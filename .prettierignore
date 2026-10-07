@@ -4,4 +4,6 @@ runs/
 baselines/
 reports/
 contract/fixtures/
+test/fixtures/
+lvrtc.local.json
 package-lock.json

@@ -30,4 +30,33 @@ npm run check
 node bin/lvrtc.mjs --help
 ```
 
+```bash
+node bin/lvrtc.mjs doctor
+```
+
 `npm run check` runs the type check, lint, format check and tests.
+
+`lvrtc doctor [--json]` reports the Node version, every configuration value with the layer that set it, the
+LensVisualizer checkout (path, commit, dirty flag), the Python interpreter and the optiland installation. A missing
+LensVisualizer, Python or optiland is reported, not an error: doctor exits non-zero only for an unsupported Node
+version or a configuration file it cannot use.
+
+## Configuration
+
+Values are layered, lowest precedence first:
+
+1. built-in defaults;
+2. `lvrtc.config.json` (committed): sibling-relative defaults for the LensVisualizer and optiland checkouts;
+3. `lvrtc.local.json` (gitignored): per-machine overrides; copy `lvrtc.local.example.json` to start;
+4. the environment: `LVRTC_LV_PATH`, `LVRTC_PYTHON`, `LVRTC_OPTILAND_PYTHON`.
+
+| Key | Meaning |
+|---|---|
+| `lvPath` | LensVisualizer checkout, or `null` |
+| `python` | Interpreter for the stdlib-only worker kit |
+| `engines.optiland.python` | Interpreter that can import optiland, or `null` |
+| `cacheDir`, `runsDir` | Where caches and run results are written |
+
+In the files, `engines.optiland.python` is written as nested objects, as in `lvrtc.local.example.json`. Relative
+paths resolve against the repository root, whichever layer they come from. An interpreter given as a bare command
+name (`python3`) is looked up on `PATH`. An unknown key or malformed JSON is an error naming the file.

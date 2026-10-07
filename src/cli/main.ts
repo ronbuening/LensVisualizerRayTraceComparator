@@ -1,24 +1,13 @@
 import packageJson from "../../package.json" with { type: "json" };
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
+import type { CliCommand, CliIo } from "./command.ts";
+import { doctorCommand } from "./commands/doctor.ts";
 
-/** Output sinks, injected so commands can be tested without touching the process streams. */
-export interface CliIo {
-  stdout(text: string): void;
-  stderr(text: string): void;
-}
-
-export interface CliCommand {
-  readonly name: string;
-  readonly summary: string;
-  /** Resolves to the process exit code. */
-  run(args: readonly string[], io: CliIo): Promise<number>;
-}
-
-export const EXIT_OK = 0;
-export const EXIT_FAILURE = 1;
-export const EXIT_USAGE = 2;
+export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
+export type { CliCommand, CliIo };
 
 /** Commands register here as their stages land. */
-export const COMMANDS: readonly CliCommand[] = [];
+export const COMMANDS: readonly CliCommand[] = [doctorCommand];
 
 function helpText(commands: readonly CliCommand[]): string {
   const width = Math.max(0, ...commands.map((command) => command.name.length));

@@ -5,7 +5,7 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["node_modules/", "runs/", ".cache/", "baselines/", "reports/", "workers/"],
+    ignores: ["node_modules/", "runs/", ".cache/", "baselines/", "reports/", "workers/", "test/fixtures/"],
   },
 
   js.configs.recommended,

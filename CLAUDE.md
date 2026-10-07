@@ -12,6 +12,7 @@ npm run lint           # eslint .
 npm run format         # prettier --write
 npm test               # node --test "test/**/*.test.ts"
 node bin/lvrtc.mjs     # the CLI
+node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 ```
 
 ## Rules
@@ -25,6 +26,8 @@ node bin/lvrtc.mjs     # the CLI
   Integration tests skip with a stated reason when LV or optiland is not configured.
 - **LV and optiland are read-only.** Never edit either checkout. LV is imported only from
   `src/engines/lv/binding.ts`; optiland is called only from `workers/python/lvrtc_optiland`.
+- **`test/fixtures/` is data, not source**: excluded from `tsc`, eslint and prettier. Tests load fixture modules
+  from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only**; numpy is used only inside the optiland worker. Nothing is installed
   into the optiland environment.
 - **Reports and baselines are deterministic**: no timestamps, no machine information.

@@ -1,0 +1,11 @@
+{
+  "lvPath": "../../LensVisualizer/LensVisualizer",
+  "python": "python3",
+  "engines": {
+    "optiland": {
+      "python": "../../optiland/optiland/.venv/bin/python"
+    }
+  },
+  "cacheDir": ".cache",
+  "runsDir": "runs"
+}

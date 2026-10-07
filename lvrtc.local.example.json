@@ -1,0 +1,9 @@
+{
+  "lvPath": "/absolute/path/to/LensVisualizer",
+  "python": "python3.13",
+  "engines": {
+    "optiland": {
+      "python": "/absolute/path/to/optiland/.venv/bin/python"
+    }
+  }
+}
