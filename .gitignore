@@ -1,7 +1,33 @@
+# Dependencies
 node_modules/
+
+# Run output and caches (results, numba and bytecode caches)
 runs/
 .cache/
+
+# Per-machine configuration and secrets
 lvrtc.local.json
+.env
+.env.*
+
+# Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tooling output
+coverage/
+*.log
+*.tsbuildinfo
+.eslintcache
+
+# Editors, OS and local agent state
 .DS_Store
+.idea/
+.vscode/
+*.swp
+.claude/settings.local.json
+.claude/worktrees/
