@@ -1,0 +1,32 @@
+{
+  "contract": "1.0",
+  "kind": "result",
+  "requestId": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+  "caseId": "f1a1f1bcf37a53d35013b1e6f15df51172e5291f3a76ec9e05aa5fc8a2d87625",
+  "engine": {
+    "id": "fake",
+    "fingerprint": "e7ac79d8f377c7751671d7211063119902939c1159379cd4c644218b90d5dc68",
+    "details": {
+      "version": "0.1.0",
+      "threads": 1,
+      "jit": false,
+      "build": null
+    }
+  },
+  "status": "unsupported",
+  "unsupported": [
+    {
+      "code": "feature",
+      "item": "surface.asphere.odd",
+      "message": "odd asphere terms are not implemented"
+    },
+    {
+      "code": "option",
+      "message": "the intersection tolerance is fixed"
+    }
+  ],
+  "diagnostics": {
+    "warnings": [],
+    "counts": {}
+  }
+}

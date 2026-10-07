@@ -1,0 +1,58 @@
+{
+  "contract": "1.0",
+  "id": "2",
+  "ok": true,
+  "result": {
+    "contract": "1.0",
+    "kind": "result",
+    "requestId": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+    "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+    "engine": {
+      "id": "fake",
+      "fingerprint": "e7ac79d8f377c7751671d7211063119902939c1159379cd4c644218b90d5dc68",
+      "details": {
+        "version": "0.1.0",
+        "threads": 1,
+        "jit": false,
+        "build": null
+      }
+    },
+    "status": "ok",
+    "method": {
+      "name": "sequential-trace",
+      "params": {
+        "tolerance": 1e-12
+      }
+    },
+    "data": {
+      "valid": {
+        "$nd": {
+          "dtype": "u1",
+          "shape": [
+            2
+          ],
+          "data": "AQE=",
+          "sha256": "9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"
+        }
+      },
+      "hits": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2,
+            3
+          ],
+          "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEQAAAAAAAALA/",
+          "sha256": "a8c597ed362170adae5e426445d2be1ca2371476d39a8d48bb2ef9fa0dc92ea7"
+        }
+      }
+    },
+    "diagnostics": {
+      "warnings": [],
+      "counts": {
+        "rays": 2,
+        "clipped": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "contract-example",
+  "defaults": {
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "lines": {
+      "kind": "reference"
+    },
+    "fields": {
+      "kind": "image-height-fractions",
+      "values": [
+        0,
+        0.5,
+        1
+      ]
+    },
+    "imagePlane": {
+      "kind": "lv-best-axial"
+    },
+    "frequenciesPerMm": [
+      10,
+      30
+    ],
+    "sampling": {
+      "lvGridCap": 64,
+      "bundleGrid": 33
+    },
+    "rungs": [
+      "R0",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ],
+    "engines": [
+      "lv",
+      "ref",
+      "optiland"
+    ],
+    "referenceEngine": "lv",
+    "lens": {
+      "kind": "lv",
+      "key": "a"
+    }
+  },
+  "runs": [
+    {
+      "name": "nikon-z-24-70f4s-wide",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s"
+      },
+      "state": {
+        "zoomT": 0
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s"
+      },
+      "state": {
+        "zoomT": 1
+      },
+      "frequenciesPerMm": [
+        10,
+        30,
+        50
+      ],
+      "sampling": {
+        "lvGridCap": 128
+      }
+    },
+    {
+      "name": "double-gauss",
+      "lens": {
+        "kind": "fixture",
+        "path": "contract/fixtures/v1/valid/optical-case/double-gauss.json"
+      },
+      "fields": {
+        "kind": "angles-deg",
+        "values": [
+          0,
+          10,
+          14
+        ]
+      },
+      "imagePlane": {
+        "kind": "design"
+      },
+      "engines": [
+        "ref",
+        "optiland"
+      ],
+      "referenceEngine": "ref"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "contract": "1.0",
+  "kind": "request",
+  "id": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+  "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+  "quantity": "rays.trace",
+  "spec": {
+    "line": 1e400,
+    "rays": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          6
+        ],
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAACTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAAAAAAAAAAAAAAAAAAEQAAAAAAAACTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/",
+        "sha256": "463672781d3e94de7c39754ae9c7da0009f32125886d052f493d88d298e74f4d"
+      }
+    }
+  },
+  "engineOptions": {
+    "tolerance": 1e-12
+  }
+}

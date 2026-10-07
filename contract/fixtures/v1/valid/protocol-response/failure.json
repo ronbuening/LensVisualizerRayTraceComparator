@@ -1,0 +1,9 @@
+{
+  "contract": "1.0",
+  "id": "2",
+  "ok": false,
+  "error": {
+    "code": "bad-request",
+    "message": "params.case is not an optical-case"
+  }
+}

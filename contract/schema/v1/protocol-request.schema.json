@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:protocol-request",
+  "title": "Protocol request",
+  "description": "A message to an engine. The protocol is stateless: every run carries its optical case.",
+  "oneOf": [
+    {
+      "description": "hello asks for the engine's descriptor; shutdown asks the engine to exit.",
+      "type": "object",
+      "properties": {
+        "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "method": { "enum": ["hello", "shutdown"] },
+        "params": { "type": "object", "additionalProperties": false }
+      },
+      "required": ["contract", "id", "method", "params"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "method": { "const": "run" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "request": { "$ref": "urn:lvrtc:contract:v1:request" },
+            "case": { "$ref": "urn:lvrtc:contract:v1:optical-case" }
+          },
+          "required": ["request", "case"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["contract", "id", "method", "params"],
+      "additionalProperties": false
+    }
+  ]
+}

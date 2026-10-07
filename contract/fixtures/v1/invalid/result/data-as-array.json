@@ -1,0 +1,34 @@
+{
+  "contract": "1.0",
+  "kind": "result",
+  "requestId": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+  "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+  "engine": {
+    "id": "fake",
+    "fingerprint": "e7ac79d8f377c7751671d7211063119902939c1159379cd4c644218b90d5dc68",
+    "details": {
+      "version": "0.1.0",
+      "threads": 1,
+      "jit": false,
+      "build": null
+    }
+  },
+  "status": "ok",
+  "method": {
+    "name": "sequential-trace",
+    "params": {
+      "tolerance": 1e-12
+    }
+  },
+  "data": [
+    1,
+    2
+  ],
+  "diagnostics": {
+    "warnings": [],
+    "counts": {
+      "rays": 2,
+      "clipped": 0
+    }
+  }
+}

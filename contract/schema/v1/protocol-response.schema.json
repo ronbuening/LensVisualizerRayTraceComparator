@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:protocol-response",
+  "title": "Protocol response",
+  "description": "An engine's reply to the protocol request with the same id.",
+  "oneOf": [
+    {
+      "description": "result is an engine descriptor for hello, a result envelope for run and an empty object for shutdown.",
+      "type": "object",
+      "properties": {
+        "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "ok": { "const": true },
+        "result": {
+          "anyOf": [
+            { "$ref": "urn:lvrtc:contract:v1:engine-descriptor" },
+            { "$ref": "urn:lvrtc:contract:v1:result" },
+            { "type": "object", "additionalProperties": false }
+          ]
+        }
+      },
+      "required": ["contract", "id", "ok", "result"],
+      "additionalProperties": false
+    },
+    {
+      "description": "The message could not be handled at all. An engine that handled a run and failed answers ok with a result of status error.",
+      "type": "object",
+      "properties": {
+        "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "ok": { "const": false },
+        "error": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/error" }
+      },
+      "required": ["contract", "id", "ok", "error"],
+      "additionalProperties": false
+    }
+  ]
+}

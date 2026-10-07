@@ -1,0 +1,16 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "one-run",
+  "runs": [
+    {
+      "contract": "1.0",
+      "kind": "run-spec",
+      "name": "singlet",
+      "lens": {
+        "kind": "fixture",
+        "path": "contract/fixtures/v1/valid/optical-case/singlet.json"
+      }
+    }
+  ]
+}

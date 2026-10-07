@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:provenance",
+  "title": "Provenance",
+  "description": "Where an optical case came from. Never part of a case's identity.",
+  "type": "object",
+  "properties": {
+    "source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "lv-lens" },
+            "lensKey": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+            "file": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+            "fileSha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+          },
+          "required": ["kind", "lensKey", "file", "fileSha256"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "fixture" },
+            "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+          },
+          "required": ["kind", "name"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "lv": {
+      "description": "The LensVisualizer checkout a case was read from. commit and dirty are null when the checkout is not a git work tree.",
+      "type": "object",
+      "properties": {
+        "commit": { "type": ["string", "null"], "minLength": 1 },
+        "dirty": { "type": ["boolean", "null"] },
+        "closureHash": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+      },
+      "required": ["commit", "dirty", "closureHash"],
+      "additionalProperties": false
+    },
+    "producer": {
+      "type": "object",
+      "properties": {
+        "tool": { "const": "lvrtc" },
+        "version": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+      },
+      "required": ["tool", "version"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["source", "producer"],
+  "additionalProperties": false
+}

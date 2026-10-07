@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:run-spec",
+  "title": "RunSpec",
+  "description": "One lens in one state and everything to compute for it. An option left out takes the comparator's default.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "run-spec" },
+    "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+    "lens": { "$ref": "#/$defs/lens" },
+    "state": { "$ref": "#/$defs/state" },
+    "aperture": { "$ref": "#/$defs/aperture" },
+    "lines": { "$ref": "#/$defs/lines" },
+    "fields": { "$ref": "#/$defs/fields" },
+    "imagePlane": { "$ref": "#/$defs/imagePlane" },
+    "frequenciesPerMm": { "$ref": "#/$defs/frequenciesPerMm" },
+    "sampling": { "$ref": "#/$defs/sampling" },
+    "rungs": { "$ref": "#/$defs/rungs" },
+    "engines": { "$ref": "#/$defs/engines" },
+    "referenceEngine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" }
+  },
+  "required": ["contract", "kind", "name", "lens"],
+  "additionalProperties": false,
+  "$defs": {
+    "lens": {
+      "oneOf": [
+        {
+          "description": "A LensVisualizer lens, by its catalog key.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "lv" },
+            "key": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+          },
+          "required": ["kind", "key"],
+          "additionalProperties": false
+        },
+        {
+          "description": "An optical-case file. A relative path is resolved against the repository root.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "fixture" },
+            "path": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+          },
+          "required": ["kind", "path"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "zoomT": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" },
+        "focus": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": { "kind": { "const": "infinity" } },
+              "required": ["kind"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": { "const": "focusT" },
+                "value": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" }
+              },
+              "required": ["kind", "value"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "aperture": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "const": "wide-open" } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "f-number" },
+            "value": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+          },
+          "required": ["kind", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "stop-radius" },
+            "mm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+          },
+          "required": ["kind", "mm"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "lines": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "enum": ["reference", "cdf", "photopic"] } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "description": "weights, when given, has one entry per wavelength; equal weights otherwise.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "explicit" },
+            "wavelengthsNm": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+              "minItems": 1
+            },
+            "weights": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "wavelengthsNm"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "fields": {
+      "oneOf": [
+        {
+          "description": "Fractions of the lens's full image height, resolved to field angles by the case source.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "image-height-fractions" },
+            "values": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field angles in degrees. A positive angle is an object toward +y.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "angles-deg" },
+            "values": {
+              "type": "array",
+              "items": { "type": "number", "exclusiveMinimum": -90, "exclusiveMaximum": 90 },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "imagePlane": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "enum": ["design", "lv-best-axial"] } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "description": "The design image plane moved by mm along +z.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "shift" },
+            "mm": { "type": "number" }
+          },
+          "required": ["kind", "mm"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "frequenciesPerMm": {
+      "description": "Spatial frequencies, cycles/mm.",
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "sampling": {
+      "type": "object",
+      "properties": {
+        "lvGridCap": { "enum": [32, 64, 128, 256] },
+        "bundleGrid": { "type": "integer", "minimum": 1 },
+        "engines": {
+          "description": "Options for one engine, keyed by engine id. Only that engine reads them.",
+          "type": "object",
+          "additionalProperties": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "rungs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "engines": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  }
+}

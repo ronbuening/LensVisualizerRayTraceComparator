@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:suite",
+  "title": "Suite",
+  "description": "A named list of runs with shared defaults. A run's own value replaces the default for that option whole; run names are unique.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "suite" },
+    "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+    "defaults": {
+      "description": "Every RunSpec option; never contract, kind, name or lens.",
+      "type": "object",
+      "properties": {
+        "state": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/state" },
+        "aperture": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/aperture" },
+        "lines": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/lines" },
+        "fields": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/fields" },
+        "imagePlane": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/imagePlane" },
+        "frequenciesPerMm": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/frequenciesPerMm" },
+        "sampling": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/sampling" },
+        "rungs": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/rungs" },
+        "engines": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/engines" },
+        "referenceEngine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" }
+      },
+      "additionalProperties": false
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "description": "A RunSpec whose contract and kind may be left out.",
+        "type": "object",
+        "properties": {
+          "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+          "kind": { "const": "run-spec" },
+          "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+          "lens": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/lens" },
+          "state": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/state" },
+          "aperture": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/aperture" },
+          "lines": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/lines" },
+          "fields": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/fields" },
+          "imagePlane": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/imagePlane" },
+          "frequenciesPerMm": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/frequenciesPerMm" },
+          "sampling": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/sampling" },
+          "rungs": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/rungs" },
+          "engines": { "$ref": "urn:lvrtc:contract:v1:run-spec#/$defs/engines" },
+          "referenceEngine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" }
+        },
+        "required": ["name", "lens"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["contract", "kind", "name", "runs"],
+  "additionalProperties": false
+}

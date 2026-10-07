@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:engine-descriptor",
+  "title": "EngineDescriptor",
+  "description": "What an engine says about itself in answer to hello: who it is and what it can do.",
+  "type": "object",
+  "properties": {
+    "contract": {
+      "description": "The range of contract versions the engine speaks, both ends included.",
+      "type": "object",
+      "properties": {
+        "min": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/version" },
+        "max": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/version" }
+      },
+      "required": ["min", "max"],
+      "additionalProperties": false
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "version": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "fingerprint": {
+          "description": "A content hash of the engine's own sources. Results are keyed by it, never by version.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "details": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/scalarMap" }
+      },
+      "required": ["id", "version", "fingerprint", "details"],
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "features": {
+          "type": "object",
+          "properties": {
+            "supported": {
+              "description": "Feature flags of an optical case the engine can handle.",
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "uniqueItems": true
+            },
+            "limits": {
+              "description": "The largest value the engine handles, per numeric limit; a limit left out is unbounded.",
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+            }
+          },
+          "required": ["supported", "limits"],
+          "additionalProperties": false
+        },
+        "quantities": {
+          "description": "The quantities the engine answers, keyed by quantity id.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": { "version": { "type": "integer", "minimum": 1 } },
+            "required": ["version"],
+            "additionalProperties": false
+          }
+        },
+        "deterministic": { "type": "boolean" },
+        "maxConcurrency": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["features", "quantities", "deterministic", "maxConcurrency"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["contract", "identity", "capabilities"],
+  "additionalProperties": false
+}

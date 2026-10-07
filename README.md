@@ -41,6 +41,14 @@ LensVisualizer checkout (path, commit, dirty flag), the Python interpreter and t
 LensVisualizer, Python or optiland is reported, not an error: doctor exits non-zero only for an unsupported Node
 version or a configuration file it cannot use.
 
+## Contract
+
+Everything that crosses a boundary (an optical case, a run specification, a request to an engine, its result) is
+a document of the engine-neutral contract in [contract/](contract/CONTRACT.md): JSON Schema files as the source of
+truth, TypeScript types that mirror them, a small validator written here, and a corpus of valid and invalid
+fixtures that every implementation must accept and reject identically. `contract/CONTRACT.md` fixes the frame,
+units, signs, identity hashes and versioning.
+
 ## Configuration
 
 Values are layered, lowest precedence first:

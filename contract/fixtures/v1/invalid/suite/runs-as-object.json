@@ -1,0 +1,46 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "contract-example",
+  "defaults": {
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "lines": {
+      "kind": "reference"
+    },
+    "fields": {
+      "kind": "image-height-fractions",
+      "values": [
+        0,
+        0.5,
+        1
+      ]
+    },
+    "imagePlane": {
+      "kind": "lv-best-axial"
+    },
+    "frequenciesPerMm": [
+      10,
+      30
+    ],
+    "sampling": {
+      "lvGridCap": 64,
+      "bundleGrid": 33
+    },
+    "rungs": [
+      "R0",
+      "R1",
+      "R2",
+      "R3",
+      "R4"
+    ],
+    "engines": [
+      "lv",
+      "ref",
+      "optiland"
+    ],
+    "referenceEngine": "lv"
+  },
+  "runs": {}
+}

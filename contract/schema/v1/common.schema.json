@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:common",
+  "title": "Common definitions",
+  "description": "Definitions shared by every contract v1 schema. The file itself constrains nothing.",
+  "$defs": {
+    "contractVersion": {
+      "description": "The contract version a document was written to: major 1, any minor.",
+      "type": "string",
+      "pattern": "^1\\.(0|[1-9][0-9]*)$"
+    },
+    "version": {
+      "description": "Any contract version, <major>.<minor>.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "sha256": {
+      "description": "Lowercase hex SHA-256.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "text": {
+      "description": "A string that is not empty.",
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "description": "A name that is safe as a file name and as a report anchor.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "engineId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "quantityId": {
+      "description": "A dotted quantity id such as rays.trace or paraxial.first-order.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$"
+    },
+    "positive": { "type": "number", "exclusiveMinimum": 0 },
+    "nonNegative": { "type": "number", "minimum": 0 },
+    "nonZero": { "type": "number", "anyOf": [{ "exclusiveMinimum": 0 }, { "exclusiveMaximum": 0 }] },
+    "unitInterval": { "type": "number", "minimum": 0, "maximum": 1 },
+    "index": { "type": "integer", "minimum": 0 },
+    "object": {
+      "description": "An object this layer carries without interpreting it.",
+      "type": "object"
+    },
+    "scalarMap": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean", "null"] }
+    },
+    "numberMap": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": { "$ref": "#/$defs/text" },
+        "message": { "type": "string" }
+      },
+      "required": ["code", "message"],
+      "additionalProperties": false
+    },
+    "base64": {
+      "description": "Standard padded base64.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+    },
+    "ndarray": {
+      "description": "The NdArray wire form: elements in C order as little-endian bytes in base64, with the SHA-256 of those bytes. Byte length and digest are checked by the array codec, not by this schema.",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "enum": ["f8", "i4", "u1"] },
+            "shape": { "type": "array", "items": { "$ref": "#/$defs/index" } },
+            "data": { "$ref": "#/$defs/base64" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    },
+    "f8Matrix": {
+      "description": "An NdArray of float64 with exactly two axes: the ndarray definition with dtype and shape narrowed.",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "const": "f8" },
+            "shape": { "type": "array", "items": { "$ref": "#/$defs/index" }, "minItems": 2, "maxItems": 2 },
+            "data": { "$ref": "#/$defs/base64" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    }
+  }
+}

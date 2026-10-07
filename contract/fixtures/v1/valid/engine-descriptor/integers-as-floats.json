@@ -1,0 +1,28 @@
+{
+  "contract": {
+    "min": "1.0",
+    "max": "1.0"
+  },
+  "identity": {
+    "id": "fake",
+    "version": "0.1.0",
+    "fingerprint": "e7ac79d8f377c7751671d7211063119902939c1159379cd4c644218b90d5dc68",
+    "details": {}
+  },
+  "capabilities": {
+    "features": {
+      "supported": [],
+      "limits": {}
+    },
+    "quantities": {
+      "system.describe": {
+        "version": 1.0
+      },
+      "rays.trace": {
+        "version": 2e0
+      }
+    },
+    "deterministic": true,
+    "maxConcurrency": 4.0
+  }
+}

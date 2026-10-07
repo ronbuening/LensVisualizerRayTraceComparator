@@ -1,0 +1,59 @@
+{
+  "contract": "1.0",
+  "kind": "run-spec",
+  "name": "nikon-z-24-70f4s-tele-f8",
+  "lens": {
+    "kind": "lv",
+    "key": "nikon-z-24-70f4s"
+  },
+  "state": {
+    "zoomT": 1,
+    "focus": {
+      "kind": "focusT",
+      "value": 0.5
+    }
+  },
+  "aperture": {
+    "kind": "f-number",
+    "value": 8
+  },
+  "lines": {
+    "kind": "explicit",
+    "wavelengthsNm": [
+      656.2725,
+      587.5618,
+      486.1327
+    ],
+    "weights": [
+      1,
+      2,
+      1
+    ]
+  },
+  "fields": {
+    "kind": "image-height-fractions",
+    "values": [
+      0,
+      0.7,
+      1
+    ]
+  },
+  "imagePlane": {
+    "kind": "shift",
+    "mm": -0.02
+  },
+  "frequenciesPerMm": [
+    30
+  ],
+  "sampling": {
+    "lvGridCap": 256
+  },
+  "rungs": [
+    "R5"
+  ],
+  "engines": [
+    "lv",
+    "optiland"
+  ],
+  "referenceEngine": "lv"
+}

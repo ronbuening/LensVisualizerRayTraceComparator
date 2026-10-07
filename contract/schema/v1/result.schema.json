@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:result",
+  "title": "ResultEnvelope",
+  "description": "An engine's answer to one request. status ok carries data, unsupported carries the unsupported list, error carries error; pending is a job to be collected later.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "result" },
+    "requestId": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+    "caseId": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "fingerprint": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "details": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/scalarMap" }
+      },
+      "required": ["id", "fingerprint", "details"],
+      "additionalProperties": false
+    },
+    "status": { "enum": ["ok", "unsupported", "error", "pending"] },
+    "unsupported": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": { "enum": ["feature", "quantity", "option", "contract"] },
+          "item": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+          "message": { "type": "string" }
+        },
+        "required": ["code", "item", "message"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "error": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/error" },
+    "method": {
+      "description": "How the engine computed the data.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "params": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "data": {
+      "description": "The quantity's data; its schema belongs to the quantity.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+    },
+    "diagnostics": {
+      "type": "object",
+      "properties": {
+        "warnings": { "type": "array", "items": { "type": "string" } },
+        "counts": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap" }
+      },
+      "required": ["warnings", "counts"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["contract", "kind", "requestId", "caseId", "engine", "status", "diagnostics"],
+  "additionalProperties": false
+}

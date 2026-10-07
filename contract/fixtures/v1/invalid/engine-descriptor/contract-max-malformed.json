@@ -1,0 +1,44 @@
+{
+  "contract": {
+    "min": "1.0",
+    "max": "1.x"
+  },
+  "identity": {
+    "id": "example-engine",
+    "version": "2.4.1+build.20260101",
+    "fingerprint": "295987c3066023031b5fe8805f42340b72afc522f2165d2d44a68e93fa4bdc12",
+    "details": {
+      "python": "3.14.0",
+      "numpy": "2.3.0",
+      "jit": true,
+      "gpu": null
+    }
+  },
+  "capabilities": {
+    "features": {
+      "supported": [
+        "aperture.annular",
+        "lines.multiple",
+        "object.finite",
+        "surface.asphere.even",
+        "surface.asphere.flat-base",
+        "surface.asphere.odd",
+        "surface.conic"
+      ],
+      "limits": {
+        "asphere.maxPower": 20,
+        "surfaces.count": 200
+      }
+    },
+    "quantities": {
+      "system.describe": {
+        "version": 1
+      },
+      "rays.trace": {
+        "version": 2
+      }
+    },
+    "deterministic": false,
+    "maxConcurrency": 4
+  }
+}

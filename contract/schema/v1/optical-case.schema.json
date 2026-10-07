@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:optical-case",
+  "title": "OpticalCase",
+  "description": "One optical system under one set of conditions, in the contract frame: mm, +z propagation, first lens vertex at z = 0.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "optical-case" },
+    "id": {
+      "description": "sha256 of the canonical JSON of { system, conditions }.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+    },
+    "systemId": {
+      "description": "sha256 of the canonical JSON of system.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+    },
+    "label": { "$ref": "#/$defs/label" },
+    "system": { "$ref": "#/$defs/system" },
+    "conditions": { "$ref": "#/$defs/conditions" },
+    "features": {
+      "description": "Derived from system and conditions; sorted.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "aperture.annular",
+          "lines.multiple",
+          "object.finite",
+          "surface.asphere.even",
+          "surface.asphere.flat-base",
+          "surface.asphere.odd",
+          "surface.conic"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "provenance": { "$ref": "urn:lvrtc:contract:v1:provenance" }
+  },
+  "required": ["contract", "kind", "id", "systemId", "label", "system", "conditions", "features", "provenance"],
+  "additionalProperties": false,
+  "$defs": {
+    "label": {
+      "description": "What people call the case. Not part of its identity.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "lensKey": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "zoomT": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" },
+        "focusT": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "system": {
+      "type": "object",
+      "properties": {
+        "surfaces": { "type": "array", "items": { "$ref": "#/$defs/surface" }, "minItems": 1 },
+        "stopIndex": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+        "lastLensSurfaceIndex": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+        "designImageZ": { "type": "number" }
+      },
+      "required": ["surfaces", "stopIndex", "lastLensSurfaceIndex", "designImageZ"],
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "properties": {
+        "label": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "z": { "description": "Vertex position, mm.", "type": "number" },
+        "thickness": {
+          "description": "Axial distance to the next vertex, or to the design image plane after the last surface, mm.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        },
+        "shape": { "$ref": "#/$defs/shape" },
+        "aperture": { "$ref": "#/$defs/aperture" },
+        "elementId": {
+          "description": "The element whose glass follows the surface; 0 when no element does.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+        },
+        "synthetic": { "enum": ["rearPlate"] }
+      },
+      "required": ["label", "z", "thickness", "shape", "aperture", "elementId"],
+      "additionalProperties": false
+    },
+    "shape": {
+      "description": "Sag z(r) = c r^2 / (1 + sqrt(1 - (1 + conic) c^2 r^2)) + sum coeff r^power, with c = 1/radius, or 0 when radius is null. radius > 0 puts the centre of curvature toward +z.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "const": "plane" } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "conic" },
+            "radius": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonZero" },
+            "conic": { "type": "number" }
+          },
+          "required": ["kind", "radius", "conic"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "asphere" },
+            "radius": { "anyOf": [{ "type": "null" }, { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonZero" }] },
+            "conic": { "type": "number" },
+            "terms": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "power": { "type": "integer", "minimum": 1 },
+                  "coeff": { "type": "number" }
+                },
+                "required": ["power", "coeff"],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "radius", "conic", "terms"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "aperture": {
+      "type": "object",
+      "properties": {
+        "semiDiameter": {
+          "description": "Effective clip radius, mm. A ray at exactly this height passes.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        },
+        "nominalSemiDiameter": {
+          "description": "The semi-diameter the prescription states, mm.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        },
+        "innerSemiDiameter": {
+          "description": "Radius of a central obstruction, mm; 0 for none.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        }
+      },
+      "required": ["semiDiameter", "nominalSemiDiameter", "innerSemiDiameter"],
+      "additionalProperties": false
+    },
+    "conditions": {
+      "type": "object",
+      "properties": {
+        "object": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": { "kind": { "const": "infinity" } },
+              "required": ["kind"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": { "const": "finite" },
+                "z": {
+                  "description": "Object plane, mm; ahead of the first vertex.",
+                  "type": "number",
+                  "exclusiveMaximum": 0
+                }
+              },
+              "required": ["kind", "z"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "stopSemiDiameter": {
+          "description": "The stop's radius under these conditions, mm.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        },
+        "imageZ": { "description": "Image plane, mm.", "type": "number" },
+        "lines": {
+          "description": "Spectral lines; the first is the reference line.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/line" },
+          "minItems": 1
+        },
+        "indexAfterSurface": {
+          "description": "Refractive index of the medium that follows each surface, per line: float64, shape [lines, surfaces]. Air is 1.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+        }
+      },
+      "required": ["object", "stopSemiDiameter", "imageZ", "lines", "indexAfterSurface"],
+      "additionalProperties": false
+    },
+    "line": {
+      "type": "object",
+      "properties": {
+        "wavelengthNm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+        "weight": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+        "indexSource": {
+          "description": "authored: the prescription states the index at this line. anchored: a dispersion model anchored to the authored index.",
+          "enum": ["authored", "anchored"]
+        }
+      },
+      "required": ["wavelengthNm", "weight", "indexSource"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "contract": "1.0",
+  "id": "1",
+  "method": "hello",
+  "params": {
+    "verbose": true
+  }
+}

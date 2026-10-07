@@ -1,0 +1,52 @@
+{
+  "contract": "1.0",
+  "kind": "run-spec",
+  "name": "double-gauss-f5",
+  "lens": {
+    "kind": "fixture",
+    "path": "contract/fixtures/v1/valid/optical-case/double-gauss.json"
+  },
+  "aperture": {
+    "kind": "wide-open"
+  },
+  "lines": {
+    "kind": "reference"
+  },
+  "fields": {
+    "kind": "angles-deg",
+    "values": [
+      0,
+      10,
+      14
+    ]
+  },
+  "imagePlane": {
+    "kind": "design"
+  },
+  "frequenciesPerMm": [
+    10,
+    20,
+    40
+  ],
+  "sampling": {
+    "lvGridCap": 64,
+    "bundleGrid": 33,
+    "engines": {
+      "optiland": {
+        "numRays": 512
+      }
+    }
+  },
+  "rungs": [
+    "R0",
+    "R1",
+    "R2",
+    "R3",
+    "R4"
+  ],
+  "engines": [
+    "ref",
+    "optiland"
+  ],
+  "referenceEngine": "ref"
+}

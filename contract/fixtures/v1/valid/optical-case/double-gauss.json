@@ -1,0 +1,222 @@
+{
+  "contract": "1.0",
+  "kind": "optical-case",
+  "id": "fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a",
+  "systemId": "c59049213c1174a60de6b2faa6e3af63d9d356de0f0f7d7523346057f4a80daf",
+  "label": {
+    "name": "Double Gauss (optiland sample)"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "1",
+        "z": 0,
+        "thickness": 8.75,
+        "shape": {
+          "kind": "conic",
+          "radius": 56.20238,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 24.44,
+          "nominalSemiDiameter": 24.44,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 1
+      },
+      {
+        "label": "2",
+        "z": 8.75,
+        "thickness": 0.5,
+        "shape": {
+          "kind": "conic",
+          "radius": 152.2858,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 21.64,
+          "nominalSemiDiameter": 21.64,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "3",
+        "z": 9.25,
+        "thickness": 12.5,
+        "shape": {
+          "kind": "conic",
+          "radius": 37.68262,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 21.42,
+          "nominalSemiDiameter": 21.42,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 2
+      },
+      {
+        "label": "4",
+        "z": 21.75,
+        "thickness": 3.8,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 15.38,
+          "nominalSemiDiameter": 15.38,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 3
+      },
+      {
+        "label": "5",
+        "z": 25.55,
+        "thickness": 16.369445,
+        "shape": {
+          "kind": "conic",
+          "radius": 24.2313,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 13.54,
+          "nominalSemiDiameter": 13.54,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "6",
+        "z": 41.919444999999996,
+        "thickness": 13.747957,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 6.35,
+          "nominalSemiDiameter": 6.35,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "7",
+        "z": 55.667401999999996,
+        "thickness": 3.8,
+        "shape": {
+          "kind": "conic",
+          "radius": -28.37731,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 11.11,
+          "nominalSemiDiameter": 11.11,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 4
+      },
+      {
+        "label": "8",
+        "z": 59.46740199999999,
+        "thickness": 11,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 12.5,
+          "nominalSemiDiameter": 12.5,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 5
+      },
+      {
+        "label": "9",
+        "z": 70.46740199999999,
+        "thickness": 0.5,
+        "shape": {
+          "kind": "conic",
+          "radius": -37.92546,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 16.45,
+          "nominalSemiDiameter": 16.45,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "10",
+        "z": 70.96740199999999,
+        "thickness": 7,
+        "shape": {
+          "kind": "conic",
+          "radius": 177.41176,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 16.61,
+          "nominalSemiDiameter": 16.61,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 6
+      },
+      {
+        "label": "11",
+        "z": 77.96740199999999,
+        "thickness": 61.487536,
+        "shape": {
+          "kind": "conic",
+          "radius": -79.41143,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 17.71,
+          "nominalSemiDiameter": 17.71,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      }
+    ],
+    "stopIndex": 5,
+    "lastLensSurfaceIndex": 10,
+    "designImageZ": 139.454938
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 6.341241012139779,
+    "imageZ": 139.454938,
+    "lines": [
+      {
+        "wavelengthNm": 587.5618,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          11
+        ],
+        "data": "WPzfVur0+T8AAAAAAADwP8UpkRvVt/k/TO30/5un+T8AAAAAAADwPwAAAAAAAPA/TO30/5un+T+5KOL/Mu35PwAAAAAAAPA/uSji/zLt+T8AAAAAAADwPw==",
+        "sha256": "e2cb4bf5092c5f97fe0da45d7f51c6537b08c2c356853be6a0d2ac4ae63fd3f7"
+      }
+    }
+  },
+  "features": [],
+  "provenance": {
+    "source": {
+      "kind": "fixture",
+      "name": "optiland-double-gauss"
+    },
+    "producer": {
+      "tool": "lvrtc",
+      "version": "0.1.0"
+    }
+  }
+}

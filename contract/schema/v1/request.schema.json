@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:request",
+  "title": "QuantityRequest",
+  "description": "One quantity asked of an engine for one optical case.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "request" },
+    "id": {
+      "description": "sha256 of the canonical JSON of { caseId, quantity, spec }.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+    },
+    "caseId": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+    "quantity": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/quantityId" },
+    "spec": {
+      "description": "What to compute; its schema belongs to the quantity.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+    },
+    "engineOptions": {
+      "description": "Options for the engine the request is sent to. Not part of the request's identity.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+    }
+  },
+  "required": ["contract", "kind", "id", "caseId", "quantity", "spec"],
+  "additionalProperties": false
+}

@@ -1,0 +1,84 @@
+{
+  "contract": "1.0",
+  "kind": "run-spec",
+  "id": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+  "systemId": "f65e0747099c4d455b407a226af09d27af9abfa6a76f28bbd2b4862de3b8fa38",
+  "label": {
+    "name": "Biconvex singlet"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "1",
+        "z": 0,
+        "thickness": 4,
+        "shape": {
+          "kind": "conic",
+          "radius": 50,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 10,
+          "nominalSemiDiameter": 10,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 1
+      },
+      {
+        "label": "2",
+        "z": 4,
+        "thickness": 96,
+        "shape": {
+          "kind": "conic",
+          "radius": -50,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 10,
+          "nominalSemiDiameter": 10,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      }
+    ],
+    "stopIndex": 0,
+    "lastLensSurfaceIndex": 1,
+    "designImageZ": 100
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 5,
+    "imageZ": 100,
+    "lines": [
+      {
+        "wavelengthNm": 587.5618,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          2
+        ],
+        "data": "MCqpE9BE+D8AAAAAAADwPw==",
+        "sha256": "97263b9734c627d6df5c284aa480a76920f617bf73bc53dddb29b78dc3cafed2"
+      }
+    }
+  },
+  "features": [],
+  "provenance": {
+    "source": {
+      "kind": "fixture",
+      "name": "singlet"
+    },
+    "producer": {
+      "tool": "lvrtc",
+      "version": "0.1.0"
+    }
+  }
+}
