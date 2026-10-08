@@ -40,6 +40,10 @@ export interface FakeRuntimeLens {
   stopPhysSD: number;
   zoomStopSDs: readonly number[] | null;
   FOPEN: number;
+  EP: { epSD: number };
+  epZRelStop: number;
+  xpZRelLastSurf: number;
+  xpSD: number;
   elements: readonly { id: number; absorptionCoefficientPerMm?: number }[];
 }
 
@@ -55,7 +59,12 @@ export interface FakeStateSurface {
   asphere: Record<string, number> | null;
   diffractive: null;
   interaction: { type: "refract" };
-  profile: { kind: string; sag(radius: number): number; slope(radius: number): number };
+  profile: {
+    kind: string;
+    sag(radius: number): number;
+    slope(radius: number): number;
+    finiteRadiusLimit(): number | null;
+  };
   source: FakeSurfaceData;
   z: number;
 }

@@ -155,7 +155,14 @@ test("a hand-built state becomes a valid case: every member is the state's, and 
     "surface.conic",
   ]);
   assert.deepEqual(opticalCase.provenance, {
-    source: { kind: "lv-lens", lensKey: LENS.key, file: LENS.file, fileSha256: LENS.fileSha256 },
+    source: {
+      kind: "lv-lens",
+      lensKey: LENS.key,
+      file: LENS.file,
+      fileSha256: LENS.fileSha256,
+      zoomT: 0,
+      focusT: 0,
+    },
     lv: LV_PROVENANCE,
     producer: { tool: "lvrtc", version: packageJson.version },
   });
@@ -243,6 +250,34 @@ test("the image plane is the design plane, or the design plane moved by the run'
   // A shift moves the image plane of the conditions and nothing of the system.
   assert.equal(shifted.systemId, tripletCase().systemId);
   assert.notEqual(shifted.id, tripletCase().id);
+});
+
+test("an image plane stated as a position is that position, whatever the design plane is", () => {
+  const placed = tripletCase({ imagePlane: { kind: "at", z: 41.3 } });
+  assert.equal(placed.conditions.imageZ, 41.3);
+  assert.equal(placed.system.designImageZ, 42);
+  assert.equal(placed.systemId, tripletCase().systemId);
+  // A shift does not always add up to the same double again; the position is the number itself.
+  const shifted = tripletCase({ imagePlane: { kind: "shift", mm: 0.1 + 0.2 } });
+  const again = tripletCase({ imagePlane: { kind: "at", z: shifted.conditions.imageZ } });
+  assert.equal(again.id, shifted.id);
+  assert.equal(tripletCase({ imagePlane: { kind: "at", z: 42 } }).id, tripletCase().id);
+});
+
+test("the provenance states the zoom and focus position of the state the case was read from", () => {
+  const conjugate = { focusT: 0.4, zoomT: 0.75, objectDistanceMm: 800, distanceReference: "first-surface" };
+  const state = tripletState({ zoomT: 0.75, focusT: 0.4 });
+  const refocused = exported(exportCase(inputFor(state, {}, { assessMtfSupport: gate({ conjugate }) })));
+  assert.deepEqual(refocused.provenance.source, {
+    kind: "lv-lens",
+    lensKey: LENS.key,
+    file: LENS.file,
+    fileSha256: LENS.fileSha256,
+    zoomT: 0.75,
+    focusT: 0.4,
+  });
+  // The label states the zoom position of a zoom lens only; the provenance always does.
+  assert.deepEqual(refocused.label, { name: "Hand-built lens", lensKey: "hand-built", focusT: 0.4 });
 });
 
 test("LensVisualizer's best axial focus is a problem here, with the stage that resolves it", () => {

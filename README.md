@@ -10,10 +10,11 @@ contract, so others can be added by a Python worker, a command line, file exchan
 
 Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. Phase 1
 (LensVisualizer as case source and engine) has the binding that loads LensVisualizer, the exporter that writes
-its lenses as engine-neutral cases, the suites of lenses to compare, and the comparator's own reference engine
-`ref`, which answers the first two rungs of the ladder: the built-system echo and the first-order data.
-LensVisualizer as an engine comes next. The full plan is in
-[docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+its lenses as engine-neutral cases, the suites of lenses to compare, the comparator's own reference engine `ref`
+and LensVisualizer itself as the engine `lv`. Both answer the first two rungs of the ladder, the built-system echo
+and the first-order data, and agree on them for every lens of the two suites. The ray rungs come next. The full
+plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md); what an engine does that a comparison has
+to know about is in [docs/gotchas.md](docs/gotchas.md).
 
 ## Try it
 
@@ -101,6 +102,18 @@ node bin/lvrtc.mjs run suites/smoke.json --engines ref --rungs r0,r1
 
 ```bash
 node bin/lvrtc.mjs engine conformance ref
+```
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1
+```
+
+```bash
+node bin/lvrtc.mjs compare benchmark
+```
+
+```bash
+node bin/lvrtc.mjs engine conformance lv
 ```
 
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
@@ -201,8 +214,9 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
   only when a run names one of its lenses.
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. A **built-in engine** is part of the comparator and needs no configuration: `ref`, the reference
-  engine. It can be named under any root, and is run only where it is named, so a root without an engine of its
-  own runs nothing until `--engines` or the suite names one. A configured engine of the same id takes its place.
+  engine, and `lv`, LensVisualizer itself. It can be named under any root, and is run only where it is named, so a
+  root without an engine of its own runs nothing until `--engines` or the suite names one. A configured engine of
+  the same id takes its place.
 - **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
   of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`) and `r1`
   (`paraxial.first-order`). An engine that does not offer a rung's quantity is recorded as `unsupported` for it
@@ -230,10 +244,10 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
   file, an engine or a rung cannot be used as asked.
 
 This repository's own configuration defines no engine, so a committed suite is run on the engines that are named.
-The reference engine answers `r0` and `r1` for every case of the three suites:
+The reference engine and LensVisualizer answer `r0` and `r1` for every case of the three suites:
 
 ```bash
-LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --engines ref --rungs r0,r1
+LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --engines lv,ref --rungs r0,r1
 ```
 
 ## The reference engine, and rungs R0 and R1
@@ -274,6 +288,57 @@ aperture, which its model does not keep yet.
   the item `system.afocal` or `surface.asphere.linear-term`.
 
 The definitions, member by member, are in [contract/CONTRACT.md](contract/CONTRACT.md#systemdescribe).
+
+## LensVisualizer as an engine
+
+`lv` (`src/engines/lv/engine.ts`) is LensVisualizer answering the same quantities through the same contract, from
+its own prepared state and its own functions. It is built in, like `ref`, and loads the checkout the configuration
+names (`lvPath`) when it is first asked. Its fingerprint is the closure hash of LensVisualizer's engine files, so
+an edit to LensVisualizer's code retires what the result store holds of it and an edit to a lens file does not.
+
+- **It answers from LensVisualizer's state, not from the case.** For a case that came from a LensVisualizer lens,
+  `lv` builds that lens again, prepares the state at the zoom and focus position the case's provenance states and
+  exports it under the case's own stop radius, lines and image plane. Only when that export is the same case, by
+  `systemId` and `id`, does it answer. A case that is not is a result of status `error` with the code
+  `stale-case`, and the message names what differs: the lens file's hash, the engine closure, or neither, when the
+  case itself was altered. A file that changed without changing the case leaves the case fresh.
+- **A case from any other source is `unsupported`**, with one item of code `case-source`: LensVisualizer has no
+  state for a fixture, and importing one is no part of what is compared.
+- **Without a LensVisualizer the engine is unavailable**, with the code `not-configured` when no `lvPath` is set
+  and `load-failed` when the path holds no LensVisualizer that can be loaded. Its jobs end as errors with that
+  code, and every other engine of the run carries on.
+- **R0** of `lv` is the state read back: vertices, radii, conic constants and the coefficients LensVisualizer's own
+  sag evaluates, the clip limit of its `evaluateAperture` with the stop at the case's stop radius, the index table
+  of its resolver for the case's lines, and the sag of its surface profile, which is NaN beyond the height at which
+  the profile says the surface ends. So R0 of `lv` against `ref` holds the exporter, and the reference engine's
+  reading of the case, to what LensVisualizer traces. A test against LensVisualizer's own tracer holds the echo to
+  that: every hit of `traceEngineRay2` lies on the surface `lv` describes, within its intersection tolerance of
+  1e-9 mm, and is clipped exactly where it lies beyond the described clip radius, the stop's included.
+- **R1** of `lv` is LensVisualizer's paraxial kernel on the state's radii and gaps with the indices of each line,
+  assembled as LensVisualizer assembles it: its own cardinal-point construction on the kernel's system matrix, and
+  the pupils as the kernel's images of the stop. LensVisualizer's own first-order module reads the authored indices
+  only; at such a line the engine's cardinal points are that module's, bit for bit, on all 868 lenses that export.
+- **Recorded, never judged**: LensVisualizer's stored pupil constants, as `lvStoredEntrancePupilZ`,
+  `lvStoredExitPupilZ`, `lvStoredExitPupilSemiDiameter`, `lvNominalEntrancePupilSemiDiameter` and
+  `lvNominalFNumber`, at infinity focus and at a line of authored indices only. They are found with real rays or
+  are nominal, and are not the paraxial images of the stop that R1 compares: on the benchmark the stored entrance
+  pupil lies up to 2.5e-5 mm from the paraxial one, and the nominal entrance pupil is up to 5 % smaller than the
+  image of the stop.
+
+Measured at LensVisualizer `d36f44b3`, with `lvrtc run <suite> --engines lv,ref --rungs r0,r1` and `lvrtc compare`:
+
+| Suite | Pairs | R0: largest sag difference | R1: largest difference |
+|---|---|---|---|
+| `benchmark`, 12 configurations at the reference and the photopic lines | 96 `PASS` | 3.6e-15 mm, `sony-fe-400mm-f28-gm-oss` surface 13; 4.0e-16 scaled, `sony-fe-20mm-f18-g` surface 6 | 1.6e-12 mm, the front focal point of `sony-fe-400mm-f28-gm-oss` at 470 nm |
+| `features`, 16 runs with a case | 64 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 3.3e-16 scaled, `odd-asphere-ref` surface 3 | 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-tele-photopic` at 610 nm |
+
+Everything R0 holds to equality is equal: no vertex, curvature, conic constant, term, clip radius, sag radius or
+index differs in any pair. The two runs of `features` that have no case say why with a code, as before. Over the
+whole catalog, 1676 cases of 868 lenses, every case passes R0 and every case but two passes R1: the reference-line
+case and the photopic case of `viltrox-af-75mm-f12-pro`, a nearly telecentric lens. Its exit pupil lies 7.7 m
+behind the lens at the d line and 14 m in front of it at 650 nm, and the two engines place it 1.1e-9 mm and
+3.0e-9 mm apart there: that is rounding, and it is above the gate. The lens is in neither suite; the entry in
+[docs/gotchas.md](docs/gotchas.md) says what would judge it rightly.
 
 ## Comparing and reporting
 
@@ -358,8 +423,8 @@ An engine is defined under `engines.<id>` by the transport that reaches it:
   speaks the protocol as NDJSON on its standard streams; see below.
 
 `options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
-gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `ref`) need no definition; one that is
-given under a built-in engine's id is the engine of that id. An engine that cannot be built or reached is found
+gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `lv`, `ref`) need no definition; one that
+is given under a built-in engine's id is the engine of that id. An engine that cannot be built or reached is found
 unavailable, with a code that says why: `not-configured`, `load-failed`, `spawn-failed`, `hello-failed`,
 `contract-mismatch` and so on.
 

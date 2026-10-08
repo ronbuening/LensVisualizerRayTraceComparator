@@ -1,6 +1,6 @@
-// Source canaries: the lines of LensVisualizer's own source that the exporter mirrors or relies on, pinned as text
-// at LV commit d36f44b3. LensVisualizer exports none of these rules as a function, so the comparator restates them;
-// when LV rewrites one, the canary fails and names what to read again. Whitespace is not compared.
+// Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
+// pinned as text at LV commit d36f44b3. LensVisualizer exports none of these rules as a function, so the comparator
+// restates them; when LV rewrites one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -104,3 +104,124 @@ test("a flat surface is still one whose radius exceeds 1e10 and that has no asph
     mirror,
   );
 });
+
+test(
+  "a point beyond a profile's finite radius limit is still no surface, though the sag there is a number",
+  { skip },
+  () => {
+    const mirror =
+      "sagOf in src/engines/lv/describe.ts reports NaN beyond finiteRadiusLimit, where the profile's sag is finite";
+    assertSource(
+      "src/optics/math/intersection.ts",
+      "if (domainRadius !== null && radius > domainRadius) return { t, point, radius, value: NaN, derivative: NaN };",
+      mirror,
+    );
+    assertSource("src/optics/math/intersection.ts", "const domainRadius = profile.finiteRadiusLimit();", mirror);
+    // The clamp that keeps the sag finite out there, and the conic and curvature the sag is evaluated with.
+    assertSource(
+      "src/optics/internal/surfaceMath.ts",
+      "const conic = (c * h2) / (1 + Math.sqrt(d > 0 ? d : 1e-12));",
+      mirror,
+    );
+    const shape = "describeLvSystem in src/engines/lv/describe.ts reads the curvature and the conic constant this way";
+    assertSource(
+      "src/optics/internal/surfaceMath.ts",
+      "const c = Math.abs(R) > FLAT_R_THRESHOLD ? 0 : 1.0 / R;",
+      shape,
+    );
+    assertSource("src/optics/internal/surfaceMath.ts", "const K = asph ? asph.K : 0;", shape);
+    assertSource(
+      "src/optics/internal/surfaceMath.ts",
+      "even: Float64Array.from(EVEN_TERM_PLANS, (term) => coefficientOf(asph, term.key)),",
+      "termsOf in src/engines/lv/describe.ts takes the coefficients of ASPHERIC_POLYNOMIAL_TERMS, as the sag does",
+    );
+  },
+);
+
+test(
+  "the paraxial kernel still starts in air and stops in front of the surface it is told to stop at",
+  { skip },
+  () => {
+    const kernel = "src/optics/math/paraxial.ts";
+    const mirror =
+      "lineValues in src/engines/lv/firstOrder.ts images the stop with it: to the stop's plane by stopAt, and from " +
+      "the stop through a plane that puts the ray into the stop's own medium";
+    assertSource(kernel, "const tracedCount = stopAt !== undefined ? stopAt : surfaces.length;", mirror);
+    assertSource(kernel, "let state: ParaxialState = { y: y0, u: u0, n: 1 };", mirror);
+    assertSource(kernel, "if (isLast && skipLastTransfer) continue;", mirror);
+    assertSource(
+      kernel,
+      "const refractivePower = Math.abs(surface.R) < FLAT_R_THRESHOLD ? (nextN - n) / surface.R : 0;",
+      mirror,
+    );
+  },
+);
+
+test(
+  "LensVisualizer still assembles the system matrix, the cardinal points and the entrance pupil as lv does",
+  { skip },
+  () => {
+    const mirror =
+      "lineValues in src/engines/lv/firstOrder.ts assembles the same from the kernel, with a line's indices";
+    const matrix = "src/optics/first-order/systemMatrix.ts";
+    assertSource(
+      matrix,
+      "const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { skipLastTransfer: true });",
+      mirror,
+    );
+    assertSource(
+      matrix,
+      "const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { skipLastTransfer: true });",
+      mirror,
+    );
+    assertSource(matrix, "A: marginal.y, B: chief.y, C: imageIndex * marginal.u, D: imageIndex * chief.u,", mirror);
+    const cardinals = "src/optics/first-order/cardinals.ts";
+    assertSource(
+      cardinals,
+      `frontVertexZ: state.z[0],
+     rearVertexZ: state.z[state.surfaces.length - 1],`,
+      mirror,
+    );
+    assertSource(
+      cardinals,
+      "rearLensVertexZ: state.z[state.lens.runtime.lastLensSurfaceIdx ?? state.surfaces.length - 1],",
+      mirror,
+    );
+    const pupils = "src/optics/first-order/pupils.ts";
+    assertSource(
+      pupils,
+      "const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { stopAt: stopIndex });",
+      mirror,
+    );
+    assertSource(pupils, "const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { stopAt: stopIndex });", mirror);
+  },
+);
+
+test(
+  "the stored pupil constants are still drawn from the stop vertex and the last vertex, at the zoom position",
+  { skip },
+  () => {
+    const overlay = "src/components/diagram/DiagramOverlayLayer.tsx";
+    const mirror = "storedConstants in src/engines/lv/firstOrder.ts converts them to positions in the same way";
+    assertSource(
+      overlay,
+      `const epSD = epAtZoom(zoomT, L);
+     const xpSD = xpAtZoom(zoomT, L);
+     const epZRel = epZRelStopAtZoom(zoomT, L);
+     const xpZRel = xpZRelLastSurfAtZoom(zoomT, L);`,
+      mirror,
+    );
+    assertSource(overlay, "movedScreenPoint(zPos[L.stopIdx] + epZRel, 0)", mirror);
+    assertSource(overlay, "movedScreenPoint(zPos[L.N - 1] + xpZRel, 0)", mirror);
+    assertSource(
+      "src/optics/optics.ts",
+      "epAtZoom2 as epAtZoom,",
+      "the binding takes epAtZoom2 for the overlay's epAtZoom",
+    );
+    // They are found at infinity focus, with real rays and a nominal entrance pupil: recorded, never compared.
+    const runtime = "src/optics/runtimeLens.ts";
+    const recorded = "answerLvFirstOrder records them only at infinity focus and at a line of authored indices";
+    assertSource(runtime, "const epZRelStop = Math.abs(realYRatio) > 1e-9 ? realB / realYRatio - zStop : 0;", recorded);
+    assertSource(runtime, "const xpZRelLastSurf = Math.abs(xpU) > 1e-9 ? -xpY / xpU : Infinity;", recorded);
+  },
+);

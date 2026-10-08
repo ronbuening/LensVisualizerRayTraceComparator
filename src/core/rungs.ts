@@ -10,7 +10,7 @@ import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.t
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunSpec } from "../contract/runSpec.ts";
-import { encodeNdArray } from "./numeric/ndarray.ts";
+import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
 
 /** One rung: what is asked of every engine for one case in one run. */
@@ -39,12 +39,9 @@ export const selftestRung: RungDefinition = Object.freeze({
   quantity: SELFTEST_ECHO,
   buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
     const { system, conditions } = opticalCase;
-    // Adding 0 turns -0 into 0 and changes no other number. An array carries the sign of a zero; a case id does not.
-    const values = Float64Array.from(
-      [...system.surfaces.map((surface) => surface.z), conditions.stopSemiDiameter],
-      (value) => value + 0,
-    );
-    const spec: SelftestEchoSpec = { values: encodeNdArray(values), scale: 1 };
+    // An array carries the sign of a zero; a case id does not.
+    const values = encodeF8([...system.surfaces.map((surface) => surface.z), conditions.stopSemiDiameter]);
+    const spec: SelftestEchoSpec = { values, scale: 1 };
     return [makeRequest({ caseId: opticalCase.id, quantity: SELFTEST_ECHO, spec })];
   },
 });

@@ -35,7 +35,7 @@ const HELP = [
   "",
   "  --root <dir>     the directory that holds lvrtc.config.json (default: this repository)",
   "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine;",
-  "                   the built-in engine ref is run only where it is named",
+  "                   a built-in engine (lv, ref) is run only where it is named",
   "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung",
   "  --json           print one JSON object in place of the lines",
   "",
@@ -138,13 +138,13 @@ function jsonText(result: SuiteRunResult): string {
  * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
- * configuration defines unless a run or `--engines` names others; a built-in engine, such as `ref`, is run only
- * where it is named. A fixture lens is read from the root; a
- * LensVisualizer lens is exported from the checkout the configuration names (`lvPath`), which is loaded only when
- * a run asks for one. Each job is printed as it finishes, as a line of run, rung, engine, status and "computed",
- * "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one object is printed in their
- * place. Which jobs were cached is said only here, never in the manifest. A run that could not be started, and a
- * warning, go to the error stream.
+ * configuration defines unless a run or `--engines` names others; a built-in engine, `lv` or `ref`, is run only
+ * where it is named. A fixture lens is read from the root; a LensVisualizer lens is exported from the checkout the
+ * configuration names (`lvPath`), which is loaded only when a run asks for one or the engine `lv` is run, and the
+ * two share the one binding. Each job is printed as it finishes, as a line of run, rung, engine, status and
+ * "computed", "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one object is printed in
+ * their place. Which jobs were cached is said only here, never in the manifest. A run that could not be started,
+ * and a warning, go to the error stream.
  *
  * Exit codes: 0 when no job ended as "error", every run was started ("unsupported" is an answer) and no case source
  * changed during the run; 1 otherwise; 2, with nothing run, for a command line that is not the synopsis, a `--root`

@@ -41,8 +41,20 @@ export type LvAsphere = Readonly<Record<string, number | undefined>>;
 /** The geometry of one surface as functions of the radial height in mm. */
 export interface LvSurfaceProfile {
   readonly kind: string;
+  /** The sag at a height. Beyond `finiteRadiusLimit` it is a finite continuation that no glass occupies. */
   sag(radius: number): number;
   slope(radius: number): number;
+  /**
+   * The height at which the surface ends, where its conic stops being real, or null for a surface without such a
+   * height. LV's intersection evaluates a point beyond it as no surface at all.
+   */
+  finiteRadiusLimit(): number | null;
+}
+
+/** One polynomial coefficient of LV's aspheric schema: its field name on an asphere and the power of the height. */
+export interface LvAsphericTerm {
+  readonly key: string;
+  readonly power: number;
 }
 
 /**
@@ -184,10 +196,15 @@ export interface LvCardinalInput extends LvSystemMatrix {
   readonly imagePlaneZ: number;
 }
 
-/** LV's CardinalElements2: positions and signed distances in mm. */
+/**
+ * LV's CardinalElements2, the members the comparator reads: positions and signed distances in mm. `bfd` is the rear
+ * focal point's distance from `rearLensVertexZ`.
+ */
 export interface LvCardinalElements {
-  readonly points: Readonly<Record<string, { readonly z: number }>>;
-  readonly distances: Readonly<Record<string, { readonly valueMm: number }>>;
+  readonly points: Readonly<
+    Record<"frontFocal" | "rearFocal" | "frontPrincipal" | "rearPrincipal", { readonly z: number }>
+  >;
+  readonly distances: Readonly<Record<"efl" | "bfd", { readonly valueMm: number }>>;
   readonly frontVertexZ: number;
   readonly rearVertexZ: number;
   readonly rearLensVertexZ: number;
@@ -282,6 +299,16 @@ export interface LvApi {
   computeCardinalElements2(state: LvPreparedState): LvCardinalElements | null;
   entrancePupilAtState2(stopSD: number, focusT: number, zoomT: number, L: LvRuntimeLens): LvEntrancePupil;
   fopenAtZoom2(zoomT: number, L: LvRuntimeLens): number;
+  /**
+   * LV's stored pupil constants at a zoom position, which it draws its pupil markers from. They are properties of
+   * the lens at infinity focus and at its authored indices, and none of them is a paraxial image of the stop: the
+   * entrance pupil's semi-diameter is nominal, focal length over twice the f-number, and the others come from real
+   * rays near the axis. The two positions are relative to the stop vertex and to the last vertex.
+   */
+  epAtZoom2(zoomT: number, L: LvRuntimeLens): number;
+  epZRelStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
+  xpZRelLastSurfAtZoom(zoomT: number, L: LvRuntimeLens): number;
+  xpAtZoom(zoomT: number, L: LvRuntimeLens): number;
   wideOpenStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
   evaluateAperture(
     state: LvPreparedState,
@@ -303,4 +330,8 @@ export interface LvApi {
   mtfFiniteObjectPoint(state: LvPreparedState, conjugate: LvFiniteConjugate, fieldAngle: number): LvVec3 | null;
   /** LV's `LINE_NM`. Anchored indices are fitted between its g and C lines. */
   readonly spectralLinesNm: LvLineNm;
+  /** LV's `FLAT_R_THRESHOLD`: a surface whose radius is larger in magnitude has no curvature. */
+  readonly flatRadiusThreshold: number;
+  /** LV's `ASPHERIC_POLYNOMIAL_TERMS`: every polynomial coefficient its sag evaluates, and no other. */
+  readonly asphericPolynomialTerms: readonly LvAsphericTerm[];
 }

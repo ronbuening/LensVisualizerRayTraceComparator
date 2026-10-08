@@ -1,6 +1,8 @@
 // Fake compatibility layer: the names the comparator's import manifest takes from LV's compat.ts.
 import { DEFAULT_FOPEN, FLAT_RADIUS } from "../lens-data/defaults.js";
+import { ASPHERIC_POLYNOMIAL_TERMS } from "../types/asphericSchema.js";
 import { wideOpenStopAtZoom } from "./apertureStop.js";
+import { FLAT_R_THRESHOLD } from "./constants.js";
 import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "./types.js";
 
 export { computeCardinalElements2 } from "./first-order/cardinals.js";
@@ -16,26 +18,45 @@ export function buildLens2(data: FakeLensData): FakeRuntimeLens {
   const stopIndex = surfaces.findIndex((surface) => surface.label === "STO");
   if (stopIndex < 0) throw new Error(`${data.key}: no STO surface`);
   const isZoom = Array.isArray(data.zoomPositions) && data.zoomPositions.length >= 2;
+  const stopPhysSD = isZoom && data.zoomStopSDs ? data.zoomStopSDs[0] : surfaces[stopIndex].sd;
   return Object.freeze({
     data,
     surfaces,
     lastLensSurfaceIdx,
     isZoom,
     stopIndex,
-    stopPhysSD: isZoom && data.zoomStopSDs ? data.zoomStopSDs[0] : surfaces[stopIndex].sd,
+    stopPhysSD,
     zoomStopSDs: data.zoomStopSDs ?? null,
     FOPEN: data.fopen ?? DEFAULT_FOPEN,
+    // Stored pupil constants, as LV keeps them on the lens: none of them is a paraxial image of the stop.
+    EP: { epSD: 2 * stopPhysSD },
+    epZRelStop: -1.5,
+    xpZRelLastSurf: -12.5,
+    xpSD: 3 * stopPhysSD,
     // One element per glass that follows an authored surface, as the state numbers them.
     elements: data.surfaces.flatMap((surface, index) => (surface.nd === 1 ? [] : [{ id: index + 1 }])),
   });
 }
 
+// A conic with polynomial terms, as LV evaluates one: beyond the height at which the conic ends the root is clamped,
+// so the sag stays finite there, and `finiteRadiusLimit` is what says that no surface is.
 function profileOf(surface: FakeSurfaceData): FakeStateSurface["profile"] {
-  const flat = Math.abs(surface.R) > 1e10;
+  const flat = Math.abs(surface.R) > FLAT_R_THRESHOLD;
   const kind = surface.asphere ? "aspheric" : flat ? "flat" : "spherical";
-  const sag = (radius: number): number => (flat ? 0 : (radius * radius) / (2 * surface.R));
-  const slope = (radius: number): number => (flat ? 0 : radius / surface.R);
-  return { kind, sag, slope };
+  const c = flat ? 0 : 1 / surface.R;
+  const edge = (1 + (surface.asphere?.K ?? 0)) * c * c;
+  const root = (radius: number): number => Math.sqrt(Math.max(1e-12, 1 - edge * radius * radius));
+  const sag = (radius: number): number =>
+    ASPHERIC_POLYNOMIAL_TERMS.reduce(
+      (z, term) => z + (surface.asphere?.[term.key] ?? 0) * radius ** term.power,
+      (c * radius * radius) / (1 + root(radius)),
+    );
+  const slope = (radius: number): number =>
+    ASPHERIC_POLYNOMIAL_TERMS.reduce(
+      (dz, term) => dz + term.power * (surface.asphere?.[term.key] ?? 0) * radius ** (term.power - 1),
+      (c * radius) / root(radius),
+    );
+  return { kind, sag, slope, finiteRadiusLimit: () => (edge > 0 ? 1 / Math.sqrt(edge) : null) };
 }
 
 export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: number, aberrationT = 0): FakeState {
@@ -101,4 +122,8 @@ export function entrancePupilAtState2(stopSD: number): unknown {
 
 export function fopenAtZoom2(_zoomT: number, L: FakeRuntimeLens): number {
   return L.FOPEN;
+}
+
+export function epAtZoom2(zoomT: number, L: FakeRuntimeLens): number {
+  return L.EP.epSD + zoomT;
 }

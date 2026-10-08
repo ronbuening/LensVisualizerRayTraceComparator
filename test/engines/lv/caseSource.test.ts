@@ -76,6 +76,8 @@ test("a lens key becomes the case of that lens, with the lens file and the check
     lensKey: "acme-singlet-50",
     file: SINGLET_FILE,
     fileSha256: fileHash(lv, SINGLET_FILE),
+    zoomT: 0,
+    focusT: 0,
   });
   // A temporary directory is under no git repository.
   assert.deepEqual(opticalCase.provenance.lv, {

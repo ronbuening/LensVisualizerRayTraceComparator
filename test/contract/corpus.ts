@@ -199,6 +199,8 @@ export const ALL_FEATURES_DRAFT = {
       lensKey: "example-zoom",
       file: "src/lens-data/example/ExampleZoom.data.ts",
       fileSha256: sha256Hex("example lens file"),
+      zoomT: 0.5,
+      focusT: 0.25,
     },
     lv: { commit: "0123456789abcdef0123456789abcdef01234567", dirty: false, closureHash: sha256Hex("example closure") },
     notes: ["bulk-absorption", "projection:fisheye-equisolid"],
@@ -356,6 +358,20 @@ export const RESULT_UNSUPPORTED = {
   unsupported: [
     { code: "feature", item: "surface.asphere.odd", message: "odd asphere terms are not implemented" },
     { code: "option", item: "tolerance", message: "the intersection tolerance is fixed" },
+  ],
+  diagnostics: { warnings: [], counts: {} },
+} satisfies ResultEnvelope;
+
+/** A refusal by an engine that answers only about cases of its own source: this case came from a fixture. */
+export const RESULT_UNSUPPORTED_SOURCE = {
+  contract: CONTRACT_VERSION,
+  kind: "result",
+  requestId: REQUEST_MINIMAL.id,
+  caseId: SINGLET_CASE.id,
+  engine: FAKE_ENGINE,
+  status: "unsupported",
+  unsupported: [
+    { code: "case-source", item: "fixture", message: "the engine answers only about cases of its own lenses" },
   ],
   diagnostics: { warnings: [], counts: {} },
 } satisfies ResultEnvelope;
@@ -953,7 +969,13 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
   "run-spec": { minimal: RUN_SPEC_MINIMAL, "worked-example": RUN_SPEC_WORKED, "lv-lens-all-options": RUN_SPEC_LV },
   suite: { minimal: SUITE_MINIMAL, "worked-example": SUITE_WORKED },
   request: { minimal: REQUEST_MINIMAL, "with-engine-options": REQUEST_WITH_OPTIONS },
-  result: { ok: RESULT_OK, unsupported: RESULT_UNSUPPORTED, error: RESULT_ERROR, pending: RESULT_PENDING },
+  result: {
+    ok: RESULT_OK,
+    unsupported: RESULT_UNSUPPORTED,
+    "unsupported-case-source": RESULT_UNSUPPORTED_SOURCE,
+    error: RESULT_ERROR,
+    pending: RESULT_PENDING,
+  },
   "engine-descriptor": { minimal: DESCRIPTOR_MINIMAL, full: DESCRIPTOR_FULL },
   "protocol-request": { hello: PROTOCOL_HELLO, run: PROTOCOL_RUN, shutdown: PROTOCOL_SHUTDOWN },
   "protocol-response": {
@@ -1067,6 +1089,13 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "feature-repeated": fault(SINGLET_CASE, "/features", ["object.finite", "object.finite"], "uniqueItems"),
     "provenance-missing-producer": fault(SINGLET_CASE, "/provenance/producer", REMOVE, "required", "/provenance"),
     "provenance-unknown-source": fault(SINGLET_CASE, "/provenance/source", { kind: "zmx", file: "a.zmx" }, "oneOf"),
+    "provenance-focus-above-one": fault(
+      ALL_FEATURES_CASE,
+      "/provenance/source/focusT",
+      1.25,
+      "oneOf",
+      "/provenance/source",
+    ),
     "provenance-dirty-as-string": fault(ALL_FEATURES_CASE, "/provenance/lv/dirty", "no", "type"),
     "provenance-note-repeated": fault(
       ALL_FEATURES_CASE,
@@ -1138,6 +1167,8 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "engine-details-nested": fault(RESULT_OK, "/engine/details/build", { date: "2026-01-01" }, "type"),
     "unsupported-empty": fault(RESULT_UNSUPPORTED, "/unsupported", [], "minItems"),
     "unsupported-unknown-code": fault(RESULT_UNSUPPORTED, "/unsupported/0/code", "version", "enum"),
+    // The code is `case-source`; a code of another spelling is no code.
+    "unsupported-source-misspelled": fault(RESULT_UNSUPPORTED_SOURCE, "/unsupported/0/code", "caseSource", "enum"),
     "unsupported-missing-item": fault(RESULT_UNSUPPORTED, "/unsupported/1/item", REMOVE, "required", "/unsupported/1"),
     "error-missing-message": fault(RESULT_ERROR, "/error/message", REMOVE, "required", "/error"),
     "error-empty-code": fault(RESULT_ERROR, "/error/code", "", "minLength"),

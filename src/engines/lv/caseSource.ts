@@ -10,11 +10,7 @@ import { exportCase } from "./exportCase.ts";
 import type { ExportCaseResult } from "./exportCase.ts";
 import { problemText } from "./exportProblems.ts";
 import type { ExportProblem } from "./exportProblems.ts";
-import type { LvRuntimeLens } from "./types.ts";
-
-function reasonOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+import { createLensBuilder } from "./lensBuilder.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
 export interface LvExporter {
@@ -35,37 +31,15 @@ export interface LvExporter {
   audit(): SourceAudit;
 }
 
-/** A lens of the catalog as `buildLens` built it, or why there is none. */
-type BuiltLens =
-  | { readonly ok: true; readonly entry: LvCatalogEntry; readonly runtime: LvRuntimeLens }
-  | { readonly ok: false; readonly problem: ExportProblem };
-
 /** The exporter of a bound LensVisualizer checkout. */
 export function createLvExporter(binding: LvBinding): LvExporter {
-  const built = new Map<string, BuiltLens>();
+  const build = createLensBuilder(binding);
   const exported = new Map<string, Pick<LvCatalogEntry, "file" | "fileSha256">>();
   const stampedClosures = new Set<string>();
 
-  const build = async (key: string): Promise<BuiltLens> => {
-    let lens: Awaited<ReturnType<LvBinding["lens"]>>;
-    try {
-      lens = await binding.lens(key);
-    } catch (error) {
-      if (!(error instanceof LvBindingError && error.code === "unknown-lens")) throw error;
-      return { ok: false, problem: { code: "unknown-lens", message: error.message } };
-    }
-    try {
-      return { ok: true, entry: lens.entry, runtime: binding.api.buildLens(lens.data) };
-    } catch (error) {
-      const message = `LensVisualizer cannot build the lens: ${reasonOf(error)}`;
-      return { ok: false, problem: { code: "lens-build-failed", message } };
-    }
-  };
-
   return {
     exportLens: async (key, options) => {
-      let lens = built.get(key);
-      if (lens === undefined) built.set(key, (lens = await build(key)));
+      const lens = await build(key);
       if (!lens.ok) return { ok: false, problems: [lens.problem] };
       const { commit, dirty, engineClosureHash } = binding.fingerprint();
       const result = exportCase({

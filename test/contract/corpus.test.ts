@@ -287,13 +287,20 @@ test("every valid request has the id its content gives", () => {
   }
 });
 
-test("every valid result keeps the status rules, and the fixtures show all four statuses", () => {
-  const statuses = validOnDisk("result").map(([file, value]) => {
+test("every valid result keeps the status rules; the fixtures show every status and a refusal by source", () => {
+  const results = validOnDisk("result").map(([file, value]) => {
     const result = value as ResultEnvelope;
     assert.deepEqual(resultInvariantProblems(result), [], file);
-    return result.status;
+    return result;
   });
-  assert.deepEqual(statuses.sort(), ["error", "ok", "pending", "unsupported"]);
+  assert.deepEqual([...new Set(results.map((result) => result.status))].sort(), [
+    "error",
+    "ok",
+    "pending",
+    "unsupported",
+  ]);
+  const codes = results.flatMap((result) => (result.unsupported ?? []).map((item) => item.code));
+  assert.ok(codes.includes("case-source"), codes.join(", "));
 });
 
 test("every valid suite expands to valid RunSpecs", () => {

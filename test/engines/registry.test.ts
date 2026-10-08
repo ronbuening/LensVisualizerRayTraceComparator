@@ -469,14 +469,14 @@ test("what a factory rejects with is what create rejects with", async (t) => {
 
 // ── Built-in engines ─────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the comparator's built-in engines are ref, and the registry lists them apart from the configured ones", (t) => {
-  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["ref"]);
+test("the built-in engines are lv and ref, and the registry lists them apart from the configured ones", (t) => {
+  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["lv", "ref"]);
   assert.ok(Object.isFrozen(BUILTIN_ENGINES));
   const registry = createEngineRegistry(
     loadConfig({ rootDir: rootWith(t, { fake: inProcess(FAKE_ENGINE) }), env: {} }),
   );
   assert.deepEqual(registry.ids(), ["fake"]);
-  assert.deepEqual(registry.builtinIds(), ["ref"]);
+  assert.deepEqual(registry.builtinIds(), ["lv", "ref"]);
   assert.deepEqual(registryOf(rootWith(t, {})).builtinIds(), []);
 });
 
@@ -520,7 +520,7 @@ test("a definition replaces a built-in engine of the same id", async (t) => {
   const rootDir = rootWith(t, { ref: inProcess(FAKE_ENGINE, { id: "ref" }) });
   const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
   assert.deepEqual(registry.ids(), ["ref"]);
-  assert.deepEqual(registry.builtinIds(), ["ref"]);
+  assert.deepEqual(registry.builtinIds(), ["lv", "ref"]);
   const adapter = await registry.create("ref");
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();
@@ -546,6 +546,20 @@ test("a built-in engine that cannot be made is create-failed, and one that is no
   const misnamed = await registry.create("misnamed");
   t.after(() => misnamed.close());
   await unavailable(misnamed.describe(), "id-mismatch");
+});
+
+test("a built-in engine that says why it cannot be used is unavailable with its own code and words", async (t) => {
+  const reason = new EngineUnavailableError("needy", "load-failed", "what it runs is not there");
+  const builtins: BuiltinEngines = {
+    needy: () => {
+      throw reason;
+    },
+    later: () => Promise.reject(new EngineUnavailableError("later", "not-configured", "nothing says where it is")),
+  };
+  const registry = registryOf(rootWith(t, {}), undefined, builtins);
+  assert.equal(await unavailable(registry.create("needy"), "load-failed"), reason);
+  const later = await unavailable(registry.create("later"), "not-configured");
+  assert.equal(later.message, "engine later is unavailable (not-configured): nothing says where it is");
 });
 
 test("an id that is neither configured nor built in is not-configured, and the error lists both", async (t) => {

@@ -8,6 +8,13 @@ export type ProvenanceSource =
       /** The lens file, relative to the LensVisualizer checkout. */
       readonly file: string;
       readonly fileSha256: string;
+      /**
+       * The zoom and focus position the lens was in, each 0..1 on LensVisualizer's own sliders; a focus position of
+       * 0 is infinity focus. With the lens file they say which prepared state the case was read from, so that
+       * LensVisualizer can be asked about the same one again. The exporter always states both.
+       */
+      readonly zoomT?: number;
+      readonly focusT?: number;
     }
   | { readonly kind: "fixture"; readonly name: string };
 

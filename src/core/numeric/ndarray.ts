@@ -192,6 +192,20 @@ export function encodeNdArray(values: NdValues, shape?: readonly number[]): NdAr
 }
 
 /**
+ * A list of numbers as a float64 array in the wire form, with -0 written as 0 and every other number as it is, the
+ * infinities and a NaN included. It is for an array built from the numbers of a case: a case's identity does not
+ * tell the two zeros apart, so what is said or asked about the case must not either. `shape` defaults to
+ * `[values.length]`.
+ */
+export function encodeF8(values: readonly number[], shape?: readonly number[]): NdArrayWire {
+  // Adding 0 turns -0 into 0 and changes no other number.
+  return encodeNdArray(
+    Float64Array.from(values, (value) => value + 0),
+    shape,
+  );
+}
+
+/**
  * Decodes the wire form into a fresh typed array, bit for bit. Throws an error saying what is wrong unless all of
  * these hold: the structure is the one `isNdArray` accepts; `data` is canonical base64 (standard alphabet, padded,
  * no whitespace); its byte length is the shape's product times the element size; and the bytes hash to `sha256`.

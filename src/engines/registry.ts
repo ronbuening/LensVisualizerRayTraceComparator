@@ -103,8 +103,8 @@ export const TRANSPORT_FACTORIES: TransportFactories = {
  * can be named under any configuration root.
  *
  * Rejects with an `EngineUnavailableError`: `not-configured` for an id that is neither defined nor built in,
- * `unsupported-transport` for a transport without a factory in `factories`, `create-failed` for a built-in engine
- * that could not be made, and whatever the factory rejects with.
+ * `unsupported-transport` for a transport without a factory in `factories`, what a built-in engine that could not
+ * be made says of itself, or `create-failed` when it says nothing, and whatever the factory rejects with.
  */
 export async function createEngineTransport(
   loaded: Pick<LoadedConfig, "rootDir" | "config">,
@@ -119,6 +119,8 @@ export async function createEngineTransport(
       try {
         return createInProcessTransport(await builtins[id](loaded));
       } catch (error) {
+        // A built-in engine that says why it cannot be used is believed.
+        if (error instanceof EngineUnavailableError) throw error;
         const detail = `the built-in engine could not be made: ${reasonOf(error)}`;
         throw new EngineUnavailableError(id, "create-failed", detail, { cause: error });
       }

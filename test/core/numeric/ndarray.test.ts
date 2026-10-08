@@ -7,6 +7,7 @@ import {
   HOST_LITTLE_ENDIAN,
   ND_DTYPES,
   decodeNdArray,
+  encodeF8,
   encodeNdArray,
   fromLittleEndianBytes,
   isNdArray,
@@ -193,6 +194,21 @@ test("a shape is kept as given when its product is the element count", () => {
   }
   // No axes at all is a single element.
   assert.deepEqual(decodeNdArray(encodeNdArray(Float64Array.of(7), [])).shape, []);
+});
+
+test("encodeF8 writes a list of numbers as float64 with -0 as 0, and every other number as it is", () => {
+  const wire = encodeF8([1, -0, 0, -2.5, Infinity, -Infinity, NaN, 5e-324]);
+  assert.equal(wire.$nd.dtype, "f8");
+  assert.deepEqual(wire.$nd.shape, [8]);
+  const { values } = decodeNdArray(wire);
+  assert.ok(Object.is(values[1], 0) && Object.is(values[2], 0), "neither zero is negative");
+  assert.deepEqual([...values], [1, 0, 0, -2.5, Infinity, -Infinity, NaN, 5e-324]);
+  // Two lists that differ only in the sign of a zero are one array, as they are one number in a case's identity.
+  assert.deepEqual(encodeF8([0, 1]), encodeF8([-0, 1]));
+  assert.notDeepEqual(encodeNdArray(Float64Array.of(0, 1)), encodeNdArray(Float64Array.of(-0, 1)));
+  assert.deepEqual(encodeF8([1, 2, 3, 4, 5, 6], [2, 3]).$nd.shape, [2, 3]);
+  assert.deepEqual(encodeF8([]).$nd.shape, [0]);
+  assert.throws(() => encodeF8([1, 2, 3], [2, 2]), /the product of shape \[2,2\] is 4 but the array length is 3/);
 });
 
 test("encodeNdArray rejects a shape that does not fit the array", () => {

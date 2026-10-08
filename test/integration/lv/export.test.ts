@@ -276,6 +276,8 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
     lensKey: "nikkor-z50f12",
     file: "src/lens-data/nikon/NikonNikkorZ50f12.data.ts",
     fileSha256: (await binding.lens("nikkor-z50f12")).entry.fileSha256,
+    zoomT: 0,
+    focusT: 0,
   });
   const { commit, dirty, engineClosureHash } = binding.fingerprint();
   assert.deepEqual(opticalCase.provenance.lv, { commit, dirty, closureHash: engineClosureHash });

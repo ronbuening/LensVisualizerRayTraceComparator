@@ -21,11 +21,14 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/apertureStop.ts",
   "src/optics/buildLens.ts",
   "src/optics/compat.ts",
+  "src/optics/constants.ts",
   "src/optics/first-order/cardinals.ts",
   "src/optics/first-order/systemMatrix.ts",
+  "src/optics/layout.ts",
   "src/optics/math/paraxial.ts",
   "src/optics/spectralLines.ts",
   "src/optics/trace/aperture.ts",
+  "src/types/asphericSchema.ts",
 ];
 
 /** The lens files of the fake tree, sorted, with the key of each. */

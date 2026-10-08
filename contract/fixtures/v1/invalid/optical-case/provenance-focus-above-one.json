@@ -191,7 +191,7 @@
       "file": "src/lens-data/example/ExampleZoom.data.ts",
       "fileSha256": "efc9fa11a8b6d5506a683e515a37ef601ec43bffd97396e82fc7b69db670b3d2",
       "zoomT": 0.5,
-      "focusT": 0.25
+      "focusT": 1.25
     },
     "lv": {
       "commit": "0123456789abcdef0123456789abcdef01234567",
@@ -200,7 +200,7 @@
     },
     "notes": [
       "bulk-absorption",
-      "Fisheye projection"
+      "projection:fisheye-equisolid"
     ],
     "producer": {
       "tool": "lvrtc",

@@ -193,9 +193,12 @@ A `radius` is never 0. An asphere's `radius` may be null (a flat base); its `ter
 `indexSource` is `authored` when the prescription states the index at that line and `anchored` when a dispersion
 model anchored to the authored index supplied it.
 
-`provenance` is `source` (`{ kind: "lv-lens", lensKey, file, fileSha256 }` or `{ kind: "fixture", name }`), `lv?`
-(`commit` and `dirty`, each null when unknown, and `closureHash`, the hash of the LensVisualizer engine files, of
-which no lens file is one), `notes?` and `producer` (`{ tool: "lvrtc", version }`). `notes` lists, as codes and
+`provenance` is `source` (`{ kind: "lv-lens", lensKey, file, fileSha256, zoomT?, focusT? }` or
+`{ kind: "fixture", name }`), `lv?` (`commit` and `dirty`, each null when unknown, and `closureHash`, the hash of
+the LensVisualizer engine files, of which no lens file is one), `notes?` and `producer`
+(`{ tool: "lvrtc", version }`). `zoomT` and `focusT`, each 0..1, are the zoom and focus position the lens was in on
+LensVisualizer's own sliders, a focus position of 0 being infinity focus: with the lens file they say which state
+the case was read from, so that LensVisualizer can be asked about the same one again. `notes` lists, as codes and
 each once, what the source knows about the lens that the case does not carry; the codes LensVisualizer's exporter
 writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 
@@ -253,6 +256,7 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 | `conditions.object` | `infinity` at `focusT` 0; else `finite` at the z of `mtfFiniteObjectPoint` for the conjugate LensVisualizer certifies for exactly that focus and zoom position (`MtfSupport.conjugate`) |
 | `conditions.lines` | a named set: `MtfSupport.spectralLines` of `assessMtfSupport` for that spectrum, with LensVisualizer's weights, its reference line first. An explicit list: its own wavelengths and weights (1 each without weights), the first the reference line |
 | `conditions.indexAfterSurface` | per line, `mtfIndexResolver(state, support, wavelength)`: its indices where it gives a resolver (`indexSource` `anchored`), each surface's `nd` where it gives none (`authored`); air is exactly 1 |
+| `provenance.source` | the lens's key, its file and the hash of the file's bytes, and `zoomT` and `focusT` of the state: `state.zoomT`, `state.focusT` |
 
 **The stop radius.** `wide-open` is `wideOpenStopAtZoom(zoomT, L)`, which is the prepared stop surface's `sd`.
 An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoom(zoomT, L)) / N`. That rule is
@@ -303,11 +307,66 @@ which these matter, adds the member and the flag then; until then the note keeps
 lens and a lens with an annular aperture are outside LensVisualizer's own MTF path, so they are exported on their
 reference line only, with the indices their prescription states.
 
+**A case can be asked for again.** What a case states of its origin and its conditions is enough to export it a
+second time: the lens of `provenance.source` at its `zoomT` and `focusT`, with the stop radius
+`conditions.stopSemiDiameter`, the image plane at `conditions.imageZ`, and the case's own lines. A single line of
+`indexSource` `authored` is LensVisualizer's reference line; any other lines are asked for by wavelength and
+weight, which gives the same anchored indices whether they came from a named spectrum or from a list
+(`exportOptionsOf`, `src/engines/lv/caseModel.ts`). The second export has the `systemId` and the `id` of the first
+for as long as the lens file and LensVisualizer's code give the same numbers. The engine `lv` holds every case it
+is asked about to this; see [The engine `lv`](#the-engine-lv).
+
 **No constraint of the schema had to be relaxed for a real lens.** The limits a prescription could have broken (an
 asphere needs a term, a thickness is not negative, a finite object lies ahead of the first vertex, the image plane
 sits one last gap behind the last vertex) hold for every lens that is exported: a negative gap and an image plane
 elsewhere occur only in folded systems, and an asphere without a term is the conic it equals. The census in
 `reports/census/` counts what was exported, and what was not and why.
+
+### The engine `lv`
+
+LensVisualizer is also an engine, `lv` (`src/engines/lv/engine.ts`): it answers a request from its own prepared
+state and its own functions, and reads nothing of the surfaces of the case it is handed. Its `fingerprint` is the
+closure hash of LensVisualizer's engine files, the `closureHash` of a case's provenance, and its `details` are the
+checkout's `commit` and `dirty` flag and the number of engine files.
+
+| The case | `lv` answers |
+|---|---|
+| came from a LensVisualizer lens, and is what LensVisualizer gives now | the quantity, from the state of that lens |
+| came from a LensVisualizer lens, and is not | status `error`, code `stale-case` |
+| came from any other source | status `unsupported`, one item `{ code: "case-source", item }`, `item` the kind of the source (`fixture`) |
+
+- **Stale.** `lv` exports the case again ([as above](#cases-from-lensvisualizer)) and answers only when that
+  export has the `systemId` and the `id` of the case. Otherwise an answer from LensVisualizer's present state would
+  be about another system than the one the other engines were asked about. The message names what differs from
+  the case's provenance: the lens file's hash, the engine closure, or neither, in which case the case was altered
+  after it was exported. A lens file or an engine file that changed without changing the case leaves it fresh:
+  identity is content. A case that does not state `zoomT` and `focusT` is stale.
+- **`system.describe`** is the state read back: `vertexZ` is `state.z`; `curvature` is one division `1 / R`, and 0
+  above LensVisualizer's own flat threshold; `conic` is the asphere's `K`, and 0 for a surface without curvature
+  and without a term; `terms` are the coefficients of LensVisualizer's own list of polynomial terms that are not 0;
+  `clipRadius` is the largest height its `evaluateAperture` passes a ray at, the stop surface asked with the stop
+  radius of the case; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
+  surface ends; `indexAfterSurface` is its index resolver's table for the case's lines. So R0 of `lv` against any
+  engine holds the exporter, and that engine's reading of the case, to what LensVisualizer traces.
+- **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`traceParaxialSurfaces2`) on the rows
+  `{ R, d, n }` of the state, with `n` the index of the line: two basis rays give the system matrix, its own
+  `buildCardinalElementsFromMatrix2` the cardinal points and the back focus, two rays to the stop's plane the
+  entrance pupil and a ray from the stop's centre the exit pupil. LensVisualizer's own first-order module answers
+  for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
+  bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
+  LensVisualizer displays.
+- **`recorded`** carries LensVisualizer's stored pupil constants, where they are defined: at infinity focus, and
+  at a line traced with the authored indices (NaN at any other line of such a case; a case without such a line has
+  none). Every name says that the value is stored or nominal, because none is the paraxial image of the stop that
+  the compared value of a like name is:
+
+| Recorded | Is, in LensVisualizer |
+|---|---|
+| `lvStoredEntrancePupilZ` | the stop vertex plus `epZRelStopAtZoom(zoomT, L)`: found with real rays near the axis |
+| `lvStoredExitPupilZ` | the last vertex, rear plates included, plus `xpZRelLastSurfAtZoom(zoomT, L)`: likewise |
+| `lvNominalEntrancePupilSemiDiameter` | `epAtZoom2(zoomT, L)`: focal length over twice the nominal f-number |
+| `lvStoredExitPupilSemiDiameter` | `xpAtZoom(zoomT, L)`: scaled from that nominal entrance pupil |
+| `lvNominalFNumber` | `fopenAtZoom2(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
 
 ### `run-spec`
 
@@ -439,7 +498,7 @@ plane and the engines, and keeps the other defaults.
 | `requestId`, `caseId` | sha256 | echoed from the request |
 | `engine` | object | `id`, `fingerprint` and `details`, a flat map of strings, numbers, booleans and nulls |
 | `status` | string | `ok`, `unsupported`, `error` or `pending` |
-| `unsupported?` | object[] | each `{ code, item, message }`; `code` is `feature`, `quantity`, `option` or `contract` |
+| `unsupported?` | object[] | each `{ code, item, message }`; `code` is `feature`, `quantity`, `option`, `contract` or `case-source` |
 | `error?` | object | `{ code, message }` |
 | `method?` | object | `{ name, params }`: how the engine computed the data |
 | `data?` | object | the quantity's data; its schema belongs to the quantity |
@@ -447,6 +506,15 @@ plane and the engines, and keeps the other defaults.
 
 `unsupported` is a first-class answer, not a failure: it is what fills a support matrix. `pending` is a job handed
 to an engine that answers later, such as one a person operates.
+
+An unsupported item's `item` says what exactly, by its `code`: the feature flag or limit of the case (`feature`),
+the quantity id (`quantity`), the option's name (`option`), the contract version (`contract`), or, for an engine
+that answers only about cases of its own source, the kind of the source the case came from, its
+`provenance.source.kind` (`case-source`).
+
+The `code` of a result's `error` is the engine's to choose. Three are written by the comparator's own engines:
+`engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's, and
+`stale-case` for a case that is no longer what its source gives ([the engine `lv`](#the-engine-lv)).
 
 **Invariants checked in code** (`resultInvariantProblems`): status `ok` needs `data`; status `unsupported` needs a
 non-empty `unsupported` list; status `error` needs `error`.
@@ -775,8 +843,9 @@ states after it.
 - **A pupil at infinity**, as a telecentric system has, is the infinity of its sign, in position and in radius. A
   NaN is never a value.
 - **`recorded`** is where an engine puts what it knows and no other engine need have: LensVisualizer's stored
-  pupil constants, for one. For a finite object every engine gives the paraxial lateral magnification of the
-  object plane there, as `magnification`.
+  pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv). For a finite object
+  every engine gives the paraxial lateral magnification of the object plane there, as `magnification`. A recorded
+  value may be a NaN, where the engine has no such value at that line.
 - **No first-order data.** Two kinds of case are answered with status `unsupported`, each with one item of code
   `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is zero, or zero to
   rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a coefficient other than

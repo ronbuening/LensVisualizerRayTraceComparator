@@ -72,6 +72,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
         kind: surface.kind ?? (asphere ? "aspheric" : flat ? "flat" : "spherical"),
         sag: () => 0,
         slope: () => 0,
+        finiteRadiusLimit: () => null,
       },
       z: position,
       // LV keeps the rear-plate flag on the authored record only; `syntheticKind` reads it from there.

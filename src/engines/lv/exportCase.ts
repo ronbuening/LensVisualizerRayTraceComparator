@@ -8,7 +8,7 @@ import packageJson from "../../../package.json" with { type: "json" };
 import { finalizeCase } from "../../contract/case.ts";
 import type { OpticalCase, OpticalCaseDraft, SurfaceIR } from "../../contract/case.ts";
 import type { LvProvenance } from "../../contract/provenance.ts";
-import type { RunOptions } from "../../contract/runSpec.ts";
+import type { RunImagePlane, RunOptions } from "../../contract/runSpec.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
 import { syntheticKind } from "./binding.ts";
 import { stopRadius, surfaceAperture, wideOpenStopRadius } from "./exportAperture.ts";
@@ -31,14 +31,22 @@ export interface ExportedLens {
   readonly fileSha256: string;
 }
 
+/**
+ * What a case is exported under: the options of a run that concern the case, any of which may be left out and
+ * takes its default. The image plane may also be stated as a position, `{ kind: "at", z }`, which is how a case
+ * states it: a shift from the design plane does not always add up to the same double again.
+ */
+export interface ExportOptions extends Pick<RunOptions, "state" | "aperture" | "lines"> {
+  readonly imagePlane?: RunImagePlane | { readonly kind: "at"; readonly z: number };
+}
+
 /** What `exportCase` is given. */
 export interface ExportCaseInput {
   readonly api: LvExportApi;
   readonly lens: ExportedLens;
   /** The lens as `buildLens` built it. */
   readonly runtime: LvRuntimeLens;
-  /** The options of the run that concern the case; any left out takes its default. */
-  readonly options: Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane">;
+  readonly options: ExportOptions;
   /** The LensVisualizer checkout the lens was built by, for the case's provenance. */
   readonly lv: LvProvenance;
 }
@@ -103,6 +111,12 @@ function structuralProblems(state: LvPreparedState): ExportProblem[] {
   return problems;
 }
 
+/** The image plane of a case: the design plane, the design plane moved by a shift, or the position asked for. */
+function imageZOf(imagePlane: NonNullable<ExportOptions["imagePlane"]>, designImageZ: number): number {
+  if (imagePlane.kind === "at") return imagePlane.z;
+  return imagePlane.kind === "shift" ? designImageZ + imagePlane.mm : designImageZ;
+}
+
 /** What the lens has that changes no surface, and that the case therefore does not carry: provenance notes. */
 function notesOf(state: LvPreparedState): string[] {
   const notes: string[] = [];
@@ -125,10 +139,11 @@ function notesOf(state: LvPreparedState): string[] {
  * - **stopIndex** = `state.lens.stop.surfaceIndex`; **lastLensSurfaceIndex** = `L.lastLensSurfaceIdx`;
  *   **designImageZ** = `state.imgZ`.
  * - **conditions.stopSemiDiameter** from the run's aperture (`stopRadius`); the stop surface's aperture carries the
- *   same radius, so every surface clips by its own aperture. **imageZ** = `designImageZ`, plus the run's shift.
+ *   same radius, so every surface clips by its own aperture. **imageZ** = `designImageZ`, plus the run's shift, or
+ *   the position that is asked for.
  * - **lines, indexAfterSurface, object** from LV's MTF support gate and index resolver (`exportLight`).
- * - **provenance**: the lens file with its hash, the LV checkout, and the notes "bulk-absorption" and
- *   "projection:<kind>" for what changes no surface.
+ * - **provenance**: the lens file with its hash and the zoom and focus position of the state, the LV checkout, and
+ *   the notes "bulk-absorption" and "projection:<kind>" for what changes no surface.
  *
  * A lens that cannot be exported as asked is a result with every problem found, each with a code: what the contract
  * cannot express (`structuralProblems`, a surface's shape), what LV does not supply (`exportLight`), an f-number
@@ -236,12 +251,19 @@ function exportChecked(
     conditions: {
       object,
       stopSemiDiameter: stop.radius,
-      imageZ: imagePlane.kind === "shift" ? state.imgZ + imagePlane.mm : state.imgZ,
+      imageZ: imageZOf(imagePlane, state.imgZ),
       lines,
       indexAfterSurface: encodeNdArray(indexAfterSurface, [lines.length, surfaces.length]),
     },
     provenance: {
-      source: { kind: "lv-lens", lensKey: lens.key, file: lens.file, fileSha256: lens.fileSha256 },
+      source: {
+        kind: "lv-lens",
+        lensKey: lens.key,
+        file: lens.file,
+        fileSha256: lens.fileSha256,
+        zoomT: state.zoomT,
+        focusT: state.focusT,
+      },
       lv,
       ...(notes.length > 0 ? { notes } : {}),
       producer: { tool: "lvrtc", version: packageJson.version },

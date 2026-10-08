@@ -28,9 +28,11 @@ export interface EngineAdapter {
 /**
  * Why an engine cannot be used at all:
  *
- * - `not-configured`: the configuration defines no engine with this id;
+ * - `not-configured`: the configuration defines no engine with this id, or does not say where what a built-in
+ *   engine runs is: the engine `lv` without an `lvPath`;
  * - `unsupported-transport`: its definition names a transport that has no implementation here;
- * - `load-failed`: an in-process engine's module is missing or could not be imported;
+ * - `load-failed`: an in-process engine's module is missing or could not be imported, or what a built-in engine
+ *   runs cannot be loaded: the engine `lv` with an `lvPath` that holds no LensVisualizer it can load;
  * - `bad-module`: the module does not export a `createEngine` function;
  * - `create-failed`: `createEngine` threw, as it does for options it does not know, or did not return a handler;
  *   or a built-in engine could not be made;

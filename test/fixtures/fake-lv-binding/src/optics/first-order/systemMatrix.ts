@@ -1,7 +1,16 @@
 import { traceParaxialSurfaces2 } from "../math/paraxial.js";
 import type { FakeState } from "../types.js";
 
-export function computeSystemMatrix2(state: FakeState): Record<string, number> {
+export interface FakeSystemMatrix {
+  A: number;
+  B: number;
+  C: number;
+  D: number;
+  objectIndex: number;
+  imageIndex: number;
+}
+
+export function computeSystemMatrix2(state: FakeState): FakeSystemMatrix {
   const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { skipLastTransfer: true });
   const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { skipLastTransfer: true });
   return {

@@ -11,10 +11,16 @@ export interface ErrorInfo {
   readonly message: string;
 }
 
-/** One thing an engine cannot do for a request: a case feature, the quantity, an option, or the contract version. */
+/**
+ * One thing an engine cannot do for a request: a case feature, the quantity, an option, the contract version, or
+ * the kind of source the case came from, for an engine that answers only about cases of its own source.
+ */
 export interface UnsupportedItem {
-  readonly code: "feature" | "quantity" | "option" | "contract";
-  /** What exactly: the feature flag, the quantity id, the option name or the contract version. */
+  readonly code: "feature" | "quantity" | "option" | "contract" | "case-source";
+  /**
+   * What exactly: the feature flag, the quantity id, the option name, the contract version, or the kind of the
+   * case's source (`provenance.source.kind`).
+   */
   readonly item: string;
   readonly message: string;
 }

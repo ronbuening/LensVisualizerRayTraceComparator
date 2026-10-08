@@ -226,7 +226,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: ref$/m,
+    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, ref$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -502,7 +502,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: ref)\n",
+      "name the engines to run with --engines (built in: lv, ref)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });

@@ -13,7 +13,15 @@
             "kind": { "const": "lv-lens" },
             "lensKey": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
             "file": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
-            "fileSha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+            "fileSha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+            "zoomT": {
+              "description": "The zoom position the lens was in, on LensVisualizer's slider.",
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval"
+            },
+            "focusT": {
+              "description": "The focus position the lens was in, on LensVisualizer's slider; 0 is infinity focus.",
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval"
+            }
           },
           "required": ["kind", "lensKey", "file", "fileSha256"],
           "additionalProperties": false

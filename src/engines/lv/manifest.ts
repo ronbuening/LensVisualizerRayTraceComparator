@@ -41,7 +41,20 @@ export const LV_IMPORT_MANIFEST = [
       "computeCardinalElements2",
       "entrancePupilAtState2",
       "fopenAtZoom2",
+      "epAtZoom2",
     ),
+  },
+  {
+    module: "src/optics/layout.ts",
+    exports: functions("epZRelStopAtZoom", "xpZRelLastSurfAtZoom", "xpAtZoom"),
+  },
+  {
+    module: "src/optics/constants.ts",
+    exports: [{ name: "FLAT_R_THRESHOLD", as: "flatRadiusThreshold", kind: "number" }],
+  },
+  {
+    module: "src/types/asphericSchema.ts",
+    exports: [{ name: "ASPHERIC_POLYNOMIAL_TERMS", as: "asphericPolynomialTerms", kind: "object" }],
   },
   { module: "src/optics/apertureStop.ts", exports: functions("wideOpenStopAtZoom") },
   { module: "src/optics/trace/aperture.ts", exports: functions("evaluateAperture") },

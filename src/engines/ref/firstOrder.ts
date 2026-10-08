@@ -2,7 +2,7 @@
 import { AFOCAL_SYSTEM, FIRST_ORDER_VALUES, LINEAR_SAG_TERM } from "../../contract/quantities/paraxialFirstOrder.ts";
 import type { FirstOrderValue, ParaxialFirstOrderData } from "../../contract/quantities/paraxialFirstOrder.ts";
 import type { UnsupportedItem } from "../../contract/result.ts";
-import { encodeNdArray } from "../../core/numeric/ndarray.ts";
+import { encodeF8 } from "../../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
 import type { RefSystem } from "./model.ts";
 import { firstOrder, vertexCurvature } from "./paraxial.ts";
@@ -11,11 +11,6 @@ import { firstOrder, vertexCurvature } from "./paraxial.ts";
 export type FirstOrderAnswer =
   | { readonly supported: true; readonly data: ParaxialFirstOrderData }
   | { readonly supported: false; readonly items: readonly UnsupportedItem[] };
-
-/** One value per line as a float64 array of shape `[lines]`, with -0 written 0. */
-function perLine(values: readonly number[]): NdArrayWire {
-  return encodeNdArray(Float64Array.from(values, (value) => value + 0));
-}
 
 /**
  * The first-order data of a model at every line of its case, each surface with the indices of that line and the
@@ -61,11 +56,11 @@ export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
     return { supported: false, items: [{ code: "feature", item: AFOCAL_SYSTEM, message }] };
   }
 
-  const values = Object.fromEntries(FIRST_ORDER_VALUES.map((name) => [name, perLine(columns[name])])) as Record<
+  const values = Object.fromEntries(FIRST_ORDER_VALUES.map((name) => [name, encodeF8(columns[name])])) as Record<
     FirstOrderValue,
     NdArrayWire
   >;
   const recorded: Record<string, NdArrayWire> = {};
-  if (system.objectZ !== null) recorded.magnification = perLine(magnifications);
+  if (system.objectZ !== null) recorded.magnification = encodeF8(magnifications);
   return { supported: true, data: { ...values, recorded } };
 }
