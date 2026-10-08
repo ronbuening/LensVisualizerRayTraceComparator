@@ -74,6 +74,21 @@ test("the environment overrides every file layer", (t) => {
   assert.equal(loaded.sources["engines.optiland.python"], "env");
 });
 
+test("LVRTC_RUNS_DIR sets the runs directory above both files, and is resolved like every other path", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: { runsDir: "from-config" },
+    [LOCAL_CONFIG_FILE]: { runsDir: "from-local" },
+  });
+  const loaded = loadConfig({ rootDir, env: { LVRTC_RUNS_DIR: "from-env" } });
+  assert.equal(loaded.config.runsDir, join(rootDir, "from-env"));
+  assert.equal(loaded.sources.runsDir, "env");
+  const elsewhere = resolve(rootDir, "..", "elsewhere");
+  assert.equal(loadConfig({ rootDir, env: { LVRTC_RUNS_DIR: elsewhere } }).config.runsDir, elsewhere);
+  const without = loadConfig({ rootDir, env: {} });
+  assert.equal(without.config.runsDir, join(rootDir, "from-local"));
+  assert.equal(without.sources.runsDir, LOCAL_CONFIG_FILE);
+});
+
 test("an empty environment variable sets nothing", (t) => {
   const rootDir = rootWith(t, { [CONFIG_FILE]: { lvPath: "/lv/from-config" } });
   const loaded = loadConfig({ rootDir, env: { LVRTC_LV_PATH: "", LVRTC_PYTHON: undefined } });

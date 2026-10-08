@@ -1,0 +1,18 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "fake-pair",
+  "defaults": {
+    "rungs": ["selftest"]
+  },
+  "runs": [
+    {
+      "name": "singlet",
+      "lens": { "kind": "fixture", "path": "../../../contract/fixtures/v1/valid/optical-case/singlet.json" }
+    },
+    {
+      "name": "double-gauss",
+      "lens": { "kind": "fixture", "path": "../../../contract/fixtures/v1/valid/optical-case/double-gauss.json" }
+    }
+  ]
+}

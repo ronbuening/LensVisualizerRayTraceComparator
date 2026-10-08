@@ -24,6 +24,16 @@ export interface QuantityRequest {
 export type QuantityRequestParts = Pick<QuantityRequest, "caseId" | "quantity" | "spec" | "engineOptions">;
 
 /**
+ * The content hash that is a request's `id`: it covers `caseId`, `quantity` and `spec` and nothing else, so
+ * `engineOptions` never changes it. Equal parts give an equal hash whatever the key order of `spec`. Throws when a
+ * part is not JSON data.
+ */
+export function requestIdentity(parts: Pick<QuantityRequest, "caseId" | "quantity" | "spec">): string {
+  const { caseId, quantity, spec } = parts;
+  return hashCanonical({ caseId, quantity, spec });
+}
+
+/**
  * Builds a request with its `id`, frozen at every depth; the parts are copied. Equal `caseId`, `quantity` and
  * `spec` give an equal `id` whatever the key order of `spec`, and `engineOptions` never changes it, so one request
  * sent to several engines keeps one id. Throws when a part is not JSON data or the request is not schema-valid.
@@ -33,7 +43,7 @@ export function makeRequest(parts: QuantityRequestParts): QuantityRequest {
   const request: QuantityRequest = {
     contract: CONTRACT_VERSION,
     kind: "request",
-    id: hashCanonical({ caseId, quantity, spec }),
+    id: requestIdentity({ caseId, quantity, spec }),
     caseId,
     quantity,
     spec,

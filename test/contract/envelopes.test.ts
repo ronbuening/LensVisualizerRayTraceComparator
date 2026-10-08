@@ -6,7 +6,7 @@ import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../../src/core/numeric/hash.ts";
 import { engineStamp } from "../../src/contract/engine.ts";
 import { deepFreeze } from "../../src/contract/json.ts";
-import { makeRequest } from "../../src/contract/request.ts";
+import { makeRequest, requestIdentity } from "../../src/contract/request.ts";
 import { makeResult, resultInvariantProblems } from "../../src/contract/result.ts";
 import type { ResultBody, ResultEnvelope } from "../../src/contract/result.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
@@ -76,6 +76,18 @@ test("engine options travel with a request and are not part of its id", () => {
   assert.deepEqual(tuned.engineOptions, { numRays: 512 });
   assert.equal(Object.hasOwn(plain, "engineOptions"), false);
   assert.equal(Object.hasOwn(makeRequest({ ...parts, engineOptions: undefined }), "engineOptions"), false);
+});
+
+test("requestIdentity is the id of a request, from the request itself or from its parts", () => {
+  for (const request of [REQUEST_MINIMAL, REQUEST_WITH_OPTIONS]) {
+    assert.equal(requestIdentity(request), request.id);
+    const { caseId, quantity, spec } = request;
+    assert.equal(requestIdentity({ caseId, quantity, spec }), request.id);
+    // Whatever else a request holds, its stated id included, is not what it is identified by.
+    const dressed = { ...request, id: "0".repeat(64), engineOptions: { other: true } };
+    assert.equal(requestIdentity(dressed), request.id);
+    assert.notEqual(requestIdentity({ ...request, spec: { ...spec, added: 1 } }), request.id);
+  }
 });
 
 test("makeRequest returns a frozen copy of its parts", () => {

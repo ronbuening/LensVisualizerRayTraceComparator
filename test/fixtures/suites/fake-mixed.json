@@ -1,0 +1,19 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "fake-mixed",
+  "runs": [
+    {
+      "name": "lv-lens",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" }
+    },
+    {
+      "name": "singlet",
+      "lens": { "kind": "fixture", "path": "../../../contract/fixtures/v1/valid/optical-case/singlet.json" }
+    },
+    {
+      "name": "missing",
+      "lens": { "kind": "fixture", "path": "cases/missing.json" }
+    }
+  ]
+}

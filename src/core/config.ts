@@ -26,6 +26,7 @@ const ENV_VARIABLES: Readonly<Partial<Record<ConfigKey, string>>> = {
   lvPath: "LVRTC_LV_PATH",
   python: "LVRTC_PYTHON",
   "engines.optiland.python": "LVRTC_OPTILAND_PYTHON",
+  runsDir: "LVRTC_RUNS_DIR",
 };
 
 /**

@@ -34,12 +34,41 @@ node bin/lvrtc.mjs --help
 node bin/lvrtc.mjs doctor
 ```
 
+```bash
+node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root
+```
+
 `npm run check` runs the type check, lint, format check and tests.
 
 `lvrtc doctor [--json]` reports the Node version, every configuration value with the layer that set it, the
 LensVisualizer checkout (path, commit, dirty flag), the Python interpreter and the optiland installation. A missing
 LensVisualizer, Python or optiland is reported, not an error: doctor exits non-zero only for an unsupported Node
 version or a configuration file it cannot use.
+
+## Running a suite
+
+`lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]` runs a suite: for every
+run, every selected rung and every selected engine, it asks the rung's requests of the engine and records how each
+job ended. The example above needs neither LensVisualizer nor optiland: its root defines three fake engines, and
+its only rung, `selftest`, asks for the conformance quantity `selftest.echo`.
+
+- **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
+  replaces both. **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. Phase 0
+  has one rung, `selftest`.
+- **`--root`** names the directory that holds `lvrtc.config.json`; the default is this repository. The suite file
+  and `--root` are relative to the working directory. A fixture lens in a suite is relative to the root.
+- **The result store** is `<runsDir>/store/`, one file per answer, keyed by the request, the engine's id and
+  fingerprint and the engine options. A result of status `ok` or `unsupported` is stored the moment it arrives; an
+  `error` never is. A run that finds an answer there does not ask the engine again, so a run that was killed
+  resumes by being run again, and computes only what is missing.
+- **The output** is `<runsDir>/<suite name>/`: `manifest.json` and `cases/<case id>.json`. The next run of the same
+  suite replaces it. The manifest is canonical JSON and is the same, byte for byte, whether results were computed
+  or found in the store, in any directory and on any machine: it holds no times and no absolute paths, and of what
+  an engine or the system said only the codes. Which jobs were cached, and why a job failed, is printed and not
+  stored. A run that could not be started is recorded with the reason, which names files relative to the root.
+- **Exit code**: 0 when no job ended as an error and every run could be started (`unsupported` is an answer, not a
+  failure); 1 otherwise; 2 when nothing was run because the suite file, an engine or a rung cannot be used as
+  asked.
 
 ## Contract
 
@@ -56,7 +85,7 @@ Values are layered, lowest precedence first:
 1. built-in defaults;
 2. `lvrtc.config.json` (committed): sibling-relative defaults for the LensVisualizer and optiland checkouts;
 3. `lvrtc.local.json` (gitignored): per-machine overrides; copy `lvrtc.local.example.json` to start;
-4. the environment: `LVRTC_LV_PATH`, `LVRTC_PYTHON`, `LVRTC_OPTILAND_PYTHON`.
+4. the environment: `LVRTC_LV_PATH`, `LVRTC_PYTHON`, `LVRTC_OPTILAND_PYTHON`, `LVRTC_RUNS_DIR`.
 
 | Key | Meaning |
 |---|---|
@@ -67,8 +96,9 @@ Values are layered, lowest precedence first:
 | `cacheDir`, `runsDir` | Where caches and run results are written |
 
 In the files, `engines.optiland.python` is written as nested objects, as in `lvrtc.local.example.json`. Relative
-paths resolve against the repository root, whichever layer they come from. An interpreter given as a bare command
-name (`python3`) is looked up on `PATH`. An unknown key or malformed JSON is an error naming the file.
+paths resolve against the configuration root, whichever layer they come from: the directory that holds
+`lvrtc.config.json`, which is this repository unless `lvrtc run --root` names another. An interpreter given as a
+bare command name (`python3`) is looked up on `PATH`. An unknown key or malformed JSON is an error naming the file.
 
 An engine is defined under `engines.<id>` by the transport that reaches it:
 

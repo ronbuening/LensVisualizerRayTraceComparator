@@ -4,7 +4,7 @@ import type { JsonObject } from "./json.ts";
 
 /**
  * The lens of a run: a LensVisualizer lens by catalog key, or an optical-case file by path. A relative path is
- * resolved against the repository root.
+ * resolved against the configuration root: the repository root, unless `lvrtc run --root` names another.
  */
 export type RunLens =
   { readonly kind: "lv"; readonly key: string } | { readonly kind: "fixture"; readonly path: string };
