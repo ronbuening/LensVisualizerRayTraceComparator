@@ -8,8 +8,9 @@ path, then MTF.
 The first external engine is [optiland](https://github.com/optiland/optiland). Engines sit behind one adapter
 contract, so others can be added by a Python worker, a command line, file exchange or HTTP.
 
-Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. The full
-plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. Phase 1
+(LensVisualizer as case source and engine) has begun with the binding that loads LensVisualizer. The full plan is
+in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Try it
 
@@ -71,14 +72,58 @@ node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root
 npm run test:python
 ```
 
+```bash
+npm run test:lv
+```
+
+```bash
+node bin/lvrtc.mjs lenses list
+```
+
+```bash
+node bin/lvrtc.mjs lenses show nikkor-z50f12
+```
+
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
 kit. A TypeScript test that needs Python is skipped, with the reason, where `python3` (or `LVRTC_PYTHON`) is
 missing or older than 3.10; `npm run test:python` itself needs it.
 
+`npm run test:lv` runs the tests in `test/integration/lv`, which need the real LensVisualizer checkout. They are
+not part of `npm run check`, which passes with no LensVisualizer on disk; each skips, with the reason, when
+LensVisualizer is not configured or not there. They write nothing, and the LensVisualizer numbers they pin name
+the commit they were taken at.
+
 `lvrtc doctor [--json]` reports the Node version, every configuration value with the layer that set it, the
-LensVisualizer checkout (path, commit, dirty flag), the Python interpreter and the optiland installation. A missing
-LensVisualizer, Python or optiland is reported, not an error: doctor exits non-zero only for an unsupported Node
-version or a configuration file it cannot use.
+LensVisualizer checkout (path, commit, dirty flag, and the file count and closure hash of the engine code the
+binding loads), the Python interpreter and the optiland installation. A missing LensVisualizer, one that is there
+and cannot be loaded, and a missing Python or optiland are reported, not errors: doctor exits non-zero only for an
+unsupported Node version or a configuration file it cannot use.
+
+## LensVisualizer
+
+LensVisualizer is read, never written, and only through `src/engines/lv/binding.ts`. `loadLvBinding(lvPath)`
+installs the loader that runs LensVisualizer's TypeScript headless, imports the modules of an import manifest
+(`src/engines/lv/manifest.ts`) and checks every export before anything is traced: a function LensVisualizer has
+renamed is reported at load time, with every missing name in one error. The comparator's own types for what it
+reads are local (`src/engines/lv/types.ts`), so the type check needs no LensVisualizer.
+
+- **The engine fingerprint** is `{ engineClosureHash, engineFileCount, commit, dirty }`. The closure hash covers
+  the engine source files Node actually loaded. Lens prescription files (`src/lens-data/**/*.data.ts` and
+  `*.teleconverter.ts`) are not engine code: each is hashed by itself, so editing a lens never changes the engine
+  fingerprint. `commit` and `dirty` come from git, restricted to the LensVisualizer directory: when it sits inside
+  another repository, the commit is the last one that touched it, not that repository's `HEAD`; both are null
+  outside git. `rehash()` reads the loaded engine files again and names those that changed since they were loaded.
+- **The catalog** is an index of every `*.data.ts` under `src/lens-data`, by lens key, with the file and its
+  hash. LensVisualizer has no such index outside its bundler, so the files are imported, once per process.
+  Duplicate keys and files without a default export or a string key are reported together.
+
+`lvrtc lenses list [--root <dir>] [--json]` prints the number of lenses and the key, name and file of each.
+`lvrtc lenses show <key> [--zoom <t>] [--focus <t>] [--root <dir>] [--json]` prints the lens as LensVisualizer
+prepares it for tracing at one zoom and focus position (0 to 1, default 0): a row per surface with its radius or
+`flat`, the gap and index after it, the clear semi-diameter and the vertex position, then the stop surface and
+its runtime radius, the last lens surface, the image plane and the surface count. Rear plates are surfaces of the
+prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that suggests the
+nearest keys. Both commands print to the console only.
 
 ## Running a suite
 
@@ -92,7 +137,9 @@ conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake
   replaces both. **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. Phase 0
   has one rung, `selftest`.
 - **`--root`** names the directory that holds `lvrtc.config.json`; the default is this repository. The suite file
-  and `--root` are relative to the working directory. A fixture lens in a suite is relative to the root.
+  and `--root` are relative to the working directory. A fixture lens in a suite is relative to the root. In every
+  command an option's value may follow it as the next word or after an equals sign: `--root <dir>` or
+  `--root=<dir>`.
 - **The result store** is `<runsDir>/store/`, one file per answer, keyed by the request, the engine's id and
   fingerprint and the engine options. A result of status `ok` or `unsupported` is stored the moment it arrives; an
   `error` never is. A run that finds an answer there does not ask the engine again, so a run that was killed

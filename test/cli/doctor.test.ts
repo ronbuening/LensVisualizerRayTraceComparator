@@ -9,14 +9,20 @@ import {
   createDoctorCommand,
   systemProbe,
   type CommandResult,
+  type DoctorLvBinding,
   type DoctorProbe,
 } from "../../src/cli/commands/doctor.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
+import { FAKE_ENGINE_FILES, closureOf, freshLv } from "../engines/lv/support.ts";
 
 const LV = "/checkouts/lv";
 const OPTILAND_PYTHON = "/checkouts/optiland/.venv/bin/python";
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+const CLOSURE = "c0ffee".repeat(10) + "abcd";
+const GIT_TOP = `git -C ${LV} rev-parse --show-toplevel`;
+const GIT_HEAD = `git -C ${LV} rev-parse HEAD`;
+const GIT_STATUS = `git --no-optional-locks -C ${LV} status --porcelain -- .`;
 const OPTILAND_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
 
 /** A scripted machine: the files that exist and what each command line answers. Unlisted commands cannot start. */
@@ -24,6 +30,8 @@ interface Machine {
   nodeVersion: string;
   files: string[];
   commands: Record<string, CommandResult | null>;
+  /** What loading LensVisualizer through the binding answers. */
+  binding: DoctorLvBinding;
 }
 
 function ok(stdout: string): CommandResult {
@@ -40,12 +48,14 @@ function healthyMachine(): Machine {
     nodeVersion: "24.15.0",
     files: [`${LV}/src/optics/buildLens.ts`],
     commands: {
-      [`git -C ${LV} rev-parse HEAD`]: ok(`${COMMIT}\n`),
-      [`git --no-optional-locks -C ${LV} status --porcelain`]: ok(""),
+      [GIT_TOP]: ok(`${LV}\n`),
+      [GIT_HEAD]: ok(`${COMMIT}\n`),
+      [GIT_STATUS]: ok(""),
       "python3 --version": ok("Python 3.13.1\n"),
       [`${OPTILAND_PYTHON} --version`]: ok("Python 3.12.7\n"),
       [`${OPTILAND_PYTHON} -c ${OPTILAND_SCRIPT}`]: ok("0.6.2\n"),
     },
+    binding: { status: "loaded", engineFileCount: 141, engineClosureHash: CLOSURE },
   };
 }
 
@@ -76,6 +86,10 @@ async function runDoctor(
       const line = [command, ...args].join(" ");
       ran.push(line);
       return machine.commands[line] ?? null;
+    },
+    lvBinding: async (path) => {
+      ran.push(`binding ${path}`);
+      return machine.binding;
     },
   };
   const out: string[] = [];
@@ -125,6 +139,7 @@ test("everything present: the full report, exit 0", async (t) => {
       `  path    ${LV}`,
       "  status  present",
       `  git     ${COMMIT} (clean)`,
+      `  engine  141 files, closure ${CLOSURE}`,
       "",
       "Python",
       "  command  python3",
@@ -142,8 +157,10 @@ test("everything present: the full report, exit 0", async (t) => {
 test("the probes only read: the exact commands run", async (t) => {
   const run = await runDoctor(t, healthyMachine());
   assert.deepEqual(run.ran, [
-    `git -C ${LV} rev-parse HEAD`,
-    `git --no-optional-locks -C ${LV} status --porcelain`,
+    GIT_TOP,
+    GIT_HEAD,
+    GIT_STATUS,
+    `binding ${LV}`,
     "python3 --version",
     `${OPTILAND_PYTHON} --version`,
     `${OPTILAND_PYTHON} -c ${OPTILAND_SCRIPT}`,
@@ -152,7 +169,7 @@ test("the probes only read: the exact commands run", async (t) => {
 
 test("a dirty LensVisualizer checkout is flagged", async (t) => {
   const machine = healthyMachine();
-  machine.commands[`git --no-optional-locks -C ${LV} status --porcelain`] = ok(" M src/optics/buildLens.ts\n");
+  machine.commands[GIT_STATUS] = ok(" M src/optics/buildLens.ts\n");
   const run = await runDoctor(t, machine);
   assert.equal(run.code, EXIT_OK);
   assert.match(run.out, new RegExp(`^  git     ${COMMIT} \\(dirty\\)$`, "m"));
@@ -160,14 +177,49 @@ test("a dirty LensVisualizer checkout is flagged", async (t) => {
 
 test("LensVisualizer outside git is present without a commit", async (t) => {
   const machine = healthyMachine();
-  machine.commands[`git -C ${LV} rev-parse HEAD`] = failed("fatal: not a git repository\n");
+  machine.commands[GIT_TOP] = failed("fatal: not a git repository\n");
   const run = await runDoctor(t, machine, { args: ["--json"] });
   assert.equal(run.code, EXIT_OK);
-  assert.deepEqual(JSON.parse(run.out).lensVisualizer, { git: null, path: LV, status: "present" });
+  assert.deepEqual(JSON.parse(run.out).lensVisualizer, {
+    binding: { engineClosureHash: CLOSURE, engineFileCount: 141, status: "loaded" },
+    git: null,
+    path: LV,
+    status: "present",
+  });
+  assert.ok(!run.ran.some((line) => line.includes("rev-parse HEAD")));
   assert.ok(!run.ran.some((line) => line.includes("status --porcelain")));
 
   const text = await runDoctor(t, machine);
   assert.match(text.out, /^ {2}git {5}not a git checkout$/m);
+});
+
+test("LensVisualizer inside another repository reports the last commit that touched it, not that repository's HEAD", async (t) => {
+  const machine = healthyMachine();
+  machine.commands[GIT_TOP] = ok("/checkouts\n");
+  machine.commands[`git -C ${LV} rev-list -1 HEAD -- .`] = ok(`${COMMIT}\n`);
+  const run = await runDoctor(t, machine);
+  assert.match(run.out, new RegExp(`^  git     ${COMMIT} \\(clean\\)$`, "m"));
+  assert.ok(!run.ran.includes(GIT_HEAD), "HEAD of the enclosing repository is not asked for");
+
+  // A directory that no commit of the enclosing repository has touched has no git state of its own.
+  machine.commands[`git -C ${LV} rev-list -1 HEAD -- .`] = ok("");
+  assert.match((await runDoctor(t, machine)).out, /^ {2}git {5}not a git checkout$/m);
+});
+
+test("a LensVisualizer that is present and cannot be loaded is reported, not a failure", async (t) => {
+  const machine = healthyMachine();
+  machine.binding = { status: "failed", code: "exports-missing", message: "lacks 1 of the exports" };
+  const run = await runDoctor(t, machine);
+  assert.equal(run.code, EXIT_OK);
+  assert.equal(run.err, "");
+  assert.match(run.out, /^ {2}engine {2}not loadable \(exports-missing\): lacks 1 of the exports$/m);
+
+  const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"] })).out);
+  assert.deepEqual(json.lensVisualizer.binding, {
+    code: "exports-missing",
+    message: "lacks 1 of the exports",
+    status: "failed",
+  });
 });
 
 test("LensVisualizer missing is reported, not a failure", async (t) => {
@@ -181,9 +233,10 @@ test("LensVisualizer missing is reported, not a failure", async (t) => {
     /^LensVisualizer\n {2}path {4}\/checkouts\/lv\n {2}status {2}missing\n {2}reason {2}src\/optics/m,
   );
   assert.ok(!run.ran.some((line) => line.startsWith("git ")), "git is not asked about a missing checkout");
+  assert.ok(!run.ran.some((line) => line.startsWith("binding ")), "a missing checkout is not loaded");
 
   const json = await runDoctor(t, machine, { args: ["--json"] });
-  assert.deepEqual(JSON.parse(json.out).lensVisualizer, { git: null, path: LV, status: "missing" });
+  assert.deepEqual(JSON.parse(json.out).lensVisualizer, { binding: null, git: null, path: LV, status: "missing" });
 });
 
 test("LensVisualizer and optiland not configured are reported, not a failure", async (t) => {
@@ -196,7 +249,7 @@ test("LensVisualizer and optiland not configured are reported, not a failure", a
   assert.deepEqual(run.ran, ["python3 --version"]);
 
   const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"], config: {} })).out);
-  assert.deepEqual(json.lensVisualizer, { git: null, path: null, status: "not configured" });
+  assert.deepEqual(json.lensVisualizer, { binding: null, git: null, path: null, status: "not configured" });
   assert.deepEqual(json.optiland, {
     interpreter: "not configured",
     interpreterVersion: null,
@@ -266,7 +319,12 @@ test("--json prints one stable object with sorted keys", async (t) => {
       python: { source: "env", value: "python3" },
       runsDir: { source: "default", value: join(run.rootDir, "runs") },
     },
-    lensVisualizer: { git: { commit: COMMIT, dirty: false }, path: LV, status: "present" },
+    lensVisualizer: {
+      binding: { engineClosureHash: CLOSURE, engineFileCount: 141, status: "loaded" },
+      git: { commit: COMMIT, dirty: false },
+      path: LV,
+      status: "present",
+    },
     node: { ok: true, required: packageJson.engines.node, version: "24.15.0" },
     optiland: {
       interpreter: "present",
@@ -345,4 +403,30 @@ test("the system probe answers null for a command line that cannot be spawned at
   // A NUL byte makes spawnSync throw instead of reporting an error; a configured path may contain anything.
   assert.equal(systemProbe.run("python\0", ["--version"]), null);
   assert.equal(systemProbe.run(process.execPath, ["-C", "/lv\0"]), null);
+});
+
+test("the system probe loads a LensVisualizer tree through the binding and reports its engine closure", async (t) => {
+  const lv = freshLv(t);
+  assert.deepEqual(await systemProbe.lvBinding(lv), {
+    status: "loaded",
+    engineFileCount: FAKE_ENGINE_FILES.length,
+    engineClosureHash: closureOf(lv, FAKE_ENGINE_FILES),
+  });
+});
+
+test("the system probe reports a tree that cannot be loaded instead of failing", async (t) => {
+  const lv = freshLv(t);
+  writeFileSync(join(lv, "src/optics/trace/aperture.ts"), "export const somethingElse = 1;\n");
+  const report = await systemProbe.lvBinding(lv);
+  assert.equal(report.status, "failed");
+  assert.equal(report.status === "failed" && report.code, "exports-missing");
+  assert.match(
+    report.status === "failed" ? report.message : "",
+    /evaluateAperture \(expected function, found undefined\)/,
+  );
+  assert.deepEqual(await systemProbe.lvBinding(join(lv, "nowhere")), {
+    status: "failed",
+    code: "path-missing",
+    message: `LensVisualizer path is not a directory: ${join(lv, "nowhere")}`,
+  });
 });

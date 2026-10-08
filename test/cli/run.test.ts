@@ -329,6 +329,12 @@ test("the suite file and --root are relative to the directory the command is run
   const ended = lvrtcRun(runsDir, args, { cwd });
   assert.equal(ended.code, EXIT_OK, ended.err);
   assert.match(ended.out, /^fake-pair: 2 jobs: 2 ok/m);
+
+  // A value may follow its option after an equals sign, as for every command.
+  const joined = [relative(cwd, FAKE_PAIR_SUITE), `--root=${relative(cwd, FAKE_ROOT)}`, "--engines=fake-a"];
+  const again = lvrtcRun(join(tempDir(t), "runs"), joined, { cwd });
+  assert.equal(again.code, EXIT_OK, again.err);
+  assert.match(again.out, /^fake-pair: 2 jobs: 2 ok/m);
 });
 
 test("a run killed with SIGKILL resumes: only the missing jobs are computed, into a whole run's manifest", (t) => {

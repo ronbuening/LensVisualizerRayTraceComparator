@@ -11,6 +11,7 @@ import { loadSuite } from "../../core/suite.ts";
 import type { LoadedSuite } from "../../core/suite.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
+import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 
@@ -53,26 +54,9 @@ interface RunArguments {
   readonly json: boolean;
 }
 
-function isValueOption(arg: string): arg is ValueOption {
-  return (VALUE_OPTIONS as readonly string[]).includes(arg);
-}
-
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
-function parseArguments(args: readonly string[]): RunArguments {
-  const files: string[] = [];
-  const values = new Map<ValueOption, string>();
-  let json = false;
-  for (let index = 0; index < args.length; index++) {
-    const arg = args[index];
-    if (arg === "--json") json = true;
-    else if (isValueOption(arg)) {
-      const value = args[++index];
-      if (value === undefined || value.startsWith("--")) throw new UsageError(`${arg} needs a value`);
-      if (values.has(arg)) throw new UsageError(`${arg} is given more than once`);
-      values.set(arg, value);
-    } else if (arg.startsWith("-")) throw new UsageError(`unknown option "${arg}"`);
-    else files.push(arg);
-  }
+function readArguments(args: readonly string[]): RunArguments {
+  const { positionals: files, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json"]);
   if (files.length === 0) throw new UsageError("no suite file was named");
   if (files.length > 1) throw new UsageError(`more than one suite file was named: ${files.join(", ")}`);
 
@@ -81,7 +65,13 @@ function parseArguments(args: readonly string[]): RunArguments {
     if (ids?.includes("")) throw new UsageError(`${option} needs ids separated by commas, got "${values.get(option)}"`);
     return ids;
   };
-  return { suite: files[0], root: values.get("--root"), engines: list("--engines"), rungs: list("--rungs"), json };
+  return {
+    suite: files[0],
+    root: values.get("--root"),
+    engines: list("--engines"),
+    rungs: list("--rungs"),
+    json: flags.has("--json"),
+  };
 }
 
 /** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
@@ -163,7 +153,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
       }
       let asked: RunArguments;
       try {
-        asked = parseArguments(args);
+        asked = readArguments(args);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
         io.stderr(`lvrtc run: ${error.message}\n${SYNOPSIS}`);

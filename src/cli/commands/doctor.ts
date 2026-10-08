@@ -1,19 +1,27 @@
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import packageJson from "../../../package.json" with { type: "json" };
 import { CONFIG_KEYS, REPO_ROOT, configValue, loadConfig } from "../../core/config.ts";
 import type { ConfigKey, ConfigLayer, LoadedConfig } from "../../core/config.ts";
+import { commandSucceeded as succeeded, runSystemCommand } from "../../core/systemCommand.ts";
+import type { CommandResult } from "../../core/systemCommand.ts";
+import { LV_MARKER, loadLvBinding } from "../../engines/lv/binding.ts";
+import { LvBindingError } from "../../engines/lv/errors.ts";
+import { lvGitState } from "../../engines/lv/gitState.ts";
+import type { LvGitState } from "../../engines/lv/gitState.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 
-/** Outcome of a command that ran to completion. */
-export interface CommandResult {
-  readonly status: number | null;
-  readonly stdout: string;
-  readonly stderr: string;
-}
+export type { CommandResult };
+
+/**
+ * What loading LensVisualizer through the binding gave: the engine code's closure, or why it could not be loaded.
+ * A checkout can be present and still not loadable, when LV has renamed something the comparator imports.
+ */
+export type DoctorLvBinding =
+  | { readonly status: "loaded"; readonly engineFileCount: number; readonly engineClosureHash: string }
+  | { readonly status: "failed"; readonly code: string; readonly message: string };
 
 /** Everything doctor reads from the machine besides the configuration, injected so tests are hermetic. */
 export interface DoctorProbe {
@@ -22,6 +30,8 @@ export interface DoctorProbe {
   exists(path: string): boolean;
   /** Runs a command to completion without a shell; null when it could not be started or did not finish. */
   run(command: string, args: readonly string[]): CommandResult | null;
+  /** Loads LensVisualizer from a checkout that is present and reports its engine closure; never rejects. */
+  lvBinding(path: string): Promise<DoctorLvBinding>;
 }
 
 /** What `lvrtc doctor` is wired to: where the configuration lives, the environment, and the machine. */
@@ -39,8 +49,13 @@ export interface DoctorReport {
     /** "present" means `src/optics/buildLens.ts` exists under the path. */
     readonly status: "present" | "missing" | "not configured";
     readonly path: string | null;
-    /** Null unless LV is present and is a git checkout. */
-    readonly git: { readonly commit: string; readonly dirty: boolean } | null;
+    /**
+     * Null unless LV is present and under git. Restricted to the checkout: inside another repository, the commit is
+     * the last one that touched the LV directory and `dirty` looks at nothing outside it.
+     */
+    readonly git: LvGitState | null;
+    /** Null unless LV is present. */
+    readonly binding: DoctorLvBinding | null;
   };
   /** `version` is the interpreter's `--version` output, or null when it could not be run. */
   readonly python: { readonly command: string; readonly version: string | null };
@@ -55,10 +70,8 @@ export interface DoctorReport {
 }
 
 const NODE_RANGE: string = packageJson.engines.node;
-const LV_MARKER = "src/optics/buildLens.ts";
 /** optiland has no `__version__`; its distribution metadata is the only version it carries. */
 const OPTILAND_VERSION_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
-const PROBE_TIMEOUT_MS = 20_000;
 const USAGE = "Usage: lvrtc doctor [--json]\n";
 
 type Version = readonly [number, number, number];
@@ -89,27 +102,16 @@ function satisfiesRange(version: string, range: string): boolean {
     });
 }
 
-function succeeded(result: CommandResult | null): result is CommandResult {
-  return result !== null && result.status === 0;
-}
-
 /** The interpreter's `--version` line, or null when it could not be run. */
 function interpreterVersion(command: string, probe: DoctorProbe): string | null {
   const result = probe.run(command, ["--version"]);
   return succeeded(result) ? result.stdout.trim() || result.stderr.trim() : null;
 }
 
-function probeLensVisualizer(path: string | null, probe: DoctorProbe): DoctorReport["lensVisualizer"] {
-  if (path === null) return { status: "not configured", path: null, git: null };
-  if (!probe.exists(join(path, LV_MARKER))) return { status: "missing", path, git: null };
-  // Both git commands only read; --no-optional-locks keeps `status` from refreshing LV's index.
-  const head = probe.run("git", ["-C", path, "rev-parse", "HEAD"]);
-  const status = succeeded(head)
-    ? probe.run("git", ["--no-optional-locks", "-C", path, "status", "--porcelain"])
-    : null;
-  const git =
-    succeeded(head) && succeeded(status) ? { commit: head.stdout.trim(), dirty: status.stdout.trim() !== "" } : null;
-  return { status: "present", path, git };
+async function probeLensVisualizer(path: string | null, probe: DoctorProbe): Promise<DoctorReport["lensVisualizer"]> {
+  if (path === null) return { status: "not configured", path: null, git: null, binding: null };
+  if (!probe.exists(join(path, LV_MARKER))) return { status: "missing", path, git: null, binding: null };
+  return { status: "present", path, git: lvGitState(path, probe.run), binding: await probe.lvBinding(path) };
 }
 
 function probeOptiland(python: string | null, probe: DoctorProbe): DoctorReport["optiland"] {
@@ -125,8 +127,11 @@ function probeOptiland(python: string | null, probe: DoctorProbe): DoctorReport[
   };
 }
 
-/** Gathers the report. Probes only read: nothing is written, installed or imported from LV or optiland. */
-export function collectDoctorReport(loaded: LoadedConfig, probe: DoctorProbe): DoctorReport {
+/**
+ * Gathers the report. Probes only read: nothing is written or installed, and nothing of optiland is imported.
+ * A LensVisualizer checkout that is present is loaded through the binding, in this process, to fingerprint it.
+ */
+export async function collectDoctorReport(loaded: LoadedConfig, probe: DoctorProbe): Promise<DoctorReport> {
   const { config, sources } = loaded;
   const nodeVersion = probe.nodeVersion();
   return {
@@ -134,7 +139,7 @@ export function collectDoctorReport(loaded: LoadedConfig, probe: DoctorProbe): D
     config: Object.fromEntries(
       CONFIG_KEYS.map((key) => [key, { value: configValue(config, key), source: sources[key] }]),
     ) as DoctorReport["config"],
-    lensVisualizer: probeLensVisualizer(config.lvPath, probe),
+    lensVisualizer: await probeLensVisualizer(config.lvPath, probe),
     python: { command: config.python, version: interpreterVersion(config.python, probe) },
     optiland: probeOptiland(config.engines.optiland.python, probe),
   };
@@ -155,8 +160,13 @@ export function renderDoctorText(report: DoctorReport): string {
   if (lensVisualizer.path !== null) lvRows.unshift(["path", lensVisualizer.path]);
   if (lensVisualizer.status === "missing") lvRows.push(["reason", `${LV_MARKER} not found under the path`]);
   if (lensVisualizer.status === "present") {
-    const { git } = lensVisualizer;
+    const { git, binding } = lensVisualizer;
     lvRows.push(["git", git === null ? "not a git checkout" : `${git.commit} (${git.dirty ? "dirty" : "clean"})`]);
+    if (binding?.status === "loaded") {
+      lvRows.push(["engine", `${binding.engineFileCount} files, closure ${binding.engineClosureHash}`]);
+    } else if (binding?.status === "failed") {
+      lvRows.push(["engine", `not loadable (${binding.code}): ${binding.message}`]);
+    }
   }
 
   const optilandRows: Row[] = [["interpreter", optiland.interpreter]];
@@ -200,7 +210,8 @@ export function renderDoctorJson(report: DoctorReport): string {
 
 /**
  * Builds `lvrtc doctor [--json]`. It exits 1 only when the Node version is out of range; a missing LensVisualizer,
- * Python or optiland is reported and exits 0. A configuration file that cannot be read is an error.
+ * one that is present and cannot be loaded, and a missing Python or optiland are reported and exit 0. A
+ * configuration file that cannot be read is an error.
  */
 export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
   return {
@@ -217,7 +228,7 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
         return EXIT_USAGE;
       }
       const loaded = loadConfig({ rootDir: inputs.rootDir, env: inputs.env });
-      const report = collectDoctorReport(loaded, inputs.probe);
+      const report = await collectDoctorReport(loaded, inputs.probe);
       io.stdout(args.includes("--json") ? renderDoctorJson(report) : renderDoctorText(report));
       if (report.node.ok) return EXIT_OK;
       io.stderr(`lvrtc doctor: Node ${report.node.version} is outside the supported range ${report.node.required}\n`);
@@ -226,56 +237,26 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
   };
 }
 
-/**
- * The variables with which git points its hooks and `rebase --exec` commands at its own repository
- * (`git rev-parse --local-env-vars`). They outrank `-C`, so a probe that inherited them would read LensVisualizer's
- * commit and dirty flag from whichever repository the parent git was working in.
- */
-const GIT_REPOSITORY_VARIABLES: readonly string[] = [
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_COMMON_DIR",
-  "GIT_CONFIG",
-  "GIT_CONFIG_COUNT",
-  "GIT_CONFIG_PARAMETERS",
-  "GIT_DIR",
-  "GIT_GRAFT_FILE",
-  "GIT_IMPLICIT_WORK_TREE",
-  "GIT_INDEX_FILE",
-  "GIT_NO_REPLACE_OBJECTS",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_PREFIX",
-  "GIT_REPLACE_REF_BASE",
-  "GIT_SHALLOW_FILE",
-  "GIT_WORK_TREE",
-];
-
-function probeEnvironment(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, PYTHONDONTWRITEBYTECODE: "1" };
-  for (const name of GIT_REPOSITORY_VARIABLES) delete env[name];
-  return env;
+/** Loads LensVisualizer through the binding; a failure becomes the report of it. */
+async function loadedBinding(path: string): Promise<DoctorLvBinding> {
+  try {
+    const { engineFileCount, engineClosureHash } = (await loadLvBinding(path)).engineClosure();
+    return { status: "loaded", engineFileCount, engineClosureHash };
+  } catch (error) {
+    const code = error instanceof LvBindingError ? error.code : "load-failed";
+    return { status: "failed", code, message: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 /**
- * Probes this machine. Commands run without a shell and under a time limit; Python is told not to write bytecode,
- * and git is not handed a repository inherited from a parent git.
+ * Probes this machine. Commands run as `runSystemCommand` runs them: without a shell, under a time limit, Python
+ * told not to write bytecode and git not handed a repository inherited from a parent git.
  */
 export const systemProbe: DoctorProbe = {
   nodeVersion: () => process.versions.node,
   exists: (path) => existsSync(path),
-  run: (command, args) => {
-    try {
-      const result = spawnSync(command, [...args], {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: PROBE_TIMEOUT_MS,
-        env: probeEnvironment(),
-      });
-      return result.error ? null : { status: result.status, stdout: result.stdout, stderr: result.stderr };
-    } catch {
-      // spawnSync throws, instead of reporting, on a command line it refuses outright (a NUL byte in a path).
-      return null;
-    }
-  },
+  run: runSystemCommand,
+  lvBinding: loadedBinding,
 };
 
 /** `lvrtc doctor` wired to this repository, the process environment and this machine. */

@@ -4,6 +4,7 @@ import type { CliCommand, CliIo } from "./command.ts";
 import { compareCommand } from "./commands/compare.ts";
 import { doctorCommand } from "./commands/doctor.ts";
 import { engineCommand } from "./commands/engine.ts";
+import { lensesCommand } from "./commands/lenses.ts";
 import { reportCommand } from "./commands/report.ts";
 import { runCommand } from "./commands/run.ts";
 
@@ -17,6 +18,7 @@ export const COMMANDS: readonly CliCommand[] = [
   compareCommand,
   reportCommand,
   engineCommand,
+  lensesCommand,
 ];
 
 function helpText(commands: readonly CliCommand[]): string {

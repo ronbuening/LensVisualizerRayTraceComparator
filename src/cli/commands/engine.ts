@@ -8,6 +8,7 @@ import { runConformance } from "../../engines/conformance.ts";
 import type { ConformanceReport, ConformanceStatus } from "../../engines/conformance.ts";
 import { createEngineTransport } from "../../engines/registry.ts";
 import type { EngineTimeouts } from "../../engines/remote.ts";
+import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 
@@ -48,27 +49,14 @@ interface EngineArguments {
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
-function parseArguments(args: readonly string[]): EngineArguments {
+function readArguments(args: readonly string[]): EngineArguments {
   const [action, ...rest] = args;
   if (action === undefined) throw new UsageError("no action was named: there is conformance");
   if (action !== "conformance") throw new UsageError(`unknown action "${action}": there is conformance`);
-  const ids: string[] = [];
-  let root: string | undefined;
-  let json = false;
-  for (let index = 0; index < rest.length; index++) {
-    const arg = rest[index];
-    if (arg === "--json") json = true;
-    else if (arg === "--root") {
-      const value = rest[++index];
-      if (value === undefined || value.startsWith("--")) throw new UsageError("--root needs a value");
-      if (root !== undefined) throw new UsageError("--root is given more than once");
-      root = value;
-    } else if (arg.startsWith("-")) throw new UsageError(`unknown option "${arg}"`);
-    else ids.push(arg);
-  }
+  const { positionals: ids, values, flags } = parseArguments(rest, ["--root"], ["--json"]);
   if (ids.length === 0) throw new UsageError("no engine was named");
   if (ids.length > 1) throw new UsageError(`more than one engine was named: ${ids.join(", ")}`);
-  return { id: ids[0], root, json };
+  return { id: ids[0], root: values.get("--root"), json: flags.has("--json") };
 }
 
 /** One line per check, in columns, and a closing line that counts them. */
@@ -107,7 +95,7 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
       }
       let asked: EngineArguments;
       try {
-        asked = parseArguments(args);
+        asked = readArguments(args);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
         io.stderr(`lvrtc engine: ${error.message}\n${SYNOPSIS}`);

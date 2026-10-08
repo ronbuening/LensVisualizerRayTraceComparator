@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
@@ -74,4 +75,16 @@ test("bin/lvrtc.mjs runs under plain node with no flags", () => {
   const bin = fileURLToPath(new URL("../bin/lvrtc.mjs", import.meta.url));
   const output = execFileSync(process.execPath, [bin, "--version"], { encoding: "utf8" });
   assert.equal(output, `${packageJson.version}\n`);
+});
+
+test("a reader that closes the pipe early ends the command quietly, as `lvrtc lenses list | head` does", async () => {
+  const bin = fileURLToPath(new URL("../bin/lvrtc.mjs", import.meta.url));
+  const child = spawn(process.execPath, [bin, "--help"], { stdio: ["ignore", "pipe", "pipe"] });
+  // The read end is gone before the command has started, so its first write finds a broken pipe.
+  child.stdout.destroy();
+  let stderr = "";
+  child.stderr.setEncoding("utf8").on("data", (text: string) => (stderr += text));
+  const [code] = await once(child, "close");
+  assert.equal(stderr, "");
+  assert.equal(code, EXIT_OK);
 });

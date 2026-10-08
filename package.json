@@ -17,7 +17,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"bin/**/*.mjs\" \"*.config.js\" \"*.json\" \"contract/schema/**/*.json\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"bin/**/*.mjs\" \"*.config.js\" \"*.json\" \"contract/schema/**/*.json\"",
-    "test": "node --test \"test/**/*.test.ts\"",
+    "test": "node --test \"test/*.test.ts\" \"test/!(integration)/**/*.test.ts\"",
+    "test:lv": "node --test \"test/integration/lv/**/*.test.ts\"",
     "test:python": "python3 -B -m unittest discover -s workers/python/tests/kit -t workers/python",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run test:python"
   },

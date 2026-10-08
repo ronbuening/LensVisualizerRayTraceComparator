@@ -10,8 +10,9 @@ npm run check          # typecheck + lint + format:check + test; run before ever
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint .
 npm run format         # prettier --write
-npm test               # node --test "test/**/*.test.ts"
+npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit (workers/python/tests/kit); part of check
+npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -20,6 +21,8 @@ node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a
 node test/contract/writeCorpus.ts   # rewrite contract/fixtures after editing test/contract/corpus.ts
 node test/report/writeGolden.ts     # rewrite test/fixtures/golden after a change meant to change a report
 node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   # the conformance kit on one engine
+node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
+node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing (console only)
 ```
 
 ## Rules
@@ -33,6 +36,22 @@ node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   #
   Integration tests skip with a stated reason when LV or optiland is not configured.
 - **LV and optiland are read-only.** Never edit either checkout. LV is imported only from
   `src/engines/lv/binding.ts`; optiland is called only from `workers/python/lvrtc_optiland`.
+- **The LV binding is the only door to LV.** To use one more LV function, add its name to
+  `src/engines/lv/manifest.ts` and its signature to `LvApi` in `src/engines/lv/types.ts`; the type check fails
+  until the two agree, and the binding checks the export at load time. Types of LV values are local structural
+  types: never `import type` from the LV path, so `npm run typecheck` passes with no LV on disk.
+- **The LV engine fingerprint covers engine code only.** Lens prescription files (`src/lens-data/**/*.data.ts`,
+  `*.teleconverter.ts`) are hashed one by one into the catalog and never into the engine closure.
+- **Read a prepared state, not the authored lens.** The runtime stop radius is `state.surfaces[stopIndex].sd`;
+  never read a surface's `source` or `base`, `L.stopPhysSD` or `L.totalTrack`. `syntheticKind` in the binding is
+  the one reader of `source` (LV keeps the rear-plate flag nowhere else).
+- **Tests that need the real LV** are `test/integration/lv/**/*.test.ts`, run by `npm run test:lv` and excluded
+  from `npm test`. Each skips with a reason when LV is missing (`LV_UNAVAILABLE` in
+  `test/integration/lv/support.ts`), writes nothing into the repository or LV, and names the LV commit of every
+  number it pins. Hermetic binding tests use the fake tree `test/fixtures/fake-lv-binding`, copied to a temporary
+  directory per test (`freshLv`), and close the binding they open: the loader serves one LV tree at a time.
+- **Nothing LV-derived that reproduces a prescription is committed**: only result numbers, hashes, counts and
+  lens keys. `lvrtc lenses show` is console output.
 - **`test/fixtures/` is data, not source**: excluded from `tsc`, eslint and prettier. Tests load fixture modules
   from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only** (`workers/python/lvrtc_worker_kit`, Python `>=3.10`, type hints, 120

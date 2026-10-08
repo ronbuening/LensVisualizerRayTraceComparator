@@ -6,6 +6,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import { loadConfig } from "../core/config.ts";
 import { MANIFEST_FILE } from "../core/manifest.ts";
 import { UsageError } from "../core/usageError.ts";
+import { parseArguments } from "./arguments.ts";
 
 /** What a command that reads a run directory is wired to, injected so that tests choose all three. */
 export interface RunTargetInputs {
@@ -24,28 +25,16 @@ export interface TargetArguments {
 }
 
 /**
- * Reads a command line of one target, options that take a value (`valueOptions`) and flags. Throws a `UsageError`
- * for an option that is neither, one given twice or without its value, no target and more than one.
+ * Reads a command line of one target, options that take a value (`valueOptions`) and flags, as `parseArguments`
+ * does. Throws a `UsageError` for an option that is neither, one given twice or without its value, no target and
+ * more than one.
  */
 export function parseTargetArguments(
   args: readonly string[],
   valueOptions: readonly string[],
   flagOptions: readonly string[],
 ): TargetArguments {
-  const targets: string[] = [];
-  const values = new Map<string, string>();
-  const flags = new Set<string>();
-  for (let index = 0; index < args.length; index++) {
-    const arg = args[index];
-    if (flagOptions.includes(arg)) flags.add(arg);
-    else if (valueOptions.includes(arg)) {
-      const value = args[++index];
-      if (value === undefined || value.startsWith("--")) throw new UsageError(`${arg} needs a value`);
-      if (values.has(arg)) throw new UsageError(`${arg} is given more than once`);
-      values.set(arg, value);
-    } else if (arg.startsWith("-")) throw new UsageError(`unknown option "${arg}"`);
-    else targets.push(arg);
-  }
+  const { positionals: targets, values, flags } = parseArguments(args, valueOptions, flagOptions);
   if (targets.length === 0) throw new UsageError("no suite name or run directory was given");
   if (targets.length > 1) throw new UsageError(`more than one suite or run directory was given: ${targets.join(", ")}`);
   return { target: targets[0], values, flags };

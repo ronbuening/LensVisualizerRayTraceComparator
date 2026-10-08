@@ -151,9 +151,11 @@ test("--json prints the report as one object with sorted keys", async (t) => {
 test("--root names the configuration root, relative to the working directory", async (t) => {
   const rootDir = rootWith(t, ENGINES);
   const elsewhere = rootWith(t, {});
-  const ended = await engine(["conformance", "good", "--root", "../root"], { rootDir: elsewhere, cwd: rootDir });
-  assert.equal(ended.code, EXIT_OK, ended.err);
-  assert.match(ended.out, /^good: conforms: /m);
+  for (const root of [["--root", "../root"], ["--root=../root"]]) {
+    const ended = await engine(["conformance", "good", ...root], { rootDir: elsewhere, cwd: rootDir });
+    assert.equal(ended.code, EXIT_OK, ended.err);
+    assert.match(ended.out, /^good: conforms: /m);
+  }
 
   const missing = await engine(["conformance", "good", "--root", "no-such-directory"], { rootDir });
   assert.equal(missing.code, EXIT_USAGE);
@@ -190,7 +192,8 @@ test("a command line that is not the synopsis is a usage error that shows it", a
     [["conformance", "good", "--root"], "--root needs a value"],
     [["conformance", "good", "--root", "--json"], "--root needs a value"],
     [["conformance", "good", "--root", "a", "--root", "b"], "--root is given more than once"],
-    [["conformance", "good", "--root=a"], 'unknown option "--root=a"'],
+    [["conformance", "good", "--root="], "--root needs a value"],
+    [["conformance", "good", "--json=1"], 'unknown option "--json=1"'],
   ];
   for (const [args, problem] of cases) {
     const ended = await engine(args, { rootDir });
