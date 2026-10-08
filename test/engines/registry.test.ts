@@ -195,10 +195,10 @@ test("an engine without options is created with an empty object", async (t) => {
   assert.ok(error.message.endsWith("the engine refused hello (tiny): {}"), error.message);
 });
 
-test("the README's example is a valid configuration that defines the comparator's own fake engine", (t) => {
-  const readme = readFileSync(join(REPO_ROOT, "README.md"), "utf8");
-  const example = /An engine is defined under[^\n]*\n+```json\n([\s\S]*?)\n```/.exec(readme);
-  assert.ok(example !== null, "the README has the example");
+test("the reference's example is a valid configuration that defines the comparator's own fake engine", (t) => {
+  const reference = readFileSync(join(REPO_ROOT, "docs", "REFERENCE.md"), "utf8");
+  const example = /An engine is defined under[^\n]*\n+```json\n([\s\S]*?)\n```/.exec(reference);
+  assert.ok(example !== null, "docs/REFERENCE.md has the example");
   const rootDir = rootWith(t, (JSON.parse(example[1]) as { engines: unknown }).engines);
   const definitions = loadConfig({ rootDir, env: {} }).config.engineDefinitions;
   assert.deepEqual(Object.keys(definitions), ["fake-a", "worker"]);
