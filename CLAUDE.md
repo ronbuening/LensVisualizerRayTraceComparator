@@ -24,7 +24,7 @@ node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   #
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
-node bin/lvrtc.mjs export --all --census reports/census   # every lens at its default state; rewrites the census
+node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both
@@ -32,6 +32,7 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
+node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
 
 ## Rules
@@ -57,6 +58,12 @@ node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; 
 - **The exporter translates and never approximates.** What the contract cannot express is a coded problem for
   that run. A rule LV keeps only in its UI (the stop-down formula) is mirrored here with a source canary in
   `test/integration/lv/canaries.test.ts`. Hermetic tests use synthetic numbers only, never an LV-derived value.
+- **A zoom is compared at both ends wherever no zoom position is stated** (`src/engines/lv/zoomEnds.ts`): a suite
+  run of an LV zoom without `state.zoomT` is two runs, `<name>-wide` and `<name>-tele`; the census and `lvrtc mtf`
+  without `--zoom` do the same. The expansion is the LV case source's (`CaseSource.expand`), never `expandSuite`'s,
+  and the runs it gives are ordinary runs; a suite's hash is that of the file as written. An explicit position is
+  one state. A prime has no zoom position: one stated for it is taken as 0 (`exportCase`). Middle stations are
+  Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and hint at `--zoom 1` on stderr.
 - **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
   suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).

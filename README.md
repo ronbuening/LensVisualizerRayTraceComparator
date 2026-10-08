@@ -164,20 +164,23 @@ reads are local (`src/engines/lv/types.ts`), so the type check needs no LensVisu
 
 `lvrtc lenses list [--root <dir>] [--json]` prints the number of lenses and the key, name and file of each.
 `lvrtc lenses show <key> [--zoom <t>] [--focus <t>] [--root <dir>] [--json]` prints the lens as LensVisualizer
-prepares it for tracing at one zoom and focus position (0 to 1, default 0): a row per surface with its radius or
-`flat`, the gap and index after it, the clear semi-diameter and the vertex position, then the stop surface and
-its runtime radius, the last lens surface, the image plane and the surface count. Rear plates are surfaces of the
-prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that suggests the
-nearest keys. Both commands print to the console only.
+prepares it for tracing at one zoom and focus position (0 to 1, default 0; for a zoom shown without `--zoom` the
+error stream says that `--zoom 1` gives the tele end, and a prime has no zoom position): a row per surface with
+its radius or `flat`, the gap and index after it, the clear semi-diameter and the vertex position, then the stop
+surface and its runtime radius, the last lens surface, the image plane and the surface count. Rear plates are
+surfaces of the prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that
+suggests the nearest keys. Both commands print to the console only.
 
 ### Cases
 
 `lvrtc export <lensKey> [--zoom <t>] [--focus <t>] [--aperture wide-open|f/<N>|r=<mm>] [--lines reference|cdf|photopic] [--out <file>] [--root <dir>]`
-writes one lens as an **optical case**, the document every engine is asked about, as canonical JSON: to `--out`,
-or else to the output. The case is built from the state LensVisualizer prepares for tracing and from the functions
-its own tracers call (the clip radius of every surface, the lines and their weights, the index after every surface
-at every line, the object of a certified focus station), never from authored surface fields. The mapping, member
-by member, is in [contract/CONTRACT.md](contract/CONTRACT.md#cases-from-lensvisualizer).
+writes one lens in one state as an **optical case**, the document every engine is asked about, as canonical JSON:
+to `--out`, or else to the output. Without `--zoom` a zoom is exported at its wide end, and the error stream says
+that `--zoom 1` gives the tele end; a prime has no zoom position, and one given for it is ignored, which is said
+too. The case is built from the state LensVisualizer prepares for tracing and from the functions its own tracers
+call (the clip radius of every surface, the lines and their weights, the index after every surface at every line,
+the object of a certified focus station), never from authored surface fields. The mapping, member by member, is in
+[contract/CONTRACT.md](contract/CONTRACT.md#cases-from-lensvisualizer).
 
 - **The stop.** `wide-open` is LensVisualizer's wide-open stop radius at that zoom position; `f/<N>` is its linear
   stop-down rule, `wide-open radius × widest f-number / N`; `r=<mm>` is a stop radius as given. An f-number faster
@@ -189,25 +192,35 @@ by member, is in [contract/CONTRACT.md](contract/CONTRACT.md#cases-from-lensvisu
   lens without dispersion data, mixed d and e references). A lens that cannot be exported as asked exits 1 with
   every reason, as `<key>: <code>: <message>`.
 
-`lvrtc export --all [--census <dir>] [--json] [--root <dir>]` exports every lens at its default state (zoom 0,
-infinity focus, wide open, the design image plane) on its reference line, never stopping at a lens, and prints
-how many were exported and how many were not, by reason. `--census <dir>` writes the **census** to
-`lv-export.json` and `lv-export.md` in that directory: the counts, the lens keys under each reason, the feature
-flags and limits of the exported cases, and the LensVisualizer commit and engine closure hash it was taken of. The
-committed one is in [reports/census/](reports/census/lv-export.md); it is a snapshot, holds no surface data and
-is asserted nowhere. Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
+`lvrtc export --all [--census <dir>] [--json] [--root <dir>]` exports every lens (infinity focus, wide open, the
+design image plane) on its reference line, a prime in its one state and **every zoom at both ends**, zoom 0 and
+zoom 1, never stopping at a state, and prints how many lenses and states there are, how many states were exported
+and how many were not, for the primes and for each end of the zooms, and by reason. `--census <dir>` writes the
+**census** to `lv-export.json` and `lv-export.md` in that directory: the counts, the lens keys under each reason
+(a zoom once, with its end where the reason applies to one end only), the feature flags and limits of the
+exported cases, and the LensVisualizer commit and engine closure hash it was taken of. The committed one is in
+[reports/census/](reports/census/lv-export.md); it is a snapshot, holds no surface data and is asserted nowhere.
+Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 ### Suites
 
 Three suites of LensVisualizer lenses are in `suites/`. None names a rung: a run uses every rung of the ladder.
+
+**A zoom is compared at both ends wherever no position is stated.** A run of a zoom lens without `state.zoomT`
+is two runs, `<name>-wide` (zoom 0) and `<name>-tele` (zoom 1), each with its own case, rays, comparisons and
+report rows; a run that states `zoomT` is that one state, and a prime is unaffected. Which lens is a zoom is
+LensVisualizer's answer, so the rule is applied when the suite is loaded against the checkout; the authored zoom
+stations between the ends are not run unless a run states one. The contract states the rule under
+[run-spec](contract/CONTRACT.md#a-zoom-without-a-position).
+
 Each names the built-in engines, `lv` and `ref`, as the engines of its runs, so that it runs at the root of this
 repository, whose configuration defines no engine; `--engines` names others.
 
 | Suite | Is |
 |---|---|
-| `smoke.json` | two small lenses, one of them also on the photopic lines |
+| `smoke.json` | two small primes, one of them also on the photopic lines, and one small zoom, which states no position and so runs at both ends: five runs |
 | `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines |
-| `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom at its tele end, an asphere without a term, a stop inside an element |
+| `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom (at both ends: it states no position), an asphere without a term, a stop inside an element: 16 runs as written, 18 as run |
 
 Two translation paths have no run, because no lens of the catalog has a case for them: the one lens that mixes d
 and e references has no wavelength data for every glass (`mixed-reference`), and every lens with an annular
@@ -364,7 +377,7 @@ Measured at LensVisualizer `d36f44b3`, with `lvrtc run <suite> --engines lv,ref 
 | Suite | Pairs | R0: largest sag difference | R1: largest difference |
 |---|---|---|---|
 | `benchmark`, 12 configurations at the reference and the photopic lines | 96 `PASS` | 3.6e-15 mm, `sony-fe-400mm-f28-gm-oss` surface 13; 4.0e-16 scaled, `sony-fe-20mm-f18-g` surface 6 | 1.6e-12 mm, the front focal point of `sony-fe-400mm-f28-gm-oss` at 470 nm; of a pupil's position 3.4e-13 mm |
-| `features`, 16 runs with a case | 64 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 2.7e-16 scaled, `odd-asphere-ref` surface 1 | 5.3e-14 mm, the front focal point of `odd-asphere-photopic` at 610 nm; of a pupil's position 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-tele-photopic` |
+| `features`, 18 runs with a case (its zoom at both ends; measured again at `ed78cf40`) | 72 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 2.7e-16 scaled, `odd-asphere-ref` surface 1 | 5.3e-14 mm, the front focal point of `odd-asphere-photopic` at 610 nm; of a pupil's position 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-photopic-tele` |
 
 Everything R0 holds to equality is equal: no vertex, curvature, conic constant, term, clip radius, sag radius or
 index differs in any pair. Over the whole catalog, 1676 cases of 868 lenses, every case passes R0 and every case
@@ -467,15 +480,16 @@ Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
 | Suite | Pairs of R2 and R3 | R2: largest hit, direction, landing | R3: largest path, to image, relative |
 |---|---|---|---|
 | `benchmark`, 216 ray sets, 137 596 rays ok in both | 864 `PASS` | 6.8e-9 mm, 3.1e-10, 9.1e-9 mm: `sigma-35mm-f14-dg-hsm-a` at 650 nm, 31.9° | 6.0e-6, 5.3e-6, 5.5e-6 waves |
-| `features`, 144 ray sets, 92 052 rays ok in both | 568 `PASS`, 8 `FLOOR` | 2.3e-9 mm; 2.1e-10 and 1.10e-8 mm, `zeiss-hologon-15f8` at 470 nm, 55.3° | 3.8e-6 waves; 2.07e-5 and 2.28e-5 waves, that ray of the Hologon |
+| `features`, 162 ray sets with its zoom at both ends, 104 846 rays ok in both (measured again at `ed78cf40`) | 640 `PASS`, 8 `FLOOR` | 2.3e-9 mm; 2.1e-10 and 1.10e-8 mm, `zeiss-hologon-15f8` at 470 nm, 55.3° | 3.8e-6 waves; 2.07e-5 and 2.28e-5 waves, that ray of the Hologon |
 
 A pair is counted in both modes, as `lvrtc compare` counts it, so the eight floors are four comparisons: R2 and R3
 of the Hologon at its full field, at 470 nm and 510 nm, where the rays leave 54° off the axis. Traced in 60-digit
 arithmetic, `ref` is within 6e-15 mm and 2e-11 waves of the truth on the worst of those rays, and LensVisualizer
 the rest. Not one ray of either suite is stopped by one engine and passed by the other, in the rim band or outside
 it, and none is failed by either. Over the whole catalog, in a sweep outside the tests, some lenses fail R2:
-because LensVisualizer loses rays where two neighbouring surfaces cross, or because a steep surface carries its
-tolerance past what the floor allows. Both are in [docs/gotchas.md](docs/gotchas.md).
+because LensVisualizer loses rays where two neighbouring surfaces cross (two zooms do so at their tele end only),
+or because a steep surface carries its tolerance past what the floor allows. Both are in
+[docs/gotchas.md](docs/gotchas.md).
 
 **The committed record** is [reports/benchmark/lv-floor.md](reports/benchmark/lv-floor.md), with
 `lv-floor.json` beside it: for every run and rung of the benchmark the largest value of each metric, the verdicts,
@@ -499,6 +513,13 @@ sagittal and tangential MTF at the frequencies the profile shows, then the engin
 focus shift it applied, the f-number it traced and the surface that limits the axial beam, the lines it computed
 with and its notes. With one engine it only presents; setting engines against each other is Phase 3, and adds
 nothing to this command line.
+
+**A zoom is asked about at both ends.** Without `--zoom`, a zoom lens gets two requests, two tables and two run
+directories, the wide end (zoom 0) and then the tele end (zoom 1), each table under a line that says which end it
+is (`state    zoom 1 (tele), infinity focus`); `--zoom <t>` asks about that one position, and what it prints and
+writes for `--zoom 1` is the tele part of the two, bit for bit. A prime has one state; a `--zoom` given for it is
+ignored, and the error stream says so. With `--json` both ends are one object, the record of each end under
+`wide` and `tele`.
 
 - **The profile `lv-tab-default`**, the default, is the request LensVisualizer's MTF tab makes for a lens as it
   opens. Its method, spectrum, focus mode, grid cap, field spacing and shown frequencies are LensVisualizer's own
@@ -534,8 +555,9 @@ nothing to this command line.
   position other than 0 and `-f8` for the comparison. Answers are kept in the result store as for a suite, so a
   second run computes nothing. The file holds no time, no path and nothing of the machine. `--json` prints it,
   with the fields of each answer as plain numbers.
-- **Exit code**: 0 when every engine answered, `unsupported` included; 1 when an engine ended in an error, when
-  the lens has no case or when LensVisualizer cannot be loaded; 2 for a command line that cannot be used.
+- **Exit code**: 0 when every engine answered in every state, `unsupported` included; 1 when an engine ended in
+  an error, when the lens has no case in a state that was asked about (the other end is asked all the same) or
+  when LensVisualizer cannot be loaded; 2 for a command line that cannot be used.
 
 Held by the integration tests: the answer for each of the 12 benchmark configurations equals LensVisualizer's own
 `computeMtf` for the tab's request, spelled out a second time in the test, in every bit of every curve; the lens

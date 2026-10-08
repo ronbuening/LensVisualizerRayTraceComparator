@@ -55,15 +55,13 @@
       "lines": { "kind": "photopic" }
     },
     {
-      "name": "fixed-iris-zoom-tele-ref",
+      "name": "fixed-iris-zoom-ref",
       "lens": { "kind": "lv", "key": "nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom" },
-      "state": { "zoomT": 1 },
       "lines": { "kind": "reference" }
     },
     {
-      "name": "fixed-iris-zoom-tele-photopic",
+      "name": "fixed-iris-zoom-photopic",
       "lens": { "kind": "lv", "key": "nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom" },
-      "state": { "zoomT": 1 },
       "lines": { "kind": "photopic" }
     },
     {

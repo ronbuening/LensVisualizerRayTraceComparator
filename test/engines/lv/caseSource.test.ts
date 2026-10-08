@@ -11,16 +11,19 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { RunOptions, RunSpec } from "../../../src/contract/runSpec.ts";
 import { validateKind } from "../../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
-import { SOURCE_CHANGED } from "../../../src/core/manifest.ts";
+import { REPO_ROOT } from "../../../src/core/config.ts";
+import { SOURCE_CHANGED, manifestText } from "../../../src/core/manifest.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { runSuite } from "../../../src/core/orchestrator.ts";
 import { createFixtureCaseSource, loadSuite } from "../../../src/core/suite.ts";
 import type { CaseResolution } from "../../../src/core/suite.ts";
+import { UsageError } from "../../../src/core/usageError.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { problemCode } from "../../../src/engines/lv/exportProblems.ts";
-import { fakeEngine, tempDir, watchedRegistry } from "../../core/support.ts";
+import { SINGLET, fakeEngine, tempDir, watchedRegistry } from "../../core/support.ts";
 import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, bind, closureOf, fileHash, freshLv } from "./support.ts";
 
+const SINGLET_ID = SINGLET.id;
 const [SINGLET_FILE, ZOOM_FILE] = FAKE_LENS_FILES.map(([file]) => file);
 
 /** A run of one LensVisualizer lens. */
@@ -297,7 +300,9 @@ test("a suite of LensVisualizer lenses loads through the source, and its manifes
     [
       ["singlet", true, []],
       ["zoom-tele", true, []],
-      ["refocused", false, ["finite-conjugate-unavailable"]],
+      // No zoom position is stated of a zoom: one run for each end, and neither end is a certified station.
+      ["refocused-wide", false, ["finite-conjugate-unavailable"]],
+      ["refocused-tele", false, ["finite-conjugate-unavailable"]],
     ],
   );
 
@@ -323,6 +328,150 @@ test("a suite of LensVisualizer lenses loads through the source, and its manifes
     ],
   );
   assert.deepEqual(result.warnings, []);
+});
+
+// ── A zoom at both ends ──────────────────────────────────────────────────────────────────────────────────────────
+
+const SINGLET_LENS = { kind: "lv", key: "acme-singlet-50" } as const;
+const ZOOM_LENS = { kind: "lv", key: "acme-zoom-24-48" } as const;
+
+test("a run of a zoom that states no zoom position stands for two runs, one for each end; any other run for itself", async (t) => {
+  const lv = freshLv(t);
+  const source = createLvCaseSource(lv);
+  const names = async (spec: RunSpec): Promise<unknown[]> =>
+    (await source.expand(spec)).map((expanded) => [expanded.name, expanded.state]);
+
+  // A zoom without a position: wide, then tele, named after the run, and alike in everything else.
+  const open = run("acme-zoom-24-48", { lines: { kind: "photopic" }, engines: ["lv"] });
+  const [wide, tele] = await source.expand(open);
+  assert.deepEqual(wide, { ...open, name: "a-run-wide", state: { zoomT: 0 } });
+  assert.deepEqual(tele, { ...open, name: "a-run-tele", state: { zoomT: 1 } });
+  for (const expanded of [wide, tele]) assert.deepEqual(validateKind("run-spec", expanded), []);
+  // What else the state says is kept.
+  const focus = { kind: "focusT", value: 1 } as const;
+  assert.deepEqual(await names(run("acme-zoom-24-48", { state: { focus } })), [
+    ["a-run-wide", { focus, zoomT: 0 }],
+    ["a-run-tele", { focus, zoomT: 1 }],
+  ]);
+
+  // A position that is stated is one state, an end included; a prime is one state, whatever it states.
+  for (const zoomT of [0, 0.5, 1]) {
+    assert.deepEqual(await names(run("acme-zoom-24-48", { state: { zoomT } })), [["a-run", { zoomT }]]);
+  }
+  assert.deepEqual(await names(run("acme-singlet-50")), [["a-run", undefined]]);
+  assert.deepEqual(await names(run("acme-singlet-50", { state: { zoomT: 1 } })), [["a-run", { zoomT: 1 }]]);
+  // A lens that cannot be looked up, and a lens of another kind, are left for `resolve` to refuse.
+  assert.deepEqual(await names(run("no-such-lens")), [["a-run", undefined]]);
+  const fixture: RunSpec = { ...run("x"), lens: { kind: "fixture", path: "case.json" } };
+  assert.deepEqual(await source.expand(fixture), [fixture]);
+  // Without a LensVisualizer nothing is known of the lens: the run is one run, with the problem of the checkout.
+  const unconfigured = createLvCaseSource(null);
+  assert.deepEqual(await unconfigured.expand(open), [open]);
+});
+
+test("a prime has no zoom position: a run that states one has the case of the run that states none", async (t) => {
+  const source = createLvCaseSource(freshLv(t));
+  const plain = caseOf(await source.resolve(run("acme-singlet-50")));
+  const positioned = caseOf(await source.resolve(run("acme-singlet-50", { state: { zoomT: 1 } })));
+  assert.deepEqual(positioned, plain);
+  assert.equal(plain.provenance.source.kind === "lv-lens" && plain.provenance.source.zoomT, 0);
+});
+
+test("a suite runs a zoom without a position at both ends, as two ordinary runs with two cases", async (t) => {
+  const lv = freshLv(t);
+  const fixturePath = "contract/fixtures/v1/valid/optical-case/singlet.json";
+  const runs = [
+    { name: "zoom", lens: ZOOM_LENS },
+    { name: "zoom-middle", lens: ZOOM_LENS, state: { zoomT: 0.5 } },
+    { name: "zoom-long", lens: ZOOM_LENS, state: { zoomT: 1 } },
+    { name: "prime", lens: SINGLET_LENS },
+    { name: "case-file", lens: { kind: "fixture", path: fixturePath } },
+  ];
+  const { rootDir, file } = suiteFile(t, runs);
+  const sources = { fixture: createFixtureCaseSource(REPO_ROOT), lv: createLvCaseSource(lv) };
+  const suite = await loadSuite(file, { rootDir, sources });
+  assert.deepEqual(
+    suite.runs.map(({ spec, problems }) => [spec.name, spec.state?.zoomT, problems]),
+    [
+      ["zoom-wide", 0, []],
+      ["zoom-tele", 1, []],
+      ["zoom-middle", 0.5, []],
+      ["zoom-long", 1, []],
+      ["prime", undefined, []],
+      ["case-file", undefined, []],
+    ],
+  );
+  const caseOfRun = (name: string): OpticalCase => {
+    const found = suite.runs.find((loaded) => loaded.spec.name === name)?.opticalCase;
+    assert.ok(found, name);
+    return found;
+  };
+  // Two ends, two cases of two systems; the tele end is the case of the run that states zoom 1.
+  const [wide, tele] = [caseOfRun("zoom-wide"), caseOfRun("zoom-tele")];
+  assert.deepEqual([wide.label.zoomT, tele.label.zoomT], [0, 1]);
+  assert.notEqual(wide.id, tele.id);
+  assert.notEqual(wide.systemId, tele.systemId);
+  assert.equal(tele.id, caseOfRun("zoom-long").id);
+  assert.equal(new Set(suite.runs.map((loaded) => loaded.opticalCase?.id)).size, 5);
+  // The case file is the file, whatever any source says of zooms.
+  assert.equal(caseOfRun("case-file").id, SINGLET_ID);
+
+  // The hash is that of the suite as it is written: the same without a LensVisualizer, where the zoom is one run
+  // that cannot be started.
+  const without = await loadSuite(file, { rootDir, sources: { ...sources, lv: createLvCaseSource(null) } });
+  assert.equal(without.hash, suite.hash);
+  assert.deepEqual(
+    without.runs.map(({ spec, opticalCase }) => [spec.name, opticalCase !== null]),
+    [
+      ["zoom", false],
+      ["zoom-middle", false],
+      ["zoom-long", false],
+      ["prime", false],
+      ["case-file", true],
+    ],
+  );
+
+  // The orchestrator and the manifest know them as runs like any other, and the manifest is the same bytes again.
+  const manifests: string[] = [];
+  for (const directory of ["runs", "again"]) {
+    const { registry } = watchedRegistry({ "fake-a": fakeEngine() });
+    const loaded = await loadSuite(file, { rootDir, sources });
+    const result = await runSuite({
+      suite: loaded,
+      registry,
+      runsDir: join(rootDir, directory),
+      sources,
+      rungs: ["selftest"],
+    });
+    assert.deepEqual(
+      result.manifest.runs.map((each) => [each.name, each.caseId]),
+      suite.runs.map((each) => [each.spec.name, each.opticalCase?.id]),
+    );
+    assert.deepEqual(
+      result.manifest.jobs.map((job) => [job.run, job.caseId, job.status]),
+      suite.runs.map((each) => [each.spec.name, each.opticalCase?.id, "ok"]),
+    );
+    assert.equal(result.manifest.suite.hash, suite.hash);
+    manifests.push(manifestText(result.manifest));
+  }
+  assert.equal(manifests[1], manifests[0]);
+});
+
+test("a run that an end of a zoom would be named like is a suite that cannot be used", async (t) => {
+  const lv = freshLv(t);
+  const { rootDir, file } = suiteFile(t, [
+    { name: "zoom", lens: ZOOM_LENS },
+    { name: "zoom-tele", lens: SINGLET_LENS },
+  ]);
+  const sources = { lv: createLvCaseSource(lv) };
+  await assert.rejects(loadSuite(file, { rootDir, sources }), (error: unknown) => {
+    assert.ok(error instanceof UsageError);
+    assert.equal(
+      error.message,
+      `${file}: suite lv-suite: more than one run is named "zoom-tele", which the run "zoom" stands for`,
+    );
+    return true;
+  });
 });
 
 test("a lens file edited between loading the suite and the end of its run marks the manifest", async (t) => {

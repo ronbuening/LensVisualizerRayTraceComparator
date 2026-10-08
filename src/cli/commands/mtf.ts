@@ -20,13 +20,15 @@ import type { JobSource } from "../../core/orchestrator.ts";
 import { STORE_DIRECTORY, createResultStore, isStorable } from "../../core/resultStore.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { EngineUnavailableError, enginesText } from "../../engines/adapter.ts";
-import type { EngineAdapter } from "../../engines/adapter.ts";
+import type { EngineAdapter, EngineUnavailableCode } from "../../engines/adapter.ts";
 import { loadLvBinding } from "../../engines/lv/binding.ts";
 import type { LvBinding } from "../../engines/lv/binding.ts";
 import { LvBindingError } from "../../engines/lv/errors.ts";
 import { problemText } from "../../engines/lv/exportProblems.ts";
 import { createLvTabProfileResolver } from "../../engines/lv/tabProfile.ts";
 import { LV_TAB_COMPARISON_F_NUMBER, LV_TAB_PROFILE } from "../../engines/lv/tabRequest.ts";
+import { ZOOM_ENDS, primeZoomNote, zoomEndAt } from "../../engines/lv/zoomEnds.ts";
+import type { ZoomEnd } from "../../engines/lv/zoomEnds.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { mtfTableRows, mtfTableText } from "../../report/mtfTable.ts";
@@ -61,18 +63,24 @@ const HELP = [
   "traced, the lines it computed with and its notes. The request, the case and the answers are written to",
   "<runsDir>/mtf/<profile>/<run>/mtf.json; an answer the result store already holds is not computed again.",
   "",
+  "A zoom is asked about at both ends unless --zoom names one position: the wide end (zoom 0) and then the tele end",
+  "(zoom 1), each with its own request, its own table, labelled wide or tele, and its own run directory.",
+  "",
   `  --engines <ids>   the engines to ask (default: ${DEFAULT_ENGINES.join(",")})`,
   `  --profile <name>  the request to make (default: ${LV_TAB_PROFILE}). ${LV_TAB_PROFILE} is the request of`,
   "                    LensVisualizer's MTF tab as it opens: its default method, spectrum, focus, grid cap, fields",
   "                    and frequencies, with the stop and pupil radii of its own hook",
-  "  --zoom <t>        zoom position from 0 (wide) to 1 (tele); default 0",
+  "  --zoom <t>        one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has",
+  "                    no zoom position",
   `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
   "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
-  "  --json            print one JSON object in place of the lines",
+  "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
+  "                    a zoom, an object with the record of each end under wide and tele",
   "",
   "Exit code: 0 when every engine answered (unsupported is an answer, not a failure); 1 when an engine ended in an",
-  "error, when the lens has no case (each reason is printed with its code) or when LensVisualizer cannot be",
-  "loaded; 2 when the command line cannot be used as given, which includes a key that is not in the catalog.",
+  "error, when the lens has no case in a state that was asked about (each reason is printed with its code) or when",
+  "LensVisualizer cannot be loaded; 2 when the command line cannot be used as given, which includes a key that is",
+  "not in the catalog.",
   "",
 ].join("\n");
 
@@ -141,7 +149,8 @@ interface MtfArguments {
   readonly lensKey: string;
   readonly engines: readonly string[];
   readonly profile: string;
-  readonly zoomT: number;
+  /** The zoom position that was named; undefined when none was. */
+  readonly zoomT: number | undefined;
   readonly aperture: RunAperture;
   readonly root: string | undefined;
   readonly json: boolean;
@@ -166,7 +175,7 @@ function readArguments(args: readonly string[]): MtfArguments {
     lensKey: keys[0],
     engines: [...new Set(engines)].sort(),
     profile,
-    zoomT: zoom === undefined ? 0 : sliderPosition("--zoom", zoom),
+    zoomT: zoom === undefined ? undefined : sliderPosition("--zoom", zoom),
     aperture: aperture === undefined ? { kind: "wide-open" } : apertureOption(aperture),
     root: values.get("--root"),
     json: flags.has("--json"),
@@ -181,6 +190,11 @@ interface Asked {
   /** The message of an "error" and the messages of an "unsupported": never stored. */
   readonly detail: string | null;
 }
+
+/** An engine for the length of a command: reached and described, or the code and the words of why it cannot be. */
+type EngineSession =
+  | { readonly adapter: EngineAdapter; readonly descriptor: EngineDescriptor }
+  | { readonly code: EngineUnavailableCode; readonly message: string };
 
 /** The engine as a run records it. */
 function engineOf(id: string, descriptor: EngineDescriptor): ManifestEngine {
@@ -229,24 +243,32 @@ function tablesOf(
  * Builds `lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>] [--aperture ...] [--root <dir>]
  * [--json]`.
  *
- * It loads the configuration of the root and LensVisualizer (`lvPath`), has the profile turn the lens at the zoom
- * position into a case and an `mtf.native` spec, and asks every named engine that one request (`askEngine`): an
- * engine that does not offer the quantity is "unsupported" without being asked, an answer the result store holds is
- * taken from it, and an "ok" or "unsupported" answer is stored. A built-in engine shares the one binding of the
- * checkout. Then it writes the record of the run (`writeMtfRun`) under `<runsDir>/mtf/<profile>/<run>/`, where
- * `<run>` is the lens key, followed by `-zoom<t>` at a zoom position other than 0 and by the profile's own mark of
- * an aperture other than wide open, and prints, for each engine in the order of their ids, how it ended and its
- * table (`mtfTableText`), or why it has none; with `--json` it prints the record as one object, with the file it
- * was written to, how each answer was come by and the fields of each answer as plain numbers.
+ * It loads the configuration of the root and LensVisualizer (`lvPath`) and takes the states to ask about: the one
+ * state of a prime, which has no zoom position (one given for it is ignored, and the error stream says so); the
+ * position `--zoom` names; and, for a zoom that is given none, both ends, wide (zoom 0) and then tele (zoom 1).
+ * Each state is a run of its own, with everything below, and what is printed for the tele end is what
+ * `--zoom 1` prints. The engines are created once, for all of them.
+ *
+ * For a state it has the profile turn the lens at the zoom position into a case and an `mtf.native` spec, and asks
+ * every named engine that one request (`askEngine`): an engine that does not offer the quantity is "unsupported"
+ * without being asked, an answer the result store holds is taken from it, and an "ok" or "unsupported" answer is
+ * stored. A built-in engine shares the one binding of the checkout. Then it writes the record of the run
+ * (`writeMtfRun`) under `<runsDir>/mtf/<profile>/<run>/`, where `<run>` is the lens key, followed by `-zoom<t>` at a
+ * zoom position other than 0 and by the profile's own mark of an aperture other than wide open, and prints, for each
+ * engine in the order of their ids, how it ended and its table (`mtfTableText`), or why it has none, under a line that
+ * states the zoom position and, at an end of a zoom, which end it is: "zoom 0 (wide)", "zoom 1 (tele)". With `--json`
+ * it prints the record as one object, with the file it was written to, how each answer was come by and the fields of
+ * each answer as plain numbers; for both ends, one object with that of each end under `wide` and `tele`. A state the
+ * lens has no case in has its reasons on the error stream, named by its end, and the other end is asked all the same.
  *
  * With one engine the command only presents; setting several engines' answers against each other is a later
  * stage's, which adds nothing to this command line.
  *
- * Exit codes: 0 when every engine answered, "unsupported" included; 1 when an engine ended in an error or could not
- * be used, when the lens cannot be exported as the profile needs it, and when LensVisualizer is not configured or
- * cannot be loaded; 2 for a command line that is not the synopsis, a `--root` that is not a directory, an unknown
- * profile or engine, an aperture the profile has no request for and a key that is not in the catalog, with the
- * nearest keys suggested.
+ * Exit codes: 0 when every engine answered in every state, "unsupported" included; 1 when an engine ended in an
+ * error or could not be used, when the lens cannot be exported as the profile needs it in a state, and when
+ * LensVisualizer is not configured or cannot be loaded; 2 for a command line that is not the synopsis, a `--root`
+ * that is not a directory, an unknown profile or engine, an aperture the profile has no request for and a key that
+ * is not in the catalog, with the nearest keys suggested.
  */
 export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
   return {
@@ -276,92 +298,123 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
         }
 
         const binding = await loadLvBinding(loaded.config.lvPath);
+        let zoom: boolean;
         try {
-          await binding.lens(asked.lensKey);
+          zoom = (await binding.lens(asked.lensKey)).entry.zoom === true;
         } catch (error) {
           if (error instanceof LvBindingError && error.code === "unknown-lens") throw new UsageError(error.message);
           throw error;
         }
-        const resolved = await PROFILES[asked.profile].resolve(binding, asked.lensKey, asked.zoomT, asked.aperture);
-        if (!resolved.ok) {
-          for (const problem of resolved.problems) io.stderr(`lvrtc mtf: ${asked.lensKey}: ${problem}\n`);
-          return EXIT_FAILURE;
+        // A zoom that is given no position is asked about at both ends; a prime has one state, whatever is given.
+        const positions: readonly { readonly zoomT: number; readonly end?: ZoomEnd["end"] }[] = !zoom
+          ? [{ zoomT: 0 }]
+          : asked.zoomT === undefined
+            ? ZOOM_ENDS
+            : [{ zoomT: asked.zoomT, end: zoomEndAt(asked.zoomT) }];
+        if (!zoom && asked.zoomT !== undefined && asked.zoomT !== 0) {
+          io.stderr(`lvrtc mtf: ${primeZoomNote(asked.lensKey)}\n`);
         }
-        const { opticalCase, spec, displayedFrequenciesPerMm } = resolved;
-        const name = `${asked.lensKey}${asked.zoomT === 0 ? "" : `-zoom${numberText(asked.zoomT)}`}${resolved.suffix}`;
-        if (validate(contractSchemas(), `${SCHEMA_ID_PREFIX}common#/$defs/name`, name).length > 0) {
-          throw new Error(`the run would be named "${name}", which cannot be the name of a directory`);
-        }
-        const request = makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec });
+        const bothEnds = positions.length > 1;
 
         const store = createResultStore(join(loaded.config.runsDir, STORE_DIRECTORY));
-        const warnings: string[] = [];
-        const askeds: Asked[] = [];
-        for (const id of asked.engines) {
-          let adapter: EngineAdapter;
-          let descriptor: EngineDescriptor;
-          try {
-            adapter = await registry.create(id);
-            adapters.push(adapter);
-            descriptor = await adapter.describe();
-          } catch (error) {
-            if (!(error instanceof EngineUnavailableError)) throw error;
-            const { code, message } = error;
-            askeds.push({
-              engine: { id, status: "unavailable", code },
-              answer: { engine: id, status: "error", storeKey: null, error: { code } },
-              source: "unavailable",
-              detail: message,
-            });
+        const sessions = new Map<string, EngineSession>();
+        const sessionOf = async (id: string): Promise<EngineSession> => {
+          let session = sessions.get(id);
+          if (session === undefined) {
+            try {
+              const adapter = await registry.create(id);
+              adapters.push(adapter);
+              session = { adapter, descriptor: await adapter.describe() };
+            } catch (error) {
+              if (!(error instanceof EngineUnavailableError)) throw error;
+              session = { code: error.code, message: error.message };
+            }
+            sessions.set(id, session);
+          }
+          return session;
+        };
+
+        let failed = false;
+        let tables = 0;
+        const printed: Record<string, unknown> = {};
+        for (const { zoomT, end } of positions) {
+          const resolved = await PROFILES[asked.profile].resolve(binding, asked.lensKey, zoomT, asked.aperture);
+          if (!resolved.ok) {
+            const which = bothEnds ? ` (${end} end)` : "";
+            for (const problem of resolved.problems) io.stderr(`lvrtc mtf: ${asked.lensKey}${which}: ${problem}\n`);
+            failed = true;
             continue;
           }
-          const { result, storeKey, source } = await askEngine({
-            adapter,
-            descriptor,
-            quantity: mtfNativeQuantity,
+          const { opticalCase, spec, displayedFrequenciesPerMm } = resolved;
+          const name = `${asked.lensKey}${zoomT === 0 ? "" : `-zoom${numberText(zoomT)}`}${resolved.suffix}`;
+          if (validate(contractSchemas(), `${SCHEMA_ID_PREFIX}common#/$defs/name`, name).length > 0) {
+            throw new Error(`the run would be named "${name}", which cannot be the name of a directory`);
+          }
+          const request = makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec });
+
+          const warnings: string[] = [];
+          const askeds: Asked[] = [];
+          for (const id of asked.engines) {
+            const session = await sessionOf(id);
+            if ("code" in session) {
+              const { code, message } = session;
+              askeds.push({
+                engine: { id, status: "unavailable", code },
+                answer: { engine: id, status: "error", storeKey: null, error: { code } },
+                source: "unavailable",
+                detail: message,
+              });
+              continue;
+            }
+            const { adapter, descriptor } = session;
+            const { result, storeKey, source } = await askEngine({
+              adapter,
+              descriptor,
+              quantity: mtfNativeQuantity,
+              request,
+              opticalCase,
+              store,
+              warnings,
+            });
+            // An answer is kept whole; of an error only its code, since its words may name files of this machine.
+            const error = result.status === "error" ? { error: { code: result.error?.code ?? "unknown" } } : {};
+            askeds.push({
+              engine: engineOf(id, descriptor),
+              answer: { engine: id, status: result.status, storeKey, ...(isStorable(result) ? { result } : error) },
+              source,
+              detail: result.error?.message ?? null,
+            });
+          }
+
+          const record: MtfRun = {
+            contract: CONTRACT_VERSION,
+            kind: "mtf-run",
+            name,
+            lensKey: asked.lensKey,
+            profile: asked.profile,
+            caseId: opticalCase.id,
             request,
-            opticalCase,
-            store,
-            warnings,
-          });
-          // An answer is kept whole; of an error only its code, since its words may name files of this machine.
-          const failed = result.status === "error" ? { error: { code: result.error?.code ?? "unknown" } } : {};
-          askeds.push({
-            engine: engineOf(id, descriptor),
-            answer: { engine: id, status: result.status, storeKey, ...(isStorable(result) ? { result } : failed) },
-            source,
-            detail: result.error?.message ?? null,
-          });
-        }
+            displayedFrequenciesPerMm: [...displayedFrequenciesPerMm],
+            engines: askeds.map(({ engine }) => engine),
+            answers: askeds.map(({ answer }) => answer),
+          };
+          const file = writeMtfRun(mtfRunDirectory(loaded.config.runsDir, asked.profile, name), record, opticalCase);
 
-        const record: MtfRun = {
-          contract: CONTRACT_VERSION,
-          kind: "mtf-run",
-          name,
-          lensKey: asked.lensKey,
-          profile: asked.profile,
-          caseId: opticalCase.id,
-          request,
-          displayedFrequenciesPerMm: [...displayedFrequenciesPerMm],
-          engines: askeds.map(({ engine }) => engine),
-          answers: askeds.map(({ answer }) => answer),
-        };
-        const file = writeMtfRun(mtfRunDirectory(loaded.config.runsDir, asked.profile, name), record, opticalCase);
-
-        for (const warning of warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
-        if (asked.json) {
+          for (const warning of warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
+          if (askeds.some(({ answer }) => answer.status === "error")) failed = true;
           const sources = Object.fromEntries(askeds.map(({ answer, source }) => [answer.engine, source]));
-          const printed = { ...record, file, sources, tables: tablesOf(askeds, resolved) };
-          // Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text.
-          io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(printed)), null, 2)}\n`);
-        } else {
+          printed[end ?? "state"] = { ...record, file, sources, tables: tablesOf(askeds, resolved) };
+          if (asked.json) continue;
           const { source: origin } = opticalCase.provenance;
-          const state = origin.kind === "lv-lens" ? `zoom ${numberText(origin.zoomT ?? 0)}, infinity focus` : "";
+          // The end of a zoom is named beside its position, so that each table says which end it is of.
+          const position = `zoom ${numberText(origin.kind === "lv-lens" ? (origin.zoomT ?? 0) : zoomT)}`;
+          // A state is printed as soon as it is answered, a blank line after the one before it.
           io.stdout(
             [
+              ...(tables++ === 0 ? [] : [""]),
               `${asked.lensKey}  ${opticalCase.label.name}`,
               `profile  ${asked.profile}: ${resolved.said}`,
-              `state    ${state}`,
+              `state    ${position}${end === undefined ? "" : ` (${end})`}, infinity focus`,
               `case     ${opticalCase.id}`,
               `request  ${request.id}`,
               "",
@@ -371,7 +424,15 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
             ].join("\n"),
           );
         }
-        return askeds.some(({ answer }) => answer.status === "error") ? EXIT_FAILURE : EXIT_OK;
+
+        if (asked.json) {
+          // One state is its record; both ends are an object of the two, each under the name of its end.
+          const [only] = Object.values(printed);
+          const shown = bothEnds ? printed : only;
+          // Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text.
+          if (shown !== undefined) io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(shown)), null, 2)}\n`);
+        }
+        return failed ? EXIT_FAILURE : EXIT_OK;
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
         io.stderr(`lvrtc mtf: ${error.message}\n${SYNOPSIS}`);

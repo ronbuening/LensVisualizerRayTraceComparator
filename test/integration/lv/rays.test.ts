@@ -870,16 +870,17 @@ test(
       const runsDir = join(directory, name);
       const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "r2");
       assert.equal(ran.code, 0, ran.err);
-      assert.match(ran.out, /^smoke: 21 jobs: 21 ok, 0 unsupported, 0 error, 0 pending \(21 computed, 0 cached\)$/m);
+      assert.match(ran.out, /^smoke: 27 jobs: 27 ok, 0 unsupported, 0 error, 0 pending \(27 computed, 0 cached\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
       const manifest: RunManifest = JSON.parse(manifestText);
       const entries = manifest.jobs.map((job) => readFileSync(join(runsDir, STORE_DIRECTORY, `${job.storeKey}.json`)));
       return { manifestText, manifest, entries };
     });
     const [first, second] = outputs;
-    // 3 fields of a lens on its reference line, 3 fields at each of 5 photopic lines, 3 fields of another lens.
-    assert.equal(first.manifest.jobs.length, 21);
-    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 21);
+    // 3 fields of a lens on its reference line, 3 fields at each of 5 photopic lines, 3 fields of another lens,
+    // and 3 fields at each end of a zoom.
+    assert.equal(first.manifest.jobs.length, 27);
+    assert.equal(new Set(first.manifest.jobs.map((job) => job.requestId)).size, 27);
     assert.equal(first.manifestText, second.manifestText);
     first.entries.forEach((entry, index) => assert.ok(entry.equals(second.entries[index]), `store entry ${index}`));
     // Nothing of this machine is in the manifest, and the rays are in the store, not in the manifest.

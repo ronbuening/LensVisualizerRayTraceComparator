@@ -16,6 +16,7 @@ import { problemText } from "./exportProblems.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
 import { lvRaySets } from "./raySets.ts";
+import { ZOOM_ENDS } from "./zoomEnds.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
 export interface LvExporter {
@@ -28,6 +29,11 @@ export interface LvExporter {
     key: string,
     options: Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane">,
   ): Promise<ExportCaseResult>;
+  /**
+   * Whether the lens `key` is a zoom, as the catalog indexes it (`LvCatalogEntry.zoom`); false for a key the
+   * catalog does not hold. Nothing is built for the answer.
+   */
+  isZoom(key: string): Promise<boolean>;
   /**
    * The ray sets of a case this checkout exported, under a run's fields and sampling: LensVisualizer's own launch
    * rays (`lvRaySets`), from the state the case was exported from, which is rebuilt and held to the case first
@@ -67,6 +73,14 @@ export function createLvExporter(binding: LvBinding): LvExporter {
       }
       return result;
     },
+    isZoom: async (key) => {
+      try {
+        return (await binding.lens(key)).entry.zoom === true;
+      } catch (error) {
+        if (error instanceof LvBindingError && error.code === "unknown-lens") return false;
+        throw error;
+      }
+    },
     raySets: async (opticalCase, options) => {
       const rebuilt = await rebuildCase(binding, build, opticalCase);
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)] };
@@ -105,6 +119,11 @@ function unavailable(error: LvBindingError): ExportProblem {
  * loaded is the problem of every such run, with the code `lv-<why>` (`LvBindingErrorCode`), and no rejection; so is
  * a key the catalog does not hold, and everything `exportCase` reports. Each problem reads `<code>: <message>`.
  *
+ * `expand` is the rule of the zoom: a run that states no zoom position (`state.zoomT`) of a lens LensVisualizer
+ * indexes as a zoom stands for two runs, `<name>-wide` at zoom 0 and `<name>-tele` at zoom 1, alike in everything
+ * else. A run that states a position, a run of a prime, and a run whose lens cannot be looked up (no checkout, an
+ * unknown key) stand for themselves, and `resolve` says what is wrong with the last.
+ *
  * `raySets` gives the rays of a case it resolved: LensVisualizer's own launch lattice for each field of the run, at
  * each line of the case (`lvRaySets`).
  *
@@ -124,6 +143,16 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
     ));
 
   return {
+    expand: async (run) => {
+      if (run.lens.kind !== "lv" || run.state?.zoomT !== undefined) return [run];
+      const loaded = await load();
+      if ("code" in loaded || !(await loaded.isZoom(run.lens.key))) return [run];
+      return ZOOM_ENDS.map(({ end, zoomT }) => ({
+        ...run,
+        name: `${run.name}-${end}`,
+        state: { ...run.state, zoomT },
+      }));
+    },
     resolve: async (run) => {
       if (run.lens.kind !== "lv") {
         return { ok: false, problems: [`a lens of kind "${run.lens.kind}" is not a LensVisualizer lens`] };

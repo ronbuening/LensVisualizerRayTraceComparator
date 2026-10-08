@@ -201,6 +201,7 @@ reference line and the five photopic lines, and an LV numerical-floor report is 
 | 1.5 Ray sets and `lv` rays | Generators (probe grids past the rim; LV's MTF launch lattice at any grid, blocked cells and weights included); LV trace export; image-projection estimator | Pins copied from LV's golden-value test (three refractive lenses) reproduced within 5e-7 mm; own `traceEngineRay2` canaries on two benchmark lenses |
 | 1.6 `ref` ray kernel, R2/R3 | Machine-precision sequential tracer; R2, R3 and clip-mask evaluators; FLOOR attribution; LV numerical-floor report | Analytic ray tests (hermetic); `lv` vs `ref` on both suites |
 | 1.7 LV product MTF | `mtf.native` for `lv` with profile `lv-tab-default`: LV's own default preferences, fields at 10 % steps, 10 and 30 lp/mm, pupil seed and stop radius by the hook's rule, spectrum fallback recorded, f/8 by the tab's scaling | Source canaries on the tab and hook; focus shift and traced f-number equal LV's committed chart-regression report; a run with the audit-script seed must differ |
+| 1.8 Zooms at both ends | A zoom is compared at both ends wherever no position is stated ([amendment](#zoom-lenses-at-both-ends)): the LV case source makes a suite run of a zoom without `state.zoomT` one run for each end; the census and `lvrtc mtf` follow; `smoke` and `features` run a zoom at both ends | Every zoom of the catalog exports at both ends or says why, with zero throws; R0 and R1 `lv` vs `ref` at the tele end of every zoom; R2 and R3 at the tele end of a constant-aperture, a variable-aperture and a fixed-iris zoom |
 
 ### Phase 2 — optiland adapter and ray-level parity (R0–R3)
 
@@ -264,7 +265,7 @@ every FAIL has a class and a reproducer command.
 |---|---|---|
 | 5.1 Throughput | Worker pool and parallel suites | Results identical to a serial run |
 | 5.2 Long-tail features | Translator gaps surfaced by the census | Each passes R0–R3 or is declared unsupported with a reason |
-| 5.3 Catalog sweep | Sweep suite and statistics report | Sweep completes; report deterministic |
+| 5.3 Catalog sweep | Sweep suite and statistics report: every prime, and every zoom at both ends | Sweep completes; report deterministic |
 | 5.4 Real-engine check | `npm run verify:real` (benchmark suite against live LV and optiland) | Runs clean on the development machine |
 
 ### Phase 6 — Beyond MTF
@@ -335,6 +336,22 @@ Gates changed after the plan was approved, each on a measured numerical floor an
 |---|---|---|
 | R0 | The sag gate is `sag.maxScaled` ≤ 1e-12, the difference divided by how large a rounding error of that sag can be (defined in `contract/CONTRACT.md`). The plain difference is still reported. | Two exact evaluators that sum the same terms in a different order differ by up to 1.34e-10 mm on five catalog lenses whose polynomial terms cancel heavily; scaled, the worst lens in the catalog is 5.5e-16. |
 | R1 | A pupil position passes within 1e-9 mm, or within 1e-12 of its distance from the image plane when that is larger. Every other R1 quantity keeps 1e-9 mm. | One near-telecentric catalog lens has its exit pupil 7.7 to 20 m away; in exact rational arithmetic both `lv` and `ref` are off by 1e-9 to 5e-9 mm there, a relative error of about 1e-13. The next largest pupil difference in the catalog is 1.9e-11 mm. |
+
+### Zoom lenses at both ends
+
+Not a gate, a rule of what is compared, added at the owner's request in Stage 1.8.
+
+| Rule | Where it applies | What it does not cover |
+|---|---|---|
+| Zoom lenses are compared at both ends, zoom 0 (wide) and zoom 1 (tele), wherever no position is stated. A prime is unaffected; an explicit position (`state.zoomT`, `--zoom`) still selects exactly one state. Whether a lens is a zoom is LensVisualizer's own answer. | Suite runs of LensVisualizer lenses (`<name>-wide`, `<name>-tele`), the census (`lvrtc export --all`), `lvrtc mtf <lensKey>`, and every later sweep and baseline built on suites. | Middle stations are Stage 4.4. `lvrtc export <lensKey>` and `lvrtc lenses show` stay single-state tools. |
+
+Measured at LensVisualizer `ed78cf40` (closure `1827eefe`): 297 zooms, 296 of which export at each end (one has a
+diffractive surface at both); at the tele end all 296 pass R0 and R1 against `ref` on the reference line and all
+280 that have photopic lines pass there too (worst `sag.maxScaled` 4.3e-16, `firstOrder.maxAbs` 9.4e-11 mm,
+`pupilZ.maxScaled` 6.7e-11). Traced at the tele end in one sweep outside the tests (5056 ray sets, 3.4 million
+rays ok in both), every pair passes R3; in R2, 5006 pass, 6 are `FLOOR` (one lens) and 44 fail on the mask: three
+zooms whose stop lies behind the surface before it at that end, two of them at that end only (`docs/gotchas.md`,
+"Where two neighbouring surfaces cross, the ray is lost").
 
 ## LensVisualizer changes
 

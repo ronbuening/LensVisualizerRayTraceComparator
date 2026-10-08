@@ -236,8 +236,8 @@ interface Presented {
 }
 
 function argsOf(configuration: (typeof CONFIGURATIONS)[number], ...more: string[]): string[] {
-  const zoom = configuration.zoomT === 0 ? [] : ["--zoom", String(configuration.zoomT)];
-  return ["mtf", configuration.key, ...zoom, ...more];
+  // The position is always named: a zoom that is given none is presented at both ends, as two records.
+  return ["mtf", configuration.key, "--zoom", String(configuration.zoomT), ...more];
 }
 
 async function present(runsDir: string, args: readonly string[]): Promise<Presented> {

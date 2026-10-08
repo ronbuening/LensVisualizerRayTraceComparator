@@ -41,6 +41,14 @@ export interface SourceAudit {
  */
 export interface CaseSource {
   /**
+   * The runs a run of a suite stands for, in order: the run itself, or one run for each state of the lens that the
+   * run leaves open, each with a name of its own made from the run's and the state it leaves open stated. The
+   * LensVisualizer source gives a zoom lens without a zoom position one run for each end. A source without this
+   * method takes every run as it is written. The runs it gives are runs like any other: nothing later knows that
+   * they were written as one.
+   */
+  expand?(run: RunSpec): Promise<readonly RunSpec[]>;
+  /**
    * The case of `run.lens` under the run's options: valid by its schema and its invariants, with the identity it
    * states, and frozen. A lens the source cannot turn into such a case is a resolution with problems, never a
    * rejection; each problem is a deterministic text without absolute paths, since it is recorded with the run.
@@ -134,7 +142,10 @@ export function createFixtureCaseSource(rootDir: string): CaseSource {
 
 /** One run of a loaded suite. */
 export interface LoadedRun {
-  /** The run as a complete RunSpec, with the suite's defaults filled in. */
+  /**
+   * The run as a complete RunSpec, with the suite's defaults filled in, and with the state its case source gave it
+   * when the suite left one open (`CaseSource.expand`).
+   */
   readonly spec: RunSpec;
   /** The case of the run's lens; null exactly when `problems` is not empty. */
   readonly opticalCase: OpticalCase | null;
@@ -146,11 +157,13 @@ export interface LoadedRun {
 export interface LoadedSuite {
   readonly name: string;
   /**
-   * The SHA-256 of the canonical JSON of `{ name, runs }`, with the runs expanded: the identity of what the suite
-   * asks for. How the file words it (key order, defaults or values repeated in each run) does not change it.
+   * The SHA-256 of the canonical JSON of `{ name, runs }`, with the runs expanded by `expandSuite`: the identity
+   * of what the suite asks for. How the file words it (key order, defaults or values repeated in each run) does not
+   * change it, and neither does what a case source makes of a run (`CaseSource.expand`): the hash is that of the
+   * suite as it is written, with or without the source at hand.
    */
   readonly hash: string;
-  /** Every run, in suite order, runnable or not. */
+  /** Every run, in suite order, runnable or not; the runs one written run stands for are together, in its place. */
   readonly runs: readonly LoadedRun[];
 }
 
@@ -167,7 +180,8 @@ export interface LoadSuiteOptions {
  * the lens of every run through the case source of its kind.
  *
  * - A file that is not a suite fails as a whole, with a `UsageError` that names the file: one that cannot be read,
- *   is not JSON, is not valid by the schema, or names two runs alike.
+ *   is not JSON, is not valid by the schema, or names two runs alike, as written or once a case source has given
+ *   a run one name for each state it stands for (`CaseSource.expand`).
  * - What is wrong with one run stays with that run and fails no other: an option that breaks a rule the schema
  *   cannot state (`runInvariantProblems`), and a lens with no case. Every problem of a run is reported, so a run
  *   with both carries both. A lens of a kind that `sources` has no source for has no case.
@@ -201,8 +215,23 @@ export async function loadSuite(file: string, options: LoadSuiteOptions): Promis
   }
 
   const sources: CaseSources = options.sources ?? { fixture: createFixtureCaseSource(options.rootDir) };
+  // Each name, with the written run it came from: itself, or the run that stands for it.
+  const names = new Map<string, string>();
+  const stated: RunSpec[] = [];
+  for (const written of specs) {
+    for (const spec of (await sources[written.lens.kind]?.expand?.(written)) ?? [written]) {
+      const other = names.get(spec.name);
+      if (other !== undefined) {
+        const from = [other, written.name].filter((name) => name !== spec.name).map((name) => `"${name}"`);
+        const why = from.length === 0 ? "" : `, which the run ${from.join(" and the run ")} stands for`;
+        throw new UsageError(`${file}: suite ${suite.name}: more than one run is named "${spec.name}"${why}`);
+      }
+      names.set(spec.name, written.name);
+      stated.push(spec);
+    }
+  }
   const runs: LoadedRun[] = [];
-  for (const spec of specs) {
+  for (const spec of stated) {
     const problems = runInvariantProblems(spec);
     const source = sources[spec.lens.kind];
     const resolution: CaseResolution =

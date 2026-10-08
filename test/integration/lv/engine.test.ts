@@ -206,7 +206,7 @@ test("lvrtc run and compare: on the feature suite every lens has a case and pass
   // Every run of the suite has a case: the two translation paths that have no lens are not runs of it.
   assert.equal(ran.code, 0, ran.err);
   assert.equal(ran.err, "");
-  assert.match(ran.out, /^features: 64 jobs: 64 ok, 0 unsupported, 0 error, 0 pending \(64 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^features: 72 jobs: 72 ok, 0 unsupported, 0 error, 0 pending \(72 computed, 0 cached\)$/m);
   assert.deepEqual(
     manifest.runs.filter((run) => run.caseId === null),
     [],
@@ -214,16 +214,17 @@ test("lvrtc run and compare: on the feature suite every lens has a case and pass
 
   assert.equal(compared.code, 0, compared.err);
   assert.deepEqual(notPassing(comparisons), []);
-  const compared16 = new Set(comparisons.comparisons.map((set) => set.run));
+  const comparedRuns = new Set(comparisons.comparisons.map((set) => set.run));
   assert.deepEqual(
-    [...compared16].sort(),
+    [...comparedRuns].sort(),
     manifest.runs
       .filter((run) => run.caseId !== null)
       .map((run) => run.name)
       .sort(),
   );
-  assert.equal(compared16.size, 16);
-  assert.equal(comparisons.comparisons.length, 64);
+  // 16 runs as written, 18 as run: the suite's zoom states no position and is run at both ends.
+  assert.equal(comparedRuns.size, 18);
+  assert.equal(comparisons.comparisons.length, 72);
 
   const worst = worstMetrics(comparisons);
   t.diagnostic(
@@ -236,7 +237,7 @@ test("lvrtc run and compare: on the feature suite every lens has a case and pass
   // At d36f44b3: the sag differs by at most 3.6e-15 mm (zero-asphere-ref, surface 1) and 2.7e-16 scaled
   // (odd-asphere-ref, surface 1); the first-order data by at most 5.3e-14 mm, on the front focal point of
   // odd-asphere-photopic at 610 nm, and the position of a pupil by at most 8.5e-14 mm, on the exit pupil of
-  // fixed-iris-zoom-tele-photopic at 610 nm.
+  // the tele end of the fixed-iris zoom, on the photopic lines, at 610 nm.
   assert.ok(worst["sag.maxAbs"].value < 1e-13, JSON.stringify(worst["sag.maxAbs"]));
   assert.ok(worst["sag.maxScaled"].value < 1e-14, JSON.stringify(worst["sag.maxScaled"]));
   assert.ok(worst["firstOrder.maxAbs"].value < 1e-10, JSON.stringify(worst["firstOrder.maxAbs"]));

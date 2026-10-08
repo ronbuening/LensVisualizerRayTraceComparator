@@ -16,7 +16,7 @@ import type { LvTabView } from "./tabRequest.ts";
 /** What the profile is asked for: a lens of the catalog at a zoom position, at infinity focus, in one of its views. */
 export interface LvTabProfileAsk {
   readonly lensKey: string;
-  /** The zoom position, 0 (wide) to 1 (tele). A prime has none, and ignores it. */
+  /** The zoom position, 0 (wide) to 1 (tele). A prime has none: it is taken as 0. */
   readonly zoomT: number;
   readonly view: LvTabView;
 }
@@ -68,9 +68,10 @@ export function createLvTabProfileResolver(
   binding: LvBinding,
   build: LensBuilder = createLensBuilder(binding),
 ): LvTabProfileResolver {
-  return async ({ lensKey, zoomT, view }) => {
+  return async ({ lensKey, zoomT: asked, view }) => {
     const lens = await build(lensKey);
     if (!lens.ok) return { ok: false, problems: [lens.problem] };
+    const zoomT = lens.runtime.isZoom ? asked : 0;
     const { api } = binding;
     const { commit, dirty, engineClosureHash } = binding.fingerprint();
     const exported = (options: ExportOptions) =>

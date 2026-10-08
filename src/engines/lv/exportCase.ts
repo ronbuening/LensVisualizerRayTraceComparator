@@ -129,8 +129,9 @@ function notesOf(state: LvPreparedState): string[] {
 /**
  * Exports one lens in the state a run asks for.
  *
- * The state is `prepareRuntimeState(L, focusT, zoomT)`: `zoomT` of the run (0 when it states none), and `focusT` 0
- * for infinity focus, or the run's value. From it:
+ * The state is `prepareRuntimeState(L, focusT, zoomT)`: `zoomT` of the run (0 when it states none, and 0 for a
+ * prime, which has no zoom position, whatever the run states), and `focusT` 0 for infinity focus, or the run's
+ * value. From it:
  *
  * - **surfaces**: `label`; `z` = `state.z[i]`; `thickness` = the resolved gap `d` after the surface, and after the
  *   last surface the distance to the image plane (LV's `d` where `z + d` is `imgZ`, as in every lens that is not
@@ -169,7 +170,8 @@ function exportChecked(
   options: ExportCaseInput["options"],
   lv: LvProvenance,
 ): ExportCaseResult {
-  const zoomT = options.state?.zoomT ?? 0;
+  // A prime has no zoom position: whatever is asked of it, its state and its provenance say 0.
+  const zoomT = runtime.isZoom ? (options.state?.zoomT ?? 0) : 0;
   const focus = options.state?.focus;
   const focusT = focus?.kind === "focusT" ? focus.value : 0;
 

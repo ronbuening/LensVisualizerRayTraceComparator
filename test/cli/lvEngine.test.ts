@@ -204,6 +204,8 @@ function raySuite(rootDir: string): string {
     {
       name: "zoom-photopic",
       lens: { kind: "lv", key: "acme-zoom-24-48" },
+      // One state: a zoom without a position would be two runs, one for each end.
+      state: { zoomT: 0 },
       lines: { kind: "photopic" },
       fields: { kind: "angles-deg", values: [0, 75] },
       sampling: { bundleGrid: 4 },

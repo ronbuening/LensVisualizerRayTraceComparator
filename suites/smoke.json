@@ -18,6 +18,11 @@
       "name": "rodenstock-geronar-210mm-f68-ref",
       "lens": { "kind": "lv", "key": "rodenstock-geronar-210mm-f68" },
       "lines": { "kind": "reference" }
+    },
+    {
+      "name": "minolta-af-35-70-f4-ref",
+      "lens": { "kind": "lv", "key": "minolta-af-35-70-f4" },
+      "lines": { "kind": "reference" }
     }
   ]
 }

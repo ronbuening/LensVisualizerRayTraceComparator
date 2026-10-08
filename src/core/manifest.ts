@@ -102,7 +102,7 @@ export interface RunManifest {
   /** The contract version the cases, requests and results of the run are written to. */
   readonly contract: string;
   readonly kind: "run-manifest";
-  /** The suite's name and the hash of its expanded runs (`LoadedSuite.hash`). */
+  /** The suite's name and the hash of the suite as it is written (`LoadedSuite.hash`). */
   readonly suite: { readonly name: string; readonly hash: string };
   /**
    * The case sources that identified their inputs, by the kind of lens they serve ("lv"); left out when none did,

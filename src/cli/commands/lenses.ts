@@ -10,6 +10,7 @@ import type { LvCatalog } from "../../engines/lv/catalog.ts";
 import { LvBindingError } from "../../engines/lv/errors.ts";
 import { summarizeState } from "../../engines/lv/stateSummary.ts";
 import type { StateSummary } from "../../engines/lv/stateSummary.ts";
+import { primeZoomNote, teleHint } from "../../engines/lv/zoomEnds.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
@@ -37,7 +38,8 @@ const HELP = [
   "        surface (radius or flat, gap after it, index after it, clear semi-diameter, vertex z), then the stop",
   "        surface and its radius, the last lens surface and the image plane; lengths are in mm",
   "",
-  "  --zoom <t>    zoom position from 0 (wide) to 1 (tele); default 0; a prime ignores it",
+  "  --zoom <t>    zoom position from 0 (wide) to 1 (tele); default 0, the wide end: --zoom 1 gives the tele end",
+  "                of a zoom. A prime has no zoom position",
   "  --focus <t>   focus position from 0 (infinity) to 1 (closest); default 0",
   "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
   "  --json        print one JSON object in place of the lines",
@@ -135,7 +137,7 @@ async function show(
   binding: LvBinding,
   key: string,
   focusT: number,
-  zoomT: number,
+  zoom: number | undefined,
   json: boolean,
   io: CliIo,
 ): Promise<number> {
@@ -146,6 +148,10 @@ async function show(
     if (error instanceof LvBindingError && error.code === "unknown-lens") throw new UsageError(error.message);
     throw error;
   }
+  const isZoom = lens.entry.zoom === true;
+  if (isZoom && zoom === undefined) io.stderr(`lvrtc lenses: ${teleHint(key)}\n`);
+  if (!isZoom && zoom !== undefined && zoom !== 0) io.stderr(`lvrtc lenses: ${primeZoomNote(key)}\n`);
+  const zoomT = isZoom ? (zoom ?? 0) : 0;
   const runtime = binding.api.buildLens(lens.data);
   const summary = summarizeState(binding.api.prepareRuntimeState(runtime, focusT, zoomT));
   const { key: lensKey, name, file } = lens.entry;
@@ -159,9 +165,11 @@ async function show(
  *
  * `list` prints the number of lenses and the key, name and file of each, sorted by key; a lens file that cannot be
  * indexed is named on the error stream. `show` builds the lens and prepares it at `--zoom` and `--focus` (0 when
- * absent), then prints the prepared state, the one that is traced: every surface, the stop surface and its
- * runtime radius, the last lens surface, the image plane and the surface count. Both are console output, never
- * stored, and `--json` prints one object with sorted keys in place of the lines.
+ * absent; a zoom shown without `--zoom` is at its wide end, and the error stream says that `--zoom 1` gives the
+ * tele end; a zoom position given for a prime is ignored, which is said too), then prints the prepared state, the
+ * one that is traced: every surface, the stop surface and its runtime radius, the last lens surface, the image
+ * plane and the surface count. Both are console output, never stored, and `--json` prints one object with sorted
+ * keys in place of the lines.
  *
  * Exit codes: 0 when done; 1 when LensVisualizer is not configured or cannot be loaded, when a lens cannot be
  * built, and, for `list`, when a lens file cannot be indexed; 2 for a command line that is not the synopsis, a
@@ -190,7 +198,8 @@ export function createLensesCommand(inputs: LensesCommandInputs): CliCommand {
         if (asked.positionals.length > expected) {
           throw new UsageError(`unexpected argument "${asked.positionals[expected]}"`);
         }
-        const zoomT = position("--zoom", asked.values.get("--zoom"), 0);
+        const zoomText = asked.values.get("--zoom");
+        const zoom = zoomText === undefined ? undefined : position("--zoom", zoomText, 0);
         const focusT = position("--focus", asked.values.get("--focus"), 0);
         const root = asked.values.get("--root");
         const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd, root);
@@ -201,7 +210,7 @@ export function createLensesCommand(inputs: LensesCommandInputs): CliCommand {
         const binding = await loadLvBinding(loadConfig({ rootDir, env: inputs.env }).config.lvPath);
         const json = asked.flags.has("--json");
         if (action === "list") return await list(binding, json, io);
-        return await show(binding, asked.positionals[0], focusT, zoomT, json, io);
+        return await show(binding, asked.positionals[0], focusT, zoom, json, io);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
         io.stderr(`lvrtc lenses: ${error.message}\n${SYNOPSIS}`);

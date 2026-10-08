@@ -275,11 +275,16 @@ test(
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, verdicts } = cycle(t, "features");
-    assert.equal(manifest.runs.length, 16);
+    // 16 runs as written, 18 as run: the fixed-iris zoom states no position and is run at both ends.
+    assert.equal(manifest.runs.length, 18);
+    assert.deepEqual(
+      manifest.runs.map((run) => run.name).filter((name) => name.startsWith("fixed-iris-zoom")),
+      ["ref-wide", "ref-tele", "photopic-wide", "photopic-tele"].map((rest) => `fixed-iris-zoom-${rest}`),
+    );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
     assert.match(
       verdicts,
-      /^features: 640 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 720 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
@@ -295,17 +300,17 @@ test(
     assert.equal(rays.compared, rays.lvOk);
     assert.ok(rays.compared > 50_000, String(rays.compared));
 
-    // At 3af45e3f four of the 288 pairs of traced rays are FLOOR, all of zeiss-hologon-15f8 at its full field of
+    // At ed78cf40 four of the 324 pairs of traced rays are FLOOR, all of zeiss-hologon-15f8 at its full field of
     // 55 degrees, at 470 nm and 510 nm: its rays leave the last surface 54 degrees off the axis, so a hit that is
     // 2.2e-9 mm off along the ray lands 1.10e-8 mm from where it should, and its path to the image plane is
     // 2.07e-5 waves off (2.28e-5 relative to the chief ray). Traced in 60-digit arithmetic, the reference engine
     // is 6e-15 mm and 2e-11 waves from the truth on that ray, and LensVisualizer the rest. See docs/gotchas.md.
     assert.deepEqual(counts, {
-      "r0 PASS": 16,
-      "r1 PASS": 16,
-      "r2 PASS": 142,
+      "r0 PASS": 18,
+      "r1 PASS": 18,
+      "r2 PASS": 160,
       "r2 FLOOR": 2,
-      "r3 PASS": 142,
+      "r3 PASS": 160,
       "r3 FLOOR": 2,
     });
     assert.deepEqual([...floors.keys()], ["stop-inside-element-photopic r2", "stop-inside-element-photopic r3"]);
@@ -426,16 +431,29 @@ async function lensVisualizerSays(binding: LvBinding, opticalCase: OpticalCase, 
 }
 
 /**
- * The lenses in which a surface lies behind the one before it within both clear apertures, with the surface at
- * which LensVisualizer loses rays: a stop or a flat face set into the curve of its neighbour.
+ * The zooms whose stop comes to lie behind the surface before it at the tele end only: the gap in front of the
+ * stop closes there, or the iris opens past the circle in which the curve before it meets the stop's plane. Found
+ * at LV ed78cf40 by tracing the tele end of every zoom of the catalog, outside the tests.
  */
-const CROSSING_SURFACES: readonly (readonly [key: string, surface: number])[] = [
+const TELE_ONLY_CROSSINGS: readonly (readonly [key: string, surface: number, zoomT: 1])[] = [
+  ["nikon-ai-s-zoom-nikkor-35-70mm-f35", 15, 1],
+  ["nikon-ai-zoom-nikkor-25-50mm-f4", 8, 1],
+];
+
+/**
+ * The lenses in which a surface lies behind the one before it within both clear apertures, with the surface at
+ * which LensVisualizer loses rays: a stop or a flat face set into the curve of its neighbour. A zoom is named with
+ * the end it does so at: at its default state, the wide end, where none is named.
+ */
+const CROSSING_SURFACES: readonly (readonly [key: string, surface: number, zoomT?: 1])[] = [
   ["bertele-sonnar-50f2-scaled", 6],
   ["leica-elmarit-90f28", 5],
   ["nokton-50f1", 7],
   ["olympus-zuiko-auto-s-50f14", 6],
   ["pentax-da-18-55mm-f35-56-al", 15],
   ["vivitar-series-1-70-210-f35", 21],
+  ["vivitar-series-1-70-210-f35", 21, 1],
+  ...TELE_ONLY_CROSSINGS,
 ];
 
 test(
@@ -444,10 +462,12 @@ test(
   async (t) => {
     const ask = await engines(t);
     const seen: string[] = [];
-    for (const [key, surface] of CROSSING_SURFACES) {
-      const sets = await tracedSets(ask, key);
+    for (const [key, surface, zoomT] of CROSSING_SURFACES) {
+      const sets = await tracedSets(ask, key, zoomT === undefined ? {} : { state: { zoomT } });
       const mismatches = sets.map((set) => metricOf(set.r2, "mask.mismatches").value ?? 0);
-      seen.push(`${key} surface ${surface}: ${mismatches.join(", ")} rays`);
+      seen.push(
+        `${key}${zoomT === undefined ? "" : " at the tele end"} surface ${surface}: ${mismatches.join(", ")} rays`,
+      );
       assert.ok(Math.max(...mismatches) > 0, key);
       const { opticalCase, spec, lvData, refData, r2 } = sets[mismatches.findIndex((count) => count > 0)];
       // A mismatch, not a rim: the pair fails, and the reason names the surface. No floor excuses a mask.
@@ -479,6 +499,13 @@ test(
       // its classification calls that a ray that carries no light.
       const says = await lensVisualizerSays(ask.binding, opticalCase, spec, ray);
       assert.deepEqual(says, { status: "failed", failureReason: "noBracket", classified: "blocked" }, key);
+    }
+    // At the wide end of the zooms that cross at the tele end only, no ray is lost: the two engines stop the same.
+    for (const [key] of TELE_ONLY_CROSSINGS) {
+      for (const { r2 } of await tracedSets(ask, key, { state: { zoomT: 0 } })) {
+        assert.equal(metricOf(r2, "mask.mismatches").value, 0, `${key} at the wide end`);
+        assert.ok(r2.verdict === "PASS" || r2.verdict === "FLOOR", `${key} at the wide end: ${r2.reason}`);
+      }
     }
     t.diagnostic(`rays LensVisualizer loses at crossing surfaces, by field: ${seen.join("; ")}`);
   },

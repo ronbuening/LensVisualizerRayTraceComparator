@@ -161,9 +161,13 @@ test("each lens of the feature suite has the translation path it is there for", 
   });
 
   // A fixed iris keeps its radius over the zoom range, and the widest f-number changes instead.
-  const tele = await featureCase("fixed-iris-zoom-tele-ref");
+  // The suite states no position for it, so it is run at both ends: two runs for each run that is written.
+  const [wide, tele] = [await featureCase("fixed-iris-zoom-ref-wide"), await featureCase("fixed-iris-zoom-ref-tele")];
   const zoom = binding.api.buildLens((await binding.lens("nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom")).data);
-  assert.equal(tele.label.zoomT, 1);
+  assert.deepEqual([wide.label.zoomT, tele.label.zoomT], [0, 1]);
+  assert.notEqual(wide.systemId, tele.systemId);
+  assert.equal(wide.conditions.stopSemiDiameter, tele.conditions.stopSemiDiameter);
+  assert.equal((await featureCase("fixed-iris-zoom-photopic-tele")).systemId, tele.systemId);
   assert.equal(tele.conditions.stopSemiDiameter, binding.api.wideOpenStopAtZoom(1, zoom));
   assert.equal(binding.api.wideOpenStopAtZoom(0, zoom), binding.api.wideOpenStopAtZoom(1, zoom));
   assert.ok(binding.api.fopenAtZoom2(1, zoom) > binding.api.fopenAtZoom2(0, zoom));
@@ -205,8 +209,13 @@ test(
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
-    assert.match(child.stdout, /^smoke: 18 jobs: 9 ok, 9 unsupported, 0 error, 0 pending \(9 computed, 0 cached\)$/m);
-    for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic"]) {
+    assert.match(
+      child.stdout,
+      /^smoke: 30 jobs: 15 ok, 15 unsupported, 0 error, 0 pending \(15 computed, 0 cached\)$/m,
+    );
+    // The suite's zoom states no position: it is two runs, one for each end.
+    const zoomRuns = ["minolta-af-35-70-f4-ref-wide", "minolta-af-35-70-f4-ref-tele"];
+    for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic", ...zoomRuns]) {
       for (const rung of ["r0", "r1"]) {
         assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +ok +computed$`, "m"), `${run} ${rung}`);
       }
@@ -245,16 +254,22 @@ test(
     // No --engines and no --rungs: the suite names the built-in engines, and a run gets every rung.
     const ran = lvrtc("run", suitePath("smoke"));
     assert.equal(ran.status, 0, ran.stderr);
-    // Three runs and two engines. Neither answers the conformance quantity, both answer R0 and R1; and the runs
-    // have 21 ray sets between them (three fields, at one line twice and at five lines once), which each engine
-    // traces once, for R2, and R3 finds in the store.
-    assert.match(ran.stdout, /^smoke: 102 jobs: 96 ok, 6 unsupported, 0 error, 0 pending \(54 computed, 42 cached\)$/m);
+    // Five runs, the zoom at both ends, and two engines. Neither answers the conformance quantity, both answer R0
+    // and R1; and the runs have 27 ray sets between them (three fields, at one line four times and at five lines
+    // once), which each engine traces once, for R2, and R3 finds in the store.
+    assert.match(
+      ran.stdout,
+      /^smoke: 138 jobs: 128 ok, 10 unsupported, 0 error, 0 pending \(74 computed, 54 cached\)$/m,
+    );
+    for (const end of ["wide", "tele"]) {
+      assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +r3 +lv +ok +cached$`, "m"), end);
+    }
     const compared = lvrtc("compare", "smoke");
     assert.equal(compared.status, 0, compared.stderr + compared.stdout);
-    // At LV d36f44b3 every pair of the smoke suite passes outright: none needs the floor.
+    // At LV ed78cf40 every pair of the smoke suite passes outright: none needs the floor.
     assert.match(
       compared.stdout,
-      /^smoke: 102 pairs: 96 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^smoke: 138 pairs: 128 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
     const reported = lvrtc("report", "smoke");
     assert.equal(reported.status, 0, reported.stderr);

@@ -831,3 +831,33 @@ test("a lens that has no case has the exporter's problems, and the tab is not as
     ["unknown-lens"],
   );
 });
+
+test("the profile of a prime is that of zoom 0 whatever position is asked for: its state is prepared at 0", async (t) => {
+  const binding = await bind(t, freshLv(t));
+  const prepared: number[] = [];
+  // The same tree, with every state it is asked to prepare written down.
+  const watched: LvBinding = {
+    ...binding,
+    api: {
+      ...binding.api,
+      prepareRuntimeState: (runtime, focusT, zoomT) => {
+        prepared.push(zoomT);
+        return binding.api.prepareRuntimeState(runtime, focusT, zoomT);
+      },
+    },
+  };
+  const resolve = createLvTabProfileResolver(watched);
+  const plain = await resolve({ lensKey: SINGLET, zoomT: 0, view: "wide-open" });
+  assert.ok(plain.ok && prepared.length > 0);
+  prepared.length = 0;
+  const positioned = await resolve({ lensKey: SINGLET, zoomT: 0.5, view: "wide-open" });
+  assert.deepEqual(positioned, plain);
+  assert.deepEqual([...new Set(prepared)], [0]);
+
+  // A zoom is prepared at the position that is asked for, and its case says so.
+  prepared.length = 0;
+  const tele = await resolve({ lensKey: ZOOM, zoomT: 1, view: "wide-open" });
+  assert.ok(tele.ok);
+  assert.deepEqual([...new Set(prepared)], [1]);
+  assert.equal(tele.opticalCase.label.zoomT, 1);
+});

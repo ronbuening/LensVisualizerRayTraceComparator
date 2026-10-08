@@ -186,7 +186,7 @@ test("equal states give equal cases, and the identity ignores label and provenan
 
 test("the state asked of LensVisualizer is the run's: zoom as given, focus 0 for infinity", () => {
   const asked: [number, number][] = [];
-  const state = tripletState();
+  const state = tripletState({ runtime: { isZoom: true } });
   const recording: Partial<LvExportApi> = {
     prepareRuntimeState: (_runtime, focusT, zoomT) => {
       asked.push([focusT, zoomT]);
@@ -203,6 +203,27 @@ test("the state asked of LensVisualizer is the run's: zoom as given, focus 0 for
     [0, 1],
     [0.4, 0],
   ]);
+});
+
+test("a prime has no zoom position: whatever the run states, LensVisualizer is asked for zoom 0", () => {
+  const asked: [number, number][] = [];
+  const state = tripletState();
+  const recording: Partial<LvExportApi> = {
+    prepareRuntimeState: (_runtime, focusT, zoomT) => {
+      asked.push([focusT, zoomT]);
+      return state;
+    },
+  };
+  const plain = exported(exportCase(inputFor(state, {}, recording)));
+  const positioned = exported(exportCase(inputFor(state, { state: { zoomT: 0.5 } }, recording)));
+  exportCase(inputFor(state, { state: { zoomT: 1, focus: { kind: "focusT", value: 0.4 } } }, recording));
+  assert.deepEqual(asked, [
+    [0, 0],
+    [0, 0],
+    [0.4, 0],
+  ]);
+  // So a position given to a prime changes nothing: the same case, with the same provenance.
+  assert.deepEqual(positioned, plain);
 });
 
 test("the label states the zoom position of a zoom lens only, and the focus position always", () => {
@@ -480,7 +501,7 @@ test("a state LensVisualizer cannot prepare is a problem with its reason", () =>
       throw new Error("Resolved thickness for surface 3 must be finite and non-negative");
     },
   };
-  const result = exportCase(inputFor(tripletState(), { state: { zoomT: 0.5 } }, failing));
+  const result = exportCase(inputFor(tripletState({ runtime: { isZoom: true } }), { state: { zoomT: 0.5 } }, failing));
   assert.deepEqual(result, {
     ok: false,
     problems: [

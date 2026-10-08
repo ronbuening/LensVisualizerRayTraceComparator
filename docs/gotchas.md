@@ -171,7 +171,7 @@ sag, and the textbook vector form of Snell's law.
   waves: above both gates, with `ref` within 6e-15 mm and 2e-11 waves of the truth on that ray.
 - **Handled.** That is what `FLOOR` is for. A pair of `lv` above a gate is a floor when the arbiter `ref` agrees
   with every other engine within 1e-10 mm and 1e-7 waves and `lv` is within 1e-7 mm and 2e-4 waves of `ref`
-  (`policy/rungs.v1.json`); it counts as a pass and is counted apart. In the suites, 4 of the 288 pairs of traced
+  (`policy/rungs.v1.json`); it counts as a pass and is counted apart. In the suites, 4 of the 324 pairs of traced
   rays of `features` are `FLOOR`, all of the Hologon at full field, at 470 nm and 510 nm; the benchmark has none.
   Over the catalog, in one sweep outside the tests (868 lenses on their reference line and 808 on the photopic
   lines, at up to three fields each: 14 370 ray sets, 16.4 million rays), 39 pairs are `FLOOR` in R2 and 24 in R3,
@@ -246,11 +246,21 @@ sag, and the textbook vector form of Snell's law.
   `leica-elmarit-90f28` at 5 (216, 156, 126), `olympus-zuiko-auto-s-50f14` at 6 (212, 138, 6),
   `bertele-sonnar-50f2-scaled` at 6 (0, 30, 4), `pentax-da-18-55mm-f35-56-al` at 15 (16, 14, 0) and `nokton-50f1`
   at 7 (0, 8, 0). In the 60-digit trace every such ray passes the surface where `ref` puts it.
+  A zoom can do it at one end and not at the other. At the tele end (one sweep outside the tests at `ed78cf40`:
+  the 296 zooms that export, on the reference line and the photopic lines, 5056 ray sets, 3.4 million rays ok in
+  both) three zooms do it: the Vivitar as at the wide end (484, 496, 520), and two that lose no ray at the wide
+  end, whose stop plane comes to lie inside the curve before it: `nikon-ai-zoom-nikkor-25-50mm-f4` at 8 (380, 356,
+  342: the gap in front of the stop closes) and `nikon-ai-s-zoom-nikkor-35-70mm-f35` at 15 (50, 48, 48: the iris
+  opens past the circle in which the curve before it meets the stop's plane). LensVisualizer's MTF tab then
+  traces f/4.92 at the tele end of the first, an f/4 lens, and f/3.62 for f/3.5 of the second. The Pentax does it
+  at the wide end only.
 - **Handled.** Nothing is forgiven: each of these rays is one that `lv` stopped and `ref` passed, well inside the
   clear aperture, so it is a mask mismatch and the pair fails R2 (14 pairs on the reference line, 63 on the
-  photopic lines, 2394 and 6998 rays). None of the six is in a suite. An integration test
-  (`test/integration/lv/rungs.test.ts`) holds each to this: the surface, LensVisualizer's `noBracket`, and the
-  step backwards in `ref`'s trace; it fails on the day LensVisualizer traces through.
+  photopic lines, 2394 and 6998 rays; at the tele end 9 and 35 pairs, with every other pair of that sweep passing
+  R2 but six of `fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii` that are `FLOOR`, and every pair passing R3). None
+  of the eight is in a suite. An integration test (`test/integration/lv/rungs.test.ts`) holds each to this, at
+  the end of the zoom where it happens: the surface, LensVisualizer's `noBracket`, and the step backwards in
+  `ref`'s trace; it fails on the day LensVisualizer traces through.
 - **Class.** method.
 
 ### A ray bent past the perpendicular to the axis
@@ -411,6 +421,36 @@ sag, and the textbook vector form of Snell's law.
   integration test (`test/integration/lv/suites.test.ts`) exports the two lenses, and every other lens of the
   catalog that has either property, and fails on the day one of them has a case: that is when the run goes back.
 - **Class.** data.
+
+### A prime keeps whatever zoom position it is handed
+
+- **Where.** `prepareRuntimeState(L, focusT, zoomT)` records the `zoomT` it is called with on the state, also for a
+  lens that is no zoom (`L.isZoom` false): the surfaces of a prime at "zoom 0.5" are those at zoom 0, and
+  `state.zoomT` says 0.5.
+- **Effect.** A prime exported with a zoom position had the case id of the prime, since the identity of a case is
+  its system and conditions, with a provenance that stated a position the lens does not have, and `lvrtc mtf`
+  named its run `<key>-zoom0.5`: one case under two names.
+- **Handled.** The exporter asks LensVisualizer for zoom 0 whenever `L.isZoom` is false (`exportCase`), so a prime
+  has one case, one provenance and one run name whatever is stated; `lvrtc export`, `lenses show` and `mtf` say
+  on the error stream that the position was ignored. It goes with the rule of the zoom: a zoom without a position
+  is compared at both ends, and a prime has none (the plan, "Amendments since approval").
+- **Class.** convention.
+
+### The tele end is the zoom slider at 1, not the last station to the bit
+
+- **Where.** `prepareRuntimeState` places a variable gap between two zoom stations as `a + (b - a) * t` (`lerp`,
+  in `resolveVariableThickness` of `src/optics/prescription/variables.ts`). At the tele end `t` is 1, and
+  `a + (b - a)` is not always `b` in doubles.
+- **Effect.** At LensVisualizer `ed78cf40`, 278 of the 1320 variable gaps of the 297 zooms at zoom 1, on 229
+  lenses, are not the gap authored for the last station: `1.4900000000000002` for `1.49`, at most 3.6e-15 mm off.
+  At zoom 0 every gap is the first station's (`a + (b - a) * 0` is `a`), and the iris of
+  `wideOpenStopAtZoom` is the station's at both ends. The widest f-number is interpolated alike
+  (`fopenAtZoom`), which is why `lvrtc mtf` can say "wide open at f/3.5000000000000004" of a tele end.
+- **Handled.** Nothing to handle between engines: the case is the state LensVisualizer traces at zoom 1, bit for
+  bit, and every engine is asked about that case. It matters to whoever sets a case beside a patent's table, and
+  to the zoom-station matrix (Stage 4.4): a station is reached through the slider, so its gaps need not be the
+  authored ones either.
+- **Class.** convention.
 
 ## Any two engines
 

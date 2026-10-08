@@ -18,7 +18,7 @@ the conditions that were traced: it says what the figures are of, whatever the l
 
 | Engine | Fingerprint | Adapter revision | Details |
 |---|---|---|---|
-| lv | 1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0 | 5b413bf2a7040ad3554f9e98b892bbb1729d5b09c6a1e6205eee6010738ea515 | commit ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62, dirty false, engineFileCount 151 |
+| lv | 1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0 | e47ee676aba5fa13019c85267ab0e8f58987a662fc404371d548e67ce4f4f196 | commit ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62, dirty false, engineFileCount 151 |
 | ref | 8f34b4024051313a54e487f265ee755bcc3778eb6422049d95d0765afd5d2486 | 7b80637836e8f618bdd91f200d8614d78b162716a22a6ace42deb63531fb5da3 | sourceFiles 12 |
 
 | Run | Case |

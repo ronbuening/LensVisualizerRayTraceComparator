@@ -237,7 +237,7 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 
 | Member of the case | Is, in LensVisualizer |
 |---|---|
-| state | `zoomT` of the run, 0 without one; `focusT` 0 for infinity focus, else the run's value |
+| state | `zoomT` of the run, 0 without one, and 0 for a prime (`L.isZoom` false) whatever the run states; `focusT` 0 for infinity focus, else the run's value. A suite run of a zoom without `zoomT` has been made two runs before it is exported ([a zoom without a position](#a-zoom-without-a-position)) |
 | `surfaces[i].label`, `elementId` | `state.surfaces[i].label`, `elemId` |
 | `surfaces[i].z` | `state.z[i]` |
 | `surfaces[i].thickness` | the resolved gap `state.surfaces[i].d`; after the last surface, the distance to `state.imgZ` (the last `d`, which reaches it in every lens that is not folded) |
@@ -480,7 +480,7 @@ takes the comparator's default.
 | `kind` | `"run-spec"` | |
 | `name` | string | letters, digits, `.`, `_` and `-`; safe as a file name |
 | `lens` | object | `{ kind: "lv", key }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another |
-| `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1 |
+| `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1. Without `zoomT`, a zoom is run at both ends ([below](#a-zoom-without-a-position)) |
 | `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }` or `{ kind: "stop-radius", mm }` |
 | `lines?` | object | `{ kind: "reference" \| "cdf" \| "photopic" }` or `{ kind: "explicit", wavelengthsNm, weights? }` |
 | `fields?` | object | `{ kind: "image-height-fractions", values }` 0..1, or `{ kind: "angles-deg", values }` in (−90, 90) |
@@ -497,6 +497,29 @@ For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the 
 1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
 LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
 ([its product MTF](#lensvisualizers-product-mtf)); no rung asks for that quantity yet, so no run hands it on yet.
+
+#### A zoom without a position
+
+**A zoom lens is compared at both ends wherever no zoom position is stated.** A run of a LensVisualizer lens whose
+`state` states no `zoomT` stands for two runs when the lens is a zoom: `<name>-wide` with `state.zoomT` 0 and
+`<name>-tele` with `state.zoomT` 1, in that order and alike in everything else. A run that states `zoomT` is that
+one state, an end included, and keeps its name. A prime has one state and no zoom position: a `zoomT` stated for
+it is taken as 0, so its case and its provenance are those of a run that states none.
+
+- Whether a lens is a zoom is LensVisualizer's own answer, as the catalog indexes it (`LvCatalogEntry.zoom`). So
+  the rule is the LensVisualizer case source's (`CaseSource.expand`, `src/engines/lv/caseSource.ts`), applied when
+  a suite is loaded; `expandSuite` knows nothing of it, and a fixture lens is one case whatever its file holds.
+- The two runs are runs like any other: each has its own case, ray sets, jobs, comparisons and rows of a report,
+  under its own name. A name that the rule gives and another run of the suite already has is a suite that cannot
+  be used, as two runs written alike are.
+- A suite's hash is that of the suite as written (`expandSuite`), with or without a LensVisualizer at hand.
+  Without one nothing says which lens is a zoom: the run is one run, which cannot be started.
+- The ends are the only states the rule adds. The authored zoom stations between them are not run unless a run
+  states one (Stage 4.4 of the plan).
+
+`lvrtc export --all` follows the same rule (every zoom at both ends), and so does `lvrtc mtf <lensKey>` without
+`--zoom`. `lvrtc export <lensKey>` and `lvrtc lenses show <lensKey>` are tools of one state, zoom 0 unless `--zoom`
+names another, and say so on the error stream for a zoom.
 
 **Invariant checked in code** (`runInvariantProblems` in `src/contract/runSpec.ts`), because a schema cannot count
 one list against another: explicit lines that give `weights` give exactly one for each wavelength. It holds for a
@@ -539,7 +562,8 @@ engine only.
 
 `expandSuite` (`src/contract/runSpec.ts`) turns a suite into complete RunSpecs. Each option is the run's own value
 when the run states one, else the default: an option is replaced whole, never merged into. Run names are unique
-within a suite.
+within a suite. A run of a zoom lens that states no zoom position is then made two runs by the case source, one
+for each end ([a zoom without a position](#a-zoom-without-a-position)).
 
 <!-- fixture: valid/suite/worked-example.json -->
 

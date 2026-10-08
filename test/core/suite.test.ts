@@ -456,3 +456,57 @@ test("the fixture source reads a file once, and says so of a lens that is not a 
     problems: ['a lens of kind "lv" is not a fixture'],
   });
 });
+
+test("a case source may give a run one run for each state it leaves open: they take its place, in order", async (t) => {
+  // A source that knows two states of the lens "twin" and one of any other; its cases are the same case throughout.
+  const resolved: string[] = [];
+  const lv: CaseSource = {
+    expand: async (run) =>
+      run.lens.kind === "lv" && run.lens.key === "twin" && run.state?.zoomT === undefined
+        ? [0, 1].map((zoomT) => ({ ...run, name: `${run.name}-at${zoomT}`, state: { ...run.state, zoomT } }))
+        : [run],
+    resolve: async (run) => {
+      resolved.push(`${run.name}@${run.state?.zoomT}`);
+      return { ok: true, opticalCase: SINGLET };
+    },
+  };
+  const written = [
+    { name: "first", lens: { kind: "lv", key: "twin" } },
+    { name: "single", lens: { kind: "lv", key: "one" } },
+    { name: "stated", lens: { kind: "lv", key: "twin" }, state: { zoomT: 0.25 } },
+    fixtureRun("file", "cases/singlet.json"),
+  ];
+  const rootDir = rootWith(t, { "suite.json": suiteOf(written), "cases/singlet.json": SINGLET });
+  const file = join(rootDir, "suite.json");
+  const sources = { lv, fixture: createFixtureCaseSource(rootDir) };
+  const suite = await loadSuite(file, { rootDir, sources });
+  assert.deepEqual(
+    suite.runs.map((run) => run.spec.name),
+    ["first-at0", "first-at1", "single", "stated", "file"],
+  );
+  // Each run the source gave is resolved as the run it is, with the state it was given.
+  assert.deepEqual(resolved, ["first-at0@0", "first-at1@1", "single@undefined", "stated@0.25"]);
+  assert.ok(Object.isFrozen(suite.runs[0].spec));
+
+  // The hash is that of the suite as written: a source that takes every run as it is gives the same one.
+  const { expand: _expand, ...plain } = lv;
+  const asWritten = await loadSuite(file, { rootDir, sources: { ...sources, lv: plain } });
+  assert.deepEqual(
+    asWritten.runs.map((run) => run.spec.name),
+    ["first", "single", "stated", "file"],
+  );
+  assert.equal(asWritten.hash, suite.hash);
+  assert.equal(suite.hash, hashCanonical({ name: "a-suite", runs: expandSuite(suiteOf(written) as unknown as Suite) }));
+
+  // Two runs of one name are no suite, also when a source gave one of them its name.
+  const clash = [...written, { name: "first-at1", lens: { kind: "lv", key: "one" } }];
+  writeFileSync(file, JSON.stringify(suiteOf(clash)));
+  await assert.rejects(loadSuite(file, { rootDir, sources }), (error: unknown) => {
+    assert.ok(error instanceof UsageError);
+    assert.equal(
+      error.message,
+      `${file}: suite a-suite: more than one run is named "first-at1", which the run "first" stands for`,
+    );
+    return true;
+  });
+});

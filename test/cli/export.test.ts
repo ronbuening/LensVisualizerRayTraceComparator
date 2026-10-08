@@ -45,10 +45,15 @@ async function exportCli(args: readonly string[], inputs: { rootDir: string; cwd
   return { code, out: out.join(""), err: err.join("") };
 }
 
-/** The case a successful export printed, checked to be one. */
-function printedCase(run: Run): OpticalCase {
+/** What a zoom that is exported without a zoom position is told, and a prime that is given one. */
+const TELE_HINT =
+  "lvrtc export: acme-zoom-24-48 is a zoom lens: this is its wide end (zoom 0); --zoom 1 gives the tele end\n";
+const PRIME_NOTE = "lvrtc export: acme-singlet-50 is a prime: it has no zoom position, and --zoom is ignored\n";
+
+/** The case a successful export printed, checked to be one; `said` is what the error stream is to hold. */
+function printedCase(run: Run, said: string = ""): OpticalCase {
   assert.equal(run.code, EXIT_OK, run.err);
-  assert.equal(run.err, "");
+  assert.equal(run.err, said);
   const opticalCase: OpticalCase = JSON.parse(run.out);
   assert.equal(run.out, `${canonicalJson(opticalCase)}\n`, "the case is canonical JSON and a newline");
   assert.deepEqual(validateKind("optical-case", opticalCase), []);
@@ -95,12 +100,33 @@ test("--zoom, --aperture and --lines choose the state, the stop and the light", 
 
   const byRadius = printedCase(
     await exportCli(["acme-zoom-24-48", "--aperture", "r=1.25", "--lines", "cdf"], { rootDir }),
+    TELE_HINT,
   );
   assert.equal(byRadius.conditions.stopSemiDiameter, 1.25);
   assert.equal(byRadius.system.surfaces[2].aperture.nominalSemiDiameter, 1.25);
   assert.equal(byRadius.conditions.lines.length, 3);
-  const wideOpen = printedCase(await exportCli(["acme-zoom-24-48", "--aperture", "wide-open"], { rootDir }));
-  assert.equal(wideOpen.id, printedCase(await exportCli(["acme-zoom-24-48"], { rootDir })).id);
+  const wideOpen = printedCase(await exportCli(["acme-zoom-24-48", "--aperture", "wide-open"], { rootDir }), TELE_HINT);
+  assert.equal(wideOpen.id, printedCase(await exportCli(["acme-zoom-24-48"], { rootDir }), TELE_HINT).id);
+});
+
+test("one lens is one state: a zoom without --zoom is its wide end and is told of the tele end; a prime has no position", async (t) => {
+  const { rootDir } = freshRoot(t);
+  // A zoom: the wide end by default, with the hint; a position that is named is exported without a word.
+  const byDefault = printedCase(await exportCli(["acme-zoom-24-48"], { rootDir }), TELE_HINT);
+  assert.equal(byDefault.label.zoomT, 0);
+  const wide = printedCase(await exportCli(["acme-zoom-24-48", "--zoom", "0"], { rootDir }));
+  assert.deepEqual(wide, byDefault);
+  const tele = printedCase(await exportCli(["acme-zoom-24-48", "--zoom", "1"], { rootDir }));
+  assert.equal(tele.label.zoomT, 1);
+  assert.notEqual(tele.id, wide.id);
+
+  // A prime: no hint, and a position given to it is ignored and said to be: the same case, bytes and all.
+  const prime = await exportCli(["acme-singlet-50"], { rootDir });
+  const positioned = await exportCli(["acme-singlet-50", "--zoom", "0.5"], { rootDir });
+  printedCase(prime);
+  assert.equal(printedCase(positioned, PRIME_NOTE).provenance.source.kind, "lv-lens");
+  assert.equal(positioned.out, prime.out);
+  assert.equal((await exportCli(["acme-singlet-50", "--zoom", "0"], { rootDir })).err, "");
 });
 
 test("--focus exports a certified station with its finite object, and no other focus position", async (t) => {
@@ -129,8 +155,8 @@ test("a lens that cannot be exported as asked exits 1 with every reason and its 
   assert.equal(fast.out, "");
   assert.equal(
     fast.err,
-    "lvrtc export: acme-zoom-24-48: aperture-faster-than-wide-open: f/2 is faster than the lens's widest aperture " +
-      "at zoom 0, f/4\n",
+    `${TELE_HINT}lvrtc export: acme-zoom-24-48: aperture-faster-than-wide-open: f/2 is faster than the lens's ` +
+      "widest aperture at zoom 0, f/4\n",
   );
   const noData = await exportCli(["zenith-doublet-100", "--lines", "photopic", "--aperture", "f/1"], { rootDir });
   assert.equal(noData.code, EXIT_FAILURE);
@@ -162,11 +188,20 @@ test("--out writes the case to a file relative to the working directory, and pri
 
 // ── Every lens ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("--all exports every lens at its default state and prints what became of them", async (t) => {
+/** The summary of the fake tree: three lenses, one of them a zoom. */
+const SUMMARY = [
+  "3 lenses (1 of them zooms, each at both ends), 4 states: 4 exported, 0 not exportable, 0 threw",
+  "  primes       2: 2 exported, 0 not exportable, 0 threw",
+  "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
+  "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
+  "",
+].join("\n");
+
+test("--all exports every lens, the zoom at both ends, and prints what became of each state", async (t) => {
   const { rootDir } = freshRoot(t);
   const run = await exportCli(["--all"], { rootDir });
   assert.deepEqual([run.code, run.err], [EXIT_OK, ""]);
-  assert.equal(run.out, "3 lenses: 3 exported, 0 not exportable, 0 threw\n");
+  assert.equal(run.out, SUMMARY);
 });
 
 test("--all --json prints the census: counts, hashes and lens keys, and nothing of a surface", async (t) => {
@@ -176,12 +211,18 @@ test("--all --json prints the census: counts, hashes and lens keys, and nothing 
   const census: ExportCensus = JSON.parse(run.out);
   assert.equal(run.out, `${JSON.stringify(census, null, 2)}\n`);
   assert.deepEqual(census, {
+    byState: {
+      prime: { exported: 2, notExportable: 0, states: 2, threw: 0 },
+      tele: { exported: 1, notExportable: 0, states: 1, threw: 0 },
+      wide: { exported: 1, notExportable: 0, states: 1, threw: 0 },
+    },
     contract: CONTRACT_VERSION,
-    exported: 3,
+    // Three lenses in four states: the zoom is exported at both ends.
+    exported: 4,
     features: {
       ...Object.fromEntries(FEATURE_FLAGS.map((flag) => [flag, 0])),
-      "surface.asphere.even": 1,
-      "surface.conic": 1,
+      "surface.asphere.even": 2,
+      "surface.conic": 2,
     },
     kind: "lv-export-census",
     lensVisualizer: {
@@ -192,16 +233,18 @@ test("--all --json prints the census: counts, hashes and lens keys, and nothing 
     },
     lenses: 3,
     limits: {
-      "asphere.maxPower": { lens: "acme-zoom-24-48", max: 4 },
+      "asphere.maxPower": { end: "wide", lens: "acme-zoom-24-48", max: 4 },
       "lines.count": { lens: "acme-singlet-50", max: 1 },
-      "surfaces.count": { lens: "acme-zoom-24-48", max: 7 },
+      "surfaces.count": { end: "wide", lens: "acme-zoom-24-48", max: 7 },
     },
     notExportable: 0,
     notes: {},
     reasons: {},
-    request: { aperture: "wide-open", focus: "infinity", imagePlane: "design", lines: "reference", zoomT: 0 },
+    request: { aperture: "wide-open", focus: "infinity", imagePlane: "design", lines: "reference", zoom: "both-ends" },
+    states: 4,
     threw: [],
     unindexedFiles: 0,
+    zooms: 1,
   });
   // No number of a prescription: no radius, gap or index of the fake lenses is in the text.
   for (const absent of ["47.5", "1.52", "-80", "6.25"]) assert.ok(!run.out.includes(absent), absent);
@@ -214,8 +257,7 @@ test("--census writes the census as JSON and Markdown, the same bytes every time
   const directory = join(rootDir, "census", "a");
   assert.equal(
     first.out,
-    "3 lenses: 3 exported, 0 not exportable, 0 threw\n" +
-      `census: ${join(directory, CENSUS_FILES.json)}, ${join(directory, CENSUS_FILES.markdown)}\n`,
+    `${SUMMARY}` + `census: ${join(directory, CENSUS_FILES.json)}, ${join(directory, CENSUS_FILES.markdown)}\n`,
   );
   assert.deepEqual(readdirSync(directory).sort(), ["lv-export.json", "lv-export.md"]);
   const json = readFileSync(join(directory, CENSUS_FILES.json), "utf8");
@@ -223,7 +265,9 @@ test("--census writes the census as JSON and Markdown, the same bytes every time
   assert.equal(json, (await exportCli(["--all", "--json"], { rootDir })).out);
   assert.equal(markdown, renderCensusMarkdown(JSON.parse(json)));
   assert.match(markdown, /^# LensVisualizer export census\n/);
-  assert.match(markdown, /^\| 3 \| 3 \| 0 \| 0 \| 0 \|$/m);
+  assert.match(markdown, /^3 lenses, 1 of them zooms, in 4 states; 0 lens files not indexed\.$/m);
+  assert.match(markdown, /^\| Zooms, tele end \| 1 \| 1 \| 0 \| 0 \|$/m);
+  assert.match(markdown, /^\| All \| 4 \| 4 \| 0 \| 0 \|$/m);
 
   const second = await exportCli(["--all", "--census", join(rootDir, "census", "b"), "--json"], { rootDir });
   assert.equal(second.out, json, "with --json the census is printed, and no line beside it");
@@ -248,10 +292,24 @@ test("--all counts a lens that cannot be exported under each of its reasons, and
   const run = await exportCli(["--all", "--json"], { rootDir });
   assert.equal(run.code, EXIT_OK, run.err);
   const census: ExportCensus = JSON.parse(run.out);
-  assert.deepEqual([census.lenses, census.exported, census.notExportable, census.threw], [4, 3, 1, []]);
-  assert.deepEqual(census.reasons, { "lens-build-failed": { count: 1, lenses: ["no-stop"] } });
+  assert.deepEqual([census.lenses, census.states, census.exported, census.notExportable], [4, 5, 4, 1]);
+  assert.deepEqual(census.threw, []);
+  assert.deepEqual(census.reasons, {
+    "lens-build-failed": { states: 1, lenses: ["no-stop"], wideOnly: [], teleOnly: [] },
+  });
   const text = await exportCli(["--all"], { rootDir });
-  assert.equal(text.out, "4 lenses: 3 exported, 1 not exportable, 0 threw\n  lens-build-failed  1\n");
+  assert.equal(
+    text.out,
+    [
+      "4 lenses (1 of them zooms, each at both ends), 5 states: 4 exported, 1 not exportable, 0 threw",
+      "  primes       3: 2 exported, 1 not exportable, 0 threw",
+      "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
+      "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
+      "not exportable, by reason (states, lenses):",
+      "  lens-build-failed  1  1",
+      "",
+    ].join("\n"),
+  );
 });
 
 test("--all names a lens file it cannot index and exits 1, with the census of the others", async (t) => {
@@ -261,7 +319,7 @@ test("--all names a lens file it cannot index and exits 1, with the census of th
   assert.equal(run.code, EXIT_FAILURE);
   assert.equal(run.err, "lvrtc export: src/lens-data/acme/Keyless.data.ts: no string key\n");
   const census: ExportCensus = JSON.parse(run.out);
-  assert.deepEqual([census.lenses, census.exported, census.unindexedFiles], [3, 3, 1]);
+  assert.deepEqual([census.lenses, census.states, census.exported, census.unindexedFiles], [3, 4, 4, 1]);
 });
 
 // ── The command line ─────────────────────────────────────────────────────────────────────────────────────────────

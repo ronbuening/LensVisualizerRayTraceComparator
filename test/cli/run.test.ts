@@ -724,13 +724,22 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
   const args = [join(rootDir, "suite.json"), "--root", rootDir];
   // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
-  assert.equal(ended.code, EXIT_FAILURE, "the refocused run cannot be started");
-  assert.match(ended.out, /^singlet {7}selftest {2}fake-a {2}ok {11}computed$/m);
-  assert.match(ended.out, /^zoom-tele-f8 {2}selftest {2}fake-a {2}ok {11}computed$/m);
-  assert.match(
-    ended.err,
-    /^lvrtc run: run refocused was not started: finite-conjugate-unavailable: focus position 0\.5 /m,
-  );
+  assert.equal(ended.code, EXIT_FAILURE, "the refocused runs cannot be started");
+  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {2}ok {11}computed$/m);
+  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {2}ok {11}computed$/m);
+  // The refocused run states no zoom position of a zoom: it is two runs, one for each end, and neither starts.
+  for (const [end, zoom] of [
+    ["wide", 0],
+    ["tele", 1],
+  ]) {
+    assert.match(
+      ended.err,
+      new RegExp(
+        `^lvrtc run: run refocused-${end} was not started: finite-conjugate-unavailable: focus position 0\\.5 at zoom ${zoom} `,
+        "m",
+      ),
+    );
+  }
 
   const manifest = manifestOf(runsDir, "lv-pair");
   const lv = join(rootDir, "lv");
@@ -750,7 +759,8 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
     [
       ["singlet", true, 0],
       ["zoom-tele-f8", true, 0],
-      ["refocused", false, 1],
+      ["refocused-wide", false, 1],
+      ["refocused-tele", false, 1],
     ],
   );
   const cases = readdirSync(join(runsDir, "lv-pair", CASES_DIRECTORY)).sort();
@@ -805,8 +815,13 @@ test("a LensVisualizer file edited while the suite runs marks the manifest, warn
   assert.ok(ended.err.includes(`lvrtc run: warning: case source lv changed during the run: ${lensFile}\n`), ended.err);
   const manifest = manifestOf(runsDir, "lv-pair");
   assert.equal(manifest.sources?.lv.status, SOURCE_CHANGED);
+  // The zoom states no position: it was run at both ends.
   assert.deepEqual(
-    manifest.jobs.map((job) => job.status),
-    ["ok", "ok"],
+    manifest.jobs.map((job) => [job.run, job.status]),
+    [
+      ["singlet", "ok"],
+      ["zoom-wide", "ok"],
+      ["zoom-tele", "ok"],
+    ],
   );
 });

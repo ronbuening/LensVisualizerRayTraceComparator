@@ -1,21 +1,41 @@
 {
+  "byState": {
+    "prime": {
+      "exported": 572,
+      "notExportable": 22,
+      "states": 594,
+      "threw": 0
+    },
+    "tele": {
+      "exported": 296,
+      "notExportable": 1,
+      "states": 297,
+      "threw": 0
+    },
+    "wide": {
+      "exported": 296,
+      "notExportable": 1,
+      "states": 297,
+      "threw": 0
+    }
+  },
   "contract": "1.0",
-  "exported": 868,
+  "exported": 1164,
   "features": {
     "aperture.annular": 0,
     "lines.multiple": 0,
     "object.finite": 0,
-    "surface.asphere.even": 392,
+    "surface.asphere.even": 580,
     "surface.asphere.flat-base": 2,
-    "surface.asphere.odd": 52,
-    "surface.conic": 181
+    "surface.asphere.odd": 78,
+    "surface.conic": 270
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "d36f44b34473cf74c8a64889f38de893702fa26d",
+    "commit": "ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62",
     "dirty": false,
-    "engineClosureHash": "7eebe2396fae83736c6a3cfee1fe7de0137fc520dde3da67dced78446047b88f",
-    "engineFileCount": 141
+    "engineClosureHash": "1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0",
+    "engineFileCount": 151
   },
   "lenses": 891,
   "limits": {
@@ -28,19 +48,19 @@
       "max": 1
     },
     "surfaces.count": {
+      "end": "wide",
       "lens": "nikon-af-s-nikkor-180-400mm-f4e-tc14-fl-ed-vr-tc-in",
       "max": 63
     }
   },
-  "notExportable": 23,
+  "notExportable": 24,
   "notes": {
     "bulk-absorption": 1,
     "projection:fisheye-equidistant": 3,
-    "projection:fisheye-equisolid": 9
+    "projection:fisheye-equisolid": 12
   },
   "reasons": {
     "diffractive-surface": {
-      "count": 8,
       "lenses": [
         "canon-ef-400mm-f4-do-is-usm",
         "canon-ef-70-300mm-f45-56-do-is-usm",
@@ -50,10 +70,12 @@
         "nikon-af-s-nikkor-500mm-f56e-pf-ed-vr",
         "nikon-nikkor-z-800mm-f63-vr-s",
         "reference-folded-diffractive-plate"
-      ]
+      ],
+      "states": 9,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "folded-path": {
-      "count": 15,
       "lenses": [
         "carl-zeiss-mirotar-500f45",
         "minolta-af-reflex-500mm-f8",
@@ -70,16 +92,20 @@
         "reference-newtonian-side-focus",
         "reference-spherical-primary-mirror",
         "vivitar-s1-450-f45"
-      ]
+      ],
+      "states": 15,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "mixed-reference": {
-      "count": 1,
       "lenses": [
         "sony-fe-14mm-f18-gm"
-      ]
+      ],
+      "states": 1,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "non-refract-interaction": {
-      "count": 15,
       "lenses": [
         "carl-zeiss-mirotar-500f45",
         "minolta-af-reflex-500mm-f8",
@@ -96,28 +122,37 @@
         "reference-newtonian-side-focus",
         "reference-spherical-primary-mirror",
         "vivitar-s1-450-f45"
-      ]
+      ],
+      "states": 15,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "off-axis-image-plane": {
-      "count": 2,
       "lenses": [
         "reference-folded-diffractive-plate",
         "reference-newtonian-side-focus"
-      ]
+      ],
+      "states": 2,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "surface-profile-unsupported": {
-      "count": 2,
       "lenses": [
         "reference-folded-diffractive-plate",
         "reference-newtonian-side-focus"
-      ]
+      ],
+      "states": 2,
+      "teleOnly": [],
+      "wideOnly": []
     },
     "tilted-image-plane": {
-      "count": 2,
       "lenses": [
         "reference-folded-diffractive-plate",
         "reference-newtonian-side-focus"
-      ]
+      ],
+      "states": 2,
+      "teleOnly": [],
+      "wideOnly": []
     }
   },
   "request": {
@@ -125,8 +160,10 @@
     "focus": "infinity",
     "imagePlane": "design",
     "lines": "reference",
-    "zoomT": 0
+    "zoom": "both-ends"
   },
+  "states": 1188,
   "threw": [],
-  "unindexedFiles": 0
+  "unindexedFiles": 0,
+  "zooms": 297
 }

@@ -13,6 +13,7 @@ import { CENSUS_FILES, buildCensus, censusJsonText, renderCensusMarkdown } from 
 import type { CensusLens, ExportCensus } from "../../engines/lv/census.ts";
 import { LvBindingError } from "../../engines/lv/errors.ts";
 import { problemText } from "../../engines/lv/exportProblems.ts";
+import { ZOOM_ENDS, primeZoomNote, teleHint } from "../../engines/lv/zoomEnds.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
@@ -38,14 +39,15 @@ const HELP = [
   "Writes a LensVisualizer lens as an optical case: the document every engine is asked about. The case is built",
   "from the state LensVisualizer prepares for tracing, at the design image plane.",
   "",
-  "  --zoom <t>      zoom position from 0 (wide) to 1 (tele); default 0",
+  "  --zoom <t>      zoom position from 0 (wide) to 1 (tele); default 0, the wide end: one lens is exported in one",
+  "                  state, and --zoom 1 gives the tele end of a zoom. A prime has no zoom position",
   "  --focus <t>     focus position from 0 (infinity) to 1 (closest); default infinity. A position other than 0",
   "                  is exported only where LensVisualizer certifies the object distance of that station",
   "  --aperture <a>  wide-open (default), f/<N> by LensVisualizer's stop-down rule, or r=<mm>, a stop radius",
   "  --lines <set>   reference (default), cdf or photopic: LensVisualizer's lines, weights and indices",
   "  --out <file>    write the case to the file; without it the case is printed",
-  "  --all           export every lens at its default state on its reference line, and print the census:",
-  "                  how many were exported, how many were not and why, by lens key",
+  "  --all           export every lens on its reference line, a zoom at both ends (zoom 0 and zoom 1), and print",
+  "                  the census: how many states were exported, how many were not and why, by lens key",
   "  --census <dir>  with --all: write the census to <dir>/lv-export.json and <dir>/lv-export.md",
   "  --json          with --all: print the census as JSON in place of the summary",
   "  --root <dir>    the directory that holds lvrtc.config.json (default: this repository)",
@@ -85,20 +87,27 @@ function exportOptions(values: ReadonlyMap<string, string>): ExportOptions {
   };
 }
 
-/** Exports one lens and writes its case to `out`, or prints it. */
+/**
+ * Exports one lens and writes its case to `out`, or prints it. `zoomGiven` says whether the command line named a
+ * zoom position: a zoom without one is told of its tele end, and a prime with one that it has none.
+ */
 async function exportOne(
   binding: LvBinding,
   key: string,
   options: ExportOptions,
+  zoomGiven: boolean,
   out: string | undefined,
   io: CliIo,
 ): Promise<number> {
+  let zoom: boolean;
   try {
-    await binding.lens(key);
+    zoom = (await binding.lens(key)).entry.zoom === true;
   } catch (error) {
     if (error instanceof LvBindingError && error.code === "unknown-lens") throw new UsageError(error.message);
     throw error;
   }
+  if (zoom && !zoomGiven) io.stderr(`lvrtc export: ${teleHint(key)}\n`);
+  if (!zoom && zoomGiven && options.state?.zoomT !== 0) io.stderr(`lvrtc export: ${primeZoomNote(key)}\n`);
   const result = await createLvExporter(binding).exportLens(key, options);
   if (!result.ok) {
     for (const problem of result.problems) io.stderr(`lvrtc export: ${key}: ${problemText(problem)}\n`);
@@ -114,26 +123,39 @@ async function exportOne(
 function summaryText(census: ExportCensus): string {
   const reasons = Object.entries(census.reasons);
   const width = Math.max(0, ...reasons.map(([code]) => code.length));
+  const counted = Math.max(0, ...reasons.map(([, { states }]) => String(states).length));
   return [
-    `${census.lenses} lenses: ${census.exported} exported, ${census.notExportable} not exportable, ` +
-      `${census.threw.length} threw`,
-    ...reasons.map(([code, { count }]) => `  ${code.padEnd(width)}  ${count}`),
+    `${census.lenses} lenses (${census.zooms} of them zooms, each at both ends), ${census.states} states: ` +
+      `${census.exported} exported, ${census.notExportable} not exportable, ${census.threw.length} threw`,
+    ...(["prime", "wide", "tele"] as const).map((kind) => {
+      const { states, exported, notExportable, threw } = census.byState[kind];
+      const name = (kind === "prime" ? "primes" : `zooms, ${kind}`).padEnd(11);
+      return `  ${name}  ${states}: ${exported} exported, ${notExportable} not exportable, ${threw} threw`;
+    }),
+    ...(reasons.length === 0 ? [] : ["not exportable, by reason (states, lenses):"]),
+    ...reasons.map(
+      ([code, { states, lenses }]) => `  ${code.padEnd(width)}  ${String(states).padStart(counted)}  ${lenses.length}`,
+    ),
     "",
   ].join("\n");
 }
 
-/** Exports every lens of the catalog at its default state and reports the census. */
+/** Exports every lens of the catalog, a zoom at both ends, and reports the census. */
 async function exportAll(binding: LvBinding, censusDir: string | undefined, json: boolean, io: CliIo): Promise<number> {
   const catalog = await binding.catalog();
   const exporter = createLvExporter(binding);
   const lenses: CensusLens[] = [];
-  for (const { key } of catalog.entries) {
-    try {
-      lenses.push({ key, outcome: await exporter.exportLens(key, {}) });
-    } catch (error) {
-      const threw = error instanceof Error ? error.message : String(error);
-      io.stderr(`lvrtc export: threw: ${threw}\n`);
-      lenses.push({ key, outcome: { threw } });
+  for (const { key, zoom } of catalog.entries) {
+    const states = zoom === true ? ZOOM_ENDS : [{ end: undefined, zoomT: 0 }];
+    for (const { end, zoomT } of states) {
+      const state = end === undefined ? { key } : { key, end };
+      try {
+        lenses.push({ ...state, outcome: await exporter.exportLens(key, { state: { zoomT } }) });
+      } catch (error) {
+        const threw = error instanceof Error ? error.message : String(error);
+        io.stderr(`lvrtc export: threw: ${threw}${end === undefined ? "" : ` (${end} end)`}\n`);
+        lenses.push({ ...state, outcome: { threw } });
+      }
     }
   }
   for (const { file, problem } of catalog.problems) io.stderr(`lvrtc export: ${file}: ${problem}\n`);
@@ -159,14 +181,17 @@ async function exportAll(binding: LvBinding, censusDir: string | undefined, json
  * Builds `lvrtc export <lensKey>` and `lvrtc export --all`, which read the LensVisualizer checkout of the
  * configuration (`lvPath`) through the binding.
  *
- * `export <lensKey>` exports the lens in the state the options name (`exportCase`) and writes the case as canonical
- * JSON with a final newline: to `--out`, which is relative to the working directory, or else to the output. A lens
- * that cannot be exported as asked has every reason printed to the error stream, as `<key>: <code>: <message>`.
+ * `export <lensKey>` exports the lens in the one state the options name (`exportCase`) and writes the case as
+ * canonical JSON with a final newline: to `--out`, which is relative to the working directory, or else to the
+ * output. A lens that cannot be exported as asked has every reason printed to the error stream, as
+ * `<key>: <code>: <message>`. Without `--zoom` a zoom is exported at its wide end, and the error stream says that
+ * `--zoom 1` gives the tele end; a prime has no zoom position, and one given for it is ignored, which is said too.
  *
- * `export --all` exports every lens of the catalog at its default state (zoom 0, infinity focus, wide open, the
- * design image plane) on its reference line, and never stops at a lens: one whose export throws is named and
- * counted. It prints a summary, or with `--json` the census, and with `--census <dir>` writes the census to
- * `lv-export.json` and `lv-export.md` in that directory. The census holds counts, hashes and lens keys only.
+ * `export --all` exports every lens of the catalog (infinity focus, wide open, the design image plane) on its
+ * reference line, a prime in its one state and a zoom at both ends, zoom 0 and zoom 1, and never stops at a state:
+ * one whose export throws is named and counted. It prints a summary, or with `--json` the census, and with
+ * `--census <dir>` writes the census to `lv-export.json` and `lv-export.md` in that directory. The census holds
+ * counts, hashes and lens keys only.
  *
  * Exit codes: 0 when the case or the census was written; 1 when the lens cannot be exported as asked, when
  * LensVisualizer is not configured or cannot be loaded, and, for `--all`, when exporting a lens threw or a lens
@@ -209,7 +234,7 @@ export function createExportCommand(inputs: ExportCommandInputs): CliCommand {
 
         const binding = await loadLvBinding(loadConfig({ rootDir, env: inputs.env }).config.lvPath);
         if (options === undefined) return await exportAll(binding, path("--census"), asked.flags.has("--json"), io);
-        return await exportOne(binding, asked.positionals[0], options, path("--out"), io);
+        return await exportOne(binding, asked.positionals[0], options, asked.values.has("--zoom"), path("--out"), io);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;
         io.stderr(`lvrtc export: ${error.message}\n${SYNOPSIS}`);

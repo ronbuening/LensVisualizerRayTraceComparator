@@ -101,22 +101,54 @@ test("export --all completes with zero throws, and its counts add up", { skip },
   assert.deepEqual(census.threw, []);
   assert.equal(census.unindexedFiles, 0);
   assert.equal(census.lenses, catalog.entries.length);
-  assert.equal(census.exported + census.notExportable, census.lenses);
-  assert.ok(census.exported > 800, `about 870 lenses export, found ${census.exported}`);
-  // Every lens that is not exportable is under at least one reason, every reason has a known code, and the keys of
-  // a reason are lenses of the catalog, sorted.
+  // Every prime once and every zoom at both ends: LensVisualizer's own flag says which is which.
+  const zooms = catalog.entries.filter((entry) => entry.zoom === true).map((entry) => entry.key);
+  assert.equal(census.zooms, zooms.length);
+  assert.equal(census.states, census.lenses + census.zooms);
+  assert.equal(census.exported + census.notExportable, census.states);
+  assert.deepEqual(
+    [census.byState.prime.states, census.byState.wide.states, census.byState.tele.states],
+    [census.lenses - census.zooms, census.zooms, census.zooms],
+  );
+  assert.ok(census.zooms > 250, `about 297 zooms, found ${census.zooms}`);
+  assert.ok(census.exported > 1100, `about 1164 states export, found ${census.exported}`);
+  assert.ok(census.byState.tele.exported > 250, `about 296 tele ends export, found ${census.byState.tele.exported}`);
+  // Every state that is not exportable is under at least one reason, every reason has a known code, and the keys
+  // of a reason are lenses of the catalog, sorted; a lens named with one end is a zoom.
   const keys = new Set(catalog.entries.map((entry) => entry.key));
+  // The states that have a reason, each named once: a prime by its key, a zoom by its key and each end that has one.
   const withReason = new Set<string>();
-  for (const [code, { count, lenses }] of Object.entries(census.reasons)) {
+  for (const [code, { states, lenses, wideOnly, teleOnly }] of Object.entries(census.reasons)) {
     assert.ok(KNOWN_CODES.includes(code), `unknown problem code ${code}`);
-    assert.equal(count, lenses.length, code);
     assert.deepEqual(lenses, [...lenses].sort(), code);
     for (const key of lenses) {
       assert.ok(keys.has(key), key);
-      withReason.add(key);
+      if (!zooms.includes(key)) withReason.add(key);
+      if (zooms.includes(key) && !teleOnly.includes(key)) withReason.add(`${key} wide`);
+      if (zooms.includes(key) && !wideOnly.includes(key)) withReason.add(`${key} tele`);
     }
+    const oneEnd = [...wideOnly, ...teleOnly];
+    for (const key of oneEnd) assert.ok(lenses.includes(key) && zooms.includes(key), `${code}: ${key}`);
+    const both = lenses.filter((key) => zooms.includes(key) && !oneEnd.includes(key));
+    assert.equal(states, lenses.length + both.length, code);
   }
+  const { prime, wide, tele } = census.byState;
   assert.equal(withReason.size, census.notExportable);
+  for (const [end, counts] of [
+    ["wide", wide],
+    ["tele", tele],
+  ] as const) {
+    const named = [...withReason].filter((state) => state.endsWith(` ${end}`));
+    assert.equal(named.length, counts.notExportable, end);
+  }
+  t.diagnostic(
+    `${census.lenses} lenses, ${census.zooms} zooms, ${census.states} states: ${census.exported} exported, ` +
+      `${census.notExportable} not exportable (primes ${prime.notExportable}, wide ${wide.notExportable}, tele ` +
+      `${tele.notExportable}); by reason: ` +
+      Object.entries(census.reasons)
+        .map(([code, reason]) => `${code} ${reason.states} states of ${reason.lenses.length} lenses`)
+        .join(", "),
+  );
   for (const count of Object.values(census.features)) assert.ok(count >= 0 && count <= census.exported);
   for (const { max, lens } of Object.values(census.limits)) assert.ok(max > 0 && lens !== null && keys.has(lens));
   assert.equal(census.limits["lines.count"].max, 1, "the census is taken on the reference line");

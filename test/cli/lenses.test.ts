@@ -176,6 +176,32 @@ test("show defaults to zoom 0 and focus 0, and --focus moves the image plane", a
   assert.equal(close.imgZ, 57.5);
 });
 
+test("show is one state: a zoom without --zoom is its wide end and is told of the tele end; a prime has no position", async (t) => {
+  const { rootDir } = freshRoot(t);
+  const hint =
+    "lvrtc lenses: acme-zoom-24-48 is a zoom lens: this is its wide end (zoom 0); --zoom 1 gives the tele end\n";
+  const byDefault = await lenses(["show", "acme-zoom-24-48", "--json"], { rootDir });
+  assert.deepEqual([byDefault.code, byDefault.err], [EXIT_OK, hint]);
+  assert.equal(JSON.parse(byDefault.out).zoomT, 0);
+  // A position that is named is shown without a word, the wide end included.
+  const wide = await lenses(["show", "acme-zoom-24-48", "--zoom", "0", "--json"], { rootDir });
+  assert.deepEqual([wide.err, wide.out], ["", byDefault.out]);
+  const tele = await lenses(["show", "acme-zoom-24-48", "--zoom", "1", "--json"], { rootDir });
+  assert.equal(tele.err, "");
+  assert.equal(JSON.parse(tele.out).zoomT, 1);
+  assert.notEqual(JSON.parse(tele.out).imgZ, JSON.parse(wide.out).imgZ);
+
+  // A prime is shown without a hint; a position given to it is ignored, and said to be.
+  const prime = await lenses(["show", "acme-singlet-50", "--json"], { rootDir });
+  assert.equal(prime.err, "");
+  const positioned = await lenses(["show", "acme-singlet-50", "--zoom", "0.5", "--json"], { rootDir });
+  assert.equal(
+    positioned.err,
+    "lvrtc lenses: acme-singlet-50 is a prime: it has no zoom position, and --zoom is ignored\n",
+  );
+  assert.equal(positioned.out, prime.out);
+});
+
 test("an unknown key is a usage error that suggests near keys", async (t) => {
   const { rootDir } = freshRoot(t);
   const run = await lenses(["show", "acme-zoom"], { rootDir });
