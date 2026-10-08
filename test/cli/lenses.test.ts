@@ -254,7 +254,7 @@ test("a LensVisualizer that is not configured, missing or not loadable is a fail
   assert.equal(unloadable.code, EXIT_FAILURE);
   assert.match(
     unloadable.err,
-    /^lvrtc lenses: LensVisualizer at .*: 1 of 14 modules cannot be imported: src\/optics\/analysis\/mtfSupport\.ts: /,
+    /^lvrtc lenses: LensVisualizer at .*: 1 of 15 modules cannot be imported: src\/optics\/analysis\/mtfSupport\.ts: /,
   );
 });
 

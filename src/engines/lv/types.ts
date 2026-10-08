@@ -133,13 +133,33 @@ export interface LvTraceOptions {
 /** The index after a surface at one wavelength, given the surface's index and its authored `nd`. */
 export type LvIndexResolver = (surfaceIndex: number, nd: number) => number;
 
-/** LV's EngineTraceResult, the members the comparator reads. */
+/**
+ * One surface a traced ray met, the members the comparator reads. A hit is `clipped` when the ray ends on it: beyond
+ * the clear aperture, inside an annular hole, or totally reflected. A surface the ray could not be intersected with
+ * has no hit at all.
+ */
+export interface LvTraceHit {
+  readonly surfaceIndex: number;
+  readonly point: LvVec3;
+  readonly clipped: boolean;
+}
+
+/**
+ * LV's EngineTraceResult, the members the comparator reads. A sequential trace ends on the last surface it met:
+ * `terminalPoint` is that hit and `terminalDirection` the unit direction after it, never a point of the image
+ * plane. `opticalPathLengthMm`, when it was asked for, is the sum of index times length from the ray's origin to
+ * that hit. `status` is "clipped" for a ray an aperture stopped and "failed" whenever `failureReason` is set, which
+ * a total internal reflection sets as well as an intersection that was not found.
+ */
 export interface LvTraceResult {
   readonly opticalPathLengthMm?: number;
-  readonly hits: readonly unknown[];
+  /** The ray as it was traced: its origin, and its direction after any normalisation. */
+  readonly input: LvRay;
+  readonly hits: readonly LvTraceHit[];
   readonly terminalPoint: LvVec3;
   readonly terminalDirection: LvVec3;
   readonly terminalSurfaceIndex: number;
+  /** The index of the medium the ray is in where the trace ends. */
   readonly finalMedium: number;
   readonly status: "ok" | "clipped" | "failed";
   readonly failureReason: string | null;
@@ -243,6 +263,96 @@ export interface LvSpectralLine {
   readonly weight: number;
 }
 
+/** One field's launch in LV's MTF sampling: its chief ray on the launch plane, shared by every line and grid. */
+export interface LvMtfFieldLaunch {
+  readonly fieldAngleDeg: number;
+  /** The one direction of a collimated bundle; a finite source launches each ray from `objectPoint` instead. */
+  readonly direction: LvVec3;
+  readonly objectPoint?: LvVec3;
+  /** The z of the launch plane, ahead of the first surface. */
+  readonly leadZ: number;
+  /** The chief ray's height on the launch plane. */
+  readonly centerY: number;
+}
+
+/** The box of the launch plane, relative to the chief ray, that holds every transmitted ray of one field. */
+export interface LvMtfFootprint {
+  readonly x0: number;
+  readonly x1: number;
+  readonly y0: number;
+  readonly y1: number;
+  readonly beamWidthMm: number;
+  readonly beamHeightMm: number;
+  readonly guardMm: number;
+}
+
+/** LV's launch lattice over a footprint: square cells of side `step` from the corner (`x0`, `y0`). */
+export interface LvMtfLaunchGrid {
+  /** Always even, so that no sample lies on the meridional plane. */
+  readonly columns: number;
+  readonly rows: number;
+  readonly step: number;
+  readonly x0: number;
+  readonly y0: number;
+}
+
+/** Where a ray lands on the image plane, with its transmitted weight. */
+export interface LvMtfSpot {
+  readonly x: number;
+  readonly y: number;
+  readonly weight: number;
+}
+
+/** LV's verdict on one traced pupil sample: it lands, an aperture stops it, or the tracer could not resolve it. */
+export type LvMtfRayClass = "valid" | "blocked" | "failed";
+
+/** One valid sample of an LV bundle: its landing, its lattice cell and the trace it came from. */
+export interface LvMtfPupilRay extends LvMtfSpot {
+  readonly column: number;
+  readonly row: number;
+  readonly trace: Pick<LvTraceResult, "input" | "terminalPoint" | "terminalDirection" | "finalMedium"> & {
+    readonly opticalPathLengthMm?: number;
+  };
+}
+
+/**
+ * What LV's `traceMtfBundle` returns. When `mirrored` is true only the columns from `columns / 2` on were traced:
+ * every other ray of `rays` is the mirror image in x of one that was, and `blocked` and `failed` count both.
+ */
+export interface LvMtfBundle {
+  readonly rays: readonly LvMtfPupilRay[];
+  readonly blocked: number;
+  readonly failed: number;
+  readonly chief: LvMtfSpot;
+  readonly chiefClipped: boolean;
+  readonly columns: number;
+  readonly rows: number;
+  readonly mirrored: boolean;
+  readonly launchStepMm: number;
+}
+
+/** LV's image-height axis for one state: the height of the 100 % field and how far the model reaches. */
+export interface LvMtfFieldGeometry {
+  readonly referenceHeightMm: number;
+  readonly modeledEdgeHeightMm: number;
+  readonly modeledEdgeAngleDeg: number;
+  readonly chiefEdgeHeightMm: number;
+  readonly chiefEdgeAngleDeg: number;
+  readonly basis: string;
+}
+
+/** One requested image height as LV resolves it: a chief-ray angle, or why it has none. */
+export interface LvMtfFieldTarget {
+  readonly fraction: number;
+  readonly targetImageHeightMm: number;
+  /** Null when the height is outside the modeled field or the angle could not be solved. */
+  readonly fieldAngleDeg: number | null;
+  readonly outsideModel: boolean;
+}
+
+/** The radial image height of the chief ray at a field angle in degrees, or NaN where it has none. */
+export type LvMtfChiefHeight = (fieldAngleDeg: number) => number;
+
 /** A focus and zoom station whose object distance the lens's source documents: LV's FiniteConjugate. */
 export interface LvFiniteConjugate {
   readonly focusT: number;
@@ -328,6 +438,68 @@ export interface LvApi {
   mtfIndexResolver(state: LvPreparedState, support: LvMtfSupport, wavelengthNm: number): LvIndexResolver | undefined;
   /** The object point of a certified conjugate at a field angle in degrees, or null when LV cannot place it. */
   mtfFiniteObjectPoint(state: LvPreparedState, conjugate: LvFiniteConjugate, fieldAngle: number): LvVec3 | null;
+  /**
+   * LV's MTF launch: the chief ray of a field, the footprint of its beam on the launch plane, the lattice over the
+   * footprint and the ray of a lattice point. The footprint is found at the first line of `support`, from the seed
+   * `options.pupilSemiDiameterMm`. A field without a chief ray has no launch, and one without a beam no footprint.
+   */
+  prepareMtfFieldLaunch(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    fieldAngleDeg: number,
+  ): LvMtfFieldLaunch | null;
+  findMtfFieldFootprint(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    launch: LvMtfFieldLaunch,
+    growths?: number,
+  ): LvMtfFootprint | null;
+  mtfLaunchGrid(footprint: LvMtfFootprint, gridSize: number): LvMtfLaunchGrid;
+  mtfLaunchRay(launch: LvMtfFieldLaunch, x: number, y: number): LvRay;
+  /** LV's own bundle over the lattice of one grid size, at one line: what its MTF sums. */
+  traceMtfBundle(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    launch: LvMtfFieldLaunch,
+    footprint: LvMtfFootprint,
+    gridSize: number,
+    line: LvSpectralLine,
+    imagePlaneZ?: number,
+    extras?: { readonly opticalPath?: boolean },
+  ): LvMtfBundle | null;
+  /** Where a trace that ended "ok" lands on the image plane, with its bulk transmission; null when it does not. */
+  mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
+  /** Whether a trace is a sample, was stopped by an aperture (a proven miss included) or could not be resolved. */
+  mtfTraceClassification(trace: LvTraceResult, state?: LvPreparedState, stopRadius?: number): LvMtfRayClass;
+  /**
+   * LV's field axis: its first estimate of the half field, the chief ray's image height at an angle (NaN where the
+   * chief is stopped, unless apertures are not checked), the same while any of the beam still lands, the axis they
+   * give, and the chief-ray angle of each fraction of the reference height.
+   */
+  mtfModeledHalfField(state: LvPreparedState): number;
+  mtfChiefHeight(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    checkApertures?: boolean,
+  ): LvMtfChiefHeight;
+  mtfBeamHeight(state: LvPreparedState, options: LvMtfOptions, support: LvMtfSupport): LvMtfChiefHeight;
+  resolveMtfFieldGeometry(
+    state: LvPreparedState,
+    startDeg: number,
+    chiefHeight: LvMtfChiefHeight,
+    beyond?: { readonly reference: LvMtfChiefHeight; readonly beam: LvMtfChiefHeight },
+  ): LvMtfFieldGeometry | null;
+  resolveMtfFieldTargets(
+    state: LvPreparedState,
+    geometry: LvMtfFieldGeometry,
+    fractions: readonly number[],
+    chiefHeight: LvMtfChiefHeight,
+    infinity: boolean,
+  ): LvMtfFieldTarget[];
   /** LV's `LINE_NM`. Anchored indices are fitted between its g and C lines. */
   readonly spectralLinesNm: LvLineNm;
   /** LV's `FLAT_R_THRESHOLD`: a surface whose radius is larger in magnitude has no curvature. */

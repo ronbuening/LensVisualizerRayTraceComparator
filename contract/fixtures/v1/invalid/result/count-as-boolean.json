@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "result",
-  "requestId": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+  "requestId": "86f90870f94da86eceb866f565746b1488849db074ade47b8bcd594d95a859e2",
   "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
   "engine": {
     "id": "fake",
@@ -21,14 +21,24 @@
     }
   },
   "data": {
-    "valid": {
+    "status": {
       "$nd": {
         "dtype": "u1",
         "shape": [
           2
         ],
-        "data": "AQE=",
-        "sha256": "9dcf97a184f32623d11a73124ceb99a5709b083721e878a16d78f596718ba7b2"
+        "data": "AAE=",
+        "sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+      }
+    },
+    "endSurface": {
+      "$nd": {
+        "dtype": "i4",
+        "shape": [
+          2
+        ],
+        "data": "/////wAAAAA=",
+        "sha256": "72a4fa3544e43a836ffcb268ce06ccdbc55d44d5e6b1b1c19216a53ea98301fd"
       }
     },
     "hits": {
@@ -36,10 +46,64 @@
         "dtype": "f8",
         "shape": [
           2,
+          2,
           3
         ],
-        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEQAAAAAAAALA/",
-        "sha256": "a8c597ed362170adae5e426445d2be1ca2371476d39a8d48bb2ef9fa0dc92ea7"
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAAAAAAAAAAAAAAAAAAABBAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/",
+        "sha256": "54d04a4f71893c8965ed4ed41effcfc3b9fcd4ff4c7acdd08fe49eeced6f5607"
+      }
+    },
+    "exitPoint": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          3
+        ],
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAABBAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/",
+        "sha256": "ef0147d974a655f3eee0474482820a49d2b6b2be260d8015f88882e5c73527cd"
+      }
+    },
+    "exitDirection": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          3
+        ],
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/",
+        "sha256": "a04a811cd5df578ed66d114c1b59d930ab5670a279be7385022414bfb01c45e9"
+      }
+    },
+    "imagePoint": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          3
+        ],
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAFlAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/",
+        "sha256": "89d20259e8f56a04d8345b017431ab23c13c4e80c47042c5db41e527b3f8f67f"
+      }
+    },
+    "opticalPath": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2
+        ],
+        "data": "jErqBDQRMEAAAAAAAAD4fw==",
+        "sha256": "02b29e07b8cd80e831c416b5e47f796c268b6980c9caa07e4b91b90b1e081548"
+      }
+    },
+    "opticalPathToImage": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2
+        ],
+        "data": "o5I6AU0EXEAAAAAAAAD4fw==",
+        "sha256": "f17a782afb33313aba0fce56ad11056cbc7b49028f56ab8e2737d5b85774c568"
       }
     }
   },
@@ -47,7 +111,9 @@
     "warnings": [],
     "counts": {
       "rays": true,
-      "clipped": 0
+      "ok": 1,
+      "blocked": 1,
+      "failed": 0
     }
   }
 }

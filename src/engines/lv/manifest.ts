@@ -62,7 +62,29 @@ export const LV_IMPORT_MANIFEST = [
   { module: "src/optics/first-order/systemMatrix.ts", exports: functions("computeSystemMatrix2") },
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix2") },
   { module: "src/optics/analysis/mtfSupport.ts", exports: functions("assessMtfSupport") },
-  { module: "src/optics/analysis/mtfTracing.ts", exports: functions("mtfIndexResolver") },
+  {
+    module: "src/optics/analysis/mtfTracing.ts",
+    exports: functions(
+      "mtfIndexResolver",
+      "prepareMtfFieldLaunch",
+      "findMtfFieldFootprint",
+      "mtfLaunchGrid",
+      "mtfLaunchRay",
+      "traceMtfBundle",
+      "mtfImagePoint",
+      "mtfTraceClassification",
+    ),
+  },
+  {
+    module: "src/optics/analysis/mtfFields.ts",
+    exports: functions(
+      "mtfModeledHalfField",
+      "mtfChiefHeight",
+      "mtfBeamHeight",
+      "resolveMtfFieldGeometry",
+      "resolveMtfFieldTargets",
+    ),
+  },
   { module: "src/optics/analysis/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
   { module: "src/optics/spectralLines.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
 ] as const satisfies readonly LvManifestModule[];

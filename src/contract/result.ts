@@ -42,7 +42,13 @@ export interface ResultEnvelope {
   readonly kind: "result";
   readonly requestId: string;
   readonly caseId: string;
-  readonly engine: { readonly id: string; readonly fingerprint: string; readonly details: EngineDetails };
+  /** Who answered: the id, the fingerprint and, when the engine states one, the adapter revision of its descriptor. */
+  readonly engine: {
+    readonly id: string;
+    readonly fingerprint: string;
+    readonly adapterRevision?: string;
+    readonly details: EngineDetails;
+  };
   readonly status: ResultStatus;
   readonly unsupported?: readonly UnsupportedItem[];
   readonly error?: ErrorInfo;

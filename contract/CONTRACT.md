@@ -326,8 +326,9 @@ elsewhere occur only in folded systems, and an asphere without a term is the con
 
 LensVisualizer is also an engine, `lv` (`src/engines/lv/engine.ts`): it answers a request from its own prepared
 state and its own functions, and reads nothing of the surfaces of the case it is handed. Its `fingerprint` is the
-closure hash of LensVisualizer's engine files, the `closureHash` of a case's provenance, and its `details` are the
-checkout's `commit` and `dirty` flag and the number of engine files.
+closure hash of LensVisualizer's engine files, the `closureHash` of a case's provenance; its `adapterRevision` is
+the hash of the comparator's own code behind it ([fingerprint and adapter revision](#engine-descriptor)); and its
+`details` are the checkout's `commit` and `dirty` flag and the number of engine files.
 
 | The case | `lv` answers |
 |---|---|
@@ -355,6 +356,20 @@ checkout's `commit` and `dirty` flag and the number of engine files.
   for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
   bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
   LensVisualizer displays.
+- **`rays.trace`** is every ray of the request traced for real by LensVisualizer's sequential tracer,
+  `traceEngineRay2`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
+  ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
+  (which are LensVisualizer's own for that line), the direction taken as the unit vector it is, and the optical
+  path recorded. These are the options of LensVisualizer's own MTF bundle. What became of a ray is what
+  LensVisualizer's `mtfTraceClassification` says: `valid` is status 0, `blocked` (an aperture, a total internal
+  reflection, a miss it can prove) status 1, `failed` status 2. `hits` are its hit points, `exitPoint` and
+  `exitDirection` its `terminalPoint` and `terminalDirection`, `opticalPath` its `opticalPathLengthMm`.
+  LensVisualizer's trace ends on the last surface, so `imagePoint` is the comparator's own projection of that end
+  (`src/estimators/imageProjection.ts`) and `opticalPathToImage` the path continued over the projection's distance
+  in the index LensVisualizer ends in; a test holds the projection to LensVisualizer's own `mtfImagePoint`, bit for
+  bit. The end surface of a ray that did not pass is the first surface it did not pass: the one that clipped or
+  reflected it, or the one LensVisualizer could not intersect it with. LensVisualizer does compute a hit on a
+  surface that clips a ray, by rules of its own beyond a clear aperture; it is not reported.
 - **`recorded`** carries LensVisualizer's stored pupil constants, where they are defined: at infinity focus, and
   at a line traced with the authored indices (NaN at any other line of such a case; a case without such a line has
   none). Every name says that the value is stored or nominal, because none is the paraxial image of the stop that
@@ -391,6 +406,9 @@ takes the comparator's default.
 | `referenceEngine?` | string | the engine the others are compared against |
 
 `weights`, when given, has one entry per wavelength; without it the lines weigh the same.
+
+For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
+1, and one without `sampling.bundleGrid` 32 cells across the beam.
 
 **Invariant checked in code** (`runInvariantProblems` in `src/contract/runSpec.ts`), because a schema cannot count
 one list against another: explicit lines that give `weights` give exactly one for each wavelength. It holds for a
@@ -496,7 +514,7 @@ plane and the engines, and keeps the other defaults.
 | `contract` | string | contract version |
 | `kind` | `"result"` | |
 | `requestId`, `caseId` | sha256 | echoed from the request |
-| `engine` | object | `id`, `fingerprint` and `details`, a flat map of strings, numbers, booleans and nulls |
+| `engine` | object | `id`, `fingerprint`, `adapterRevision?` and `details`, a flat map of strings, numbers, booleans and nulls |
 | `status` | string | `ok`, `unsupported`, `error` or `pending` |
 | `unsupported?` | object[] | each `{ code, item, message }`; `code` is `feature`, `quantity`, `option`, `contract` or `case-source` |
 | `error?` | object | `{ code, message }` |
@@ -513,8 +531,9 @@ that answers only about cases of its own source, the kind of the source the case
 `provenance.source.kind` (`case-source`).
 
 The `code` of a result's `error` is the engine's to choose. Three are written by the comparator's own engines:
-`engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's, and
-`stale-case` for a case that is no longer what its source gives ([the engine `lv`](#the-engine-lv)).
+`engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's or that
+cannot be about the case (a line the case does not have), and `stale-case` for a case that is no longer what its
+source gives ([the engine `lv`](#the-engine-lv)).
 
 **Invariants checked in code** (`resultInvariantProblems`): status `ok` needs `data`; status `unsupported` needs a
 non-empty `unsupported` list; status `error` needs `error`.
@@ -524,7 +543,7 @@ non-empty `unsupported` list; status `error` needs `error`.
 | Member | Type | Meaning |
 |---|---|---|
 | `contract` | object | `min` and `max`: the range of contract versions the engine speaks, both included |
-| `identity` | object | `id`, `version`, `fingerprint`, `details` |
+| `identity` | object | `id`, `version`, `fingerprint`, `adapterRevision?`, `details` |
 | `capabilities.features` | object | `supported`, a list of feature flags, and `limits`, a map from limit to the largest value handled |
 | `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1 |
 | `capabilities.deterministic` | boolean | whether equal requests give bit-equal results |
@@ -532,6 +551,21 @@ non-empty `unsupported` list; status `error` needs `error`.
 
 `fingerprint` is a content hash of the engine's own sources. Results are keyed by it; `version` is for people.
 A limit an engine leaves out is unbounded.
+
+**Fingerprint and adapter revision.** An answer depends on two bodies of code: the engine, and whatever of the
+comparator stands between the contract and the engine. For an engine in another process the second is the
+engine's own worker, whose sources its fingerprint covers. For an engine that is part of the comparator the two
+are apart, and each has its own hash:
+
+| | Is the hash of | Changes when |
+|---|---|---|
+| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref` | the engine changes |
+| `adapterRevision` | the comparator's code the answer passes through: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`). For `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection | the comparator changes how it asks the engine, reads its answer or writes it down |
+
+`adapterRevision` is a SHA-256, stated by `lv` and `ref` and by no engine outside the comparator. A result carries
+the one of its engine's descriptor, and the result store keys an answer by both: so a fix to the adapter retires
+the answers the old adapter wrote, and the fingerprint of `lv` stays what it says it is, the identity of
+LensVisualizer's code. A run's manifest records both for each engine.
 
 ### `protocol-request` and `protocol-response`
 
@@ -599,9 +633,10 @@ per pair of engines and per case; two engines that agree on the system are judge
 
 **Invariants checked in code** (`policyProblems`): a rung of mode `independent-method` is never gated; a gated
 rung judges at least one metric; every metric of a gated rung has a `tolerance`; only a gated rung blocks later
-ones. A test holds the policy file to
-the code: every registered rung has an entry and every entry a registered rung, with the rung's quantity, and
-every metric it names is one the quantity's comparator reports, in the same unit.
+ones. A test holds the policy file to the code: every rung that is judged has an entry and every entry such a
+rung, with the rung's quantity, and every metric it names is one the quantity's comparator reports, in the same
+unit. A rung that only asks, as `rays` does until the rungs that compare traced rays are there, is run only where
+it is named and has no entry.
 
 ### `comparison`
 
@@ -685,6 +720,7 @@ and `validateData`.
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
 | `system.describe` | 1 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
+| `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -861,6 +897,158 @@ carries its own, and a report lists them side by side. Answers for different num
 
 `valid/quantities/paraxial.first-order.data/singlet.json` is the answer about the case
 `valid/optical-case/singlet.json`, worked out from the formulas of a thick lens in air.
+
+### `rays.trace`
+
+Given rays, traced as they are given through every surface of the case and on to its image plane, at one line of
+the case. It is what the identical-ray rungs compare: every engine is handed the same rays, so no engine's own
+sampling, aiming or pupil takes part. n is the number of rays and S the number of surfaces.
+
+**Frame and signs**, stated here once for everything about rays. Points and directions are in the contract frame,
+in mm: x sagittal, y meridional, z along the axis from the first vertex, light travelling toward +z. A direction is
+a unit vector `(dx, dy, dz)`. The rays of a field at a positive angle θ travel toward −y: a collimated bundle has
+the direction `(0, −sin θ, cos θ)`. An engine traces the rays as they are given and answers in the same frame and
+the same order: nothing is mirrored, aimed again, normalised again, sorted or left out. An engine whose own frame
+differs converts in its adapter, in both directions.
+
+`spec`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `line` | integer ≥ 0 | the index, in the case's `conditions.lines`, of the line whose indices the rays are traced with |
+| `origins` | NdArray | float64 `[n, 3]`: where each ray starts |
+| `directions` | NdArray | float64 `[n, 3]`: the unit direction of each ray |
+| `weights` | NdArray | float64 `[n]`: the flux each ray stands for |
+| `groups?` | object | what the rays are, for whoever reads the answer: `field?`, `lattice?`, `chiefIndex?` |
+
+- **Origins** lie strictly in front of the first surface: the z of an origin is below the smallest z the surface
+  has anywhere within its clear aperture, which is its vertex when it is convex toward the object and its rim when
+  it is concave. So every ray has all of the first element ahead of it, whatever its direction and however far
+  from the axis it starts.
+- **Directions** have a length within 1e-12 of 1 and a z component above 0.
+- **Weights** are finite and not negative. They are for the estimators that sum over rays, each of which uses
+  them unchanged; an engine traces a ray of weight 0 like any other.
+- **`groups`** changes nothing an engine computes. `field` is `{ angleDeg, heightFraction? }`: the field angle in
+  degrees, between −90 and 90, and the fraction of the full image height it was resolved from. `lattice` is
+  `{ columns, rows, step }`: the first `columns × rows` rays are the cells of a square lattice, row by row, so the
+  cell of row r and column c is ray `r × columns + c`; `step` is the side of a cell, mm, on the plane the lattice
+  is laid on. `chiefIndex` is the index of the field's chief ray, a reference for the other rays and no sample of
+  the pupil. `groups` is part of the spec, and so of the request's `id`.
+
+`data`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `status` | NdArray | uint8 `[n]`: how each ray ended: 0 ok, 1 blocked, 2 failed |
+| `endSurface` | NdArray | int32 `[n]`: the index of the surface at which the ray ended; −1 for a ray that is ok |
+| `hits` | NdArray | float64 `[S, n, 3]`: where each ray meets each surface |
+| `exitPoint` | NdArray | float64 `[n, 3]`: where each ray leaves the last surface: its hit on it |
+| `exitDirection` | NdArray | float64 `[n, 3]`: the unit direction of each ray behind the last surface |
+| `imagePoint` | NdArray | float64 `[n, 3]`: where each ray meets the plane z = `conditions.imageZ`; its z is that number |
+| `opticalPath` | NdArray | float64 `[n]`, mm: the sum of index × length along the ray from its origin to its hit on the last surface |
+| `opticalPathToImage` | NdArray | float64 `[n]`, mm: the same sum continued to the image plane |
+
+- **A ray is carried surface by surface**, in the order of the case: it is intersected with the surface, tested
+  against the surface's aperture at the hit (its distance from the axis against `semiDiameter`, inclusive, and
+  against `innerSemiDiameter`), and refracted into the medium that follows, whose index is that of the spec's
+  line. The medium in front of the first surface is air, of index 1.
+- **A surface is its sag within its clear aperture.** What the sag formula gives beyond `semiDiameter` is no part
+  of the system: a polynomial fitted to a clear aperture diverges outside it, and a conic may have ended. A ray
+  whose line meets the surface within the clear aperture passes it there; a ray whose line does not is blocked at
+  that surface, wherever, and whether, it meets the formula's continuation.
+- **Status.** *ok* (0): the ray passed every surface and reached the image plane. *blocked* (1): the ray carries no
+  light to the image and the engine knows why: it met a surface outside its clear aperture or inside its central
+  obstruction, it was totally reflected, it provably does not meet a surface, or it passed every surface and cannot
+  reach the image plane. *failed* (2): the engine could not trace the ray, by a numerical failure of its own; that
+  says nothing about the light, and whoever sums over rays must account for it.
+- **`endSurface`** of a ray that is not ok is the surface it did not pass: the one that clipped or reflected it,
+  or the one it was not, or could not be, intersected with. It is S, one past the last surface, for a ray that
+  passed every surface and cannot reach the image plane: it does not travel toward +z, or the plane lies behind its
+  exit point by more than 1e-9 mm along the ray.
+- **NaN from where a ray ended.** A ray that is ok has a number in every member. Any other ray has a hit on every
+  surface before its end surface and NaN from that surface on, the end surface itself included: engines compute a
+  point beyond a clear aperture in ways of their own, where they compute one at all. Its `exitPoint`,
+  `exitDirection` and `opticalPath` are numbers only when it passed every surface (`endSurface` is S); its
+  `imagePoint` and `opticalPathToImage` are NaN.
+- **The optical path** is the sum, over the stretches of the ray from its origin to its hit on the last surface, of
+  the index of the medium times the length of the stretch. It is measured from the ray's origin, so the paths of
+  two rays of a set differ by where the set starts them as well as by the lens; an estimator takes differences
+  against the chief ray or a reference sphere. `opticalPathToImage` adds the index after the last surface, at the
+  spec's line, times the length from `exitPoint` to `imagePoint`.
+- **The image plane within reach.** An exit point that lies behind the image plane by no more than 1e-9 mm along
+  the ray, as a plate whose rear face is the image plane puts it to within an engine's intersection tolerance, is
+  on the plane: the ray lands at its exit point.
+
+**Invariants checked in code** (`src/quantities/raysTrace.ts`). A spec: `origins` and `directions` are `[n, 3]`
+and `weights` is `[n]` for one n of at least 1; every origin is finite; every direction is a unit vector within
+1e-12 with a z component above 0; every weight is finite and at least 0; `chiefIndex` is below n, and a lattice has
+at most n cells. That the origins lie in front of the first surface, and that `line` is a line of the case, needs
+the case, which a spec is validated without: the generators see to the first (`startsInFront`,
+`src/rays/probe.ts`: a field whose rays would not is the problem `launch-behind-first-surface`), and an engine
+answers a line the case does not have with the error `bad-spec`. Data: the shapes agree on one n and one S of at
+least 1; `status` is 0, 1 or 2; `endSurface` is −1 exactly for a ray that is ok and else from 0 to S; and the rule
+above for where a ray has numbers and where NaN holds for every ray.
+
+Nothing compares the answers yet. The rungs that will, R2 and R3 of the ladder, ask the requests of the rung
+`rays`; until they are there, `rays` is run only where it is named and has no entry in the policy.
+
+`valid/quantities/rays.trace.data/singlet-axis-and-rim.json` is the answer to the spec of the same name about the
+case `valid/optical-case/singlet.json`, exact in every number: a ray along the axis, which nothing bends, and a
+ray 12 mm off the axis, which meets the first surface outside its clip radius and ends there.
+
+#### Ray sets
+
+The rays of a run are **ray sets**: `rays.trace` specs, one for each field of the run and each line of the case.
+Where they come from is the business of the case source (`CaseSource.raySets`, `src/core/suite.ts`), because what
+"the same rays as the engine under test uses" means depends on where the case came from. A rung's request builder
+only wraps the sets it is handed, so it is the same function for every engine and every source. A set is content:
+its arrays are in the spec, the spec is in the request's `id`, and its identity, the SHA-256 of the canonical JSON
+of the spec, is what a run's manifest records under `runs[].raySets.sets`. Nothing of a set is kept in the
+repository. A field that has no rays is a coded problem of that field, recorded under `runs[].raySets.problems`
+as `<code>: <message>`; the other fields are traced, and the run fails for none of it.
+
+**For a case read from a file** (`src/rays/probe.ts`) the sets are probe lattices made from the case alone:
+
+| | Is |
+|---|---|
+| lattice | `sampling.bundleGrid` cells across (an odd number is raised to the next even one, so that no ray lies on the axis or in a plane through it), laid on the first surface's vertex plane and centred on the axis, with a half width of 1.125 clip radii of the first surface: the cells past the rim are stopped at once |
+| object at infinity | a collimated bundle with the field's direction, each ray started on the plane 10 mm in front of the first surface: of its vertex, or of its rim when it is concave toward the object; every weight is 1 |
+| finite object | every ray starts at the object point of the field, `(0, −object.z × tan θ, object.z)`: the field angle is measured at the first vertex; a ray's weight is the solid angle of its cell relative to a cell straight ahead of the point, `(D / d)³`, with D the point's distance from the lattice plane and d its distance from the cell. An object point that is not in front of the first surface, inside the bowl of a concave one, is the problem `launch-behind-first-surface` |
+| fields | angles in degrees as given; of image-height fractions only 0, the axis, since a case states no image height: any other is the problem `field-fraction-unresolved` |
+| lines | the same rays at every line of the case |
+| `groups` | `field` and `lattice`; no chief ray |
+
+The generators under them (`src/rays/generators.ts`: a collimated lattice, a diverging lattice from a point, a
+collimated fan along x or y) need nothing but numbers.
+
+**For a LensVisualizer lens** (`src/engines/lv/raySets.ts`) the sets are LensVisualizer's own launch rays, the
+ones its MTF samples a pupil with:
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | its MTF options with the stop radius of the case and, as the seed of the footprint scan, its entrance pupil for that stop radius, `entrancePupilAtState2(stop, focusT, zoomT, L).epSD`; its support record (`assessMtfSupport`) with the lines of the case, so that everything below is found at the case's reference line with LensVisualizer's indices for it |
+| fields, as fractions | the field axis `resolveMtfFieldGeometry(state, mtfModeledHalfField(state), mtfChiefHeight(…), { reference: mtfChiefHeight(…, false), beam: mtfBeamHeight(…) })`, then `resolveMtfFieldTargets`: the chief-ray angle of each fraction of LensVisualizer's reference image height, as its MTF resolves it. That solved angle is the field of the set |
+| fields, as angles | taken as given |
+| chief ray and beam | `prepareMtfFieldLaunch`, `findMtfFieldFootprint` |
+| lattice | `mtfLaunchGrid(footprint, bundleGrid)`: square cells, an even number of columns |
+| rays | every cell, the ones an aperture will stop included and none mirrored: the cell of row r and column c is `mtfLaunchRay(launch, x0 + (c + 0.5) step, y0 + (r + 0.5) step)`, which is where LensVisualizer's own bundle launches it; then the chief ray, `mtfLaunchRay(launch, 0, 0)`, which is no cell of the lattice, as the last ray, with its index under `groups.chiefIndex` |
+| weights | LensVisualizer's weight of a pupil sample: 1 in a collimated bundle and `(chief distance / ray distance)³` from the object point of a certified finite conjugate, times its bulk transmission where a glass of the lens absorbs, which it states as the weight of `mtfImagePoint` at that line. The chief ray weighs 0 |
+| lines | the same rays at every line, as LensVisualizer finds a field's chief ray and footprint once, at the reference line; only the weights are a line's |
+
+A field without rays has LensVisualizer's own reason as its code: `outside-modeled-field` for an image height
+beyond the modeled edge, `chief-ray-failed` where it finds no chief ray, `vignetted` where no ray of the field
+reaches the image. LensVisualizer launches from a plane 10 mm or more in front of the first surface's vertex and
+rim, which is in front of the surface as the contract asks; the sets are checked for it all the same, and a field
+that broke it would be `launch-behind-first-surface`. Where its MTF gate does not pass for the state at all (a
+fisheye projection, an annular aperture, an unverified scale), there is no launch of its own to take, and the
+gate's reason is the one problem of every field. LensVisualizer's `traceMtfBundle` traces half the columns and
+mirrors the rest; the sets hold every cell as a ray of its own, and `lv` traces each. Two things `traceMtfBundle`
+and `computeMtfSteps` do inline, and export no function for, are restated: the lattice point and weight of a cell,
+and the assembly of the field axis.
+Tests hold both to LensVisualizer, the rays to those of its own bundle bit for bit and the source lines to their
+text. The seed is the entrance pupil of the case's stop radius; LensVisualizer's MTF tab scales the wide-open
+pupil by the f-number instead, which is the same number to rounding and is mirrored where the tab's own request is
+reproduced.
 
 ## Schemas and the validator
 

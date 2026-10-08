@@ -1,0 +1,87 @@
+{
+  "status": {
+    "$nd": {
+      "dtype": "u1",
+      "shape": [
+        4
+      ],
+      "data": "AAECAQ==",
+      "sha256": "f16f6b7f1cd082e72284f88f0b05969cfa0431be25a05508e66cf60b3ea2cf63"
+    }
+  },
+  "endSurface": {
+    "$nd": {
+      "dtype": "i4",
+      "shape": [
+        4
+      ],
+      "data": "/////wEAAAAAAAAAAgAAAA==",
+      "sha256": "00ac605cb5974c11e5dfd98c15f7be5495056232e285d35450e8fa25b117fe05"
+    }
+  },
+  "hits": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        4,
+        3
+      ],
+      "data": "AAAAAAAA8D8AAAAAAAAAQAAAAAAAAOA/AAAAAAAACEAAAAAAAAAQQAAAAAAAAOg/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAACMAAAAAAAAAYwAAAAAAAAPg/AAAAAAAA4D8AAAAAAADwPwAAAAAAABFAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAACMAAAAAAAAAYwAAAAAAAACJA",
+      "sha256": "ee0798951af5e47323eae1fb42a6e3895ebbf1c5a8ad6b99b8f6ad2f43e93330"
+    }
+  },
+  "exitPoint": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        4,
+        3
+      ],
+      "data": "AAAAAAAA4D8AAAAAAADwPwAAAAAAABFAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAACMAAAAAAAAAYwAAAAAAAACJA",
+      "sha256": "e4796da872419e17d698eaeb5dca7c650fba7c56eba8bab69404b03f9ee92b86"
+    }
+  },
+  "exitDirection": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        4,
+        3
+      ],
+      "data": "AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAzMzMzMzPjP5qZmZmZmek/",
+      "sha256": "8355b19d7b6c0b53da3a52f4c7fd7a39c48620e481f567935a6e1913bf44825d"
+    }
+  },
+  "imagePoint": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        4,
+        3
+      ],
+      "data": "AAAAAAAA4D8AAAAAAAAAwAAAAAAAgCBAAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/",
+      "sha256": "bd468e5446607bc5b750de8bc115b4913ae32ed9c0207fe2b735b2a0bb6e5668"
+    }
+  },
+  "opticalPath": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        4
+      ],
+      "data": "AAAAAACAMEAAAAAAAAD4fwAAAAAAAPh/AAAAAADAMEA=",
+      "sha256": "955299f165b8833039b4c86c2a3aee69e718835cf23f090965c87854beb3e4dd"
+    }
+  },
+  "opticalPathToImage": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        4
+      ],
+      "data": "AAAAAACANUAAAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8=",
+      "sha256": "0512069dae6e5163f5ab7f0640f01ed5e06fdce3d154b28ad1b9fae1a4315ba9"
+    }
+  }
+}

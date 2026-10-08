@@ -3,6 +3,8 @@
 // stages land.
 import type { OpticalCase } from "../contract/case.ts";
 import { PARAXIAL_FIRST_ORDER } from "../contract/quantities/paraxialFirstOrder.ts";
+import { RAYS_TRACE } from "../contract/quantities/raysTrace.ts";
+import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
@@ -13,6 +15,21 @@ import type { RunSpec } from "../contract/runSpec.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
 
+/**
+ * What a rung is handed beside the case and the run: what the run's case source made for it. A request builder
+ * reads this and never an engine or a lens, so it stays the same function for every engine and every source.
+ */
+export interface RungInputs {
+  /**
+   * The ray sets of the run, from the source of its case (`CaseSource.raySets`), for a rung that says it
+   * `needsRaySets`; empty for any other rung, and where the source has no rays for the run.
+   */
+  readonly raySets: readonly RaysTraceSpec[];
+}
+
+/** The inputs of a rung that needs none. */
+export const NO_RUNG_INPUTS: RungInputs = Object.freeze({ raySets: Object.freeze([]) });
+
 /** One rung: what is asked of every engine for one case in one run. */
 export interface RungDefinition {
   /** What `--rungs` and a RunSpec's `rungs` call it. Ids are compared exactly. */
@@ -20,11 +37,22 @@ export interface RungDefinition {
   /** The quantity every request of the rung asks for. */
   readonly quantity: string;
   /**
+   * True for a rung whose requests are made from the run's ray sets: the sets are generated, once per run, only
+   * when such a rung is run.
+   */
+  readonly needsRaySets?: boolean;
+  /**
+   * True for a rung that is run only where it is named, by `--rungs` or by a run's `rungs`, and is none of the
+   * rungs of a run that names none. It is a rung nothing judges: it has no entry in the policy, so a run of it
+   * cannot be compared.
+   */
+  readonly onlyWhenNamed?: boolean;
+  /**
    * The requests of this rung for one case, in a fixed order and without engine options: equal arguments give
    * equal requests, with equal ids. Each is about `opticalCase` and asks for `quantity` with a spec the quantity
-   * accepts.
+   * accepts. `inputs` is `NO_RUNG_INPUTS` when the caller has none to give.
    */
-  buildRequests(opticalCase: OpticalCase, runSpec: RunSpec): QuantityRequest[];
+  buildRequests(opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[];
 }
 
 /**
@@ -74,21 +102,56 @@ export const r1Rung: RungDefinition = Object.freeze({
 });
 
 /**
- * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
- * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first.
+ * The `rays.trace` requests of a run: one for each of its ray sets, in the order of the sets, each set once. They
+ * are what every rung that compares traced rays asks, so that such rungs share one answer per engine and set.
  */
-export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung]);
+export function rayTraceRequests(opticalCase: OpticalCase, inputs: RungInputs = NO_RUNG_INPUTS): QuantityRequest[] {
+  const requests = new Map<string, QuantityRequest>();
+  for (const spec of inputs.raySets) {
+    const request = makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec });
+    // A Map keeps the first of two equal sets, in its place.
+    if (!requests.has(request.id)) requests.set(request.id, request);
+  }
+  return [...requests.values()];
+}
 
 /**
- * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them; every
- * rung when `ids` is undefined, as for a run that states none. Throws a `UsageError` naming every id that is not a
- * rung, and for an empty list, which asks for nothing.
+ * The rung `rays`: the `rays.trace` requests of the run's ray sets (`rayTraceRequests`), which the source of the
+ * run's case generates for the run's fields, lines and bundle grid. It asks every engine to trace the same rays
+ * and judges nothing: the rungs that compare the traces are R2 and R3 of the ladder, which ask the same requests.
+ * So it is run only where it is named, and it has no entry in the policy.
+ */
+export const raysRung: RungDefinition = Object.freeze({
+  id: "rays",
+  quantity: RAYS_TRACE,
+  needsRaySets: true,
+  onlyWhenNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    rayTraceRequests(opticalCase, inputs),
+});
+
+/**
+ * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
+ * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first; `rays`,
+ * which is run only where it is named, comes last.
+ */
+export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, raysRung]);
+
+/** The rungs that are judged: those of `rungs` that a run which names none is run on, each with a policy entry. */
+export function judgedRungs(rungs: readonly RungDefinition[] = RUNGS): RungDefinition[] {
+  return rungs.filter((rung) => rung.onlyWhenNamed !== true);
+}
+
+/**
+ * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When
+ * `ids` is undefined, as for a run that states none: every rung that is not one to be run `onlyWhenNamed`. Throws
+ * a `UsageError` naming every id that is not a rung, and for an empty list, which asks for nothing.
  */
 export function selectRungs(
   ids: readonly string[] | undefined,
   rungs: readonly RungDefinition[] = RUNGS,
 ): RungDefinition[] {
-  if (ids === undefined) return [...rungs];
+  if (ids === undefined) return judgedRungs(rungs);
   const known = rungs.map((rung) => rung.id);
   const unknown = [...new Set(ids)].filter((id) => !known.includes(id));
   if (unknown.length > 0) {

@@ -6,6 +6,12 @@ export interface EngineIdentity {
   readonly id: string;
   readonly version: string;
   readonly fingerprint: string;
+  /**
+   * For an engine that is part of the comparator: a content hash of the comparator's own code that its answers
+   * pass through, the adapter and the shared kernels the adapter calls. Results are keyed by it beside the
+   * fingerprint, so that a change to the adapter retires them and the fingerprint stays the engine's own.
+   */
+  readonly adapterRevision?: string;
   readonly details: EngineDetails;
 }
 
@@ -45,9 +51,10 @@ export function isEngineId(value: unknown): value is string {
 }
 
 /**
- * The `engine` member of every result an engine with this identity gives: its id, fingerprint and details.
- * `version` is for people and is not stamped on results.
+ * The `engine` member of every result an engine with this identity gives: its id, its fingerprint, its adapter
+ * revision when it states one, and its details. `version` is for people and is not stamped on results.
  */
 export function engineStamp(identity: EngineIdentity): ResultEnvelope["engine"] {
-  return { id: identity.id, fingerprint: identity.fingerprint, details: identity.details };
+  const { id, fingerprint, adapterRevision, details } = identity;
+  return { id, fingerprint, ...(adapterRevision === undefined ? {} : { adapterRevision }), details };
 }

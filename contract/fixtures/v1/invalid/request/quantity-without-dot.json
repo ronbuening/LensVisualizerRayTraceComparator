@@ -1,20 +1,41 @@
 {
   "contract": "1.0",
   "kind": "request",
-  "id": "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b",
+  "id": "86f90870f94da86eceb866f565746b1488849db074ade47b8bcd594d95a859e2",
   "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
   "quantity": "rays",
   "spec": {
     "line": 0,
-    "rays": {
+    "origins": {
       "$nd": {
         "dtype": "f8",
         "shape": [
           2,
-          6
+          3
         ],
-        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAACTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAAAAAAAAAAAAAAAAAAEQAAAAAAAACTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/",
-        "sha256": "463672781d3e94de7c39754ae9c7da0009f32125886d052f493d88d298e74f4d"
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAACTAAAAAAAAAAAAAAAAAAAAoQAAAAAAAACTA",
+        "sha256": "674c5be2e202600cb3aa585b12c8d33441d5f494a190b0273fa4a8677b5186a5"
+      }
+    },
+    "directions": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          3
+        ],
+        "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/",
+        "sha256": "b76a51d51658b8961adb4b08f1563f132b3152f68e705e85cb3b0047239de35a"
+      }
+    },
+    "weights": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2
+        ],
+        "data": "AAAAAAAA8D8AAAAAAADwPw==",
+        "sha256": "5f07eef034c5a21fedede8ef2f970fefbcc8ea44c02fd970117dacbee5483005"
       }
     }
   },

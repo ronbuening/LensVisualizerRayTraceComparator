@@ -16,8 +16,8 @@ import type { RunManifest } from "../../../src/core/manifest.ts";
 import { loadSuite } from "../../../src/core/suite.ts";
 import type { LoadedSuite } from "../../../src/core/suite.ts";
 import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
-import { createLvCaseSource } from "../../../src/engines/lv/caseSource.ts";
-import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES, problemCode } from "../../../src/engines/lv/exportProblems.ts";
+import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
+import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
 import { SUITE_NAMES, suitePath } from "../../suites/support.ts";
 import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 
@@ -26,12 +26,15 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_ROOT = fileURLToPath(new URL("../../fixtures/fake-root", import.meta.url));
 const KNOWN_CODES: readonly string[] = [...EXPORT_PROBLEM_CODES, ...LV_GATE_PROBLEM_CODES];
 
-/** The runs of the committed suites that have no case, with the codes of why, at LV d36f44b3. */
-const NOT_EXPORTABLE: Readonly<Record<string, readonly string[]>> = {
+/**
+ * The two translation paths the feature suite has no run for, at LV d36f44b3, each with the lens that would serve
+ * it and the codes of why that lens has no case (docs/gotchas.md).
+ */
+const NO_LENS_FOR: Readonly<Record<string, { readonly key: string; readonly codes: readonly string[] }>> = {
   // The one lens that mixes d- and e-referenced glasses lacks wavelength data for some of them.
-  "features/mixed-d-e-ref": ["mixed-reference"],
+  "mixed d and e references": { key: "sony-fe-14mm-f18-gm", codes: ["mixed-reference"] },
   // Every lens with an annular aperture is a mirror lens.
-  "features/annular-aperture-ref": ["folded-path", "non-refract-interaction"],
+  "an annular aperture": { key: "nikon-reflex-nikkor-c-500mm-f8", codes: ["folded-path", "non-refract-interaction"] },
 };
 
 const loaded = new Map<string, Promise<LoadedSuite>>();
@@ -49,24 +52,57 @@ async function featureCase(run: string): Promise<OpticalCase> {
   return found.opticalCase;
 }
 
-test("every committed suite loads, and every run exports or reports a coded problem", { skip }, async () => {
-  const withoutCase: Record<string, (string | null)[]> = {};
+test("every committed suite loads, and every run of it exports", { skip }, async () => {
   for (const name of SUITE_NAMES) {
     const suite = await suiteOf(name);
     for (const run of suite.runs) {
       const at = `${name}/${run.spec.name}`;
-      if (run.opticalCase !== null) {
-        assert.deepEqual(run.problems, [], at);
-        assert.equal(run.opticalCase.label.lensKey, run.spec.lens.kind === "lv" ? run.spec.lens.key : null, at);
-        continue;
-      }
-      assert.ok(run.problems.length > 0, at);
-      withoutCase[at] = run.problems.map(problemCode);
-      for (const code of withoutCase[at]) assert.ok(code !== null && KNOWN_CODES.includes(code), `${at}: ${code}`);
+      assert.ok(run.opticalCase !== null, `${at}: ${run.problems.join("; ")}`);
+      assert.deepEqual(run.problems, [], at);
+      assert.equal(run.opticalCase.label.lensKey, run.spec.lens.kind === "lv" ? run.spec.lens.key : null, at);
     }
   }
-  assert.deepEqual(withoutCase, NOT_EXPORTABLE);
 });
+
+test(
+  "the two translation paths the feature suite has no run for still have no lens with a case",
+  { skip },
+  async () => {
+    const binding = await loadLvBinding(LV_PATH);
+    const exporter = createLvExporter(binding);
+    for (const [path, { key, codes }] of Object.entries(NO_LENS_FOR)) {
+      const exported = await exporter.exportLens(key, {});
+      const found = exported.ok ? [] : exported.problems.map((problem) => problem.code);
+      for (const code of found) assert.ok(KNOWN_CODES.includes(code), `${key}: ${code}`);
+      // The day this fails, LensVisualizer can supply the lens: add its run to suites/features.json again.
+      assert.deepEqual(found, codes, `${path}: ${key} can be exported now; give the feature suite a run of it`);
+    }
+    // No other lens serves either path: every lens of the catalog that mixes references, or has an annular
+    // aperture, is refused the same way.
+    const others: string[] = [];
+    for (const { key } of (await binding.catalog()).entries) {
+      const runtime = binding.api.buildLens((await binding.lens(key)).data);
+      const state = binding.api.prepareRuntimeState(runtime, 0, 0);
+      const annular = state.surfaces.some((surface) => (surface.innerSd ?? 0) > 0);
+      const gate = binding.api.assessMtfSupport(state, {
+        method: "geometric",
+        spectrum: "reference",
+        pupilSemiDiameterMm: 1,
+        stopSemiDiameterMm: 1,
+        focus: "design",
+      });
+      // A lens of mixed references is traced with resolved indices at its reference line, or refused for that.
+      const mixed = gate.useResolvedReference || gate.reason === "mixed-reference";
+      if (!annular && !mixed) continue;
+      if ((await exporter.exportLens(key, {})).ok) others.push(key);
+    }
+    assert.deepEqual(
+      others,
+      [],
+      "a lens with one of the two paths can be exported: give the feature suite a run of it",
+    );
+  },
+);
 
 test(
   "the benchmark cases are 24 different cases of 12 systems: the lines change the conditions only",
@@ -192,5 +228,40 @@ test(
     // Nothing of this machine is in the manifest.
     const text = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
     for (const absent of [runsDir, REPO_ROOT, LV_PATH ?? "?"]) assert.ok(!text.includes(absent), absent);
+  },
+);
+
+test(
+  "a committed suite runs at the root of this repository as it is: on lv and ref, on every judged rung",
+  { skip },
+  (t) => {
+    const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-smoke-root-"));
+    t.after(() => rmSync(runsDir, { recursive: true, force: true }));
+    const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
+    const lvrtc = (...args: string[]) =>
+      spawnSync(process.execPath, [BIN, ...args], { encoding: "utf8", cwd: REPO_ROOT, env });
+    // No --engines and no --rungs: the suite names the built-in engines, and a run gets the rungs that are judged.
+    const ran = lvrtc("run", suitePath("smoke"));
+    assert.equal(ran.status, 0, ran.stderr);
+    // Three runs, three rungs, two engines: neither answers the conformance quantity, both the other two.
+    assert.match(ran.stdout, /^smoke: 18 jobs: 12 ok, 6 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+    assert.doesNotMatch(ran.stdout, / rays /);
+    const compared = lvrtc("compare", "smoke");
+    assert.equal(compared.status, 0, compared.stderr);
+    assert.match(
+      compared.stdout,
+      /^smoke: 18 pairs: 12 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+    );
+    // The manifest states, for each engine, the comparator's own code behind it beside the engine's fingerprint.
+    const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8"));
+    for (const engine of manifest.engines) {
+      assert.ok(engine.status === "available", engine.id);
+      assert.match(engine.adapterRevision ?? "", /^[0-9a-f]{64}$/, engine.id);
+      assert.notEqual(engine.adapterRevision, engine.fingerprint, engine.id);
+    }
+    assert.deepEqual(
+      manifest.engines.map((engine) => engine.id),
+      ["lv", "ref"],
+    );
   },
 );

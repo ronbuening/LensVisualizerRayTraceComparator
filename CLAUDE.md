@@ -26,6 +26,8 @@ node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for 
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens at its default state; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
+node bin/lvrtc.mjs run suites/benchmark.json   # the same: a committed suite names lv and ref, and gets r0 and r1
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv --rungs rays        # lv traces LV's own launch rays
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 ```
 
@@ -80,8 +82,26 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
   a test writes goes into the repository. `test/fixtures/fake-root` defines `fake-py` and `fake-pyn`, Python
   workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
   `test/fixtures/fault-root` holds the engines that fail.
-- **Every rung has an entry in `policy/rungs.v1.json` and every quantity a comparator in `src/compare`**; a test
-  holds the three together. Raise the policy's `version` when a rung, a class or a limit changes.
+- **Every judged rung has an entry in `policy/rungs.v1.json` and its quantity a comparator in `src/compare`**; a
+  test holds the three together. Raise the policy's `version` when a rung, a class or a limit changes. The one
+  rung nothing judges yet is `rays` (`onlyWhenNamed`: run only by `--rungs rays`, no policy entry, no comparator
+  for `rays.trace`); rungs that compare traced rays ask its requests (`rayTraceRequests`), so they share answers.
+- **Rays come from the case source, never from a rung or an engine.** `CaseSource.raySets` makes the ray sets of a
+  run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
+  only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
+  hash is in the request id. A field without rays is a coded problem of that field and fails nothing.
+- **LV's launch rays are kept verbatim**: every lattice cell as its own ray, no mirroring, no normalising (a `-0`
+  stays), the chief ray last at weight 0. What `traceMtfBundle` and `computeMtfSteps` do inline is restated in
+  `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own bundle.
+- **In `rays.trace` every value of a ray that did not arrive is NaN from the surface where it ended**, that
+  surface's hit included; `endSurface` is S for a ray that passed every surface and cannot reach the image plane.
+  A trace that ends on the last surface is landed by `src/estimators/imageProjection.ts`, for every engine alike.
+- **`fingerprint` is the engine's own code; `adapterRevision` is the comparator's code behind a built-in engine**
+  (`src/engines/adapterRevision.ts`: the import closure of the engine's module, values only). The result store
+  keys by both. A new built-in engine states both; never fold adapter code into a fingerprint.
+- **The fake LV tree (`test/fixtures/fake-lv-binding`) has a tracer and an MTF launch of its own**, with LV's
+  names. A name added to the import manifest needs a fake of it there, and a new fake file a line in
+  `FAKE_ENGINE_FILES` (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
   `renderMarkdown` are pure functions and stay so.

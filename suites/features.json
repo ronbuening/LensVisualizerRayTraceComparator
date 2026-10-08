@@ -2,7 +2,7 @@
   "contract": "1.0",
   "kind": "suite",
   "name": "features",
-  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" }, "engines": ["lv", "ref"] },
   "runs": [
     {
       "name": "odd-asphere-ref",
@@ -23,11 +23,6 @@
       "name": "e-line-photopic",
       "lens": { "kind": "lv", "key": "leica-elcan-50f2" },
       "lines": { "kind": "photopic" }
-    },
-    {
-      "name": "mixed-d-e-ref",
-      "lens": { "kind": "lv", "key": "sony-fe-14mm-f18-gm" },
-      "lines": { "kind": "reference" }
     },
     {
       "name": "asphere-a20-ref",
@@ -70,11 +65,6 @@
       "lens": { "kind": "lv", "key": "nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom" },
       "state": { "zoomT": 1 },
       "lines": { "kind": "photopic" }
-    },
-    {
-      "name": "annular-aperture-ref",
-      "lens": { "kind": "lv", "key": "nikon-reflex-nikkor-c-500mm-f8" },
-      "lines": { "kind": "reference" }
     },
     {
       "name": "zero-asphere-ref",

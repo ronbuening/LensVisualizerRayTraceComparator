@@ -23,6 +23,8 @@ import type {
   ParaxialFirstOrderData,
   ParaxialFirstOrderSpec,
 } from "../../src/contract/quantities/paraxialFirstOrder.ts";
+import { RAYS_TRACE } from "../../src/contract/quantities/raysTrace.ts";
+import type { RaysTraceData, RaysTraceSpec } from "../../src/contract/quantities/raysTrace.ts";
 import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
 import type { SelftestEchoData, SelftestEchoSpec } from "../../src/contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../../src/contract/quantities/systemDescribe.ts";
@@ -309,19 +311,87 @@ export const SUITE_MINIMAL = {
   ],
 } satisfies Suite;
 
+// ── rays.trace ───────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// `valid/quantities/rays.trace.data/singlet-axis-and-rim.json` is the answer to the spec of the same name about
+// `valid/optical-case/singlet.json`, exact in every number: the ray along the axis is bent by nothing, and the ray
+// 12 mm off the axis meets the first surface outside its clip radius of 10 mm, where it ends.
+
+const SINGLET_GLASS = 1.5168;
+const NAN3 = [NaN, NaN, NaN] as const;
+/** A unit direction toward +z and -y: the 3-4-5 triangle. */
+const DOWNWARD = [0, -0.6, 0.8] as const;
+
+/** Two rays for the singlet, parallel to the axis from 10 mm in front of it: one on the axis, one past the rim. */
+export const RAYS_SPEC_SINGLET = {
+  line: 0,
+  origins: encodeNdArray(Float64Array.of(0, 0, -10, 0, 12, -10), [2, 3]),
+  directions: encodeNdArray(Float64Array.of(0, 0, 1, 0, 0, 1), [2, 3]),
+  weights: encodeNdArray(Float64Array.of(1, 1)),
+} satisfies RaysTraceSpec;
+
+/** The trace of those two rays: the first lands on the axis, the second is blocked at surface 0. */
+export const RAYS_DATA_SINGLET = {
+  status: encodeNdArray(Uint8Array.of(0, 1)),
+  endSurface: encodeNdArray(Int32Array.of(-1, 0)),
+  hits: encodeNdArray(Float64Array.of(0, 0, 0, ...NAN3, 0, 0, 4, ...NAN3), [2, 2, 3]),
+  exitPoint: encodeNdArray(Float64Array.of(0, 0, 4, ...NAN3), [2, 3]),
+  exitDirection: encodeNdArray(Float64Array.of(0, 0, 1, ...NAN3), [2, 3]),
+  imagePoint: encodeNdArray(Float64Array.of(0, 0, 100, ...NAN3), [2, 3]),
+  // 10 mm of air and 4 mm of glass to the last surface, then 96 mm of air to the image plane.
+  opticalPath: encodeNdArray(Float64Array.of(10 + SINGLET_GLASS * 4, NaN)),
+  opticalPathToImage: encodeNdArray(Float64Array.of(10 + SINGLET_GLASS * 4 + 96, NaN)),
+} satisfies RaysTraceData;
+
+/**
+ * A format example of a spec with everything a spec can state: a lattice of two by two cells from a field off the
+ * axis, with its chief ray after it at weight 0, at the second line of a case. The direction is (0, -0.6, 0.8).
+ */
+export const RAYS_SPEC_LATTICE = {
+  line: 1,
+  origins: encodeNdArray(Float64Array.of(-2, 5.5, -10, 2, 5.5, -10, -2, 9.5, -10, 2, 9.5, -10, 0, 7.5, -10), [5, 3]),
+  directions: encodeNdArray(Float64Array.of(...DOWNWARD, ...DOWNWARD, ...DOWNWARD, ...DOWNWARD, ...DOWNWARD), [5, 3]),
+  weights: encodeNdArray(Float64Array.of(1, 1, 0.96875, 0.96875, 0)),
+  groups: {
+    field: { angleDeg: 36.86989764584402, heightFraction: 0.5 },
+    lattice: { columns: 2, rows: 2, step: 4 },
+    chiefIndex: 4,
+  },
+} satisfies RaysTraceSpec;
+
+/**
+ * A format example of every way a ray ends, through two surfaces, with the image plane at z = 8.25: ray 0 lands;
+ * ray 1 is blocked at surface 1; ray 2 could not be traced to surface 0; ray 3 passes both surfaces so far out
+ * that it leaves the last one behind the image plane, which it therefore cannot reach: its end surface is 2, and
+ * it keeps its exit. The numbers describe no lens.
+ */
+export const RAYS_DATA_STATUSES = {
+  status: encodeNdArray(Uint8Array.of(0, 1, 2, 1)),
+  endSurface: encodeNdArray(Int32Array.of(-1, 1, 0, 2)),
+  hits: encodeNdArray(
+    Float64Array.of(1, 2, 0.5, 3, 4, 0.75, ...NAN3, -3, -6, 1.5, 0.5, 1, 4.25, ...NAN3, ...NAN3, -3, -6, 9),
+    [2, 4, 3],
+  ),
+  exitPoint: encodeNdArray(Float64Array.of(0.5, 1, 4.25, ...NAN3, ...NAN3, -3, -6, 9), [4, 3]),
+  exitDirection: encodeNdArray(Float64Array.of(...DOWNWARD, ...NAN3, ...NAN3, 0, 0.6, 0.8), [4, 3]),
+  imagePoint: encodeNdArray(Float64Array.of(0.5, -2, 8.25, ...NAN3, ...NAN3, ...NAN3), [4, 3]),
+  opticalPath: encodeNdArray(Float64Array.of(16.5, NaN, NaN, 16.75)),
+  opticalPathToImage: encodeNdArray(Float64Array.of(21.5, NaN, NaN, NaN)),
+} satisfies RaysTraceData;
+
 // ── request and result ───────────────────────────────────────────────────────────────────────────────────────────
 //
 // A request and a result carry a spec and data as they are: their schemas belong to the quantity, which has
-// fixtures of its own further down. `rays.trace` has no schema yet.
+// fixtures of its own further down.
 
 /** The smallest request: an empty spec and no engine options. */
 export const REQUEST_MINIMAL = makeRequest({ caseId: SINGLET_CASE.id, quantity: "system.describe", spec: {} });
 
-/** A spec that carries an array, and options for the engine the request goes to. */
+/** A spec that carries arrays, and options for the engine the request goes to. */
 export const REQUEST_WITH_OPTIONS = makeRequest({
   caseId: SINGLET_CASE.id,
-  quantity: "rays.trace",
-  spec: { line: 0, rays: encodeNdArray(Float64Array.of(0, 0, -10, 0, 0, 1, 0, 2.5, -10, 0, 0, 1), [2, 6]) },
+  quantity: RAYS_TRACE,
+  spec: RAYS_SPEC_SINGLET,
   engineOptions: { tolerance: 1e-12 },
 });
 
@@ -340,11 +410,14 @@ export const RESULT_OK = {
   engine: FAKE_ENGINE,
   status: "ok",
   method: { name: "sequential-trace", params: { tolerance: 1e-12 } },
-  data: {
-    valid: encodeNdArray(Uint8Array.of(1, 1)),
-    hits: encodeNdArray(Float64Array.of(0, 0, 0, 0, 2.5, 0.0625), [2, 3]),
-  },
-  diagnostics: { warnings: [], counts: { rays: 2, clipped: 0 } },
+  data: RAYS_DATA_SINGLET,
+  diagnostics: { warnings: [], counts: { rays: 2, ok: 1, blocked: 1, failed: 0 } },
+} satisfies ResultEnvelope;
+
+/** An answer of an engine that is part of the comparator: it states the adapter revision of its descriptor. */
+export const RESULT_BUILTIN = {
+  ...RESULT_OK,
+  engine: { ...FAKE_ENGINE, id: "builtin", adapterRevision: sha256Hex("the comparator's code behind the engine") },
 } satisfies ResultEnvelope;
 
 /** A refusal that names a case feature and an option the engine does not have. */
@@ -413,13 +486,14 @@ export const DESCRIPTOR_MINIMAL = {
   },
 } satisfies EngineDescriptor;
 
-/** An engine that supports every feature flag, states limits and answers two quantities. */
+/** An engine that supports every feature flag, states limits, an adapter revision and answers two quantities. */
 export const DESCRIPTOR_FULL = {
   contract: { min: "1.0", max: "1.2" },
   identity: {
     id: "example-engine",
     version: "2.4.1+build.20260101",
     fingerprint: sha256Hex("example engine sources"),
+    adapterRevision: sha256Hex("example adapter sources"),
     details: { python: "3.14.0", numpy: "2.3.0", jit: true, gpu: null },
   },
   capabilities: {
@@ -971,6 +1045,7 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
   request: { minimal: REQUEST_MINIMAL, "with-engine-options": REQUEST_WITH_OPTIONS },
   result: {
     ok: RESULT_OK,
+    "ok-with-adapter-revision": RESULT_BUILTIN,
     unsupported: RESULT_UNSUPPORTED,
     "unsupported-case-source": RESULT_UNSUPPORTED_SOURCE,
     error: RESULT_ERROR,
@@ -1165,6 +1240,7 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "unknown-property": fault(RESULT_OK, "/elapsedMs", 12, "additionalProperties"),
     "engine-missing-fingerprint": fault(RESULT_OK, "/engine/fingerprint", REMOVE, "required", "/engine"),
     "engine-details-nested": fault(RESULT_OK, "/engine/details/build", { date: "2026-01-01" }, "type"),
+    "engine-adapter-revision-not-a-hash": fault(RESULT_BUILTIN, "/engine/adapterRevision", "r2", "pattern"),
     "unsupported-empty": fault(RESULT_UNSUPPORTED, "/unsupported", [], "minItems"),
     "unsupported-unknown-code": fault(RESULT_UNSUPPORTED, "/unsupported/0/code", "version", "enum"),
     // The code is `case-source`; a code of another spelling is no code.
@@ -1186,6 +1262,8 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "identity-id-uppercase": fault(DESCRIPTOR_FULL, "/identity/id", "Example", "pattern"),
     "identity-missing-fingerprint": fault(DESCRIPTOR_FULL, "/identity/fingerprint", REMOVE, "required", "/identity"),
     "identity-details-as-list": fault(DESCRIPTOR_FULL, "/identity/details/python", ["3.14"], "type"),
+    // An adapter revision is a content hash, never a version someone numbers.
+    "identity-adapter-revision-not-a-hash": fault(DESCRIPTOR_FULL, "/identity/adapterRevision", "2", "pattern"),
     "supported-repeated": fault(
       DESCRIPTOR_FULL,
       "/capabilities/features/supported",
@@ -1376,6 +1454,47 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
         "type",
       ),
       "unknown-property": fault(FIRST_ORDER_DATA_SINGLET, "/fNumber", 4.9, "additionalProperties"),
+    },
+  },
+  [`${RAYS_TRACE}.spec`]: {
+    valid: { "singlet-axis-and-rim": RAYS_SPEC_SINGLET, "lattice-with-chief": RAYS_SPEC_LATTICE },
+    invalid: {
+      "not-an-object": fault(RAYS_SPEC_SINGLET, "", [0, 0, -10, 0, 0, 1], "type"),
+      "missing-origins": fault(RAYS_SPEC_SINGLET, "/origins", REMOVE, "required", ""),
+      "missing-weights": fault(RAYS_SPEC_SINGLET, "/weights", REMOVE, "required", ""),
+      "line-negative": fault(RAYS_SPEC_SINGLET, "/line", -1, "minimum"),
+      "line-as-wavelength": fault(RAYS_SPEC_SINGLET, "/line", 587.5618, "type"),
+      "origins-one-axis": fault(RAYS_SPEC_SINGLET, "/origins/$nd/shape", [6], "minItems"),
+      "directions-not-float64": fault(RAYS_SPEC_SINGLET, "/directions/$nd/dtype", "i4", "const"),
+      "directions-as-plain-numbers": fault(RAYS_SPEC_SINGLET, "/directions", [[0, 0, 1]], "type"),
+      "weights-two-axes": fault(RAYS_SPEC_SINGLET, "/weights/$nd/shape", [2, 1], "maxItems"),
+      "unknown-property": fault(RAYS_SPEC_SINGLET, "/wavelengthNm", 587.5618, "additionalProperties"),
+      "groups-unknown-property": fault(RAYS_SPEC_LATTICE, "/groups/pupil", "exit", "additionalProperties"),
+      "field-without-angle": fault(RAYS_SPEC_LATTICE, "/groups/field/angleDeg", REMOVE, "required", "/groups/field"),
+      // A field at 90 degrees has no ray that travels toward +z.
+      "field-angle-ninety": fault(RAYS_SPEC_LATTICE, "/groups/field/angleDeg", 90, "exclusiveMaximum"),
+      "field-fraction-above-one": fault(RAYS_SPEC_LATTICE, "/groups/field/heightFraction", 1.5, "maximum"),
+      "lattice-columns-zero": fault(RAYS_SPEC_LATTICE, "/groups/lattice/columns", 0, "minimum"),
+      "lattice-step-zero": fault(RAYS_SPEC_LATTICE, "/groups/lattice/step", 0, "exclusiveMinimum"),
+      "chief-index-negative": fault(RAYS_SPEC_LATTICE, "/groups/chiefIndex", -1, "minimum"),
+    },
+  },
+  [`${RAYS_TRACE}.data`]: {
+    valid: { "singlet-axis-and-rim": RAYS_DATA_SINGLET, "every-status": RAYS_DATA_STATUSES },
+    invalid: {
+      "missing-status": fault(RAYS_DATA_SINGLET, "/status", REMOVE, "required", ""),
+      "missing-optical-path-to-image": fault(RAYS_DATA_SINGLET, "/opticalPathToImage", REMOVE, "required", ""),
+      // A status is one byte per ray, never a word or a flag.
+      "status-not-uint8": fault(RAYS_DATA_SINGLET, "/status/$nd/dtype", "i4", "const"),
+      "status-as-words": fault(RAYS_DATA_SINGLET, "/status", ["ok", "blocked"], "type"),
+      "end-surface-not-int32": fault(RAYS_DATA_SINGLET, "/endSurface/$nd/dtype", "u1", "const"),
+      "end-surface-two-axes": fault(RAYS_DATA_SINGLET, "/endSurface/$nd/shape", [2, 1], "maxItems"),
+      "hits-two-axes": fault(RAYS_DATA_SINGLET, "/hits/$nd/shape", [4, 3], "minItems"),
+      "hits-not-float64": fault(RAYS_DATA_SINGLET, "/hits/$nd/dtype", "i4", "const"),
+      "exit-point-one-axis": fault(RAYS_DATA_SINGLET, "/exitPoint/$nd/shape", [6], "minItems"),
+      "image-point-as-plain-numbers": fault(RAYS_DATA_SINGLET, "/imagePoint", [[0, 0, 100]], "type"),
+      "optical-path-two-axes": fault(RAYS_DATA_SINGLET, "/opticalPath/$nd/shape", [2, 1], "maxItems"),
+      "unknown-property": fault(RAYS_DATA_SINGLET, "/valid", [true, false], "additionalProperties"),
     },
   },
   [`${SELFTEST_ECHO}.spec`]: {

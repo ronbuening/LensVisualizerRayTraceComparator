@@ -92,6 +92,156 @@ Measured numbers are of LensVisualizer commit `d36f44b3`.
   accessors at the state's zoom position (`fopenAtZoom2`, `wideOpenStopAtZoom`, `epAtZoom2`).
 - **Class.** data.
 
+### A sequential trace ends on the last surface, not on the image plane
+
+- **Where.** `traceSequential` in `src/optics/trace/sequentialTrace.ts` returns `terminalPoint`, the hit on the last
+  surface, `terminalDirection`, the direction behind it, and `reachedImagePlane: false`. Every caller carries the
+  ray on by itself; the MTF's own helper is `mtfImagePoint` in `src/optics/analysis/mtfTracing.ts`, which takes an
+  exit point up to 1e-9 mm behind the plane for a point of it, since a rear plate can end on the image plane.
+- **Effect.** LensVisualizer has no image point and no optical path to the image to report: they depend on who
+  projects, and two projections can differ where a plate ends on the plane.
+- **Handled.** `lv` lands every ray with the comparator's own projection (`src/estimators/imageProjection.ts`),
+  which is one division and one multiplication and addition a component, with the same 1e-9 mm. On the 22 918 rays
+  of the benchmark that land (36 ray sets, reference line) it is `mtfImagePoint` to the last bit.
+- **Class.** convention.
+
+### The optical path is measured from where the ray was launched
+
+- **Where.** `opticalPathLengthMm` in `traceSequential` starts at 0 at the ray's origin and adds index times
+  length to each hit; it ends at the last surface.
+- **Effect.** The paths of two rays of a bundle differ by where the launch plane cuts them as well as by the lens,
+  and the path to the image is not in the result at all.
+- **Handled.** The contract defines `opticalPath` exactly so, from the origin to the last surface, and
+  `opticalPathToImage` as its continuation in the index of the image space; `lv` reports LensVisualizer's number
+  for the first, bit for bit, and adds `finalMedium` times the projection's distance for the second. An estimator
+  takes differences against the chief ray, whose index a ray set states.
+- **Class.** convention.
+
+### A hit lies within 1e-9 mm of its surface, not on it
+
+- **Where.** `intersectProfile` in `src/optics/math/intersection.ts` iterates until the z of the ray is within
+  `INTERSECTION_TOLERANCE` of the z of the surface (`src/optics/constants.ts`: 1e-9 mm) and takes that point for
+  the hit. The tracer has no option for it. A plane is met in closed form, and a hit that lies up to the tolerance
+  behind the start of its stretch is moved onto the start.
+- **Effect.** Every hit, and every length and landing behind it, carries an error of up to that size, which no
+  setting removes: on the same ray an exact tracer and LensVisualizer differ by about 1e-9 mm a hit.
+- **Handled.** Measured with the reference engine's sag and normal on the case, which share nothing with
+  LensVisualizer: over the 398 516 rays `lv` traces for the benchmark and the feature suite at every line (360 ray
+  sets), the worst hit lies 9.99997e-10 mm from its surface along z, every hit of a ray that passed lies within the
+  clip radius, and every surface bends every ray by Snell's law with the indices of the case to 6e-14, the
+  directions taken from hit to hit. Over the whole catalog, in one sweep outside the tests (868 lenses on their
+  reference line, 2 873 367 rays), the worst hit is as far off, and Snell's law holds to 1.5e-11. That worst is
+  no tolerance but rounding: surface 7 of `fujifilm-fujinon-xf-27mm-f28` is an asphere of 18 terms whose slope
+  terms reach 6e4 and sum to 0.09, and by rational arithmetic LensVisualizer's slope is 2.0e-11 from the exact
+  one there and the reference engine's 3.2e-12. An integration test holds the benchmark's sets to all of it
+  (`test/integration/lv/rays.test.ts`). Nothing compares traced rays yet; the rungs that will judge this floor
+  for what it is (FLOOR, in the ladder of the plan).
+- **Class.** numerical.
+
+### A total internal reflection is "failed", and a miss is "failed" until it is proven
+
+- **Where.** `finalizeTraceResult` in `src/optics/trace/utils.ts` gives every trace with a failure reason the
+  status `failed`: a reflection as well as an intersection that was not found (`noBracket`,
+  `noConvergedIntersection`). What is physical and what is numerical is decided afterwards, by
+  `mtfTraceClassification` in `src/optics/analysis/mtfRayClassification.ts`: a clip and a total internal
+  reflection are `blocked`; a missed surface is `blocked` only where an independent test proves that the ray
+  passes outside the surface's clear cap, and `failed` otherwise.
+- **Effect.** Read by its status alone, a ray that passes a lens 60 mm off the axis and meets nothing would be a
+  failure of the tracer, and every probe lattice that reaches past a front element would be full of them.
+- **Handled.** `lv` reports LensVisualizer's own classification: `blocked` is status 1 and `failed` status 2. The
+  end surface is the first surface the ray did not pass: the hit LensVisualizer marks as clipped, or the surface
+  it has no hit on. On the benchmark's 39 302 launch rays not one is `failed`.
+- **Class.** convention.
+
+### Beyond a clear aperture a hit is computed by rules of LensVisualizer's own
+
+- **Where.** `intersectSurfaceProfile` in `src/optics/math/intersection.ts` restricts an asphere to its authored
+  cap (`selectAsphericCapHit`), the sag keeps a conic real beyond its end by clamping the root, and the search for
+  a surface runs forward only, between bounds taken from the clear semi-diameter (`sequentialSurfaceMinT`,
+  `sequentialSurfaceMaxT` in `src/optics/trace/pathPlanner.ts`). A ray stopped by an aperture still has a hit on
+  the surface that stopped it.
+- **Effect.** Where a ray is clipped, LensVisualizer's hit point need not be the point another engine computes for
+  the same surface, and where two surfaces cross inside a clear aperture it finds no hit at all. The continuation
+  of a surface is not small either: the polynomial of an aspheric front surface, evaluated where the outer cells
+  of a wide field's lattice start, lies in front of LensVisualizer's launch plane in 20 ray sets of the catalog, by
+  up to 1e8 mm (`sigma-28-45mm-f18-dg-dn` at full field). A rule that asked a ray to start in front of the formula
+  would refuse those rays, which LensVisualizer traces without trouble.
+- **Handled.** The contract takes a surface for its sag within its clear aperture, and nothing of the formula
+  beyond: a ray starts in front of that part of the first surface, which every launch ray of the catalog does by
+  10 mm or more, and a ray that does not meet a surface within its clear aperture is blocked there. It has no hit
+  on the surface a ray ended at: every value of a ray is NaN from its end surface on, in every engine. Positions
+  are compared on rays that passed.
+- **Class.** method.
+
+### The MTF bundle traces half its lattice and mirrors the rest
+
+- **Where.** `traceMtfBundle` in `src/optics/analysis/mtfTracing.ts` starts at `grid.columns / 2` when every
+  profile is symmetric in x, and writes each ray a second time with x negated (`mirrorPupilRay`). The lattice has
+  an even number of columns, so no cell is on the meridional plane, and the chief ray, `mtfLaunchRay(launch, 0, 0)`,
+  is no cell of it.
+- **Effect.** Half the rays of a bundle were never traced. Nor are they the other half of the lattice to the last
+  bit: a cell's launch point is `x0 + (column + 0.5) × step`, which rounds differently on the two sides, so the
+  mirror image of a traced cell is not exactly the cell opposite. On the benchmark, 4493 of the 11 441 mirrored
+  rays equal a real trace of their cell in every bit, and the others lie within 3.5e-13 mm of it.
+- **Handled.** A ray set holds every cell of the lattice as a ray of its own, at the cell's own launch point, and
+  `lv` traces each: 39 266 cells where LensVisualizer's bundles trace 19 633. Its 11 441 rays that land, of those
+  it did trace, are reproduced bit for bit, in origin, weight, landing and optical path. The chief ray follows the
+  cells as the last ray, with weight 0.
+- **Class.** method.
+
+### A bundle is found once, at the reference line, from a seed
+
+- **Where.** `findMtfFieldFootprint` scans the launch plane at `support.spectralLines[0]` only, starting from a box
+  of 1.25 times `options.pupilSemiDiameterMm`; `mtfLaunchGrid` then divides the larger side of the beam it found.
+  The MTF tab's seed is the entrance pupil of the wide-open stop scaled by the f-number
+  (`currentEPSD` in `src/components/hooks/useLensComputation.ts`); LensVisualizer's audit scripts pass another.
+- **Effect.** Every line of a case is traced with the rays of its reference line, and the lattice is another one
+  for another seed, another reference line or another stop: `nikon-z-24-70f4s` at its wide end has 36 × 29 cells
+  at full field on the d line and 36 × 31 with 555 nm as the reference line.
+- **Handled.** The ray sets ask with the lines of the case, so that the footprint is found at the case's own
+  reference line, and with LensVisualizer's entrance pupil for the case's stop radius as the seed, which is the
+  tab's number to rounding. A set is identified by its content, never by the request that made it. The tab's own
+  request, to the bit, is reproduced where its MTF is.
+- **Class.** data.
+
+### A field can lie outside the model
+
+- **Where.** `resolveMtfFieldTargets` in `src/optics/analysis/mtfFields.ts` resolves a fraction of the reference
+  image height, which is the format corner where a lens declares a format, and marks it `outsideModel` when the
+  height lies beyond the last one the authored clear apertures let light reach.
+- **Effect.** The default fields of a ray rung are the fractions 0, 0.5 and 1, and the last of them has no rays on
+  such a lens: of the first 120 lenses of the catalog, 11 end short of their format corner.
+- **Handled.** The field is a coded problem of that run, `outside-modeled-field`, recorded in the manifest and
+  printed; the other fields are traced, and the run does not fail for it. A field LensVisualizer finds no chief ray
+  for is `chief-ray-failed`, and one whose beam is stopped altogether `vignetted`. The 12 benchmark configurations
+  have rays at all three fields.
+- **Class.** data.
+
+### One lens has a glass that absorbs
+
+- **Where.** `bulkTransmissionForTrace` in `src/optics/trace/bulkAbsorption.ts` multiplies `exp(−α × length)` over
+  the stretches of a ray inside an element with `absorptionCoefficientPerMm`; `mtfImagePoint` returns it as the
+  weight of a landing. One lens of the catalog has such an element: `minolta-stf-135f28-t45`.
+- **Effect.** Its rays do not weigh alike: the transmitted rays of its axial bundle weigh from 0.84 down to 0.044.
+  An MTF summed with equal weights would be another lens's.
+- **Handled.** A ray's weight in a set is LensVisualizer's own: its launch weight times the transmission of its
+  path at that line, taken from `mtfImagePoint`. An engine reads no weight; an estimator uses the column as it is.
+  The case carries the note `bulk-absorption`.
+- **Class.** data.
+
+### No lens serves two of the translation paths
+
+- **Where.** `assessMtfSupport` rejects a lens that mixes d- and e-referenced glasses unless every glass has
+  catalog dispersion data (`mixed-reference`), and a folded path. The catalog has one lens of mixed references,
+  `sony-fe-14mm-f18-gm`, which lacks that data, and every lens with an annular aperture is a mirror lens
+  (`nikon-reflex-nikkor-c-500mm-f8` among them).
+- **Effect.** The feature suite cannot have a run for "mixed d and e references" or for "an annular aperture":
+  there is no case to run. With such runs in it, `lvrtc run suites/features.json` could only ever exit 1.
+- **Handled.** The suite has no run for either path; the census lists both lenses with their codes. An
+  integration test (`test/integration/lv/suites.test.ts`) exports the two lenses, and every other lens of the
+  catalog that has either property, and fails on the day one of them has a case: that is when the run goes back.
+- **Class.** data.
+
 ## Any two engines
 
 ### A pupil that is metres away cannot be placed to 1e-9 mm

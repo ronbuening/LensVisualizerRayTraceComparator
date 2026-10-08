@@ -39,7 +39,6 @@ import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLvEngineOn, lvDescriptor } from "../../../src/engines/lv/engine.ts";
-import { problemCode } from "../../../src/engines/lv/exportProblems.ts";
 import { LV_STORED_CONSTANTS } from "../../../src/engines/lv/firstOrder.ts";
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
@@ -195,55 +194,44 @@ test(
   },
 );
 
-test(
-  "lvrtc run and compare: on the feature suite every lens with a case passes R0 and R1, and the others say why not",
-  { skip },
-  (t) => {
-    const { ran, compared, manifest, comparisons } = ranAndCompared(t, "features");
-    // Two runs have no case, which is a failure of the run command and no pair of the comparison.
-    assert.equal(ran.code, 1);
-    assert.match(ran.out, /^features: 64 jobs: 64 ok, 0 unsupported, 0 error, 0 pending \(64 computed, 0 cached\)$/m);
-    const withoutCase = manifest.runs.filter((run) => run.caseId === null);
-    assert.deepEqual(
-      withoutCase.map((run) => [run.name, run.problems.map(problemCode)]),
-      [
-        // The one lens that mixes d- and e-referenced glasses lacks wavelength data for some of them.
-        ["mixed-d-e-ref", ["mixed-reference"]],
-        // Every lens with an annular aperture is a mirror lens.
-        ["annular-aperture-ref", ["folded-path", "non-refract-interaction"]],
-      ],
-    );
-    for (const run of withoutCase)
-      assert.match(ran.err, new RegExp(`^lvrtc run: run ${run.name} was not started: `, "m"));
+test("lvrtc run and compare: on the feature suite every lens has a case and passes R0 and R1", { skip }, (t) => {
+  const { ran, compared, manifest, comparisons } = ranAndCompared(t, "features");
+  // Every run of the suite has a case: the two translation paths that have no lens are not runs of it.
+  assert.equal(ran.code, 0, ran.err);
+  assert.equal(ran.err, "");
+  assert.match(ran.out, /^features: 64 jobs: 64 ok, 0 unsupported, 0 error, 0 pending \(64 computed, 0 cached\)$/m);
+  assert.deepEqual(
+    manifest.runs.filter((run) => run.caseId === null),
+    [],
+  );
 
-    assert.equal(compared.code, 0, compared.err);
-    assert.deepEqual(notPassing(comparisons), []);
-    const compared16 = new Set(comparisons.comparisons.map((set) => set.run));
-    assert.deepEqual(
-      [...compared16].sort(),
-      manifest.runs
-        .filter((run) => run.caseId !== null)
-        .map((run) => run.name)
-        .sort(),
-    );
-    assert.equal(compared16.size, 16);
-    assert.equal(comparisons.comparisons.length, 64);
+  assert.equal(compared.code, 0, compared.err);
+  assert.deepEqual(notPassing(comparisons), []);
+  const compared16 = new Set(comparisons.comparisons.map((set) => set.run));
+  assert.deepEqual(
+    [...compared16].sort(),
+    manifest.runs
+      .filter((run) => run.caseId !== null)
+      .map((run) => run.name)
+      .sort(),
+  );
+  assert.equal(compared16.size, 16);
+  assert.equal(comparisons.comparisons.length, 64);
 
-    const worst = worstMetrics(comparisons);
-    t.diagnostic(
-      `features: worst R0 sag difference ${worst["sag.maxAbs"].value} mm (${worst["sag.maxAbs"].at}), scaled ` +
-        `${worst["sag.maxScaled"].value} (${worst["sag.maxScaled"].at}); worst R1 difference ` +
-        `${worst["firstOrder.maxAbs"].value} mm (${worst["firstOrder.maxAbs"].at})`,
-    );
-    for (const count of ["layout", "shape", "aperture", "index"]) assert.equal(worst[`${count}.mismatches`].value, 0);
-    // At d36f44b3: the sag differs by at most 3.6e-15 mm (zero-asphere-ref, surface 1) and 3.3e-16 scaled
-    // (odd-asphere-ref, surface 3); the first-order data by at most 8.5e-14 mm, on the exit pupil of
-    // fixed-iris-zoom-tele-photopic at 610 nm.
-    assert.ok(worst["sag.maxAbs"].value < 1e-13, JSON.stringify(worst["sag.maxAbs"]));
-    assert.ok(worst["sag.maxScaled"].value < 1e-14, JSON.stringify(worst["sag.maxScaled"]));
-    assert.ok(worst["firstOrder.maxAbs"].value < 1e-10, JSON.stringify(worst["firstOrder.maxAbs"]));
-  },
-);
+  const worst = worstMetrics(comparisons);
+  t.diagnostic(
+    `features: worst R0 sag difference ${worst["sag.maxAbs"].value} mm (${worst["sag.maxAbs"].at}), scaled ` +
+      `${worst["sag.maxScaled"].value} (${worst["sag.maxScaled"].at}); worst R1 difference ` +
+      `${worst["firstOrder.maxAbs"].value} mm (${worst["firstOrder.maxAbs"].at})`,
+  );
+  for (const count of ["layout", "shape", "aperture", "index"]) assert.equal(worst[`${count}.mismatches`].value, 0);
+  // At d36f44b3: the sag differs by at most 3.6e-15 mm (zero-asphere-ref, surface 1) and 3.3e-16 scaled
+  // (odd-asphere-ref, surface 3); the first-order data by at most 8.5e-14 mm, on the exit pupil of
+  // fixed-iris-zoom-tele-photopic at 610 nm.
+  assert.ok(worst["sag.maxAbs"].value < 1e-13, JSON.stringify(worst["sag.maxAbs"]));
+  assert.ok(worst["sag.maxScaled"].value < 1e-14, JSON.stringify(worst["sag.maxScaled"]));
+  assert.ok(worst["firstOrder.maxAbs"].value < 1e-10, JSON.stringify(worst["firstOrder.maxAbs"]));
+});
 
 test("lvrtc run: a case with one index nudged is reported stale-case by lv, and answered by ref", { skip }, (t) => {
   const rootDir = tempDir(t);

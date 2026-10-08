@@ -14,6 +14,10 @@
       "properties": {
         "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
         "fingerprint": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "adapterRevision": {
+          "description": "The adapter revision of the engine's descriptor, when it states one.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+        },
         "details": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/scalarMap" }
       },
       "required": ["id", "fingerprint", "details"],

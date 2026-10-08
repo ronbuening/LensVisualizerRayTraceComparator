@@ -301,6 +301,13 @@ test("a result that does not belong to the request, the case or the engine becom
       "fingerprint-mismatch",
       `the result carries fingerprint rebuilt, the descriptor ${fingerprint}`,
     ],
+    // An engine that states no adapter revision gives results without one.
+    [
+      "/engine/adapterRevision",
+      "c".repeat(64),
+      "adapter-revision-mismatch",
+      `the result carries the adapter revision ${"c".repeat(64)}, the descriptor none`,
+    ],
     // Schema-valid, and still not a result: an ok without data, an error without an error.
     ["/data", REMOVE, "invalid-result", 'the result breaks a status rule: status "ok" needs data'],
     ["/status", "error", "invalid-result", 'the result breaks a status rule: status "error" needs error'],
@@ -336,6 +343,38 @@ test("a result that does not belong to the request, the case or the engine becom
     const result = await adapter.run(REQUEST, CASE);
     assert.equal(assertFailure(result, code, await adapter.describe()), message, pointer);
   }
+});
+
+test("an engine that states an adapter revision must stamp it: a result without it, or with another, is refused", async () => {
+  const revision = "d".repeat(64);
+  const fake = createEngine({ id: "fake" });
+  // The same engine, saying that the comparator's own code stands behind it.
+  const stating = bending(fake, "hello", (reply) => {
+    (reply.result as { identity: Record<string, unknown> }).identity.adapterRevision = revision;
+  });
+  const stamped = bending(stating, "run", (reply) => {
+    (reply.result as { engine: Record<string, unknown> }).engine.adapterRevision = revision;
+  });
+  const good = adapterOver(stamped);
+  assert.equal((await good.describe()).identity.adapterRevision, revision);
+  const result = await good.run(REQUEST, CASE);
+  assert.equal(result.status, "ok");
+  assert.equal(result.engine.adapterRevision, revision);
+
+  const unstamped = adapterOver(stating);
+  assert.equal(
+    assertFailure(await unstamped.run(REQUEST, CASE), "adapter-revision-mismatch", await unstamped.describe()),
+    `the result carries the adapter revision none, the descriptor ${revision}`,
+  );
+  const other = adapterOver(
+    bending(stating, "run", (reply) => {
+      (reply.result as { engine: Record<string, unknown> }).engine.adapterRevision = "e".repeat(64);
+    }),
+  );
+  const failed = await other.run(REQUEST, CASE);
+  assert.equal(failed.error?.code, "adapter-revision-mismatch");
+  // The failure is written in the engine's name, with the revision its descriptor states.
+  assert.equal(failed.engine.adapterRevision, revision);
 });
 
 test("a pending result is passed on: a job to collect later is a valid answer", async () => {

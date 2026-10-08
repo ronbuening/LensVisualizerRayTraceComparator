@@ -9,7 +9,7 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { RUNGS, selftestRung } from "../../src/core/rungs.ts";
+import { RUNGS, judgedRungs, raysRung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
@@ -51,9 +51,22 @@ test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blo
   assert.equal(selftest.blocksLaterRungs, undefined);
 });
 
-test("every registered rung has a policy entry and every entry a registered rung, with its quantity and metrics", () => {
-  assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), []);
-  assert.deepEqual(Object.keys(loadPolicy().rungs).sort(), RUNGS.map((rung) => rung.id).sort());
+test("every judged rung has a policy entry and every entry a judged rung, with its quantity and metrics", () => {
+  assert.deepEqual(policyRegistryProblems(loadPolicy(), judgedRungs(), COMPARATORS), []);
+  assert.deepEqual(
+    Object.keys(loadPolicy().rungs).sort(),
+    judgedRungs()
+      .map((rung) => rung.id)
+      .sort(),
+  );
+  // The one rung that is run only where it is named is the one nothing judges: it has no entry, and cannot have
+  // one before its quantity has a comparator.
+  assert.deepEqual(
+    RUNGS.filter((rung) => !judgedRungs().includes(rung)),
+    [raysRung],
+  );
+  assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), ["rung rays has no policy entry"]);
+  assert.equal(COMPARATORS.get(raysRung.quantity), undefined);
 });
 
 test("each way a policy and the code can disagree is reported", () => {
@@ -62,7 +75,7 @@ test("each way a policy and the code can disagree is reported", () => {
   assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, other], COMPARATORS), [
     "rung other has no policy entry",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, RUNGS, COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, judgedRungs(), COMPARATORS), [
     "rung r0 has no policy entry",
     "rung r1 has no policy entry",
   ]);
@@ -89,7 +102,7 @@ test("each way a policy and the code can disagree is reported", () => {
   ]);
   // A format example is not the comparator's policy: its r1 judges metrics the comparator does not report, and
   // its other rungs are of later phases or of none.
-  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, RUNGS, COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, judgedRungs(), COMPARATORS), [
     "rung selftest has no policy entry",
     "rung r0 has no policy entry",
     "policy entry notes is of no registered rung",

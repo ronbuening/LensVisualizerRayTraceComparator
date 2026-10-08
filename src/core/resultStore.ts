@@ -24,18 +24,30 @@ export interface StoreKeyParts {
   readonly engineId: string;
   /** The content hash of the engine's sources: a changed engine never finds the answers of the one it replaced. */
   readonly engineFingerprint: string;
+  /**
+   * The engine's adapter revision, when it states one: the hash of the comparator's own code behind the engine. A
+   * changed adapter never finds the answers the old one wrote down.
+   */
+  readonly adapterRevision?: string;
   /** The options the request carries for this engine. Left out, they are no options: the same as `{}`. */
   readonly engineOptions?: JsonObject;
 }
 
 /**
  * The key of an answer: the SHA-256 of the canonical JSON of `{ requestId, engineId, engineFingerprint,
- * engineOptions }`. Equal parts give an equal key in any process and on any machine, and a change to any part,
- * the value of one engine option included, gives another.
+ * engineOptions }`, with `adapterRevision` as a fifth member for an engine that states one. Equal parts give an
+ * equal key in any process and on any machine, and a change to any part, the value of one engine option included,
+ * gives another.
  */
 export function storeKey(parts: StoreKeyParts): string {
-  const { requestId, engineId, engineFingerprint, engineOptions = {} } = parts;
-  return hashCanonical({ requestId, engineId, engineFingerprint, engineOptions });
+  const { requestId, engineId, engineFingerprint, adapterRevision, engineOptions = {} } = parts;
+  return hashCanonical({
+    requestId,
+    engineId,
+    engineFingerprint,
+    engineOptions,
+    ...(adapterRevision === undefined ? {} : { adapterRevision }),
+  });
 }
 
 /** One answer as it is kept: the request, with the options the engine was given, and the engine's result. */
@@ -59,6 +71,7 @@ function keyOf(entry: StoreEntry): string {
     requestId: request.id,
     engineId: result.engine.id,
     engineFingerprint: result.engine.fingerprint,
+    adapterRevision: result.engine.adapterRevision,
     engineOptions: request.engineOptions,
   });
 }

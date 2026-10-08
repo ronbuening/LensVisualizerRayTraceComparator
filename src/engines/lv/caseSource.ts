@@ -1,9 +1,13 @@
 // Cases from LensVisualizer: a lens key and a run's options in, an optical case out. This is the LV half of the
 // case-source seam of src/core/suite.ts, and what `lvrtc export` drives.
+import type { OpticalCase } from "../../contract/case.ts";
 import type { RunOptions } from "../../contract/runSpec.ts";
 import type { CaseSource, SourceAudit } from "../../core/suite.ts";
+import { rayProblem } from "../../rays/raySets.ts";
+import type { RaySetResolution } from "../../rays/raySets.ts";
 import { loadLvBinding } from "./binding.ts";
 import type { LvBinding } from "./binding.ts";
+import { STALE_CASE, rebuildCase } from "./caseModel.ts";
 import type { LvCatalogEntry } from "./catalog.ts";
 import { LvBindingError } from "./errors.ts";
 import { exportCase } from "./exportCase.ts";
@@ -11,6 +15,7 @@ import type { ExportCaseResult } from "./exportCase.ts";
 import { problemText } from "./exportProblems.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
+import { lvRaySets } from "./raySets.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
 export interface LvExporter {
@@ -23,6 +28,13 @@ export interface LvExporter {
     key: string,
     options: Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane">,
   ): Promise<ExportCaseResult>;
+  /**
+   * The ray sets of a case this checkout exported, under a run's fields and sampling: LensVisualizer's own launch
+   * rays (`lvRaySets`), from the state the case was exported from, which is rebuilt and held to the case first
+   * (`rebuildCase`). A case that is no longer what LensVisualizer gives has no rays, and the one problem
+   * `stale-case`. Rejects for a case that did not come from a LensVisualizer lens.
+   */
+  raySets(opticalCase: OpticalCase, options: Pick<RunOptions, "fields" | "sampling">): Promise<RaySetResolution>;
   /**
    * The checkout's fingerprint now, and what has changed since the lenses were read: an engine file or an exported
    * lens's file whose bytes on disk are no longer the ones loaded, and an engine closure that is no longer the one
@@ -54,6 +66,11 @@ export function createLvExporter(binding: LvBinding): LvExporter {
         stampedClosures.add(engineClosureHash);
       }
       return result;
+    },
+    raySets: async (opticalCase, options) => {
+      const rebuilt = await rebuildCase(binding, build, opticalCase);
+      if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)] };
+      return lvRaySets(binding.api, rebuilt.model, options);
     },
     audit: () => {
       const { commit, dirty, engineClosureHash, engineFileCount } = binding.fingerprint();
@@ -88,10 +105,13 @@ function unavailable(error: LvBindingError): ExportProblem {
  * loaded is the problem of every such run, with the code `lv-<why>` (`LvBindingErrorCode`), and no rejection; so is
  * a key the catalog does not hold, and everything `exportCase` reports. Each problem reads `<code>: <message>`.
  *
+ * `raySets` gives the rays of a case it resolved: LensVisualizer's own launch lattice for each field of the run, at
+ * each line of the case (`lvRaySets`).
+ *
  * `audit` gives the checkout's fingerprint (`commit`, `dirty`, `engineClosureHash`, `engineFileCount`) and what
  * changed since the cases were built; null while LensVisualizer has not been loaded.
  */
-export function createLvCaseSource(lvPath: string | null): CaseSource & { audit(): SourceAudit | null } {
+export function createLvCaseSource(lvPath: string | null): Required<CaseSource> {
   let loading: Promise<LvExporter | ExportProblem> | undefined;
   let exporter: LvExporter | undefined;
   const load = (): Promise<LvExporter | ExportProblem> =>
@@ -112,6 +132,11 @@ export function createLvCaseSource(lvPath: string | null): CaseSource & { audit(
       if ("code" in loaded) return { ok: false, problems: [problemText(loaded)] };
       const result = await loaded.exportLens(run.lens.key, run);
       return result.ok ? result : { ok: false, problems: result.problems.map(problemText) };
+    },
+    raySets: async (run, opticalCase) => {
+      const loaded = await load();
+      if ("code" in loaded) return { sets: [], problems: [problemText(loaded)] };
+      return loaded.raySets(opticalCase, run);
     },
     audit: () => exporter?.audit() ?? null,
   };

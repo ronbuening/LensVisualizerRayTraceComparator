@@ -334,7 +334,7 @@ test("the quantity schemas are a spec and a data file for every registered quant
       assert.ok(contractSchemas().targets.has(quantitySchemaId(id, part)), `${id}.${part}`);
     }
   }
-  assert.equal(contractSchemas().targets.has(quantitySchemaId("rays.trace", "spec")), false);
+  assert.equal(contractSchemas().targets.has(quantitySchemaId("no.such-quantity", "spec")), false);
 });
 
 test("the float64 array is the array wire form with only its element type narrowed", () => {
@@ -348,7 +348,7 @@ test("the float64 array is the array wire form with only its element type narrow
 test("a quantity schema placed under quantities/ is loaded and addressed by quantitySchemaId", (t) => {
   const dir = tempDir(t);
   cpSync(SCHEMA_DIR, dir, { recursive: true });
-  const file = "quantities/rays.trace.spec.schema.json";
+  const file = "quantities/no.such-quantity.spec.schema.json";
   writeJson(dir, file, {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: idOfFile(file),
@@ -359,9 +359,9 @@ test("a quantity schema placed under quantities/ is loaded and addressed by quan
   });
 
   const set = loadSchemaDirectory(dir);
-  const id = quantitySchemaId("rays.trace", "spec");
+  const id = quantitySchemaId("no.such-quantity", "spec");
   assert.equal(id, idOfFile(file));
-  assert.equal(quantitySchemaId("rays.trace", "data"), idOfFile("quantities/rays.trace.data.schema.json"));
+  assert.equal(quantitySchemaId("no.such-quantity", "data"), idOfFile("quantities/no.such-quantity.data.schema.json"));
   const rays = { $nd: { dtype: "f8", shape: [0, 6], data: "", sha256: "0".repeat(64) } };
   assert.deepEqual(validate(set, id, { line: 0, rays }), []);
   const issues = validate(set, id, { line: 0, rays: { $nd: { ...rays.$nd, shape: [6] } } });

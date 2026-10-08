@@ -1,0 +1,36 @@
+{
+  "line": 0,
+  "origins": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        3
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAACTAAAAAAAAAAAAAAAAAAAAoQAAAAAAAACTA",
+      "sha256": "674c5be2e202600cb3aa585b12c8d33441d5f494a190b0273fa4a8677b5186a5"
+    }
+  },
+  "directions": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        3
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPA/",
+      "sha256": "b76a51d51658b8961adb4b08f1563f132b3152f68e705e85cb3b0047239de35a"
+    }
+  },
+  "weights": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAA8D8AAAAAAADwPw==",
+      "sha256": "5f07eef034c5a21fedede8ef2f970fefbcc8ea44c02fd970117dacbee5483005"
+    }
+  },
+  "wavelengthNm": 587.5618
+}

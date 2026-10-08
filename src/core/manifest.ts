@@ -23,7 +23,8 @@ export const CASES_DIRECTORY = "cases";
 /**
  * An engine the run turned to: who it said it was, or the code of why it could not be used
  * (`ENGINE_UNAVAILABLE_CODES`). `version` and `details` are the engine's own, for people; results are keyed by
- * `fingerprint`.
+ * `fingerprint` and, for an engine that states one, by `adapterRevision`: the hash of the comparator's own code
+ * behind the engine.
  */
 export type ManifestEngine =
   | {
@@ -31,6 +32,7 @@ export type ManifestEngine =
       readonly status: "available";
       readonly version: string;
       readonly fingerprint: string;
+      readonly adapterRevision?: string;
       readonly details: EngineDetails;
     }
   | { readonly id: string; readonly status: "unavailable"; readonly code: EngineUnavailableCode };
@@ -49,6 +51,17 @@ export interface ManifestSource {
   readonly status: "unchanged" | typeof SOURCE_CHANGED;
 }
 
+/** The ray sets that were generated for one run. */
+export interface ManifestRaySets {
+  /**
+   * The identity of each set, in the order the source gave them: the SHA-256 of the canonical JSON of its
+   * `rays.trace` spec (`raySetId`). The rays themselves are in the requests of the store, never here.
+   */
+  readonly sets: readonly string[];
+  /** What kept a field of the run from having rays, each as `<code>: <message>`; it fails nothing. */
+  readonly problems: readonly string[];
+}
+
 /** One run of the suite: the case it was run on, or why it was not run. */
 export interface ManifestRun {
   readonly name: string;
@@ -58,6 +71,8 @@ export interface ManifestRun {
   readonly problems: readonly string[];
   /** The engine the run asks the others to be compared against (its `referenceEngine`), when it names one. */
   readonly referenceEngine?: string;
+  /** The ray sets of the run; stated exactly when a rung that traces rays was run on it. */
+  readonly raySets?: ManifestRaySets;
 }
 
 /** One request asked of one engine for one run, and how that ended. */

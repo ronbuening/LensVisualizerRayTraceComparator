@@ -1,0 +1,47 @@
+{
+  "line": 1,
+  "origins": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        5,
+        3
+      ],
+      "data": "AAAAAAAAAMAAAAAAAAAWQAAAAAAAACTAAAAAAAAAAEAAAAAAAAAWQAAAAAAAACTAAAAAAAAAAMAAAAAAAAAjQAAAAAAAACTAAAAAAAAAAEAAAAAAAAAjQAAAAAAAACTAAAAAAAAAAAAAAAAAAAAeQAAAAAAAACTA",
+      "sha256": "61b3036e274ae81cc7a3469b7918cb01460ce9858b0615559e79c22d95beb482"
+    }
+  },
+  "directions": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        5,
+        3
+      ],
+      "data": "AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/AAAAAAAAAAAzMzMzMzPjv5qZmZmZmek/",
+      "sha256": "68d1d0d848f64c50490176eb07db78b4890e05bcbc5b3c9559ded983dcce1357"
+    }
+  },
+  "weights": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        5
+      ],
+      "data": "AAAAAAAA8D8AAAAAAADwPwAAAAAAAO8/AAAAAAAA7z8AAAAAAAAAAA==",
+      "sha256": "29633e78e5a3b91fa95229eb0226cbea835fcde1c68e02633c1a4cc73184ab57"
+    }
+  },
+  "groups": {
+    "field": {
+      "angleDeg": 36.86989764584402,
+      "heightFraction": 0.5
+    },
+    "lattice": {
+      "columns": 2,
+      "rows": 2,
+      "step": 4
+    },
+    "chiefIndex": -1
+  }
+}

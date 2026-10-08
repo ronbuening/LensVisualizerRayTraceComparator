@@ -2,8 +2,8 @@
 // LensVisualizer. The fake has a paraxial kernel and conic surfaces of its own, so what the engine assembles from
 // them is held to the reference engine here; its numbers describe no real lens.
 import assert from "node:assert/strict";
-import { appendFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
 import { COMPARATORS } from "../../../src/compare/index.ts";
@@ -15,6 +15,7 @@ import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
 import type { ParaxialFirstOrderData } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
+import { RAYS_TRACE } from "../../../src/contract/quantities/raysTrace.ts";
 import { SYSTEM_DESCRIBE } from "../../../src/contract/quantities/systemDescribe.ts";
 import type { SystemDescribeData } from "../../../src/contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
@@ -28,6 +29,7 @@ import type { NdArrayWire } from "../../../src/core/numeric/ndarray.ts";
 import { runSuite } from "../../../src/core/orchestrator.ts";
 import { resultDataProblems } from "../../../src/core/resultData.ts";
 import { EngineUnavailableError } from "../../../src/engines/adapter.ts";
+import { adapterRevision } from "../../../src/engines/adapterRevision.ts";
 import { BUILTIN_ENGINES } from "../../../src/engines/builtin.ts";
 import { runConformance } from "../../../src/engines/conformance.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
@@ -35,6 +37,7 @@ import { STALE_CASE } from "../../../src/engines/lv/caseModel.ts";
 import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import {
   LV_ENGINE_ID,
+  LV_ENGINE_MODULE,
   LV_ENGINE_VERSION,
   createLvEngine,
   createLvEngineOn,
@@ -46,9 +49,9 @@ import { createEngineRegistry } from "../../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
-import { SINGLET_CASE } from "../../contract/corpus.ts";
+import { RAYS_SPEC_SINGLET, SINGLET_CASE } from "../../contract/corpus.ts";
 import { suiteOf, tempDir } from "../../core/support.ts";
-import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, bind, closureOf, fileHash, freshLv } from "./support.ts";
+import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, bind, closureOf, fileHash, freshLv, variantOf } from "./support.ts";
 
 const POLICY = loadPolicy();
 const [SINGLET_FILE] = FAKE_LENS_FILES.map(([file]) => file);
@@ -117,20 +120,6 @@ async function verdictOf(
   return pair.reason === undefined ? pair.verdict : `${pair.verdict}: ${pair.reason}`;
 }
 
-/** A copy of a tree with some of its files rewritten, in the same temporary directory; removed with it. */
-function variantOf(lv: string, name: string, edits: Readonly<Record<string, (text: string) => string>>): string {
-  const copy = join(dirname(lv), name);
-  cpSync(lv, copy, { recursive: true });
-  for (const [file, edit] of Object.entries(edits)) {
-    const path = join(copy, ...file.split("/"));
-    const text = readFileSync(path, "utf8");
-    const edited = edit(text);
-    assert.notEqual(edited, text, `${file} was to be edited`);
-    writeFileSync(path, edited);
-  }
-  return copy;
-}
-
 /** A case with one member of its system or conditions replaced, finished again so that it is what it says. */
 function altered(opticalCase: OpticalCase, change: (draft: OpticalCase) => void): OpticalCase {
   const draft: OpticalCase = structuredClone(opticalCase);
@@ -141,7 +130,7 @@ function altered(opticalCase: OpticalCase, change: (draft: OpticalCase) => void)
 
 // ── Who it is ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("lv describes itself: LensVisualizer's engine closure, its commit and its two quantities", async (t) => {
+test("lv describes itself: LensVisualizer's engine closure, its commit, its adapter revision and its quantities", async (t) => {
   const lv = freshLv(t);
   const binding = await bind(t, lv);
   const descriptor = await engineOn(t, binding).describe();
@@ -151,11 +140,15 @@ test("lv describes itself: LensVisualizer's engine closure, its commit and its t
     id: "lv",
     version: LV_ENGINE_VERSION,
     fingerprint: closureOf(lv, FAKE_ENGINE_FILES),
+    // The comparator's own code behind the engine: another hash, of other files.
+    adapterRevision: adapterRevision(LV_ENGINE_MODULE).revision,
     // A temporary directory is under no git repository.
     details: { commit: null, dirty: null, engineFileCount: FAKE_ENGINE_FILES.length },
   });
+  assert.notEqual(descriptor.identity.adapterRevision, descriptor.identity.fingerprint);
   assert.deepEqual(descriptor.capabilities.quantities, {
     "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
+    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
   });
   // Whatever LensVisualizer's exporter writes, LensVisualizer answers for.
@@ -610,8 +603,13 @@ test("a system LensVisualizer finds afocal is unsupported, with the item system.
 
 test("a case from any other source is unsupported, with the code case-source and the kind of the source", async (t) => {
   const lv = engineOn(t, await bind(t, freshLv(t)));
-  for (const quantity of [SYSTEM_DESCRIBE, PARAXIAL_FIRST_ORDER]) {
-    const result = await ask(lv, SINGLET_CASE, quantity);
+  const specs: [string, JsonObject][] = [
+    [SYSTEM_DESCRIBE, {}],
+    [PARAXIAL_FIRST_ORDER, {}],
+    [RAYS_TRACE, RAYS_SPEC_SINGLET],
+  ];
+  for (const [quantity, spec] of specs) {
+    const result = await ask(lv, SINGLET_CASE, quantity, spec);
     assert.equal(result.status, "unsupported");
     assert.deepEqual(
       result.unsupported?.map(({ code, item }) => [code, item]),
@@ -621,10 +619,10 @@ test("a case from any other source is unsupported, with the code case-source and
     assert.deepEqual(validateKind("result", result), []);
   }
   // What its descriptor rules out is said first, in negotiation's own words.
-  const unknown = await ask(lv, SINGLET_CASE, "rays.trace");
+  const unknown = await ask(lv, SINGLET_CASE, "selftest.echo");
   assert.deepEqual(
     unknown.unsupported?.map(({ code, item }) => [code, item]),
-    [["quantity", "rays.trace"]],
+    [["quantity", "selftest.echo"]],
   );
 });
 

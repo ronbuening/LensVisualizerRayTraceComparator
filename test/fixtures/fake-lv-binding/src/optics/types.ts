@@ -29,6 +29,74 @@ export interface FakeLensData {
   fopen?: number;
   finiteConjugates?: FakeFiniteConjugate[];
   noDispersionData?: boolean;
+  /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
+  field?: {
+    mmPerDeg?: number;
+    edgeDeg?: number;
+    referenceHeightMm?: number;
+    chiefLimitDeg?: number;
+    unsolvedFraction?: number;
+  };
+  /** Absorption of every glass of the lens, per mm. */
+  absorptionPerMm?: number;
+  /** An annulus of one surface in which the fake's tracer "does not converge". */
+  unresolvedZone?: { surface: number; inner: number; outer: number };
+}
+
+export type Vec3 = [number, number, number];
+
+export interface FakeTraceOptions {
+  recordOpticalPath?: boolean;
+  stopAt?: number;
+  checkSemiDiameter?: boolean;
+  stopSemiDiameter?: number;
+  stopOnClip?: boolean;
+  indexAtSurface?: (surfaceIndex: number, nd: number) => number;
+  wavelengthNm?: number;
+  directionNormalized?: boolean;
+}
+
+export interface FakeTraceHit {
+  surfaceIndex: number;
+  surfaceLabel: string;
+  point: Vec3;
+  normal: Vec3;
+  incidentDirection: Vec3;
+  outgoingDirection?: Vec3;
+  radius: number;
+  clipped: boolean;
+  failureReason: string | null;
+}
+
+export interface FakeTraceResult {
+  opticalPathLengthMm?: number;
+  input: { origin: Vec3; direction: Vec3 };
+  hits: FakeTraceHit[];
+  terminalPoint: Vec3;
+  terminalDirection: Vec3;
+  terminalSurfaceIndex: number;
+  finalMedium: number;
+  status: "ok" | "clipped" | "failed";
+  failureReason: string | null;
+  reachedImagePlane: boolean;
+}
+
+export interface FakeFieldLaunch {
+  fieldAngleDeg: number;
+  direction: Vec3;
+  objectPoint?: Vec3;
+  leadZ: number;
+  centerY: number;
+}
+
+export interface FakeFootprint {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  beamWidthMm: number;
+  beamHeightMm: number;
+  guardMm: number;
 }
 
 export interface FakeRuntimeLens {

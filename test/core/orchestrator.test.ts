@@ -862,6 +862,61 @@ test("another fingerprint finds none of the old answers: a changed engine is ask
   });
 });
 
+test("another adapter revision finds none of the old answers, under the same fingerprint", async (t) => {
+  const runsDir = tempDir(t);
+  const suite = pairSuite();
+  // The fake engine, saying that this much of the comparator's own code stands behind its answers.
+  const revised =
+    (adapterRevision: string): EngineMaker =>
+    async (id) => {
+      const adapter = await fakeEngine()(id);
+      const described = await adapter.describe();
+      const descriptor = { ...described, identity: { ...described.identity, adapterRevision } };
+      return {
+        id,
+        describe: async () => descriptor,
+        run: async (request, opticalCase) => {
+          const result = await adapter.run(request, opticalCase);
+          return { ...result, engine: { ...result.engine, adapterRevision } };
+        },
+        close: () => adapter.close(),
+      };
+    };
+  const [before, after] = ["1".repeat(64), "2".repeat(64)];
+  const first = await runSuite({ suite, registry: watchedRegistry({ "fake-a": revised(before) }).registry, runsDir });
+  const fingerprint = parseFakeOptions({ id: "fake-a" }).fingerprint;
+  assert.deepEqual(first.manifest.engines[0], {
+    id: "fake-a",
+    status: "available",
+    version: "1",
+    fingerprint,
+    adapterRevision: before,
+    details: { bias: 0, offersQuantities: true, failMode: "none" },
+  });
+  // The same adapter again finds its answers.
+  const same = watchedRegistry({ "fake-a": revised(before) });
+  await runSuite({ suite, registry: same.registry, runsDir });
+  assert.deepEqual(same.ran, []);
+
+  // The adapter was edited: the engine is the engine it was, and every answer is computed again.
+  const changed = watchedRegistry({ "fake-a": revised(after) });
+  const second = await runSuite({ suite, registry: changed.registry, runsDir });
+  assert.deepEqual(changed.ran, ["fake-a", "fake-a"]);
+  assert.equal(storeFiles(runsDir).length, 4, "the old answers stay, under the old revision");
+  const [engine] = second.manifest.engines;
+  assert.ok(engine.status === "available");
+  assert.deepEqual([engine.fingerprint, engine.adapterRevision], [fingerprint, after]);
+  assert.notDeepEqual(
+    second.manifest.jobs.map((job) => job.storeKey),
+    first.manifest.jobs.map((job) => job.storeKey),
+  );
+  // An engine that states no revision keeps the keys it always had: neither of the two.
+  const plain = watchedRegistry({ "fake-a": fakeEngine() });
+  await runSuite({ suite, registry: plain.registry, runsDir });
+  assert.deepEqual(plain.ran, ["fake-a", "fake-a"]);
+  assert.equal(storeFiles(runsDir).length, 6);
+});
+
 // ── Engine options ───────────────────────────────────────────────────────────────────────────────────────────────
 
 test("a run's options for an engine travel with its requests, key its answers, and change no request id", async (t) => {
@@ -1167,21 +1222,21 @@ test("a rung that builds a request that is not its own is a defect, reported bef
       ...selftestRung.buildRequests(opticalCase, runSpec),
     ],
   };
-  const unknown: RungDefinition = { id: "unknown", quantity: "rays.trace", buildRequests: () => [] };
+  const unknown: RungDefinition = { id: "unknown", quantity: "no.such-quantity", buildRequests: () => [] };
   const foreign: RungDefinition = {
     id: "foreign",
     quantity: SELFTEST_ECHO,
     buildRequests: (opticalCase, runSpec) => {
       const { caseId, spec } = selftestRung.buildRequests(opticalCase, runSpec)[0];
-      return [makeRequest({ caseId, quantity: "rays.trace", spec })];
+      return [makeRequest({ caseId, quantity: "no.such-quantity", spec })];
     },
   };
   const defects: [RungDefinition, RegExp][] = [
     [stray, /^Error: rung stray: it built a request about case/],
-    [foreign, /^Error: rung foreign: it built a request for rays\.trace, not for its selftest\.echo$/],
+    [foreign, /^Error: rung foreign: it built a request for no\.such-quantity, not for its selftest\.echo$/],
     [badSpec, /^Error: rung bad-spec: it built a request whose spec is not a selftest\.echo spec/],
     [repeats, /^Error: rung repeats: it built a request twice/],
-    [unknown, /^Error: rung unknown: rays\.trace is not a quantity$/],
+    [unknown, /^Error: rung unknown: no\.such-quantity is not a quantity$/],
   ];
   for (const [definition, message] of defects) {
     const engines = threeFakes();

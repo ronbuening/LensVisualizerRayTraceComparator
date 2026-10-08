@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:rays.trace.spec",
+  "title": "rays.trace spec",
+  "description": "What a rays.trace request asks for: n given rays, traced at one line of the case. Lengths in mm, in the contract frame. Code checks that the three arrays describe the same n rays, that every direction is a unit vector toward +z and that every weight is finite and not negative.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The index of the line of the case, in conditions.lines, whose indices the rays are traced with.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+    },
+    "origins": {
+      "description": "Where each ray starts, in front of the first surface; shape [n, 3].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "directions": {
+      "description": "The unit direction of each ray, its z component above 0; shape [n, 3].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "weights": {
+      "description": "The flux each ray stands for, finite and not negative; shape [n].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "groups": {
+      "description": "What the rays are, for whoever reads the answer: the field they come from, the lattice they lie on and which of them is the chief ray. An engine traces the rays and reads none of it.",
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "object",
+          "properties": {
+            "angleDeg": {
+              "description": "The field angle in degrees; a positive angle is an object toward +y.",
+              "type": "number",
+              "exclusiveMinimum": -90,
+              "exclusiveMaximum": 90
+            },
+            "heightFraction": {
+              "description": "The fraction of the full image height the angle was resolved from.",
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval"
+            }
+          },
+          "required": ["angleDeg"],
+          "additionalProperties": false
+        },
+        "lattice": {
+          "description": "The first columns x rows rays are the cells of a square lattice, row by row: ray row x columns + column.",
+          "type": "object",
+          "properties": {
+            "columns": { "type": "integer", "minimum": 1 },
+            "rows": { "type": "integer", "minimum": 1 },
+            "step": {
+              "description": "The side of a cell on the plane the lattice is laid on.",
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+            }
+          },
+          "required": ["columns", "rows", "step"],
+          "additionalProperties": false
+        },
+        "chiefIndex": {
+          "description": "The index of the ray that is the chief ray of the field.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["line", "origins", "directions", "weights"],
+  "additionalProperties": false
+}

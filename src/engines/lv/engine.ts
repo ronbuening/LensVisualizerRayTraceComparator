@@ -8,18 +8,21 @@ import type { EngineDescriptor } from "../../contract/engine.ts";
 import { FEATURE_FLAGS } from "../../contract/features.ts";
 import type { JsonObject } from "../../contract/json.ts";
 import type { ProtocolHandler } from "../../contract/protocol.ts";
+import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import { DEFAULT_SAG_FRACTIONS } from "../../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../../contract/quantities/systemDescribe.ts";
 import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
-import type { ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
+import type { ErrorInfo, ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
+import { raysTraceQuantity } from "../../quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../quantities/systemDescribe.ts";
 import { EngineUnavailableError } from "../adapter.ts";
+import { adapterRevision } from "../adapterRevision.ts";
 import { createProtocolHandler } from "../protocolHandler.ts";
 import { loadLvBinding } from "./binding.ts";
 import type { LvBinding } from "./binding.ts";
@@ -30,6 +33,7 @@ import { LvBindingError } from "./errors.ts";
 import type { LvFingerprint } from "./fingerprint.ts";
 import { answerLvFirstOrder } from "./firstOrder.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
+import { answerLvRays } from "./rays.ts";
 import type { LvApi } from "./types.ts";
 
 /** The id of the engine that is LensVisualizer. */
@@ -41,8 +45,17 @@ export const LV_ENGINE_ID = "lv";
  */
 export const LV_ENGINE_VERSION = "1";
 
-/** What a quantity makes of a model: its data, or what keeps the model from having any. */
-type Answer = { readonly data: JsonObject } | { readonly unsupported: readonly UnsupportedItem[] };
+/** The module of the engine `lv`, relative to the comparator's sources: where its adapter revision starts from. */
+export const LV_ENGINE_MODULE = "engines/lv/engine.ts";
+
+/**
+ * What a quantity makes of a model: its data, with the counts it has to report beside the model's; what keeps the
+ * model from having any; or why the spec cannot be answered about this case.
+ */
+type Answer =
+  | { readonly data: JsonObject; readonly counts?: { readonly [name: string]: number } }
+  | { readonly unsupported: readonly UnsupportedItem[] }
+  | { readonly error: ErrorInfo };
 
 /** One quantity the engine answers: how its spec is checked, what its method is called, and the computation. */
 interface Answered {
@@ -68,14 +81,22 @@ const ANSWERED: readonly Answered[] = [
       return answer.supported ? { data: answer.data } : { unsupported: answer.items };
     },
   },
+  {
+    quantity: raysTraceQuantity,
+    method: "sequential-trace",
+    answer: (api, model, spec) => answerLvRays(api, model, spec as RaysTraceSpec),
+  },
 ];
 
 /**
  * What the engine answers to `hello`, for LensVisualizer with the given fingerprint. Its `fingerprint` is the hash
  * of the closure of LensVisualizer's engine files, in which no lens file takes part: an edit to LensVisualizer's
- * code retires what the store holds of it, and an edit to a lens does not. `details` carry the checkout's commit
- * and dirty flag, null outside git, and the number of engine files. It declares every feature of a case and no
- * limit: it answers for whatever LensVisualizer's own exporter wrote. It is deterministic.
+ * code retires what the store holds of it, and an edit to a lens does not. Its `adapterRevision` is the hash of the
+ * comparator's own code behind it (`adapterRevision` of `LV_ENGINE_MODULE`): an edit to how the engine asks
+ * LensVisualizer, or to a kernel it shares, retires the same results and leaves the fingerprint LensVisualizer's.
+ * `details` carry the checkout's commit and dirty flag, null outside git, and the number of engine files. It
+ * declares every feature of a case and no limit: it answers for whatever LensVisualizer's own exporter wrote. It is
+ * deterministic.
  */
 export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
   const { engineClosureHash, engineFileCount, commit, dirty } = fingerprint;
@@ -85,6 +106,7 @@ export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
       id: LV_ENGINE_ID,
       version: LV_ENGINE_VERSION,
       fingerprint: engineClosureHash,
+      adapterRevision: adapterRevision(LV_ENGINE_MODULE).revision,
       details: { commit, dirty, engineFileCount },
     },
     capabilities: {
@@ -102,13 +124,15 @@ export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
  * - `hello`: `lvDescriptor` of the binding's fingerprint as it is when the engine is made.
  * - `run`, for a case that came from a LensVisualizer lens: the state is rebuilt and held to the case
  *   (`rebuildCase`), and the quantity answered from it: `system.describe` by `describeLvSystem`,
- *   `paraxial.first-order` by `answerLvFirstOrder`. A case that is no longer what LensVisualizer gives is a result
- *   of status "error" with the code `stale-case`, whose message names what changed.
+ *   `paraxial.first-order` by `answerLvFirstOrder`, `rays.trace` by `answerLvRays`. A case that is no longer what
+ *   LensVisualizer gives is a result of status "error" with the code `stale-case`, whose message names what
+ *   changed.
  * - `run`, for a case from any other source: a result of status "unsupported" with one item of code `case-source`
  *   that names the kind of source. LensVisualizer has no state for such a case, and building one from the case's
  *   surfaces would be an import, which is no part of what is compared.
  * - A request the descriptor rules out (another quantity, a contract version it does not speak) is "unsupported"
- *   with the items negotiation gives, and a spec that is not the quantity's is an "error" with the code `bad-spec`.
+ *   with the items negotiation gives, and a spec that is not the quantity's, or that names a line the case does not
+ *   have, is an "error" with the code `bad-spec`.
  *
  * The engine keeps the lenses it has built and nothing else between messages, and it never closes the binding,
  * which the case source of the same run shares. An exception while it computes becomes a result of status "error"
@@ -130,7 +154,7 @@ export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
       const item: UnsupportedItem = { code: "case-source", item: source.kind, message };
       return makeResult(request, engine, { status: "unsupported", unsupported: [item] });
     }
-    // Negotiation has passed, so the quantity is one of the two.
+    // Negotiation has passed, so the quantity is one the engine answers.
     const answered = ANSWERED.find(({ quantity }) => quantity.id === request.quantity) as Answered;
     const issues = answered.quantity.validateSpec(request.spec);
     if (issues.length > 0) {
@@ -148,7 +172,12 @@ export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
     if ("unsupported" in answer) {
       return makeResult(request, engine, { status: "unsupported", unsupported: answer.unsupported });
     }
-    const counts = { surfaces: model.state.surfaces.length, lines: model.exported.conditions.lines.length };
+    if ("error" in answer) return makeResult(request, engine, { status: "error", error: answer.error });
+    const counts = {
+      surfaces: model.state.surfaces.length,
+      lines: model.exported.conditions.lines.length,
+      ...answer.counts,
+    };
     return makeResult(request, engine, {
       status: "ok",
       method: { name: answered.method, params: {} },

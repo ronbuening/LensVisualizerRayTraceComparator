@@ -108,8 +108,8 @@ test("schemaQuantity refuses an id that is no quantity id, a bad version and a q
       String(version),
     );
   }
-  assert.throws(() => schemaQuantity("rays.trace", 1), {
-    message: "quantity rays.trace: the contract has no schema quantities/rays.trace.spec.schema.json",
+  assert.throws(() => schemaQuantity("no.such-quantity", 1), {
+    message: "quantity no.such-quantity: the contract has no schema quantities/no.such-quantity.spec.schema.json",
   });
 });
 

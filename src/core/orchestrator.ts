@@ -19,13 +19,15 @@ import type { EngineRegistry } from "../engines/registry.ts";
 import { QUANTITIES } from "../quantities/index.ts";
 import type { QuantityModule } from "../quantities/module.ts";
 import { SOURCE_CHANGED, writeRunOutput } from "./manifest.ts";
-import type { ManifestEngine, ManifestJob, ManifestSource, RunManifest } from "./manifest.ts";
+import type { ManifestEngine, ManifestJob, ManifestRaySets, ManifestSource, RunManifest } from "./manifest.ts";
 import { negotiate } from "./negotiate.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
-import { RUNGS, selectRungs } from "./rungs.ts";
-import type { RungDefinition } from "./rungs.ts";
+import { raySetId } from "../rays/raySets.ts";
+import type { RaySetResolution } from "../rays/raySets.ts";
+import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
+import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedSuite } from "./suite.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -62,7 +64,8 @@ export interface RunSuiteInput {
   readonly runsDir: string;
   /**
    * The case sources the suite was loaded with. Each one that serves a run of the suite and can audit itself is
-   * recorded in the manifest and asked, when the last job has ended, whether its inputs are still the same.
+   * recorded in the manifest and asked, when the last job has ended, whether its inputs are still the same. The
+   * source of a run's lens is also what generates the run's ray sets, for a rung that needs them.
    */
   readonly sources?: CaseSources;
   /**
@@ -70,7 +73,7 @@ export interface RunSuiteInput {
    * A built-in engine is run only where it is named, here or by a run.
    */
   readonly engines?: readonly string[];
-  /** Rung ids for every run, in place of each run's own `rungs` and of the default, every rung. */
+  /** Rung ids for every run, in place of each run's own `rungs` and of the default, every rung that is judged. */
   readonly rungs?: readonly string[];
   /** The rungs there are; `RUNGS` unless given. */
   readonly rungDefinitions?: readonly RungDefinition[];
@@ -156,8 +159,14 @@ function defaultEngines(known: KnownEngines): string[] {
 }
 
 /** The requests a rung builds for a case, checked: a rung that builds anything else is a defect of the rung. */
-function requestsOf(rung: RungDefinition, quantity: QuantityModule, opticalCase: OpticalCase, spec: RunSpec) {
-  const requests = rung.buildRequests(opticalCase, spec);
+function requestsOf(
+  rung: RungDefinition,
+  quantity: QuantityModule,
+  opticalCase: OpticalCase,
+  spec: RunSpec,
+  inputs: RungInputs,
+) {
+  const requests = rung.buildRequests(opticalCase, spec, inputs);
   const seen = new Set<string>();
   for (const request of requests) {
     const defect = (text: string): Error => new Error(`rung ${rung.id}: it built a request ${text}`);
@@ -171,12 +180,33 @@ function requestsOf(rung: RungDefinition, quantity: QuantityModule, opticalCase:
   return requests;
 }
 
+/** Why a run has no ray sets when the source of its case has no generator, or no source was given. */
+const NO_RAY_SOURCE = "ray-sets-unavailable: no case source generates rays for this lens";
+
+/**
+ * The ray sets of one run, from the source of its lens (`CaseSource.raySets`); none, and the problem that says so,
+ * when no source was given for the lens or the source has no rays to give.
+ */
+async function raySetsOf(input: RunSuiteInput, spec: RunSpec, opticalCase: OpticalCase): Promise<RaySetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.raySets === undefined) return { sets: [], problems: [NO_RAY_SOURCE] };
+  return source.raySets(spec, opticalCase);
+}
+
+/** Every job of a suite before it is run, and the ray sets that were generated for its runs. */
+interface Plan {
+  readonly jobs: readonly PlannedJob[];
+  /** The ray sets of each run that a rung needed them for, by run name. */
+  readonly raySets: ReadonlyMap<string, ManifestRaySets>;
+}
+
 /**
  * Every job of the suite, in manifest order, with nothing run and no engine contacted. What was asked for is
  * checked for every run, also one that cannot be run, so that a rung or an engine that does not exist is reported
- * whatever else is wrong.
+ * whatever else is wrong. The ray sets of a run are generated here, once, and only when a rung that needs them is
+ * one of the run's.
  */
-function planJobs(input: RunSuiteInput): PlannedJob[] {
+async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const { suite, registry, rungDefinitions = RUNGS } = input;
   if (suite.name.toLowerCase() === STORE_DIRECTORY) {
     throw new UsageError(`a suite cannot be named "${suite.name}": the runs directory keeps the result store there`);
@@ -188,19 +218,37 @@ function planJobs(input: RunSuiteInput): PlannedJob[] {
   const rungsAsked = input.rungs === undefined ? undefined : selectRungs(input.rungs, rungDefinitions);
   const enginesAsked = input.engines === undefined ? undefined : selectEngines(input.engines, known);
 
-  const jobs: PlannedJob[] = [];
-  for (const { spec, opticalCase } of suite.runs) {
-    const rungs = rungsAsked ?? forRun(spec.name, () => selectRungs(spec.rungs, rungDefinitions));
-    const engineIds =
+  // What was asked for is checked for every run before anything is generated for one.
+  const selected = suite.runs.map(({ spec }) => ({
+    rungs: rungsAsked ?? forRun(spec.name, () => selectRungs(spec.rungs, rungDefinitions)),
+    engineIds:
       enginesAsked ??
       forRun(spec.name, () =>
         spec.engines === undefined ? defaultEngines(known) : selectEngines(spec.engines, known),
-      );
+      ),
+  }));
+
+  const jobs: PlannedJob[] = [];
+  const raySets = new Map<string, ManifestRaySets>();
+  for (const [index, { spec, opticalCase }] of suite.runs.entries()) {
+    const { rungs, engineIds } = selected[index];
     if (opticalCase === null) continue;
+    let inputs = NO_RUNG_INPUTS;
+    if (rungs.some((rung) => rung.needsRaySets === true)) {
+      const { sets, problems } = await raySetsOf(input, spec, opticalCase);
+      inputs = { raySets: sets };
+      raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     for (const rung of rungs) {
       const quantity = QUANTITIES.get(rung.quantity);
       if (quantity === undefined) throw new Error(`rung ${rung.id}: ${rung.quantity} is not a quantity`);
-      const requests = requestsOf(rung, quantity, opticalCase, spec);
+      const requests = requestsOf(
+        rung,
+        quantity,
+        opticalCase,
+        spec,
+        rung.needsRaySets === true ? inputs : NO_RUNG_INPUTS,
+      );
       for (const engineId of engineIds) {
         // An own key: an engine id such as "constructor" must not find what every object inherits.
         const options = spec.sampling?.engines;
@@ -216,7 +264,7 @@ function planJobs(input: RunSuiteInput): PlannedJob[] {
       }
     }
   }
-  return jobs;
+  return { jobs, raySets };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -280,6 +328,7 @@ async function runJob(
     requestId: request.id,
     engineId,
     engineFingerprint: descriptor.identity.fingerprint,
+    adapterRevision: descriptor.identity.adapterRevision,
     engineOptions: request.engineOptions,
   });
   const found = store.get(key);
@@ -328,6 +377,10 @@ function auditSources(
  * a run that names none under a configuration that defines none is a `UsageError` too. A run of the suite that has
  * no case (`LoadedRun.problems`) is recorded in the manifest and has no jobs.
  *
+ * A run with a rung that traces rays has its ray sets generated first, by the source of its case
+ * (`CaseSource.raySets`), once for all such rungs: the manifest records the identity of each set and, as coded
+ * problems, each field that has none. A field without rays fails nothing; the rung asks for the sets there are.
+ *
  * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order and each
  * request of the rung, one job:
  *
@@ -335,7 +388,8 @@ function auditSources(
  *    with the code of why (`ENGINE_UNAVAILABLE_CODES`), and the other engines carry on;
  * 2. the request is negotiated against the descriptor. An engine that cannot answer is not asked: the job is
  *    "unsupported" with the items negotiation gives, and nothing is stored;
- * 3. the store is looked up under the key of the request, the engine's id and fingerprint and the engine options.
+ * 3. the store is looked up under the key of the request, the engine's id, fingerprint and adapter revision and the
+ *    engine options.
  *    A hit is the job's result. An entry that is corrupt, or whose data is no longer valid, is a miss and a warning;
  * 4. on a miss the engine is asked. An "ok" result whose data is not the quantity's, or holds an array that does
  *    not decode, becomes "error" with the code `INVALID_DATA`;
@@ -356,7 +410,7 @@ function auditSources(
  */
 export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
-  const planned = planJobs(input);
+  const { jobs: planned, raySets } = await planJobs(input);
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -397,8 +451,9 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     .map(([id, session]): ManifestEngine => {
       if (session.kind === "unavailable") return { id, status: "unavailable", code: session.code };
-      const { version, fingerprint, details } = session.descriptor.identity;
-      return { id, status: "available", version, fingerprint, details };
+      const { version, fingerprint, adapterRevision, details } = session.descriptor.identity;
+      const adapter = adapterRevision === undefined ? {} : { adapterRevision };
+      return { id, status: "available", version, fingerprint, ...adapter, details };
     });
   const sources = auditSources(input, warnings);
   const manifest: RunManifest = {
@@ -407,12 +462,16 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     suite: { name: suite.name, hash: suite.hash },
     ...(sources === undefined ? {} : { sources }),
     engines,
-    runs: suite.runs.map(({ spec, opticalCase, problems }) => ({
-      name: spec.name,
-      caseId: opticalCase?.id ?? null,
-      problems,
-      ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
-    })),
+    runs: suite.runs.map(({ spec, opticalCase, problems }) => {
+      const rays = raySets.get(spec.name);
+      return {
+        name: spec.name,
+        caseId: opticalCase?.id ?? null,
+        problems,
+        ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
+        ...(rays === undefined ? {} : { raySets: rays }),
+      };
+    }),
     jobs: outcomes.map((outcome) => outcome.job),
   };
   const cases = suite.runs.flatMap(({ opticalCase }) => (opticalCase === null ? [] : [opticalCase]));

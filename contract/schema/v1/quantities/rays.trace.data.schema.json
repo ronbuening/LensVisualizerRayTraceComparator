@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:rays.trace.data",
+  "title": "rays.trace data",
+  "description": "The trace of n given rays through the S surfaces of a case, to its image plane. Lengths in mm, in the contract frame. Code checks that the shapes agree, that the status and the end surface of each ray agree, and that every value of a ray is a number up to where the ray ended and NaN from there on.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "description": "How each ray ended: 0 it reached the image plane, 1 it was blocked, 2 the engine could not trace it; shape [n].",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "const": "u1" },
+            "shape": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
+            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    },
+    "endSurface": {
+      "description": "The index of the surface at which each ray ended; S for a ray that passed every surface and does not reach the image plane; -1 for a ray that reached it; shape [n].",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "const": "i4" },
+            "shape": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
+            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    },
+    "hits": {
+      "description": "Where each ray meets each surface; NaN from the surface at which the ray ended; shape [S, n, 3].",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "const": "f8" },
+            "shape": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
+            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    },
+    "exitPoint": {
+      "description": "Where each ray leaves the last surface; shape [n, 3].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "exitDirection": {
+      "description": "The unit direction of each ray behind the last surface; shape [n, 3].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "imagePoint": {
+      "description": "Where each ray meets the image plane z = conditions.imageZ; shape [n, 3].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "opticalPath": {
+      "description": "The sum of index times length along each ray from its origin to the last surface; shape [n].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "opticalPathToImage": {
+      "description": "The same sum continued to the image plane in the index of the image space; shape [n].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    }
+  },
+  "required": [
+    "status",
+    "endSurface",
+    "hits",
+    "exitPoint",
+    "exitDirection",
+    "imagePoint",
+    "opticalPath",
+    "opticalPathToImage"
+  ],
+  "additionalProperties": false
+}

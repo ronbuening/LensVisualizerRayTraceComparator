@@ -23,8 +23,9 @@ import type { EngineAdapter, EngineUnavailableCode } from "./adapter.ts";
  * - `protocol-error`: the engine answered `ok: false`: it could not handle the message at all;
  * - `invalid-result`: the reply's result is not a valid result, or breaks a status rule;
  * - `request-id-mismatch`, `case-id-mismatch`: the result does not echo the id of the request, of the case;
- * - `engine-id-mismatch`, `fingerprint-mismatch`: the result carries another engine id, another fingerprint, than
- *   the descriptor the engine gave.
+ * - `engine-id-mismatch`, `fingerprint-mismatch`, `adapter-revision-mismatch`: the result carries another engine
+ *   id, another fingerprint, another adapter revision (or one where the descriptor has none), than the descriptor
+ *   the engine gave.
  *
  * An engine's own failure keeps the code the engine chose.
  */
@@ -38,6 +39,7 @@ export const RUN_ERROR_CODES = [
   "case-id-mismatch",
   "engine-id-mismatch",
   "fingerprint-mismatch",
+  "adapter-revision-mismatch",
 ] as const;
 /** One `error.code` the adapter writes. */
 export type RunErrorCode = (typeof RUN_ERROR_CODES)[number];
@@ -122,7 +124,8 @@ function readReply(reply: unknown, messageId: string): Reply {
  *   engine speaks this contract version and it names the configured id. The outcome is kept: the engine is asked
  *   once, and an engine found unavailable stays unavailable for this adapter.
  * - `run()` sends `run` and returns the engine's result only when it is a valid result that keeps the status rules,
- *   echoes the ids of the request and the case, and carries the descriptor's engine id and fingerprint. Anything
+ *   echoes the ids of the request and the case, and carries the descriptor's engine id, fingerprint and adapter
+ *   revision. Anything
  *   else, and any failure to get a reply, becomes a result of status "error" with one of `RUN_ERROR_CODES`. It
  *   rejects only as `describe()` does, and for a misuse by its caller: a request about another case, or a call
  *   after `close()`.
@@ -197,6 +200,13 @@ export class RemoteEngineAdapter implements EngineAdapter {
       return failed(
         "fingerprint-mismatch",
         `the result carries fingerprint ${carried}, the descriptor ${identity.fingerprint}`,
+      );
+    }
+    if (result.engine.adapterRevision !== identity.adapterRevision) {
+      const [carried, stated] = [result.engine.adapterRevision ?? "none", identity.adapterRevision ?? "none"];
+      return failed(
+        "adapter-revision-mismatch",
+        `the result carries the adapter revision ${carried}, the descriptor ${stated}`,
       );
     }
     return deepFreeze(result);

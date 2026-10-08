@@ -1,5 +1,6 @@
 // Every quantity the comparator knows. A stage that adds a quantity adds its module to the list below.
 import { paraxialFirstOrderQuantity } from "./paraxialFirstOrder.ts";
+import { raysTraceQuantity } from "./raysTrace.ts";
 import { createQuantityRegistry } from "./registry.ts";
 import type { QuantityLookup } from "./registry.ts";
 import { selftestEchoQuantity } from "./selftestEcho.ts";
@@ -9,6 +10,7 @@ const { has, get, list } = createQuantityRegistry([
   selftestEchoQuantity,
   systemDescribeQuantity,
   paraxialFirstOrderQuantity,
+  raysTraceQuantity,
 ]);
 
 /**

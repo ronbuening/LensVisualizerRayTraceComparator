@@ -12,7 +12,9 @@ Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engi
 (LensVisualizer as case source and engine) has the binding that loads LensVisualizer, the exporter that writes
 its lenses as engine-neutral cases, the suites of lenses to compare, the comparator's own reference engine `ref`
 and LensVisualizer itself as the engine `lv`. Both answer the first two rungs of the ladder, the built-system echo
-and the first-order data, and agree on them for every lens of the two suites. The ray rungs come next. The full
+and the first-order data, and agree on them for every lens of the two suites. Rays cross the contract too: a run
+has ray sets, which are LensVisualizer's own launch rays for a LensVisualizer lens, and `lv` traces them with
+LensVisualizer's tracer. The reference engine's tracer, and the rungs that compare traced rays, come next. The full
 plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md); what an engine does that a comparison has
 to know about is in [docs/gotchas.md](docs/gotchas.md).
 
@@ -116,6 +118,10 @@ node bin/lvrtc.mjs compare benchmark
 node bin/lvrtc.mjs engine conformance lv
 ```
 
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv --rungs rays
+```
+
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
 kit. A TypeScript test that needs Python is skipped, with the reason, where `python3` (or `LVRTC_PYTHON`) is
 missing or older than 3.10; `npm run test:python` itself needs it.
@@ -186,18 +192,21 @@ is asserted nowhere. Rewrite it with `node bin/lvrtc.mjs export --all --census r
 
 ### Suites
 
-Three suites of LensVisualizer lenses are in `suites/`. None names a rung or an engine: a run uses every rung
-there is, on the engines it is run with.
+Three suites of LensVisualizer lenses are in `suites/`. None names a rung: a run uses every rung that is judged.
+Each names the built-in engines, `lv` and `ref`, as the engines of its runs, so that it runs at the root of this
+repository, whose configuration defines no engine; `--engines` names others.
 
 | Suite | Is |
 |---|---|
 | `smoke.json` | two small lenses, one of them also on the photopic lines |
 | `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines |
-| `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, mixed d and e references, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom at its tele end, an annular aperture, an asphere without a term, a stop inside an element |
+| `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom at its tele end, an asphere without a term, a stop inside an element |
 
-Two runs of `features.json` have no case today, and say why with a code: the lens that mixes d and e references
-has no wavelength data for every glass (`mixed-reference`), and every lens with an annular aperture is a mirror
-lens (`folded-path`). They stay in the suite so that the day LensVisualizer can supply them is noticed.
+Two translation paths have no run, because no lens of the catalog has a case for them: the one lens that mixes d
+and e references has no wavelength data for every glass (`mixed-reference`), and every lens with an annular
+aperture is a mirror lens (`folded-path`). A run that can never have a case would only make the suite fail. An
+integration test exports those lenses and fails on the day one of them has a case
+([docs/gotchas.md](docs/gotchas.md)).
 
 ## Running a suite
 
@@ -215,25 +224,35 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. A **built-in engine** is part of the comparator and needs no configuration: `ref`, the reference
   engine, and `lv`, LensVisualizer itself. It can be named under any root, and is run only where it is named, so a
-  root without an engine of its own runs nothing until `--engines` or the suite names one. A configured engine of
-  the same id takes its place.
-- **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
-  of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`) and `r1`
-  (`paraxial.first-order`). An engine that does not offer a rung's quantity is recorded as `unsupported` for it
-  without being asked.
+  root without an engine of its own runs nothing until `--engines` or the suite names one; the committed suites
+  name both. A configured engine of the same id takes its place.
+- **Rungs** are every rung that is judged, unless the run lists its own `rungs`; `--rungs` replaces both. They
+  are, in the order of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`)
+  and `r1` (`paraxial.first-order`). One more rung is run only where it is named: `rays` (`rays.trace`), which asks
+  every engine to trace the run's ray sets and judges nothing. An engine that does not offer a rung's quantity is
+  recorded as `unsupported` for it without being asked.
+- **Ray sets.** A run of a rung that traces rays has its rays generated first, by the source of its case, for the
+  run's `fields` (image-height fractions 0, 0.5 and 1 unless it states others) and `sampling.bundleGrid` (32), at
+  every line of the case: LensVisualizer's own launch rays for a LensVisualizer lens, probe lattices over the first
+  surface for a case file. A field that has no rays is printed with a code and recorded; the other fields are
+  traced. See [Rays](#rays).
 - **`--root`** names the directory that holds `lvrtc.config.json`; the default is this repository. The suite file
   and `--root` are relative to the working directory. A fixture lens in a suite is relative to the root. In every
   command an option's value may follow it as the next word or after an equals sign: `--root <dir>` or
   `--root=<dir>`.
-- **The result store** is `<runsDir>/store/`, one file per answer, keyed by the request, the engine's id and
-  fingerprint and the engine options. A result of status `ok` or `unsupported` is stored the moment it arrives; an
+- **The result store** is `<runsDir>/store/`, one file per answer, keyed by the request, the engine's id, its
+  fingerprint, its adapter revision where it states one, and the engine options. The fingerprint is the engine's
+  own code and the adapter revision the comparator's code behind a built-in engine: a change to either retires the
+  answers of that engine. A result of status `ok` or `unsupported` is stored the moment it arrives; an
   `error` never is. A run that finds an answer there does not ask the engine again, so a run that was killed
   resumes by being run again, and computes only what is missing.
-- **The output** is `<runsDir>/<suite name>/`: `manifest.json` and `cases/<case id>.json`. The next run of the same
-  suite replaces it. The manifest is canonical JSON and is the same, byte for byte, whether results were computed
-  or found in the store, in any directory and on any machine: it holds no times and no absolute paths, and of what
-  an engine or the system said only the codes. Which jobs were cached, and why a job failed, is printed and not
-  stored. A run that could not be started is recorded with the reason, which names files relative to the root.
+- **The output** is `<runsDir>/<suite name>/`: `manifest.json` and `cases/<case id>.json`. The manifest records,
+  for a run with ray sets, the identity of each set and the fields that have none; the rays themselves are in the
+  requests of the store. The next run of the same suite replaces it. The manifest is canonical JSON and is the
+  same, byte for byte, whether results were computed or found in the store, in any directory and on any machine: it
+  holds no times and no absolute paths, and of what an engine or the system said only the codes. Which jobs were
+  cached, and why a job failed, is printed and not stored. A run that could not be started is recorded with the
+  reason, which names files relative to the root.
 - **The LensVisualizer fingerprint.** When a run's case came from LensVisualizer, the manifest records under
   `sources.lv` what the cases were built from: the checkout's `commit` and `dirty` flag and the hash and file count
   of the engine closure. When the last job has ended the checkout is read again: an engine file or an exported
@@ -241,13 +260,13 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
   with a warning that names what changed.
 - **Exit code**: 0 when no job ended as an error, every run could be started (`unsupported` is an answer, not a
   failure) and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite
-  file, an engine or a rung cannot be used as asked.
+  file, an engine or a rung cannot be used as asked. A field without rays fails nothing.
 
-This repository's own configuration defines no engine, so a committed suite is run on the engines that are named.
-The reference engine and LensVisualizer answer `r0` and `r1` for every case of the three suites:
+This repository's own configuration defines no engine, and the committed suites name the built-in ones. The
+reference engine and LensVisualizer answer `r0` and `r1` for every case of the three suites:
 
 ```bash
-LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --engines lv,ref --rungs r0,r1
+LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json
 ```
 
 ## The reference engine, and rungs R0 and R1
@@ -255,8 +274,9 @@ LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smo
 `ref` (`src/engines/ref`) is the comparator's own engine: small, written from the optics alone, sharing no code
 with LensVisualizer or optiland, and using closed forms and IEEE 754 basic operations only, so that its answers are
 the same bits on every machine. It arbitrates between the other engines, and it is the engine of the tests that
-have neither. Its fingerprint is a hash of its own source files. It declares every feature of a case but an annular
-aperture, which its model does not keep yet.
+have neither. Its fingerprint is a hash of its own source files, and its adapter revision a hash of those and of
+the kernels of the comparator they run on. It declares every feature of a case but an annular aperture, which its
+model does not keep yet. It does not trace rays yet.
 
 | Rung | Quantity | What is asked of every engine |
 |---|---|---|
@@ -295,6 +315,9 @@ The definitions, member by member, are in [contract/CONTRACT.md](contract/CONTRA
 its own prepared state and its own functions. It is built in, like `ref`, and loads the checkout the configuration
 names (`lvPath`) when it is first asked. Its fingerprint is the closure hash of LensVisualizer's engine files, so
 an edit to LensVisualizer's code retires what the result store holds of it and an edit to a lens file does not.
+Its adapter revision is the hash of the comparator's own code behind it (`src/engines/adapterRevision.ts`: the
+engine's module and everything of the comparator it imports), so an edit to how the comparator asks LensVisualizer
+retires the same answers, and the fingerprint stays LensVisualizer's.
 
 - **It answers from LensVisualizer's state, not from the case.** For a case that came from a LensVisualizer lens,
   `lv` builds that lens again, prepares the state at the zoom and focus position the case's provenance states and
@@ -339,6 +362,60 @@ case and the photopic case of `viltrox-af-75mm-f12-pro`, a nearly telecentric le
 behind the lens at the d line and 14 m in front of it at 650 nm, and the two engines place it 1.1e-9 mm and
 3.0e-9 mm apart there: that is rounding, and it is above the gate. The lens is in neither suite; the entry in
 [docs/gotchas.md](docs/gotchas.md) says what would judge it rightly.
+
+## Rays
+
+"Identical rays" in the ladder are rays that are given: every engine traces the same origins and directions, so no
+engine's own sampling or aiming takes part. The quantity is `rays.trace`: n rays in, and for each ray its status
+(ok, blocked or failed), the surface it ended at, its hit on every surface, its exit point and direction behind
+the last surface, its landing on the image plane, and its optical path to the last surface and to the image.
+Every value of a ray that did not arrive is NaN from the surface where it ended. The frame, the signs and the
+rules are in [contract/CONTRACT.md](contract/CONTRACT.md#raystrace).
+
+- **Ray sets** are made by the source of a run's case, because "the same rays as the engine under test" depends on
+  where the case came from. For a LensVisualizer lens they are LensVisualizer's own launch rays
+  (`src/engines/lv/raySets.ts`): the lattice its MTF lays over the beam of a field, at a fixed grid
+  (`sampling.bundleGrid`), every cell as a ray of its own, the cells an aperture will stop included, with the chief
+  ray after them at weight 0 and LensVisualizer's weight on each cell. Fields are fractions of LensVisualizer's
+  reference image height, resolved to its solved chief-ray angles, or angles in degrees. For a case file they are
+  probe lattices over the first surface and a little past its rim (`src/rays/probe.ts`), made from the case alone.
+- **A set is content.** Its arrays are in the request's spec, so its hash is in the request's id: two processes
+  that generate the same rays ask the same requests, and find each other's answers in the store. Nothing of a set
+  is in the repository; the manifest records the identity of each.
+- **`lv` traces every ray for real**, with LensVisualizer's `traceEngineRay2` and the options of its own MTF bundle,
+  the indices of the case's line included, and takes LensVisualizer's own word for what stopped a ray. Its trace
+  ends on the last surface: the landing is the comparator's projection (`src/estimators/imageProjection.ts`).
+- **`rays`** is the rung that asks for it: `lvrtc run <suite> --engines lv --rungs rays`. Nothing compares the
+  traces yet, so the rung has no entry in the policy and is run only where it is named; `lvrtc compare` refuses a
+  run of it.
+
+Measured at LensVisualizer `d36f44b3`, on the 12 benchmark configurations at the reference line, fields 0, 0.5 and
+1, grid 32:
+
+| | |
+|---|---|
+| ray sets, rays | 36 sets, 39 302 rays: 39 266 lattice cells and 36 chief rays |
+| ok, blocked, failed | 22 918 ok (the 36 chief rays among them), 16 384 blocked, 0 failed |
+| ok cells against LensVisualizer's own `traceMtfBundle` | the same count in every set, 22 882 in all; blocked and failed counts equal too |
+| landing against `mtfImagePoint` | equal in every bit, on every ray that lands |
+| optical path against `opticalPathLengthMm` | equal in every bit |
+| the 11 441 landing rays LensVisualizer traced itself | origin, weight, landing and optical path equal in every bit |
+| the 11 441 it mirrored instead | within 3.5e-13 mm of a real trace of the cell; 4493 equal in every bit |
+| LensVisualizer's own golden rays (three lenses, 18 numbers) | reproduced through `traceRay2` and `traceEngineRay2` to 2.1e-17 |
+| every hit against the case's own surface (the reference engine's sag) | within 1.0e-9 mm along z, which is LensVisualizer's intersection tolerance; Snell's law holds with the case's indices to 6e-14 |
+
+On the photopic cases of the same configurations, whose reference line is 555 nm, `lv` traces 196 510 rays in 180
+sets (three fields at five lines each), 114 678 of them ok and none failed. At a certified finite conjugate
+(`sigma-105mm-f28-dg-dn-macro-art` at 1:1) the sets have 2305, 1801 and 1921 rays from the object point, with
+weights from 0.92 to 1.01, and hold to LensVisualizer's bundle in the same way. The one lens whose glass absorbs,
+`minolta-stf-135f28-t45`, has rays that weigh from 0.84 down to 0.044. A set of some 1100 rays through 30 surfaces
+is about a megabyte in the store, with its answer: the 36 sets above are 43 MB.
+
+Over the whole catalog, in one sweep outside the tests (868 exported lenses on their reference line, three fields
+each): 2515 sets and 2 873 367 rays, of which 1 663 596 are ok, 1 209 771 blocked and none failed; every answer
+is valid `rays.trace` data, and every ray starts 10 mm or more in front of the first surface. 53 fields and 12
+lenses have no rays: the fields lie outside the modeled field, and the lenses are outside LensVisualizer's MTF
+path altogether (`unsupported-path`), which is one problem for each of them.
 
 ## Comparing and reporting
 

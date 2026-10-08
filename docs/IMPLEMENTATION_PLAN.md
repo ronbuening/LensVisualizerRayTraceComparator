@@ -165,7 +165,8 @@ interpreter and skip with a stated reason otherwise.
 
 Suites: **benchmark** = the MTF plan's 11 lenses, 12 configurations (`nikon-z-24-70f4s` at both ends), all d-line
 with even aspheres. **features** = one lens per translation path the benchmark lacks: odd asphere, e-line, mixed
-d/e, A18/A20, flat-base asphere, authored rear-plate rim, fixed-iris zoom.
+d/e, A18/A20, flat-base asphere, authored rear-plate rim, fixed-iris zoom. (Since Stage 1.5 the suite has no run
+for mixed d/e, nor for an annular aperture: no lens of the catalog has a case for either. See `docs/gotchas.md`.)
 
 ### Phase 0 — Foundations (no optics, no LV, no optiland)
 

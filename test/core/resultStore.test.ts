@@ -71,6 +71,43 @@ test("the key changes with every part: the request, the engine, its fingerprint,
   assert.equal(new Set(variants.map(storeKey)).size, variants.length);
 });
 
+test("an adapter revision is part of the key of an engine that states one, and of no other engine's", () => {
+  const parts = { requestId: REQUEST.id, engineId: "lv", engineFingerprint: "abc" };
+  const revised = { ...parts, adapterRevision: "1".repeat(64) };
+  // The same engine behind another adapter never finds the answers the old adapter wrote down.
+  assert.notEqual(storeKey(revised), storeKey(parts));
+  assert.notEqual(storeKey(revised), storeKey({ ...revised, adapterRevision: "2".repeat(64) }));
+  assert.equal(storeKey(revised), hashCanonical({ ...revised, engineOptions: {} }));
+  // The adapter is not the engine: a revision is no fingerprint, and the two do not stand in for each other.
+  assert.notEqual(storeKey(revised), storeKey({ ...parts, engineFingerprint: "1".repeat(64), adapterRevision: "abc" }));
+  // An engine without one has the key it always had: nothing is stated, so nothing is hashed.
+  assert.equal(storeKey(parts), hashCanonical({ ...parts, engineOptions: {} }));
+  assert.equal(storeKey({ ...parts, adapterRevision: undefined }), storeKey(parts));
+});
+
+test("an entry of an engine with an adapter revision belongs under the key that has it", (t) => {
+  const store = newStore(t);
+  const builtin = { ...ENGINE, adapterRevision: "a".repeat(64) };
+  const key = store.put(REQUEST, okResult(REQUEST, builtin));
+  const expected = storeKey({
+    requestId: REQUEST.id,
+    engineId: builtin.id,
+    engineFingerprint: builtin.fingerprint,
+    adapterRevision: builtin.adapterRevision,
+  });
+  assert.equal(key, expected);
+  assert.equal(store.get(expected).kind, "hit");
+  // Under the key without the revision there is nothing: that is what a changed adapter looks up.
+  assert.deepEqual(store.get(keyOf(REQUEST, builtin)), { kind: "miss" });
+  const other = storeKey({
+    requestId: REQUEST.id,
+    engineId: builtin.id,
+    engineFingerprint: builtin.fingerprint,
+    adapterRevision: "b".repeat(64),
+  });
+  assert.deepEqual(store.get(other), { kind: "miss" });
+});
+
 test("engine options are keyed by content, and none at all is the same as an empty object", () => {
   const parts = { requestId: REQUEST.id, engineId: "fake-a", engineFingerprint: "abc" };
   const [ab, ba] = [

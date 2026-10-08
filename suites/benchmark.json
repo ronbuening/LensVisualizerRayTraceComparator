@@ -2,7 +2,7 @@
   "contract": "1.0",
   "kind": "suite",
   "name": "benchmark",
-  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" }, "engines": ["lv", "ref"] },
   "runs": [
     {
       "name": "canon-ef-135-f2l-usm-ref",

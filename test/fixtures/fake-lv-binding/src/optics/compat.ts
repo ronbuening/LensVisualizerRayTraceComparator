@@ -6,6 +6,7 @@ import { FLAT_R_THRESHOLD } from "./constants.js";
 import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "./types.js";
 
 export { computeCardinalElements2 } from "./first-order/cardinals.js";
+export { traceSequential as traceEngineRay2 } from "./trace/sequentialTrace.js";
 
 export function buildLens2(data: FakeLensData): FakeRuntimeLens {
   const surfaces: FakeSurfaceData[] = data.surfaces.map((surface) => ({ ...surface }));
@@ -106,10 +107,6 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
     imgZ: position,
     totalTrack: position,
   };
-}
-
-export function traceEngineRay2(state: FakeState, input: { origin: number[]; direction: number[] }): unknown {
-  return { input, status: "ok", reachedImagePlane: true, terminalSurfaceIndex: state.surfaces.length - 1 };
 }
 
 export function traceRay2(y0: number, u0: number): unknown {

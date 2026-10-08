@@ -7,6 +7,7 @@ import type { ComputedMetric } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { selftestEchoComparator } from "../../src/compare/selftestEcho.ts";
 import type { JsonObject } from "../../src/contract/json.ts";
+import { judgedRungs } from "../../src/core/rungs.ts";
 import { QUANTITIES } from "../../src/quantities/index.ts";
 import { SELFTEST_ECHO_EXAMPLES } from "../contract/corpus.ts";
 import { BITS, echoData, fromBits } from "./support.ts";
@@ -106,11 +107,16 @@ test("the comparator does not change the data it is given, and every example of 
   }
 });
 
-test("every quantity has a comparator and every comparator a quantity; a lookup is by exact id", () => {
+test("every comparator is of a quantity, and every quantity but rays.trace has one; a lookup is by exact id", () => {
+  const compared = COMPARATORS.list().map((comparator) => comparator.quantity);
+  const registered = QUANTITIES.list().map((quantity) => quantity.id);
+  for (const quantity of compared) assert.ok(registered.includes(quantity), quantity);
+  // rays.trace is asked by the rung rays, which nothing judges: its comparator comes with rungs R2 and R3.
   assert.deepEqual(
-    COMPARATORS.list().map((comparator) => comparator.quantity),
-    QUANTITIES.list().map((quantity) => quantity.id),
+    registered.filter((quantity) => !compared.includes(quantity)),
+    ["rays.trace"],
   );
+  for (const rung of judgedRungs()) assert.ok(compared.includes(rung.quantity), rung.id);
   assert.equal(COMPARATORS.get("selftest.echo"), selftestEchoComparator);
   assert.equal(COMPARATORS.get("constructor"), undefined);
   assert.throws(() => createComparatorLookup([selftestEchoComparator, selftestEchoComparator]), {

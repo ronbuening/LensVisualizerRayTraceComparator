@@ -13,6 +13,7 @@ import { validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import {
   DESCRIPTOR_FULL,
+  DESCRIPTOR_MINIMAL,
   PROTOCOL_RUN,
   REQUEST_MINIMAL,
   REQUEST_WITH_OPTIONS,
@@ -50,7 +51,7 @@ test("a request's id hashes the canonical JSON of caseId, quantity and spec", ()
   const request = makeRequest({ caseId: CASE_ID, quantity: "rays.trace", spec });
   assert.equal(request.id, sha256Hex(canonicalJson({ caseId: CASE_ID, quantity: "rays.trace", spec })));
   // Python: sha256 of json.dumps({"caseId": ..., "quantity": ..., "spec": ...}, sort_keys=True, separators=(",", ":")).
-  assert.equal(REQUEST_WITH_OPTIONS.id, "be3888b6ee00068df5059d6f2e33e8a48e1525efaa29d2090a32c4605c77c81b");
+  assert.equal(REQUEST_WITH_OPTIONS.id, "86f90870f94da86eceb866f565746b1488849db074ade47b8bcd594d95a859e2");
 });
 
 test("a request's id does not depend on key order, and changes with each part it covers", () => {
@@ -283,15 +284,20 @@ test("makeResult refuses a result that is not schema-valid or breaks a status ru
   assert.throws(() => makeResult(REQUEST_MINIMAL, ENGINE, { status: "ok", data: { f: () => 1 } }));
 });
 
-test("the engine stamp of an identity is its id, fingerprint and details, without the version", () => {
+test("the engine stamp of an identity is its id, fingerprint, adapter revision and details, without the version", () => {
   const { identity } = DESCRIPTOR_FULL;
   assert.deepEqual(engineStamp(identity), {
     id: identity.id,
     fingerprint: identity.fingerprint,
+    adapterRevision: identity.adapterRevision,
     details: identity.details,
   });
   const result = makeResult(REQUEST_MINIMAL, engineStamp(identity), { status: "pending" });
   assert.deepEqual(result.engine, engineStamp(identity));
+  // An engine that states no adapter revision stamps none: the member is absent, not null.
+  const plain = engineStamp(DESCRIPTOR_MINIMAL.identity);
+  assert.deepEqual(Object.keys(plain), ["id", "fingerprint", "details"]);
+  assert.deepEqual(validateKind("result", makeResult(REQUEST_MINIMAL, plain, { status: "pending" })), []);
 });
 
 // ── Examples hang together ───────────────────────────────────────────────────────────────────────────────────────

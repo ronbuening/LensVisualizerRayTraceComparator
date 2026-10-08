@@ -2,7 +2,7 @@
   "contract": "1.0",
   "kind": "suite",
   "name": "smoke",
-  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" }, "engines": ["lv", "ref"] },
   "runs": [
     {
       "name": "carl-zeiss-tessar-50f35-ref",

@@ -1,16 +1,21 @@
 // The committed suites, checked without LensVisualizer: each is a valid suite of LensVisualizer lenses, names no
-// rung, and holds nothing of a prescription. That every run exports is checked against the real LensVisualizer by
-// test/integration/lv/suites.test.ts.
+// rung and the built-in engines, and holds nothing of a prescription. That every run exports is checked against
+// the real LensVisualizer by test/integration/lv/suites.test.ts.
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
+import { createRunCommand } from "../../src/cli/commands/run.ts";
+import { EXIT_FAILURE, runCli } from "../../src/cli/main.ts";
 import { expandSuite, runInvariantProblems } from "../../src/contract/runSpec.ts";
 import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import { formatIssues, validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { loadSuite } from "../../src/core/suite.ts";
+import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
 import { BENCHMARK_KEYS, SUITES_DIR, SUITE_NAMES, suitePath } from "./support.ts";
 
 function readSuite(name: (typeof SUITE_NAMES)[number]): Suite {
@@ -31,13 +36,20 @@ test("the suites directory holds the three suites and nothing else", () => {
 });
 
 for (const name of SUITE_NAMES) {
-  test(`suites/${name}.json is a valid suite of LensVisualizer lenses that names no rung and no engine`, () => {
+  test(`suites/${name}.json is a valid suite of LensVisualizer lenses that names no rung, and the built-in engines`, () => {
     const suite = readSuite(name);
     assert.equal(formatIssues(validateKind("suite", suite)), "");
     assert.equal(suite.name, name);
     assert.equal(suite.contract, CONTRACT_VERSION);
-    // A run uses every registered rung, and whatever engines it is run on.
-    assert.deepEqual(suite.defaults, { aperture: { kind: "wide-open" }, imagePlane: { kind: "design" } });
+    // A run uses every judged rung, and the built-in engines unless it is run on others: so the suite runs at the
+    // root of this repository, whose configuration defines no engine.
+    const builtin = Object.keys(BUILTIN_ENGINES).sort();
+    assert.deepEqual(builtin, ["lv", "ref"]);
+    assert.deepEqual(suite.defaults, {
+      aperture: { kind: "wide-open" },
+      imagePlane: { kind: "design" },
+      engines: builtin,
+    });
     const runs = expandSuite(suite);
     assert.ok(runs.length > 0);
     for (const run of runs) {
@@ -45,7 +57,7 @@ for (const name of SUITE_NAMES) {
       assert.equal(formatIssues(validateKind("run-spec", run)), "", run.name);
       // Nothing but which lens, in which state, on which lines: no number of a prescription has a place to be.
       const { contract: _contract, kind: _kind, name: _name, lens, state, lines, aperture, imagePlane, ...other } = run;
-      assert.deepEqual(other, {}, run.name);
+      assert.deepEqual(other, { engines: builtin }, run.name);
       assert.ok(lens.kind === "lv" && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(lens.key), run.name);
       assert.deepEqual(
         Object.keys(state ?? {}).filter((member) => member !== "zoomT"),
@@ -89,16 +101,18 @@ test("the feature suite has one lens for each translation path, on the reference
     [
       "odd-asphere",
       "e-line",
-      "mixed-d-e",
       "asphere-a20",
       "flat-base-asphere",
       "rear-plate-rim",
       "fixed-iris-zoom-tele",
-      "annular-aperture",
       "zero-asphere",
       "stop-inside-element",
     ],
   );
+  // Two paths have no lens LensVisualizer can supply a case for, and so no run: a lens that mixes d- and
+  // e-referenced glasses, and one with an annular aperture. docs/gotchas.md says why, and an integration test fails
+  // on the day one of the two can be exported.
+  assert.equal(runs.length, 16);
   for (const [path, keys] of paths) assert.equal(keys.size, 1, path);
   // No lens serves two paths, and none is a lens of the benchmark, which has those paths covered.
   const keys = [...paths.values()].map((set) => [...set][0]);
@@ -108,6 +122,31 @@ test("the feature suite has one lens for each translation path, on the reference
   for (const run of runs.filter((candidate) => candidate.name.startsWith("fixed-iris-zoom-tele"))) {
     assert.deepEqual(run.state, { zoomT: 1 });
   }
+});
+
+test("a committed suite runs at the root of the repository without naming an engine: it names the built-in ones", async (t) => {
+  // Without a LensVisualizer no run can be started, which is a failure of the runs and no usage error: before the
+  // suites named their engines, the same command was refused for naming none.
+  const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-suites-"));
+  t.after(() => rmSync(runsDir, { recursive: true, force: true }));
+  const out: string[] = [];
+  const err: string[] = [];
+  const command = createRunCommand({
+    rootDir: REPO_ROOT,
+    env: { LVRTC_LV_PATH: join(runsDir, "no-lv-here"), LVRTC_RUNS_DIR: runsDir },
+    cwd: REPO_ROOT,
+  });
+  const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
+  const code = await runCli(["run", "suites/smoke.json"], io, [command]);
+  assert.equal(code, EXIT_FAILURE, err.join(""));
+  assert.match(out.join(""), /^smoke: 0 jobs: 0 ok, 0 unsupported, 0 error, 0 pending/m);
+  const lines = err.join("").trimEnd().split("\n");
+  assert.equal(lines.length, 3);
+  for (const line of lines) {
+    assert.match(line, /^lvrtc run: run [a-z0-9-]+ was not started: lv-path-missing: LensVisualizer cannot be loaded/);
+  }
+  const manifest = JSON.parse(readFileSync(join(runsDir, "smoke", "manifest.json"), "utf8"));
+  assert.deepEqual(manifest.jobs, []);
 });
 
 test("without a LensVisualizer source every run of a committed suite says so, and the suite still loads", async () => {

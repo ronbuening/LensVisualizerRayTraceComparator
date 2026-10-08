@@ -19,6 +19,7 @@ import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
 import { systemDescribeQuantity } from "../../quantities/systemDescribe.ts";
+import { adapterRevision } from "../adapterRevision.ts";
 import { createProtocolHandler } from "../protocolHandler.ts";
 import { describeSystem } from "./describe.ts";
 import { refFingerprint } from "./fingerprint.ts";
@@ -31,6 +32,9 @@ export const REF_ENGINE_ID = "ref";
 
 /** The version of the reference engine, for people. Results are keyed by its fingerprint, never by this. */
 export const REF_ENGINE_VERSION = "1";
+
+/** The module of the reference engine, relative to the comparator's sources: where its adapter revision starts. */
+export const REF_ENGINE_MODULE = "engines/ref/engine.ts";
 
 /**
  * The feature flags of a case that the reference engine handles: several lines, a finite object, and every shape
@@ -77,14 +81,22 @@ const ANSWERED: readonly Answered[] = [
 
 /**
  * What the reference engine answers to `hello`: its id, a fingerprint of its own source files (`refFingerprint`),
- * the features of `REF_FEATURES` without a limit of any kind, and the quantities `system.describe` and
- * `paraxial.first-order`. It is deterministic: its arithmetic is IEEE 754 basic operations in a fixed order.
+ * the adapter revision of everything of the comparator it runs on (`adapterRevision` of `REF_ENGINE_MODULE`: its
+ * own files and the kernels it shares, such as the array codec), the features of `REF_FEATURES` without a limit of
+ * any kind, and the quantities `system.describe` and `paraxial.first-order`. It is deterministic: its arithmetic is
+ * IEEE 754 basic operations in a fixed order.
  */
 export function refDescriptor(): EngineDescriptor {
   const { fingerprint, fileCount } = refFingerprint();
   return {
     contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
-    identity: { id: REF_ENGINE_ID, version: REF_ENGINE_VERSION, fingerprint, details: { sourceFiles: fileCount } },
+    identity: {
+      id: REF_ENGINE_ID,
+      version: REF_ENGINE_VERSION,
+      fingerprint,
+      adapterRevision: adapterRevision(REF_ENGINE_MODULE).revision,
+      details: { sourceFiles: fileCount },
+    },
     capabilities: {
       features: { supported: [...REF_FEATURES], limits: {} },
       quantities: Object.fromEntries(ANSWERED.map(({ quantity }) => [quantity.id, { version: quantity.version }])),

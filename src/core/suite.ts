@@ -9,6 +9,8 @@ import type { EngineDetails } from "../contract/result.ts";
 import { expandSuite, runInvariantProblems } from "../contract/runSpec.ts";
 import type { RunLens, RunSpec, Suite } from "../contract/runSpec.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
+import { probeRaySets } from "../rays/probe.ts";
+import type { RaySetResolution } from "../rays/raySets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -44,6 +46,13 @@ export interface CaseSource {
    * rejection; each problem is a deterministic text without absolute paths, since it is recorded with the run.
    */
   resolve(run: RunSpec): Promise<CaseResolution>;
+  /**
+   * The rays every engine is to trace for a run of a case this source resolved: one `rays.trace` spec for each
+   * field of the run and each line of the case, in that order, and a coded problem for each field that has none.
+   * The sets are a pure function of the run and the case: asked again, the source gives the same rays, bit for
+   * bit, so the requests made from them have the same ids. A source without this method has no rays to give.
+   */
+  raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
   /**
    * What the cases resolved so far were built from, read again now: called when a run of a suite ends, so that a
    * source that changed under the run is noticed. Null when nothing was built. A source whose cases are whole
@@ -103,6 +112,8 @@ function readCaseFile(file: string, shown: string): CaseResolution {
  * change a fixture) and must be valid by the schema, keep the invariants of a case and state the `id`, `systemId`
  * and `features` that its own system and conditions give. A file is read once, however many runs name it.
  * Problems name the file by its path relative to `rootDir`.
+ *
+ * Its rays are probe lattices made from the case alone (`probeRaySets`), under the run's fields and sampling.
  */
 export function createFixtureCaseSource(rootDir: string): CaseSource {
   const read = new Map<string, CaseResolution>();
@@ -117,6 +128,7 @@ export function createFixtureCaseSource(rootDir: string): CaseSource {
       }
       return resolution;
     },
+    raySets: (run, opticalCase) => probeRaySets(opticalCase, run),
   };
 }
 
