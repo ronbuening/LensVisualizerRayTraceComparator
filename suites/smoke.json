@@ -1,0 +1,23 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "smoke",
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "runs": [
+    {
+      "name": "carl-zeiss-tessar-50f35-ref",
+      "lens": { "kind": "lv", "key": "carl-zeiss-tessar-50f35" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "carl-zeiss-tessar-50f35-photopic",
+      "lens": { "kind": "lv", "key": "carl-zeiss-tessar-50f35" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "rodenstock-geronar-210mm-f68-ref",
+      "lens": { "kind": "lv", "key": "rodenstock-geronar-210mm-f68" },
+      "lines": { "kind": "reference" }
+    }
+  ]
+}

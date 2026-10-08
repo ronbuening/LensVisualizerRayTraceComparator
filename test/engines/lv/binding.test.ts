@@ -44,7 +44,9 @@ test("a tree with every module and export loads, and the facade holds every mani
   assert.equal(binding.root, lv);
   const names = LV_IMPORT_MANIFEST.flatMap((entry) => entry.exports.map((item) => item.as)).sort();
   assert.deepEqual(Object.keys(binding.api).sort(), names);
-  for (const name of names) assert.equal(typeof (binding.api as unknown as Record<string, unknown>)[name], "function");
+  for (const { as, kind } of LV_IMPORT_MANIFEST.flatMap((entry) => [...entry.exports])) {
+    assert.equal(typeof (binding.api as unknown as Record<string, unknown>)[as], kind, as);
+  }
   assert.ok(Object.isFrozen(binding.api));
 });
 
@@ -87,7 +89,7 @@ test("a tree missing one module fails with that module named, and leaves no load
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
   assert.match(error.details[0], /^src\/optics\/analysis\/mtfTracing\.ts: /);
-  assert.match(error.message, /1 of 9 modules cannot be imported/);
+  assert.match(error.message, /1 of 11 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -115,7 +117,7 @@ test("a module that cannot be imported and an export missing elsewhere are named
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 9 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 11 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 

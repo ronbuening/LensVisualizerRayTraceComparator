@@ -194,6 +194,7 @@ export const ALL_FEATURES_DRAFT = {
       fileSha256: sha256Hex("example lens file"),
     },
     lv: { commit: "0123456789abcdef0123456789abcdef01234567", dirty: false, closureHash: sha256Hex("example closure") },
+    notes: ["bulk-absorption", "projection:fisheye-equisolid"],
     producer: PRODUCER,
   },
 } satisfies OpticalCaseDraft;
@@ -852,6 +853,13 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "provenance-missing-producer": fault(SINGLET_CASE, "/provenance/producer", REMOVE, "required", "/provenance"),
     "provenance-unknown-source": fault(SINGLET_CASE, "/provenance/source", { kind: "zmx", file: "a.zmx" }, "oneOf"),
     "provenance-dirty-as-string": fault(ALL_FEATURES_CASE, "/provenance/lv/dirty", "no", "type"),
+    "provenance-note-repeated": fault(
+      ALL_FEATURES_CASE,
+      "/provenance/notes",
+      ["bulk-absorption", "bulk-absorption"],
+      "uniqueItems",
+    ),
+    "provenance-note-not-a-code": fault(ALL_FEATURES_CASE, "/provenance/notes/1", "Fisheye projection", "pattern"),
     // The file says 1e400, which every JSON parser reads as an infinity; see `fixtureText`.
     "number-overflow": fault(SINGLET_CASE, "/conditions/imageZ", Infinity, "finite"),
   },

@@ -1,0 +1,132 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "benchmark",
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "runs": [
+    {
+      "name": "canon-ef-135-f2l-usm-ref",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-photopic",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-ref",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-photopic",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-ref",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-photopic",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikkor-z50f12-ref",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikkor-z50f12-photopic",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-ref",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-photopic",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-ref",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-photopic",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "lines": { "kind": "photopic" }
+    }
+  ]
+}

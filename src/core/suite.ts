@@ -5,6 +5,7 @@ import { relative, resolve, sep } from "node:path";
 import { caseInvariantProblems, verifyCaseIdentity } from "../contract/case.ts";
 import type { OpticalCase } from "../contract/case.ts";
 import { deepFreeze } from "../contract/json.ts";
+import type { EngineDetails } from "../contract/result.ts";
 import { expandSuite, runInvariantProblems } from "../contract/runSpec.ts";
 import type { RunLens, RunSpec, Suite } from "../contract/runSpec.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
@@ -16,10 +17,25 @@ export type CaseResolution =
   | { readonly ok: true; readonly opticalCase: OpticalCase }
   | { readonly ok: false; readonly problems: readonly string[] };
 
+/** What a case source built its cases from, and whether that is still what is there. */
+export interface SourceAudit {
+  /**
+   * What identifies the inputs: a flat map of strings, numbers, booleans and nulls, without a path or a time, so
+   * that it can be recorded with a run.
+   */
+  readonly fingerprint: EngineDetails;
+  /**
+   * Each input that is no longer what the cases were built from, named without an absolute path; empty when
+   * nothing has changed since the first case was built.
+   */
+  readonly changed: readonly string[];
+}
+
 /**
  * Where optical cases come from: the seam between a run's `lens` and the case every engine is asked about. The
- * fixture source below reads a case file; the LensVisualizer source (Stage 1.2) will build one from a lens key
- * and the run's state, aperture, lines and image plane, which is why a source is handed the whole run.
+ * fixture source below reads a case file; the LensVisualizer source (`src/engines/lv/caseSource.ts`) builds one
+ * from a lens key and the run's state, aperture, lines and image plane, which is why a source is handed the whole
+ * run.
  */
 export interface CaseSource {
   /**
@@ -28,6 +44,12 @@ export interface CaseSource {
    * rejection; each problem is a deterministic text without absolute paths, since it is recorded with the run.
    */
   resolve(run: RunSpec): Promise<CaseResolution>;
+  /**
+   * What the cases resolved so far were built from, read again now: called when a run of a suite ends, so that a
+   * source that changed under the run is noticed. Null when nothing was built. A source whose cases are whole
+   * files, read once, has no such method: a case file's identity is its content.
+   */
+  audit?(): SourceAudit | null;
 }
 
 /** A case source for each kind of lens a run can name. A kind without one cannot be run. */
@@ -35,7 +57,7 @@ export type CaseSources = { readonly [K in RunLens["kind"]]?: CaseSource };
 
 /** Why a lens of each kind has no case when no source is given for the kind. */
 const NO_SOURCE: Readonly<Record<RunLens["kind"], string>> = {
-  lv: "LensVisualizer case source is not available yet (Stage 1.2)",
+  lv: "no case source builds cases from LensVisualizer lenses",
   fixture: "no case source reads optical-case files",
 };
 
@@ -136,7 +158,7 @@ export interface LoadSuiteOptions {
  *   is not JSON, is not valid by the schema, or names two runs alike.
  * - What is wrong with one run stays with that run and fails no other: an option that breaks a rule the schema
  *   cannot state (`runInvariantProblems`), and a lens with no case. Every problem of a run is reported, so a run
- *   with both carries both. A `{ kind: "lv" }` lens has no case until its source exists.
+ *   with both carries both. A lens of a kind that `sources` has no source for has no case.
  *
  * The result is frozen. A source that rejects has crashed, and the load rejects with it.
  */

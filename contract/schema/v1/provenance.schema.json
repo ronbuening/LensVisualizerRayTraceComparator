@@ -40,6 +40,12 @@
       "required": ["commit", "dirty", "closureHash"],
       "additionalProperties": false
     },
+    "notes": {
+      "description": "What the source knows about the lens that the case does not carry, as codes, each once.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9.:-]*$" },
+      "uniqueItems": true
+    },
     "producer": {
       "type": "object",
       "properties": {

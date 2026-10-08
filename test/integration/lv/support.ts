@@ -17,17 +17,4 @@ export const LV_UNAVAILABLE: string | false = (() => {
   return false;
 })();
 
-/** The lenses of the benchmark suite; `nikon-z-24-70f4s` is run at both ends of its zoom. */
-export const BENCHMARK_KEYS: readonly string[] = [
-  "canon-ef-135-f2l-usm",
-  "fujifilm-fujinon-gf-63mm-f28-r-wr",
-  "sigma-35mm-f14-dg-hsm-a",
-  "nikkor-z50f12",
-  "sony-fe-20mm-f18-g",
-  "sony-fe-400mm-f28-gm-oss",
-  "sigma-105mm-f28-dg-dn-macro-art",
-  "nikon-z-24-70f4s",
-  "nikon-z-mc-105f28",
-  "nikon-z-135f18-plena",
-  "sigma-45mm-f28-dg-dn-contemporary",
-];
+export { BENCHMARK_KEYS } from "../../suites/support.ts";

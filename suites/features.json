@@ -1,0 +1,100 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "features",
+  "defaults": { "aperture": { "kind": "wide-open" }, "imagePlane": { "kind": "design" } },
+  "runs": [
+    {
+      "name": "odd-asphere-ref",
+      "lens": { "kind": "lv", "key": "zeiss-touit-50mm-f28-macro" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "odd-asphere-photopic",
+      "lens": { "kind": "lv", "key": "zeiss-touit-50mm-f28-macro" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "e-line-ref",
+      "lens": { "kind": "lv", "key": "leica-elcan-50f2" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "e-line-photopic",
+      "lens": { "kind": "lv", "key": "leica-elcan-50f2" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "mixed-d-e-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-14mm-f18-gm" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "asphere-a20-ref",
+      "lens": { "kind": "lv", "key": "sigma-24mm-f35-dg-dn" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "asphere-a20-photopic",
+      "lens": { "kind": "lv", "key": "sigma-24mm-f35-dg-dn" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "flat-base-asphere-ref",
+      "lens": { "kind": "lv", "key": "zeiss-zx1-distagon-35mm-f2" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "flat-base-asphere-photopic",
+      "lens": { "kind": "lv", "key": "zeiss-zx1-distagon-35mm-f2" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "rear-plate-rim-ref",
+      "lens": { "kind": "lv", "key": "nikkor-z-35f18s" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "rear-plate-rim-photopic",
+      "lens": { "kind": "lv", "key": "nikkor-z-35f18s" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "fixed-iris-zoom-tele-ref",
+      "lens": { "kind": "lv", "key": "nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "fixed-iris-zoom-tele-photopic",
+      "lens": { "kind": "lv", "key": "nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "annular-aperture-ref",
+      "lens": { "kind": "lv", "key": "nikon-reflex-nikkor-c-500mm-f8" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "zero-asphere-ref",
+      "lens": { "kind": "lv", "key": "kinoptik-tegea-57mm-f18" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "zero-asphere-photopic",
+      "lens": { "kind": "lv", "key": "kinoptik-tegea-57mm-f18" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "stop-inside-element-ref",
+      "lens": { "kind": "lv", "key": "zeiss-hologon-15f8" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "stop-inside-element-photopic",
+      "lens": { "kind": "lv", "key": "zeiss-hologon-15f8" },
+      "lines": { "kind": "photopic" }
+    }
+  ]
+}

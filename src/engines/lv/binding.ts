@@ -12,7 +12,7 @@ import type { LvLoader } from "../../loader/lvHooks.ts";
 import { buildCatalog, listLensFiles, nearestKeys } from "./catalog.ts";
 import type { LoadedLensFile, LvCatalog, LvCatalogEntry } from "./catalog.ts";
 import { LvBindingError } from "./errors.ts";
-import { changedEngineFiles, engineClosure } from "./fingerprint.ts";
+import { changedEngineFiles, changedFiles, engineClosure } from "./fingerprint.ts";
 import type { LvEngineClosure, LvFingerprint } from "./fingerprint.ts";
 import { lvGitState } from "./gitState.ts";
 import type { LvGitState } from "./gitState.ts";
@@ -33,7 +33,7 @@ export interface LvLoadedLens {
 export interface LvBinding {
   /** The absolute, symlink-free LV root. */
   readonly root: string;
-  /** The functions of the import manifest, each checked to exist when the binding was loaded. */
+  /** The exports of the import manifest, each checked to exist and be of its kind when the binding was loaded. */
   readonly api: LvApi;
   /** The closure of the engine files loaded so far; lens prescription files are not part of it. */
   engineClosure(): LvEngineClosure;
@@ -44,6 +44,11 @@ export interface LvBinding {
    * empty when the checkout still holds the code that is running.
    */
   rehash(): string[];
+  /**
+   * The lens files, of those given as the catalog lists them, whose bytes on disk are no longer the ones that were
+   * loaded, sorted; empty when the checkout still holds the prescriptions the lenses were built from.
+   */
+  changedLensFiles(lenses: readonly Pick<LvCatalogEntry, "file" | "fileSha256">[]): string[];
   /** The index of every lens file. The files are imported once; every later call answers from that scan. */
   catalog(): Promise<LvCatalog>;
   /** The lens of a key. Throws an `LvBindingError` of code `unknown-lens`, whose details are the nearest keys. */
@@ -184,6 +189,13 @@ async function createBinding(root: string): Promise<LvBinding> {
       return { ...engineClosure(loaded()), commit: git.state?.commit ?? null, dirty: git.state?.dirty ?? null };
     },
     rehash: () => changedEngineFiles(root, loaded()),
+    changedLensFiles: (lenses) => {
+      const files = new Map(lenses.map(({ file, fileSha256 }) => [file, fileSha256]));
+      return changedFiles(
+        root,
+        [...files].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+      );
+    },
     catalog: async () => (await scanned()).catalog,
     lens: async (key) => {
       const { catalog, data } = await scanned();

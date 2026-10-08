@@ -1,0 +1,132 @@
+{
+  "contract": "1.0",
+  "exported": 868,
+  "features": {
+    "aperture.annular": 0,
+    "lines.multiple": 0,
+    "object.finite": 0,
+    "surface.asphere.even": 392,
+    "surface.asphere.flat-base": 2,
+    "surface.asphere.odd": 52,
+    "surface.conic": 181
+  },
+  "kind": "lv-export-census",
+  "lensVisualizer": {
+    "commit": "d36f44b34473cf74c8a64889f38de893702fa26d",
+    "dirty": false,
+    "engineClosureHash": "7eebe2396fae83736c6a3cfee1fe7de0137fc520dde3da67dced78446047b88f",
+    "engineFileCount": 141
+  },
+  "lenses": 891,
+  "limits": {
+    "asphere.maxPower": {
+      "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
+      "max": 20
+    },
+    "lines.count": {
+      "lens": "agfa-color-magnolar-ii-100f45",
+      "max": 1
+    },
+    "surfaces.count": {
+      "lens": "nikon-af-s-nikkor-180-400mm-f4e-tc14-fl-ed-vr-tc-in",
+      "max": 63
+    }
+  },
+  "notExportable": 23,
+  "notes": {
+    "bulk-absorption": 1,
+    "projection:fisheye-equidistant": 3,
+    "projection:fisheye-equisolid": 9
+  },
+  "reasons": {
+    "diffractive-surface": {
+      "count": 8,
+      "lenses": [
+        "canon-ef-400mm-f4-do-is-usm",
+        "canon-ef-70-300mm-f45-56-do-is-usm",
+        "canon-rf-800mm-f11-is-stm",
+        "canon-rf600mmf11-is-stm",
+        "nikon-af-s-nikkor-300mm-f4e-pf-ed-vr",
+        "nikon-af-s-nikkor-500mm-f56e-pf-ed-vr",
+        "nikon-nikkor-z-800mm-f63-vr-s",
+        "reference-folded-diffractive-plate"
+      ]
+    },
+    "folded-path": {
+      "count": 15,
+      "lenses": [
+        "carl-zeiss-mirotar-500f45",
+        "minolta-af-reflex-500mm-f8",
+        "nikon-reflex-nikkor-1000mm-f11",
+        "nikon-reflex-nikkor-500mm-f8-new",
+        "nikon-reflex-nikkor-c-500mm-f8",
+        "reference-annular-obscured-mirror",
+        "reference-annular-ring-blocker",
+        "reference-cassegrain-back-focus",
+        "reference-folded-diffractive-plate",
+        "reference-gregorian-secondary",
+        "reference-maksutov-cassegrain-meniscus",
+        "reference-mangin-second-surface-mirror",
+        "reference-newtonian-side-focus",
+        "reference-spherical-primary-mirror",
+        "vivitar-s1-450-f45"
+      ]
+    },
+    "mixed-reference": {
+      "count": 1,
+      "lenses": [
+        "sony-fe-14mm-f18-gm"
+      ]
+    },
+    "non-refract-interaction": {
+      "count": 15,
+      "lenses": [
+        "carl-zeiss-mirotar-500f45",
+        "minolta-af-reflex-500mm-f8",
+        "nikon-reflex-nikkor-1000mm-f11",
+        "nikon-reflex-nikkor-500mm-f8-new",
+        "nikon-reflex-nikkor-c-500mm-f8",
+        "reference-annular-obscured-mirror",
+        "reference-annular-ring-blocker",
+        "reference-cassegrain-back-focus",
+        "reference-folded-diffractive-plate",
+        "reference-gregorian-secondary",
+        "reference-maksutov-cassegrain-meniscus",
+        "reference-mangin-second-surface-mirror",
+        "reference-newtonian-side-focus",
+        "reference-spherical-primary-mirror",
+        "vivitar-s1-450-f45"
+      ]
+    },
+    "off-axis-image-plane": {
+      "count": 2,
+      "lenses": [
+        "reference-folded-diffractive-plate",
+        "reference-newtonian-side-focus"
+      ]
+    },
+    "surface-profile-unsupported": {
+      "count": 2,
+      "lenses": [
+        "reference-folded-diffractive-plate",
+        "reference-newtonian-side-focus"
+      ]
+    },
+    "tilted-image-plane": {
+      "count": 2,
+      "lenses": [
+        "reference-folded-diffractive-plate",
+        "reference-newtonian-side-focus"
+      ]
+    }
+  },
+  "request": {
+    "aperture": "wide-open",
+    "focus": "infinity",
+    "imagePlane": "design",
+    "lines": "reference",
+    "zoomT": 0
+  },
+  "threw": [],
+  "unindexedFiles": 0
+}

@@ -27,7 +27,7 @@ function functions<const Name extends string>(
  * Everything the comparator imports from LensVisualizer. The binding imports each module, checks every export at
  * load time and fails with all the missing names at once, so a rename in LV is found before any lens is traced.
  *
- * To use one more LV function: add its name to the module's line here (or a line for a new module) and its
+ * To use one more LV export: add its name to the module's line here (or a line for a new module) and its
  * signature to `LvApi`; the type check fails until the two agree.
  */
 export const LV_IMPORT_MANIFEST = [
@@ -50,10 +50,12 @@ export const LV_IMPORT_MANIFEST = [
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix2") },
   { module: "src/optics/analysis/mtfSupport.ts", exports: functions("assessMtfSupport") },
   { module: "src/optics/analysis/mtfTracing.ts", exports: functions("mtfIndexResolver") },
+  { module: "src/optics/analysis/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
+  { module: "src/optics/spectralLines.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
 ] as const satisfies readonly LvManifestModule[];
 
 type ManifestName = (typeof LV_IMPORT_MANIFEST)[number]["exports"][number]["as"];
 type Agree = [ManifestName] extends [keyof LvApi] ? ([keyof LvApi] extends [ManifestName] ? true : never) : never;
 
-/** Fails the type check when the manifest and `LvApi` do not name exactly the same functions. */
+/** Fails the type check when the manifest and `LvApi` do not name exactly the same exports. */
 export const MANIFEST_MATCHES_API: Agree = true;

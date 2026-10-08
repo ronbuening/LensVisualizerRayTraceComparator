@@ -35,6 +35,20 @@ export type ManifestEngine =
     }
   | { readonly id: string; readonly status: "unavailable"; readonly code: EngineUnavailableCode };
 
+/** What `ManifestSource.status` says when a case source's inputs changed between its first case and the end. */
+export const SOURCE_CHANGED = "source-changed-during-run";
+
+/**
+ * A case source the run's cases were built from, when the source has something to identify (`CaseSource.audit`):
+ * what its inputs were, and whether they were still that when the run ended. A changed source means the cases, and
+ * whatever an engine in this process computed from the same files, may not be those of one state of the source.
+ */
+export interface ManifestSource {
+  /** The source's own identification of its inputs: content hashes and the like, never a path or a time. */
+  readonly fingerprint: EngineDetails;
+  readonly status: "unchanged" | typeof SOURCE_CHANGED;
+}
+
 /** One run of the suite: the case it was run on, or why it was not run. */
 export interface ManifestRun {
   readonly name: string;
@@ -73,6 +87,11 @@ export interface RunManifest {
   readonly kind: "run-manifest";
   /** The suite's name and the hash of its expanded runs (`LoadedSuite.hash`). */
   readonly suite: { readonly name: string; readonly hash: string };
+  /**
+   * The case sources that identified their inputs, by the kind of lens they serve ("lv"); left out when none did,
+   * as for a suite of case files only.
+   */
+  readonly sources?: { readonly [lensKind: string]: ManifestSource };
   /** Every engine a job was planned for, sorted by id. */
   readonly engines: readonly ManifestEngine[];
   /** Every run of the suite, in suite order. */

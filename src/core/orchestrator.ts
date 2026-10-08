@@ -18,15 +18,15 @@ import type { EngineAdapter, EngineUnavailableCode } from "../engines/adapter.ts
 import type { EngineRegistry } from "../engines/registry.ts";
 import { QUANTITIES } from "../quantities/index.ts";
 import type { QuantityModule } from "../quantities/module.ts";
-import { writeRunOutput } from "./manifest.ts";
-import type { ManifestEngine, ManifestJob, RunManifest } from "./manifest.ts";
+import { SOURCE_CHANGED, writeRunOutput } from "./manifest.ts";
+import type { ManifestEngine, ManifestJob, ManifestSource, RunManifest } from "./manifest.ts";
 import { negotiate } from "./negotiate.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
 import { RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition } from "./rungs.ts";
-import type { LoadedSuite } from "./suite.ts";
+import type { CaseSources, LoadedSuite } from "./suite.ts";
 import { UsageError } from "./usageError.ts";
 
 /** The `error.code` of an "ok" result whose data is not the quantity's data, or holds an array that does not decode. */
@@ -60,6 +60,11 @@ export interface RunSuiteInput {
   readonly registry: EngineRegistry;
   /** The directory that holds the store and, under the suite's name, the output of the run. */
   readonly runsDir: string;
+  /**
+   * The case sources the suite was loaded with. Each one that serves a run of the suite and can audit itself is
+   * recorded in the manifest and asked, when the last job has ended, whether its inputs are still the same.
+   */
+  readonly sources?: CaseSources;
   /** Engine ids for every run, in place of each run's own `engines` and of the default, every configured engine. */
   readonly engines?: readonly string[];
   /** Rung ids for every run, in place of each run's own `rungs` and of the default, every rung. */
@@ -78,7 +83,10 @@ export interface SuiteRunResult {
   readonly manifestPath: string;
   /** Every job with how it came by its status, in the order of `manifest.jobs`. */
   readonly outcomes: readonly JobOutcome[];
-  /** What went wrong without failing a job: a store entry that could not be trusted, an engine that did not close. */
+  /**
+   * What went wrong without failing a job: a store entry that could not be trusted, an engine that did not close,
+   * a case source that changed during the run.
+   */
   readonly warnings: readonly string[];
 }
 
@@ -266,6 +274,26 @@ async function runJob(
 }
 
 /**
+ * The audit of every case source that serves a run of the suite, by lens kind in sorted order, as the manifest
+ * records it; undefined when no source has one. A source that changed is added to `warnings` with what changed.
+ */
+function auditSources(
+  input: RunSuiteInput,
+  warnings: string[],
+): { readonly [lensKind: string]: ManifestSource } | undefined {
+  const kinds = [...new Set(input.suite.runs.map((run) => run.spec.lens.kind))].sort();
+  const audited: [string, ManifestSource][] = [];
+  for (const kind of kinds) {
+    const audit = input.sources?.[kind]?.audit?.();
+    if (audit === undefined || audit === null) continue;
+    const changed = audit.changed.length > 0;
+    if (changed) warnings.push(`case source ${kind} changed during the run: ${audit.changed.join(", ")}`);
+    audited.push([kind, { fingerprint: audit.fingerprint, status: changed ? SOURCE_CHANGED : "unchanged" }]);
+  }
+  return audited.length === 0 ? undefined : Object.fromEntries(audited);
+}
+
+/**
  * Runs a suite and writes its output.
  *
  * Before anything runs, what was asked for is checked, and a `UsageError` thrown for a rung that does not exist, an
@@ -285,6 +313,10 @@ async function runJob(
  *    not decode, becomes "error" with the code `INVALID_DATA`;
  * 5. a result of status "ok" or "unsupported" is stored at once; an "error" or a "pending" job never is. So a run
  *    that is killed has lost nothing it finished, and the next run asks only for what is missing.
+ *
+ * When the last job has ended, each case source that built a case of the suite is audited (`CaseSource.audit`):
+ * the manifest records what it says identifies its inputs, and "source-changed-during-run" when they are no longer
+ * what the cases were built from, which is also a warning.
  *
  * The output is written last and whole (`writeRunOutput`): the cases under `<runsDir>/<suite name>/cases/`, then
  * the manifest. The manifest is the same, byte for byte, whether results were computed or found in the store, in
@@ -340,10 +372,12 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
       const { version, fingerprint, details } = session.descriptor.identity;
       return { id, status: "available", version, fingerprint, details };
     });
+  const sources = auditSources(input, warnings);
   const manifest: RunManifest = {
     contract: CONTRACT_VERSION,
     kind: "run-manifest",
     suite: { name: suite.name, hash: suite.hash },
+    ...(sources === undefined ? {} : { sources }),
     engines,
     runs: suite.runs.map(({ spec, opticalCase, problems }) => ({
       name: spec.name,

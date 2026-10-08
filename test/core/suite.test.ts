@@ -16,7 +16,7 @@ import { UsageError } from "../../src/core/usageError.ts";
 import { FIXTURE_DIR, SUITE_WORKED, edited } from "../contract/corpus.ts";
 import { DOUBLE_GAUSS, FAKE_PAIR_SUITE, FAKE_ROOT, SINGLET, caseFixture, tempDir } from "./support.ts";
 
-const LV_PROBLEM = "LensVisualizer case source is not available yet (Stage 1.2)";
+const LV_PROBLEM = "no case source builds cases from LensVisualizer lenses";
 
 /** A configuration root holding the given files; a string is written as it is, anything else as JSON. */
 function rootWith(t: TestContext, files: Readonly<Record<string, unknown>> = {}): string {
@@ -207,7 +207,7 @@ test("two runs of one name are a usage error naming the file and the name", asyn
 
 // ── A run that cannot be run ─────────────────────────────────────────────────────────────────────────────────────
 
-test("a LensVisualizer lens has no case yet: that run says so, and the runs beside it load", async (t) => {
+test("a LensVisualizer lens has no case without a source for it: that run says so, and the runs beside it load", async (t) => {
   const suite = await load(
     t,
     suiteOf([

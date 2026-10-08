@@ -187,6 +187,10 @@
       "dirty": false,
       "closureHash": "1ea413d685651ca35040a436eb8deadf619590afe0dcd086e0d5efe912a13a8a"
     },
+    "notes": [
+      "bulk-absorption",
+      "projection:fisheye-equisolid"
+    ],
     "producer": {
       "tool": "lvrtc",
       "version": "0.1.0"

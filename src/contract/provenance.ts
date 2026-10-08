@@ -17,7 +17,10 @@ export interface LvProvenance {
   readonly commit: string | null;
   /** Whether the work tree had uncommitted changes, or null when that is unknown. */
   readonly dirty: boolean | null;
-  /** SHA-256 over every LensVisualizer source file the loader returned while building the case. */
+  /**
+   * SHA-256 over the LensVisualizer engine files loaded when the case was built: the engine closure, in which no
+   * lens prescription file takes part. The lens file is identified by `source.fileSha256`.
+   */
   readonly closureHash: string;
 }
 
@@ -28,5 +31,10 @@ export interface LvProvenance {
 export interface Provenance {
   readonly source: ProvenanceSource;
   readonly lv?: LvProvenance;
+  /**
+   * What the source knows about the lens that the case does not carry, as codes, sorted and each once; left out
+   * when there is nothing to note. The codes a source writes are listed in contract/CONTRACT.md.
+   */
+  readonly notes?: readonly string[];
   readonly producer: { readonly tool: "lvrtc"; readonly version: string };
 }

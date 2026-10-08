@@ -255,6 +255,41 @@ test("stopIndex and lastLensSurfaceIndex must be surface indices", () => {
   }
 });
 
+test("lastLensSurfaceIndex is the last surface that is not a synthetic plate", () => {
+  const withSystem = (pointer: string, replacement: unknown): OpticalCaseDraft =>
+    edited(ALL_FEATURES_DRAFT, `/system${pointer}`, replacement) as OpticalCaseDraft;
+  // The example has five lens surfaces and a rear plate of two: the rear lens vertex is surface 4.
+  assert.equal(ALL_FEATURES_DRAFT.system.lastLensSurfaceIndex, 4);
+  for (const index of [0, 3, 5, 6]) {
+    assert.deepEqual(problemsOf(withSystem("/lastLensSurfaceIndex", index)), [
+      `system.lastLensSurfaceIndex is ${index}, which is not the last surface that is not a synthetic plate: ` +
+        "the last that is not is surface 4",
+    ]);
+  }
+  // A plate that is no longer marked moves the rear lens vertex behind it.
+  assert.deepEqual(problemsOf(withSystem("/surfaces/6/synthetic", REMOVE)), [
+    "system.lastLensSurfaceIndex is 4, which is not the last surface that is not a synthetic plate: " +
+      "the last that is not is surface 6",
+  ]);
+  assert.deepEqual(
+    problemsOf(
+      edited(withSystem("/surfaces/6/synthetic", REMOVE), "/system/lastLensSurfaceIndex", 6) as OpticalCaseDraft,
+    ),
+    [],
+  );
+  // A synthetic surface ahead of the rear lens vertex, as a plate in front of a converter is, changes nothing.
+  assert.deepEqual(problemsOf(withSystem("/surfaces/1/synthetic", "rearPlate")), []);
+  // A system of plates only has no lens vertex to name.
+  const onlyPlate = edited(SINGLET_DRAFT, "/system/surfaces/0/synthetic", "rearPlate");
+  assert.deepEqual(problemsOf(edited(onlyPlate, "/system/surfaces/1/synthetic", "rearPlate") as OpticalCaseDraft), [
+    "system.lastLensSurfaceIndex is 1, which is not the last surface that is not a synthetic plate: " +
+      "every surface is a synthetic plate",
+  ]);
+  // An index that is no surface is reported as that, once.
+  assert.equal(problemsOf(withSystem("/lastLensSurfaceIndex", 7)).length, 1);
+  assert.throws(() => finalizeCase(withSystem("/lastLensSurfaceIndex", 5)), /lastLensSurfaceIndex is 5, which is not/);
+});
+
 test("each vertex sits at the sum of the thicknesses before it, the first at 0", () => {
   assert.deepEqual(problemsOf(singletWith("/system/surfaces/1/z", 4.001)), [
     "system.surfaces[1].z is 4.001, but the thicknesses before it sum to 4",

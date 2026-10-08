@@ -4,12 +4,14 @@ import { resolve } from "node:path";
 import type { ResultStatus } from "../../contract/result.ts";
 import { REPO_ROOT, loadConfig } from "../../core/config.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
+import { SOURCE_CHANGED } from "../../core/manifest.ts";
 import { runSuite } from "../../core/orchestrator.ts";
 import type { JobOutcome, JobSource, SuiteRunResult } from "../../core/orchestrator.ts";
 import { RUNGS } from "../../core/rungs.ts";
-import { loadSuite } from "../../core/suite.ts";
-import type { LoadedSuite } from "../../core/suite.ts";
+import { createFixtureCaseSource, loadSuite } from "../../core/suite.ts";
+import type { CaseSources, LoadedSuite } from "../../core/suite.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { createLvCaseSource } from "../../engines/lv/caseSource.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
@@ -28,15 +30,17 @@ const SYNOPSIS = "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,..
 const HELP = [
   SYNOPSIS,
   "Runs every run of the suite on each selected engine, asking an engine only for what the result store does not",
-  "hold, and writes <runsDir>/<suite name>/manifest.json with the cases beside it.",
+  "hold, and writes <runsDir>/<suite name>/manifest.json with the cases beside it. A run that names a",
+  "LensVisualizer lens has its case built from the configured checkout (lvPath).",
   "",
   "  --root <dir>     the directory that holds lvrtc.config.json (default: this repository)",
   "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine",
   "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung",
   "  --json           print one JSON object in place of the lines",
   "",
-  "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure) and every run could be",
-  "started; 1 otherwise; 2 when nothing was run because the suite file, an engine or a rung cannot be used as asked.",
+  "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
+  "started and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite",
+  "file, an engine or a rung cannot be used as asked.",
   "",
 ].join("\n");
 
@@ -118,6 +122,7 @@ function jsonText(result: SuiteRunResult): string {
   const report = {
     suite: manifest.suite,
     manifest: manifestPath,
+    sources: manifest.sources ?? {},
     engines: manifest.engines,
     runs: manifest.runs,
     jobs: outcomes.map(({ job, source, detail }) => ({ ...job, source, detail })),
@@ -132,15 +137,17 @@ function jsonText(result: SuiteRunResult): string {
  * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
- * configuration defines unless a run or `--engines` names fewer. Each job is printed as it finishes, as a line of
- * run, rung, engine, status and "computed", "cached", "negotiated" or "unavailable", and a summary follows; with
- * `--json` one object is printed in their place. Which jobs were cached is said only here, never in the manifest.
- * A run that could not be started, and a warning, go to the error stream.
+ * configuration defines unless a run or `--engines` names fewer. A fixture lens is read from the root; a
+ * LensVisualizer lens is exported from the checkout the configuration names (`lvPath`), which is loaded only when
+ * a run asks for one. Each job is printed as it finishes, as a line of run, rung, engine, status and "computed",
+ * "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one object is printed in their
+ * place. Which jobs were cached is said only here, never in the manifest. A run that could not be started, and a
+ * warning, go to the error stream.
  *
- * Exit codes: 0 when no job ended as "error" and every run was started ("unsupported" is an answer); 1 otherwise;
- * 2, with nothing run, for a command line that is not the synopsis, a `--root` that is not a directory, a suite
- * file that is not a suite, an unknown engine or rung, and no engine at all. A configuration file that cannot be
- * used is an error like any other, as for `lvrtc doctor`.
+ * Exit codes: 0 when no job ended as "error", every run was started ("unsupported" is an answer) and no case source
+ * changed during the run; 1 otherwise; 2, with nothing run, for a command line that is not the synopsis, a `--root`
+ * that is not a directory, a suite file that is not a suite, an unknown engine or rung, and no engine at all. A
+ * configuration file that cannot be used is an error like any other, as for `lvrtc doctor`.
  */
 export function createRunCommand(inputs: RunCommandInputs): CliCommand {
   return {
@@ -169,7 +176,11 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         }
         const loaded = loadConfig({ rootDir, env: inputs.env });
         const registry = createEngineRegistry(loaded);
-        suite = await loadSuite(resolve(inputs.cwd, asked.suite), { rootDir: loaded.rootDir });
+        const sources: CaseSources = {
+          fixture: createFixtureCaseSource(loaded.rootDir),
+          lv: createLvCaseSource(loaded.config.lvPath),
+        };
+        suite = await loadSuite(resolve(inputs.cwd, asked.suite), { rootDir: loaded.rootDir, sources });
 
         const widths = [
           Math.max(0, ...suite.runs.map((run) => run.spec.name.length)),
@@ -182,6 +193,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
           suite,
           registry,
           runsDir: loaded.config.runsDir,
+          sources,
           engines: asked.engines,
           rungs: asked.rungs,
           onJob: asked.json ? undefined : (outcome) => io.stdout(jobLine(outcome, widths)),
@@ -200,7 +212,8 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
       io.stdout(asked.json ? jsonText(result) : summaryText(suite, result));
 
       const failed = result.outcomes.some((outcome) => outcome.job.status === "error");
-      return failed || notStarted.length > 0 ? EXIT_FAILURE : EXIT_OK;
+      const changed = Object.values(result.manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED);
+      return failed || changed || notStarted.length > 0 ? EXIT_FAILURE : EXIT_OK;
     },
   };
 }

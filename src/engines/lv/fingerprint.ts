@@ -49,12 +49,11 @@ export function engineClosure(loaded: ReadonlyMap<string, string>): LvEngineClos
 }
 
 /**
- * The loaded engine files whose bytes on disk are no longer the ones that were loaded, a file that has gone
- * included, sorted by path. Node keeps running the code it loaded, so a non-empty answer means the fingerprint
- * describes what ran but no longer what is in the checkout.
+ * The files, of those given with the hash each had when it was loaded, whose bytes on disk are no longer those: a
+ * file that has gone included. In the order given.
  */
-export function changedEngineFiles(root: string, loaded: ReadonlyMap<string, string>): string[] {
-  return engineFiles(loaded)
+export function changedFiles(root: string, files: Iterable<readonly [file: string, sha256: string]>): string[] {
+  return [...files]
     .filter(([file, hash]) => {
       try {
         return sha256Hex(readFileSync(join(root, ...file.split("/")))) !== hash;
@@ -63,4 +62,13 @@ export function changedEngineFiles(root: string, loaded: ReadonlyMap<string, str
       }
     })
     .map(([file]) => file);
+}
+
+/**
+ * The loaded engine files whose bytes on disk are no longer the ones that were loaded, a file that has gone
+ * included, sorted by path. Node keeps running the code it loaded, so a non-empty answer means the fingerprint
+ * describes what ran but no longer what is in the checkout.
+ */
+export function changedEngineFiles(root: string, loaded: ReadonlyMap<string, string>): string[] {
+  return changedFiles(root, engineFiles(loaded));
 }

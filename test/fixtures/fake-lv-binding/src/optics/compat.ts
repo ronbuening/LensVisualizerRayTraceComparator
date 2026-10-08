@@ -25,12 +25,14 @@ export function buildLens2(data: FakeLensData): FakeRuntimeLens {
     stopPhysSD: isZoom && data.zoomStopSDs ? data.zoomStopSDs[0] : surfaces[stopIndex].sd,
     zoomStopSDs: data.zoomStopSDs ?? null,
     FOPEN: data.fopen ?? DEFAULT_FOPEN,
+    // One element per glass that follows an authored surface, as the state numbers them.
+    elements: data.surfaces.flatMap((surface, index) => (surface.nd === 1 ? [] : [{ id: index + 1 }])),
   });
 }
 
 function profileOf(surface: FakeSurfaceData): FakeStateSurface["profile"] {
   const flat = Math.abs(surface.R) > 1e10;
-  const kind = flat ? "flat" : surface.asphere ? "aspheric" : "spherical";
+  const kind = surface.asphere ? "aspheric" : flat ? "flat" : "spherical";
   const sag = (radius: number): number => (flat ? 0 : (radius * radius) / (2 * surface.R));
   const slope = (radius: number): number => (flat ? 0 : radius / surface.R);
   return { kind, sag, slope };
@@ -49,6 +51,7 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
     if (index === 0) d += zoomGap;
     if (index === L.lastLensSurfaceIdx) d += focusT * (L.data.focusTravel ?? 0);
     surfaces.push({
+      physicalIndex: index,
       label: source.label,
       R: source.R,
       d,
@@ -57,6 +60,8 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       innerSd: null,
       elemId: source.nd === 1 ? 0 : index + 1,
       asphere: source.asphere ?? null,
+      diffractive: null,
+      interaction: { type: "refract" },
       profile: profileOf(source),
       source,
       z: position,
@@ -65,11 +70,18 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
     position += d;
   });
   return {
-    lens: { key: L.data.key, runtime: L, stop: { surfaceIndex: L.stopIndex }, flags: { isZoom: L.isZoom } },
+    lens: {
+      key: L.data.key,
+      runtime: L,
+      stop: { surfaceIndex: L.stopIndex },
+      flags: { isZoom: L.isZoom, isFoldedOptics: false },
+      projection: { kind: "rectilinear" },
+    },
     focusT,
     zoomT,
     surfaces,
     z,
+    imagePlane: { point: [0, 0, position], normal: [0, 0, 1] },
     imgZ: position,
     totalTrack: position,
   };

@@ -1,0 +1,208 @@
+{
+  "contract": "1.0",
+  "kind": "optical-case",
+  "id": "f1a1f1bcf37a53d35013b1e6f15df51172e5291f3a76ec9e05aa5fc8a2d87625",
+  "systemId": "2c9f72aeb382b196a227487591574d939bd359d8fb5b0624f5cd40b0f51eac00",
+  "label": {
+    "name": "Every feature",
+    "lensKey": "example-zoom",
+    "zoomT": 0.5,
+    "focusT": 0.25
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "1",
+        "z": 0,
+        "thickness": 3,
+        "shape": {
+          "kind": "asphere",
+          "radius": 40,
+          "conic": -0.8,
+          "terms": [
+            {
+              "power": 4,
+              "coeff": 0.0000012
+            },
+            {
+              "power": 6,
+              "coeff": -3.4e-9
+            }
+          ]
+        },
+        "aperture": {
+          "semiDiameter": 12,
+          "nominalSemiDiameter": 12.5,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 1
+      },
+      {
+        "label": "2",
+        "z": 3,
+        "thickness": 5,
+        "shape": {
+          "kind": "conic",
+          "radius": -120,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 12,
+          "nominalSemiDiameter": 12,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "STO",
+        "z": 8,
+        "thickness": 4,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 6,
+          "nominalSemiDiameter": 6,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "4",
+        "z": 12,
+        "thickness": 2.5,
+        "shape": {
+          "kind": "asphere",
+          "radius": null,
+          "conic": 0,
+          "terms": [
+            {
+              "power": 3,
+              "coeff": 0.00002
+            },
+            {
+              "power": 4,
+              "coeff": -0.000001
+            }
+          ]
+        },
+        "aperture": {
+          "semiDiameter": 9,
+          "nominalSemiDiameter": 9,
+          "innerSemiDiameter": 2
+        },
+        "elementId": 2
+      },
+      {
+        "label": "5",
+        "z": 14.5,
+        "thickness": 30,
+        "shape": {
+          "kind": "conic",
+          "radius": -35,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 9,
+          "nominalSemiDiameter": 9,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "RP1a",
+        "z": 44.5,
+        "thickness": 1,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 15,
+          "nominalSemiDiameter": 15,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 3,
+        "synthetic": "rearPlate"
+      },
+      {
+        "label": "RP1b",
+        "z": 45.5,
+        "thickness": 2,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 15,
+          "nominalSemiDiameter": 15,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0,
+        "synthetic": "rearPlate"
+      }
+    ],
+    "stopIndex": 2,
+    "lastLensSurfaceIndex": 4,
+    "designImageZ": 47.5
+  },
+  "conditions": {
+    "object": {
+      "kind": "finite",
+      "z": -500
+    },
+    "stopSemiDiameter": 4.5,
+    "imageZ": 47.625,
+    "lines": [
+      {
+        "wavelengthNm": 587.5618,
+        "weight": 0.75,
+        "indexSource": "authored"
+      },
+      {
+        "wavelengthNm": 486.1327,
+        "weight": 0.25,
+        "indexSource": "anchored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          2,
+          7
+        ],
+        "data": "zHoxlBNt+T8AAAAAAADwPwAAAAAAAPA/veMUHcnl/D8AAAAAAADwPzAqqRPQRPg/AAAAAAAA8D9/EwoRcIj5PwAAAAAAAPA/AAAAAAAA8D+daFch5Sf9PwAAAAAAAPA/CFqBIatb+D8AAAAAAADwPw==",
+        "sha256": "4b2637e2c290627e845663b13a0e709bebed00200501664bb205f91b6d6f14d2"
+      }
+    }
+  },
+  "features": [
+    "aperture.annular",
+    "lines.multiple",
+    "object.finite",
+    "surface.asphere.even",
+    "surface.asphere.flat-base",
+    "surface.asphere.odd",
+    "surface.conic"
+  ],
+  "provenance": {
+    "source": {
+      "kind": "lv-lens",
+      "lensKey": "example-zoom",
+      "file": "src/lens-data/example/ExampleZoom.data.ts",
+      "fileSha256": "efc9fa11a8b6d5506a683e515a37ef601ec43bffd97396e82fc7b69db670b3d2"
+    },
+    "lv": {
+      "commit": "0123456789abcdef0123456789abcdef01234567",
+      "dirty": false,
+      "closureHash": "1ea413d685651ca35040a436eb8deadf619590afe0dcd086e0d5efe912a13a8a"
+    },
+    "notes": [
+      "bulk-absorption",
+      "Fisheye projection"
+    ],
+    "producer": {
+      "tool": "lvrtc",
+      "version": "0.1.0"
+    }
+  }
+}

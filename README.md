@@ -9,8 +9,9 @@ The first external engine is [optiland](https://github.com/optiland/optiland). E
 contract, so others can be added by a Python worker, a command line, file exchange or HTTP.
 
 Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. Phase 1
-(LensVisualizer as case source and engine) has begun with the binding that loads LensVisualizer. The full plan is
-in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+(LensVisualizer as case source and engine) has the binding that loads LensVisualizer and the exporter that writes
+its lenses as engine-neutral cases, with the suites of lenses to compare; the engines that answer for those cases
+come next. The full plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Try it
 
@@ -84,6 +85,14 @@ node bin/lvrtc.mjs lenses list
 node bin/lvrtc.mjs lenses show nikkor-z50f12
 ```
 
+```bash
+node bin/lvrtc.mjs export nikkor-z50f12 --aperture f/2.8 --lines photopic --out /tmp/z50.case.json
+```
+
+```bash
+node bin/lvrtc.mjs export --all
+```
+
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
 kit. A TypeScript test that needs Python is skipped, with the reason, where `python3` (or `LVRTC_PYTHON`) is
 missing or older than 3.10; `npm run test:python` itself needs it.
@@ -125,6 +134,48 @@ its runtime radius, the last lens surface, the image plane and the surface count
 prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that suggests the
 nearest keys. Both commands print to the console only.
 
+### Cases
+
+`lvrtc export <lensKey> [--zoom <t>] [--focus <t>] [--aperture wide-open|f/<N>|r=<mm>] [--lines reference|cdf|photopic] [--out <file>] [--root <dir>]`
+writes one lens as an **optical case**, the document every engine is asked about, as canonical JSON: to `--out`,
+or else to the output. The case is built from the state LensVisualizer prepares for tracing and from the functions
+its own tracers call (the clip radius of every surface, the lines and their weights, the index after every surface
+at every line, the object of a certified focus station), never from authored surface fields. The mapping, member
+by member, is in [contract/CONTRACT.md](contract/CONTRACT.md#cases-from-lensvisualizer).
+
+- **The stop.** `wide-open` is LensVisualizer's wide-open stop radius at that zoom position; `f/<N>` is its linear
+  stop-down rule, `wide-open radius × widest f-number / N`; `r=<mm>` is a stop radius as given. An f-number faster
+  than wide open is refused, not clamped.
+- **Focus.** Infinity, or a focus position LensVisualizer certifies an object distance for. Any other focus
+  position is refused: a refocused lens is never exported with its object at infinity.
+- **What a case cannot express is reported with a code**, never approximated: a folded path, a mirror or a
+  blocker, a diffractive surface, a tilted image plane, and what LensVisualizer itself has no data for (lines for a
+  lens without dispersion data, mixed d and e references). A lens that cannot be exported as asked exits 1 with
+  every reason, as `<key>: <code>: <message>`.
+
+`lvrtc export --all [--census <dir>] [--json] [--root <dir>]` exports every lens at its default state (zoom 0,
+infinity focus, wide open, the design image plane) on its reference line, never stopping at a lens, and prints
+how many were exported and how many were not, by reason. `--census <dir>` writes the **census** to
+`lv-export.json` and `lv-export.md` in that directory: the counts, the lens keys under each reason, the feature
+flags and limits of the exported cases, and the LensVisualizer commit and engine closure hash it was taken of. The
+committed one is in [reports/census/](reports/census/lv-export.md); it is a snapshot, holds no surface data and
+is asserted nowhere. Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
+
+### Suites
+
+Three suites of LensVisualizer lenses are in `suites/`. None names a rung or an engine: a run uses every rung
+there is, on the engines it is run with.
+
+| Suite | Is |
+|---|---|
+| `smoke.json` | two small lenses, one of them also on the photopic lines |
+| `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines |
+| `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, mixed d and e references, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom at its tele end, an annular aperture, an asphere without a term, a stop inside an element |
+
+Two runs of `features.json` have no case today, and say why with a code: the lens that mixes d and e references
+has no wavelength data for every glass (`mixed-reference`), and every lens with an annular aperture is a mirror
+lens (`folded-path`). They stay in the suite so that the day LensVisualizer can supply them is noticed.
+
 ## Running a suite
 
 `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]` runs a suite: for every
@@ -133,6 +184,11 @@ job ended. The example above needs neither LensVisualizer nor optiland: its root
 in this process and two, `fake-py` and `fake-pyn`, Python workers, and its only rung, `selftest`, asks for the
 conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none`.
 
+- **Lenses.** A run names an optical-case file (`{ "kind": "fixture", "path" }`) or a LensVisualizer lens
+  (`{ "kind": "lv", "key" }`), whose case is exported from the configured checkout (`lvPath`) in the state, at the
+  aperture, on the lines and at the image plane the run states, exactly as `lvrtc export` does. A lens that cannot
+  be exported as asked is a run that is not started, with the exporter's coded reasons. LensVisualizer is loaded
+  only when a run names one of its lenses.
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. Phase 0
   has one rung, `selftest`.
@@ -149,9 +205,21 @@ conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake
   or found in the store, in any directory and on any machine: it holds no times and no absolute paths, and of what
   an engine or the system said only the codes. Which jobs were cached, and why a job failed, is printed and not
   stored. A run that could not be started is recorded with the reason, which names files relative to the root.
-- **Exit code**: 0 when no job ended as an error and every run could be started (`unsupported` is an answer, not a
-  failure); 1 otherwise; 2 when nothing was run because the suite file, an engine or a rung cannot be used as
-  asked.
+- **The LensVisualizer fingerprint.** When a run's case came from LensVisualizer, the manifest records under
+  `sources.lv` what the cases were built from: the checkout's `commit` and `dirty` flag and the hash and file count
+  of the engine closure. When the last job has ended the checkout is read again: an engine file or an exported
+  lens file whose bytes changed, or an engine closure that grew, marks the manifest `source-changed-during-run`,
+  with a warning that names what changed.
+- **Exit code**: 0 when no job ended as an error, every run could be started (`unsupported` is an answer, not a
+  failure) and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite
+  file, an engine or a rung cannot be used as asked.
+
+Until the engines `ref` and `lv` are registered (the next stages), this repository's own configuration defines no
+engine, so a committed suite is run on a fake one, which shows that its cases build and travel:
+
+```bash
+LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --root test/fixtures/fake-root --engines fake-a
+```
 
 ## Comparing and reporting
 

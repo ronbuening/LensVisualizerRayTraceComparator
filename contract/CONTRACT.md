@@ -48,7 +48,11 @@ paraboloid. A term's `power` is any integer of at least 1, so even and odd asphe
 different document with a different identity, and an engine may treat it differently.
 
 **Apertures.** `semiDiameter` is the effective clip radius, and the limit is inclusive: a ray at exactly that
-height passes. `innerSemiDiameter` above 0 is a central obstruction.
+height passes. `innerSemiDiameter` above 0 is a central obstruction: a ray below it is stopped.
+
+**The stop** clips like every other surface, by its own `aperture`, which a case source writes for the stop setting
+of the case. `conditions.stopSemiDiameter` states that setting as a radius, for what is derived from the stop and
+not from a clip: the entrance pupil, the f-number, a ray aimed at the stop's rim.
 
 ## Numbers and arrays
 
@@ -90,7 +94,8 @@ object it is, so its `dtype`, `shape`, `data` and `sha256` are all covered.
 | `QuantityRequest.id` | `{ caseId, quantity, spec }` |
 
 - `label`, `features` and `provenance` are in no hash. Two cases that differ only there are the same case.
-- Cases of one lens under different conditions share a `systemId`.
+- `system` is the lens as it is set: at one zoom and focus position, which place its surfaces, and at one stop
+  setting, which is the stop surface's aperture. Cases of it that differ in lines or image plane share a `systemId`.
 - `engineOptions` is not in a request's `id`, so one request sent to several engines keeps one id.
 - **Hashes are computed only in TypeScript.** Other languages do not write numbers the way ECMAScript does
   (`1.2e-6` is `0.0000012` in ECMAScript and `1.2e-06` in Python), so a worker never recomputes an id: it echoes
@@ -103,6 +108,8 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 ## Versioning
 
 Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.0`.
+It is still being written: until the first baseline is committed, nothing outside this repository has read a
+document of it, and what a stage adds is added to `1.0`. From then on the rules below hold.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -166,7 +173,7 @@ SurfaceIR:
 | `z` | number | vertex position |
 | `thickness` | number ≥ 0 | distance to the next vertex; after the last surface, to the design image plane |
 | `shape` | object | `{ kind: "plane" }`, `{ kind: "conic", radius, conic }` or `{ kind: "asphere", radius, conic, terms }` |
-| `aperture` | object | `semiDiameter` > 0, `nominalSemiDiameter` > 0 (as the prescription states it), `innerSemiDiameter` ≥ 0 |
+| `aperture` | object | `semiDiameter` > 0, `nominalSemiDiameter` > 0 (the clear semi-diameter the clip is derived from: the prescription's; on the stop surface, the stop setting), `innerSemiDiameter` ≥ 0 |
 | `elementId` | integer ≥ 0 | the element whose glass follows the surface; 0 when no element does |
 | `synthetic?` | `"rearPlate"` | set on a surface the case source generated for a cover glass or filter |
 
@@ -187,11 +194,15 @@ A `radius` is never 0. An asphere's `radius` may be null (a flat base); its `ter
 model anchored to the authored index supplied it.
 
 `provenance` is `source` (`{ kind: "lv-lens", lensKey, file, fileSha256 }` or `{ kind: "fixture", name }`), `lv?`
-(`commit` and `dirty`, each null when unknown, and `closureHash`) and `producer` (`{ tool: "lvrtc", version }`).
+(`commit` and `dirty`, each null when unknown, and `closureHash`, the hash of the LensVisualizer engine files, of
+which no lens file is one), `notes?` and `producer` (`{ tool: "lvrtc", version }`). `notes` lists, as codes and
+each once, what the source knows about the lens that the case does not carry; the codes LensVisualizer's exporter
+writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 
 **Invariants checked in code** (`caseInvariantProblems`), because a schema cannot state them:
 
-- `stopIndex` and `lastLensSurfaceIndex` are indices of `surfaces`;
+- `stopIndex` and `lastLensSurfaceIndex` are indices of `surfaces`, and `lastLensSurfaceIndex` is that of the last
+  surface that is not a synthetic plate;
 - each `z` equals the sum of the thicknesses before it within 1e-9 mm, so the first vertex is at 0, and
   `designImageZ` equals the sum of all thicknesses within the same tolerance;
 - an asphere has at most one term of each power;
@@ -213,6 +224,90 @@ model anchored to the authored index supplied it.
 Three numeric limits go with them: `asphere.maxPower` (0 without an asphere), `lines.count` and `surfaces.count`.
 A case stores its flags; the limits are derived when capabilities are negotiated. An engine lists the flags it
 supports and the largest value of each limit it handles in its descriptor.
+
+### Cases from LensVisualizer
+
+`exportCase` (`src/engines/lv/exportCase.ts`) writes the case of one LensVisualizer lens in the state a run asks
+for. It reads LensVisualizer's **prepared state**, `prepareRuntimeState(L, focusT, zoomT)`, and the functions
+LensVisualizer's own tracers call; it reads no authored surface field, and it computes no index, no aperture and no
+conjugate of its own. A lens it cannot write exactly is reported with a code, never approximated.
+
+| Member of the case | Is, in LensVisualizer |
+|---|---|
+| state | `zoomT` of the run, 0 without one; `focusT` 0 for infinity focus, else the run's value |
+| `surfaces[i].label`, `elementId` | `state.surfaces[i].label`, `elemId` |
+| `surfaces[i].z` | `state.z[i]` |
+| `surfaces[i].thickness` | the resolved gap `state.surfaces[i].d`; after the last surface, the distance to `state.imgZ` (the last `d`, which reaches it in every lens that is not folded) |
+| `shape`, no asphere | `plane` when `abs(R)` > 1e10 (`FLAT_R_THRESHOLD`; LensVisualizer writes a plane as 1e15), else `conic` of radius `R` with conic constant 0 |
+| `shape`, an asphere | `conic` is `K`; one term per coefficient `A<n>` that is not zero, `power` n from its name (even `A4`..`A20`, odd `A3`..`A19`), in order of power; `radius` null on a flat base. LensVisualizer's sag (`conicPolySag`) is the contract's, so no number is converted |
+| `shape`, an asphere without a term | the `conic` it equals, with its `K`; a `plane` on a flat base |
+| `aperture.nominalSemiDiameter` | the semi-diameter LensVisualizer traces the surface with: `evaluateAperture(...).semiDiameter`, which is `state.surfaces[i].sd`, or the run's stop radius on the stop surface |
+| `aperture.semiDiameter` | LensVisualizer's inclusive clip limit for it, found by asking `evaluateAperture` for the largest radius it does not call outside: today `sd + max(1e-9, abs(sd) × 1e-12)` |
+| `aperture.innerSemiDiameter` | `innerSd`, or 0 |
+| `synthetic` | `"rearPlate"` on the two flat surfaces LensVisualizer generates for a rear plate, which are surfaces of the state like any other |
+| `stopIndex` | `state.lens.stop.surfaceIndex` |
+| `lastLensSurfaceIndex` | `L.lastLensSurfaceIdx` |
+| `designImageZ` | `state.imgZ` |
+| `conditions.stopSemiDiameter` | from the run's aperture, below; the stop surface's aperture carries the same radius |
+| `conditions.imageZ` | `state.imgZ`, plus the run's shift |
+| `conditions.object` | `infinity` at `focusT` 0; else `finite` at the z of `mtfFiniteObjectPoint` for the conjugate LensVisualizer certifies for exactly that focus and zoom position (`MtfSupport.conjugate`) |
+| `conditions.lines` | a named set: `MtfSupport.spectralLines` of `assessMtfSupport` for that spectrum, with LensVisualizer's weights, its reference line first. An explicit list: its own wavelengths and weights (1 each without weights), the first the reference line |
+| `conditions.indexAfterSurface` | per line, `mtfIndexResolver(state, support, wavelength)`: its indices where it gives a resolver (`indexSource` `anchored`), each surface's `nd` where it gives none (`authored`); air is exactly 1 |
+
+**The stop radius.** `wide-open` is `wideOpenStopAtZoom(zoomT, L)`, which is the prepared stop surface's `sd`.
+An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoom(zoomT, L)) / N`. That rule is
+written only in LensVisualizer's React hook (`useLensComputation.ts`, `currentPhysStopSD`), so the exporter restates
+it, in the hook's order of operations, and a test against LensVisualizer's source fails when the hook's expression
+changes. An N below the widest f-number of that zoom position is a problem, not a clamp. `stop-radius` is taken as
+given.
+
+**Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, or the
+e line for a lens whose glasses are all e-referenced, and it is traced with the authored `nd`; several lines, and
+a lens that mixes d- and e-referenced glasses, are traced with indices anchored to the authored one. Which applies,
+and whether LensVisualizer has the glass data for it, is what `assessMtfSupport` says. An explicit list of
+wavelengths takes the indices of a spectral run, where LensVisualizer has them and every wavelength lies between
+its g and C lines, which its anchored indices are fitted between.
+
+**What is reported instead of exported**, each with its code (`src/engines/lv/exportProblems.ts`):
+
+| Code | The lens, or the run |
+|---|---|
+| `folded-path`, `non-refract-interaction` | has a path that turns at a mirror; a surface that reflects or blocks |
+| `diffractive-surface` | has a surface with a diffractive phase |
+| `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
+| `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
+| `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
+| `lv-best-axial-needs-mtf-recipe` | asks for the image plane `lv-best-axial`, which only LensVisualizer's MTF result states; the MTF recipe resolves it to a shift |
+| `wavelength-outside-fitted-range` | lists a wavelength outside LensVisualizer's g to C lines |
+| `finite-conjugate-unavailable` | asks for a focus position that is not a station LensVisualizer certifies. A refocused lens is never exported with its object at infinity |
+| `mixed-reference`, `spectral-data-unavailable` | has no glass data for what was asked: LensVisualizer's own reasons, under its own codes |
+| `unsupported-path`, `unverified-scale` | is outside LensVisualizer's MTF path, which is the only source of indices at several lines |
+| `unknown-lens`, `lens-build-failed`, `state-prepare-failed` | is not in the catalog, or LensVisualizer cannot build or prepare it |
+| `lv-<why>` | LensVisualizer itself is not configured or cannot be loaded |
+
+Tilt and shift are not states a run can ask for, so a case is always the lens unmoved.
+
+**What changes no surface is a provenance note, not a feature flag.** Two things LensVisualizer knows about a lens
+leave every surface, gap and index of the case as it is:
+
+| Note | The lens |
+|---|---|
+| `bulk-absorption` | has a glass that absorbs (`absorptionCoefficientPerMm`): it weights rays and bends none |
+| `projection:<kind>` | maps field angle to image height otherwise than rectilinearly (`projection:fisheye-equisolid`) |
+
+A feature flag is derived from `system` and `conditions` alone, and is what an engine is negotiated against. Neither
+of these is in either: carrying them would mean new members that change the identity of every case, for no rung
+that reads them. The gated rungs trace rays that are given, with weights that are given, so no engine needs to
+know of absorption or projection to answer them. A later stage that asks an engine for an analysis of its own, for
+which these matter, adds the member and the flag then; until then the note keeps the fact with the case. A fisheye
+lens and a lens with an annular aperture are outside LensVisualizer's own MTF path, so they are exported on their
+reference line only, with the indices their prescription states.
+
+**No constraint of the schema had to be relaxed for a real lens.** The limits a prescription could have broken (an
+asphere needs a term, a thickness is not negative, a finite object lies ahead of the first vertex, the image plane
+sits one last gap behind the last vertex) hold for every lens that is exported: a negative gap and an image plane
+elsewhere occur only in folded systems, and an asphere without a term is the conic it equals. The census in
+`reports/census/` counts what was exported, and what was not and why.
 
 ### `run-spec`
 

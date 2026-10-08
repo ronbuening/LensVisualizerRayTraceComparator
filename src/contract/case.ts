@@ -35,7 +35,10 @@ export type SurfaceShape =
 export interface SurfaceAperture {
   /** The effective clip radius. The limit is inclusive: a ray at exactly this height passes. */
   readonly semiDiameter: number;
-  /** The semi-diameter the prescription states, before any rule that tightens it. */
+  /**
+   * The clear semi-diameter the clip radius is derived from, before any rule that widens or tightens it: the
+   * prescription's, and on the stop surface the stop setting of the case.
+   */
   readonly nominalSemiDiameter: number;
   /** Radius of a central obstruction; 0 for none. */
   readonly innerSemiDiameter: number;
@@ -56,7 +59,10 @@ export interface SurfaceIR {
   readonly synthetic?: "rearPlate";
 }
 
-/** The lens itself, whatever it is used for. Hashed on its own as `systemId`. */
+/**
+ * The lens as it is set: at one zoom and focus position and one stop setting, since the stop surface's aperture is
+ * the stop. Hashed on its own as `systemId`.
+ */
 export interface OpticalSystem {
   readonly surfaces: readonly SurfaceIR[];
   readonly stopIndex: number;
@@ -125,11 +131,11 @@ export const Z_TOLERANCE_MM = 1e-9;
 
 /**
  * The invariants of a case that its schema cannot state, as a list of what is broken (empty when nothing is):
- * `stopIndex` and `lastLensSurfaceIndex` are surface indices; each vertex `z`, and `designImageZ` after the last
- * surface, equals the sum of the thicknesses before it within `Z_TOLERANCE_MM`, so the first vertex is at 0; an
- * asphere's term powers are distinct; there is at least one line and every weight is positive; and
- * `indexAfterSurface` decodes to float64 of shape `[lines, surfaces]` holding positive finite indices. The inputs
- * are expected to be schema-valid.
+ * `stopIndex` and `lastLensSurfaceIndex` are surface indices, and `lastLensSurfaceIndex` is that of the last
+ * surface that is not a synthetic plate; each vertex `z`, and `designImageZ` after the last surface, equals the sum
+ * of the thicknesses before it within `Z_TOLERANCE_MM`, so the first vertex is at 0; an asphere's term powers are
+ * distinct; there is at least one line and every weight is positive; and `indexAfterSurface` decodes to float64 of
+ * shape `[lines, surfaces]` holding positive finite indices. The inputs are expected to be schema-valid.
  */
 export function caseInvariantProblems(system: OpticalSystem, conditions: CaseConditions): string[] {
   const problems: string[] = [];
@@ -139,6 +145,15 @@ export function caseInvariantProblems(system: OpticalSystem, conditions: CaseCon
     if (!Number.isInteger(index) || index < 0 || index >= surfaces.length) {
       problems.push(`system.${name} is ${index}, which is not the index of one of the ${surfaces.length} surfaces`);
     }
+  }
+  // An index that is no surface has been reported; only one that is a surface can be the wrong surface.
+  const lastLens = surfaces.findLastIndex((surface) => surface.synthetic === undefined);
+  if (surfaces[system.lastLensSurfaceIndex] !== undefined && system.lastLensSurfaceIndex !== lastLens) {
+    const found = lastLens < 0 ? "every surface is a synthetic plate" : `the last that is not is surface ${lastLens}`;
+    problems.push(
+      `system.lastLensSurfaceIndex is ${system.lastLensSurfaceIndex}, which is not the last surface that is not ` +
+        `a synthetic plate: ${found}`,
+    );
   }
 
   let expectedZ = 0;
@@ -183,9 +198,10 @@ export function caseInvariantProblems(system: OpticalSystem, conditions: CaseCon
 }
 
 /**
- * The two content hashes of a case. `systemId` covers the lens alone and `id` the lens under its conditions, so
- * cases of one lens at different apertures, conjugates or lines share a `systemId`. Label, features and provenance
- * are in neither.
+ * The two content hashes of a case. `systemId` covers the lens as it is set and `id` the lens under its conditions,
+ * so cases of one lens that differ only in lines or image plane share a `systemId`; another zoom or focus position
+ * moves surfaces and another stop setting changes the stop surface's aperture, so each is another system. Label,
+ * features and provenance are in neither.
  */
 export function caseIdentity(system: OpticalSystem, conditions: CaseConditions): { systemId: string; id: string } {
   return { systemId: hashCanonical(system), id: hashCanonical({ system, conditions }) };

@@ -135,7 +135,7 @@
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
         },
         "nominalSemiDiameter": {
-          "description": "The semi-diameter the prescription states, mm.",
+          "description": "The clear semi-diameter the clip radius is derived from, mm: the prescription's; on the stop surface, the stop setting.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
         },
         "innerSemiDiameter": {

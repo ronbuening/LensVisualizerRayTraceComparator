@@ -45,8 +45,11 @@ function fingerprintInProcess(
 test("every module and export of the import manifest exists in LensVisualizer", { skip }, async () => {
   const binding = await loadLvBinding(LV_PATH);
   for (const { exports } of LV_IMPORT_MANIFEST) {
-    for (const { as } of exports) assert.equal(typeof binding.api[as], "function", as);
+    for (const { as, kind } of exports) assert.equal(typeof binding.api[as], kind, as);
   }
+  // The one export that is not a function: the lines the anchored indices are fitted between.
+  const { C, d, e, F, g } = binding.api.spectralLinesNm;
+  assert.deepEqual([C, d, e, F, g], [656.2725, 587.5618, 546.074, 486.1327, 435.8343]);
   const closure = binding.engineClosure();
   assert.ok(closure.engineFileCount >= LV_IMPORT_MANIFEST.length);
   assert.match(closure.engineClosureHash, /^[0-9a-f]{64}$/);

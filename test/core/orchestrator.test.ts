@@ -10,7 +10,7 @@ import type { QuantityRequest } from "../../src/contract/request.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { REPO_ROOT, loadConfig } from "../../src/core/config.ts";
-import { CASES_DIRECTORY, MANIFEST_FILE, manifestText } from "../../src/core/manifest.ts";
+import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED, manifestText } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
@@ -20,7 +20,7 @@ import { STORE_DIRECTORY, createResultStore, storeKey } from "../../src/core/res
 import { selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { loadSuite } from "../../src/core/suite.ts";
-import type { LoadedSuite } from "../../src/core/suite.ts";
+import type { CaseSource, LoadedSuite, SourceAudit } from "../../src/core/suite.ts";
 import { UsageError } from "../../src/core/usageError.ts";
 import { EngineUnavailableError } from "../../src/engines/adapter.ts";
 import type { EngineAdapter } from "../../src/engines/adapter.ts";
@@ -903,7 +903,7 @@ test("options named for an engine id that every object inherits a member for are
 
 test("a run without a case is recorded with its problems and has no jobs; the others run", async (t) => {
   const runsDir = tempDir(t);
-  const problem = "LensVisualizer case source is not available yet (Stage 1.2)";
+  const problem = "no case source builds cases from LensVisualizer lenses";
   const suite = suiteOf("partly", [
     { name: "lv", opticalCase: null, problems: [problem] },
     { name: "singlet", opticalCase: SINGLET },
@@ -985,7 +985,7 @@ test("two runs into different directories write the same bytes, and none of them
     });
   const suite = suiteOf("pair", [
     { name: "singlet", opticalCase: SINGLET },
-    { name: "lv", opticalCase: null, problems: ["LensVisualizer case source is not available yet (Stage 1.2)"] },
+    { name: "lv", opticalCase: null, problems: ["no case source builds cases from LensVisualizer lenses"] },
     { name: "double-gauss", opticalCase: DOUBLE_GAUSS },
   ]);
   await runSuite({ suite, registry: engines().registry, runsDir: here });
@@ -1050,6 +1050,92 @@ test("the fixture suite runs on the fixture root's engines, built by the real re
   const inMemory = await runSuite({ suite: pairSuite(), registry: threeFakes().registry, runsDir: tempDir(t) });
   assert.deepEqual(result.manifest.jobs, inMemory.manifest.jobs);
   assert.deepEqual(result.manifest.engines, inMemory.manifest.engines);
+});
+
+// ── Case sources ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The pair suite with its first run named as a LensVisualizer lens, as a source of that kind would have built it. */
+function lvFirstSuite(): LoadedSuite {
+  const suite = pairSuite();
+  const [first, ...rest] = suite.runs;
+  const spec = { ...first.spec, lens: { kind: "lv", key: "some-lens" } as const };
+  return { ...suite, runs: [{ ...first, spec }, ...rest] };
+}
+
+/** A case source that resolves nothing and audits itself as told, counting how often it is asked. */
+function auditedSource(audit: () => SourceAudit | null): CaseSource & { asked: string[] } {
+  const asked: string[] = [];
+  return {
+    asked,
+    resolve: () => assert.fail("a loaded suite is not resolved again"),
+    audit: () => {
+      asked.push("audit");
+      return audit();
+    },
+  };
+}
+
+const LV_FINGERPRINT = {
+  commit: "c".repeat(40),
+  dirty: false,
+  engineClosureHash: "ab".repeat(32),
+  engineFileCount: 141,
+};
+
+test("a case source that identifies its inputs is recorded in the manifest, audited once the last job has ended", async (t) => {
+  const runsDir = tempDir(t);
+  const lv = auditedSource(() => ({ fingerprint: LV_FINGERPRINT, changed: [] }));
+  const result = await runSuite({
+    suite: lvFirstSuite(),
+    registry: threeFakes().registry,
+    runsDir,
+    sources: { lv },
+    onJob: () => void lv.asked.push("job"),
+  });
+  assert.deepEqual(lv.asked, [...Array.from({ length: 6 }, () => "job"), "audit"]);
+  assert.deepEqual(result.manifest.sources, { lv: { fingerprint: LV_FINGERPRINT, status: "unchanged" } });
+  assert.deepEqual(result.warnings, []);
+  assert.deepEqual(JSON.parse(manifestBytes(runsDir, "pair")).sources, result.manifest.sources);
+});
+
+test("a source that changed during the run marks the manifest, and the warning says what changed", async (t) => {
+  const changed = ["src/optics/trace/aperture.ts", "src/lens-data/acme/Some.data.ts"];
+  const lv = auditedSource(() => ({ fingerprint: LV_FINGERPRINT, changed }));
+  const result = await runSuite({
+    suite: lvFirstSuite(),
+    registry: threeFakes().registry,
+    runsDir: tempDir(t),
+    sources: { lv },
+  });
+  assert.equal(SOURCE_CHANGED, "source-changed-during-run");
+  assert.deepEqual(result.manifest.sources, { lv: { fingerprint: LV_FINGERPRINT, status: SOURCE_CHANGED } });
+  assert.deepEqual(result.warnings, [
+    "case source lv changed during the run: src/optics/trace/aperture.ts, src/lens-data/acme/Some.data.ts",
+  ]);
+  // The jobs are what they were: the mark says the run cannot be trusted, it does not rewrite it.
+  assert.deepEqual(
+    result.manifest.jobs.map((job) => job.status),
+    ["ok", "ok", "unsupported", "ok", "ok", "unsupported"],
+  );
+});
+
+test("only a source that serves a run of the suite and has something to say is in the manifest", async (t) => {
+  const run = (suite: LoadedSuite, sources: RunSuiteInput["sources"]): Promise<SuiteRunResult> =>
+    runSuite({ suite, registry: threeFakes().registry, runsDir: tempDir(t), sources });
+
+  // No run of the suite names a LensVisualizer lens: its source is not asked.
+  const unused = auditedSource(() => assert.fail("a source no run uses was audited"));
+  assert.equal((await run(pairSuite(), { lv: unused })).manifest.sources, undefined);
+  // A source that built nothing has nothing to say, and one without an audit is never asked.
+  const idle = auditedSource(() => null);
+  const plain: CaseSource = { resolve: () => assert.fail("a loaded suite is not resolved again") };
+  assert.equal((await run(lvFirstSuite(), { lv: idle, fixture: plain })).manifest.sources, undefined);
+  assert.deepEqual(idle.asked, ["audit"]);
+  assert.equal((await run(lvFirstSuite(), undefined)).manifest.sources, undefined);
+  // A manifest without the member is the manifest of before: its text does not name it.
+  const runsDir = tempDir(t);
+  await runSuite({ suite: pairSuite(), registry: threeFakes().registry, runsDir });
+  assert.ok(!manifestBytes(runsDir, "pair").includes("sources"));
 });
 
 test("a rung that builds a request that is not its own is a defect, reported before anything runs", async (t) => {

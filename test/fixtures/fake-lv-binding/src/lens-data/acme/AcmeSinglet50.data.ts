@@ -5,6 +5,10 @@ const LENS: FakeLensData = {
   key: "acme-singlet-50",
   name: "ACME Singlet 50mm f/4",
   focusTravel: 5,
+  // The one focus station whose object distance this lens "documents": the closest.
+  finiteConjugates: [
+    { focusT: 1, zoomT: 0, objectDistanceMm: 500, distanceReference: "first-surface", source: "synthetic" },
+  ],
   surfaces: [
     { label: "1", R: 50, d: 4, nd: 1.5, sd: 8 },
     { label: "2", R: -50, d: 1, nd: 1, sd: 8 },

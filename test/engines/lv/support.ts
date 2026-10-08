@@ -15,6 +15,7 @@ export const FAKE_LV: string = fileURLToPath(new URL("../../fixtures/fake-lv-bin
 /** The engine files the fake tree loads for the manifest, sorted: everything but its lens and type files. */
 export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/lens-data/defaults.ts",
+  "src/optics/analysis/mtfConjugates.ts",
   "src/optics/analysis/mtfSupport.ts",
   "src/optics/analysis/mtfTracing.ts",
   "src/optics/apertureStop.ts",
@@ -23,6 +24,7 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/first-order/cardinals.ts",
   "src/optics/first-order/systemMatrix.ts",
   "src/optics/math/paraxial.ts",
+  "src/optics/spectralLines.ts",
   "src/optics/trace/aperture.ts",
 ];
 

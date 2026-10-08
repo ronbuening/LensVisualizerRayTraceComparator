@@ -15,6 +15,13 @@ export interface LvLensData {
   readonly [member: string]: unknown;
 }
 
+/** One glass element of a lens, the members the comparator reads. */
+export interface LvElement {
+  readonly id: number;
+  /** Beer-Lambert absorption of the glass per mm; above 0 it weights rays and bends none. */
+  readonly absorptionCoefficientPerMm?: number;
+}
+
 /**
  * LV's frozen RuntimeLens. Never read `stopPhysSD` (zoom station 0 only) or `totalTrack` from it: the prepared
  * state holds the values of the current zoom and focus.
@@ -23,6 +30,8 @@ export interface LvRuntimeLens {
   /** Index of the last authored surface; synthetic rear plates come after it. */
   readonly lastLensSurfaceIdx: number;
   readonly isZoom: boolean;
+  /** The lens's elements, without those of synthetic rear plates. */
+  readonly elements: readonly LvElement[];
   readonly [member: string]: unknown;
 }
 
@@ -43,6 +52,8 @@ export interface LvSurfaceProfile {
  * the runtime one. `syntheticKind` of the binding reads the one member of `source` that exists nowhere else.
  */
 export interface LvSurface {
+  /** The surface's index in the lens, which `evaluateAperture` compares with the stop index. */
+  readonly physicalIndex: number;
   readonly label: string;
   /** Radius of curvature in mm; a plane is 1e15 (|R| > 1e10). */
   readonly R: number;
@@ -52,9 +63,19 @@ export interface LvSurface {
   readonly innerSd: number | null;
   readonly elemId: number;
   readonly asphere: LvAsphere | null;
+  /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */
+  readonly diffractive: object | null;
+  /** What the surface does to a ray: "refract" on an ordinary surface, "reflect" or "block" in a folded system. */
+  readonly interaction: { readonly type: string };
   readonly profile: LvSurfaceProfile;
   /** Vertex position in mm; the first surface is at 0. */
   readonly z: number;
+}
+
+/** A plane: a point on it and its unit normal. */
+export interface LvPlane {
+  readonly point: LvVec3;
+  readonly normal: LvVec3;
 }
 
 /** LV's PreparedOpticalState: a lens at one focus, zoom and aberration-control position. */
@@ -63,12 +84,17 @@ export interface LvPreparedState {
     readonly key: string;
     readonly runtime: LvRuntimeLens;
     readonly stop: { readonly surfaceIndex: number };
+    /** `isFoldedOptics` is true for a system whose path turns at a mirror. */
     readonly flags: Readonly<Record<string, boolean>>;
+    /** How field angles map to image heights: "rectilinear", or a "fisheye-..." kind. */
+    readonly projection: { readonly kind: string };
   };
   readonly focusT: number;
   readonly zoomT: number;
   readonly surfaces: readonly LvSurface[];
   readonly z: readonly number[];
+  /** The image plane; its normal is +z in every system that is not folded. */
+  readonly imagePlane: LvPlane;
   /** Image plane position: `z[last] + d[last]`, except in a folded system that authors its image plane. */
   readonly imgZ: number;
   readonly totalTrack: number;
@@ -194,22 +220,49 @@ export interface LvMtfOptions {
   readonly [member: string]: unknown;
 }
 
+/** One wavelength LV traces, with its incident intensity weight. */
+export interface LvSpectralLine {
+  readonly wavelengthNm: number;
+  readonly weight: number;
+}
+
+/** A focus and zoom station whose object distance the lens's source documents: LV's FiniteConjugate. */
+export interface LvFiniteConjugate {
+  readonly focusT: number;
+  readonly zoomT: number;
+  readonly objectDistanceMm: number;
+  readonly distanceReference: string;
+}
+
 /** LV's MtfSupport: whether its MTF path covers a state, and with which indices and lines. */
 export interface LvMtfSupport {
   readonly available: boolean;
+  /** LV's MtfUnavailableReason when `available` is false. */
   readonly reason: string | null;
   readonly message: string;
   readonly referenceWavelengthNm: number;
   /** True when the trace uses anchored per-wavelength indices instead of the authored `nd`. */
   readonly useResolvedReference: boolean;
-  readonly spectralLines: readonly unknown[];
-  readonly conjugate?: unknown;
+  /** The lines of the spectrum that was asked for, the reference line first. */
+  readonly spectralLines: readonly LvSpectralLine[];
+  /** Set at a focus position other than infinity that LV certifies; never at infinity focus. */
+  readonly conjugate?: LvFiniteConjugate;
   readonly limitations: readonly string[];
 }
 
+/** LV's standard spectral lines in nm, the ones the comparator reads. */
+export interface LvLineNm {
+  readonly C: number;
+  readonly d: number;
+  readonly e: number;
+  readonly F: number;
+  readonly g: number;
+}
+
 /**
- * The LensVisualizer functions the comparator calls, by the name the import manifest gives each. The signatures are
- * LV's, with the local types above; `LV_IMPORT_MANIFEST` says which module exports each.
+ * What the comparator takes from LensVisualizer, by the name the import manifest gives each: the functions it calls
+ * and one table of constants. The signatures are LV's, with the local types above; `LV_IMPORT_MANIFEST` says which
+ * module exports each.
  */
 export interface LvApi {
   buildLens(data: LvLensData): LvRuntimeLens;
@@ -246,4 +299,8 @@ export interface LvApi {
   buildCardinalElementsFromMatrix2(input: LvCardinalInput): LvCardinalElements | null;
   assessMtfSupport(state: LvPreparedState, options: LvMtfOptions): LvMtfSupport;
   mtfIndexResolver(state: LvPreparedState, support: LvMtfSupport, wavelengthNm: number): LvIndexResolver | undefined;
+  /** The object point of a certified conjugate at a field angle in degrees, or null when LV cannot place it. */
+  mtfFiniteObjectPoint(state: LvPreparedState, conjugate: LvFiniteConjugate, fieldAngle: number): LvVec3 | null;
+  /** LV's `LINE_NM`. Anchored indices are fitted between its g and C lines. */
+  readonly spectralLinesNm: LvLineNm;
 }

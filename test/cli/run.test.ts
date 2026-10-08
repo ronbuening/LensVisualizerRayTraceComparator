@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,10 +9,11 @@ import { createRunCommand } from "../../src/cli/commands/run.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
-import { CASES_DIRECTORY, MANIFEST_FILE } from "../../src/core/manifest.ts";
+import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
 import { DOUBLE_GAUSS, FAKE_PAIR_SUITE, FAKE_ROOT, SINGLET, caseFixture, tempDir } from "../core/support.ts";
+import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
@@ -246,11 +247,13 @@ test("a suite that is missing, or is not a suite, is a usage error naming the fi
 
 test("a run that cannot be started exits 1, is reported and recorded, and the other runs are run", (t) => {
   const runsDir = join(tempDir(t), "runs");
-  const ended = lvrtcRun(runsDir, [FAKE_MIXED_SUITE, "--root", FAKE_ROOT, "--engines", "fake-a"]);
+  // An empty variable sets nothing, so the fixture root has no LensVisualizer whatever this machine is set to.
+  const args = [FAKE_MIXED_SUITE, "--root", FAKE_ROOT, "--engines", "fake-a"];
+  const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_FAILURE);
   assert.match(ended.out, /^singlet {2}selftest {2}fake-a {5}ok {11}computed$/m);
   assert.match(ended.out, /^fake-mixed: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 0 cached\)$/m);
-  const lv = "LensVisualizer case source is not available yet (Stage 1.2)";
+  const lv = "lv-not-configured: LensVisualizer is not configured: set lvPath in lvrtc.local.json or LVRTC_LV_PATH";
   const missing = "lens fixture cases/missing.json: it cannot be read (ENOENT)";
   assert.ok(ended.err.includes(`lvrtc run: run lv-lens was not started: ${lv}\n`), ended.err);
   assert.ok(ended.err.includes(`lvrtc run: run missing was not started: ${missing}\n`), ended.err);
@@ -298,7 +301,16 @@ test("--json prints one object with sorted keys in place of the lines, and says 
   assert.equal(ended.code, EXIT_OK, ended.err);
   const report = JSON.parse(ended.out);
   assert.equal(ended.out, `${JSON.stringify(report, null, 2)}\n`);
-  assert.deepEqual(Object.keys(report), ["counts", "engines", "jobs", "manifest", "runs", "suite", "warnings"]);
+  assert.deepEqual(Object.keys(report), [
+    "counts",
+    "engines",
+    "jobs",
+    "manifest",
+    "runs",
+    "sources",
+    "suite",
+    "warnings",
+  ]);
   assert.deepEqual(report.counts, {
     jobs: 6,
     source: { cached: 2, computed: 2, negotiated: 2, unavailable: 0 },
@@ -307,6 +319,9 @@ test("--json prints one object with sorted keys in place of the lines, and says 
   assert.equal(report.manifest, join(runsDir, "fake-pair", MANIFEST_FILE));
   const manifest = manifestOf(runsDir, "fake-pair");
   assert.deepEqual(report.suite, manifest.suite);
+  // A suite of case files has no source to identify, and its manifest no member for one.
+  assert.deepEqual(report.sources, {});
+  assert.equal(manifest.sources, undefined);
   assert.deepEqual(report.engines, manifest.engines);
   assert.deepEqual(report.runs, manifest.runs);
   assert.deepEqual(report.warnings, []);
@@ -532,4 +547,132 @@ test("a store entry that cannot be trusted is a warning on the error stream, and
     new RegExp(`^lvrtc run: warning: store entry ${key}: it is malformed JSON .*; the job is computed again\n$`),
   );
   assert.match(ended.out, /\(1 computed, 1 cached\)/);
+});
+
+// ── LensVisualizer lenses ────────────────────────────────────────────────────────────────────────────────────────
+//
+// Against a copy of the fake LV tree, in a child process: the parent binds no LensVisualizer for these.
+
+/** A root whose `lvPath` is a copy of the fake LV tree beside it, with the given engines and a suite of two lenses. */
+function lvRoot(t: TestContext, engines: unknown, files: Readonly<Record<string, string>> = {}): string {
+  const rootDir = join(tempDir(t), "root");
+  const suite = {
+    contract: CONTRACT_VERSION,
+    kind: "suite",
+    name: "lv-pair",
+    runs: [
+      { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
+      {
+        name: "zoom-tele-f8",
+        lens: { kind: "lv", key: "acme-zoom-24-48" },
+        state: { zoomT: 1 },
+        aperture: { kind: "f-number", value: 8 },
+      },
+      {
+        name: "refocused",
+        lens: { kind: "lv", key: "acme-zoom-24-48" },
+        state: { focus: { kind: "focusT", value: 0.5 } },
+      },
+    ],
+  };
+  const config = { lvPath: "lv", engines };
+  const texts = { [CONFIG_FILE]: JSON.stringify(config), "suite.json": JSON.stringify(suite), ...files };
+  for (const [name, text] of Object.entries(texts)) {
+    mkdirSync(dirname(join(rootDir, name)), { recursive: true });
+    writeFileSync(join(rootDir, name), text);
+  }
+  cpSync(FAKE_LV, join(rootDir, "lv"), { recursive: true });
+  return rootDir;
+}
+
+test("a suite of LensVisualizer lenses has its cases built from the configured checkout, which the manifest records", (t) => {
+  const rootDir = lvRoot(t, { "fake-a": fake({ id: "fake-a" }) });
+  const runsDir = join(tempDir(t), "runs");
+  const args = [join(rootDir, "suite.json"), "--root", rootDir];
+  // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
+  const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
+  assert.equal(ended.code, EXIT_FAILURE, "the refocused run cannot be started");
+  assert.match(ended.out, /^singlet {7}selftest {2}fake-a {2}ok {11}computed$/m);
+  assert.match(ended.out, /^zoom-tele-f8 {2}selftest {2}fake-a {2}ok {11}computed$/m);
+  assert.match(
+    ended.err,
+    /^lvrtc run: run refocused was not started: finite-conjugate-unavailable: focus position 0\.5 /m,
+  );
+
+  const manifest = manifestOf(runsDir, "lv-pair");
+  const lv = join(rootDir, "lv");
+  assert.deepEqual(manifest.sources, {
+    lv: {
+      fingerprint: {
+        commit: null,
+        dirty: null,
+        engineClosureHash: closureOf(lv, FAKE_ENGINE_FILES),
+        engineFileCount: FAKE_ENGINE_FILES.length,
+      },
+      status: "unchanged",
+    },
+  });
+  assert.deepEqual(
+    manifest.runs.map((run) => [run.name, run.caseId !== null, run.problems.length]),
+    [
+      ["singlet", true, 0],
+      ["zoom-tele-f8", true, 0],
+      ["refocused", false, 1],
+    ],
+  );
+  const cases = readdirSync(join(runsDir, "lv-pair", CASES_DIRECTORY)).sort();
+  assert.deepEqual(cases, manifest.runs.flatMap((run) => (run.caseId === null ? [] : [`${run.caseId}.json`])).sort());
+  const stored = JSON.parse(
+    readFileSync(join(runsDir, "lv-pair", CASES_DIRECTORY, `${manifest.runs[0].caseId}.json`), "utf8"),
+  );
+  assert.equal(stored.provenance.source.lensKey, "acme-singlet-50");
+  assert.equal(stored.provenance.lv.closureHash, closureOf(lv, FAKE_ENGINE_FILES));
+
+  // Another process, another runs directory: the same manifest, byte for byte, and no path in it.
+  const elsewhere = join(tempDir(t), "runs");
+  lvrtcRun(elsewhere, [...args, "--json"], { env: { LVRTC_LV_PATH: "" } });
+  const text = readFileSync(join(runsDir, "lv-pair", MANIFEST_FILE), "utf8");
+  assert.equal(readFileSync(join(elsewhere, "lv-pair", MANIFEST_FILE), "utf8"), text);
+  assert.ok(!text.includes(rootDir) && !text.includes(runsDir));
+});
+
+test("a LensVisualizer file edited while the suite runs marks the manifest, warns and exits 1", (t) => {
+  // An engine that edits the lens file the first case was built from, whenever it is asked to run.
+  const editing = [
+    'import { appendFileSync } from "node:fs";',
+    `import { createEngine as createFake } from ${JSON.stringify(pathToFileURL(FAKE_ENGINE).href)};`,
+    "export function createEngine({ edits, ...options }) {",
+    "  const fake = createFake(options);",
+    "  return (message) => {",
+    '    if (message.method === "run") appendFileSync(edits, "// edited during the run\\n");',
+    "    return fake(message);",
+    "  };",
+    "}",
+    "",
+  ].join("\n");
+  const lensFile = FAKE_LENS_FILES[0][0];
+  // Every run of this suite starts, so nothing but the edit can make the command fail.
+  const suite = {
+    contract: CONTRACT_VERSION,
+    kind: "suite",
+    name: "lv-pair",
+    runs: [
+      { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
+      { name: "zoom", lens: { kind: "lv", key: "acme-zoom-24-48" } },
+    ],
+  };
+  const rootDir = lvRoot(t, {}, { "engines/editing.ts": editing, "suite.json": JSON.stringify(suite) });
+  const engines = { "fake-a": fake({ id: "fake-a", edits: join(rootDir, "lv", lensFile) }, "engines/editing.ts") };
+  writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ lvPath: "lv", engines }));
+  const runsDir = join(tempDir(t), "runs");
+  const ended = lvrtcRun(runsDir, [join(rootDir, "suite.json"), "--root", rootDir], { env: { LVRTC_LV_PATH: "" } });
+  assert.equal(ended.code, EXIT_FAILURE);
+  assert.ok(!ended.err.includes("was not started"), ended.err);
+  assert.ok(ended.err.includes(`lvrtc run: warning: case source lv changed during the run: ${lensFile}\n`), ended.err);
+  const manifest = manifestOf(runsDir, "lv-pair");
+  assert.equal(manifest.sources?.lv.status, SOURCE_CHANGED);
+  assert.deepEqual(
+    manifest.jobs.map((job) => job.status),
+    ["ok", "ok"],
+  );
 });

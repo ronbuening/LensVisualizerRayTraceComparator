@@ -1,8 +1,6 @@
 import { syntheticKind } from "./binding.ts";
+import { LV_FLAT_RADIUS } from "./exportShape.ts";
 import type { LvPreparedState } from "./types.ts";
-
-/** A radius beyond which LV's surface is a plane; LV writes a plane as 1e15. */
-const FLAT_RADIUS = 1e10;
 
 /** One surface of a prepared state, as `lvrtc lenses show` prints it. Lengths are in mm. */
 export interface SurfaceSummary {
@@ -52,7 +50,7 @@ export function summarizeState(state: LvPreparedState): StateSummary {
     surfaces: state.surfaces.map((surface, index) => ({
       index,
       label: surface.label,
-      R: Math.abs(surface.R) > FLAT_RADIUS ? null : surface.R,
+      R: Math.abs(surface.R) > LV_FLAT_RADIUS ? null : surface.R,
       d: surface.d,
       nd: surface.nd,
       sd: surface.sd,
