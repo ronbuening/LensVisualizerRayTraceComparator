@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 3,
+  "version": 4,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -31,6 +31,7 @@
       "class": "gated",
       "metrics": {
         "firstOrder.maxAbs": { "tolerance": 1e-9, "unit": "mm" },
+        "pupilRadius.maxScaled": { "tolerance": 1e-9, "unit": "mm" },
         "pupilZ.maxScaled": { "tolerance": 1e-9, "unit": "mm" }
       }
     },
@@ -39,7 +40,7 @@
       "mode": "identical-rays",
       "class": "gated",
       "metrics": {
-        "direction.maxAbs": { "tolerance": 1e-9, "unit": "1" },
+        "direction.maxAbs": { "tolerance": 1e-9, "unit": "1", "floor": { "limit": 1e-8, "agreement": 1e-12 } },
         "hits.maxDistance": { "tolerance": 1e-8, "unit": "mm", "floor": { "limit": 1e-7, "agreement": 1e-10 } },
         "landing.maxDistance": { "tolerance": 1e-8, "unit": "mm", "floor": { "limit": 1e-7, "agreement": 1e-10 } },
         "mask.mismatches": { "tolerance": 0, "unit": "rays" }

@@ -18,16 +18,24 @@ Line numbers are not quoted: LensVisualizer changes daily. The integration tests
 Measured numbers are of LensVisualizer commit `d36f44b3`; those of rungs R2 and R3 were taken at `3af45e3f`,
 whose engine files are the same, with two lens files corrected; those of the product MTF at `ed78cf40`, with the
 same engine files again. The engine closure the comparator states has grown with what it loads of LensVisualizer:
-it was `f6681074` (142 files) through rung R3, and is `1827eefe` (151 files) since the product MTF, the same 142
-and the nine files of LensVisualizer's MTF product, its aperture slider and its tab preferences. The committed
-digest of the benchmark was last written at `ed78cf40`, with that closure and the same cases, each named there by
-its content hash. Its figures are those of `3af45e3f` but for one lens, `sigma-35mm-f14-dg-hsm-a`, whose launch
-rays moved by 7e-15 mm when the ray sets took the MTF tab's own seed (below): its largest differences changed in
-the fifth digit, and no count changed.
+it was `f6681074` (142 files) through rung R3, and `1827eefe` (151 files) from the product MTF on, the same 142
+and the nine files of LensVisualizer's MTF product, its aperture slider and its tab preferences. It is `ff670f03`
+(the same 151 files) since LensVisualizer edited partial-dispersion fields in its glass catalogue: at `1ed8cc3d`
+every case of the benchmark has the content hash it had, and every figure of the digest is the same. The verdicts
+that policy version 4 changed (the floor of the exit direction, the radius of a far pupil) were measured at
+`1ed8cc3d`, closure `ff670f03`, while one lens file of that checkout was being edited, which no result here is of.
+The committed digest of the benchmark was last written at `23631dc0`, with that closure and the same cases, each
+named there by its content hash. Its figures are those of `3af45e3f` but for one lens, `sigma-35mm-f14-dg-hsm-a`,
+whose launch rays moved by 7e-15 mm when the ray sets took the MTF tab's own seed (below): its largest differences
+changed in the fifth digit, and no count changed. Since policy version 4 it has two more figures in R1, the radius
+of a pupil scaled and plain, and `firstOrder.maxAbs` is of the six values that are no pupil's: in the two rows of
+that lens it used to be a pupil's radius, which is now in the column of its own.
 
 Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
 60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
-sag, and the textbook vector form of Snell's law.
+sag, and the textbook vector form of Snell's law. For the pairs whose verdict policy version 4 changed, and for
+those it left failing, that was done again in the review of Stage 2.0, at closure `ff670f03` and in 50 digits,
+by a tracer written afresh, on every ray both engines land of each set and not on its worst ray alone.
 
 ## LensVisualizer
 
@@ -170,26 +178,50 @@ sag, and the textbook vector form of Snell's law.
   and the rays leave 54° off the axis, so the landing is 1.10e-8 mm off and the path to the image plane 2.07e-5
   waves: above both gates, with `ref` within 6e-15 mm and 2e-11 waves of the truth on that ray.
 - **Handled.** That is what `FLOOR` is for. A pair of `lv` above a gate is a floor when the arbiter `ref` agrees
-  with every other engine within 1e-10 mm and 1e-7 waves and `lv` is within 1e-7 mm and 2e-4 waves of `ref`
-  (`policy/rungs.v1.json`); it counts as a pass and is counted apart. In the suites, 4 of the 324 pairs of traced
-  rays of `features` are `FLOOR`, all of the Hologon at full field, at 470 nm and 510 nm; the benchmark has none.
+  with every other engine within 1e-10 mm, 1e-12 in direction and 1e-7 waves, and `lv` is within 1e-7 mm, 1e-8 in
+  direction and 2e-4 waves of `ref` (`policy/rungs.v1.json`): ten times each gate. It counts as a pass and is
+  counted apart. In the suites, 4 of the 324 pairs of traced rays of `features` are `FLOOR`, all of the Hologon at
+  full field, at 470 nm and 510 nm; the benchmark has none.
   Over the catalog, in one sweep outside the tests (868 lenses on their reference line and 808 on the photopic
-  lines, at up to three fields each: 14 370 ray sets, 16.4 million rays), 39 pairs are `FLOOR` in R2 and 24 in R3,
-  on eleven lenses. Ten are at their full field only. The eleventh, `fujinon-xf-23mm-f14-r`, is a floor at every
-  field, the axis included: its hits are 1.0e-8 mm to 1.6e-8 mm off at surface 21, where the 60-digit trace puts
-  `ref` 6e-13 mm from the truth on the worst ray of the axial pencil.
-- **Not handled, and failing.** The floor has limits, and a direction has none: a difference of direction above 1e-9
-  always fails. Five lenses of the catalog are beyond one or the other, in 19 pairs of R2 and one of R3, and those
-  pairs are `FAIL`, as they should be until someone decides otherwise. At their full field:
-  `apple-iphone-12-main-wide` (direction 2.9e-9 to 4.1e-9, with hits 1.1e-8 mm to 1.2e-8 mm off),
-  `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` (direction 1.1e-9 to 4.0e-9, hits up to 1.15e-7 mm and landings up to
-  1.20e-7 mm), `fujifilm-fujinon-xf-27mm-f28` at 510 nm (hits 1.8e-7 mm and direction 3.5e-9, on a ray that leaves a
-  surface 3° short of the perpendicular to the axis) and `leica-apo-summicron-m-35f2` at 555 nm (direction 1.8e-9,
-  landing 2.0e-7 mm and 3.3e-4 waves behind an exit 64° off the axis). At half its field, on the photopic lines only:
-  `apple-iphone-7-wide-camera-lens` (direction 1.0e-9 to 1.4e-9, with every hit within its gate). In each, the
-  60-digit trace puts `ref` between 5e-15 mm and 6e-13 mm from the truth and `lv` the rest. None is in a suite. A
-  tighter or caller-set intersection tolerance in LensVisualizer would turn every one of them, and every `FLOOR`, into
-  a `PASS`.
+  lines, at up to three fields each: 14 370 ray sets, 9.5 million rays that both engines land), 53 pairs are
+  `FLOOR` in R2 and 24 in R3, on thirteen lenses. Eleven are at their full field only. One,
+  `fujinon-xf-23mm-f14-r`, is a floor at every field, the axis included: its hits are 1.0e-8 mm to 1.6e-8 mm off at
+  surface 21, where the 60-digit trace puts `ref` 6e-13 mm from the truth on the worst ray of the axial pencil. Two
+  of the thirteen are floors by the direction a ray leaves in, which had no floor until policy version 4 (the
+  plan, "Amendments since approval") and so always failed: `apple-iphone-12-main-wide` at its full field, on every
+  line (direction 2.9e-9 to 4.1e-9, with hits 1.06e-8 mm to 1.21e-8 mm off and every landing and path inside its
+  gate), and `apple-iphone-7-wide-camera-lens` at half its field, on the photopic lines only (direction 1.02e-9
+  to 1.44e-9, with every hit and landing within its gate). The largest direction of any floor is 4.07e-9, under
+  half the limit. On every ray of those eleven sets (7561 rays) the 50-digit trace puts `ref` within 3.8e-14 mm
+  of the truth in every hit and landing and within 1.5e-14 in direction: the whole of each figure is
+  LensVisualizer's.
+- **Not handled, and failing.** The floor has limits. Three lenses of the catalog are beyond one, in five pairs of R2
+  and one of R3, and those pairs are `FAIL`, as they should be: nothing was widened for them, and each is a finding
+  about LensVisualizer. All are at the full field: `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` at three of its six lines (a
+  landing 1.02e-7 mm off at the d line and 1.04e-7 mm at 650 nm, a hit 1.15e-7 mm and a landing 1.20e-7 mm off at 470
+  nm; at 555 nm, 510 nm and 610 nm its hits, 2.5e-8 mm to 7.3e-8 mm off, and its directions, 1.1e-9 to 2.7e-9, are
+  within the limits, and those three pairs are `FLOOR` since the direction has one), `fujifilm-fujinon-xf-27mm-f28` at
+  510 nm (a hit 1.79e-7 mm off, with a direction of 3.5e-9 that is within its limit, on a ray that leaves a surface 3°
+  short of the perpendicular to the axis) and `leica-apo-summicron-m-35f2` at 555 nm (a landing 1.96e-7 mm and a path
+  3.3e-4 waves off behind an exit 64° off the axis, with every hit inside its gate). In each, the 60-digit trace puts
+  `ref` between 5e-15 mm and 6e-13 mm from the truth on the worst ray and `lv` the rest. Over every ray of those sets,
+  in the 50-digit trace: `ref` is within 1.7e-11 mm and 4.9e-13 in direction on all six lines of the zoom (3826 rays;
+  its worst is the ray of 650 nm on which `lv` is 1.0e-7 mm off), within 7.3e-13 mm and 2.4e-14 on
+  `fujifilm-fujinon-xf-27mm-f28`, and within 4.6e-12 mm of landing, 4.2e-14 in direction and 7.6e-9 waves on the Leica.
+  None is in a suite. A tighter or caller-set intersection tolerance in LensVisualizer would turn every one of them, and
+  every `FLOOR`, into a `PASS`.
+- **To watch with a third engine.** A floor needs every other engine within 1e-12 of `ref` in direction, a thousandth of
+  the gate, where a length has a hundredth. On the zoom above `ref` itself is up to 4.9e-13 from the truth in direction,
+  half of that agreement, so an engine as exact as `ref` may be more than 1e-12 from it there: the three pairs of that
+  zoom that are floors would then be `FAIL`, by the condition and not by a defect of either. Nothing is widened for it
+  ahead of a measurement. On the Hologon, whose floors are the ones in a suite, `ref` is within 6.5e-16 of the truth in
+  direction, 4.0e-14 mm in landing and 7.9e-11 waves on every ray of its full field.
+- **Before and after policy version 4**, over that sweep at `1ed8cc3d`: R2 had 14 235 `PASS`, 39 `FLOOR` and 96
+  `FAIL`, and has 14 235, 53 and 82; R3 has 14 345, 24 and 1, as it had. The 14 pairs that changed are the six of
+  `apple-iphone-12-main-wide`, the five of `apple-iphone-7-wide-camera-lens` and three of
+  `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr`: each had a direction between 1.0e-9 and 4.1e-9 as its only figure
+  without a floor. No other verdict moved. Of the 82 that fail, 77 are rays LensVisualizer loses where two
+  surfaces cross (below), which no floor reaches.
 - **Class.** numerical.
 
 ### A total internal reflection is "failed", and a miss is "failed" until it is proven
@@ -473,12 +505,21 @@ sag, and the textbook vector form of Snell's law.
   reports both figures, `pupilZ.maxAbs` and `pupilZ.maxScaled`, and judges the second. On this lens the exit
   pupils are 1.09e-9 mm apart at the d line and 3.03e-9 mm at 650 nm, which on the scale of their distance is
   1.4e-10 and 2.1e-10: its reference-line case passes R1.
-- **Not handled, and failing.** The radius of that pupil is as large as it is far: 3.4 m at the d line and 6.3 m at
-  650 nm, the same quotient. There the two engines hold 4.8e-10 mm and 1.35e-9 mm apart, 2e-13 of the radius. The
-  amendment is of a pupil's position, and every other value keeps the plain 1e-9 mm, so the photopic case of this
-  one lens still fails R1, by `exitPupilSemiDiameter` at 650 nm. Judging the radius of a pupil on the scale of the
-  pupil's distance, as its position is, would pass it; that is a change of the gate, and the owner's to make. An
-  integration test pins both halves (`test/integration/lv/engine.test.ts`). Over the 1676 cases of the catalog it
-  is the only pair that fails R1; every value of every other lens that is not a pupil's position is within
-  1.1e-11 mm, and every other pupil position within 1.9e-11 mm.
+- **The radius of that pupil** is as large as it is far: 3.4 m at the d line and 6.3 m at 650 nm, the same quotient.
+  There the two engines hold 4.8e-10 mm and 1.35e-9 mm apart, 2e-13 of the radius. In exact rational arithmetic, as for
+  the position, neither is wrong: with the gaps taken as exact `lv` is within 1.6e-9 mm of the radius at every line and
+  `ref` within 2.2e-9 mm (both at 610 nm), and at 650 nm 1.2e-10 mm and 1.5e-9 mm. With the vertices of the case taken
+  as exact in their place, which are the sums of those gaps and one rounding from them, the exact radius is another by
+  6e-10 mm at 650 nm and by 1.2e-9 mm at 610 nm, and `lv` is then 5.2e-10 mm above it at 650 nm and `ref` 8.3e-10 mm
+  below: what the radius is, to 1e-9 mm, depends on which of two equal statements of the lens is read. While only the
+  position of a pupil was judged on the scale of its distance, the photopic case of this one lens failed R1, by
+  `exitPupilSemiDiameter` at 650 nm, the only pair of the catalog that did. Since policy version 4 the radius of a pupil
+  is judged as its position is, on the scale of the distance of the pupil it is the radius of (`pupilRadius.maxScaled`,
+  with the plain figure `pupilRadius.maxAbs` beside it): 6.3e-11 at the d line and, with the pupil 14 m from the image
+  plane at 650 nm, 9.4e-11. The lens passes R1 entirely, and so does every one of the 1676 cases of the catalog (at
+  `1ed8cc3d`). It is a scale and no excuse: a radius is scaled by the distance of its own pupil and not by its own size,
+  the radius of a pupil within a metre of the image plane keeps the plain 1e-9 mm, and on this lens 1e-11 of the
+  distance still fails. An integration test pins all of it (`test/integration/lv/engine.test.ts`). Every value of every
+  lens that is neither the position nor the radius of a pupil is within 1.1e-11 mm; every other pupil position is within
+  1.9e-11 mm, and every other pupil radius within 4.2e-12 mm.
 - **Class.** numerical.

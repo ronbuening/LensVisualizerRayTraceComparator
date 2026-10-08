@@ -289,7 +289,7 @@ test("the Markdown names the two engines with their hashes, then each rung's wor
   assert.ok(markdown.includes(`| ref | ${"e".repeat(64)} | — | sourceFiles 12 |`));
   assert.ok(markdown.includes(`\n| Run | Case |\n|---|---|\n| wide | ${CASE} |\n| tele | ${TELE_CASE} |\n\n## Worst`));
   assert.ok(!markdown.includes("never-compared"));
-  assert.match(markdown, /^\| Policy \| rungs v3 \|$/m);
+  assert.match(markdown, /^\| Policy \| rungs v4 \|$/m);
   assert.match(markdown, /^Quantity `rays\.trace`: 4 pairs, 2 PASS, 1 FLOOR, 1 FAIL\.$/m);
   // The worst figure of a rung, with its run and its place; a count has neither.
   assert.match(markdown, /^\| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| 2\.00e-13 \| wide \| line 0, quantity efl \|$/m);

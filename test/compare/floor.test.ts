@@ -26,6 +26,14 @@ function offBy(mm: number, from: RaysTraceData = BASE): RaysTraceData {
   return changed(from, (arrays) => void (arrays.hits[hitAt(arrays, 1, 2) + 2] += mm));
 }
 
+/**
+ * A trace whose exit direction of ray 2 is `by` from the base's in its x component, which is -0.0041 there: a
+ * difference of a component of a unit vector, as an engine that met a steep surface a little way off reports it.
+ */
+function turnedBy(by: number, from: RaysTraceData = BASE): RaysTraceData {
+  return changed(from, (arrays) => void (arrays.exitDirection[3 * 2] += by));
+}
+
 /** A trace whose path of ray 1 to the image is `waves` waves of the first line longer than the base's. */
 function longerBy(waves: number): RaysTraceData {
   return changed(BASE, (arrays) => void (arrays.opticalPathToImage[1] += waves * WAVE_MM[0]));
@@ -59,6 +67,14 @@ test("the policy gives lv a floor against ref, in the two rungs of traced rays, 
     assert.deepEqual(POLICY.rungs[rung].floor, { engine: "lv", arbiter: "ref" });
   assert.deepEqual(POLICY.rungs.r2.metrics["hits.maxDistance"].floor, { limit: 1e-7, agreement: 1e-10 });
   assert.deepEqual(POLICY.rungs.r3.metrics["opticalPathToImage.maxAbs"].floor, { limit: 2e-4, agreement: 1e-7 });
+  // The exit direction: ten times its gate of 1e-9, where every other engine is within 1e-12 of ref.
+  assert.deepEqual(POLICY.rungs.r2.metrics["direction.maxAbs"], {
+    tolerance: 1e-9,
+    unit: "1",
+    floor: { limit: 1e-8, agreement: 1e-12 },
+  });
+  // Which rays got through has no floor: a count is right or it is not.
+  assert.equal(POLICY.rungs.r2.metrics["mask.mismatches"].floor, undefined);
 });
 
 test("lv against ref, a hit 3e-8 mm off: above the gate, within the floor's limit, and so FLOOR", () => {
@@ -70,7 +86,8 @@ test("lv against ref, a hit 3e-8 mm off: above the gate, within the floor's limi
   assert.equal(
     pair.reason,
     "hits.maxDistance 3.00e-8 exceeds its tolerance 1.00e-8 at field 0, line 0, ray 2, surface 1; floor of lv: " +
-      "lv against ref hits.maxDistance 3.00e-8 within 1.00e-7, lv against ref landing.maxDistance 0 within 1.00e-7",
+      "lv against ref direction.maxAbs 0 within 1.00e-8, lv against ref hits.maxDistance 3.00e-8 within 1.00e-7, " +
+      "lv against ref landing.maxDistance 0 within 1.00e-7",
   );
   // The metrics are the pair's own, as measured.
   assert.ok(Math.abs((pair.metrics[0].value ?? 0) - 3e-8) < 1e-14);
@@ -126,13 +143,15 @@ test("three engines: lv is FLOOR against ref and against the engine that agrees 
   assert.equal(
     pairs["lv ref"].reason,
     "hits.maxDistance 3.00e-8 exceeds its tolerance 1.00e-8 at field 0, line 0, ray 2, surface 1; floor of lv: " +
+      "optiland against ref direction.maxAbs 0 within 1.00e-12, " +
       "optiland against ref hits.maxDistance 5.00e-11 within 1.00e-10, " +
       "optiland against ref landing.maxDistance 0 within 1.00e-10, " +
-      "lv against ref hits.maxDistance 3.00e-8 within 1.00e-7, lv against ref landing.maxDistance 0 within 1.00e-7",
+      "lv against ref direction.maxAbs 0 within 1.00e-8, lv against ref hits.maxDistance 3.00e-8 within 1.00e-7, " +
+      "lv against ref landing.maxDistance 0 within 1.00e-7",
   );
   assert.match(
     pairs["lv optiland"].reason ?? "",
-    /^hits\.maxDistance 2\.99e-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: optiland against ref hits\.maxDistance 5\.00e-11 within 1\.00e-10, .*lv against ref hits\.maxDistance 3\.00e-8 within 1\.00e-7/,
+    /^hits\.maxDistance 2\.99e-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: optiland against ref direction\.maxAbs 0 within 1\.00e-12, optiland against ref hits\.maxDistance 5\.00e-11 within 1\.00e-10, .*lv against ref hits\.maxDistance 3\.00e-8 within 1\.00e-7/,
   );
 });
 
@@ -173,7 +192,7 @@ test("only a pair of lv can be a floor: two other engines that far apart FAIL, w
   assert.match(pairs["lv optiland"].reason ?? "", /; not a floor of lv: optiland does not agree with ref: /);
 });
 
-test("a metric without a floor never is one: a mask mismatch, a direction, or a number that is none", () => {
+test("a metric without a floor never is one: a mask mismatch, or a number that is none", () => {
   // The hit is within the floor, and a ray is clipped by one engine well inside the stop.
   const masked = changed(offBy(3e-8), (arrays) => stopAt(arrays, 3, 2));
   const withRadius = changed(BASE, (arrays) => hitRadius(arrays, 2, 3, STOP_CLIP - 0.5));
@@ -186,11 +205,14 @@ test("a metric without a floor never is one: a mask mismatch, a direction, or a 
   // In the rim band the same ray is no mismatch, and the pair is the floor it otherwise is.
   const atRim = changed(BASE, (arrays) => hitRadius(arrays, 2, 3, STOP_CLIP - 1e-9));
   assert.equal(pairsOf(groupOf("r2", [tracer("lv", masked), tracer("ref", atRim)]))["lv ref"].verdict, "FLOOR");
-
-  const turned = changed(BASE, (arrays) => void (arrays.exitDirection[3 * 2] += 5e-9));
-  const direction = pairsOf(groupOf("r2", [tracer("lv", turned), tracer("ref", BASE)]))["lv ref"];
-  assert.equal(direction.verdict, "FAIL");
-  assert.match(direction.reason ?? "", /; not a floor of lv: direction\.maxAbs has no floor$/);
+  // Nor does the direction's floor reach the mask: a direction within its floor, and the same ray clipped.
+  const turnedAndMasked = changed(turnedBy(5e-9), (arrays) => stopAt(arrays, 3, 2));
+  const both = pairsOf(groupOf("r2", [tracer("lv", turnedAndMasked), tracer("ref", withRadius)]))["lv ref"];
+  assert.equal(both.verdict, "FAIL");
+  assert.match(
+    both.reason ?? "",
+    /^direction\.maxAbs 5\.00e-9 exceeds .*; not a floor of lv: mask\.mismatches has no floor$/,
+  );
 
   const broken = changed(BASE, (arrays) => void (arrays.hits[hitAt(arrays, 1, 2)] = NaN));
   const nan = pairsOf(groupOf("r2", [tracer("lv", broken), tracer("ref", BASE)]))["lv ref"];
@@ -199,6 +221,168 @@ test("a metric without a floor never is one: a mask mismatch, a direction, or a 
     nan.reason ?? "",
     /^hits\.maxDistance is NaN at .*; not a floor of lv: hits\.maxDistance is not a number$/,
   );
+  // A direction that is no number is no floor either.
+  const lost = changed(BASE, (arrays) => void (arrays.exitDirection[3 * 2] = NaN));
+  const none = pairsOf(groupOf("r2", [tracer("lv", lost), tracer("ref", BASE)]))["lv ref"];
+  assert.equal(none.verdict, "FAIL");
+  assert.match(
+    none.reason ?? "",
+    /^direction\.maxAbs is NaN at .*; not a floor of lv: direction\.maxAbs is not a number$/,
+  );
+});
+
+test("the exit direction, lv against ref: 5e-9 is above the gate and within the floor's limit, and so FLOOR", () => {
+  const pairs = pairsOf(groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("ref", BASE)]));
+  const pair = pairs["lv ref"];
+  assert.equal(pair.verdict, "FLOOR");
+  // Nothing else is off: the positions of the same rays are the base's, and the reason states each figure.
+  assert.equal(
+    pair.reason,
+    "direction.maxAbs 5.00e-9 exceeds its tolerance 1.00e-9 at field 0, line 0, ray 2; floor of lv: " +
+      "lv against ref direction.maxAbs 5.00e-9 within 1.00e-8, lv against ref hits.maxDistance 0 within 1.00e-7, " +
+      "lv against ref landing.maxDistance 0 within 1.00e-7",
+  );
+  // Within the gate there is nothing to attribute: PASS, not FLOOR.
+  const within = pairsOf(groupOf("r2", [tracer("lv", turnedBy(9e-10)), tracer("ref", BASE)]))["lv ref"];
+  assert.deepEqual([within.verdict, within.reason], ["PASS", undefined]);
+  // The same in the other mode, with the reference named either way.
+  for (const reference of ["lv", "ref"]) {
+    const set = compareGroup(
+      groupOf("r2", [tracer("ref", BASE), tracer("lv", turnedBy(5e-9))]),
+      "reference-vs-each",
+      reference,
+    );
+    assert.deepEqual([set.pairs[0].verdict, set.pairs[0].reason], ["FLOOR", pair.reason], reference);
+  }
+  // Only lv has the floor: another engine as far from ref fails, and lv's pair with it is no floor of lv.
+  const others = pairsOf(groupOf("r2", [tracer("lv", BASE), tracer("optiland", turnedBy(5e-9)), tracer("ref", BASE)]));
+  assert.equal(others["optiland ref"].verdict, "FAIL");
+  assert.equal(
+    others["optiland ref"].reason,
+    "direction.maxAbs 5.00e-9 exceeds its tolerance 1.00e-9 at field 0, line 0, ray 2",
+  );
+  assert.equal(others["lv ref"].verdict, "PASS");
+  assert.equal(others["lv optiland"].verdict, "FAIL");
+});
+
+test("the exit direction, condition 3: lv beyond ten times the gate is no floor, and the limit is inclusive", () => {
+  const pair = pairsOf(groupOf("r2", [tracer("lv", turnedBy(2e-8)), tracer("ref", BASE)]))["lv ref"];
+  assert.equal(pair.verdict, "FAIL");
+  assert.equal(
+    pair.reason,
+    "direction.maxAbs 2.00e-8 exceeds its tolerance 1.00e-9 at field 0, line 0, ray 2; " +
+      "not a floor of lv: direction.maxAbs against ref 2.00e-8 exceeds the floor limit 1.00e-8",
+  );
+  // The policy's own limit, from both sides.
+  const verdictOf = (by: number): string =>
+    pairsOf(groupOf("r2", [tracer("lv", turnedBy(by)), tracer("ref", BASE)]))["lv ref"].verdict;
+  assert.deepEqual([9.9e-9, 1.01e-8].map(verdictOf), ["FLOOR", "FAIL"]);
+
+  // To the last bit: ray 0 starts on the meridional plane, so the x component of its direction is 0 in the base,
+  // and a component of 2^-27 is that far from it exactly.
+  const policy: RungPolicy = {
+    ...POLICY.rungs.r2,
+    metrics: {
+      ...POLICY.rungs.r2.metrics,
+      "direction.maxAbs": { tolerance: 1e-9, unit: "1", floor: { limit: 2 ** -27, agreement: 1e-12 } },
+    },
+  };
+  const verdictAt = (component: number): string => {
+    const lv = changed(BASE, (arrays) => {
+      assert.equal(arrays.exitDirection[0], 0);
+      arrays.exitDirection[0] = component;
+    });
+    return pairsOf(groupOf("r2", [tracer("lv", lv), tracer("ref", BASE)], policy))["lv ref"].verdict;
+  };
+  assert.equal(verdictAt(2 ** -27), "FLOOR");
+  assert.equal(verdictAt(2 ** -27 * (1 + 2 ** -52)), "FAIL");
+});
+
+test("the exit direction, condition 2: a third engine must agree with ref within 1e-12 in direction", () => {
+  // The third engine's direction is 5e-13 from ref's: its own rounding, and a witness that ref is right.
+  const near = pairsOf(
+    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(5e-13)), tracer("ref", BASE)]),
+  );
+  assert.equal(near["optiland ref"].verdict, "PASS");
+  assert.equal(near["lv ref"].verdict, "FLOOR");
+  assert.equal(near["lv optiland"].verdict, "FLOOR");
+  assert.equal(
+    near["lv ref"].reason,
+    "direction.maxAbs 5.00e-9 exceeds its tolerance 1.00e-9 at field 0, line 0, ray 2; floor of lv: " +
+      "optiland against ref direction.maxAbs 5.00e-13 within 1.00e-12, " +
+      "optiland against ref hits.maxDistance 0 within 1.00e-10, " +
+      "optiland against ref landing.maxDistance 0 within 1.00e-10, " +
+      "lv against ref direction.maxAbs 5.00e-9 within 1.00e-8, lv against ref hits.maxDistance 0 within 1.00e-7, " +
+      "lv against ref landing.maxDistance 0 within 1.00e-7",
+  );
+
+  // 2e-12 from ref is far inside the gate, so that engine passes against ref, and outside the agreement: it
+  // leaves open whose rounding lv's excess is.
+  const apart = pairsOf(
+    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
+  );
+  assert.equal(apart["optiland ref"].verdict, "PASS");
+  for (const name of ["lv ref", "lv optiland"]) {
+    assert.equal(apart[name].verdict, "FAIL", name);
+    assert.match(
+      apart[name].reason ?? "",
+      /^direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 at .*; not a floor of lv: optiland does not agree with ref: direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
+    );
+  }
+  // The witness is held to every metric that has floor limits, whichever of them lv exceeds: a hit of lv that is
+  // within its floor is no floor while another engine's direction is not ref's.
+  const hit = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
+  );
+  assert.equal(hit["lv ref"].verdict, "FAIL");
+  assert.match(
+    hit["lv ref"].reason ?? "",
+    /^hits\.maxDistance 3\.00e-8 exceeds .*; not a floor of lv: optiland does not agree with ref: direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
+  );
+  // And a direction of lv within its floor is none while another engine's hits are not ref's.
+  const direction = pairsOf(
+    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", offBy(3e-10)), tracer("ref", BASE)]),
+  );
+  assert.equal(direction["lv ref"].verdict, "FAIL");
+  assert.match(
+    direction["lv ref"].reason ?? "",
+    /; not a floor of lv: optiland does not agree with ref: hits\.maxDistance 3\.00e-10 exceeds 1\.00e-10$/,
+  );
+});
+
+test("a direction and a position above their gates together: FLOOR when both are within their limits, FAIL when either is not", () => {
+  const verdictOf = (hitMm: number, direction: number) =>
+    pairsOf(groupOf("r2", [tracer("lv", turnedBy(direction, offBy(hitMm))), tracer("ref", BASE)]))["lv ref"];
+
+  // Both above their gates, both within their limits: one floor, and the reason names both excesses.
+  const both = verdictOf(3e-8, 5e-9);
+  assert.equal(both.verdict, "FLOOR");
+  assert.equal(
+    both.reason,
+    "direction.maxAbs 5.00e-9 exceeds its tolerance 1.00e-9 at field 0, line 0, ray 2; " +
+      "hits.maxDistance 3.00e-8 exceeds its tolerance 1.00e-8 at field 0, line 0, ray 2, surface 1; floor of lv: " +
+      "lv against ref direction.maxAbs 5.00e-9 within 1.00e-8, lv against ref hits.maxDistance 3.00e-8 within 1.00e-7, " +
+      "lv against ref landing.maxDistance 0 within 1.00e-7",
+  );
+  // The position beyond its limit: the direction's floor does not carry it.
+  const hitBeyond = verdictOf(1.5e-7, 5e-9);
+  assert.equal(hitBeyond.verdict, "FAIL");
+  assert.match(
+    hitBeyond.reason ?? "",
+    /; not a floor of lv: hits\.maxDistance against ref 1\.50e-7 exceeds the floor limit 1\.00e-7$/,
+  );
+  // The direction beyond its limit: the position's floor does not carry it.
+  const directionBeyond = verdictOf(3e-8, 2e-8);
+  assert.equal(directionBeyond.verdict, "FAIL");
+  assert.match(
+    directionBeyond.reason ?? "",
+    /; not a floor of lv: direction\.maxAbs against ref 2\.00e-8 exceeds the floor limit 1\.00e-8$/,
+  );
+  // A position above its gate with a direction inside its own gate is the floor it always was, and the other way
+  // round: each metric's limit is held whether or not the metric is above its tolerance.
+  assert.equal(verdictOf(3e-8, 5e-10).verdict, "FLOOR");
+  assert.equal(verdictOf(5e-9, 5e-9).verdict, "FLOOR");
+  assert.deepEqual([verdictOf(5e-9, 5e-10).verdict, verdictOf(5e-9, 5e-10).reason], ["PASS", undefined]);
 });
 
 test("without the arbiter there is nothing to hold lv to: a pair above its gate FAILs and says so", () => {

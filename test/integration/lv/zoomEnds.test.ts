@@ -140,7 +140,16 @@ test(
     const threw: string[] = [];
     const notExportable: Record<string, Map<string, string[]>> = { wide: new Map(), tele: new Map() };
     const counts = { zooms: 0, wide: 0, tele: 0 };
-    const worst = { sag: 0, sagAt: "", firstOrder: 0, firstOrderAt: "", pupil: 0, pupilAt: "" };
+    const worst = {
+      sag: 0,
+      sagAt: "",
+      firstOrder: 0,
+      firstOrderAt: "",
+      pupil: 0,
+      pupilAt: "",
+      radius: 0,
+      radiusAt: "",
+    };
     const failed: string[] = [];
     let judgedCases = 0;
     for (const entry of entries) {
@@ -187,8 +196,10 @@ test(
               if (sag > worst.sag) Object.assign(worst, { sag, sagAt: at });
             } else {
               const [plain, pupil] = [metricOf(pair, "firstOrder.maxAbs"), metricOf(pair, "pupilZ.maxScaled")];
+              const radius = metricOf(pair, "pupilRadius.maxScaled");
               if (plain > worst.firstOrder) Object.assign(worst, { firstOrder: plain, firstOrderAt: at });
               if (pupil > worst.pupil) Object.assign(worst, { pupil, pupilAt: at });
+              if (radius > worst.radius) Object.assign(worst, { radius, radiusAt: at });
             }
           }
         }
@@ -212,7 +223,8 @@ test(
     t.diagnostic(
       `tele end, ${judgedCases} cases on the reference and photopic lines: worst R0 sag.maxScaled ${worst.sag} ` +
         `(${worst.sagAt}); worst R1 firstOrder.maxAbs ${worst.firstOrder} mm (${worst.firstOrderAt}); worst R1 ` +
-        `pupilZ.maxScaled ${worst.pupil} (${worst.pupilAt}); not PASS: ${failed.join("; ") || "none"}`,
+        `pupilZ.maxScaled ${worst.pupil} (${worst.pupilAt}); worst R1 pupilRadius.maxScaled ${worst.radius} ` +
+        `(${worst.radiusAt}); not PASS: ${failed.join("; ") || "none"}`,
     );
     assert.deepEqual(threw, [], "exporting a zoom at an end threw");
     assert.ok(counts.zooms > 250, `about 297 zooms, found ${counts.zooms}`);

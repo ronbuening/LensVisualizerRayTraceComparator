@@ -102,7 +102,7 @@
       ],
       "class": "gated",
       "verdict": "FLOOR",
-      "reason": "landing.maxDistance 1.25e-8 exceeds its tolerance 1.00e-8 at field 54, line 0, ray 4; floor of lv: lv against ref hits.maxDistance 2.50e-9 within 1.00e-7, lv against ref landing.maxDistance 1.25e-8 within 1.00e-7"
+      "reason": "landing.maxDistance 1.25e-8 exceeds its tolerance 1.00e-8 at field 54, line 0, ray 4; floor of lv: lv against ref direction.maxAbs 2.00e-10 within 1.00e-8, lv against ref hits.maxDistance 2.50e-9 within 1.00e-7, lv against ref landing.maxDistance 1.25e-8 within 1.00e-7"
     }
   ]
 }

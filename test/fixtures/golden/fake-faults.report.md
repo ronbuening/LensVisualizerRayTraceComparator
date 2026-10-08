@@ -7,8 +7,8 @@
 | Suite | fake-faults |
 | Suite hash | d0a97adbd49af2fa7095fb5733b69d9e1f76813ad91912feec9f99f6f432d7f9 |
 | Contract version | 1.0 |
-| Policy | rungs v3 |
-| Policy hash | f410813933d1b8a408aaa2c0d912802e10b818c83940926b1d9b1516e98da902 |
+| Policy | rungs v4 |
+| Policy hash | 01abb393f5fd737168b05920418e8e79d4c921e26adb994b1062d559ea5cbfbb |
 
 ### Engines
 
@@ -119,7 +119,8 @@ in every rung after that one.
 
 A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band
 of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric
-without a limit is shown and not judged.
+without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that
+one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.
 Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
 A recorded value has 9 significant digits, or is a whole number in full, and is named with the index of its
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.

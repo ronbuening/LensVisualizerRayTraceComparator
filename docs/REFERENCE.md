@@ -178,19 +178,22 @@ the kernels of the comparator they run on. It declares every feature of a case, 
 - **A failed R0 blocks the later rungs** for that pair of engines on that case: two engines that built different
   systems differ in everything after it, and each such difference would be the first one again. The pair is
   `BLOCKED` there, with the rung that blocks it as the reason.
-- **R1** has two gates of 1e-9 mm. `firstOrder.maxAbs` is the largest difference of the eight values that are not
-  the position of a pupil, at any line, and names the value and the line. The position of a pupil is judged on the
-  scale of its distance from the image plane: `pupilZ.maxScaled` is the plain difference for a pupil within a
-  metre of it, and 1e-12 of the distance beyond; the plain figure, `pupilZ.maxAbs`, is shown beside it. A pupil
-  20 m away is a quotient that no arithmetic in doubles places to 1e-9 mm (the plan, "Amendments since
-  approval"). What an engine only knows for itself, such as LensVisualizer's stored pupil constants, travels as
-  `recorded`: a report lists it side by side and nothing judges it. On the Double-Gauss fixture `ref` gives
-  optiland's focal length, 100.00372050801042 mm, to the last digit; its cardinal points and those of
-  LensVisualizer's first-order module differ by at most 2.7e-13 mm on the benchmark and feature suites, and by at
-  most 1.1e-11 mm over all 868 exported lenses (at `d36f44b3`). Its pupils and those of LensVisualizer's paraxial
-  kernel, at the reference line and the five photopic lines, differ by at most 1.9e-11 mm on every lens but one:
-  `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away, and there the two
-  differ by up to 3.0e-9 mm, which is 2e-13 of the distance and passes on that scale.
+- **R1** has three gates of 1e-9 mm. `firstOrder.maxAbs` is the largest difference of the six values that are
+  neither the position nor the radius of a pupil, at any line, and names the value and the line. The position of a
+  pupil is judged on the scale of its distance from the image plane: `pupilZ.maxScaled` is the plain difference for
+  a pupil within a metre of it, and 1e-12 of the distance beyond; the plain figure, `pupilZ.maxAbs`, is shown beside
+  it. A pupil 20 m away is a quotient that no arithmetic in doubles places to 1e-9 mm. The radius of a pupil is the
+  stop's radius times the same quotient, so it is judged on the same scale, the distance of the pupil it is the
+  radius of: `pupilRadius.maxScaled`, with `pupilRadius.maxAbs` beside it. The radius of a pupil within a metre of
+  the image plane keeps the plain 1e-9 mm, and a pupil at the same infinity in both engines is equal, in position
+  and in radius (the plan, "Amendments since approval"). What an engine only knows for itself, such as
+  LensVisualizer's stored pupil constants, travels as `recorded`: a report lists it side by side and nothing judges
+  it. On the Double-Gauss fixture `ref` gives optiland's focal length, 100.00372050801042 mm, to the last digit; its
+  cardinal points and those of LensVisualizer's first-order module differ by at most 2.7e-13 mm on the benchmark and
+  feature suites, and by at most 1.1e-11 mm over all 868 exported lenses (at `d36f44b3`). Its pupils and those of
+  LensVisualizer's paraxial kernel, at the reference line and the five photopic lines, differ by at most 1.9e-11 mm
+  on every lens but one: `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away,
+  and there the two differ by up to 3.0e-9 mm, which is 2e-13 of the distance and passes on that scale.
 - **No first-order data.** An afocal system and a surface with a term of power 1 are answered `unsupported`, with
   the item `system.afocal` or `surface.asphere.linear-term`.
 
@@ -243,13 +246,14 @@ Measured at LensVisualizer `d36f44b3`, with `lvrtc run <suite> --engines lv,ref 
 | `features`, 18 runs with a case (its zoom at both ends; measured again at `ed78cf40`) | 72 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 2.7e-16 scaled, `odd-asphere-ref` surface 1 | 5.3e-14 mm, the front focal point of `odd-asphere-photopic` at 610 nm; of a pupil's position 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-photopic-tele` |
 
 Everything R0 holds to equality is equal: no vertex, curvature, conic constant, term, clip radius, sag radius or
-index differs in any pair. Over the whole catalog, 1676 cases of 868 lenses, every case passes R0 and every case
-but one passes R1. `viltrox-af-75mm-f12-pro` is nearly telecentric: its exit pupil lies 7.7 m behind the lens at
-the d line and 14 m in front of it at 650 nm, and the two engines place it 1.1e-9 mm and 3.0e-9 mm apart there,
-which on the scale of its distance is 1.4e-10 and 2.1e-10 and passes. What still fails is the radius of that
-pupil at 650 nm: 6.3 m, of which the two hold 1.35e-9 mm apart, 2e-13 of it, where the gate of every value that is
-not a pupil's position is a plain 1e-9 mm. The lens is in neither suite; the entry in
-[docs/gotchas.md](gotchas.md) says what would judge it rightly.
+index differs in any pair. Over the whole catalog, 1676 cases of 868 lenses, every case passes R0 and R1.
+`viltrox-af-75mm-f12-pro` is nearly telecentric: its exit pupil lies 7.7 m behind the lens at the d line and 14 m
+in front of it at 650 nm, and the two engines place it 1.1e-9 mm and 3.0e-9 mm apart there, which on the scale of
+its distance is 1.4e-10 and 2.1e-10 and passes. The radius of that pupil is 6.3 m at 650 nm, of which the two
+hold 1.35e-9 mm apart, 2e-13 of it: on the scale of the pupil's distance 9.4e-11, which passes since the radius of
+a pupil is judged as its position is (policy version 4; measured at `1ed8cc3d`, engine closure `ff670f03`). Before
+that it was the one case of the catalog that failed R1. The lens is in neither suite; see
+[docs/gotchas.md](gotchas.md).
 
 ## Rays
 
@@ -334,8 +338,11 @@ path altogether (`unsupported-path`), which is one problem for each of them.
   measured, the pair says so, and the two raw paths are judged alone.
 - **`FLOOR`.** LensVisualizer meets a surface within 1e-9 mm of it, and a steep surface behind makes more of that.
   A pair of `lv` that is above a gate is `FLOOR`, a pass that is counted apart, when the arbiter `ref` agrees with
-  every other engine within 1e-10 mm and 1e-7 waves and `lv` is within 1e-7 mm and 2e-4 waves of `ref`; otherwise
-  it is `FAIL`. The limits are in `policy/rungs.v1.json`. A mask mismatch and a direction have no floor.
+  every other engine within 1e-10 mm, 1e-12 in direction and 1e-7 waves, and `lv` is within 1e-7 mm, 1e-8 in
+  direction and 2e-4 waves of `ref`: ten times each gate. Otherwise it is `FAIL`. Every one of those figures is
+  held together, whichever is above its gate: a direction within its limit excuses no hit beyond its own. The
+  limits are in `policy/rungs.v1.json`. A mask mismatch has no floor: a ray that one engine stopped and the other
+  passed always fails.
 
 Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
 `lvrtc run <suite> --engines lv,ref --rungs r0,r1,r2,r3`, `lvrtc compare` and `lvrtc report`:
@@ -349,10 +356,13 @@ A pair is counted in both modes, as `lvrtc compare` counts it, so the eight floo
 of the Hologon at its full field, at 470 nm and 510 nm, where the rays leave 54° off the axis. Traced in 60-digit
 arithmetic, `ref` is within 6e-15 mm and 2e-11 waves of the truth on the worst of those rays, and LensVisualizer
 the rest. Not one ray of either suite is stopped by one engine and passed by the other, in the rim band or outside
-it, and none is failed by either. Over the whole catalog, in a sweep outside the tests, some lenses fail R2:
-because LensVisualizer loses rays where two neighbouring surfaces cross (two zooms do so at their tele end only),
-or because a steep surface carries its tolerance past what the floor allows. Both are in
-[docs/gotchas.md](gotchas.md).
+it, and none is failed by either. Over the whole catalog, in a sweep outside the tests (14 370 ray sets at
+`1ed8cc3d`), R2 has 14 235 `PASS`, 53 `FLOOR` and 82 `FAIL`, and R3 14 345, 24 and 1. The lenses that fail R2 do
+so because LensVisualizer loses rays where two neighbouring surfaces cross (77 pairs on six lenses; two more
+zooms do so at their tele end only), or because a steep surface carries its tolerance past what the floor allows
+(five pairs on three lenses). Both are findings about LensVisualizer, and both are in
+[docs/gotchas.md](gotchas.md). Until policy version 4 a direction had no floor, and 14 more pairs failed by it
+alone.
 
 **The committed record** is [reports/benchmark/lv-floor.md](../reports/benchmark/lv-floor.md), with
 `lv-floor.json` beside it: for every run and rung of the benchmark the largest value of each metric, the verdicts,
@@ -486,14 +496,17 @@ answers in the result store, and writes `comparisons.json` into the run director
 into the run directory from the manifest, the comparisons and the policy: the inputs (suite, contract version,
 policy version, engines with fingerprints and, for the built-in ones, adapter revisions), the verdict counts, a
 support matrix of rung by engine, and for each run and rung a reference-vs-each table, a pairwise matrix and the
-values the answers only record, side by side, with a note on how to read the verdicts. A metric's cell says where
-its value occurs: the field and surface of a mismatch, the quantity and line of the largest first-order
-difference, the line, field, ray and surface of the largest distance between two hits. It exits 0 when the report
-is written, whatever the verdicts are, and 2 when the run has no comparisons or they were made from another
-manifest or policy. Both files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the
-same run gives the same bytes anywhere. With `--floor <dir>` it also writes the numerical-floor digest of the run
-into that directory, `lv-floor.json` and `lv-floor.md`: the pairs of the engine the policy gives a floor and its
-arbiter, rung by rung and run by run.
+values the answers only record, side by side, with a note on how to read the verdicts. A metric that is shown
+and not judged stands beside the judged one of the same subject: the plain `pupilRadius.maxAbs` next to
+`pupilRadius.maxScaled`, `sag.maxAbs` next to `sag.maxScaled`. A metric's cell says where its value occurs: the
+field and surface of a mismatch, the quantity and line of the largest first-order difference, the line, field, ray
+and surface of the largest distance between two hits. It exits 0 when the report is written, whatever the
+verdicts are, and 2 when the run has no comparisons or they were made from another manifest or policy. Both
+files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the same run gives the same
+bytes anywhere. With `--floor <dir>` it also writes the numerical-floor digest of the run into that directory,
+`lv-floor.json` and `lv-floor.md`: the pairs of the engine the policy gives a floor and its arbiter, rung by rung
+and run by run. The digest lists the metrics in the order the comparator reports them, so there too a plain
+figure follows its scaled one.
 
 The expected reports of the fixture suites are in `test/fixtures/golden`; `node test/report/writeGolden.ts`
 rewrites them after a change that is meant to change a report.

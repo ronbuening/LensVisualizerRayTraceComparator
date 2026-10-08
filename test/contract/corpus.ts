@@ -677,6 +677,8 @@ export const POLICY_SELFTEST = {
 
 /** The floor limits of a length between traced rays, mm, as the ladder has them: a fresh object for each metric. */
 const floorMm = () => ({ limit: 1e-7, agreement: 1e-10 });
+/** The floor limits of a component of a ray's exit direction, as the ladder has them: ten times its gate. */
+const floorDirection = () => ({ limit: 1e-8, agreement: 1e-12 });
 /** The floor limits of an optical path, waves, as the ladder has them. */
 const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 
@@ -688,7 +690,7 @@ const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 3,
+  version: 4,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -710,6 +712,7 @@ export const POLICY_LADDER = {
       class: "gated",
       metrics: {
         "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" },
+        "pupilRadius.maxScaled": { tolerance: 1e-9, unit: "mm" },
         "pupilZ.maxScaled": { tolerance: 1e-9, unit: "mm" },
       },
     },
@@ -718,7 +721,7 @@ export const POLICY_LADDER = {
       mode: "identical-rays",
       class: "gated",
       metrics: {
-        "direction.maxAbs": { tolerance: 1e-9, unit: "1" },
+        "direction.maxAbs": { tolerance: 1e-9, unit: "1", floor: floorDirection() },
         "hits.maxDistance": { tolerance: 1e-8, unit: "mm", floor: floorMm() },
         "landing.maxDistance": { tolerance: 1e-8, unit: "mm", floor: floorMm() },
         "mask.mismatches": { tolerance: 0, unit: "rays" },
@@ -949,8 +952,8 @@ export const COMPARISON_FLOOR: ComparisonSet = {
       verdict: "FLOOR",
       reason:
         "landing.maxDistance 1.25e-8 exceeds its tolerance 1.00e-8 at field 54, line 0, ray 4; floor of lv: " +
-        "lv against ref hits.maxDistance 2.50e-9 within 1.00e-7, lv against ref landing.maxDistance 1.25e-8 " +
-        "within 1.00e-7",
+        "lv against ref direction.maxAbs 2.00e-10 within 1.00e-8, lv against ref hits.maxDistance 2.50e-9 within " +
+        "1.00e-7, lv against ref landing.maxDistance 1.25e-8 within 1.00e-7",
     },
   ],
 };

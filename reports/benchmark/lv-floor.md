@@ -13,12 +13,12 @@ the conditions that were traced: it says what the figures are of, whatever the l
 | Suite | benchmark |
 | Suite hash | 27333fa1ef567a2ac3310215fc3e886a6ba2aa55f30c5177c6d6d951fb067b09 |
 | Contract version | 1.0 |
-| Policy | rungs v3 |
-| Policy hash | f410813933d1b8a408aaa2c0d912802e10b818c83940926b1d9b1516e98da902 |
+| Policy | rungs v4 |
+| Policy hash | 01abb393f5fd737168b05920418e8e79d4c921e26adb994b1062d559ea5cbfbb |
 
 | Engine | Fingerprint | Adapter revision | Details |
 |---|---|---|---|
-| lv | 1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0 | e47ee676aba5fa13019c85267ab0e8f58987a662fc404371d548e67ce4f4f196 | commit ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62, dirty false, engineFileCount 151 |
+| lv | ff670f03d42e55f8d3467347eaebfd37fa10f21bf5cec2c7087895509d797ffd | e47ee676aba5fa13019c85267ab0e8f58987a662fc404371d548e67ce4f4f196 | commit 23631dc0f77a149cf14f8fa62ff66779dfe16b65, dirty false, engineFileCount 151 |
 | ref | 8f34b4024051313a54e487f265ee755bcc3778eb6422049d95d0765afd5d2486 | 7b80637836e8f618bdd91f200d8614d78b162716a22a6ace42deb63531fb5da3 | sourceFiles 12 |
 
 | Run | Case |
@@ -72,6 +72,8 @@ Quantity `paraxial.first-order`: 24 pairs, 24 PASS.
 | firstOrder.maxAbs (≤ 1.00e-9 mm) | 1.59e-12 | sony-fe-400mm-f28-gm-oss-photopic | line 1, quantity frontFocalZ |
 | pupilZ.maxScaled (≤ 1.00e-9 mm) | 3.41e-13 | sony-fe-400mm-f28-gm-oss-photopic | line 3, quantity entrancePupilZ |
 | pupilZ.maxAbs [mm] | 3.41e-13 | sony-fe-400mm-f28-gm-oss-photopic | line 3, quantity entrancePupilZ |
+| pupilRadius.maxScaled (≤ 1.00e-9 mm) | 4.26e-14 | sigma-35mm-f14-dg-hsm-a-photopic | line 2, quantity exitPupilSemiDiameter |
+| pupilRadius.maxAbs [mm] | 4.26e-14 | sigma-35mm-f14-dg-hsm-a-photopic | line 2, quantity exitPupilSemiDiameter |
 
 ### r2
 
@@ -129,32 +131,32 @@ Quantity `rays.trace`: 216 pairs, 216 PASS.
 
 ### r1
 
-| Run | Requests | Verdicts | firstOrder.maxAbs (≤ 1.00e-9 mm) | pupilZ.maxScaled (≤ 1.00e-9 mm) | pupilZ.maxAbs [mm] |
-|---|---|---|---|---|---|
-| canon-ef-135-f2l-usm-ref | 1 | 1 PASS | 2.70e-13 | 5.68e-14 | 5.68e-14 |
-| canon-ef-135-f2l-usm-photopic | 1 | 1 PASS | 1.14e-13 | 7.11e-14 | 7.11e-14 |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 1 | 1 PASS | 1.42e-14 | 1.42e-14 | 1.42e-14 |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 1 | 1 PASS | 4.26e-14 | 4.26e-14 | 4.26e-14 |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | 1 PASS | 3.55e-14 | 6.39e-14 | 6.39e-14 |
-| sigma-35mm-f14-dg-hsm-a-photopic | 1 | 1 PASS | 4.26e-14 | 7.82e-14 | 7.82e-14 |
-| nikkor-z50f12-ref | 1 | 1 PASS | 7.11e-14 | 1.42e-14 | 1.42e-14 |
-| nikkor-z50f12-photopic | 1 | 1 PASS | 5.68e-14 | 3.55e-14 | 3.55e-14 |
-| sony-fe-20mm-f18-g-ref | 1 | 1 PASS | 2.84e-14 | 7.11e-15 | 7.11e-15 |
-| sony-fe-20mm-f18-g-photopic | 1 | 1 PASS | 3.55e-14 | 1.07e-14 | 1.07e-14 |
-| sony-fe-400mm-f28-gm-oss-ref | 1 | 1 PASS | 5.68e-14 | 2.27e-13 | 2.27e-13 |
-| sony-fe-400mm-f28-gm-oss-photopic | 1 | 1 PASS | 1.59e-12 | 3.41e-13 | 3.41e-13 |
-| sigma-105mm-f28-dg-dn-macro-art-ref | 1 | 1 PASS | 2.84e-14 | 2.84e-14 | 2.84e-14 |
-| sigma-105mm-f28-dg-dn-macro-art-photopic | 1 | 1 PASS | 1.14e-13 | 7.11e-14 | 7.11e-14 |
-| nikon-z-24-70f4s-wide-ref | 1 | 1 PASS | 1.42e-14 | 2.84e-14 | 2.84e-14 |
-| nikon-z-24-70f4s-wide-photopic | 1 | 1 PASS | 5.68e-14 | 2.84e-14 | 2.84e-14 |
-| nikon-z-24-70f4s-tele-ref | 1 | 1 PASS | 1.44e-13 | 4.26e-14 | 4.26e-14 |
-| nikon-z-24-70f4s-tele-photopic | 1 | 1 PASS | 1.42e-13 | 5.68e-14 | 5.68e-14 |
-| nikon-z-mc-105f28-ref | 1 | 1 PASS | 5.68e-14 | 2.84e-14 | 2.84e-14 |
-| nikon-z-mc-105f28-photopic | 1 | 1 PASS | 2.13e-13 | 4.26e-14 | 4.26e-14 |
-| nikon-z-135f18-plena-ref | 1 | 1 PASS | 5.68e-14 | 1.42e-14 | 1.42e-14 |
-| nikon-z-135f18-plena-photopic | 1 | 1 PASS | 2.84e-13 | 4.26e-14 | 4.26e-14 |
-| sigma-45mm-f28-dg-dn-contemporary-ref | 1 | 1 PASS | 1.42e-14 | 7.11e-15 | 7.11e-15 |
-| sigma-45mm-f28-dg-dn-contemporary-photopic | 1 | 1 PASS | 3.20e-14 | 2.13e-14 | 2.13e-14 |
+| Run | Requests | Verdicts | firstOrder.maxAbs (≤ 1.00e-9 mm) | pupilZ.maxScaled (≤ 1.00e-9 mm) | pupilZ.maxAbs [mm] | pupilRadius.maxScaled (≤ 1.00e-9 mm) | pupilRadius.maxAbs [mm] |
+|---|---|---|---|---|---|---|---|
+| canon-ef-135-f2l-usm-ref | 1 | 1 PASS | 2.70e-13 | 5.68e-14 | 5.68e-14 | 1.42e-14 | 1.42e-14 |
+| canon-ef-135-f2l-usm-photopic | 1 | 1 PASS | 1.14e-13 | 7.11e-14 | 7.11e-14 | 2.13e-14 | 2.13e-14 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 1 | 1 PASS | 1.42e-14 | 1.42e-14 | 1.42e-14 | 5.33e-15 | 5.33e-15 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 1 | 1 PASS | 4.26e-14 | 4.26e-14 | 4.26e-14 | 7.11e-15 | 7.11e-15 |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | 1 PASS | 1.42e-14 | 6.39e-14 | 6.39e-14 | 3.55e-14 | 3.55e-14 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 1 | 1 PASS | 3.55e-14 | 7.82e-14 | 7.82e-14 | 4.26e-14 | 4.26e-14 |
+| nikkor-z50f12-ref | 1 | 1 PASS | 7.11e-14 | 1.42e-14 | 1.42e-14 | 1.07e-14 | 1.07e-14 |
+| nikkor-z50f12-photopic | 1 | 1 PASS | 5.68e-14 | 3.55e-14 | 3.55e-14 | 1.07e-14 | 1.07e-14 |
+| sony-fe-20mm-f18-g-ref | 1 | 1 PASS | 2.84e-14 | 7.11e-15 | 7.11e-15 | 8.88e-15 | 8.88e-15 |
+| sony-fe-20mm-f18-g-photopic | 1 | 1 PASS | 3.55e-14 | 1.07e-14 | 1.07e-14 | 5.33e-15 | 5.33e-15 |
+| sony-fe-400mm-f28-gm-oss-ref | 1 | 1 PASS | 5.68e-14 | 2.27e-13 | 2.27e-13 | 5.33e-15 | 5.33e-15 |
+| sony-fe-400mm-f28-gm-oss-photopic | 1 | 1 PASS | 1.59e-12 | 3.41e-13 | 3.41e-13 | 2.84e-14 | 2.84e-14 |
+| sigma-105mm-f28-dg-dn-macro-art-ref | 1 | 1 PASS | 2.84e-14 | 2.84e-14 | 2.84e-14 | 7.11e-15 | 7.11e-15 |
+| sigma-105mm-f28-dg-dn-macro-art-photopic | 1 | 1 PASS | 1.14e-13 | 7.11e-14 | 7.11e-14 | 7.11e-15 | 7.11e-15 |
+| nikon-z-24-70f4s-wide-ref | 1 | 1 PASS | 1.42e-14 | 2.84e-14 | 2.84e-14 | 4.44e-15 | 4.44e-15 |
+| nikon-z-24-70f4s-wide-photopic | 1 | 1 PASS | 5.68e-14 | 2.84e-14 | 2.84e-14 | 3.55e-15 | 3.55e-15 |
+| nikon-z-24-70f4s-tele-ref | 1 | 1 PASS | 1.44e-13 | 4.26e-14 | 4.26e-14 | 0 | 0 |
+| nikon-z-24-70f4s-tele-photopic | 1 | 1 PASS | 1.42e-13 | 5.68e-14 | 5.68e-14 | 5.33e-15 | 5.33e-15 |
+| nikon-z-mc-105f28-ref | 1 | 1 PASS | 5.68e-14 | 2.84e-14 | 2.84e-14 | 1.07e-14 | 1.07e-14 |
+| nikon-z-mc-105f28-photopic | 1 | 1 PASS | 2.13e-13 | 4.26e-14 | 4.26e-14 | 1.07e-14 | 1.07e-14 |
+| nikon-z-135f18-plena-ref | 1 | 1 PASS | 5.68e-14 | 1.42e-14 | 1.42e-14 | 7.11e-15 | 7.11e-15 |
+| nikon-z-135f18-plena-photopic | 1 | 1 PASS | 2.84e-13 | 4.26e-14 | 4.26e-14 | 7.11e-15 | 7.11e-15 |
+| sigma-45mm-f28-dg-dn-contemporary-ref | 1 | 1 PASS | 1.42e-14 | 7.11e-15 | 7.11e-15 | 1.78e-15 | 1.78e-15 |
+| sigma-45mm-f28-dg-dn-contemporary-photopic | 1 | 1 PASS | 3.20e-14 | 2.13e-14 | 2.13e-14 | 3.55e-15 | 3.55e-15 |
 
 ### r2
 

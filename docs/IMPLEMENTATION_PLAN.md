@@ -144,7 +144,7 @@ first two are gated.
 | Rung | Quantity | Mode | Gate |
 |---|---|---|---|
 | R0 | Built-system echo: vertex z, sag at 9 radii per surface, indices, apertures, stop | direct | sag ≤ 1e-12 scaled by its rounding size (see Amendments); rest bit-equal. Failure blocks later rungs |
-| R1 | EFL, focal points, back focus from the last lens vertex, stop-derived entrance-pupil radius, pupil z | direct | 1e-9 mm; pupil z also passes within 1e-12 of its distance from the image plane (see Amendments) |
+| R1 | EFL, focal points, back focus from the last lens vertex, stop-derived entrance-pupil radius, pupil z | direct | 1e-9 mm; the position and the radius of a pupil also pass within 1e-12 of the pupil's distance from the image plane (see Amendments) |
 | R2 | Per-surface hits, exit direction, image landing; clip mask | identical-rays | 1e-8 mm, 1e-9; 0 mismatches outside the rim band |
 | R3 | Optical path to last surface and image; chief-relative OPD | identical-rays | 2e-5 waves |
 | R4 | Binless geometric MTF, reference line and polychromatic, on rays valid in every engine | identical-rays | 1e-7 |
@@ -154,8 +154,10 @@ first two are gated.
 
 Statuses: PASS; FLOOR; FAIL; RECORDED; ATTENTION (recorded, outside its band; not a failure); UNSUPPORTED; STALE;
 ERROR. **FLOOR** applies to R2/R3 only when every other engine agrees with `ref` within 1e-10 mm / 1e-7 waves
-*and* |`lv` − `ref`| ≤ 1e-7 mm per hit and 2e-4 waves; otherwise FAIL. Classes, decided in order: unsupported,
-data (inputs not identical), convention (a missing declared transform; a comparator bug), numerical, method.
+*and* |`lv` − `ref`| ≤ 1e-7 mm per hit and 2e-4 waves; otherwise FAIL. Since Stage 2.0 the exit direction has a
+floor too, 1e-12 and 1e-8 (see Amendments); which rays got through has none. Classes, decided in order:
+unsupported, data (inputs not identical), convention (a missing declared transform; a comparator bug), numerical,
+method.
 
 ## Phases and stages
 
@@ -211,12 +213,13 @@ LV lens file flips that lens to STALE(case) and changing the optiland fingerprin
 
 | Stage | Deliver | Verify |
 |---|---|---|
+| 2.0 Gates before optiland | Three decisions of the owner after Phase 1, in force before a third engine is judged ([amendments](#amendments-since-approval)): a floor for the exit direction in R2; the radius of a pupil judged on the scale of the pupil's distance in R1; baselines keyed on the runs as run. Policy version 4; a report shows each plain figure beside the scaled one that is judged | Hermetic: each condition of the direction's floor failing on its own, and a direction with a position; a near pupil, a far one and one at infinity. With LensVisualizer: the nearly telecentric lens passes R1 entirely; benchmark and features keep their verdicts; the lenses that fail R2 for LensVisualizer's rounding swept before and after |
 | 2.1 Worker skeleton | `lvrtc_optiland`: hello, capabilities, fingerprint (checkout sha + dirty, package source hash, Python/numpy/numba/scipy versions, JIT state); cache redirection; one timed FFT call | Conformance kit green; path + size + mtime snapshot of the optiland checkout identical before and after a JIT-enabled trace; no core module edited |
 | 2.2 IR → Optic, R0 | Builder (even/odd asphere mapping, planes, apertures, stop, object, image plane); post-build echo re-read from the Optic; `docs/gotchas.md` started | `unittest` on fixtures; R0 on both suites; a deliberately shifted coefficient is caught and names the surface |
 | 2.3 Paraxial, R1 | `paraxial.first-order` with reference conversions (image-relative → global; back focus from the last lens vertex) | R1 three-way `lv` / `ref` / `optiland` |
 | 2.4 Rays, R2 | `rays.trace` via `RealRays` + `surfaces.trace`; intensity-mask validity; rim-band accounting | R2 three-way on both suites at every line, once with JIT on and once off |
 | 2.5 Optical path, R3 | Path to last surface and image; comparator OPD re-referencing | R3 three-way on both suites |
-| 2.6 Baselines and staleness | Baseline records; STALE(case) keyed on IR hash, STALE(engine) on fingerprint; `lvrtc baseline write/check` (OK / REFRESHABLE / DRIFT; non-zero exit only on DRIFT, FAIL or ERROR); hermetic `lvrtc verify` | CI validates baselines and regenerates reports byte-for-byte without LV or optiland; Double-Gauss optiland numbers replay against `ref` |
+| 2.6 Baselines and staleness | Baseline records, keyed on the runs as run: a zoom at each end ([amendment](#baselines-are-of-the-runs-as-run)); STALE(case) keyed on IR hash, STALE(engine) on fingerprint; `lvrtc baseline write/check` (OK / REFRESHABLE / DRIFT; non-zero exit only on DRIFT, FAIL or ERROR); hermetic `lvrtc verify` | CI validates baselines and regenerates reports byte-for-byte without LV or optiland; Double-Gauss optiland numbers replay against `ref` |
 
 ### Phase 3 — MTF v1 (R4, R5, R6a)
 
@@ -336,6 +339,8 @@ Gates changed after the plan was approved, each on a measured numerical floor an
 |---|---|---|
 | R0 | The sag gate is `sag.maxScaled` ≤ 1e-12, the difference divided by how large a rounding error of that sag can be (defined in `contract/CONTRACT.md`). The plain difference is still reported. | Two exact evaluators that sum the same terms in a different order differ by up to 1.34e-10 mm on five catalog lenses whose polynomial terms cancel heavily; scaled, the worst lens in the catalog is 5.5e-16. |
 | R1 | A pupil position passes within 1e-9 mm, or within 1e-12 of its distance from the image plane when that is larger. Every other R1 quantity keeps 1e-9 mm. | One near-telecentric catalog lens has its exit pupil 7.7 to 20 m away; in exact rational arithmetic both `lv` and `ref` are off by 1e-9 to 5e-9 mm there, a relative error of about 1e-13. The next largest pupil difference in the catalog is 1.9e-11 mm. |
+| R1 (Stage 2.0, policy version 4) | The radius of a pupil is judged as its position is: `entrancePupilSemiDiameter` and `exitPupilSemiDiameter` pass within 1e-9 mm, or within 1e-12 of that pupil's distance from the image plane when that is larger (`pupilRadius.maxScaled`, the same scale as `pupilZ.maxScaled`; the plain `pupilRadius.maxAbs` is reported beside it). The six values that are no pupil's keep the plain 1e-9 mm, and so does the radius of a pupil within a metre of the image plane. A pupil at the same infinity in both engines is equal, in position and in radius. | The radius of a far pupil is the stop's radius times the quotient that places the pupil, and is known as well as the pupil is placed and no better. On the same lens the exit pupil is 6.3 m in radius at 650 nm, 14 m from the image plane, and `lv` and `ref` hold 1.35e-9 mm apart, 2e-13 of it: the one pair of the 1676 cases of the catalog that still failed R1. On the scale of the distance it is 9.4e-11. Neither engine is wrong there: in exact rational arithmetic on the vertices, radii and indices of the case, `lv` is 5.2e-10 mm above that radius and `ref` 8.3e-10 mm below it, 1e-13 of it each; and with the gaps taken as exact in place of the vertices they are the sums of, which is one rounding apart, the exact radius itself moves by 6e-10 mm there and by 1.2e-9 mm at 610 nm, where the pupil is 19.5 m away. No arithmetic in doubles holds that radius to 1e-9 mm. Every other pupil radius of the catalog is within 4.2e-12 mm, and every value that is no pupil's within 1.1e-11 mm (LensVisualizer `1ed8cc3d`, closure `ff670f03`); at the tele end of every zoom (576 cases) all of R1 passes before and after, with no pupil radius more than 5.1e-11 mm apart. |
+| R2 (Stage 2.0, policy version 4) | The exit direction has a floor, on the pattern of the lengths: a pair of `lv` whose `direction.maxAbs` is above 1e-9 may be `FLOOR` when every other engine agrees with the arbiter `ref` within 1e-12 in direction and `lv` is within 1e-8 of `ref`, ten times the gate; beyond that it is `FAIL`. Every metric with floor limits is held to them together, so a direction within its limit never excuses a hit beyond its own. Which rays got through keeps having no floor. | A direction is carried by the same hit as a position: LensVisualizer's 1e-9 mm at one surface, magnified by a steep one behind it. Over the catalog (14 370 ray sets, 9.5 million rays both engines land; LensVisualizer `1ed8cc3d`, closure `ff670f03`) 19 pairs of R2 failed for that rounding, each with a direction of 1.0e-9 to 4.1e-9 as a figure without a floor. Whose rounding it is was settled ray by ray: a trace in 50-digit arithmetic that shares no code with either engine, made at closure `ff670f03` on every ray both engines land of the 14 pairs that are floors now and of the three of the same zoom that are not (17 ray sets, 11 387 rays), puts `ref` within 3.8e-14 mm and 1.5e-14 in direction of the truth on the two phone lenses, within 1.7e-11 mm and 4.9e-13 on the zoom, and the whole excess on `lv` (`docs/gotchas.md`). With the limit, 14 are `FLOOR`: five in which the direction is the only figure above a gate, six in which it goes with a hit 1.1e-8 to 1.2e-8 mm off, and three of one wide zoom whose hits are 2.5e-8 to 7.3e-8 mm off. The 5 that stay `FAIL` are a hit or a landing beyond 1e-7 mm, on three lenses. No other verdict of the sweep moves: R2 from 14 235 `PASS`, 39 `FLOOR`, 96 `FAIL` to 14 235, 53, 82 (77 of them rays LensVisualizer loses at crossing surfaces); R3 unchanged at 14 345, 24, 1. The largest direction of any floor is 4.07e-9, and no direction of the catalog is beyond 1e-8 on rays both engines pass. At the tele end of every zoom (5056 ray sets) no verdict moves either: no direction there is above 1e-9. The agreement of 1e-12 is the tightest of the floor's figures, a thousandth of its gate, and is not yet measured on a third engine: on that zoom `ref` itself is up to 4.9e-13 from the truth in direction, so an engine as exact as `ref` may be more than 1e-12 from it there, and the zoom's floors would then be `FAIL` (it is in no suite). On the Hologon, the lens of the suites' floors, `ref` is within 6.5e-16. Stage 2.4 measures it. |
 
 ### Zoom lenses at both ends
 
@@ -352,6 +357,17 @@ diffractive surface at both); at the tele end all 296 pass R0 and R1 against `re
 rays ok in both), every pair passes R3; in R2, 5006 pass, 6 are `FLOOR` (one lens) and 44 fail on the mask: three
 zooms whose stop lies behind the surface before it at that end, two of them at that end only (`docs/gotchas.md`,
 "Where two neighbouring surfaces cross, the ray is lost").
+
+### Baselines are of the runs as run
+
+A decision of the owner after Phase 1, recorded in Stage 2.0 for Stage 2.6: a baseline is keyed on the runs after
+zooms expand to both ends, never on the suite file as written. A zoom that a suite names once has two baseline
+records, `<name>-wide` and `<name>-tele`, each with the content hash of its own case; a lens that becomes a zoom,
+or stops being one, changes the records and not only their figures.
+
+| What a baseline is keyed on | Where it is today | What it is not keyed on |
+|---|---|---|
+| The run as run: its name after expansion and the content hash of its case; then the rung, the request and the two engines with their fingerprints. | The run manifest: `runs[]` is the expanded list, in order, each with `name`, `caseId` and the identities of its ray sets, and every job states its `run`, `caseId`, `rung`, `requestId` and `engine`. Nothing was added to the manifest for it. | `suite.hash`, which is the hash of the suite as written and is the same whether or not a lens of it is a zoom. It stays what says which file was run. |
 
 ## LensVisualizer changes
 

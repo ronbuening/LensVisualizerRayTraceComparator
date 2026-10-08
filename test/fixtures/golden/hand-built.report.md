@@ -132,7 +132,8 @@ in every rung after that one.
 
 A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band
 of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric
-without a limit is shown and not judged.
+without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that
+one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.
 Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
 A recorded value has 9 significant digits, or is a whole number in full, and is named with the index of its
 element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.

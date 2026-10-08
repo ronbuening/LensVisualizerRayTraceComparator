@@ -60,10 +60,12 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   `test/integration/lv/canaries.test.ts`. Hermetic tests use synthetic numbers only, never an LV-derived value.
 - **A zoom is compared at both ends wherever no zoom position is stated** (`src/engines/lv/zoomEnds.ts`): a suite
   run of an LV zoom without `state.zoomT` is two runs, `<name>-wide` and `<name>-tele`; the census and `lvrtc mtf`
-  without `--zoom` do the same. The expansion is the LV case source's (`CaseSource.expand`), never `expandSuite`'s,
-  and the runs it gives are ordinary runs; a suite's hash is that of the file as written. An explicit position is
-  one state. A prime has no zoom position: one stated for it is taken as 0 (`exportCase`). Middle stations are
-  Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and hint at `--zoom 1` on stderr.
+  without `--zoom` do the same. Baselines (Stage 2.6) are keyed on those runs as run, by name and case id as the
+  manifest lists them, never on the suite file as written. The expansion is the LV case source's
+  (`CaseSource.expand`), never `expandSuite`'s, and the runs it gives are ordinary runs; a suite's hash is that of
+  the file as written. An explicit position is one state. A prime has no zoom position: one stated for it is taken
+  as 0 (`exportCase`). Middle stations are Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and
+  hint at `--zoom 1` on stderr.
 - **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
   suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
@@ -110,7 +112,16 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
   `src/compare/floor.ts`). Only a pair of the floored engine (`lv`) can be `FLOOR`; a metric without floor limits
-  (the mask, the direction) always fails. Never add a floor limit, or widen one, to make a lens pass.
+  (the mask) always fails. Every metric that has floor limits is held to them together, whichever is above its
+  gate: hits, landing and, since policy version 4, the exit direction (1e-8, with the others within 1e-12 of
+  `ref`). Never add a floor limit, or widen one, to make a lens pass.
+- **In R1 a pupil is judged on the scale of its distance from the image plane, in position and in radius**
+  (`pupilZ.maxScaled`, `pupilRadius.maxScaled`; `PUPIL_RADII` in `src/compare/paraxialFirstOrder.ts` pairs each
+  radius with the position of its own pupil). The six values that are no pupil's keep the plain 1e-9 mm, and so
+  does a pupil within a metre of the image plane. A distance that is no finite number scales nothing.
+- **A metric that is shown and not judged is named after what it is a figure of**: `<subject>.maxAbs` beside the
+  judged `<subject>.maxScaled`. A report puts it in the column after the judged one (`subjectOf`,
+  `src/report/model.ts`).
 - **Rays come from the case source, never from a rung or an engine.** `CaseSource.raySets` makes the ray sets of a
   run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its

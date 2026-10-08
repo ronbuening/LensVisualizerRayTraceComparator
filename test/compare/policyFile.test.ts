@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { createComparatorLookup } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
-import type { Policy } from "../../src/contract/policy.ts";
+import type { MetricPolicy, Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { RUNGS, r0Rung, r1Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 3);
+  assert.equal(policy.version, 4);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -46,15 +46,18 @@ test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blo
   );
 
   assert.deepEqual([r1.quantity, r1.mode, r1.class], ["paraxial.first-order", "direct", "gated"]);
-  // A pupil's position is judged on the scale of its distance from the image plane; every other value plainly.
+  // A pupil's position and its radius are judged on the scale of the pupil's distance from the image plane; every
+  // other value plainly. All three gates are 1e-9 mm, and nothing of R1 has a floor.
   assert.deepEqual(r1.metrics, {
     "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" },
+    "pupilRadius.maxScaled": { tolerance: 1e-9, unit: "mm" },
     "pupilZ.maxScaled": { tolerance: 1e-9, unit: "mm" },
   });
+  // The plain figure of each is shown beside the scaled one, and not judged.
   const firstOrder = COMPARATORS.get("paraxial.first-order")?.metrics.map((metric) => metric.name) ?? [];
   assert.deepEqual(
     firstOrder.filter((name) => !Object.hasOwn(r1.metrics, name)),
-    ["pupilZ.maxAbs"],
+    ["pupilZ.maxAbs", "pupilRadius.maxAbs"],
   );
   assert.equal(r1.blocksLaterRungs, undefined);
   assert.equal(selftest.blocksLaterRungs, undefined);
@@ -67,11 +70,12 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, with th
     assert.deepEqual(rung.floor, { engine: "lv", arbiter: "ref" });
     assert.equal(rung.blocksLaterRungs, undefined);
   }
-  // Lengths: 1e-8 mm, a floor of lv up to 1e-7 mm where every other engine is within 1e-10 mm of ref. The
-  // direction and the mask have no floor: an excess of either is always a failure.
+  // Lengths: 1e-8 mm, a floor of lv up to 1e-7 mm where every other engine is within 1e-10 mm of ref. The exit
+  // direction: 1e-9, a floor of lv up to 1e-8 where every other engine is within 1e-12 of ref. The mask has no
+  // floor: a ray that one engine stopped and the other passed is always a failure.
   const mm = { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-7, agreement: 1e-10 } };
   assert.deepEqual(r2.metrics, {
-    "direction.maxAbs": { tolerance: 1e-9, unit: "1" },
+    "direction.maxAbs": { tolerance: 1e-9, unit: "1", floor: { limit: 1e-8, agreement: 1e-12 } },
     "hits.maxDistance": mm,
     "landing.maxDistance": mm,
     "mask.mismatches": { tolerance: 0, unit: "rays" },
@@ -89,6 +93,14 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, with th
     reported.filter((name) => !Object.hasOwn(r2.metrics, name)),
     ["mask.rimBand", "rays.compared"],
   );
+  // Every floor limit is ten times its gate, and every agreement at most a hundredth of it.
+  const judged: [string, MetricPolicy][] = [...Object.entries(r2.metrics), ...Object.entries(r3.metrics)];
+  for (const [name, metric] of judged) {
+    if (metric.floor === undefined) continue;
+    const gate = metric.tolerance as number;
+    assert.ok(Math.abs(metric.floor.limit / gate - 10) < 1e-9, name);
+    assert.ok(metric.floor.agreement <= gate / 100, name);
+  }
   // No other rung has a floor.
   const floored = Object.entries(loadPolicy().rungs).filter(([, rung]) => rung.floor !== undefined);
   assert.deepEqual(

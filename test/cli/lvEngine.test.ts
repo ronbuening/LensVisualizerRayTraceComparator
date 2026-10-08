@@ -308,7 +308,10 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(report, /^#### r2, request 3 of 3$/m);
+  assert.match(report, /\| direction\.maxAbs \(≤ 1\.00e-9; floor ≤ 1\.00e-8\) \|/);
   assert.match(report, /\| hits\.maxDistance \(≤ 1\.00e-8 mm; floor ≤ 1\.00e-7\) \|/);
+  // The mask is judged at 0 and has no floor.
+  assert.match(report, /\| mask\.mismatches \(≤ 0 rays\) \|/);
   assert.match(report, /\| opd\.maxAbs \(≤ 2\.00e-5 waves; floor ≤ 2\.00e-4\) \|/);
   assert.match(report, /^\| rays\.ok\[0\] \| \d+ \| \d+ \|$/m);
   // The engines table states the adapter revision of each of the comparator's own engines.
@@ -373,7 +376,7 @@ test("a LensVisualizer whose hits are 3e-8 mm off is the floor of lv: FLOOR, a p
   // The reason names what exceeded its gate, and the figures against the arbiter that make it a floor.
   assert.match(
     pair.reason ?? "",
-    /^hits\.maxDistance \d\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref hits\.maxDistance \d\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-\d+ within 1\.00e-7$/,
+    /^hits\.maxDistance \d\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-\d+ within 1\.00e-7$/,
   );
 
   const reported = lvrtc(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));

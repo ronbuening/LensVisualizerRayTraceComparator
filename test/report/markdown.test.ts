@@ -171,6 +171,94 @@ test("a gated metric shows its tolerance with its unit", () => {
   );
 });
 
+test("a figure that is shown and not judged stands beside the judged figure of the same subject", () => {
+  const r1 = {
+    quantity: "paraxial.first-order",
+    mode: "direct",
+    class: "gated",
+    metrics: {
+      "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" },
+      "pupilRadius.maxScaled": { tolerance: 1e-9, unit: "mm" },
+      "pupilZ.maxScaled": { tolerance: 1e-9, unit: "mm" },
+    },
+  } as const;
+  // As the comparator of the first-order data reports them: the position of a pupil first, then its radius, each
+  // scaled and then plain; and a count that is a figure of nothing the policy names.
+  const radius = { quantity: "exitPupilSemiDiameter", line: 4 };
+  const position = { quantity: "exitPupilZ", line: 4 };
+  const metrics: ComparisonMetric[] = [
+    { name: "firstOrder.maxAbs", value: 2e-13, unit: "mm", where: { quantity: "efl", line: 0 } },
+    { name: "pupilZ.maxScaled", value: 2.1e-10, unit: "mm", where: position },
+    { name: "pupilZ.maxAbs", value: 3e-9, unit: "mm", where: position },
+    { name: "pupilRadius.maxScaled", value: 9.6e-11, unit: "mm", where: radius },
+    { name: "pupilRadius.maxAbs", value: 1.35e-9, unit: "mm", where: radius },
+    { name: "lines.compared", value: 5, unit: "lines" },
+  ];
+  const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "PASS" } as const;
+  const sets = [0, 1].map((index) => ({
+    ...COMPARISONS.comparisons[index],
+    rung: "r1",
+    quantity: "paraxial.first-order",
+    pairs: [pair],
+  }));
+  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { r1 } });
+  const markdown = renderMarkdown(model);
+
+  // The metrics the policy names, by name, each followed by the figure of the same subject that is only shown.
+  assert.deepEqual(model.sections[0].columns, [
+    { name: "firstOrder.maxAbs", unit: "mm", limit: 1e-9, limitKind: "tolerance" },
+    { name: "pupilRadius.maxScaled", unit: "mm", limit: 1e-9, limitKind: "tolerance" },
+    { name: "pupilRadius.maxAbs", unit: "mm" },
+    { name: "pupilZ.maxScaled", unit: "mm", limit: 1e-9, limitKind: "tolerance" },
+    { name: "pupilZ.maxAbs", unit: "mm" },
+    { name: "lines.compared", unit: "lines" },
+  ]);
+  assert.match(
+    markdown,
+    /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[lines\] \| Verdict \| Note \|$/m,
+  );
+  // The plain figures are above 1e-9 mm in a pair that passes: they are shown beside what is judged, with where.
+  assert.deepEqual(rowsStarting(markdown, "optiland")[1], [
+    "optiland",
+    "2.00e-13 at line 0, quantity efl",
+    "9.60e-11 at line 4, quantity exitPupilSemiDiameter",
+    "1.35e-9 at line 4, quantity exitPupilSemiDiameter",
+    "2.10e-10 at line 4, quantity exitPupilZ",
+    "3.00e-9 at line 4, quantity exitPupilZ",
+    "5",
+    "PASS",
+    "",
+  ]);
+  // The pairwise matrix names the judged metric nearest its limit, never a figure that is only shown.
+  assert.deepEqual(rowsStarting(markdown, "lv")[1], [
+    "lv",
+    "—",
+    "PASS (pupilZ.maxScaled 2.10e-10 at line 4, quantity exitPupilZ)",
+    "—",
+  ]);
+
+  // Several shown figures of one subject keep the order they are reported in, after the last judged one of it.
+  const r2 = {
+    quantity: "rays.trace",
+    mode: "identical-rays",
+    class: "gated",
+    metrics: { "mask.mismatches": { tolerance: 0, unit: "rays" }, "hits.maxDistance": { tolerance: 1e-8, unit: "mm" } },
+  } as const;
+  const counts: ComparisonMetric[] = [
+    { name: "rays.compared", value: 9, unit: "rays" },
+    { name: "mask.rimBand", value: 1, unit: "rays" },
+    { name: "hits.maxDistance", value: 2e-9, unit: "mm" },
+    { name: "mask.failed", value: 0, unit: "rays" },
+    { name: "mask.mismatches", value: 0, unit: "rays" },
+  ];
+  const set = { ...sets[0], rung: "r2", quantity: "rays.trace", pairs: [{ ...pair, metrics: counts }] };
+  const rays = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, { ...POLICY, rungs: { r2 } });
+  assert.deepEqual(
+    rays.sections[0].columns.map((column) => column.name),
+    ["hits.maxDistance", "mask.mismatches", "mask.rimBand", "mask.failed", "rays.compared"],
+  );
+});
+
 test("a floor is a verdict of its own: counted apart from PASS, no failure, with its limit in the metric's heading", () => {
   const floor = { limit: 1e-7, agreement: 1e-10 };
   const r2 = {

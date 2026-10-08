@@ -747,16 +747,20 @@ metrics that the floor may excuse carries `floor: { limit, agreement }`, both in
 otherwise:
 
 1. every metric of the pair that is above its tolerance is a number and has floor limits. A metric without them
-   is never excused: a count of rays the two engines disagree about, the direction of a ray;
+   is never excused: a count of rays the two engines disagree about is right or it is not;
 2. the arbiter answered, and every other engine of the comparison that answered is within `agreement` of the
    arbiter in every metric that has floor limits: an arbiter that agrees with the others to rounding is right
    about the rays;
 3. `floor.engine` is within `limit` of the arbiter in every metric that has floor limits: what it is off by is of
    the size of its known tolerance, and not a defect of another kind.
 
-A metric that two answers have nothing to measure on takes no part in 2 or 3. The comparator's policy gives `lv`
-this floor against `ref` in `r2` and `r3`: lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, optical paths
-with 2e-4 waves and 1e-7 waves. The limits are in the policy and nowhere in the code.
+A metric that two answers have nothing to measure on takes no part in 2 or 3. Every metric that has floor limits
+takes part in both, whether or not it is the one above its tolerance: a direction within its limit excuses no hit
+beyond its own, and an engine whose directions are not the arbiter's is no witness for a hit. The comparator's
+policy gives `lv` this floor against `ref` in `r2` and `r3`: lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm,
+a component of the exit direction with 1e-8 and 1e-12, optical paths with 2e-4 waves and 1e-7 waves; each limit is
+ten times its tolerance. Which rays got through, `mask.mismatches`, has none. The limits are in the policy and
+nowhere in the code.
 
 **Blocking.** A rung with `blocksLaterRungs` establishes what the rungs after it take for granted: two engines
 that built different systems would differ in every ray traced through them, and each such difference would be the
@@ -1026,8 +1030,8 @@ states after it.
 
 - **The stop surface's own refraction** bends a ray without moving it, so it changes neither pupil: with the stop
   on the first surface the entrance pupil is the stop, and with the stop on the last surface the exit pupil is.
-- **A pupil at infinity**, as a telecentric system has, is the infinity of its sign, in position and in radius. A
-  NaN is never a value.
+- **A pupil at infinity**, as a telecentric system has, is the infinity of its sign in position, and the positive
+  infinity in radius: a radius is a size, and is never below 0 on either side of the lens. A NaN is never a value.
 - **`recorded`** is where an engine puts what it knows and no other engine need have: LensVisualizer's stored
   pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv). For a finite object
   every engine gives the paraxial lateral magnification of the object plane there, as `magnification`. A recorded
@@ -1040,22 +1044,32 @@ states after it.
 **Invariant checked in code** (`src/quantities/paraxialFirstOrder.ts`): every array, the recorded ones included,
 has the same length, of at least 1.
 
-**Compared** (`src/compare/paraxialFirstOrder.ts`) by three metrics, each in mm, with the `quantity` and the `line`
+**Compared** (`src/compare/paraxialFirstOrder.ts`) by five metrics, each in mm, with the `quantity` and the `line`
 of its largest value in `where`:
 
 | Metric | Is the largest, over the lines, of |
 |---|---|
-| `firstOrder.maxAbs` | \|a − b\| of the eight values that are not the position of a pupil |
+| `firstOrder.maxAbs` | \|a − b\| of the six values that are neither the position nor the radius of a pupil |
 | `pupilZ.maxScaled` | \|a − b\| / max(1, d / 1000 mm) of `entrancePupilZ` and `exitPupilZ`, with d the pupil's distance from the image plane of the case, the farther of the two answers |
 | `pupilZ.maxAbs` | \|a − b\| of the same two |
+| `pupilRadius.maxScaled` | \|a − b\| / max(1, d / 1000 mm) of `entrancePupilSemiDiameter` and `exitPupilSemiDiameter`, with d the distance of the pupil the radius is of, as above: by `entrancePupilZ` for the first and `exitPupilZ` for the second |
+| `pupilRadius.maxAbs` | \|a − b\| of the same two |
 
 The position of a pupil is a quotient, a height over an angle, and in a nearly telecentric system the angle is the
 small remainder of a sum that cancels: a pupil 20 m away cannot be placed to 1e-9 mm by any arithmetic in doubles,
 of which one unit in the last place is 3.6e-12 mm there. So a pupil's position is judged on the scale of its
 distance: `pupilZ.maxScaled` is the plain difference for a pupil within a metre of the image plane, and beyond that
 the difference as a fraction of the distance, in units of 1e-3, so that a gate of 1e-9 mm on it is 1e-12 of the
-distance. The plain difference is reported beside it and not judged. Every other value keeps the plain measure,
-the radius of a pupil included.
+distance. The plain difference is reported beside it and not judged.
+
+The radius of a pupil is the stop's radius times that same quotient: a pupil metres away is metres wide, and its
+radius is known as well as the pupil is placed and no better. So it is judged on the same scale, the distance of
+its own pupil from the image plane, and never on its own size: `pupilRadius.maxScaled`, with the plain
+`pupilRadius.maxAbs` beside it. The radius of a pupil within a metre of the image plane is held to the plain
+difference, however wide the pupil. Where that distance is no finite number, because an answer puts the pupil at
+infinity or gives it no position, there is no scale, and two radii that are numbers are compared plainly. A pupil
+at infinity has the infinity for its radius, and the same infinity in both answers is no difference. Every other
+value keeps the plain measure.
 
 Two values that are the same infinity differ by 0 in every metric, an infinity against anything else by an
 infinity, and a NaN is a NaN. `recorded` is not compared: each participant of a comparison carries its own, and a
