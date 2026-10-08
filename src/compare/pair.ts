@@ -2,7 +2,7 @@
 import type { ComparisonMetric, PairComparison, ParticipantStatus } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 import type { RungPolicy } from "../contract/policy.ts";
-import type { ComputedMetric, QuantityComparator } from "./comparator.ts";
+import type { ComparisonContext, ComputedMetric, QuantityComparator } from "./comparator.ts";
 import { numberText, whereText } from "./metricText.ts";
 
 /** One engine as it enters a comparison: how its job ended and, when it answered, what it answered. */
@@ -53,12 +53,17 @@ function stored(metric: ComputedMetric, unit: string): ComparisonMetric {
  * 3. `blockedBy` names a rung: `BLOCKED`. Both sides answered, and the two answers are not set against each other,
  *    because that earlier rung failed for the same two engines on the same case; the reason names it;
  * 4. no comparator for the quantity, or the comparator finds the two answers not comparable: `ERROR`, with why;
- * 5. a metric the policy names that the comparator did not report: `ERROR`. That is a defect of one of the two;
+ * 5. a metric the policy names that the comparator neither reported nor said it could not measure: `ERROR`. That
+ *    is a defect of one of the two;
  * 6. a gated rung: `PASS` when every metric the policy names is at or below its tolerance, else `FAIL` with a
  *    reason that names each metric above it, its value and where it occurs. A metric that is not a number is not
  *    at or below anything, so a NaN fails, and so does an infinity;
  * 7. a recorded rung: `RECORDED`, or `ATTENTION` when a metric is above the attention band the policy gives it,
  *    or has a band and is not a number. A metric without a band is only written down.
+ *
+ * A metric the policy names that the comparator could not measure on these two answers (`unmeasured`) is not
+ * judged: the reason says that it was not measured, and why, whatever the verdict. `FLOOR` is not decided here: it
+ * needs the other engines of the comparison (`attributeFloor`).
  *
  * The pair's metrics are the comparator's, in its order and its units, with null for a value that is not finite;
  * they are empty wherever nothing was measured. A pure function: equal arguments give an equal pair. Throws for a
@@ -70,6 +75,7 @@ export function comparePair(
   policy: RungPolicy,
   comparator: QuantityComparator | undefined,
   blockedBy?: string,
+  context?: ComparisonContext,
 ): PairComparison {
   const ended = (verdict: PairComparison["verdict"], reason: string): PairComparison => {
     return { a: a.engine, b: b.engine, metrics: [], class: policy.class, verdict, reason };
@@ -82,10 +88,14 @@ export function comparePair(
   if (blockedBy !== undefined) return ended("BLOCKED", blockedReason(a.engine, b.engine, blockedBy));
   if (comparator === undefined) return ended("ERROR", `quantity ${policy.quantity} has no comparator`);
 
-  const outcome = comparator.compare(a.data as JsonObject, b.data as JsonObject);
+  const outcome = comparator.compare(a.data as JsonObject, b.data as JsonObject, context);
   if (!outcome.comparable) return ended("ERROR", outcome.reason);
   const names = Object.keys(policy.metrics).sort();
-  const unreported = names.filter((name) => !outcome.metrics.some((metric) => metric.name === name));
+  const unmeasured = (outcome.unmeasured ?? []).filter(({ name }) => names.includes(name));
+  const unreported = names.filter(
+    (name) =>
+      !outcome.metrics.some((metric) => metric.name === name) && !unmeasured.some((metric) => metric.name === name),
+  );
   if (unreported.length > 0) {
     return ended("ERROR", `the comparator of ${comparator.quantity} reported no ${unreported.join(", ")}`);
   }
@@ -111,12 +121,15 @@ export function comparePair(
   const units = new Map(comparator.metrics.map((declared) => [declared.name, declared.unit]));
   const metrics = outcome.metrics.map((metric) => stored(metric, units.get(metric.name) ?? "1"));
   const verdict = gated ? (beyond.length > 0 ? "FAIL" : "PASS") : beyond.length > 0 ? "ATTENTION" : "RECORDED";
+  // In the order of the metrics' names, as the metrics beyond a limit are.
+  const missing = names.flatMap((name) => unmeasured.filter((metric) => metric.name === name));
+  const said = [...beyond, ...missing.map(({ name, reason }) => `${name} was not measured: ${reason}`)];
   return {
     a: a.engine,
     b: b.engine,
     metrics,
     class: policy.class,
     verdict,
-    ...(beyond.length > 0 ? { reason: beyond.join("; ") } : {}),
+    ...(said.length > 0 ? { reason: said.join("; ") } : {}),
   };
 }

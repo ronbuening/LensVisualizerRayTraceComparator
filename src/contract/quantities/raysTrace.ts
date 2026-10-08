@@ -32,6 +32,14 @@ export const DIRECTION_NORM_TOLERANCE = 1e-12;
 /** The `endSurface` of a ray that reached the image plane. */
 export const NO_END_SURFACE = -1;
 
+/**
+ * The width of the rim band, mm: a ray that one engine passes and another stops at a surface lies in the band when
+ * the hit of the engine that passed it is within this distance of the surface's clip radius, or of the radius of
+ * its central obstruction. There the two engines may legitimately disagree: each has placed the hit to its own
+ * intersection tolerance, and the limit is inclusive on a number neither of them holds exactly.
+ */
+export const RIM_BAND_MM = 1e-8;
+
 /** The field a set of rays comes from. */
 export type RayField = {
   /** The field angle in degrees; a positive angle is an object toward +y. */

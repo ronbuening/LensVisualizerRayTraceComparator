@@ -26,8 +26,10 @@ node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for 
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens at its default state; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
-node bin/lvrtc.mjs run suites/benchmark.json   # the same: a committed suite names lv and ref, and gets r0 and r1
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv --rungs rays        # lv traces LV's own launch rays
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
+node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both
+node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
+node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 ```
 
@@ -57,6 +59,12 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 - **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
   suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
+- **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
+  in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
+  cancel is compensated (`src/engines/ref/exact.ts`): the polynomial of a sag, an optical path. A ray is blocked
+  only where the line was looked at: where Newton's method settles on no hit, the stretch inside the clear aperture
+  is scanned for crossings (`crossingSteps`), and what cannot be decided is failed. When `lv` and `ref` differ,
+  check the ray in extended precision before believing either; no gate is widened for it.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.
@@ -82,10 +90,16 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
   a test writes goes into the repository. `test/fixtures/fake-root` defines `fake-py` and `fake-pyn`, Python
   workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
   `test/fixtures/fault-root` holds the engines that fail.
-- **Every judged rung has an entry in `policy/rungs.v1.json` and its quantity a comparator in `src/compare`**; a
-  test holds the three together. Raise the policy's `version` when a rung, a class or a limit changes. The one
-  rung nothing judges yet is `rays` (`onlyWhenNamed`: run only by `--rungs rays`, no policy entry, no comparator
-  for `rays.trace`); rungs that compare traced rays ask its requests (`rayTraceRequests`), so they share answers.
+- **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
+  test holds the three together. Raise the policy's `version` when a rung, a class or a limit changes. Two rungs
+  may compare one quantity, each with a comparator that names its rung: `r2` (geometry and mask) and `r3`
+  (optical path) both ask the `rays.trace` requests of `rayTraceRequests`, so an engine traces a set once.
+- **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
+  when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
+  `unmeasured`, is not judged, and is named in the pair's reason.
+- **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
+  `src/compare/floor.ts`). Only a pair of the floored engine (`lv`) can be `FLOOR`; a metric without floor limits
+  (the mask, the direction) always fails. Never add a floor limit, or widen one, to make a lens pass.
 - **Rays come from the case source, never from a rung or an engine.** `CaseSource.raySets` makes the ray sets of a
   run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
@@ -93,6 +107,9 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 - **LV's launch rays are kept verbatim**: every lattice cell as its own ray, no mirroring, no normalising (a `-0`
   stays), the chief ray last at weight 0. What `traceMtfBundle` and `computeMtfSteps` do inline is restated in
   `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own bundle.
+- **A sequential trace follows the order of the case, not of z**: a surface behind the last hit is met by a step
+  backwards (LV fails there with `noBracket`); a ray that no longer travels toward +z is blocked at the next
+  surface. Every engine writes its answer through `src/rays/traceRecorder.ts`.
 - **In `rays.trace` every value of a ray that did not arrive is NaN from the surface where it ended**, that
   surface's hit included; `endSurface` is S for a ray that passed every surface and cannot reach the image plane.
   A trace that ends on the last surface is landed by `src/estimators/imageProjection.ts`, for every engine alike.
@@ -102,6 +119,10 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 - **The fake LV tree (`test/fixtures/fake-lv-binding`) has a tracer and an MTF launch of its own**, with LV's
   names. A name added to the import manifest needs a fake of it there, and a new fake file a line in
   `FAKE_ENGINE_FILES` (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
+- **`reports/benchmark/lv-floor.{json,md}` is the committed digest of the benchmark** (`src/report/floor.ts`):
+  results, counts, run names and hashes only. An integration test holds its figures to a fresh run while LV's
+  engine closure is the one it names. Regenerate it with `run ... --rungs r0,r1,r2,r3`, `compare` and
+  `report --floor` after a change to `ref`, to the `lv` adapter or to the figures: it names both engines by hash.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
   `renderMarkdown` are pure functions and stay so.

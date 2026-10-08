@@ -42,12 +42,6 @@ export interface RungDefinition {
    */
   readonly needsRaySets?: boolean;
   /**
-   * True for a rung that is run only where it is named, by `--rungs` or by a run's `rungs`, and is none of the
-   * rungs of a run that names none. It is a rung nothing judges: it has no entry in the policy, so a run of it
-   * cannot be compared.
-   */
-  readonly onlyWhenNamed?: boolean;
-  /**
    * The requests of this rung for one case, in a fixed order and without engine options: equal arguments give
    * equal requests, with equal ids. Each is about `opticalCase` and asks for `quantity` with a spec the quantity
    * accepts. `inputs` is `NO_RUNG_INPUTS` when the caller has none to give.
@@ -116,42 +110,49 @@ export function rayTraceRequests(opticalCase: OpticalCase, inputs: RungInputs = 
 }
 
 /**
- * The rung `rays`: the `rays.trace` requests of the run's ray sets (`rayTraceRequests`), which the source of the
- * run's case generates for the run's fields, lines and bundle grid. It asks every engine to trace the same rays
- * and judges nothing: the rungs that compare the traces are R2 and R3 of the ladder, which ask the same requests.
- * So it is run only where it is named, and it has no entry in the policy.
+ * The rung `r2`, the traced rays as geometry: the `rays.trace` requests of the run's ray sets (`rayTraceRequests`),
+ * which the source of the run's case generates for the run's fields, lines and bundle grid. Every engine traces the
+ * same rays, and the answers are compared hit by hit, in the direction behind the last surface, in the landing on
+ * the image plane and in which rays got through.
  */
-export const raysRung: RungDefinition = Object.freeze({
-  id: "rays",
+export const r2Rung: RungDefinition = Object.freeze({
+  id: "r2",
   quantity: RAYS_TRACE,
   needsRaySets: true,
-  onlyWhenNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    rayTraceRequests(opticalCase, inputs),
+});
+
+/**
+ * The rung `r3`, the traced rays as optical path: the same requests as `r2`, so an engine that has answered one
+ * has answered the other and the store holds one answer for both. The answers are compared in the optical path to
+ * the last surface and to the image plane.
+ */
+export const r3Rung: RungDefinition = Object.freeze({
+  id: "r3",
+  quantity: RAYS_TRACE,
+  needsRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
     rayTraceRequests(opticalCase, inputs),
 });
 
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
- * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first; `rays`,
- * which is run only where it is named, comes last.
+ * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
+ * rung is judged: each has an entry in the policy and a comparator for its quantity.
  */
-export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, raysRung]);
-
-/** The rungs that are judged: those of `rungs` that a run which names none is run on, each with a policy entry. */
-export function judgedRungs(rungs: readonly RungDefinition[] = RUNGS): RungDefinition[] {
-  return rungs.filter((rung) => rung.onlyWhenNamed !== true);
-}
+export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, r2Rung, r3Rung]);
 
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When
- * `ids` is undefined, as for a run that states none: every rung that is not one to be run `onlyWhenNamed`. Throws
- * a `UsageError` naming every id that is not a rung, and for an empty list, which asks for nothing.
+ * `ids` is undefined, as for a run that states none: every rung. Throws a `UsageError` naming every id that is not
+ * a rung, and for an empty list, which asks for nothing.
  */
 export function selectRungs(
   ids: readonly string[] | undefined,
   rungs: readonly RungDefinition[] = RUNGS,
 ): RungDefinition[] {
-  if (ids === undefined) return judgedRungs(rungs);
+  if (ids === undefined) return [...rungs];
   const known = rungs.map((rung) => rung.id);
   const unknown = [...new Set(ids)].filter((id) => !known.includes(id));
   if (unknown.length > 0) {

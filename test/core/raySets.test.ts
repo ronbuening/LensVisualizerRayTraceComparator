@@ -17,8 +17,7 @@ import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { runSuite } from "../../src/core/orchestrator.ts";
 import type { SuiteRunResult } from "../../src/core/orchestrator.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../src/core/resultStore.ts";
-import { rayTraceRequests, raysRung, selftestRung } from "../../src/core/rungs.ts";
-import type { RungDefinition } from "../../src/core/rungs.ts";
+import { r2Rung, r3Rung, rayTraceRequests, selftestRung } from "../../src/core/rungs.ts";
 import { createFixtureCaseSource } from "../../src/core/suite.ts";
 import type { CaseSource } from "../../src/core/suite.ts";
 import { raysTraceQuantity } from "../../src/quantities/raysTrace.ts";
@@ -103,21 +102,21 @@ test("a rung that traces rays is handed the sets of the run's source, and asks o
     registry: engines.registry,
     runsDir,
     sources: { fixture: source },
-    rungs: ["rays"],
+    rungs: ["r2"],
   });
 
   // The source was asked once for each run, with the run and its case.
   assert.deepEqual(asked, [`singlet ${SINGLET.id.slice(0, 8)}`, `double-gauss ${DOUBLE_GAUSS.id.slice(0, 8)}`]);
   // Two sets a run: two requests for each engine. The fake does not offer the quantity and is not asked.
   assert.deepEqual(rows(result), [
-    "singlet rays fake unsupported negotiated",
-    "singlet rays fake unsupported negotiated",
-    "singlet rays tracer ok computed",
-    "singlet rays tracer ok computed",
-    "double-gauss rays fake unsupported negotiated",
-    "double-gauss rays fake unsupported negotiated",
-    "double-gauss rays tracer ok computed",
-    "double-gauss rays tracer ok computed",
+    "singlet r2 fake unsupported negotiated",
+    "singlet r2 fake unsupported negotiated",
+    "singlet r2 tracer ok computed",
+    "singlet r2 tracer ok computed",
+    "double-gauss r2 fake unsupported negotiated",
+    "double-gauss r2 fake unsupported negotiated",
+    "double-gauss r2 tracer ok computed",
+    "double-gauss r2 tracer ok computed",
   ]);
   for (const [index, opticalCase] of [SINGLET, DOUBLE_GAUSS].entries()) {
     const expected = rayTraceRequests(opticalCase, { raySets: BOTH.sets });
@@ -153,23 +152,22 @@ test("two rungs that trace rays share the sets and the answers: the source is as
   const runsDir = join(tempDir(t), "runs");
   const { source, asked } = watchedSource(() => BOTH);
   const engines = watchedRegistry({ tracer });
-  // What rungs R2 and R3 of the ladder will be: two rungs of one quantity, asking the same requests.
-  const again: RungDefinition = { ...raysRung, id: "rays-again" };
+  // Rungs R2 and R3 of the ladder: two rungs of one quantity, asking the same requests.
   const suite = suiteOf("shared", [{ name: "singlet", opticalCase: SINGLET }]);
   const result = await runSuite({
     suite,
     registry: engines.registry,
     runsDir,
     sources: { fixture: source },
-    rungDefinitions: [selftestRung, raysRung, again],
-    rungs: ["rays", "rays-again"],
+    rungDefinitions: [selftestRung, r2Rung, r3Rung],
+    rungs: ["r2", "r3"],
   });
   assert.equal(asked.length, 1);
   assert.deepEqual(rows(result), [
-    "singlet rays tracer ok computed",
-    "singlet rays tracer ok computed",
-    "singlet rays-again tracer ok cached",
-    "singlet rays-again tracer ok cached",
+    "singlet r2 tracer ok computed",
+    "singlet r2 tracer ok computed",
+    "singlet r3 tracer ok cached",
+    "singlet r3 tracer ok cached",
   ]);
   assert.equal(engines.ran.length, 2);
   const [first, second, third, fourth] = result.manifest.jobs;
@@ -184,12 +182,13 @@ test("the sets are generated only when a rung that needs them is run, and never 
     { name: "no-case", opticalCase: null, problems: ["its lens has no case"] },
   ]);
   const sources = { fixture: source };
-  // A run that names no rung gets the judged ones, of which none traces rays.
+  // A run of rungs none of which traces rays: the source is not asked, and the manifest states no sets.
   const plain = await runSuite({
     suite,
     registry: watchedRegistry({ fake: fakeEngine() }).registry,
     runsDir: tempDir(t),
     sources,
+    rungs: ["selftest", "r0", "r1"],
   });
   assert.deepEqual(asked, []);
   assert.deepEqual(
@@ -200,13 +199,25 @@ test("the sets are generated only when a rung that needs them is run, and never 
     plain.manifest.runs.map((run) => Object.hasOwn(run, "raySets")),
     [false, false],
   );
+  // A run that names no rung gets every rung, the two of traced rays among them: the sets are made once for both.
+  const every = await runSuite({
+    suite,
+    registry: watchedRegistry({ tracer }).registry,
+    runsDir: tempDir(t),
+    sources,
+  });
+  assert.deepEqual(asked.splice(0), [`singlet ${SINGLET.id.slice(0, 8)}`]);
+  assert.deepEqual(
+    every.manifest.jobs.map((job) => `${job.rung} ${job.status}`),
+    ["selftest unsupported", "r0 unsupported", "r1 unsupported", "r2 ok", "r2 ok", "r3 ok", "r3 ok"],
+  );
 
   const traced = await runSuite({
     suite,
     registry: watchedRegistry({ tracer }).registry,
     runsDir: tempDir(t),
     sources,
-    rungs: ["r0", "rays"],
+    rungs: ["r0", "r2"],
   });
   assert.deepEqual(asked, [`singlet ${SINGLET.id.slice(0, 8)}`]);
   assert.deepEqual(traced.manifest.runs[1], { name: "no-case", caseId: null, problems: ["its lens has no case"] });
@@ -214,7 +225,7 @@ test("the sets are generated only when a rung that needs them is run, and never 
   // A rung that needs no rays is handed none: r0 asks what it always asks.
   assert.deepEqual(
     traced.manifest.jobs.map((job) => `${job.rung} ${job.status}`),
-    ["r0 unsupported", "rays ok", "rays ok"],
+    ["r0 unsupported", "r2 ok", "r2 ok"],
   );
 });
 
@@ -232,7 +243,7 @@ test("a field without rays is recorded with its code and fails nothing; the run 
     registry: watchedRegistry({ tracer }).registry,
     runsDir: tempDir(t),
     sources: { fixture: source },
-    rungs: ["rays"],
+    rungs: ["r2"],
   });
   assert.deepEqual(
     result.manifest.runs.map((run) => [run.name, run.problems, run.raySets?.sets.length, run.raySets?.problems]),
@@ -242,9 +253,9 @@ test("a field without rays is recorded with its code and fails nothing; the run 
     ],
   );
   assert.deepEqual(rows(result), [
-    "short rays tracer ok computed",
-    "whole rays tracer ok computed",
-    "whole rays tracer ok computed",
+    "short r2 tracer ok computed",
+    "whole r2 tracer ok computed",
+    "whole r2 tracer ok computed",
   ]);
   assert.deepEqual(result.warnings, []);
 });
@@ -258,7 +269,7 @@ test("a lens whose source makes no rays has no ray jobs, and the manifest says w
       registry: watchedRegistry({ tracer }).registry,
       runsDir: tempDir(t),
       sources,
-      rungs: ["rays"],
+      rungs: ["r2"],
     });
     assert.deepEqual(result.manifest.jobs, []);
     assert.deepEqual(result.manifest.runs[0].raySets, {
@@ -281,7 +292,7 @@ test("a case read from a file is traced with its probe lattices, at each of its 
       registry: watchedRegistry({ tracer }).registry,
       runsDir,
       sources: { fixture: createFixtureCaseSource("/nowhere") },
-      rungs: ["rays"],
+      rungs: ["r2"],
     });
   const result = await run();
   const probe = probeRaySets(ALL_FEATURES_CASE, options);
@@ -298,8 +309,8 @@ test("a case read from a file is traced with its probe lattices, at each of its 
     ],
   );
   assert.deepEqual(rows(result), [
-    ...new Array(4).fill("two-lines rays tracer ok computed"),
-    "default-fields rays tracer ok computed",
+    ...new Array(4).fill("two-lines r2 tracer ok computed"),
+    "default-fields r2 tracer ok computed",
   ]);
   assert.deepEqual(
     result.manifest.jobs.slice(0, 4).map((job) => job.requestId),

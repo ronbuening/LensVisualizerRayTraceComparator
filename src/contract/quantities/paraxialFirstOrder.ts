@@ -37,6 +37,16 @@ export const FIRST_ORDER_VALUES = [
 export type FirstOrderValue = (typeof FIRST_ORDER_VALUES)[number];
 
 /**
+ * The compared values that are the position of a pupil. A pupil can lie metres from the lens, where no arithmetic
+ * places it to a fixed fraction of a millimetre, so a comparison measures these two against their distance from
+ * the image plane as well as in plain millimetres.
+ */
+export const PUPIL_POSITIONS: readonly FirstOrderValue[] = Object.freeze(["entrancePupilZ", "exitPupilZ"] as const);
+
+/** The distance of a pupil from the image plane, mm, up to which its position is compared in plain millimetres. */
+export const PUPIL_DISTANCE_SCALE_MM = 1000;
+
+/**
  * The `item` of the "unsupported" answer to a case whose system has no finite focal length at one of its lines.
  * Its `code` is `feature`.
  */

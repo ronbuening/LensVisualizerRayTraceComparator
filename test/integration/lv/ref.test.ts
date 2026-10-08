@@ -88,12 +88,14 @@ test(
     );
     assert.ok(lenses > 800, `about 870 lenses export, found ${lenses}`);
 
-    // At d36f44b3: 868 lenses, 18 678 surfaces. The largest scaled difference is 5.5e-16, a few units of rounding,
+    // At d36f44b3: 868 lenses, 18 678 surfaces. The largest scaled difference is 4.3e-16, a few units of rounding,
     // so the tolerance of 1e-12 has three orders of magnitude to spare.
     assert.ok(worst.scaled < 1e-14, `the scaled difference is rounding: ${worst.scaled} on ${worst.scaledAt}`);
     // The plain difference is not: 1.3e-10 mm on russar-22-70f8, whose second surface ends 1e-10 short of a
-    // hemisphere's rim in the root, and up to 8e-12 mm on four Fujifilm lenses whose terms of 1e4 to 1e5 mm cancel
-    // to a sag of a millimetre. A gate of 1e-12 mm on it would fail five lenses that two correct engines agree on.
+    // hemisphere's rim in the root, and up to 8e-12 mm on three lenses whose terms of 1e4 to 1e5 mm cancel to a sag
+    // of a millimetre: there `ref`, which sums its terms with their rounding errors carried along, is the exact
+    // sum, and LensVisualizer's plain sum is that far from it. A gate of 1e-12 mm on the plain difference would
+    // fail four lenses whose sag both engines have right.
     assert.ok(worst.abs > 1e-12 && worst.abs < 1e-9, `${worst.abs} mm on ${worst.absAt}`);
     assert.ok(overPlainGate.size >= 1 && overPlainGate.size < 20, String(overPlainGate.size));
   },

@@ -66,6 +66,10 @@ export interface SurfaceOf {
   readonly index: number | readonly number[];
   /** The clear semi-diameter; 10 mm without it. */
   readonly semiDiameter?: number;
+  /** The clip radius, to the last bit; without it the clear semi-diameter and 1e-9 mm, as a case source widens it. */
+  readonly clipRadius?: number;
+  /** The radius of a central obstruction; none without it. */
+  readonly innerSemiDiameter?: number;
   readonly synthetic?: "rearPlate";
 }
 
@@ -106,7 +110,11 @@ export function caseOf(surfaces: readonly SurfaceOf[], more: SystemOf = {}): Opt
         z: surface.z,
         thickness: (at + 1 < surfaces.length ? surfaces[at + 1].z : imageZ) - surface.z,
         shape: surface.shape,
-        aperture: { semiDiameter: semiDiameter + 1e-9, nominalSemiDiameter: semiDiameter, innerSemiDiameter: 0 },
+        aperture: {
+          semiDiameter: surface.clipRadius ?? semiDiameter + 1e-9,
+          nominalSemiDiameter: semiDiameter,
+          innerSemiDiameter: surface.innerSemiDiameter ?? 0,
+        },
         elementId: 0,
         ...(surface.synthetic === undefined ? {} : { synthetic: surface.synthetic }),
       };

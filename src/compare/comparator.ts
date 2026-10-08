@@ -1,5 +1,6 @@
 // The comparator plug-in: what the comparison knows about one quantity. A quantity's comparator turns the data of
 // two "ok" results into the numbers that say how far apart they are; judging those numbers belongs to the policy.
+import type { OpticalCase } from "../contract/case.ts";
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 
@@ -19,24 +20,57 @@ export interface ComputedMetric {
   readonly where?: ComparisonMetric["where"];
 }
 
-/** What a comparator makes of two answers: their metrics, or why they cannot be compared at all. */
+/** A metric a comparator declares and could not measure on two answers, and why. */
+export interface UnmeasuredMetric {
+  readonly name: string;
+  /** Why the two answers have nothing to measure it on, in words that quote nothing but the data. */
+  readonly reason: string;
+}
+
+/**
+ * What a comparator makes of two answers: their metrics, or why they cannot be compared at all. A metric that the
+ * two answers have nothing to measure on is left out of `metrics` and listed under `unmeasured`: it is then not
+ * judged, and the pair's reason says why it is missing.
+ */
 export type ComparatorOutcome =
-  | { readonly comparable: true; readonly metrics: readonly ComputedMetric[] }
+  | {
+      readonly comparable: true;
+      readonly metrics: readonly ComputedMetric[];
+      readonly unmeasured?: readonly UnmeasuredMetric[];
+    }
   | { readonly comparable: false; readonly reason: string };
+
+/**
+ * What two answers are answers to, for a comparator whose metrics need more than the answers: the clip radius of a
+ * surface, the wavelength of a line, which ray of a set is the chief ray. A member is left out where the caller
+ * does not have it; a comparator that needs it then finds the answers not comparable.
+ */
+export interface ComparisonContext {
+  /** The spec of the request both answers are to. */
+  readonly spec?: JsonObject;
+  /** The case the request is about. */
+  readonly opticalCase?: OpticalCase;
+}
 
 /** The comparison of one quantity. */
 export interface QuantityComparator {
   /** The dotted id of the quantity whose data it reads. */
   readonly quantity: string;
+  /**
+   * The one rung it compares the quantity for, where several rungs compare one quantity, each by metrics of its
+   * own; left out by the comparator of a quantity for every rung that has none of its own.
+   */
+  readonly rung?: string;
   /** Every metric it reports, in the order it reports them. */
   readonly metrics: readonly MetricDeclaration[];
   /**
-   * The metrics of two answers. A pure function of the two: equal data gives equal metrics, on any machine, and
-   * swapping the two changes no value. Both are data of the quantity, valid by its schema and with arrays that
-   * decode; for anything else it may throw. Answers that are valid and still cannot be set against each other
-   * (arrays of different shapes) are not comparable, with a reason that quotes nothing but the data.
+   * The metrics of two answers. A pure function of its arguments: equal data and context give equal metrics, on
+   * any machine, and swapping the two answers changes no value. Both are data of the quantity, valid by its schema
+   * and with arrays that decode; for anything else it may throw. Answers that are valid and still cannot be set
+   * against each other (arrays of different shapes, a context it needs and was not given) are not comparable, with
+   * a reason that quotes nothing but the data.
    */
-  compare(a: JsonObject, b: JsonObject): ComparatorOutcome;
+  compare(a: JsonObject, b: JsonObject, context?: ComparisonContext): ComparatorOutcome;
   /**
    * What one answer reports beside what is compared, by name: values that are listed with every comparison of the
    * answer and never judged. A comparator has this only when its quantity has such values. The data is as for
@@ -47,22 +81,33 @@ export interface QuantityComparator {
 
 /** A set of comparators that can be read but not added to. */
 export interface ComparatorLookup {
-  /** The comparator of the quantity with this id, or undefined when it has none. */
-  get(quantity: string): QuantityComparator | undefined;
-  /** Every comparator, sorted by quantity id, in a fresh list. */
+  /**
+   * The comparator of the quantity with this id for a rung: the one that names the rung, else the one of the
+   * quantity that names none; undefined when there is neither. Without a rung: the one that names none.
+   */
+  get(quantity: string, rung?: string): QuantityComparator | undefined;
+  /** Every comparator, sorted by quantity id and then by rung, in a fresh list. */
   list(): QuantityComparator[];
 }
 
-/** A lookup of the given comparators. Throws when two of them are for one quantity. A lookup is by exact id. */
+/**
+ * A lookup of the given comparators. Throws when two of them are for one quantity and one rung, or both for every
+ * rung of one quantity. A lookup is by exact id.
+ */
 export function createComparatorLookup(comparators: readonly QuantityComparator[]): ComparatorLookup {
-  const byQuantity = new Map<string, QuantityComparator>();
+  const keyOf = (quantity: string, rung?: string): string => JSON.stringify([quantity, rung ?? null]);
+  const byKey = new Map<string, QuantityComparator>();
   for (const comparator of comparators) {
-    if (byQuantity.has(comparator.quantity)) throw new Error(`quantity ${comparator.quantity} has two comparators`);
-    byQuantity.set(comparator.quantity, comparator);
+    const key = keyOf(comparator.quantity, comparator.rung);
+    if (byKey.has(key)) {
+      const of = comparator.rung === undefined ? "" : ` for the rung ${comparator.rung}`;
+      throw new Error(`quantity ${comparator.quantity} has two comparators${of}`);
+    }
+    byKey.set(key, comparator);
   }
+  const order = (comparator: QuantityComparator): string => `${comparator.quantity}\0${comparator.rung ?? ""}`;
   return Object.freeze({
-    get: (quantity: string) => byQuantity.get(quantity),
-    list: () =>
-      [...byQuantity.values()].sort((a, b) => (a.quantity < b.quantity ? -1 : a.quantity > b.quantity ? 1 : 0)),
+    get: (quantity: string, rung?: string) => byKey.get(keyOf(quantity, rung)) ?? byKey.get(keyOf(quantity)),
+    list: () => [...byKey.values()].sort((a, b) => (order(a) < order(b) ? -1 : order(a) > order(b) ? 1 : 0)),
   });
 }

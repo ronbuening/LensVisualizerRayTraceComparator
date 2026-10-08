@@ -5,7 +5,12 @@
 //
 // Only IEEE 754 basic operations are used (+, -, *, / and square root, each correctly rounded), and a power is
 // built by multiplication, so a result does not depend on a math library and is the same bits on every platform.
+//
+// The polynomial is the one sum of a surface that cancels: the terms of a real asphere reach 1e5 mm and add up to a
+// sag of a millimetre. It is therefore summed with the rounding error of every product and of every addition
+// carried along (`polynomial`), which gives the sum as if it had been computed in twice the working precision.
 import type { AsphereTerm, SurfaceShape } from "../../contract/case.ts";
+import { twoProductError, twoSumError } from "./exact.ts";
 
 /** A surface of revolution as the reference engine holds it. */
 export interface SurfaceProfile {
@@ -29,15 +34,53 @@ function byPower(a: AsphereTerm, b: AsphereTerm): number {
   return a.power - b.power;
 }
 
-/** `base` to a whole power of at least 0, by squaring and multiplying: at most 2 log2(power) rounded products. */
-function wholePower(base: number, power: number): number {
-  let result = 1;
-  let square = base;
-  for (let left = power; left > 0; left = Math.floor(left / 2)) {
-    if (left % 2 === 1) result *= square;
-    if (left > 1) square *= square;
+/**
+ * The polynomial part of a sag and its derivative at the radial height `r`: the sum of `coeff * r^power` over the
+ * terms, and the sum of `power * coeff * r^(power - 1)`, as `[value, slope]`.
+ *
+ * Both are compensated sums. A power of `r` is carried as two doubles, a value and what its rounding left out, and
+ * raised one multiplication at a time; each term's product with it, and each addition to the running sum, has its
+ * rounding error computed exactly (`twoProductError`, `twoSumError`) and added up beside the sum. The result is
+ * each sum rounded once from a value that is exact to about 1e-32 of the magnitudes added, so terms that cancel by
+ * five orders of magnitude cost no digit. The terms are taken in the order given, which `profileOf` makes ascending.
+ */
+export function polynomial(terms: readonly AsphereTerm[], r: number): [value: number, slope: number] {
+  // r^reached as power + powerRest, and r^(reached - 1) as below + belowRest.
+  let reached = 0;
+  let power = 1;
+  let powerRest = 0;
+  let below = 0;
+  let belowRest = 0;
+  let value = 0;
+  let valueRest = 0;
+  let slope = 0;
+  let slopeRest = 0;
+  for (const term of terms) {
+    while (reached < term.power) {
+      below = power;
+      belowRest = powerRest;
+      const raised = power * r;
+      const rest = twoProductError(power, r, raised) + powerRest * r;
+      power = raised + rest;
+      powerRest = rest - (power - raised);
+      reached++;
+    }
+    const product = term.coeff * power;
+    const productRest = twoProductError(term.coeff, power, product) + term.coeff * powerRest;
+    const sum = value + product;
+    valueRest += twoSumError(value, product, sum) + productRest;
+    value = sum;
+
+    // power * coeff need not be a double: a small whole number times 53 bits can have 58.
+    const factor = term.power * term.coeff;
+    const factorRest = twoProductError(term.power, term.coeff, factor);
+    const steepness = factor * below;
+    const steepnessRest = twoProductError(factor, below, steepness) + (factor * belowRest + factorRest * below);
+    const slopeSum = slope + steepness;
+    slopeRest += twoSumError(slope, steepness, slopeSum) + steepnessRest;
+    slope = slopeSum;
   }
-  return result;
+  return [value + valueRest, slope + slopeRest];
 }
 
 /**
@@ -45,7 +88,7 @@ function wholePower(base: number, power: number): number {
  * the cosine of the angle between the conic's normal and the axis, times sqrt(1 - K c^2 r^2). NaN beyond the
  * height at which the conic ends, where 1 - (1 + K) c^2 r^2 is below 0; 1 on a flat base.
  */
-function conicRoot(profile: SurfaceProfile, r: number): number {
+export function conicRoot(profile: SurfaceProfile, r: number): number {
   const u = profile.curvature * r;
   return Math.sqrt(1 - (1 + profile.conic) * u * u);
 }
@@ -56,20 +99,12 @@ function conicRoot(profile: SurfaceProfile, r: number): number {
  * The conic part is written c r^2 / (1 + root), which adds two positive numbers where the textbook form
  * (1 - root) / ((1 + K) c) subtracts two nearly equal ones, so it keeps its precision near the vertex and is
  * defined for a paraboloid. Beyond the height at which the conic ends the root is not real and the sag is NaN.
- * The polynomial is summed term by term in ascending power.
+ * The polynomial is a compensated sum (`polynomial`), added to the conic part in one addition.
  */
 export function sag(profile: SurfaceProfile, r: number): number {
   const { curvature, terms } = profile;
-  let z = curvature === 0 ? 0 : (curvature * r * r) / (1 + conicRoot(profile, r));
-  for (const { power, coeff } of terms) z += coeff * wholePower(r, power);
-  return z;
-}
-
-/** The derivative of the polynomial part of the sag: the sum of n a_n r^(n - 1). */
-function polynomialSlope(terms: readonly AsphereTerm[], r: number): number {
-  let slope = 0;
-  for (const { power, coeff } of terms) slope += power * coeff * wholePower(r, power - 1);
-  return slope;
+  const conicPart = curvature === 0 ? 0 : (curvature * r * r) / (1 + conicRoot(profile, r));
+  return terms.length === 0 ? conicPart : conicPart + polynomial(terms, r)[0];
 }
 
 /**
@@ -79,7 +114,7 @@ function polynomialSlope(terms: readonly AsphereTerm[], r: number): number {
 export function slope(profile: SurfaceProfile, r: number): number {
   const { curvature, terms } = profile;
   const conicPart = curvature === 0 ? 0 : (curvature * r) / conicRoot(profile, r);
-  return conicPart + polynomialSlope(terms, r);
+  return terms.length === 0 ? conicPart : conicPart + polynomial(terms, r)[1];
 }
 
 /**
@@ -93,8 +128,24 @@ export function slope(profile: SurfaceProfile, r: number): number {
  */
 export function unitNormal(profile: SurfaceProfile, x: number, y: number): [nx: number, ny: number, nz: number] {
   const r = Math.sqrt(x * x + y * y);
-  const root = profile.curvature === 0 ? 1 : conicRoot(profile, r);
-  const g = profile.curvature * r + root * polynomialSlope(profile.terms, r);
+  return unitNormalAt(profile, x, y, profile.curvature === 0 ? 1 : conicRoot(profile, r));
+}
+
+/**
+ * The unit normal of a surface at the point above (x, y) (`unitNormal`), for a caller that knows the conic's root
+ * there by another way than from the height: on the surface the root is 1 - (1 + K) c w, with w the conic part of
+ * the sag, which is exact where the square root of `conicRoot` has lost its digits: near the height at which the
+ * conic ends. On a flat base the root is 1.
+ */
+export function unitNormalAt(
+  profile: SurfaceProfile,
+  x: number,
+  y: number,
+  root: number,
+): [nx: number, ny: number, nz: number] {
+  const r = Math.sqrt(x * x + y * y);
+  const polynomialSlope = profile.terms.length === 0 ? 0 : polynomial(profile.terms, r)[1];
+  const g = profile.curvature * r + root * polynomialSlope;
   if (r === 0) return g === 0 ? [0, 0, 1] : [NaN, NaN, NaN];
   const length = Math.sqrt(g * g + root * root);
   const radial = -g / (r * length);

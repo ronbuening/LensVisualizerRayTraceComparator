@@ -199,7 +199,9 @@ test(
     t.after(() => rmSync(runsDir, { recursive: true, force: true }));
     // On the fixture root's fake engine, which knows no optics and answers the selftest rung, and on the built-in
     // reference engine, which answers R0 and R1 for every one of these cases: each declines what the other offers.
-    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a,ref"];
+    // The rungs that trace rays are left out: this is about the cases.
+    const rungs = ["--rungs", "selftest,r0,r1"];
+    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a,ref", ...rungs];
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
@@ -232,7 +234,7 @@ test(
 );
 
 test(
-  "a committed suite runs at the root of this repository as it is: on lv and ref, on every judged rung",
+  "a committed suite runs at the root of this repository as it is: on lv and ref, on every rung of the ladder",
   { skip },
   (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-smoke-root-"));
@@ -240,18 +242,22 @@ test(
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const lvrtc = (...args: string[]) =>
       spawnSync(process.execPath, [BIN, ...args], { encoding: "utf8", cwd: REPO_ROOT, env });
-    // No --engines and no --rungs: the suite names the built-in engines, and a run gets the rungs that are judged.
+    // No --engines and no --rungs: the suite names the built-in engines, and a run gets every rung.
     const ran = lvrtc("run", suitePath("smoke"));
     assert.equal(ran.status, 0, ran.stderr);
-    // Three runs, three rungs, two engines: neither answers the conformance quantity, both the other two.
-    assert.match(ran.stdout, /^smoke: 18 jobs: 12 ok, 6 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
-    assert.doesNotMatch(ran.stdout, / rays /);
+    // Three runs and two engines. Neither answers the conformance quantity, both answer R0 and R1; and the runs
+    // have 21 ray sets between them (three fields, at one line twice and at five lines once), which each engine
+    // traces once, for R2, and R3 finds in the store.
+    assert.match(ran.stdout, /^smoke: 102 jobs: 96 ok, 6 unsupported, 0 error, 0 pending \(54 computed, 42 cached\)$/m);
     const compared = lvrtc("compare", "smoke");
-    assert.equal(compared.status, 0, compared.stderr);
+    assert.equal(compared.status, 0, compared.stderr + compared.stdout);
+    // At LV d36f44b3 every pair of the smoke suite passes outright: none needs the floor.
     assert.match(
       compared.stdout,
-      /^smoke: 18 pairs: 12 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^smoke: 102 pairs: 96 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
+    const reported = lvrtc("report", "smoke");
+    assert.equal(reported.status, 0, reported.stderr);
     // The manifest states, for each engine, the comparator's own code behind it beside the engine's fingerprint.
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8"));
     for (const engine of manifest.engines) {

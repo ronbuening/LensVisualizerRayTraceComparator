@@ -487,7 +487,11 @@ test("a built-in engine is made without a definition, under any root, and answer
   assert.ok(adapter instanceof RemoteEngineAdapter);
   const descriptor = await adapter.describe();
   assert.equal(descriptor.identity.id, "ref");
-  assert.deepEqual(Object.keys(descriptor.capabilities.quantities).sort(), ["paraxial.first-order", "system.describe"]);
+  assert.deepEqual(Object.keys(descriptor.capabilities.quantities).sort(), [
+    "paraxial.first-order",
+    "rays.trace",
+    "system.describe",
+  ]);
   // It does not answer the conformance quantity, and says so as an answer.
   assert.equal((await adapter.run(echoRequest(Float64Array.of(1)), CASE)).status, "unsupported");
 });

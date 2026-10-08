@@ -6,7 +6,6 @@ import { cpSync, readFileSync, readdirSync, renameSync, writeFileSync } from "no
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import { finalizeCase } from "../../../src/contract/case.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
@@ -88,7 +87,7 @@ function f8(wire: NdArrayWire): number[] {
 
 // ── Who it is ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("ref describes itself: its id, a fingerprint of its sources, its features and its two quantities", async (t) => {
+test("ref describes itself: its id, a fingerprint of its sources, its features and its three quantities", async (t) => {
   const descriptor = await refEngine(t).describe();
   assert.deepEqual(validateKind("engine-descriptor", descriptor), []);
   assert.deepEqual(descriptor, refDescriptor());
@@ -98,15 +97,13 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
   assert.equal(descriptor.identity.version, REF_ENGINE_VERSION);
   assert.match(descriptor.identity.fingerprint, /^[0-9a-f]{64}$/);
   assert.deepEqual(descriptor.capabilities.quantities, {
-    "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
+    "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
+    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version },
   });
   assert.equal(descriptor.capabilities.deterministic, true);
-  // Every feature of a case but an annular aperture, in the order of the flags, and no limit of any kind.
-  assert.deepEqual(
-    descriptor.capabilities.features.supported,
-    FEATURE_FLAGS.filter((flag) => flag !== "aperture.annular"),
-  );
+  // Every feature of a case, in the order of the flags, and no limit of any kind.
+  assert.deepEqual(descriptor.capabilities.features.supported, [...FEATURE_FLAGS]);
   assert.deepEqual(descriptor.capabilities.features.supported, [...REF_FEATURES]);
   assert.deepEqual(descriptor.capabilities.features.limits, {});
 });
@@ -114,6 +111,8 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
 test("the fingerprint is a hash of the engine's own source files, by path and content", (t) => {
   const files = readdirSync(REF_SOURCE_DIRECTORY).sort();
   assert.ok(files.includes("engine.ts") && files.includes("surface.ts") && files.includes("paraxial.ts"));
+  // The tracer and everything under it are the engine's own, and so are in its fingerprint.
+  for (const file of ["trace.ts", "intersect.ts", "refract.ts", "exact.ts", "rays.ts"]) assert.ok(files.includes(file));
   assert.ok(files.every((file) => file.endsWith(".ts")));
   const lines = files.map((file) => `${file}\0${sha256Hex(readFileSync(join(REF_SOURCE_DIRECTORY, file)))}\n`);
   assert.deepEqual(refFingerprint(), { fingerprint: sha256Hex(lines.join("")), fileCount: files.length });
@@ -236,14 +235,10 @@ test("the Double-Gauss is described as the case states it, and its sag is that o
 });
 
 test("an asphere is described with its terms, a flat base with curvature 0, and several lines with a row each", async (t) => {
-  // The every-feature case has an annular aperture, which ref does not take: the same surfaces without it.
-  const { label, system, conditions, provenance } = ALL_FEATURES_CASE;
-  const surfaces = system.surfaces.map((surface) => ({
-    ...surface,
-    aperture: { ...surface.aperture, innerSemiDiameter: 0 },
-  }));
-  const plain = finalizeCase({ label, system: { ...system, surfaces }, conditions, provenance });
-  assert.ok(!plain.features.includes("aperture.annular"));
+  // The every-feature case, annular aperture and all.
+  const plain = ALL_FEATURES_CASE;
+  const { surfaces } = plain.system;
+  assert.ok(plain.features.includes("aperture.annular"));
   assert.ok(plain.features.includes("surface.asphere.flat-base") && plain.features.includes("lines.multiple"));
 
   const data = await described(t, plain, { sagFractions: [0.5, 1] });
@@ -472,29 +467,26 @@ test("a system without a focal length, and a cone, have no first-order data: uns
   assert.deepEqual(data.terms[1], [{ power: 1, coeff: 1e-3 }]);
 });
 
-test("ref answers nothing its own descriptor rules out: another quantity, or a case with an annular aperture", async (t) => {
+test("ref answers nothing its own descriptor rules out: another quantity, or a contract it does not speak", async (t) => {
   const engine = refEngine(t);
   const descriptor = await engine.describe();
-  for (const quantity of ["selftest.echo", "rays.trace", "mtf.native"]) {
-    const result = await ask(engine, SINGLET_CASE, quantity);
+  for (const quantity of ["selftest.echo", "mtf.native"]) {
+    const request = makeRequest({ caseId: SINGLET_CASE.id, quantity, spec: {} });
+    const result = await engine.run(request, SINGLET_CASE);
     assert.equal(result.status, "unsupported", quantity);
+    // What it says when it is asked is what negotiation reads from its descriptor without asking.
+    assert.deepEqual(result.unsupported, negotiate(SINGLET_CASE, request, descriptor));
     assert.deepEqual(
       result.unsupported?.map(({ code, item }) => [code, item]),
       [["quantity", quantity]],
     );
   }
-  // The every-feature case has an inner semi-diameter, which the model does not keep.
+  // Every feature of a case is one it takes: the every-feature case, with its annular aperture, is answered.
   assert.ok(ALL_FEATURES_CASE.features.includes("aperture.annular"));
   for (const quantity of [SYSTEM_DESCRIBE, PARAXIAL_FIRST_ORDER]) {
     const request = makeRequest({ caseId: ALL_FEATURES_CASE.id, quantity, spec: {} });
-    const result = await engine.run(request, ALL_FEATURES_CASE);
-    assert.equal(result.status, "unsupported", quantity);
-    // What it says when it is asked is what negotiation reads from its descriptor without asking.
-    assert.deepEqual(result.unsupported, negotiate(ALL_FEATURES_CASE, request, descriptor));
-    assert.deepEqual(
-      result.unsupported?.map(({ code, item }) => [code, item]),
-      [["feature", "aperture.annular"]],
-    );
+    assert.deepEqual(negotiate(ALL_FEATURES_CASE, request, descriptor), []);
+    assert.equal((await engine.run(request, ALL_FEATURES_CASE)).status, "ok", quantity);
   }
 });
 

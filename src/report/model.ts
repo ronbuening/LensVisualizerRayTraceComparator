@@ -16,9 +16,18 @@ import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 
-/** An engine of the run, as the report names it. */
+/**
+ * An engine of the run, as the report names it. `adapterRevision` is stated for an engine that has one: the hash
+ * of the comparator's own code behind a built-in engine.
+ */
 export type ReportEngine =
-  | { readonly id: string; readonly status: "available"; readonly version: string; readonly fingerprint: string }
+  | {
+      readonly id: string;
+      readonly status: "available";
+      readonly version: string;
+      readonly fingerprint: string;
+      readonly adapterRevision?: string;
+    }
   | { readonly id: string; readonly status: "unavailable"; readonly code: string };
 
 /** A run of the suite: its case, or why it was not started. */
@@ -60,6 +69,8 @@ export interface MetricColumn {
   /** The tolerance of a gated rung or the attention band of a recorded one. */
   readonly limit?: number;
   readonly limitKind?: "tolerance" | "attention";
+  /** The floor limit of the metric, where the policy gives it one: how far a `FLOOR` may be from the arbiter. */
+  readonly floorLimit?: number;
 }
 
 /** One row of a reference-vs-each table: one engine against the reference. */
@@ -198,10 +209,11 @@ function columnsOf(policy: RungPolicy | null, pairs: readonly PairComparison[]):
   const gated = policy?.class === "gated";
   const columns = Object.entries(policy?.metrics ?? {})
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([name, { tolerance, attention, unit }]): MetricColumn => {
+    .map(([name, { tolerance, attention, unit, floor }]): MetricColumn => {
       const limit = gated ? tolerance : attention;
       if (limit === undefined) return { name, unit };
-      return { name, unit, limit, limitKind: gated ? "tolerance" : "attention" };
+      const floorLimit = floor === undefined ? {} : { floorLimit: floor.limit };
+      return { name, unit, limit, limitKind: gated ? "tolerance" : "attention", ...floorLimit };
     });
   for (const { name, unit } of reported) {
     if (!columns.some((column) => column.name === name)) columns.push({ name, unit });
@@ -317,7 +329,8 @@ function sectionOf(
  * Builds the report of one run of a suite from its manifest, its comparisons and the policy they were judged by.
  * A pure function: equal arguments give an equal model, and nothing in it depends on when or where it is built.
  *
- * - `engines` and `runs` are the manifest's, without what only an engine's maker reads (`details`).
+ * - `engines` and `runs` are the manifest's, without what only an engine's maker reads (`details`); an engine
+ *   that states an adapter revision keeps it.
  * - `summary` counts the pairs of each mode by verdict; `failing` is how many are `FAIL` or `ERROR`.
  * - `support` has a row for every request of the manifest, in the order of its jobs, and says for every engine how
  *   its job ended. It comes from the manifest alone, so it is the same whatever was compared.
@@ -360,7 +373,9 @@ export function buildReport(manifest: RunManifest, comparisons: ComparisonFile, 
     policy: { version: policy.version, hash: hashCanonical(policy) },
     engines: manifest.engines.map((engine): ReportEngine => {
       if (engine.status === "unavailable") return { id: engine.id, status: "unavailable", code: engine.code };
-      return { id: engine.id, status: "available", version: engine.version, fingerprint: engine.fingerprint };
+      const { id, version, fingerprint, adapterRevision } = engine;
+      const adapter = adapterRevision === undefined ? {} : { adapterRevision };
+      return { id, status: "available", version, fingerprint, ...adapter };
     }),
     runs: manifest.runs.map(({ name, caseId, problems }) => ({ name, caseId, problems: [...problems] })),
     summary,

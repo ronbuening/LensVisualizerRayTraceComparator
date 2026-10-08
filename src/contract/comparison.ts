@@ -6,6 +6,9 @@ import type { ResultStatus } from "./result.ts";
  * What a pair of answers came to, in the order reports list them:
  *
  * - `PASS`, `FAIL`: a gated pair, with every judged metric within its tolerance, or not;
+ * - `FLOOR`: a gated pair with a metric above its tolerance, where the excess is the known numerical floor of one
+ *   of its two engines: the arbiter of the rung agrees with every other engine and is within the floor's limit of
+ *   that one. It counts as a pass and is counted apart from `PASS` wherever verdicts are counted;
  * - `RECORDED`, `ATTENTION`: a recorded pair, with every judged metric within its attention band, or not. Neither
  *   is a failure;
  * - `UNSUPPORTED`: one of the two engines cannot answer, which is an answer and not a failure;
@@ -13,7 +16,7 @@ import type { ResultStatus } from "./result.ts";
  *   failed for the same two engines on the same case. It is not a failure of its own: the failure is that rung's;
  * - `ERROR`: there is nothing to compare, or what there is cannot be compared.
  */
-export const VERDICTS = ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] as const;
+export const VERDICTS = ["PASS", "FLOOR", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] as const;
 /** What one pair came to. */
 export type Verdict = (typeof VERDICTS)[number];
 

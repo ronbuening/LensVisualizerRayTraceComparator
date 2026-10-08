@@ -9,7 +9,7 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { RUNGS, judgedRungs, raysRung, selftestRung } from "../../src/core/rungs.ts";
+import { RUNGS, r0Rung, r1Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 2);
+  assert.equal(policy.version, 3);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -46,27 +46,64 @@ test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blo
   );
 
   assert.deepEqual([r1.quantity, r1.mode, r1.class], ["paraxial.first-order", "direct", "gated"]);
-  assert.deepEqual(r1.metrics, { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } });
+  // A pupil's position is judged on the scale of its distance from the image plane; every other value plainly.
+  assert.deepEqual(r1.metrics, {
+    "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" },
+    "pupilZ.maxScaled": { tolerance: 1e-9, unit: "mm" },
+  });
+  const firstOrder = COMPARATORS.get("paraxial.first-order")?.metrics.map((metric) => metric.name) ?? [];
+  assert.deepEqual(
+    firstOrder.filter((name) => !Object.hasOwn(r1.metrics, name)),
+    ["pupilZ.maxAbs"],
+  );
   assert.equal(r1.blocksLaterRungs, undefined);
   assert.equal(selftest.blocksLaterRungs, undefined);
 });
 
-test("every judged rung has a policy entry and every entry a judged rung, with its quantity and metrics", () => {
-  assert.deepEqual(policyRegistryProblems(loadPolicy(), judgedRungs(), COMPARATORS), []);
+test("r2 and r3 are gated on identical rays, at the gates of the ladder, with the floor of lv against ref", () => {
+  const { r2, r3 } = loadPolicy().rungs;
+  for (const rung of [r2, r3]) {
+    assert.deepEqual([rung.quantity, rung.mode, rung.class], ["rays.trace", "identical-rays", "gated"]);
+    assert.deepEqual(rung.floor, { engine: "lv", arbiter: "ref" });
+    assert.equal(rung.blocksLaterRungs, undefined);
+  }
+  // Lengths: 1e-8 mm, a floor of lv up to 1e-7 mm where every other engine is within 1e-10 mm of ref. The
+  // direction and the mask have no floor: an excess of either is always a failure.
+  const mm = { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-7, agreement: 1e-10 } };
+  assert.deepEqual(r2.metrics, {
+    "direction.maxAbs": { tolerance: 1e-9, unit: "1" },
+    "hits.maxDistance": mm,
+    "landing.maxDistance": mm,
+    "mask.mismatches": { tolerance: 0, unit: "rays" },
+  });
+  // Paths: 2e-5 waves, a floor of lv up to 2e-4 waves where every other engine is within 1e-7 waves of ref.
+  const waves = { tolerance: 2e-5, unit: "waves", floor: { limit: 2e-4, agreement: 1e-7 } };
+  assert.deepEqual(r3.metrics, {
+    "opd.maxAbs": waves,
+    "opticalPath.maxAbs": waves,
+    "opticalPathToImage.maxAbs": waves,
+  });
+  // What R2 reports and does not judge: the rays in the rim band, and how many rays were compared.
+  const reported = COMPARATORS.get("rays.trace", "r2")?.metrics.map((metric) => metric.name) ?? [];
   assert.deepEqual(
-    Object.keys(loadPolicy().rungs).sort(),
-    judgedRungs()
-      .map((rung) => rung.id)
-      .sort(),
+    reported.filter((name) => !Object.hasOwn(r2.metrics, name)),
+    ["mask.rimBand", "rays.compared"],
   );
-  // The one rung that is run only where it is named is the one nothing judges: it has no entry, and cannot have
-  // one before its quantity has a comparator.
+  // No other rung has a floor.
+  const floored = Object.entries(loadPolicy().rungs).filter(([, rung]) => rung.floor !== undefined);
   assert.deepEqual(
-    RUNGS.filter((rung) => !judgedRungs().includes(rung)),
-    [raysRung],
+    floored.map(([id]) => id),
+    ["r2", "r3"],
   );
-  assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), ["rung rays has no policy entry"]);
-  assert.equal(COMPARATORS.get(raysRung.quantity), undefined);
+});
+
+test("every rung has a policy entry and every entry a rung, with its quantity, a comparator and its metrics", () => {
+  assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), []);
+  assert.deepEqual(Object.keys(loadPolicy().rungs).sort(), RUNGS.map((rung) => rung.id).sort());
+  // Two rungs compare one quantity, each by a comparator of its own.
+  for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
+  assert.notEqual(COMPARATORS.get("rays.trace", "r2"), COMPARATORS.get("rays.trace", "r3"));
+  assert.equal(COMPARATORS.get("rays.trace"), undefined);
 });
 
 test("each way a policy and the code can disagree is reported", () => {
@@ -75,7 +112,7 @@ test("each way a policy and the code can disagree is reported", () => {
   assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, other], COMPARATORS), [
     "rung other has no policy entry",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, judgedRungs(), COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, r0Rung, r1Rung], COMPARATORS), [
     "rung r0 has no policy entry",
     "rung r1 has no policy entry",
   ]);
@@ -102,14 +139,21 @@ test("each way a policy and the code can disagree is reported", () => {
   ]);
   // A format example is not the comparator's policy: its r1 judges metrics the comparator does not report, and
   // its other rungs are of later phases or of none.
-  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, judgedRungs(), COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, RUNGS, COMPARATORS), [
     "rung selftest has no policy entry",
     "rung r0 has no policy entry",
+    "rung r3 has no policy entry",
     "policy entry notes is of no registered rung",
     "policy entry r1: the comparator reports no metric efl.abs",
     "policy entry r1: the comparator reports no metric pupil.z.abs",
-    "policy entry r2 is of no registered rung",
+    "policy entry r2: the comparator reports no metric clip.mismatches",
     "policy entry r5 is of no registered rung",
+  ]);
+  // A quantity that is compared for other rungs only has no comparator for this one.
+  const stray: RungDefinition = { id: "r9", quantity: "rays.trace", buildRequests: () => [] };
+  const strayPolicy: Policy = { ...POLICY_SELFTEST, rungs: { r9: POLICY_LADDER.rungs.r2 } };
+  assert.deepEqual(policyRegistryProblems(strayPolicy, [stray], COMPARATORS), [
+    "policy entry r9: the quantity rays.trace has no comparator",
   ]);
 });
 

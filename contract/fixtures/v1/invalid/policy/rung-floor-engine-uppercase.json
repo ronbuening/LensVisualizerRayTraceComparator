@@ -1,0 +1,135 @@
+{
+  "contract": "1.0",
+  "kind": "policy",
+  "version": 3,
+  "rungs": {
+    "selftest": {
+      "quantity": "selftest.echo",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "sum.abs": {
+          "tolerance": 1e-12,
+          "unit": "1"
+        },
+        "values.maxAbs": {
+          "tolerance": 1e-12,
+          "unit": "1"
+        }
+      }
+    },
+    "r0": {
+      "quantity": "system.describe",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "aperture.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        },
+        "index.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        },
+        "layout.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        },
+        "sag.maxScaled": {
+          "tolerance": 1e-12,
+          "unit": "1"
+        },
+        "shape.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        }
+      },
+      "blocksLaterRungs": true
+    },
+    "r1": {
+      "quantity": "paraxial.first-order",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "firstOrder.maxAbs": {
+          "tolerance": 1e-9,
+          "unit": "mm"
+        },
+        "pupilZ.maxScaled": {
+          "tolerance": 1e-9,
+          "unit": "mm"
+        }
+      }
+    },
+    "r2": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "direction.maxAbs": {
+          "tolerance": 1e-9,
+          "unit": "1"
+        },
+        "hits.maxDistance": {
+          "tolerance": 1e-8,
+          "unit": "mm",
+          "floor": {
+            "limit": 1e-7,
+            "agreement": 1e-10
+          }
+        },
+        "landing.maxDistance": {
+          "tolerance": 1e-8,
+          "unit": "mm",
+          "floor": {
+            "limit": 1e-7,
+            "agreement": 1e-10
+          }
+        },
+        "mask.mismatches": {
+          "tolerance": 0,
+          "unit": "rays"
+        }
+      },
+      "floor": {
+        "engine": "lv",
+        "arbiter": "ref"
+      }
+    },
+    "r3": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "opd.maxAbs": {
+          "tolerance": 0.00002,
+          "unit": "waves",
+          "floor": {
+            "limit": 0.0002,
+            "agreement": 1e-7
+          }
+        },
+        "opticalPath.maxAbs": {
+          "tolerance": 0.00002,
+          "unit": "waves",
+          "floor": {
+            "limit": 0.0002,
+            "agreement": 1e-7
+          }
+        },
+        "opticalPathToImage.maxAbs": {
+          "tolerance": 0.00002,
+          "unit": "waves",
+          "floor": {
+            "limit": 0.0002,
+            "agreement": 1e-7
+          }
+        }
+      },
+      "floor": {
+        "engine": "LV",
+        "arbiter": "ref"
+      }
+    }
+  }
+}

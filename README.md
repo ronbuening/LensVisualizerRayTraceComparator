@@ -11,10 +11,11 @@ contract, so others can be added by a Python worker, a command line, file exchan
 Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. Phase 1
 (LensVisualizer as case source and engine) has the binding that loads LensVisualizer, the exporter that writes
 its lenses as engine-neutral cases, the suites of lenses to compare, the comparator's own reference engine `ref`
-and LensVisualizer itself as the engine `lv`. Both answer the first two rungs of the ladder, the built-system echo
-and the first-order data, and agree on them for every lens of the two suites. Rays cross the contract too: a run
-has ray sets, which are LensVisualizer's own launch rays for a LensVisualizer lens, and `lv` traces them with
-LensVisualizer's tracer. The reference engine's tracer, and the rungs that compare traced rays, come next. The full
+and LensVisualizer itself as the engine `lv`. Both answer the first four rungs of the ladder: the built-system
+echo, the first-order data, and LensVisualizer's own launch rays traced by each, compared hit by hit (R2) and in
+optical path (R3). On the benchmark and the feature suite every pair of the two passes or is a numerical floor of
+LensVisualizer, which the reference engine arbitrates; the committed record is
+[reports/benchmark/lv-floor.md](reports/benchmark/lv-floor.md). LensVisualizer's product MTF comes next. The full
 plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md); what an engine does that a comparison has
 to know about is in [docs/gotchas.md](docs/gotchas.md).
 
@@ -107,7 +108,7 @@ node bin/lvrtc.mjs engine conformance ref
 ```
 
 ```bash
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3
 ```
 
 ```bash
@@ -115,11 +116,11 @@ node bin/lvrtc.mjs compare benchmark
 ```
 
 ```bash
-node bin/lvrtc.mjs engine conformance lv
+node bin/lvrtc.mjs report benchmark --floor reports/benchmark
 ```
 
 ```bash
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv --rungs rays
+node bin/lvrtc.mjs engine conformance lv
 ```
 
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
@@ -192,7 +193,7 @@ is asserted nowhere. Rewrite it with `node bin/lvrtc.mjs export --all --census r
 
 ### Suites
 
-Three suites of LensVisualizer lenses are in `suites/`. None names a rung: a run uses every rung that is judged.
+Three suites of LensVisualizer lenses are in `suites/`. None names a rung: a run uses every rung of the ladder.
 Each names the built-in engines, `lv` and `ref`, as the engines of its runs, so that it runs at the root of this
 repository, whose configuration defines no engine; `--engines` names others.
 
@@ -226,11 +227,11 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
   engine, and `lv`, LensVisualizer itself. It can be named under any root, and is run only where it is named, so a
   root without an engine of its own runs nothing until `--engines` or the suite names one; the committed suites
   name both. A configured engine of the same id takes its place.
-- **Rungs** are every rung that is judged, unless the run lists its own `rungs`; `--rungs` replaces both. They
-  are, in the order of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`)
-  and `r1` (`paraxial.first-order`). One more rung is run only where it is named: `rays` (`rays.trace`), which asks
-  every engine to trace the run's ray sets and judges nothing. An engine that does not offer a rung's quantity is
-  recorded as `unsupported` for it without being asked.
+- **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
+  of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`), `r1`
+  (`paraxial.first-order`), and `r2` and `r3` (`rays.trace`), which ask every engine to trace the run's ray sets.
+  The two ask the same requests, so an engine traces a set once and the second rung finds the answer in the
+  store. An engine that does not offer a rung's quantity is recorded as `unsupported` for it without being asked.
 - **Ray sets.** A run of a rung that traces rays has its rays generated first, by the source of its case, for the
   run's `fields` (image-height fractions 0, 0.5 and 1 unless it states others) and `sampling.bundleGrid` (32), at
   every line of the case: LensVisualizer's own launch rays for a LensVisualizer lens, probe lattices over the first
@@ -263,7 +264,7 @@ asks for the conformance quantity `selftest.echo`. Without Python, add `--engine
   file, an engine or a rung cannot be used as asked. A field without rays fails nothing.
 
 This repository's own configuration defines no engine, and the committed suites name the built-in ones. The
-reference engine and LensVisualizer answer `r0` and `r1` for every case of the three suites:
+reference engine and LensVisualizer answer `r0` to `r3` for every case of the three suites:
 
 ```bash
 LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json
@@ -275,8 +276,8 @@ LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smo
 with LensVisualizer or optiland, and using closed forms and IEEE 754 basic operations only, so that its answers are
 the same bits on every machine. It arbitrates between the other engines, and it is the engine of the tests that
 have neither. Its fingerprint is a hash of its own source files, and its adapter revision a hash of those and of
-the kernels of the comparator they run on. It declares every feature of a case but an annular aperture, which its
-model does not keep yet. It does not trace rays yet.
+the kernels of the comparator they run on. It declares every feature of a case, and answers `system.describe`,
+`paraxial.first-order` and `rays.trace`; its tracer is under [Rays](#rays).
 
 | Rung | Quantity | What is asked of every engine |
 |---|---|---|
@@ -288,22 +289,26 @@ model does not keep yet. It does not trace rays yet.
   names the first one by field and surface, so a mistranslated surface is found before a ray is traced. Only the
   sag is computed, and it is gated relative to how large its rounding can be (`sag.maxScaled` ≤ 1e-12): the plain
   difference, `sag.maxAbs`, is shown beside it. Measured at LensVisualizer `d36f44b3`, over the 868 lenses it
-  exports: `ref` and LensVisualizer's own surface profiles differ by at most 5.5e-16 on that scale, and by up to
-  1.3e-10 mm in plain terms, on a surface that ends just short of a hemisphere; a gate of 1e-12 mm would fail five
-  lenses on which both are right.
+  exports: `ref` and LensVisualizer's own surface profiles differ by at most 4.3e-16 on that scale, and by up to
+  1.3e-10 mm in plain terms, on a surface that ends just short of a hemisphere; a gate of 1e-12 mm would fail four
+  lenses on which both are right. `ref` sums a surface's polynomial with the rounding error of every product and
+  addition carried along, so its sag is the exact sum rounded once, however far the terms cancel.
 - **A failed R0 blocks the later rungs** for that pair of engines on that case: two engines that built different
   systems differ in everything after it, and each such difference would be the first one again. The pair is
   `BLOCKED` there, with the rung that blocks it as the reason.
-- **R1** is gated at 1e-9 mm on the largest difference of any of its ten values at any line (`firstOrder.maxAbs`),
-  which names the value and the line. What an engine only knows for itself, such as LensVisualizer's stored pupil
-  constants, travels as `recorded`: a report lists it side by side and nothing judges it. On the Double-Gauss
-  fixture `ref` gives optiland's focal length, 100.00372050801042 mm, to the last digit; its cardinal points and
-  those of LensVisualizer's first-order module differ by at most 2.7e-13 mm on the benchmark and feature suites,
-  and by at most 1.1e-11 mm over all 868 exported lenses (at `d36f44b3`). Its pupils and those of LensVisualizer's
-  paraxial kernel, at the reference line and the five photopic lines, differ by at most 1.9e-11 mm on every lens
-  but one: `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away, and there the
-  two differ by up to 3.0e-9 mm, which is 2e-13 of the distance. The gate is a plain 1e-9 mm, so on that lens it
-  would fail two engines that are both right; it is in neither suite, and the gate is left as the plan states it.
+- **R1** has two gates of 1e-9 mm. `firstOrder.maxAbs` is the largest difference of the eight values that are not
+  the position of a pupil, at any line, and names the value and the line. The position of a pupil is judged on the
+  scale of its distance from the image plane: `pupilZ.maxScaled` is the plain difference for a pupil within a
+  metre of it, and 1e-12 of the distance beyond; the plain figure, `pupilZ.maxAbs`, is shown beside it. A pupil
+  20 m away is a quotient that no arithmetic in doubles places to 1e-9 mm (the plan, "Amendments since
+  approval"). What an engine only knows for itself, such as LensVisualizer's stored pupil constants, travels as
+  `recorded`: a report lists it side by side and nothing judges it. On the Double-Gauss fixture `ref` gives
+  optiland's focal length, 100.00372050801042 mm, to the last digit; its cardinal points and those of
+  LensVisualizer's first-order module differ by at most 2.7e-13 mm on the benchmark and feature suites, and by at
+  most 1.1e-11 mm over all 868 exported lenses (at `d36f44b3`). Its pupils and those of LensVisualizer's paraxial
+  kernel, at the reference line and the five photopic lines, differ by at most 1.9e-11 mm on every lens but one:
+  `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away, and there the two
+  differ by up to 3.0e-9 mm, which is 2e-13 of the distance and passes on that scale.
 - **No first-order data.** An afocal system and a surface with a term of power 1 are answered `unsupported`, with
   the item `system.afocal` or `surface.asphere.linear-term`.
 
@@ -352,15 +357,16 @@ Measured at LensVisualizer `d36f44b3`, with `lvrtc run <suite> --engines lv,ref 
 
 | Suite | Pairs | R0: largest sag difference | R1: largest difference |
 |---|---|---|---|
-| `benchmark`, 12 configurations at the reference and the photopic lines | 96 `PASS` | 3.6e-15 mm, `sony-fe-400mm-f28-gm-oss` surface 13; 4.0e-16 scaled, `sony-fe-20mm-f18-g` surface 6 | 1.6e-12 mm, the front focal point of `sony-fe-400mm-f28-gm-oss` at 470 nm |
-| `features`, 16 runs with a case | 64 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 3.3e-16 scaled, `odd-asphere-ref` surface 3 | 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-tele-photopic` at 610 nm |
+| `benchmark`, 12 configurations at the reference and the photopic lines | 96 `PASS` | 3.6e-15 mm, `sony-fe-400mm-f28-gm-oss` surface 13; 4.0e-16 scaled, `sony-fe-20mm-f18-g` surface 6 | 1.6e-12 mm, the front focal point of `sony-fe-400mm-f28-gm-oss` at 470 nm; of a pupil's position 3.4e-13 mm |
+| `features`, 16 runs with a case | 64 `PASS` | 3.6e-15 mm, `zero-asphere-ref` surface 1; 2.7e-16 scaled, `odd-asphere-ref` surface 1 | 5.3e-14 mm, the front focal point of `odd-asphere-photopic` at 610 nm; of a pupil's position 8.5e-14 mm, the exit pupil of `fixed-iris-zoom-tele-photopic` |
 
 Everything R0 holds to equality is equal: no vertex, curvature, conic constant, term, clip radius, sag radius or
-index differs in any pair. The two runs of `features` that have no case say why with a code, as before. Over the
-whole catalog, 1676 cases of 868 lenses, every case passes R0 and every case but two passes R1: the reference-line
-case and the photopic case of `viltrox-af-75mm-f12-pro`, a nearly telecentric lens. Its exit pupil lies 7.7 m
-behind the lens at the d line and 14 m in front of it at 650 nm, and the two engines place it 1.1e-9 mm and
-3.0e-9 mm apart there: that is rounding, and it is above the gate. The lens is in neither suite; the entry in
+index differs in any pair. Over the whole catalog, 1676 cases of 868 lenses, every case passes R0 and every case
+but one passes R1. `viltrox-af-75mm-f12-pro` is nearly telecentric: its exit pupil lies 7.7 m behind the lens at
+the d line and 14 m in front of it at 650 nm, and the two engines place it 1.1e-9 mm and 3.0e-9 mm apart there,
+which on the scale of its distance is 1.4e-10 and 2.1e-10 and passes. What still fails is the radius of that
+pupil at 650 nm: 6.3 m, of which the two hold 1.35e-9 mm apart, 2e-13 of it, where the gate of every value that is
+not a pupil's position is a plain 1e-9 mm. The lens is in neither suite; the entry in
 [docs/gotchas.md](docs/gotchas.md) says what would judge it rightly.
 
 ## Rays
@@ -385,9 +391,22 @@ rules are in [contract/CONTRACT.md](contract/CONTRACT.md#raystrace).
 - **`lv` traces every ray for real**, with LensVisualizer's `traceEngineRay2` and the options of its own MTF bundle,
   the indices of the case's line included, and takes LensVisualizer's own word for what stopped a ray. Its trace
   ends on the last surface: the landing is the comparator's projection (`src/estimators/imageProjection.ts`).
-- **`rays`** is the rung that asks for it: `lvrtc run <suite> --engines lv --rungs rays`. Nothing compares the
-  traces yet, so the rung has no entry in the policy and is run only where it is named; `lvrtc compare` refuses a
-  run of it.
+- **`ref` traces every ray to rounding** (`src/engines/ref/trace.ts`), by analytic geometry and Snell's law: a
+  plane and a conic are met in closed form, by the root of the quadratic that has no cancellation in it and lies on
+  the sag's own sheet; a conic with a polynomial by Newton's method from the conic's hit, on a form of the surface
+  that has no square root, carried to a fixed point in double precision; refraction as vectors, split across and
+  along the normal so that nothing cancels; and the optical path as a compensated sum. Where Newton's method does
+  not settle on a hit within the clear aperture, the line's stretch inside the aperture is scanned for its
+  crossings of the sag, by the sag's sign and its slope, and the crossing nearest the vertex plane is the hit, as
+  for a conic: a line that cuts a surface twice, or only grazes it, is met and not lost. A ray that misses a
+  surface, is totally reflected or no longer travels toward +z is blocked; one whose crossing it cannot decide is
+  failed, never blocked. Where two neighbouring surfaces cross it steps backwards, as a sequential trace does.
+  Its proof is analytic (`test/engines/ref/trace.test.ts`): a plate, one sphere by hand, the aplanatic points of a
+  sphere at every aperture, Cartesian ellipsoid and hyperboloid with equal paths to their focus, the paraxial
+  limit, aspheres against a bisection of the contract's own sag and refracted by the slope of that sag, lines that
+  cut a surface twice or graze it, apertures to one unit of rounding, skew rays by their invariant.
+- **`r2` and `r3`** are the rungs that ask for it and compare the answers: `lvrtc run <suite> --rungs r2,r3`. See
+  [the two rungs](#rungs-r2-and-r3-and-the-floor) below.
 
 Measured at LensVisualizer `d36f44b3`, on the 12 benchmark configurations at the reference line, fields 0, 0.5 and
 1, grid 32:
@@ -417,6 +436,50 @@ is valid `rays.trace` data, and every ray starts 10 mm or more in front of the f
 lenses have no rays: the fields lie outside the modeled field, and the lenses are outside LensVisualizer's MTF
 path altogether (`unsupported-path`), which is one problem for each of them.
 
+### Rungs R2 and R3, and the floor
+
+| Rung | Compares, on the rays that are ok in both engines | Gate |
+|---|---|---|
+| `r2` | the hit of every ray on every surface (`hits.maxDistance`), the direction behind the last surface (`direction.maxAbs`), the landing on the image plane (`landing.maxDistance`); and which rays got through (`mask.mismatches`) | 1e-8 mm, 1e-9, 1e-8 mm; 0 rays |
+| `r3` | the optical path to the last surface, to the image plane, and relative to the chief ray's (`opticalPath.maxAbs`, `opticalPathToImage.maxAbs`, `opd.maxAbs`), in waves of the line | 2e-5 waves |
+
+- **The mask.** A ray that one engine stopped at a surface the other let it pass is a mismatch, unless the hit of
+  the engine that passed it lies within 1e-8 mm of that surface's clip radius, or of the radius of its central
+  obstruction: the rim band, where each engine has placed the hit to its own tolerance. Rim-band rays are counted
+  (`mask.rimBand`) and not judged. A ray either engine failed is in neither count; how many rays of each engine
+  are ok, blocked and failed is listed beside the comparison.
+- **The chief ray.** `opd.maxAbs` needs a chief ray that is ok in both engines. Where there is none it is not
+  measured, the pair says so, and the two raw paths are judged alone.
+- **`FLOOR`.** LensVisualizer meets a surface within 1e-9 mm of it, and a steep surface behind makes more of that.
+  A pair of `lv` that is above a gate is `FLOOR`, a pass that is counted apart, when the arbiter `ref` agrees with
+  every other engine within 1e-10 mm and 1e-7 waves and `lv` is within 1e-7 mm and 2e-4 waves of `ref`; otherwise
+  it is `FAIL`. The limits are in `policy/rungs.v1.json`. A mask mismatch and a direction have no floor.
+
+Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
+`lvrtc run <suite> --engines lv,ref --rungs r0,r1,r2,r3`, `lvrtc compare` and `lvrtc report`:
+
+| Suite | Pairs of R2 and R3 | R2: largest hit, direction, landing | R3: largest path, to image, relative |
+|---|---|---|---|
+| `benchmark`, 216 ray sets, 137 596 rays ok in both | 864 `PASS` | 6.8e-9 mm, 3.1e-10, 9.1e-9 mm: `sigma-35mm-f14-dg-hsm-a` at 650 nm, 31.9° | 6.0e-6, 5.3e-6, 5.5e-6 waves |
+| `features`, 144 ray sets, 92 052 rays ok in both | 568 `PASS`, 8 `FLOOR` | 2.3e-9 mm; 2.1e-10 and 1.10e-8 mm, `zeiss-hologon-15f8` at 470 nm, 55.3° | 3.8e-6 waves; 2.07e-5 and 2.28e-5 waves, that ray of the Hologon |
+
+A pair is counted in both modes, as `lvrtc compare` counts it, so the eight floors are four comparisons: R2 and R3
+of the Hologon at its full field, at 470 nm and 510 nm, where the rays leave 54° off the axis. Traced in 60-digit
+arithmetic, `ref` is within 6e-15 mm and 2e-11 waves of the truth on the worst of those rays, and LensVisualizer
+the rest. Not one ray of either suite is stopped by one engine and passed by the other, in the rim band or outside
+it, and none is failed by either. Over the whole catalog, in a sweep outside the tests, some lenses fail R2:
+because LensVisualizer loses rays where two neighbouring surfaces cross, or because a steep surface carries its
+tolerance past what the floor allows. Both are in [docs/gotchas.md](docs/gotchas.md).
+
+**The committed record** is [reports/benchmark/lv-floor.md](reports/benchmark/lv-floor.md), with
+`lv-floor.json` beside it: for every run and rung of the benchmark the largest value of each metric, the verdicts,
+and how the rays of each engine ended, with the LensVisualizer commit and engine closure it was taken at, the hashes
+of both engines' code here, and the content hash of each run's case. The last says what was traced even where the
+commit cannot, in a checkout whose lens files are being edited (`dirty`). It holds results, counts, run names and
+hashes, and nothing an engine traced. The three commands that write it are under [Commands](#commands); an
+integration test holds its figures to a fresh run for as long as LensVisualizer's engine files and those cases are
+the ones it names. It names `ref` and the `lv` adapter by hash too: write it again after changing either.
+
 ## Comparing and reporting
 
 `lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--json]`
@@ -430,25 +493,30 @@ answers in the result store, and writes `comparisons.json` into the run director
   `ok` result.
 - **The policy**, `policy/rungs.v1.json`, says for each rung which quantity it compares, in which mode (`direct`,
   `identical-rays` or `independent-method`), whether it is `gated` or `recorded`, the tolerance or attention band
-  of each metric, and whether a failure of the rung blocks the rungs after it. A gated metric has a tolerance, and
-  an independent-method rung is never gated.
+  of each metric, whether a failure of the rung blocks the rungs after it, and whose numerical floor may exceed a
+  tolerance, within which limits. A gated metric has a tolerance, and an independent-method rung is never gated.
+- **What a comparator reads** beside the two answers: the spec of the request, from the store, and the case of the
+  run, from the run directory's `cases/`. Without one it needs, its pairs are `ERROR`, with the reason.
 - **Verdicts.** `UNSUPPORTED` when either engine cannot answer; `ERROR` when either gave no result or the two
   cannot be compared; `BLOCKED` when both answered and an earlier rung that blocks later ones failed for the same
-  two engines on the same case; on a gated rung `PASS` or `FAIL`, where a metric that is not a number fails; on a
-  recorded rung `RECORDED`, or `ATTENTION` outside the band. Only `FAIL` and `ERROR` are failures: a blocked pair
-  is not a second one.
+  two engines on the same case; on a gated rung `PASS`, `FLOOR` or `FAIL`, where a metric that is not a number
+  fails; on a recorded rung `RECORDED`, or `ATTENTION` outside the band. Only `FAIL` and `ERROR` are failures: a
+  floor is a pass, and a blocked pair is not a second failure.
 - **Exit code**: 0 when no pair is `FAIL` or `ERROR`; 1 otherwise; 2 when nothing was compared because the run has
   no manifest or the reference is not an engine of the run.
 
-`lvrtc report <suite name | run directory> [--root <dir>]` writes `report.json` and `report.md` into the run
-directory from the manifest, the comparisons and the policy: the inputs (suite, contract version, policy version,
-engines with fingerprints), the verdict counts, a support matrix of rung by engine, and for each run and rung a
-reference-vs-each table, a pairwise matrix and the values the answers only record, side by side, with a note on
-how to read the verdicts. A metric's cell says where its value occurs: the field and surface of a mismatch, the
-quantity and line of the largest first-order difference. It exits 0 when the report
+`lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]` writes `report.json` and `report.md`
+into the run directory from the manifest, the comparisons and the policy: the inputs (suite, contract version,
+policy version, engines with fingerprints and, for the built-in ones, adapter revisions), the verdict counts, a
+support matrix of rung by engine, and for each run and rung a reference-vs-each table, a pairwise matrix and the
+values the answers only record, side by side, with a note on how to read the verdicts. A metric's cell says where
+its value occurs: the field and surface of a mismatch, the quantity and line of the largest first-order
+difference, the line, field, ray and surface of the largest distance between two hits. It exits 0 when the report
 is written, whatever the verdicts are, and 2 when the run has no comparisons or they were made from another
 manifest or policy. Both files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the
-same run gives the same bytes anywhere.
+same run gives the same bytes anywhere. With `--floor <dir>` it also writes the numerical-floor digest of the run
+into that directory, `lv-floor.json` and `lv-floor.md`: the pairs of the engine the policy gives a floor and its
+arbiter, rung by rung and run by run.
 
 The expected reports of the fixture suites are in `test/fixtures/golden`; `node test/report/writeGolden.ts`
 rewrites them after a change that is meant to change a report.

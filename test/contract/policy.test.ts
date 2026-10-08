@@ -7,7 +7,15 @@ import type { ComparisonSet } from "../../src/contract/comparison.ts";
 import { policyProblems } from "../../src/contract/policy.ts";
 import type { Policy, RungPolicy } from "../../src/contract/policy.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
-import { COMPARISON_PAIRWISE, COMPARISON_REFERENCE, POLICY_EVERY_MODE, POLICY_SELFTEST } from "./corpus.ts";
+import { FAILING_VERDICTS, VERDICTS } from "../../src/contract/comparison.ts";
+import {
+  COMPARISON_FLOOR,
+  COMPARISON_PAIRWISE,
+  COMPARISON_REFERENCE,
+  POLICY_EVERY_MODE,
+  POLICY_LADDER,
+  POLICY_SELFTEST,
+} from "./corpus.ts";
 
 function policyOf(rungs: Record<string, RungPolicy>): Policy {
   const policy: Policy = { contract: "1.0", kind: "policy", version: 1, rungs };
@@ -18,6 +26,64 @@ function policyOf(rungs: Record<string, RungPolicy>): Policy {
 test("the valid policy fixtures keep the rules of a policy", () => {
   assert.deepEqual(policyProblems(POLICY_SELFTEST), []);
   assert.deepEqual(policyProblems(POLICY_EVERY_MODE), []);
+  assert.deepEqual(policyProblems(POLICY_LADDER), []);
+});
+
+test("a floor belongs to a gated rung, names two engines, and has a metric whose limits enclose its tolerance", () => {
+  const whole: RungPolicy = {
+    quantity: "rays.trace",
+    mode: "identical-rays",
+    class: "gated",
+    metrics: {
+      "hits.maxDistance": { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-7, agreement: 1e-10 } },
+      "mask.mismatches": { tolerance: 0, unit: "rays" },
+    },
+    floor: { engine: "lv", arbiter: "ref" },
+  };
+  const { floor: _floor, ...unfloored } = whole;
+  const rung = (change: Partial<RungPolicy>, base: RungPolicy = whole): Policy =>
+    policyOf({ r2: { ...base, ...change } });
+  assert.deepEqual(policyProblems(rung({})), []);
+  // The limits may sit on the tolerance itself: a floor that admits nothing more than the gate, and a witness
+  // that need be no nearer than the gate.
+  const onGate = { m: { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-8, agreement: 1e-8 } } };
+  assert.deepEqual(policyProblems(rung({ metrics: onGate })), []);
+
+  assert.deepEqual(policyProblems(rung({ floor: { engine: "lv", arbiter: "lv" } })), [
+    "rung r2: the floor's engine lv is its own arbiter",
+  ]);
+  assert.deepEqual(policyProblems(rung({}, unfloored)), [
+    "rung r2: metric hits.maxDistance has floor limits and the rung no floor",
+  ]);
+  assert.deepEqual(policyProblems(rung({ metrics: { "mask.mismatches": { tolerance: 0, unit: "rays" } } })), [
+    "rung r2: it has a floor and no metric with floor limits",
+  ]);
+  // A limit below the tolerance would fail what the gate passes; an agreement above it would call a failing
+  // engine a witness.
+  for (const floor of [
+    { limit: 1e-9, agreement: 1e-10 },
+    { limit: 1e-7, agreement: 1e-7 },
+  ]) {
+    assert.deepEqual(policyProblems(rung({ metrics: { m: { tolerance: 1e-8, unit: "mm", floor } } })), [
+      "rung r2: the floor limits of metric m do not enclose its tolerance",
+    ]);
+  }
+  // A recorded rung never fails, so it has nothing a floor could excuse.
+  const recorded = rung({ class: "recorded" });
+  assert.deepEqual(policyProblems(recorded), ["rung r2: a recorded rung has no floor"]);
+  const limitsOnly = rung({ class: "recorded" }, unfloored);
+  assert.deepEqual(policyProblems(limitsOnly), ["rung r2: a recorded rung has no floor"]);
+});
+
+test("FLOOR is a verdict between PASS and FAIL, and fails nothing", () => {
+  assert.deepEqual(
+    [...VERDICTS],
+    ["PASS", "FLOOR", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"],
+  );
+  assert.deepEqual([...FAILING_VERDICTS], ["FAIL", "ERROR"]);
+  assert.deepEqual(validateKind("comparison", COMPARISON_FLOOR), []);
+  assert.deepEqual(comparisonInvariantProblems(COMPARISON_FLOOR), []);
+  assert.equal(COMPARISON_FLOOR.pairs[0].verdict, "FLOOR");
 });
 
 test("a gated metric needs a tolerance, and an attention band is not one", () => {

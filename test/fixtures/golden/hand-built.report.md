@@ -32,6 +32,7 @@
 | Verdict | reference-vs-each | pairwise |
 |---|---|---|
 | PASS | 0 | 0 |
+| FLOOR | 0 | 0 |
 | FAIL | 0 | 0 |
 | RECORDED | 0 | 0 |
 | ATTENTION | 1 | 1 |
@@ -116,6 +117,7 @@ Each pair of engines that answered one request gets one verdict.
 | Verdict | Meaning |
 |---|---|
 | PASS | A gated rung: every judged metric is at or below its tolerance. |
+| FLOOR | A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two engines. The rung's arbiter agrees with every other engine, and that engine is within the floor limit of the arbiter; the note gives the figures. It counts as a pass. |
 | FAIL | A gated rung: a judged metric is above its tolerance, or is not a number. |
 | RECORDED | A recorded rung: the difference is written down. It is not a failure. |
 | ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |
@@ -123,12 +125,16 @@ Each pair of engines that answered one request gets one verdict.
 | BLOCKED | Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the same two engines on the same case. The failure is that rung's, and the note names it. |
 | ERROR | One of the two engines gave no result, or the two results cannot be compared. |
 
-Only FAIL and ERROR fail a comparison. RECORDED and ATTENTION are not failures: a recorded rung compares
-methods that are expected to differ, and its numbers are kept to be read, not to be gated. BLOCKED is not a
-second failure: two engines that built different systems would differ in every rung after that one.
+Only FAIL and ERROR fail a comparison. FLOOR is a pass that is counted apart from PASS. RECORDED and ATTENTION
+are not failures: a recorded rung compares methods that are expected to differ, and its numbers are kept to be
+read, not to be gated. BLOCKED is not a second failure: two engines that built different systems would differ
+in every rung after that one.
 
-A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung and `band` the attention
-band of a recorded one. Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
-A recorded value has 9 significant digits and is named with the index of its element. `—` marks a place with
-nothing to compare, and `not finite` a number that is a NaN or an infinity. The reference-vs-each table and the
-pairwise matrix judge a pair alike, so a pair that is in both has the same verdict in both.
+A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band
+of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric
+without a limit is shown and not judged.
+Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
+A recorded value has 9 significant digits, or is a whole number in full, and is named with the index of its
+element. `—` marks a place with nothing to compare, and `not finite` a number that is a NaN or an infinity.
+The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same
+verdict in both.

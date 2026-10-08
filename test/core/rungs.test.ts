@@ -16,11 +16,11 @@ import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import {
   NO_RUNG_INPUTS,
   RUNGS,
-  judgedRungs,
   r0Rung,
   r1Rung,
+  r2Rung,
+  r3Rung,
   rayTraceRequests,
-  raysRung,
   selectRungs,
   selftestRung,
 } from "../../src/core/rungs.ts";
@@ -54,17 +54,16 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the rungs are selftest, r0, r1 and rays, in ladder order, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest and r0 to r3, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
-    ["selftest", "r0", "r1", "rays"],
+    ["selftest", "r0", "r1", "r2", "r3"],
   );
-  assert.deepEqual([...RUNGS], [selftestRung, r0Rung, r1Rung, raysRung]);
-  // The rungs that are judged are the ones a run gets without naming any; rays is run only where it is named.
-  assert.deepEqual(judgedRungs(), [selftestRung, r0Rung, r1Rung]);
+  assert.deepEqual([...RUNGS], [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung]);
+  // The rungs that trace rays are the two that compare traced rays, and they are the last of the ladder.
   assert.deepEqual(
-    RUNGS.filter((definition) => definition.onlyWhenNamed === true),
-    [raysRung],
+    RUNGS.filter((definition) => definition.needsRaySets === true),
+    [r2Rung, r3Rung],
   );
   assert.equal(new Set(RUNGS.map((definition) => definition.id)).size, RUNGS.length);
   for (const definition of RUNGS) assert.ok(QUANTITIES.has(definition.quantity), definition.id);
@@ -162,25 +161,26 @@ test("r0 and r1 are functions of the case alone: equal cases give equal requests
     const ids = [SINGLET, DOUBLE_GAUSS, ALL_FEATURES_CASE].map((each) => rung.buildRequests(each, RUN)[0].id);
     assert.equal(new Set(ids).size, 3, rung.id);
   }
-  // One case, three rungs, three requests: no two rungs ask the same thing.
-  const ids = judgedRungs().map((rung) => rung.buildRequests(SINGLET, RUN)[0].id);
+  // One case, three rungs, three requests: no two rungs that need no rays ask the same thing.
+  const ids = [selftestRung, r0Rung, r1Rung].map((rung) => rung.buildRequests(SINGLET, RUN)[0].id);
   assert.equal(new Set(ids).size, 3);
 });
 
-// ── rays ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── r2 and r3 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("rays builds one rays.trace request for each ray set it is handed, in their order, and none without sets", () => {
-  assert.equal(raysRung.quantity, "rays.trace");
-  assert.equal(raysRung.needsRaySets, true);
-  assert.equal(raysRung.onlyWhenNamed, true);
-  // Without inputs, and with none, there is nothing to ask: the rung reads no engine and no lens for its rays.
-  assert.deepEqual(raysRung.buildRequests(SINGLET, RUN), []);
-  assert.deepEqual(raysRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+test("r2 and r3 each build one rays.trace request for each ray set they are handed, in order, and none without sets", () => {
+  for (const rung of [r2Rung, r3Rung]) {
+    assert.equal(rung.quantity, "rays.trace");
+    assert.equal(rung.needsRaySets, true);
+    // Without inputs, and with none, there is nothing to ask: the rung reads no engine and no lens for its rays.
+    assert.deepEqual(rung.buildRequests(SINGLET, RUN), []);
+    assert.deepEqual(rung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  }
   assert.deepEqual(NO_RUNG_INPUTS, { raySets: [] });
   assert.ok(Object.isFrozen(NO_RUNG_INPUTS) && Object.isFrozen(NO_RUNG_INPUTS.raySets));
 
   const raySets = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }];
-  const requests = raysRung.buildRequests(SINGLET, RUN, { raySets });
+  const requests = r2Rung.buildRequests(SINGLET, RUN, { raySets });
   assert.deepEqual(
     requests.map((request) => [request.quantity, request.caseId, request.spec, request.engineOptions]),
     raySets.map((spec) => ["rays.trace", SINGLET.id, spec, undefined]),
@@ -190,9 +190,12 @@ test("rays builds one rays.trace request for each ray set it is handed, in their
     assert.deepEqual(QUANTITIES.get("rays.trace")?.validateSpec(request.spec), []);
   }
   assert.deepEqual(rayTraceRequests(SINGLET, { raySets }), requests);
+  // The two rungs ask the very same requests: an engine that answered one has answered the other.
+  assert.deepEqual(r3Rung.buildRequests(SINGLET, RUN, { raySets }), requests);
 });
 
 test("the id of a rays request is the content of its set: the same rays give the same id, any other bit another", () => {
+  const raysRung = r2Rung;
   const idOf = (spec: typeof RAYS_SPEC_SINGLET, opticalCase: OpticalCase = SINGLET): string =>
     raysRung.buildRequests(opticalCase, RUN, { raySets: [spec] })[0].id;
   const id = idOf(RAYS_SPEC_SINGLET);
@@ -223,17 +226,15 @@ test("the id of a rays request is the content of its set: the same rays give the
 
 // ── Selection ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("a run that names no rungs gets every rung that is judged, and none that is run only where it is named", () => {
-  assert.deepEqual(selectRungs(undefined), [selftestRung, r0Rung, r1Rung]);
-  assert.deepEqual(selectRungs(undefined), judgedRungs());
+test("a run that names no rungs gets every rung, in ladder order", () => {
+  assert.deepEqual(selectRungs(undefined), [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung]);
+  assert.deepEqual(selectRungs(undefined), [...RUNGS]);
+  assert.notEqual(selectRungs(undefined), RUNGS, "a list of its own");
   const three = [rung("a"), rung("b"), rung("c")];
   assert.deepEqual(selectRungs(undefined, three), three);
   assert.notEqual(selectRungs(undefined, three), three, "a list of its own");
-  const named = { ...rung("b"), onlyWhenNamed: true };
-  assert.deepEqual(selectRungs(undefined, [three[0], named, three[2]]), [three[0], three[2]]);
-  assert.deepEqual(selectRungs(["b", "a"], [three[0], named, three[2]]), [three[0], named]);
-  // rays is a rung like any other once it is named, in its place on the ladder.
-  assert.deepEqual(selectRungs(["rays", "r0"]), [r0Rung, raysRung]);
+  // A rung that traces rays is a rung like any other, in its place on the ladder.
+  assert.deepEqual(selectRungs(["r3", "r0"]), [r0Rung, r3Rung]);
 });
 
 test("named rungs come in ladder order, each once, however they were named", () => {
@@ -249,11 +250,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, rays',
+    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, rays',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -278,6 +279,6 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, rays",
+    "no rung was named: the rungs are selftest, r0, r1, r2, r3",
   );
 });

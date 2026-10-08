@@ -11,6 +11,11 @@ const NOTHING = "—";
 /** How many significant digits a recorded value has: enough to set two engines' values side by side by eye. */
 export const RECORDED_DIGITS = 9;
 
+/** A recorded value as text: a whole number in full, so that a count reads as a count, any other in nine digits. */
+function recordedText(value: number): string {
+  return Number.isSafeInteger(value) ? formatFixed(value, 0) : formatSci(value, RECORDED_DIGITS);
+}
+
 /**
  * A text as the content of one table cell: a backslash and a `|` are escaped with a backslash, and every line
  * break (CR LF, LF or CR) becomes `<br>`, so the text can neither end its cell nor its row. Nothing else is
@@ -39,12 +44,13 @@ function metricText(metric: ComparisonMetric): string {
   return `${value}${whereText(metric.where)}`;
 }
 
-/** The heading of a metric column: the name, with its limit and a unit other than 1. */
+/** The heading of a metric column: the name, with its limit, a unit other than 1 and its floor limit, if any. */
 function columnText(column: MetricColumn): string {
   const unit = column.unit === null || column.unit === "1" ? "" : ` ${column.unit}`;
   if (column.limit === undefined) return unit === "" ? column.name : `${column.name} [${unit.trim()}]`;
   const sign = column.limitKind === "attention" ? "band" : "≤";
-  return `${column.name} (${sign} ${numberText(column.limit)}${unit})`;
+  const floor = column.floorLimit === undefined ? "" : `; floor ≤ ${numberText(column.floorLimit)}`;
+  return `${column.name} (${sign} ${numberText(column.limit)}${unit}${floor})`;
 }
 
 function supportText(cell: SupportCell): string {
@@ -99,7 +105,7 @@ function sectionLines(section: ReportSection): string[] {
       `${row.name}[${count(row.index)}]`,
       ...row.cells.map((cell) => {
         if (cell === null) return NOTHING;
-        return cell.value === null ? "not finite" : formatSci(cell.value, RECORDED_DIGITS);
+        return cell.value === null ? "not finite" : recordedText(cell.value);
       }),
     ]);
     lines.push(...table(["Value", ...engines], body));
@@ -116,6 +122,12 @@ const HOW_TO_READ: readonly string[] = [
     ["Verdict", "Meaning"],
     [
       ["PASS", "A gated rung: every judged metric is at or below its tolerance."],
+      [
+        "FLOOR",
+        "A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two " +
+          "engines. The rung's arbiter agrees with every other engine, and that engine is within the floor limit " +
+          "of the arbiter; the note gives the figures. It counts as a pass.",
+      ],
       ["FAIL", "A gated rung: a judged metric is above its tolerance, or is not a number."],
       ["RECORDED", "A recorded rung: the difference is written down. It is not a failure."],
       [
@@ -132,15 +144,19 @@ const HOW_TO_READ: readonly string[] = [
     ],
   ),
   "",
-  "Only FAIL and ERROR fail a comparison. RECORDED and ATTENTION are not failures: a recorded rung compares",
-  "methods that are expected to differ, and its numbers are kept to be read, not to be gated. BLOCKED is not a",
-  "second failure: two engines that built different systems would differ in every rung after that one.",
+  "Only FAIL and ERROR fail a comparison. FLOOR is a pass that is counted apart from PASS. RECORDED and ATTENTION",
+  "are not failures: a recorded rung compares methods that are expected to differ, and its numbers are kept to be",
+  "read, not to be gated. BLOCKED is not a second failure: two engines that built different systems would differ",
+  "in every rung after that one.",
   "",
-  "A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung and `band` the attention",
-  `band of a recorded one. Numbers have ${METRIC_DIGITS} significant digits, and a whole number, such as a count, is written in full.`,
-  `A recorded value has ${RECORDED_DIGITS} significant digits and is named with the index of its element. \`${NOTHING}\` marks a place with`,
-  "nothing to compare, and `not finite` a number that is a NaN or an infinity. The reference-vs-each table and the",
-  "pairwise matrix judge a pair alike, so a pair that is in both has the same verdict in both.",
+  "A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band",
+  "of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric",
+  "without a limit is shown and not judged.",
+  `Numbers have ${METRIC_DIGITS} significant digits, and a whole number, such as a count, is written in full.`,
+  `A recorded value has ${RECORDED_DIGITS} significant digits, or is a whole number in full, and is named with the index of its`,
+  `element. \`${NOTHING}\` marks a place with nothing to compare, and \`not finite\` a number that is a NaN or an infinity.`,
+  "The reference-vs-each table and the pairwise matrix judge a pair alike, so a pair that is in both has the same",
+  "verdict in both.",
 ];
 
 /**
@@ -149,8 +165,9 @@ const HOW_TO_READ: readonly string[] = [
  * goes through `escapeCell`.
  *
  * The sections, in order: the title and the inputs (suite, contract version, policy version, engines with their
- * fingerprints, runs); the verdict summary; the support matrix; for each run and rung the reference-vs-each table,
- * the pairwise matrix and the values the answers only record; and how to read the verdicts.
+ * fingerprints and, for the comparator's own engines, their adapter revisions, runs); the verdict summary; the
+ * support matrix; for each run and rung the reference-vs-each table, the pairwise matrix and the values the
+ * answers only record; and how to read the verdicts.
  */
 export function renderMarkdown(model: ReportModel): string {
   const lines: string[] = [`# Comparison report: ${model.suite.name}`, "", "## Inputs", ""];
@@ -169,15 +186,25 @@ export function renderMarkdown(model: ReportModel): string {
     "### Engines",
     "",
   );
+  // The column of adapter revisions is there only where an engine has one: an engine of the comparator's own.
+  const adapters = model.engines.some(
+    (engine) => engine.status === "available" && engine.adapterRevision !== undefined,
+  );
   const engineRows = model.engines.map((engine) =>
     engine.status === "available"
-      ? [engine.id, "available", engine.version, engine.fingerprint]
-      : [engine.id, `unavailable: ${engine.code}`, NOTHING, NOTHING],
+      ? [
+          engine.id,
+          "available",
+          engine.version,
+          engine.fingerprint,
+          ...(adapters ? [engine.adapterRevision ?? NOTHING] : []),
+        ]
+      : [engine.id, `unavailable: ${engine.code}`, NOTHING, NOTHING, ...(adapters ? [NOTHING] : [])],
   );
   lines.push(
     ...(engineRows.length === 0
       ? ["No engine was run."]
-      : table(["Engine", "Status", "Version", "Fingerprint"], engineRows)),
+      : table(["Engine", "Status", "Version", "Fingerprint", ...(adapters ? ["Adapter revision"] : [])], engineRows)),
   );
   lines.push("", "### Runs", "");
   const runRows = model.runs.map((run) => [

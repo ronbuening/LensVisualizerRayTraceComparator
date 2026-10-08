@@ -15,7 +15,14 @@ Each entry has a **class**, the one the plan's ladder uses when two answers diff
 
 Line numbers are not quoted: LensVisualizer changes daily. The integration tests in
 `test/integration/lv/canaries.test.ts` pin the source lines these entries rest on and fail when one is rewritten.
-Measured numbers are of LensVisualizer commit `d36f44b3`.
+Measured numbers are of LensVisualizer commit `d36f44b3`; those of rungs R2 and R3 were taken at `3af45e3f`,
+whose engine files are the same (closure `f6681074`), with two lens files corrected. The committed digest of the
+benchmark was last written at `c3fc5a2d`, with the same engine files and the same cases, each named there by its
+content hash: its figures are those of `3af45e3f`, number for number.
+
+Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
+60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
+sag, and the textbook vector form of Snell's law.
 
 ## LensVisualizer
 
@@ -134,8 +141,50 @@ Measured numbers are of LensVisualizer commit `d36f44b3`.
   no tolerance but rounding: surface 7 of `fujifilm-fujinon-xf-27mm-f28` is an asphere of 18 terms whose slope
   terms reach 6e4 and sum to 0.09, and by rational arithmetic LensVisualizer's slope is 2.0e-11 from the exact
   one there and the reference engine's 3.2e-12. An integration test holds the benchmark's sets to all of it
-  (`test/integration/lv/rays.test.ts`). Nothing compares traced rays yet; the rungs that will judge this floor
-  for what it is (FLOOR, in the ladder of the plan).
+  (`test/integration/lv/rays.test.ts`).
+- **Judged.** Rungs R2 and R3 set `lv` against `ref`, which meets a surface to a few units in the last place. On
+  the benchmark, 216 ray sets and 137 596 rays that both engines land, every pair passes: the largest hit distance
+  is 6.8e-9 mm, the largest difference of a direction 3.1e-10 and of a landing 9.1e-9 mm (all three on
+  `sigma-35mm-f14-dg-hsm-a` at 650 nm, 31.9°), and the optical path differs by at most 6.0e-6 waves to the last
+  surface, 5.3e-6 to the image and 5.5e-6 relative to the chief ray. Not one ray is stopped by one engine and
+  passed by the other, and none is failed. The committed digest is `reports/benchmark/lv-floor.md`. What the
+  tolerance becomes behind a steep surface is the next entry.
+- **Class.** numerical.
+
+### Behind a steep surface 1e-9 mm is not 1e-9 mm any more
+
+- **Where.** The same tolerance, `INTERSECTION_TOLERANCE`. An error along the ray at one surface is an error across
+  it at the next, by the tangent of the angle between them, and a surface met near grazing incidence, or one that
+  bends a ray almost back on itself, magnifies whatever arrives. So does the image plane, for a ray that lands
+  far off the axis.
+- **Effect.** Per-surface errors of `lv` and `ref` on one ray of `fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii` at its
+  full field of 44.8°, against the 60-digit trace: both are flat for 17 surfaces (`lv` 2e-10 to 1e-9 mm, `ref`
+  1e-15 to 6e-14 mm) and both jump at surface 17 by the same factor of about 40 (`lv` to 7.0e-9 mm, `ref` to
+  4.3e-13 mm), ending at 4.0e-8 mm and 2.5e-12 mm. The reference engine is at rounding all the way; the surface
+  magnifies. On `zeiss-hologon-15f8` (in the feature suite as `stop-inside-element`) the hits are within 2.2e-9 mm
+  and the rays leave 54° off the axis, so the landing is 1.10e-8 mm off and the path to the image plane 2.07e-5
+  waves: above both gates, with `ref` within 6e-15 mm and 2e-11 waves of the truth on that ray.
+- **Handled.** That is what `FLOOR` is for. A pair of `lv` above a gate is a floor when the arbiter `ref` agrees
+  with every other engine within 1e-10 mm and 1e-7 waves and `lv` is within 1e-7 mm and 2e-4 waves of `ref`
+  (`policy/rungs.v1.json`); it counts as a pass and is counted apart. In the suites, 4 of the 288 pairs of traced
+  rays of `features` are `FLOOR`, all of the Hologon at full field, at 470 nm and 510 nm; the benchmark has none.
+  Over the catalog, in one sweep outside the tests (868 lenses on their reference line and 808 on the photopic
+  lines, at up to three fields each: 14 370 ray sets, 16.4 million rays), 39 pairs are `FLOOR` in R2 and 24 in R3,
+  on eleven lenses. Ten are at their full field only. The eleventh, `fujinon-xf-23mm-f14-r`, is a floor at every
+  field, the axis included: its hits are 1.0e-8 mm to 1.6e-8 mm off at surface 21, where the 60-digit trace puts
+  `ref` 6e-13 mm from the truth on the worst ray of the axial pencil.
+- **Not handled, and failing.** The floor has limits, and a direction has none: a difference of direction above 1e-9
+  always fails. Five lenses of the catalog are beyond one or the other, in 19 pairs of R2 and one of R3, and those
+  pairs are `FAIL`, as they should be until someone decides otherwise. At their full field:
+  `apple-iphone-12-main-wide` (direction 2.9e-9 to 4.1e-9, with hits 1.1e-8 mm to 1.2e-8 mm off),
+  `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` (direction 1.1e-9 to 4.0e-9, hits up to 1.15e-7 mm and landings up to
+  1.20e-7 mm), `fujifilm-fujinon-xf-27mm-f28` at 510 nm (hits 1.8e-7 mm and direction 3.5e-9, on a ray that leaves a
+  surface 3° short of the perpendicular to the axis) and `leica-apo-summicron-m-35f2` at 555 nm (direction 1.8e-9,
+  landing 2.0e-7 mm and 3.3e-4 waves behind an exit 64° off the axis). At half its field, on the photopic lines only:
+  `apple-iphone-7-wide-camera-lens` (direction 1.0e-9 to 1.4e-9, with every hit within its gate). In each, the
+  60-digit trace puts `ref` between 5e-15 mm and 6e-13 mm from the truth and `lv` the rest. None is in a suite. A
+  tighter or caller-set intersection tolerance in LensVisualizer would turn every one of them, and every `FLOOR`, into
+  a `PASS`.
 - **Class.** numerical.
 
 ### A total internal reflection is "failed", and a miss is "failed" until it is proven
@@ -150,7 +199,10 @@ Measured numbers are of LensVisualizer commit `d36f44b3`.
   failure of the tracer, and every probe lattice that reaches past a front element would be full of them.
 - **Handled.** `lv` reports LensVisualizer's own classification: `blocked` is status 1 and `failed` status 2. The
   end surface is the first surface the ray did not pass: the hit LensVisualizer marks as clipped, or the surface
-  it has no hit on. On the benchmark's 39 302 launch rays not one is `failed`.
+  it has no hit on. On the benchmark's 39 302 launch rays not one is `failed`, and of the 16.4 million rays of the
+  catalog sweep none is: every ray LensVisualizer does not land, it calls `blocked`. So no ray of `lv` is left out
+  of the mask that R2 judges, and a ray it loses for a reason of its own is a mismatch there (the next two
+  entries).
 - **Class.** convention.
 
 ### Beyond a clear aperture a hit is computed by rules of LensVisualizer's own
@@ -172,6 +224,43 @@ Measured numbers are of LensVisualizer commit `d36f44b3`.
   on the surface a ray ended at: every value of a ray is NaN from its end surface on, in every engine. Positions
   are compared on rays that passed.
 - **Class.** method.
+
+### Where two neighbouring surfaces cross, the ray is lost
+
+- **Where.** `traceSequential` searches for the next surface forwards only, from the last hit, between the bounds
+  of `sequentialSurfaceMinT` and `sequentialSurfaceMaxT` (`src/optics/trace/pathPlanner.ts`). A surface that lies
+  behind the hit, by more than the 1e-9 mm it forgives, is not found: the trace ends `failed` with the reason
+  `noBracket`, and `mtfTraceClassification` calls the ray `blocked`.
+- **Effect.** A prescription can put a surface behind the one before it within both clear apertures: a stop or a
+  flat face set into the curve of its neighbour, where the neighbour's sag at the rim is more than the gap at the
+  vertex. A sequential trace follows the order of the prescription and steps back to it; that is what the contract
+  asks and what `ref` does. LensVisualizer drops the ray, and its MTF is that of the rays that are left. Six lenses
+  of the catalog do this at their default state, on their reference line (rays lost at fields 0, 0.5 and 1, of
+  some 1100 to 1400 launched for each): `vivitar-series-1-70-210-f35` at surface 21 (484, 484, 500: every ray that
+  reaches it more than 0.4 µm off the axis, because a curved face and a plane share a vertex there),
+  `leica-elmarit-90f28` at 5 (216, 156, 126), `olympus-zuiko-auto-s-50f14` at 6 (212, 138, 6),
+  `bertele-sonnar-50f2-scaled` at 6 (0, 30, 4), `pentax-da-18-55mm-f35-56-al` at 15 (16, 14, 0) and `nokton-50f1`
+  at 7 (0, 8, 0). In the 60-digit trace every such ray passes the surface where `ref` puts it.
+- **Handled.** Nothing is forgiven: each of these rays is one that `lv` stopped and `ref` passed, well inside the
+  clear aperture, so it is a mask mismatch and the pair fails R2 (14 pairs on the reference line, 63 on the
+  photopic lines, 2394 and 6998 rays). None of the six is in a suite. An integration test
+  (`test/integration/lv/rungs.test.ts`) holds each to this: the surface, LensVisualizer's `noBracket`, and the
+  step backwards in `ref`'s trace; it fails on the day LensVisualizer traces through.
+- **Class.** method.
+
+### A ray bent past the perpendicular to the axis
+
+- **Where.** The same forward search. Glass to air just inside the critical angle, at a point where the surface's
+  normal leans from the axis, sends a ray out along the surface: more than 90° from the axis, travelling back.
+- **Effect.** The line of such a ray still crosses the next surface, behind the ray. A tracer that intersects
+  lines would take that for a hit and carry on: `ref` did, until it was held to LensVisualizer on
+  `fujifilm-fujinon-xf-27mm-f28` at 510 nm, where two rays of the full-field lattice leave surface 10 at 94° to
+  the axis.
+- **Handled.** The contract says it: a ray that no longer travels toward +z behind a surface goes to no further
+  surface and is blocked at the next one. LensVisualizer finds no intersection there (`noBracket`, classified
+  `blocked`), `ref` does not look for one, and the two agree. It is the one place where the comparison corrected
+  the reference engine and not the other way round.
+- **Class.** convention.
 
 ### The MTF bundle traces half its lattice and mirrors the rest
 
@@ -250,16 +339,25 @@ Measured numbers are of LensVisualizer commit `d36f44b3`.
   telecentric lens the angle is small and is itself the remainder of a sum that cancels.
 - **Effect.** `viltrox-af-75mm-f12-pro` has its exit pupil 7.7 m behind the first vertex at the d line and, at the
   photopic lines, from 1.4 m to 20 m behind it and 14 m in front of it. `lv` and `ref` place it 1.1e-9 mm apart at
-  the d line and up to 3.0e-9 mm apart at 650 nm: 2e-13 of the distance, and above the R1 gate of 1e-9 mm. Over
+  the d line and up to 3.0e-9 mm apart at 650 nm: 2e-13 of the distance, and above a plain gate of 1e-9 mm. Over
   the 1676 cases of the catalog (868 lenses on the reference line, 808 on the photopic lines) it is the only one
-  that fails R1; the next largest difference of any value is 1.9e-11 mm. Neither engine is wrong, and neither
-  can do better: one unit in the last place of 20 m is 3.6e-12 mm. Worked out in exact rational arithmetic from
+  that far apart; the next largest difference of a pupil's position is 1.9e-11 mm. Neither engine is wrong, and
+  neither can do better: one unit in the last place of 20 m is 3.6e-12 mm. Worked out in exact rational arithmetic from
   the same radii, gaps and indices, the pupil lies up to 3.5e-9 mm from where `lv` puts it and up to 4.9e-9 mm
   from where `ref` does (both at 610 nm, where the two happen to err alike and differ by 1.4e-9 mm); at the d line
   `lv` is 1.8e-11 mm off and `ref` 1.1e-9 mm, and at 650 nm 2.7e-10 mm and 3.3e-9 mm. So no change to the
-  reference engine alone would bring every line of this lens inside the gate.
-- **Handled.** The gate is as the plan states it, and the lens fails R1 by it. The lens is in neither suite, so
-  the suites pass; a run of the whole catalog will show it as `FAIL`. What would judge it rightly is a comparison
-  of pupils in reciprocal distance, which is also what a truly telecentric system needs; that is a change of the
-  gate, and the owner's to make.
+  reference engine alone would bring every line of this lens inside a plain gate of 1e-9 mm.
+- **Handled.** The gate of R1 was amended for it (the plan, "Amendments since approval"): the position of a pupil
+  passes within 1e-9 mm, or within 1e-12 of its distance from the image plane where that is larger. The comparator
+  reports both figures, `pupilZ.maxAbs` and `pupilZ.maxScaled`, and judges the second. On this lens the exit
+  pupils are 1.09e-9 mm apart at the d line and 3.03e-9 mm at 650 nm, which on the scale of their distance is
+  1.4e-10 and 2.1e-10: its reference-line case passes R1.
+- **Not handled, and failing.** The radius of that pupil is as large as it is far: 3.4 m at the d line and 6.3 m at
+  650 nm, the same quotient. There the two engines hold 4.8e-10 mm and 1.35e-9 mm apart, 2e-13 of the radius. The
+  amendment is of a pupil's position, and every other value keeps the plain 1e-9 mm, so the photopic case of this
+  one lens still fails R1, by `exitPupilSemiDiameter` at 650 nm. Judging the radius of a pupil on the scale of the
+  pupil's distance, as its position is, would pass it; that is a change of the gate, and the owner's to make. An
+  integration test pins both halves (`test/integration/lv/engine.test.ts`). Over the 1676 cases of the catalog it
+  is the only pair that fails R1; every value of every other lens that is not a pupil's position is within
+  1.1e-11 mm, and every other pupil position within 1.9e-11 mm.
 - **Class.** numerical.

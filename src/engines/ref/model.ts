@@ -12,6 +12,8 @@ export interface RefSurface {
   readonly profile: SurfaceProfile;
   /** The largest radial height at which a ray passes the surface, mm: the limit is inclusive. */
   readonly clipRadius: number;
+  /** The radius of the surface's central obstruction, mm: a ray below it is stopped; 0 for none. */
+  readonly innerClipRadius: number;
   /** The clear semi-diameter the clip radius was derived from, mm: the heights the sag is reported at scale with it. */
   readonly nominalSemiDiameter: number;
 }
@@ -35,9 +37,9 @@ export interface RefSystem {
 /**
  * Builds the model of a case. A surface stands where its vertex `z` says, and the gap between two surfaces is the
  * difference of their vertices: `thickness`, which the case keeps equal to it within 1e-9 mm, is not read, so the
- * model has one statement of where a surface is. The stop surface clips by its own aperture like any other;
- * `stopSemiDiameter` is the radius the pupils are images of. The case is expected to be valid by its schema and
- * its invariants, as the protocol handler has checked.
+ * model has one statement of where a surface is. The stop surface clips by its own aperture like any other, which
+ * a case states for its stop setting; `stopSemiDiameter` is the radius the pupils are images of, and no second
+ * clip. The case is expected to be valid by its schema and its invariants, as the protocol handler has checked.
  */
 export function buildRefSystem(opticalCase: OpticalCase): RefSystem {
   const { system, conditions } = opticalCase;
@@ -48,6 +50,7 @@ export function buildRefSystem(opticalCase: OpticalCase): RefSystem {
       z: surface.z,
       profile: profileOf(surface.shape),
       clipRadius: surface.aperture.semiDiameter,
+      innerClipRadius: surface.aperture.innerSemiDiameter,
       nominalSemiDiameter: surface.aperture.nominalSemiDiameter,
     })),
     stopIndex: system.stopIndex,

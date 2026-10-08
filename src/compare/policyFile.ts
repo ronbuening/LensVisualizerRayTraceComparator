@@ -41,7 +41,7 @@ export function loadPolicy(file: string = POLICY_FILE): Policy {
  * rung can be compared and judged:
  *
  * - every registered rung has a policy entry, and every entry is of a registered rung;
- * - an entry names the quantity of its rung, and that quantity has a comparator;
+ * - an entry names the quantity of its rung, and that quantity has a comparator for the rung;
  * - every metric an entry names is one the comparator reports, in the unit the comparator reports it in.
  */
 export function policyRegistryProblems(
@@ -65,7 +65,7 @@ export function policyRegistryProblems(
       problems.push(`policy entry ${id} names the quantity ${entry.quantity}; the rung's is ${rung.quantity}`);
       continue;
     }
-    const comparator = comparators.get(entry.quantity);
+    const comparator = comparators.get(entry.quantity, id);
     if (comparator === undefined) {
       problems.push(`policy entry ${id}: the quantity ${entry.quantity} has no comparator`);
       continue;

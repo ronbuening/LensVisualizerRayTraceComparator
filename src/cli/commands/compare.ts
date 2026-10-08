@@ -5,11 +5,12 @@ import type { ComparisonFile } from "../../compare/comparisonFile.ts";
 import { compareManifest } from "../../compare/manifest.ts";
 import { loadPolicy } from "../../compare/policyFile.ts";
 import { COMPARISON_MODES, FAILING_VERDICTS, VERDICTS } from "../../contract/comparison.ts";
+import type { OpticalCase } from "../../contract/case.ts";
 import type { ComparisonMode } from "../../contract/comparison.ts";
 import type { Policy } from "../../contract/policy.ts";
 import { writeFileAtomic } from "../../core/atomicFile.ts";
 import { REPO_ROOT } from "../../core/config.ts";
-import { readRunManifest } from "../../core/manifest.ts";
+import { readRunCase, readRunManifest } from "../../core/manifest.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../core/resultStore.ts";
 import { UsageError } from "../../core/usageError.ts";
@@ -30,8 +31,8 @@ const SYNOPSIS =
 const HELP = [
   SYNOPSIS,
   "Compares the answers of a run's engines, request by request, and judges each pair by the policy of its rung.",
-  "It reads the run's manifest and the result store beside the run directory, and writes comparisons.json into the",
-  "run directory. Nothing is asked of any engine.",
+  "It reads the run's manifest, its cases and the result store beside the run directory, and writes",
+  "comparisons.json into the run directory. Nothing is asked of any engine.",
   "",
   "  --root <dir>          the directory that holds lvrtc.config.json, whose runsDir a suite name is looked up in",
   "                        (default: this repository)",
@@ -40,8 +41,9 @@ const HELP = [
   "  --mode <mode>         reference-vs-each, pairwise or both (default: both)",
   "  --json                print the comparisons as one JSON object in place of the lines",
   "",
-  "Exit code: 0 when no pair is FAIL or ERROR (UNSUPPORTED, RECORDED and ATTENTION are not failures); 1 otherwise;",
-  "2 when nothing was compared because the run has no manifest or the reference is not an engine of the run.",
+  "Exit code: 0 when no pair is FAIL or ERROR (FLOOR is a pass; UNSUPPORTED, RECORDED and ATTENTION are not",
+  "failures); 1 otherwise; 2 when nothing was compared because the run has no manifest or the reference is not an",
+  "engine of the run.",
   "",
 ].join("\n");
 
@@ -80,15 +82,16 @@ function linesText(file: ComparisonFile): string {
  * [--json]`.
  *
  * It finds the run directory (`resolveRunDirectory`), reads its manifest and compares what the manifest's engines
- * answered (`compareManifest`), taking each answer from the store beside the run directory. The comparisons are
- * written to `comparisons.json` in the run directory as canonical JSON and a newline: the same bytes for the same
- * manifest, store entries and policy, in any directory. Each pair is printed as a line and a count follows, with
- * the path of the file; with `--json` the file's content is printed, indented, in their place.
+ * answered (`compareManifest`), taking each answer from the store beside the run directory and each case from the
+ * run directory's `cases` (`readRunCase`). The comparisons are written to `comparisons.json` in the run directory
+ * as canonical JSON and a newline: the same bytes for the same manifest, cases, store entries and policy, in any
+ * directory. Each pair is printed as a line and a count follows, with the path of the file; with `--json` the
+ * file's content is printed, indented, in their place.
  *
- * Exit codes: 0 when no pair is `FAIL` or `ERROR`; 1 when one is; 2, with nothing written, for a command line
- * that is not the synopsis, a `--root` that is not a directory, a run that has no manifest or one that cannot be
- * read, a `--reference` that is not an engine of the run, and a run of a rung the policy does not judge. A
- * configuration or policy file that cannot be used is an error like any other.
+ * Exit codes: 0 when no pair is `FAIL` or `ERROR`, a `FLOOR` being a pass; 1 when one is; 2, with nothing written,
+ * for a command line that is not the synopsis, a `--root` that is not a directory, a run that has no manifest or
+ * one that cannot be read, a `--reference` that is not an engine of the run, and a run of a rung the policy does
+ * not judge. A configuration or policy file that cannot be used is an error like any other.
  */
 export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
   return {
@@ -110,12 +113,17 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
         }
         json = asked.flags.has("--json");
         const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
+        const cases = new Map<string, OpticalCase | undefined>();
         file = compareManifest({
           manifest: readRunManifest(directory),
           store: createResultStore(join(dirname(directory), STORE_DIRECTORY)),
           policy: inputs.policy ?? loadPolicy(),
           reference: asked.values.get("--reference"),
           modes: MODE_CHOICES[mode],
+          cases: (caseId) => {
+            if (!cases.has(caseId)) cases.set(caseId, readRunCase(directory, caseId));
+            return cases.get(caseId);
+          },
         });
         path = join(directory, COMPARISONS_FILE);
       } catch (error) {

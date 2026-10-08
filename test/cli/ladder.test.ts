@@ -98,7 +98,7 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   assert.equal(compared.code, EXIT_FAILURE, compared.err);
   assert.match(
     compared.out,
-    /^ladder: 20 pairs: 14 PASS, 3 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 3 BLOCKED, 0 ERROR$/m,
+    /^ladder: 20 pairs: 14 PASS, 0 FLOOR, 3 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 3 BLOCKED, 0 ERROR$/m,
   );
   assert.equal(reported.code, EXIT_OK, reported.err);
 
@@ -153,7 +153,11 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   assert.deepEqual(pairOf("double-gauss", "r1", "reference-vs-each", "ref", "ref-twin"), {
     a: "ref",
     b: "ref-twin",
-    metrics: [{ name: "firstOrder.maxAbs", value: 0, unit: "mm", where: { quantity: "efl", line: 0 } }],
+    metrics: [
+      { name: "firstOrder.maxAbs", value: 0, unit: "mm", where: { quantity: "efl", line: 0 } },
+      { name: "pupilZ.maxScaled", value: 0, unit: "mm", where: { quantity: "entrancePupilZ", line: 0 } },
+      { name: "pupilZ.maxAbs", value: 0, unit: "mm", where: { quantity: "entrancePupilZ", line: 0 } },
+    ],
     class: "gated",
     verdict: "PASS",
   });
@@ -209,11 +213,16 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
   assert.match(markdown, /^Quantity `system\.describe`, compared direct, gated\. /m);
 
   // R1: the worst quantity and its line for the pair that was judged, and the blocked pair with why.
-  assert.ok(markdown.includes("\n| Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | Verdict | Note |\n"));
-  assert.match(markdown, /^\| ref-twin \| 0 at line 0, quantity efl \| PASS \| {2}\|$/m);
+  // The position of a pupil has its own two columns: on the scale of its distance, which is judged, and plain.
+  const firstOrder =
+    "| Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | pupilZ.maxScaled (≤ 1.00e-9 mm) | pupilZ.maxAbs [mm] | " +
+    "Verdict | Note |";
+  assert.ok(markdown.includes(`\n${firstOrder}\n`));
+  const pupil = "0 at line 0, quantity entrancePupilZ";
+  assert.ok(markdown.includes(`\n| ref-twin | 0 at line 0, quantity efl | ${pupil} | ${pupil} | PASS |  |\n`));
   assert.match(
     markdown,
-    /^\| ref-bent \| — \| BLOCKED \| not judged: rung r0 failed for ref and ref-bent on this case \|$/m,
+    /^\| ref-bent \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed for ref and ref-bent on this case \|$/m,
   );
   // And in the pairwise matrix of that rung.
   assert.match(markdown, /^\| ref-bent \| BLOCKED \| — \| BLOCKED \|$/m);
@@ -256,6 +265,7 @@ async function against(
     policy: loadPolicy(),
     reference: "ref",
     modes: ["reference-vs-each"],
+    cases: () => opticalCase,
   });
   const [r0, r1] = file.comparisons.map((set) => set.pairs[0]);
   assert.deepEqual(
@@ -381,7 +391,8 @@ test("what R0 lets through, R1 judges: without the blocking rule a wrong radius 
   const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
   const policy = { ...own, rungs: { ...own.rungs, r0 } };
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
-  const file = compareManifest({ manifest, store, policy, reference: "ref", modes: ["reference-vs-each"] });
+  const asked = { manifest, store, reference: "ref", modes: ["reference-vs-each"], cases: () => ASPHERE } as const;
+  const file = compareManifest({ ...asked, policy });
   const [first, second] = file.comparisons.map((set) => set.pairs[0]);
   assert.equal(first.verdict, "FAIL");
   assert.equal(second.verdict, "FAIL");
@@ -391,6 +402,13 @@ test("what R0 lets through, R1 judges: without the blocking rule a wrong radius 
   assert.ok((metric.value ?? 0) > 1e-5 && (metric.value ?? 0) < 1e-3, String(metric.value));
   assert.equal(typeof metric.where?.quantity, "string");
   // With the comparator's own policy the same answers are blocked.
-  const blocked = compareManifest({ manifest, store, policy: own, reference: "ref", modes: ["reference-vs-each"] });
+  const blocked = compareManifest({ ...asked, policy: own });
   assert.equal(blocked.comparisons[1].pairs[0].verdict, "BLOCKED");
+  // Without the case of the run a rung that reads it cannot be judged, and says so: nothing is guessed.
+  const { cases: _cases, ...withoutCases } = asked;
+  const [, unjudged] = compareManifest({ ...withoutCases, policy }).comparisons.map((set) => set.pairs[0]);
+  assert.deepEqual(
+    [unjudged.verdict, unjudged.reason],
+    ["ERROR", "the case is not at hand: a pupil is measured from its image plane"],
+  );
 });

@@ -11,7 +11,8 @@ import type { RungPolicy } from "../contract/policy.ts";
 import { CONTRACT_VERSION } from "../contract/version.ts";
 import { pairKey } from "./blocking.ts";
 import type { BlockedPairs } from "./blocking.ts";
-import type { QuantityComparator } from "./comparator.ts";
+import type { ComparisonContext, QuantityComparator } from "./comparator.ts";
+import { attributeFloor } from "./floor.ts";
 import { comparePair } from "./pair.ts";
 import type { ParticipantResult } from "./pair.ts";
 
@@ -31,6 +32,8 @@ export interface ComparisonGroup {
   readonly comparator: QuantityComparator | undefined;
   /** The pairs of engines that an earlier rung blocks (`createBlockingLedger`); none unless given. */
   readonly blocked?: BlockedPairs;
+  /** What the answers are answers to, for a comparator that needs it: the request's spec and its case. */
+  readonly context?: ComparisonContext;
 }
 
 function byEngine(a: ParticipantResult, b: ParticipantResult): number {
@@ -76,19 +79,27 @@ export function defaultReference(participants: readonly ParticipantResult[]): st
  *
  * Both modes pair the same participants and judge a pair alike (`comparePair`), so a pair that is in both has the
  * same metrics and the same verdict in both, up to which engine is named first. A pair the group lists as blocked
- * is `BLOCKED` in place of being judged, whichever of its engines is named first. Each participant that answered
- * carries the values its answer only records. A group of one has no pairs. Pure: equal arguments give an equal
- * set. Throws when an engine is a participant twice, and in the mode reference-vs-each when `reference` is not
- * given or is not a participant.
+ * is `BLOCKED` in place of being judged, whichever of its engines is named first. A pair that came to `FAIL` in a
+ * rung with a floor is held to the rung's arbiter, with every participant of the group as a witness, in either
+ * mode alike, and is `FLOOR` where the excess is the floored engine's own (`attributeFloor`).
+ *
+ * Each participant that answered carries the values its answer only records. A group of one has no pairs. Pure:
+ * equal arguments give an equal set. Throws when an engine is a participant twice, and in the mode
+ * reference-vs-each when `reference` is not given or is not a participant.
  */
 export function compareGroup(group: ComparisonGroup, mode: ComparisonMode, reference?: string): ComparisonSet {
-  const { suite, run, caseId, rung, quantity, requestId, policy, comparator } = group;
+  const { suite, run, caseId, rung, quantity, requestId, policy, comparator, context } = group;
   const participants = [...group.participants].sort(byEngine);
   const repeated = participants.find((participant, index) => participants[index + 1]?.engine === participant.engine);
   if (repeated !== undefined) throw new Error(`compareGroup: engine ${repeated.engine} is a participant twice`);
 
   const pair = (a: ParticipantResult, b: ParticipantResult): PairComparison =>
-    comparePair(a, b, policy, comparator, group.blocked?.get(pairKey(a.engine, b.engine)));
+    attributeFloor(comparePair(a, b, policy, comparator, group.blocked?.get(pairKey(a.engine, b.engine)), context), {
+      participants,
+      policy,
+      comparator,
+      context,
+    });
   let pairs: PairComparison[];
   if (mode === "reference-vs-each") {
     const first = participants.find((participant) => participant.engine === reference);

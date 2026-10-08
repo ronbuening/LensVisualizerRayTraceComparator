@@ -582,14 +582,20 @@ export const POLICY_SELFTEST = {
   },
 } satisfies Policy;
 
+/** The floor limits of a length between traced rays, mm, as the ladder has them: a fresh object for each metric. */
+const floorMm = () => ({ limit: 1e-7, agreement: 1e-10 });
+/** The floor limits of an optical path, waves, as the ladder has them. */
+const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
+
 /**
  * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
- * blocks the rungs after it, and the first-order data `r1`.
+ * blocks the rungs after it, the first-order data `r1`, and the two rungs of traced rays, `r2` and `r3`, with the
+ * floor of `lv` against `ref`.
  */
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 2,
+  version: 3,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -609,7 +615,33 @@ export const POLICY_LADDER = {
       quantity: PARAXIAL_FIRST_ORDER,
       mode: "direct",
       class: "gated",
-      metrics: { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } },
+      metrics: {
+        "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" },
+        "pupilZ.maxScaled": { tolerance: 1e-9, unit: "mm" },
+      },
+    },
+    r2: {
+      quantity: RAYS_TRACE,
+      mode: "identical-rays",
+      class: "gated",
+      metrics: {
+        "direction.maxAbs": { tolerance: 1e-9, unit: "1" },
+        "hits.maxDistance": { tolerance: 1e-8, unit: "mm", floor: floorMm() },
+        "landing.maxDistance": { tolerance: 1e-8, unit: "mm", floor: floorMm() },
+        "mask.mismatches": { tolerance: 0, unit: "rays" },
+      },
+      floor: { engine: "lv", arbiter: "ref" },
+    },
+    r3: {
+      quantity: RAYS_TRACE,
+      mode: "identical-rays",
+      class: "gated",
+      metrics: {
+        "opd.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
+        "opticalPath.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
+        "opticalPathToImage.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
+      },
+      floor: { engine: "lv", arbiter: "ref" },
     },
   },
 } satisfies Policy;
@@ -784,6 +816,51 @@ export const COMPARISON_BLOCKED = {
     },
   ],
 } satisfies ComparisonSet;
+
+/**
+ * A pair above a tolerance that is the floor of one of its engines: the verdict is `FLOOR`, and the reason gives
+ * what exceeded and the figures against the arbiter. A metric that was not measured is not among the metrics.
+ */
+export const COMPARISON_FLOOR: ComparisonSet = {
+  ...COMPARISON_BASE,
+  rung: "r2",
+  quantity: RAYS_TRACE,
+  participants: [
+    {
+      engine: "lv",
+      fingerprint: sha256Hex("lv sources"),
+      status: "ok",
+      recorded: { "rays.blocked": [3], "rays.failed": [0], "rays.ok": [5] },
+    },
+    {
+      engine: "ref",
+      fingerprint: sha256Hex("ref sources"),
+      status: "ok",
+      recorded: { "rays.blocked": [3], "rays.failed": [0], "rays.ok": [5] },
+    },
+  ],
+  mode: "pairwise",
+  pairs: [
+    {
+      a: "lv",
+      b: "ref",
+      metrics: [
+        { name: "hits.maxDistance", value: 2.5e-9, unit: "mm", where: { field: 54, line: 0, ray: 4, surface: 6 } },
+        { name: "direction.maxAbs", value: 2e-10, unit: "1", where: { field: 54, line: 0, ray: 4 } },
+        { name: "landing.maxDistance", value: 1.25e-8, unit: "mm", where: { field: 54, line: 0, ray: 4 } },
+        { name: "mask.mismatches", value: 0, unit: "rays" },
+        { name: "mask.rimBand", value: 1, unit: "rays", where: { field: 54, line: 0, ray: 7, surface: 2 } },
+        { name: "rays.compared", value: 5, unit: "rays" },
+      ],
+      class: "gated",
+      verdict: "FLOOR",
+      reason:
+        "landing.maxDistance 1.25e-8 exceeds its tolerance 1.00e-8 at field 54, line 0, ray 4; floor of lv: " +
+        "lv against ref hits.maxDistance 2.50e-9 within 1.00e-7, lv against ref landing.maxDistance 1.25e-8 " +
+        "within 1.00e-7",
+    },
+  ],
+};
 
 // ── system.describe and paraxial.first-order ─────────────────────────────────────────────────────────────────────
 //
@@ -1064,6 +1141,7 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     "reference-vs-each": COMPARISON_REFERENCE,
     pairwise: COMPARISON_PAIRWISE,
     blocked: COMPARISON_BLOCKED,
+    floor: COMPARISON_FLOOR,
   },
 };
 
@@ -1329,6 +1407,27 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "metric-attention-as-string": fault(POLICY_EVERY_MODE, "/rungs/r5/metrics/mtf.maxAbs/attention", "0.005", "type"),
     "metric-as-number": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs", 1e-12, "type"),
     "rung-blocks-as-string": fault(POLICY_LADDER, "/rungs/r0/blocksLaterRungs", "later", "type"),
+    "rung-floor-without-arbiter": fault(
+      POLICY_LADDER,
+      "/rungs/r2/floor/arbiter",
+      REMOVE,
+      "required",
+      "/rungs/r2/floor",
+    ),
+    "rung-floor-engine-uppercase": fault(POLICY_LADDER, "/rungs/r3/floor/engine", "LV", "pattern"),
+    "metric-floor-negative-limit": fault(
+      POLICY_LADDER,
+      "/rungs/r2/metrics/hits.maxDistance/floor/limit",
+      -1e-7,
+      "minimum",
+    ),
+    "metric-floor-without-agreement": fault(
+      POLICY_LADDER,
+      "/rungs/r3/metrics/opd.maxAbs/floor/agreement",
+      REMOVE,
+      "required",
+      "/rungs/r3/metrics/opd.maxAbs/floor",
+    ),
   },
   comparison: {
     "missing-pairs": fault(COMPARISON_REFERENCE, "/pairs", REMOVE, "required", ""),
@@ -1347,7 +1446,7 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     ),
     "participant-fingerprint-as-number": fault(COMPARISON_PAIRWISE, "/participants/0/fingerprint", 0, "type"),
     "pair-verdict-lowercase": fault(COMPARISON_REFERENCE, "/pairs/0/verdict", "pass", "enum"),
-    "pair-unknown-verdict": fault(COMPARISON_REFERENCE, "/pairs/0/verdict", "FLOOR", "enum"),
+    "pair-unknown-verdict": fault(COMPARISON_REFERENCE, "/pairs/0/verdict", "MARGINAL", "enum"),
     "pair-unknown-class": fault(COMPARISON_REFERENCE, "/pairs/0/class", "method", "enum"),
     "pair-empty-reason": fault(COMPARISON_REFERENCE, "/pairs/1/reason", "", "minLength"),
     "pair-unknown-property": fault(COMPARISON_REFERENCE, "/pairs/0/tolerance", 1e-12, "additionalProperties"),

@@ -1,7 +1,9 @@
 // The comparison of one run of a suite: every request of the manifest that engines were asked, grouped, with each
 // engine's answer fetched from the store, and compared against a reference and pairwise.
+import type { OpticalCase } from "../contract/case.ts";
 import type { ComparisonMode, ComparisonSet } from "../contract/comparison.ts";
 import { COMPARISON_MODES } from "../contract/comparison.ts";
+import type { JsonObject } from "../contract/json.ts";
 import type { Policy } from "../contract/policy.ts";
 import { CONTRACT_VERSION } from "../contract/version.ts";
 import { jobDetail } from "../core/manifest.ts";
@@ -30,16 +32,28 @@ export interface CompareManifestInput {
   readonly modes?: readonly ComparisonMode[];
   /** The comparators there are; `COMPARATORS` unless given. */
   readonly comparators?: ComparatorLookup;
+  /**
+   * The case of a run, by its id, for the comparators that read it (the clip radii of a rim band, the wavelength of
+   * a line, an image plane): `readRunCase` on the run directory. Without it, or where it gives none, the pairs of
+   * such a comparator are `ERROR`, with the comparator's reason.
+   */
+  readonly cases?: (caseId: string) => OpticalCase | undefined;
+}
+
+/** One job as a participant, and the spec of the request it answered, where the store holds its answer. */
+interface Answered {
+  readonly participant: ParticipantResult;
+  readonly spec?: JsonObject;
 }
 
 /** One job as a participant: an "ok" job with the data the store holds for it, or "missing" when it holds none. */
-function participantOf(job: ManifestJob, fingerprint: string | null, store: ResultStore): ParticipantResult {
+function participantOf(job: ManifestJob, fingerprint: string | null, store: ResultStore): Answered {
   const { engine, status } = job;
   if (status !== "ok") {
     const detail = jobDetail(job);
-    return { engine, fingerprint, status, ...(detail === undefined ? {} : { detail }) };
+    return { participant: { engine, fingerprint, status, ...(detail === undefined ? {} : { detail }) } };
   }
-  const missing = (detail: string): ParticipantResult => ({ engine, fingerprint, status: "missing", detail });
+  const missing = (detail: string): Answered => ({ participant: { engine, fingerprint, status: "missing", detail } });
   if (job.storeKey === null) return missing("its result was not stored");
   const found = store.get(job.storeKey);
   if (found.kind !== "hit") return missing("its result is not in the store");
@@ -51,7 +65,7 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
   if (quantity === undefined || resultDataProblems(quantity, result.data).length > 0) {
     return missing("its stored data cannot be used");
   }
-  return { engine, fingerprint, status: "ok", data: result.data };
+  return { participant: { engine, fingerprint, status: "ok", data: result.data }, spec: request.spec };
 }
 
 /**
@@ -68,7 +82,11 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  *
  * Each group gives one set per mode (`compareGroup`). The sets are ordered by run as the suite orders them, then
  * by rung and request as the manifest's jobs do, then by mode. A run without a case has no jobs and no sets. Equal
- * manifests, store entries and policies give an equal file, in any directory and on any machine.
+ * manifests, store entries, cases and policies give an equal file, in any directory and on any machine.
+ *
+ * A comparator is the one of the quantity for the rung (`ComparatorLookup.get`), and is handed what the answers
+ * are answers to: the spec of the request, from the store entry of an engine that answered it, and the case of the
+ * run, from `cases`. An answer the store holds is read once for a run, however many rungs and modes compare it.
  *
  * The groups of a run are compared in the order of the manifest's jobs, which is the order of the ladder. Where
  * the policy of a rung says `blocksLaterRungs`, two engines whose pair in that rung is `FAIL` or `ERROR` are not
@@ -79,7 +97,7 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  * policy has no entry for, or one whose entry is for another quantity: such a run cannot be judged.
  */
 export function compareManifest(input: CompareManifestInput): ComparisonFile {
-  const { manifest, store, policy, reference, modes = COMPARISON_MODES, comparators = COMPARATORS } = input;
+  const { manifest, store, policy, reference, modes = COMPARISON_MODES, comparators = COMPARATORS, cases } = input;
   const engineIds = manifest.engines.map((engine) => engine.id);
   if (reference !== undefined && !engineIds.includes(reference)) {
     const ran = engineIds.length === 0 ? "no engine" : engineIds.join(", ");
@@ -99,6 +117,17 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
   const comparisons: ComparisonSet[] = [];
   for (const run of manifest.runs) {
     const ledger = createBlockingLedger();
+    // Rungs that ask one request share one answer: it is read from the store once, and dropped with the run.
+    const read = new Map<string, Answered>();
+    const answeredBy = (job: ManifestJob): Answered => {
+      const fingerprint = fingerprints.get(job.engine) ?? null;
+      if (job.status !== "ok" || job.storeKey === null) return participantOf(job, fingerprint, store);
+      const key = JSON.stringify([job.engine, job.storeKey, job.requestId, job.quantity]);
+      const known = read.get(key) ?? participantOf(job, fingerprint, store);
+      read.set(key, known);
+      return known;
+    };
+    const opticalCase = run.caseId === null ? undefined : cases?.(run.caseId);
     for (const jobs of groups.values()) {
       const [{ run: runName, caseId, rung, quantity, requestId }] = jobs;
       if (runName !== run.name) continue;
@@ -108,7 +137,9 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
         throw new UsageError(`rung ${rung}: the run asked for ${quantity}; the policy judges ${rungPolicy.quantity}`);
       }
 
-      const participants = jobs.map((job) => participantOf(job, fingerprints.get(job.engine) ?? null, store));
+      const answers = jobs.map(answeredBy);
+      const participants = answers.map((answer) => answer.participant);
+      const spec = answers.find((answer) => answer.spec !== undefined)?.spec;
       const against = reference ?? run.referenceEngine ?? defaultReference(participants);
       if (against !== undefined && !participants.some((participant) => participant.engine === against)) {
         const fingerprint = fingerprints.get(against) ?? null;
@@ -123,8 +154,9 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
         requestId,
         participants,
         policy: rungPolicy,
-        comparator: comparators.get(quantity),
+        comparator: comparators.get(quantity, rung),
         blocked: ledger.blockedIn(rung),
+        context: { ...(spec === undefined ? {} : { spec }), ...(opticalCase === undefined ? {} : { opticalCase }) },
       };
       const sets = COMPARISON_MODES.filter((mode) => modes.includes(mode)).map((mode) =>
         compareGroup(group, mode, against),

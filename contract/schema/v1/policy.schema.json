@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lvrtc:contract:v1:policy",
   "title": "Policy",
-  "description": "How the results of each rung are judged: the quantity compared, the mode of comparison, whether the rung is gated or recorded, the limit of each metric, and whether a failure of the rung blocks the later ones. A gated metric needs a tolerance, an independent-method rung is never gated and only a gated rung blocks later ones; code checks all three.",
+  "description": "How the results of each rung are judged: the quantity compared, the mode of comparison, whether the rung is gated or recorded, the limit of each metric, whether a failure of the rung blocks the later ones, and whose numerical floor may exceed a tolerance. A gated metric needs a tolerance, an independent-method rung is never gated, only a gated rung blocks later ones or has a floor, and floor limits enclose their tolerance; code checks them.",
   "type": "object",
   "properties": {
     "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
@@ -35,6 +35,16 @@
         "blocksLaterRungs": {
           "description": "True: two engines whose pair in this rung is FAIL or ERROR are not judged against each other in any later rung for the same case.",
           "type": "boolean"
+        },
+        "floor": {
+          "description": "The engine whose numerical floor may exceed a tolerance of this rung without failing, and the engine that decides whether an excess is that floor.",
+          "type": "object",
+          "properties": {
+            "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+            "arbiter": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" }
+          },
+          "required": ["engine", "arbiter"],
+          "additionalProperties": false
         }
       },
       "required": ["quantity", "mode", "class", "metrics"],
@@ -51,7 +61,17 @@
           "description": "The largest value a recorded metric may have without being marked for attention.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
         },
-        "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+        "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "floor": {
+          "description": "The floor limits of the metric: the largest value between the rung's floored engine and its arbiter, and the largest between any other engine and the arbiter.",
+          "type": "object",
+          "properties": {
+            "limit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative" },
+            "agreement": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative" }
+          },
+          "required": ["limit", "agreement"],
+          "additionalProperties": false
+        }
       },
       "required": ["unit"],
       "additionalProperties": false

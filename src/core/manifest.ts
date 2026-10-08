@@ -7,8 +7,10 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
+import { caseInvariantProblems, verifyCaseIdentity } from "../contract/case.ts";
 import type { OpticalCase } from "../contract/case.ts";
 import type { EngineDetails, ResultStatus, UnsupportedItem } from "../contract/result.ts";
+import { validateKind } from "../contract/schemas.ts";
 import { isCompatibleContract } from "../contract/version.ts";
 import type { EngineUnavailableCode } from "../engines/adapter.ts";
 import { writeFileAtomic } from "./atomicFile.ts";
@@ -250,4 +252,25 @@ export function readRunManifest(directory: string): RunManifest {
   const problems = manifestProblems(parsed);
   if (problems.length > 0) throw new UsageError(`${file}: not a run manifest: ${problems.join("; ")}`);
   return parsed as RunManifest;
+}
+
+/**
+ * The case `caseId` of the run directory `directory`, as `writeRunOutput` wrote it to `cases/<caseId>.json`; or
+ * undefined when the file is not there or is not that case: not JSON, not a valid optical-case, or one whose own
+ * system and conditions give another id than the one it is filed under. An id that is no content hash names no
+ * file and is undefined too. Never throws for what is in the directory.
+ */
+export function readRunCase(directory: string, caseId: string): OpticalCase | undefined {
+  if (!/^[0-9a-f]{64}$/.test(caseId)) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(join(directory, CASES_DIRECTORY, `${caseId}.json`), "utf8"));
+  } catch {
+    return undefined;
+  }
+  if (validateKind("optical-case", parsed).length > 0) return undefined;
+  const opticalCase = parsed as OpticalCase;
+  if (caseInvariantProblems(opticalCase.system, opticalCase.conditions).length > 0) return undefined;
+  if (opticalCase.id !== caseId || verifyCaseIdentity(opticalCase).length > 0) return undefined;
+  return opticalCase;
 }

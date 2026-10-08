@@ -46,7 +46,7 @@
         }
       ],
       "class": "gated",
-      "verdict": "FLOOR"
+      "verdict": "MARGINAL"
     },
     {
       "a": "fake-a",

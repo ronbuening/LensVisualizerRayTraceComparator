@@ -616,27 +616,49 @@ A rung:
 | `quantity` | string | the quantity whose results the rung compares |
 | `mode` | string | `direct`: closed-form numbers set against each other; `identical-rays`: one estimator applied to every engine's trace of the same rays; `independent-method`: each engine's own sampling and algorithm |
 | `class` | string | `gated`: a difference passes or fails against a tolerance; `recorded`: it is written down and never fails |
-| `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit }` |
+| `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit, floor? }` |
 | `blocksLaterRungs?` | boolean | true: two engines whose pair in this rung is `FAIL` or `ERROR` are not judged against each other in any later rung of the ladder, for the same case |
+| `floor?` | object | `{ engine, arbiter }`: the engine whose known numerical floor may exceed a tolerance of this rung without failing, and the engine the others are held to |
 
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
-judged.
+judged. Two rungs may compare one quantity, each by metrics of its own: `r2` and `r3` both compare `rays.trace`.
+
+**The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
+meets a surface within 1e-9 mm of it, and behind a steep surface that becomes more than the 1e-8 mm two exact
+tracers are held to. A rung with a `floor` says which engine that is and which engine arbitrates, and each of its
+metrics that the floor may excuse carries `floor: { limit, agreement }`, both in the metric's unit. A pair of
+`floor.engine` that is above a tolerance is then `FLOOR`, which is a pass, when all of these hold, and `FAIL`
+otherwise:
+
+1. every metric of the pair that is above its tolerance is a number and has floor limits. A metric without them
+   is never excused: a count of rays the two engines disagree about, the direction of a ray;
+2. the arbiter answered, and every other engine of the comparison that answered is within `agreement` of the
+   arbiter in every metric that has floor limits: an arbiter that agrees with the others to rounding is right
+   about the rays;
+3. `floor.engine` is within `limit` of the arbiter in every metric that has floor limits: what it is off by is of
+   the size of its known tolerance, and not a defect of another kind.
+
+A metric that two answers have nothing to measure on takes no part in 2 or 3. The comparator's policy gives `lv`
+this floor against `ref` in `r2` and `r3`: lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, optical paths
+with 2e-4 waves and 1e-7 waves. The limits are in the policy and nowhere in the code.
 
 **Blocking.** A rung with `blocksLaterRungs` establishes what the rungs after it take for granted: two engines
 that built different systems would differ in every ray traced through them, and each such difference would be the
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
-ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`. Blocking is
-per pair of engines and per case; two engines that agree on the system are judged whatever a third one built.
+ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`.
+Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
+built.
 
 **Invariants checked in code** (`policyProblems`): a rung of mode `independent-method` is never gated; a gated
 rung judges at least one metric; every metric of a gated rung has a `tolerance`; only a gated rung blocks later
-ones. A test holds the policy file to the code: every rung that is judged has an entry and every entry such a
-rung, with the rung's quantity, and every metric it names is one the quantity's comparator reports, in the same
-unit. A rung that only asks, as `rays` does until the rungs that compare traced rays are there, is run only where
-it is named and has no entry.
+ones; only a gated rung has a floor, whose engine is not its own arbiter and which has at least one metric with
+floor limits; floor limits belong to a metric of a rung with a floor and enclose its tolerance (`agreement` ≤
+`tolerance` ≤ `limit`). A test holds the policy file to the code: every rung has an entry and every entry a rung,
+with the rung's quantity and a comparator of that quantity for the rung, and every metric it names is one that
+comparator reports, in the same unit.
 
 ### `comparison`
 
@@ -669,14 +691,16 @@ A pair:
 | Member | Type | Meaning |
 |---|---|---|
 | `a`, `b` | string | the two engines |
-| `metrics` | object[] | each `{ name, value, unit, where? }`, in the order the quantity's comparator reports them; empty when nothing could be measured |
+| `metrics` | object[] | each `{ name, value, unit, where? }`, in the order the quantity's comparator reports them; empty when nothing could be measured, and without a metric the two answers had nothing to measure on |
 | `class` | string | `gated` or `recorded`, from the policy of the rung |
 | `verdict` | string | below |
 | `reason?` | string | why the verdict is what it is, wherever the metrics do not show it |
 
 A metric's `value` is null when it is not a finite number; where the policy judges the metric, the pair's `reason`
 says what it is. `where` says where the value occurs, as a flat map of numbers and strings: an element index, a
-field, a frequency.
+field, a frequency. A metric that the two answers have nothing to measure on is not among the metrics: it is not
+judged, and the pair's `reason` says that it was not measured, and why, whatever the verdict (the path of a ray
+relative to a chief ray that one engine stopped, for one).
 
 **Verdicts**, decided in this order:
 
@@ -687,12 +711,13 @@ field, a frequency.
 | `BLOCKED` | both engines answered, and their pair in an earlier rung that blocks later ones is `FAIL` or `ERROR`. The two answers are not set against each other |
 | `ERROR` | the two answers cannot be compared at all, as arrays of different shapes cannot |
 | `PASS` | the rung is gated and every metric the policy names is at or below its `tolerance` |
-| `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number |
+| `FLOOR` | the rung is gated, a metric the policy names is above its `tolerance`, and the excess is the numerical floor of the rung's floored engine, by the three conditions of [the floor](#policy). The `reason` gives what exceeded its tolerance and the figures against the arbiter |
+| `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number, and the pair is no floor. Where the rung has a floor and the pair is of its engine, the `reason` says which condition did not hold |
 | `RECORDED` | the rung is recorded and no metric that has an `attention` band is above it |
 | `ATTENTION` | the rung is recorded and a metric that has an `attention` band is above it, or is not a number. It is not a failure |
 
-Only `FAIL` and `ERROR` fail a comparison. `BLOCKED` is not a failure of its own: the failure is the blocking
-rung's.
+Only `FAIL` and `ERROR` fail a comparison. `FLOOR` is a pass, and is counted apart from `PASS` wherever verdicts
+are counted. `BLOCKED` is not a failure of its own: the failure is the blocking rung's.
 
 **Invariants checked in code** (`comparisonInvariantProblems`): no engine is a participant twice; `reference` is
 stated exactly in the mode `reference-vs-each` and names a participant; every pair names two different
@@ -701,6 +726,12 @@ participants, the first of them the reference when there is one.
 `lvrtc compare` writes the sets of one run of a suite to `comparisons.json` in the run directory, as
 `{ contract, kind: "comparison-file", suite, manifest, policy, comparisons }`: the suite's name, the content hash
 of the manifest and of the policy the sets were made from, and the sets ordered by run, rung, request and mode.
+
+A comparator is given the two answers and what they are answers to: the spec of the request, which the result
+store keeps with each answer, and the case of the run, which the run directory keeps under `cases/`. Some need
+them: a clip radius says which rays lie in a rim band, a line's wavelength turns a path into waves, an image plane
+gives a pupil's distance. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
+nothing is guessed in its place.
 
 ## Quantities
 
@@ -890,10 +921,27 @@ states after it.
 **Invariant checked in code** (`src/quantities/paraxialFirstOrder.ts`): every array, the recorded ones included,
 has the same length, of at least 1.
 
-**Compared** (`src/compare/paraxialFirstOrder.ts`) by one metric, `firstOrder.maxAbs`, in mm: the largest
-\|a − b\| over the ten compared values and the lines, with the `quantity` and the `line` it occurs at in `where`.
-Two values that are the same infinity differ by 0. `recorded` is not compared: each participant of a comparison
-carries its own, and a report lists them side by side. Answers for different numbers of lines are not comparable.
+**Compared** (`src/compare/paraxialFirstOrder.ts`) by three metrics, each in mm, with the `quantity` and the `line`
+of its largest value in `where`:
+
+| Metric | Is the largest, over the lines, of |
+|---|---|
+| `firstOrder.maxAbs` | \|a − b\| of the eight values that are not the position of a pupil |
+| `pupilZ.maxScaled` | \|a − b\| / max(1, d / 1000 mm) of `entrancePupilZ` and `exitPupilZ`, with d the pupil's distance from the image plane of the case, the farther of the two answers |
+| `pupilZ.maxAbs` | \|a − b\| of the same two |
+
+The position of a pupil is a quotient, a height over an angle, and in a nearly telecentric system the angle is the
+small remainder of a sum that cancels: a pupil 20 m away cannot be placed to 1e-9 mm by any arithmetic in doubles,
+of which one unit in the last place is 3.6e-12 mm there. So a pupil's position is judged on the scale of its
+distance: `pupilZ.maxScaled` is the plain difference for a pupil within a metre of the image plane, and beyond that
+the difference as a fraction of the distance, in units of 1e-3, so that a gate of 1e-9 mm on it is 1e-12 of the
+distance. The plain difference is reported beside it and not judged. Every other value keeps the plain measure,
+the radius of a pupil included.
+
+Two values that are the same infinity differ by 0 in every metric, an infinity against anything else by an
+infinity, and a NaN is a NaN. `recorded` is not compared: each participant of a comparison carries its own, and a
+report lists them side by side. Answers for different numbers of lines are not comparable, and no two answers are
+without the case, whose image plane a pupil is measured from.
 
 `valid/quantities/paraxial.first-order.data/singlet.json` is the answer about the case
 `valid/optical-case/singlet.json`, worked out from the formulas of a thick lens in air.
@@ -950,17 +998,25 @@ differs converts in its adapter, in both directions.
 
 - **A ray is carried surface by surface**, in the order of the case: it is intersected with the surface, tested
   against the surface's aperture at the hit (its distance from the axis against `semiDiameter`, inclusive, and
-  against `innerSemiDiameter`), and refracted into the medium that follows, whose index is that of the spec's
-  line. The medium in front of the first surface is air, of index 1.
+  against `innerSemiDiameter`, below which it is stopped), and refracted into the medium that follows, whose index
+  is that of the spec's line. The medium in front of the first surface is air, of index 1.
+- **The order is the order of the case, not of z.** Where two neighbouring surfaces cross within their clear
+  apertures, as a stop set into the curve of the surface before it, the next surface lies behind the ray's last
+  hit: the ray's line is met with it there, by a step backwards, and the stretch counts in the optical path with
+  its sign. That is what a sequential trace is. A ray that no longer travels toward +z behind a surface, as one
+  that a steep surface has bent past the perpendicular to the axis, goes to no further surface: it is blocked at
+  the next one, because the point where its line crosses that surface lies behind the ray.
 - **A surface is its sag within its clear aperture.** What the sag formula gives beyond `semiDiameter` is no part
   of the system: a polynomial fitted to a clear aperture diverges outside it, and a conic may have ended. A ray
   whose line meets the surface within the clear aperture passes it there; a ray whose line does not is blocked at
-  that surface, wherever, and whether, it meets the formula's continuation.
+  that surface, wherever, and whether, it meets the formula's continuation. A line that meets a steep surface more
+  than once within the clear aperture passes it at the meeting nearest the surface's vertex plane: on a sphere of
+  either curvature that is where a ray in front of the surface enters it.
 - **Status.** *ok* (0): the ray passed every surface and reached the image plane. *blocked* (1): the ray carries no
   light to the image and the engine knows why: it met a surface outside its clear aperture or inside its central
-  obstruction, it was totally reflected, it provably does not meet a surface, or it passed every surface and cannot
-  reach the image plane. *failed* (2): the engine could not trace the ray, by a numerical failure of its own; that
-  says nothing about the light, and whoever sums over rays must account for it.
+  obstruction, it was totally reflected, it provably does not meet a surface, it no longer travels toward +z, or
+  it passed every surface and cannot reach the image plane. *failed* (2): the engine could not trace the ray, by a
+  numerical failure of its own; that says nothing about the light, and whoever sums over rays must account for it.
 - **`endSurface`** of a ray that is not ok is the surface it did not pass: the one that clipped or reflected it,
   or the one it was not, or could not be, intersected with. It is S, one past the last surface, for a ray that
   passed every surface and cannot reach the image plane: it does not travel toward +z, or the plane lies behind its
@@ -989,8 +1045,50 @@ answers a line the case does not have with the error `bad-spec`. Data: the shape
 least 1; `status` is 0, 1 or 2; `endSurface` is −1 exactly for a ray that is ok and else from 0 to S; and the rule
 above for where a ray has numbers and where NaN holds for every ray.
 
-Nothing compares the answers yet. The rungs that will, R2 and R3 of the ladder, ask the requests of the rung
-`rays`; until they are there, `rays` is run only where it is named and has no entry in the policy.
+**Compared by two rungs**, which ask the same requests, so that an engine traces a set once for both and the
+result store holds one answer. Each has a comparator of its own. Positions and paths are compared on the rays
+that are ok in both answers; every metric's `where` has the `ray` of its largest value, with the `line` of the
+spec and, where the set states one, its `field` angle in degrees.
+
+*R2, the geometry* (`src/compare/raysGeometry.ts`):
+
+| Metric | Unit | Is |
+|---|---|---|
+| `hits.maxDistance` | mm | the largest distance between the two hits of a ray on a surface, over every surface; `where` has the `surface` |
+| `direction.maxAbs` | 1 | the largest difference of a component of `exitDirection` |
+| `landing.maxDistance` | mm | the largest distance between the two `imagePoint`s |
+| `mask.mismatches` | rays | the rays the two engines disagree about, outside the rim band |
+| `mask.rimBand` | rays | the rays they disagree about within it: counted, never judged |
+| `rays.compared` | rays | the rays that are ok in both |
+
+- **A disagreement** is a ray that one engine stopped at a surface the other let it pass: ok in one and blocked in
+  the other, or blocked in both at different surfaces. It is at the first surface the two part at, where the
+  engine that passed the ray has a hit. Two engines that stopped a ray at one surface agree, whatever each would
+  call the reason.
+- **The rim band.** A disagreement is in the band when that hit lies within 1e-8 mm (`RIM_BAND_MM`) of the
+  surface's `semiDiameter`, or of its `innerSemiDiameter` where it has one: each engine has placed the hit to its
+  own tolerance, and the limit is inclusive on a number neither holds exactly. A ray that passed every surface in
+  both engines and reaches the image plane in only one is a mismatch: there is no rim there.
+- **A ray either engine failed** is in neither count: a failure says nothing about the light. How many rays of
+  each answer are ok, blocked and failed is listed with the comparison, as `rays.ok`, `rays.blocked` and
+  `rays.failed` under the participant's `recorded`.
+- Where no ray is ok in both, the three distances are not measured, and the mask is judged all the same.
+
+*R3, the optical path* (`src/compare/raysPath.ts`), each a difference in waves of the spec's line, which is the
+difference in mm over `wavelengthNm` × 1e-6:
+
+| Metric | Is the largest difference of |
+|---|---|
+| `opticalPath.maxAbs` | `opticalPath` |
+| `opticalPathToImage.maxAbs` | `opticalPathToImage` |
+| `opd.maxAbs` | the path to the image relative to the chief ray's, W = path(chief) − path(ray): what two engines differ by on every ray alike has cancelled in it |
+
+`opd.maxAbs` is measured where the set states a `chiefIndex` and that ray is ok in both answers; elsewhere it is
+not measured, which fails nothing, and the two raw paths stand alone. A ray that is not ok in both has no path in
+one answer: that is a matter of the mask, which R2 judges.
+
+Answers for different numbers of rays or surfaces are not comparable; nor are any two without the case (R2: its
+apertures) or without the request and the case (R3: the line and its wavelength).
 
 `valid/quantities/rays.trace.data/singlet-axis-and-rim.json` is the answer to the spec of the same name about the
 case `valid/optical-case/singlet.json`, exact in every number: a ray along the axis, which nothing bends, and a

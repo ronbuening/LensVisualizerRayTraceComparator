@@ -2,11 +2,10 @@
 // sequential tracer on its own prepared state, with the indices of the line. LensVisualizer's trace ends on the
 // last surface; the landing on the image plane is the comparator's own projection of that end.
 import type { ErrorInfo } from "../../contract/result.ts";
-import { NO_END_SURFACE, RAY_STATUS } from "../../contract/quantities/raysTrace.ts";
 import type { RaysTraceData, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
-import { decodeNdArray, encodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
+import { decodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
-import { continuedOpticalPath, projectToImagePlane } from "../../estimators/imageProjection.ts";
+import { createTraceRecorder } from "../../rays/traceRecorder.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import type { LvApi, LvTraceOptions, LvTraceResult } from "./types.ts";
 
@@ -104,15 +103,7 @@ export function answerLvRays(api: LvRaysApi, model: LvCaseModel, spec: RaysTrace
   const surfaces = state.surfaces.length;
   const options = lvTraceOptions(model, spec.line);
 
-  const status = new Uint8Array(rays);
-  const endSurface = new Int32Array(rays);
-  const hits = new Float64Array(surfaces * rays * 3).fill(NaN);
-  const exitPoint = new Float64Array(rays * 3).fill(NaN);
-  const exitDirection = new Float64Array(rays * 3).fill(NaN);
-  const imagePoint = new Float64Array(rays * 3).fill(NaN);
-  const opticalPath = new Float64Array(rays).fill(NaN);
-  const opticalPathToImage = new Float64Array(rays).fill(NaN);
-  const counts = { rays, ok: 0, blocked: 0, failed: 0 };
+  const recorder = createTraceRecorder(rays, surfaces, conditions.imageZ);
 
   for (let ray = 0; ray < rays; ray++) {
     const trace = api.traceEngineRay2(
@@ -125,48 +116,16 @@ export function answerLvRays(api: LvRaysApi, model: LvCaseModel, spec: RaysTrace
     );
     const outcome = api.mtfTraceClassification(trace, state, conditions.stopSemiDiameter);
     const passed = surfacesPassed(trace);
-    for (let surface = 0; surface < passed; surface++) {
-      hits.set(trace.hits[surface].point, (surface * rays + ray) * 3);
-    }
+    for (let surface = 0; surface < passed; surface++) recorder.hit(ray, surface, trace.hits[surface].point);
     if (outcome !== "valid") {
       if (passed >= surfaces) throw new Error(`LensVisualizer calls ray ${ray} ${outcome} after its last surface`);
-      const name = outcome === "blocked" ? "blocked" : "failed";
-      status[ray] = RAY_STATUS[name];
-      endSurface[ray] = passed;
-      counts[name]++;
+      recorder.stop(ray, outcome === "blocked" ? "blocked" : "failed", passed);
       continue;
     }
     if (passed !== surfaces || trace.opticalPathLengthMm === undefined) {
       throw new Error(`LensVisualizer calls ray ${ray} valid with ${passed} of ${surfaces} surfaces passed`);
     }
-    exitPoint.set(trace.terminalPoint, 3 * ray);
-    exitDirection.set(trace.terminalDirection, 3 * ray);
-    opticalPath[ray] = trace.opticalPathLengthMm;
-    const landing = projectToImagePlane(trace.terminalPoint, trace.terminalDirection, conditions.imageZ);
-    if (landing === null) {
-      status[ray] = RAY_STATUS.blocked;
-      endSurface[ray] = surfaces;
-      counts.blocked++;
-      continue;
-    }
-    status[ray] = RAY_STATUS.ok;
-    endSurface[ray] = NO_END_SURFACE;
-    imagePoint.set(landing.point, 3 * ray);
-    opticalPathToImage[ray] = continuedOpticalPath(trace.opticalPathLengthMm, trace.finalMedium, landing.distance);
-    counts.ok++;
+    recorder.exit(ray, trace.terminalPoint, trace.terminalDirection, trace.opticalPathLengthMm, trace.finalMedium);
   }
-
-  return {
-    data: {
-      status: encodeNdArray(status),
-      endSurface: encodeNdArray(endSurface),
-      hits: encodeNdArray(hits, [surfaces, rays, 3]),
-      exitPoint: encodeNdArray(exitPoint, [rays, 3]),
-      exitDirection: encodeNdArray(exitDirection, [rays, 3]),
-      imagePoint: encodeNdArray(imagePoint, [rays, 3]),
-      opticalPath: encodeNdArray(opticalPath),
-      opticalPathToImage: encodeNdArray(opticalPathToImage),
-    },
-    counts,
-  };
+  return recorder.finish();
 }

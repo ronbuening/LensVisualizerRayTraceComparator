@@ -115,7 +115,9 @@ async function verdictOf(
     participant("lv", mine),
     participant("ref", theirs),
     POLICY.rungs[rung],
-    COMPARATORS.get(quantity),
+    COMPARATORS.get(quantity, rung),
+    undefined,
+    { opticalCase },
   );
   return pair.reason === undefined ? pair.verdict : `${pair.verdict}: ${pair.reason}`;
 }

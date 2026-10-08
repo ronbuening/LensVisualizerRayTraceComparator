@@ -511,7 +511,7 @@ function fieldsAtTheirHeights(
 }
 
 test(
-  "lvrtc run --rungs rays: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
+  "lvrtc run --rungs r2: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
   { skip, timeout: 600_000 },
   async (t) => {
     const directory = tempDir(t);
@@ -523,7 +523,7 @@ test(
     writeFileSync(suiteFile, JSON.stringify({ ...benchmark, name: "benchmark-reference", runs }));
 
     const runsDir = join(directory, "runs");
-    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "rays");
+    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "", "every field has rays");
     assert.match(
@@ -531,7 +531,7 @@ test(
       /^benchmark-reference: 36 jobs: 36 ok, 0 unsupported, 0 error, 0 pending \(36 computed, 0 cached\)$/m,
     );
     // The same command again asks nothing: the rays are the same rays, so the requests have the same ids.
-    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "rays");
+    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
     assert.match(again.out, /36 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 36 cached\)$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark-reference", MANIFEST_FILE), "utf8"));
@@ -559,7 +559,7 @@ test(
       assert.deepEqual(
         jobs.map((job) => [job.rung, job.quantity, job.engine, job.status, job.requestId]),
         sets.map((spec) => [
-          "rays",
+          "r2",
           RAYS_TRACE,
           "lv",
           "ok",
@@ -868,7 +868,7 @@ test(
     const directory = tempDir(t);
     const outputs = ["first", "second"].map((name) => {
       const runsDir = join(directory, name);
-      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "rays");
+      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "r2");
       assert.equal(ran.code, 0, ran.err);
       assert.match(ran.out, /^smoke: 21 jobs: 21 ok, 0 unsupported, 0 error, 0 pending \(21 computed, 0 cached\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");

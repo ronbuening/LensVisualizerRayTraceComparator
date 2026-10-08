@@ -12,7 +12,7 @@ import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
-import { judgedRungs } from "../../src/core/rungs.ts";
+import { RUNGS } from "../../src/core/rungs.ts";
 import { DOUBLE_GAUSS, FAKE_PAIR_SUITE, FAKE_ROOT, SINGLET, caseFixture, tempDir } from "../core/support.ts";
 import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
@@ -208,7 +208,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
-  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, rays$/m);
+  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3$/m);
   assert.equal(existsSync(runsDir), false);
 
   const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
@@ -547,7 +547,7 @@ test("the built-in engine ref runs under any root when it is named, and only the
   assert.match(both.out, /^singlet {7}selftest {2}fake-a {2}ok {11}cached$/m);
 });
 
-test("--rungs rays traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
+test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
   const suite = (fields: unknown): string =>
     JSON.stringify({
       contract: CONTRACT_VERSION,
@@ -564,15 +564,16 @@ test("--rungs rays traces the probe rays of a fixture: one job for each set, and
       "fractions.json": suite(undefined),
     },
   );
-  // The reference engine does not trace rays yet: it says so before it is asked, which is an answer.
-  const angles = await inProcess(["angles.json", "--engines", "ref", "--rungs", "rays"], { rootDir });
+  // The reference engine traces the rays of every set; the conformance engine says, before it is asked, that it
+  // does not trace rays, which is an answer.
+  const angles = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
   assert.equal(angles.code, EXIT_OK, angles.err);
   assert.equal(angles.err, "");
   assert.equal(
     angles.out,
     [
-      ...new Array(3).fill("singlet  rays      ref  unsupported  negotiated   the engine does not offer rays.trace"),
-      "probe: 3 jobs: 0 ok, 3 unsupported, 0 error, 0 pending (0 computed, 0 cached)",
+      ...new Array(3).fill("singlet  r2        ref  ok           computed"),
+      "probe: 3 jobs: 3 ok, 0 unsupported, 0 error, 0 pending (3 computed, 0 cached)",
       `manifest: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
       "",
     ].join("\n"),
@@ -581,16 +582,31 @@ test("--rungs rays traces the probe rays of a fixture: one job for each set, and
   assert.equal(new Set(manifest.jobs.map((job) => job.requestId)).size, 3);
   assert.equal(manifest.runs[0].raySets?.sets.length, 3);
   assert.deepEqual(manifest.runs[0].raySets?.problems, []);
-  // The same suite again has the same rays, and so the same manifest, byte for byte.
+  // The same suite again has the same rays, and so the same manifest, byte for byte: every answer is in the store.
   const bytes = readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8");
-  await inProcess(["angles.json", "--engines", "ref", "--rungs", "rays"], { rootDir });
+  const again = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
+  assert.match(again.out, /\(0 computed, 3 cached\)$/m);
   assert.equal(readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8"), bytes);
+
+  // r3 asks the very requests of r2: an engine is asked once for both, and the second rung finds the answers.
+  const both = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r3,r2"], { rootDir });
+  assert.equal(both.code, EXIT_OK, both.err);
+  assert.match(both.out, /^probe: 6 jobs: 6 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 6 cached\)$/m);
+  const jobs = manifestOf(join(rootDir, "runs"), "probe").jobs;
+  assert.deepEqual(
+    jobs.map((job) => job.rung),
+    ["r2", "r2", "r2", "r3", "r3", "r3"],
+  );
+  assert.deepEqual(
+    jobs.slice(3).map((job) => [job.requestId, job.storeKey]),
+    jobs.slice(0, 3).map((job) => [job.requestId, job.storeKey]),
+  );
 
   // Without fields a run takes the fractions 0, 0.5 and 1, of which a case alone can place the axis only: the
   // others are reported, recorded, and no failure.
-  const fractions = await inProcess(["fractions.json", "--engines", "ref", "--rungs", "rays"], { rootDir });
+  const fractions = await inProcess(["fractions.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
   assert.equal(fractions.code, EXIT_OK, fractions.err);
-  assert.match(fractions.out, /^probe: 1 job: 0 ok, 1 unsupported, 0 error, 0 pending/m);
+  assert.match(fractions.out, /^probe: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending/m);
   assert.deepEqual(fractions.err.split("\n"), [
     "lvrtc run: run singlet: a field has no rays: field-fraction-unresolved: a case read from a file states no " +
       "image height to take the fraction 0.5 of; state the field as an angle (fields of kind angles-deg)",
@@ -600,13 +616,15 @@ test("--rungs rays traces the probe rays of a fixture: one job for each set, and
   ]);
   assert.equal(manifestOf(join(rootDir, "runs"), "probe").runs[0].raySets?.problems.length, 2);
 
-  // A run that names no rung is not run on rays: nothing judges it, so it is asked for by name.
+  // A run that names no rung is run on every rung, the two of traced rays among them; one that names rungs
+  // without rays has no ray sets generated for it.
   const plain = await inProcess(["angles.json", "--engines", "ref"], { rootDir });
   assert.deepEqual(
-    manifestOf(join(rootDir, "runs"), "probe").jobs.map((job) => job.rung),
-    ["selftest", "r0", "r1"],
+    [...new Set(manifestOf(join(rootDir, "runs"), "probe").jobs.map((job) => job.rung))],
+    ["selftest", "r0", "r1", "r2", "r3"],
     plain.err,
   );
+  await inProcess(["angles.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir });
   assert.equal(Object.hasOwn(manifestOf(join(rootDir, "runs"), "probe").runs[0], "raySets"), false);
 });
 
@@ -623,19 +641,17 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   writeFileSync(join(rootDir, "own.json"), suite({ engines: ["fake-b"], rungs: ["selftest"] }));
   const own = await inProcess(["own.json"], { rootDir });
   assert.equal(own.code, EXIT_OK, own.err);
-  // The run that names neither gets every configured engine on every rung that is judged.
+  // The run that names neither gets every configured engine on every rung. A case read from a file has rays on
+  // the axis only, so each rung of traced rays asks one request.
   assert.deepEqual(
     manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
-    [
-      ...judgedRungs().flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]),
-      "choosy selftest fake-b",
-    ],
+    [...RUNGS.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]), "choosy selftest fake-b"],
   );
 
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
-  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, rays\n');
+  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3\n');
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
   assert.equal(replaced.code, EXIT_OK, replaced.err);

@@ -7,7 +7,7 @@ import type { ComputedMetric } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { selftestEchoComparator } from "../../src/compare/selftestEcho.ts";
 import type { JsonObject } from "../../src/contract/json.ts";
-import { judgedRungs } from "../../src/core/rungs.ts";
+import { RUNGS } from "../../src/core/rungs.ts";
 import { QUANTITIES } from "../../src/quantities/index.ts";
 import { SELFTEST_ECHO_EXAMPLES } from "../contract/corpus.ts";
 import { BITS, echoData, fromBits } from "./support.ts";
@@ -107,19 +107,46 @@ test("the comparator does not change the data it is given, and every example of 
   }
 });
 
-test("every comparator is of a quantity, and every quantity but rays.trace has one; a lookup is by exact id", () => {
+test("every comparator is of a quantity, and every quantity has one; a lookup is by exact id, and by rung", () => {
   const compared = COMPARATORS.list().map((comparator) => comparator.quantity);
   const registered = QUANTITIES.list().map((quantity) => quantity.id);
   for (const quantity of compared) assert.ok(registered.includes(quantity), quantity);
-  // rays.trace is asked by the rung rays, which nothing judges: its comparator comes with rungs R2 and R3.
   assert.deepEqual(
     registered.filter((quantity) => !compared.includes(quantity)),
-    ["rays.trace"],
+    [],
   );
-  for (const rung of judgedRungs()) assert.ok(compared.includes(rung.quantity), rung.id);
+  for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
   assert.equal(COMPARATORS.get("selftest.echo"), selftestEchoComparator);
   assert.equal(COMPARATORS.get("constructor"), undefined);
   assert.throws(() => createComparatorLookup([selftestEchoComparator, selftestEchoComparator]), {
     message: "quantity selftest.echo has two comparators",
   });
+
+  // A comparator that names no rung serves every rung of its quantity; one that names a rung serves that rung,
+  // and comes before the general one for it. The list is by quantity and then by rung.
+  assert.equal(COMPARATORS.get("selftest.echo", "selftest"), selftestEchoComparator);
+  assert.equal(COMPARATORS.get("selftest.echo", "any-rung"), selftestEchoComparator);
+  const forOne = { ...selftestEchoComparator, rung: "one" };
+  const forTwo = { ...selftestEchoComparator, rung: "two" };
+  const lookup = createComparatorLookup([forTwo, selftestEchoComparator, forOne]);
+  assert.equal(lookup.get("selftest.echo", "one"), forOne);
+  assert.equal(lookup.get("selftest.echo", "two"), forTwo);
+  assert.equal(lookup.get("selftest.echo", "three"), selftestEchoComparator);
+  assert.equal(lookup.get("selftest.echo"), selftestEchoComparator);
+  assert.deepEqual(lookup.list(), [selftestEchoComparator, forOne, forTwo]);
+  assert.equal(createComparatorLookup([forOne]).get("selftest.echo", "two"), undefined);
+  assert.equal(createComparatorLookup([forOne]).get("selftest.echo"), undefined);
+  assert.throws(() => createComparatorLookup([forOne, selftestEchoComparator, { ...forOne }]), {
+    message: "quantity selftest.echo has two comparators for the rung one",
+  });
+  assert.deepEqual(
+    COMPARATORS.list().map((comparator) => [comparator.quantity, comparator.rung]),
+    [
+      ["paraxial.first-order", undefined],
+      ["rays.trace", "r2"],
+      ["rays.trace", "r3"],
+      ["selftest.echo", undefined],
+      ["system.describe", undefined],
+    ],
+  );
 });

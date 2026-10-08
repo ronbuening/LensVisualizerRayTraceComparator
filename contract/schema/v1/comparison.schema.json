@@ -63,7 +63,7 @@
         "b": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
         "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
         "class": { "enum": ["gated", "recorded"] },
-        "verdict": { "enum": ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] },
+        "verdict": { "enum": ["PASS", "FLOOR", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] },
         "reason": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
       },
       "required": ["a", "b", "metrics", "class", "verdict"],
