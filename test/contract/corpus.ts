@@ -13,8 +13,10 @@ import { sha256Hex } from "../../src/core/numeric/hash.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { finalizeCase } from "../../src/contract/case.ts";
 import type { OpticalCaseDraft } from "../../src/contract/case.ts";
+import type { ComparisonSet } from "../../src/contract/comparison.ts";
 import type { EngineDescriptor } from "../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../src/contract/features.ts";
+import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
 import type { SelftestEchoData, SelftestEchoSpec } from "../../src/contract/quantities/selftestEcho.ts";
@@ -462,6 +464,163 @@ export const RESPONSE_FAILURE = {
   error: { code: "bad-request", message: "params.case is not an optical-case" },
 } satisfies ProtocolResponse;
 
+// ── policy and comparison ────────────────────────────────────────────────────────────────────────────────────────
+
+/** The policy of Phase 0, as `policy/rungs.v1.json` holds it: the one rung `selftest`, direct and gated. */
+export const POLICY_SELFTEST = {
+  contract: CONTRACT_VERSION,
+  kind: "policy",
+  version: 1,
+  rungs: {
+    selftest: {
+      quantity: SELFTEST_ECHO,
+      mode: "direct",
+      class: "gated",
+      metrics: {
+        "sum.abs": { tolerance: 1e-12, unit: "1" },
+        "values.maxAbs": { tolerance: 1e-12, unit: "1" },
+      },
+    },
+  },
+} satisfies Policy;
+
+/** A policy with a rung of every mode and both classes. It is a format example: its rungs are not registered. */
+export const POLICY_EVERY_MODE = {
+  contract: CONTRACT_VERSION,
+  kind: "policy",
+  version: 7,
+  rungs: {
+    r1: {
+      quantity: "paraxial.first-order",
+      mode: "direct",
+      class: "gated",
+      metrics: { "efl.abs": { tolerance: 1e-9, unit: "mm" }, "pupil.z.abs": { tolerance: 1e-9, unit: "mm" } },
+    },
+    r2: {
+      quantity: "rays.trace",
+      mode: "identical-rays",
+      class: "gated",
+      metrics: {
+        "hits.maxDistance": { tolerance: 1e-8, unit: "mm" },
+        "clip.mismatches": { tolerance: 0, unit: "rays" },
+      },
+    },
+    r5: {
+      quantity: "mtf.native",
+      mode: "independent-method",
+      class: "recorded",
+      metrics: { "mtf.maxAbs": { attention: 0.005, unit: "1" }, "mtf.rms": { unit: "1" } },
+    },
+    notes: { quantity: "system.describe", mode: "direct", class: "recorded", metrics: {} },
+  },
+} satisfies Policy;
+
+const COMPARISON_BASE = {
+  contract: CONTRACT_VERSION,
+  kind: "comparison",
+  suite: "contract-example",
+  run: "singlet",
+  caseId: SINGLET_CASE.id,
+  rung: "selftest",
+  quantity: SELFTEST_ECHO,
+  requestId: REQUEST_MINIMAL.id,
+} as const;
+
+/** Three engines against a reference: one agrees within the tolerance, one cannot answer. */
+export const COMPARISON_REFERENCE = {
+  ...COMPARISON_BASE,
+  participants: [
+    { engine: "fake-a", fingerprint: sha256Hex("fake-a sources"), status: "ok" },
+    { engine: "fake-b", fingerprint: "operator-run 2", status: "ok" },
+    { engine: "fake-none", fingerprint: sha256Hex("fake-none sources"), status: "unsupported" },
+  ],
+  mode: "reference-vs-each",
+  reference: "fake-a",
+  pairs: [
+    {
+      a: "fake-a",
+      b: "fake-b",
+      metrics: [
+        { name: "values.maxAbs", value: 2.5e-14, unit: "1", where: { index: 2 } },
+        { name: "sum.abs", value: 0, unit: "1" },
+      ],
+      class: "gated",
+      verdict: "PASS",
+    },
+    {
+      a: "fake-a",
+      b: "fake-none",
+      metrics: [],
+      class: "gated",
+      verdict: "UNSUPPORTED",
+      reason: "fake-none is unsupported (quantity selftest.echo)",
+    },
+  ],
+} satisfies ComparisonSet;
+
+/** Every pair of four participants, with every other verdict: a metric that is not finite, and an engine that failed. */
+export const COMPARISON_PAIRWISE = {
+  ...COMPARISON_BASE,
+  rung: "r5",
+  quantity: "mtf.native",
+  participants: [
+    { engine: "broken", fingerprint: null, status: "error" },
+    { engine: "lv", fingerprint: sha256Hex("lv sources"), status: "ok" },
+    { engine: "optiland", fingerprint: sha256Hex("optiland sources"), status: "ok" },
+    { engine: "ref", fingerprint: sha256Hex("ref sources"), status: "ok" },
+  ],
+  mode: "pairwise",
+  pairs: [
+    {
+      a: "broken",
+      b: "lv",
+      metrics: [],
+      class: "recorded",
+      verdict: "ERROR",
+      reason: "broken ended as error (load-failed)",
+    },
+    {
+      a: "broken",
+      b: "optiland",
+      metrics: [],
+      class: "recorded",
+      verdict: "ERROR",
+      reason: "broken ended as error (load-failed)",
+    },
+    {
+      a: "broken",
+      b: "ref",
+      metrics: [],
+      class: "recorded",
+      verdict: "ERROR",
+      reason: "broken ended as error (load-failed)",
+    },
+    {
+      a: "lv",
+      b: "optiland",
+      metrics: [{ name: "mtf.maxAbs", value: 0.0125, unit: "1", where: { field: "14 deg", frequencyPerMm: 40 } }],
+      class: "recorded",
+      verdict: "ATTENTION",
+      reason: "mtf.maxAbs 1.25e-2 is outside its attention band 5.00e-3 at field 14 deg, frequencyPerMm 40",
+    },
+    {
+      a: "lv",
+      b: "ref",
+      metrics: [{ name: "mtf.maxAbs", value: 0.0004, unit: "1", where: { field: "0 deg", frequencyPerMm: 10 } }],
+      class: "recorded",
+      verdict: "RECORDED",
+    },
+    {
+      a: "optiland",
+      b: "ref",
+      metrics: [{ name: "mtf.maxAbs", value: null, unit: "1", where: { index: 5 } }],
+      class: "gated",
+      verdict: "FAIL",
+      reason: "mtf.maxAbs is NaN at index 5",
+    },
+  ],
+} satisfies ComparisonSet;
+
 // ── selftest.echo ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** A float64 array given by the bits of each element, for the values a number literal cannot state. */
@@ -591,6 +750,8 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     shutdown: RESPONSE_SHUTDOWN,
     failure: RESPONSE_FAILURE,
   },
+  policy: { selftest: POLICY_SELFTEST, "every-mode": POLICY_EVERY_MODE },
+  comparison: { "reference-vs-each": COMPARISON_REFERENCE, pairwise: COMPARISON_PAIRWISE },
 };
 
 /** Where the validator must report an invalid fixture: its one issue has this instance path and this keyword. */
@@ -812,6 +973,60 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "ok-with-unknown-result": fault(RESPONSE_RUN, "/result", { status: "ok" }, "oneOf", ""),
     "failure-without-error": fault(RESPONSE_FAILURE, "/error", REMOVE, "oneOf", ""),
     "failure-with-result": fault(RESPONSE_FAILURE, "/result", {}, "oneOf", ""),
+  },
+  policy: {
+    "missing-rungs": fault(POLICY_SELFTEST, "/rungs", REMOVE, "required", ""),
+    "kind-of-another-document": fault(POLICY_SELFTEST, "/kind", "suite", "const"),
+    "version-zero": fault(POLICY_SELFTEST, "/version", 0, "minimum"),
+    "version-as-string": fault(POLICY_SELFTEST, "/version", "1", "type"),
+    "rungs-as-list": fault(POLICY_SELFTEST, "/rungs", [], "type"),
+    "rung-missing-class": fault(POLICY_SELFTEST, "/rungs/selftest/class", REMOVE, "required", "/rungs/selftest"),
+    "rung-unknown-mode": fault(POLICY_SELFTEST, "/rungs/selftest/mode", "identical", "enum"),
+    "rung-unknown-class": fault(POLICY_EVERY_MODE, "/rungs/r5/class", "informational", "enum"),
+    "rung-quantity-without-dot": fault(POLICY_SELFTEST, "/rungs/selftest/quantity", "selftest", "pattern"),
+    "rung-unknown-property": fault(POLICY_SELFTEST, "/rungs/selftest/tolerance", 1e-12, "additionalProperties"),
+    "metric-missing-unit": fault(
+      POLICY_SELFTEST,
+      "/rungs/selftest/metrics/sum.abs/unit",
+      REMOVE,
+      "required",
+      "/rungs/selftest/metrics/sum.abs",
+    ),
+    "metric-empty-unit": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/unit", "", "minLength"),
+    "metric-negative-tolerance": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/tolerance", -1e-12, "minimum"),
+    "metric-attention-as-string": fault(POLICY_EVERY_MODE, "/rungs/r5/metrics/mtf.maxAbs/attention", "0.005", "type"),
+    "metric-as-number": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs", 1e-12, "type"),
+  },
+  comparison: {
+    "missing-pairs": fault(COMPARISON_REFERENCE, "/pairs", REMOVE, "required", ""),
+    "kind-of-another-document": fault(COMPARISON_REFERENCE, "/kind", "result", "const"),
+    "suite-with-slash": fault(COMPARISON_REFERENCE, "/suite", "runs/example", "pattern"),
+    "request-id-not-a-hash": fault(COMPARISON_REFERENCE, "/requestId", "request-1", "pattern"),
+    "mode-unknown": fault(COMPARISON_REFERENCE, "/mode", "all-pairs", "enum"),
+    "reference-uppercase": fault(COMPARISON_REFERENCE, "/reference", "Fake-A", "pattern"),
+    "participant-unknown-status": fault(COMPARISON_REFERENCE, "/participants/0/status", "cached", "enum"),
+    "participant-missing-fingerprint": fault(
+      COMPARISON_REFERENCE,
+      "/participants/1/fingerprint",
+      REMOVE,
+      "required",
+      "/participants/1",
+    ),
+    "participant-fingerprint-as-number": fault(COMPARISON_PAIRWISE, "/participants/0/fingerprint", 0, "type"),
+    "pair-verdict-lowercase": fault(COMPARISON_REFERENCE, "/pairs/0/verdict", "pass", "enum"),
+    "pair-unknown-verdict": fault(COMPARISON_REFERENCE, "/pairs/0/verdict", "FLOOR", "enum"),
+    "pair-unknown-class": fault(COMPARISON_REFERENCE, "/pairs/0/class", "method", "enum"),
+    "pair-empty-reason": fault(COMPARISON_REFERENCE, "/pairs/1/reason", "", "minLength"),
+    "pair-unknown-property": fault(COMPARISON_REFERENCE, "/pairs/0/tolerance", 1e-12, "additionalProperties"),
+    "metric-value-as-string": fault(COMPARISON_REFERENCE, "/pairs/0/metrics/0/value", "NaN", "type"),
+    "metric-missing-unit": fault(
+      COMPARISON_REFERENCE,
+      "/pairs/0/metrics/1/unit",
+      REMOVE,
+      "required",
+      "/pairs/0/metrics/1",
+    ),
+    "metric-where-nested": fault(COMPARISON_REFERENCE, "/pairs/0/metrics/0/where/index", [2], "type"),
   },
 };
 

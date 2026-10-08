@@ -11,6 +11,11 @@
       "module": "../../../src/engines/fake/engine.ts",
       "options": { "id": "fake-b", "bias": 0.001 }
     },
+    "fake-near": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-near", "bias": 2e-14 }
+    },
     "fake-none": {
       "transport": "in-process",
       "module": "../../../src/engines/fake/engine.ts",
@@ -20,6 +25,12 @@
       "transport": "stdio",
       "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine"],
       "options": { "id": "fake-py" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
+    },
+    "fake-pyn": {
+      "transport": "stdio",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine"],
+      "options": { "id": "fake-pyn", "bias": 2e-14, "fingerprint": "fake-pyn fixture 1" },
       "env": { "PYTHONPATH": "${root}/../../../workers/python" }
     }
   }

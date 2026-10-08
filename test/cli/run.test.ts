@@ -49,7 +49,7 @@ function lvrtcRun(
   return { code: child.status, signal: child.signal, out: child.stdout, err: child.stderr };
 }
 
-/** The engines of the fixture root that run in this process. Its fourth, `fake-py`, is a Python worker. */
+/** Three engines of the fixture root that run in this process. `fake-py` and `fake-pyn` are Python workers. */
 const IN_PROCESS_ENGINES = "fake-a,fake-b,fake-none";
 
 /** The fixture suite on the fixture root, on its in-process engines unless `args` name engines: no Python is needed. */
@@ -112,7 +112,7 @@ test("run is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "run"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}run {5}Run a suite on the configured engines, reusing stored results$/m);
+  assert.match(out.join(""), /^ {2}run {6}Run a suite on the configured engines, reusing stored results$/m);
 });
 
 test("lvrtc run: a line per job and a summary, exit 0; the second run finds every answer in the store", (t) => {
@@ -220,7 +220,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-none, fake-py$/m,
+    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });

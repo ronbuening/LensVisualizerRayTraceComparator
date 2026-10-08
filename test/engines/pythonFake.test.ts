@@ -227,20 +227,23 @@ test(
     assert.equal(first.code, EXIT_OK, first.out + first.err);
     assert.match(first.out, /^singlet {7}selftest {2}fake-py {4}ok {11}computed$/m);
     assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {4}ok {11}computed$/m);
-    assert.match(first.out, /^fake-pair: 8 jobs: 6 ok, 2 unsupported, 0 error, 0 pending \(6 computed, 0 cached\)$/m);
+    assert.match(
+      first.out,
+      /^fake-pair: 12 jobs: 10 ok, 2 unsupported, 0 error, 0 pending \(10 computed, 0 cached\)$/m,
+    );
 
     const manifestPath = join(runsDir, "fake-pair", MANIFEST_FILE);
     const manifestText = readFileSync(manifestPath, "utf8");
     const manifest: RunManifest = JSON.parse(manifestText);
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["fake-a", "fake-b", "fake-none", "fake-py"],
+      ["fake-a", "fake-b", "fake-near", "fake-none", "fake-py", "fake-pyn"],
     );
     // The stored answers of the two unbiased fakes hold the same data, byte for byte.
     const stored = readdirSync(join(runsDir, STORE_DIRECTORY)).map(
       (file): ResultEnvelope => JSON.parse(readFileSync(join(runsDir, STORE_DIRECTORY, file), "utf8")).result,
     );
-    assert.equal(stored.length, 6);
+    assert.equal(stored.length, 10);
     const dataOf = (engine: string): string[] =>
       stored
         .filter((result) => result.engine.id === engine)
@@ -249,10 +252,13 @@ test(
     assert.equal(dataOf("fake-py").length, 2);
     assert.deepEqual(dataOf("fake-py"), dataOf("fake-a"));
     assert.notDeepEqual(dataOf("fake-py"), dataOf("fake-b"));
+    // The two fakes with the same small bias agree with each other bit for bit, and with neither of the unbiased.
+    assert.deepEqual(dataOf("fake-pyn"), dataOf("fake-near"));
+    assert.notDeepEqual(dataOf("fake-pyn"), dataOf("fake-py"));
 
     const second = run();
     assert.equal(second.code, EXIT_OK, second.err);
-    assert.match(second.out, /\(0 computed, 6 cached\)$/m);
+    assert.match(second.out, /\(0 computed, 10 cached\)$/m);
     assert.equal(readFileSync(manifestPath, "utf8"), manifestText);
     assert.equal(existsSync(join(runsDir, "fake-pair")), true);
   },

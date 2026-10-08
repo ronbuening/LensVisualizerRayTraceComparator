@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:comparison",
+  "title": "ComparisonSet",
+  "description": "The answers of several engines to one request, compared pair by pair: every engine against a reference, or every engine against every other. Code checks that a reference is named exactly in the mode reference-vs-each and that every pair names two different participants.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "comparison" },
+    "suite": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+    "run": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+    "caseId": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+    "rung": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+    "quantity": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/quantityId" },
+    "requestId": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+          "fingerprint": {
+            "description": "The engine's fingerprint; null for an engine that could not be described.",
+            "type": ["string", "null"]
+          },
+          "status": {
+            "description": "How the engine's job ended; missing when there is no result to compare.",
+            "enum": ["ok", "unsupported", "error", "pending", "missing"]
+          }
+        },
+        "required": ["engine", "fingerprint", "status"],
+        "additionalProperties": false
+      }
+    },
+    "mode": { "enum": ["reference-vs-each", "pairwise"] },
+    "reference": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+    "pairs": { "type": "array", "items": { "$ref": "#/$defs/pair" } }
+  },
+  "required": [
+    "contract",
+    "kind",
+    "suite",
+    "run",
+    "caseId",
+    "rung",
+    "quantity",
+    "requestId",
+    "participants",
+    "mode",
+    "pairs"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "pair": {
+      "type": "object",
+      "properties": {
+        "a": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "b": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+        "class": { "enum": ["gated", "recorded"] },
+        "verdict": { "enum": ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "ERROR"] },
+        "reason": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+      },
+      "required": ["a", "b", "metrics", "class", "verdict"],
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "value": {
+          "description": "The metric; null when it is not a finite number.",
+          "type": ["number", "null"]
+        },
+        "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "where": {
+          "description": "Where the value occurs: an index, a field, a frequency.",
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string"] }
+        }
+      },
+      "required": ["name", "value", "unit"],
+      "additionalProperties": false
+    }
+  }
+}

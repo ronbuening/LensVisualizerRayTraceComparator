@@ -1,0 +1,57 @@
+{
+  "contract": "1.0",
+  "kind": "policy",
+  "version": 7,
+  "rungs": {
+    "r1": {
+      "quantity": "paraxial.first-order",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "efl.abs": {
+          "tolerance": 1e-9,
+          "unit": "mm"
+        },
+        "pupil.z.abs": {
+          "tolerance": 1e-9,
+          "unit": "mm"
+        }
+      }
+    },
+    "r2": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "hits.maxDistance": {
+          "tolerance": 1e-8,
+          "unit": "mm"
+        },
+        "clip.mismatches": {
+          "tolerance": 0,
+          "unit": "rays"
+        }
+      }
+    },
+    "r5": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "mtf.maxAbs": {
+          "attention": 0.005,
+          "unit": "1"
+        },
+        "mtf.rms": {
+          "unit": "1"
+        }
+      }
+    },
+    "notes": {
+      "quantity": "system.describe",
+      "mode": "direct",
+      "class": "recorded",
+      "metrics": {}
+    }
+  }
+}

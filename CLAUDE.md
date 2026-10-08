@@ -15,6 +15,10 @@ npm run test:python    # unittest for the Python worker kit (workers/python/test
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
+node bin/lvrtc.mjs compare fake-pair --root test/fixtures/fake-root   # compare a run: writes comparisons.json
+node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a compared run: report.json, report.md
+node test/contract/writeCorpus.ts   # rewrite contract/fixtures after editing test/contract/corpus.ts
+node test/report/writeGolden.ts     # rewrite test/fixtures/golden after a change meant to change a report
 node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   # the conformance kit on one engine
 ```
 
@@ -40,9 +44,15 @@ node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   #
 - **A test that needs `python3` skips with a stated reason when it is missing** (`PYTHON_MISSING` in
   `test/engines/support.ts`). The stdio transport itself is tested against Node workers in
   `test/fixtures/stdio-worker`, so those tests need no Python.
-- **A test that runs `lvrtc run` sets `LVRTC_RUNS_DIR` to a temporary directory**; nothing a test writes goes into
-  the repository. `test/fixtures/fake-root` defines `fake-py`, a Python worker: name the in-process engines
-  (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
+- **A test that runs `lvrtc run`, `compare` or `report` sets `LVRTC_RUNS_DIR` to a temporary directory**; nothing
+  a test writes goes into the repository. `test/fixtures/fake-root` defines `fake-py` and `fake-pyn`, Python
+  workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
+  `test/fixtures/fault-root` holds the engines that fail.
+- **Every rung has an entry in `policy/rungs.v1.json` and every quantity a comparator in `src/compare`**; a test
+  holds the three together. Raise the policy's `version` when a rung, a class or a limit changes.
+- **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
+  them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
+  `renderMarkdown` are pure functions and stay so.
 - **Reports and baselines are deterministic**: no timestamps, no machine information.
 - **Recorded differences are not errors.** Only direct and identical-ray rungs are gated; see the ladder in the
   plan before adding a tolerance.

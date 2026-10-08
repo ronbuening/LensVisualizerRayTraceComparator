@@ -1,0 +1,22 @@
+{
+  "contract": "1.0",
+  "kind": "policy",
+  "version": 1,
+  "rungs": {
+    "selftest": {
+      "quantity": "selftest.echo",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "sum.abs": {
+          "tolerance": 1e-12,
+          "unit": "1"
+        },
+        "values.maxAbs": {
+          "tolerance": 1e-12,
+          "unit": "1"
+        }
+      }
+    }
+  }
+}

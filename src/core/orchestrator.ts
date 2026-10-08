@@ -349,6 +349,7 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
       name: spec.name,
       caseId: opticalCase?.id ?? null,
       problems,
+      ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
     })),
     jobs: outcomes.map((outcome) => outcome.job),
   };

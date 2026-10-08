@@ -1,0 +1,60 @@
+{
+  "contract": "1.0",
+  "kind": "result",
+  "suite": "contract-example",
+  "run": "singlet",
+  "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+  "rung": "selftest",
+  "quantity": "selftest.echo",
+  "requestId": "f73544fdaba65af6e6a55c5e146d8565b2e94185ba3154359ecda6f4a6ffd54f",
+  "participants": [
+    {
+      "engine": "fake-a",
+      "fingerprint": "7d1bcbc14a023d7349cadc6dcc3002de217d9ed2acc455e9de2cb09b17bf1c8c",
+      "status": "ok"
+    },
+    {
+      "engine": "fake-b",
+      "fingerprint": "operator-run 2",
+      "status": "ok"
+    },
+    {
+      "engine": "fake-none",
+      "fingerprint": "a6097f88f56574614576e4c4260c5355a2cbc28d5e58d3fc193484f442f1bd72",
+      "status": "unsupported"
+    }
+  ],
+  "mode": "reference-vs-each",
+  "reference": "fake-a",
+  "pairs": [
+    {
+      "a": "fake-a",
+      "b": "fake-b",
+      "metrics": [
+        {
+          "name": "values.maxAbs",
+          "value": 2.5e-14,
+          "unit": "1",
+          "where": {
+            "index": 2
+          }
+        },
+        {
+          "name": "sum.abs",
+          "value": 0,
+          "unit": "1"
+        }
+      ],
+      "class": "gated",
+      "verdict": "PASS"
+    },
+    {
+      "a": "fake-a",
+      "b": "fake-none",
+      "metrics": [],
+      "class": "gated",
+      "verdict": "UNSUPPORTED",
+      "reason": "fake-none is unsupported (quantity selftest.echo)"
+    }
+  ]
+}

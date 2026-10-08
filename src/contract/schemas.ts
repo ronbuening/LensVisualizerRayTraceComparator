@@ -26,6 +26,8 @@ export const CONTRACT_KINDS = [
   "engine-descriptor",
   "protocol-request",
   "protocol-response",
+  "policy",
+  "comparison",
 ] as const;
 /** One kind of contract document. */
 export type ContractKind = (typeof CONTRACT_KINDS)[number];

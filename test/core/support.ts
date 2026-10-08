@@ -23,8 +23,11 @@ import { createInProcessTransport } from "../../src/transports/inProcess.ts";
 import { FIXTURE_DIR, SINGLET_CASE } from "../contract/corpus.ts";
 
 /**
- * The fixture configuration root: three in-process fake engines, `fake-a`, `fake-b` and `fake-none`, and `fake-py`,
- * the Python fake engine as a stdio worker. A test that runs the root without naming engines needs Python.
+ * The fixture configuration root. Four fake engines run in this process: `fake-a`, `fake-b` (a bias of 0.001, far
+ * beyond any tolerance), `fake-near` (a bias of 2e-14, within the tolerance of the `selftest` rung) and `fake-none`
+ * (no quantity). Two are the Python fake engine as a stdio worker: `fake-py`, and `fake-pyn` with the bias of
+ * `fake-near` and a fingerprint stated in the configuration, so that a report that names it does not change with
+ * every edit of the worker kit. A test that runs the root without naming engines needs Python.
  */
 export const FAKE_ROOT: string = fileURLToPath(new URL("../fixtures/fake-root", import.meta.url));
 /** The fixture suite: the singlet and the Double-Gauss case on `selftest`, by paths relative to `FAKE_ROOT`. */

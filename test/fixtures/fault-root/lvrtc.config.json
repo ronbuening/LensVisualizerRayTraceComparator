@@ -1,0 +1,24 @@
+{
+  "runsDir": "runs",
+  "engines": {
+    "fake-a": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-a" }
+    },
+    "fake-absent": {
+      "transport": "in-process",
+      "module": "no-such-engine.ts"
+    },
+    "fake-broken": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-broken", "failMode": "protocol-error" }
+    },
+    "fake-far": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-far", "bias": 0.001 }
+    }
+  }
+}

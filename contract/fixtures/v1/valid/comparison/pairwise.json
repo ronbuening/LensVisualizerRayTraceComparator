@@ -1,0 +1,111 @@
+{
+  "contract": "1.0",
+  "kind": "comparison",
+  "suite": "contract-example",
+  "run": "singlet",
+  "caseId": "0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8",
+  "rung": "r5",
+  "quantity": "mtf.native",
+  "requestId": "f73544fdaba65af6e6a55c5e146d8565b2e94185ba3154359ecda6f4a6ffd54f",
+  "participants": [
+    {
+      "engine": "broken",
+      "fingerprint": null,
+      "status": "error"
+    },
+    {
+      "engine": "lv",
+      "fingerprint": "a5218c82fa7cfc822c5f6e7412f7eb818985255f09a7cf211226e93069ece7e1",
+      "status": "ok"
+    },
+    {
+      "engine": "optiland",
+      "fingerprint": "989753400a52393512e1c63eeabd3295b44a9c6e776f3f9b8a68be303a4299de",
+      "status": "ok"
+    },
+    {
+      "engine": "ref",
+      "fingerprint": "874110a11991233d73d1cd46195d7b01cc20b4d99aad22116fc69474136bb4d6",
+      "status": "ok"
+    }
+  ],
+  "mode": "pairwise",
+  "pairs": [
+    {
+      "a": "broken",
+      "b": "lv",
+      "metrics": [],
+      "class": "recorded",
+      "verdict": "ERROR",
+      "reason": "broken ended as error (load-failed)"
+    },
+    {
+      "a": "broken",
+      "b": "optiland",
+      "metrics": [],
+      "class": "recorded",
+      "verdict": "ERROR",
+      "reason": "broken ended as error (load-failed)"
+    },
+    {
+      "a": "broken",
+      "b": "ref",
+      "metrics": [],
+      "class": "recorded",
+      "verdict": "ERROR",
+      "reason": "broken ended as error (load-failed)"
+    },
+    {
+      "a": "lv",
+      "b": "optiland",
+      "metrics": [
+        {
+          "name": "mtf.maxAbs",
+          "value": 0.0125,
+          "unit": "1",
+          "where": {
+            "field": "14 deg",
+            "frequencyPerMm": 40
+          }
+        }
+      ],
+      "class": "recorded",
+      "verdict": "ATTENTION",
+      "reason": "mtf.maxAbs 1.25e-2 is outside its attention band 5.00e-3 at field 14 deg, frequencyPerMm 40"
+    },
+    {
+      "a": "lv",
+      "b": "ref",
+      "metrics": [
+        {
+          "name": "mtf.maxAbs",
+          "value": 0.0004,
+          "unit": "1",
+          "where": {
+            "field": "0 deg",
+            "frequencyPerMm": 10
+          }
+        }
+      ],
+      "class": "recorded",
+      "verdict": "RECORDED"
+    },
+    {
+      "a": "optiland",
+      "b": "ref",
+      "metrics": [
+        {
+          "name": "mtf.maxAbs",
+          "value": null,
+          "unit": "1",
+          "where": {
+            "index": 5
+          }
+        }
+      ],
+      "class": "gated",
+      "verdict": "FAIL",
+      "reason": "mtf.maxAbs is NaN at index 5"
+    }
+  ]
+}

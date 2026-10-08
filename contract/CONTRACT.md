@@ -125,6 +125,8 @@ Every document carries the contract version it was written to, as `<major>.<mino
 | `engine-descriptor` | `engine-descriptor.schema.json` | `engine.ts` | who an engine is and what it can do |
 | `protocol-request` | `protocol-request.schema.json` | `protocol.ts` | a message to an engine |
 | `protocol-response` | `protocol-response.schema.json` | `protocol.ts` | an engine's reply |
+| `policy` | `policy.schema.json` | `policy.ts` | how the results of each rung are judged |
+| `comparison` | `comparison.schema.json` | `comparison.ts` | the answers of several engines to one request, compared pair by pair |
 
 `common.schema.json` holds the definitions the others share. `validateKind(kind, value)` in
 `src/contract/schemas.ts` validates a document against the schema of its kind. In the tables below a member is
@@ -397,6 +399,96 @@ Over a byte stream (the stdio transport) a message is one line of JSON and so is
 inside, a newline after. A worker answers every line it reads with exactly one line, and writes nothing else to
 that stream. A line it cannot read an `id` from, because it is not JSON or not an object or has no usable `id`, is
 answered under the id `"?"`. `lvrtc engine conformance` checks an engine against this section.
+
+### `policy`
+
+How the results of each rung of the comparison ladder are judged. The comparator's own policy is
+`policy/rungs.v1.json`; `lvrtc compare` reads it, and a report states its version.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `contract` | string | contract version |
+| `kind` | `"policy"` | |
+| `version` | integer ≥ 1 | rises whenever a rung, a class or a limit changes |
+| `rungs` | object | a map from rung id to how the rung is judged |
+
+A rung:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `quantity` | string | the quantity whose results the rung compares |
+| `mode` | string | `direct`: closed-form numbers set against each other; `identical-rays`: one estimator applied to every engine's trace of the same rays; `independent-method`: each engine's own sampling and algorithm |
+| `class` | string | `gated`: a difference passes or fails against a tolerance; `recorded`: it is written down and never fails |
+| `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit }` |
+
+`tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
+metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
+is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
+judged.
+
+**Invariants checked in code** (`policyProblems`): a rung of mode `independent-method` is never gated; a gated
+rung judges at least one metric; every metric of a gated rung has a `tolerance`. A test holds the policy file to
+the code: every registered rung has an entry and every entry a registered rung, with the rung's quantity, and
+every metric it names is one the quantity's comparator reports, in the same unit.
+
+### `comparison`
+
+A `ComparisonSet`: the answers of N engines to one request, compared pair by pair. A comparison of two engines is
+the same document with N = 2.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `contract` | string | contract version |
+| `kind` | `"comparison"` | |
+| `suite`, `run` | string | the names of the suite and of its run |
+| `caseId`, `requestId` | sha256 | the case and the request the answers are to |
+| `rung`, `quantity` | string | the rung, and the quantity it compares |
+| `participants` | object[] | each `{ engine, fingerprint, status }`, sorted by engine id |
+| `mode` | string | `reference-vs-each` or `pairwise` |
+| `reference?` | string | the engine every other is compared against; stated exactly in the mode `reference-vs-each` |
+| `pairs` | object[] | the pairs, below |
+
+A participant's `status` is that of its result (`ok`, `unsupported`, `error`, `pending`), or `missing` when there
+is no result of it to compare: an engine named as the reference that was not run, or an answer that is no longer
+in the store. Its `fingerprint` is null when the engine could not be described.
+
+In the mode `reference-vs-each` there are N − 1 pairs, the reference first in each, in the order of the other
+engines' ids. In the mode `pairwise` there are N(N − 1)/2, every two engines once, in the order of their ids.
+
+A pair:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `a`, `b` | string | the two engines |
+| `metrics` | object[] | each `{ name, value, unit, where? }`, in the order the quantity's comparator reports them; empty when nothing could be measured |
+| `class` | string | `gated` or `recorded`, from the policy of the rung |
+| `verdict` | string | below |
+| `reason?` | string | why the verdict is what it is, wherever the metrics do not show it |
+
+A metric's `value` is null when it is not a finite number; where the policy judges the metric, the pair's `reason`
+says what it is. `where` says where the value occurs, as a flat map of numbers and strings: an element index, a
+field, a frequency.
+
+**Verdicts**, decided in this order:
+
+| Verdict | When |
+|---|---|
+| `UNSUPPORTED` | either engine's status is `unsupported`. It is an answer, not a failure |
+| `ERROR` | either engine's status is `error`, `pending` or `missing`; or the two answers cannot be compared at all, as arrays of different shapes cannot |
+| `PASS` | the rung is gated and every metric the policy names is at or below its `tolerance` |
+| `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number |
+| `RECORDED` | the rung is recorded and no metric that has an `attention` band is above it |
+| `ATTENTION` | the rung is recorded and a metric that has an `attention` band is above it, or is not a number. It is not a failure |
+
+Only `FAIL` and `ERROR` fail a comparison.
+
+**Invariants checked in code** (`comparisonInvariantProblems`): no engine is a participant twice; `reference` is
+stated exactly in the mode `reference-vs-each` and names a participant; every pair names two different
+participants, the first of them the reference when there is one.
+
+`lvrtc compare` writes the sets of one run of a suite to `comparisons.json` in the run directory, as
+`{ contract, kind: "comparison-file", suite, manifest, policy, comparisons }`: the suite's name, the content hash
+of the manifest and of the policy the sets were made from, and the sets ordered by run, rung, request and mode.
 
 ## Quantities
 

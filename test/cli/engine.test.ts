@@ -65,7 +65,7 @@ test("engine is a registered command, and --help says what conformance checks", 
   assert.ok(help.stdout.startsWith(SYNOPSIS));
   assert.match(help.stdout, /PASS, FAIL or SKIPPED with a reason/);
   const list = spawnSync(process.execPath, [BIN, "--help"], { encoding: "utf8", cwd: REPO_ROOT });
-  assert.match(list.stdout, /^ {2}engine {2}Check that a configured engine conforms to the contract$/m);
+  assert.match(list.stdout, /^ {2}engine {3}Check that a configured engine conforms to the contract$/m);
 });
 
 test("an engine that conforms: a line per check, a count, exit 0", async (t) => {

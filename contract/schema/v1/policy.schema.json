@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:policy",
+  "title": "Policy",
+  "description": "How the results of each rung are judged: the quantity compared, the mode of comparison, whether the rung is gated or recorded, and the limit of each metric. A gated metric needs a tolerance and an independent-method rung is never gated; code checks both.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "policy" },
+    "version": {
+      "description": "The version of the policy: an integer from 1 that rises whenever a rung, a class or a limit changes.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "rungs": {
+      "description": "A map from rung id to how the rung is judged.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/rung" }
+    }
+  },
+  "required": ["contract", "kind", "version", "rungs"],
+  "additionalProperties": false,
+  "$defs": {
+    "rung": {
+      "type": "object",
+      "properties": {
+        "quantity": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/quantityId" },
+        "mode": { "enum": ["direct", "identical-rays", "independent-method"] },
+        "class": { "enum": ["gated", "recorded"] },
+        "metrics": {
+          "description": "A map from metric name to its limits and unit.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/metric" }
+        }
+      },
+      "required": ["quantity", "mode", "class", "metrics"],
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "properties": {
+        "tolerance": {
+          "description": "The largest value a gated metric may have and pass.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        },
+        "attention": {
+          "description": "The largest value a recorded metric may have without being marked for attention.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        },
+        "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+      },
+      "required": ["unit"],
+      "additionalProperties": false
+    }
+  }
+}

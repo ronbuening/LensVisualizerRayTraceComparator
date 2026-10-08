@@ -1,0 +1,32 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "fake-3-engines",
+  "defaults": {
+    "rungs": [
+      "selftest"
+    ],
+    "engines": [
+      "fake-a",
+      "fake-pyn",
+      "fake-none"
+    ],
+    "referenceEngine": "fake-a"
+  },
+  "runs": [
+    {
+      "name": "singlet",
+      "lens": {
+        "kind": "fixture",
+        "path": "../../../contract/fixtures/v1/valid/optical-case/singlet.json"
+      }
+    },
+    {
+      "name": "double-gauss",
+      "lens": {
+        "kind": "fixture",
+        "path": "../../../contract/fixtures/v1/valid/optical-case/double-gauss.json"
+      }
+    }
+  ]
+}

@@ -8,7 +8,30 @@ path, then MTF.
 The first external engine is [optiland](https://github.com/optiland/optiland). Engines sit behind one adapter
 contract, so others can be added by a Python worker, a command line, file exchange or HTTP.
 
-Status: Phase 0 (foundations) in progress. The full plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. The full
+plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+
+## Try it
+
+Three commands take a suite from engines to a report. The fixture suite below needs neither LensVisualizer nor
+optiland: its three engines are a TypeScript fake (the reference), the Python fake with a bias that stays inside
+the tolerance, and a fake that offers no quantity.
+
+```bash
+node bin/lvrtc.mjs run test/fixtures/suites/fake-3-engines.json --root test/fixtures/fake-root
+```
+
+```bash
+node bin/lvrtc.mjs compare fake-3-engines --root test/fixtures/fake-root
+```
+
+```bash
+node bin/lvrtc.mjs report fake-3-engines --root test/fixtures/fake-root
+```
+
+The report is `test/fixtures/fake-root/runs/fake-3-engines/report.md` (the fixture root's `runsDir`, which git
+ignores; set `LVRTC_RUNS_DIR` to write elsewhere). Run the three again and it is the same file, byte for byte.
+Without Python, use `fake-3-engines-ts`, the same trio with a TypeScript engine in the Python one's place.
 
 ## Requirements
 
@@ -61,9 +84,9 @@ version or a configuration file it cannot use.
 
 `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]` runs a suite: for every
 run, every selected rung and every selected engine, it asks the rung's requests of the engine and records how each
-job ended. The example above needs neither LensVisualizer nor optiland: its root defines four fake engines, three
-in this process and one, `fake-py`, a Python worker, and its only rung, `selftest`, asks for the conformance
-quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none`.
+job ended. The example above needs neither LensVisualizer nor optiland: its root defines six fake engines, four
+in this process and two, `fake-py` and `fake-pyn`, Python workers, and its only rung, `selftest`, asks for the
+conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none`.
 
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. Phase 0
@@ -82,6 +105,37 @@ quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none
 - **Exit code**: 0 when no job ended as an error and every run could be started (`unsupported` is an answer, not a
   failure); 1 otherwise; 2 when nothing was run because the suite file, an engine or a rung cannot be used as
   asked.
+
+## Comparing and reporting
+
+`lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--json]`
+compares what the engines of a run answered. It asks no engine anything: it reads the run's manifest and the
+answers in the result store, and writes `comparisons.json` into the run directory.
+
+- **A run** is named by its suite, which is looked up in the `runsDir` of the root, or by its run directory.
+- **Groups.** The answers of every engine to one request are one group, compared twice: every engine against a
+  reference (N − 1 pairs), and every engine against every other (N(N − 1)/2 pairs). Two engines are a group of two.
+- **The reference** is `--reference`, else the run's `referenceEngine`, else the first engine, by id, that has an
+  `ok` result.
+- **The policy**, `policy/rungs.v1.json`, says for each rung which quantity it compares, in which mode (`direct`,
+  `identical-rays` or `independent-method`), whether it is `gated` or `recorded`, and the tolerance or attention
+  band of each metric. A gated metric has a tolerance, and an independent-method rung is never gated.
+- **Verdicts.** `UNSUPPORTED` when either engine cannot answer; `ERROR` when either gave no result or the two
+  cannot be compared; on a gated rung `PASS` or `FAIL`, where a metric that is not a number fails; on a recorded
+  rung `RECORDED`, or `ATTENTION` outside the band. Only `FAIL` and `ERROR` are failures.
+- **Exit code**: 0 when no pair is `FAIL` or `ERROR`; 1 otherwise; 2 when nothing was compared because the run has
+  no manifest or the reference is not an engine of the run.
+
+`lvrtc report <suite name | run directory> [--root <dir>]` writes `report.json` and `report.md` into the run
+directory from the manifest, the comparisons and the policy: the inputs (suite, contract version, policy version,
+engines with fingerprints), the verdict counts, a support matrix of rung by engine, and for each run and rung a
+reference-vs-each table and a pairwise matrix, with a note on how to read the verdicts. It exits 0 when the report
+is written, whatever the verdicts are, and 2 when the run has no comparisons or they were made from another
+manifest or policy. Both files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the
+same run gives the same bytes anywhere.
+
+The expected reports of the fixture suites are in `test/fixtures/golden`; `node test/report/writeGolden.ts`
+rewrites them after a change that is meant to change a report.
 
 ## Contract
 
