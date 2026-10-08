@@ -10,6 +10,7 @@ import {
   systemProbe,
   type CommandResult,
   type DoctorLvBinding,
+  type DoctorOptilandEngine,
   type DoctorProbe,
 } from "../../src/cli/commands/doctor.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
@@ -23,6 +24,19 @@ const CLOSURE = "c0ffee".repeat(10) + "abcd";
 const GIT_TOP = `git -C ${LV} rev-parse --show-toplevel`;
 const GIT_HEAD = `git -C ${LV} rev-parse HEAD`;
 const GIT_STATUS = `git --no-optional-locks -C ${LV} status --porcelain -- .`;
+const FINGERPRINT = "f".repeat(64);
+const REVISION = "a".repeat(64);
+const ENGINE_DETAILS = {
+  commit: "e".repeat(40),
+  dirty: true,
+  jit: true,
+  numba: "9.3",
+  numpy: "9.1",
+  python: "3.12.7",
+  scipy: "9.2",
+  sourceFiles: 7,
+  sourceHash: "5".repeat(64),
+};
 const OPTILAND_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
 
 /** A scripted machine: the files that exist and what each command line answers. Unlisted commands cannot start. */
@@ -32,6 +46,8 @@ interface Machine {
   commands: Record<string, CommandResult | null>;
   /** What loading LensVisualizer through the binding answers. */
   binding: DoctorLvBinding;
+  /** What starting the engine `optiland` and asking it who it is answers. */
+  engine: DoctorOptilandEngine;
 }
 
 function ok(stdout: string): CommandResult {
@@ -56,6 +72,7 @@ function healthyMachine(): Machine {
       [`${OPTILAND_PYTHON} -c ${OPTILAND_SCRIPT}`]: ok("0.6.2\n"),
     },
     binding: { status: "loaded", engineFileCount: 141, engineClosureHash: CLOSURE },
+    engine: { status: "available", fingerprint: FINGERPRINT, adapterRevision: REVISION, details: ENGINE_DETAILS },
   };
 }
 
@@ -90,6 +107,10 @@ async function runDoctor(
     lvBinding: async (path) => {
       ran.push(`binding ${path}`);
       return machine.binding;
+    },
+    optilandEngine: async (loaded) => {
+      ran.push(`engine optiland ${loaded.config.engines.optiland.python}`);
+      return machine.engine;
     },
   };
   const out: string[] = [];
@@ -149,6 +170,12 @@ test("everything present: the full report, exit 0", async (t) => {
       `  python       ${OPTILAND_PYTHON}`,
       "  interpreter  present (Python 3.12.7)",
       "  version      0.6.2",
+      `  engine       fingerprint ${FINGERPRINT}`,
+      `  git          ${"e".repeat(40)} (dirty)`,
+      `  sources      7 files, hash ${"5".repeat(64)}`,
+      "  versions     Python 3.12.7, numpy 9.1, scipy 9.2, numba 9.3",
+      "  jit          on",
+      `  adapter      ${REVISION}`,
       "",
     ].join("\n"),
   );
@@ -164,6 +191,7 @@ test("the probes only read: the exact commands run", async (t) => {
     "python3 --version",
     `${OPTILAND_PYTHON} --version`,
     `${OPTILAND_PYTHON} -c ${OPTILAND_SCRIPT}`,
+    `engine optiland ${OPTILAND_PYTHON}`,
   ]);
 });
 
@@ -251,6 +279,7 @@ test("LensVisualizer and optiland not configured are reported, not a failure", a
   const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"], config: {} })).out);
   assert.deepEqual(json.lensVisualizer, { binding: null, git: null, path: null, status: "not configured" });
   assert.deepEqual(json.optiland, {
+    engine: null,
     interpreter: "not configured",
     interpreterVersion: null,
     python: null,
@@ -280,7 +309,40 @@ test("optiland not importable is reported, not a failure", async (t) => {
     interpreterVersion: "Python 3.12.7",
     python: OPTILAND_PYTHON,
     version: null,
+    engine: { adapterRevision: REVISION, details: ENGINE_DETAILS, fingerprint: FINGERPRINT, status: "available" },
   });
+});
+
+test("an optiland engine that cannot be used is reported with its code and reason, not a failure", async (t) => {
+  const machine = healthyMachine();
+  const message = "engine optiland is unavailable (hello-failed): the engine refused hello (engine-failure): no numba";
+  machine.engine = { status: "unavailable", code: "hello-failed", message };
+  const run = await runDoctor(t, machine);
+  assert.equal(run.code, EXIT_OK);
+  assert.equal(run.err, "");
+  assert.ok(run.out.endsWith(`  version      0.6.2\n  engine       unavailable (hello-failed): ${message}\n`), run.out);
+  const json = JSON.parse((await runDoctor(t, machine, { args: ["--json"] })).out);
+  assert.deepEqual(json.optiland.engine, { code: "hello-failed", message, status: "unavailable" });
+});
+
+test("an optiland that is not a git checkout, and details that are missing, are said as such", async (t) => {
+  const machine = healthyMachine();
+  machine.engine = { status: "available", fingerprint: FINGERPRINT, adapterRevision: null, details: { commit: null } };
+  const run = await runDoctor(t, machine);
+  assert.ok(
+    run.out.endsWith(
+      [
+        `  engine       fingerprint ${FINGERPRINT}`,
+        "  git          not a git checkout",
+        "  sources      unknown files, hash unknown",
+        "  versions     Python unknown, numpy unknown, scipy unknown, numba unknown",
+        "  jit          unknown",
+        "  adapter      none stated",
+        "",
+      ].join("\n"),
+    ),
+    run.out,
+  );
 });
 
 test("a missing optiland interpreter is reported and not asked for optiland", async (t) => {
@@ -289,7 +351,7 @@ test("a missing optiland interpreter is reported and not asked for optiland", as
   const run = await runDoctor(t, machine);
   assert.equal(run.code, EXIT_OK);
   assert.match(run.out, /^ {2}interpreter {2}missing\n$/m);
-  assert.ok(!run.ran.some((line) => line.includes(" -c ")));
+  assert.ok(!run.ran.some((line) => line.includes(" -c ") || line.startsWith("engine ")));
 });
 
 test("a Node version out of range exits 1 and still prints the report", async (t) => {
@@ -327,6 +389,7 @@ test("--json prints one stable object with sorted keys", async (t) => {
     },
     node: { ok: true, required: packageJson.engines.node, version: "24.15.0" },
     optiland: {
+      engine: { adapterRevision: REVISION, details: ENGINE_DETAILS, fingerprint: FINGERPRINT, status: "available" },
       interpreter: "present",
       interpreterVersion: "Python 3.12.7",
       python: OPTILAND_PYTHON,

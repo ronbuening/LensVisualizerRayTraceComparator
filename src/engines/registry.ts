@@ -14,6 +14,7 @@ import type { EngineAdapter } from "./adapter.ts";
 import { BUILTIN_ENGINES } from "./builtin.ts";
 import type { BuiltinEngines } from "./builtin.ts";
 import { RemoteEngineAdapter } from "./remote.ts";
+import type { EngineTimeouts } from "./remote.ts";
 
 /** What a transport factory is told beside the definition. */
 export interface TransportContext {
@@ -99,7 +100,8 @@ export const TRANSPORT_FACTORIES: TransportFactories = {
 /**
  * Builds the transport of an engine, unopened: the engine is not contacted. An id the configuration defines is
  * built from its definition, by the factory of its transport. Any other id that is a built-in engine's is that
- * engine, in this process: so a definition replaces a built-in engine of the same id, and every built-in engine
+ * engine: in this process, or, for one that runs in a worker, through the transport of the definition it builds
+ * from the configuration. So a definition replaces a built-in engine of the same id, and every built-in engine
  * can be named under any configuration root.
  *
  * Rejects with an `EngineUnavailableError`: `not-configured` for an id that is neither defined nor built in,
@@ -113,22 +115,27 @@ export async function createEngineTransport(
   builtins: BuiltinEngines = BUILTIN_ENGINES,
 ): Promise<Transport> {
   const definitions = loaded.config.engineDefinitions;
+  let definition: EngineDefinition;
   // An own key: "constructor" is an engine id like any other, and no object defines it by inheritance.
-  if (!Object.hasOwn(definitions, id)) {
+  if (Object.hasOwn(definitions, id)) {
+    definition = definitions[id];
+  } else {
     if (Object.hasOwn(builtins, id)) {
       try {
-        return createInProcessTransport(await builtins[id](loaded));
+        const builtin = builtins[id];
+        if (typeof builtin === "function") return createInProcessTransport(await builtin(loaded));
+        definition = builtin.worker(loaded);
       } catch (error) {
         // A built-in engine that says why it cannot be used is believed.
         if (error instanceof EngineUnavailableError) throw error;
         const detail = `the built-in engine could not be made: ${reasonOf(error)}`;
         throw new EngineUnavailableError(id, "create-failed", detail, { cause: error });
       }
+    } else {
+      const said = enginesText(Object.keys(definitions).sort(), Object.keys(builtins).sort());
+      throw new EngineUnavailableError(id, "not-configured", said);
     }
-    const said = enginesText(Object.keys(definitions).sort(), Object.keys(builtins).sort());
-    throw new EngineUnavailableError(id, "not-configured", said);
   }
-  const definition = definitions[id];
   // Looked up by the definition's own transport, so the factory found is the one for this kind of definition.
   const factory = factories[definition.transport] as TransportFactory<EngineDefinition["transport"]> | undefined;
   if (factory === undefined) {
@@ -136,6 +143,20 @@ export async function createEngineTransport(
     throw new EngineUnavailableError(id, "unsupported-transport", detail);
   }
   return factory(definition, { engineId: id, rootDir: loaded.rootDir });
+}
+
+/**
+ * The waits of an engine that differ from the adapter's defaults: those of a built-in engine that runs in a worker
+ * and states some, unless the configuration defines the id itself. Nothing for any other engine.
+ */
+export function engineTimeouts(
+  loaded: Pick<LoadedConfig, "config">,
+  id: string,
+  builtins: BuiltinEngines = BUILTIN_ENGINES,
+): Partial<EngineTimeouts> {
+  if (Object.hasOwn(loaded.config.engineDefinitions, id) || !Object.hasOwn(builtins, id)) return {};
+  const builtin = builtins[id];
+  return typeof builtin === "function" ? {} : { ...builtin.timeouts };
 }
 
 /** The engines of one configuration, and the built-in ones beside them. */
@@ -170,6 +191,10 @@ export function createEngineRegistry(
     ids: () => Object.keys(loaded.config.engineDefinitions).sort(),
     builtinIds: () => Object.keys(builtins).sort(),
     create: async (id) =>
-      new RemoteEngineAdapter({ id, transport: await createEngineTransport(loaded, id, factories, builtins) }),
+      new RemoteEngineAdapter({
+        id,
+        transport: await createEngineTransport(loaded, id, factories, builtins),
+        timeouts: engineTimeouts(loaded, id, builtins),
+      }),
   };
 }

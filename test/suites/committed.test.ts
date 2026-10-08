@@ -44,8 +44,9 @@ for (const name of SUITE_NAMES) {
     assert.equal(suite.contract, CONTRACT_VERSION);
     // A run uses every judged rung, and the built-in engines unless it is run on others: so the suite runs at the
     // root of this repository, whose configuration defines no engine.
-    const builtin = Object.keys(BUILTIN_ENGINES).sort();
-    assert.deepEqual(builtin, ["lv", "ref"]);
+    // optiland is built in too, and joins a suite's own engines with the rungs it answers.
+    assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), ["lv", "optiland", "ref"]);
+    const builtin = ["lv", "ref"];
     assert.deepEqual(suite.defaults, {
       aperture: { kind: "wide-open" },
       imagePlane: { kind: "design" },

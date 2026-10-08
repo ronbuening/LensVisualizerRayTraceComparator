@@ -558,10 +558,78 @@ An engine is defined under `engines.<id>` by the transport that reaches it:
   speaks the protocol as NDJSON on its standard streams; see below.
 
 `options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
-gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `lv`, `ref`) need no definition; one that
-is given under a built-in engine's id is the engine of that id. An engine that cannot be built or reached is found
-unavailable, with a code that says why: `not-configured`, `load-failed`, `spawn-failed`, `hello-failed`,
-`contract-mismatch` and so on.
+gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `lv`, `optiland`, `ref`) need no
+definition; one that is given under a built-in engine's id is the engine of that id. An engine that cannot be built
+or reached is found unavailable, with a code that says why: `not-configured`, `load-failed`, `spawn-failed`,
+`hello-failed`, `contract-mismatch` and so on.
+
+## The engine `optiland`
+
+`optiland` is [optiland](https://github.com/optiland/optiland) behind a Python worker of the comparator,
+`workers/python/lvrtc_optiland`. It is a built-in engine: name it (`--engines optiland`, a suite's `engines`)
+wherever `engines.optiland.python` names an interpreter that can import optiland, and nothing else is configured.
+The comparator supplies the rest (`src/engines/optiland/definition.ts`): the command
+`<python> -m lvrtc_optiland`, `PYTHONPATH` set to `workers/python` of this repository, so that nothing is installed,
+and where the worker's caches go.
+
+**In this stage the engine offers no quantity.** It starts, says who it is and passes the conformance kit; a run
+on it is answered `unsupported` for every rung. The rungs it answers arrive with the stages that follow.
+
+**Nothing is written into the optiland checkout or its environment.** Importing optiland imports numba,
+matplotlib and vtk, each of which writes somewhere unless told where, so the worker's environment says where,
+under the configuration's `cacheDir` (`.cache/optiland`, gitignored):
+
+| Variable | Why |
+|---|---|
+| `NUMBA_CACHE_DIR` | numba caches the machine code of optiland's `@njit(cache=True)` functions beside their sources otherwise, and already on import it creates and removes a file in each such `__pycache__` to see whether it may |
+| `MPLCONFIGDIR`, `MPLBACKEND=Agg` | matplotlib's font cache, and no display |
+| `PYTHONDONTWRITEBYTECODE=1`, `PYTHONPYCACHEPREFIX` | no bytecode is written, and none could land beside a source |
+
+The worker sets the same from inside before it imports anything of optiland (`lvrtc_optiland/hygiene.py`), so one
+started by hand is as careful. A cache that would lie inside the directory optiland is imported from, or inside
+the interpreter's virtual environment, is refused before a directory is made and before numba is imported: a
+`cacheDir` that points there makes the engine unavailable and writes nothing. After the import the worker checks
+that numba caches where it was told, that its JIT is on, and that optiland computes with numpy in float64. In
+every such case it refuses `hello` with the reason. The JIT stays on: optiland is compared as it runs. The worker's
+standard output is reserved for replies at the level of the file descriptor before optiland is imported, so a
+warning of numpy or a `print` in a library is a line of the log.
+
+**Starting takes time.** `hello` is answered once optiland is imported: about 6 s on this machine with warm
+caches, and about 17 s the first time, when matplotlib builds its font cache. Half of the 6 s is the price of
+`PYTHONPYCACHEPREFIX` with `PYTHONDONTWRITEBYTECODE`: every module is compiled from its source on every start. The
+engine's `hello` may take three minutes (`OPTILAND_TIMEOUTS`) where every other engine's may take 30 s.
+
+**What the JIT costs and saves**, measured at optiland `4e893f53` on a synthetic singlet of two spherical surfaces
+with 4096 rays given to `surfaces.trace`: the first trace of a process takes 0.9 s on an empty numba cache, while
+the conic intersection is compiled, and 0.23 s once it is cached; every later one 0.8 ms. With the JIT off a
+trace takes 20 ms, the first like the rest. One `FFTMTF` of that singlet on the axis (128 rays across the pupil)
+takes 17 ms with the JIT on and 31 ms with it off. The landing points are the same bits either way.
+
+**When it cannot be used** the engine is unavailable and every other engine carries on:
+
+| Code | When | The message says |
+|---|---|---|
+| `not-configured` | `engines.optiland.python` is `null` | to set it in `lvrtc.local.json`, or `LVRTC_OPTILAND_PYTHON` |
+| `spawn-failed` | the interpreter it names is not on this machine | its path, and the same |
+| `hello-failed` | the interpreter cannot import optiland, numpy, scipy or numba; or optiland is not in the state the worker computes in; or `cacheDir` lies inside the optiland checkout or its environment | the interpreter and Python's own error, and for an import that failed the same |
+
+**Who it is.** The fingerprint is a hash over the commit and dirty flag of the optiland checkout, a hash of the
+package's Python sources, the versions of Python, numpy, scipy and numba, and whether the JIT is on; the
+distribution's version string is no part of it, because it ends in the day of the install. The worker's own
+sources are not the engine: they are the adapter revision, a hash of `workers/python/lvrtc_optiland` and the kit,
+and the result store keys an answer by both ([contract](../contract/CONTRACT.md#engine-descriptor)).
+`lvrtc doctor` prints all of it, and `python -m lvrtc_optiland --identity` prints the identity as one line of JSON.
+
+```bash
+npm run test:optiland
+```
+
+Runs the tests against the real optiland (`test/integration/optiland`), with the interpreter of the configuration:
+the Python tests of the worker (`workers/python/tests/optiland`, none skipped), the conformance kit, a run that is
+answered `unsupported`, `lvrtc doctor`, and a recursive snapshot of the optiland checkout and its environment
+(path, size and modification time of every file and directory) taken before the first test and after a cold start
+on an empty cache directory with the JIT compiling: nothing may differ. Each test skips with the reason when
+optiland is not configured or cannot be imported.
 
 ## Workers over stdio
 
@@ -622,14 +690,23 @@ the standard library, writes nothing to disk and runs on Python 3.10 and later.
 | `fake_engine` | the fake engine as a worker: `python -m lvrtc_worker_kit.fake_engine [--id ID] [--bias X] [--no-quantities] [--fingerprint F]` |
 
 The loop answers every line with exactly one line and never crashes on one: a line that is not JSON, an unknown
-method, a request that is not valid by the contract and an exception in the engine are all answered
-`{ "ok": false, "error": { "code", "message" } }`. Standard output carries replies only. A worker echoes the ids
-it is given and never recomputes them.
+method and a request that is not valid by the contract are answered
+`{ "ok": false, "error": { "code", "message" } }`. An exception in an engine's `run` is the engine's failure on
+that request and no fault of the protocol: it is answered `ok: true` with a result of status `error` and the code
+`engine-failure`, as the engines of the comparator's own process answer it. A worker echoes the ids it is given
+and never recomputes them.
+
+Standard output carries replies only, and that is kept at the level of the file descriptor: `protect_stdout()`
+duplicates descriptor 1 for the replies and points descriptor 1 itself at the standard error, so a `print`, a
+warning, a C library and a process the worker starts all write to the log. `serve_stdio` does it for a worker
+that has not; a worker whose engine may write while it is imported calls it first.
 
 The Python fake engine and the TypeScript one are interchangeable: for one request they give byte-identical
 results. The kit's tests are `unittest`, in `workers/python/tests/kit`, and run the validator against the same
-fixture corpus as the TypeScript tests:
+fixture corpus as the TypeScript tests; those of the optiland worker are beside them, in
+`workers/python/tests/optiland`, and run on a fake optiland (`test/fixtures/fake-optiland`) under any Python:
 
 ```bash
 python3 -m unittest discover -s workers/python/tests/kit -t workers/python
+python3 -m unittest discover -s workers/python/tests/optiland -t workers/python
 ```

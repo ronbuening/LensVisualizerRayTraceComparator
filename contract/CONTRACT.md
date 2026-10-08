@@ -667,19 +667,34 @@ non-empty `unsupported` list; status `error` needs `error`.
 A limit an engine leaves out is unbounded.
 
 **Fingerprint and adapter revision.** An answer depends on two bodies of code: the engine, and whatever of the
-comparator stands between the contract and the engine. For an engine in another process the second is the
-engine's own worker, whose sources its fingerprint covers. For an engine that is part of the comparator the two
-are apart, and each has its own hash:
+comparator stands between the contract and the engine. For an engine whose worker is someone else's the second is
+that worker, whose sources its fingerprint covers. For an engine that is part of the comparator, and for one whose
+worker is the comparator's own, the two are apart, and each has its own hash:
 
 | | Is the hash of | Changes when |
 |---|---|---|
-| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref` | the engine changes |
-| `adapterRevision` | the comparator's code the answer passes through: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`). For `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection | the comparator changes how it asks the engine, reads its answer or writes it down |
+| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref`, optiland and what it computes with for `optiland` | the engine changes |
+| `adapterRevision` | the comparator's code the answer passes through. For `lv` and `ref`: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`); for `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection. For `optiland`: the Python sources of its worker and of the worker kit (`workers/python/lvrtc_optiland`, `workers/python/lvrtc_worker_kit`) | the comparator changes how it asks the engine, reads its answer or writes it down |
 
-`adapterRevision` is a SHA-256, stated by `lv` and `ref` and by no engine outside the comparator. A result carries
-the one of its engine's descriptor, and the result store keys an answer by both: so a fix to the adapter retires
-the answers the old adapter wrote, and the fingerprint of `lv` stays what it says it is, the identity of
-LensVisualizer's code. A run's manifest records both for each engine.
+`adapterRevision` is a SHA-256, stated by `lv`, `ref` and `optiland`; an engine whose worker is not the
+comparator's states none. A result carries the one of its engine's descriptor, and the result store keys an answer
+by both: so a fix to the adapter retires the answers the old adapter wrote, and the fingerprint of `lv` stays what
+it says it is, the identity of LensVisualizer's code. A run's manifest records both for each engine.
+
+**The identity of `optiland`.** optiland states no version of its own, and the version of its distribution ends in
+the day it was installed, so neither identifies its code. The fingerprint is a SHA-256 over these, each of which
+the descriptor's `details` also carry:
+
+| Detail | Is |
+|---|---|
+| `commit`, `dirty` | the commit of the optiland checkout the package is imported from, and whether `git status` lists anything in it; both `null` for a package that is in no checkout of its own |
+| `sourceHash` | a SHA-256 over every `.py` file of the package: its path relative to the package, a NUL, its bytes, a NUL, in the order of the paths |
+| `python`, `numpy`, `scipy`, `numba` | the versions of the interpreter and of what optiland computes with |
+| `jit` | whether numba's JIT is on; the worker leaves it on |
+
+`details` carry beside them `sourceFiles` (how many files the hash covers), `distVersion` (the distribution's
+version string, which is also the descriptor's `version`), `backend` (`numpy`) and `precision` (`float64`): the
+worker computes in nothing else and refuses `hello` when optiland is in another state.
 
 ### `protocol-request` and `protocol-response`
 
@@ -695,7 +710,10 @@ between messages.
 A request is `{ contract, id, method, params }`. A response is `{ contract, id, ok: true, result }` or
 `{ contract, id, ok: false, error: { code, message } }`, with the `id` of the request it answers. `ok: false`
 means the message could not be handled at all. An engine that handled a `run` and failed answers `ok: true` with a
-`result` of status `error`.
+`result` of status `error`: an exception while it computed is a result with the code `engine-failure`, from an
+engine in the comparator's process and from a worker of the Python kit alike. A worker refuses with `ok: false`
+and that code only where no result can be written: an exception while it describes itself, which `hello` asks
+for and which every result is stamped with.
 
 A protocol message is one of two whole shapes, so the validator reports any fault in one at the root of the
 message, with the keyword `oneOf`; the issue's message quotes the first fault of each shape with its own path.

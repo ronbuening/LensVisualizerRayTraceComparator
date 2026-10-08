@@ -469,13 +469,36 @@ test(
     const exporter = createLvExporter(binding);
     const worst = { firstOrder: 0, at: "" };
     let stations = 0;
+    const uncertified: string[] = [];
     for (const { key } of (await binding.catalog()).entries) {
-      const stationsOf = (await binding.lens(key)).data.finiteConjugates as
-        { focusT: number; zoomT: number }[] | undefined;
+      const { data } = await binding.lens(key);
+      const stationsOf = data.finiteConjugates as { focusT: number; zoomT: number }[] | undefined;
       for (const { focusT, zoomT } of stationsOf ?? []) {
         const exported = await exporter.exportLens(key, { state: { zoomT, focus: { kind: "focusT", value: focusT } } });
-        assert.ok(exported.ok, `${key}: ${JSON.stringify(exported)}`);
         const at = `${key} at focus ${focusT}, zoom ${zoomT}`;
+        // A station a lens documents is certified when LensVisualizer's gate hands its conjugate for exactly that
+        // state (CONTRACT.md, `conditions.object`). The gate turns a lens outside its MTF path away before it
+        // looks at the conjugate, a fisheye for one: such a station is refused, never exported some other way.
+        const runtime = binding.api.buildLens(data);
+        const radius = binding.api.wideOpenStopAtZoom(zoomT, runtime);
+        const gate = binding.api.assessMtfSupport(binding.api.prepareRuntimeState(runtime, focusT, zoomT), {
+          method: "geometric",
+          spectrum: "reference",
+          pupilSemiDiameterMm: radius,
+          stopSemiDiameterMm: radius,
+          focus: "design",
+        });
+        if (gate.conjugate === undefined) {
+          assert.ok(!exported.ok, `${at}: exported without a conjugate of LensVisualizer's (${gate.reason})`);
+          assert.deepEqual(
+            exported.problems.map((problem) => problem.code),
+            ["finite-conjugate-unavailable"],
+            at,
+          );
+          uncertified.push(`${at} (${gate.reason})`);
+          continue;
+        }
+        assert.ok(exported.ok, `${key}: ${JSON.stringify(exported)}`);
         assert.equal(exported.opticalCase.conditions.object.kind, "finite", at);
         const echo = (await compared(lv, ref, exported.opticalCase, SYSTEM_DESCRIBE, at)).metrics;
         for (const count of ["layout", "shape", "aperture", "index"])
@@ -502,6 +525,7 @@ test(
       }
     }
     t.diagnostic(`${stations} certified focus stations: worst R1 difference ${worst.firstOrder} mm (${worst.at})`);
+    if (uncertified.length > 0) t.diagnostic(`documented and not certified, so refused: ${uncertified.join("; ")}`);
     // At d36f44b3: 19 stations of 12 lenses, from 1:40 to 1:1; the first-order data differ by at most 3.8e-13 mm.
     assert.ok(stations >= 10, String(stations));
     assert.ok(worst.firstOrder < 1e-10, `${worst.firstOrder} mm on ${worst.at}`);

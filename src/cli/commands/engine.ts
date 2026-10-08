@@ -7,7 +7,8 @@ import { UsageError } from "../../core/usageError.ts";
 import { runConformance } from "../../engines/conformance.ts";
 import type { ConformanceReport, ConformanceStatus } from "../../engines/conformance.ts";
 import { enginesText } from "../../engines/adapter.ts";
-import { createEngineRegistry, createEngineTransport } from "../../engines/registry.ts";
+import type { BuiltinEngines } from "../../engines/builtin.ts";
+import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../engines/registry.ts";
 import type { EngineTimeouts } from "../../engines/remote.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
@@ -20,8 +21,10 @@ export interface EngineCommandInputs {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** The directory that `--root` is relative to. */
   readonly cwd: string;
-  /** Waits that differ from the adapter's defaults. */
+  /** Waits that differ from the engine's own, which are the adapter's defaults unless a built-in engine states others. */
   readonly timeouts?: Partial<EngineTimeouts>;
+  /** The built-in engines; the comparator's own (`BUILTIN_ENGINES`) unless a test names others. */
+  readonly builtins?: BuiltinEngines;
 }
 
 const SYNOPSIS = "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n";
@@ -110,7 +113,8 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
         return EXIT_USAGE;
       }
       const loaded = loadConfig({ rootDir, env: inputs.env });
-      const registry = createEngineRegistry(loaded);
+      const { builtins } = inputs;
+      const registry = createEngineRegistry(loaded, undefined, builtins);
       const [configured, builtin] = [registry.ids(), registry.builtinIds()];
       if (!configured.includes(asked.id) && !builtin.includes(asked.id)) {
         io.stderr(`lvrtc engine: unknown engine "${asked.id}": ${enginesText(configured, builtin)}\n`);
@@ -119,8 +123,9 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
 
       const report = await runConformance({
         id: asked.id,
-        createTransport: () => createEngineTransport(loaded, asked.id),
-        timeouts: inputs.timeouts,
+        createTransport: () => createEngineTransport(loaded, asked.id, undefined, builtins),
+        // The engine's own waits, as a run would use them, unless this command was given others.
+        timeouts: { ...engineTimeouts(loaded, asked.id, builtins), ...inputs.timeouts },
       });
       // Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text.
       io.stdout(asked.json ? `${JSON.stringify(JSON.parse(canonicalJson(report)), null, 2)}\n` : reportText(report));

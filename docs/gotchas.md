@@ -416,6 +416,20 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   MTF, and why. An integration test finds every such lens of the catalog and holds each answer to the gate.
 - **Class.** data.
 
+### A focus station a lens documents is certified only inside the MTF path
+
+- **Where.** `assessMtfSupport` turns a lens outside its MTF path away (`unsupported-path`) before it looks at the
+  focus position, so `MtfSupport.conjugate` is set only for a lens the path covers. A lens file may still list the
+  station under `finiteConjugates`.
+- **Effect.** A fisheye that documents a close-focus station has no conjugate LensVisualizer certifies for it. Its
+  case at infinity focus exports on the reference line as before; the station does not.
+- **Handled.** The exporter takes the object of a refocused state from `MtfSupport.conjugate` and from nothing
+  else: such a station is `finite-conjugate-unavailable`, never exported with an object distance read from the
+  lens file. The integration test of the focus stations asks the gate for each documented station, compares `lv`
+  and `ref` at every one it certifies, holds every other to that refusal, and names it in its diagnostic. Seen
+  first on a fisheye that was in LensVisualizer's working tree, not yet committed, at `b7deb221`.
+- **Class.** data.
+
 ### A field can lie outside the model
 
 - **Where.** `resolveMtfFieldTargets` in `src/optics/analysis/mtfFields.ts` resolves a fraction of the reference
@@ -523,3 +537,49 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   lens that is neither the position nor the radius of a pupil is within 1.1e-11 mm; every other pupil position is within
   1.9e-11 mm, and every other pupil radius within 4.2e-12 mm.
 - **Class.** numerical.
+
+## optiland
+
+Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8).
+
+### Importing optiland writes into its own checkout
+
+- **Where.** `optiland/backend/numpy_backend/conic.py`, `optiland/scatter.py` and
+  `optiland/geometries/nurbs/nurbs_basis_functions.py` decorate functions with `@njit(cache=True)`. numba decides
+  where such a function is cached when the decorator runs, on import (`numba/core/caching.py`): unless
+  `NUMBA_CACHE_DIR` is set it takes the `__pycache__` beside the source and, to see whether it may write there,
+  creates a temporary file in it and removes it. Later, when the function is first called, it writes an index
+  (`.nbi`) and the machine code (`.nbc`) there: two such files of an earlier session lie in the checkout.
+- **Effect.** A bare `import optiland` changes the modification time of three `__pycache__` directories of the
+  checkout and leaves no file; a traced ray then leaves files. git sees neither: `__pycache__` is ignored.
+  matplotlib, which optiland imports, writes a font cache into its configuration directory, and Python writes
+  bytecode beside every source it imports.
+- **Handled.** The worker's environment names a place for each under the comparator's cache directory, and the
+  worker sets the same itself before it imports anything of optiland ([reference](REFERENCE.md#the-engine-optiland)).
+  `npm run test:optiland` takes a recursive snapshot of the checkout and its environment before its first test and
+  after a cold start with the JIT compiling, and nothing may differ. It was found the hard way: a timing
+  experiment of Stage 2.1 that ran the interpreter with the variables in one unsplit shell word changed those
+  three modification times, and nothing else.
+- **Class.** none of the ladder's: it is no difference between answers, but a rule of the house.
+
+### optiland has no version that identifies its code
+
+- **Where.** There is no `optiland.__version__`; `importlib.metadata.version("optiland")` gives the
+  distribution's, which for an editable install of a checkout ends in `.dYYYYMMDD`, the day of the install.
+- **Effect.** Two installs of the same commit state different versions, and an edit to a source file states none.
+- **Handled.** The engine's fingerprint is made of the checkout's commit and dirty flag, a hash of the package's
+  Python sources and the versions it computes with ([contract](../contract/CONTRACT.md#engine-descriptor)); the
+  version string is carried as a detail and is no part of it.
+- **Class.** none of the ladder's.
+
+### What optiland loads may write to the standard output
+
+- **Where.** Importing optiland loads matplotlib, vtk, numba and scipy. matplotlib logs "Matplotlib is building
+  the font cache" on its first start, and numpy warns of an invalid value in a square root for a ray that misses a
+  surface. Both go to the standard error as Python is set up by default; nothing promises that of every library,
+  of a C library that writes to its own `stdout`, or of a later version.
+- **Effect.** Anything written to the standard output of a worker would be read as a reply, and end the worker.
+- **Handled.** The worker kit reserves the reply stream at the level of the file descriptor before optiland is
+  imported (`protect_stdout`): file descriptor 1 is the log from then on, for Python, for a C library and for a
+  child process alike.
+- **Class.** none of the ladder's.

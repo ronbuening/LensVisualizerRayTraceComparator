@@ -384,7 +384,8 @@ None is required. Optional, each a user decision on evidence the comparator prod
 - **LV reference revision**: the working tree at run time, identified by closure hash, commit recorded.
 - **What is committed**: baselines and reports hold result numbers, hashes and lens keys only; no LV-derived
   prescription is committed, only synthetic fixtures. (This repo has a GitHub remote.)
-- **optiland JIT**: on, cache under `.cache/`, once Stage 2.1 has timed it.
+- **optiland JIT**: on, cache under `.cache/`. Stage 2.1 timed it (`docs/REFERENCE.md`, "The engine `optiland`"):
+  a trace of 4096 rays takes 0.8 ms with it and 20 ms without, after 0.9 s of compiling once per cache.
 - **Second engine** (Stage 7.3): chosen when Phase 7 starts.
 
 ## Existing code reused

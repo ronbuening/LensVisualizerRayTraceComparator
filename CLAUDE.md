@@ -11,8 +11,9 @@ npm run typecheck      # tsc --noEmit
 npm run lint           # eslint .
 npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
-npm run test:python    # unittest for the Python worker kit (workers/python/tests/kit); part of check
+npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -31,6 +32,7 @@ node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, re
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
+node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 6 s)
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -66,6 +68,34 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   the file as written. An explicit position is one state. A prime has no zoom position: one stated for it is taken
   as 0 (`exportCase`). Middle stations are Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and
   hint at `--zoom 1` on stderr.
+- **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
+  `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
+  (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the
+  worker with it (`workers/python/tests/optiland`, none skipped there), and each test skips with a reason
+  (`OPTILAND_UNAVAILABLE`) without it. Hermetic tests of the optiland worker use the fake package
+  `test/fixtures/fake-optiland`, copied to a temporary directory (`fakeOptilandRoot`): in place it lies inside this
+  repository, whose commit is not the fake's.
+- **`optiland` is a built-in engine in a worker** (`src/engines/optiland/definition.ts`): the stdio definition is
+  built from `engines.optiland.python` and `cacheDir` and nothing else is configured. Without an interpreter it is
+  unavailable (`not-configured`, `spawn-failed`, `hello-failed`), with a message that says what to set, and every
+  other engine carries on. Its `hello` may take three minutes (`OPTILAND_TIMEOUTS`); a built-in worker states its
+  waits there, never by widening `DEFAULT_ENGINE_TIMEOUTS`.
+- **Never start the optiland interpreter without the worker's environment** (`optilandWorkerEnvironment`; in a
+  test `optilandPython` of `test/integration/optiland/support.ts`): `NUMBA_CACHE_DIR`, `MPLCONFIGDIR`,
+  `PYTHONPYCACHEPREFIX` under `.cache`, `PYTHONDONTWRITEBYTECODE=1`, `MPLBACKEND=Agg`. A bare `import optiland`
+  already writes into the checkout: numba probes each `__pycache__` it would cache in. The worker applies the same
+  itself (`lvrtc_optiland/hygiene.py`) before it imports optiland, and reserves file descriptor 1 for replies
+  first (`protect_stdout`). A cache that would lie inside the optiland checkout or its virtual environment is
+  refused before a directory is made or numba is imported (`prepare`), never afterwards. In `zsh` an unquoted
+  `$VARS` holding several assignments is one word: write them out. The JIT stays on, and the backend is numpy in
+  float64: never switch either.
+- **The fingerprint of `optiland` is optiland's, the adapter revision the worker's** (`lvrtc_optiland/identity.py`):
+  commit and dirty flag of the checkout, a hash of the package's `.py` files, the versions of Python, numpy, scipy
+  and numba, the JIT flag; never the distribution's version, which ends in an install date. The adapter revision
+  is a hash of the `.py` files of `lvrtc_optiland` and the kit. The result store keys by both.
+- **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
+  Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
+  engine that cannot describe itself.
 - **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
   suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
@@ -89,7 +119,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only** (`workers/python/lvrtc_worker_kit`, Python `>=3.10`, type hints, 120
   columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
-  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`.
+  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
+  standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
 - **`validate.py` is a port of `src/contract/validate.ts`, and `ndarray.py` of the array codec.** Change both
   sides together; the fixture corpus in `contract/fixtures` holds them to the same answers. Workers echo ids and
   never recompute a hash.

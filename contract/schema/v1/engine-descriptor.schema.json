@@ -25,7 +25,7 @@
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
         },
         "adapterRevision": {
-          "description": "A content hash of the comparator's own code that the engine's answers pass through, for an engine that is part of the comparator. Results are keyed by it beside the fingerprint.",
+          "description": "A content hash of the comparator's own code that the engine's answers pass through, for an engine that is part of the comparator or whose worker is. Results are keyed by it beside the fingerprint.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
         },
         "details": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/scalarMap" }
