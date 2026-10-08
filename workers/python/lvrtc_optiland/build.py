@@ -247,7 +247,12 @@ def build_optic(case: dict[str, Any], line: int, api: OptilandApi | None = None)
     without an aperture. The system's aperture is the stop's diameter (``float_by_stop_size``), twice the case's
     stop radius. Each surface's nominal semi-diameter is set as optiland's own semi-aperture of the surface, which
     clips nothing: the heights the sag is asked at are fractions of it. The line's wavelength is the only one, and
-    the field is the axis.
+    the field is the axis: no first-order value the worker asks of optiland reads a field.
+
+    The image surface states the medium of the image space, which is the medium after the last surface of the
+    case: optiland takes the index of the image space from the image surface (``surfaces.n(...)[-1]``), and its
+    paraxial rays are refracted there, into whatever it states. Left at optiland's default, air, an image space
+    of another index would end in an interface that the case does not have, and its focal length would be another.
 
     A call of optiland that it has deprecated is an error here, not a warning in the log.
     """
@@ -264,7 +269,8 @@ def build_optic(case: dict[str, Any], line: int, api: OptilandApi | None = None)
         for number, surface in enumerate(surfaces):
             keywords = surface_keywords(api, surface, indices[number], number == system["stopIndex"])
             optic.surfaces.add(index=number + 1, **keywords)
-        optic.surfaces.add(index=len(surfaces) + 1, z=float(conditions["imageZ"]))
+        image_space = api.IdealMaterial(n=float(indices[-1]))
+        optic.surfaces.add(index=len(surfaces) + 1, z=float(conditions["imageZ"]), material=image_space)
         for number, surface in enumerate(surfaces):
             optic.surfaces[number + 1].set_semi_aperture(r_max=float(surface["aperture"]["nominalSemiDiameter"]))
         optic.set_aperture("float_by_stop_size", 2.0 * float(conditions["stopSemiDiameter"]))
@@ -401,8 +407,9 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     and on the paraxial axis alike), the class of its geometry, its radius, conic constant and terms, the Newton
     settings of an asphere, its aperture's class and two radii, its semi-aperture, whether it is the stop, that it
     refracts by optiland's ordinary model (no mirror, no thin lens, no coating), and the index after it; then the
-    system's aperture and the wavelength. So a keyword the factory dropped, a coefficient list one place off and a
-    diameter taken for a radius are each found, and named.
+    index of the image space, which optiland reads from the image surface; then the system's aperture and the
+    wavelength. So a keyword the factory dropped, a coefficient list one place off and a diameter taken for a
+    radius are each found, and named.
 
     Then the surface optiland evaluates is held to the surface of the case: its sag at ``SAG_PROBE_FRACTIONS`` of
     the nominal semi-diameter against ``contract_sag``, within ``SAG_PROBE_TOLERANCE`` on the scale of the sag's
@@ -477,6 +484,7 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     hold("the image surface", "its position on the paraxial axis", image.axial, float(conditions["imageZ"]))
     hold("the image surface", "the class of its geometry", image.geometry, "Plane")
     hold("the image surface", "aperture", image.aperture, None)
+    hold("the image surface", "the index of the image space", image.index_after, float(indices[-1]))
 
     hold("the system", "the index of the stop surface", int(optic.surfaces.stop_index) - 1, system["stopIndex"])
     hold("the system", "the type of its aperture", optic.aperture.ap_type, "float_by_stop_size")

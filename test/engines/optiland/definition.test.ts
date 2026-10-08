@@ -33,6 +33,7 @@ import {
 } from "../../../src/engines/optiland/definition.ts";
 import type { InterpreterProbe } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
+import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
@@ -320,10 +321,14 @@ test("with an interpreter and no other configuration the engine answers hello as
     scipy: "0.2.fake",
     sourceFiles: 3,
   });
-  // Every feature flag of the contract, without a limit, and the built-system echo at the comparator's version.
+  // Every feature flag of the contract, without a limit; the built-system echo and the first-order data, each at
+  // the version of its definition that the comparator holds an answer to.
   assert.deepEqual(capabilities, {
     features: { supported: [...FEATURE_FLAGS], limits: {} },
-    quantities: { "system.describe": { version: systemDescribeQuantity.version } },
+    quantities: {
+      "system.describe": { version: systemDescribeQuantity.version },
+      "paraxial.first-order": { version: paraxialFirstOrderQuantity.version },
+    },
     deterministic: true,
     maxConcurrency: 1,
   });
@@ -525,14 +530,20 @@ test(
   { skip },
   async (t) => {
     const fake = fakeOptilandRoot(t);
-    const rootDir = suiteRoot(t, ["selftest", "r0", "r1"], fake);
-    const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest,r1"]);
-    assert.equal(ended.err, "");
+    // The rungs of traced rays are not the worker's yet; the first-order data, rung r1, is since Stage 2.3.
+    const rootDir = suiteRoot(t, ["selftest", "r0", "r1", "r2"], fake);
+    const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest,r2"]);
+    // A case file states no image height, so its fields given as fractions have no rays: said, and no failure.
+    const said = ended.err.split("\n").filter((line) => line !== "");
+    assert.deepEqual(
+      said.filter((line) => !line.includes("a field has no rays: field-fraction-unresolved")),
+      [],
+    );
     assert.equal(ended.code, EXIT_OK, ended.out);
     const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
     assert.deepEqual(rows, [
       "singlet  selftest  optiland  unsupported  negotiated   the engine does not offer selftest.echo",
-      "singlet  r1        optiland  unsupported  negotiated   the engine does not offer paraxial.first-order",
+      "singlet  r2        optiland  unsupported  negotiated   the engine does not offer rays.trace",
     ]);
     assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));

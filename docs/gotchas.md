@@ -93,6 +93,23 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `src/engines/lv/firstOrder.ts`).
 - **Class.** convention.
 
+### The paraxial kernel is handed radii, and no lens has a term below A3
+
+- **Where.** `traceParaxialSurfaces2` takes rows of radius, gap and index; `ASPHERIC_COEFFICIENT_SCHEMA` in
+  `src/types/asphericSchema.ts` lists the conic constant, the even coefficients `A4` to `A20` and the odd ones
+  `A3` to `A19`, and LensVisualizer's validation of a lens file knows no other key.
+- **Effect.** None today. The contract allows a term of any power from 1, counts twice the coefficient of a term
+  of power 2 as curvature at the vertex, and has no first-order data for a term of power 1. A lens with `A2` would
+  be exported with the term (the exporter reads the power from the coefficient's name), LensVisualizer's sag would
+  evaluate it, and its kernel would give the focal length of the lens without it.
+- **Handled.** `lv` answers `paraxial.first-order` of a case with a term of power 1 or 2 as `unsupported`, with the
+  item `surface.asphere.linear-term` or `surface.asphere.quadratic-term`, before the kernel is asked
+  (`termItems`, `src/engines/lv/firstOrder.ts`); a test gives the fake tree both coefficients. optiland's own
+  paraxial tracer reads the radius alone too, and its engine answers the same way (below); `ref` answers a term of
+  power 2 by the contract's rule. The sweeps over the catalog would say so first: they hold every exported lens to
+  an answer from `lv` and from optiland.
+- **Class.** method.
+
 ### Afocal is an absolute test
 
 - **Where.** `buildCardinalElementsFromMatrix2` returns nothing when the matrix element `C`, the system's power in
@@ -537,6 +554,66 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   distance still fails. An integration test pins all of it (`test/integration/lv/engine.test.ts`). Every value of every
   lens that is neither the position nor the radius of a pupil is within 1.1e-11 mm; every other pupil position is within
   1.9e-11 mm, and every other pupil radius within 4.2e-12 mm.
+- **A third engine** says the same. optiland's own paraxial tracer places that exit pupil 1.04e-9 mm from where
+  `ref` does at the d line and sizes it 4.6e-10 mm apart, as `lv` does (1.09e-9 mm and 4.8e-10 mm): on the scale of
+  the pupil's distance 1.4e-10 and 6.0e-11, the largest of the 1173 reference-line cases of the catalog, and a pass
+  (measured at `5278694b`, in `test/integration/optiland/r1.test.ts`). In exact rational arithmetic on the vertices,
+  radii and indices of that case, optiland puts the pupil 3.8e-10 mm short of where it is, `lv` 4.3e-10 mm short
+  and `ref` 6.6e-10 mm beyond, and its radius 1.7e-10 mm, 1.9e-10 mm and 2.9e-10 mm off in the same directions:
+  1e-13 of the distance each, three roundings of one quotient. The largest difference of the catalog in a value
+  that is no pupil's is of the same kind: the front focal point of `sony-fe-400-800-f63-8-g-oss` at its tele end
+  lies 6.5 m in front of the lens, where optiland is 1.2e-11 mm from the exact point, `lv` 5.0e-11 mm and `ref`
+  6.0e-11 mm.
+- **Class.** numerical.
+
+### The fraction of its distance a pupil is placed to grows with the distance
+
+- **Where.** The angle a pupil's position divides by is what is left of a sum of terms of the size of the lens's
+  power. Its rounding is of the size of one unit in the last place of those terms however little is left, so the
+  position is known to about 1e-16 times its distance over the focal length, as a fraction of the distance: in
+  millimetres the error grows as the square of the distance.
+- **Effect.** A gate of 1e-12 of the distance holds while the pupil is within some thousands of focal lengths of a
+  simple lens, and beyond that a verdict is a matter of how two roundings fall. Measured on a singlet of 52.87 mm
+  (radii 61.3 and -47.9 mm, 5.1 mm of index 1.5168) with a plane stop a little behind its rear focal plane, which
+  puts the entrance pupil far in front, and the image plane 100 mm behind the stop: `ref` against optiland
+  (`4e893f53`) through `lvrtc run` and `lvrtc compare`, in a sweep outside the tests, and each engine against
+  exact rational arithmetic on the numbers of the case:
+
+  | Stop behind the focal plane | Entrance pupil | optiland from the exact position | `ref` from it | `pupilZ.maxScaled` | R1 |
+  |---|---|---|---|---|---|
+  | 0.1 mm | 28 m away | 2.3e-9 mm | 1.0e-9 mm | 4.3e-11 | `PASS` |
+  | 0.01 mm | 280 m | 1.6e-7 mm | 7.6e-8 mm | 2.9e-10 | `PASS` |
+  | 0.005 mm | 560 m | 1.7e-6 mm | 2.1e-7 mm | 2.6e-9 | `FAIL` |
+  | 0.003 mm | 930 m | 1.2e-6 mm | 3.3e-7 mm | 9.8e-10 | `PASS` |
+  | 0.002 mm | 1.4 km | 6.1e-6 mm | 2.1e-6 mm | 5.9e-9 | `FAIL` |
+  | 0.001 mm | 2.8 km | 2.0e-5 mm | 8.0e-7 mm | 7.3e-9 | `FAIL` |
+
+  The mirror image of the system, with the stop in front of the front focal plane and the exit pupil far behind,
+  gives the same picture (4.4e-11, 4.4e-10, then 1.2e-9, 2.9e-9, 3.7e-10 and 5.1e-9; there `ref` is the farther
+  from the exact pupil in two rows of six). Neither engine is wrong in any row: each is off by a rounding of the
+  size of one unit in the last place of the terms the angle is left of, at most 7e-12 of the distance. Which way
+  optiland's falls depends on more than the lens: it traces backwards in coordinates counted from the image
+  surface, and with the image plane 25 mm behind the stop it has the pupil of the last row 1.1e-5 mm on the other
+  side of the exact one. The radius of the pupil, on the same scale, stays inside the gate in every row (at most
+  1.4e-10).
+- **Handled.** Nothing, and no gate is widened for it: the nearest lens of the catalog has its pupil 7.7 m to 20 m
+  away, 270 of its focal lengths at most, where the three engines are within 1.4e-10 on that scale ("A pupil that
+  is metres away", above). A lens with a pupil some hundreds of metres away would have to be classified here
+  before its R1 verdict means anything.
+- **Class.** numerical.
+
+### A pupil exactly at infinity is an infinity only where a sum cancels to the bit
+
+- **Where.** The position of a pupil divides by the angle of a ray from the stop, and in a telecentric system
+  that angle is the difference of two equal numbers. An engine has an infinity there only when its own arithmetic
+  comes out at exactly 0, and the sign of the infinity is the sign of that zero and of the height above it.
+- **Effect.** The same infinity in two answers is no difference, in position and in radius; an infinity against
+  1e17 mm, or against the other infinity, is an infinite one and fails R1. On a plano-convex lens of 100 mm with
+  its stop in its front focal plane (numbers that are doubles: `1 - 0.01 x 100`) `ref` and optiland both put the
+  exit pupil at minus infinity with an infinite radius, and the pair passes. With numbers that are not doubles
+  either engine may be left with a rounding where the other has a zero.
+- **Handled.** Nothing: no gate is written for it. No lens of the catalog is telecentric to the bit; the nearest
+  has its exit pupil 7.7 m to 20 m away (above), where every engine has a number.
 - **Class.** numerical.
 
 ## optiland
@@ -545,7 +622,9 @@ Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8). The 
 with LensVisualizer at `b7deb221` (engine closure `46b028bc`, 151 files), over the suites and over every case of
 the catalog: 2267 cases of 1173 systems, the primes once and the zooms at both ends, each on its reference line
 and on the photopic lines, 53 378 surfaces in all. LensVisualizer moved to `1bf669ee` (closure `66027121`) while
-the stage was written; the suites were run again there, with every figure the same.
+the stage was written; the suites were run again there, with every figure the same. The figures of rung R1 were
+taken with LensVisualizer at `5278694b` (engine closure `78215d72`, 151 files), over the suites, the 22 focus
+stations LensVisualizer certifies there, and the 1173 cases of the catalog on the reference line.
 
 ### Importing optiland writes into its own checkout
 
@@ -780,12 +859,119 @@ the stage was written; the suites were run again there, with every figure the sa
   power 2. A singlet whose front surface has the term 1e-3 r^2 on a radius of 50 mm has the focal length 48.29 mm
   by the contract and 50.68 mm by `optic.paraxial.f2()`, which is that of the lens without the term. A term of
   power 1 has no first-order data at all, in any engine (`surface.asphere.linear-term`).
-- **Handled.** Decided for the builder in Stage 2.2: it builds terms of power 1 and 2, as `odd_asphere` and as the
-  first entry of `even_asphere`, reads them back, and `system.describe` echoes them; their sag is the contract's
-  to rounding, held by the probe and by a test in 60-digit arithmetic. What optiland cannot answer for such a case
-  is its own first-order data: `paraxial.first-order` of the engine (Stage 2.3) must be `unsupported` for a case
-  with a term of power 2 that is not 0, as it is for a term of power 1 in every engine. No lens of LensVisualizer
-  has either: its lowest coefficient is A3.
+- **Handled.** The builder builds terms of power 1 and 2, as `odd_asphere` and as the first entry of
+  `even_asphere`, reads them back, and `system.describe` echoes them; their sag is the contract's to rounding, held
+  by the probe and by a test in 60-digit arithmetic. What optiland cannot answer for such a case is its own
+  first-order data: the engine answers `paraxial.first-order` as `unsupported`, with the item
+  `surface.asphere.quadratic-term` for a term of power 2 that is not 0 and `surface.asphere.linear-term` for one
+  of power 1, as every engine does for the second (`first_order.term_refusals`). It is decided from the case,
+  before anything is built, and is the engine's own answer: no flag of a descriptor says it, so the engine is
+  asked. `ref` answers such a case by the contract's rule, so the pair is `UNSUPPORTED`, which fails nothing. A
+  term whose coefficient is 0 is no term, here as in the contract. `lv`, whose kernel reads the radius alone too,
+  answers the same way ("The paraxial kernel is handed radii", above); no lens of LensVisualizer has either term,
+  its lowest coefficient being A3.
+- **Class.** method.
+
+### optiland measures the front of a lens from its first surface and the rear from the image surface
+
+- **Where.** `optiland/paraxial.py`: `F1()`, `P1()` and `EPL()` are distances from the surface of index 1, the
+  first of the lens; `F2()`, `P2()` and `XPL()` are distances from the image surface. The row "Back Focal Length"
+  of optiland's own prescription report is `F2()`: how far the focal point lies from the image plane, not from the
+  lens. `f1()` is the front focal length, negative for a positive lens.
+- **Effect.** The contract states every position as a z from the first vertex, and the back focus from the last
+  vertex of the lens. A value taken as it comes would be right for the three object-side positions of a lens whose
+  first vertex is at 0, and wrong by the image plane's z for the three image-side ones.
+- **Handled.** The worker adds the first vertex to the first three and the image plane to the last three, both
+  read from the optic (`surfaces.positions`, which `verify_optic` holds to the case), and takes the back focus as
+  its rear focal point minus the vertex of the case's `lastLensSurfaceIndex`, the one number of the case an optic
+  cannot hold: optiland knows no rear plate. Each reference is checked on lenses whose closed forms are written
+  out in the test (`test_first_order.py`): with the image plane at its design position, behind it, inside the
+  lens, in front of the lens and a metre away, the rear focal point is the same to rounding.
+- **Class.** convention.
+
+### optiland takes the image space from the image surface, and refracts its paraxial rays there
+
+- **Where.** `ParaxialRayTracer.trace_generic` refracts at every surface behind the object, the image surface
+  among them, from the medium before it into the one it states; `surfaces.n(wavelength)[-1]`, the index after the
+  image surface, is what optiland's wavefront code takes for the index of the image space. A surface added without
+  a material is in air.
+- **Effect.** A case whose last surface is followed by another medium than air, an immersed sensor, would end in
+  an interface at the image plane that it does not have. The interface is flat and has no power, but the slope
+  behind it is the one every image-side accessor divides by: one surface of radius 50 mm into an index of 1.5 has
+  the focal length 150 mm by the contract (`rearFocalZ - rearPrincipalZ`, which is n'/P) and 100 mm by `f2()` of
+  an optic whose image surface is in air, with the rear focal point 83.3 mm behind the image plane for 125 mm.
+- **Handled.** The builder gives the image surface the medium after the last surface of the case, at the line,
+  and `verify_optic` reads it back ("the index of the image space"); a test leaves it in air and finds both the
+  message and the 100 mm. Every lens of LensVisualizer ends in air, where the two are the same optic.
+- **Class.** convention.
+
+### A pupil diameter of optiland has a sign
+
+- **Where.** `FloatByStopAperture.compute_epd` divides the stop diameter by the height that a paraxial ray of
+  height 1 has at the stop, and `Paraxial.XPD` is twice the height of the marginal ray in the plane of the exit
+  pupil. Either height is negative where the stop is imaged upside down: a stop behind the focus of the lens in
+  front of it, or one that the lens behind it images through its own focus. `FNO()`, `f2() / EPD()`, has the same
+  sign.
+- **Effect.** The contract's radius of a pupil is a size, never below 0. A stop 150 mm behind a lens of 50.7 mm
+  has `EPD()` = -2.097 mm for a stop diameter of 4 mm.
+- **Handled.** The worker halves the magnitude. optiland's f-number is recorded as optiland gives it, sign and
+  all (`optilandFNumber`), and nothing judges it.
+- **Class.** convention.
+
+### The stop has two radii in optiland: the system's aperture and the stop surface's clip
+
+- **Where.** With `set_aperture("float_by_stop_size", d)` the paraxial entrance pupil is `d` over the paraxial
+  ray height at the stop (`optiland/aperture/float_by_stop.py`), and the marginal ray, the exit pupil and the
+  f-number follow from it. optiland's ray aiming takes the stop's radius from the stop surface's own aperture,
+  `aperture.r_max`: the clip limit, which for a case from LensVisualizer is the stop radius plus 1e-9 mm.
+- **Effect.** The contract's pupils are images of `conditions.stopSemiDiameter`, never of a clip limit.
+- **Handled.** The builder sets the system's aperture to twice `conditions.stopSemiDiameter` and the stop
+  surface's aperture to the case's clip limit, each read back, and the worker asks `EPD()` and `XPD()`, which read
+  the first. A test gives the stop surface a clip limit of 2.75 mm under a stop radius of 2 mm and finds the
+  pupils of 2 mm. The rays optiland aims itself, which come with its own analyses in Phase 3, fill the second.
+- **Class.** convention.
+
+### An afocal system has an infinite focal length in optiland, or one of 1e17 mm
+
+- **Where.** `Paraxial.f2` is the height of a parallel ray over the slope it leaves with. optiland has no test
+  for a slope that is 0, or 0 to rounding (`f2_range` gives an infinity for a slope of exactly 0).
+- **Effect.** A telescope of two surfaces whose powers 0.01 and 0.02 cancel to the bit has `f2()` = -inf, and
+  every focal and principal point an infinity. The same construction with a gap that is no double is left with a
+  power of -2.3e-18 per mm, and `f2()` is -2.9e17 mm: a number, with focal points to match.
+- **Handled.** The worker calls a system afocal where `f2()` is no finite number, or where the power it stands
+  for is at most 1e-12 of the sum of the magnitudes of the surfaces' powers, each read from the optic as optiland's
+  own tracer reads it (`first_order.surface_power_scale`): the measure the reference engine uses, on optiland's
+  numbers. It answers `unsupported` with the item `system.afocal`, naming the lines. Each engine still answers by
+  a test of its own ("Afocal is an absolute test", above), and a pair of which one is unsupported fails nothing.
+- **Class.** convention.
+
+### With the entrance pupil at infinity optiland has no exit pupil diameter
+
+- **Where.** `Paraxial.XPD` follows the marginal ray to the exit pupil, and `marginal_ray` launches it at the rim
+  of the entrance pupil: at a height of `EPD() / 2` for an object at infinity, at an angle of `EPD() / (2 z)` for
+  a finite one. With the stop in the rear focal plane of what stands in front of it, `EPL()` and `EPD()` are
+  infinities, and the ray is `inf x 0`.
+- **Effect.** `XPD()` is a NaN, for a system whose exit pupil is as finite as any: on a plano-convex lens with a
+  plane stop in its rear focal plane the exit pupil is the stop itself. An exit pupil at infinity, the commoner
+  telecentric lens, has no such trouble: `XPL()` and `XPD()` are the infinities their divisions give.
+- **Short of infinity the same ray costs digits.** The exit pupil's radius comes out of a marginal ray that starts
+  as high as the entrance pupil is wide, so optiland knows it to about 1e-16 of the entrance pupil's radius and not
+  of its own. On the singlet of "The fraction of its distance a pupil is placed to grows with the distance"
+  (above), whose stop of radius 1.3 mm is its exit pupil, optiland's exit pupil radius is 4.6e-14 mm off with the
+  entrance pupil 0.69 m in radius, 2.9e-12 mm off at 69 m, 7.5e-10 mm off at 6.9 km and 3.0e-9 mm off at 69 km,
+  where the reference engine, which sizes the exit pupil from the surfaces behind the stop alone, has 1.3 mm to
+  the bit. That pupil lies centimetres from the image plane and is judged plainly, at 1e-9 mm: R1 would fail
+  there for an entrance pupil some tens of kilometres wide, and the position of such a pupil has failed long
+  before.
+- **The two infinities are not always found together.** `EPL()` divides by an angle of a ray traced backwards from
+  the stop and `EPD()` by a height of one traced forwards to it: the same quantity of the lens, rounded twice. On
+  that singlet with the stop at the double nearest its rear focal point, `EPL()` is an infinity and `EPD()` is
+  1.2e16 mm.
+- **Handled.** A NaN is never a value. The worker answers `unsupported` with the item
+  `system.telecentric.object-space` where optiland's `EPL()` or `EPD()` is an infinity, either of them, and the
+  reference engine answers the case in full. Any other NaN, a focal length that is one among them, and an infinity
+  that is no pupil's, is the engine's failure on that request, not an answer. No lens of the catalog has its
+  entrance pupil at infinity.
 - **Class.** method.
 
 ### What the builder refuses
@@ -798,5 +984,6 @@ the stage was written; the suites were run again there, with every figure the sa
 - **Handled.** What it refuses is an optic that is not the case. Whatever of the build comes back from optiland
   as another value than the case states is an error of the code `build-mismatch`, with the surface, the field and
   both values, and nothing is described; a call of optiland that optiland has deprecated is an error too, not a
-  warning in a log. Every other quantity than `system.describe` is `unsupported` until its stage.
+  warning in a log. Every other quantity than `system.describe` and `paraxial.first-order` is `unsupported` until
+  its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order data of every one.
 - **Class.** none of the ladder's.

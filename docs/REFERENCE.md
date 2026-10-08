@@ -196,7 +196,11 @@ the kernels of the comparator they run on. It declares every feature of a case, 
   on every lens but one: `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away,
   and there the two differ by up to 3.0e-9 mm, which is 2e-13 of the distance and passes on that scale.
 - **No first-order data.** An afocal system and a surface with a term of power 1 are answered `unsupported`, with
-  the item `system.afocal` or `surface.asphere.linear-term`.
+  the item `system.afocal` or `surface.asphere.linear-term`. A term of power 2 is curvature at the vertex, which
+  `ref` counts; an engine whose own paraxial model reads the radius alone, as LensVisualizer's kernel and
+  optiland's tracer do, answers `unsupported` with the item `surface.asphere.quadratic-term`, never with the focal
+  length of the lens without the term. optiland also has no first-order data of a system whose entrance pupil is
+  at infinity ([below](#the-engine-optiland)).
 
 The definitions, member by member, are in [contract/CONTRACT.md](../contract/CONTRACT.md#systemdescribe).
 
@@ -232,6 +236,8 @@ retires the same answers, and the fingerprint stays LensVisualizer's.
   assembled as LensVisualizer assembles it: its own cardinal-point construction on the kernel's system matrix, and
   the pupils as the kernel's images of the stop. LensVisualizer's own first-order module reads the authored indices
   only; at such a line the engine's cardinal points are that module's, bit for bit, on all 868 lenses that export.
+  A case with a term of power 1 or 2 would be answered `unsupported`: the kernel is handed radii alone. No lens
+  has one, since LensVisualizer's coefficients start at `A3`.
 - **Recorded, never judged**: LensVisualizer's stored pupil constants, as `lvStoredEntrancePupilZ`,
   `lvStoredExitPupilZ`, `lvStoredExitPupilSemiDiameter`, `lvNominalEntrancePupilSemiDiameter` and
   `lvNominalFNumber`, at infinity focus and at a line of authored indices only. They are found with real rays or
@@ -573,15 +579,15 @@ The comparator supplies the rest (`src/engines/optiland/definition.ts`): the com
 `<python> -m lvrtc_optiland`, `PYTHONPATH` set to `workers/python` of this repository, so that nothing is installed,
 and where the worker's caches go.
 
-**It answers `system.describe`, which is rung R0.** A run on it is answered `unsupported` for every other rung;
-those arrive with the stages that follow.
+**It answers `system.describe` and `paraxial.first-order`, which are rungs R0 and R1.** A run on it is answered
+`unsupported` for every other rung; those arrive with the stages that follow.
 
 ```bash
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1
 ```
 
-Builds every case of the suite in optiland and asks all three engines for the system they built; `lvrtc compare
-benchmark` then judges each pair of engines.
+Builds every case of the suite in optiland and asks all three engines for the system they built and for its
+first-order data; `lvrtc compare benchmark` then judges each pair of engines.
 
 **The builder** (`workers/python/lvrtc_optiland/build.py`) makes one optiland `Optic` for each spectral line of a
 case, because optiland's constant-index material is the same at every wavelength and its first-order data is that
@@ -599,6 +605,7 @@ of its primary wavelength. It uses only what optiland has not deprecated; a depr
 | `aperture.nominalSemiDiameter` | the surface's `semi_aperture`, which clips nothing: the heights of the sag are fractions of it |
 | `stopIndex`, `conditions.stopSemiDiameter` | `is_stop=True`, and `set_aperture("float_by_stop_size", 2 x radius)` |
 | `conditions.imageZ` | the image surface at that `z`, flat, without an aperture |
+| the index after the last surface, at the line | the medium the image surface states: optiland takes the image space from there |
 | the line | the optic's only wavelength, in µm, and primary |
 
 **Nothing is answered about an optic that is not the case.** After building, the worker reads every one of those
@@ -607,7 +614,8 @@ frame and on optiland's paraxial axis, the class of the geometry, its radius, co
 settings of an asphere, the class of the aperture and its two radii, the semi-aperture, the stop flag, that the
 surface refracts by optiland's ordinary model (a plane that optiland was given as a thin lens is a `Plane` too, and
 gave a system of the every-feature case a focal length of 19 mm for 27 mm), without a coating, the index, the
-object and image planes, the stop diameter and the wavelength. Then it holds the sag optiland evaluates, at
+object and image planes, the index of the image space, the stop diameter and the wavelength. Then it holds the sag
+optiland evaluates, at
 four heights of each surface, to the contract's sag of the case's surface within 1e-9 on the scale of the sag's
 rounding: the one check that does not depend on how a coefficient list is laid out. What differs is a result of
 status `error` with the code `build-mismatch`, which names the surface, the field and both values:
@@ -630,12 +638,44 @@ semi-aperture, with -0 written as 0 and no sag as a NaN.
 
 **Features.** The engine declares every feature flag of the contract and no limit: an annular aperture, several
 lines, a finite object, even and odd aspheres, a flat base and a conic constant. Each has a test on the real
-optiland. It does not yet answer first-order data: optiland's own does not see a term of power 2
-([docs/gotchas.md](gotchas.md#optilands-first-order-data-does-not-see-a-term-of-power-2)), which Stage 2.3 has to
-refuse.
+optiland.
 
-Measured at optiland `4e893f53` and LensVisualizer `b7deb221` (engine closure `46b028bc`), with the command above
-and `lvrtc compare`, and again at `1bf669ee` (closure `66027121`) with every figure the same:
+**`paraxial.first-order` is optiland's own first-order data** (`workers/python/lvrtc_optiland/first_order.py`):
+every number is what `optic.paraxial` of a line's optic gives, and the worker changes only what it is measured
+from. optiland states its object-space points from its first surface and its image-space points from the image
+surface, so the worker adds the first vertex or the image plane, both read from the optic.
+
+| Of the answer | Is, in optiland |
+|---|---|
+| `efl` | `f2()` |
+| `frontFocalZ`, `frontPrincipalZ`, `entrancePupilZ` | `F1()`, `P1()`, `EPL()`, each plus the first vertex |
+| `rearFocalZ`, `rearPrincipalZ`, `exitPupilZ` | `F2()`, `P2()`, `XPL()`, each plus the image plane, wherever the case put it |
+| `backFocus` | that rear focal point minus the vertex of the case's `lastLensSurfaceIndex`: optiland reports its back focal point from the image surface and knows no rear plate |
+| `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | half of `EPD()` and of `XPD()`, without the sign, which is negative where the stop is imaged upside down |
+| `recorded.optilandFNumber` | `FNO()`: `f2() / EPD()`, never judged |
+| `recorded.magnification`, for a finite object | `magnification()`, never judged |
+
+- **The pupils are images of the stop radius of the case.** `EPD()` divides the stop diameter of the system's
+  aperture, which the builder set to twice `conditions.stopSemiDiameter`; optiland's ray aiming takes the stop's
+  radius from the stop surface's own aperture, the clip limit, which the first-order data never reads.
+- **The image space is the image surface's.** optiland takes the index of the image space from the image surface
+  and refracts its paraxial rays there, so the builder gives that surface the medium after the last surface of the
+  case and `verify_optic` holds it there. Left in air, a surface into glass of index 1.5 had a focal length of
+  100 mm for 150 mm.
+- **What optiland has no answer for is `unsupported`**, each with an item of code `feature`: a term of power 1
+  (`surface.asphere.linear-term`, as in every engine) and a term of power 2 (`surface.asphere.quadratic-term`),
+  both decided from the case before anything is built; an afocal system (`system.afocal`: `f2()` is an infinity,
+  or stands for a power of at most 1e-12 of the surfaces' own, since optiland has no test of its own); and an
+  entrance pupil at infinity (`system.telecentric.object-space`: optiland's `XPD()` is a NaN there). An exit pupil
+  at infinity is answered, with the infinities optiland's own division gives. No lens of LensVisualizer is any of
+  these.
+- **Nothing is written back into the optic.** The worker calls no `update_paraxial`, which would overwrite every
+  semi-aperture; an optic passes the verification again after its first-order data was read. The data of one line
+  takes some fifteen of optiland's paraxial traces: 8 ms for a lens of 11 surfaces.
+
+Rung R0, measured at optiland `4e893f53` and LensVisualizer `b7deb221` (engine closure `46b028bc`), with the
+command above on rung `r0` and `lvrtc compare`, and again at `1bf669ee` (closure `66027121`) with every figure the
+same:
 
 | Suite | R0, pairs | optiland against `ref`: largest sag difference | optiland against `lv` |
 |---|---|---|---|
@@ -650,6 +690,35 @@ and powers up to 20), every case passes R0 against `ref`: the largest sag differ
 (`tamron-35-150mm-f2-28-di-iii-vxd-a058`, wide end, surface 28) and 1.3e-10 mm in plain terms, on the surface of
 `russar-22-70f8` that ends just short of a hemisphere. A case takes optiland 12 ms: building its optics, reading
 them back and describing them.
+
+Rung R1, measured at optiland `4e893f53` and LensVisualizer `5278694b` (engine closure `78215d72`, 151 files),
+with the command above and `lvrtc compare`. Each figure is the largest of its kind, in mm; the position and the
+radius of a pupil are given plain and, where it differs, on the scale of the pupil's distance, which is what R1
+judges:
+
+| Suite | R1, pairs | optiland against `ref` | optiland against `lv` |
+|---|---|---|---|
+| `benchmark`, 24 runs | 120 `PASS` (72 pairs of two engines) | 1.8e-12, the front focal point of `sony-fe-400mm-f28-gm-oss-photopic` at 555 nm; of a pupil's position 1.0e-12, of its radius 5.7e-14 | 1.8e-12, the same point at 470 nm; of a pupil's position 8.0e-13, of its radius 5.7e-14 |
+| `features`, 18 runs | 90 `PASS` (54 pairs of two engines) | 5.0e-14, the front principal point of `odd-asphere-photopic`; of a pupil's position 9.9e-14, of its radius 9.8e-15 | 6.0e-14, the front focal point of `odd-asphere-photopic`; of a pupil's position 1.1e-13, of its radius 1.1e-14 |
+| the contract's three cases and 16 systems made for the rung, against `ref` | 38 `PASS` (19 pairs of two engines) | 5.3e-14, the front focal point of `double-gauss`; of a pupil's position 2.8e-14, of its radius 1.8e-15 | no case of LensVisualizer |
+
+On the suites the largest scaled figure of a pupil is its plain one: no pupil that sets it lies a metre from its
+image plane. At the 22 focus stations LensVisualizer certifies (14 lenses, from 1:40 to 1:1) all three engines pass
+R0 and R1 pair by pair: the pairs of optiland are within 3.4e-13 mm in the cardinal points, 1.9e-13 mm in a
+pupil's position and 4.7e-14 mm in its radius, and the three engines record one magnification to 1e-12 of itself.
+Over the whole catalog on the reference line, in a test (900 lenses, 297 of them zooms: 1173 cases, each prime
+that exports once and each zoom at both ends), optiland builds every case, has first-order data of every one, and
+passes R0 and R1 against `ref` on every one: the largest difference of a value that is no pupil's is 4.7e-11 mm
+(the front focal point of `sony-fe-400-800-f63-8-g-oss` at its tele end); of a pupil's position 1.0e-9 mm, which
+is 1.4e-10 on the scale of its distance, and of a pupil's radius 4.6e-10 mm, 6.0e-11 on that scale, both the exit
+pupil of `viltrox-af-75mm-f12-pro`, which lies 7.7 m away ([docs/gotchas.md](gotchas.md#any-two-engines)).
+
+What optiland's own values say of LensVisualizer's stored constants is information, never judged: on the 12
+benchmark configurations optiland's paraxial pupils lie up to 2.5e-5 mm (entrance) and 8.2e-6 mm (exit) from the
+stored positions, its entrance pupil is up to 5.1 % wider than the nominal one (`nikon-z-135f18-plena`: 37.58 mm
+against 35.76 mm), its exit pupil up to 3.2 % wider than the stored one, and its paraxial f-number is up to 4.9 %
+below the nominal one (1.76 against 1.85 on that lens): the figures `lv`'s own paraxial kernel gave
+([docs/gotchas.md](gotchas.md#the-stored-pupil-constants-are-not-paraxial)).
 
 **Nothing is written into the optiland checkout or its environment.** Importing optiland imports numba,
 matplotlib and vtk, each of which writes somewhere unless told where, so the worker's environment says where,
@@ -712,13 +781,16 @@ npm run test:optiland
 
 Runs the tests against the real optiland (`test/integration/optiland`), with the interpreter of the configuration:
 the Python tests of the worker (`workers/python/tests/optiland`, none skipped: the builder on every shape and
-mapping, and the mistakes it must catch), the conformance kit, a run in which R0 is answered and every other rung
-`unsupported`, `lvrtc doctor`, and a recursive snapshot of the optiland checkout and its environment (path, size
-and modification time of every file and directory) taken before the first test and after a cold start on an empty
-cache directory, with the JIT compiling and the bytecode being written: nothing may differ. `r0.test.ts` runs rung
-R0 through the commands: the contract's cases against `ref`, which needs optiland only, and the benchmark and
-feature suites on `lv`, `ref` and `optiland`, which need LensVisualizer too. Each test skips with the reason when
-optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
+mapping, the mistakes it must catch, and optiland's first-order data held to values derived by hand), the
+conformance kit, a run in which R0 and R1 are answered and every other rung `unsupported`, `lvrtc doctor`, and a
+recursive snapshot of the optiland checkout and its environment (path, size and modification time of every file
+and directory) taken before the first test and after a cold start on an empty cache directory, with the JIT
+compiling and the bytecode being written: nothing may differ. `r0.test.ts` and `r1.test.ts` run rungs R0 and R1
+through the commands: the contract's cases and systems made for the rung against `ref`, which need optiland only,
+and the benchmark and feature suites on `lv`, `ref` and `optiland`, which need LensVisualizer too. `r1.test.ts`
+also asks the three engines in its own process, without ray sets: at every focus station LensVisualizer
+certifies, and optiland against `ref` over every lens of the catalog that exports, a zoom at both ends. Each test
+skips with the reason when optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
 
 ## Workers over stdio
 

@@ -13,7 +13,11 @@ import { finalizeCase } from "../../../src/contract/case.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
-import { PARAXIAL_FIRST_ORDER } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
+import {
+  LINEAR_SAG_TERM,
+  PARAXIAL_FIRST_ORDER,
+  QUADRATIC_SAG_TERM,
+} from "../../../src/contract/quantities/paraxialFirstOrder.ts";
 import type { ParaxialFirstOrderData } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
 import { RAYS_TRACE } from "../../../src/contract/quantities/raysTrace.ts";
 import { SYSTEM_DESCRIBE } from "../../../src/contract/quantities/systemDescribe.ts";
@@ -640,6 +644,74 @@ test("a system LensVisualizer finds afocal is unsupported, with the item system.
     await unsupportedFor({ lines: { kind: "photopic" } }),
     "LensVisualizer finds no finite focal length at lines 0, 1, 2, 3, 4",
   );
+});
+
+test("a term of power 1 or 2, which the paraxial kernel is not handed, is unsupported with its item", async (t) => {
+  // LensVisualizer's aspheric schema starts at A3, and so does the fake's. This copy of the fake has A1 and A2 as
+  // well: its sag evaluates them, the exporter writes them, and its kernel, like LensVisualizer's, is handed the
+  // radius of a surface and nothing else of its shape.
+  const lv = variantOf(freshLv(t), "low-terms", {
+    "src/types/asphericSchema.ts": (text) =>
+      text
+        .replace('{ key: "A4", power: 4, parity: "even" },', '{ key: "A2", power: 2, parity: "even" },\n$&')
+        .replace('{ key: "A3", power: 3, parity: "odd" },', '{ key: "A1", power: 1, parity: "odd" },\n$&'),
+  });
+  const lens = (asphere: string): string[] => [
+    '{ label: "1", R: 40, d: 3, nd: 1.6, sd: 9 }',
+    `{ label: "2A", R: -80, d: 2, nd: 1, sd: 9, asphere: ${asphere} }`,
+    '{ label: "STO", R: 1e15, d: 30, nd: 1, sd: 3 }',
+  ];
+  addLens(lv, "paraboloid-term", lens("{ K: 0, A2: 1e-3, A4: 1e-6 }"));
+  addLens(lv, "cone-term", lens("{ K: 0, A1: 1e-3, A2: 1e-3 }"));
+  addLens(lv, "no-low-term", lens("{ K: 0, A1: 0, A2: 0, A4: 1e-6 }"));
+  const binding = await bind(t, lv);
+  const [engine, ref] = [engineOn(t, binding), refEngine(t)];
+  assert.deepEqual(binding.api.asphericPolynomialTerms.map((term) => term.power).sort(), [1, 2, 3, 4, 5, 6, 8]);
+
+  const answered = async (key: string): Promise<{ items: unknown; r0: string; r1: string }> => {
+    const opticalCase = await exported(binding, key);
+    const result = await ask(engine, opticalCase, PARAXIAL_FIRST_ORDER);
+    assert.deepEqual(validateKind("result", result), []);
+    const items = result.status === "unsupported" ? result.unsupported : result.status;
+    return {
+      items,
+      r0: await verdictOf("r0", engine, ref, opticalCase),
+      r1: await verdictOf("r1", engine, ref, opticalCase),
+    };
+  };
+
+  // A term of power 2 is curvature at the vertex by the contract, which the reference engine counts: it answers,
+  // and lv, whose kernel would give the focal length of the lens without the term, says that it has none.
+  const paraboloid = await answered("paraboloid-term");
+  assert.deepEqual(paraboloid.items, [
+    {
+      code: "feature",
+      item: QUADRATIC_SAG_TERM,
+      message:
+        "surface 1 has a term of power 2: LensVisualizer's paraxial kernel reads the radius of a surface alone, " +
+        "which does not see it",
+    },
+  ]);
+  // The system is described all the same: the term is in LensVisualizer's sag, and in the reference engine's.
+  assert.deepEqual([paraboloid.r0, paraboloid.r1], ["PASS", "UNSUPPORTED: lv is unsupported"]);
+
+  // A term of power 1 has no first-order data in any engine; with both, the linear one is named first.
+  const cone = await answered("cone-term");
+  assert.deepEqual(
+    (cone.items as { code: string; item: string }[]).map(({ code, item }) => [code, item]),
+    [
+      ["feature", LINEAR_SAG_TERM],
+      ["feature", QUADRATIC_SAG_TERM],
+    ],
+  );
+  assert.deepEqual([cone.r0, cone.r1], ["PASS", "UNSUPPORTED: lv is unsupported; ref is unsupported"]);
+  assert.deepEqual(
+    [LINEAR_SAG_TERM, QUADRATIC_SAG_TERM],
+    ["surface.asphere.linear-term", "surface.asphere.quadratic-term"],
+  );
+
+  // A coefficient of 0 is no term: the exporter writes none, and the kernel is asked as for any lens.
+  assert.deepEqual(await answered("no-low-term"), { items: "ok", r0: "PASS", r1: "PASS" });
 });
 
 // ── What it does not answer ──────────────────────────────────────────────────────────────────────────────────────

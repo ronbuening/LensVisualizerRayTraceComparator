@@ -73,7 +73,7 @@ class WorkerTest(TempDirTest):
             descriptor["capabilities"],
             {
                 "features": {"supported": list(SUPPORTED_FEATURES), "limits": {}},
-                "quantities": {"system.describe": {"version": 2}},
+                "quantities": {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}},
                 "deterministic": True,
                 "maxConcurrency": 1,
             },

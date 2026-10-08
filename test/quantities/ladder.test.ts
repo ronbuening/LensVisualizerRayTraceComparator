@@ -9,6 +9,7 @@ import {
   LINEAR_SAG_TERM,
   PARAXIAL_FIRST_ORDER,
   PARAXIAL_FIRST_ORDER_VERSION,
+  QUADRATIC_SAG_TERM,
 } from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import {
   DEFAULT_SAG_FRACTIONS,
@@ -85,7 +86,10 @@ test("the default sag fractions are nine eighths from 0 to 1, and the compared f
   // Every compared value is a required member of the data, and the only other one is `recorded`.
   const schema = contractSchemas().targets.get(quantitySchemaId(PARAXIAL_FIRST_ORDER, "data"));
   assert.deepEqual([...(schema?.required ?? [])].sort(), [...FIRST_ORDER_VALUES, "recorded"].sort());
-  assert.deepEqual([AFOCAL_SYSTEM, LINEAR_SAG_TERM], ["system.afocal", "surface.asphere.linear-term"]);
+  assert.deepEqual(
+    [AFOCAL_SYSTEM, LINEAR_SAG_TERM, QUADRATIC_SAG_TERM],
+    ["system.afocal", "surface.asphere.linear-term", "surface.asphere.quadratic-term"],
+  );
 });
 
 // ── Invariants ───────────────────────────────────────────────────────────────────────────────────────────────────

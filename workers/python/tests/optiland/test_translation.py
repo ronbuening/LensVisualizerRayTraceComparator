@@ -211,13 +211,15 @@ class ContractSagTest(unittest.TestCase):
 
 
 class DeclarationTest(unittest.TestCase):
-    def test_the_engine_declares_every_feature_flag_no_limit_and_the_built_system_echo(self) -> None:
+    def test_the_engine_declares_every_feature_flag_no_limit_the_built_system_echo_and_first_order_data(self) -> None:
         descriptor = OptilandEngine(IDENTITY).describe()
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         capabilities = descriptor["capabilities"]
         self.assertEqual(capabilities["features"], {"supported": list(FEATURE_FLAGS), "limits": {}})
         self.assertEqual(tuple(capabilities["features"]["supported"]), SUPPORTED_FEATURES)
-        self.assertEqual(capabilities["quantities"], {"system.describe": {"version": 2}})
+        self.assertEqual(
+            capabilities["quantities"], {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}}
+        )
         self.assertEqual(QUANTITIES, capabilities["quantities"])
         self.assertIs(capabilities["deterministic"], True)
 

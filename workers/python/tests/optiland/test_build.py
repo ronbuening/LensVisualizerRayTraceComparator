@@ -22,106 +22,31 @@ from unittest import mock
 from lvrtc_optiland import build
 from lvrtc_optiland.build import BuildMismatch, build_case, build_optic, describe_optics, read_optic, verify_optic
 from lvrtc_optiland.engine import OptilandEngine
-from lvrtc_worker_kit.ndarray import decode_ndarray, encode_ndarray
+from lvrtc_worker_kit.ndarray import decode_ndarray
 from lvrtc_worker_kit.protocol import parse_json
 from lvrtc_worker_kit.validate import contract_schemas, quantity_schema_id, validate, validate_kind
 
 from .support import (
+    D_LINE,
     HELLO,
+    PLANE,
     SHUTDOWN,
     TempDirTest,
+    asphere,
     describe_line,
     describe_request,
+    f8,
+    make_case,
     read_fixture,
     real_optiland_missing,
+    sphere,
+    surface,
 )
 
 MISSING = real_optiland_missing()
 getcontext().prec = 60
 
-D_LINE = 587.5618
 NINE = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-
-
-def surface(z: float, shape: dict[str, Any], semi: float = 10.0, **more: Any) -> dict[str, Any]:
-    """One surface of a synthetic case; the thickness is filled in by ``make_case``."""
-    aperture = {
-        "semiDiameter": more.pop("clip", semi),
-        "nominalSemiDiameter": semi,
-        "innerSemiDiameter": more.pop("inner", 0),
-    }
-    return {
-        "label": more.pop("label", "s"),
-        "z": z,
-        "thickness": 0,
-        "shape": shape,
-        "aperture": aperture,
-        "elementId": 0,
-    }
-
-
-def sphere(radius: float, conic: float = 0) -> dict[str, Any]:
-    return {"kind": "conic", "radius": radius, "conic": conic}
-
-
-def asphere(radius: float | None, conic: float, *terms: tuple[int, float]) -> dict[str, Any]:
-    stated = [{"power": power, "coeff": coeff} for power, coeff in terms]
-    return {"kind": "asphere", "radius": radius, "conic": conic, "terms": stated}
-
-
-PLANE: dict[str, Any] = {"kind": "plane"}
-
-
-def make_case(
-    surfaces: list[dict[str, Any]],
-    *,
-    stop: int = 0,
-    image_z: float | None = None,
-    stop_radius: float = 2.0,
-    object_z: float | None = None,
-    lines: tuple[float, ...] = (D_LINE,),
-    indices: list[list[float]] | None = None,
-) -> dict[str, Any]:
-    """A synthetic optical case. Its ids are made up: nothing in a worker computes or checks one."""
-    design = surfaces[-1]["z"] + 25.0
-    for number, entry in enumerate(surfaces):
-        entry["label"] = str(number + 1)
-        following = surfaces[number + 1]["z"] if number + 1 < len(surfaces) else design
-        entry["thickness"] = following - entry["z"]
-    rows = (
-        indices
-        if indices is not None
-        else [[1.5 if number % 2 == 0 else 1.0 for number in range(len(surfaces))]] * len(lines)
-    )
-    return {
-        "contract": "1.0",
-        "kind": "optical-case",
-        "id": "c" * 64,
-        "systemId": "5" * 64,
-        "label": {"name": "synthetic"},
-        "system": {
-            "surfaces": surfaces,
-            "stopIndex": stop,
-            "lastLensSurfaceIndex": len(surfaces) - 1,
-            "designImageZ": design,
-        },
-        "conditions": {
-            "object": {"kind": "infinity"} if object_z is None else {"kind": "finite", "z": object_z},
-            "stopSemiDiameter": stop_radius,
-            "imageZ": design if image_z is None else image_z,
-            "lines": [{"wavelengthNm": nm, "weight": 1, "indexSource": "authored"} for nm in lines],
-            "indexAfterSurface": encode_ndarray("f8", [n for row in rows for n in row], [len(lines), len(surfaces)]),
-        },
-        "features": [],
-        "provenance": {
-            "source": {"kind": "fixture", "name": "synthetic"},
-            "producer": {"tool": "lvrtc", "version": "0"},
-        },
-    }
-
-
-def f8(wire: dict[str, Any]) -> list[float]:
-    return decode_ndarray(wire).values()
 
 
 def bits(wire: dict[str, Any]) -> list[str]:
@@ -751,6 +676,14 @@ class VerificationTest(unittest.TestCase):
                 "the image surface: aperture is 'RadialAperture' in the optic optiland built and None in the case",
             ),
             (
+                # optiland reads the index of the image space from the image surface, and refracts its paraxial rays
+                # there: an image surface that states another medium than the one after the last surface ends the
+                # system in an interface the case does not have (test_first_order.py shows what that does).
+                lambda optic: setattr(optic.surfaces[-1], "material_post", api.IdealMaterial(n=1.33)),
+                "the image surface: the index of the image space is 1.33 in the optic optiland built and 1.0 in the "
+                "case",
+            ),
+            (
                 # optiland's stop is the first surface that is flagged, the object surface included.
                 lambda optic: setattr(optic.surfaces[0], "is_stop", True),
                 "the system: the index of the stop surface is -1 in the optic optiland built and 2 in the case",
@@ -894,7 +827,7 @@ class WorkerTest(TempDirTest):
         ended = self.worker(None, lines, env=environment)
         self.assertEqual(ended.returncode, 0, ended.stderr)
         hello, *answers, again, bye = [parse_json(line) for line in ended.stdout.splitlines()]
-        self.assertEqual(hello["result"]["capabilities"]["quantities"], {"system.describe": {"version": 2}})
+        self.assertEqual(hello["result"]["capabilities"]["quantities"]["system.describe"], {"version": 2})
         self.assertNotRegex(hello["result"]["identity"]["version"], r"\.d\d{8}$")
         schemas = contract_schemas()
         for case, answer in zip(cases, answers, strict=True):

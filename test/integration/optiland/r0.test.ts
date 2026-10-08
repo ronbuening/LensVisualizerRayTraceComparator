@@ -10,115 +10,50 @@
 // 46b028bc), and again at 1bf669ee (closure 66027121). Nothing is pinned to them but the verdicts: R0 holds what is
 // copied to equality on any checkout, and the sag to its gate.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
-import { fileURLToPath } from "node:url";
 
-import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
-import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { loadPolicy } from "../../../src/compare/policyFile.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { SystemDescribeData } from "../../../src/contract/quantities/systemDescribe.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../../../src/contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
 import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
-import { REPO_ROOT } from "../../../src/core/config.ts";
-import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { createEngineRegistry } from "../../../src/engines/registry.ts";
+import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import { caseFixture } from "../../core/support.ts";
 import { suitePath } from "../../suites/support.ts";
-import { LV_PATH, LV_UNAVAILABLE } from "../lv/support.ts";
-import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, optilandRoot, tempDir } from "./support.ts";
+import { LV_UNAVAILABLE } from "../lv/support.ts";
+import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, worstOf } from "./support.ts";
+import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE;
 /** The suites are of LensVisualizer lenses: they need both. */
 const skipSuites = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const R0 = loadPolicy().rungs.r0;
 const COUNTS = ["layout.mismatches", "shape.mismatches", "aperture.mismatches", "index.mismatches"] as const;
-
-/** Runs one `lvrtc` command as a child process, in `cwd`, writing runs into `runsDir`. */
-function lvrtc(runsDir: string, cwd: string, ...args: string[]): { code: number | null; out: string; err: string } {
-  const env = {
-    ...process.env,
-    LVRTC_RUNS_DIR: runsDir,
-    LVRTC_LV_PATH: LV_PATH ?? "",
-    LVRTC_OPTILAND_PYTHON: OPTILAND_PYTHON ?? "",
-  };
-  const child = spawnSync(process.execPath, [BIN, ...args], {
-    encoding: "utf8",
-    cwd,
-    env,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  return { code: child.status, out: child.stdout, err: child.stderr };
-}
-
-/** One pair of a comparison of R0, with the run it is of. */
-interface R0Pair {
-  readonly run: string;
-  readonly engines: string;
-  readonly verdict: string;
-  readonly reason?: string;
-  readonly metrics: Readonly<Record<string, { value: number | null; where: string }>>;
-}
 
 /** What `lvrtc run` on rung R0 and `lvrtc compare` gave for a suite. */
 interface R0Cycle {
   readonly manifest: RunManifest;
   /** Every pair of two engines, each once: three for each run on three engines. */
-  readonly pairs: readonly R0Pair[];
+  readonly pairs: readonly RungPair[];
   /** The summary line of `lvrtc compare`. */
   readonly verdicts: string;
 }
 
 function r0Cycle(t: TestContext, suite: string, name: string, engines: string, root?: string): R0Cycle {
-  const runsDir = tempDir(t);
-  const cwd = root ?? REPO_ROOT;
-  const rooted = root === undefined ? [] : ["--root", root];
-  const ran = lvrtc(runsDir, cwd, "run", suite, ...rooted, "--engines", engines, "--rungs", "r0");
-  assert.equal(ran.code, 0, ran.out + ran.err);
-  const compared = lvrtc(runsDir, cwd, "compare", name, ...rooted);
-  assert.equal(compared.code, 0, compared.out + compared.err);
-  const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, name, MANIFEST_FILE), "utf8"));
-  const file: ComparisonFile = JSON.parse(readFileSync(join(runsDir, name, COMPARISONS_FILE), "utf8"));
-  const pairs = file.comparisons
-    .filter((set) => set.mode === "pairwise")
-    .flatMap((set) => {
-      assert.deepEqual([set.rung, set.quantity], ["r0", SYSTEM_DESCRIBE]);
-      return set.pairs.map((pair): R0Pair => {
-        const metrics = Object.fromEntries(
-          pair.metrics.map((metric) => [
-            metric.name,
-            { value: metric.value, where: JSON.stringify(metric.where ?? {}) },
-          ]),
-        );
-        const reason = pair.reason === undefined ? {} : { reason: pair.reason };
-        return { run: set.run, engines: `${pair.a} / ${pair.b}`, verdict: pair.verdict, ...reason, metrics };
-      });
-    });
-  const verdicts = compared.out.split("\n").find((line) => line.startsWith(`${name}: `)) ?? "";
-  return { manifest, pairs, verdicts };
-}
-
-/** The largest value of a metric over some pairs, with the run, the two engines and the place it occurs at. */
-function worst(pairs: readonly R0Pair[], metric: string): { value: number; at: string } {
-  let found = { value: -1, at: "nowhere" };
-  for (const pair of pairs) {
-    const { value, where } = pair.metrics[metric];
-    assert.ok(value !== null, `${pair.run} ${pair.engines}: ${metric} is not finite`);
-    if (value > found.value) found = { value, at: `${pair.run}, ${pair.engines}, ${where}` };
-  }
-  return found;
+  const { manifest, comparisons, verdicts } = runAndCompare(t, { suite, name, engines, rungs: "r0", root });
+  assert.ok(comparisons.comparisons.every((set) => set.rung === "r0"));
+  return { manifest, pairs: pairsOf(comparisons, "r0", SYSTEM_DESCRIBE), verdicts };
 }
 
 /** Holds every pair to R0's gates as PASS, and says the worst sag of the pairs of optiland. */
-function assertAllPass(t: TestContext, suite: string, pairs: readonly R0Pair[]): void {
+function assertAllPass(t: TestContext, suite: string, pairs: readonly RungPair[]): void {
   for (const pair of pairs) {
     const said = `${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`;
     assert.equal(pair.verdict, "PASS", said);
@@ -132,7 +67,7 @@ function assertAllPass(t: TestContext, suite: string, pairs: readonly R0Pair[]):
   for (const other of ["ref", "lv"]) {
     const against = optiland.filter((pair) => pair.engines.split(" / ").includes(other));
     if (against.length === 0) continue;
-    const [scaled, plain] = [worst(against, "sag.maxScaled"), worst(against, "sag.maxAbs")];
+    const [scaled, plain] = [worstOf(against, "sag.maxScaled"), worstOf(against, "sag.maxAbs")];
     t.diagnostic(
       `${suite}, optiland against ${other}, ${against.length} pairs: sag.maxScaled ${scaled.value} (${scaled.at}); ` +
         `sag.maxAbs ${plain.value} mm (${plain.at})`,
@@ -183,7 +118,7 @@ test(
     assertAllPass(t, "contract-cases", pairs);
     // Measured: the largest sag difference of the three cases is 8.9e-16 mm, and 2.9e-16 on the scale of a rounding,
     // both on the Double-Gauss.
-    assert.ok(worst(pairs, "sag.maxAbs").value < 1e-14, JSON.stringify(worst(pairs, "sag.maxAbs")));
+    assert.ok(worstOf(pairs, "sag.maxAbs").value < 1e-14, JSON.stringify(worstOf(pairs, "sag.maxAbs")));
   },
 );
 
@@ -197,6 +132,7 @@ test(
     const descriptor = await adapter.describe();
     assert.deepEqual(descriptor.capabilities.quantities, {
       [SYSTEM_DESCRIBE]: { version: systemDescribeQuantity.version },
+      [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
     });
     const opticalCase: OpticalCase = JSON.parse(readFileSync(caseFixture("all-features"), "utf8"));
     const request = makeRequest({ caseId: opticalCase.id, quantity: SYSTEM_DESCRIBE, spec: {} });

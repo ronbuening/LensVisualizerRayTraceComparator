@@ -26,8 +26,9 @@ export const OPTILAND_CACHE_NAME = "optiland";
  * The waits of the engine that differ from the defaults. `hello` is answered once optiland is imported: measured at
  * about 3 s with warm caches and about 18 s on a first start, when matplotlib builds its font cache and every
  * module is compiled under an empty cache directory. Three minutes leave room for a slower machine and a cold
- * disk, where the default of 30 s would not. A run keeps the default: `system.describe`, the one quantity so far,
- * is answered in milliseconds.
+ * disk, where the default of 30 s would not. A run keeps the default: `system.describe` and `paraxial.first-order`,
+ * the quantities so far, are answered in milliseconds (a lens of 11 surfaces is built in 1 ms, and its first-order
+ * data at one line takes optiland's paraxial tracer 8 ms).
  */
 export const OPTILAND_TIMEOUTS: Partial<EngineTimeouts> = Object.freeze({ helloMs: 180_000 });
 

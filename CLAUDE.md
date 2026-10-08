@@ -13,7 +13,7 @@ npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
-npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; r0 needs LV too
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -33,7 +33,7 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0   # R0 three ways: optiland builds every case and reads it back
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1   # R0 and R1 three ways: optiland builds every case, reads it back and gives its own first-order data
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -102,7 +102,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **The optiland builder hands over, verifies, then describes** (`workers/python/lvrtc_optiland/build.py`).
   `build_optic` gives the case to optiland; `verify_optic` reads every value back from optiland's own objects
   (vertex, geometry class, radius, conic, terms, `tol`, `max_iter`, aperture class and both radii, stop,
-  interaction model, coating, index, object and image planes, stop diameter, wavelength) and holds it to the
+  interaction model, coating, index, the index of the image space, object and image planes, stop diameter,
+  wavelength) and holds it to the
   case, then holds optiland's sag to the contract's; `describe_optics` writes `system.describe` from the optics
   and is never given the case. An optic that differs is the error `build-mismatch`, naming surface and field. A
   keyword added to the build needs its read-back check and a test that makes the mistake on purpose
@@ -111,15 +112,34 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   (`IdealMaterial` is constant and first-order data is the primary wavelength's); `RadialAperture(r_max, r_min)`
   on every surface, the stop included; `float_by_stop_size` takes the stop diameter; an asphere stays
   `even_asphere` or `odd_asphere` whatever its coefficients, the list starting at r^2 (even) or r^1 (odd), with
-  `tol=1e-12` and `max_iter=100`; only the non-deprecated API, a deprecated call being an error. Each has an
-  entry under optiland in `docs/gotchas.md`.
+  `tol=1e-12` and `max_iter=100`; the image surface states the medium after the last surface (optiland takes the
+  image space from it); only the non-deprecated API, a deprecated call being an error. Each has an entry under
+  optiland in `docs/gotchas.md`.
 - **What the builder needs of optiland is imported when the first case is built** (`build.optiland_api`), never
   when the worker loads: the hermetic tier runs the worker on `test/fixtures/fake-optiland`, which has no
   geometries, materials or apertures. A test that needs the real optiland skips with `real_optiland_missing()`.
 - **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
   `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
-  `system.describe` is version 2 (`innerClipRadius`).
+  `system.describe` is version 2 (`innerClipRadius`); `paraxial.first-order` is version 1.
+- **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
+  accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
+  from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
+  image plane); the back focus is that rear focal point minus the vertex of the case's `lastLensSurfaceIndex`. A
+  pupil's radius is half the magnitude of `EPD()` / `XPD()`, which are negative for an inverted pupil and are
+  images of the system aperture's value (twice `conditions.stopSemiDiameter`), never of the stop surface's
+  `r_max`. `FNO()` and, for a finite object, `magnification()` are recorded. Never call
+  `updater.update_paraxial`. A NaN, the focal length's included, is `engine-failure`, never a value.
+- **What an engine's paraxial model does not see is `unsupported`, never the focal length of another lens.** A
+  term of power 1 is `surface.asphere.linear-term` in every engine; a term of power 2 is
+  `surface.asphere.quadratic-term` in `lv` and `optiland`, whose kernels read the radius alone, and is answered
+  by `ref` by the contract's rule. Both are decided from the case before anything is built or asked. optiland
+  also answers `system.afocal` (`f2()` an infinity, or a power of at most 1e-12 of the sum of the surfaces'
+  powers) and `system.telecentric.object-space` (`EPL()` or `EPD()` an infinity). A canary in
+  `test/integration/lv/canaries.test.ts` fails when LV's aspheric schema gains a coefficient below `A3`.
+- **Expected first-order values of the worker's tests are derived in the test** (`test_first_order.py`: closed
+  forms and an exact `fractions.Fraction` trace), never taken from an engine's output. Synthetic cases come from
+  `tests/optiland/support.py`; tier-3 helpers are in `test/integration/optiland/support.ts`.
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.

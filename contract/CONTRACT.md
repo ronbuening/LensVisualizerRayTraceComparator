@@ -355,7 +355,10 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   entrance pupil and a ray from the stop's centre the exit pupil. LensVisualizer's own first-order module answers
   for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
   bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
-  LensVisualizer displays.
+  LensVisualizer displays. The kernel is handed the radius of a surface and nothing else of its shape, so a case
+  with a term of power 1 or of power 2 is answered `unsupported`, with the item `surface.asphere.linear-term` or
+  `surface.asphere.quadratic-term`, before the kernel is asked. No lens of LensVisualizer has either: its
+  coefficients start at `A3`.
 - **`rays.trace`** is every ray of the request traced for real by LensVisualizer's sequential tracer,
   `traceEngineRay2`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
   ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
@@ -704,7 +707,7 @@ and two installs of one commit say the same of themselves.
 
 `optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
 each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
-declares every feature flag and no limit, and offers `system.describe`.
+declares every feature flag and no limit, and offers `system.describe` and `paraxial.first-order`.
 
 | The case | `optiland` answers |
 |---|---|
@@ -716,11 +719,12 @@ declares every feature flag and no limit, and offers `system.describe`.
   geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
   intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
   ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface; the object
-  and image planes; the stop diameter; the wavelength. Then the sag optiland evaluates on each surface, at a
-  quarter, a half, three quarters and the whole of its nominal semi-diameter, must be the contract's sag of the
-  case's surface within 1e-9 on the scale of the sag's rounding (the scale of `sag.maxScaled`, below). The first
-  thing that differs is the error's message, with the surface, the field and both values. Nothing is answered
-  about such an optic: a translation error is an error of the engine, never a difference between engines.
+  and image planes; the index of the image space, which optiland reads from the image surface; the stop diameter;
+  the wavelength. Then the sag optiland evaluates on each surface, at a quarter, a half, three quarters and the
+  whole of its nominal semi-diameter, must be the contract's sag of the case's surface within 1e-9 on the scale of
+  the sag's rounding (the scale of `sag.maxScaled`, below). The first thing that differs is the error's message,
+  with the surface, the field and both values. Nothing is answered about such an optic: a translation error is an
+  error of the engine, never a difference between engines.
 - **`system.describe`** is written from the optics, by a function that is not given the case. `vertexZ` and
   `imageZ` are the `z` of each surface's coordinate system; `curvature` is one division, 1 over the radius the
   geometry holds, which is 0 for an infinite one; `conic` is the geometry's conic constant, and 0 for a plane,
@@ -735,8 +739,43 @@ declares every feature flag and no limit, and offers `system.describe`.
 - **Where a surface stands** is the case's `z`, given to optiland as a position. A thickness is not given: optiland
   would place the surface at a sum of thicknesses, which is the case's `z` within the 1e-9 mm the invariants of a
   case allow and not always to the bit, and no thickness states an image plane that was shifted.
-- **What it does not answer** is said in two ways. A quantity it does not offer, and a contract version it does
-  not speak, are `unsupported`, by the items of negotiation. A spec that is not the quantity's is `bad-spec`.
+- **The image space** is the medium after the last surface of the case, and the image surface of the optic states
+  it: optiland takes the index of the image space from the image surface and refracts its paraxial rays there.
+- **`paraxial.first-order`** is optiland's own first-order data, each line's from that line's optic
+  (`first_order.py`): what `optic.paraxial` gives, with only its reference changed to the contract's, as the table
+  below states. The method is named `paraxial-accessors`, and its `params` state `afocalRelativePower`.
+- **What it does not answer** is said in two ways. A quantity it does not offer, a contract version it does
+  not speak and what its first-order data has no answer for, below, are `unsupported`, by items as those of
+  negotiation. A spec that is not the quantity's is `bad-spec`.
+
+| Of `paraxial.first-order` | Is, in optiland | Which optiland measures from |
+|---|---|---|
+| `efl` | `f2()` | nothing: a length |
+| `frontFocalZ`, `frontPrincipalZ` | `F1()`, `P1()`, plus the first vertex | the first surface |
+| `rearFocalZ`, `rearPrincipalZ` | `F2()`, `P2()`, plus the image plane | the image surface, wherever the case put it |
+| `backFocus` | that `rearFocalZ` minus the vertex of the surface `lastLensSurfaceIndex` | optiland reports its back focal point from the image surface, and knows no rear plate: the index is the one number taken from the case |
+| `entrancePupilZ` | `EPL()`, plus the first vertex | the first surface |
+| `exitPupilZ` | `XPL()`, plus the image plane | the image surface |
+| `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | half of `EPD()` and of `XPD()`, without the sign | a diameter of optiland is negative where the stop is imaged upside down |
+| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `f2() / EPD()`: the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
+| `recorded.magnification`, for a finite object | `magnification()` | |
+
+The vertices and the image plane are read from the optic (`surfaces.positions`). The pupils are images of the stop
+radius of the case: `EPD()` divides the stop diameter of the system's aperture, which the builder set to twice
+`conditions.stopSemiDiameter`, and never reads the clip limit of the stop surface. A pupil at infinity in image
+space is what optiland's own division gives, an infinity in position and in diameter.
+
+`optiland` answers `paraxial.first-order` with status `unsupported`, each with one item of code `feature`, for:
+
+| Item | The case | Decided |
+|---|---|---|
+| `surface.asphere.linear-term` | has a term of power 1 with a coefficient other than 0, as for every engine | from the case, before anything is built |
+| `surface.asphere.quadratic-term` | has a term of power 2 with a coefficient other than 0, as for every engine whose paraxial model reads the radius alone ([`paraxial.first-order`](#paraxialfirst-order)): optiland's paraxial power of a surface is `(n2 − n1) / radius`. `system.describe` of such a case is answered: the term is in the surface optiland builds | from the case, before anything is built |
+| `system.afocal` | has no finite focal length at a line: `f2()` is an infinity, or the power it stands for is at most 1e-12 of the sum of the magnitudes of the surfaces' powers. optiland has no test of its own | from optiland's answer |
+| `system.telecentric.object-space` | has its entrance pupil at infinity (`EPL()` or `EPD()` is an infinity). optiland sizes the exit pupil with a marginal ray it launches at the rim of the entrance pupil, so its `XPD()` is a NaN there, and a NaN is never a value | from optiland's answer |
+
+A value of optiland that is a NaN for any other reason, or an infinity that is no pupil's, is no answer and no
+`unsupported`: it is the engine's failure on that request (`engine-failure`).
 
 ### `protocol-request` and `protocol-response`
 
@@ -1102,13 +1141,20 @@ states after it.
 - **A pupil at infinity**, as a telecentric system has, is the infinity of its sign in position, and the positive
   infinity in radius: a radius is a size, and is never below 0 on either side of the lens. A NaN is never a value.
 - **`recorded`** is where an engine puts what it knows and no other engine need have: LensVisualizer's stored
-  pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv). For a finite object
+  pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv), and optiland's paraxial
+  f-number, `optilandFNumber`, listed with [the engine `optiland`](#the-engine-optiland). For a finite object
   every engine gives the paraxial lateral magnification of the object plane there, as `magnification`. A recorded
   value may be a NaN, where the engine has no such value at that line.
-- **No first-order data.** Two kinds of case are answered with status `unsupported`, each with one item of code
-  `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is zero, or zero to
-  rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a coefficient other than
-  0, since a cone has a corner at its vertex and no curvature there.
+- **No first-order data.** Two kinds of case are answered with status `unsupported` by every engine, each with
+  one item of code `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is
+  zero, or zero to rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a
+  coefficient other than 0, since a cone has a corner at its vertex and no curvature there.
+- **A term of power 2 that an engine's own model does not see.** An engine whose paraxial model reads the base
+  radius of a surface alone has no first-order data of a case with a term of power 2 whose coefficient is not 0:
+  it answers `unsupported` with one item of code `feature`, `surface.asphere.quadratic-term`, and never with the
+  focal length of the lens without the term. `lv` and `optiland` are such engines; `ref`, whose model is the rule
+  above, answers. An engine may name further things of its own model, listed with the engine: `optiland` an
+  entrance pupil at infinity ([the engine `optiland`](#the-engine-optiland)).
 
 **Invariant checked in code** (`src/quantities/paraxialFirstOrder.ts`): every array, the recorded ones included,
 has the same length, of at least 1.

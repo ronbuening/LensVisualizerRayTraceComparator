@@ -3,9 +3,10 @@
 ``load_engine`` imports optiland, after ``hygiene.prepare`` has run, and gives the engine; when optiland cannot be
 imported it gives an engine that says so to every ``hello``, with what to set, and the worker stays a worker.
 
-The engine answers ``system.describe``: the case is built as optiland optics, one for each line (``build``), each
-is read back and held to the case, and the answer is written from the optics alone. An optic that is not the case
-is answered as an error that names the surface and the field, never described.
+The engine answers ``system.describe`` and ``paraxial.first-order``: the case is built as optiland optics, one for
+each line (``build``), each is read back and held to the case, and the answer is written from the optics alone
+(``build.describe_optics``, ``first_order.first_order_of``). An optic that is not the case is answered as an error
+that names the surface and the field, and nothing is said about it.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from lvrtc_worker_kit.validate import (
 
 from . import ENGINE_ID
 from .build import ASPHERE_MAX_ITERATIONS, ASPHERE_TOLERANCE_MM, BuildMismatch, BuiltCase, build_case, describe_optics
+from .first_order import AFOCAL_RELATIVE_POWER, PARAXIAL_FIRST_ORDER, first_order_of, term_refusals
 from .hygiene import CacheDirs, check
 from .identity import adapter_revision, engine_identity
 
@@ -59,7 +61,7 @@ builder counts lines or surfaces."""
 SYSTEM_DESCRIBE = "system.describe"
 """The id of the quantity that echoes the built system."""
 
-QUANTITIES: dict[str, dict[str, int]] = {SYSTEM_DESCRIBE: {"version": 2}}
+QUANTITIES: dict[str, dict[str, int]] = {SYSTEM_DESCRIBE: {"version": 2}, PARAXIAL_FIRST_ORDER: {"version": 1}}
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
 DEFAULT_SAG_FRACTIONS: tuple[float, ...] = (0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0)
@@ -88,6 +90,10 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     In the order of the comparator's negotiation (``src/core/negotiate.ts``): a contract version that is not the
     worker's, the case's first; the quantity, when it is not offered; each feature flag the case states that is not
     supported. The engine states no limit, so none is exceeded.
+
+    Then what the quantity asked for has no answer about in this case, which no flag of a descriptor says: for
+    ``paraxial.first-order``, a term of power 1 and a term of power 2 (``first_order.term_refusals``). It is decided
+    from the case, before anything is built.
     """
     items: list[dict[str, str]] = []
     written = (("the case", case["contract"]), ("the request", request["contract"]))
@@ -104,7 +110,25 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     for flag in case["features"]:
         if flag not in SUPPORTED_FEATURES:
             items.append({"code": "feature", "item": flag, "message": f"the engine does not support {flag}"})
+    if quantity == PARAXIAL_FIRST_ORDER:
+        items.extend(term_refusals(case))
     return items
+
+
+def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list[ValidationIssue]:
+    """What keeps ``spec`` from being a spec of ``quantity``: by its schema, and then by the rule no schema states.
+
+    The one such rule is of ``system.describe`` (``src/quantities/systemDescribe.ts``): the fractions ascend.
+    """
+    issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
+    if issues or quantity != SYSTEM_DESCRIBE:
+        return issues
+    stated = spec.get("sagFractions", DEFAULT_SAG_FRACTIONS)
+    unordered = next((at for at in range(1, len(stated)) if not stated[at] > stated[at - 1]), None)
+    if unordered is None:
+        return []
+    said = f"the fractions must ascend: {stated[unordered]} follows {stated[unordered - 1]}"
+    return [ValidationIssue(f"/sagFractions/{unordered}", "invariant", said)]
 
 
 class OptilandEngine:
@@ -140,11 +164,14 @@ class OptilandEngine:
     def run(self, request: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
         """The result of one request about one case.
 
-        - What the engine's own descriptor rules out is a result of status "unsupported" (``refusals``).
+        - What the engine's own descriptor rules out, and what the quantity has no answer about in this case, is a
+          result of status "unsupported" (``refusals``).
         - A spec that is not the quantity's is a result of status "error" with the code ``bad-spec``.
         - A case that optiland did not build as it is stated is a result of status "error" with the code
           ``build-mismatch``, whose message names the surface and the field: nothing is answered about such an
           optic.
+        - A system optiland has no first-order data of (an afocal one, one whose entrance pupil is at infinity) is
+          a result of status "unsupported", found when optiland was asked.
         - Anything else that goes wrong is raised, and the protocol loop answers it as ``engine-failure``.
         """
         engine = engine_stamp(self._descriptor)
@@ -154,43 +181,41 @@ class OptilandEngine:
 
         quantity = request["quantity"]
         spec = request["spec"]
-        issues = validate(self._schemas, quantity_schema_id(quantity, "spec"), spec)
+        issues = spec_issues(self._schemas, quantity, spec)
         if issues:
             message = f"spec is not a {quantity} spec: {format_issues(issues)}"
             return make_result(request, engine, "error", error={"code": BAD_SPEC, "message": message})
-        stated = spec.get("sagFractions", DEFAULT_SAG_FRACTIONS)
-        # The one rule of a spec that its schema cannot state (src/quantities/systemDescribe.ts): the fractions ascend.
-        unordered = next((at for at in range(1, len(stated)) if not stated[at] > stated[at - 1]), None)
-        if unordered is not None:
-            said = f"the fractions must ascend: {stated[unordered]} follows {stated[unordered - 1]}"
-            issue = ValidationIssue(f"/sagFractions/{unordered}", "invariant", said)
-            message = f"spec is not a {quantity} spec: {format_issues([issue])}"
-            return make_result(request, engine, "error", error={"code": BAD_SPEC, "message": message})
-        fractions = [float(fraction) for fraction in stated]
 
         try:
             built = self._build(case)
         except BuildMismatch as error:
             return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
-        data = describe_optics(built.optics, fractions)
-        issues = validate(self._schemas, quantity_schema_id(quantity, "data"), data)
-        if issues:
-            raise RuntimeError(f"the answer is not {quantity} data: {format_issues(issues)}")
-        return make_result(
-            request,
-            engine,
-            "ok",
-            method={
+        method: dict[str, Any]
+        if quantity == SYSTEM_DESCRIBE:
+            fractions = [float(fraction) for fraction in spec.get("sagFractions", DEFAULT_SAG_FRACTIONS)]
+            data = describe_optics(built.optics, fractions)
+            method = {
                 "name": "optic-readback",
                 "params": {
                     "asphereTolerance": ASPHERE_TOLERANCE_MM,
                     "asphereMaxIterations": ASPHERE_MAX_ITERATIONS,
                     "positioning": "absolute-z",
                 },
-            },
-            data=data,
-            diagnostics={"warnings": [], "counts": {"surfaces": data["surfaceCount"], "lines": len(built.optics)}},
-        )
+            }
+        else:
+            # The one number of the case an optic cannot hold: which surface is the last of the lens.
+            answer = first_order_of(built.optics, int(case["system"]["lastLensSurfaceIndex"]))
+            if answer.data is None:
+                return make_result(request, engine, "unsupported", unsupported=list(answer.unsupported))
+            data = answer.data
+            method = {"name": "paraxial-accessors", "params": {"afocalRelativePower": AFOCAL_RELATIVE_POWER}}
+        issues = validate(self._schemas, quantity_schema_id(quantity, "data"), data)
+        if issues:
+            raise RuntimeError(f"the answer is not {quantity} data: {format_issues(issues)}")
+        # optiland counts the object surface and the image surface among an optic's surfaces.
+        counts = {"surfaces": int(built.optics[0].surfaces.num_surfaces) - 2, "lines": len(built.optics)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=method, data=data, diagnostics=diagnostics)
 
 
 class UnavailableEngine:

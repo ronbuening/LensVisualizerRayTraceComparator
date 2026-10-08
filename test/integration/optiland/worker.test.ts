@@ -1,6 +1,7 @@
 // The engine `optiland` on the real optiland: the worker starts, says who it is, conforms to the contract, describes
-// the system it built and answers every other quantity "unsupported" for now, and writes nothing into the optiland
-// checkout or its environment. Rung R0 against the other engines is in r0.test.ts.
+// the system it built, gives its first-order data and answers every other quantity "unsupported" for now, and
+// writes nothing into the optiland checkout or its environment. Rungs R0 and R1 against the other engines are in
+// r0.test.ts and r1.test.ts.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -31,6 +32,7 @@ import { runConformance } from "../../../src/engines/conformance.ts";
 import { PYTHON_WORKERS_DIRECTORY } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
+import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
 import { caseFixture } from "../../core/support.ts";
@@ -186,8 +188,13 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.commit, commit);
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
-  // The built-system echo, at the version of its definition the comparator holds; every feature flag, no limit.
-  assert.deepEqual(capabilities.quantities, { "system.describe": { version: systemDescribeQuantity.version } });
+  // The built-system echo and the first-order data, each at the version of its definition the comparator holds;
+  // every feature flag, no limit.
+  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity];
+  assert.deepEqual(
+    capabilities.quantities,
+    Object.fromEntries(offered.map((quantity) => [quantity.id, { version: quantity.version }])),
+  );
   assert.deepEqual(capabilities.features, { supported: [...FEATURE_FLAGS], limits: {} });
   assert.equal(capabilities.deterministic, true);
 
@@ -200,9 +207,10 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
       adapterRevision: identity.adapterRevision,
       details,
     });
-    if (quantity === "system.describe") {
-      assert.equal(result.status, "ok", JSON.stringify(result.error));
-      assert.deepEqual(systemDescribeQuantity.validateData(result.data), []);
+    const answered = offered.find((module) => module.id === quantity);
+    if (answered !== undefined) {
+      assert.equal(result.status, "ok", `${quantity}: ${JSON.stringify(result.error ?? result.unsupported)}`);
+      assert.deepEqual(answered.validateData(result.data), [], quantity);
       continue;
     }
     assert.equal(result.status, "unsupported", quantity);
@@ -213,7 +221,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
 });
 
 test(
-  "lvrtc run --engines optiland: R0 is answered, every other rung unsupported, and nothing fails",
+  "lvrtc run --engines optiland: R0 and R1 are answered, every other rung unsupported, and nothing fails",
   { skip },
   async (t) => {
     const loaded = optilandRoot(t);
@@ -241,10 +249,12 @@ test(
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
+    const answered = ["r0", "r1"];
     for (const job of manifest.jobs) {
-      assert.deepEqual([job.engine, job.status], ["optiland", job.rung === "r0" ? "ok" : "unsupported"], job.rung);
+      const status = answered.includes(job.rung) ? "ok" : "unsupported";
+      assert.deepEqual([job.engine, job.status], ["optiland", status], job.rung);
     }
-    assert.equal(manifest.jobs.filter((job) => job.rung === "r0").length, 1);
+    for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);
@@ -303,9 +313,12 @@ test(
         helloMs.push(performance.now() - started);
         const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: {} }), CASE);
         assert.equal(result.status, "unsupported", start);
-        // A case is built: what the builder uses of optiland is imported now, and cached like the rest.
-        const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: {} }), CASE);
-        assert.equal(built.status, "ok", `${start}: ${JSON.stringify(built.error)}`);
+        // A case is built: what the builder uses of optiland is imported now, and cached like the rest. Then
+        // optiland's paraxial tracer is asked, which is more of optiland that is imported and cached.
+        for (const quantity of ["system.describe", "paraxial.first-order"]) {
+          const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec: {} }), CASE);
+          assert.equal(built.status, "ok", `${start} ${quantity}: ${JSON.stringify(built.error)}`);
+        }
       } finally {
         await adapter.close();
       }

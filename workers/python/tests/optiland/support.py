@@ -18,6 +18,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from lvrtc_worker_kit.ndarray import decode_ndarray, encode_ndarray
 from lvrtc_worker_kit.protocol import parse_json
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[4]
@@ -53,15 +54,122 @@ def describe_request(case: dict[str, Any], spec: dict[str, Any] | None = None) -
     }
 
 
+def first_order_request(case: dict[str, Any], spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A ``paraxial.first-order`` request about ``case``, with a made-up id; its spec is the empty object."""
+    return {**describe_request(case, spec), "id": "f" * 64, "quantity": "paraxial.first-order"}
+
+
+def run_message(request: dict[str, Any], case: dict[str, Any]) -> bytes:
+    """The ``run`` message that asks ``request`` of ``case``, as one line."""
+    message = {"contract": "1.0", "id": "r", "method": "run", "params": {"request": request, "case": case}}
+    return json.dumps(message, allow_nan=False, separators=(",", ":")).encode("ascii") + b"\n"
+
+
 def describe_line(case: dict[str, Any], spec: dict[str, Any] | None = None) -> bytes:
     """The ``run`` message that asks ``system.describe`` of ``case``, as one line."""
-    message = {
-        "contract": "1.0",
-        "id": "r",
-        "method": "run",
-        "params": {"request": describe_request(case, spec), "case": case},
+    return run_message(describe_request(case, spec), case)
+
+
+def first_order_line(case: dict[str, Any], spec: dict[str, Any] | None = None) -> bytes:
+    """The ``run`` message that asks ``paraxial.first-order`` of ``case``, as one line."""
+    return run_message(first_order_request(case, spec), case)
+
+
+# ── Synthetic cases ──────────────────────────────────────────────────────────────────────────────────────────────
+
+D_LINE = 587.5618
+"""The wavelength of a synthetic case's one line, nm."""
+
+
+def surface(z: float, shape: dict[str, Any], semi: float = 10.0, **more: Any) -> dict[str, Any]:
+    """One surface of a synthetic case; the thickness is filled in by ``make_case``."""
+    aperture = {
+        "semiDiameter": more.pop("clip", semi),
+        "nominalSemiDiameter": semi,
+        "innerSemiDiameter": more.pop("inner", 0),
     }
-    return json.dumps(message, allow_nan=False, separators=(",", ":")).encode("ascii") + b"\n"
+    return {
+        "label": more.pop("label", "s"),
+        "z": z,
+        "thickness": 0,
+        "shape": shape,
+        "aperture": aperture,
+        "elementId": 0,
+    }
+
+
+def sphere(radius: float, conic: float = 0) -> dict[str, Any]:
+    return {"kind": "conic", "radius": radius, "conic": conic}
+
+
+def asphere(radius: float | None, conic: float, *terms: tuple[int, float]) -> dict[str, Any]:
+    stated = [{"power": power, "coeff": coeff} for power, coeff in terms]
+    return {"kind": "asphere", "radius": radius, "conic": conic, "terms": stated}
+
+
+PLANE: dict[str, Any] = {"kind": "plane"}
+
+
+def make_case(
+    surfaces: list[dict[str, Any]],
+    *,
+    stop: int = 0,
+    image_z: float | None = None,
+    stop_radius: float = 2.0,
+    object_z: float | None = None,
+    lines: tuple[float, ...] = (D_LINE,),
+    indices: list[list[float]] | None = None,
+    last_lens: int | None = None,
+) -> dict[str, Any]:
+    """A synthetic optical case. Its ids are made up: nothing in a worker computes or checks one.
+
+    Without ``indices`` the surfaces bound glass of index 1.5 and air in turn, at every line. The design image
+    plane lies 25 mm behind the last vertex. ``last_lens`` is the index of the rear lens vertex, the last surface
+    without it: every surface behind it is marked as a rear plate.
+    """
+    design = surfaces[-1]["z"] + 25.0
+    rear = len(surfaces) - 1 if last_lens is None else last_lens
+    for entry in surfaces[rear + 1 :]:
+        entry["synthetic"] = "rearPlate"
+    for number, entry in enumerate(surfaces):
+        entry["label"] = str(number + 1)
+        following = surfaces[number + 1]["z"] if number + 1 < len(surfaces) else design
+        entry["thickness"] = following - entry["z"]
+    rows = (
+        indices
+        if indices is not None
+        else [[1.5 if number % 2 == 0 else 1.0 for number in range(len(surfaces))]] * len(lines)
+    )
+    return {
+        "contract": "1.0",
+        "kind": "optical-case",
+        "id": "c" * 64,
+        "systemId": "5" * 64,
+        "label": {"name": "synthetic"},
+        "system": {
+            "surfaces": surfaces,
+            "stopIndex": stop,
+            "lastLensSurfaceIndex": rear,
+            "designImageZ": design,
+        },
+        "conditions": {
+            "object": {"kind": "infinity"} if object_z is None else {"kind": "finite", "z": object_z},
+            "stopSemiDiameter": stop_radius,
+            "imageZ": design if image_z is None else image_z,
+            "lines": [{"wavelengthNm": nm, "weight": 1, "indexSource": "authored"} for nm in lines],
+            "indexAfterSurface": encode_ndarray("f8", [n for row in rows for n in row], [len(lines), len(surfaces)]),
+        },
+        "features": [],
+        "provenance": {
+            "source": {"kind": "fixture", "name": "synthetic"},
+            "producer": {"tool": "lvrtc", "version": "0"},
+        },
+    }
+
+
+def f8(wire: dict[str, Any]) -> list[float]:
+    """The elements of a float64 array of an answer, in order."""
+    return decode_ndarray(wire).values()
 
 
 class TempDirTest(unittest.TestCase):

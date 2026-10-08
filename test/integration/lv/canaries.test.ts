@@ -661,3 +661,36 @@ test(
     );
   },
 );
+
+test(
+  "the aspheric schema still starts at A4 and at A3: no lens has a term of power 1 or 2, which no paraxial kernel sees",
+  { skip },
+  () => {
+    // Read at 5278694b. The contract counts twice the coefficient of a term of power 2 as curvature at a vertex and
+    // has no first-order data for a term of power 1; LensVisualizer's kernel is handed radii alone.
+    const schema = "src/types/asphericSchema.ts";
+    const mirror =
+      "termItems in src/engines/lv/firstOrder.ts answers paraxial.first-order of a case with a term of power 1 or 2 " +
+      "as unsupported, and docs/gotchas.md says that no lens of LensVisualizer has one: decide again what lv says " +
+      "of such a lens, and whether LensVisualizer's own first-order module reads the new coefficient";
+    assertSource(
+      schema,
+      `{ key: "K", kind: "conic", power: 0, parity: "even", required: true },
+       { key: "A4", kind: "polynomial", power: 4, parity: "even", required: true },`,
+      mirror,
+    );
+    assertSource(
+      schema,
+      `{ key: "A20", kind: "polynomial", power: 20, parity: "even", required: false },
+       { key: "A3", kind: "polynomial", power: 3, parity: "odd", required: false },`,
+      mirror,
+    );
+    for (const power of [1, 2]) assert.equal(occurrences(schema, `power: ${power},`), 0, `power ${power}: ${mirror}`);
+    // The kernel's power of a surface is still the step of the index over the radius, and nothing else of a shape.
+    assertSource(
+      "src/optics/math/paraxial.ts",
+      "const refractivePower = Math.abs(surface.R) < FLAT_R_THRESHOLD ? (nextN - n) / surface.R : 0;",
+      mirror,
+    );
+  },
+);
