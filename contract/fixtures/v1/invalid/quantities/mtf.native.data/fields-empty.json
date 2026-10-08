@@ -1,0 +1,21 @@
+{
+  "fields": [],
+  "method": {
+    "name": "ray-sum",
+    "params": {
+      "gridCap": 128
+    }
+  },
+  "focus": {
+    "mode": "design",
+    "appliedShiftMm": 0
+  },
+  "aperture": {},
+  "lines": [
+    {
+      "wavelengthNm": 587.5618,
+      "weight": 1
+    }
+  ],
+  "notes": []
+}

@@ -18,6 +18,8 @@ import type { EngineDescriptor } from "../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
+import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
+import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import type {
   ParaxialFirstOrderData,
@@ -378,6 +380,97 @@ export const RAYS_DATA_STATUSES = {
   opticalPath: encodeNdArray(Float64Array.of(16.5, NaN, NaN, 16.75)),
   opticalPathToImage: encodeNdArray(Float64Array.of(21.5, NaN, NaN, NaN)),
 } satisfies RaysTraceData;
+
+// ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own MTF. The numbers describe no lens: every curve value is a dyadic fraction.
+
+/** Three fields as fractions of the image height at 10 and 30 cycles/mm: geometric, on the plane of the case. */
+export const MTF_SPEC_FRACTIONS = {
+  frequenciesPerMm: [10, 30],
+  fields: { kind: "image-height-fractions", values: [0, 0.5, 1] },
+  method: "geometric",
+  focus: "design",
+} satisfies MtfNativeSpec;
+
+/** Everything a spec can state: field angles, the engine's own best focus and a profile of the engine. */
+export const MTF_SPEC_PROFILE = {
+  frequenciesPerMm: [0, 10, 20, 40],
+  fields: { kind: "angles-deg", values: [0, 10, 14] },
+  method: "diffraction",
+  focus: "engine-best",
+  profile: "some-engine-default",
+} satisfies MtfNativeSpec;
+
+/**
+ * An answer to `MTF_SPEC_FRACTIONS` with every status: the axis is ok, the half field has curves whose sampling did
+ * not settle, and the full field lies outside what the engine models, so it has no curve and says why.
+ */
+export const MTF_DATA_FRACTIONS: MtfNativeData = {
+  fields: [
+    {
+      field: 0,
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      sagittal: encodeNdArray(Float64Array.of(0.875, 0.5)),
+      tangential: encodeNdArray(Float64Array.of(0.875, 0.5)),
+      status: "ok",
+      sampling: { gridSize: 32, validRays: 812, blockedRays: 212, failedRays: 0 },
+    },
+    {
+      field: 0.5,
+      fieldAngleDeg: 12.5,
+      imageHeightMm: 10.75,
+      sagittal: encodeNdArray(Float64Array.of(0.75, 0.375)),
+      tangential: encodeNdArray(Float64Array.of(0.6875, 0.25)),
+      status: "unconverged",
+      sampling: { gridSize: 128, validRays: 11584, blockedRays: 4800, failedRays: 0, maxDelta: 0.03125 },
+    },
+    {
+      field: 1,
+      fieldAngleDeg: null,
+      imageHeightMm: null,
+      sagittal: encodeNdArray(Float64Array.of(NaN, NaN)),
+      tangential: encodeNdArray(Float64Array.of(NaN, NaN)),
+      status: "unavailable",
+      reason: "outside-modeled-field",
+      sampling: {},
+    },
+  ],
+  method: { name: "ray-sum", params: { gridCap: 128 } },
+  focus: { mode: "design", appliedShiftMm: 0 },
+  aperture: {},
+  lines: [{ wavelengthNm: 587.5618, weight: 1 }],
+  notes: [],
+};
+
+/**
+ * An answer to `MTF_SPEC_PROFILE`: three fields at four frequencies on the engine's own best focus, 1/32 mm in
+ * front of the image plane of the case, on three lines, with what the engine recorded of its aperture.
+ */
+export const MTF_DATA_BEST_FOCUS: MtfNativeData = {
+  fields: [0, 10, 14].map((field, index) => ({
+    field,
+    fieldAngleDeg: field,
+    imageHeightMm: 1.75 * field,
+    sagittal: encodeNdArray(Float64Array.of(1, 0.875 - index / 16, 0.75 - index / 16, 0.5 - index / 16)),
+    tangential: encodeNdArray(Float64Array.of(1, 0.875 - index / 8, 0.75 - index / 8, 0.5 - index / 8)),
+    status: "ok",
+    sampling: { gridSize: 64 },
+  })),
+  method: {
+    name: "pupil-autocorrelation",
+    params: { profile: "some-engine-default", spectrum: "three-line", displayedFrequenciesPerMm: [10, 40] },
+  },
+  focus: { mode: "best-axial", appliedShiftMm: -0.03125 },
+  aperture: { tracedFNumber: 2.0625, limitingSurfaceIndex: 3 },
+  lines: [
+    { wavelengthNm: 550, weight: 1 },
+    { wavelengthNm: 480, weight: 0.25 },
+    { wavelengthNm: 620, weight: 0.5 },
+  ],
+  notes: ["The dispersion of one glass is estimated."],
+};
 
 // ── request and result ───────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -1594,6 +1687,53 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       "image-point-as-plain-numbers": fault(RAYS_DATA_SINGLET, "/imagePoint", [[0, 0, 100]], "type"),
       "optical-path-two-axes": fault(RAYS_DATA_SINGLET, "/opticalPath/$nd/shape", [2, 1], "maxItems"),
       "unknown-property": fault(RAYS_DATA_SINGLET, "/valid", [true, false], "additionalProperties"),
+    },
+  },
+  [`${MTF_NATIVE}.spec`]: {
+    valid: { "three-fractions": MTF_SPEC_FRACTIONS, "angles-and-profile": MTF_SPEC_PROFILE },
+    invalid: {
+      "not-an-object": fault(MTF_SPEC_FRACTIONS, "", [10, 30], "type"),
+      "missing-frequencies": fault(MTF_SPEC_FRACTIONS, "/frequenciesPerMm", REMOVE, "required", ""),
+      "missing-focus": fault(MTF_SPEC_FRACTIONS, "/focus", REMOVE, "required", ""),
+      "frequencies-empty": fault(MTF_SPEC_FRACTIONS, "/frequenciesPerMm", [], "minItems"),
+      "frequencies-repeated": fault(MTF_SPEC_FRACTIONS, "/frequenciesPerMm", [10, 10], "uniqueItems"),
+      "frequency-negative": fault(MTF_SPEC_FRACTIONS, "/frequenciesPerMm/0", -10, "minimum"),
+      "method-unknown": fault(MTF_SPEC_FRACTIONS, "/method", "huygens", "enum"),
+      // An engine's own name for its focus criterion is what the answer states, never what a spec asks by.
+      "focus-by-engine-name": fault(MTF_SPEC_PROFILE, "/focus", "best-axial", "enum"),
+      "fields-as-list": fault(MTF_SPEC_FRACTIONS, "/fields", [0, 0.5, 1], "oneOf"),
+      "field-fraction-above-one": fault(MTF_SPEC_FRACTIONS, "/fields/values/2", 1.5, "oneOf", "/fields"),
+      "field-angle-ninety": fault(MTF_SPEC_PROFILE, "/fields/values/2", 90, "oneOf", "/fields"),
+      "profile-with-space": fault(MTF_SPEC_PROFILE, "/profile", "some engine default", "pattern"),
+      "unknown-property": fault(MTF_SPEC_FRACTIONS, "/lines", "photopic", "additionalProperties"),
+    },
+  },
+  [`${MTF_NATIVE}.data`]: {
+    valid: { "every-status": MTF_DATA_FRACTIONS, "best-focus-three-lines": MTF_DATA_BEST_FOCUS },
+    invalid: {
+      "missing-fields": fault(MTF_DATA_FRACTIONS, "/fields", REMOVE, "required", ""),
+      "missing-notes": fault(MTF_DATA_FRACTIONS, "/notes", REMOVE, "required", ""),
+      "fields-empty": fault(MTF_DATA_FRACTIONS, "/fields", [], "minItems"),
+      "field-missing-status": fault(MTF_DATA_FRACTIONS, "/fields/0/status", REMOVE, "required", "/fields/0"),
+      // An engine's own word for a status is mapped to one of the three, never passed on.
+      "status-by-engine-name": fault(MTF_DATA_FRACTIONS, "/fields/0/status", "converged", "enum"),
+      "sagittal-as-plain-numbers": fault(MTF_DATA_FRACTIONS, "/fields/0/sagittal", [0.875, 0.5], "type"),
+      "tangential-two-axes": fault(MTF_DATA_FRACTIONS, "/fields/0/tangential/$nd/shape", [2, 1], "maxItems"),
+      "sagittal-not-float64": fault(MTF_DATA_FRACTIONS, "/fields/1/sagittal/$nd/dtype", "u1", "const"),
+      "field-angle-ninety": fault(MTF_DATA_FRACTIONS, "/fields/1/fieldAngleDeg", 90, "exclusiveMaximum"),
+      "image-height-negative": fault(MTF_DATA_FRACTIONS, "/fields/1/imageHeightMm", -10.75, "minimum"),
+      "reason-empty": fault(MTF_DATA_FRACTIONS, "/fields/2/reason", "", "minLength"),
+      "sampling-value-as-string": fault(MTF_DATA_FRACTIONS, "/fields/0/sampling/gridSize", "32", "type"),
+      "field-unknown-property": fault(MTF_DATA_FRACTIONS, "/fields/0/meridional", [0.875, 0.5], "additionalProperties"),
+      "method-without-params": fault(MTF_DATA_FRACTIONS, "/method/params", REMOVE, "required", "/method"),
+      "focus-without-mode": fault(MTF_DATA_BEST_FOCUS, "/focus/mode", REMOVE, "required", "/focus"),
+      "focus-shift-null": fault(MTF_DATA_BEST_FOCUS, "/focus/appliedShiftMm", null, "type"),
+      // A label is not a number: the limiting surface is named by its index in the case.
+      "aperture-value-as-label": fault(MTF_DATA_BEST_FOCUS, "/aperture/limitingSurfaceIndex", "4A", "type"),
+      "lines-empty": fault(MTF_DATA_FRACTIONS, "/lines", [], "minItems"),
+      "line-weight-zero": fault(MTF_DATA_BEST_FOCUS, "/lines/1/weight", 0, "exclusiveMinimum"),
+      "notes-as-string": fault(MTF_DATA_BEST_FOCUS, "/notes", "The dispersion of one glass is estimated.", "type"),
+      "unknown-property": fault(MTF_DATA_FRACTIONS, "/frequenciesPerMm", [10, 30], "additionalProperties"),
     },
   },
   [`${SELFTEST_ECHO}.spec`]: {

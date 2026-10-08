@@ -37,6 +37,15 @@ export function assessMtfSupport(state: FakeState, options: FakeMtfOptions): Fak
   if (!(options.pupilSemiDiameterMm > 0) || !(options.stopSemiDiameterMm > 0)) {
     return reject("invalid-input", "MTF requires finite physical apertures.");
   }
+  // The fake's limits on one request, none of them LV's: 8 fields, 12 frequencies, 400 cycles/mm.
+  const fields = options.fieldFractions ?? [];
+  const frequencies = options.frequenciesPerMm ?? [];
+  if (fields.length > 8 || frequencies.length > 12 || frequencies.some((frequency) => frequency > 400)) {
+    return reject("invalid-input", "MTF requires fields and image-space frequencies within its limits.");
+  }
+  if (state.lens.runtime.data.unverifiedScale) {
+    return reject("unverified-scale", "Prescription scale needs verification before reporting lp/mm.");
+  }
   if (options.spectrum !== "reference") {
     if (state.lens.runtime.data.noDispersionData) {
       return reject("spectral-data-unavailable", "Spectral MTF is unavailable because a glass has no Abbe number.");
@@ -45,4 +54,19 @@ export function assessMtfSupport(state: FakeState, options: FakeMtfOptions): Fak
     support.useResolvedReference = true;
   }
   return support;
+}
+
+// The spectrum the fake's "MTF tab" asks for: the preferred one, or the reference line for a lens without the glass
+// data, with a note that says so.
+export function resolveMtfSpectrum(
+  state: FakeState,
+  preferred: FakeMtfOptions["spectrum"],
+): { spectrum: FakeMtfOptions["spectrum"]; note: string | null } {
+  const hasData = !state.lens.runtime.data.noDispersionData;
+  if (preferred === "reference" || hasData) return { spectrum: preferred, note: null };
+  const label = preferred === "cdf" ? "C/d/F" : "Photopic";
+  return {
+    spectrum: "reference",
+    note: `${label} MTF is unavailable because a glass has no Abbe number; showing the reference wavelength.`,
+  };
 }

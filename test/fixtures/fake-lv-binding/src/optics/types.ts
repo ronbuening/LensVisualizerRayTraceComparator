@@ -27,8 +27,16 @@ export interface FakeLensData {
   zoomStopSDs?: number[];
   zoomGaps?: number[];
   fopen?: number;
+  /** The largest f-number the fake's aperture slider reaches; 16 without it. */
+  maxFstop?: number;
+  /** The height of a ray at the stop per unit of height at the entrance pupil; 1 without it. */
+  pupilRatio?: number;
   finiteConjugates?: FakeFiniteConjugate[];
   noDispersionData?: boolean;
+  /** The fake's gate refuses the lens every MTF: its scale is "unverified". */
+  unverifiedScale?: boolean;
+  /** What the fake's product MTF says of the lens beside its curves. */
+  mtf?: { unconvergedFraction?: number; clippedChiefFraction?: number; limitingSurfaceLabel?: string };
   /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
   field?: {
     mmPerDeg?: number;
@@ -108,6 +116,7 @@ export interface FakeRuntimeLens {
   stopPhysSD: number;
   zoomStopSDs: readonly number[] | null;
   FOPEN: number;
+  maxFstop: number;
   EP: { epSD: number };
   epZRelStop: number;
   xpZRelLastSurf: number;
@@ -155,9 +164,15 @@ export interface FakeState {
 }
 
 export interface FakeMtfOptions {
+  method: "geometric" | "diffraction";
   spectrum: "reference" | "cdf" | "photopic";
   pupilSemiDiameterMm: number;
   stopSemiDiameterMm: number;
+  focus: "auto" | "design" | "best-axial";
+  movementActive?: boolean;
+  fieldFractions?: readonly number[];
+  frequenciesPerMm?: readonly number[];
+  maxGridSize?: number;
 }
 
 export interface FakeMtfSupport {
@@ -169,4 +184,35 @@ export interface FakeMtfSupport {
   spectralLines: { wavelengthNm: number; weight: number }[];
   conjugate?: FakeFiniteConjugate;
   limitations: string[];
+}
+
+export interface FakeMtfFieldResult {
+  fieldFraction: number;
+  targetImageHeightMm: number | null;
+  fieldAngleDeg: number | null;
+  imageHeightMm: number | null;
+  sagittal: number[];
+  tangential: number[];
+  status: "converged" | "unconverged" | "unavailable" | "pending";
+  reason: string | null;
+  message: string;
+  notes: string[];
+  gridSize: number;
+  validRays: number;
+  blockedRays: number;
+  failedRays: number;
+  unknownFluxFraction: number;
+  maxDelta: number | null;
+  convergedThroughLpMm: number | null;
+}
+
+export interface FakeMtfResult {
+  method: string;
+  spectrum: string;
+  support: FakeMtfSupport;
+  frequenciesPerMm: number[];
+  fields: FakeMtfFieldResult[];
+  geometry: unknown;
+  focus: { requestedMode: string; mode: string; appliedShiftMm: number; bestAxialShiftMm: number | null } | null;
+  aperture: { tracedFNumber: number; limitingSurfaceLabel: string | null } | null;
 }

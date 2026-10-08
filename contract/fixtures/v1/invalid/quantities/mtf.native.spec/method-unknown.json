@@ -1,0 +1,16 @@
+{
+  "frequenciesPerMm": [
+    10,
+    30
+  ],
+  "fields": {
+    "kind": "image-height-fractions",
+    "values": [
+      0,
+      0.5,
+      1
+    ]
+  },
+  "method": "huygens",
+  "focus": "design"
+}

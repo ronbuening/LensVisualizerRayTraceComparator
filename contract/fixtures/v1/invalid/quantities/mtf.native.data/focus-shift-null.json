@@ -1,0 +1,127 @@
+{
+  "fields": [
+    {
+      "field": 0,
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADsPwAAAAAAAOg/AAAAAAAA4D8=",
+          "sha256": "166b9eee99cde5574831985c066f3e8f2601f93cdd03da63e1aa8641f2f2983e"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADsPwAAAAAAAOg/AAAAAAAA4D8=",
+          "sha256": "166b9eee99cde5574831985c066f3e8f2601f93cdd03da63e1aa8641f2f2983e"
+        }
+      },
+      "status": "ok",
+      "sampling": {
+        "gridSize": 64
+      }
+    },
+    {
+      "field": 10,
+      "fieldAngleDeg": 10,
+      "imageHeightMm": 17.5,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADqPwAAAAAAAOY/AAAAAAAA3D8=",
+          "sha256": "3839e8c512454eeb03e5e37c7fa79cbeb9185fbb95abf058ab39287a54f957c5"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADoPwAAAAAAAOQ/AAAAAAAA2D8=",
+          "sha256": "3bf3eba88e5edefe305424b236058b9fde5583c8525d35fde551405af067757a"
+        }
+      },
+      "status": "ok",
+      "sampling": {
+        "gridSize": 64
+      }
+    },
+    {
+      "field": 14,
+      "fieldAngleDeg": 14,
+      "imageHeightMm": 24.5,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADoPwAAAAAAAOQ/AAAAAAAA2D8=",
+          "sha256": "3bf3eba88e5edefe305424b236058b9fde5583c8525d35fde551405af067757a"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            4
+          ],
+          "data": "AAAAAAAA8D8AAAAAAADkPwAAAAAAAOA/AAAAAAAA0D8=",
+          "sha256": "cfc0eff5c7be1e2f41f71b18286172885eec2e016bd0a902df03ca0bf8bd83e6"
+        }
+      },
+      "status": "ok",
+      "sampling": {
+        "gridSize": 64
+      }
+    }
+  ],
+  "method": {
+    "name": "pupil-autocorrelation",
+    "params": {
+      "profile": "some-engine-default",
+      "spectrum": "three-line",
+      "displayedFrequenciesPerMm": [
+        10,
+        40
+      ]
+    }
+  },
+  "focus": {
+    "mode": "best-axial",
+    "appliedShiftMm": null
+  },
+  "aperture": {
+    "tracedFNumber": 2.0625,
+    "limitingSurfaceIndex": 3
+  },
+  "lines": [
+    {
+      "wavelengthNm": 550,
+      "weight": 1
+    },
+    {
+      "wavelengthNm": 480,
+      "weight": 0.25
+    },
+    {
+      "wavelengthNm": 620,
+      "weight": 0.5
+    }
+  ],
+  "notes": [
+    "The dispersion of one glass is estimated."
+  ]
+}

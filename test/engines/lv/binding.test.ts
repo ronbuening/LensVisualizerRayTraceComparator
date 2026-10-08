@@ -89,7 +89,7 @@ test("a tree missing one module fails with that module named, and leaves no load
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
   assert.match(error.details[0], /^src\/optics\/analysis\/mtfTracing\.ts: /);
-  assert.match(error.message, /1 of 15 modules cannot be imported/);
+  assert.match(error.message, /1 of 18 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -100,9 +100,10 @@ test("every module that cannot be imported is listed in one error", async (t) =>
   rmSync(join(lv, "src/optics/analysis/mtfTracing.ts"));
   writeFileSync(join(lv, "src/optics/analysis/mtfSupport.ts"), 'throw new Error("mtfSupport is broken");\n');
   const error = await refused(loadLvBinding(lv), "import-failed");
+  // The MTF barrel takes its gate from the broken module, so it cannot be imported either.
   assert.deepEqual(
     error.details.map((detail) => detail.split(": ")[0]),
-    ["src/optics/analysis/mtfSupport.ts", "src/optics/analysis/mtfTracing.ts"],
+    ["src/optics/analysis/mtfSupport.ts", "src/optics/analysis/mtfTracing.ts", "src/optics/mtf.ts"],
   );
   assert.match(error.details[0], /mtfSupport is broken/);
 });
@@ -117,22 +118,19 @@ test("a module that cannot be imported and an export missing elsewhere are named
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 15 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 18 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 
 test("a tree missing two exports fails with both named", async (t) => {
   const lv = freshLv(t);
   // One export renamed away, one that is no longer a function.
-  writeFileSync(
-    join(lv, "src/optics/analysis/mtfSupport.ts"),
-    "export const renamedGate = (): undefined => undefined;\n",
-  );
+  writeFileSync(join(lv, "src/optics/aperture.ts"), "export const renamedSlider = (): undefined => undefined;\n");
   writeFileSync(join(lv, "src/optics/trace/aperture.ts"), "export const evaluateAperture = 3;\n");
   const error = await refused(loadLvBinding(lv), "exports-missing");
   assert.deepEqual(error.details, [
+    "src/optics/aperture.ts: fNumberAtStopdown (expected function, found undefined)",
     "src/optics/trace/aperture.ts: evaluateAperture (expected function, found number)",
-    "src/optics/analysis/mtfSupport.ts: assessMtfSupport (expected function, found undefined)",
   ]);
   for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
   assert.match(error.message, /lacks 2 of the exports/);

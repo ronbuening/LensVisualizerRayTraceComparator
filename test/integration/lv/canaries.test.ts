@@ -1,6 +1,7 @@
 // Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
-// pinned as text at LV commit d36f44b3. LensVisualizer exports none of these rules as a function, so the comparator
-// restates them; when LV rewrites one, the canary fails and names what to read again. Whitespace is not compared.
+// pinned as text at LV commit d36f44b3, and those of the MTF tab's request at ed78cf40. LensVisualizer exports none
+// of these rules as a function, so the comparator restates them; when LV rewrites one, the canary fails and names
+// what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -407,14 +408,256 @@ test("the MTF still puts the field axis together as the ray sets resolve image-h
     "const traceOptions = mtfTraceOptions(state, options, support, support.spectralLines[0]);",
     "lvLaunchSetup in src/engines/lv/raySets.ts puts the lines of the case into the support record",
   );
-  // The tab's own seed of the footprint scan is the wide-open pupil scaled by the f-number; the ray sets take the
-  // entrance pupil of the case's stop radius, which is the same number to rounding.
+  // The seed of the footprint scan is the pupil radius of the request, which the ray sets take from the hook's rule
+  // (the canary of the hook is below).
+  assertSource(
+    "src/optics/analysis/mtfTracing.ts",
+    `options.stopSemiDiameterMm,
+       ),
+     options.pupilSemiDiameterMm,
+     mtfMirrorSymmetric(state),
+     growths,
+   );`,
+    "lvLaunchSetup in src/engines/lv/raySets.ts seeds the footprint scan with lvPupilSeed, as pupilSemiDiameterMm",
+  );
+});
+
+// ── The MTF tab's request ────────────────────────────────────────────────────────────────────────────────────────
+//
+// What LensVisualizer presents as a lens's MTF is what its MTF tab asks its engine for. The tab and the hook that
+// feeds it are React code, which cannot be imported: src/engines/lv/tabRequest.ts restates them, and the lines
+// below are the ones it restates, pinned at LV commit ed78cf40.
+
+test("the hook still hands the MTF tab the stop and the pupil radius by the expressions lv restates", { skip }, () => {
   const hook = "src/components/hooks/useLensComputation.ts";
-  const seed = "lvLaunchSetup seeds the footprint with entrancePupilAtState2(stop radius of the case, ...).epSD";
-  assertSource(hook, "const currentEPSD = L ? (baseEPSD * currentFOPEN) / fNumber : 0;", seed);
+  const mirror = "lvHookAperture in src/engines/lv/tabRequest.ts restates it, in this order of operations";
+  assertSource(hook, "const currentFOPEN = L ? fopenAtZoom(zoomT, L) : 1;", mirror);
+  assertSource(hook, "const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;", mirror);
+  assertSource(hook, "const wideOpenStopSD = L ? wideOpenStopAtZoom(zoomT, L) : 0;", mirror);
+  assertSource(hook, "const currentPhysStopSD = L ? (wideOpenStopSD * currentFOPEN) / fNumber : 0;", mirror);
+  assertSource(
+    hook,
+    `const baseEPSD =
+       L && fieldGeometry ? entrancePupilAtState(wideOpenStopSD, focusT, zoomT, L, fieldGeometry, aberrationT).epSD : 0;`,
+    mirror,
+  );
+  assertSource(hook, "const currentEPSD = L ? (baseEPSD * currentFOPEN) / fNumber : 0;", mirror);
+  assertSource(
+    hook,
+    `const fieldGeometry = useMemo(
+       () => (L ? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT) : null),`,
+    "lvHookAperture hands entrancePupilAtState2 the analysis field geometry, as the hook does",
+  );
+  // A lens opens with its aperture slider at 0 and its aberration control neutral.
+  assertSource(
+    hook,
+    "aberrationT: requestedAberrationT = 0,",
+    "lvHookAperture takes the aberration control as neutral",
+  );
+  assertSource(
+    "src/optics/aperture.ts",
+    "const requested = L.FOPEN * Math.pow(L.maxFstop / L.FOPEN, stopdownT);",
+    "lvHookAperture asks fNumberAtStopdown at the slider position 0, which is wide open",
+  );
+  // The hook's functions are the ones the binding imports under their names with a 2.
+  const barrel = "src/optics/optics.ts";
+  const imported = "the binding takes the function of this name with a 2 for the one the hook calls";
+  assertSource(barrel, "fopenAtZoom2 as fopenAtZoom,", imported);
+  assertSource(barrel, "entrancePupilAtState2 as entrancePupilAtState,", imported);
+  assertSource(barrel, "computeAnalysisFieldGeometryAtState2 as computeAnalysisFieldGeometryAtState,", imported);
+  // The pupil radius the hook derives follows the stop radius through the geometry's pupil ratio alone.
   assertSource(
     "src/optics/field/chiefRay.ts",
     "const epSD = Math.abs(geom.yRatio) > 1e-9 ? Math.abs(stopSD / geom.yRatio) : 0;",
-    seed,
+    "lvHookAperture takes the entrance pupil of the wide-open iris for the pupil the tab scales",
   );
 });
+
+test(
+  "the MTF tab still builds its request from its preferences and the hook's radii as lv restates it",
+  { skip },
+  () => {
+    const tab = "src/components/display/analysis/MtfTab.tsx";
+    const mirror = "lvTabRequest in src/engines/lv/tabRequest.ts restates it, member for member";
+    assertSource(
+      tab,
+      `const spectrum = useMemo(
+       () => resolveMtfSpectrum(preparedState, preferences.spectrum),`,
+      mirror,
+    );
+    // The whole of the options: a member added here, a frequency list for one, is a member lv does not send.
+    assertSource(
+      tab,
+      `const options: MtfOptions = useMemo(
+       () => ({
+         method: preferences.method,
+         spectrum: spectrum.spectrum,
+         focus: preferences.focus,
+         maxGridSize: preferences.maxGridSize,
+         fieldFractions: mtfFieldFractions(preferences.fieldStepPercent),
+         pupilSemiDiameterMm: currentEPSD,
+         stopSemiDiameterMm: currentPhysStopSD,
+         movementActive,
+       }),`,
+      mirror,
+    );
+    assertSource(tab, "movementActive = false,", "lvTabRequest sends movementActive false: a lens opens unmoved");
+    assertSource(
+      tab,
+      `export function mtfFieldFractions(stepPercent: number): number[] {
+       const count = Math.round(100 / stepPercent);
+       return Array.from({ length: count + 1 }, (_, i) => i / count);
+     }`,
+      "lvTabFieldFractions in src/engines/lv/tabRequest.ts restates it",
+    );
+    // The request goes to the worker as it is, with the state's own positions, and the tab draws a selection of the
+    // frequencies it gets back.
+    assertSource(tab, "const { focusT, zoomT, aberrationT } = preparedState;", mirror);
+    assertSource(tab, "() => (support.available ? { focusT, zoomT, aberrationT, options } : null),", mirror);
+    assertSource(tab, "const { result, stale, running, error } = useMtfComputation(L, job);", mirror);
+    assert.equal(occurrences(tab, "frequenciesPerMm"), 0, `${tab} now names the frequencies of its request`);
+    assert.equal(occurrences(tab, "frequencies={preferences.frequencies}"), 2, `${tab} draws other frequencies`);
+  },
+);
+
+test(
+  "the tab's f/8 comparison still scales both radii by N over 8, for a lens that is faster and reaches f/8",
+  { skip },
+  () => {
+    const tab = "src/components/display/analysis/MtfTab.tsx";
+    const mirror = 'lvTabRequest in src/engines/lv/tabRequest.ts restates it for the view "f8-comparison"';
+    assertSource(tab, "const COMPARISON_F_NUMBER = 8;", "LV_TAB_COMPARISON_F_NUMBER in tabRequest.ts is this number");
+    assertSource(
+      tab,
+      "const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;",
+      mirror,
+    );
+    assertSource(
+      tab,
+      `const scale = fNumber / COMPARISON_F_NUMBER;
+     const stopped = {
+       ...job.options,
+       pupilSemiDiameterMm: job.options.pupilSemiDiameterMm * scale,
+       stopSemiDiameterMm: job.options.stopSemiDiameterMm * scale,
+     };`,
+      mirror,
+    );
+  },
+);
+
+test("the tab's defaults are still the ones the profile lv-tab-default is documented and pinned with", { skip }, () => {
+  // The profile reads LensVisualizer's defaults when it runs, so a change here changes no code of the comparator:
+  // it changes what the profile is. README.md, contract/CONTRACT.md and the figures pinned in
+  // test/integration/lv/mtf.test.ts describe these.
+  assertSource(
+    "src/utils/state/mtfPreferences.ts",
+    `export const DEFAULT_MTF_PREFERENCES: MtfPreferences = Object.freeze({
+       method: "diffraction",
+       spectrum: "photopic",
+       focus: "best-axial",
+       view: "field",
+       fieldStepPercent: 10,
+       frequencies: Object.freeze([10, 30] as const),
+       maxGridSize: 128,
+       compareF8: false,
+     });`,
+    "the profile lv-tab-default follows it at run time; its documented defaults and pinned figures are of these",
+  );
+  assertSource(
+    "src/optics/analysis/mtfConstants.ts",
+    "export const MTF_FREQUENCIES: readonly number[] = Object.freeze(Array.from({ length: 51 }, (_, i) => i * 2));",
+    "the frequencies of the profile are documented as 0 to 100 cycles/mm in steps of 2",
+  );
+});
+
+test("the grid caps, the names and the limits of a request are still as lv states, maps or asks them", { skip }, () => {
+  const constants = "src/optics/analysis/mtfConstants.ts";
+  assertSource(
+    constants,
+    "export const MTF_GRID_CAPS: readonly MtfGridCap[] = Object.freeze([32, 64, 128, 256]);",
+    "LV_GRID_CAPS in src/engines/lv/mtf.ts is this list: a cap of the option lvGridCap is held to it",
+  );
+  assertSource(
+    constants,
+    "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 128;",
+    "LV_DEFAULT_GRID_CAP in src/engines/lv/mtf.ts is this number: the cap of a request without a profile",
+  );
+  // The names lv maps to the contract's, and the ones it passes on, are still all there are.
+  const types = "src/types/mtf.ts";
+  assertSource(
+    types,
+    'export type MtfMethod = "geometric" | "diffraction";',
+    "the methods of an mtf.native spec are LensVisualizer's by the same names (answerLvMtf, lvTabSpec)",
+  );
+  assertSource(
+    types,
+    'export type MtfSpectrum = "reference" | "cdf" | "photopic";',
+    "LV_MTF_SPECTRA in src/engines/lv/mtf.ts is this list: the lines of a case are held to each (lvSpectrumOf)",
+  );
+  assertSource(
+    types,
+    'export type MtfFocusMode = "auto" | "design" | "best-axial";',
+    'answerLvMtf asks "design" for the design plane and "best-axial" for engine-best; lvTabSpec maps them back',
+  );
+  assertSource(
+    types,
+    'export type MtfFieldStatus = "converged" | "unconverged" | "unavailable" | "pending";',
+    'fieldOf in src/engines/lv/mtf.ts maps "converged" to ok, passes two on and refuses "pending"',
+  );
+  // The limits on the fields and frequencies of one request are not restated: lv asks the gate, which must still
+  // answer for them with the reason lv reads as a refusal of what was added to a request it had passed.
+  const gate = "src/optics/analysis/mtfSupport.ts";
+  const asked = "specRefusal in src/engines/lv/mtf.ts asks the gate with the spec's fields, then its frequencies";
+  assertSource(gate, "fields.length > MTF_MAX_FIELDS ||", asked);
+  assertSource(gate, "frequencies.length > MTF_MAX_FREQUENCIES ||", asked);
+  assertSource(gate, "frequencies.some((f) => !Number.isFinite(f) || f < 0 || f > MTF_MAX_FREQUENCY_LPMM) ||", asked);
+  assertSource(
+    gate,
+    'return reject("invalid-input", "MTF requires finite physical apertures, fields and image-space frequencies.");',
+    asked,
+  );
+});
+
+test(
+  "the tab's worker still computes a request as computeMtf does: on a state of its own, by the same steps",
+  { skip },
+  () => {
+    const worker = "src/components/hooks/mtf.worker.ts";
+    const mirror = "answerLvMtf in src/engines/lv/mtf.ts calls computeMtf on the state it prepared for the case";
+    assertSource(worker, "const { focusT, zoomT, aberrationT, options } = message.job;", mirror);
+    assertSource(worker, "const state = prepareRuntimeState(lens, focusT, zoomT, aberrationT);", mirror);
+    assertSource(worker, "steps: computeMtfSteps(state, options, jobCache(message.job)),", mirror);
+    // The worker builds the lens again from the authored surfaces, as the catalog's lens file is built.
+    assertSource(
+      worker,
+      `lens = buildLens({
+       ...message.data,
+       surfaces: message.data.surfaces.filter((surface) => !surface.synthetic),
+       elements: message.data.elements.filter((element) => !element.synthetic),
+     });`,
+      "lv builds the lens of the catalog, which an integration test holds to this rebuilt one",
+    );
+    const engine = "src/optics/analysis/mtf.ts";
+    assertSource(
+      engine,
+      `export function computeMtf(state: PreparedOpticalState, options: MtfOptions): MtfResult {
+       const steps = computeMtfSteps(state, options);
+       let next = steps.next();
+       while (!next.done) next = steps.next();
+       return next.value;
+     }`,
+      mirror,
+    );
+    assertSource(
+      engine,
+      "const frequencies = [...(options.frequenciesPerMm ?? MTF_FREQUENCIES)];",
+      "lvTabRequest names no frequencies and takes LensVisualizer's MTF_FREQUENCIES for what comes back",
+    );
+    // The request crosses to the worker as JSON, which keeps every double.
+    assertSource(
+      "src/components/hooks/useMtfComputation.ts",
+      ".compute(JSON.parse(key) as MtfJob,",
+      "the options lv hands computeMtf are the tab's as numbers, which JSON carries exactly",
+    );
+  },
+);

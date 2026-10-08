@@ -303,30 +303,50 @@ function dataProblems(quantity: QuantityModule, result: ResultEnvelope): string[
   return result.status === "ok" ? resultDataProblems(quantity, result.data) : [];
 }
 
-/** Runs one job on an engine that is ready or not. A store entry that cannot be trusted is added to `warnings`. */
-async function runJob(
-  planned: PlannedJob,
-  session: EngineSession,
-  store: ResultStore,
-  warnings: string[],
-): Promise<JobOutcome> {
-  const { opticalCase, quantity, engineId, request } = planned;
-  if (session.kind === "unavailable") {
-    const job = jobOf(planned, { status: "error", storeKey: null, error: { code: session.code } });
-    return { job, source: "unavailable", detail: session.message };
-  }
-  const { adapter, descriptor } = session;
+/** One request to ask of an engine that has been reached and described. */
+export interface EngineQuestion {
+  readonly adapter: EngineAdapter;
+  /** What the adapter's `describe()` gave. */
+  readonly descriptor: EngineDescriptor;
+  /** The module of the request's quantity, which the answer's data is held to. */
+  readonly quantity: QuantityModule;
+  /** The request, with the options it carries for this engine. */
+  readonly request: QuantityRequest;
+  readonly opticalCase: OpticalCase;
+  readonly store: ResultStore;
+  /** A store entry that cannot be trusted is said here. */
+  readonly warnings: string[];
+}
+
+/** An engine's answer to one request, and how it was come by. */
+export interface EngineAnswer {
+  readonly result: ResultEnvelope;
+  /** The key the result is kept under in the store; null for a result that is not kept. */
+  readonly storeKey: string | null;
+  readonly source: Exclude<JobSource, "unavailable">;
+}
+
+/**
+ * Asks one engine one request, as every job of a suite is asked: the request is negotiated against the engine's
+ * descriptor, and an engine that cannot answer is not asked ("negotiated"); the store is looked up under the key of
+ * the request, the engine's id, fingerprint and adapter revision and the engine options, and a hit whose data is
+ * still valid is the answer ("cached"); else the engine is asked ("computed"), an "ok" result whose data is not the
+ * quantity's becomes an "error" with the code `INVALID_DATA`, and a result of status "ok" or "unsupported" is
+ * stored at once.
+ */
+export async function askEngine(question: EngineQuestion): Promise<EngineAnswer> {
+  const { adapter, descriptor, quantity, request, opticalCase, store, warnings } = question;
   const stamp = engineStamp(descriptor.identity);
 
   const items = negotiate(opticalCase, request, descriptor);
   if (items.length > 0) {
     const refusal = makeResult(request, stamp, { status: "unsupported", unsupported: items });
-    return outcomeOf(planned, refusal, null, "negotiated");
+    return { result: refusal, storeKey: null, source: "negotiated" };
   }
 
   const key = storeKey({
     requestId: request.id,
-    engineId,
+    engineId: adapter.id,
     engineFingerprint: descriptor.identity.fingerprint,
     adapterRevision: descriptor.identity.adapterRevision,
     engineOptions: request.engineOptions,
@@ -335,7 +355,7 @@ async function runJob(
   if (found.kind === "corrupt") warnings.push(`${found.problem}; the job is computed again`);
   if (found.kind === "hit") {
     const problems = dataProblems(quantity, found.entry.result);
-    if (problems.length === 0) return outcomeOf(planned, found.entry.result, key, "cached");
+    if (problems.length === 0) return { result: found.entry.result, storeKey: key, source: "cached" };
     warnings.push(`store entry ${key}: its data cannot be used: ${problems.join("; ")}; the job is computed again`);
   }
 
@@ -345,7 +365,24 @@ async function runJob(
     const message = `the engine's data cannot be used: ${problems.join("; ")}`;
     result = makeResult(request, stamp, { status: "error", error: { code: INVALID_DATA, message } });
   }
-  return outcomeOf(planned, result, store.put(request, result), "computed");
+  return { result, storeKey: store.put(request, result), source: "computed" };
+}
+
+/** Runs one job on an engine that is ready or not. A store entry that cannot be trusted is added to `warnings`. */
+async function runJob(
+  planned: PlannedJob,
+  session: EngineSession,
+  store: ResultStore,
+  warnings: string[],
+): Promise<JobOutcome> {
+  const { opticalCase, quantity, request } = planned;
+  if (session.kind === "unavailable") {
+    const job = jobOf(planned, { status: "error", storeKey: null, error: { code: session.code } });
+    return { job, source: "unavailable", detail: session.message };
+  }
+  const { adapter, descriptor } = session;
+  const answer = await askEngine({ adapter, descriptor, quantity, request, opticalCase, store, warnings });
+  return outcomeOf(planned, answer.result, answer.storeKey, answer.source);
 }
 
 /**

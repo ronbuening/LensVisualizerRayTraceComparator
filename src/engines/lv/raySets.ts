@@ -16,6 +16,8 @@ import { exportOptionsOf } from "./caseModel.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { lvTraceOptions } from "./rays.ts";
 import type { LvRaysApi } from "./rays.ts";
+import { lvHookAperture, lvPupilSeed } from "./tabRequest.ts";
+import type { LvHookApi } from "./tabRequest.ts";
 import type {
   LvApi,
   LvMtfFieldLaunch,
@@ -28,10 +30,10 @@ import type {
 
 /** The LensVisualizer exports the ray sets are made with. */
 export type LvRaySetApi = LvRaysApi &
+  LvHookApi &
   Pick<
     LvApi,
     | "assessMtfSupport"
-    | "entrancePupilAtState2"
     | "mtfModeledHalfField"
     | "mtfChiefHeight"
     | "mtfBeamHeight"
@@ -55,8 +57,9 @@ export interface LvLaunchSetup {
 /**
  * The setup of LensVisualizer's launch for a case, or the coded problem that keeps every field from having rays.
  *
- * - The stop radius is the case's. The seed of the footprint scan is LensVisualizer's entrance pupil for that stop
- *   radius at the state, `entrancePupilAtState2(stop, focusT, zoomT, L).epSD`.
+ * - The stop radius is the case's. The seed of the footprint scan is the pupil radius LensVisualizer's own hook
+ *   hands its MTF tab for that stop radius (`lvPupilSeed`): for a case that is the tab's, the launch is then the
+ *   tab's, to the bit.
  * - The support record is LensVisualizer's own (`assessMtfSupport`), asked for the reference line when that is all
  *   the case has and for a spectral run otherwise, as the case's export was (`exportOptionsOf`); its lines are then
  *   those of the case, so that the chief ray is aimed and the beam is found at the case's reference line, with the
@@ -66,12 +69,12 @@ export interface LvLaunchSetup {
  * reason as its code.
  */
 export function lvLaunchSetup(
-  api: Pick<LvApi, "assessMtfSupport" | "entrancePupilAtState2">,
+  api: LvHookApi & Pick<LvApi, "assessMtfSupport">,
   model: LvCaseModel,
 ): LvLaunchSetup | { readonly problem: string } {
   const { state, runtime, exported } = model;
   const { lines, stopSemiDiameter } = exported.conditions;
-  const seed = api.entrancePupilAtState2(stopSemiDiameter, state.focusT, state.zoomT, runtime).epSD;
+  const seed = lvPupilSeed(lvHookAperture(api, runtime, state), stopSemiDiameter);
   const asked = exportOptionsOf(exported, state.zoomT, state.focusT).lines;
   const options: LvMtfOptions = {
     method: "geometric",

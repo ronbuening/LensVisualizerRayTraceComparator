@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:mtf.native.spec",
+  "title": "mtf.native spec",
+  "description": "What an mtf.native request asks for: the engine's own MTF of the case, by the engine's own method and sampling, at the given image-space frequencies and fields. Code checks that the frequencies ascend.",
+  "type": "object",
+  "properties": {
+    "frequenciesPerMm": {
+      "description": "Spatial frequencies in image space, cycles/mm, ascending.",
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "fields": {
+      "oneOf": [
+        {
+          "description": "Fractions of the full image height, as the engine itself resolves them to field angles.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "image-height-fractions" },
+            "values": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field angles in degrees. A positive angle is an object toward +y.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "angles-deg" },
+            "values": {
+              "type": "array",
+              "items": { "type": "number", "exclusiveMinimum": -90, "exclusiveMaximum": 90 },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "method": {
+      "description": "geometric: from where rays land, without diffraction. diffraction: with the diffraction of the aperture.",
+      "enum": ["geometric", "diffraction"]
+    },
+    "focus": {
+      "description": "design: on the image plane of the case. engine-best: on the plane the engine's own focus criterion moves it to; the answer says what was applied.",
+      "enum": ["design", "engine-best"]
+    },
+    "profile": {
+      "description": "A named, documented bundle of settings of one engine, for what this spec does not state.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/name"
+    }
+  },
+  "required": ["frequenciesPerMm", "fields", "method", "focus"],
+  "additionalProperties": false
+}

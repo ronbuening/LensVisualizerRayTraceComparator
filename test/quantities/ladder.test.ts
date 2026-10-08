@@ -58,7 +58,7 @@ test("system.describe and paraxial.first-order are registered, at the versions t
   assert.equal(PARAXIAL_FIRST_ORDER_VERSION, 1);
   assert.deepEqual(
     QUANTITIES.list().map(({ id }) => id),
-    ["paraxial.first-order", "rays.trace", "selftest.echo", "system.describe"],
+    ["mtf.native", "paraxial.first-order", "rays.trace", "selftest.echo", "system.describe"],
   );
 });
 

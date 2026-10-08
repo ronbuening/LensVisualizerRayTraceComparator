@@ -149,6 +149,7 @@ test("lv describes itself: LensVisualizer's engine closure, its commit, its adap
   });
   assert.notEqual(descriptor.identity.adapterRevision, descriptor.identity.fingerprint);
   assert.deepEqual(descriptor.capabilities.quantities, {
+    "mtf.native": { version: QUANTITIES.get("mtf.native")?.version },
     "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
     "rays.trace": { version: QUANTITIES.get("rays.trace")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },

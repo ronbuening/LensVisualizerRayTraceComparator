@@ -1,0 +1,19 @@
+{
+  "frequenciesPerMm": [
+    0,
+    10,
+    20,
+    40
+  ],
+  "fields": {
+    "kind": "angles-deg",
+    "values": [
+      0,
+      10,
+      14
+    ]
+  },
+  "method": "diffraction",
+  "focus": "best-axial",
+  "profile": "some-engine-default"
+}

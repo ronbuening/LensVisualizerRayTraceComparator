@@ -11,7 +11,7 @@ import type { LvStopApi } from "../../../src/engines/lv/exportAperture.ts";
 import type { LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { FLAT, lvEvaluateAperture, stateOf } from "./exportSupport.ts";
 
-const RUNTIME: LvRuntimeLens = { lastLensSurfaceIdx: 0, isZoom: true, elements: [] };
+const RUNTIME: LvRuntimeLens = { lastLensSurfaceIdx: 0, isZoom: true, elements: [], maxFstop: 22 };
 
 /** A zoom whose iris opens from 3 mm at the wide end to 6 mm at the tele end, f/4 at both. */
 const ZOOM: LvStopApi = {

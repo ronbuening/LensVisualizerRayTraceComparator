@@ -31,6 +31,7 @@ node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, re
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
+node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 ```
 
 ## Rules
@@ -91,9 +92,12 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
   workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
   `test/fixtures/fault-root` holds the engines that fail.
 - **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
-  test holds the three together. Raise the policy's `version` when a rung, a class or a limit changes. Two rungs
-  may compare one quantity, each with a comparator that names its rung: `r2` (geometry and mask) and `r3`
-  (optical path) both ask the `rays.trace` requests of `rayTraceRequests`, so an engine traces a set once.
+  test holds the three together. A quantity no rung asks for has no comparator, and the test names each: today
+  `mtf.native`, which is presented (`lvrtc mtf`) and not yet compared. The rung that compares it brings its
+  comparator and its policy entry, and takes it off that list. Raise the policy's `version` when a rung, a class
+  or a limit changes. Two rungs may compare one quantity, each with a comparator that names its rung: `r2`
+  (geometry and mask) and `r3` (optical path) both ask the `rays.trace` requests of `rayTraceRequests`, so an
+  engine traces a set once.
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -104,6 +108,8 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
   run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
   hash is in the request id. A field without rays is a coded problem of that field and fails nothing.
+- **One seed for LV's footprint scan, the MTF tab's** (`lvPupilSeed`): the ray sets and the product MTF both ask
+  with it, so the rays of a set are the tab's own launch rays for a case that is the tab's.
 - **LV's launch rays are kept verbatim**: every lattice cell as its own ray, no mirroring, no normalising (a `-0`
   stays), the chief ray last at weight 0. What `traceMtfBundle` and `computeMtfSteps` do inline is restated in
   `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own bundle.
@@ -116,13 +122,34 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 - **`fingerprint` is the engine's own code; `adapterRevision` is the comparator's code behind a built-in engine**
   (`src/engines/adapterRevision.ts`: the import closure of the engine's module, values only). The result store
   keys by both. A new built-in engine states both; never fold adapter code into a fingerprint.
-- **The fake LV tree (`test/fixtures/fake-lv-binding`) has a tracer and an MTF launch of its own**, with LV's
-  names. A name added to the import manifest needs a fake of it there, and a new fake file a line in
-  `FAKE_ENGINE_FILES` (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
+- **`mtf.native` of `lv` is LV's product MTF asked as LV's MTF tab asks** (`src/engines/lv/mtf.ts`). The tab and
+  its hook are React and cannot be imported: `src/engines/lv/tabRequest.ts` restates them expression by expression,
+  in their order of operations, on the functions and defaults they read, which the binding imports. Never
+  simplify an expression there (`(w * F) / F` is not `w` in doubles), never hard-code a default of the tab, and
+  never take the seed from `L.EP` as LV's audit scripts do. Every restated line has a source canary; a change to
+  the tab's request changes `tabRequest.ts`, its canary and the request spelled out again in
+  `test/integration/lv/mtf.test.ts`, three places that share no line.
+- **A profile is checked, not trusted.** The spec of `lv-tab-default` states the tab's frequencies, fields, method
+  and focus, and the case has the tab's stop radius and lines (`src/engines/lv/tabProfile.ts` builds both); `lv`
+  rebuilds the request from the case and answers `bad-spec` for anything else. What LV's MTF cannot compute is
+  `unsupported` with a named item, LV's own gate first and with LV's reason. A limit of LV on a request (how many
+  fields or frequencies) is asked of its gate, never restated: `invalid-input` from LV is an engine failure only
+  for what the engine itself put into the request.
+- **`lvrtc mtf` writes `<runsDir>/mtf/<profile>/<run>/mtf.json`** (`src/core/mtfRun.ts`): codes, hashes and answers,
+  no time, no path, and of a failed engine only the code. A test that runs it sets `LVRTC_RUNS_DIR`, and a test
+  that runs it in this process on a second fake tree closes the binding of the first (`closeBinding`).
+- **Pinned MTF figures are compared only while LV's engine closure and the case are the ones they were measured
+  with** (`PINNED_CLOSURE`, `PINNED` in `test/integration/lv/mtf.test.ts`): a lens edit must not turn `test:lv`
+  red. A name added to the import manifest changes the closure: measure and pin again.
+- **The fake LV tree (`test/fixtures/fake-lv-binding`) has a tracer, an MTF launch, a product MTF and tab
+  defaults of its own**, with LV's names; its defaults are deliberately not LV's. A name added to the import
+  manifest needs a fake of it there, and a new fake file a line in `FAKE_ENGINE_FILES`
+  (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
 - **`reports/benchmark/lv-floor.{json,md}` is the committed digest of the benchmark** (`src/report/floor.ts`):
   results, counts, run names and hashes only. An integration test holds its figures to a fresh run while LV's
   engine closure is the one it names. Regenerate it with `run ... --rungs r0,r1,r2,r3`, `compare` and
-  `report --floor` after a change to `ref`, to the `lv` adapter or to the figures: it names both engines by hash.
+  `report --floor` after a change to `ref`, to the `lv` adapter, to the import manifest (the closure it names) or
+  to the figures: it names both engines by hash.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
   `renderMarkdown` are pure functions and stay so.

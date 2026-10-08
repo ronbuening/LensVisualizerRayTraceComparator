@@ -29,6 +29,7 @@ export function buildLens2(data: FakeLensData): FakeRuntimeLens {
     stopPhysSD,
     zoomStopSDs: data.zoomStopSDs ?? null,
     FOPEN: data.fopen ?? DEFAULT_FOPEN,
+    maxFstop: data.maxFstop ?? 16,
     // Stored pupil constants, as LV keeps them on the lens: none of them is a paraxial image of the stop.
     EP: { epSD: 2 * stopPhysSD },
     epZRelStop: -1.5,
@@ -113,8 +114,20 @@ export function traceRay2(y0: number, u0: number): unknown {
   return { pts: [], ghostPts: [], y: y0, u: u0, clipped: false };
 }
 
-export function entrancePupilAtState2(stopSD: number): unknown {
-  return { epSD: stopSD, yRatio: 1, b: 0, epRatio: 1 };
+// The field geometry the fake's analyses share: its pupil ratio is the lens's, at any state.
+export function computeAnalysisFieldGeometryAtState2(_focusT: number, _zoomT: number, L: FakeRuntimeLens): unknown {
+  return { yRatio: L.data.pupilRatio ?? 1, b: 0, epRatio: 1, halfFieldDeg: L.data.field?.edgeDeg ?? 20 };
+}
+
+export function entrancePupilAtState2(
+  stopSD: number,
+  _focusT: number,
+  _zoomT: number,
+  L: FakeRuntimeLens,
+  geometry?: { yRatio: number },
+): unknown {
+  const yRatio = geometry?.yRatio ?? L.data.pupilRatio ?? 1;
+  return { epSD: Math.abs(stopSD / yRatio), yRatio, b: 0, epRatio: 1 };
 }
 
 export function fopenAtZoom2(_zoomT: number, L: FakeRuntimeLens): number {

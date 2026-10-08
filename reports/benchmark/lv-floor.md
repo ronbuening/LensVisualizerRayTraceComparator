@@ -18,7 +18,7 @@ the conditions that were traced: it says what the figures are of, whatever the l
 
 | Engine | Fingerprint | Adapter revision | Details |
 |---|---|---|---|
-| lv | f6681074924b98ec737648984fc0b25fb6b538918c4e02e65619e9bbf3978144 | f301b8f2ae8f2d5c9a750f1e3c4d741fda5fb5cb13c901706c06c6e57a9a4ea3 | commit c3fc5a2d6dc16b0b0a8ec7923f47b171b157e9a4, dirty true, engineFileCount 142 |
+| lv | 1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0 | 5b413bf2a7040ad3554f9e98b892bbb1729d5b09c6a1e6205eee6010738ea515 | commit ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62, dirty false, engineFileCount 151 |
 | ref | 8f34b4024051313a54e487f265ee755bcc3778eb6422049d95d0765afd5d2486 | 7b80637836e8f618bdd91f200d8614d78b162716a22a6ace42deb63531fb5da3 | sourceFiles 12 |
 
 | Run | Case |
@@ -79,7 +79,7 @@ Quantity `rays.trace`: 216 pairs, 216 PASS.
 
 | Metric | Worst, or total | Run | Where |
 |---|---|---|---|
-| hits.maxDistance (≤ 1.00e-8 mm) | 6.77e-9 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 4, ray 177, surface 23 |
+| hits.maxDistance (≤ 1.00e-8 mm) | 6.77e-9 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 4, ray 164, surface 23 |
 | direction.maxAbs (≤ 1.00e-9) | 3.13e-10 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 4, ray 164 |
 | landing.maxDistance (≤ 1.00e-8 mm) | 9.12e-9 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 4, ray 164 |
 | mask.mismatches (≤ 0 rays) | 0 | — | — |

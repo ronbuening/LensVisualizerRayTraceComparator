@@ -40,10 +40,12 @@ export const LV_IMPORT_MANIFEST = [
       "traceRay2",
       "computeCardinalElements2",
       "entrancePupilAtState2",
+      "computeAnalysisFieldGeometryAtState2",
       "fopenAtZoom2",
       "epAtZoom2",
     ),
   },
+  { module: "src/optics/aperture.ts", exports: functions("fNumberAtStopdown") },
   {
     module: "src/optics/layout.ts",
     exports: functions("epZRelStopAtZoom", "xpZRelLastSurfAtZoom", "xpAtZoom"),
@@ -86,6 +88,17 @@ export const LV_IMPORT_MANIFEST = [
     ),
   },
   { module: "src/optics/analysis/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
+  {
+    module: "src/optics/mtf.ts",
+    exports: [
+      ...functions("computeMtf", "resolveMtfSpectrum"),
+      { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
+    ],
+  },
+  {
+    module: "src/utils/state/mtfPreferences.ts",
+    exports: [{ name: "DEFAULT_MTF_PREFERENCES", as: "mtfDefaultPreferences", kind: "object" }],
+  },
   { module: "src/optics/spectralLines.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
 ] as const satisfies readonly LvManifestModule[];
 

@@ -1,4 +1,5 @@
 // Every quantity the comparator knows. A stage that adds a quantity adds its module to the list below.
+import { mtfNativeQuantity } from "./mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "./paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "./raysTrace.ts";
 import { createQuantityRegistry } from "./registry.ts";
@@ -11,6 +12,7 @@ const { has, get, list } = createQuantityRegistry([
   systemDescribeQuantity,
   paraxialFirstOrderQuantity,
   raysTraceQuantity,
+  mtfNativeQuantity,
 ]);
 
 /**

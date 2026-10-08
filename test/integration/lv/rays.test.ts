@@ -673,11 +673,11 @@ test(
     const setup = lvLaunchSetup(api, model);
     assert.ok(!("problem" in setup));
     assert.equal(setup.options.stopSemiDiameterMm, stop);
-    // The seed of the footprint is the number LensVisualizer's MTF tab asks with at this f-number, to rounding: the
-    // entrance pupil of the wide-open stop, scaled by the wide-open f-number over this one.
+    // The seed of the footprint is the number the hook of LensVisualizer's MTF tab hands over at this f-number, to
+    // the bit: the entrance pupil of the wide-open stop, times the wide-open f-number, over this one.
     const tabSeed =
       (api.entrancePupilAtState2(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoom2(0, model.runtime)) / fNumber;
-    assert.ok(Math.abs(setup.options.pupilSemiDiameterMm - tabSeed) <= 1e-12 * tabSeed, `${tabSeed}`);
+    assert.equal(setup.options.pupilSemiDiameterMm, tabSeed);
 
     const { sets, problems } = lvRaySets(api, model, {});
     assert.deepEqual(problems, []);

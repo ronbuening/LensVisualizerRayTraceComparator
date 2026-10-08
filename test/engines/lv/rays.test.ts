@@ -22,6 +22,7 @@ import { createLvEngineOn } from "../../../src/engines/lv/engine.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
 import { lvFieldAngles, lvFieldRays, lvLaunchSetup, lvRaySets } from "../../../src/engines/lv/raySets.ts";
 import { answerLvRays, lvTraceOptions } from "../../../src/engines/lv/rays.ts";
+import { lvHookAperture, lvPupilSeed } from "../../../src/engines/lv/tabRequest.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { startsInFront } from "../../../src/rays/probe.ts";
@@ -390,12 +391,14 @@ test("the ray sets of a case are LensVisualizer's launch lattice, every cell of 
   );
   const setup = lvLaunchSetup(api, model);
   assert.ok(!("problem" in setup));
-  // The stop radius is the case's, and the seed of the footprint is LensVisualizer's entrance pupil for it.
+  // The stop radius is the case's, and the seed of the footprint is the pupil radius the hook of LensVisualizer's
+  // MTF tab hands over for it: here the entrance pupil of the iris wide open, which the fake puts at the stop.
   const stop = opticalCase.conditions.stopSemiDiameter;
+  assert.equal(lvPupilSeed(lvHookAperture(api, model.runtime, model.state), stop), stop);
   assert.deepEqual(setup.options, {
     method: "geometric",
     spectrum: "reference",
-    pupilSemiDiameterMm: api.entrancePupilAtState2(stop, 0, 0, model.runtime).epSD,
+    pupilSemiDiameterMm: stop,
     stopSemiDiameterMm: stop,
     focus: "design",
   });

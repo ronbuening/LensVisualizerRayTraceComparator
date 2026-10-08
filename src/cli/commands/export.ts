@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import type { RunAperture, RunOptions } from "../../contract/runSpec.ts";
+import type { RunOptions } from "../../contract/runSpec.ts";
 import { writeFileAtomic } from "../../core/atomicFile.ts";
 import { REPO_ROOT, loadConfig } from "../../core/config.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
@@ -16,6 +16,7 @@ import { problemText } from "../../engines/lv/exportProblems.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
+import { apertureOption, sliderPosition } from "../lensOptions.ts";
 
 /** What `lvrtc export` is wired to, injected so that tests choose all three. */
 export interface ExportCommandInputs {
@@ -63,24 +64,6 @@ const EVERY_LENS_OPTIONS: readonly string[] = ["--census", "--json"];
 const LINE_SETS = ["reference", "cdf", "photopic"] as const;
 type ExportOptions = Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane">;
 
-/** A slider position from the command line: a number from 0 to 1. */
-function position(option: string, text: string): number {
-  const value = text.trim() === "" ? Number.NaN : Number(text);
-  if (!(value >= 0 && value <= 1)) throw new UsageError(`${option} needs a number from 0 to 1, got "${text}"`);
-  return value;
-}
-
-/** `--aperture`: "wide-open", "f/<N>" or "r=<mm>", with a positive number. */
-function apertureOf(text: string): RunAperture {
-  if (text === "wide-open") return { kind: "wide-open" };
-  const [, form, digits] = /^(f\/|r=)(.+)$/.exec(text) ?? [];
-  const value = digits === undefined || digits.trim() === "" ? Number.NaN : Number(digits);
-  if (!(Number.isFinite(value) && value > 0)) {
-    throw new UsageError(`--aperture needs wide-open, f/<N> or r=<mm> with a positive number, got "${text}"`);
-  }
-  return form === "f/" ? { kind: "f-number", value } : { kind: "stop-radius", mm: value };
-}
-
 /** The options of a single export, read from the command line. */
 function exportOptions(values: ReadonlyMap<string, string>): ExportOptions {
   const zoom = values.get("--zoom");
@@ -93,10 +76,10 @@ function exportOptions(values: ReadonlyMap<string, string>): ExportOptions {
   }
   return {
     state: {
-      zoomT: zoom === undefined ? 0 : position("--zoom", zoom),
-      focus: focus === undefined ? { kind: "infinity" } : { kind: "focusT", value: position("--focus", focus) },
+      zoomT: zoom === undefined ? 0 : sliderPosition("--zoom", zoom),
+      focus: focus === undefined ? { kind: "infinity" } : { kind: "focusT", value: sliderPosition("--focus", focus) },
     },
-    aperture: aperture === undefined ? { kind: "wide-open" } : apertureOf(aperture),
+    aperture: aperture === undefined ? { kind: "wide-open" } : apertureOption(aperture),
     lines: { kind: lineSet ?? "reference" },
     imagePlane: { kind: "design" },
   };

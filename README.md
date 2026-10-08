@@ -15,9 +15,11 @@ and LensVisualizer itself as the engine `lv`. Both answer the first four rungs o
 echo, the first-order data, and LensVisualizer's own launch rays traced by each, compared hit by hit (R2) and in
 optical path (R3). On the benchmark and the feature suite every pair of the two passes or is a numerical floor of
 LensVisualizer, which the reference engine arbitrates; the committed record is
-[reports/benchmark/lv-floor.md](reports/benchmark/lv-floor.md). LensVisualizer's product MTF comes next. The full
-plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md); what an engine does that a comparison has
-to know about is in [docs/gotchas.md](docs/gotchas.md).
+[reports/benchmark/lv-floor.md](reports/benchmark/lv-floor.md). And `lvrtc mtf` presents the MTF LensVisualizer
+itself presents, asked exactly as its MTF tab asks: what every other engine's MTF will be set against. That
+completes Phase 1; the first external engine, optiland, is Phase 2. The full plan is in
+[docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md); what an engine does that a comparison has to know about
+is in [docs/gotchas.md](docs/gotchas.md).
 
 ## Try it
 
@@ -121,6 +123,10 @@ node bin/lvrtc.mjs report benchmark --floor reports/benchmark
 
 ```bash
 node bin/lvrtc.mjs engine conformance lv
+```
+
+```bash
+node bin/lvrtc.mjs mtf nikkor-z50f12
 ```
 
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
@@ -479,6 +485,92 @@ commit cannot, in a checkout whose lens files are being edited (`dirty`). It hol
 hashes, and nothing an engine traced. The three commands that write it are under [Commands](#commands); an
 integration test holds its figures to a fresh run for as long as LensVisualizer's engine files and those cases are
 the ones it names. It names `ref` and the `lv` adapter by hash too: write it again after changing either.
+
+## LensVisualizer's product MTF
+
+`mtf.native` is the quantity for an engine's own MTF: by its own method, sampling and aiming, as it presents it.
+No two engines are expected to agree on it within a tolerance, and no rung compares it yet. LensVisualizer's is
+the one every later comparison is against, so it has to be obtained exactly as LensVisualizer obtains it.
+
+`lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>] [--aperture wide-open|f/8] [--root <dir>] [--json]`
+asks each named engine (`lv` unless others are named) for its MTF of a LensVisualizer lens, as a profile requests
+it, and prints what each answered: a row per field with the image height, the field angle, the status and the
+sagittal and tangential MTF at the frequencies the profile shows, then the engine's method and its settings, the
+focus shift it applied, the f-number it traced and the surface that limits the axial beam, the lines it computed
+with and its notes. With one engine it only presents; setting engines against each other is Phase 3, and adds
+nothing to this command line.
+
+- **The profile `lv-tab-default`**, the default, is the request LensVisualizer's MTF tab makes for a lens as it
+  opens. Its method, spectrum, focus mode, grid cap, field spacing and shown frequencies are LensVisualizer's own
+  `DEFAULT_MTF_PREFERENCES`, read when the command runs: today the diffraction estimate on the photopic spectrum
+  at best axial focus, a grid cap of 128, fields at 10 % steps of the image height, 51 frequencies from 0 to 100
+  cycles/mm, of which the tab draws 10 and 30. A lens without the glass data for the spectrum is asked on its
+  reference line, as the tab asks it, and the answer's first note says so.
+- **The two radii are the hook's.** The stop radius and the pupil radius, which seeds the scan that finds a
+  field's beam, are computed as LensVisualizer's own React hook computes them for the tab, in its order of
+  operations: `(wide-open iris × widest f-number) / f-number` and `(entrance pupil of that iris × widest f-number)
+  / f-number`. The seed matters: LensVisualizer's audit scripts pass the lens's nominal pupil instead, and get
+  another MTF, by 0.006 to 0.008 on the three benchmark lenses a test asks it of and by 0.003 to 0.013 over the
+  twelve configurations, measured once outside the tests.
+- **`--aperture f/8`** is the tab's own comparison at f/8: both radii of the wide-open request times `N / 8`. A
+  lens the tab offers no such comparison for (not faster than f/7.95, or not stopping down to f/8) is answered
+  `unsupported`, with the reason, and the command says so on its `profile` line. A lens that is f/8 wide open is
+  scaled by 8 / 8: its comparison is its wide-open case, and that is what is answered. The tab reaches any other
+  aperture only through its slider, so the profile has no request for one.
+- **The case** every engine is asked about is built by the profile: the lens at the zoom position, at infinity
+  focus, with the tab's stop radius and on the lines of the tab's spectrum. For 11 of the 12 benchmark
+  configurations it is the very case the benchmark suite runs on the photopic lines; for `nikon-z-mc-105f28` the
+  tab's stop radius is one unit in the last place from the iris of the prepared state, so its case is another
+  ([docs/gotchas.md](docs/gotchas.md)). `lv` builds the tab's request again from the case it is handed, and
+  refuses the profile for a case that is not the tab's: on other lines than the spectrum the tab resolves for the
+  lens, or with another stop radius, the answer is the error `bad-spec`, which says what to export instead. So is
+  a spec that names the profile and states other frequencies, fields, method or focus than the tab's.
+- **A lens LensVisualizer shows no MTF for** (a fisheye, an annular aperture, an unverified scale) is answered as
+  its own gate answers: `unsupported`, with the gate's reason and message. So is a request without a profile that
+  asks more of LensVisualizer than it takes at once (more than 101 fields or 501 frequencies, or a frequency above
+  1000 cycles/mm, today): `unsupported`, with the gate's message, never an error.
+- **The output** is `<runsDir>/mtf/<profile>/<run>/mtf.json`, with the case beside it under `cases/`: the request,
+  the engines with their fingerprints, and each answer whole. `<run>` is the lens key, with `-zoom<t>` at a zoom
+  position other than 0 and `-f8` for the comparison. Answers are kept in the result store as for a suite, so a
+  second run computes nothing. The file holds no time, no path and nothing of the machine. `--json` prints it,
+  with the fields of each answer as plain numbers.
+- **Exit code**: 0 when every engine answered, `unsupported` included; 1 when an engine ended in an error, when
+  the lens has no case or when LensVisualizer cannot be loaded; 2 for a command line that cannot be used.
+
+Held by the integration tests: the answer for each of the 12 benchmark configurations equals LensVisualizer's own
+`computeMtf` for the tab's request, spelled out a second time in the test, in every bit of every curve; the lens
+the tab's worker rebuilds gives the same bits; without a profile the answer is `computeMtf` of the spec, the lines
+and the stop of the case, in every bit, wide open, stopped down on three lines and at a finite conjugate; two
+processes write the same bytes; and source canaries fail when the tab, the hook, the worker, the defaults or the
+names and limits of a request are rewritten. The contract is in
+[contract/CONTRACT.md](contract/CONTRACT.md#mtfnative).
+
+Measured at LensVisualizer `ed78cf40` (engine closure `1827eefe`) with `lvrtc mtf <key>`, every configuration on
+the photopic spectrum, diffraction estimate, best axial focus. S and T are the sagittal and tangential MTF at 10
+and 30 cycles/mm:
+
+| Configuration | Focus shift, mm | Traced f/ | Axis: S10 T10 S30 T30 | 70 % field: S10 T10 S30 T30 | Grids |
+|---|---:|---:|---|---|---|
+| `canon-ef-135-f2l-usm` | −0.0280 | 2.06 (surface 8) | 0.9487 0.9487 0.7512 0.7512 | 0.9442 0.9440 0.6761 0.7111 | 32 to 64 |
+| `fujifilm-fujinon-gf-63mm-f28-r-wr` | −0.0426 | 2.87 | 0.9699 0.9699 0.8813 0.8813 | 0.8351 0.8794 0.5916 0.6270 | 64 to 128 |
+| `sigma-35mm-f14-dg-hsm-a` | −0.0256 | 1.49 (surface 14) | 0.9571 0.9571 0.7706 0.7706 | 0.7245 0.9059 0.4818 0.6297 | 32 to 128 |
+| `nikkor-z50f12` | −0.0515 | 1.23 | 0.9753 0.9753 0.8494 0.8494 | 0.8501 0.9308 0.6273 0.7047 | 32 to 128 |
+| `sony-fe-20mm-f18-g` | −0.0400 | 1.85 | 0.9615 0.9615 0.8173 0.8173 | 0.7398 0.3123 0.1115 0.0263 | 64 to 128 |
+| `sony-fe-400mm-f28-gm-oss` | +0.0511 | 2.91 | 0.9773 0.9773 0.9223 0.9223 | 0.9739 0.9667 0.9018 0.8861 | 32 to 64 |
+| `sigma-105mm-f28-dg-dn-macro-art` | −0.0215 | 2.90 | 0.9717 0.9717 0.8922 0.8922 | 0.9585 0.9247 0.7814 0.6011 | 32 to 64 |
+| `nikon-z-24-70f4s`, wide | −0.0734 | 4.00 | 0.9662 0.9662 0.8775 0.8775 | 0.9644 0.9232 0.8733 0.6426 | 32 to 64 |
+| `nikon-z-24-70f4s`, tele | +0.0181 | 4.00 | 0.9685 0.9685 0.9029 0.9029 | 0.8519 0.8881 0.5974 0.6896 | 32 to 128 |
+| `nikon-z-mc-105f28` | +0.0294 | 2.89 | 0.9750 0.9750 0.9133 0.9133 | 0.9725 0.9400 0.8909 0.7350 | 32 to 64 |
+| `nikon-z-135f18-plena` | −0.0109 | 1.85 | 0.9808 0.9808 0.9115 0.9115 | 0.9685 0.9704 0.8386 0.8765 | 32 to 128 |
+| `sigma-45mm-f28-dg-dn-contemporary` | −0.0316 | 2.90 | 0.9370 0.9370 0.7722 0.7722 | 0.9521 0.9163 0.7656 0.6900 | 64 to 128 |
+
+Every field of every configuration has curves; one, the full field of `sigma-35mm-f14-dg-hsm-a`, is
+`unconverged` at the grid cap. The iris limits the axial beam everywhere but on the two lenses named. The focus
+shift and the traced f-number of the eight configurations that LensVisualizer's own committed chart-regression
+report holds are that report's, to its printed precision, although the report asks with a grid cap of 256, its
+own fields and frequencies and radii that are not scaled: none of that enters the axial focus search or the
+traced aperture. The figures are pinned in `test/integration/lv/mtf.test.ts` and compared while LensVisualizer's
+engine files and the case of a configuration are the ones they were measured with.
 
 ## Comparing and reporting
 

@@ -1,0 +1,114 @@
+{
+  "fields": [
+    {
+      "field": 0,
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA7D8AAAAAAADgPw==",
+          "sha256": "17cedd7e0fbac3a339f1070edea0ce14cc82fea58589eb36582a9e7f38985900"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA7D8AAAAAAADgPw==",
+          "sha256": "17cedd7e0fbac3a339f1070edea0ce14cc82fea58589eb36582a9e7f38985900"
+        }
+      },
+      "sampling": {
+        "gridSize": 32,
+        "validRays": 812,
+        "blockedRays": 212,
+        "failedRays": 0
+      }
+    },
+    {
+      "field": 0.5,
+      "fieldAngleDeg": 12.5,
+      "imageHeightMm": 10.75,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA6D8AAAAAAADYPw==",
+          "sha256": "de1a9605585b1cb3002534ac82924924d69972aef41ad7becbc86e1c4d05dfcc"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA5j8AAAAAAADQPw==",
+          "sha256": "9bfc8b749f49eb09dec0dc3ff1db5cb0adf248546a55a2c3e179abf179d0f305"
+        }
+      },
+      "status": "unconverged",
+      "sampling": {
+        "gridSize": 128,
+        "validRays": 11584,
+        "blockedRays": 4800,
+        "failedRays": 0,
+        "maxDelta": 0.03125
+      }
+    },
+    {
+      "field": 1,
+      "fieldAngleDeg": null,
+      "imageHeightMm": null,
+      "sagittal": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA+H8AAAAAAAD4fw==",
+          "sha256": "241808cce19b49683d2308412efef71f1f4c7dcf2627039cba044bf44f6e3533"
+        }
+      },
+      "tangential": {
+        "$nd": {
+          "dtype": "f8",
+          "shape": [
+            2
+          ],
+          "data": "AAAAAAAA+H8AAAAAAAD4fw==",
+          "sha256": "241808cce19b49683d2308412efef71f1f4c7dcf2627039cba044bf44f6e3533"
+        }
+      },
+      "status": "unavailable",
+      "reason": "outside-modeled-field",
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "ray-sum",
+    "params": {
+      "gridCap": 128
+    }
+  },
+  "focus": {
+    "mode": "design",
+    "appliedShiftMm": 0
+  },
+  "aperture": {},
+  "lines": [
+    {
+      "wavelengthNm": 587.5618,
+      "weight": 1
+    }
+  ],
+  "notes": []
+}

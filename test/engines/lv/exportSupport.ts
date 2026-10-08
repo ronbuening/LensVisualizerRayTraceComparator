@@ -87,6 +87,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
     lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
     isZoom: false,
     elements: [],
+    maxFstop: 22,
     ...spec.runtime,
   };
   return {

@@ -16,9 +16,14 @@ Each entry has a **class**, the one the plan's ladder uses when two answers diff
 Line numbers are not quoted: LensVisualizer changes daily. The integration tests in
 `test/integration/lv/canaries.test.ts` pin the source lines these entries rest on and fail when one is rewritten.
 Measured numbers are of LensVisualizer commit `d36f44b3`; those of rungs R2 and R3 were taken at `3af45e3f`,
-whose engine files are the same (closure `f6681074`), with two lens files corrected. The committed digest of the
-benchmark was last written at `c3fc5a2d`, with the same engine files and the same cases, each named there by its
-content hash: its figures are those of `3af45e3f`, number for number.
+whose engine files are the same, with two lens files corrected; those of the product MTF at `ed78cf40`, with the
+same engine files again. The engine closure the comparator states has grown with what it loads of LensVisualizer:
+it was `f6681074` (142 files) through rung R3, and is `1827eefe` (151 files) since the product MTF, the same 142
+and the nine files of LensVisualizer's MTF product, its aperture slider and its tab preferences. The committed
+digest of the benchmark was last written at `ed78cf40`, with that closure and the same cases, each named there by
+its content hash. Its figures are those of `3af45e3f` but for one lens, `sigma-35mm-f14-dg-hsm-a`, whose launch
+rays moved by 7e-15 mm when the ray sets took the MTF tab's own seed (below): its largest differences changed in
+the fifth digit, and no count changed.
 
 Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
 60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
@@ -287,10 +292,86 @@ sag, and the textbook vector form of Snell's law.
 - **Effect.** Every line of a case is traced with the rays of its reference line, and the lattice is another one
   for another seed, another reference line or another stop: `nikon-z-24-70f4s` at its wide end has 36 × 29 cells
   at full field on the d line and 36 × 31 with 555 nm as the reference line.
+  The seed is no detail: on the 12 benchmark configurations the tab's MTF with the audit scripts' seed, the
+  nominal pupil `L.EP.epSD`, in place of the tab's lies 0.003 to 0.013 from the tab's own (measured once, outside
+  the tests; a test holds three of them to more than 0.001). A seed that is off by one unit in the last place
+  moves the launch rays by some 1e-14 mm.
 - **Handled.** The ray sets ask with the lines of the case, so that the footprint is found at the case's own
-  reference line, and with LensVisualizer's entrance pupil for the case's stop radius as the seed, which is the
-  tab's number to rounding. A set is identified by its content, never by the request that made it. The tab's own
-  request, to the bit, is reproduced where its MTF is.
+  reference line, and with the seed of the MTF tab: the pupil radius its hook hands over for the stop radius of
+  the case (`lvPupilSeed`, `src/engines/lv/tabRequest.ts`), which the product MTF of `lv` asks with too. A set is
+  identified by its content, never by the request that made it.
+- **Class.** data.
+
+### What the MTF tab asks is written in React, and nowhere else
+
+- **Where.** `MtfTab.tsx` (`src/components/display/analysis/`) builds the options of `computeMtf` from
+  `DEFAULT_MTF_PREFERENCES` and from two radii of the hook `useLensComputation.ts`: `currentPhysStopSD`,
+  `(wideOpenStopSD × currentFOPEN) / fNumber`, and `currentEPSD`, `(baseEPSD × currentFOPEN) / fNumber`, with
+  `baseEPSD` the entrance pupil of the wide-open iris found with the analysis field geometry. It names no
+  frequencies, so the engine computes its 51 default ones, of which the tab draws two. A worker rebuilds the lens
+  and runs the request. No function of LensVisualizer returns that request.
+- **Effect.** "The MTF LensVisualizer presents" is the answer to that request and to no other. LensVisualizer's
+  own scripts ask otherwise: its audit scripts with the nominal pupil and the stop of the first zoom station, its
+  chart-regression report with a grid cap of 256, the fields and frequencies of the published charts and radii
+  that are not scaled by the f-number.
+- **Handled.** `src/engines/lv/tabRequest.ts` restates the hook and the tab expression by expression, on the
+  functions and defaults they read, which the binding imports (`fNumberAtStopdown`,
+  `computeAnalysisFieldGeometryAtState2`, `resolveMtfSpectrum`, `DEFAULT_MTF_PREFERENCES`, `MTF_FREQUENCIES`).
+  The profile `lv-tab-default` of `mtf.native` is that request. Source canaries pin every restated expression,
+  the defaults and the worker's call. On the 12 benchmark configurations the answer is `computeMtf` of a request
+  spelled out a second time in the test, in every bit, and the lens rebuilt as the worker rebuilds it gives the
+  same bits. The focus shift and the traced f-number of the eight configurations that are also in
+  LensVisualizer's committed chart-regression report are that report's to its printed precision: the axial focus
+  search and the traced aperture do not depend on what the report asks differently.
+- **Class.** data.
+
+### The iris the MTF tab traces wide open is not always the iris of the prepared state
+
+- **Where.** The hook's `currentPhysStopSD` at wide open is `(wideOpenStopSD × currentFOPEN) / fNumber` with
+  `fNumber` equal to `currentFOPEN`: a product divided by one of its factors, which in double arithmetic is not
+  always the other factor again.
+- **Effect.** On `nikon-z-mc-105f28` the stop radius the tab traces is one unit in the last place above the one
+  of the prepared state, which is the one of the case a run exports for `wide-open`. The pupil radius does the
+  same on `sigma-35mm-f14-dg-hsm-a`. Over the 868 lenses that export, at their default state (one sweep outside
+  the tests, at `ed78cf40`), the stop radius is off its iris on 79 and the pupil radius off the entrance pupil of
+  the iris on 81, never by more than 2e-16 of itself. One unit in the last place moves no MTF value that anyone
+  reads, but it is another request and another case: a case's identity is its content.
+- **Handled.** The profile `lv-tab-default` is about the tab's case, with the hook's stop radius, and `lvrtc mtf`
+  builds that case (`src/engines/lv/tabProfile.ts`). For 11 of the 12 benchmark configurations it is the case the
+  benchmark suite runs on the photopic lines; for `nikon-z-mc-105f28` it is another, and the engine refuses the
+  profile on the suite's case (`bad-spec`) rather than answer about a stop that is not the tab's. An integration
+  test holds the two statements together: the cases are the same exactly where the two radii are.
+- **Class.** numerical.
+
+### LensVisualizer's MTF has three spectra, two planes and one kind of field
+
+- **Where.** `MtfOptions` (`src/types/mtf.ts`) names a spectrum (`reference`, `cdf`, `photopic`), a focus mode
+  (`design`, `best-axial`, `auto`) and fractions of the reference image height. It has no wavelength list, no
+  image-plane position and no field angle.
+- **Effect.** A case on other lines, a case whose image plane was moved, and a request for fields by angle have
+  no answer from LensVisualizer's product MTF. Nor has a reference wavelength that was asked for by number: such a
+  case carries anchored indices, and LensVisualizer traces its reference spectrum with the authored ones. Its gate
+  also limits one request: at `ed78cf40` to 101 fields and 501 frequencies, none above 1000 cycles/mm, and calls
+  anything beyond `invalid-input`, the same reason it gives a request that is malformed.
+- **Handled.** `lv` answers each `unsupported`, with an item that says which (`lines.custom-spectrum`,
+  `image-plane.shifted`, `fields.angles-deg`, `fields.limits`, `frequenciesPerMm.limits`); nothing is substituted.
+  The limits are asked of the gate, not restated: a request it has passed is asked again with the spec's fields
+  and then with its frequencies, so a refusal is of that member and no failure of the engine. Its `engine-best`
+  is LensVisualizer's `best-axial`: a geometric search on the axial bundle, whatever the method, whose shift the
+  answer states. A later comparison that wants another engine on LensVisualizer's plane asks that engine about a
+  case at that shift.
+- **Class.** method.
+
+### A lens outside the MTF path has no MTF, and says why
+
+- **Where.** `assessMtfSupport` refuses a fisheye projection, an annular aperture, a folded path and a scale it
+  has not verified; the tab then shows the gate's message and makes no request.
+- **Effect.** 12 lenses that export (every one a fisheye, at `ed78cf40`) have a case on their reference line and
+  no MTF in LensVisualizer.
+- **Handled.** `lv` asks the gate first, on the reference line, and answers `mtf.native` for such a case
+  `unsupported` with the gate's reason as the item (`unsupported-path`) and its message, whatever the spec asks.
+  `lvrtc mtf` builds the reference-line case such a lens has, so the command presents what the tab presents: no
+  MTF, and why. An integration test finds every such lens of the catalog and holds each answer to the gate.
 - **Class.** data.
 
 ### A field can lie outside the model

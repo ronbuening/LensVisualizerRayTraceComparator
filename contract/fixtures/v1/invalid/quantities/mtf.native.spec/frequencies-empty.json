@@ -1,0 +1,13 @@
+{
+  "frequenciesPerMm": [],
+  "fields": {
+    "kind": "image-height-fractions",
+    "values": [
+      0,
+      0.5,
+      1
+    ]
+  },
+  "method": "geometric",
+  "focus": "design"
+}

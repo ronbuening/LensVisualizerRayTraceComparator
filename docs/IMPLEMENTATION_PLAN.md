@@ -359,8 +359,10 @@ None is required. Optional, each a user decision on evidence the comparator prod
 LV (`LensVisualizer/LensVisualizer/src/`, imported by path, read-only):
 
 - `optics/buildLens.ts` (default export), `optics/compat.ts` — `prepareRuntimeState`, `traceEngineRay2`,
-  `traceRay2`, `computeCardinalElements2`, `entrancePupilAtState2`, `createAnalysisComputationContext`
-- `optics/apertureStop.ts` `wideOpenStopAtZoom`; `optics/trace/aperture.ts` `evaluateAperture`
+  `traceRay2`, `computeCardinalElements2`, `entrancePupilAtState2`, `computeAnalysisFieldGeometryAtState2`,
+  `createAnalysisComputationContext`
+- `optics/apertureStop.ts` `wideOpenStopAtZoom`; `optics/aperture.ts` `fNumberAtStopdown`;
+  `optics/trace/aperture.ts` `evaluateAperture`
 - `optics/math/paraxial.ts` `traceParaxialSurfaces2`; `optics/first-order/cardinals.ts`
   `buildCardinalElementsFromMatrix2`; `optics/first-order/systemMatrix.ts`
 - `optics/mtf.ts` `computeMtf`, `assessMtfSupport`, `resolveMtfSpectrum`
@@ -369,7 +371,7 @@ LV (`LensVisualizer/LensVisualizer/src/`, imported by path, read-only):
 - `optics/analysis/mtf.ts` `refineMtfField`; `optics/analysis/mtfFootprint.ts` `expandMtfFootprint`;
   `optics/analysis/mtfMath.ts` `geometricOtf`, `combineOtfs`; `optics/analysis/mtfConstants.ts`
 - `utils/state/mtfPreferences.ts` (tab defaults); source canaries on `components/display/analysis/MtfTab.tsx`,
-  `components/hooks/useLensComputation.ts` and `optics/analysis/mtf.ts`
+  `components/hooks/useLensComputation.ts`, `components/hooks/mtf.worker.ts` and `optics/analysis/mtf.ts`
 
 optiland (called, never modified): `Optic.surfaces.add`, `IdealMaterial`, `RadialAperture`, `set_aperture`,
 `ray_tracer.set_aiming`, `RealRays` + `surfaces.trace`, `paraxial.*`, `ScalarFFTMTF`, `Wavefront.get_data`.

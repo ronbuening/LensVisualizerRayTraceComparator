@@ -32,6 +32,8 @@ export interface LvRuntimeLens {
   readonly isZoom: boolean;
   /** The lens's elements, without those of synthetic rear plates. */
   readonly elements: readonly LvElement[];
+  /** The largest f-number the lens stops down to: where its aperture slider ends. */
+  readonly maxFstop: number;
   readonly [member: string]: unknown;
 }
 
@@ -239,6 +241,15 @@ export interface LvApertureEvaluation {
   readonly innerSemiDiameter: number;
 }
 
+/**
+ * LV's FieldGeometryState, which the comparator hands back to LV unread. `yRatio` is the height of a paraxial ray at
+ * the stop per unit of height at the entrance pupil.
+ */
+export interface LvFieldGeometry {
+  readonly yRatio: number;
+  readonly [member: string]: unknown;
+}
+
 /** The result of `entrancePupilAtState2`. */
 export interface LvEntrancePupil {
   readonly epSD: number;
@@ -255,6 +266,87 @@ export interface LvMtfOptions {
   readonly stopSemiDiameterMm: number;
   readonly focus: unknown;
   readonly [member: string]: unknown;
+}
+
+/** One field of LV's MtfResult, the members the comparator reads. */
+export interface LvMtfFieldResult {
+  readonly fieldFraction: number;
+  readonly targetImageHeightMm: number | null;
+  /** The chief-ray field angle that reaches the target height, degrees; null where LV found none. */
+  readonly fieldAngleDeg: number | null;
+  /** The radial height at which the reference chief ray lands on the analysed plane; null without one. */
+  readonly imageHeightMm: number | null;
+  /** One value per frequency for frequency along image x; empty for a field without curves. */
+  readonly sagittal: readonly number[];
+  /** One value per frequency for frequency along image y; empty for a field without curves. */
+  readonly tangential: readonly number[];
+  /** "pending" only while a request is still being computed. */
+  readonly status: "converged" | "unconverged" | "unavailable" | "pending";
+  /** LV's MtfUnavailableReason for an unavailable field. */
+  readonly reason: string | null;
+  readonly message: string;
+  readonly notes: readonly string[];
+  /** Launch cells across the beam's larger side at the last grid LV refined the field to. */
+  readonly gridSize: number;
+  /** Summed over the lines of the spectrum. */
+  readonly validRays: number;
+  readonly blockedRays: number;
+  readonly failedRays: number;
+  readonly unknownFluxFraction: number;
+  readonly maxDelta: number | null;
+  readonly convergedThroughLpMm: number | null;
+}
+
+/** LV's MtfFocus: the plane a result is of, with its axial best-focus diagnostic. */
+export interface LvMtfFocus {
+  readonly requestedMode: string;
+  /** The plane LV applied to every field: "design" or "best-axial". */
+  readonly mode: string;
+  /** The shift of that plane from the authored image plane, mm, positive away from the lens. */
+  readonly appliedShiftMm: number;
+  readonly bestAxialShiftMm: number | null;
+}
+
+/** LV's MtfAperture: the f-number the axial beam traces at, and the surface that bounds it when it is not the iris. */
+export interface LvMtfAperture {
+  readonly tracedFNumber: number;
+  readonly limitingSurfaceLabel: string | null;
+}
+
+/**
+ * LV's MtfResult, the members the comparator reads. `fields` is in the order of the request's fractions; it is
+ * empty, and `focus` and `aperture` null, when `support` is not available.
+ */
+export interface LvMtfResult {
+  readonly method: string;
+  readonly spectrum: string;
+  readonly support: LvMtfSupport;
+  readonly frequenciesPerMm: readonly number[];
+  readonly fields: readonly LvMtfFieldResult[];
+  /** The field axis; null when no chief ray reaches the image. */
+  readonly geometry: LvMtfFieldGeometry | null;
+  readonly focus: LvMtfFocus | null;
+  readonly aperture: LvMtfAperture | null;
+}
+
+/** What `resolveMtfSpectrum` gives: the spectrum the MTF tab requests, and its note when that is not the preferred. */
+export interface LvMtfSpectrumChoice {
+  readonly spectrum: string;
+  readonly note: string | null;
+}
+
+/** LV's MtfPreferences: the options of its MTF tab, of which `DEFAULT_MTF_PREFERENCES` are the ones it opens with. */
+export interface LvMtfPreferences {
+  readonly method: string;
+  /** The preferred spectrum: a lens without the glass data for it falls back to the reference line. */
+  readonly spectrum: string;
+  readonly focus: string;
+  /** The spacing of the fields, in percent of the reference image height. */
+  readonly fieldStepPercent: number;
+  /** The frequencies the tab draws, cycles/mm: a selection of those it computes. */
+  readonly frequencies: readonly number[];
+  readonly maxGridSize: number;
+  readonly compareF8: boolean;
 }
 
 /** One wavelength LV traces, with its incident intensity weight. */
@@ -407,7 +499,27 @@ export interface LvApi {
     aberrationT?: number,
   ): LvMeridionalTraceResult;
   computeCardinalElements2(state: LvPreparedState): LvCardinalElements | null;
-  entrancePupilAtState2(stopSD: number, focusT: number, zoomT: number, L: LvRuntimeLens): LvEntrancePupil;
+  /**
+   * The entrance pupil of a stop radius at a state. `geometry` is a field geometry already computed for the state;
+   * without it LV computes its own.
+   */
+  entrancePupilAtState2(
+    stopSD: number,
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    geometry?: LvFieldGeometry,
+    aberrationT?: number,
+  ): LvEntrancePupil;
+  /** The field geometry LV's analysis tabs share for a state, which its hook hands to `entrancePupilAtState2`. */
+  computeAnalysisFieldGeometryAtState2(
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    aberrationT?: number,
+  ): LvFieldGeometry;
+  /** The marked f-number of an aperture-slider position, 0 for wide open, never below the widest of the zoom state. */
+  fNumberAtStopdown(stopdownT: number, zoomT: number, L: LvRuntimeLens): number;
   fopenAtZoom2(zoomT: number, L: LvRuntimeLens): number;
   /**
    * LV's stored pupil constants at a zoom position, which it draws its pupil markers from. They are properties of
@@ -500,6 +612,14 @@ export interface LvApi {
     chiefHeight: LvMtfChiefHeight,
     infinity: boolean,
   ): LvMtfFieldTarget[];
+  /** LV's product MTF: what its MTF tab draws, for a request that names method, spectrum, focus and both radii. */
+  computeMtf(state: LvPreparedState, options: LvMtfOptions): LvMtfResult;
+  /** The spectrum the MTF tab requests for a preferred one: itself, or the reference line where glass data lacks. */
+  resolveMtfSpectrum(state: LvPreparedState, preferred: string): LvMtfSpectrumChoice;
+  /** LV's `MTF_FREQUENCIES`: the frequencies `computeMtf` reports for a request that names none, as the tab's does. */
+  readonly mtfDefaultFrequencies: readonly number[];
+  /** LV's `DEFAULT_MTF_PREFERENCES`: the options its MTF tab opens with. */
+  readonly mtfDefaultPreferences: LvMtfPreferences;
   /** LV's `LINE_NM`. Anchored indices are fitted between its g and C lines. */
   readonly spectralLinesNm: LvLineNm;
   /** LV's `FLAT_R_THRESHOLD`: a surface whose radius is larger in magnitude has no curvature. */

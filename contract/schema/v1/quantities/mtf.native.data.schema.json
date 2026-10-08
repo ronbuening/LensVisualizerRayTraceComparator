@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:mtf.native.data",
+  "title": "mtf.native data",
+  "description": "An engine's own MTF of a case: per requested field, the modulus at each of the F requested frequencies along image x (sagittal) and along image y (tangential), with how the engine came by it. Code checks that every curve has one length, that a field with curves holds values from 0 to 1, that a field without them holds NaN and says why, and that a plane called design is not shifted.",
+  "type": "object",
+  "properties": {
+    "fields": {
+      "description": "One entry per requested field, in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "description": "The field as it was requested: a fraction of the image height, or an angle in degrees.",
+            "type": "number"
+          },
+          "fieldAngleDeg": {
+            "description": "The chief-ray field angle the engine used, in degrees; null where it found none.",
+            "type": ["number", "null"],
+            "exclusiveMinimum": -90,
+            "exclusiveMaximum": 90
+          },
+          "imageHeightMm": {
+            "description": "The distance from the axis at which the field's reference chief ray lands on the plane the MTF is of; null where there is none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "sagittal": {
+            "description": "MTF for frequency along image x; shape [F]. NaN in a field that is unavailable.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+          },
+          "tangential": {
+            "description": "MTF for frequency along image y; shape [F]. NaN in a field that is unavailable.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+          },
+          "status": {
+            "description": "ok: the engine stands by the curves. unconverged: it has curves and says its sampling did not settle. unavailable: it has none.",
+            "enum": ["ok", "unconverged", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the field is as its status says; always there for an unavailable field.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "sampling": {
+            "description": "How the engine sampled the field, by names of its own: a grid size, counts of rays.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": ["field", "fieldAngleDeg", "imageHeightMm", "sagittal", "tangential", "status", "sampling"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the curves, and the settings it computed them with.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "params": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "focus": {
+      "description": "The plane the curves are of.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "design for the image plane of the case as it is; else the engine's own name for the criterion that moved it.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "appliedShiftMm": {
+          "description": "How far along +z the plane lies from the image plane of the case, mm.",
+          "type": "number"
+        }
+      },
+      "required": ["mode", "appliedShiftMm"],
+      "additionalProperties": false
+    },
+    "aperture": {
+      "description": "What the engine measured of the aperture it computed with, by names of its own: recorded, never judged.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+    },
+    "lines": {
+      "description": "The lines the engine actually computed with, the reference line first.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "wavelengthNm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+          "weight": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+        },
+        "required": ["wavelengthNm", "weight"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+    }
+  },
+  "required": ["fields", "method", "focus", "aperture", "lines", "notes"],
+  "additionalProperties": false
+}

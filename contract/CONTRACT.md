@@ -370,6 +370,9 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   bit. The end surface of a ray that did not pass is the first surface it did not pass: the one that clipped or
   reflected it, or the one LensVisualizer could not intersect it with. LensVisualizer does compute a hit on a
   surface that clips a ray, by rules of its own beyond a clear aperture; it is not reported.
+- **`mtf.native`** is LensVisualizer's product MTF, `computeMtf`, on the state: the MTF its MTF tab draws. The
+  method, the sampling, the focus search and the spectra are LensVisualizer's; the engine builds the request and
+  writes the answer down. See [LensVisualizer's product MTF](#lensvisualizers-product-mtf) below.
 - **`recorded`** carries LensVisualizer's stored pupil constants, where they are defined: at infinity focus, and
   at a line traced with the authored indices (NaN at any other line of such a case; a case without such a line has
   none). Every name says that the value is stored or nominal, because none is the paraxial image of the stop that
@@ -382,6 +385,89 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 | `lvNominalEntrancePupilSemiDiameter` | `epAtZoom2(zoomT, L)`: focal length over twice the nominal f-number |
 | `lvStoredExitPupilSemiDiameter` | `xpAtZoom(zoomT, L)`: scaled from that nominal entrance pupil |
 | `lvNominalFNumber` | `fopenAtZoom2(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
+
+#### LensVisualizer's product MTF
+
+`lv` answers `mtf.native` (`src/engines/lv/mtf.ts`) with one call of `computeMtf(state, options)`.
+
+| Of the request | Is |
+|---|---|
+| `method`, `frequenciesPerMm` | the spec's |
+| `fieldFractions` | the spec's fractions. LensVisualizer takes them of its reference image height, the format corner where the lens declares a format and the modeled edge where it does not, and solves each to a chief-ray angle, which the answer states |
+| `spectrum` | the one of LensVisualizer's three whose lines the case has: `reference`, `cdf` or `photopic`, the same wavelengths with the same weights, as its support gate lists them, traced with the indices of the case |
+| `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best` |
+| `stopSemiDiameterMm` | `conditions.stopSemiDiameter` |
+| `pupilSemiDiameterMm` | the seed of LensVisualizer's footprint scan: the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`). It is never the nominal pupil of the lens, which LensVisualizer's audit scripts pass and which gives another MTF |
+| `maxGridSize` | the engine option `lvGridCap`: 32, 64, 128 or 256, the grid LensVisualizer's refinement may go up to; 128 without it. It is what `sampling.lvGridCap` of a run is for |
+
+| Of the answer | Is, in LensVisualizer's result |
+|---|---|
+| a field's `fieldAngleDeg`, `imageHeightMm`, curves | `fieldAngleDeg`, `imageHeightMm` (the reference chief ray's landing on the analysed plane), `sagittal`, `tangential` |
+| `status` | `ok` for `converged`; `unconverged`; `unavailable`, with NaN curves and LensVisualizer's `reason` (`outside-modeled-field`, `vignetted`, `chief-ray-failed`, `empty-pupil`, `trace-failed`) |
+| `sampling` | `gridSize`, the grid the field's refinement ended at; `validRays`, `blockedRays`, `failedRays`, summed over the lines; `unknownFluxFraction`; and, where it has them, `maxDelta` and `convergedThroughLpMm` |
+| `method` | `name` is LensVisualizer's (`diffraction`, `geometric`); `params` hold the request as it was made (`spectrum`, `focus`, `maxGridSize`, both radii) and the height the fractions are of (`referenceHeightMm`, `fieldBasis`) |
+| `focus` | `mode` and `appliedShiftMm` of its focus record: `design`, or `best-axial` with its shift, positive away from the lens |
+| `aperture` | `tracedFNumber`, and `limitingSurfaceIndex` from `limitingSurfaceLabel`: the stop's index where LensVisualizer says the iris limits the beam |
+| `lines` | the lines of its support record |
+| `notes` | what it says of a field in words (`message` of a field that is not converged, and its `notes`), each prefixed with the field |
+
+**What LensVisualizer's MTF does not compute** is answered `unsupported`, each with one item:
+
+| Code, item | When |
+|---|---|
+| `feature`, a reason of LensVisualizer's support gate (`unsupported-path`, `unverified-scale`, ...) | the gate refuses the state, on any spectrum: a fisheye projection, an annular aperture, a scale it has not verified. The message is the gate's, word for word. It is decided first, whatever the spec asks |
+| `feature`, `image-plane.shifted` | `conditions.imageZ` is not the design image plane: LensVisualizer's MTF is of that plane or of its own best focus, and of no plane it is given |
+| `feature`, `lines.custom-spectrum` | the lines of the case are none of its three spectra: it has no spectrum by wavelength |
+| `feature`, `aperture.f8-comparison` | the case is stopped down as the tab's f/8 comparison would be, for a lens the tab offers none for |
+| `option`, `fields.angles-deg` | fields as angles: it takes fractions of its reference image height |
+| `option`, `profile` | a profile other than `lv-tab-default` |
+| `option`, `lvGridCap` | a grid cap that is none of the four |
+| `option`, `fields.limits` or `frequenciesPerMm.limits` | without a profile, more fields or frequencies, or a higher frequency, than LensVisualizer takes in one request (at `ed78cf40`: 101 fields, 501 frequencies, 1000 cycles/mm). The limits are not restated: its gate is asked with the spec's fields and then with its frequencies, and the message ends with the gate's |
+
+##### The request of the MTF tab
+
+The profile **`lv-tab-default`** is the request LensVisualizer's MTF tab makes for a lens as it opens: what
+"the MTF LensVisualizer presents" was asked with. The tab builds it in a React component from numbers of a React
+hook, neither of which can be imported, so both are restated (`src/engines/lv/tabRequest.ts`), expression by
+expression, on the functions and the defaults they themselves read, which are imported. Nothing of the request is
+the comparator's: every value is LensVisualizer's own when the engine runs.
+
+| Of the request | Is, in LensVisualizer |
+|---|---|
+| `method`, `focus`, `maxGridSize` | `DEFAULT_MTF_PREFERENCES` (`src/utils/state/mtfPreferences.ts`): today `diffraction`, `best-axial` and 128 |
+| `spectrum` | `resolveMtfSpectrum(state, preferences.spectrum).spectrum`: the preferred spectrum, today `photopic`, or the reference line for a lens without the glass data. Its note, when it has one, is the first of the answer's `notes` |
+| `fieldFractions` | `mtfFieldFractions(preferences.fieldStepPercent)`: today the eleven fractions i/10 |
+| frequencies | none are named, so LensVisualizer computes its `MTF_FREQUENCIES`: today 0 to 100 cycles/mm in steps of 2. The tab draws `preferences.frequencies` of them, today 10 and 30 |
+| `stopSemiDiameterMm` | the hook's `currentPhysStopSD`, `(wideOpenStopAtZoom × fopenAtZoom) / fNumber`, with `fNumber` that of the aperture slider at wide open, `fNumberAtStopdown(0, zoomT, L)` |
+| `pupilSemiDiameterMm` | the hook's `currentEPSD`, `(baseEPSD × fopenAtZoom) / fNumber`, with `baseEPSD` the entrance pupil of the wide-open iris, `entrancePupilAtState(wideOpenStopAtZoom, focusT, zoomT, L, fieldGeometry, 0).epSD`, found with the hook's analysis field geometry |
+| `movementActive` | false |
+
+The tab also makes a second request, its **f/8 comparison**: the same options with both radii multiplied by
+`fNumber / 8`. It makes it only for a lens that is faster than f/7.95 wide open and stops down to f/8. For any
+other lens the radii that scaling gives are still a case, and the answer to it is `unsupported`
+(`aperture.f8-comparison`), with one exception that no case can tell apart: a lens that is f/8 wide open is scaled
+by 8 / 8, so its comparison is its wide-open case, and that is what is answered (`view` `wide-open`, `fNumber` 8).
+
+- **The spec** of the profile states the frequencies LensVisualizer computes, the tab's fractions, its method and
+  its focus (`design`, or `engine-best` for either of LensVisualizer's other modes), and names the profile
+  (`lvTabSpec`). `lv` builds the tab's request again from the case and answers `bad-spec` when the spec states
+  anything else.
+- **The case says which of the two requests.** Its stop radius is the tab's wide-open radius, or that of the
+  tab's f/8 comparison, to the bit; with any other the profile is not about the case (`bad-spec`). The tab's
+  wide-open radius is a product divided by one of its factors, which is not always the other factor again: on some
+  lenses it lies one unit in the last place from the iris of the prepared state, and the case of the profile is
+  then not the case a run exports for `wide-open`. `lvrtc mtf` builds the case of the profile
+  (`src/engines/lv/tabProfile.ts`).
+- **The lines of the case are the spectrum the tab resolves.** A case on other lines is not what the tab traces
+  (`bad-spec`, with the lines to export it on).
+- **The grid cap is the profile's.** The engine option `lvGridCap`, when given, must be the same.
+- **The answer** says under `method.params` which request it was: `profile`, `view` (`wide-open` or
+  `f8-comparison`), `fNumber`, the f-number the view is labelled with, and `displayedFrequenciesPerMm`, the
+  frequencies of the request that the tab draws.
+
+Source canaries (`test/integration/lv/canaries.test.ts`) pin every restated expression, the defaults and the
+worker's call; an integration test holds the answers for the 12 benchmark configurations to `computeMtf` called
+with a request spelled out a second time, bit for bit.
 
 ### `run-spec`
 
@@ -408,7 +494,9 @@ takes the comparator's default.
 `weights`, when given, has one entry per wavelength; without it the lines weigh the same.
 
 For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
-1, and one without `sampling.bundleGrid` 32 cells across the beam.
+1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
+LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
+([its product MTF](#lensvisualizers-product-mtf)); no rung asks for that quantity yet, so no run hands it on yet.
 
 **Invariant checked in code** (`runInvariantProblems` in `src/contract/runSpec.ts`), because a schema cannot count
 one list against another: explicit lines that give `weights` give exactly one for each wavelength. It holds for a
@@ -528,7 +616,9 @@ to an engine that answers later, such as one a person operates.
 An unsupported item's `item` says what exactly, by its `code`: the feature flag or limit of the case (`feature`),
 the quantity id (`quantity`), the option's name (`option`), the contract version (`contract`), or, for an engine
 that answers only about cases of its own source, the kind of the source the case came from, its
-`provenance.source.kind` (`case-source`).
+`provenance.source.kind` (`case-source`). A quantity, or an engine's answer to it, may name further things under
+`feature` and `option`: what about the case, or about the spec, it has no answer for (`system.afocal`,
+`lines.custom-spectrum`, `fields.angles-deg`). Each is listed with the quantity or with the engine.
 
 The `code` of a result's `error` is the engine's to choose. Three are written by the comparator's own engines:
 `engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's or that
@@ -752,10 +842,15 @@ and `validateData`.
 | `system.describe` | 1 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
+| `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
 value is no fixture of the invalid corpus, which holds what a schema rejects.
+
+A quantity that a rung of the ladder asks for has a comparator, and its section says how it is compared. A
+quantity that no rung asks for has none: it is presented, engine by engine, and not yet set against another
+engine's. Today that is `mtf.native` alone.
 
 ### `selftest.echo`
 
@@ -1124,7 +1219,7 @@ ones its MTF samples a pupil with:
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | its MTF options with the stop radius of the case and, as the seed of the footprint scan, its entrance pupil for that stop radius, `entrancePupilAtState2(stop, focusT, zoomT, L).epSD`; its support record (`assessMtfSupport`) with the lines of the case, so that everything below is found at the case's reference line with LensVisualizer's indices for it |
+| request | its MTF options with the stop radius of the case and, as the seed of the footprint scan, the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`, `src/engines/lv/tabRequest.ts`; see [the tab's request](#the-request-of-the-mtf-tab)); its support record (`assessMtfSupport`) with the lines of the case, so that everything below is found at the case's reference line with LensVisualizer's indices for it |
 | fields, as fractions | the field axis `resolveMtfFieldGeometry(state, mtfModeledHalfField(state), mtfChiefHeight(…), { reference: mtfChiefHeight(…, false), beam: mtfBeamHeight(…) })`, then `resolveMtfFieldTargets`: the chief-ray angle of each fraction of LensVisualizer's reference image height, as its MTF resolves it. That solved angle is the field of the set |
 | fields, as angles | taken as given |
 | chief ray and beam | `prepareMtfFieldLaunch`, `findMtfFieldFootprint` |
@@ -1144,9 +1239,86 @@ mirrors the rest; the sets hold every cell as a ray of its own, and `lv` traces 
 and `computeMtfSteps` do inline, and export no function for, are restated: the lattice point and weight of a cell,
 and the assembly of the field axis.
 Tests hold both to LensVisualizer, the rays to those of its own bundle bit for bit and the source lines to their
-text. The seed is the entrance pupil of the case's stop radius; LensVisualizer's MTF tab scales the wide-open
-pupil by the f-number instead, which is the same number to rounding and is mirrored where the tab's own request is
-reproduced.
+text. The seed is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays of a
+set are the tab's own launch rays at that grid, to the bit.
+
+### `mtf.native`
+
+An engine's own MTF of the case: by its own method, with its own sampling of the pupil and its own aiming, as the
+engine presents it to whoever uses it. Nothing of it is the comparator's, and no two engines are expected to
+agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung asks for it
+yet; `lvrtc mtf` does, and presents each engine's answer by itself. F is the number of frequencies.
+
+`spec`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `frequenciesPerMm` | number[] | spatial frequencies in image space, cycles/mm: at least one, each ≥ 0, ascending |
+| `fields` | object | `{ kind: "image-height-fractions", values }`: fractions 0..1 of the full image height, which the engine resolves to field angles by its own rule; or `{ kind: "angles-deg", values }`: field angles in (−90, 90) |
+| `method` | string | `geometric`: from where rays land, without diffraction; `diffraction`: with the diffraction of the aperture |
+| `focus` | string | `design`: on the image plane of the case, `conditions.imageZ`; `engine-best`: on the plane the engine's own focus criterion moves it to |
+| `profile?` | string | a named, documented bundle of settings of one engine |
+
+- **The light, the stop and the object are the case's.** The MTF is that of the lines of `conditions.lines` with
+  their weights, at the stop setting of the case and for its object. An engine that cannot compute with exactly
+  those says so with `unsupported`; it does not substitute.
+- **`method` says what kind of MTF**, not how it is computed: every engine has algorithms of its own for either,
+  and names the one it used in its answer.
+- **A profile** stands for what a spec does not state and only one engine has: a grid cap, a seed, a rule of that
+  engine's own product. A spec that names one still states its frequencies, fields, method and focus, and they are
+  the profile's, so that a request says what was computed whoever reads it. An engine that knows the profile
+  answers the error `bad-spec` where the spec states anything else, and where the profile cannot be about the
+  case; an engine that does not know it answers `unsupported`, with the item `profile` under the code `option`.
+  The profiles there are are listed with the engine that has them ([the engine `lv`](#the-engine-lv)).
+
+`data`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `fields` | object[] | one entry per requested field, in the order of the request |
+| `method` | object | `{ name, params }`: the engine's own name for how it computed the curves, and the settings it computed them with, by names of its own |
+| `focus` | object | `{ mode, appliedShiftMm }`: the plane the curves are of |
+| `aperture` | object | a map from name to number: what the engine measured of the aperture it computed with |
+| `lines` | object[] | each `{ wavelengthNm, weight }`: the lines the engine actually computed with, the reference line first |
+| `notes` | string[] | what the engine says about the answer, for people |
+
+A field:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `field` | number | the field as it was requested: the fraction, or the angle |
+| `fieldAngleDeg` | number or null | the chief-ray field angle the engine used, degrees; null where it found none |
+| `imageHeightMm` | number or null | how far from the axis the field's reference chief ray lands on the plane the curves are of, ≥ 0; null where there is none |
+| `sagittal` | NdArray | float64 `[F]`: MTF for frequency along image x |
+| `tangential` | NdArray | float64 `[F]`: MTF for frequency along image y |
+| `status` | string | `ok`, `unconverged` or `unavailable` |
+| `reason?` | string | the engine's own code for why the field is as its status says |
+| `sampling` | object | a map from name to number: how the engine sampled the field (a grid size, counts of rays) |
+
+- **A value** is a modulus, from 0 to 1, at one frequency of the spec, in the spec's order.
+- **Status.** `ok`: the engine stands by the curves. `unconverged`: it has curves, and says that its own sampling
+  did not settle; the curves are given as they are. `unavailable`: it has none; every value of both curves is NaN,
+  and `reason` says why in the engine's own code. An engine's own word for a status (`converged`) is mapped to one
+  of the three and not passed on.
+- **Focus.** `mode` is `design` when the curves are of the image plane of the case as it is, and `appliedShiftMm`
+  is then 0. Any other `mode` is the engine's own name for the criterion that moved the plane, and
+  `appliedShiftMm` is how far along +z the plane lies from `conditions.imageZ`. The answer says what was applied,
+  not what was asked: an engine that was asked for `engine-best` and found no plane to move to answers `design`.
+- **`aperture` and `sampling`** are recorded, like the `recorded` values of `paraxial.first-order`: listed beside an
+  answer and never judged. Two names are agreed, so that whoever reads an answer can find them: `tracedFNumber`,
+  the working f-number of the axial beam as the engine traced it, and `limitingSurfaceIndex`, the index, in the
+  surfaces of the case, of the surface that bounds that beam: the stop's own index when the stop does.
+
+**Invariants checked in code** (`src/quantities/mtfNative.ts`). A spec's frequencies ascend. In the data, every
+curve has F values, for one F of at least 1; a field that is `unavailable` holds NaN at every frequency and states
+a `reason`, and any other field holds a number from 0 to 1 at every frequency; a plane whose `mode` is `design`
+has an `appliedShiftMm` of 0. That F is the number of the spec's frequencies, and the fields those of the spec,
+needs the spec, which data is validated without: whoever sets an answer beside its request checks it
+(`mtfTableRows`, `src/report/mtfTable.ts`).
+
+`valid/quantities/mtf.native.data/every-status.json` is a format example of an answer to the spec
+`three-fractions.json`, with a field of each status; `best-focus-three-lines.json` one of an answer to
+`angles-and-profile.json`. Their numbers describe no lens.
 
 ## Schemas and the validator
 

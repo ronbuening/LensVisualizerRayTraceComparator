@@ -8,6 +8,7 @@ import type { EngineDescriptor } from "../../contract/engine.ts";
 import { FEATURE_FLAGS } from "../../contract/features.ts";
 import type { JsonObject } from "../../contract/json.ts";
 import type { ProtocolHandler } from "../../contract/protocol.ts";
+import type { MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import { DEFAULT_SAG_FRACTIONS } from "../../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../../contract/quantities/systemDescribe.ts";
@@ -18,6 +19,7 @@ import { formatIssues } from "../../contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
+import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../quantities/systemDescribe.ts";
@@ -33,6 +35,7 @@ import { LvBindingError } from "./errors.ts";
 import type { LvFingerprint } from "./fingerprint.ts";
 import { answerLvFirstOrder } from "./firstOrder.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
+import { answerLvMtf } from "./mtf.ts";
 import { answerLvRays } from "./rays.ts";
 import type { LvApi } from "./types.ts";
 
@@ -57,11 +60,14 @@ type Answer =
   | { readonly unsupported: readonly UnsupportedItem[] }
   | { readonly error: ErrorInfo };
 
-/** One quantity the engine answers: how its spec is checked, what its method is called, and the computation. */
+/**
+ * One quantity the engine answers: how its spec is checked, what its method is called, and the computation, which
+ * is handed the options the request carries for the engine.
+ */
 interface Answered {
   readonly quantity: QuantityModule;
   readonly method: string;
-  answer(api: LvApi, model: LvCaseModel, spec: JsonObject): Answer;
+  answer(api: LvApi, model: LvCaseModel, spec: JsonObject, engineOptions: JsonObject): Answer;
 }
 
 const ANSWERED: readonly Answered[] = [
@@ -85,6 +91,11 @@ const ANSWERED: readonly Answered[] = [
     quantity: raysTraceQuantity,
     method: "sequential-trace",
     answer: (api, model, spec) => answerLvRays(api, model, spec as RaysTraceSpec),
+  },
+  {
+    quantity: mtfNativeQuantity,
+    method: "product-mtf",
+    answer: (api, model, spec, engineOptions) => answerLvMtf(api, model, spec as MtfNativeSpec, engineOptions),
   },
 ];
 
@@ -124,7 +135,8 @@ export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
  * - `hello`: `lvDescriptor` of the binding's fingerprint as it is when the engine is made.
  * - `run`, for a case that came from a LensVisualizer lens: the state is rebuilt and held to the case
  *   (`rebuildCase`), and the quantity answered from it: `system.describe` by `describeLvSystem`,
- *   `paraxial.first-order` by `answerLvFirstOrder`, `rays.trace` by `answerLvRays`. A case that is no longer what
+ *   `paraxial.first-order` by `answerLvFirstOrder`, `rays.trace` by `answerLvRays`, and `mtf.native`, LensVisualizer's
+ *   product MTF, by `answerLvMtf`, which alone reads an option of the request. A case that is no longer what
  *   LensVisualizer gives is a result of status "error" with the code `stale-case`, whose message names what
  *   changed.
  * - `run`, for a case from any other source: a result of status "unsupported" with one item of code `case-source`
@@ -168,7 +180,7 @@ export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
       return makeResult(request, engine, { status: "error", error: { code: STALE_CASE, message } });
     }
     const { model } = rebuilt;
-    const answer = answered.answer(binding.api, model, request.spec);
+    const answer = answered.answer(binding.api, model, request.spec, request.engineOptions ?? {});
     if ("unsupported" in answer) {
       return makeResult(request, engine, { status: "unsupported", unsupported: answer.unsupported });
     }
