@@ -27,12 +27,13 @@ const FAKE_ROOT = fileURLToPath(new URL("../../fixtures/fake-root", import.meta.
 const KNOWN_CODES: readonly string[] = [...EXPORT_PROBLEM_CODES, ...LV_GATE_PROBLEM_CODES];
 
 /**
- * The two translation paths the feature suite has no run for, at LV d36f44b3, each with the lens that would serve
- * it and the codes of why that lens has no case (docs/gotchas.md).
+ * The two translation paths the feature suite has no run for, at LV 5278694b, each with the lens that would serve
+ * it and the codes of why that lens has no case (docs/gotchas.md). Until LV 5278694b the lens of mixed references
+ * was sony-fe-14mm-f18-gm, which has one reference since and exports like any other lens.
  */
 const NO_LENS_FOR: Readonly<Record<string, { readonly key: string; readonly codes: readonly string[] }>> = {
   // The one lens that mixes d- and e-referenced glasses lacks wavelength data for some of them.
-  "mixed d and e references": { key: "sony-fe-14mm-f18-gm", codes: ["mixed-reference"] },
+  "mixed d and e references": { key: "samyang-af-35mm-f2p8-fe", codes: ["mixed-reference"] },
   // Every lens with an annular aperture is a mirror lens.
   "an annular aperture": { key: "nikon-reflex-nikkor-c-500mm-f8", codes: ["folded-path", "non-refract-interaction"] },
 };

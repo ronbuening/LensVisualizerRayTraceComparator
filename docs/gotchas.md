@@ -459,7 +459,8 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 - **Where.** `assessMtfSupport` rejects a lens that mixes d- and e-referenced glasses unless every glass has
   catalog dispersion data (`mixed-reference`), and a folded path. The catalog has one lens of mixed references,
-  `sony-fe-14mm-f18-gm`, which lacks that data, and every lens with an annular aperture is a mirror lens
+  `samyang-af-35mm-f2p8-fe` (at LV `5278694b`; before that commit it was `sony-fe-14mm-f18-gm`, which has one
+  reference since and exports), which lacks that data, and every lens with an annular aperture is a mirror lens
   (`nikon-reflex-nikkor-c-500mm-f8` among them).
 - **Effect.** The feature suite cannot have a run for "mixed d and e references" or for "an annular aperture":
   there is no case to run. With such runs in it, `lvrtc run suites/features.json` could only ever exit 1.
