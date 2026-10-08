@@ -351,14 +351,14 @@ RunSpec, for a run of a suite and for a suite's defaults.
   "imagePlane": { "kind": "design" },
   "frequenciesPerMm": [10, 20, 40],
   "sampling": { "lvGridCap": 64, "bundleGrid": 33, "engines": { "optiland": { "numRays": 512 } } },
-  "rungs": ["R0", "R1", "R2", "R3", "R4"],
+  "rungs": ["r0", "r1", "r2", "r3", "r4"],
   "engines": ["ref", "optiland"],
   "referenceEngine": "ref"
 }
 ```
 
 It reads: take the Double-Gauss fixture as it is, wide open, on its reference line; evaluate on axis and at 10°
-and 14° off axis, at the design image plane, at 10, 20 and 40 cycles/mm; run rungs R0 to R4 with the engines
+and 14° off axis, at the design image plane, at 10, 20 and 40 cycles/mm; run rungs r0 to r4 with the engines
 `ref` and `optiland`, comparing against `ref`. The object under `sampling.engines.optiland` is read by that
 engine only.
 
@@ -390,7 +390,7 @@ within a suite.
     "imagePlane": { "kind": "lv-best-axial" },
     "frequenciesPerMm": [10, 30],
     "sampling": { "lvGridCap": 64, "bundleGrid": 33 },
-    "rungs": ["R0", "R1", "R2", "R3", "R4"],
+    "rungs": ["r0", "r1", "r2", "r3", "r4"],
     "engines": ["lv", "ref", "optiland"],
     "referenceEngine": "lv"
   },
@@ -515,14 +515,23 @@ A rung:
 | `mode` | string | `direct`: closed-form numbers set against each other; `identical-rays`: one estimator applied to every engine's trace of the same rays; `independent-method`: each engine's own sampling and algorithm |
 | `class` | string | `gated`: a difference passes or fails against a tolerance; `recorded`: it is written down and never fails |
 | `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit }` |
+| `blocksLaterRungs?` | boolean | true: two engines whose pair in this rung is `FAIL` or `ERROR` are not judged against each other in any later rung of the ladder, for the same case |
 
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
 judged.
 
+**Blocking.** A rung with `blocksLaterRungs` establishes what the rungs after it take for granted: two engines
+that built different systems would differ in every ray traced through them, and each such difference would be the
+first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
+rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
+ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`. Blocking is
+per pair of engines and per case; two engines that agree on the system are judged whatever a third one built.
+
 **Invariants checked in code** (`policyProblems`): a rung of mode `independent-method` is never gated; a gated
-rung judges at least one metric; every metric of a gated rung has a `tolerance`. A test holds the policy file to
+rung judges at least one metric; every metric of a gated rung has a `tolerance`; only a gated rung blocks later
+ones. A test holds the policy file to
 the code: every registered rung has an entry and every entry a registered rung, with the rung's quantity, and
 every metric it names is one the quantity's comparator reports, in the same unit.
 
@@ -538,14 +547,16 @@ the same document with N = 2.
 | `suite`, `run` | string | the names of the suite and of its run |
 | `caseId`, `requestId` | sha256 | the case and the request the answers are to |
 | `rung`, `quantity` | string | the rung, and the quantity it compares |
-| `participants` | object[] | each `{ engine, fingerprint, status }`, sorted by engine id |
+| `participants` | object[] | each `{ engine, fingerprint, status, recorded? }`, sorted by engine id |
 | `mode` | string | `reference-vs-each` or `pairwise` |
 | `reference?` | string | the engine every other is compared against; stated exactly in the mode `reference-vs-each` |
 | `pairs` | object[] | the pairs, below |
 
 A participant's `status` is that of its result (`ok`, `unsupported`, `error`, `pending`), or `missing` when there
 is no result of it to compare: an engine named as the reference that was not run, or an answer that is no longer
-in the store. Its `fingerprint` is null when the engine could not be described.
+in the store. Its `fingerprint` is null when the engine could not be described. Its `recorded` holds what its
+answer reports beside what is compared, where the quantity has such values: a map from name to a list of numbers,
+with null for one that is not finite. They are listed with the comparison, side by side, and never judged.
 
 In the mode `reference-vs-each` there are N − 1 pairs, the reference first in each, in the order of the other
 engines' ids. In the mode `pairwise` there are N(N − 1)/2, every two engines once, in the order of their ids.
@@ -569,13 +580,16 @@ field, a frequency.
 | Verdict | When |
 |---|---|
 | `UNSUPPORTED` | either engine's status is `unsupported`. It is an answer, not a failure |
-| `ERROR` | either engine's status is `error`, `pending` or `missing`; or the two answers cannot be compared at all, as arrays of different shapes cannot |
+| `ERROR` | either engine's status is `error`, `pending` or `missing` |
+| `BLOCKED` | both engines answered, and their pair in an earlier rung that blocks later ones is `FAIL` or `ERROR`. The two answers are not set against each other |
+| `ERROR` | the two answers cannot be compared at all, as arrays of different shapes cannot |
 | `PASS` | the rung is gated and every metric the policy names is at or below its `tolerance` |
 | `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number |
 | `RECORDED` | the rung is recorded and no metric that has an `attention` band is above it |
 | `ATTENTION` | the rung is recorded and a metric that has an `attention` band is above it, or is not a number. It is not a failure |
 
-Only `FAIL` and `ERROR` fail a comparison.
+Only `FAIL` and `ERROR` fail a comparison. `BLOCKED` is not a failure of its own: the failure is the blocking
+rung's.
 
 **Invariants checked in code** (`comparisonInvariantProblems`): no engine is a participant twice; `reference` is
 stated exactly in the mode `reference-vs-each` and names a participant; every pair names two different
@@ -601,6 +615,12 @@ and `validateData`.
 | Quantity | Version | TypeScript | Is |
 |---|---|---|---|
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
+| `system.describe` | 1 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
+| `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
+
+A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
+checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
+value is no fixture of the invalid corpus, which holds what a schema rejects.
 
 ### `selftest.echo`
 
@@ -641,6 +661,137 @@ that is a NaN or an infinity is null.
 The valid fixtures of the quantity are its conformance examples:
 `valid/quantities/selftest.echo.data/<name>.json` is the answer to
 `valid/quantities/selftest.echo.spec/<name>.json`, byte for byte in `values`.
+
+### `system.describe`
+
+The system an engine actually built for a case, re-read from the engine's own model and never copied from the case
+it was given: an engine that mistranslated a surface says so here, before a ray is traced. It is what rung `r0`
+compares. S is the number of surfaces, L the number of lines and K the number of sag radii per surface.
+
+`spec`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `sagFractions?` | number[] | fractions of each surface's nominal semi-diameter at which its sag is given: at least one, each in [0, 1], ascending. Without it: the nine fractions 0, 1/8, ..., 1 |
+
+`data`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `surfaceCount` | integer ≥ 1 | S |
+| `stopIndex` | integer | the index of the stop surface |
+| `imageZ` | number | the image plane |
+| `stopSemiDiameter` | number > 0 | the stop's radius, from which the engine derives the pupils |
+| `vertexZ` | NdArray | float64 `[S]`: the vertex position of each surface |
+| `curvature` | NdArray | float64 `[S]`: the base curvature, `1/radius` as one division; 0 for a plane and for a flat base |
+| `conic` | NdArray | float64 `[S]`: the conic constant the engine holds; 0 for a plane |
+| `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface |
+| `indexAfterSurface` | NdArray | float64 `[L, S]`: the index of the medium that follows each surface, per line |
+| `sagRadii` | NdArray | float64 `[S, K]`: the heights the sag is given at, each fraction times the surface's `nominalSemiDiameter` as one multiplication |
+| `sag` | NdArray | float64 `[S, K]`: the sag at those heights as the engine itself evaluates it; NaN where the surface has no real sag |
+| `terms` | object[][] | S lists: the polynomial terms `{ power, coeff }` the engine holds for each surface |
+
+- **The stop row is the stop of the case.** `clipRadius` of the stop surface is the limit the engine clips with at
+  the stop setting of the case, which is the stop surface's own `aperture.semiDiameter`; it is never the limit of the
+  stop wide open, nor `stopSemiDiameter` itself. `sagRadii` of the stop surface scale with its
+  `nominalSemiDiameter`, which a case source writes as the stop setting.
+- **`terms`** lists only terms whose coefficient is not 0, in ascending order of power, each power once. A
+  coefficient of 0 adds nothing to a surface, and an engine that stores one cannot tell it from none.
+- **Zeros.** −0 is written as 0, in the arrays as in the numbers: a case's identity does not tell the two apart.
+- **`sag`** is the one member an engine computes. It is NaN beyond the height at which a conic ends, where
+  `1 − (1 + conic) c² r²` is negative.
+
+**Invariants checked in code** (`src/quantities/systemDescribe.ts`): a spec's fractions ascend; in the data,
+`stopIndex` is below S, the four per-surface arrays have S elements, `indexAfterSurface` has S columns and at
+least one row, `sagRadii` has S rows and at least one column and `sag` its shape, and `terms` has S lists, each
+ascending in power.
+
+**Compared** (`src/compare/systemDescribe.ts`) by six metrics. Four count the elements that are not the same
+number in two answers, where −0 is 0 and a NaN is a NaN and nothing else is the same; `where` names the first
+such element by `field`, with its `surface` and, where the field has them, its `line`, `sample` or `power`:
+
+| Metric | Unit | Counts, in this order |
+|---|---|---|
+| `layout.mismatches` | elements | `surfaceCount`, `vertexZ`, `imageZ` |
+| `shape.mismatches` | elements | `curvature`, `conic`, and `terms`: a surface counts once when its two lists are not the same list |
+| `aperture.mismatches` | elements | `stopIndex`, `stopSemiDiameter`, `clipRadius`, `sagRadii` |
+| `index.mismatches` | elements | `indexAfterSurface` |
+
+Two are of the sag, each with the `surface` and the `sample` (the index of the radius) of its largest value. A sag
+that neither answer has is no difference; a sag that only one has is a NaN, which no tolerance admits.
+
+| Metric | Unit | Is |
+|---|---|---|
+| `sag.maxAbs` | mm | the largest \|a − b\| |
+| `sag.maxScaled` | 1 | the largest \|a − b\| / max(1 mm, scale) |
+
+The scale is how large a rounding error of that sag can be. With `u = c r`, `q = (1 + conic) u²` and
+`root = sqrt(1 − q)`, the sag is `u r / (1 + root)` plus the terms, and
+
+```
+scale = |u r / (1 + root)| (1 + |q| / (root (1 + root))) + sum over terms of |coeff| r^power
+```
+
+The first part is the conic sag, once more for each time the root magnifies a rounding, which grows without bound
+as the height nears the one at which the conic ends; the second is the size of what the polynomial adds up, however
+far its terms cancel. So `sag.maxScaled` is the difference in mm for a sag below 1 mm that is evaluated without
+cancellation, and a relative difference for a sag that is large or ill-conditioned. Two engines that add the same
+terms in another order differ by a few units of 1e-16 in it on every lens; a gate on `sag.maxAbs` alone would fail
+a surface whose terms of some 1e5 mm cancel to a sag of 1 mm, where the two legitimately differ by 1e-11 mm.
+
+Answers for different numbers of lines, or with the sag at different numbers of radii, are not comparable. Answers
+with different numbers of surfaces are: `surfaceCount` is a mismatch, and each per-surface field is compared over
+the surfaces both have.
+
+`valid/quantities/system.describe.data/singlet.json` is the answer to the spec `three-fractions.json` about the
+case `valid/optical-case/singlet.json`, worked out from the formula of a sphere: exact in everything but the sag,
+which an engine reproduces to rounding.
+
+### `paraxial.first-order`
+
+The first-order data of the case's system at every line of the case. It is what rung `r1` compares. The `spec` is
+an empty object: there is nothing to choose.
+
+A paraxial ray sees of a surface its vertex position, the indices on its two sides and the curvature at its
+vertex. That curvature is the base curvature `c`, plus twice the coefficient of a term of power 2; a term of power
+3 or more and the conic constant do not enter. The gap between two surfaces is the difference of their vertices.
+The medium in front of the first surface is air, of index 1; the medium behind the last one has the index the case
+states after it.
+
+`data`: every array is float64 of shape `[L]`, one value per line, in mm; a position is a z in the contract frame.
+
+| Member | Meaning |
+|---|---|
+| `efl` | the effective focal length: `rearFocalZ − rearPrincipalZ`, which is 1/power for an image space in air |
+| `frontFocalZ`, `rearFocalZ` | the focal points |
+| `frontPrincipalZ`, `rearPrincipalZ` | the principal points |
+| `backFocus` | `rearFocalZ` minus the vertex of the surface `lastLensSurfaceIndex`: a rear plate lies inside it |
+| `entrancePupilZ`, `exitPupilZ` | the paraxial images of the stop surface's vertex plane: through the surfaces in front of it into object space, and through the surfaces behind it into image space |
+| `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | the radii of those images of a stop of radius `stopSemiDiameter`: never a nominal pupil, nor one found by tracing real rays |
+| `recorded` | a map from name to float64 `[L]`: values of the engine's own, reported and never judged |
+
+- **The stop surface's own refraction** bends a ray without moving it, so it changes neither pupil: with the stop
+  on the first surface the entrance pupil is the stop, and with the stop on the last surface the exit pupil is.
+- **A pupil at infinity**, as a telecentric system has, is the infinity of its sign, in position and in radius. A
+  NaN is never a value.
+- **`recorded`** is where an engine puts what it knows and no other engine need have: LensVisualizer's stored
+  pupil constants, for one. For a finite object every engine gives the paraxial lateral magnification of the
+  object plane there, as `magnification`.
+- **No first-order data.** Two kinds of case are answered with status `unsupported`, each with one item of code
+  `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is zero, or zero to
+  rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a coefficient other than
+  0, since a cone has a corner at its vertex and no curvature there.
+
+**Invariant checked in code** (`src/quantities/paraxialFirstOrder.ts`): every array, the recorded ones included,
+has the same length, of at least 1.
+
+**Compared** (`src/compare/paraxialFirstOrder.ts`) by one metric, `firstOrder.maxAbs`, in mm: the largest
+\|a − b\| over the ten compared values and the lines, with the `quantity` and the `line` it occurs at in `where`.
+Two values that are the same infinity differ by 0. `recorded` is not compared: each participant of a comparison
+carries its own, and a report lists them side by side. Answers for different numbers of lines are not comparable.
+
+`valid/quantities/paraxial.first-order.data/singlet.json` is the answer about the case
+`valid/optical-case/singlet.json`, worked out from the formulas of a thick lens in air.
 
 ## Schemas and the validator
 

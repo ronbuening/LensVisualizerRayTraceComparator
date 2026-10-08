@@ -8,7 +8,7 @@
 | Suite hash | 5555555555555555555555555555555555555555555555555555555555555555 |
 | Contract version | 1.0 |
 | Policy | rungs v3 |
-| Policy hash | a4e595457068bfb3631898439e760cc107ba21ea5acb21faf7b6796f5f9a6b33 |
+| Policy hash | e5d4b2b491ff3425c5b5f3ad552232256fe7ccbbb6c033f407c81f1a2546865a |
 
 ### Engines
 
@@ -27,7 +27,7 @@
 
 ## Verdict summary
 
-3 of 6 pairs are FAIL or ERROR.
+3 of 7 pairs are FAIL or ERROR.
 
 | Verdict | reference-vs-each | pairwise |
 |---|---|---|
@@ -36,6 +36,7 @@
 | RECORDED | 0 | 0 |
 | ATTENTION | 1 | 1 |
 | UNSUPPORTED | 0 | 1 |
+| BLOCKED | 1 | 0 |
 | ERROR | 1 | 2 |
 
 ## Support matrix
@@ -45,6 +46,7 @@
 | tele | r5, request 1 of 2 | ok | ok | error: spawn-failed |
 | tele | r5, request 2 of 2 | ok | unsupported: feature surface.asphere.odd, option a\|b | — |
 | tele | r0 | ok | pending | — |
+| tele | r1 | ok | ok | — |
 
 ## Results
 
@@ -88,6 +90,25 @@ Reference vs each, against `lv`:
 
 No other engine was compared.
 
+#### r1
+
+Quantity `paraxial.first-order`, compared direct, gated. Request `2222222222222222222222222222222222222222222222222222222222222222`.
+
+Reference vs each, against `lv`:
+
+| Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | Verdict | Note |
+|---|---|---|---|
+| optiland | — | BLOCKED | not judged: rung r0 failed for lv and optiland on this case |
+
+Recorded values, as each engine reports them. They are listed and never judged:
+
+| Value | lv | optiland |
+|---|---|---|
+| epZ\|RelStop[0] | -1.25000000e1 | — |
+| epZ\|RelStop[1] | not finite | — |
+| magnification[0] | -2.50000000e-1 | -2.50000000e-1 |
+| magnification[1] | -2.50100000e-1 | — |
+
 ## How to read this
 
 Each pair of engines that answered one request gets one verdict.
@@ -99,12 +120,15 @@ Each pair of engines that answered one request gets one verdict.
 | RECORDED | A recorded rung: the difference is written down. It is not a failure. |
 | ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |
 | UNSUPPORTED | One of the two engines cannot answer the request. That is an answer, not a failure. |
+| BLOCKED | Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the same two engines on the same case. The failure is that rung's, and the note names it. |
 | ERROR | One of the two engines gave no result, or the two results cannot be compared. |
 
 Only FAIL and ERROR fail a comparison. RECORDED and ATTENTION are not failures: a recorded rung compares
-methods that are expected to differ, and its numbers are kept to be read, not to be gated.
+methods that are expected to differ, and its numbers are kept to be read, not to be gated. BLOCKED is not a
+second failure: two engines that built different systems would differ in every rung after that one.
 
 A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung and `band` the attention
-band of a recorded one. Numbers have 3 significant digits; `—` marks a place with nothing to compare, and
-`not finite` a metric that is a NaN or an infinity. The reference-vs-each table and the pairwise matrix judge a
-pair alike, so a pair that is in both has the same verdict in both.
+band of a recorded one. Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
+A recorded value has 9 significant digits and is named with the index of its element. `—` marks a place with
+nothing to compare, and `not finite` a number that is a NaN or an infinity. The reference-vs-each table and the
+pairwise matrix judge a pair alike, so a pair that is in both has the same verdict in both.

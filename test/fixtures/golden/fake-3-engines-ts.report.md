@@ -7,8 +7,8 @@
 | Suite | fake-3-engines-ts |
 | Suite hash | d9a47b16c3b04fcb18d8caadae50aa24e457148d86e938eb28632a5d1dd75a85 |
 | Contract version | 1.0 |
-| Policy | rungs v1 |
-| Policy hash | e3173c2a3eb62528bc18637f61d53e9d99b2f58ec16f142cf23645bbf84b6e4d |
+| Policy | rungs v2 |
+| Policy hash | bbd20a76cbd643fcbaf3a4ceb600bc177594a01c83a75545320c638bded9f79b |
 
 ### Engines
 
@@ -36,6 +36,7 @@ No pair is FAIL or ERROR, of 10 compared.
 | RECORDED | 0 | 0 |
 | ATTENTION | 0 | 0 |
 | UNSUPPORTED | 2 | 4 |
+| BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
 
 ## Support matrix
@@ -100,12 +101,15 @@ Each pair of engines that answered one request gets one verdict.
 | RECORDED | A recorded rung: the difference is written down. It is not a failure. |
 | ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |
 | UNSUPPORTED | One of the two engines cannot answer the request. That is an answer, not a failure. |
+| BLOCKED | Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the same two engines on the same case. The failure is that rung's, and the note names it. |
 | ERROR | One of the two engines gave no result, or the two results cannot be compared. |
 
 Only FAIL and ERROR fail a comparison. RECORDED and ATTENTION are not failures: a recorded rung compares
-methods that are expected to differ, and its numbers are kept to be read, not to be gated.
+methods that are expected to differ, and its numbers are kept to be read, not to be gated. BLOCKED is not a
+second failure: two engines that built different systems would differ in every rung after that one.
 
 A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung and `band` the attention
-band of a recorded one. Numbers have 3 significant digits; `—` marks a place with nothing to compare, and
-`not finite` a metric that is a NaN or an infinity. The reference-vs-each table and the pairwise matrix judge a
-pair alike, so a pair that is in both has the same verdict in both.
+band of a recorded one. Numbers have 3 significant digits, and a whole number, such as a count, is written in full.
+A recorded value has 9 significant digits and is named with the index of its element. `—` marks a place with
+nothing to compare, and `not finite` a number that is a NaN or an infinity. The reference-vs-each table and the
+pairwise matrix judge a pair alike, so a pair that is in both has the same verdict in both.

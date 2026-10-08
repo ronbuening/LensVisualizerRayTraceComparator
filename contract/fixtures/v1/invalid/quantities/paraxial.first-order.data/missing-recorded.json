@@ -1,0 +1,102 @@
+{
+  "efl": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "88UwMIGFSEA=",
+      "sha256": "399b608c5e80a47df82b15290fb9ec0a9f82eb482e1d0c8b3fa2f0089907c394"
+    }
+  },
+  "frontFocalZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "Ky4Uc2XaR8A=",
+      "sha256": "4e5b329c4f9cb9b8a4ed1c9f9f8e22ec55cd045dd3ba4103fe9187e2c2a620a6"
+    }
+  },
+  "rearFocalZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "Ky4Uc2XaSUA=",
+      "sha256": "713583affa85b15097e6c2fc0499eae7b19c9e81d697263d9effc32f9de5b731"
+    }
+  },
+  "frontPrincipalZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "9fiSo3dj9T8=",
+      "sha256": "c5f6b7a42c321a716253f6e2039855ebeb79c46f61fd41904018e49ab15fb39c"
+    }
+  },
+  "rearPrincipalZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "hoM2LkROBUA=",
+      "sha256": "acd5c36809a4a54544d2d01b0fb88a5bbb171c4e4b2db07ff2373f9cde5be42e"
+    }
+  },
+  "backFocus": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "Ky4Uc2XaR0A=",
+      "sha256": "cd5f7253d23066b85f05537a11d0cdd70e96bb8433f7aad53f12d890403e06af"
+    }
+  },
+  "entrancePupilZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "AAAAAAAAAAA=",
+      "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    }
+  },
+  "exitPupilZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "aOuo5qKf9D8=",
+      "sha256": "effa17b879d9eafeb6547c44c6c04a62bb332021825ba7e3d579bf164c877e74"
+    }
+  },
+  "entrancePupilSemiDiameter": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "AAAAAAAAFEA=",
+      "sha256": "a7ca1349517e14c0690dccc98bf9a515019b2018116a3191f6c7d53831c0432a"
+    }
+  },
+  "exitPupilSemiDiameter": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "nsOo53ePFEA=",
+      "sha256": "9705eb263b59b75462adb720c4f1816d2a653c5cf1c1c9fb640440e12d4245d1"
+    }
+  }
+}

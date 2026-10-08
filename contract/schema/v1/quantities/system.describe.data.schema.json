@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:system.describe.data",
+  "title": "system.describe data",
+  "description": "The system an engine built for a case, re-read from the engine's own model: S surfaces, L lines and K sag radii per surface. Lengths in mm, in the contract frame. Code checks that the shapes agree with one another.",
+  "type": "object",
+  "properties": {
+    "surfaceCount": { "description": "S: the number of surfaces.", "type": "integer", "minimum": 1 },
+    "stopIndex": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+    "imageZ": { "description": "The image plane.", "type": "number" },
+    "stopSemiDiameter": {
+      "description": "The stop's radius, from which the engine derives the pupils.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+    },
+    "vertexZ": {
+      "description": "The vertex position of each surface; shape [S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "curvature": {
+      "description": "The base curvature of each surface, 1/radius; 0 for a plane and for a flat base; shape [S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "conic": {
+      "description": "The conic constant of each surface; 0 for a plane; shape [S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "clipRadius": {
+      "description": "The largest radial height at which the engine lets a ray pass each surface; on the stop surface, the one of the case's stop setting; shape [S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "indexAfterSurface": {
+      "description": "The refractive index of the medium that follows each surface, per line; shape [L, S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "sagRadii": {
+      "description": "The radial heights the sag is given at: each fraction times the surface's nominal semi-diameter; shape [S, K].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "sag": {
+      "description": "The sag of each surface at each of its radii, as the engine evaluates it; NaN where the surface has no real sag; shape [S, K].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "terms": {
+      "description": "Per surface, the polynomial terms the engine holds whose coefficient is not zero, by ascending power; S lists.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "power": { "type": "integer", "minimum": 1 },
+            "coeff": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonZero" }
+          },
+          "required": ["power", "coeff"],
+          "additionalProperties": false
+        }
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "surfaceCount",
+    "stopIndex",
+    "imageZ",
+    "stopSemiDiameter",
+    "vertexZ",
+    "curvature",
+    "conic",
+    "clipRadius",
+    "indexAfterSurface",
+    "sagRadii",
+    "sag",
+    "terms"
+  ],
+  "additionalProperties": false
+}

@@ -2,9 +2,8 @@
 import type { ComparisonMetric, PairComparison, ParticipantStatus } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 import type { RungPolicy } from "../contract/policy.ts";
-import { formatSci } from "../core/numeric/format.ts";
 import type { ComputedMetric, QuantityComparator } from "./comparator.ts";
-import { METRIC_DIGITS, whereText } from "./metricText.ts";
+import { numberText, whereText } from "./metricText.ts";
 
 /** One engine as it enters a comparison: how its job ended and, when it answered, what it answered. */
 export interface ParticipantResult {
@@ -31,6 +30,15 @@ function describe(participant: ParticipantResult): string {
   return `${engine} has no result${said}`;
 }
 
+/**
+ * Why a pair is `BLOCKED`: the rung that failed for its two engines. The engines are named in the order of their
+ * ids, so the reason is the same whichever of the two is the pair's first.
+ */
+export function blockedReason(a: string, b: string, rung: string): string {
+  const [first, second] = [a, b].sort();
+  return `not judged: rung ${rung} failed for ${first} and ${second} on this case`;
+}
+
 /** A metric as it is stored: a value that is not finite becomes null. */
 function stored(metric: ComputedMetric, unit: string): ComparisonMetric {
   const { name, value, where } = metric;
@@ -42,12 +50,14 @@ function stored(metric: ComputedMetric, unit: string): ComparisonMetric {
  *
  * 1. either side "unsupported": `UNSUPPORTED`, and the reason names each such side with its items;
  * 2. either side "error", "pending" or "missing": `ERROR`, and the reason names each such side with its code;
- * 3. no comparator for the quantity, or the comparator finds the two answers not comparable: `ERROR`, with why;
- * 4. a metric the policy names that the comparator did not report: `ERROR`. That is a defect of one of the two;
- * 5. a gated rung: `PASS` when every metric the policy names is at or below its tolerance, else `FAIL` with a
+ * 3. `blockedBy` names a rung: `BLOCKED`. Both sides answered, and the two answers are not set against each other,
+ *    because that earlier rung failed for the same two engines on the same case; the reason names it;
+ * 4. no comparator for the quantity, or the comparator finds the two answers not comparable: `ERROR`, with why;
+ * 5. a metric the policy names that the comparator did not report: `ERROR`. That is a defect of one of the two;
+ * 6. a gated rung: `PASS` when every metric the policy names is at or below its tolerance, else `FAIL` with a
  *    reason that names each metric above it, its value and where it occurs. A metric that is not a number is not
  *    at or below anything, so a NaN fails, and so does an infinity;
- * 6. a recorded rung: `RECORDED`, or `ATTENTION` when a metric is above the attention band the policy gives it,
+ * 7. a recorded rung: `RECORDED`, or `ATTENTION` when a metric is above the attention band the policy gives it,
  *    or has a band and is not a number. A metric without a band is only written down.
  *
  * The pair's metrics are the comparator's, in its order and its units, with null for a value that is not finite;
@@ -59,6 +69,7 @@ export function comparePair(
   b: ParticipantResult,
   policy: RungPolicy,
   comparator: QuantityComparator | undefined,
+  blockedBy?: string,
 ): PairComparison {
   const ended = (verdict: PairComparison["verdict"], reason: string): PairComparison => {
     return { a: a.engine, b: b.engine, metrics: [], class: policy.class, verdict, reason };
@@ -68,6 +79,7 @@ export function comparePair(
   if (unsupported.length > 0) return ended("UNSUPPORTED", unsupported.map(describe).join("; "));
   const absent = sides.filter((side) => side.status !== "ok" || side.data === undefined);
   if (absent.length > 0) return ended("ERROR", absent.map(describe).join("; "));
+  if (blockedBy !== undefined) return ended("BLOCKED", blockedReason(a.engine, b.engine, blockedBy));
   if (comparator === undefined) return ended("ERROR", `quantity ${policy.quantity} has no comparator`);
 
   const outcome = comparator.compare(a.data as JsonObject, b.data as JsonObject);
@@ -92,7 +104,7 @@ export function comparePair(
       const what = gated ? "exceeds its tolerance" : "is outside its attention band";
       const said = Number.isNaN(metric.value)
         ? `${name} is NaN`
-        : `${name} ${formatSci(metric.value, METRIC_DIGITS)} ${what} ${formatSci(limit, METRIC_DIGITS)}`;
+        : `${name} ${numberText(metric.value)} ${what} ${numberText(limit)}`;
       beyond.push(`${said}${whereText(metric.where)}`);
     }
   }

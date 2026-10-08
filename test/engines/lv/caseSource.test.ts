@@ -301,7 +301,7 @@ test("a suite of LensVisualizer lenses loads through the source, and its manifes
 
   const runsDir = join(rootDir, "runs");
   const { registry } = watchedRegistry({ "fake-a": fakeEngine() });
-  const result = await runSuite({ suite, registry, runsDir, sources });
+  const result = await runSuite({ suite, registry, runsDir, sources, rungs: ["selftest"] });
   assert.deepEqual(result.manifest.sources, {
     lv: {
       fingerprint: {

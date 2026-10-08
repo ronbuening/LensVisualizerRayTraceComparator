@@ -9,9 +9,11 @@ import type { ResultStatus } from "./result.ts";
  * - `RECORDED`, `ATTENTION`: a recorded pair, with every judged metric within its attention band, or not. Neither
  *   is a failure;
  * - `UNSUPPORTED`: one of the two engines cannot answer, which is an answer and not a failure;
+ * - `BLOCKED`: both engines answered and the pair is not judged, because an earlier rung that blocks later ones
+ *   failed for the same two engines on the same case. It is not a failure of its own: the failure is that rung's;
  * - `ERROR`: there is nothing to compare, or what there is cannot be compared.
  */
-export const VERDICTS = ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "ERROR"] as const;
+export const VERDICTS = ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] as const;
 /** What one pair came to. */
 export type Verdict = (typeof VERDICTS)[number];
 
@@ -26,12 +28,23 @@ export type ComparisonMode = (typeof COMPARISON_MODES)[number];
 /** How a participant's job ended; `missing` when there is no result of it to compare. */
 export type ParticipantStatus = ResultStatus | "missing";
 
+/**
+ * What one answer reports beside what is compared: values of the engine's own, by name, each a list in the order
+ * the quantity gives them (one per line of the case, for `paraxial.first-order`). A value that is not a finite
+ * number is null. They are listed with a comparison and never judged.
+ */
+export interface RecordedValues {
+  readonly [name: string]: readonly (number | null)[];
+}
+
 /** One engine whose answer is compared. */
 export interface ComparisonParticipant {
   readonly engine: string;
   /** The fingerprint of the engine that answered; null for an engine that could not be described. */
   readonly fingerprint: string | null;
   readonly status: ParticipantStatus;
+  /** The recorded values of the engine's answer; left out when it gave no answer or the answer has none. */
+  readonly recorded?: RecordedValues;
 }
 
 /** One number that says how far two answers are apart. */

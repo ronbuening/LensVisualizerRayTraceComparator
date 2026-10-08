@@ -125,6 +125,7 @@ export function watchedRegistry(engines: Readonly<Record<string, EngineMaker>>):
     closed: [],
     registry: {
       ids: () => Object.keys(engines).sort(),
+      builtinIds: () => [],
       create: async (id) => {
         const adapter = await engines[id](id);
         watched.created.push(id);

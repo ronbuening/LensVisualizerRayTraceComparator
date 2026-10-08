@@ -9,6 +9,9 @@ import { CONFIG_FILE, REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import type { EngineDefinition } from "../../src/core/config.ts";
 import { EngineUnavailableError } from "../../src/engines/adapter.ts";
 import type { EngineUnavailableCode } from "../../src/engines/adapter.ts";
+import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
+import type { BuiltinEngines } from "../../src/engines/builtin.ts";
+import { createEngine } from "../../src/engines/fake/engine.ts";
 import { parseFakeOptions } from "../../src/engines/fake/options.ts";
 import { TRANSPORT_FACTORIES, createEngineRegistry, createEngineTransport } from "../../src/engines/registry.ts";
 import type { EngineRegistry, TransportContext, TransportFactories } from "../../src/engines/registry.ts";
@@ -47,8 +50,9 @@ function rootWith(t: TestContext, engines: unknown, files: Record<string, string
   return rootDir;
 }
 
-function registryOf(rootDir: string, factories?: TransportFactories): EngineRegistry {
-  return createEngineRegistry(loadConfig({ rootDir, env: {} }), factories);
+/** The registry of a root, without a built-in engine unless `builtins` gives some: what the configuration defines. */
+function registryOf(rootDir: string, factories?: TransportFactories, builtins: BuiltinEngines = {}): EngineRegistry {
+  return createEngineRegistry(loadConfig({ rootDir, env: {} }), factories, builtins);
 }
 
 /** The error a promise rejects with, which must be an `EngineUnavailableError` with this code. */
@@ -461,4 +465,105 @@ test("what a factory rejects with is what create rejects with", async (t) => {
     },
   };
   assert.equal(await unavailable(registryOf(rootDir, factories).create("worker"), "spawn-failed"), failure);
+});
+
+// ── Built-in engines ─────────────────────────────────────────────────────────────────────────────────────────────
+
+test("the comparator's built-in engines are ref, and the registry lists them apart from the configured ones", (t) => {
+  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["ref"]);
+  assert.ok(Object.isFrozen(BUILTIN_ENGINES));
+  const registry = createEngineRegistry(
+    loadConfig({ rootDir: rootWith(t, { fake: inProcess(FAKE_ENGINE) }), env: {} }),
+  );
+  assert.deepEqual(registry.ids(), ["fake"]);
+  assert.deepEqual(registry.builtinIds(), ["ref"]);
+  assert.deepEqual(registryOf(rootWith(t, {})).builtinIds(), []);
+});
+
+test("a built-in engine is made without a definition, under any root, and answers as the engine it is", async (t) => {
+  const registry = createEngineRegistry(loadConfig({ rootDir: rootWith(t, {}), env: {} }));
+  const adapter = await registry.create("ref");
+  t.after(() => adapter.close());
+  assert.ok(adapter instanceof RemoteEngineAdapter);
+  const descriptor = await adapter.describe();
+  assert.equal(descriptor.identity.id, "ref");
+  assert.deepEqual(Object.keys(descriptor.capabilities.quantities).sort(), ["paraxial.first-order", "system.describe"]);
+  // It does not answer the conformance quantity, and says so as an answer.
+  assert.equal((await adapter.run(echoRequest(Float64Array.of(1)), CASE)).status, "unsupported");
+});
+
+test("a built-in engine is given the configuration, and one made for each adapter", async (t) => {
+  const rootDir = rootWith(t, {});
+  const seen: string[] = [];
+  const builtins: BuiltinEngines = {
+    "fake-in": (loaded) => {
+      seen.push(loaded.rootDir);
+      return createEngine({ id: "fake-in", bias: seen.length });
+    },
+    later: async () => createEngine({ id: "later" }),
+  };
+  const registry = registryOf(rootDir, undefined, builtins);
+  assert.deepEqual(registry.builtinIds(), ["fake-in", "later"]);
+  const [first, second, later] = [
+    await registry.create("fake-in"),
+    await registry.create("fake-in"),
+    await registry.create("later"),
+  ];
+  t.after(() => Promise.all([first, second, later].map((adapter) => adapter.close())));
+  assert.deepEqual(seen, [rootDir, rootDir]);
+  assert.equal((await first.run(echoRequest(Float64Array.of(1)), CASE)).data?.sum, 2);
+  assert.equal((await second.run(echoRequest(Float64Array.of(1)), CASE)).data?.sum, 3);
+  assert.equal((await later.describe()).identity.id, "later");
+});
+
+test("a definition replaces a built-in engine of the same id", async (t) => {
+  const rootDir = rootWith(t, { ref: inProcess(FAKE_ENGINE, { id: "ref" }) });
+  const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
+  assert.deepEqual(registry.ids(), ["ref"]);
+  assert.deepEqual(registry.builtinIds(), ["ref"]);
+  const adapter = await registry.create("ref");
+  t.after(() => adapter.close());
+  const descriptor = await adapter.describe();
+  assert.equal(descriptor.identity.fingerprint, parseFakeOptions({ id: "ref" }).fingerprint, "the fake, as configured");
+});
+
+test("a built-in engine that cannot be made is create-failed, and one that is not its id is id-mismatch", async (t) => {
+  const builtins: BuiltinEngines = {
+    broken: () => {
+      throw new Error("no LensVisualizer is configured");
+    },
+    rejecting: () => Promise.reject(new Error("later")),
+    misnamed: () => createEngine({ id: "someone-else" }),
+  };
+  const registry = registryOf(rootWith(t, {}), undefined, builtins);
+  const broken = await unavailable(registry.create("broken"), "create-failed");
+  assert.equal(
+    broken.message,
+    "engine broken is unavailable (create-failed): the built-in engine could not be made: " +
+      "no LensVisualizer is configured",
+  );
+  await unavailable(registry.create("rejecting"), "create-failed");
+  const misnamed = await registry.create("misnamed");
+  t.after(() => misnamed.close());
+  await unavailable(misnamed.describe(), "id-mismatch");
+});
+
+test("an id that is neither configured nor built in is not-configured, and the error lists both", async (t) => {
+  const rootDir = rootWith(t, { "fake-a": inProcess(FAKE_ENGINE, { id: "fake-a" }) });
+  const builtins: BuiltinEngines = {
+    zeta: () => createEngine({ id: "zeta" }),
+    alpha: () => createEngine({ id: "alpha" }),
+  };
+  const error = await unavailable(registryOf(rootDir, undefined, builtins).create("optiland"), "not-configured");
+  assert.equal(
+    error.message,
+    "engine optiland is unavailable (not-configured): the configuration defines fake-a; built in: alpha, zeta",
+  );
+  const bare = await unavailable(registryOf(rootWith(t, {}), undefined, builtins).create("ref"), "not-configured");
+  assert.equal(
+    bare.message,
+    "engine ref is unavailable (not-configured): the configuration defines no engine; built in: alpha, zeta",
+  );
+  // A name every object inherits a member for is no built-in engine either.
+  await unavailable(registryOf(rootDir, undefined, builtins).create("constructor"), "not-configured");
 });

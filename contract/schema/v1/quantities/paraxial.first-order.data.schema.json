@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:paraxial.first-order.data",
+  "title": "paraxial.first-order data",
+  "description": "The first-order data of a system, one value per line of the case: every array is float64 of shape [L]. Positions are z in the contract frame, mm. Code checks that the arrays have one length.",
+  "type": "object",
+  "properties": {
+    "efl": {
+      "description": "The effective focal length: the rear focal point minus the rear principal point.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "frontFocalZ": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" },
+    "rearFocalZ": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" },
+    "frontPrincipalZ": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" },
+    "rearPrincipalZ": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" },
+    "backFocus": {
+      "description": "The rear focal point minus the vertex of the last lens surface.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "entrancePupilZ": {
+      "description": "The paraxial image of the stop in object space.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "exitPupilZ": {
+      "description": "The paraxial image of the stop in image space.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "entrancePupilSemiDiameter": {
+      "description": "The radius of the paraxial image of the stop in object space, from the stop's radius.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "exitPupilSemiDiameter": {
+      "description": "The radius of the paraxial image of the stop in image space, from the stop's radius.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "recorded": {
+      "description": "Values of the engine's own, by name, one per line: reported and never judged.",
+      "type": "object",
+      "additionalProperties": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" }
+    }
+  },
+  "required": [
+    "efl",
+    "frontFocalZ",
+    "rearFocalZ",
+    "frontPrincipalZ",
+    "rearPrincipalZ",
+    "backFocus",
+    "entrancePupilZ",
+    "exitPupilZ",
+    "entrancePupilSemiDiameter",
+    "exitPupilSemiDiameter",
+    "recorded"
+  ],
+  "additionalProperties": false
+}

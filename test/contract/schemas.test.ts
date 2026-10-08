@@ -270,6 +270,24 @@ test("the float64 matrix is the array wire form with only its element type and i
   assert.deepEqual(at(definitions, "f8Matrix"), narrowed);
 });
 
+test("the float64 vector is the array wire form with only its element type and its one axis narrowed", () => {
+  const definitions = at(readSchema("common.schema.json"), "$defs");
+  const narrowed = structuredClone(at(definitions, "ndarray"));
+  const members = at(narrowed, "properties", "$nd", "properties");
+  members.dtype = { const: "f8" };
+  members.shape = { ...at(members, "shape"), minItems: 1, maxItems: 1 };
+  narrowed.description = at(definitions, "f8Vector").description;
+  assert.deepEqual(at(definitions, "f8Vector"), narrowed);
+  // One axis exactly: a scalar and a matrix are neither.
+  const id = `${SCHEMA_ID_PREFIX}common#/$defs/f8Vector`;
+  const wire = (shape: number[]) => ({ $nd: { dtype: "f8", shape, data: "", sha256: "0".repeat(64) } });
+  assert.deepEqual(validate(contractSchemas(), id, wire([0])), []);
+  assert.deepEqual(
+    [[], [1, 3]].map((shape) => validate(contractSchemas(), id, wire(shape)).map((issue) => issue.keyword)),
+    [["minItems"], ["maxItems"]],
+  );
+});
+
 test("a RunSpec, a suite's defaults and a suite's runs offer the same options", () => {
   const runSpec = at(readSchema("run-spec.schema.json"), "properties");
   const suite = at(readSchema("suite.schema.json"), "properties");

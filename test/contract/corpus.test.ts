@@ -158,7 +158,10 @@ test("the quantities directory has the spec and the data of every registered qua
 test("the quantity files are the values of corpus.ts, and every schema has two valid and several invalid ones", () => {
   for (const schema of QUANTITY_SCHEMAS) {
     const { valid, invalid } = QUANTITY_FIXTURES[schema];
-    assert.ok(Object.keys(valid).length >= 2, `valid/quantities/${schema}`);
+    // A spec with nothing to choose has one valid value, the empty object, and so one valid fixture.
+    const onlyEmpty = Object.values(valid).every((value) => JSON.stringify(value) === "{}");
+    assert.ok(Object.keys(valid).length >= (onlyEmpty ? 1 : 2), `valid/quantities/${schema}`);
+    if (onlyEmpty) assert.deepEqual(validateQuantityPart(schema, { anything: 1 }).length, 1, schema);
     assert.ok(Object.keys(invalid).length >= 5, `invalid/quantities/${schema}`);
     const validFiles = Object.keys(valid).map((name) => `${name}.json`);
     assert.deepEqual(filesIn("valid", "quantities", schema), validFiles.sort(), schema);

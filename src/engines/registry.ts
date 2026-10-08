@@ -1,4 +1,5 @@
-// Engine adapters from configuration: `engines.<id>` says how an engine is reached, and this builds the adapter.
+// Engine adapters: `engines.<id>` of the configuration says how an engine is reached, the built-in engines are
+// part of the comparator, and this builds the adapter of either.
 import { existsSync } from "node:fs";
 import { relative } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -8,8 +9,10 @@ import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
 import { createInProcessTransport } from "../transports/inProcess.ts";
 import { createStdioTransport, workerEnvironment } from "../transports/stdio.ts";
 import type { Transport } from "../transports/transport.ts";
-import { EngineUnavailableError } from "./adapter.ts";
+import { EngineUnavailableError, enginesText } from "./adapter.ts";
 import type { EngineAdapter } from "./adapter.ts";
+import { BUILTIN_ENGINES } from "./builtin.ts";
+import type { BuiltinEngines } from "./builtin.ts";
 import { RemoteEngineAdapter } from "./remote.ts";
 
 /** What a transport factory is told beside the definition. */
@@ -94,21 +97,34 @@ export const TRANSPORT_FACTORIES: TransportFactories = {
 };
 
 /**
- * Builds the transport of a configured engine, unopened: the engine is not contacted. Rejects with an
- * `EngineUnavailableError`: `not-configured` for an id that `loaded` does not define, `unsupported-transport` for a
- * transport without a factory in `factories`, and whatever the factory rejects with.
+ * Builds the transport of an engine, unopened: the engine is not contacted. An id the configuration defines is
+ * built from its definition, by the factory of its transport. Any other id that is a built-in engine's is that
+ * engine, in this process: so a definition replaces a built-in engine of the same id, and every built-in engine
+ * can be named under any configuration root.
+ *
+ * Rejects with an `EngineUnavailableError`: `not-configured` for an id that is neither defined nor built in,
+ * `unsupported-transport` for a transport without a factory in `factories`, `create-failed` for a built-in engine
+ * that could not be made, and whatever the factory rejects with.
  */
 export async function createEngineTransport(
   loaded: Pick<LoadedConfig, "rootDir" | "config">,
   id: string,
   factories: TransportFactories = TRANSPORT_FACTORIES,
+  builtins: BuiltinEngines = BUILTIN_ENGINES,
 ): Promise<Transport> {
   const definitions = loaded.config.engineDefinitions;
   // An own key: "constructor" is an engine id like any other, and no object defines it by inheritance.
   if (!Object.hasOwn(definitions, id)) {
-    const ids = Object.keys(definitions).sort();
-    const defined = ids.length === 0 ? "no engine" : ids.join(", ");
-    throw new EngineUnavailableError(id, "not-configured", `the configuration defines ${defined}`);
+    if (Object.hasOwn(builtins, id)) {
+      try {
+        return createInProcessTransport(await builtins[id](loaded));
+      } catch (error) {
+        const detail = `the built-in engine could not be made: ${reasonOf(error)}`;
+        throw new EngineUnavailableError(id, "create-failed", detail, { cause: error });
+      }
+    }
+    const said = enginesText(Object.keys(definitions).sort(), Object.keys(builtins).sort());
+    throw new EngineUnavailableError(id, "not-configured", said);
   }
   const definition = definitions[id];
   // Looked up by the definition's own transport, so the factory found is the one for this kind of definition.
@@ -120,30 +136,38 @@ export async function createEngineTransport(
   return factory(definition, { engineId: id, rootDir: loaded.rootDir });
 }
 
-/** The engines of one configuration. */
+/** The engines of one configuration, and the built-in ones beside them. */
 export interface EngineRegistry {
-  /** The ids of the engines the configuration defines, sorted. */
+  /** The ids of the engines the configuration defines, sorted: the engines of a run that names none. */
   ids(): string[];
   /**
-   * Builds a new adapter for a configured engine. The engine is not contacted: `describe()` does that. The caller
-   * owns the adapter and closes it. Rejects with an `EngineUnavailableError`: `not-configured` for an id the
-   * configuration does not define, `unsupported-transport` for a transport without a factory, and whatever the
-   * factory rejects with.
+   * The ids of the built-in engines, sorted. Each can be named like a configured engine; none is run unless it is
+   * named. An id may be in both lists: the configuration's definition is then the engine.
+   */
+  builtinIds(): string[];
+  /**
+   * Builds a new adapter for an engine, configured or built in. The engine is not contacted: `describe()` does
+   * that. The caller owns the adapter and closes it. Rejects with an `EngineUnavailableError`: `not-configured`
+   * for an id that is neither, `unsupported-transport` for a transport without a factory, and whatever making the
+   * engine rejects with.
    */
   create(id: string): Promise<EngineAdapter>;
 }
 
 /**
- * The registry of the engines that `loaded` defines under `engines.<id>`. `factories` maps each transport to what
- * builds it, and defaults to every transport implemented.
+ * The registry of the engines that `loaded` defines under `engines.<id>`, with the built-in engines beside them.
+ * `factories` maps each transport to what builds it, and defaults to every transport implemented; `builtins`
+ * defaults to the comparator's own (`BUILTIN_ENGINES`).
  */
 export function createEngineRegistry(
   loaded: Pick<LoadedConfig, "rootDir" | "config">,
   factories: TransportFactories = TRANSPORT_FACTORIES,
+  builtins: BuiltinEngines = BUILTIN_ENGINES,
 ): EngineRegistry {
   return {
     ids: () => Object.keys(loaded.config.engineDefinitions).sort(),
+    builtinIds: () => Object.keys(builtins).sort(),
     create: async (id) =>
-      new RemoteEngineAdapter({ id, transport: await createEngineTransport(loaded, id, factories) }),
+      new RemoteEngineAdapter({ id, transport: await createEngineTransport(loaded, id, factories, builtins) }),
   };
 }

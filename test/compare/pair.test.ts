@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { QuantityComparator } from "../../src/compare/comparator.ts";
-import { whereText } from "../../src/compare/metricText.ts";
+import { numberText, whereText } from "../../src/compare/metricText.ts";
 import { comparePair } from "../../src/compare/pair.ts";
 import { selftestEchoComparator } from "../../src/compare/selftestEcho.ts";
 import type { RungPolicy } from "../../src/contract/policy.ts";
@@ -107,7 +107,7 @@ test("recorded: RECORDED within the attention band, ATTENTION outside it; a metr
 
   const far = comparePair(A, answered("b", [1, 2, 300]), RECORDED, ECHO);
   assert.equal(far.verdict, "ATTENTION");
-  assert.equal(far.reason, "values.maxAbs 2.97e2 is outside its attention band 5.00e-1 at index 2");
+  assert.equal(far.reason, "values.maxAbs 297 is outside its attention band 5.00e-1 at index 2");
 
   const nan = comparePair(A, answered("b", [1, NaN, 3]), RECORDED, ECHO);
   assert.equal(nan.verdict, "ATTENTION");
@@ -196,7 +196,7 @@ test("where a failing metric occurs is said with its keys in order", () => {
   );
   assert.equal(
     comparePair(A, A, GATED, comparator).reason,
-    "values.maxAbs 2.00e0 exceeds its tolerance 1.00e-12 at field 14 deg, line 0",
+    "values.maxAbs 2 exceeds its tolerance 1.00e-12 at field 14 deg, line 0",
   );
 });
 
@@ -213,7 +213,18 @@ test("a place is worded by the number formatter, in a reason as in a report", ()
   );
   assert.equal(
     comparePair(A, A, GATED, comparator).reason,
-    "values.maxAbs 2.00e0 exceeds its tolerance 1.00e-12 at frequencyPerMm 1.25e1",
+    "values.maxAbs 2 exceeds its tolerance 1.00e-12 at frequencyPerMm 1.25e1",
+  );
+});
+
+test("a metric and a limit are worded as a place is: a whole number in full, so that a count reads as a count", () => {
+  assert.deepEqual([0, 3, 123456789, -2].map(numberText), ["0", "3", "123456789", "-2"]);
+  assert.deepEqual([2.5, 1e-12, 1e21, NaN, Infinity].map(numberText), ["2.50e0", "1.00e-12", "1.00e21", "NaN", "inf"]);
+  const counting: RungPolicy = { ...GATED, metrics: { "values.maxAbs": { tolerance: 0, unit: "elements" } } };
+  const comparator = reporting({ name: "values.maxAbs", value: 3, where: { field: "curvature", surface: 4 } });
+  assert.equal(
+    comparePair(A, A, counting, comparator).reason,
+    "values.maxAbs 3 exceeds its tolerance 0 at field curvature, surface 4",
   );
 });
 
@@ -231,7 +242,7 @@ test("a rung is judged by the limit of its class alone: a recorded rung by its b
   assert.equal(near.reason, undefined);
   const far = comparePair(A, answered("b", [1, 2, 300]), both, ECHO);
   assert.equal(far.verdict, "ATTENTION");
-  assert.equal(far.reason, "values.maxAbs 2.97e2 is outside its attention band 5.00e-1 at index 2");
+  assert.equal(far.reason, "values.maxAbs 297 is outside its attention band 5.00e-1 at index 2");
   // And a gated rung is judged by its tolerance, whatever band stands beside it.
   const gated: RungPolicy = {
     ...GATED,

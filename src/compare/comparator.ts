@@ -37,6 +37,12 @@ export interface QuantityComparator {
    * (arrays of different shapes) are not comparable, with a reason that quotes nothing but the data.
    */
   compare(a: JsonObject, b: JsonObject): ComparatorOutcome;
+  /**
+   * What one answer reports beside what is compared, by name: values that are listed with every comparison of the
+   * answer and never judged. A comparator has this only when its quantity has such values. The data is as for
+   * `compare`; the values are as the answer has them, so one may be a NaN or an infinity.
+   */
+  recorded?(data: JsonObject): { readonly [name: string]: readonly number[] };
 }
 
 /** A set of comparators that can be read but not added to. */

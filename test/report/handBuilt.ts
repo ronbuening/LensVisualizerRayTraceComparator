@@ -10,7 +10,10 @@ const CASE = "c".repeat(64);
 const FIRST = "1".repeat(64);
 const SECOND = "2".repeat(64);
 
-/** Two rungs: a recorded one in millimetres with a band on one metric, and one the comparisons know nothing of. */
+/**
+ * Three rungs: a recorded one in millimetres with a band on one metric, a gated one that the comparisons show
+ * blocked, and one the comparisons know nothing of.
+ */
 export const POLICY: Policy = {
   contract: "1.0",
   kind: "policy",
@@ -22,6 +25,12 @@ export const POLICY: Policy = {
       class: "recorded",
       metrics: { "spot.rms": { unit: "mm" }, "mtf.maxAbs": { attention: 0.005, unit: "1" } },
     },
+    r1: {
+      quantity: "paraxial.first-order",
+      mode: "direct",
+      class: "gated",
+      metrics: { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } },
+    },
     r2: {
       quantity: "rays.trace",
       mode: "identical-rays",
@@ -32,7 +41,8 @@ export const POLICY: Policy = {
 };
 
 function job(run: string, rung: string, requestId: string, engine: string, more: Record<string, unknown> = {}) {
-  const quantity = rung === "r5" ? "mtf.native" : rung === "r2" ? "rays.trace" : "system.describe";
+  const quantities: Record<string, string> = { r1: "paraxial.first-order", r2: "rays.trace", r5: "mtf.native" };
+  const quantity = quantities[rung] ?? "system.describe";
   return {
     run,
     caseId: CASE,
@@ -46,7 +56,7 @@ function job(run: string, rung: string, requestId: string, engine: string, more:
   };
 }
 
-/** Three engines, one of them unavailable; a run of two rungs, the first with two requests; a run not started. */
+/** Three engines, one of them unavailable; a run of three rungs, the first with two requests; a run not started. */
 export const MANIFEST: RunManifest = {
   contract: "1.0",
   kind: "run-manifest",
@@ -79,6 +89,8 @@ export const MANIFEST: RunManifest = {
     }),
     job("tele", "r0", FIRST, "lv"),
     job("tele", "r0", FIRST, "optiland", { status: "pending", storeKey: null }),
+    job("tele", "r1", SECOND, "lv"),
+    job("tele", "r1", SECOND, "optiland"),
   ],
 };
 
@@ -107,7 +119,11 @@ const ZEMAX = {
   reason: "zemax ended as error (spawn-failed)",
 } as const;
 
-/** The comparisons of `MANIFEST`: both modes of the first request, one mode each of the others. */
+/**
+ * The comparisons of `MANIFEST`: both modes of the first request, one mode each of the others. The last is a pair
+ * that is blocked, of two answers that record values: one both report, with a second element in one of them only,
+ * and one of a single engine, with an element that is not finite.
+ */
 export const COMPARISONS: ComparisonFile = {
   contract: "1.0",
   kind: "comparison-file",
@@ -163,6 +179,28 @@ export const COMPARISONS: ComparisonFile = {
       mode: "reference-vs-each",
       reference: "lv",
       pairs: [],
+    },
+    {
+      ...SET,
+      rung: "r1",
+      quantity: "paraxial.first-order",
+      requestId: SECOND,
+      participants: [
+        { ...PARTICIPANTS[0], recorded: { "epZ|RelStop": [-12.5, null], magnification: [-0.25, -0.2501] } },
+        { ...PARTICIPANTS[1], recorded: { magnification: [-0.2500000004] } },
+      ],
+      mode: "reference-vs-each",
+      reference: "lv",
+      pairs: [
+        {
+          a: "lv",
+          b: "optiland",
+          metrics: [],
+          class: "gated",
+          verdict: "BLOCKED",
+          reason: "not judged: rung r0 failed for lv and optiland on this case",
+        },
+      ],
     },
   ],
 };

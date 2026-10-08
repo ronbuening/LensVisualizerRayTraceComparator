@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
+import type { ComparisonMetric } from "../../src/contract/comparison.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { renderReport } from "../../src/report/index.ts";
 import { escapeCell, renderMarkdown } from "../../src/report/markdown.ts";
@@ -75,7 +76,7 @@ test("every table row has as many cells as its header, whatever text its cells h
     }
     assert.equal(cells, width, line);
   });
-  assert.equal(tables, 9);
+  assert.equal(tables, 11);
 });
 
 test("text from the manifest and the comparisons is escaped where it enters a table", () => {
@@ -98,12 +99,17 @@ test("the inputs name the suite, the contract version and the policy version", (
 
 test("the summary counts the pairs of each mode by verdict, and says how many fail", () => {
   assert.deepEqual(MODEL.summary, [
-    { mode: "reference-vs-each", counts: { PASS: 0, FAIL: 0, RECORDED: 0, ATTENTION: 1, UNSUPPORTED: 0, ERROR: 1 } },
-    { mode: "pairwise", counts: { PASS: 0, FAIL: 0, RECORDED: 0, ATTENTION: 1, UNSUPPORTED: 1, ERROR: 2 } },
+    {
+      mode: "reference-vs-each",
+      counts: { PASS: 0, FAIL: 0, RECORDED: 0, ATTENTION: 1, UNSUPPORTED: 0, BLOCKED: 1, ERROR: 1 },
+    },
+    { mode: "pairwise", counts: { PASS: 0, FAIL: 0, RECORDED: 0, ATTENTION: 1, UNSUPPORTED: 1, BLOCKED: 0, ERROR: 2 } },
   ]);
+  // A blocked pair is counted, and is not one of the failures: the rung that blocks it is.
   assert.equal(MODEL.failing, 3);
-  assert.match(MARKDOWN, /^3 of 6 pairs are FAIL or ERROR\.$/m);
+  assert.match(MARKDOWN, /^3 of 7 pairs are FAIL or ERROR\.$/m);
   assert.deepEqual(rowsStarting(MARKDOWN, "ATTENTION")[0], ["ATTENTION", "1", "1"]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "BLOCKED")[0], ["BLOCKED", "1", "0"]);
   assert.deepEqual(rowsStarting(MARKDOWN, "ERROR")[0], ["ERROR", "1", "2"]);
 
   const clean: ComparisonFile = { ...COMPARISONS, comparisons: COMPARISONS.comparisons.slice(2, 3) };
@@ -116,6 +122,7 @@ test("the support matrix has a row per request and a cell per engine, from the m
     ["tele", "r5, request 1 of 2", "ok", "ok", "error: spawn-failed"],
     ["tele", "r5, request 2 of 2", "ok", "unsupported: feature surface.asphere.odd, option a\\|b", "—"],
     ["tele", "r0", "ok", "pending", "—"],
+    ["tele", "r1", "ok", "ok", "—"],
   ]);
   const nothingCompared = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [] }, POLICY);
   assert.deepEqual(nothingCompared.support, MODEL.support);
@@ -190,6 +197,82 @@ test("numbers are laid out by the number formatter: three digits, 'not finite' f
     "ERROR",
     "zemax ended as error (spawn-failed)",
   ]);
+});
+
+test("a whole number is written in full, so a count and a limit of 0 read as what they are", () => {
+  const counting = { quantity: "system.describe", mode: "direct", class: "gated" } as const;
+  const policy = {
+    ...POLICY,
+    rungs: { r0: { ...counting, metrics: { "shape.mismatches": { tolerance: 0, unit: "elements" } } } },
+  };
+  const metrics: ComparisonMetric[] = [
+    { name: "shape.mismatches", value: 12, unit: "elements", where: { field: "curvature", surface: 4 } },
+    { name: "sag.maxAbs", value: 2.5e-7, unit: "mm", where: { sample: 8, surface: 4 } },
+  ];
+  const reason = "shape.mismatches 12 exceeds its tolerance 0 at field curvature, surface 4";
+  const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "FAIL", reason } as const;
+  const set = { ...COMPARISONS.comparisons[0], rung: "r0", quantity: "system.describe", pairs: [pair] };
+  const markdown = renderMarkdown(buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, policy));
+  assert.match(
+    markdown,
+    /^\| Engine \| shape\.mismatches \(≤ 0 elements\) \| sag\.maxAbs \[mm\] \| Verdict \| Note \|$/m,
+  );
+  assert.deepEqual(rowsStarting(markdown, "optiland")[1], [
+    "optiland",
+    "12 at field curvature, surface 4",
+    "2.50e-7 at sample 8, surface 4",
+    "FAIL",
+    reason,
+  ]);
+});
+
+test("a blocked pair is a row with its reason, and no metric", () => {
+  const section = MODEL.sections[3];
+  assert.deepEqual([section.rung, section.mode, section.class], ["r1", "direct", "gated"]);
+  assert.deepEqual(section.referenceVsEach, {
+    reference: "lv",
+    rows: [
+      {
+        engine: "optiland",
+        metrics: [null],
+        verdict: "BLOCKED",
+        reason: "not judged: rung r0 failed for lv and optiland on this case",
+      },
+    ],
+  });
+  assert.deepEqual(rowsStarting(MARKDOWN, "optiland").at(-1), [
+    "optiland",
+    "—",
+    "BLOCKED",
+    "not judged: rung r0 failed for lv and optiland on this case",
+  ]);
+  assert.match(MARKDOWN, /^\| BLOCKED \| Both engines answered and the pair is not judged: /m);
+});
+
+test("recorded values are listed side by side: a row per element, a column per engine, nothing judged", () => {
+  // Only an answer that records something has a table.
+  assert.deepEqual(
+    MODEL.sections.map((section) => section.recorded === null),
+    [true, true, true, false],
+  );
+  assert.deepEqual(MODEL.sections[3].recorded, {
+    engines: ["lv", "optiland"],
+    rows: [
+      { name: "epZ|RelStop", index: 0, cells: [{ value: -12.5 }, null] },
+      { name: "epZ|RelStop", index: 1, cells: [{ value: null }, null] },
+      { name: "magnification", index: 0, cells: [{ value: -0.25 }, { value: -0.2500000004 }] },
+      { name: "magnification", index: 1, cells: [{ value: -0.2501 }, null] },
+    ],
+  });
+  assert.match(MARKDOWN, /^Recorded values, as each engine reports them\. They are listed and never judged:$/m);
+  assert.deepEqual(rowsStarting(MARKDOWN, "Value"), [["Value", "lv", "optiland"]]);
+  // Nine digits, a name escaped like any text, and the two ways a cell has no number.
+  assert.deepEqual(rowsStarting(MARKDOWN, "epZ\\|RelStop[0]"), [["epZ\\|RelStop[0]", "-1.25000000e1", "—"]]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "epZ\\|RelStop[1]"), [["epZ\\|RelStop[1]", "not finite", "—"]]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "magnification[0]"), [
+    ["magnification[0]", "-2.50000000e-1", "-2.50000000e-1"],
+  ]);
+  assert.deepEqual(rowsStarting(MARKDOWN, "magnification[1]"), [["magnification[1]", "-2.50100000e-1", "—"]]);
 });
 
 test("the pairwise matrix is symmetric, empty on its diagonal, and names the judged metric nearest its limit", () => {

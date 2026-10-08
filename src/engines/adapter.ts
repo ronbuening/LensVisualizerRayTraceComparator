@@ -33,6 +33,7 @@ export interface EngineAdapter {
  * - `load-failed`: an in-process engine's module is missing or could not be imported;
  * - `bad-module`: the module does not export a `createEngine` function;
  * - `create-failed`: `createEngine` threw, as it does for options it does not know, or did not return a handler;
+ *   or a built-in engine could not be made;
  * - `spawn-failed`: the transport did not open, as when a worker's process does not start;
  * - `hello-failed`: `hello` got no usable reply: none in time, a refusal, or something that is not a reply to it;
  * - `bad-descriptor`: the reply to `hello` is not a valid engine descriptor;
@@ -71,4 +72,13 @@ export class EngineUnavailableError extends Error {
     this.engineId = engineId;
     this.code = code;
   }
+}
+
+/**
+ * The engines there are to name, as a message says them: `the configuration defines fake-a, fake-b; built in: ref`.
+ * Both lists are given sorted. Without a built-in engine nothing is said of them.
+ */
+export function enginesText(configured: readonly string[], builtin: readonly string[]): string {
+  const defined = `the configuration defines ${configured.length === 0 ? "no engine" : configured.join(", ")}`;
+  return builtin.length === 0 ? defined : `${defined}; built in: ${builtin.join(", ")}`;
 }

@@ -36,7 +36,7 @@ test("the worked suite expands to its three runs, each a complete RunSpec", () =
   const shared = {
     aperture: { kind: "wide-open" },
     lines: { kind: "reference" },
-    rungs: ["R0", "R1", "R2", "R3", "R4"],
+    rungs: ["r0", "r1", "r2", "r3", "r4"],
   } as const;
   const lvRun = {
     fields: { kind: "image-height-fractions", values: [0, 0.5, 1] },

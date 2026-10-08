@@ -77,6 +77,28 @@ export interface PairwiseCell {
   readonly worst: ComparisonMetric | null;
 }
 
+/** One recorded value of one engine; `value` is null when it is not a finite number. */
+export interface RecordedCell {
+  readonly value: number | null;
+}
+
+/** One row of a table of recorded values: one element of one named value, and what each engine reports for it. */
+export interface RecordedRow {
+  readonly name: string;
+  /** Which element of the value this is: the line of the case, for first-order data. */
+  readonly index: number;
+  /** One cell per engine of the table; null for an engine that does not report this element. */
+  readonly cells: readonly (RecordedCell | null)[];
+}
+
+/** The values the answers to one request report beside what is compared: listed side by side, never judged. */
+export interface RecordedTable {
+  /** The engines of the section, sorted by id. */
+  readonly engines: readonly string[];
+  /** The rows, by name and then by index. */
+  readonly rows: readonly RecordedRow[];
+}
+
 /** The comparisons of one request of one rung of one run. */
 export interface ReportSection {
   readonly run: string;
@@ -100,6 +122,8 @@ export interface ReportSection {
     readonly engines: readonly string[];
     readonly cells: readonly (readonly (PairwiseCell | null)[])[];
   } | null;
+  /** The values the engines' answers only record; null when no answer has any. */
+  readonly recorded: RecordedTable | null;
 }
 
 /** A report of one run of a suite. */
@@ -210,6 +234,30 @@ function worstOf(pair: PairComparison, columns: readonly MetricColumn[]): Compar
   return worst;
 }
 
+/**
+ * The recorded values of a set's participants as a table: a row for every element of every name that any of them
+ * reports, by name and then by index, and a column for every participant. Null when none reports anything.
+ */
+function recordedOf(set: ComparisonSet): RecordedTable | null {
+  const names = [...new Set(set.participants.flatMap((participant) => Object.keys(participant.recorded ?? {})))].sort();
+  if (names.length === 0) return null;
+  const valuesOf = (name: string): (readonly (number | null)[] | undefined)[] =>
+    set.participants.map(({ recorded }) =>
+      recorded !== undefined && Object.hasOwn(recorded, name) ? recorded[name] : undefined,
+    );
+  const rows = names.flatMap((name) => {
+    const columns = valuesOf(name);
+    const length = Math.max(...columns.map((values) => values?.length ?? 0));
+    return Array.from({ length }, (_unused, index): RecordedRow => {
+      const cells = columns.map((values) =>
+        values === undefined || index >= values.length ? null : { value: values[index] },
+      );
+      return { name, index, cells };
+    });
+  });
+  return { engines: set.participants.map((participant) => participant.engine), rows };
+}
+
 /** The section of one request from its sets: at most one of each mode. */
 function sectionOf(
   sets: readonly ComparisonSet[],
@@ -260,6 +308,8 @@ function sectionOf(
     columns,
     referenceVsEach,
     pairwise,
+    // Every set of a request states the same participants, so the first one says it for all.
+    recorded: recordedOf(sets[0]),
   };
 }
 
@@ -272,7 +322,7 @@ function sectionOf(
  * - `support` has a row for every request of the manifest, in the order of its jobs, and says for every engine how
  *   its job ended. It comes from the manifest alone, so it is the same whatever was compared.
  * - `sections` has one entry per request that was compared, in the order of the comparisons: the sets of one run,
- *   rung and request that follow each other are one section.
+ *   rung and request that follow each other are one section. A section also lists what the answers only record.
  *
  * It does not check that the three belong together; `reportInputProblems` does.
  */

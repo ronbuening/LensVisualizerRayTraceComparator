@@ -18,8 +18,15 @@ import type { EngineDescriptor } from "../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
+import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
+import type {
+  ParaxialFirstOrderData,
+  ParaxialFirstOrderSpec,
+} from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
 import type { SelftestEchoData, SelftestEchoSpec } from "../../src/contract/quantities/selftestEcho.ts";
+import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../../src/contract/quantities/systemDescribe.ts";
+import type { SystemDescribeData, SystemDescribeSpec } from "../../src/contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../../src/contract/request.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
@@ -226,7 +233,7 @@ export const RUN_SPEC_WORKED = {
   imagePlane: { kind: "design" },
   frequenciesPerMm: [10, 20, 40],
   sampling: { lvGridCap: 64, bundleGrid: 33, engines: { optiland: { numRays: 512 } } },
-  rungs: ["R0", "R1", "R2", "R3", "R4"],
+  rungs: ["r0", "r1", "r2", "r3", "r4"],
   engines: ["ref", "optiland"],
   referenceEngine: "ref",
 } satisfies RunSpec;
@@ -244,7 +251,7 @@ export const RUN_SPEC_LV = {
   imagePlane: { kind: "shift", mm: -0.02 },
   frequenciesPerMm: [30],
   sampling: { lvGridCap: 256 },
-  rungs: ["R5"],
+  rungs: ["r5"],
   engines: ["lv", "optiland"],
   referenceEngine: "lv",
 } satisfies RunSpec;
@@ -261,7 +268,7 @@ export const SUITE_WORKED = {
     imagePlane: { kind: "lv-best-axial" },
     frequenciesPerMm: [10, 30],
     sampling: { lvGridCap: 64, bundleGrid: 33 },
-    rungs: ["R0", "R1", "R2", "R3", "R4"],
+    rungs: ["r0", "r1", "r2", "r3", "r4"],
     engines: ["lv", "ref", "optiland"],
     referenceEngine: "lv",
   },
@@ -302,8 +309,8 @@ export const SUITE_MINIMAL = {
 
 // ── request and result ───────────────────────────────────────────────────────────────────────────────────────────
 //
-// `system.describe` and `rays.trace` have no schema yet, so the specs and data below only show that an object
-// travels as it is. The quantity that has one, `selftest.echo`, has fixtures of its own further down.
+// A request and a result carry a spec and data as they are: their schemas belong to the quantity, which has
+// fixtures of its own further down. `rays.trace` has no schema yet.
 
 /** The smallest request: an empty spec and no engine options. */
 export const REQUEST_MINIMAL = makeRequest({ caseId: SINGLET_CASE.id, quantity: "system.describe", spec: {} });
@@ -467,7 +474,7 @@ export const RESPONSE_FAILURE = {
 
 // ── policy and comparison ────────────────────────────────────────────────────────────────────────────────────────
 
-/** The policy of Phase 0, as `policy/rungs.v1.json` holds it: the one rung `selftest`, direct and gated. */
+/** A policy of one rung: `selftest`, direct and gated, as the comparator's own policy judges it. */
 export const POLICY_SELFTEST = {
   contract: CONTRACT_VERSION,
   kind: "policy",
@@ -485,7 +492,42 @@ export const POLICY_SELFTEST = {
   },
 } satisfies Policy;
 
-/** A policy with a rung of every mode and both classes. It is a format example: its rungs are not registered. */
+/**
+ * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
+ * blocks the rungs after it, and the first-order data `r1`.
+ */
+export const POLICY_LADDER = {
+  contract: CONTRACT_VERSION,
+  kind: "policy",
+  version: 2,
+  rungs: {
+    selftest: POLICY_SELFTEST.rungs.selftest,
+    r0: {
+      quantity: SYSTEM_DESCRIBE,
+      mode: "direct",
+      class: "gated",
+      metrics: {
+        "aperture.mismatches": { tolerance: 0, unit: "elements" },
+        "index.mismatches": { tolerance: 0, unit: "elements" },
+        "layout.mismatches": { tolerance: 0, unit: "elements" },
+        "sag.maxScaled": { tolerance: 1e-12, unit: "1" },
+        "shape.mismatches": { tolerance: 0, unit: "elements" },
+      },
+      blocksLaterRungs: true,
+    },
+    r1: {
+      quantity: PARAXIAL_FIRST_ORDER,
+      mode: "direct",
+      class: "gated",
+      metrics: { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } },
+    },
+  },
+} satisfies Policy;
+
+/**
+ * A policy with a rung of every mode and both classes. It is a format example: its rungs are none of the
+ * comparator's, though two of them bear the id of one.
+ */
 export const POLICY_EVERY_MODE = {
   contract: CONTRACT_VERSION,
   kind: "policy",
@@ -622,6 +664,175 @@ export const COMPARISON_PAIRWISE = {
   ],
 } satisfies ComparisonSet;
 
+/**
+ * A rung behind one that failed: the pair is not judged, and says which rung blocks it. Each engine's answer is
+ * listed with the values it only records: one that both report, one of a single engine, one that is not finite.
+ */
+export const COMPARISON_BLOCKED = {
+  ...COMPARISON_BASE,
+  rung: "r1",
+  quantity: PARAXIAL_FIRST_ORDER,
+  participants: [
+    {
+      engine: "lv",
+      fingerprint: sha256Hex("lv sources"),
+      status: "ok",
+      recorded: { epZRelStop: [-12.5, null], magnification: [-0.25, -0.2501] },
+    },
+    { engine: "ref", fingerprint: sha256Hex("ref sources"), status: "ok", recorded: { magnification: [-0.25, -0.25] } },
+  ],
+  mode: "reference-vs-each",
+  reference: "ref",
+  pairs: [
+    {
+      a: "ref",
+      b: "lv",
+      metrics: [],
+      class: "gated",
+      verdict: "BLOCKED",
+      reason: "not judged: rung r0 failed for lv and ref on this case",
+    },
+  ],
+} satisfies ComparisonSet;
+
+// ── system.describe and paraxial.first-order ─────────────────────────────────────────────────────────────────────
+//
+// The examples below are of the singlet case, worked out here from the textbook formulas of a single lens and not
+// by any engine, so that an engine can be held to them: `valid/quantities/system.describe.data/singlet.json` is the
+// answer to the spec `three-fractions.json` about `valid/optical-case/singlet.json`, to rounding, and
+// `valid/quantities/paraxial.first-order.data/singlet.json` is the answer to the empty spec about the same case.
+
+const [SINGLET_FRONT, SINGLET_REAR] = SINGLET_DRAFT.system.surfaces;
+const SINGLET_INDEX = 1.5168;
+const SINGLET_STOP = SINGLET_DRAFT.conditions.stopSemiDiameter;
+
+/** The sag of a sphere of radius `radius` at the height `r`: r^2 / (R + sqrt(R^2 - r^2)), with the sign of R. */
+function sphereSag(radius: number, r: number): number {
+  const magnitude = Math.abs(radius);
+  return (Math.sign(radius) * (r * r)) / (magnitude + Math.sqrt(magnitude * magnitude - r * r));
+}
+
+/** A spec with three fractions, and the default one written out. */
+export const DESCRIBE_SPEC_THREE = { sagFractions: [0, 0.5, 1] } satisfies SystemDescribeSpec;
+
+/** The singlet as an engine that built it describes it: two spheres of 50 mm, the sag at 0, 5 and 10 mm. */
+export const DESCRIBE_DATA_SINGLET = {
+  surfaceCount: 2,
+  stopIndex: 0,
+  imageZ: 100,
+  stopSemiDiameter: SINGLET_STOP,
+  vertexZ: encodeNdArray(Float64Array.of(0, 4)),
+  curvature: encodeNdArray(Float64Array.of(1 / 50, 1 / -50)),
+  conic: encodeNdArray(Float64Array.of(0, 0)),
+  clipRadius: encodeNdArray(Float64Array.of(10, 10)),
+  indexAfterSurface: encodeNdArray(Float64Array.of(SINGLET_INDEX, 1), [1, 2]),
+  sagRadii: encodeNdArray(Float64Array.of(0, 5, 10, 0, 5, 10), [2, 3]),
+  sag: encodeNdArray(
+    Float64Array.of(0, sphereSag(50, 5), sphereSag(50, 10), 0, sphereSag(-50, 5), sphereSag(-50, 10)),
+    [2, 3],
+  ),
+  terms: [[], []],
+} satisfies SystemDescribeData;
+
+/**
+ * A format example with everything the singlet lacks: two lines, a paraboloid with two terms, and a sphere of
+ * radius -6 whose nominal semi-diameter of 8 reaches past its equator, where it has no sag: a NaN.
+ */
+export const DESCRIBE_DATA_ASPHERE = {
+  surfaceCount: 2,
+  stopIndex: 1,
+  imageZ: 31.5,
+  stopSemiDiameter: 2.25,
+  vertexZ: encodeNdArray(Float64Array.of(0, 3)),
+  curvature: encodeNdArray(Float64Array.of(0.025, 1 / -6)),
+  conic: encodeNdArray(Float64Array.of(-1, 0)),
+  clipRadius: encodeNdArray(Float64Array.of(12.000000001, 2.250000001)),
+  indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1.5224, 1), [2, 2]),
+  sagRadii: encodeNdArray(Float64Array.of(6, 12, 4, 8), [2, 2]),
+  // A paraboloid's sag is c r^2 / 2; the terms add 1e-6 r^4 - 2e-9 r^6.
+  sag: encodeNdArray(
+    Float64Array.of(
+      0.0125 * 36 + 1e-6 * 6 ** 4 - 2e-9 * 6 ** 6,
+      0.0125 * 144 + 1e-6 * 12 ** 4 - 2e-9 * 12 ** 6,
+      sphereSag(-6, 4),
+      NaN,
+    ),
+    [2, 2],
+  ),
+  terms: [
+    [
+      { power: 4, coeff: 1e-6 },
+      { power: 6, coeff: -2e-9 },
+    ],
+    [],
+  ],
+} satisfies SystemDescribeData;
+
+/**
+ * The first-order data of the singlet by the formulas of a thick lens in air. With the surface powers
+ * P1 = (n - 1) / R1 and P2 = (1 - n) / R2 and the thickness t, the power is P = P1 + P2 - P1 P2 t / n and the
+ * focal length f = 1 / P. The rear principal point lies f P1 t / n in front of the rear vertex and the front one
+ * f P2 t / n behind the front vertex; each focal point is f from its principal point. The stop is on the front
+ * surface, so the entrance pupil is the stop itself. The exit pupil is the image of the stop through the rear
+ * surface: an object t in front of it, in glass, with n / (-t) + P2 = 1 / l' and the magnification n l' / (-t).
+ */
+function singletFirstOrder(): Record<keyof Omit<ParaxialFirstOrderData, "recorded">, number> {
+  const t = SINGLET_FRONT.thickness;
+  const front = (SINGLET_INDEX - 1) / SINGLET_FRONT.shape.radius;
+  const rear = (1 - SINGLET_INDEX) / SINGLET_REAR.shape.radius;
+  const efl = 1 / (front + rear - (front * rear * t) / SINGLET_INDEX);
+  const rearPrincipalZ = SINGLET_REAR.z - (efl * front * t) / SINGLET_INDEX;
+  const frontPrincipalZ = SINGLET_FRONT.z + (efl * rear * t) / SINGLET_INDEX;
+  const pupilDistance = 1 / (rear - SINGLET_INDEX / t);
+  return {
+    efl,
+    frontFocalZ: frontPrincipalZ - efl,
+    rearFocalZ: rearPrincipalZ + efl,
+    frontPrincipalZ,
+    rearPrincipalZ,
+    backFocus: rearPrincipalZ + efl - SINGLET_REAR.z,
+    entrancePupilZ: SINGLET_FRONT.z,
+    exitPupilZ: SINGLET_REAR.z + pupilDistance,
+    entrancePupilSemiDiameter: SINGLET_STOP,
+    exitPupilSemiDiameter: SINGLET_STOP * Math.abs((SINGLET_INDEX * pupilDistance) / -t),
+  };
+}
+
+/** One value per line, as the quantity carries it. */
+function perLine(...values: number[]): ReturnType<typeof encodeNdArray> {
+  return encodeNdArray(Float64Array.from(values));
+}
+
+/** The singlet's first-order data, at its one line; an object at infinity records nothing. */
+export const FIRST_ORDER_DATA_SINGLET = {
+  ...(Object.fromEntries(Object.entries(singletFirstOrder()).map(([name, value]) => [name, perLine(value)])) as Omit<
+    ParaxialFirstOrderData,
+    "recorded"
+  >),
+  recorded: {},
+} satisfies ParaxialFirstOrderData;
+
+/**
+ * A format example: two lines, a finite object, whose magnification is recorded beside a value of the engine's
+ * own, and an exit pupil at infinity at the second line.
+ */
+export const FIRST_ORDER_DATA_TWO_LINES = {
+  efl: perLine(50.25, 50.5),
+  frontFocalZ: perLine(-48.5, -48.75),
+  rearFocalZ: perLine(57.25, 57.5),
+  frontPrincipalZ: perLine(1.75, 1.75),
+  rearPrincipalZ: perLine(7, 7),
+  backFocus: perLine(47.25, 47.5),
+  entrancePupilZ: perLine(3.5, 3.5),
+  exitPupilZ: perLine(-120, Infinity),
+  entrancePupilSemiDiameter: perLine(6.25, 6.25),
+  exitPupilSemiDiameter: perLine(18.5, Infinity),
+  recorded: { epZRelStop: perLine(-4.5, -4.5), magnification: perLine(-0.25, -0.2515) },
+} satisfies ParaxialFirstOrderData;
+
+/** The spec of `paraxial.first-order`: there is nothing to choose. */
+export const FIRST_ORDER_SPEC = {} satisfies ParaxialFirstOrderSpec;
+
 // ── selftest.echo ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** A float64 array given by the bits of each element, for the values a number literal cannot state. */
@@ -751,8 +962,12 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     shutdown: RESPONSE_SHUTDOWN,
     failure: RESPONSE_FAILURE,
   },
-  policy: { selftest: POLICY_SELFTEST, "every-mode": POLICY_EVERY_MODE },
-  comparison: { "reference-vs-each": COMPARISON_REFERENCE, pairwise: COMPARISON_PAIRWISE },
+  policy: { selftest: POLICY_SELFTEST, ladder: POLICY_LADDER, "every-mode": POLICY_EVERY_MODE },
+  comparison: {
+    "reference-vs-each": COMPARISON_REFERENCE,
+    pairwise: COMPARISON_PAIRWISE,
+    blocked: COMPARISON_BLOCKED,
+  },
 };
 
 /** Where the validator must report an invalid fixture: its one issue has this instance path and this keyword. */
@@ -1004,6 +1219,7 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "metric-negative-tolerance": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/tolerance", -1e-12, "minimum"),
     "metric-attention-as-string": fault(POLICY_EVERY_MODE, "/rungs/r5/metrics/mtf.maxAbs/attention", "0.005", "type"),
     "metric-as-number": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs", 1e-12, "type"),
+    "rung-blocks-as-string": fault(POLICY_LADDER, "/rungs/r0/blocksLaterRungs", "later", "type"),
   },
   comparison: {
     "missing-pairs": fault(COMPARISON_REFERENCE, "/pairs", REMOVE, "required", ""),
@@ -1035,6 +1251,14 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
       "/pairs/0/metrics/1",
     ),
     "metric-where-nested": fault(COMPARISON_REFERENCE, "/pairs/0/metrics/0/where/index", [2], "type"),
+    "pair-verdict-of-another-ladder": fault(COMPARISON_BLOCKED, "/pairs/0/verdict", "STALE", "enum"),
+    "participant-recorded-as-list": fault(COMPARISON_BLOCKED, "/participants/1/recorded", [-0.25], "type"),
+    "participant-recorded-value-as-text": fault(
+      COMPARISON_BLOCKED,
+      "/participants/0/recorded/epZRelStop/1",
+      "NaN",
+      "type",
+    ),
   },
 };
 
@@ -1056,6 +1280,73 @@ const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
  * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
  */
 export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${SYSTEM_DESCRIBE}.spec`]: {
+    valid: {
+      default: {} satisfies SystemDescribeSpec,
+      "three-fractions": DESCRIBE_SPEC_THREE,
+      "nine-fractions": { sagFractions: [...DEFAULT_SAG_FRACTIONS] } satisfies SystemDescribeSpec,
+    },
+    invalid: {
+      "not-an-object": fault(DESCRIBE_SPEC_THREE, "", [0, 0.5, 1], "type"),
+      "fractions-as-number": fault(DESCRIBE_SPEC_THREE, "/sagFractions", 9, "type"),
+      "fractions-empty": fault(DESCRIBE_SPEC_THREE, "/sagFractions", [], "minItems"),
+      "fractions-repeated": fault(DESCRIBE_SPEC_THREE, "/sagFractions", [0, 0.5, 0.5], "uniqueItems"),
+      "fraction-above-one": fault(DESCRIBE_SPEC_THREE, "/sagFractions/2", 1.25, "maximum"),
+      "fraction-negative": fault(DESCRIBE_SPEC_THREE, "/sagFractions/0", -0.5, "minimum"),
+      "fraction-as-string": fault(DESCRIBE_SPEC_THREE, "/sagFractions/1", "1/2", "type"),
+      "unknown-property": fault(DESCRIBE_SPEC_THREE, "/radii", [0, 5, 10], "additionalProperties"),
+    },
+  },
+  [`${SYSTEM_DESCRIBE}.data`]: {
+    valid: { singlet: DESCRIBE_DATA_SINGLET, "asphere-two-lines": DESCRIBE_DATA_ASPHERE },
+    invalid: {
+      "missing-terms": fault(DESCRIBE_DATA_SINGLET, "/terms", REMOVE, "required", ""),
+      "missing-sag": fault(DESCRIBE_DATA_SINGLET, "/sag", REMOVE, "required", ""),
+      "surface-count-zero": fault(DESCRIBE_DATA_SINGLET, "/surfaceCount", 0, "minimum"),
+      "stop-index-negative": fault(DESCRIBE_DATA_SINGLET, "/stopIndex", -1, "minimum"),
+      "stop-semi-diameter-zero": fault(DESCRIBE_DATA_SINGLET, "/stopSemiDiameter", 0, "exclusiveMinimum"),
+      "image-z-null": fault(DESCRIBE_DATA_SINGLET, "/imageZ", null, "type"),
+      "vertex-z-as-plain-numbers": fault(DESCRIBE_DATA_SINGLET, "/vertexZ", [0, 4], "type"),
+      "vertex-z-two-axes": fault(DESCRIBE_DATA_SINGLET, "/vertexZ/$nd/shape", [1, 2], "maxItems"),
+      "index-table-one-axis": fault(DESCRIBE_DATA_SINGLET, "/indexAfterSurface/$nd/shape", [2], "minItems"),
+      "sag-not-float64": fault(DESCRIBE_DATA_SINGLET, "/sag/$nd/dtype", "i4", "const"),
+      "terms-empty": fault(DESCRIBE_DATA_SINGLET, "/terms", [], "minItems"),
+      "term-power-zero": fault(DESCRIBE_DATA_ASPHERE, "/terms/0/0/power", 0, "minimum"),
+      // A term that adds nothing is not listed: an engine that holds one leaves it out.
+      "term-zero-coefficient": fault(DESCRIBE_DATA_ASPHERE, "/terms/0/1/coeff", 0, "anyOf"),
+      "term-unknown-property": fault(DESCRIBE_DATA_ASPHERE, "/terms/0/0/name", "A4", "additionalProperties"),
+      "unknown-property": fault(DESCRIBE_DATA_SINGLET, "/lastLensSurfaceIndex", 1, "additionalProperties"),
+    },
+  },
+  [`${PARAXIAL_FIRST_ORDER}.spec`]: {
+    valid: { empty: FIRST_ORDER_SPEC },
+    invalid: {
+      "not-an-object": fault(FIRST_ORDER_SPEC, "", [], "type"),
+      "as-null": fault(FIRST_ORDER_SPEC, "", null, "type"),
+      "as-string": fault(FIRST_ORDER_SPEC, "", "paraxial", "type"),
+      "line-chosen": fault(FIRST_ORDER_SPEC, "/line", 0, "additionalProperties"),
+      "object-chosen": fault(FIRST_ORDER_SPEC, "/object", { kind: "infinity" }, "additionalProperties"),
+    },
+  },
+  [`${PARAXIAL_FIRST_ORDER}.data`]: {
+    valid: { singlet: FIRST_ORDER_DATA_SINGLET, "finite-object-two-lines": FIRST_ORDER_DATA_TWO_LINES },
+    invalid: {
+      "missing-efl": fault(FIRST_ORDER_DATA_SINGLET, "/efl", REMOVE, "required", ""),
+      "missing-recorded": fault(FIRST_ORDER_DATA_SINGLET, "/recorded", REMOVE, "required", ""),
+      "efl-as-number": fault(FIRST_ORDER_DATA_SINGLET, "/efl", 49.04, "type"),
+      "back-focus-not-float64": fault(FIRST_ORDER_DATA_SINGLET, "/backFocus/$nd/dtype", "i4", "const"),
+      "pupil-z-two-axes": fault(FIRST_ORDER_DATA_TWO_LINES, "/exitPupilZ/$nd/shape", [1, 2], "maxItems"),
+      "pupil-z-no-axis": fault(FIRST_ORDER_DATA_TWO_LINES, "/entrancePupilZ/$nd/shape", [], "minItems"),
+      "recorded-as-list": fault(FIRST_ORDER_DATA_TWO_LINES, "/recorded", [], "type"),
+      "recorded-value-as-plain-numbers": fault(
+        FIRST_ORDER_DATA_TWO_LINES,
+        "/recorded/magnification",
+        [-0.25, -0.2515],
+        "type",
+      ),
+      "unknown-property": fault(FIRST_ORDER_DATA_SINGLET, "/fNumber", 4.9, "additionalProperties"),
+    },
+  },
   [`${SELFTEST_ECHO}.spec`]: {
     valid: examplePart("spec"),
     invalid: {

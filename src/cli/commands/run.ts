@@ -34,7 +34,8 @@ const HELP = [
   "LensVisualizer lens has its case built from the configured checkout (lvPath).",
   "",
   "  --root <dir>     the directory that holds lvrtc.config.json (default: this repository)",
-  "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine",
+  "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine;",
+  "                   the built-in engine ref is run only where it is named",
   "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung",
   "  --json           print one JSON object in place of the lines",
   "",
@@ -137,7 +138,8 @@ function jsonText(result: SuiteRunResult): string {
  * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
- * configuration defines unless a run or `--engines` names fewer. A fixture lens is read from the root; a
+ * configuration defines unless a run or `--engines` names others; a built-in engine, such as `ref`, is run only
+ * where it is named. A fixture lens is read from the root; a
  * LensVisualizer lens is exported from the checkout the configuration names (`lvPath`), which is loaded only when
  * a run asks for one. Each job is printed as it finishes, as a line of run, rung, engine, status and "computed",
  * "cached", "negotiated" or "unavailable", and a summary follows; with `--json` one object is printed in their
@@ -185,7 +187,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         const widths = [
           Math.max(0, ...suite.runs.map((run) => run.spec.name.length)),
           Math.max(0, ...RUNGS.map((rung) => rung.id.length)),
-          Math.max(0, ...registry.ids().map((id) => id.length)),
+          Math.max(0, ...[...registry.ids(), ...registry.builtinIds()].map((id) => id.length)),
           Math.max(...STATUSES.map((status) => status.length)),
           Math.max(...SOURCES.map((source) => source.length)),
         ];

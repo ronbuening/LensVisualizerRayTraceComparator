@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lvrtc:contract:v1:policy",
   "title": "Policy",
-  "description": "How the results of each rung are judged: the quantity compared, the mode of comparison, whether the rung is gated or recorded, and the limit of each metric. A gated metric needs a tolerance and an independent-method rung is never gated; code checks both.",
+  "description": "How the results of each rung are judged: the quantity compared, the mode of comparison, whether the rung is gated or recorded, the limit of each metric, and whether a failure of the rung blocks the later ones. A gated metric needs a tolerance, an independent-method rung is never gated and only a gated rung blocks later ones; code checks all three.",
   "type": "object",
   "properties": {
     "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
@@ -31,6 +31,10 @@
           "description": "A map from metric name to its limits and unit.",
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/metric" }
+        },
+        "blocksLaterRungs": {
+          "description": "True: two engines whose pair in this rung is FAIL or ERROR are not judged against each other in any later rung for the same case.",
+          "type": "boolean"
         }
       },
       "required": ["quantity", "mode", "class", "metrics"],

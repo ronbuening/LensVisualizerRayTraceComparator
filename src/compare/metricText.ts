@@ -6,16 +6,23 @@ import { formatFixed, formatSci } from "../core/numeric/format.ts";
 export const METRIC_DIGITS = 3;
 
 /**
+ * A metric, a limit or a place as text: a whole number in full, without an exponent, so that a count reads as a
+ * count, and any other number in scientific notation with `METRIC_DIGITS` digits. NaN is "NaN" and the infinities
+ * are "inf" and "-inf".
+ */
+export function numberText(value: number): string {
+  return Number.isSafeInteger(value) ? formatFixed(value, 0) : formatSci(value, METRIC_DIGITS);
+}
+
+/**
  * Where a metric occurs, as words: ` at field 14 deg, index 3`, and nothing for a metric that occurs nowhere. The
- * keys are in code-unit order. A number goes through the number formatter: a whole number in full, without an
- * exponent, and any other in scientific notation with `METRIC_DIGITS` digits. A string is given as it is.
+ * keys are in code-unit order. A number is worded by `numberText`, and a string is given as it is.
  */
 export function whereText(where: ComparisonMetric["where"]): string {
   const keys = Object.keys(where ?? {}).sort();
   const said = keys.map((key) => {
     const value = where?.[key];
-    if (typeof value !== "number") return `${key} ${value}`;
-    return `${key} ${Number.isSafeInteger(value) ? formatFixed(value, 0) : formatSci(value, METRIC_DIGITS)}`;
+    return `${key} ${typeof value === "number" ? numberText(value) : value}`;
   });
   return said.length === 0 ? "" : ` at ${said.join(", ")}`;
 }

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:paraxial.first-order.spec",
+  "title": "paraxial.first-order spec",
+  "description": "What a paraxial.first-order request asks for: the first-order data of the case's system at every line of the case. There is nothing to choose, so the spec is an empty object.",
+  "type": "object",
+  "additionalProperties": false
+}

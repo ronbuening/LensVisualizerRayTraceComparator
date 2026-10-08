@@ -3,13 +3,16 @@ import { test } from "node:test";
 
 import { verifyCaseIdentity } from "../../src/contract/case.ts";
 import type { OpticalCase } from "../../src/contract/case.ts";
+import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
 import type { SelftestEchoData, SelftestEchoSpec } from "../../src/contract/quantities/selftestEcho.ts";
+import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../../src/contract/quantities/systemDescribe.ts";
+import type { SystemDescribeSpec } from "../../src/contract/quantities/systemDescribe.ts";
 import type { RunSpec } from "../../src/contract/runSpec.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { decodeNdArray } from "../../src/core/numeric/ndarray.ts";
-import { RUNGS, selectRungs, selftestRung } from "../../src/core/rungs.ts";
+import { RUNGS, r0Rung, r1Rung, selectRungs, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { UsageError } from "../../src/core/usageError.ts";
 import { QUANTITIES } from "../../src/quantities/index.ts";
@@ -40,12 +43,12 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("Phase 0 has exactly one rung, selftest, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest, r0 and r1, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
-    ["selftest"],
+    ["selftest", "r0", "r1"],
   );
-  assert.equal(RUNGS[0], selftestRung);
+  assert.deepEqual([...RUNGS], [selftestRung, r0Rung, r1Rung]);
   assert.equal(new Set(RUNGS.map((definition) => definition.id)).size, RUNGS.length);
   for (const definition of RUNGS) assert.ok(QUANTITIES.has(definition.quantity), definition.id);
   assert.ok(Object.isFrozen(RUNGS));
@@ -107,6 +110,46 @@ test("an engine that conforms sends a selftest request's elements back unchanged
   }
 });
 
+// ── r0 and r1 ────────────────────────────────────────────────────────────────────────────────────────────────────
+
+test("r0 builds one system.describe request that states the nine default sag fractions", () => {
+  assert.equal(r0Rung.quantity, SYSTEM_DESCRIBE);
+  const requests = r0Rung.buildRequests(DOUBLE_GAUSS, RUN);
+  assert.equal(requests.length, 1);
+  const [request] = requests;
+  assert.deepEqual(validateKind("request", request), []);
+  assert.equal(request.caseId, DOUBLE_GAUSS.id);
+  assert.equal(request.engineOptions, undefined);
+  assert.deepEqual(request.spec, { sagFractions: [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1] });
+  assert.deepEqual(request.spec, { sagFractions: DEFAULT_SAG_FRACTIONS });
+  assert.deepEqual(QUANTITIES.get(SYSTEM_DESCRIBE)?.validateSpec(request.spec), []);
+  // The rung's list is its own: the default cannot be changed through a request.
+  assert.notEqual((request.spec as SystemDescribeSpec).sagFractions, DEFAULT_SAG_FRACTIONS);
+  assert.ok(Object.isFrozen(DEFAULT_SAG_FRACTIONS));
+});
+
+test("r1 builds one paraxial.first-order request with the empty spec", () => {
+  assert.equal(r1Rung.quantity, PARAXIAL_FIRST_ORDER);
+  const requests = r1Rung.buildRequests(SINGLET, RUN);
+  assert.equal(requests.length, 1);
+  assert.deepEqual(validateKind("request", requests[0]), []);
+  assert.equal(requests[0].caseId, SINGLET.id);
+  assert.deepEqual(requests[0].spec, {});
+  assert.deepEqual(QUANTITIES.get(PARAXIAL_FIRST_ORDER)?.validateSpec(requests[0].spec), []);
+});
+
+test("r0 and r1 are functions of the case alone: equal cases give equal requests, different cases different ones", () => {
+  const again = { ...RUN, name: "another-run", aperture: { kind: "f-number", value: 8 } } as const;
+  for (const rung of [r0Rung, r1Rung]) {
+    assert.deepEqual(rung.buildRequests(SINGLET, RUN), rung.buildRequests(SINGLET, again), rung.id);
+    const ids = [SINGLET, DOUBLE_GAUSS, ALL_FEATURES_CASE].map((each) => rung.buildRequests(each, RUN)[0].id);
+    assert.equal(new Set(ids).size, 3, rung.id);
+  }
+  // One case, three rungs, three requests: no two rungs ask the same thing.
+  const ids = RUNGS.map((rung) => rung.buildRequests(SINGLET, RUN)[0].id);
+  assert.equal(new Set(ids).size, RUNGS.length);
+});
+
 // ── Selection ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 test("a run that names no rungs gets every rung", () => {
@@ -118,6 +161,7 @@ test("a run that names no rungs gets every rung", () => {
 
 test("named rungs come in ladder order, each once, however they were named", () => {
   assert.deepEqual(selectRungs(["selftest"]), [selftestRung]);
+  assert.deepEqual(selectRungs(["r1", "selftest", "r0", "r1"]), [selftestRung, r0Rung, r1Rung]);
   const three = [rung("a"), rung("b"), rung("c")];
   const ids = (selected: RungDefinition[]): string[] => selected.map((definition) => definition.id);
   assert.deepEqual(ids(selectRungs(["c", "a"], three)), ["a", "c"]);
@@ -128,11 +172,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest',
+    'unknown rung "R0": the rungs are selftest, r0, r1',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -157,6 +201,6 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest",
+    "no rung was named: the rungs are selftest, r0, r1",
   );
 });

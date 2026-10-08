@@ -11,6 +11,7 @@ import { resultDataProblems } from "../core/resultData.ts";
 import type { ResultStore } from "../core/resultStore.ts";
 import { UsageError } from "../core/usageError.ts";
 import { QUANTITIES } from "../quantities/index.ts";
+import { createBlockingLedger } from "./blocking.ts";
 import type { ComparatorLookup } from "./comparator.ts";
 import type { ComparisonFile } from "./comparisonFile.ts";
 import { compareGroup, defaultReference } from "./group.ts";
@@ -69,6 +70,11 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  * by rung and request as the manifest's jobs do, then by mode. A run without a case has no jobs and no sets. Equal
  * manifests, store entries and policies give an equal file, in any directory and on any machine.
  *
+ * The groups of a run are compared in the order of the manifest's jobs, which is the order of the ladder. Where
+ * the policy of a rung says `blocksLaterRungs`, two engines whose pair in that rung is `FAIL` or `ERROR` are not
+ * judged against each other in the rungs after it, in that run: their pairs there are `BLOCKED`, in every mode,
+ * and say which rung blocked them (`createBlockingLedger`).
+ *
  * Throws a `UsageError` when `reference` is not an engine of the manifest, and when the manifest names a rung the
  * policy has no entry for, or one whose entry is for another quantity: such a run cannot be judged.
  */
@@ -92,6 +98,7 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
 
   const comparisons: ComparisonSet[] = [];
   for (const run of manifest.runs) {
+    const ledger = createBlockingLedger();
     for (const jobs of groups.values()) {
       const [{ run: runName, caseId, rung, quantity, requestId }] = jobs;
       if (runName !== run.name) continue;
@@ -117,10 +124,14 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
         participants,
         policy: rungPolicy,
         comparator: comparators.get(quantity),
+        blocked: ledger.blockedIn(rung),
       };
-      for (const mode of COMPARISON_MODES) {
-        if (modes.includes(mode)) comparisons.push(compareGroup(group, mode, against));
-      }
+      const sets = COMPARISON_MODES.filter((mode) => modes.includes(mode)).map((mode) =>
+        compareGroup(group, mode, against),
+      );
+      // Only now: the modes of one group judge a pair alike, so neither may see what the other found.
+      for (const set of sets) ledger.note(set, rungPolicy);
+      comparisons.push(...sets);
     }
   }
   return {

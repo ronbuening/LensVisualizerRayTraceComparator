@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createEngineCommand } from "../../src/cli/commands/engine.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
+import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
 import { tempDir } from "../core/support.ts";
 import { STDIO_FAKE_ENGINE } from "../engines/support.ts";
 
@@ -65,7 +66,7 @@ test("engine is a registered command, and --help says what conformance checks", 
   assert.ok(help.stdout.startsWith(SYNOPSIS));
   assert.match(help.stdout, /PASS, FAIL or SKIPPED with a reason/);
   const list = spawnSync(process.execPath, [BIN, "--help"], { encoding: "utf8", cwd: REPO_ROOT });
-  assert.match(list.stdout, /^ {2}engine {3}Check that a configured engine conforms to the contract$/m);
+  assert.match(list.stdout, /^ {2}engine {3}Check that an engine conforms to the contract$/m);
 });
 
 test("an engine that conforms: a line per check, a count, exit 0", async (t) => {
@@ -94,6 +95,18 @@ test("the same over stdio: the worker is started from the configuration and ends
   assert.equal(ended.code, EXIT_OK, ended.out + ended.err);
   assert.match(ended.out, /^PASS {5}shutdown +the worker ended by itself with exit code 0$/m);
   assert.match(ended.out, /^worker: conforms: 15 passed, 0 failed, 0 skipped$/m);
+});
+
+test("the built-in engine ref conforms under a root that defines no engine; it offers no selftest.echo", async (t) => {
+  const ended = await engine(["conformance", "ref"], { rootDir: rootWith(t, {}) });
+  assert.equal(ended.code, EXIT_OK, ended.out + ended.err);
+  assert.equal(ended.err, "");
+  assert.match(ended.out, /^PASS {5}engine-id +the descriptor names ref$/m);
+  assert.match(ended.out, /^PASS {5}unknown-quantity +conformance\.no-such-quantity is answered "unsupported"$/m);
+  assert.match(ended.out, /^PASS {5}malformed-run +a run whose request has no spec is refused with ok: false$/m);
+  assert.match(ended.out, /^SKIPPED {2}echo\.matrix +the engine does not offer selftest\.echo$/m);
+  assert.match(ended.out, /^PASS {5}deterministic /m);
+  assert.match(ended.out, /^ref: conforms: 8 passed, 0 failed, 7 skipped$/m);
 });
 
 test("an engine that does not conform exits 1 and says which checks failed and why", async (t) => {
@@ -163,18 +176,22 @@ test("--root names the configuration root, relative to the working directory", a
   assert.equal(missing.out, "");
 });
 
-test("an engine the configuration does not define is a usage error that lists the engines there are", async (t) => {
+test("an engine that is neither configured nor built in is a usage error that lists the engines there are", async (t) => {
+  const builtin = Object.keys(BUILTIN_ENGINES).sort().join(", ");
   const ended = await engine(["conformance", "optiland"], { rootDir: rootWith(t, ENGINES) });
   assert.equal(ended.code, EXIT_USAGE);
   assert.equal(ended.out, "");
   assert.equal(
     ended.err,
     'lvrtc engine: unknown engine "optiland": the configuration defines ' +
-      "absent, biased, good, none, renamed, unstarted, worker\n",
+      `absent, biased, good, none, renamed, unstarted, worker; built in: ${builtin}\n`,
   );
   const empty = await engine(["conformance", "good"], { rootDir: rootWith(t, {}) });
   assert.equal(empty.code, EXIT_USAGE);
-  assert.equal(empty.err, 'lvrtc engine: unknown engine "good": the configuration defines no engine\n');
+  assert.equal(
+    empty.err,
+    `lvrtc engine: unknown engine "good": the configuration defines no engine; built in: ${builtin}\n`,
+  );
   // A name every object inherits a member for is an engine id like any other, and not defined.
   const inherited = await engine(["conformance", "constructor"], { rootDir: rootWith(t, ENGINES) });
   assert.equal(inherited.code, EXIT_USAGE);

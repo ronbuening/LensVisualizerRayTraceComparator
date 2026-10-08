@@ -48,7 +48,7 @@
     "lvGridCap": 256
   },
   "rungs": [
-    "R5"
+    "r5"
   ],
   "engines": [
     "lv",

@@ -11,19 +11,44 @@ import type { Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { RUNGS, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
-import { POLICY_EVERY_MODE, POLICY_SELFTEST } from "../contract/corpus.ts";
+import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
 
-test("the policy file is policy/rungs.v1.json, and holds the policy of Phase 0", () => {
+test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.deepEqual(policy, POLICY_SELFTEST);
+  assert.deepEqual(policy, POLICY_LADDER);
+  assert.equal(policy.version, 2);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
     class: "gated",
     metrics: { "sum.abs": { tolerance: 1e-12, unit: "1" }, "values.maxAbs": { tolerance: 1e-12, unit: "1" } },
   });
+});
+
+test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blocks the rungs after it", () => {
+  const { r0, r1, selftest } = loadPolicy().rungs;
+  assert.deepEqual([r0.quantity, r0.mode, r0.class], ["system.describe", "direct", "gated"]);
+  assert.deepEqual(r0.metrics, {
+    "aperture.mismatches": { tolerance: 0, unit: "elements" },
+    "index.mismatches": { tolerance: 0, unit: "elements" },
+    "layout.mismatches": { tolerance: 0, unit: "elements" },
+    "sag.maxScaled": { tolerance: 1e-12, unit: "1" },
+    "shape.mismatches": { tolerance: 0, unit: "elements" },
+  });
+  assert.equal(r0.blocksLaterRungs, true);
+  // Every count the comparator reports is judged; the plain sag difference is shown beside the scaled one.
+  const reported = COMPARATORS.get("system.describe")?.metrics.map((metric) => metric.name) ?? [];
+  assert.deepEqual(
+    reported.filter((name) => !Object.hasOwn(r0.metrics, name)),
+    ["sag.maxAbs"],
+  );
+
+  assert.deepEqual([r1.quantity, r1.mode, r1.class], ["paraxial.first-order", "direct", "gated"]);
+  assert.deepEqual(r1.metrics, { "firstOrder.maxAbs": { tolerance: 1e-9, unit: "mm" } });
+  assert.equal(r1.blocksLaterRungs, undefined);
+  assert.equal(selftest.blocksLaterRungs, undefined);
 });
 
 test("every registered rung has a policy entry and every entry a registered rung, with its quantity and metrics", () => {
@@ -33,8 +58,13 @@ test("every registered rung has a policy entry and every entry a registered rung
 
 test("each way a policy and the code can disagree is reported", () => {
   const other: RungDefinition = { id: "other", quantity: "selftest.echo", buildRequests: () => [] };
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung], COMPARATORS), []);
   assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [selftestRung, other], COMPARATORS), [
     "rung other has no policy entry",
+  ]);
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, RUNGS, COMPARATORS), [
+    "rung r0 has no policy entry",
+    "rung r1 has no policy entry",
   ]);
   assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, [], COMPARATORS), [
     "policy entry selftest is of no registered rung",
@@ -45,19 +75,29 @@ test("each way a policy and the code can disagree is reported", () => {
     ...POLICY_SELFTEST,
     rungs: { selftest: { ...entry, ...change } },
   });
-  assert.deepEqual(policyRegistryProblems(policyOf({ quantity: "rays.trace" }), RUNGS, COMPARATORS), [
+  const registered = [selftestRung];
+  assert.deepEqual(policyRegistryProblems(policyOf({ quantity: "rays.trace" }), registered, COMPARATORS), [
     "policy entry selftest names the quantity rays.trace; the rung's is selftest.echo",
   ]);
-  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, RUNGS, createComparatorLookup([])), [
+  assert.deepEqual(policyRegistryProblems(POLICY_SELFTEST, registered, createComparatorLookup([])), [
     "policy entry selftest: the quantity selftest.echo has no comparator",
   ]);
   const metrics = { "sum.abs": { tolerance: 1e-12, unit: "mm" }, "values.rms": { tolerance: 1e-12, unit: "1" } };
-  assert.deepEqual(policyRegistryProblems(policyOf({ metrics }), RUNGS, COMPARATORS), [
+  assert.deepEqual(policyRegistryProblems(policyOf({ metrics }), registered, COMPARATORS), [
     "policy entry selftest: metric sum.abs is in mm; the comparator reports 1",
     "policy entry selftest: the comparator reports no metric values.rms",
   ]);
-  // Rungs of later phases: none of them is registered yet.
-  assert.equal(policyRegistryProblems(POLICY_EVERY_MODE, RUNGS, COMPARATORS).length, 5);
+  // A format example is not the comparator's policy: its r1 judges metrics the comparator does not report, and
+  // its other rungs are of later phases or of none.
+  assert.deepEqual(policyRegistryProblems(POLICY_EVERY_MODE, RUNGS, COMPARATORS), [
+    "rung selftest has no policy entry",
+    "rung r0 has no policy entry",
+    "policy entry notes is of no registered rung",
+    "policy entry r1: the comparator reports no metric efl.abs",
+    "policy entry r1: the comparator reports no metric pupil.z.abs",
+    "policy entry r2 is of no registered rung",
+    "policy entry r5 is of no registered rung",
+  ]);
 });
 
 test("a policy file that cannot be used is refused with what is wrong, and never with its path", (t) => {

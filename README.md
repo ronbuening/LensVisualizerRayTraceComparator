@@ -9,9 +9,11 @@ The first external engine is [optiland](https://github.com/optiland/optiland). E
 contract, so others can be added by a Python worker, a command line, file exchange or HTTP.
 
 Status: Phase 0 (foundations) is complete: the whole pipeline runs, on fake engines that know no optics. Phase 1
-(LensVisualizer as case source and engine) has the binding that loads LensVisualizer and the exporter that writes
-its lenses as engine-neutral cases, with the suites of lenses to compare; the engines that answer for those cases
-come next. The full plan is in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+(LensVisualizer as case source and engine) has the binding that loads LensVisualizer, the exporter that writes
+its lenses as engine-neutral cases, the suites of lenses to compare, and the comparator's own reference engine
+`ref`, which answers the first two rungs of the ladder: the built-system echo and the first-order data.
+LensVisualizer as an engine comes next. The full plan is in
+[docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Try it
 
@@ -91,6 +93,14 @@ node bin/lvrtc.mjs export nikkor-z50f12 --aperture f/2.8 --lines photopic --out 
 
 ```bash
 node bin/lvrtc.mjs export --all
+```
+
+```bash
+node bin/lvrtc.mjs run suites/smoke.json --engines ref --rungs r0,r1
+```
+
+```bash
+node bin/lvrtc.mjs engine conformance ref
 ```
 
 `npm run check` runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker
@@ -181,8 +191,8 @@ lens (`folded-path`). They stay in the suite so that the day LensVisualizer can 
 `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]` runs a suite: for every
 run, every selected rung and every selected engine, it asks the rung's requests of the engine and records how each
 job ended. The example above needs neither LensVisualizer nor optiland: its root defines six fake engines, four
-in this process and two, `fake-py` and `fake-pyn`, Python workers, and its only rung, `selftest`, asks for the
-conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none`.
+in this process and two, `fake-py` and `fake-pyn`, Python workers, and its suite names one rung, `selftest`, which
+asks for the conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake-b,fake-none`.
 
 - **Lenses.** A run names an optical-case file (`{ "kind": "fixture", "path" }`) or a LensVisualizer lens
   (`{ "kind": "lv", "key" }`), whose case is exported from the configured checkout (`lvPath`) in the state, at the
@@ -190,8 +200,13 @@ conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake
   be exported as asked is a run that is not started, with the exporter's coded reasons. LensVisualizer is loaded
   only when a run names one of its lenses.
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
-  replaces both. **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. Phase 0
-  has one rung, `selftest`.
+  replaces both. A **built-in engine** is part of the comparator and needs no configuration: `ref`, the reference
+  engine. It can be named under any root, and is run only where it is named, so a root without an engine of its
+  own runs nothing until `--engines` or the suite names one. A configured engine of the same id takes its place.
+- **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
+  of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`) and `r1`
+  (`paraxial.first-order`). An engine that does not offer a rung's quantity is recorded as `unsupported` for it
+  without being asked.
 - **`--root`** names the directory that holds `lvrtc.config.json`; the default is this repository. The suite file
   and `--root` are relative to the working directory. A fixture lens in a suite is relative to the root. In every
   command an option's value may follow it as the next word or after an equals sign: `--root <dir>` or
@@ -214,12 +229,51 @@ conformance quantity `selftest.echo`. Without Python, add `--engines fake-a,fake
   failure) and LensVisualizer did not change under the run; 1 otherwise; 2 when nothing was run because the suite
   file, an engine or a rung cannot be used as asked.
 
-Until the engines `ref` and `lv` are registered (the next stages), this repository's own configuration defines no
-engine, so a committed suite is run on a fake one, which shows that its cases build and travel:
+This repository's own configuration defines no engine, so a committed suite is run on the engines that are named.
+The reference engine answers `r0` and `r1` for every case of the three suites:
 
 ```bash
-LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --root test/fixtures/fake-root --engines fake-a
+LVRTC_LV_PATH=/absolute/path/to/LensVisualizer node bin/lvrtc.mjs run suites/smoke.json --engines ref --rungs r0,r1
 ```
+
+## The reference engine, and rungs R0 and R1
+
+`ref` (`src/engines/ref`) is the comparator's own engine: small, written from the optics alone, sharing no code
+with LensVisualizer or optiland, and using closed forms and IEEE 754 basic operations only, so that its answers are
+the same bits on every machine. It arbitrates between the other engines, and it is the engine of the tests that
+have neither. Its fingerprint is a hash of its own source files. It declares every feature of a case but an annular
+aperture, which its model does not keep yet.
+
+| Rung | Quantity | What is asked of every engine |
+|---|---|---|
+| `r0` | `system.describe` | the system it built, re-read from its own model: vertices, curvatures, conic constants, polynomial terms, clip radii, the index after every surface at every line, the stop and the image plane, and the sag of every surface at nine radii |
+| `r1` | `paraxial.first-order` | per line: focal length, focal and principal points, back focus from the last lens vertex, and both pupils as the paraxial images of the stop, in position and in radius |
+
+- **R0** is the echo: what an engine copies from the case must come back as the same numbers, with no tolerance.
+  Four metrics count the elements that do not (`layout`, `shape`, `aperture` and `index.mismatches`), and each
+  names the first one by field and surface, so a mistranslated surface is found before a ray is traced. Only the
+  sag is computed, and it is gated relative to how large its rounding can be (`sag.maxScaled` ≤ 1e-12): the plain
+  difference, `sag.maxAbs`, is shown beside it. Measured at LensVisualizer `d36f44b3`, over the 868 lenses it
+  exports: `ref` and LensVisualizer's own surface profiles differ by at most 5.5e-16 on that scale, and by up to
+  1.3e-10 mm in plain terms, on a surface that ends just short of a hemisphere; a gate of 1e-12 mm would fail five
+  lenses on which both are right.
+- **A failed R0 blocks the later rungs** for that pair of engines on that case: two engines that built different
+  systems differ in everything after it, and each such difference would be the first one again. The pair is
+  `BLOCKED` there, with the rung that blocks it as the reason.
+- **R1** is gated at 1e-9 mm on the largest difference of any of its ten values at any line (`firstOrder.maxAbs`),
+  which names the value and the line. What an engine only knows for itself, such as LensVisualizer's stored pupil
+  constants, travels as `recorded`: a report lists it side by side and nothing judges it. On the Double-Gauss
+  fixture `ref` gives optiland's focal length, 100.00372050801042 mm, to the last digit; its cardinal points and
+  those of LensVisualizer's first-order module differ by at most 2.7e-13 mm on the benchmark and feature suites,
+  and by at most 1.1e-11 mm over all 868 exported lenses (at `d36f44b3`). Its pupils and those of LensVisualizer's
+  paraxial kernel, at the reference line and the five photopic lines, differ by at most 1.9e-11 mm on every lens
+  but one: `viltrox-af-75mm-f12-pro` is nearly telecentric, with its exit pupil 7.7 m to 20 m away, and there the
+  two differ by up to 3.0e-9 mm, which is 2e-13 of the distance. The gate is a plain 1e-9 mm, so on that lens it
+  would fail two engines that are both right; it is in neither suite, and the gate is left as the plan states it.
+- **No first-order data.** An afocal system and a surface with a term of power 1 are answered `unsupported`, with
+  the item `system.afocal` or `surface.asphere.linear-term`.
+
+The definitions, member by member, are in [contract/CONTRACT.md](contract/CONTRACT.md#systemdescribe).
 
 ## Comparing and reporting
 
@@ -233,18 +287,23 @@ answers in the result store, and writes `comparisons.json` into the run director
 - **The reference** is `--reference`, else the run's `referenceEngine`, else the first engine, by id, that has an
   `ok` result.
 - **The policy**, `policy/rungs.v1.json`, says for each rung which quantity it compares, in which mode (`direct`,
-  `identical-rays` or `independent-method`), whether it is `gated` or `recorded`, and the tolerance or attention
-  band of each metric. A gated metric has a tolerance, and an independent-method rung is never gated.
+  `identical-rays` or `independent-method`), whether it is `gated` or `recorded`, the tolerance or attention band
+  of each metric, and whether a failure of the rung blocks the rungs after it. A gated metric has a tolerance, and
+  an independent-method rung is never gated.
 - **Verdicts.** `UNSUPPORTED` when either engine cannot answer; `ERROR` when either gave no result or the two
-  cannot be compared; on a gated rung `PASS` or `FAIL`, where a metric that is not a number fails; on a recorded
-  rung `RECORDED`, or `ATTENTION` outside the band. Only `FAIL` and `ERROR` are failures.
+  cannot be compared; `BLOCKED` when both answered and an earlier rung that blocks later ones failed for the same
+  two engines on the same case; on a gated rung `PASS` or `FAIL`, where a metric that is not a number fails; on a
+  recorded rung `RECORDED`, or `ATTENTION` outside the band. Only `FAIL` and `ERROR` are failures: a blocked pair
+  is not a second one.
 - **Exit code**: 0 when no pair is `FAIL` or `ERROR`; 1 otherwise; 2 when nothing was compared because the run has
   no manifest or the reference is not an engine of the run.
 
 `lvrtc report <suite name | run directory> [--root <dir>]` writes `report.json` and `report.md` into the run
 directory from the manifest, the comparisons and the policy: the inputs (suite, contract version, policy version,
 engines with fingerprints), the verdict counts, a support matrix of rung by engine, and for each run and rung a
-reference-vs-each table and a pairwise matrix, with a note on how to read the verdicts. It exits 0 when the report
+reference-vs-each table, a pairwise matrix and the values the answers only record, side by side, with a note on
+how to read the verdicts. A metric's cell says where its value occurs: the field and surface of a mismatch, the
+quantity and line of the largest first-order difference. It exits 0 when the report
 is written, whatever the verdicts are, and 2 when the run has no comparisons or they were made from another
 manifest or policy. Both files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the
 same run gives the same bytes anywhere.
@@ -299,8 +358,10 @@ An engine is defined under `engines.<id>` by the transport that reaches it:
   speaks the protocol as NDJSON on its standard streams; see below.
 
 `options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
-gives the same id, whole. An engine that cannot be built or reached is found unavailable, with a code that says
-why: `not-configured`, `load-failed`, `spawn-failed`, `hello-failed`, `contract-mismatch` and so on.
+gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `ref`) need no definition; one that is
+given under a built-in engine's id is the engine of that id. An engine that cannot be built or reached is found
+unavailable, with a code that says why: `not-configured`, `load-failed`, `spawn-failed`, `hello-failed`,
+`contract-mismatch` and so on.
 
 ## Workers over stdio
 
@@ -338,15 +399,15 @@ and kept as a tail that is quoted when the worker fails.
   is waited for: a process the worker started may keep the worker's output open after it, and the comparator stops
   reading a second after the worker has ended.
 
-`lvrtc engine conformance <id> [--root <dir>] [--json]` checks a configured engine against the contract, over
-whatever transport reaches it: `hello` gives a valid descriptor of this contract and of the configured id; an
-unknown quantity is answered `unsupported`, not with an error; a malformed `run` is refused with `ok: false`; ids
-are echoed; if the engine offers `selftest.echo`, the contract's examples are answered byte for byte (a NaN with a
-payload, −0, the infinities, subnormals, the largest double, an empty array, a 2-D array, scaling and summing); a
-repeated request gets an equal result if the descriptor says the engine is deterministic; and `shutdown` is
-answered with an empty object, after which a worker process ends by itself with exit code 0. Each check is printed
-`PASS`, `FAIL` or `SKIPPED` with a reason. The exit code is 0 when nothing failed, 1 when a check did, and 2 for an
-id the configuration does not define.
+`lvrtc engine conformance <id> [--root <dir>] [--json]` checks an engine, configured or built in, against the
+contract, over whatever transport reaches it: `hello` gives a valid descriptor of this contract and of the id it
+was asked under; an unknown quantity is answered `unsupported`, not with an error; a malformed `run` is refused
+with `ok: false`; ids are echoed; if the engine offers `selftest.echo`, the contract's examples are answered byte
+for byte (a NaN with a payload, −0, the infinities, subnormals, the largest double, an empty array, a 2-D array,
+scaling and summing); a repeated request gets an equal result if the descriptor says the engine is deterministic;
+and `shutdown` is answered with an empty object, after which a worker process ends by itself with exit code 0.
+Each check is printed `PASS`, `FAIL` or `SKIPPED` with a reason. The exit code is 0 when nothing failed, 1 when a
+check did, and 2 for an id that is neither a configured nor a built-in engine.
 
 ## The Python worker kit
 

@@ -26,6 +26,11 @@
           "status": {
             "description": "How the engine's job ended; missing when there is no result to compare.",
             "enum": ["ok", "unsupported", "error", "pending", "missing"]
+          },
+          "recorded": {
+            "description": "Values the engine's answer reports beside what is compared, by name: listed and never judged. null for a value that is not a finite number.",
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": ["number", "null"] } }
           }
         },
         "required": ["engine", "fingerprint", "status"],
@@ -58,7 +63,7 @@
         "b": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
         "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
         "class": { "enum": ["gated", "recorded"] },
-        "verdict": { "enum": ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "ERROR"] },
+        "verdict": { "enum": ["PASS", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] },
         "reason": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
       },
       "required": ["a", "b", "metrics", "class", "verdict"],

@@ -38,11 +38,11 @@
     }
   },
   "rungs": [
-    "R0",
-    "R1",
-    "R2",
-    "R3",
-    "R4"
+    "r0",
+    "r1",
+    "r2",
+    "r3",
+    "r4"
   ],
   "engines": "optiland",
   "referenceEngine": "ref"

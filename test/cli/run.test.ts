@@ -12,6 +12,7 @@ import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
+import { RUNGS } from "../../src/core/rungs.ts";
 import { DOUBLE_GAUSS, FAKE_PAIR_SUITE, FAKE_ROOT, SINGLET, caseFixture, tempDir } from "../core/support.ts";
 import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
@@ -63,13 +64,17 @@ function manifestOf(runsDir: string, suite: string): RunManifest {
   return JSON.parse(readFileSync(join(runsDir, suite, MANIFEST_FILE), "utf8"));
 }
 
-/** A configuration root with its own engines, the two fixture cases under `cases/` and a suite of both. */
+/**
+ * A configuration root with its own engines, the two fixture cases under `cases/` and a suite of both on the rung
+ * `selftest`, which is the one the fake engines answer.
+ */
 function rootWith(t: TestContext, engines: unknown, files: Readonly<Record<string, string>> = {}): string {
   const rootDir = join(tempDir(t), "root");
   const suite = {
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
+    defaults: { rungs: ["selftest"] },
     runs: [
       { name: "singlet", lens: { kind: "fixture", path: "cases/singlet.json" } },
       { name: "double-gauss", lens: { kind: "fixture", path: "cases/double-gauss.json" } },
@@ -203,7 +208,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
-  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest$/m);
+  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1$/m);
   assert.equal(existsSync(runsDir), false);
 
   const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
@@ -221,7 +226,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn$/m,
+    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: ref$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -490,12 +495,56 @@ test("LVRTC_RUNS_DIR moves the output, relative to the root as every configured 
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
 
-test("a configuration without engines has nothing to run: a usage error", async (t) => {
+test("a configuration without engines runs nothing unless an engine is named: a usage error", async (t) => {
   const rootDir = rootWith(t, {});
   const ended = await inProcess(["suite.json"], { rootDir });
   assert.equal(ended.code, EXIT_USAGE);
-  assert.equal(ended.err, "lvrtc run: no engine to run: the configuration defines no engine\n");
+  assert.equal(
+    ended.err,
+    "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
+      "name the engines to run with --engines (built in: ref)\n",
+  );
   assert.equal(existsSync(join(rootDir, "runs")), false);
+});
+
+test("the built-in engine ref runs under any root when it is named, and only then", async (t) => {
+  // A root without a single engine of its own.
+  const bare = rootWith(t, {});
+  const named = await inProcess(["suite.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir: bare });
+  assert.equal(named.code, EXIT_OK, named.err);
+  assert.equal(
+    named.out,
+    [
+      "singlet       r0        ref  ok           computed",
+      "singlet       r1        ref  ok           computed",
+      "double-gauss  r0        ref  ok           computed",
+      "double-gauss  r1        ref  ok           computed",
+      "pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
+      `manifest: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
+      "",
+    ].join("\n"),
+  );
+  const [engine] = manifestOf(join(bare, "runs"), "pair").engines;
+  assert.ok(engine.status === "available");
+  assert.equal(engine.id, "ref");
+  assert.match(engine.fingerprint, /^[0-9a-f]{64}$/);
+
+  // A root with an engine of its own: that one is the default, and ref joins it when it is named.
+  const rootDir = rootWith(t, { "fake-a": fake({ id: "fake-a" }) });
+  const plain = await inProcess(["suite.json"], { rootDir });
+  assert.deepEqual(
+    manifestOf(join(rootDir, "runs"), "pair").engines.map((each) => each.id),
+    ["fake-a"],
+    plain.err,
+  );
+  const both = await inProcess(["suite.json", "--engines", "ref,fake-a"], { rootDir });
+  assert.equal(both.code, EXIT_OK, both.err);
+  // ref does not answer the conformance quantity, and says so before it is asked.
+  assert.match(
+    both.out,
+    /^singlet {7}selftest {2}ref {5}unsupported {2}negotiated {3}the engine does not offer selftest\.echo$/m,
+  );
+  assert.match(both.out, /^singlet {7}selftest {2}fake-a {2}ok {11}cached$/m);
 });
 
 test("a run's own engines and rungs are used, and one that does not exist is a usage error", async (t) => {
@@ -511,15 +560,16 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   writeFileSync(join(rootDir, "own.json"), suite({ engines: ["fake-b"], rungs: ["selftest"] }));
   const own = await inProcess(["own.json"], { rootDir });
   assert.equal(own.code, EXIT_OK, own.err);
+  // The run that names neither gets every configured engine on every rung there is.
   assert.deepEqual(
-    manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.engine}`),
-    ["plain fake-a", "plain fake-b", "choosy fake-b"],
+    manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
+    [...RUNGS.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]), "choosy selftest fake-b"],
   );
 
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
-  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest\n');
+  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1\n');
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
   assert.equal(replaced.code, EXIT_OK, replaced.err);
@@ -560,6 +610,7 @@ function lvRoot(t: TestContext, engines: unknown, files: Readonly<Record<string,
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "lv-pair",
+    defaults: { rungs: ["selftest"] },
     runs: [
       { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
       {
@@ -656,6 +707,7 @@ test("a LensVisualizer file edited while the suite runs marks the manifest, warn
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "lv-pair",
+    defaults: { rungs: ["selftest"] },
     runs: [
       { name: "singlet", lens: { kind: "lv", key: "acme-singlet-50" } },
       { name: "zoom", lens: { kind: "lv", key: "acme-zoom-24-48" } },

@@ -106,7 +106,7 @@ test("run, compare, report through the binary: the all-TypeScript trio exits 0 t
       "double-gauss  selftest  pairwise           fake-a     fake-near  PASS",
       "double-gauss  selftest  pairwise           fake-a     fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
       "double-gauss  selftest  pairwise           fake-near  fake-none  UNSUPPORTED  fake-none is unsupported (quantity selftest.echo)",
-      "fake-3-engines-ts: 10 pairs: 4 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 ERROR",
+      "fake-3-engines-ts: 10 pairs: 4 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 6 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
       `comparisons: ${join(directory, COMPARISONS_FILE)}`,
       "",
     ].join("\n"),
@@ -133,7 +133,7 @@ test("compare exits 1 when a pair is FAIL or ERROR, and report still writes the 
   assert.equal(compared.code, EXIT_FAILURE, compared.err);
   assert.match(
     compared.out,
-    /^fake-faults: 18 pairs: 0 PASS, 4 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 14 ERROR$/m,
+    /^fake-faults: 18 pairs: 0 PASS, 4 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 14 ERROR$/m,
   );
   assert.ok(existsSync(join(runsDir, "fake-faults", COMPARISONS_FILE)));
   const reported = lvrtc(runsDir, ["report", "fake-faults", "--root", FAULT_ROOT]);
@@ -153,7 +153,7 @@ test("FAIL alone exits 1, ERROR alone exits 1, and UNSUPPORTED alone exits 0", a
   const unsupported = await pairRun(t, "fake-a,fake-none");
   const ended = await inProcess(unsupported, ["compare", "fake-pair"]);
   assert.equal(ended.code, EXIT_OK);
-  assert.match(ended.out, /: 4 pairs: 0 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 4 UNSUPPORTED, 0 ERROR$/m);
+  assert.match(ended.out, /: 4 pairs: 0 PASS, 0 FAIL, 0 RECORDED, 0 ATTENTION, 4 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m);
 
   // An answer that has gone from the store is an ERROR.
   const missing = await pairRun(t, "fake-a,fake-near");
@@ -314,7 +314,7 @@ test("report needs comparisons that were made from the manifest and the policy a
 test("report refuses comparisons judged by another policy than the one it is given", async (t) => {
   const runsDir = await pairRun(t);
   assert.equal((await inProcess(runsDir, ["compare", "fake-pair"])).code, EXIT_OK);
-  const policy = { ...loadPolicy(), version: 2 };
+  const policy = { ...loadPolicy(), version: loadPolicy().version + 1 };
   const command = createReportCommand({ rootDir: FAKE_ROOT, cwd: REPO_ROOT, env: { LVRTC_RUNS_DIR: runsDir }, policy });
   const err: string[] = [];
   const io = { stdout: () => {}, stderr: (text: string) => void err.push(text) };
@@ -330,7 +330,8 @@ test("report refuses comparisons judged by another policy than the one it is giv
   });
   assert.equal(await runCli(["compare", "fake-pair"], { ...io, stderr: () => {} }, [compare]), EXIT_OK);
   assert.equal(await runCli(["report", "fake-pair"], io, [command]), EXIT_OK);
-  assert.match(readFileSync(join(runsDir, "fake-pair", REPORT_MARKDOWN_FILE), "utf8"), /^\| Policy \| rungs v2 \|$/m);
+  const written = readFileSync(join(runsDir, "fake-pair", REPORT_MARKDOWN_FILE), "utf8");
+  assert.ok(written.includes(`\n| Policy | rungs v${policy.version} |\n`), written);
 });
 
 test("the report is the same bytes each time it is written, and report.json is canonical", async (t) => {

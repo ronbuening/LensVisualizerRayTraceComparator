@@ -6,7 +6,8 @@ import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { runConformance } from "../../engines/conformance.ts";
 import type { ConformanceReport, ConformanceStatus } from "../../engines/conformance.ts";
-import { createEngineTransport } from "../../engines/registry.ts";
+import { enginesText } from "../../engines/adapter.ts";
+import { createEngineRegistry, createEngineTransport } from "../../engines/registry.ts";
 import type { EngineTimeouts } from "../../engines/remote.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
@@ -26,10 +27,11 @@ export interface EngineCommandInputs {
 const SYNOPSIS = "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n";
 const HELP = [
   SYNOPSIS,
-  "Runs the conformance kit on one configured engine: it must answer hello with a descriptor of this contract and",
-  'its own id, answer an unknown quantity "unsupported", refuse a malformed run, echo ids, answer the contract\'s',
-  "selftest.echo examples byte for byte if it offers the quantity, repeat itself if it says it is deterministic,",
-  "and answer shutdown, then end cleanly. Every check is reported PASS, FAIL or SKIPPED with a reason.",
+  "Runs the conformance kit on one engine, configured or built in: it must answer hello with a descriptor of this",
+  'contract and its own id, answer an unknown quantity "unsupported", refuse a malformed run, echo ids, answer the',
+  "contract's selftest.echo examples byte for byte if it offers the quantity, repeat itself if it says it is",
+  "deterministic, and answer shutdown, then end cleanly. Every check is reported",
+  "PASS, FAIL or SKIPPED with a reason.",
   "",
   "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
   "  --json        print one JSON object in place of the lines",
@@ -74,20 +76,21 @@ function reportText(report: ConformanceReport): string {
 /**
  * Builds `lvrtc engine conformance <id> [--root <dir>] [--json]`.
  *
- * It loads the configuration of the root, builds the transport of the engine `<id>` and runs the conformance kit
- * on it (`runConformance`). Each check is printed as a line of PASS, FAIL or SKIPPED, the check's name and the
- * reason, and a count follows; with `--json` the report is printed as one object with sorted keys. It is console
- * output: a reason may quote what the engine or the system said.
+ * It loads the configuration of the root, builds the transport of the engine `<id>`, which the configuration
+ * defines or which is built in, and runs the conformance kit on it (`runConformance`). Each check is printed as a
+ * line of PASS, FAIL or SKIPPED, the check's name and the reason, and a count follows; with `--json` the report is
+ * printed as one object with sorted keys. It is console output: a reason may quote what the engine or the system
+ * said.
  *
  * Exit codes: 0 when no check failed; 1 when one did, which includes an engine that is configured and cannot be
  * built or reached; 2, with nothing checked, for a command line that is not the synopsis, a `--root` that is not a
- * directory and an id the configuration does not define. A configuration file that cannot be used is an error like
- * any other, as for `lvrtc doctor`.
+ * directory and an id that is neither a configured nor a built-in engine. A configuration file that cannot be used
+ * is an error like any other, as for `lvrtc doctor`.
  */
 export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
   return {
     name: "engine",
-    summary: "Check that a configured engine conforms to the contract",
+    summary: "Check that an engine conforms to the contract",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -107,10 +110,10 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
         return EXIT_USAGE;
       }
       const loaded = loadConfig({ rootDir, env: inputs.env });
-      const defined = Object.keys(loaded.config.engineDefinitions);
-      if (!defined.includes(asked.id)) {
-        const list = defined.length === 0 ? "no engine" : defined.join(", ");
-        io.stderr(`lvrtc engine: unknown engine "${asked.id}": the configuration defines ${list}\n`);
+      const registry = createEngineRegistry(loaded);
+      const [configured, builtin] = [registry.ids(), registry.builtinIds()];
+      if (!configured.includes(asked.id) && !builtin.includes(asked.id)) {
+        io.stderr(`lvrtc engine: unknown engine "${asked.id}": ${enginesText(configured, builtin)}\n`);
         return EXIT_USAGE;
       }
 

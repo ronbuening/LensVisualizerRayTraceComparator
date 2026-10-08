@@ -14,7 +14,7 @@ import { CASES_DIRECTORY, MANIFEST_FILE, SOURCE_CHANGED, manifestText } from "..
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
-import { INVALID_DATA, runSuite } from "../../src/core/orchestrator.ts";
+import { INVALID_DATA, runSuite as runSuiteOnEveryRung } from "../../src/core/orchestrator.ts";
 import type { JobOutcome, RunSuiteInput, SuiteRunResult } from "../../src/core/orchestrator.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "../../src/core/resultStore.ts";
 import { selftestRung } from "../../src/core/rungs.ts";
@@ -40,6 +40,14 @@ import {
   watchedRegistry,
 } from "./support.ts";
 import type { EngineMaker, WatchedRegistry } from "./support.ts";
+
+/**
+ * `runSuite` with the rung `selftest` as the only rung there is, unless a test gives its own: these tests are of
+ * the orchestrator, on engines that know no optics, and hold whatever rungs the ladder has grown since.
+ */
+function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
+  return runSuiteOnEveryRung({ rungDefinitions: [selftestRung], ...input });
+}
 
 /** The three fake engines of the fixture root: one plain, one with a bias, one that offers no quantity. */
 function threeFakes(): WatchedRegistry {

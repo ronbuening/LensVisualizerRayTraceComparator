@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:system.describe.spec",
+  "title": "system.describe spec",
+  "description": "What a system.describe request asks for: the system the engine built for the case, re-read from the engine's own model, with the sag of every surface at the given fractions of its nominal semi-diameter. Code checks that the fractions ascend.",
+  "type": "object",
+  "properties": {
+    "sagFractions": {
+      "description": "Fractions of each surface's nominal semi-diameter at which its sag is evaluated, ascending. Without it: the nine fractions 0, 1/8, ..., 1.",
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false
+}

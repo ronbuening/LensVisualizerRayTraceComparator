@@ -15,7 +15,10 @@ A quantity is complete when it also has TypeScript types in `src/contract/quanti
 `src/quantities/`, fixtures under `contract/fixtures/v1/{valid,invalid}/quantities/<quantity>.<part>/` and an entry
 in `contract/CONTRACT.md`. The tests fail on a schema file here that no registered quantity owns.
 
-Arrays use `urn:lvrtc:contract:v1:common#/$defs/ndarray`, or `f8Array` and `f8Matrix` beside it for float64 of any
-shape and of exactly two axes. A quantity that needs another element type or number of axes writes the wire form
-out with the narrower `dtype` and `shape`, as those two do: a `$ref` cannot be narrowed in place, because no
-assertion may sit beside one.
+Arrays use `urn:lvrtc:contract:v1:common#/$defs/ndarray`, or `f8Array`, `f8Vector` and `f8Matrix` beside it for
+float64 of any shape, of exactly one axis and of exactly two. A quantity that needs another element type or number
+of axes writes the wire form out with the narrower `dtype` and `shape`, as those three do: a `$ref` cannot be
+narrowed in place, because no assertion may sit beside one.
+
+What a schema cannot state about a quantity (two arrays of one length, a list that ascends) is checked by the
+quantity's module in `src/quantities/`, after the schema, and reported with the keyword `invariant`.

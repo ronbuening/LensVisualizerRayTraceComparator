@@ -161,12 +161,19 @@ test(
   async (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-smoke-"));
     t.after(() => rmSync(runsDir, { recursive: true, force: true }));
-    // Any engine will do: the fixture root's fake engine knows no optics and answers the selftest rung.
-    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a"];
+    // On the fixture root's fake engine, which knows no optics and answers the selftest rung, and on the built-in
+    // reference engine, which answers R0 and R1 for every one of these cases: each declines what the other offers.
+    const args = [BIN, "run", suitePath("smoke"), "--root", FAKE_ROOT, "--engines", "fake-a,ref"];
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
-    assert.match(child.stdout, /^smoke: 3 jobs: 3 ok, 0 unsupported, 0 error, 0 pending \(3 computed, 0 cached\)$/m);
+    assert.match(child.stdout, /^smoke: 18 jobs: 9 ok, 9 unsupported, 0 error, 0 pending \(9 computed, 0 cached\)$/m);
+    for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic"]) {
+      for (const rung of ["r0", "r1"]) {
+        assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +ok +computed$`, "m"), `${run} ${rung}`);
+      }
+      assert.match(child.stdout, new RegExp(`^${run} +selftest +fake-a +ok +computed$`, "m"), run);
+    }
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8"));
     const { commit, dirty, engineClosureHash, engineFileCount } = (await loadLvBinding(LV_PATH)).fingerprint();

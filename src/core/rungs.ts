@@ -2,8 +2,11 @@
 // says which requests of it a case and a run need. The rungs of the comparison ladder register here as their
 // stages land.
 import type { OpticalCase } from "../contract/case.ts";
+import { PARAXIAL_FIRST_ORDER } from "../contract/quantities/paraxialFirstOrder.ts";
 import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
+import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
+import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunSpec } from "../contract/runSpec.ts";
@@ -46,8 +49,38 @@ export const selftestRung: RungDefinition = Object.freeze({
   },
 });
 
-/** Every rung there is, in ladder order: the order a run evaluates them in. */
-export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung]);
+/**
+ * The rung `r0`, the built-system echo: one `system.describe` request per case, which asks every engine for the
+ * system it built, with the sag of each surface at the nine default fractions of its nominal semi-diameter. The
+ * fractions are stated in the spec, so the request says what was asked whatever an engine's default is. The
+ * RunSpec is not consulted.
+ */
+export const r0Rung: RungDefinition = Object.freeze({
+  id: "r0",
+  quantity: SYSTEM_DESCRIBE,
+  buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
+    const spec: SystemDescribeSpec = { sagFractions: [...DEFAULT_SAG_FRACTIONS] };
+    return [makeRequest({ caseId: opticalCase.id, quantity: SYSTEM_DESCRIBE, spec })];
+  },
+});
+
+/**
+ * The rung `r1`, the first-order data: one `paraxial.first-order` request per case, with the empty spec the
+ * quantity has. The RunSpec is not consulted.
+ */
+export const r1Rung: RungDefinition = Object.freeze({
+  id: "r1",
+  quantity: PARAXIAL_FIRST_ORDER,
+  buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => [
+    makeRequest({ caseId: opticalCase.id, quantity: PARAXIAL_FIRST_ORDER, spec: {} }),
+  ],
+});
+
+/**
+ * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
+ * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first.
+ */
+export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung]);
 
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them; every

@@ -47,7 +47,10 @@ const ENGINES: Readonly<Record<string, EngineMaker>> = {
   "fake-none": fakeEngine({ offersQuantities: false }),
 };
 
-/** Runs the pair suite on the given engines and returns what a comparison reads. */
+/**
+ * Runs the pair suite on the given engines and returns what a comparison reads. The only rung is `selftest`, unless
+ * `more` gives others: these engines know no optics.
+ */
 async function ran(
   t: TestContext,
   engines: Readonly<Record<string, EngineMaker>> = ENGINES,
@@ -56,7 +59,8 @@ async function ran(
 ): Promise<{ manifest: RunManifest; store: ResultStore; runsDir: string }> {
   const runsDir = tempDir(t);
   const { registry } = watchedRegistry(engines);
-  const { manifest } = await runSuite({ suite: pairSuite(options), registry, runsDir, ...more });
+  const rungDefinitions = more.rungDefinitions ?? [selftestRung];
+  const { manifest } = await runSuite({ suite: pairSuite(options), registry, runsDir, rungDefinitions });
   return { manifest, store: createResultStore(join(runsDir, STORE_DIRECTORY)), runsDir };
 }
 
@@ -167,7 +171,7 @@ test("a reference that has no job in a run is a missing participant, and its pai
     { name: "one", opticalCase: SINGLET, engines: ["fake-b", "fake-near"], referenceEngine: "fake-a" },
     { name: "two", opticalCase: DOUBLE_GAUSS, engines: ["fake-a", "fake-b"], referenceEngine: "fake-a" },
   ]);
-  const { manifest } = await runSuite({ suite, registry, runsDir });
+  const { manifest } = await runSuite({ suite, registry, runsDir, rungDefinitions: [selftestRung] });
   const file = compareManifest({ manifest, store: createResultStore(join(runsDir, STORE_DIRECTORY)), policy: POLICY });
   assert.deepEqual(rows(file), [
     "one reference-vs-each fake-a fake-b ERROR",
@@ -312,7 +316,7 @@ test("a run that was not started has no comparisons, and a manifest without jobs
   const runsDir = tempDir(t);
   const { registry } = watchedRegistry(ENGINES);
   const suite = suiteOf("pair", [{ name: "missing", opticalCase: null, problems: ["no case"] }]);
-  const { manifest } = await runSuite({ suite, registry, runsDir });
+  const { manifest } = await runSuite({ suite, registry, runsDir, rungDefinitions: [selftestRung] });
   const file = compareManifest({ manifest, store: createResultStore(join(runsDir, STORE_DIRECTORY)), policy: POLICY });
   assert.deepEqual(file.comparisons, []);
 });

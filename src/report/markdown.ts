@@ -1,5 +1,5 @@
 // The Markdown of a report: a pure layout of the report model, so the same model always gives the same bytes.
-import { METRIC_DIGITS, whereText } from "../compare/metricText.ts";
+import { METRIC_DIGITS, numberText, whereText } from "../compare/metricText.ts";
 import { COMPARISON_MODES, VERDICTS } from "../contract/comparison.ts";
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import { formatFixed, formatSci } from "../core/numeric/format.ts";
@@ -7,6 +7,9 @@ import type { MetricColumn, ReportModel, ReportSection, SupportCell } from "./mo
 
 /** What an empty cell holds: a place where there is nothing to say, as opposed to a value that is missing. */
 const NOTHING = "—";
+
+/** How many significant digits a recorded value has: enough to set two engines' values side by side by eye. */
+export const RECORDED_DIGITS = 9;
 
 /**
  * A text as the content of one table cell: a backslash and a `|` are escaped with a backslash, and every line
@@ -32,7 +35,7 @@ function count(value: number): string {
 
 /** A metric's value and where it occurs; "not finite" for a value that is null. */
 function metricText(metric: ComparisonMetric): string {
-  const value = metric.value === null ? "not finite" : formatSci(metric.value, METRIC_DIGITS);
+  const value = metric.value === null ? "not finite" : numberText(metric.value);
   return `${value}${whereText(metric.where)}`;
 }
 
@@ -41,7 +44,7 @@ function columnText(column: MetricColumn): string {
   const unit = column.unit === null || column.unit === "1" ? "" : ` ${column.unit}`;
   if (column.limit === undefined) return unit === "" ? column.name : `${column.name} [${unit.trim()}]`;
   const sign = column.limitKind === "attention" ? "band" : "≤";
-  return `${column.name} (${sign} ${formatSci(column.limit, METRIC_DIGITS)}${unit})`;
+  return `${column.name} (${sign} ${numberText(column.limit)}${unit})`;
 }
 
 function supportText(cell: SupportCell): string {
@@ -89,6 +92,18 @@ function sectionLines(section: ReportSection): string[] {
     ]);
     lines.push(...table(["Engine", ...engines], body));
   }
+  if (section.recorded !== null) {
+    const { engines, rows } = section.recorded;
+    lines.push("", "Recorded values, as each engine reports them. They are listed and never judged:", "");
+    const body = rows.map((row) => [
+      `${row.name}[${count(row.index)}]`,
+      ...row.cells.map((cell) => {
+        if (cell === null) return NOTHING;
+        return cell.value === null ? "not finite" : formatSci(cell.value, RECORDED_DIGITS);
+      }),
+    ]);
+    lines.push(...table(["Value", ...engines], body));
+  }
   return lines;
 }
 
@@ -108,17 +123,24 @@ const HOW_TO_READ: readonly string[] = [
         "A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure.",
       ],
       ["UNSUPPORTED", "One of the two engines cannot answer the request. That is an answer, not a failure."],
+      [
+        "BLOCKED",
+        "Both engines answered and the pair is not judged: an earlier rung, on which this one rests, failed for the " +
+          "same two engines on the same case. The failure is that rung's, and the note names it.",
+      ],
       ["ERROR", "One of the two engines gave no result, or the two results cannot be compared."],
     ],
   ),
   "",
   "Only FAIL and ERROR fail a comparison. RECORDED and ATTENTION are not failures: a recorded rung compares",
-  "methods that are expected to differ, and its numbers are kept to be read, not to be gated.",
+  "methods that are expected to differ, and its numbers are kept to be read, not to be gated. BLOCKED is not a",
+  "second failure: two engines that built different systems would differ in every rung after that one.",
   "",
   "A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung and `band` the attention",
-  `band of a recorded one. Numbers have ${METRIC_DIGITS} significant digits; \`${NOTHING}\` marks a place with nothing to compare, and`,
-  "`not finite` a metric that is a NaN or an infinity. The reference-vs-each table and the pairwise matrix judge a",
-  "pair alike, so a pair that is in both has the same verdict in both.",
+  `band of a recorded one. Numbers have ${METRIC_DIGITS} significant digits, and a whole number, such as a count, is written in full.`,
+  `A recorded value has ${RECORDED_DIGITS} significant digits and is named with the index of its element. \`${NOTHING}\` marks a place with`,
+  "nothing to compare, and `not finite` a number that is a NaN or an infinity. The reference-vs-each table and the",
+  "pairwise matrix judge a pair alike, so a pair that is in both has the same verdict in both.",
 ];
 
 /**
@@ -127,8 +149,8 @@ const HOW_TO_READ: readonly string[] = [
  * goes through `escapeCell`.
  *
  * The sections, in order: the title and the inputs (suite, contract version, policy version, engines with their
- * fingerprints, runs); the verdict summary; the support matrix; for each run and rung the reference-vs-each table
- * and the pairwise matrix; and how to read the verdicts.
+ * fingerprints, runs); the verdict summary; the support matrix; for each run and rung the reference-vs-each table,
+ * the pairwise matrix and the values the answers only record; and how to read the verdicts.
  */
 export function renderMarkdown(model: ReportModel): string {
   const lines: string[] = [`# Comparison report: ${model.suite.name}`, "", "## Inputs", ""];
