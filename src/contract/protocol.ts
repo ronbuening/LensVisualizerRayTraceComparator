@@ -34,3 +34,9 @@ export type ProtocolResponse =
       readonly result: EngineDescriptor | ResultEnvelope | Empty;
     }
   | { readonly contract: string; readonly id: string; readonly ok: false; readonly error: ErrorInfo };
+
+/**
+ * Whatever answers protocol messages: an engine as a transport sees it. A handler that cannot handle a message
+ * answers `ok: false`; one that throws or rejects has crashed, as a worker process that died has.
+ */
+export type ProtocolHandler = (request: ProtocolRequest) => ProtocolResponse | Promise<ProtocolResponse>;

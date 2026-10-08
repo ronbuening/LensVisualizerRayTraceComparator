@@ -63,8 +63,29 @@ Values are layered, lowest precedence first:
 | `lvPath` | LensVisualizer checkout, or `null` |
 | `python` | Interpreter for the stdlib-only worker kit |
 | `engines.optiland.python` | Interpreter that can import optiland, or `null` |
+| `engines.<id>` | How the engine `<id>` is reached; see below |
 | `cacheDir`, `runsDir` | Where caches and run results are written |
 
 In the files, `engines.optiland.python` is written as nested objects, as in `lvrtc.local.example.json`. Relative
 paths resolve against the repository root, whichever layer they come from. An interpreter given as a bare command
 name (`python3`) is looked up on `PATH`. An unknown key or malformed JSON is an error naming the file.
+
+An engine is defined under `engines.<id>` by the transport that reaches it:
+
+```json
+{
+  "engines": {
+    "fake-a": { "transport": "in-process", "module": "src/engines/fake/engine.ts", "options": { "id": "fake-a" } },
+    "worker": { "transport": "stdio", "command": ["python3", "-m", "some_worker"], "env": { "MODE": "test" } }
+  }
+}
+```
+
+- `in-process`: `module` is a TypeScript module that exports `createEngine(options)`, which returns a function
+  that answers protocol messages. `src/engines/fake/engine.ts` is one: an engine without optics, for tests.
+- `stdio`: `command` is a worker's command line and `env` variables to set for it. The shape is accepted; the
+  transport itself arrives with the Python worker kit.
+
+`options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
+gives the same id, whole. An engine that cannot be built or reached is found unavailable, with a code that says
+why: `not-configured`, `load-failed`, `hello-failed`, `contract-mismatch` and so on.

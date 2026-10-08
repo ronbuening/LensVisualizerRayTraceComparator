@@ -11,20 +11,31 @@ import { dirname, join } from "node:path";
 
 import { finalizeCase } from "../../src/contract/case.ts";
 import { CONTRACT_KINDS } from "../../src/contract/schemas.ts";
-import { EXTERNAL_VALID, FIXTURE_DIR, INVALID, VALID, fixtureText } from "./corpus.ts";
+import { EXTERNAL_VALID, FIXTURE_DIR, INVALID, QUANTITY_FIXTURES, VALID, fixtureText } from "./corpus.ts";
+import type { InvalidFixture } from "./corpus.ts";
 
 function write(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, fixtureText(value));
 }
 
-for (const kind of CONTRACT_KINDS) {
-  for (const [name, value] of Object.entries(VALID[kind]))
-    write(join(FIXTURE_DIR, "valid", kind, `${name}.json`), value);
-  for (const [name, { value, expect }] of Object.entries(INVALID[kind])) {
-    write(join(FIXTURE_DIR, "invalid", kind, `${name}.json`), value);
-    write(join(FIXTURE_DIR, "invalid", kind, `${name}.expect.json`), expect);
+/** Writes the fixtures of one schema below `valid/<directory>` and `invalid/<directory>`. */
+function writeFixtures(
+  directory: string,
+  valid: Record<string, unknown>,
+  invalid: Record<string, InvalidFixture>,
+): void {
+  for (const [name, value] of Object.entries(valid))
+    write(join(FIXTURE_DIR, "valid", directory, `${name}.json`), value);
+  for (const [name, { value, expect }] of Object.entries(invalid)) {
+    write(join(FIXTURE_DIR, "invalid", directory, `${name}.json`), value);
+    write(join(FIXTURE_DIR, "invalid", directory, `${name}.expect.json`), expect);
   }
+}
+
+for (const kind of CONTRACT_KINDS) writeFixtures(kind, VALID[kind], INVALID[kind]);
+for (const [schema, { valid, invalid }] of Object.entries(QUANTITY_FIXTURES)) {
+  writeFixtures(join("quantities", schema), valid, invalid);
 }
 for (const name of EXTERNAL_VALID["optical-case"] ?? []) {
   const path = join(FIXTURE_DIR, "valid", "optical-case", `${name}.json`);

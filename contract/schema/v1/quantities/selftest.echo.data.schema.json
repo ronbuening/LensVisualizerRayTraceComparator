@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:selftest.echo.data",
+  "title": "selftest.echo data",
+  "description": "The answer to a selftest.echo request: the scaled elements, and their sum.",
+  "type": "object",
+  "properties": {
+    "values": {
+      "description": "The scaled elements, in the shape of the spec's values.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Array"
+    },
+    "sum": {
+      "description": "The running sum of the scaled elements in index order, starting from 0; null when it is not finite.",
+      "type": ["number", "null"]
+    }
+  },
+  "required": ["values", "sum"],
+  "additionalProperties": false
+}

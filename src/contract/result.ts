@@ -1,5 +1,9 @@
 // The result envelope: mirrors contract/schema/v1/result.schema.json, plus the status rules a schema cannot state.
+import { deepFreeze } from "./json.ts";
 import type { JsonObject } from "./json.ts";
+import type { QuantityRequest } from "./request.ts";
+import { assertKind } from "./schemas.ts";
+import { CONTRACT_VERSION } from "./version.ts";
 
 /** A machine-readable code with a message for people. */
 export interface ErrorInfo {
@@ -56,4 +60,38 @@ export function resultInvariantProblems(result: ResultEnvelope): string[] {
   if (result.status === "error" && result.error === undefined) problems.push('status "error" needs error');
   if (result.status === "ok" && result.data === undefined) problems.push('status "ok" needs data');
   return problems;
+}
+
+/** What a result says beyond whose it is and what it answers. Without `diagnostics`: no warnings, no counts. */
+export type ResultBody = Pick<ResultEnvelope, "status" | "unsupported" | "error" | "method" | "data"> &
+  Partial<Pick<ResultEnvelope, "diagnostics">>;
+
+/**
+ * Builds the result of `request` as `engine` gives it, frozen at every depth; the parts are copied. Both ids are
+ * echoed from the request, never computed, so the result answers exactly that request. Throws when a part is not
+ * JSON data, when the result is not schema-valid and when it breaks a status rule.
+ */
+export function makeResult(
+  request: Pick<QuantityRequest, "id" | "caseId">,
+  engine: ResultEnvelope["engine"],
+  body: ResultBody,
+): ResultEnvelope {
+  const { status, unsupported, error, method, data, diagnostics } = structuredClone(body);
+  const result: ResultEnvelope = {
+    contract: CONTRACT_VERSION,
+    kind: "result",
+    requestId: request.id,
+    caseId: request.caseId,
+    engine: structuredClone(engine),
+    status,
+    ...(unsupported === undefined ? {} : { unsupported }),
+    ...(error === undefined ? {} : { error }),
+    ...(method === undefined ? {} : { method }),
+    ...(data === undefined ? {} : { data }),
+    diagnostics: diagnostics ?? { warnings: [], counts: {} },
+  };
+  assertKind("result", result);
+  const problems = resultInvariantProblems(result);
+  if (problems.length > 0) throw new Error(`contract: not a valid result: ${problems.join("; ")}`);
+  return deepFreeze(result);
 }

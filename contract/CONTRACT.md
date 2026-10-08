@@ -361,7 +361,7 @@ non-empty `unsupported` list; status `error` needs `error`.
 | `contract` | object | `min` and `max`: the range of contract versions the engine speaks, both included |
 | `identity` | object | `id`, `version`, `fingerprint`, `details` |
 | `capabilities.features` | object | `supported`, a list of feature flags, and `limits`, a map from limit to the largest value handled |
-| `capabilities.quantities` | object | a map from quantity id to `{ version }`, an integer of at least 1 |
+| `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1 |
 | `capabilities.deterministic` | boolean | whether equal requests give bit-equal results |
 | `capabilities.maxConcurrency` | integer ≥ 1 | how many requests the engine works on at once |
 
@@ -388,11 +388,67 @@ A protocol message is one of two whole shapes, so the validator reports any faul
 message, with the keyword `oneOf`; the issue's message quotes the first fault of each shape with its own path.
 A transport that wants the precise issue validates `params.case`, `params.request` or `result` by its own kind.
 
+An error's `code` is the engine's to choose. Two are agreed, so that every engine refuses alike: `bad-request` for
+a `run` whose request or case is not valid by its own kind or whose request is about another case, and
+`unknown-method` for any other method. An engine echoes the ids it is given: `id` of the message in its reply, and
+`request.id` and `case.id` as the result's `requestId` and `caseId`.
+
 ## Quantities
 
-A quantity is identified by a dotted id (`system.describe`, `paraxial.first-order`, `rays.trace`, `mtf.native`).
-Contract v1 defines none yet: `spec` and `data` are any object. Their schemas are added by later stages under
-[`schema/v1/quantities/`](schema/v1/quantities/README.md), which the loader already reads.
+A quantity is what a request asks for, identified by a dotted id (`system.describe`, `paraxial.first-order`,
+`rays.trace`, `mtf.native`). Each has two schema files under
+[`schema/v1/quantities/`](schema/v1/quantities/README.md): `<id>.spec.schema.json` for the `spec` of a request and
+`<id>.data.schema.json` for the `data` of a result of status `ok`. The definition of a quantity, which is its two
+schemas and what this document says they mean, has a version: an integer from 1 that rises when the definition
+changes incompatibly. An engine states the version it implements under `capabilities.quantities`.
+
+The schemas of `request` and `result` accept any object as `spec` and `data`. Whoever knows the quantity validates
+them against its own schemas; in TypeScript that is the quantity's module in `src/quantities/`, with `validateSpec`
+and `validateData`.
+
+| Quantity | Version | TypeScript | Is |
+|---|---|---|---|
+| `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
+
+### `selftest.echo`
+
+The conformance quantity. It needs no optics and ignores the case, so every engine, worker kit and test double can
+answer it; one that answers it correctly has shown that it reads requests, carries arrays bit for bit and writes
+results.
+
+`spec`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `values` | NdArray | float64, any shape: the elements to scale |
+| `scale` | number | the factor |
+
+`data`:
+
+| Member | Type | Meaning |
+|---|---|---|
+| `values` | NdArray | float64, in the shape of the spec's `values`: the scaled elements |
+| `sum` | number or null | the sum of the scaled elements; null when it is not finite |
+
+Each element is produced by a rule that fixes every bit of it, so that two engines answer one request with
+byte-equal arrays:
+
+1. An element that is a NaN is copied bit for bit (sign, quiet bit and payload) and takes no part in arithmetic,
+   which may replace a NaN's payload and quiets a signalling NaN.
+2. Any other element becomes `element × scale`: one IEEE 754 double multiplication, rounded to nearest, ties to
+   even. With a `scale` of 1 every element therefore comes back unchanged: −0 stays −0, and an infinity and a
+   subnormal keep their bits.
+3. A product that is a NaN, which only an infinity times 0 is, is written as the quiet NaN `7ff8000000000000`:
+   processors do not agree on the sign of the NaN they produce.
+
+`sum` is a running sum. It starts at 0 and adds the scaled elements in index order (C order), each addition
+rounded on its own; the sum of no elements is 0. It is not a compensated sum and not an exactly rounded one:
+Python's `math.fsum` is, and so is its built-in `sum` from Python 3.12 on, and both give another number. A sum
+that is a NaN or an infinity is null.
+
+The valid fixtures of the quantity are its conformance examples:
+`valid/quantities/selftest.echo.data/<name>.json` is the answer to
+`valid/quantities/selftest.echo.spec/<name>.json`, byte for byte in `values`.
 
 ## Schemas and the validator
 
@@ -437,13 +493,15 @@ A schema's `$id` is `urn:lvrtc:contract:v1:` followed by its path below `schema/
 ## Fixtures
 
 ```
-fixtures/v1/valid/<kind>/<name>.json
-fixtures/v1/invalid/<kind>/<name>.json
-fixtures/v1/invalid/<kind>/<name>.expect.json
+fixtures/v1/valid/<schema>/<name>.json
+fixtures/v1/invalid/<schema>/<name>.json
+fixtures/v1/invalid/<schema>/<name>.expect.json
 ```
 
-Every valid fixture passes the schema of its kind. Every invalid fixture is a valid one with a single fault, and
-its `.expect.json` names where the validator reports it:
+`<schema>` is the path of a schema file below `schema/v1` without `.schema.json`: a kind, such as `optical-case`,
+or the spec or data of a quantity, such as `quantities/selftest.echo.spec`. Every valid fixture passes that schema.
+Every invalid fixture is a valid one with a single fault, and its `.expect.json` names where the validator reports
+it:
 
 ```json
 { "path": "/system/stopIndex", "keyword": "type" }

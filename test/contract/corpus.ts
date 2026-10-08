@@ -16,13 +16,18 @@ import type { OpticalCaseDraft } from "../../src/contract/case.ts";
 import type { EngineDescriptor } from "../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
+import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
+import type { SelftestEchoData, SelftestEchoSpec } from "../../src/contract/quantities/selftestEcho.ts";
 import { makeRequest } from "../../src/contract/request.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import type { ContractKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 
-/** The corpus directory: `valid/<kind>/<name>.json`, `invalid/<kind>/<name>.json` and `<name>.expect.json`. */
+/**
+ * The corpus directory: `valid/<schema>/<name>.json`, `invalid/<schema>/<name>.json` and `<name>.expect.json`,
+ * where `<schema>` is a kind, or `quantities/<quantity>.<part>` for a quantity's spec or data.
+ */
 export const FIXTURE_DIR: string = fileURLToPath(new URL("../../contract/fixtures/v1", import.meta.url));
 
 const OVERFLOW_MARKER = "@@overflow@@";
@@ -294,7 +299,8 @@ export const SUITE_MINIMAL = {
 
 // ── request and result ───────────────────────────────────────────────────────────────────────────────────────────
 //
-// No quantity has a schema yet, so the specs and data below only show that an object travels as it is.
+// `system.describe` and `rays.trace` have no schema yet, so the specs and data below only show that an object
+// travels as it is. The quantity that has one, `selftest.echo`, has fixtures of its own further down.
 
 /** The smallest request: an empty spec and no engine options. */
 export const REQUEST_MINIMAL = makeRequest({ caseId: SINGLET_CASE.id, quantity: "system.describe", spec: {} });
@@ -455,6 +461,95 @@ export const RESPONSE_FAILURE = {
   ok: false,
   error: { code: "bad-request", message: "params.case is not an optical-case" },
 } satisfies ProtocolResponse;
+
+// ── selftest.echo ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** A float64 array given by the bits of each element, for the values a number literal cannot state. */
+export function f8FromBits(...bits: bigint[]): Float64Array {
+  return new Float64Array(new BigUint64Array(bits).buffer);
+}
+
+/** A `selftest.echo` spec, and the data that every conforming engine answers it with, bit for bit. */
+export interface EchoExample {
+  readonly spec: SelftestEchoSpec;
+  readonly data: SelftestEchoData;
+}
+
+function echoExample(
+  shape: readonly number[],
+  values: Float64Array,
+  scale: number,
+  echoed: Float64Array,
+  sum: number | null,
+): EchoExample {
+  return {
+    spec: { values: encodeNdArray(values, shape), scale },
+    data: { values: encodeNdArray(echoed, shape), sum },
+  };
+}
+
+const QUIET_NAN = 0x7ff8_0000_0000_0000n;
+const NAN_WITH_PAYLOAD = 0x7ff8_0000_dead_beefn;
+/** Every value a plain JSON number cannot carry, and the ones arithmetic is tempted to change. */
+const SPECIAL_VALUES = f8FromBits(
+  NAN_WITH_PAYLOAD,
+  0x7ff0_0000_0000_0001n, // a signalling NaN, which arithmetic would quiet
+  0xfff8_0000_0000_0123n, // a NaN with its sign bit set
+  0x8000_0000_0000_0000n, // -0
+  0x7ff0_0000_0000_0000n, // +infinity
+  0xfff0_0000_0000_0000n, // -infinity
+  0x0000_0000_0000_0001n, // the smallest subnormal
+  0x000f_ffff_ffff_ffffn, // the largest subnormal
+  0x7fef_ffff_ffff_ffffn, // the largest finite number
+  0x3ff8_0000_0000_0000n, // 1.5
+);
+
+/**
+ * The conformance examples of `selftest.echo`, by fixture name: `valid/quantities/selftest.echo.spec/<name>.json`
+ * holds the spec and `valid/quantities/selftest.echo.data/<name>.json` the answer. The answers are written out
+ * here, not computed, so that an engine is tested against the contract and not against another engine.
+ */
+export const SELFTEST_ECHO_EXAMPLES: Readonly<Record<string, EchoExample>> = {
+  // Scale 1 sends every element back unchanged, NaN payloads included. A NaN among them leaves no finite sum.
+  "special-values": echoExample([10], SPECIAL_VALUES, 1, SPECIAL_VALUES, null),
+  // Every product and every partial sum is exact, and -0 times a negative number is +0.
+  matrix: echoExample(
+    [2, 3],
+    Float64Array.of(1.5, -2, 0.25, 4, -0, 0.125),
+    -2.5,
+    Float64Array.of(-3.75, 5, -0.625, -10, 0, -0.3125),
+    -9.6875,
+  ),
+  // A running sum loses the first 1 to rounding and gives 1. A compensated sum gives 2: Python's math.fsum does,
+  // and from Python 3.12 on its built-in sum does too.
+  "sum-is-not-compensated": echoExample(
+    [4],
+    Float64Array.of(1e16, 1, -1e16, 1),
+    1,
+    Float64Array.of(1e16, 1, -1e16, 1),
+    1,
+  ),
+  // An infinity times 0 has no value and is written as the quiet NaN without payload; a NaN that came in is kept.
+  "zero-scale": echoExample(
+    [5],
+    f8FromBits(
+      0x7ff0_0000_0000_0000n,
+      0xfff0_0000_0000_0000n,
+      0x3ff0_0000_0000_0000n,
+      0xbff0_0000_0000_0000n,
+      NAN_WITH_PAYLOAD,
+    ),
+    0,
+    f8FromBits(QUIET_NAN, QUIET_NAN, 0x0000_0000_0000_0000n, 0x8000_0000_0000_0000n, NAN_WITH_PAYLOAD),
+    null,
+  ),
+  // A product too large for a float64 is an infinity, and an infinite sum is null.
+  overflow: echoExample([2], Float64Array.of(Number.MAX_VALUE, 1), 2, Float64Array.of(Infinity, 2), null),
+  // No elements: the shape is kept and the sum is the 0 it starts from.
+  empty: echoExample([0, 3], new Float64Array(0), 2, new Float64Array(0), 0),
+  // A shape without axes is one element.
+  scalar: echoExample([], Float64Array.of(3), 2, Float64Array.of(6), 6),
+};
 
 // ── The corpus ───────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -717,5 +812,55 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "ok-with-unknown-result": fault(RESPONSE_RUN, "/result", { status: "ok" }, "oneOf", ""),
     "failure-without-error": fault(RESPONSE_FAILURE, "/error", REMOVE, "oneOf", ""),
     "failure-with-result": fault(RESPONSE_FAILURE, "/result", {}, "oneOf", ""),
+  },
+};
+
+/** The fixtures of one quantity schema, valid and invalid, as `VALID` and `INVALID` hold them for a kind. */
+export interface QuantityFixtures {
+  readonly valid: Readonly<Record<string, unknown>>;
+  readonly invalid: Readonly<Record<string, InvalidFixture>>;
+}
+
+function examplePart(part: keyof EchoExample): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(SELFTEST_ECHO_EXAMPLES).map(([name, example]) => [name, example[part]]));
+}
+
+const ECHO_SPEC = SELFTEST_ECHO_EXAMPLES.matrix.spec;
+const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
+
+/**
+ * The fixtures of every quantity schema, by `<quantity>.<part>`: the name of the schema file without
+ * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
+ */
+export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${SELFTEST_ECHO}.spec`]: {
+    valid: examplePart("spec"),
+    invalid: {
+      "not-an-object": fault(ECHO_SPEC, "", [1, 2, 3], "type"),
+      "missing-scale": fault(ECHO_SPEC, "/scale", REMOVE, "required", ""),
+      "missing-values": fault(ECHO_SPEC, "/values", REMOVE, "required", ""),
+      "scale-as-string": fault(ECHO_SPEC, "/scale", "2", "type"),
+      "scale-null": fault(ECHO_SPEC, "/scale", null, "type"),
+      "unknown-property": fault(ECHO_SPEC, "/offset", 1, "additionalProperties"),
+      "values-as-plain-numbers": fault(ECHO_SPEC, "/values", [1.5, -2], "type"),
+      "values-not-float64": fault(ECHO_SPEC, "/values/$nd/dtype", "i4", "const"),
+      "values-missing-shape": fault(ECHO_SPEC, "/values/$nd/shape", REMOVE, "required", "/values/$nd"),
+      "values-malformed-digest": fault(ECHO_SPEC, "/values/$nd/sha256", "0f", "pattern"),
+    },
+  },
+  [`${SELFTEST_ECHO}.data`]: {
+    valid: examplePart("data"),
+    invalid: {
+      "missing-sum": fault(ECHO_DATA, "/sum", REMOVE, "required", ""),
+      "missing-values": fault(ECHO_DATA, "/values", REMOVE, "required", ""),
+      "sum-as-string": fault(ECHO_DATA, "/sum", "-9.6875", "type"),
+      // A sum that is not finite is null, never a boolean or a token.
+      "sum-as-boolean": fault(ECHO_DATA, "/sum", false, "type"),
+      "unknown-property": fault(ECHO_DATA, "/count", 6, "additionalProperties"),
+      "values-as-plain-numbers": fault(ECHO_DATA, "/values", [-3.75, 5], "type"),
+      "values-not-float64": fault(ECHO_DATA, "/values/$nd/dtype", "u1", "const"),
+      "values-negative-axis": fault(ECHO_DATA, "/values/$nd/shape/0", -2, "minimum"),
+      "values-data-not-base64": fault(ECHO_DATA, "/values/$nd/data", "not base64!", "pattern"),
+    },
   },
 };

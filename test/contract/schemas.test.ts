@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
 import { ND_DTYPES } from "../../src/core/numeric/ndarray.ts";
+import { ENGINE_ID_PATTERN, isEngineId } from "../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import { RUN_OPTION_KEYS } from "../../src/contract/runSpec.ts";
 import {
@@ -20,7 +21,13 @@ import {
   validateKind,
 } from "../../src/contract/schemas.ts";
 import { validate } from "../../src/contract/validate.ts";
-import { CONTRACT_MAJOR, CONTRACT_VERSION, isCompatibleContract } from "../../src/contract/version.ts";
+import {
+  CONTRACT_MAJOR,
+  CONTRACT_VERSION,
+  isCompatibleContract,
+  isContractInRange,
+} from "../../src/contract/version.ts";
+import { QUANTITIES } from "../../src/quantities/index.ts";
 
 type Json = Record<string, unknown>;
 
@@ -83,6 +90,47 @@ test("a contract version is compatible exactly when its major matches", () => {
   for (const version of ["0.9", "2.0", "10.0", "11.0"]) assert.equal(isCompatibleContract(version), false, version);
   for (const version of ["1", "1.", "1.x", "1.0.0", "v1.0", "01.0", "1.00", " 1.0", "", "1.0\n"]) {
     assert.equal(isCompatibleContract(version), false, JSON.stringify(version));
+  }
+});
+
+test("a version is in an engine's range when it is neither below min nor above max, by major and then minor", () => {
+  const inRange: [string, string, string][] = [
+    ["1.0", "1.0", "1.0"],
+    ["1.0", "1.0", "1.2"],
+    ["1.2", "1.0", "1.2"],
+    ["1.1", "1.0", "1.2"],
+    // Numbers, not text: 1.10 is above 1.9.
+    ["1.10", "1.9", "1.11"],
+    ["1.9", "1.2", "1.10"],
+    // A range over more than one major holds every version between its ends.
+    ["1.0", "0.9", "2.0"],
+    ["1.7", "0.9", "2.0"],
+    ["2.0", "1.5", "2.0"],
+  ];
+  for (const [version, min, max] of inRange) {
+    assert.equal(isContractInRange(version, { min, max }), true, `${version} in ${min}..${max}`);
+  }
+  const outside: [string, string, string][] = [
+    ["1.0", "1.1", "1.2"],
+    ["1.3", "1.0", "1.2"],
+    ["1.0", "2.0", "2.1"],
+    ["1.0", "0.1", "0.9"],
+    ["1.10", "1.0", "1.9"],
+    ["2.1", "0.9", "2.0"],
+    // An inverted range holds nothing.
+    ["1.0", "1.0", "0.9"],
+    ["1.1", "1.2", "1.0"],
+  ];
+  for (const [version, min, max] of outside) {
+    assert.equal(isContractInRange(version, { min, max }), false, `${version} in ${min}..${max}`);
+  }
+});
+
+test("a text that is not a version is in no range, and a range with one holds nothing", () => {
+  for (const text of ["1", "1.x", "1.0.0", "v1.0", "01.0", "", " 1.0"]) {
+    assert.equal(isContractInRange(text, { min: "0.0", max: "9.9" }), false, JSON.stringify(text));
+    assert.equal(isContractInRange("1.0", { min: text, max: "9.9" }), false, JSON.stringify(text));
+    assert.equal(isContractInRange("1.0", { min: "0.0", max: text }), false, JSON.stringify(text));
   }
 });
 
@@ -177,6 +225,35 @@ test("the feature flags of the schema are the feature flags of the code", () => 
   assert.deepEqual(items.enum, [...FEATURE_FLAGS]);
 });
 
+test("an engine id of the schema is an engine id of the code", () => {
+  const pattern = at(readSchema("common.schema.json"), "$defs", "engineId").pattern;
+  assert.equal(pattern, ENGINE_ID_PATTERN.source);
+  assert.equal(ENGINE_ID_PATTERN.flags, "");
+  const id = `${SCHEMA_ID_PREFIX}common#/$defs/engineId`;
+  const samples = [
+    "lv",
+    "ref",
+    "optiland",
+    "fake-a",
+    "a",
+    "a1",
+    "a-",
+    "constructor",
+    "",
+    "A",
+    "1a",
+    "-a",
+    "a_b",
+    "a.b",
+  ];
+  for (const sample of [...samples, "a b", "a\n", " a", "é", 7, null, undefined, ["a"]]) {
+    const bySchema = sample !== undefined && validate(contractSchemas(), id, sample).length === 0;
+    assert.equal(isEngineId(sample), bySchema, JSON.stringify(sample));
+  }
+  assert.equal(isEngineId("fake-a"), true);
+  assert.equal(isEngineId("Fake"), false);
+});
+
 test("the array element types of the schema are the ones the codec has", () => {
   const nd = at(readSchema("common.schema.json"), "$defs", "ndarray", "properties", "$nd", "properties");
   assert.deepEqual(at(nd, "dtype").enum, [...ND_DTYPES]);
@@ -223,15 +300,31 @@ test("the schemas accept the contract version the code writes, and any minor of 
   }
 });
 
-// ── Quantity schemas: the place a later stage puts them ──────────────────────────────────────────────────────────
+// ── Quantity schemas ─────────────────────────────────────────────────────────────────────────────────────────────
 
-test("no quantity schema is defined yet, and the place for them is documented", () => {
+test("the quantity schemas are a spec and a data file for every registered quantity, and no other", () => {
+  assert.ok(existsSync(join(SCHEMA_DIR, "quantities", "README.md")));
+  const registered = QUANTITIES.list().map(({ id }) => id);
+  assert.ok(registered.includes("selftest.echo"));
   assert.deepEqual(
     SCHEMA_FILES.filter((file) => file.startsWith("quantities/")),
-    [],
+    registered.flatMap((id) => [`quantities/${id}.data.schema.json`, `quantities/${id}.spec.schema.json`]),
   );
-  assert.ok(existsSync(join(SCHEMA_DIR, "quantities", "README.md")));
+  for (const id of registered) {
+    for (const part of ["spec", "data"] as const) {
+      assert.equal(quantitySchemaId(id, part), idOfFile(`quantities/${id}.${part}.schema.json`));
+      assert.ok(contractSchemas().targets.has(quantitySchemaId(id, part)), `${id}.${part}`);
+    }
+  }
   assert.equal(contractSchemas().targets.has(quantitySchemaId("rays.trace", "spec")), false);
+});
+
+test("the float64 array is the array wire form with only its element type narrowed", () => {
+  const definitions = at(readSchema("common.schema.json"), "$defs");
+  const narrowed = structuredClone(at(definitions, "ndarray"));
+  at(narrowed, "properties", "$nd", "properties").dtype = { const: "f8" };
+  narrowed.description = at(definitions, "f8Array").description;
+  assert.deepEqual(at(definitions, "f8Array"), narrowed);
 });
 
 test("a quantity schema placed under quantities/ is loaded and addressed by quantitySchemaId", (t) => {

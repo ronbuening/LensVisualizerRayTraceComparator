@@ -36,8 +36,8 @@ export function kindSchemaId(kind: ContractKind): string {
 }
 
 /**
- * The `$id` a quantity's schema has once a later stage adds it under `quantities/`: `spec` is what a request asks
- * for, `data` what an "ok" result carries. None is defined yet, so `contractSchemas().targets` has none of these.
+ * The `$id` of a quantity's schema under `quantities/`: `spec` is what a request asks for, `data` what an "ok"
+ * result carries. `contractSchemas().targets` has it exactly when the contract defines the quantity.
  */
 export function quantitySchemaId(quantity: string, part: "spec" | "data"): string {
   return `${SCHEMA_ID_PREFIX}quantities:${quantity}.${part}`;

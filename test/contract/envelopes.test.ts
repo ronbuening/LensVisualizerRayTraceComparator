@@ -4,13 +4,15 @@ import { test } from "node:test";
 
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../../src/core/numeric/hash.ts";
+import { engineStamp } from "../../src/contract/engine.ts";
 import { deepFreeze } from "../../src/contract/json.ts";
 import { makeRequest } from "../../src/contract/request.ts";
-import { resultInvariantProblems } from "../../src/contract/result.ts";
-import type { ResultEnvelope } from "../../src/contract/result.ts";
+import { makeResult, resultInvariantProblems } from "../../src/contract/result.ts";
+import type { ResultBody, ResultEnvelope } from "../../src/contract/result.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import {
+  DESCRIPTOR_FULL,
   PROTOCOL_RUN,
   REQUEST_MINIMAL,
   REQUEST_WITH_OPTIONS,
@@ -173,6 +175,111 @@ test("the status decides which rule applies, not which members are present", () 
   const partial = resultWith(RESULT_OK, "/unsupported", RESULT_UNSUPPORTED.unsupported);
   assert.deepEqual(validateKind("result", partial), []);
   assert.deepEqual(resultInvariantProblems(partial), []);
+});
+
+// ── makeResult ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+const ENGINE = { id: "fake", fingerprint: "f".repeat(64), details: { jit: false } };
+
+test("makeResult echoes the request's ids, stamps the engine and adds the contract version and the kind", () => {
+  const result = makeResult(REQUEST_WITH_OPTIONS, ENGINE, { status: "ok", data: { answer: 42 } });
+  assert.deepEqual(result, {
+    contract: CONTRACT_VERSION,
+    kind: "result",
+    requestId: REQUEST_WITH_OPTIONS.id,
+    caseId: REQUEST_WITH_OPTIONS.caseId,
+    engine: ENGINE,
+    status: "ok",
+    data: { answer: 42 },
+    diagnostics: { warnings: [], counts: {} },
+  });
+  assert.deepEqual(validateKind("result", result), []);
+  // Only the two ids are read from the request: a result never restates what was asked.
+  const ids = { id: REQUEST_MINIMAL.id, caseId: CASE_ID };
+  assert.equal(makeResult(ids, ENGINE, { status: "pending" }).requestId, REQUEST_MINIMAL.id);
+});
+
+test("makeResult writes the members in the schema's order, and only the ones the body states", () => {
+  const whole = makeResult(REQUEST_MINIMAL, ENGINE, {
+    diagnostics: { warnings: ["slow"], counts: { rays: 2 } },
+    data: { a: 1 },
+    method: { name: "m", params: {} },
+    error: { code: "c", message: "" },
+    unsupported: [{ code: "option", item: "tolerance", message: "" }],
+    status: "ok",
+  });
+  assert.deepEqual(Object.keys(whole), [
+    "contract",
+    "kind",
+    "requestId",
+    "caseId",
+    "engine",
+    "status",
+    "unsupported",
+    "error",
+    "method",
+    "data",
+    "diagnostics",
+  ]);
+  assert.deepEqual(whole.diagnostics, { warnings: ["slow"], counts: { rays: 2 } });
+  const bare = makeResult(REQUEST_MINIMAL, ENGINE, { status: "pending" });
+  assert.deepEqual(Object.keys(bare), ["contract", "kind", "requestId", "caseId", "engine", "status", "diagnostics"]);
+  const undefinedMembers = makeResult(REQUEST_MINIMAL, ENGINE, {
+    status: "pending",
+    data: undefined,
+    error: undefined,
+  });
+  assert.deepEqual(Object.keys(undefinedMembers), Object.keys(bare));
+});
+
+test("makeResult returns a frozen copy of its parts", () => {
+  const engine = { id: "fake", fingerprint: "f", details: { jit: false } };
+  const data = { list: [1, 2, 3] };
+  const diagnostics = { warnings: ["w"], counts: { n: 1 } };
+  const result = makeResult(REQUEST_MINIMAL, engine, { status: "ok", data, diagnostics });
+  assert.ok(Object.isFrozen(result) && Object.isFrozen(result.engine) && Object.isFrozen(result.engine.details));
+  assert.ok(Object.isFrozen(result.data) && Object.isFrozen((result.data as typeof data).list));
+  assert.ok(Object.isFrozen(result.diagnostics.warnings) && Object.isFrozen(result.diagnostics.counts));
+  assert.ok(!Object.isFrozen(engine) && !Object.isFrozen(data) && !Object.isFrozen(diagnostics));
+
+  data.list.push(4);
+  diagnostics.warnings.push("later");
+  engine.details.jit = true;
+  assert.deepEqual(result.data, { list: [1, 2, 3] });
+  assert.deepEqual(result.diagnostics, { warnings: ["w"], counts: { n: 1 } });
+  assert.deepEqual(result.engine.details, { jit: false });
+});
+
+test("makeResult refuses a result that is not schema-valid or breaks a status rule", () => {
+  const cases: [ResultEnvelope["engine"], ResultBody, RegExp][] = [
+    [ENGINE, { status: "ok" }, /^Error: contract: not a valid result: status "ok" needs data$/],
+    [ENGINE, { status: "error" }, /^Error: contract: not a valid result: status "error" needs error$/],
+    [ENGINE, { status: "unsupported" }, /not a valid result: status "unsupported" needs a non-empty unsupported list$/],
+    [ENGINE, { status: "unsupported", unsupported: [] }, /not a valid result: \/unsupported \[minItems\]/],
+    [ENGINE, { status: "error", error: { code: "", message: "m" } }, /not a valid result: \/error\/code \[minLength\]/],
+    [ENGINE, { status: "ok", data: { x: NaN } }, /not a valid result: \/data\/x \[finite\]/],
+    [{ ...ENGINE, id: "Fake" }, { status: "pending" }, /not a valid result: \/engine\/id \[pattern\]/],
+    [{ ...ENGINE, fingerprint: "" }, { status: "pending" }, /not a valid result: \/engine\/fingerprint \[minLength\]/],
+    [ENGINE, { status: "done" as "ok", data: {} }, /not a valid result: \/status \[enum\]/],
+  ];
+  for (const [engine, body, message] of cases) assert.throws(() => makeResult(REQUEST_MINIMAL, engine, body), message);
+  assert.throws(
+    () => makeResult({ id: "request-1", caseId: CASE_ID }, ENGINE, { status: "pending" }),
+    /not a valid result: \/requestId \[pattern\]/,
+  );
+  // A value that cannot be copied as data is refused before there is a result to validate.
+  assert.throws(() => makeResult(REQUEST_MINIMAL, ENGINE, { status: "ok", data: { f: () => 1 } }));
+});
+
+test("the engine stamp of an identity is its id, fingerprint and details, without the version", () => {
+  const { identity } = DESCRIPTOR_FULL;
+  assert.deepEqual(engineStamp(identity), {
+    id: identity.id,
+    fingerprint: identity.fingerprint,
+    details: identity.details,
+  });
+  const result = makeResult(REQUEST_MINIMAL, engineStamp(identity), { status: "pending" });
+  assert.deepEqual(result.engine, engineStamp(identity));
 });
 
 // ── Examples hang together ───────────────────────────────────────────────────────────────────────────────────────

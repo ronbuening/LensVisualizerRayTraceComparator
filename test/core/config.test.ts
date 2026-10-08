@@ -24,6 +24,7 @@ test("with no files and no environment the built-in defaults apply", (t) => {
     lvPath: null,
     python: "python3",
     engines: { optiland: { python: null } },
+    engineDefinitions: {},
     cacheDir: join(rootDir, ".cache"),
     runsDir: join(rootDir, "runs"),
   });
@@ -50,6 +51,7 @@ test("each layer overrides the previous one and every value remembers its layer"
     lvPath: "/lv/from-env",
     python: "python-env",
     engines: { optiland: { python: "/optiland/from-local/python" } },
+    engineDefinitions: {},
     cacheDir: "/cache/from-config",
     runsDir: join(rootDir, "runs"),
   });
@@ -122,8 +124,10 @@ test("a higher layer can set a nullable value back to null", (t) => {
 test("an unknown key is an error naming the key and the file", (t) => {
   const cases: [unknown, string][] = [
     [{ lvPaht: "/lv" }, "lvPaht"],
-    [{ engines: { zemax: {} } }, "engines.zemax"],
     [{ engines: { optiland: { pyhton: "python3" } } }, "engines.optiland.pyhton"],
+    // `python` is a key of the optiland entry alone.
+    [{ engines: { zemax: { python: "python3" } } }, "engines.zemax.python"],
+    [{ engines: { zemax: { transport: "stdio", command: ["zemax"], timeout: 5 } } }, "engines.zemax.timeout"],
   ];
   for (const [content, key] of cases) {
     const rootDir = rootWith(t, { [LOCAL_CONFIG_FILE]: content });
@@ -140,6 +144,7 @@ test("a key written with dots is unknown, and the error says to nest it", (t) =>
     [{ "engines.optiland.python": "python3" }, "engines.optiland.python"],
     [{ engines: { "optiland.python": "python3" } }, "engines.optiland.python"],
     [{ "engines.optiland": { python: "python3" } }, "engines.optiland"],
+    [{ engines: { fake: { "options.id": "fake" } } }, "engines.fake.options.id"],
   ];
   for (const [content, key] of cases) {
     const rootDir = rootWith(t, { [CONFIG_FILE]: content });
@@ -196,6 +201,7 @@ test("the committed lvrtc.config.json points at the sibling checkouts", (t) => {
     lvPath: resolve(rootDir, "../../LensVisualizer/LensVisualizer"),
     python: "python3",
     engines: { optiland: { python: resolve(rootDir, "../../optiland/optiland/.venv/bin/python") } },
+    engineDefinitions: {},
     cacheDir: join(rootDir, ".cache"),
     runsDir: join(rootDir, "runs"),
   });
@@ -208,4 +214,196 @@ test("the example local file is a valid local configuration", (t) => {
   const loaded = loadConfig({ rootDir, env: {} });
   assert.equal(loaded.sources.lvPath, LOCAL_CONFIG_FILE);
   assert.equal(loaded.sources["engines.optiland.python"], LOCAL_CONFIG_FILE);
+});
+
+// ── Engine definitions ───────────────────────────────────────────────────────────────────────────────────────────
+
+test("an in-process engine is a module path, resolved against the root, and options that default to none", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        "fake-b": { transport: "in-process", module: "engines/fake.ts", options: { id: "fake-b", bias: 0.5 } },
+        "fake-a": { transport: "in-process", module: "../shared/engine.ts" },
+        absolute: { transport: "in-process", module: "/opt/engines/engine.ts", options: {} },
+      },
+    },
+  });
+  const { config } = loadConfig({ rootDir, env: {} });
+  assert.deepEqual(config.engineDefinitions, {
+    absolute: { transport: "in-process", module: resolve("/opt/engines/engine.ts"), options: {} },
+    "fake-a": { transport: "in-process", module: resolve(rootDir, "..", "shared", "engine.ts"), options: {} },
+    "fake-b": {
+      transport: "in-process",
+      module: join(rootDir, "engines", "fake.ts"),
+      options: { id: "fake-b", bias: 0.5 },
+    },
+  });
+  // Sorted by id, whatever order the file wrote them in.
+  assert.deepEqual(Object.keys(config.engineDefinitions), ["absolute", "fake-a", "fake-b"]);
+  assert.deepEqual(config.engines, { optiland: { python: null } });
+});
+
+test("a stdio engine is a command line, whose first word resolves like an interpreter, and an environment", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        "by-name": { transport: "stdio", command: ["python3", "-m", "lvrtc_fake", "workers/x.py"] },
+        "by-path": {
+          transport: "stdio",
+          command: ["./tools/worker", "--stdio"],
+          options: { id: "by-path", nested: { list: [1, 2] } },
+          env: { PYTHONPATH: "workers/python", EMPTY: "" },
+        },
+      },
+    },
+  });
+  const { config } = loadConfig({ rootDir, env: {} });
+  assert.deepEqual(config.engineDefinitions, {
+    // A bare command name is left for PATH; the other words are passed as written, path or not.
+    "by-name": { transport: "stdio", command: ["python3", "-m", "lvrtc_fake", "workers/x.py"], options: {}, env: {} },
+    "by-path": {
+      transport: "stdio",
+      command: [join(rootDir, "tools", "worker"), "--stdio"],
+      options: { id: "by-path", nested: { list: [1, 2] } },
+      env: { PYTHONPATH: "workers/python", EMPTY: "" },
+    },
+  });
+});
+
+test("engines.optiland.python stays a value of its own, with or without a definition beside it", (t) => {
+  const alone = rootWith(t, { [CONFIG_FILE]: { engines: { optiland: { python: "../optiland/python" } } } });
+  const loadedAlone = loadConfig({ rootDir: alone, env: {} });
+  assert.equal(loadedAlone.config.engines.optiland.python, resolve(alone, "..", "optiland", "python"));
+  assert.deepEqual(loadedAlone.config.engineDefinitions, {});
+
+  // An entry that states nothing is allowed where the id has keys of its own.
+  const empty = rootWith(t, { [CONFIG_FILE]: { engines: { optiland: {} } } });
+  assert.deepEqual(loadConfig({ rootDir: empty, env: {} }).config.engineDefinitions, {});
+  assert.equal(loadConfig({ rootDir: empty, env: {} }).config.engines.optiland.python, null);
+
+  const both = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        optiland: { python: "python3.13", transport: "stdio", command: ["python3.13", "-m", "lvrtc_optiland"] },
+        fake: { transport: "in-process", module: "fake.ts" },
+      },
+    },
+  });
+  const loaded = loadConfig({ rootDir: both, env: { LVRTC_OPTILAND_PYTHON: "/env/python" } });
+  assert.equal(loaded.config.engines.optiland.python, "/env/python");
+  assert.equal(loaded.sources["engines.optiland.python"], "env");
+  assert.deepEqual(loaded.config.engineDefinitions, {
+    fake: { transport: "in-process", module: join(both, "fake.ts"), options: {} },
+    optiland: { transport: "stdio", command: ["python3.13", "-m", "lvrtc_optiland"], options: {}, env: {} },
+  });
+});
+
+test("a higher layer replaces an engine definition whole and adds engines of its own", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        kept: { transport: "in-process", module: "kept.ts", options: { id: "kept" } },
+        replaced: { transport: "stdio", command: ["worker"], options: { id: "replaced" }, env: { A: "1" } },
+      },
+    },
+    [LOCAL_CONFIG_FILE]: {
+      engines: {
+        replaced: { transport: "in-process", module: "local/replaced.ts" },
+        added: { transport: "stdio", command: ["other"] },
+      },
+    },
+  });
+  assert.deepEqual(loadConfig({ rootDir, env: {} }).config.engineDefinitions, {
+    added: { transport: "stdio", command: ["other"], options: {}, env: {} },
+    kept: { transport: "in-process", module: join(rootDir, "kept.ts"), options: { id: "kept" } },
+    // Nothing of the lower layer's definition is left: not its options, not its environment.
+    replaced: { transport: "in-process", module: join(rootDir, "local", "replaced.ts"), options: {} },
+  });
+});
+
+test("an engine id that an object inherits a member for is an engine id like any other", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: { engines: { constructor: { transport: "in-process", module: "a.ts" } } },
+  });
+  assert.deepEqual(Object.entries(loadConfig({ rootDir, env: {} }).config.engineDefinitions), [
+    ["constructor", { transport: "in-process", module: join(rootDir, "a.ts"), options: {} }],
+  ]);
+});
+
+test("an engine definition of the wrong shape is an error naming the key and the file", (t) => {
+  const inProcess = { transport: "in-process", module: "fake.ts" };
+  const stdio = { transport: "stdio", command: ["python3"] };
+  const idRule = 'is not an engine id: a lowercase letter, then lowercase letters, digits or "-"';
+  const transports = '"in-process" or "stdio"';
+  const cases: [unknown, string][] = [
+    [{ Fake: inProcess }, `"engines.Fake" ${idRule}`],
+    [{ fake_engine: inProcess }, `"engines.fake_engine" ${idRule}`],
+    [{ "2fake": inProcess }, `"engines.2fake" ${idRule}`],
+    [{ "": inProcess }, `"engines." ${idRule}`],
+    [{ fake: "fake.ts" }, '"engines.fake" must be an object'],
+    [{ fake: [inProcess] }, '"engines.fake" must be an object'],
+    // An entry that defines nothing, under an id without keys of its own.
+    [{ fake: {} }, `"engines.fake.transport" must be ${transports}`],
+    [{ fake: { module: "fake.ts" } }, `"engines.fake.transport" must be ${transports}`],
+    [{ fake: { ...inProcess, transport: "http" } }, `"engines.fake.transport" must be ${transports}`],
+    [{ fake: { ...inProcess, transport: null } }, `"engines.fake.transport" must be ${transports}`],
+    [{ optiland: { python: "python3", command: ["python3"] } }, `"engines.optiland.transport" must be ${transports}`],
+    [{ fake: { transport: "in-process" } }, '"engines.fake.module" must be a non-empty string'],
+    [{ fake: { ...inProcess, module: "" } }, '"engines.fake.module" must be a non-empty string'],
+    [{ fake: { ...inProcess, module: ["fake.ts"] } }, '"engines.fake.module" must be a non-empty string'],
+    [{ fake: { ...inProcess, options: null } }, '"engines.fake.options" must be an object'],
+    [{ fake: { ...inProcess, options: ["bias"] } }, '"engines.fake.options" must be an object'],
+    [{ fake: { ...stdio, options: "id=fake" } }, '"engines.fake.options" must be an object'],
+    [{ fake: { transport: "stdio" } }, '"engines.fake.command" must be a non-empty list of non-empty strings'],
+    [{ fake: { ...stdio, command: [] } }, '"engines.fake.command" must be a non-empty list of non-empty strings'],
+    [
+      { fake: { ...stdio, command: "python3 -m x" } },
+      '"engines.fake.command" must be a non-empty list of non-empty strings',
+    ],
+    [
+      { fake: { ...stdio, command: ["python3", 3] } },
+      '"engines.fake.command" must be a non-empty list of non-empty strings',
+    ],
+    [
+      { fake: { ...stdio, command: ["python3", ""] } },
+      '"engines.fake.command" must be a non-empty list of non-empty strings',
+    ],
+    [{ fake: { ...stdio, env: ["A=1"] } }, '"engines.fake.env" must be an object'],
+    [{ fake: { ...stdio, env: null } }, '"engines.fake.env" must be an object'],
+    [{ fake: { ...stdio, env: { A: "1", JOBS: 4 } } }, '"engines.fake.env.JOBS" must be a string'],
+    [{ fake: { ...stdio, env: { A: null } } }, '"engines.fake.env.A" must be a string'],
+  ];
+  for (const [engines, problem] of cases) {
+    const rootDir = rootWith(t, { [LOCAL_CONFIG_FILE]: { engines } });
+    assert.throws(
+      () => loadConfig({ rootDir, env: {} }),
+      { message: `${join(rootDir, LOCAL_CONFIG_FILE)}: ${problem}` },
+      problem,
+    );
+  }
+});
+
+test("a member of the other transport is an unknown key, and the error says what the transport has", (t) => {
+  const cases: [unknown, string][] = [
+    [
+      { transport: "in-process", module: "fake.ts", command: ["python3"] },
+      'unknown key "engines.fake.command" (a definition with transport "in-process" has transport, module, options)',
+    ],
+    [
+      { transport: "in-process", module: "fake.ts", env: {} },
+      'unknown key "engines.fake.env" (a definition with transport "in-process" has transport, module, options)',
+    ],
+    [
+      { transport: "stdio", command: ["python3"], module: "fake.ts" },
+      'unknown key "engines.fake.module" (a definition with transport "stdio" has transport, command, options, env)',
+    ],
+  ];
+  for (const [fake, problem] of cases) {
+    const rootDir = rootWith(t, { [CONFIG_FILE]: { engines: { fake } } });
+    assert.throws(
+      () => loadConfig({ rootDir, env: {} }),
+      { message: `${join(rootDir, CONFIG_FILE)}: ${problem}` },
+      problem,
+    );
+  }
 });

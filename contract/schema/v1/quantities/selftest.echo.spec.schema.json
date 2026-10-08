@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:selftest.echo.spec",
+  "title": "selftest.echo spec",
+  "description": "What a selftest.echo request asks for: an array to send back, each element multiplied by scale. The quantity needs no optics, so any engine or test double can be exercised with it.",
+  "type": "object",
+  "properties": {
+    "values": {
+      "description": "The elements to scale; any shape.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Array"
+    },
+    "scale": {
+      "description": "The factor every element that is not a NaN is multiplied by.",
+      "type": "number"
+    }
+  },
+  "required": ["values", "scale"],
+  "additionalProperties": false
+}

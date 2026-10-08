@@ -1,0 +1,13 @@
+{
+  "values": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAA8H8AAAAAAAAAQA==",
+      "sha256": "e9bad23e28cff9e68ad181b35de987909ca2b73d63a6aa3f8cfcc1cfc5e5ed18"
+    }
+  },
+  "sum": null
+}

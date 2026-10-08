@@ -1,16 +1,21 @@
 # Quantity schemas
 
-Contract v1 defines no quantity yet. A later stage adds two files here for each quantity it introduces:
+Two files for each quantity of the contract:
 
 | File | `$id` | Validates |
 |---|---|---|
 | `<quantity>.spec.schema.json` | `urn:lvrtc:contract:v1:quantities:<quantity>.spec` | `spec` of a request for that quantity |
 | `<quantity>.data.schema.json` | `urn:lvrtc:contract:v1:quantities:<quantity>.data` | `data` of an `ok` result for that quantity |
 
-`<quantity>` is the dotted quantity id, for example `rays.trace`. The schema loader reads this directory with the
-rest of `contract/schema/v1`, so a file placed here is compiled, checked against the validator's keyword subset
+`<quantity>` is the dotted quantity id, for example `selftest.echo`. The schema loader reads this directory with
+the rest of `contract/schema/v1`, so a file placed here is compiled, checked against the validator's keyword subset
 and addressable by its `$id` with no code change. `quantitySchemaId` in `src/contract/schemas.ts` builds the id.
 
-Arrays use `urn:lvrtc:contract:v1:common#/$defs/ndarray`. A quantity that needs one element type or a fixed number
-of axes writes the wire form out with the narrower `dtype` and `shape`, as `f8Matrix` in `common.schema.json` does:
-a `$ref` cannot be narrowed in place, because no assertion may sit beside one.
+A quantity is complete when it also has TypeScript types in `src/contract/quantities/`, a module registered in
+`src/quantities/`, fixtures under `contract/fixtures/v1/{valid,invalid}/quantities/<quantity>.<part>/` and an entry
+in `contract/CONTRACT.md`. The tests fail on a schema file here that no registered quantity owns.
+
+Arrays use `urn:lvrtc:contract:v1:common#/$defs/ndarray`, or `f8Array` and `f8Matrix` beside it for float64 of any
+shape and of exactly two axes. A quantity that needs another element type or number of axes writes the wire form
+out with the narrower `dtype` and `shape`, as those two do: a `$ref` cannot be narrowed in place, because no
+assertion may sit beside one.

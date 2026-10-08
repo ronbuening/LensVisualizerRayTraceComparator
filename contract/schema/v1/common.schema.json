@@ -88,6 +88,25 @@
       "required": ["$nd"],
       "additionalProperties": false
     },
+    "f8Array": {
+      "description": "An NdArray of float64 with any number of axes: the ndarray definition with dtype narrowed.",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": { "const": "f8" },
+            "shape": { "type": "array", "items": { "$ref": "#/$defs/index" } },
+            "data": { "$ref": "#/$defs/base64" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
+    },
     "f8Matrix": {
       "description": "An NdArray of float64 with exactly two axes: the ndarray definition with dtype and shape narrowed.",
       "type": "object",

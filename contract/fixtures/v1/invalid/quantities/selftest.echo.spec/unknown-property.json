@@ -1,0 +1,15 @@
+{
+  "values": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        3
+      ],
+      "data": "AAAAAAAA+D8AAAAAAAAAwAAAAAAAANA/AAAAAAAAEEAAAAAAAAAAgAAAAAAAAMA/",
+      "sha256": "0a7d8240b4753e731749b9a3a0546d004d48f4357d18c3d615675899a8ecbd86"
+    }
+  },
+  "scale": -2.5,
+  "offset": 1
+}

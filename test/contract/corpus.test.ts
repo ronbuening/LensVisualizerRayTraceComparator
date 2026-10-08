@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
+import { decodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { caseInvariantProblems, finalizeCase, verifyCaseIdentity } from "../../src/contract/case.ts";
 import type { OpticalCase } from "../../src/contract/case.ts";
 import type { QuantityRequest } from "../../src/contract/request.ts";
@@ -13,9 +14,21 @@ import { resultInvariantProblems } from "../../src/contract/result.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import { expandSuite } from "../../src/contract/runSpec.ts";
 import type { Suite } from "../../src/contract/runSpec.ts";
-import { CONTRACT_KINDS, validateKind } from "../../src/contract/schemas.ts";
+import { CONTRACT_KINDS, contractSchemas, quantitySchemaId, validateKind } from "../../src/contract/schemas.ts";
 import type { ContractKind } from "../../src/contract/schemas.ts";
-import { DESCRIPTOR_INTEGERS_AS_FLOATS, EXTERNAL_VALID, FIXTURE_DIR, INVALID, VALID, fixtureText } from "./corpus.ts";
+import { validate } from "../../src/contract/validate.ts";
+import type { ValidationIssue } from "../../src/contract/validate.ts";
+import { QUANTITIES } from "../../src/quantities/index.ts";
+import {
+  DESCRIPTOR_INTEGERS_AS_FLOATS,
+  EXTERNAL_VALID,
+  FIXTURE_DIR,
+  INVALID,
+  QUANTITY_FIXTURES,
+  SELFTEST_ECHO_EXAMPLES,
+  VALID,
+  fixtureText,
+} from "./corpus.ts";
 
 const CONTRACT_MD = join(FIXTURE_DIR, "..", "..", "CONTRACT.md");
 
@@ -40,11 +53,11 @@ function validOnDisk(kind: ContractKind): [string, unknown][] {
 
 // ── The files are the corpus ─────────────────────────────────────────────────────────────────────────────────────
 
-test("the corpus has one directory per kind, valid and invalid, and no other", () => {
-  const kinds = [...CONTRACT_KINDS].sort();
+test("the corpus has one directory per kind and one for the quantities, valid and invalid, and no other", () => {
+  const directories = [...CONTRACT_KINDS, "quantities"].sort();
   assert.deepEqual(filesIn(), ["invalid", "valid"]);
-  assert.deepEqual(filesIn("valid"), kinds);
-  assert.deepEqual(filesIn("invalid"), kinds);
+  assert.deepEqual(filesIn("valid"), directories);
+  assert.deepEqual(filesIn("invalid"), directories);
 });
 
 test("the valid files are the values of corpus.ts, written as fixtureText writes them", () => {
@@ -123,6 +136,103 @@ test("the invalid fixtures make every one of these keywords the reported one", (
     "type",
     "uniqueItems",
   ]);
+});
+
+// ── Quantities ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+const QUANTITY_SCHEMAS = Object.keys(QUANTITY_FIXTURES).sort();
+
+/** Validates a value against the quantity schema that a fixture directory `<quantity>.<part>` is named after. */
+function validateQuantityPart(schema: string, value: unknown): ValidationIssue[] {
+  const part = schema.endsWith(".spec") ? "spec" : "data";
+  return validate(contractSchemas(), quantitySchemaId(schema.slice(0, -(part.length + 1)), part), value);
+}
+
+test("the quantities directory has the spec and the data of every registered quantity, and no other", () => {
+  const expected = QUANTITIES.list().flatMap(({ id }) => [`${id}.data`, `${id}.spec`]);
+  assert.deepEqual(QUANTITY_SCHEMAS, expected);
+  assert.deepEqual(filesIn("valid", "quantities"), expected);
+  assert.deepEqual(filesIn("invalid", "quantities"), expected);
+});
+
+test("the quantity files are the values of corpus.ts, and every schema has two valid and several invalid ones", () => {
+  for (const schema of QUANTITY_SCHEMAS) {
+    const { valid, invalid } = QUANTITY_FIXTURES[schema];
+    assert.ok(Object.keys(valid).length >= 2, `valid/quantities/${schema}`);
+    assert.ok(Object.keys(invalid).length >= 5, `invalid/quantities/${schema}`);
+    const validFiles = Object.keys(valid).map((name) => `${name}.json`);
+    assert.deepEqual(filesIn("valid", "quantities", schema), validFiles.sort(), schema);
+    for (const [name, value] of Object.entries(valid)) {
+      assert.equal(readText("valid", "quantities", schema, `${name}.json`), fixtureText(value), `${schema}/${name}`);
+    }
+    const invalidFiles = Object.keys(invalid).flatMap((name) => [`${name}.json`, `${name}.expect.json`]);
+    assert.deepEqual(filesIn("invalid", "quantities", schema), invalidFiles.sort(), schema);
+    for (const [name, { value, expect }] of Object.entries(invalid)) {
+      const at = ["invalid", "quantities", schema] as const;
+      assert.equal(readText(...at, `${name}.json`), fixtureText(value), `${schema}/${name}`);
+      assert.equal(readText(...at, `${name}.expect.json`), fixtureText(expect), `${schema}/${name}`);
+    }
+  }
+});
+
+test("every valid quantity fixture passes its schema, and every invalid one fails with the one issue it names", () => {
+  for (const schema of QUANTITY_SCHEMAS) {
+    for (const file of filesIn("valid", "quantities", schema)) {
+      const value = readJson("valid", "quantities", schema, file);
+      assert.deepEqual(validateQuantityPart(schema, value), [], `valid/quantities/${schema}/${file}`);
+    }
+    for (const file of filesIn("invalid", "quantities", schema).filter((name) => name.endsWith(".expect.json"))) {
+      const name = file.slice(0, -".expect.json".length);
+      const expectation = readJson("invalid", "quantities", schema, file) as Record<string, unknown>;
+      assert.deepEqual(Object.keys(expectation), ["path", "keyword"], `${schema}/${file}`);
+      const issues = validateQuantityPart(schema, readJson("invalid", "quantities", schema, `${name}.json`));
+      assert.deepEqual(
+        issues.map(({ path, keyword }) => ({ path, keyword })),
+        [expectation],
+        `invalid/quantities/${schema}/${name}.json`,
+      );
+    }
+  }
+});
+
+test("a quantity module validates as the schema files do", () => {
+  for (const schema of QUANTITY_SCHEMAS) {
+    const part = schema.endsWith(".spec") ? "spec" : "data";
+    const module = QUANTITIES.get(schema.slice(0, -(part.length + 1)));
+    assert.ok(module !== undefined, schema);
+    const check = part === "spec" ? module.validateSpec : module.validateData;
+    for (const value of Object.values(QUANTITY_FIXTURES[schema].valid)) assert.deepEqual(check(value), []);
+    for (const [name, { value, expect }] of Object.entries(QUANTITY_FIXTURES[schema].invalid)) {
+      assert.deepEqual(
+        check(value).map(({ path, keyword }) => ({ path, keyword })),
+        [expect],
+        `${schema}/${name}`,
+      );
+    }
+  }
+});
+
+test("each selftest.echo data fixture answers the spec fixture of the same name: same shape, its own sum", () => {
+  assert.deepEqual(
+    filesIn("valid", "quantities", "selftest.echo.spec"),
+    filesIn("valid", "quantities", "selftest.echo.data"),
+  );
+  for (const [name, { spec, data }] of Object.entries(SELFTEST_ECHO_EXAMPLES)) {
+    const asked = decodeNdArray(spec.values);
+    const answered = decodeNdArray(data.values);
+    assert.deepEqual(answered.shape, asked.shape, name);
+    assert.equal(answered.dtype, "f8", name);
+    // The sum of the answer, as the contract defines it: a plain running sum from 0, null when not finite.
+    let sum = 0;
+    for (const value of answered.values) sum += value;
+    assert.equal(data.sum, Number.isFinite(sum) ? sum : null, name);
+  }
+  // With scale 1 the answer is the question, bit for bit.
+  for (const name of ["special-values", "sum-is-not-compensated"]) {
+    const { spec, data } = SELFTEST_ECHO_EXAMPLES[name];
+    assert.equal(spec.scale, 1, name);
+    assert.deepEqual(data.values, spec.values, name);
+  }
 });
 
 // ── Fixtures whose point is how a number is spelled ──────────────────────────────────────────────────────────────
@@ -217,7 +327,11 @@ test("the worked examples of CONTRACT.md are the fixtures they name", () => {
   for (const [, file, json] of examples) assert.deepEqual(JSON.parse(json), readJson(file), file);
 });
 
-test("CONTRACT.md names every kind", () => {
+test("CONTRACT.md names every kind and every quantity", () => {
   const text = readFileSync(CONTRACT_MD, "utf8");
   for (const kind of CONTRACT_KINDS) assert.ok(text.includes(`\`${kind}\``), kind);
+  for (const { id, version } of QUANTITIES.list()) {
+    assert.ok(text.includes(`### \`${id}\``), id);
+    assert.ok(text.includes(`| \`${id}\` | ${version} |`), `${id} at version ${version}`);
+  }
 });
