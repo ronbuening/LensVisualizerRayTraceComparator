@@ -8,6 +8,7 @@ The tests of ``test_real.py`` need the real one and skip, with the reason, under
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -38,6 +39,29 @@ def read_fixture(*parts: str) -> Any:
 def run_line() -> bytes:
     """The contract's ``run`` message, as one line."""
     return FIXTURE_DIR.joinpath("valid", "protocol-request", "run.json").read_bytes().replace(b"\n", b"") + b"\n"
+
+
+def describe_request(case: dict[str, Any], spec: dict[str, Any] | None = None) -> dict[str, Any]:
+    """A ``system.describe`` request about ``case``. Its id is a made-up one: a worker echoes ids and checks none."""
+    return {
+        "contract": "1.0",
+        "kind": "request",
+        "id": "d" * 64,
+        "caseId": case["id"],
+        "quantity": "system.describe",
+        "spec": {} if spec is None else spec,
+    }
+
+
+def describe_line(case: dict[str, Any], spec: dict[str, Any] | None = None) -> bytes:
+    """The ``run`` message that asks ``system.describe`` of ``case``, as one line."""
+    message = {
+        "contract": "1.0",
+        "id": "r",
+        "method": "run",
+        "params": {"request": describe_request(case, spec), "case": case},
+    }
+    return json.dumps(message, allow_nan=False, separators=(",", ":")).encode("ascii") + b"\n"
 
 
 class TempDirTest(unittest.TestCase):

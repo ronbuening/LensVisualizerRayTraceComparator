@@ -644,10 +644,11 @@ that answers only about cases of its own source, the kind of the source the case
 `feature` and `option`: what about the case, or about the spec, it has no answer for (`system.afocal`,
 `lines.custom-spectrum`, `fields.angles-deg`). Each is listed with the quantity or with the engine.
 
-The `code` of a result's `error` is the engine's to choose. Three are written by the comparator's own engines:
+The `code` of a result's `error` is the engine's to choose. Four are written by the comparator's own engines:
 `engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's or that
-cannot be about the case (a line the case does not have), and `stale-case` for a case that is no longer what its
-source gives ([the engine `lv`](#the-engine-lv)).
+cannot be about the case (a line the case does not have), `stale-case` for a case that is no longer what its
+source gives ([the engine `lv`](#the-engine-lv)), and `build-mismatch` for a case that an engine's own model did
+not come to hold as the case states it ([the engine `optiland`](#the-engine-optiland)).
 
 **Invariants checked in code** (`resultInvariantProblems`): status `ok` needs `data`; status `unsupported` needs a
 non-empty `unsupported` list; status `error` needs `error`.
@@ -659,7 +660,7 @@ non-empty `unsupported` list; status `error` needs `error`.
 | `contract` | object | `min` and `max`: the range of contract versions the engine speaks, both included |
 | `identity` | object | `id`, `version`, `fingerprint`, `adapterRevision?`, `details` |
 | `capabilities.features` | object | `supported`, a list of feature flags, and `limits`, a map from limit to the largest value handled |
-| `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1 |
+| `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1. An engine that implements another version than the comparator's is not asked for that quantity: the job is `unsupported`, with an item of the code `quantity` whose message states both versions |
 | `capabilities.deterministic` | boolean | whether equal requests give bit-equal results |
 | `capabilities.maxConcurrency` | integer ≥ 1 | how many requests the engine works on at once |
 
@@ -693,8 +694,49 @@ the descriptor's `details` also carry:
 | `jit` | whether numba's JIT is on; the worker leaves it on |
 
 `details` carry beside them `sourceFiles` (how many files the hash covers), `distVersion` (the distribution's
-version string, which is also the descriptor's `version`), `backend` (`numpy`) and `precision` (`float64`): the
-worker computes in nothing else and refuses `hello` when optiland is in another state.
+version string without the day of the install, which is also the descriptor's `version`), `backend` (`numpy`) and
+`precision` (`float64`): the worker computes in nothing else and refuses `hello` when optiland is in another state.
+The day is left off wherever the engine states its version: an ending `.dYYYYMMDD`, as in
+`0.6.2.post117+g4e893f53.d20261007`, is removed, so that a manifest and a report that name the engine hold no date,
+and two installs of one commit say the same of themselves.
+
+### The engine `optiland`
+
+`optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
+each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
+declares every feature flag and no limit, and offers `system.describe`.
+
+| The case | `optiland` answers |
+|---|---|
+| is built by optiland as it is stated | the quantity, from the optics it built |
+| comes back from optiland as another system | status `error`, code `build-mismatch` |
+
+- **Verified before it is answered.** Every value handed to optiland is read back from optiland's own objects and
+  must be the number of the case: each vertex, in the geometry's frame and on the paraxial axis; the class of each
+  geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
+  intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
+  ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface; the object
+  and image planes; the stop diameter; the wavelength. Then the sag optiland evaluates on each surface, at a
+  quarter, a half, three quarters and the whole of its nominal semi-diameter, must be the contract's sag of the
+  case's surface within 1e-9 on the scale of the sag's rounding (the scale of `sag.maxScaled`, below). The first
+  thing that differs is the error's message, with the surface, the field and both values. Nothing is answered
+  about such an optic: a translation error is an error of the engine, never a difference between engines.
+- **`system.describe`** is written from the optics, by a function that is not given the case. `vertexZ` and
+  `imageZ` are the `z` of each surface's coordinate system; `curvature` is one division, 1 over the radius the
+  geometry holds, which is 0 for an infinite one; `conic` is the geometry's conic constant, and 0 for a plane,
+  which has none; `terms` are the coefficients of an asphere read by optiland's rule, an entry of an even asphere
+  being the term of twice its place, those that are not 0; `clipRadius` and `innerClipRadius` are the two radii of
+  the surface's aperture; `stopSemiDiameter` is half the stop diameter the system's aperture states;
+  `indexAfterSurface` has a row from each line's optic, the index of each surface's material at that optic's
+  wavelength; `sagRadii` are the fractions of the semi-aperture optiland holds for each surface, which the builder
+  set to the nominal semi-diameter; and `sag` is the geometry's own sag at those heights. The method is named
+  `optic-readback`, and its `params` say how the optic was made: `asphereTolerance`, `asphereMaxIterations` and
+  `positioning`, which is `absolute-z`.
+- **Where a surface stands** is the case's `z`, given to optiland as a position. A thickness is not given: optiland
+  would place the surface at a sum of thicknesses, which is the case's `z` within the 1e-9 mm the invariants of a
+  case allow and not always to the bit, and no thickness states an image plane that was shifted.
+- **What it does not answer** is said in two ways. A quantity it does not offer, and a contract version it does
+  not speak, are `unsupported`, by the items of negotiation. A spec that is not the quantity's is `bad-spec`.
 
 ### `protocol-request` and `protocol-response`
 
@@ -876,7 +918,8 @@ A quantity is what a request asks for, identified by a dotted id (`system.descri
 [`schema/v1/quantities/`](schema/v1/quantities/README.md): `<id>.spec.schema.json` for the `spec` of a request and
 `<id>.data.schema.json` for the `data` of a result of status `ok`. The definition of a quantity, which is its two
 schemas and what this document says they mean, has a version: an integer from 1 that rises when the definition
-changes incompatibly. An engine states the version it implements under `capabilities.quantities`.
+changes incompatibly. An engine states the version it implements under `capabilities.quantities`, and is asked for
+a quantity only when that is the version of the table below (`negotiate`, `src/core/negotiate.ts`).
 
 The schemas of `request` and `result` accept any object as `spec` and `data`. Whoever knows the quantity validates
 them against its own schemas; in TypeScript that is the quantity's module in `src/quantities/`, with `validateSpec`
@@ -885,7 +928,7 @@ and `validateData`.
 | Quantity | Version | TypeScript | Is |
 |---|---|---|---|
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
-| `system.describe` | 1 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
+| `system.describe` | 2 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
@@ -962,6 +1005,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
 | `curvature` | NdArray | float64 `[S]`: the base curvature, `1/radius` as one division; 0 for a plane and for a flat base |
 | `conic` | NdArray | float64 `[S]`: the conic constant the engine holds; 0 for a plane |
 | `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface |
+| `innerClipRadius` | NdArray | float64 `[S]`: the radial height below which the engine stops a ray at the surface, the radius of a central obstruction; 0 for a surface without one |
 | `indexAfterSurface` | NdArray | float64 `[L, S]`: the index of the medium that follows each surface, per line |
 | `sagRadii` | NdArray | float64 `[S, K]`: the heights the sag is given at, each fraction times the surface's `nominalSemiDiameter` as one multiplication |
 | `sag` | NdArray | float64 `[S, K]`: the sag at those heights as the engine itself evaluates it; NaN where the surface has no real sag |
@@ -971,6 +1015,13 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   the stop setting of the case, which is the stop surface's own `aperture.semiDiameter`; it is never the limit of the
   stop wide open, nor `stopSemiDiameter` itself. `sagRadii` of the stop surface scale with its
   `nominalSemiDiameter`, which a case source writes as the stop setting.
+- **`innerClipRadius`** is the engine's own limit, like `clipRadius`: a ray at exactly that height passes, and one
+  below it is stopped. It was added in version 2 of the quantity, with the first engine beside `ref` that builds an
+  annular aperture: a central obstruction an engine left out, or built another size, is found here and not in the
+  rays it lets through. `lv` states the inner semi-diameter LensVisualizer's `evaluateAperture` reports, which is
+  the case's `innerSemiDiameter`; LensVisualizer itself lets a ray pass down to `max(1e-9, 1e-12 × that radius)` mm
+  below it, a tolerance the case carries for the outer limit, in `semiDiameter`, and not for the inner one. A ray
+  that close to either limit is in the rim band of R2, and no lens LensVisualizer exports has an annular aperture.
 - **`terms`** lists only terms whose coefficient is not 0, in ascending order of power, each power once. A
   coefficient of 0 adds nothing to a surface, and an engine that stores one cannot tell it from none.
 - **Zeros.** −0 is written as 0, in the arrays as in the numbers: a case's identity does not tell the two apart.
@@ -978,7 +1029,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   `1 − (1 + conic) c² r²` is negative.
 
 **Invariants checked in code** (`src/quantities/systemDescribe.ts`): a spec's fractions ascend; in the data,
-`stopIndex` is below S, the four per-surface arrays have S elements, `indexAfterSurface` has S columns and at
+`stopIndex` is below S, the five per-surface arrays have S elements, `indexAfterSurface` has S columns and at
 least one row, `sagRadii` has S rows and at least one column and `sag` its shape, and `terms` has S lists, each
 ascending in power.
 
@@ -990,7 +1041,7 @@ such element by `field`, with its `surface` and, where the field has them, its `
 |---|---|---|
 | `layout.mismatches` | elements | `surfaceCount`, `vertexZ`, `imageZ` |
 | `shape.mismatches` | elements | `curvature`, `conic`, and `terms`: a surface counts once when its two lists are not the same list |
-| `aperture.mismatches` | elements | `stopIndex`, `stopSemiDiameter`, `clipRadius`, `sagRadii` |
+| `aperture.mismatches` | elements | `stopIndex`, `stopSemiDiameter`, `clipRadius`, `innerClipRadius`, `sagRadii` |
 | `index.mismatches` | elements | `indexAfterSurface` |
 
 Two are of the sag, each with the `surface` and the `sample` (the index of the radius) of its largest value. A sag

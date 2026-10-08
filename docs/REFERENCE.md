@@ -113,7 +113,8 @@ Python, add `--engines fake-a,fake-b,fake-none`.
   of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`), `r1`
   (`paraxial.first-order`), and `r2` and `r3` (`rays.trace`), which ask every engine to trace the run's ray sets.
   The two ask the same requests, so an engine traces a set once and the second rung finds the answer in the
-  store. An engine that does not offer a rung's quantity is recorded as `unsupported` for it without being asked.
+  store. An engine that does not offer a rung's quantity, or implements another version of its definition than
+  the comparator's, is recorded as `unsupported` for it without being asked.
 - **Ray sets.** A run of a rung that traces rays has its rays generated first, by the source of its case, for the
   run's `fields` (image-height fractions 0, 0.5 and 1 unless it states others) and `sampling.bundleGrid` (32), at
   every line of the case: LensVisualizer's own launch rays for a LensVisualizer lens, probe lattices over the first
@@ -163,7 +164,7 @@ the kernels of the comparator they run on. It declares every feature of a case, 
 
 | Rung | Quantity | What is asked of every engine |
 |---|---|---|
-| `r0` | `system.describe` | the system it built, re-read from its own model: vertices, curvatures, conic constants, polynomial terms, clip radii, the index after every surface at every line, the stop and the image plane, and the sag of every surface at nine radii |
+| `r0` | `system.describe` | the system it built, re-read from its own model: vertices, curvatures, conic constants, polynomial terms, clip radii and the inner radii of annular apertures, the index after every surface at every line, the stop and the image plane, and the sag of every surface at nine radii |
 | `r1` | `paraxial.first-order` | per line: focal length, focal and principal points, back focus from the last lens vertex, and both pupils as the paraxial images of the stop, in position and in radius |
 
 - **R0** is the echo: what an engine copies from the case must come back as the same numbers, with no tolerance.
@@ -572,8 +573,83 @@ The comparator supplies the rest (`src/engines/optiland/definition.ts`): the com
 `<python> -m lvrtc_optiland`, `PYTHONPATH` set to `workers/python` of this repository, so that nothing is installed,
 and where the worker's caches go.
 
-**In this stage the engine offers no quantity.** It starts, says who it is and passes the conformance kit; a run
-on it is answered `unsupported` for every rung. The rungs it answers arrive with the stages that follow.
+**It answers `system.describe`, which is rung R0.** A run on it is answered `unsupported` for every other rung;
+those arrive with the stages that follow.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0
+```
+
+Builds every case of the suite in optiland and asks all three engines for the system they built; `lvrtc compare
+benchmark` then judges each pair of engines.
+
+**The builder** (`workers/python/lvrtc_optiland/build.py`) makes one optiland `Optic` for each spectral line of a
+case, because optiland's constant-index material is the same at every wavelength and its first-order data is that
+of its primary wavelength. It uses only what optiland has not deprecated; a deprecated call is an error.
+
+| Of the case | Becomes, in optiland |
+|---|---|
+| the object | the object surface at `z = -inf`, or at the object plane of a finite object |
+| a surface's vertex | `z=` the case's `z`, as it is: nothing is added up from thicknesses |
+| `plane` | a `standard` surface of infinite radius, which optiland makes a `Plane` |
+| `conic` | a `standard` surface with the radius and the conic constant |
+| `asphere` | `even_asphere` when every power it states is even, else `odd_asphere`, with the coefficient list laid out to the highest power and 0 where the case has no term; `radius=inf` on a flat base; `tol=1e-12`, `max_iter=100` |
+| the index after a surface, at the line | `IdealMaterial(n=...)` |
+| `aperture.semiDiameter`, `innerSemiDiameter` | `RadialAperture(r_max=..., r_min=...)` on every surface, the stop like any other |
+| `aperture.nominalSemiDiameter` | the surface's `semi_aperture`, which clips nothing: the heights of the sag are fractions of it |
+| `stopIndex`, `conditions.stopSemiDiameter` | `is_stop=True`, and `set_aperture("float_by_stop_size", 2 x radius)` |
+| `conditions.imageZ` | the image surface at that `z`, flat, without an aperture |
+| the line | the optic's only wavelength, in µm, and primary |
+
+**Nothing is answered about an optic that is not the case.** After building, the worker reads every one of those
+values back from optiland's own objects and holds it to the case (`verify_optic`): the vertex in the geometry's
+frame and on optiland's paraxial axis, the class of the geometry, its radius, conic constant and terms, the Newton
+settings of an asphere, the class of the aperture and its two radii, the semi-aperture, the stop flag, that the
+surface refracts by optiland's ordinary model (a plane that optiland was given as a thin lens is a `Plane` too, and
+gave a system of the every-feature case a focal length of 19 mm for 27 mm), without a coating, the index, the
+object and image planes, the stop diameter and the wavelength. Then it holds the sag optiland evaluates, at
+four heights of each surface, to the contract's sag of the case's surface within 1e-9 on the scale of the sag's
+rounding: the one check that does not depend on how a coefficient list is laid out. What differs is a result of
+status `error` with the code `build-mismatch`, which names the surface, the field and both values:
+
+```
+surface 3 (4): tol is 1e-06 in the optic optiland built and 1e-12 in the case (line 0, 587.5618 nm)
+```
+
+So a keyword optiland's factory dropped, a coefficient list one place off and a diameter taken for a radius are
+found before a ray is traced, each by a test that makes the mistake on purpose
+(`workers/python/tests/optiland/test_build.py`). Why each keyword is what it is, is in
+[docs/gotchas.md](gotchas.md#optiland).
+
+**`system.describe` is written from the optics alone**: the function that writes it is not given the case.
+`curvature` is one division, 1 over the radius optiland holds, which is 0 for its infinite one; `conic` is the
+geometry's `k`, and 0 for a plane, which has none; `terms` are the coefficients read by optiland's own rule;
+`clipRadius` and `innerClipRadius` are the aperture's two radii; `stopSemiDiameter` is the stop diameter halved;
+the index table has a row from each line's optic; and `sag` is `geometry.sag` at the fractions of the
+semi-aperture, with -0 written as 0 and no sag as a NaN.
+
+**Features.** The engine declares every feature flag of the contract and no limit: an annular aperture, several
+lines, a finite object, even and odd aspheres, a flat base and a conic constant. Each has a test on the real
+optiland. It does not yet answer first-order data: optiland's own does not see a term of power 2
+([docs/gotchas.md](gotchas.md#optilands-first-order-data-does-not-see-a-term-of-power-2)), which Stage 2.3 has to
+refuse.
+
+Measured at optiland `4e893f53` and LensVisualizer `b7deb221` (engine closure `46b028bc`), with the command above
+and `lvrtc compare`, and again at `1bf669ee` (closure `66027121`) with every figure the same:
+
+| Suite | R0, pairs | optiland against `ref`: largest sag difference | optiland against `lv` |
+|---|---|---|---|
+| `benchmark`, 24 runs | 120 `PASS` (72 pairs of two engines) | 4.5e-16 scaled, `sony-fe-20mm-f18-g-ref` surface 0; 1.8e-15 mm, `canon-ef-135-f2l-usm-ref` surface 8 | 3.9e-16 scaled, `nikon-z-24-70f4s-wide-ref` surface 10; 3.6e-15 mm, `sony-fe-400mm-f28-gm-oss-ref` surface 13 |
+| `features`, 18 runs | 90 `PASS` (54 pairs of two engines) | 3.3e-16 scaled, `asphere-a20-ref` surface 5; 4.4e-15 mm, `stop-inside-element-ref` surface 6 | 2.3e-16 scaled, `fixed-iris-zoom-ref-wide` surface 3; 4.4e-15 mm, `stop-inside-element-ref` surface 6 |
+| the contract's three cases, against `ref` | 6 `PASS` (3 pairs of two engines) | 2.9e-16 scaled, `double-gauss` surface 10; 8.9e-16 mm, `double-gauss` surface 0 | no case of LensVisualizer |
+
+Not one vertex, curvature, conic constant, term, clip radius, inner clip radius, sag radius or index differs in
+any pair, and optiland declares nothing unsupported. Over the whole catalog, outside the tests (2267 cases: every
+prime, every zoom at both ends, the reference line and the photopic lines; 53 378 surfaces, up to 63 in a lens
+and powers up to 20), every case passes R0 against `ref`: the largest sag difference is 6.0e-16 scaled
+(`tamron-35-150mm-f2-28-di-iii-vxd-a058`, wide end, surface 28) and 1.3e-10 mm in plain terms, on the surface of
+`russar-22-70f8` that ends just short of a hemisphere. A case takes optiland 12 ms: building its optics, reading
+them back and describing them.
 
 **Nothing is written into the optiland checkout or its environment.** Importing optiland imports numba,
 matplotlib and vtk, each of which writes somewhere unless told where, so the worker's environment says where,
@@ -583,7 +659,8 @@ under the configuration's `cacheDir` (`.cache/optiland`, gitignored):
 |---|---|
 | `NUMBA_CACHE_DIR` | numba caches the machine code of optiland's `@njit(cache=True)` functions beside their sources otherwise, and already on import it creates and removes a file in each such `__pycache__` to see whether it may |
 | `MPLCONFIGDIR`, `MPLBACKEND=Agg` | matplotlib's font cache, and no display |
-| `PYTHONDONTWRITEBYTECODE=1`, `PYTHONPYCACHEPREFIX` | no bytecode is written, and none could land beside a source |
+| `PYTHONPYCACHEPREFIX` | bytecode is cached there: with a prefix Python reads and writes no `__pycache__` beside a source |
+| `PYTHONDONTWRITEBYTECODE=1` | the interpreter writes no bytecode while it starts; the worker turns the writing on itself once it has checked the prefix, below |
 
 The worker sets the same from inside before it imports anything of optiland (`lvrtc_optiland/hygiene.py`), so one
 started by hand is as careful. A cache that would lie inside the directory optiland is imported from, or inside
@@ -594,9 +671,17 @@ every such case it refuses `hello` with the reason. The JIT stays on: optiland i
 standard output is reserved for replies at the level of the file descriptor before optiland is imported, so a
 warning of numpy or a `print` in a library is a line of the log.
 
-**Starting takes time.** `hello` is answered once optiland is imported: about 6 s on this machine with warm
-caches, and about 17 s the first time, when matplotlib builds its font cache. Half of the 6 s is the price of
-`PYTHONPYCACHEPREFIX` with `PYTHONDONTWRITEBYTECODE`: every module is compiled from its source on every start. The
+**Bytecode is cached, under the cache directory and nowhere else.** The stdio transport starts every worker with
+`PYTHONDONTWRITEBYTECODE=1`, and a definition can replace a variable of the transport but not remove one. So the
+switch is the worker's: `hygiene.prepare` first refuses a prefix that lies inside optiland, then names it
+(`sys.pycache_prefix`), and only then lets this interpreter write (`sys.dont_write_bytecode = False`). What is
+imported after that, which is numpy, scipy, numba, matplotlib, vtk and optiland, is compiled once and read from
+the cache on every later start; what was imported before, the worker's own first modules, is written nowhere. A
+process the worker starts is still told not to write.
+
+**Starting takes time.** `hello` is answered once optiland is imported: about 3 s on this machine with warm
+caches, and about 18 s the first time, when matplotlib builds its font cache and 2900 modules are compiled and
+their bytecode written. Until Stage 2.2 no bytecode was kept and a warm start took 6 s, half of it compiling. The
 engine's `hello` may take three minutes (`OPTILAND_TIMEOUTS`) where every other engine's may take 30 s.
 
 **What the JIT costs and saves**, measured at optiland `4e893f53` on a synthetic singlet of two spherical surfaces
@@ -615,9 +700,10 @@ takes 17 ms with the JIT on and 31 ms with it off. The landing points are the sa
 
 **Who it is.** The fingerprint is a hash over the commit and dirty flag of the optiland checkout, a hash of the
 package's Python sources, the versions of Python, numpy, scipy and numba, and whether the JIT is on; the
-distribution's version string is no part of it, because it ends in the day of the install. The worker's own
-sources are not the engine: they are the adapter revision, a hash of `workers/python/lvrtc_optiland` and the kit,
-and the result store keys an answer by both ([contract](../contract/CONTRACT.md#engine-descriptor)).
+distribution's version string is no part of it, because it ends in the day of the install; the version the engine
+states is that string without the day (`0.6.2.post117+g4e893f53`), so that no manifest or report holds a date. The
+worker's own sources are not the engine: they are the adapter revision, a hash of `workers/python/lvrtc_optiland`
+and the kit, and the result store keys an answer by both ([contract](../contract/CONTRACT.md#engine-descriptor)).
 `lvrtc doctor` prints all of it, and `python -m lvrtc_optiland --identity` prints the identity as one line of JSON.
 
 ```bash
@@ -625,11 +711,14 @@ npm run test:optiland
 ```
 
 Runs the tests against the real optiland (`test/integration/optiland`), with the interpreter of the configuration:
-the Python tests of the worker (`workers/python/tests/optiland`, none skipped), the conformance kit, a run that is
-answered `unsupported`, `lvrtc doctor`, and a recursive snapshot of the optiland checkout and its environment
-(path, size and modification time of every file and directory) taken before the first test and after a cold start
-on an empty cache directory with the JIT compiling: nothing may differ. Each test skips with the reason when
-optiland is not configured or cannot be imported.
+the Python tests of the worker (`workers/python/tests/optiland`, none skipped: the builder on every shape and
+mapping, and the mistakes it must catch), the conformance kit, a run in which R0 is answered and every other rung
+`unsupported`, `lvrtc doctor`, and a recursive snapshot of the optiland checkout and its environment (path, size
+and modification time of every file and directory) taken before the first test and after a cold start on an empty
+cache directory, with the JIT compiling and the bytecode being written: nothing may differ. `r0.test.ts` runs rung
+R0 through the commands: the contract's cases against `ref`, which needs optiland only, and the benchmark and
+feature suites on `lv`, `ref` and `optiland`, which need LensVisualizer too. Each test skips with the reason when
+optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
 
 ## Workers over stdio
 

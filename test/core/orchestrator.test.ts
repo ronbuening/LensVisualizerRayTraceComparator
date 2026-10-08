@@ -479,6 +479,39 @@ test("negotiation is per case: an engine is asked about the cases it can take, a
   assert.equal(storeFiles(runsDir).length, 1);
 });
 
+test("an engine that implements another version of a quantity's definition is not asked for it", async (t) => {
+  const runsDir = tempDir(t);
+  // A fake that says it implements version 7 of the conformance quantity, of which the comparator has version 1.
+  const other: EngineMaker = async (id) => {
+    const adapter = await fakeEngine()(id);
+    return {
+      id,
+      describe: async () => {
+        const descriptor = await adapter.describe();
+        const quantities = { [SELFTEST_ECHO]: { version: 7 } };
+        return { ...descriptor, capabilities: { ...descriptor.capabilities, quantities } };
+      },
+      run: (request, opticalCase) => adapter.run(request, opticalCase),
+      close: () => adapter.close(),
+    };
+  };
+  const suite = suiteOf("versions", [{ name: "singlet", opticalCase: SINGLET }]);
+  const engines = watchedRegistry({ current: fakeEngine(), other });
+  const result = await runSuite({ suite, registry: engines.registry, runsDir });
+
+  assert.deepEqual(rows(result), [
+    "singlet selftest current ok computed",
+    "singlet selftest other unsupported negotiated",
+  ]);
+  assert.deepEqual(engines.ran, ["current"], "the engine of another version was not asked");
+  assert.deepEqual(result.manifest.jobs[1].unsupported, [{ code: "quantity", item: SELFTEST_ECHO }]);
+  assert.equal(
+    result.outcomes[1].detail,
+    `the engine implements version 7 of ${SELFTEST_ECHO}; the comparator asks for version 1`,
+  );
+  assert.equal(storeFiles(runsDir).length, 1);
+});
+
 test("an engine that answers unsupported when asked is an answer, and is stored", async (t) => {
   const runsDir = tempDir(t);
   const unsupported = [{ code: "option", item: "rays", message: "the ray count is fixed" }] as const;

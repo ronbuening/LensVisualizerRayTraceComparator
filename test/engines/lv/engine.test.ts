@@ -228,6 +228,8 @@ test("system.describe is the prepared state read back: vertices, shapes, clip ra
     f8(data.clipRadius),
     [9, 9, 3, 7, 7, 12, 12].map((sd) => sd + 1e-9),
   );
+  // The fake zoom has no central obstruction: the inner semi-diameter its evaluateAperture reports is 0 everywhere.
+  assert.deepEqual(f8(data.innerClipRadius), [0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual(f8(data.sagRadii), [0, 4.5, 9, 0, 4.5, 9, 0, 1.5, 3, 0, 3.5, 7, 0, 3.5, 7, 0, 6, 12, 0, 6, 12]);
   assert.deepEqual(data.indexAfterSurface, opticalCase.conditions.indexAfterSurface);
   assert.deepEqual(data.indexAfterSurface.$nd.shape, [5, 7]);
@@ -274,6 +276,44 @@ test("the sag is NaN beyond the height at which LensVisualizer says a surface en
   assert.equal(state.surfaces[0].profile.finiteRadiusLimit(), 5.5);
   // The reference engine has no sag there either, so the two still agree.
   assert.equal(await verdictOf("r0", engine, refEngine(t), opticalCase), "PASS");
+});
+
+test("a central obstruction of the state is the inner clip radius of the echo, and R0 holds ref to it", async (t) => {
+  // The fake tree's state has no inner semi-diameter; this copy of it gives one to the second surface of every lens,
+  // as LensVisualizer's state has for an annular aperture.
+  const lv = variantOf(freshLv(t), "annular", {
+    "src/optics/compat.ts": (text) => text.replace("innerSd: null,", "innerSd: index === 1 ? 2.5 : null,"),
+  });
+  const binding = await bind(t, lv);
+  const opticalCase = await exported(binding, "acme-zoom-24-48");
+  assert.deepEqual(
+    opticalCase.system.surfaces.map((surface) => surface.aperture.innerSemiDiameter),
+    [0, 2.5, 0, 0, 0, 0, 0],
+  );
+  assert.ok(opticalCase.features.includes("aperture.annular"));
+  const engine = engineOn(t, binding);
+  const data = dataOf<SystemDescribeData>(await ask(engine, opticalCase, SYSTEM_DESCRIBE), SYSTEM_DESCRIBE);
+  // What LensVisualizer's evaluateAperture reports for each surface, and not what the case states.
+  assert.deepEqual(f8(data.innerClipRadius), [0, 2.5, 0, 0, 0, 0, 0]);
+  assert.equal(await verdictOf("r0", engine, refEngine(t), opticalCase), "PASS");
+  // An engine that built the lens without the obstruction, as the case without it stands for, fails R0 on it.
+  const plain = {
+    ...opticalCase,
+    system: {
+      ...opticalCase.system,
+      surfaces: opticalCase.system.surfaces.map((surface) => ({
+        ...surface,
+        aperture: { ...surface.aperture, innerSemiDiameter: 0 },
+      })),
+    },
+  };
+  const theirs = await ask(refEngine(t), plain as OpticalCase, SYSTEM_DESCRIBE);
+  const outcome = COMPARATORS.get(SYSTEM_DESCRIBE, "r0")?.compare(data, theirs.data as SystemDescribeData);
+  assert.ok(outcome?.comparable);
+  assert.deepEqual(
+    outcome.metrics.find((metric) => metric.name === "aperture.mismatches"),
+    { name: "aperture.mismatches", value: 1, where: { field: "innerClipRadius", surface: 1 } },
+  );
 });
 
 // ── paraxial.first-order ─────────────────────────────────────────────────────────────────────────────────────────

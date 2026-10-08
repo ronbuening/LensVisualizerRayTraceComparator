@@ -988,6 +988,7 @@ export const DESCRIBE_DATA_SINGLET = {
   curvature: encodeNdArray(Float64Array.of(1 / 50, 1 / -50)),
   conic: encodeNdArray(Float64Array.of(0, 0)),
   clipRadius: encodeNdArray(Float64Array.of(10, 10)),
+  innerClipRadius: encodeNdArray(Float64Array.of(0, 0)),
   indexAfterSurface: encodeNdArray(Float64Array.of(SINGLET_INDEX, 1), [1, 2]),
   sagRadii: encodeNdArray(Float64Array.of(0, 5, 10, 0, 5, 10), [2, 3]),
   sag: encodeNdArray(
@@ -998,8 +999,9 @@ export const DESCRIBE_DATA_SINGLET = {
 } satisfies SystemDescribeData;
 
 /**
- * A format example with everything the singlet lacks: two lines, a paraboloid with two terms, and a sphere of
- * radius -6 whose nominal semi-diameter of 8 reaches past its equator, where it has no sag: a NaN.
+ * A format example with everything the singlet lacks: two lines, a paraboloid with two terms and a central
+ * obstruction of 1.5 mm, and a sphere of radius -6 whose nominal semi-diameter of 8 reaches past its equator, where
+ * it has no sag: a NaN.
  */
 export const DESCRIBE_DATA_ASPHERE = {
   surfaceCount: 2,
@@ -1010,6 +1012,7 @@ export const DESCRIBE_DATA_ASPHERE = {
   curvature: encodeNdArray(Float64Array.of(0.025, 1 / -6)),
   conic: encodeNdArray(Float64Array.of(-1, 0)),
   clipRadius: encodeNdArray(Float64Array.of(12.000000001, 2.250000001)),
+  innerClipRadius: encodeNdArray(Float64Array.of(1.5, 0)),
   indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1.5224, 1), [2, 2]),
   sagRadii: encodeNdArray(Float64Array.of(6, 12, 4, 8), [2, 2]),
   // A paraboloid's sag is c r^2 / 2; the terms add 1e-6 r^4 - 2e-9 r^6.
@@ -1606,6 +1609,8 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
     invalid: {
       "missing-terms": fault(DESCRIBE_DATA_SINGLET, "/terms", REMOVE, "required", ""),
       "missing-sag": fault(DESCRIBE_DATA_SINGLET, "/sag", REMOVE, "required", ""),
+      "missing-inner-clip-radius": fault(DESCRIBE_DATA_SINGLET, "/innerClipRadius", REMOVE, "required", ""),
+      "inner-clip-radius-as-number": fault(DESCRIBE_DATA_SINGLET, "/innerClipRadius", 0, "type"),
       "surface-count-zero": fault(DESCRIBE_DATA_SINGLET, "/surfaceCount", 0, "minimum"),
       "stop-index-negative": fault(DESCRIBE_DATA_SINGLET, "/stopIndex", -1, "minimum"),
       "stop-semi-diameter-zero": fault(DESCRIBE_DATA_SINGLET, "/stopSemiDiameter", 0, "exclusiveMinimum"),

@@ -13,18 +13,23 @@ import { isContractInRange } from "../contract/version.ts";
  *
  * 1. `contract`: a contract version the case or the request is written to that lies outside the range the engine
  *    speaks; one item per distinct version, the case's first;
- * 2. `quantity`: the request's quantity, when the engine does not offer it;
+ * 2. `quantity`: the request's quantity, when the engine does not offer it, or implements another version of its
+ *    definition than `definitionVersion`, the comparator's own, where one is given: an answer to another definition
+ *    is not an answer to what was asked, whatever it holds;
  * 3. `feature`: each feature flag of the case that the engine does not list as supported, in the case's order;
  * 4. `feature`: each numeric limit, in `FEATURE_LIMITS` order, for which the case needs more than the engine
  *    declares. The message names the limit and both numbers. A limit the engine leaves out is unbounded.
  *
- * The flags are the ones the case states; the limits are derived from its system and conditions. All three
- * arguments are expected to be schema-valid.
+ * The flags are the ones the case states; the limits are derived from its system and conditions. The first three
+ * arguments are expected to be schema-valid. `definitionVersion` is the version of the quantity's definition that
+ * whoever asks holds the answer to (`QuantityModule.version`); an engine that negotiates for itself, against its
+ * own descriptor, gives none.
  */
 export function negotiate(
   opticalCase: OpticalCase,
   request: QuantityRequest,
   descriptor: EngineDescriptor,
+  definitionVersion?: number,
 ): UnsupportedItem[] {
   const items: UnsupportedItem[] = [];
   const { features, quantities } = descriptor.capabilities;
@@ -43,6 +48,10 @@ export function negotiate(
 
   if (!Object.hasOwn(quantities, request.quantity)) {
     items.push({ code: "quantity", item: request.quantity, message: `the engine does not offer ${request.quantity}` });
+  } else if (definitionVersion !== undefined && quantities[request.quantity].version !== definitionVersion) {
+    const implemented = quantities[request.quantity].version;
+    const message = `the engine implements version ${implemented} of ${request.quantity}; the comparator asks for version ${definitionVersion}`;
+    items.push({ code: "quantity", item: request.quantity, message });
   }
 
   for (const flag of opticalCase.features) {

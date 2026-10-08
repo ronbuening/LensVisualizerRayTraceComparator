@@ -15,6 +15,13 @@ The comparator's engine definition sets all of these in the worker's environment
 with a variable missing, before anything of optiland is imported; ``check`` holds the loaded modules to them
 afterwards. The JIT stays on: a variable that would turn it off is removed.
 
+Bytecode is cached, under the worker's cache directory and nowhere else. The worker is started with
+``PYTHONDONTWRITEBYTECODE`` set, so that the interpreter writes nothing while it starts, before anyone has said
+where. ``prepare`` then names the place (``sys.pycache_prefix``) and turns writing on for this interpreter
+(``sys.dont_write_bytecode``): what is imported after it, which is numpy, scipy, numba, matplotlib, vtk and
+optiland, is compiled once and read from the cache on every later start. That halves the start of the worker.
+With a prefix no bytecode is read from or written to a ``__pycache__`` beside a source.
+
 A cache that would lie inside the optiland checkout or its environment is refused by ``prepare`` itself, before a
 directory is made and before numba is imported: numba makes its cache directory, and probes it with a file, as
 soon as a cached function is defined, which is when optiland is imported.
@@ -92,7 +99,8 @@ def prepare(environ: MutableMapping[str, str] | None = None, protected: Sequence
 
     Call it before numba, matplotlib, numpy or optiland is imported. A cache variable that is already set is
     kept; one that is not is set to a directory under ``LVRTC_CACHE_DIR``, or under the system's temporary directory
-    when that is not set either. The directories are created. Returns where the caches go.
+    when that is not set either. The directories are created. Returns where the caches go. From then on this
+    interpreter writes the bytecode of what it imports under the bytecode cache, whatever it was started with.
 
     Raises a ``HygieneError``, with nothing set and no directory made, when a cache would lie inside one of
     ``protected``: by default ``protected_directories()``, the optiland this interpreter would import and its
@@ -120,13 +128,15 @@ def prepare(environ: MutableMapping[str, str] | None = None, protected: Sequence
         environ[variable] = str(path)
         path.mkdir(parents=True, exist_ok=True)
     environ["MPLBACKEND"] = "Agg"
+    # A process this one starts writes no bytecode: it has not checked where it would go.
     environ["PYTHONDONTWRITEBYTECODE"] = "1"
     # The JIT stays on: optiland is compared as it runs for its users.
     environ.pop("NUMBA_DISABLE_JIT", None)
     # The variables above reach the processes this one starts; these two reach this interpreter, which has
-    # already read its environment.
-    sys.dont_write_bytecode = True
+    # already read its environment. The place first, then the permission: from here on bytecode is written, under
+    # the prefix and nowhere else.
     sys.pycache_prefix = str(dirs.pycache)
+    sys.dont_write_bytecode = False
     return dirs
 
 
@@ -136,12 +146,14 @@ def check(dirs: CacheDirs, optiland: Any, numba: Any) -> None:
     - no cache directory lies inside the directory that holds the optiland package that was loaded (its checkout,
       or the site-packages it is installed into): ``prepare`` refused that for the package it could find, and this
       is the same of the one that is there;
+    - bytecode goes to the cache directory ``prepare`` named, never beside a source;
     - numba caches where it was told to, so it was not imported before ``prepare`` ran, and its JIT is on;
     - optiland computes with numpy in float64, its default: the worker never switches backend or precision.
     """
     _refuse_inside(dirs, [Path(optiland.__file__).resolve().parent.parent])
-    if not sys.dont_write_bytecode:
-        raise HygieneError("the interpreter writes bytecode")
+    prefix = sys.pycache_prefix
+    if prefix is None or Path(prefix).absolute() != dirs.pycache:
+        raise HygieneError(f"bytecode is written to {prefix or 'the source directories'}, not to {dirs.pycache}")
     used = str(getattr(numba.config, "CACHE_DIR", ""))
     if used == "" or Path(used).absolute() != dirs.numba:
         raise HygieneError(f"numba caches in {used or 'the source directories'}, not in {dirs.numba}")

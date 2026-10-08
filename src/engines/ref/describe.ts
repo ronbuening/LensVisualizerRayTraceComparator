@@ -25,6 +25,7 @@ export function describeSystem(system: RefSystem, sagFractions: readonly number[
     curvature: encodeF8(surfaces.map((surface) => surface.profile.curvature)),
     conic: encodeF8(surfaces.map((surface) => surface.profile.conic)),
     clipRadius: encodeF8(surfaces.map((surface) => surface.clipRadius)),
+    innerClipRadius: encodeF8(surfaces.map((surface) => surface.innerClipRadius)),
     indexAfterSurface: encodeF8(
       indexAfter.flatMap((row) => [...row]),
       [indexAfter.length, surfaces.length],

@@ -13,13 +13,14 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from lvrtc_optiland.build import build_case
 from lvrtc_optiland.hygiene import check, protected_directories
-from lvrtc_optiland.identity import adapter_revision, source_hash
+from lvrtc_optiland.identity import adapter_revision, source_hash, stated_version
 from lvrtc_worker_kit.protocol import parse_json
 from lvrtc_worker_kit.validate import validate_kind
 
 from . import CACHE_DIRS
-from .support import HELLO, SHUTDOWN, WORKERS_DIR, TempDirTest, real_optiland_missing, run_line
+from .support import HELLO, SHUTDOWN, WORKERS_DIR, TempDirTest, read_fixture, real_optiland_missing, run_line
 
 MISSING = real_optiland_missing()
 
@@ -59,6 +60,12 @@ class RealOptilandTest(TempDirTest):
         self.assertIs(details["jit"], True)
         self.assertEqual((details["backend"], details["precision"]), ("numpy", "float64"))
         self.assertEqual(identity["version"], details["distVersion"])
+        # The version is the distribution's without the day of the install, which an editable install of a checkout
+        # with uncommitted changes ends in: no word the engine says of itself holds a date.
+        import importlib.metadata  # noqa: PLC0415
+
+        self.assertEqual(identity["version"], stated_version(importlib.metadata.version("optiland")))
+        self.assertNotRegex(identity["version"], r"\.d\d{8}$")
         self.assertEqual(identity["adapterRevision"], adapter_revision(WORKERS_DIR))
         self.assertRegex(identity["fingerprint"], r"^[0-9a-f]{64}$")
         if details["commit"] is not None:
@@ -94,25 +101,14 @@ class RealOptilandTest(TempDirTest):
     def test_what_the_jit_compiles_is_cached_where_the_worker_said_and_not_beside_the_source(self) -> None:
         # A ray through two spherical surfaces: optiland's conic intersection is a function numba compiles and
         # caches (@njit(cache=True)), which without NUMBA_CACHE_DIR goes into __pycache__ beside conic.py.
+        # The optic is the builder's, of the contract's singlet. The rays are still made here, with optiland's own
+        # class: the worker traces rays from Stage 2.4 on, and this import goes then.
         import numba  # noqa: PLC0415
         import numpy as np  # noqa: PLC0415
-        from optiland.materials import IdealMaterial  # noqa: PLC0415
-        from optiland.optic import Optic  # noqa: PLC0415
-        from optiland.physical_apertures import RadialAperture  # noqa: PLC0415
         from optiland.rays import RealRays  # noqa: PLC0415
 
         self.assertFalse(numba.config.DISABLE_JIT)
-        optic = Optic()
-        optic.surfaces.add(index=0, radius=np.inf, thickness=np.inf)
-        front = {"material": IdealMaterial(n=1.5), "is_stop": True, "aperture": RadialAperture(r_max=10.0)}
-        optic.surfaces.add(index=1, radius=50.0, thickness=5.0, **front)
-        back = {"material": IdealMaterial(n=1.0), "aperture": RadialAperture(r_max=10.0)}
-        optic.surfaces.add(index=2, radius=-50.0, thickness=40.0, **back)
-        optic.surfaces.add(index=3)
-        optic.set_aperture("float_by_stop_size", 20.0)
-        optic.fields.set_type("angle")
-        optic.fields.add(y=0.0)
-        optic.wavelengths.add(value=0.5875618, is_primary=True)
+        (optic,) = build_case(read_fixture("valid", "optical-case", "singlet.json")).optics
         count = 5
         heights = np.linspace(-4.0, 4.0, count)
         zeros, ones = np.zeros(count), np.ones(count)
@@ -122,10 +118,29 @@ class RealOptilandTest(TempDirTest):
         self.assertEqual(landed.dtype, np.float64)
         self.assertEqual(float(landed[2]), 0.0)
         self.assertTrue(np.allclose(landed, -landed[::-1], rtol=0.0, atol=1e-12), landed)
+        # The image surface is where the case says, and every ray inside the apertures arrived.
+        self.assertEqual([float(value) for value in np.asarray(optic.surfaces.z)[-1]], [100.0] * count)
+        self.assertTrue(bool(np.all(np.asarray(optic.surfaces.intensity)[-1] > 0)))
 
         assert CACHE_DIRS is not None
         index_files = sorted(path.name for path in CACHE_DIRS.numba.rglob("*.nbi"))
         self.assertTrue(any(name.startswith("conic.") for name in index_files), index_files)
+
+    def test_bytecode_is_cached_under_the_prefix_and_none_lies_in_the_optiland_checkout(self) -> None:
+        import importlib.util  # noqa: PLC0415
+
+        import optiland  # noqa: PLC0415
+
+        assert CACHE_DIRS is not None
+        self.assertIs(sys.dont_write_bytecode, False)
+        self.assertEqual(Path(sys.pycache_prefix or ""), CACHE_DIRS.pycache)
+        package = Path(optiland.__file__).resolve().parent
+        # Where Python reads and writes the bytecode of optiland's own modules: under the prefix, by their full path.
+        cached = Path(importlib.util.cache_from_source(optiland.__file__))
+        self.assertTrue(cached.is_relative_to(CACHE_DIRS.pycache), cached)
+        self.assertEqual(cached.parent, CACHE_DIRS.pycache.joinpath(*package.parts[1:]))
+        self.assertTrue(cached.is_file(), "the import of optiland wrote it, or an earlier one did")
+        self.assertFalse(cached.is_relative_to(package.parent))
 
 
 if __name__ == "__main__":

@@ -540,7 +540,11 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ## optiland
 
-Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8).
+Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8). The figures of rung R0 were taken
+with LensVisualizer at `b7deb221` (engine closure `46b028bc`, 151 files), over the suites and over every case of
+the catalog: 2267 cases of 1173 systems, the primes once and the zooms at both ends, each on its reference line
+and on the photopic lines, 53 378 surfaces in all. LensVisualizer moved to `1bf669ee` (closure `66027121`) while
+the stage was written; the suites were run again there, with every figure the same.
 
 ### Importing optiland writes into its own checkout
 
@@ -556,8 +560,11 @@ Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8).
   bytecode beside every source it imports.
 - **Handled.** The worker's environment names a place for each under the comparator's cache directory, and the
   worker sets the same itself before it imports anything of optiland ([reference](REFERENCE.md#the-engine-optiland)).
-  `npm run test:optiland` takes a recursive snapshot of the checkout and its environment before its first test and
-  after a cold start with the JIT compiling, and nothing may differ. It was found the hard way: a timing
+  Bytecode is cached there too, since Stage 2.2: with a prefix (`PYTHONPYCACHEPREFIX`) Python reads and writes no
+  `__pycache__` beside a source, and the worker turns the writing on only once it has checked that the prefix lies
+  outside optiland. `npm run test:optiland` takes a recursive snapshot of the checkout and its environment before
+  its first test and after a cold start with the JIT compiling and the bytecode being written, and nothing may
+  differ. It was found the hard way: a timing
   experiment of Stage 2.1 that ran the interpreter with the variables in one unsplit shell word changed those
   three modification times, and nothing else.
 - **Class.** none of the ladder's: it is no difference between answers, but a rule of the house.
@@ -569,7 +576,9 @@ Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8).
 - **Effect.** Two installs of the same commit state different versions, and an edit to a source file states none.
 - **Handled.** The engine's fingerprint is made of the checkout's commit and dirty flag, a hash of the package's
   Python sources and the versions it computes with ([contract](../contract/CONTRACT.md#engine-descriptor)); the
-  version string is carried as a detail and is no part of it.
+  version string is no part of it. Where the worker states the version, as the descriptor's `version` and as the
+  detail `distVersion`, it leaves the day off (`stated_version`): `0.6.2.post117+g4e893f53`, which names the
+  commit, and not `0.6.2.post117+g4e893f53.d20261007`. So no manifest and no report of a run holds a date.
 - **Class.** none of the ladder's.
 
 ### What optiland loads may write to the standard output
@@ -582,4 +591,211 @@ Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8).
 - **Handled.** The worker kit reserves the reply stream at the level of the file descriptor before optiland is
   imported (`protect_stdout`): file descriptor 1 is the log from then on, for Python, for a C library and for a
   child process alike.
+- **Class.** none of the ladder's.
+
+### Nothing clips a ray unless the surface has a physical aperture, the stop included
+
+- **Where.** `Surface._trace_real` in `optiland/surfaces/standard_surface.py` clips only `if self.aperture`.
+  `is_stop=True` marks the surface the system's aperture is measured at, and `set_aperture("float_by_stop_size",
+  d)` says how wide the paraxial beam is there; neither stops a ray. optiland's own rays are aimed inside the
+  pupil, so its own analyses never notice.
+- **Effect.** Rays that are given, as every ray of rungs R2 to R4 is, would pass the iris and every rim: optiland
+  would land rays that LensVisualizer and `ref` stop, and its MTF would be another lens's.
+- **Handled.** The builder gives every surface of a case a `RadialAperture` of the case's clip radius, the stop
+  surface like any other with the radius of the stop setting, and the image surface none. `verify_optic` reads
+  each back and refuses an optic in which a surface has none; `system.describe` echoes each as `clipRadius`, and
+  R0 holds it to equality.
+- **Class.** convention.
+
+### The surface factory drops a keyword it does not know
+
+- **Where.** `GeometryFactory.create` in `optiland/surfaces/factories/geometry_factory.py` keeps of the keywords
+  of `surfaces.add` those that are fields of the geometry's configuration, and says nothing of the rest:
+  `tolerance=1e-12` for `tol=1e-12`, or `coefficients` on a `standard` surface, changes nothing and raises
+  nothing.
+- **Effect.** A misspelt or misplaced keyword builds another surface than was asked for, silently.
+- **Handled.** Nothing the builder hands over is believed: `verify_optic` (`workers/python/lvrtc_optiland/build.py`)
+  reads every value back from optiland's objects and holds it to the case, and an optic that differs is answered
+  as an error of the code `build-mismatch` that names the surface and the field, before anything is described. A
+  test renames `tol` and finds `surface 3 (4): tol is 1e-06 in the optic optiland built and 1e-12 in the case`.
+- **Class.** convention.
+
+### A surface's geometry does not say how it bends a ray
+
+- **Where.** `SurfaceFactory.create_surface` in `optiland/surfaces/factories/surface_factory.py` gives a surface
+  of the type `paraxial` a `Plane` for its geometry and a `ThinLensInteractionModel` for what it does to a ray; a
+  phase profile and a grating have models of their own, a `material="mirror"` reflects, and `coating="fresnel"`
+  takes intensity at the surface. The geometry, the aperture and the medium of such a surface are a plane's.
+- **Effect.** An optic with a thin lens of 50 mm where the contract's every-feature case has its stop, a plane,
+  holds every number of `system.describe` as the case states it, and has a focal length of 19.03 mm where the case
+  has 26.86 mm (`optic.paraxial.f2()`). R0 would pass on it, and every rung after it would differ.
+- **Handled.** `verify_optic` holds the class of each surface's interaction model to optiland's
+  `RefractiveReflectiveModel`, its `is_reflective` to false and its coating to none, beside the geometry. The thin
+  lens was built on purpose in the review of Stage 2.2 and passed the verification of that day; a test builds it
+  now and finds `surface 2 (STO): the model of its interaction is 'ThinLensInteractionModel'`.
+- **Class.** convention.
+
+### An asphere built through the factory is intersected to 1e-6 mm
+
+- **Where.** `EvenAsphereConfig` and `OddAsphereConfig` in `optiland/surfaces/factories/geometry_configs.py`
+  default `tol` to 1e-6, a residual of the Newton iteration in mm, where the geometry classes themselves default
+  to 1e-10. `surfaces.add(surface_type="even_asphere", ...)` goes through the configuration.
+- **Effect.** A hit on an asphere would lie up to 1e-6 mm from the surface, a hundred times the gate of R2.
+- **Handled.** The builder passes `tol=1e-12` and `max_iter=100` for every asphere, and `verify_optic` holds the
+  built geometry to both: the first is the keyword the factory drops when it is misspelt (above).
+- **Class.** numerical.
+
+### The first coefficient of an even asphere is the term of power 2
+
+- **Where.** `EvenAsphere.sag` in `optiland/geometries/even_asphere.py` adds `Ci * r2 ** (i + 1)`: entry `i` of
+  `coefficients` multiplies r^(2i + 2), so the list starts at r^2. `OddAsphere.sag` adds `Ci * r ** (i + 1)`: its
+  list starts at r^1. LensVisualizer's coefficients start at A4 (even) and A3 (odd).
+- **Effect.** A list laid out as `[A4, A6, ...]` is a surface whose every term is one power of r^2 too low: a
+  lens that differs from the case by fractions of a millimetre in sag, with nothing to say so.
+- **Handled.** `coefficient_list` lays the list out to the highest power of the case, with 0 where the case has
+  no term: `[0, A4, A6, ..., A20]` for an even asphere, `[0, 0, A3, A4, ...]` for one with an odd term. An asphere
+  is even when every power it states is even, whatever the coefficients, as the feature flags of a case are.
+  Three things hold the layout: the terms are read back by a rule written from optiland's two sag functions
+  (`terms_of`) and held to the case's; the sag optiland evaluates is held to the contract's sag of the case's
+  surface, which depends on no layout (`SAG_PROBE_FRACTIONS`: a builder and a reader that agreed on a wrong layout
+  are found by it, and a test makes them agree so); and R0 compares the sag with two other engines. Measured over
+  the catalog, powers up to 20: no term differs, and the sag of optiland and of `ref` differ by at most 6.0e-16 on
+  the scale of the sag's rounding.
+- **Class.** convention.
+
+### A bare number as an aperture is a diameter, and so is the stop's size
+
+- **Where.** `configure_aperture` in `optiland/physical_apertures/radial.py` makes of a number given as
+  `aperture=` a `RadialAperture(r_max=number / 2)`; `RadialAperture(r_max=...)` itself takes a radius, and
+  `r_min` for a central obstruction. `FloatByStopAperture` (`set_aperture("float_by_stop_size", value)`) takes the
+  stop's diameter.
+- **Effect.** A clip radius given as a bare number clips at half of it; a stop radius given as the stop's size
+  halves the pupil.
+- **Handled.** The builder passes `RadialAperture(r_max=semiDiameter, r_min=innerSemiDiameter)` and
+  `2 x stopSemiDiameter`; `verify_optic` reads `r_max`, `r_min` and the aperture's value back, and
+  `system.describe` states the stop radius as that value halved, which is the number again to the bit. A test
+  passes the bare number and finds `aperture.r_max is 6.0 in the optic optiland built and 12.0 in the case`.
+- **Class.** convention.
+
+### The clip limit is inclusive to one unit in the last place of a square
+
+- **Where.** `RadialAperture.contains` passes a ray where `x**2 + y**2 <= self.r_max**2` and
+  `>= self.r_min**2`. The left side is numpy's, which squares by multiplying; the right side is a Python float
+  raised to the power 2, which is the C library's `pow` and not always `r_max * r_max`: on this machine it is
+  another double for 247 of 200 000 radii between 0.5 and 60 mm, the lower one for 202 of them.
+- **Effect.** Both limits are inclusive, as the contract's are: a ray at the inner radius passes, and one at the
+  clip radius passes for nearly every radius. For about one radius in a thousand a ray at exactly the clip radius,
+  to the bit, is stopped; one unit in the last place inside it passes.
+- **Handled.** Nothing: R0 compares the limit itself, which is the case's number, and a ray within 1e-8 mm of a
+  limit is in the rim band of R2, where two engines may differ and nothing fails. No two engines could agree
+  there in any case: `ref` compares a radius with the limit, optiland a square with a square.
+- **Class.** numerical.
+
+### An ideal material has one index, and first-order data is that of the primary wavelength
+
+- **Where.** `IdealMaterial.n(wavelength)` in `optiland/materials/ideal.py` returns its index whatever the
+  wavelength. Every accessor of `optic.paraxial`, the size of the entrance pupil and the reference of the exit
+  pupil are evaluated at `optic.primary_wavelength`.
+- **Effect.** One optic cannot hold the indices of two lines, and its first-order data is of one wavelength.
+- **Handled.** One optic for each line of a case, with that line's index after each surface and that line's
+  wavelength as its only one (`build_case`). `system.describe` reads the index table row by row, each row from
+  its own optic. A test asks each optic at three wavelengths and gets its own row each time.
+- **Class.** convention.
+
+### A thickness places a surface at a running sum, and nothing places a shifted image plane
+
+- **Where.** `CoordinateSystemFactory.create` in `optiland/surfaces/factories/coordinate_system_factory.py` puts
+  a surface given `thickness=` at `float(z_prev) + float(t_prev)`, from 0 at the first surface. Given `z=` it puts
+  the surface there, and from then on refuses `thickness=` on every later surface.
+- **Effect.** R0 holds `vertexZ` and `imageZ` to the bit. A running sum of the case's thicknesses is the case's
+  vertex only where the case's vertices are those sums. For a lens from LensVisualizer they are: measured on all
+  1173 systems of the catalog, 27 481 surfaces, the sum is the vertex and the design image plane to the bit,
+  because LensVisualizer's own `z` is that sum. The contract promises only 1e-9 mm between the two, and an image
+  plane that was shifted is stated by no thickness: with the last gap stretched to reach it, `z + (imageZ - z)` is
+  not `imageZ` on 7 to 12 of those 1173 systems, depending on the shift.
+- **Handled.** The builder places every surface, the object and the image surface included, by `z=`, with the
+  case's own number: nothing is added up. optiland's `surface.thickness` is then 0 on every surface, which its
+  tracers do not read (its paraxial tracer and its real one both take positions from the coordinate systems;
+  `verify_optic` holds `surfaces.positions`, the paraxial axis, to the same vertices). It matters to whoever
+  prints a prescription of such an optic, which the comparator does not.
+- **Class.** numerical.
+
+### A standard surface without a radius is a plane, and a plane has no conic constant
+
+- **Where.** `_create_standard` in the geometry factory returns a `Plane` for an infinite radius, whatever the
+  conic constant; `_create_even_asphere` and `_create_odd_asphere` return an asphere of radius `inf`, which keeps
+  its `k`.
+- **Effect.** The contract echoes the conic constant an engine holds, and 0 for a plane. An asphere on a flat base
+  states one, on which it shapes nothing; `ref` echoes it as stated.
+- **Handled.** A shape of the kind `asphere` is always built as one of optiland's two aspheres, also where every
+  coefficient is 0: `radius=inf` for a flat base. So `conic` comes back as the case states it, the curvature as
+  `1 / inf`, which is 0, and the sag of a flat base is its terms alone (`r2 / (inf * ...)` is 0, not a NaN).
+- **Class.** convention.
+
+### The sag is written with the radius, is -0 at the vertex of a concave surface, and warns where it ends
+
+- **Where.** `StandardGeometry.sag` evaluates `r2 / (R * (1 + sqrt(1 - (1 + k) * r2 / R**2)))`, where the contract
+  writes the curvature; the aspheres add their terms to that one by one, without compensation.
+- **Effect.** The sag agrees with the contract's to rounding and not to the bit, which is what the two sag metrics
+  of R0 are for: over the catalog the largest difference from `ref` is 6.0e-16 on the scale of the sag's rounding
+  (`tamron-35-150mm-f2-28-di-iii-vxd-a058`, surface 28), and 1.3e-10 mm in plain terms, on the surface of
+  `russar-22-70f8` that ends 1e-9 mm short of a hemisphere. At a height of 0 on a surface of negative radius it is
+  `0 / negative`, which is -0. Beyond the end of a conic the root is of a negative number: a NaN, with numpy's
+  `RuntimeWarning: invalid value encountered in sqrt`. Where a conic ends, to the last place, the two forms round
+  to different sides of 0: a conic of radius 10 and conic constant 0.5 ends at 10/sqrt(1.5), and at the double
+  nearest to that, 8.16496580927726 mm, `1 - (1 + K) c^2 r^2` is -1.1e-16 in exact arithmetic. `ref` has -2.2e-16
+  there and no sag; optiland's `1 - (1 + k) * r2 / R**2` is 0, and its sag is 6.67 mm. One double nearer the axis
+  both have a sag, one double further out neither has. A hemisphere is not such a place: at a height that is the
+  radius to the bit both roots are 0 or above, in every radius (`c r` never rounds above 1, and `r2 / R**2` is 1).
+- **Handled.** `system.describe` writes -0 as 0 and every NaN as the one quiet NaN, and asks the sag with numpy's
+  warnings off (`read_sag`). The builder's own probe of the sag skips a height within 1e-6 of the end of a conic,
+  where one rounding decides between a number and none. R0 is not loosened for that one double: a sag that only
+  one engine has is a NaN, which no limit admits, so a surface whose nominal semi-diameter, or a fraction of it
+  that is asked, is that double fails R0 between optiland and `ref`. No surface of the catalog or of a suite is
+  asked there; it was found with synthetic cases (61 cases at two sets of fractions: 119 pairs pass, and the 3
+  that fail are this).
+- **Class.** numerical.
+
+### optiland keeps a surface's semi-aperture apart from the aperture that clips
+
+- **Where.** `Surface.semi_aperture` (`set_semi_aperture`) is what optiland draws a surface to, and what its sag
+  viewer evaluates a surface over; `Surface.aperture` is what clips. `optic.updater.update_paraxial()`, which its
+  drawings and its optimiser call, overwrites the first with an estimate from paraxial ray heights.
+- **Effect.** The contract has both too: `aperture.semiDiameter` clips, and the sag of `system.describe` is asked
+  at fractions of `aperture.nominalSemiDiameter`, which on the stop surface is the stop setting.
+- **Handled.** The builder sets each surface's semi-aperture to the case's nominal semi-diameter and
+  `system.describe` multiplies the fractions with what it reads back, so that no number of an answer is taken from
+  the case. The worker calls nothing that overwrites it, and `verify_optic` holds it to the case before anything
+  is answered.
+- **Class.** convention.
+
+### optiland's first-order data does not see a term of power 2
+
+- **Where.** The paraxial power of a surface is `(n2 - n1) / geometry.radius`
+  (`optiland/interactions/refractive_reflective_model.py`, and `diff(n) / R` in
+  `optiland/raytrace/paraxial_ray_tracer.py`): the coefficients of an asphere are in its sag and in its real rays,
+  and not in `optic.paraxial`.
+- **Effect.** The contract's first-order curvature is the base curvature plus twice the coefficient of a term of
+  power 2. A singlet whose front surface has the term 1e-3 r^2 on a radius of 50 mm has the focal length 48.29 mm
+  by the contract and 50.68 mm by `optic.paraxial.f2()`, which is that of the lens without the term. A term of
+  power 1 has no first-order data at all, in any engine (`surface.asphere.linear-term`).
+- **Handled.** Decided for the builder in Stage 2.2: it builds terms of power 1 and 2, as `odd_asphere` and as the
+  first entry of `even_asphere`, reads them back, and `system.describe` echoes them; their sag is the contract's
+  to rounding, held by the probe and by a test in 60-digit arithmetic. What optiland cannot answer for such a case
+  is its own first-order data: `paraxial.first-order` of the engine (Stage 2.3) must be `unsupported` for a case
+  with a term of power 2 that is not 0, as it is for a term of power 1 in every engine. No lens of LensVisualizer
+  has either: its lowest coefficient is A3.
+- **Class.** method.
+
+### What the builder refuses
+
+- **Where.** `workers/python/lvrtc_optiland/build.py` and `engine.py`.
+- **Effect.** The engine declares every feature flag of the contract and no limit: an annular aperture (`r_min`),
+  several lines (an optic each), a finite object (the object surface at the object plane), even and odd aspheres
+  of any power, a flat base and a conic constant. Of the 2267 cases of the catalog none is refused, and each
+  passes R0 against `ref`.
+- **Handled.** What it refuses is an optic that is not the case. Whatever of the build comes back from optiland
+  as another value than the case states is an error of the code `build-mismatch`, with the surface, the field and
+  both values, and nothing is described; a call of optiland that optiland has deprecated is an error too, not a
+  warning in a log. Every other quantity than `system.describe` is `unsupported` until its stage.
 - **Class.** none of the ladder's.

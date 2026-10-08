@@ -16,6 +16,7 @@ from lvrtc_optiland.identity import (
     fingerprint_of,
     git_state,
     source_hash,
+    stated_version,
 )
 
 from .support import GIT_MISSING, WORKERS_DIR, TempDirTest
@@ -196,7 +197,17 @@ class FingerprintTest(TempDirTest):
         }
         return engine_identity(**{**stated, **changes})  # type: ignore[arg-type]
 
-    def test_the_identity_states_every_part_and_the_install_date_is_no_part_of_the_fingerprint(self) -> None:
+    def test_the_version_is_stated_without_the_day_of_the_install(self) -> None:
+        self.assertEqual(stated_version("0.6.2.post117+g4e893f53.d20261007"), "0.6.2.post117+g4e893f53")
+        # A version that ends in no install date is stated as it is: a release, a clean checkout, a local label.
+        for version in ("0.6.2", "0.6.2.post117+g4e893f53", "0.0.7+fake", "1.0.dev3", "0.6.2+d20261007x"):
+            self.assertEqual(stated_version(version), version)
+        # Only the ending is the date, and only eight digits are one.
+        self.assertEqual(stated_version("0.6.2+g1.d20261007.d20261008"), "0.6.2+g1.d20261007")
+        self.assertEqual(stated_version("0.6.2+g1.d2026100"), "0.6.2+g1.d2026100")
+        self.assertEqual(stated_version("0.6.2+g1.d20261007\n"), "0.6.2+g1.d20261007\n")
+
+    def test_the_identity_states_every_part_and_the_install_date_is_no_part_of_it(self) -> None:
         package = write(self.tmp / "optiland" / "__init__.py", "x = 1\n").parent
         identity = self.identity(package)
         sources, count = source_hash(package)
@@ -204,7 +215,7 @@ class FingerprintTest(TempDirTest):
             identity,
             {
                 "id": "optiland",
-                "version": "0.6.2.post1+gabc.d20260101",
+                "version": "0.6.2.post1+gabc",
                 "fingerprint": fingerprint_of({**self.PARTS, "commit": None, "dirty": None, "sourceHash": sources}),
                 "adapterRevision": "a" * 64,
                 "details": {
@@ -217,14 +228,17 @@ class FingerprintTest(TempDirTest):
                     "scipy": "1.16.0",
                     "numba": "0.65.0",
                     "jit": True,
-                    "distVersion": "0.6.2.post1+gabc.d20260101",
+                    "distVersion": "0.6.2.post1+gabc",
                     "backend": "numpy",
                     "precision": "float64",
                 },
             },
         )
-        reinstalled = self.identity(package, dist_version="0.6.2.post1+gabc.d20260102", adapter="b" * 64)
-        self.assertEqual(reinstalled["fingerprint"], identity["fingerprint"])
+        # The same code installed on another day is the same engine, in every word it says of itself.
+        reinstalled = self.identity(package, dist_version="0.6.2.post1+gabc.d20260102")
+        self.assertEqual(reinstalled, identity)
+        self.assertNotIn("d2026", repr(identity))
+        self.assertEqual(self.identity(package, adapter="b" * 64)["fingerprint"], identity["fingerprint"])
         self.assertNotEqual(self.identity(package, jit=False)["fingerprint"], identity["fingerprint"])
         self.assertNotEqual(self.identity(package, numba="0.66.0")["fingerprint"], identity["fingerprint"])
         write(package / "__init__.py", "x = 2\n")

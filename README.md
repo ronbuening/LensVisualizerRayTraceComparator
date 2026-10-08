@@ -7,8 +7,8 @@ and compares the answers rung by rung: the built system, paraxial data, identica
 **Status.** Phases 0 and 1 of the [plan](docs/IMPLEMENTATION_PLAN.md) are complete. LensVisualizer (`lv`) and the
 comparator's own reference tracer (`ref`) answer rungs R0 to R3 and agree on the benchmark suite, and `lvrtc mtf`
 prints the MTF that LensVisualizer's own MTF tab shows. The first external engine,
-[optiland](https://github.com/optiland/optiland), is Phase 2: its worker starts and identifies itself as the engine
-`optiland`, and answers no rung yet.
+[optiland](https://github.com/optiland/optiland), is Phase 2: the engine `optiland` builds every case in optiland
+and answers rung R0, the built system, on which it agrees with both; the other rungs follow.
 
 ## Requirements
 
@@ -99,7 +99,8 @@ npm run test:optiland
 ```
 
 Runs the tests that need the real optiland, with the interpreter of `engines.optiland.python`. They are not part
-of `npm run check` either, skip the same way, and prove that nothing was written into the optiland checkout.
+of `npm run check` either, skip the same way, and prove that nothing was written into the optiland checkout. The
+tests that set optiland against LensVisualizer need both.
 
 ### Look at LensVisualizer's lenses
 
@@ -138,6 +139,13 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r
 
 Runs a suite: for every lens, rung and engine it asks the engine and stores the answer. Stored answers are reused,
 so a run that was interrupted resumes by being run again. `--engines` and `--rungs` are optional.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0
+```
+
+Adds optiland on rung R0: it builds every lens in optiland and reads the built system back, so a translation
+error shows before a ray is traced. optiland answers the other rungs `unsupported` until their stages land.
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

@@ -5,7 +5,8 @@ adapter revision"):
 
 - the **fingerprint** is optiland's: the commit and dirty flag of its checkout, a hash of the package's Python
   sources, the versions of Python, numpy, scipy and numba, and whether numba's JIT is on. The distribution's
-  version string is not part of it: its ``.dYYYYMMDD`` suffix is the day of an install, not a state of the code;
+  version string is not part of it: its ``.dYYYYMMDD`` suffix is the day of an install, not a state of the code,
+  and is left off wherever the worker states the version (``stated_version``);
 - the **adapter revision** is the worker's: a hash of the Python sources of ``lvrtc_optiland`` and of the worker
   kit, which are the comparator's code and not the engine.
 """
@@ -15,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -101,6 +103,20 @@ def fingerprint_of(parts: dict[str, Any]) -> str:
     return hashlib.sha256(text.encode("ascii")).hexdigest()
 
 
+_INSTALL_DATE = re.compile(r"\.d\d{8}\Z")
+
+
+def stated_version(dist_version: str) -> str:
+    """The distribution's version as the worker states it: without the day of the install.
+
+    An install of a checkout that has uncommitted changes ends its version in ``.dYYYYMMDD``, the day it was
+    installed: ``0.6.2.post117+g4e893f53.d20261007``. That day says nothing of the code, and would put a date into
+    every manifest and report that names the engine; ``0.6.2.post117+g4e893f53`` is what is stated. A version
+    without such an ending is stated as it is.
+    """
+    return _INSTALL_DATE.sub("", dist_version)
+
+
 FINGERPRINT_PARTS: tuple[str, ...] = ("commit", "dirty", "sourceHash", "python", "numpy", "scipy", "numba", "jit")
 """The details the fingerprint is made of, and nothing else is."""
 
@@ -117,9 +133,14 @@ def engine_identity(
     jit: bool,
     adapter: str,
 ) -> dict[str, Any]:
-    """The ``identity`` of the engine's descriptor, from the optiland package at ``package_dir`` and what runs it."""
+    """The ``identity`` of the engine's descriptor, from the optiland package at ``package_dir`` and what runs it.
+
+    ``dist_version`` is the distribution's version as its metadata gives it; the identity states it without the
+    day of the install (``stated_version``), as ``version`` and as the detail ``distVersion``.
+    """
     commit, dirty = git_state(package_dir)
     sources, count = source_hash(package_dir)
+    version = stated_version(dist_version)
     details: dict[str, Any] = {
         "commit": commit,
         "dirty": dirty,
@@ -130,13 +151,13 @@ def engine_identity(
         "scipy": scipy,
         "numba": numba,
         "jit": jit,
-        "distVersion": dist_version,
+        "distVersion": version,
         "backend": "numpy",
         "precision": "float64",
     }
     return {
         "id": engine_id,
-        "version": dist_version,
+        "version": version,
         "fingerprint": fingerprint_of({name: details[name] for name in FINGERPRINT_PARTS}),
         "adapterRevision": adapter,
         "details": details,

@@ -13,7 +13,7 @@ npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
-npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; r0 needs LV too
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -32,7 +32,8 @@ node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, re
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
-node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 6 s)
+node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0   # R0 three ways: optiland builds every case and reads it back
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -86,13 +87,39 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   already writes into the checkout: numba probes each `__pycache__` it would cache in. The worker applies the same
   itself (`lvrtc_optiland/hygiene.py`) before it imports optiland, and reserves file descriptor 1 for replies
   first (`protect_stdout`). A cache that would lie inside the optiland checkout or its virtual environment is
-  refused before a directory is made or numba is imported (`prepare`), never afterwards. In `zsh` an unquoted
+  refused before a directory is made or numba is imported (`prepare`), never afterwards. Bytecode is cached under
+  `<cacheDir>/optiland/pycache`: `prepare` refuses a prefix inside optiland, names it (`sys.pycache_prefix`) and
+  only then sets `sys.dont_write_bytecode = False`; `check` refuses an interpreter whose prefix is not the
+  cache's. Never give the optiland definition an empty `PYTHONDONTWRITEBYTECODE`. In `zsh` an unquoted
   `$VARS` holding several assignments is one word: write them out. The JIT stays on, and the backend is numpy in
   float64: never switch either.
 - **The fingerprint of `optiland` is optiland's, the adapter revision the worker's** (`lvrtc_optiland/identity.py`):
   commit and dirty flag of the checkout, a hash of the package's `.py` files, the versions of Python, numpy, scipy
   and numba, the JIT flag; never the distribution's version, which ends in an install date. The adapter revision
-  is a hash of the `.py` files of `lvrtc_optiland` and the kit. The result store keys by both.
+  is a hash of the `.py` files of `lvrtc_optiland` and the kit. The result store keys by both. The version the
+  engine states, and `details.distVersion`, drop a trailing `.dYYYYMMDD` (`identity.stated_version`), so no
+  manifest or report holds a date.
+- **The optiland builder hands over, verifies, then describes** (`workers/python/lvrtc_optiland/build.py`).
+  `build_optic` gives the case to optiland; `verify_optic` reads every value back from optiland's own objects
+  (vertex, geometry class, radius, conic, terms, `tol`, `max_iter`, aperture class and both radii, stop,
+  interaction model, coating, index, object and image planes, stop diameter, wavelength) and holds it to the
+  case, then holds optiland's sag to the contract's; `describe_optics` writes `system.describe` from the optics
+  and is never given the case. An optic that differs is the error `build-mismatch`, naming surface and field. A
+  keyword added to the build needs its read-back check and a test that makes the mistake on purpose
+  (`test_build.py`): removing a check must turn a test red.
+- **How a case becomes an Optic**: every surface placed by `z=`, never by thickness; one Optic per line
+  (`IdealMaterial` is constant and first-order data is the primary wavelength's); `RadialAperture(r_max, r_min)`
+  on every surface, the stop included; `float_by_stop_size` takes the stop diameter; an asphere stays
+  `even_asphere` or `odd_asphere` whatever its coefficients, the list starting at r^2 (even) or r^1 (odd), with
+  `tol=1e-12` and `max_iter=100`; only the non-deprecated API, a deprecated call being an error. Each has an
+  entry under optiland in `docs/gotchas.md`.
+- **What the builder needs of optiland is imported when the first case is built** (`build.optiland_api`), never
+  when the worker loads: the hermetic tier runs the worker on `test/fixtures/fake-optiland`, which has no
+  geometries, materials or apertures. A test that needs the real optiland skips with `real_optiland_missing()`.
+- **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
+  `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
+  table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
+  `system.describe` is version 2 (`innerClipRadius`).
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.

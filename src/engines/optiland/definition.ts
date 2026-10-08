@@ -24,9 +24,10 @@ export const OPTILAND_CACHE_NAME = "optiland";
 
 /**
  * The waits of the engine that differ from the defaults. `hello` is answered once optiland is imported: measured at
- * about 6 s with warm caches and about 17 s on a first start, when matplotlib builds its font cache under an empty
- * cache directory. Three minutes leave room for a slower machine and a cold disk, where the default of 30 s would
- * not. A run keeps the default: no quantity is computed yet that could say how long one takes.
+ * about 3 s with warm caches and about 18 s on a first start, when matplotlib builds its font cache and every
+ * module is compiled under an empty cache directory. Three minutes leave room for a slower machine and a cold
+ * disk, where the default of 30 s would not. A run keeps the default: `system.describe`, the one quantity so far,
+ * is answered in milliseconds.
  */
 export const OPTILAND_TIMEOUTS: Partial<EngineTimeouts> = Object.freeze({ helloMs: 180_000 });
 
@@ -41,7 +42,13 @@ export const OPTILAND_SETTING_HINT =
  *
  * - `NUMBA_CACHE_DIR`: numba would write the machine code of optiland's cached functions next to their sources;
  * - `MPLCONFIGDIR`, `MPLBACKEND=Agg`: matplotlib's font cache, and no display;
- * - `PYTHONPYCACHEPREFIX`, `PYTHONDONTWRITEBYTECODE=1`: no bytecode is written, and none could land beside a source;
+ * - `PYTHONPYCACHEPREFIX`: where bytecode is cached, so that none is read from or written to a `__pycache__` beside
+ *   a source;
+ * - `PYTHONDONTWRITEBYTECODE=1`: the interpreter writes no bytecode while it starts. The worker turns writing on
+ *   itself once it has checked that the prefix lies outside optiland (`hygiene.prepare`): what it imports from
+ *   then on, which is optiland and everything optiland loads, is compiled once and read from the cache on every
+ *   later start, which halves it. A definition can replace a variable of the transport and cannot remove one, so
+ *   the switch is the worker's;
  * - `LVRTC_CACHE_DIR`: where the worker puts any cache it is not told the place of.
  *
  * The worker sets the same from inside before it imports optiland (`lvrtc_optiland/hygiene.py`), so one that is

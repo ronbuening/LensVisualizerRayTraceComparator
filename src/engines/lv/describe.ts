@@ -45,7 +45,8 @@ function sagOf(surface: LvSurface, radius: number): number {
  *   without curvature and without a term, on which `K` shapes nothing.
  * - `terms` are the coefficients LensVisualizer evaluates (`termsOf`).
  * - `clipRadius` is the largest height at which LensVisualizer's `evaluateAperture` passes a ray, the stop surface
- *   asked with the stop radius of the case, as its tracers ask it; `sagRadii` are the fractions of the
+ *   asked with the stop radius of the case, as its tracers ask it; `innerClipRadius` is the inner semi-diameter it
+ *   reports there, 0 for a surface without a central obstruction; `sagRadii` are the fractions of the
  *   semi-diameter it reports there. `stopSemiDiameter` is that stop radius.
  * - `sag` is the profile's at those heights (`sagOf`).
  * - `indexAfterSurface` and `imageZ` are those of the case LensVisualizer exports now: the indices of its own
@@ -70,6 +71,7 @@ export function describeLvSystem(
       curvature,
       conic: curvature === 0 && terms.length === 0 ? 0 : (surface.asphere?.K ?? 0),
       clipRadius: aperture.semiDiameter,
+      innerClipRadius: aperture.innerSemiDiameter,
       terms,
       radii,
       sags: radii.map((radius) => sagOf(surface, radius)),
@@ -85,6 +87,7 @@ export function describeLvSystem(
     curvature: encodeF8(rows.map((row) => row.curvature)),
     conic: encodeF8(rows.map((row) => row.conic)),
     clipRadius: encodeF8(rows.map((row) => row.clipRadius)),
+    innerClipRadius: encodeF8(rows.map((row) => row.innerClipRadius)),
     indexAfterSurface: exported.conditions.indexAfterSurface,
     sagRadii: encodeF8(
       rows.flatMap((row) => row.radii),

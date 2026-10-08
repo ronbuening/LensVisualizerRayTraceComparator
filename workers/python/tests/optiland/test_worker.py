@@ -10,12 +10,12 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from lvrtc_optiland.engine import SETTING_HINT, SUPPORTED_FEATURES
+from lvrtc_optiland.engine import QUANTITIES, SETTING_HINT, SUPPORTED_FEATURES
 from lvrtc_optiland.identity import adapter_revision, fingerprint_of, source_hash
 from lvrtc_worker_kit.protocol import parse_json
 from lvrtc_worker_kit.validate import validate_kind
 
-from .support import HELLO, SHUTDOWN, TempDirTest, read_fixture, run_line
+from .support import HELLO, SHUTDOWN, TempDirTest, describe_line, read_fixture, run_line
 
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -73,18 +73,23 @@ class WorkerTest(TempDirTest):
             descriptor["capabilities"],
             {
                 "features": {"supported": list(SUPPORTED_FEATURES), "limits": {}},
-                "quantities": {},
+                "quantities": {"system.describe": {"version": 2}},
                 "deterministic": True,
                 "maxConcurrency": 1,
             },
         )
+        self.assertEqual(descriptor["capabilities"]["quantities"], QUANTITIES)
         self.assertEqual(list(SUPPORTED_FEATURES), sorted(SUPPORTED_FEATURES))
+        # The distribution's version ends in the day of an install; what the worker states does not.
+        metadata = (site / "optiland-0.0.7.dist-info" / "METADATA").read_text(encoding="utf-8")
+        self.assertIn("Version: 0.0.7+fake.d20260131\n", metadata)
+        self.assertNotIn("d2026", repr(descriptor))
         # What the fakes wrote to the standard output while they were imported is in the log, and only there.
         for line in ("fake numpy: imported", "fake optiland: imported", "fake optiland: wrote to file descriptor 1"):
             self.assertIn(line + "\n", log)
         self.assertIn("RuntimeWarning: fake optiland: a warning at import", log)
 
-    def test_every_run_is_answered_unsupported_and_stamped_with_both_hashes(self) -> None:
+    def test_a_quantity_it_does_not_offer_is_answered_unsupported_and_stamped_with_both_hashes(self) -> None:
         site = self.fake_site()
         (hello, ran), _ = self.replies(site, HELLO + run_line())
         request = read_fixture("valid", "protocol-request", "run.json")["params"]["request"]
@@ -107,11 +112,43 @@ class WorkerTest(TempDirTest):
                 },
                 "status": "unsupported",
                 "unsupported": [
-                    {"code": "quantity", "item": quantity, "message": f"the engine optiland does not offer {quantity}"}
+                    {"code": "quantity", "item": quantity, "message": f"the engine does not offer {quantity}"}
                 ],
                 "diagnostics": {"warnings": [], "counts": {}},
             },
         )
+
+    def test_a_spec_that_is_not_the_quantitys_is_an_error_of_the_engine_before_anything_is_built(self) -> None:
+        site = self.fake_site()
+        case = read_fixture("valid", "optical-case", "singlet.json")
+        for spec, said in (
+            ({"sagFractions": [0.5, 0.25]}, "/sagFractions/1 [invariant] the fractions must ascend: 0.25 follows 0.5"),
+            ({"sagFractions": []}, "/sagFractions [minItems] "),
+            ({"sagFractions": [0, 2]}, "/sagFractions/1 [maximum] "),
+            ({"radii": [1]}, " [additionalProperties] "),
+        ):
+            (ran,), _ = self.replies(site, describe_line(case, spec))
+            self.assertIs(ran["ok"], True, ran)
+            result = ran["result"]
+            self.assertEqual((result["status"], result["error"]["code"]), ("error", "bad-spec"), spec)
+            self.assertTrue(result["error"]["message"].startswith("spec is not a system.describe spec: "), result)
+            self.assertIn(said, result["error"]["message"])
+
+    def test_what_the_builder_needs_of_optiland_is_imported_when_a_case_is_built_and_not_before(self) -> None:
+        # The fake optiland has no geometries, materials or apertures. The worker starts on it and says who it is;
+        # a case cannot be built, which is the engine's failure on that request and leaves the worker a worker.
+        site = self.fake_site()
+        case = read_fixture("valid", "optical-case", "singlet.json")
+        (hello, ran, again, bye), log = self.replies(site, HELLO + describe_line(case) + run_line() + SHUTDOWN)
+        self.assertIs(hello["ok"], True)
+        self.assertIs(ran["ok"], True)
+        result = ran["result"]
+        self.assertEqual(validate_kind("result", result), [])
+        self.assertEqual((result["status"], result["error"]["code"]), ("error", "engine-failure"))
+        self.assertIn("No module named 'optiland.geometries'", result["error"]["message"])
+        self.assertEqual(result["engine"]["fingerprint"], hello["result"]["identity"]["fingerprint"])
+        self.assertEqual((again["result"]["status"], bye["ok"]), ("unsupported", True))
+        self.assertIn("ModuleNotFoundError", log)
 
     def test_the_fingerprint_is_the_same_in_another_process_and_another_for_another_source(self) -> None:
         site = self.fake_site()
@@ -148,8 +185,15 @@ class WorkerTest(TempDirTest):
         self.assertIs(identity["details"]["jit"], True)
         cache = self.tmp / "cache"
         self.assertEqual(sorted(path.name for path in cache.iterdir()), ["matplotlib", "numba", "pycache"])
+        # Bytecode is cached, under the cache directory and nowhere else: of what was imported once the worker had
+        # said where, the fakes among it. Nothing lies beside a source.
         written = [path for path in self.tmp.rglob("*") if path.suffix == ".pyc" or path.name == "__pycache__"]
-        self.assertEqual(written, [], "no bytecode, beside a source or anywhere")
+        self.assertTrue(written)
+        for path in written:
+            self.assertTrue(path.is_relative_to(cache / "pycache") and path.suffix == ".pyc", path)
+        cached = {path.name.split(".")[0] for path in (cache / "pycache").joinpath(*site.parts[1:]).rglob("*.pyc")}
+        self.assertEqual(cached, {"__init__"}, "the fake numpy, scipy, numba and optiland, each an __init__")
+        self.assertEqual(sorted(str(path.relative_to(site)) for path in site.rglob("*.pyc")), [])
 
     def test_an_interpreter_that_cannot_import_optiland_refuses_hello_and_says_what_to_set(self) -> None:
         site = self.fake_site()

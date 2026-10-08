@@ -33,6 +33,7 @@ import {
 } from "../../../src/engines/optiland/definition.ts";
 import type { InterpreterProbe } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
+import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
 import type { Transport } from "../../../src/transports/transport.ts";
@@ -319,20 +320,20 @@ test("with an interpreter and no other configuration the engine answers hello as
     scipy: "0.2.fake",
     sourceFiles: 3,
   });
+  // Every feature flag of the contract, without a limit, and the built-system echo at the comparator's version.
   assert.deepEqual(capabilities, {
-    features: { supported: ["lines.multiple", "surface.asphere.even", "surface.conic"], limits: {} },
-    quantities: {},
+    features: { supported: [...FEATURE_FLAGS], limits: {} },
+    quantities: { "system.describe": { version: systemDescribeQuantity.version } },
     deterministic: true,
     maxConcurrency: 1,
   });
-  for (const flag of capabilities.features.supported) assert.ok((FEATURE_FLAGS as readonly string[]).includes(flag));
 
-  // It offers no quantity yet: a run is answered "unsupported", by the engine itself, stamped with both hashes.
-  const request = makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: {} });
+  // A quantity it does not offer is answered "unsupported", by the engine itself, stamped with both hashes.
+  const request = makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: {} });
   const result = await adapter.run(request, CASE);
   assert.equal(result.status, "unsupported");
   assert.deepEqual(result.unsupported, [
-    { code: "quantity", item: "system.describe", message: "the engine optiland does not offer system.describe" },
+    { code: "quantity", item: "rays.trace", message: "the engine does not offer rays.trace" },
   ]);
   assert.deepEqual(result.engine, {
     id: "optiland",
@@ -340,10 +341,35 @@ test("with an interpreter and no other configuration the engine answers hello as
     adapterRevision: identity.adapterRevision,
     details: identity.details,
   });
+  // A spec that is not the quantity's is the engine's error, before anything of optiland is asked.
+  const badSpec = await adapter.run(
+    makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: { sagFractions: [0.5, 0.25] } }),
+    CASE,
+  );
+  assert.deepEqual(
+    [badSpec.status, badSpec.error?.code, badSpec.error?.message],
+    [
+      "error",
+      "bad-spec",
+      "spec is not a system.describe spec: /sagFractions/1 [invariant] the fractions must ascend: 0.25 follows 0.5",
+    ],
+  );
+  // The fake optiland has nothing to build a case with: the builder's imports fail when the first case is built,
+  // not when the worker starts, and the failure is the engine's answer to that request.
+  const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: {} }), CASE);
+  assert.deepEqual([built.status, built.error?.code], ["error", "engine-failure"]);
+  assert.match(built.error?.message ?? "", /^ModuleNotFoundError: No module named 'optiland\.geometries'/);
   await adapter.close();
 
-  // The caches are under the root's cache directory; nothing was written beside a source, the fake's or the worker's.
+  // The caches are under the root's cache directory. Bytecode is cached there, of what the worker imported once it
+  // had said where; nothing was written beside a source, the fake's or the worker's.
   assert.deepEqual(readdirSync(join(root.rootDir, ".cache", "optiland")).sort(), ["matplotlib", "numba", "pycache"]);
+  const cached = filesUnder(join(root.rootDir, ".cache", "optiland", "pycache"));
+  assert.ok(
+    cached.some((name) => /lvrtc_optiland\/engine\.[^/]+\.pyc$/.test(name)),
+    cached.join(", "),
+  );
+  assert.ok(cached.every((name) => name.endsWith(".pyc") && !name.includes("__pycache__")));
   assert.deepEqual(filesUnder(root.site), before);
   assert.equal(existsSync(bytecode), hadBytecode);
 });
@@ -494,25 +520,29 @@ test("lvrtc run: optiland without an interpreter is unavailable, and the other e
   );
 });
 
-test("lvrtc run --engines optiland: every rung's quantity is answered unsupported", { skip }, async (t) => {
-  const fake = fakeOptilandRoot(t);
-  const rootDir = suiteRoot(t, ["selftest", "r0", "r1"], fake);
-  const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest,r0"]);
-  assert.equal(ended.err, "");
-  assert.equal(ended.code, EXIT_OK, ended.out);
-  const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
-  assert.deepEqual(rows, [
-    "singlet  selftest  optiland  unsupported  negotiated   the engine does not offer selftest.echo",
-    "singlet  r0        optiland  unsupported  negotiated   the engine does not offer system.describe",
-  ]);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
-  const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
-  const engine = manifest.engines.find((entry) => entry.id === "optiland");
-  assert.ok(engine !== undefined && engine.status === "available");
-  assert.match(engine.fingerprint, SHA256);
-  assert.match(engine.adapterRevision ?? "", SHA256);
-  assert.ok(existsSync(join(rootDir, ".cache", "optiland", "numba")));
-});
+test(
+  "lvrtc run --engines optiland: a rung whose quantity it does not offer is answered unsupported",
+  { skip },
+  async (t) => {
+    const fake = fakeOptilandRoot(t);
+    const rootDir = suiteRoot(t, ["selftest", "r0", "r1"], fake);
+    const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest,r1"]);
+    assert.equal(ended.err, "");
+    assert.equal(ended.code, EXIT_OK, ended.out);
+    const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
+    assert.deepEqual(rows, [
+      "singlet  selftest  optiland  unsupported  negotiated   the engine does not offer selftest.echo",
+      "singlet  r1        optiland  unsupported  negotiated   the engine does not offer paraxial.first-order",
+    ]);
+    assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
+    const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
+    const engine = manifest.engines.find((entry) => entry.id === "optiland");
+    assert.ok(engine !== undefined && engine.status === "available");
+    assert.match(engine.fingerprint, SHA256);
+    assert.match(engine.adapterRevision ?? "", SHA256);
+    assert.ok(existsSync(join(rootDir, ".cache", "optiland", "numba")));
+  },
+);
 
 test(
   "lvrtc doctor's probe of this machine reports who the engine is, or why it cannot be used",

@@ -1,5 +1,6 @@
-// The engine `optiland` on the real optiland: the worker starts, says who it is, conforms to the contract, answers
-// every quantity "unsupported" for now, and writes nothing into the optiland checkout or its environment.
+// The engine `optiland` on the real optiland: the worker starts, says who it is, conforms to the contract, describes
+// the system it built and answers every other quantity "unsupported" for now, and writes nothing into the optiland
+// checkout or its environment. Rung R0 against the other engines is in r0.test.ts.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -20,6 +21,7 @@ import { systemProbe } from "../../../src/cli/commands/doctor.ts";
 import { createRunCommand } from "../../../src/cli/commands/run.ts";
 import { EXIT_OK, runCli } from "../../../src/cli/main.ts";
 import type { EngineIdentity } from "../../../src/contract/engine.ts";
+import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
 import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
 import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
@@ -29,6 +31,7 @@ import { runConformance } from "../../../src/engines/conformance.ts";
 import { PYTHON_WORKERS_DIRECTORY } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
+import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
 import { caseFixture } from "../../core/support.ts";
 import { CASE } from "../../engines/support.ts";
@@ -173,6 +176,8 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.jit, true, "the JIT stays on");
   assert.deepEqual([details.backend, details.precision], ["numpy", "float64"]);
   assert.equal(details.distVersion, identity.version);
+  // The version names the commit the distribution was built from and not the day it was installed.
+  assert.doesNotMatch(identity.version, /\.d\d{8}$/);
   assert.match(String(details.sourceHash), SHA256);
   assert.equal(details.sourceFiles, pythonFiles(optilandPackageDir()).length);
   for (const name of ["python", "numpy", "scipy", "numba"]) assert.match(String(details[name]), /^\d+\.\d+/, name);
@@ -181,54 +186,70 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.commit, commit);
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
-  assert.deepEqual(capabilities.quantities, {});
+  // The built-system echo, at the version of its definition the comparator holds; every feature flag, no limit.
+  assert.deepEqual(capabilities.quantities, { "system.describe": { version: systemDescribeQuantity.version } });
+  assert.deepEqual(capabilities.features, { supported: [...FEATURE_FLAGS], limits: {} });
   assert.equal(capabilities.deterministic, true);
 
-  // No quantity yet: the engine itself answers "unsupported" for each there is, and for one there is not.
+  // The engine itself answers "unsupported" for each quantity it does not offer, and for one there is not.
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
     const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec: {} }), CASE);
-    assert.equal(result.status, "unsupported", quantity);
-    assert.deepEqual(result.unsupported, [
-      { code: "quantity", item: quantity, message: `the engine optiland does not offer ${quantity}` },
-    ]);
     assert.deepEqual(result.engine, {
       id: "optiland",
       fingerprint: identity.fingerprint,
       adapterRevision: identity.adapterRevision,
       details,
     });
+    if (quantity === "system.describe") {
+      assert.equal(result.status, "ok", JSON.stringify(result.error));
+      assert.deepEqual(systemDescribeQuantity.validateData(result.data), []);
+      continue;
+    }
+    assert.equal(result.status, "unsupported", quantity);
+    assert.deepEqual(result.unsupported, [
+      { code: "quantity", item: quantity, message: `the engine does not offer ${quantity}` },
+    ]);
   }
 });
 
-test("lvrtc run --engines optiland: every rung is answered unsupported, and nothing fails", { skip }, async (t) => {
-  const loaded = optilandRoot(t);
-  const { rootDir } = loaded;
-  const suite = {
-    contract: CONTRACT_VERSION,
-    kind: "suite",
-    name: "singlet",
-    runs: [{ name: "singlet", lens: { kind: "fixture", path: "cases/singlet.json" } }],
-  };
-  writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
-  mkdirSync(join(rootDir, "cases"));
-  copyFileSync(caseFixture("singlet"), join(rootDir, "cases", "singlet.json"));
+test(
+  "lvrtc run --engines optiland: R0 is answered, every other rung unsupported, and nothing fails",
+  { skip },
+  async (t) => {
+    const loaded = optilandRoot(t);
+    const { rootDir } = loaded;
+    const suite = {
+      contract: CONTRACT_VERSION,
+      kind: "suite",
+      name: "singlet",
+      runs: [{ name: "singlet", lens: { kind: "fixture", path: "cases/singlet.json" } }],
+    };
+    writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
+    mkdirSync(join(rootDir, "cases"));
+    copyFileSync(caseFixture("singlet"), join(rootDir, "cases", "singlet.json"));
 
-  const out: string[] = [];
-  const err: string[] = [];
-  const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
-  const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
-  const rungs = RUNGS.map((rung) => rung.id);
-  const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", rungs.join(",")], io, [command]);
-  // The standard error names the fields a case file gives no rays for; that fails nothing.
-  assert.equal(code, EXIT_OK, out.join("") + err.join(""));
-  const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
-  assert.ok(manifest.jobs.length >= rungs.length);
-  assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
-  for (const job of manifest.jobs) assert.deepEqual([job.engine, job.status], ["optiland", "unsupported"], job.rung);
-  const [engine] = manifest.engines;
-  assert.ok(engine.id === "optiland" && engine.status === "available");
-  assert.match(engine.adapterRevision ?? "", SHA256);
-});
+    const out: string[] = [];
+    const err: string[] = [];
+    const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
+    const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
+    const rungs = RUNGS.map((rung) => rung.id);
+    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", rungs.join(",")], io, [
+      command,
+    ]);
+    // The standard error names the fields a case file gives no rays for; that fails nothing.
+    assert.equal(code, EXIT_OK, out.join("") + err.join(""));
+    const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
+    assert.ok(manifest.jobs.length >= rungs.length);
+    assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
+    for (const job of manifest.jobs) {
+      assert.deepEqual([job.engine, job.status], ["optiland", job.rung === "r0" ? "ok" : "unsupported"], job.rung);
+    }
+    assert.equal(manifest.jobs.filter((job) => job.rung === "r0").length, 1);
+    const [engine] = manifest.engines;
+    assert.ok(engine.id === "optiland" && engine.status === "available");
+    assert.match(engine.adapterRevision ?? "", SHA256);
+  },
+);
 
 test("lvrtc doctor reports the fingerprint of the optiland it finds", { skip }, async (t) => {
   // The probe that doctor uses, on a root whose caches are warm.
@@ -263,7 +284,8 @@ test(
   { skip },
   async (t) => {
     // A cache directory of this test's own: matplotlib builds its font cache again, numba compiles optiland's cached
-    // functions again, and every module is compiled from its source, as on a machine that never ran the worker.
+    // functions again, and every module is compiled from its source and its bytecode written, as on a machine that
+    // never ran the worker. The second start reads that bytecode.
     const cacheDir = join(tempDir(t), "cache");
     const loaded = optilandRoot(t, cacheDir);
     // The snapshot was taken when this file was loaded, so everything the tests above did is inside it too: the
@@ -281,6 +303,9 @@ test(
         helloMs.push(performance.now() - started);
         const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: {} }), CASE);
         assert.equal(result.status, "unsupported", start);
+        // A case is built: what the builder uses of optiland is imported now, and cached like the rest.
+        const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: {} }), CASE);
+        assert.equal(built.status, "ok", `${start}: ${JSON.stringify(built.error)}`);
       } finally {
         await adapter.close();
       }
@@ -308,6 +333,19 @@ test(
       `numba wrote its index and its machine code under the cache directory: ${cached.join(", ")}`,
     );
     assert.deepEqual(readdirSync(join(cacheDir, "optiland")).sort(), ["matplotlib", "numba", "pycache"]);
+    // Bytecode is cached too, under the cache directory: optiland's own modules among it, by their full path, and
+    // not one file of it in a `__pycache__`, which is where Python would have written beside a source.
+    const bytecode = readdirSync(join(cacheDir, "optiland", "pycache"), { recursive: true, encoding: "utf8" }).filter(
+      (name) => name.endsWith(".pyc"),
+    );
+    const ofOptiland = join(optilandPackageDir(), "optic").slice(1);
+    assert.ok(
+      bytecode.some((name) => name.startsWith(ofOptiland)),
+      `${bytecode.length} files of bytecode, none of ${ofOptiland}`,
+    );
+    assert.ok(bytecode.length > 500, `the import of optiland is cached: ${bytecode.length} files`);
+    assert.ok(bytecode.every((name) => !name.includes("__pycache__")));
+    t.diagnostic(`bytecode: ${bytecode.length} files under the cache directory`);
 
     const changes = snapshotChanges(before, after);
     if (changes.length > 0 && optilandCommit() !== commit) {

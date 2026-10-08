@@ -35,7 +35,7 @@ class PrepareTest(TempDirTest):
 
         self.addCleanup(restore)
 
-    def test_every_cache_goes_under_the_stated_directory_and_bytecode_is_not_written(self) -> None:
+    def test_every_cache_goes_under_the_stated_directory_and_bytecode_is_written_there_and_only_there(self) -> None:
         base = self.tmp / "cache"
         environ = {CACHE_DIR_VARIABLE: str(base), "NUMBA_DISABLE_JIT": "1", "OTHER": "kept"}
         dirs = prepare(environ)
@@ -56,8 +56,46 @@ class PrepareTest(TempDirTest):
         )
         for directory in (dirs.numba, dirs.matplotlib, dirs.pycache):
             self.assertTrue(directory.is_dir())
-        self.assertIs(sys.dont_write_bytecode, True)
+        # The place first, then the permission: this interpreter caches what it imports from now on, under the
+        # prefix; a process it starts is told not to write, by the variable above.
         self.assertEqual(sys.pycache_prefix, str(base / "pycache"))
+        self.assertIs(sys.dont_write_bytecode, False)
+
+    def test_what_is_imported_after_prepare_is_cached_under_the_prefix_and_not_beside_its_source(self) -> None:
+        # An interpreter started as the comparator starts the worker, told to write no bytecode: nothing is written
+        # for what it imports before prepare, and what it imports afterwards is cached under the prefix.
+        package = self.tmp / "site" / "late"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text("x = 1\n", encoding="utf-8")
+        script = (
+            "import sys\n"
+            "import lvrtc_optiland.hygiene as hygiene\n"
+            "hygiene.prepare(protected=[])\n"
+            "import late\n"
+            "print(sys.dont_write_bytecode, sys.pycache_prefix)\n"
+        )
+        cache = self.tmp / "cache"
+        ended = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            env={
+                "PATH": os.environ.get("PATH", ""),
+                "PYTHONPATH": os.pathsep.join([str(self.tmp / "site"), str(WORKERS_DIR)]),
+                "PYTHONDONTWRITEBYTECODE": "1",
+                CACHE_DIR_VARIABLE: str(cache),
+            },
+            cwd=self.tmp,
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual(ended.returncode, 0, ended.stderr)
+        self.assertEqual(ended.stdout.decode().strip(), f"False {cache / 'pycache'}")
+        written = sorted(path for path in self.tmp.rglob("*.pyc"))
+        self.assertEqual(len(written), 1, written)
+        self.assertEqual(written[0].parent, (cache / "pycache").joinpath(*package.parts[1:]))
+        self.assertRegex(written[0].name, r"^__init__\..+\.pyc$")
+        self.assertEqual([path for path in self.tmp.rglob("__pycache__")], [], "nothing beside a source")
+        self.assertEqual(sorted(path.name for path in package.iterdir()), ["__init__.py"])
 
     def test_a_cache_variable_that_is_set_is_kept_and_a_backend_that_is_set_is_not(self) -> None:
         numba = self.tmp / "elsewhere" / "numba"
@@ -162,9 +200,9 @@ class CheckTest(TempDirTest):
 
     def setUp(self) -> None:
         super().setUp()
-        saved = sys.dont_write_bytecode
-        sys.dont_write_bytecode = True
-        self.addCleanup(lambda: setattr(sys, "dont_write_bytecode", saved))
+        saved = sys.pycache_prefix
+        sys.pycache_prefix = str(self.tmp / "cache" / "pycache")
+        self.addCleanup(lambda: setattr(sys, "pycache_prefix", saved))
 
     def test_the_state_prepare_leaves_passes(self) -> None:
         check(*self.modules())
@@ -196,11 +234,18 @@ class CheckTest(TempDirTest):
             self.assertIn(f"the {name} cache", str(raised.exception))
             self.assertIn(f"lies inside {home}, which the worker must not write to", str(raised.exception))
 
-    def test_an_interpreter_that_writes_bytecode_is_refused(self) -> None:
-        sys.dont_write_bytecode = False
+    def test_an_interpreter_whose_bytecode_would_go_elsewhere_is_refused(self) -> None:
+        dirs, optiland, numba = self.modules()
+        sys.pycache_prefix = None
         with self.assertRaises(HygieneError) as raised:
-            check(*self.modules())
-        self.assertEqual(str(raised.exception), "the interpreter writes bytecode")
+            check(dirs, optiland, numba)
+        self.assertEqual(str(raised.exception), f"bytecode is written to the source directories, not to {dirs.pycache}")
+        sys.pycache_prefix = str(self.tmp / "elsewhere")
+        with self.assertRaises(HygieneError) as raised:
+            check(dirs, optiland, numba)
+        self.assertEqual(
+            str(raised.exception), f"bytecode is written to {self.tmp / 'elsewhere'}, not to {dirs.pycache}"
+        )
 
 
 if __name__ == "__main__":

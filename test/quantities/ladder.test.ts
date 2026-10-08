@@ -52,9 +52,10 @@ test("system.describe and paraxial.first-order are registered, at the versions t
   assert.equal(PARAXIAL_FIRST_ORDER, "paraxial.first-order");
   assert.equal(QUANTITIES.get("system.describe"), systemDescribeQuantity);
   assert.equal(QUANTITIES.get("paraxial.first-order"), paraxialFirstOrderQuantity);
-  assert.deepEqual([systemDescribeQuantity.id, systemDescribeQuantity.version], [SYSTEM_DESCRIBE, 1]);
+  assert.deepEqual([systemDescribeQuantity.id, systemDescribeQuantity.version], [SYSTEM_DESCRIBE, 2]);
   assert.deepEqual([paraxialFirstOrderQuantity.id, paraxialFirstOrderQuantity.version], [PARAXIAL_FIRST_ORDER, 1]);
-  assert.equal(SYSTEM_DESCRIBE_VERSION, 1);
+  // Version 2 echoes the inner clip radius of every surface.
+  assert.equal(SYSTEM_DESCRIBE_VERSION, 2);
   assert.equal(PARAXIAL_FIRST_ORDER_VERSION, 1);
   assert.deepEqual(
     QUANTITIES.list().map(({ id }) => id),
@@ -141,12 +142,14 @@ test("the parts of system.describe data describe one system: one S, one L, one K
     "/curvature invariant",
     "/conic invariant",
     "/clipRadius invariant",
+    "/innerClipRadius invariant",
     "/indexAfterSurface invariant",
     "/sagRadii invariant",
     "/terms invariant",
   ]);
   assert.deepEqual(broken("/vertexZ", vector(0, 4, 9)), ["/vertexZ invariant"]);
   assert.deepEqual(broken("/clipRadius", vector(10)), ["/clipRadius invariant"]);
+  assert.deepEqual(broken("/innerClipRadius", vector(0, 0, 0)), ["/innerClipRadius invariant"]);
   // The index table has a row per line, of which there is at least one, and a column per surface.
   assert.deepEqual(broken("/indexAfterSurface", matrix(1, 3)), ["/indexAfterSurface invariant"]);
   assert.deepEqual(broken("/indexAfterSurface", matrix(0, 2)), ["/indexAfterSurface invariant"]);

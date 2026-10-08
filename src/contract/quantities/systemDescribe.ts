@@ -9,8 +9,11 @@ import type { AsphereTerm } from "../case.ts";
 /** The id of the quantity that echoes the system an engine built: what rung R0 compares. */
 export const SYSTEM_DESCRIBE = "system.describe";
 
-/** The version of `system.describe`'s definition, which an engine that answers it states in its descriptor. */
-export const SYSTEM_DESCRIBE_VERSION = 1;
+/**
+ * The version of `system.describe`'s definition, which an engine that answers it states in its descriptor. Version
+ * 2 added `innerClipRadius`: the central obstruction of an annular aperture is part of the system an engine built.
+ */
+export const SYSTEM_DESCRIBE_VERSION = 2;
 
 /**
  * The fractions of a surface's nominal semi-diameter at which its sag is reported when a spec names none: nine,
@@ -50,6 +53,11 @@ export type SystemDescribeData = {
    * the case's stop setting. Shape `[S]`.
    */
   readonly clipRadius: NdArrayWire;
+  /**
+   * The radial height below which the engine stops a ray at each surface, mm: the radius of a central obstruction,
+   * and 0 for a surface without one. A ray at exactly that height passes. Shape `[S]`.
+   */
+  readonly innerClipRadius: NdArrayWire;
   /** The index of the medium that follows each surface, per line: shape `[L, S]`. */
   readonly indexAfterSurface: NdArrayWire;
   /** The radial heights the sag is given at, mm: each fraction times the surface's nominal semi-diameter. `[S, K]`. */

@@ -28,6 +28,10 @@
       "description": "The largest radial height at which the engine lets a ray pass each surface; on the stop surface, the one of the case's stop setting; shape [S].",
       "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
     },
+    "innerClipRadius": {
+      "description": "The radial height below which the engine stops a ray at each surface: the radius of a central obstruction; 0 for a surface without one; shape [S].",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
     "indexAfterSurface": {
       "description": "The refractive index of the medium that follows each surface, per line; shape [L, S].",
       "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
@@ -67,6 +71,7 @@
     "curvature",
     "conic",
     "clipRadius",
+    "innerClipRadius",
     "indexAfterSurface",
     "sagRadii",
     "sag",

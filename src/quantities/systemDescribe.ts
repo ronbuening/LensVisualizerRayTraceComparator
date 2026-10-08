@@ -30,7 +30,7 @@ function dataInvariants(value: unknown): ValidationIssue[] {
   if (data.stopIndex >= surfaces) {
     issues.push(invariantIssue("/stopIndex", `${data.stopIndex} is not the index of one of the ${surfaces} surfaces`));
   }
-  for (const name of ["vertexZ", "curvature", "conic", "clipRadius"] as const) {
+  for (const name of ["vertexZ", "curvature", "conic", "clipRadius", "innerClipRadius"] as const) {
     const { shape } = data[name].$nd;
     if (shape[0] !== surfaces) {
       issues.push(invariantIssue(`/${name}`, `its shape is ${shapeText(shape)}, expected [${surfaces}] (surfaces)`));
