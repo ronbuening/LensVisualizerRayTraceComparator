@@ -23,6 +23,10 @@ node test/report/writeGolden.ts     # rewrite test/fixtures/golden after a chang
 node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   # the conformance kit on one engine
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing (console only)
+node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
+node bin/lvrtc.mjs export --all --census reports/census   # every lens at its default state; rewrites the census
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
+node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 ```
 
 ## Rules
@@ -45,6 +49,15 @@ node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for 
 - **Read a prepared state, not the authored lens.** The runtime stop radius is `state.surfaces[stopIndex].sd`;
   never read a surface's `source` or `base`, `L.stopPhysSD` or `L.totalTrack`. `syntheticKind` in the binding is
   the one reader of `source` (LV keeps the rear-plate flag nowhere else).
+- **The exporter translates and never approximates.** What the contract cannot express is a coded problem for
+  that run. A rule LV keeps only in its UI (the stop-down formula) is mirrored here with a source canary in
+  `test/integration/lv/canaries.test.ts`. Hermetic tests use synthetic numbers only, never an LV-derived value.
+- **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
+  suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
+- **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
+  a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
+  `version`.
 - **Tests that need the real LV** are `test/integration/lv/**/*.test.ts`, run by `npm run test:lv` and excluded
   from `npm test`. Each skips with a reason when LV is missing (`LV_UNAVAILABLE` in
   `test/integration/lv/support.ts`), writes nothing into the repository or LV, and names the LV commit of every

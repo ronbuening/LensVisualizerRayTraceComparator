@@ -143,8 +143,8 @@ first two are gated.
 
 | Rung | Quantity | Mode | Gate |
 |---|---|---|---|
-| R0 | Built-system echo: vertex z, sag at 9 radii per surface, indices, apertures, stop | direct | sag ≤ 1e-12 mm; rest bit-equal. Failure blocks later rungs |
-| R1 | EFL, focal points, back focus from the last lens vertex, stop-derived entrance-pupil radius, pupil z | direct | 1e-9 mm |
+| R0 | Built-system echo: vertex z, sag at 9 radii per surface, indices, apertures, stop | direct | sag ≤ 1e-12 scaled by its rounding size (see Amendments); rest bit-equal. Failure blocks later rungs |
+| R1 | EFL, focal points, back focus from the last lens vertex, stop-derived entrance-pupil radius, pupil z | direct | 1e-9 mm; pupil z also passes within 1e-12 of its distance from the image plane (see Amendments) |
 | R2 | Per-surface hits, exit direction, image landing; clip mask | identical-rays | 1e-8 mm, 1e-9; 0 mismatches outside the rim band |
 | R3 | Optical path to last surface and image; chief-relative OPD | identical-rays | 2e-5 waves |
 | R4 | Binless geometric MTF, reference line and polychromatic, on rays valid in every engine | identical-rays | 1e-7 |
@@ -325,6 +325,15 @@ the existing result store and baselines.
 | Gotchas entries for optiland defaults | Moved to `docs/gotchas.md` here |
 | Double-Gauss case in LV's `npm test` | Amended: an IR fixture replayed hermetically here |
 | R0, R4f, R6, FLOOR, the direction gate | Comparator additions; R4f and R6a tolerances provisional until measured |
+
+## Amendments since approval
+
+Gates changed after the plan was approved, each on a measured numerical floor and never to make one lens pass.
+
+| Rung | Change | Evidence |
+|---|---|---|
+| R0 | The sag gate is `sag.maxScaled` ≤ 1e-12, the difference divided by how large a rounding error of that sag can be (defined in `contract/CONTRACT.md`). The plain difference is still reported. | Two exact evaluators that sum the same terms in a different order differ by up to 1.34e-10 mm on five catalog lenses whose polynomial terms cancel heavily; scaled, the worst lens in the catalog is 5.5e-16. |
+| R1 | A pupil position passes within 1e-9 mm, or within 1e-12 of its distance from the image plane when that is larger. Every other R1 quantity keeps 1e-9 mm. | One near-telecentric catalog lens has its exit pupil 7.7 to 20 m away; in exact rational arithmetic both `lv` and `ref` are off by 1e-9 to 5e-9 mm there, a relative error of about 1e-13. The next largest pupil difference in the catalog is 1.9e-11 mm. |
 
 ## LensVisualizer changes
 
