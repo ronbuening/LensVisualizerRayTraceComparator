@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import { CONFIG_FILE, CONFIG_KEYS, LOCAL_CONFIG_FILE, REPO_ROOT, loadConfig } from "../../src/core/config.ts";
+import {
+  CONFIG_FILE,
+  CONFIG_KEYS,
+  ENGINE_PLACEHOLDERS,
+  LOCAL_CONFIG_FILE,
+  REPO_ROOT,
+  loadConfig,
+} from "../../src/core/config.ts";
 
 /** A temporary root directory holding the given files; a string is written verbatim, anything else as JSON. */
 function rootWith(t: TestContext, files: Record<string, unknown> = {}): string {
@@ -283,6 +290,75 @@ test("a stdio engine is a command line, whose first word resolves like an interp
       env: { PYTHONPATH: "workers/python", EMPTY: "" },
     },
   });
+});
+
+test("a stdio engine's command and env may use ${root} and ${python}, which are replaced; nothing else is", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      python: "tools/venv/bin/python",
+      engines: {
+        worker: {
+          transport: "stdio",
+          command: ["${python}", "-m", "worker", "--data=${root}/data", "${root}", "$HOME", "${", "$root", "{root}"],
+          options: { note: "${root} is not replaced in options" },
+          env: { PYTHONPATH: "${root}/workers/python:${root}/more", INTERPRETER: "${python}", PLAIN: "as written" },
+        },
+        "by-root": { transport: "stdio", command: ["${root}/bin/worker"] },
+        "in-process": { transport: "in-process", module: "${root}.ts", options: { text: "${python}" } },
+      },
+    },
+    // The placeholder is the value of the highest layer, whichever layer the definition is from.
+    [LOCAL_CONFIG_FILE]: { python: "python3.13" },
+  });
+  const { config } = loadConfig({ rootDir, env: {} });
+  assert.deepEqual(config.engineDefinitions.worker, {
+    transport: "stdio",
+    command: ["python3.13", "-m", "worker", `--data=${rootDir}/data`, rootDir, "$HOME", "${", "$root", "{root}"],
+    options: { note: "${root} is not replaced in options" },
+    env: { PYTHONPATH: `${rootDir}/workers/python:${rootDir}/more`, INTERPRETER: "python3.13", PLAIN: "as written" },
+  });
+  assert.deepEqual(config.engineDefinitions["by-root"], {
+    transport: "stdio",
+    command: [join(rootDir, "bin", "worker")],
+    options: {},
+    env: {},
+  });
+  // An in-process definition has no placeholders: its module is a path like any other.
+  assert.deepEqual(config.engineDefinitions["in-process"], {
+    transport: "in-process",
+    module: join(rootDir, "${root}.ts"),
+    options: { text: "${python}" },
+  });
+
+  // An interpreter given as a path is resolved before it is put in, and the environment is the highest layer.
+  const fromEnv = loadConfig({ rootDir, env: { LVRTC_PYTHON: "venv/bin/python" } }).config.engineDefinitions.worker;
+  assert.partialDeepStrictEqual(fromEnv, {
+    command: [join(rootDir, "venv", "bin", "python"), "-m"],
+    env: { INTERPRETER: join(rootDir, "venv", "bin", "python") },
+  });
+  assert.deepEqual([...ENGINE_PLACEHOLDERS], ["root", "python"]);
+});
+
+test("a ${...} that is not a placeholder is an error naming the member and the file", (t) => {
+  const stdio = { transport: "stdio", command: ["python3"] };
+  const cases: [unknown, string][] = [
+    [{ ...stdio, command: ["python3", "${rootDir}/x"] }, '"engines.fake.command[1]" uses ${rootDir}'],
+    [{ ...stdio, command: ["${Python}"] }, '"engines.fake.command[0]" uses ${Python}'],
+    [{ ...stdio, env: { A: "${root}", PYTHONPATH: "${repo}/workers" } }, '"engines.fake.env.PYTHONPATH" uses ${repo}'],
+    [{ ...stdio, env: { A: "${}" } }, '"engines.fake.env.A" uses ${}'],
+    [{ ...stdio, env: { A: "${root }" } }, '"engines.fake.env.A" uses ${root }'],
+  ];
+  for (const [fake, problem] of cases) {
+    const rootDir = rootWith(t, { [CONFIG_FILE]: { engines: { fake } } });
+    assert.throws(
+      () => loadConfig({ rootDir, env: {} }),
+      {
+        message:
+          `${join(rootDir, CONFIG_FILE)}: ${problem}, ` + "which is not a placeholder: there are ${root} and ${python}",
+      },
+      problem,
+    );
+  }
 });
 
 test("engines.optiland.python stays a value of its own, with or without a definition beside it", (t) => {

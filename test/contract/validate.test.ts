@@ -541,6 +541,22 @@ test("a pattern uses nothing that ECMAScript and Python match differently", () =
   rejects({ pattern: "^[\\].]+$" }, "pattern", "a");
 });
 
+test("a pattern has no character class that starts with its closing bracket", () => {
+  // ECMAScript reads [] as a class that matches nothing and [^] as one that matches anything. Python reads the ]
+  // as the first member of a class that goes on to the next ]: "^[^][a]$" loads in both and matches other strings.
+  const starts = /#\/pattern: \[\] and \[\^\] are whole classes in ECMAScript and the start of a class in Python/;
+  for (const pattern of ["^[]$", "^[^]$", "^[^][a]$", "^[][a]$", "^a[^]*$", "^[a][]$", "^\\\\[]$", "^[^].$"]) {
+    assert.match(loadError({ $id: ID, pattern }), starts, pattern);
+  }
+  // A bracket that is escaped, or that is not the first member of its class, is a member like any other.
+  accepts({ pattern: "^[\\]]$" }, "]");
+  accepts({ pattern: "^[^\\]]$" }, "a");
+  rejects({ pattern: "^[^\\]]$" }, "pattern", "]");
+  accepts({ pattern: "^[a\\]]+$" }, "a]");
+  accepts({ pattern: "^\\[\\]$" }, "[]");
+  accepts({ pattern: "^[a[^]$" }, "^");
+});
+
 test("uniqueItems needs an items schema that admits only primitives", () => {
   const needs = /#\/uniqueItems: needs a sibling items schema whose type names only primitive types/;
   assert.match(loadError({ $id: ID, uniqueItems: true }), needs);

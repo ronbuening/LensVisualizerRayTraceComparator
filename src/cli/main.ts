@@ -2,13 +2,14 @@ import packageJson from "../../package.json" with { type: "json" };
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
 import type { CliCommand, CliIo } from "./command.ts";
 import { doctorCommand } from "./commands/doctor.ts";
+import { engineCommand } from "./commands/engine.ts";
 import { runCommand } from "./commands/run.ts";
 
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
 export type { CliCommand, CliIo };
 
 /** Commands register here as their stages land. */
-export const COMMANDS: readonly CliCommand[] = [doctorCommand, runCommand];
+export const COMMANDS: readonly CliCommand[] = [doctorCommand, runCommand, engineCommand];
 
 function helpText(commands: readonly CliCommand[]): string {
   const width = Math.max(0, ...commands.map((command) => command.name.length));

@@ -31,6 +31,9 @@ export interface Transport {
   close(): Promise<void>;
 }
 
+/** The longest delay a timer takes; a longer one would fire at once. */
+export const MAX_TIMER_MS = 2 ** 31 - 1;
+
 /** No reply came within the time the caller allowed. The engine may still be working on the message. */
 export class TransportTimeoutError extends Error {
   /** The time that was allowed, in milliseconds. */

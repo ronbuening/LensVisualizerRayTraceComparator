@@ -14,5 +14,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # The worker kit is stdlib-only, so nothing is installed: 3.10 is the oldest Python it supports.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
       - run: npm ci
       - run: npm run check

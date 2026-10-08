@@ -33,8 +33,9 @@ const ENV_VARIABLES: Readonly<Partial<Record<ConfigKey, string>>> = {
  * How one engine is reached, as `engines.<id>` defines it; the member `transport` says which of the two it is.
  *
  * - `in-process`: `module` is the absolute path of a module that exports `createEngine(options)`.
- * - `stdio`: `command` is the worker's command line, whose first word is an absolute path or a bare command name
- *   and whose other words are as written, and `env` the variables set for it on top of the environment.
+ * - `stdio`: `command` is the worker's command line, whose first word is an absolute path or a bare command name,
+ *   and `env` the variables set for it on top of the environment the transport gives every worker. In both, every
+ *   placeholder of `ENGINE_PLACEHOLDERS` has been replaced; the words are otherwise as written.
  *
  * `options` is the engine's own business; it is `{}` when the definition gives none.
  */
@@ -119,6 +120,19 @@ function checkedValue(key: ConfigKey, value: unknown, file: string): string | nu
   throw new Error(`${file}: "${key}" must be a non-empty string${NULLABLE.has(key) ? " or null" : ""}`);
 }
 
+/**
+ * What a stdio definition may write in a word of `command` and in a value of `env`, as `${name}`:
+ *
+ * - `${root}`: the configuration root, an absolute directory; `${root}/workers` is a path below it;
+ * - `${python}`: the configuration value `python`, as resolved: an absolute path or a bare command name.
+ *
+ * Nothing else is replaced, and a `${...}` that names neither is an error, so a misspelling is not passed on to a
+ * worker as text.
+ */
+export const ENGINE_PLACEHOLDERS = ["root", "python"] as const;
+
+const PLACEHOLDER = /\$\{([^}]*)\}/g;
+
 /** What one layer sets: values by key, and engine definitions by engine id, with paths as they were written. */
 interface Layer {
   readonly values: Partial<Values>;
@@ -169,9 +183,20 @@ function checkedDefinition(key: string, members: Readonly<Record<string, unknown
   if (!Array.isArray(command) || command.length === 0 || !command.every(isWord)) {
     throw wrong("command", "a non-empty list of non-empty strings");
   }
+  const known: readonly string[] = ENGINE_PLACEHOLDERS;
+  const checkPlaceholders = (member: string, text: string): void => {
+    for (const [written, name] of text.matchAll(PLACEHOLDER)) {
+      if (!known.includes(name)) {
+        const list = known.map((placeholder) => `\${${placeholder}}`).join(" and ");
+        throw new Error(`${file}: "${key}.${member}" uses ${written}, which is not a placeholder: there are ${list}`);
+      }
+    }
+  };
+  command.forEach((word, index) => checkPlaceholders(`command[${index}]`, word));
   if (!isPlainObject(env)) throw wrong("env", "an object");
   const variables = Object.entries(env).map(([name, value]): [string, string] => {
     if (typeof value !== "string") throw wrong(`env.${name}`, "a string");
+    checkPlaceholders(`env.${name}`, value);
     return [name, value];
   });
   return { transport, command: [...command], options, env: Object.fromEntries(variables) };
@@ -266,10 +291,18 @@ function resolved(key: ConfigKey, value: string | null, rootDir: string): string
   return INTERPRETERS.has(key) ? resolvedCommand(value, rootDir) : resolve(rootDir, value);
 }
 
-function resolvedDefinition(definition: EngineDefinition, rootDir: string): EngineDefinition {
+/**
+ * A definition as it is used: paths resolved against the root and, in a stdio definition, every placeholder
+ * replaced. `python` is the resolved configuration value `python`.
+ */
+function resolvedDefinition(definition: EngineDefinition, rootDir: string, python: string): EngineDefinition {
   if (definition.transport === "in-process") return { ...definition, module: resolve(rootDir, definition.module) };
-  const [program, ...args] = definition.command;
-  return { ...definition, command: [resolvedCommand(program, rootDir), ...args] };
+  const replacements: Readonly<Record<string, string>> = { root: rootDir, python };
+  // The names were checked when the file was read, so each one has a replacement.
+  const filled = (text: string): string => text.replace(PLACEHOLDER, (_written, name: string) => replacements[name]);
+  const [program, ...args] = definition.command.map(filled);
+  const env = Object.fromEntries(Object.entries(definition.env).map(([name, value]) => [name, filled(value)]));
+  return { ...definition, command: [resolvedCommand(program, rootDir), ...args], env };
 }
 
 /**
@@ -282,8 +315,9 @@ function resolvedDefinition(definition: EngineDefinition, rootDir: string): Engi
  *
  * `engines.<id>` with a `transport` defines an engine. A definition is taken whole from the highest layer that
  * states one for that id, never merged across layers; its `module`, and a `command` whose first word is a path,
- * resolve against `rootDir` like every other path. `engines.optiland.python` is a value of its own and may stand
- * with or without a definition beside it.
+ * resolve against `rootDir` like every other path. In a stdio definition's `command` and `env`, `${root}` and
+ * `${python}` (`ENGINE_PLACEHOLDERS`) are replaced, and any other `${...}` is an error naming the file.
+ * `engines.optiland.python` is a value of its own and may stand with or without a definition beside it.
  */
 export function loadConfig(input: LoadConfigInput): LoadedConfig {
   const rootDir = resolve(input.rootDir);
@@ -304,11 +338,8 @@ export function loadConfig(input: LoadConfigInput): LoadedConfig {
       sources[key] = layer;
     }
     // A definition replaces the one a lower layer gave the same id, whole.
-    for (const [id, definition] of Object.entries(engines)) {
-      definitions.set(id, resolvedDefinition(definition, rootDir));
-    }
+    for (const [id, definition] of Object.entries(engines)) definitions.set(id, definition);
   }
-  const sortedDefinitions = [...definitions].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
   const optional = (key: ConfigKey): string | null => resolved(key, values[key], rootDir);
   const required = (key: ConfigKey): string => {
@@ -317,11 +348,16 @@ export function loadConfig(input: LoadConfigInput): LoadedConfig {
     if (value === null) throw new Error(`"${key}" has no value`);
     return value;
   };
+  // Resolved last: a placeholder stands for the value of the highest layer, whichever layer the definition is from.
+  const python = required("python");
+  const sortedDefinitions = [...definitions]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([id, definition]): [string, EngineDefinition] => [id, resolvedDefinition(definition, rootDir, python)]);
   return {
     rootDir,
     config: {
       lvPath: optional("lvPath"),
-      python: required("python"),
+      python,
       engines: { optiland: { python: optional("engines.optiland.python") } },
       engineDefinitions: Object.fromEntries(sortedDefinitions),
       cacheDir: required("cacheDir"),

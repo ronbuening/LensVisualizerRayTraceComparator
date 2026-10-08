@@ -49,9 +49,13 @@ function lvrtcRun(
   return { code: child.status, signal: child.signal, out: child.stdout, err: child.stderr };
 }
 
-/** The fixture suite on the fixture root. */
+/** The engines of the fixture root that run in this process. Its fourth, `fake-py`, is a Python worker. */
+const IN_PROCESS_ENGINES = "fake-a,fake-b,fake-none";
+
+/** The fixture suite on the fixture root, on its in-process engines unless `args` name engines: no Python is needed. */
 function fakePair(runsDir: string, ...args: string[]): Ended {
-  return lvrtcRun(runsDir, [FAKE_PAIR_SUITE, "--root", FAKE_ROOT, ...args]);
+  const engines = args.includes("--engines") ? [] : ["--engines", IN_PROCESS_ENGINES];
+  return lvrtcRun(runsDir, [FAKE_PAIR_SUITE, "--root", FAKE_ROOT, ...args, ...engines]);
 }
 
 function manifestOf(runsDir: string, suite: string): RunManifest {
@@ -216,7 +220,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-none$/m,
+    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-none, fake-py$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });

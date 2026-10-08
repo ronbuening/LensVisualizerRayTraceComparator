@@ -393,6 +393,11 @@ a `run` whose request or case is not valid by its own kind or whose request is a
 `unknown-method` for any other method. An engine echoes the ids it is given: `id` of the message in its reply, and
 `request.id` and `case.id` as the result's `requestId` and `caseId`.
 
+Over a byte stream (the stdio transport) a message is one line of JSON and so is its reply: UTF-8, no line break
+inside, a newline after. A worker answers every line it reads with exactly one line, and writes nothing else to
+that stream. A line it cannot read an `id` from, because it is not JSON or not an object or has no usable `id`, is
+answered under the id `"?"`. `lvrtc engine conformance` checks an engine against this section.
+
 ## Quantities
 
 A quantity is what a request asks for, identified by a dotted id (`system.describe`, `paraxial.first-order`,
@@ -471,7 +476,9 @@ load time:
 - `enum` and `const` hold primitives only, compared by JSON type and value (1 equals 1.0; neither equals `true`);
 - `uniqueItems` needs a sibling `items` whose `type` names only primitive types;
 - a `pattern` is anchored with `^` and `$` and uses neither `\d`, `\w`, `\s`, `\b` nor a dot outside a character
-  class, because ECMAScript and Python's `re` match different characters with those.
+  class, because ECMAScript and Python's `re` match different characters with those, nor a character class that
+  starts with its closing bracket: `[]` and `[^]` are whole classes in ECMAScript, and in Python the start of a
+  class that holds `]`.
 
 Whatever is accepted means what the draft says it means. `integer` is a number without a fraction, however it was
 written (`4`, `4.0` and `4e0` alike); a boolean is never a number, and 1 is never `true`; `minLength` counts

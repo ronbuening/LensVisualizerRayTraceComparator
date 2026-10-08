@@ -22,7 +22,10 @@ import { RemoteEngineAdapter } from "../../src/engines/remote.ts";
 import { createInProcessTransport } from "../../src/transports/inProcess.ts";
 import { FIXTURE_DIR, SINGLET_CASE } from "../contract/corpus.ts";
 
-/** The fixture configuration root: three in-process fake engines, `fake-a`, `fake-b` and `fake-none`. */
+/**
+ * The fixture configuration root: three in-process fake engines, `fake-a`, `fake-b` and `fake-none`, and `fake-py`,
+ * the Python fake engine as a stdio worker. A test that runs the root without naming engines needs Python.
+ */
 export const FAKE_ROOT: string = fileURLToPath(new URL("../fixtures/fake-root", import.meta.url));
 /** The fixture suite: the singlet and the Double-Gauss case on `selftest`, by paths relative to `FAKE_ROOT`. */
 export const FAKE_PAIR_SUITE: string = fileURLToPath(new URL("../fixtures/suites/fake-pair.json", import.meta.url));

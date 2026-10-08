@@ -10,13 +10,18 @@ import type { EngineDefinition } from "../../src/core/config.ts";
 import { EngineUnavailableError } from "../../src/engines/adapter.ts";
 import type { EngineUnavailableCode } from "../../src/engines/adapter.ts";
 import { parseFakeOptions } from "../../src/engines/fake/options.ts";
-import { TRANSPORT_FACTORIES, createEngineRegistry } from "../../src/engines/registry.ts";
+import { TRANSPORT_FACTORIES, createEngineRegistry, createEngineTransport } from "../../src/engines/registry.ts";
 import type { EngineRegistry, TransportContext, TransportFactories } from "../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../src/engines/remote.ts";
 import { createInProcessTransport } from "../../src/transports/inProcess.ts";
+import { INHERITED_VARIABLES } from "../../src/transports/stdio.ts";
 import { CASE, echoRequest } from "./support.ts";
 
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
+/** The fixture worker of the stdio transport's tests: it answers any message with what it was started with. */
+const STDIO_WORKER = fileURLToPath(new URL("../fixtures/stdio-worker/worker.mjs", import.meta.url));
+/** The TypeScript fake engine as a stdio worker. */
+const STDIO_FAKE_ENGINE = fileURLToPath(new URL("../fixtures/stdio-worker/fakeEngine.mjs", import.meta.url));
 /** A module that is the fake engine, wherever the file that holds this text is. */
 const FAKE_MODULE = `export { createEngine } from ${JSON.stringify(pathToFileURL(FAKE_ENGINE).href)};\n`;
 /** A module whose engine answers hello as the engine its options name, and refuses everything else. */
@@ -326,19 +331,89 @@ test("a createEngine that throws, as the fake does for options it does not know,
 // ── Transports ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 test("a definition whose transport has no factory is unsupported-transport", async (t) => {
-  // This stage implements the in-process transport alone; the stage that adds stdio adds its factory to the map.
-  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process"]);
+  // Every transport a definition can name is implemented; a caller's own map may leave one out.
+  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process", "stdio"]);
   const rootDir = rootWith(t, {
     worker: { transport: "stdio", command: ["python3", "-m", "worker"] },
     fake: inProcess("fake.ts", { id: "fake" }),
   });
-  const error = await unavailable(registryOf(rootDir).create("worker"), "unsupported-transport");
+  const inProcessOnly = { "in-process": TRANSPORT_FACTORIES["in-process"] };
+  const error = await unavailable(registryOf(rootDir, inProcessOnly).create("worker"), "unsupported-transport");
   assert.equal(
     error.message,
     'engine worker is unavailable (unsupported-transport): no transport "stdio" is implemented',
   );
-  // The same holds for in-process when a caller's map leaves it out.
   await unavailable(registryOf(rootDir, {}).create("fake"), "unsupported-transport");
+  await unavailable(createEngineTransport(loadConfig({ rootDir, env: {} }), "fake", {}), "unsupported-transport");
+});
+
+test("a stdio definition is a worker process: started by describe, in the root, with its options and env", async (t) => {
+  const rootDir = rootWith(
+    t,
+    {
+      "fake-node": {
+        transport: "stdio",
+        command: [process.execPath, "${root}/worker.mjs"],
+        options: { id: "fake-node", bias: 0.5 },
+        env: { WORKER_NOTE: "from ${root}" },
+      },
+      inspector: { transport: "stdio", command: [process.execPath, STDIO_WORKER, "well"], env: { WORKER_NOTE: "x" } },
+    },
+    { "worker.mjs": `import ${JSON.stringify(pathToFileURL(STDIO_FAKE_ENGINE).href)};\n` },
+  );
+  const adapter = await registryOf(rootDir).create("fake-node");
+  t.after(() => adapter.close());
+  const descriptor = await adapter.describe();
+  // The configured options reached the worker, through LVRTC_ENGINE_OPTIONS.
+  assert.deepEqual(descriptor.identity.details, { bias: 0.5, offersQuantities: true, failMode: "none" });
+  assert.equal(descriptor.identity.fingerprint, parseFakeOptions({ id: "fake-node", bias: 0.5 }).fingerprint);
+  const result = await adapter.run(echoRequest(Float64Array.of(2, 3)), CASE);
+  assert.equal(result.status, "ok");
+  assert.equal(result.data?.sum, 6);
+
+  // What the worker was started with, as a worker that reports it says.
+  const transport = await createEngineTransport(loadConfig({ rootDir, env: {} }), "inspector");
+  t.after(() => transport.close());
+  assert.equal(transport.kind, "stdio");
+  await transport.open();
+  const reply = await transport.call({ contract: "1.0", id: "1", method: "hello", params: {} }, { timeoutMs: 30_000 });
+  const seen = (reply as unknown as { result: { cwd: string; env: Record<string, string> } }).result;
+  assert.equal(seen.cwd, rootDir);
+  const set = { PYTHONDONTWRITEBYTECODE: "1", PYTHONUNBUFFERED: "1", LVRTC_ENGINE_OPTIONS: "{}", WORKER_NOTE: "x" };
+  assert.partialDeepStrictEqual(seen.env, set);
+  // Beside those, only the few variables a program needs to start: nothing else of this process is passed on.
+  // (macOS gives every process a variable of its own, which no parent can withhold.)
+  const others = Object.keys(seen.env).filter((name) => !Object.hasOwn(set, name) && !name.startsWith("__CF"));
+  assert.deepEqual(
+    others.filter((name) => !(INHERITED_VARIABLES as readonly string[]).includes(name)),
+    [],
+  );
+});
+
+test("a stdio engine whose command does not start, or is no engine, is unavailable when it is described", async (t) => {
+  const rootDir = rootWith(t, {
+    nowhere: { transport: "stdio", command: ["lvrtc-no-such-command"] },
+    quitter: { transport: "stdio", command: [process.execPath, STDIO_WORKER, "exit-on-start"] },
+    stranger: { transport: "stdio", command: [process.execPath, STDIO_WORKER, "well"] },
+  });
+  const registry = registryOf(rootDir);
+  // Building the adapter starts nothing: the engine is found unavailable when it is first needed.
+  const [nowhere, quitter, stranger] = await Promise.all(
+    ["nowhere", "quitter", "stranger"].map((id) => registry.create(id)),
+  );
+  t.after(() => Promise.all([nowhere.close(), quitter.close(), stranger.close()]));
+
+  const missing = await unavailable(nowhere.describe(), "spawn-failed");
+  assert.equal(
+    missing.message,
+    "engine nowhere is unavailable (spawn-failed): its stdio transport did not open: stdio worker: " +
+      "the command lvrtc-no-such-command did not start: spawn lvrtc-no-such-command ENOENT",
+  );
+  const gone = await unavailable(quitter.describe(), "hello-failed");
+  assert.match(gone.message, /the transport failed: stdio worker: the worker exited with code 2/);
+  assert.match(gone.message, /its log ends: cannot start: the licence file is missing$/);
+  // A worker that answers, but not with a descriptor.
+  await unavailable(stranger.describe(), "bad-descriptor");
 });
 
 test("a factory in the map builds the transport of its kind, from the definition and the context", async (t) => {

@@ -15,6 +15,12 @@
       "transport": "in-process",
       "module": "../../../src/engines/fake/engine.ts",
       "options": { "id": "fake-none", "offersQuantities": false }
+    },
+    "fake-py": {
+      "transport": "stdio",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine"],
+      "options": { "id": "fake-py" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
     }
   }
 }

@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import type { ProtocolHandler } from "../contract/protocol.ts";
 import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
 import { createInProcessTransport } from "../transports/inProcess.ts";
+import { createStdioTransport, workerEnvironment } from "../transports/stdio.ts";
 import type { Transport } from "../transports/transport.ts";
 import { EngineUnavailableError } from "./adapter.ts";
 import type { EngineAdapter } from "./adapter.ts";
@@ -71,10 +72,53 @@ export const inProcessTransportFactory: TransportFactory<"in-process"> = async (
 };
 
 /**
+ * The factory of stdio engines: a worker process started from the definition's `command`, in the configuration root
+ * as its working directory, with the environment `workerEnvironment` builds from this process's environment, the
+ * definition's `options` and its `env`. Nothing is started here: the transport's `open()` does that, and a command
+ * that does not start is found then.
+ */
+export const stdioTransportFactory: TransportFactory<"stdio"> = async (definition, { rootDir }) =>
+  createStdioTransport({
+    command: definition.command,
+    env: workerEnvironment(process.env, definition.options, definition.env),
+    cwd: rootDir,
+  });
+
+/**
  * The transports implemented so far. A stage that implements another adds its factory here, and nothing that uses
  * the registry changes.
  */
-export const TRANSPORT_FACTORIES: TransportFactories = { "in-process": inProcessTransportFactory };
+export const TRANSPORT_FACTORIES: TransportFactories = {
+  "in-process": inProcessTransportFactory,
+  stdio: stdioTransportFactory,
+};
+
+/**
+ * Builds the transport of a configured engine, unopened: the engine is not contacted. Rejects with an
+ * `EngineUnavailableError`: `not-configured` for an id that `loaded` does not define, `unsupported-transport` for a
+ * transport without a factory in `factories`, and whatever the factory rejects with.
+ */
+export async function createEngineTransport(
+  loaded: Pick<LoadedConfig, "rootDir" | "config">,
+  id: string,
+  factories: TransportFactories = TRANSPORT_FACTORIES,
+): Promise<Transport> {
+  const definitions = loaded.config.engineDefinitions;
+  // An own key: "constructor" is an engine id like any other, and no object defines it by inheritance.
+  if (!Object.hasOwn(definitions, id)) {
+    const ids = Object.keys(definitions).sort();
+    const defined = ids.length === 0 ? "no engine" : ids.join(", ");
+    throw new EngineUnavailableError(id, "not-configured", `the configuration defines ${defined}`);
+  }
+  const definition = definitions[id];
+  // Looked up by the definition's own transport, so the factory found is the one for this kind of definition.
+  const factory = factories[definition.transport] as TransportFactory<EngineDefinition["transport"]> | undefined;
+  if (factory === undefined) {
+    const detail = `no transport "${definition.transport}" is implemented`;
+    throw new EngineUnavailableError(id, "unsupported-transport", detail);
+  }
+  return factory(definition, { engineId: id, rootDir: loaded.rootDir });
+}
 
 /** The engines of one configuration. */
 export interface EngineRegistry {
@@ -97,25 +141,9 @@ export function createEngineRegistry(
   loaded: Pick<LoadedConfig, "rootDir" | "config">,
   factories: TransportFactories = TRANSPORT_FACTORIES,
 ): EngineRegistry {
-  const definitions = loaded.config.engineDefinitions;
-  const ids = (): string[] => Object.keys(definitions).sort();
   return {
-    ids,
-    create: async (id) => {
-      // An own key: "constructor" is an engine id like any other, and no object defines it by inheritance.
-      if (!Object.hasOwn(definitions, id)) {
-        const defined = ids().length === 0 ? "no engine" : ids().join(", ");
-        throw new EngineUnavailableError(id, "not-configured", `the configuration defines ${defined}`);
-      }
-      const definition = definitions[id];
-      // Looked up by the definition's own transport, so the factory found is the one for this kind of definition.
-      const factory = factories[definition.transport] as TransportFactory<EngineDefinition["transport"]> | undefined;
-      if (factory === undefined) {
-        const detail = `no transport "${definition.transport}" is implemented`;
-        throw new EngineUnavailableError(id, "unsupported-transport", detail);
-      }
-      const transport = await factory(definition, { engineId: id, rootDir: loaded.rootDir });
-      return new RemoteEngineAdapter({ id, transport });
-    },
+    ids: () => Object.keys(loaded.config.engineDefinitions).sort(),
+    create: async (id) =>
+      new RemoteEngineAdapter({ id, transport: await createEngineTransport(loaded, id, factories) }),
   };
 }

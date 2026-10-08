@@ -18,7 +18,8 @@
 //   - enum and const hold primitives only;
 //   - uniqueItems needs a sibling `items` whose `type` names only primitive types;
 //   - a pattern is anchored with ^ and $ and uses neither \d, \w, \s, \b nor a dot outside a character class, which
-//     match different characters in ECMAScript and in Python's `re`.
+//     match different characters in ECMAScript and in Python's `re`, nor a character class that starts with its
+//     closing bracket: [] and [^] are whole classes in ECMAScript, and in Python the start of a class that holds ].
 // The port has one more thing to mind in a pattern: the closing $ is the very end of the string, as in ECMAScript.
 // Python's $ also matches before a trailing newline, so the port writes it \Z.
 // Whatever is accepted means what the draft says it means, so a full validator agrees with this one on these
@@ -124,8 +125,13 @@ function checkPattern(value: unknown, at: string): void {
   if (typeof value !== "string" || !value.startsWith("^") || !value.endsWith("$") || value.endsWith("\\$")) {
     fail(at, "must be a string anchored with ^ and $");
   }
-  // What is left once every escape and every character class is taken out: a dot in it is the wildcard.
-  const outsideClasses = value.replace(/\\.|\[(?:\\.|[^\]\\])*\]/g, "");
+  // Every escape and every character class, as ECMAScript reads them.
+  const tokens = /\\.|\[(?:\\.|[^\]\\])*\]/g;
+  if (value.match(tokens)?.some((token) => token === "[]" || token === "[^]")) {
+    fail(at, "[] and [^] are whole classes in ECMAScript and the start of a class in Python");
+  }
+  // What is left once they are taken out: a dot in it is the wildcard.
+  const outsideClasses = value.replace(tokens, "");
   if (/\\[dDwWsSbB]/.test(value) || outsideClasses.includes(".")) {
     fail(at, "\\d, \\w, \\s, \\b and a dot outside a character class match differently in ECMAScript and Python");
   }

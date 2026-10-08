@@ -1,4 +1,7 @@
 // What the engine, transport and adapter tests share: requests to send, and ways to watch and bend an engine.
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
 import type { OpticalCase } from "../../src/contract/case.ts";
 import type { ProtocolHandler, ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { SELFTEST_ECHO } from "../../src/contract/quantities/selftestEcho.ts";
@@ -79,3 +82,28 @@ export function bending(
     return (replaced === undefined ? copy : replaced) as ProtocolResponse;
   };
 }
+
+/** The TypeScript fake engine as a stdio worker: `node fakeEngine.mjs`, with its options in LVRTC_ENGINE_OPTIONS. */
+export const STDIO_FAKE_ENGINE: string = fileURLToPath(
+  new URL("../fixtures/stdio-worker/fakeEngine.mjs", import.meta.url),
+);
+
+/** The Python worker kit: the directory a worker's PYTHONPATH names. */
+export const WORKER_KIT_PATH: string = fileURLToPath(new URL("../../workers/python", import.meta.url));
+
+/** The interpreter the tests that need Python use: `LVRTC_PYTHON`, as the configuration reads it, else `python3`. */
+export const PYTHON: string = process.env.LVRTC_PYTHON || "python3";
+
+/**
+ * Why the tests that need Python are skipped on this machine, or false when they can run: the worker kit needs an
+ * interpreter of version 3.10 or later. Asked once, when the module is loaded.
+ */
+export const PYTHON_MISSING: string | false = (() => {
+  const probe = spawnSync(PYTHON, ["-c", "import sys; print(sys.version_info >= (3, 10))"], {
+    encoding: "utf8",
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" },
+    timeout: 30_000,
+  });
+  if (probe.error !== undefined || probe.status !== 0) return `${PYTHON} is not available on this machine`;
+  return probe.stdout.trim() === "True" ? false : `${PYTHON} is older than Python 3.10, which the worker kit needs`;
+})();

@@ -4,11 +4,8 @@
 // caller holds, cannot be handed or hand back anything JSON cannot carry, and sees exactly what a worker in another
 // process would see: an engine that works here works over any other transport.
 import type { ProtocolHandler, ProtocolRequest, ProtocolResponse } from "../contract/protocol.ts";
-import { TransportTimeoutError } from "./transport.ts";
+import { MAX_TIMER_MS, TransportTimeoutError } from "./transport.ts";
 import type { Transport } from "./transport.ts";
-
-/** The longest delay a timer takes; a longer one would fire at once. */
-const MAX_TIMER_MS = 2 ** 31 - 1;
 
 /** `value` as it is after travelling as JSON text. Throws when it has no JSON text at all. */
 function throughJson(value: unknown, what: string): unknown {
