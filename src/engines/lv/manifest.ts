@@ -88,11 +88,26 @@ export const LV_IMPORT_MANIFEST = [
     ),
   },
   { module: "src/optics/analysis/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
+  { module: "src/optics/analysis/mtfFootprint.ts", exports: functions("expandMtfFootprint") },
+  {
+    module: "src/optics/analysis/mtfConstants.ts",
+    exports: [
+      { name: "MTF_GRID_LADDER", as: "mtfGridLadder", kind: "object" },
+      { name: "MTF_DEFAULT_GRID_CAP", as: "mtfDefaultGridCap", kind: "number" },
+      { name: "MTF_MAX_FOOTPRINT_EXPANSIONS", as: "mtfMaxFootprintExpansions", kind: "number" },
+      { name: "MTF_MIN_RAYS", as: "mtfMinRays", kind: "number" },
+    ],
+  },
+  {
+    module: "src/optics/analysis/mtf.ts",
+    exports: functions("refineMtfField", "emptyMtfField", "assessUnresolvedFlux"),
+  },
   {
     module: "src/optics/mtf.ts",
     exports: [
-      ...functions("computeMtf", "resolveMtfSpectrum"),
+      ...functions("computeMtf", "computeMtfSteps", "resolveMtfSpectrum"),
       { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
+      { name: "MTF_FIELDS", as: "mtfDefaultFields", kind: "object" },
     ],
   },
   {

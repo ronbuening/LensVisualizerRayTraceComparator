@@ -255,7 +255,7 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 | `lastLensSurfaceIndex` | `L.lastLensSurfaceIdx` |
 | `designImageZ` | `state.imgZ` |
 | `conditions.stopSemiDiameter` | from the run's aperture, below; the stop surface's aperture carries the same radius |
-| `conditions.imageZ` | `state.imgZ`, plus the run's shift |
+| `conditions.imageZ` | `state.imgZ`, plus the run's shift; for the image plane `lv-best-axial`, plus LensVisualizer's own best axial focus shift, below |
 | `conditions.object` | `infinity` at `focusT` 0; else `finite` at the z of `mtfFiniteObjectPoint` for the conjugate LensVisualizer certifies for exactly that focus and zoom position (`MtfSupport.conjugate`) |
 | `conditions.lines` | a named set: `MtfSupport.spectralLines` of `assessMtfSupport` for that spectrum, with LensVisualizer's weights, its reference line first. An explicit list: its own wavelengths and weights (1 each without weights), the first the reference line |
 | `conditions.indexAfterSurface` | per line, `mtfIndexResolver(state, support, wavelength)`: its indices where it gives a resolver (`indexSource` `anchored`), each surface's `nd` where it gives none (`authored`); air is exactly 1 |
@@ -267,6 +267,36 @@ written only in LensVisualizer's React hook (`useLensComputation.ts`, `currentPh
 it, in the hook's order of operations, and a test against LensVisualizer's source fails when the hook's expression
 changes. An N below the widest f-number of that zoom position is a problem, not a clamp. `stop-radius` is taken as
 given.
+
+`lv-f8-comparison` is the stop of the f/8 comparison of LensVisualizer's MTF tab
+([the request of the MTF tab](#the-request-of-the-mtf-tab)): the radius the hook hands the tab wide open,
+`(wide-open radius × fopenAtZoom) / fNumber` with the f-number of the aperture slider at wide open, times
+`fNumber / 8`. It is not the hook's own f/8, `(wide-open radius × fopenAtZoom) / 8`: the two are the same number
+on many lenses and one unit in the last place apart on others, and a case is its numbers to the bit. A lens the tab
+offers no comparison for (it is not faster than f/7.95 wide open, or does not stop down to f/8) has no such stop:
+the run has the problem `f8-comparison-unavailable`, with the tab's reason. Both expressions are the tab's and the
+hook's, restated (`lvHookStop`, `lvTabComparison` in `src/engines/lv/tabRequest.ts`) with source canaries.
+
+**The image plane `lv-best-axial`** is LensVisualizer's own best axial focus for the stop radius and the lines of
+the case: `conditions.imageZ` is `state.imgZ` plus the shift its MTF applies to every field when it is asked for
+its best focus, added as LensVisualizer adds it. The shift is asked of LensVisualizer, never computed
+(`lvBestAxialFocus`, `src/engines/lv/focus.ts`): the first step of its `computeMtfSteps`, before any field is
+traced, states the focus of the request, found by its own search on the axial beam.
+
+| Of the request the focus is asked with | Is |
+|---|---|
+| `stopSemiDiameterMm`, `pupilSemiDiameterMm` | the stop radius of the case, and the seed the tab's hook would hand over for it (`lvPupilSeed`) |
+| `spectrum` | the one of LensVisualizer's three whose lines the case has. Lines that are none of them have no focus of LensVisualizer's: `lv-best-axial-needs-lv-spectrum` |
+| `focus` | `best-axial` |
+| `maxGridSize` | `sampling.lvGridCap` of the run, where it states one; LensVisualizer's own default, 128, without |
+
+So the plane is that of one stop, one spectrum and one grid cap: the reference line and the photopic lines of one
+lens have two best planes, and so have wide open and f/8. The grid cap matters only below 64: the search is of an
+axial bundle of 64 cells, or of the cap when that is smaller. A state LensVisualizer's MTF does not cover has the
+problem of its gate's reason, and a search that finds no focus `lv-best-axial-unavailable`. A case at that plane is
+a case like any other: every engine is asked about `conditions.imageZ`, and none is told where the number came
+from. The engine `lv` recognises it ([its product MTF](#lensvisualizers-product-mtf)), and the
+[MTF recipe](#the-mtf-recipe) of a run names it.
 
 **Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, or the
 e line for a lens whose glasses are all e-referenced, and it is traced with the authored `nd`; several lines, and
@@ -284,7 +314,8 @@ its g and C lines, which its anchored indices are fitted between.
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
-| `lv-best-axial-needs-mtf-recipe` | asks for the image plane `lv-best-axial`, which only LensVisualizer's MTF result states; the MTF recipe resolves it to a shift |
+| `f8-comparison-unavailable` | asks for the aperture `lv-f8-comparison` of a lens LensVisualizer's MTF tab offers no f/8 comparison for |
+| `lv-best-axial-needs-lv-spectrum`, `lv-best-axial-unavailable` | asks for the image plane `lv-best-axial` on lines that are none of LensVisualizer's spectra, or in a state its focus search finds no focus for |
 | `wavelength-outside-fitted-range` | lists a wavelength outside LensVisualizer's g to C lines |
 | `finite-conjugate-unavailable` | asks for a focus position that is not a station LensVisualizer certifies. A refocused lens is never exported with its object at infinity |
 | `mixed-reference`, `spectral-data-unavailable` | has no glass data for what was asked: LensVisualizer's own reasons, under its own codes |
@@ -401,7 +432,7 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 | `method`, `frequenciesPerMm` | the spec's |
 | `fieldFractions` | the spec's fractions. LensVisualizer takes them of its reference image height, the format corner where the lens declares a format and the modeled edge where it does not, and solves each to a chief-ray angle, which the answer states |
 | `spectrum` | the one of LensVisualizer's three whose lines the case has: `reference`, `cdf` or `photopic`, the same wavelengths with the same weights, as its support gate lists them, traced with the indices of the case |
-| `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best` |
+| `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best`. For a case at LensVisualizer's own best axial focus, `best-axial` for the spec's `design` ([below](#a-case-at-lensvisualizers-best-axial-focus)) |
 | `stopSemiDiameterMm` | `conditions.stopSemiDiameter` |
 | `pupilSemiDiameterMm` | the seed of LensVisualizer's footprint scan: the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`). It is never the nominal pupil of the lens, which LensVisualizer's audit scripts pass and which gives another MTF |
 | `maxGridSize` | the engine option `lvGridCap`: 32, 64, 128 or 256, the grid LensVisualizer's refinement may go up to; 128 without it. It is what `sampling.lvGridCap` of a run is for |
@@ -422,13 +453,34 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 | Code, item | When |
 |---|---|
 | `feature`, a reason of LensVisualizer's support gate (`unsupported-path`, `unverified-scale`, ...) | the gate refuses the state, on any spectrum: a fisheye projection, an annular aperture, a scale it has not verified. The message is the gate's, word for word. It is decided first, whatever the spec asks |
-| `feature`, `image-plane.shifted` | `conditions.imageZ` is not the design image plane: LensVisualizer's MTF is of that plane or of its own best focus, and of no plane it is given |
+| `feature`, `image-plane.shifted` | `conditions.imageZ` is neither the design image plane nor LensVisualizer's own best axial focus for the request: its MTF is of one of those two, and of no plane it is given. Also: `engine-best`, or a profile, asked of a case that is not at its design plane |
 | `feature`, `lines.custom-spectrum` | the lines of the case are none of its three spectra: it has no spectrum by wavelength |
 | `feature`, `aperture.f8-comparison` | the case is stopped down as the tab's f/8 comparison would be, for a lens the tab offers none for |
 | `option`, `fields.angles-deg` | fields as angles: it takes fractions of its reference image height |
 | `option`, `profile` | a profile other than `lv-tab-default` |
 | `option`, `lvGridCap` | a grid cap that is none of the four |
 | `option`, `fields.limits` or `frequenciesPerMm.limits` | without a profile, more fields or frequencies, or a higher frequency, than LensVisualizer takes in one request (at `ed78cf40`: 101 fields, 501 frequencies, 1000 cycles/mm). The limits are not restated: its gate is asked with the spec's fields and then with its frequencies, and the message ends with the gate's |
+
+##### A case at LensVisualizer's best axial focus
+
+LensVisualizer's MTF cannot be handed a plane: it evaluates the design plane, or the plane its own focus search
+finds. So a case whose image plane is not its design plane has an MTF of LensVisualizer's only when that plane
+**is** the one its search finds for the very request: `lv` asks LensVisualizer for its best axial focus at the stop
+radius, the lines and the grid cap of the request (`lvBestAxialFocus`) and holds `state.imgZ` plus that shift to
+`conditions.imageZ`, to the bit. It is what a run with the image plane `lv-best-axial` exports.
+
+| The case is at | The spec's `focus` | `lv` asks LensVisualizer for | The answer's `focus` |
+|---|---|---|---|
+| its design plane | `design` | `design` | `{ mode: "design", appliedShiftMm: 0 }` |
+| its design plane | `engine-best` | `best-axial` | `{ mode: "best-axial", appliedShiftMm }`, LensVisualizer's shift |
+| LensVisualizer's best axial focus | `design` | `best-axial` | `{ mode: "design", appliedShiftMm: 0 }`: the plane of the case as it is. `method.params.focus` says `best-axial` |
+| LensVisualizer's best axial focus | `engine-best` | nothing | `unsupported`, `image-plane.shifted` |
+| any other plane | either | nothing | `unsupported`, `image-plane.shifted` |
+
+The check is of the request, not of the run's words: a case at the best focus of a grid cap of 32 is at no best
+focus of a request capped at 128, and the same plane asked for as a shift by its number is the same case and is
+answered. Should LensVisualizer's result then be of another plane than the case's, the engine fails
+(`engine-failure`) and gives no answer.
 
 ##### The request of the MTF tab
 
@@ -475,6 +527,44 @@ Source canaries (`test/integration/lv/canaries.test.ts`) pin every restated expr
 worker's call; an integration test holds the answers for the 12 benchmark configurations to `computeMtf` called
 with a request spelled out a second time, bit for bit.
 
+### The engine `replay`
+
+`replay` (`src/engines/lv/replayEngine.ts`) is the comparator's own estimators on a replay of LensVisualizer's
+sampling. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays
+are LensVisualizer's, launched and traced by LensVisualizer. What is its own is which bundles it asks for, what it
+sums and how: the comparator's reading of LensVisualizer's MTF. Rung `r4f` holds it to `lv`. Its `fingerprint` is
+LensVisualizer's engine closure, as `lv`'s is; its `adapterRevision` is the hash of the comparator's code behind
+it, in which the replay and the estimator are and which is not `lv`'s.
+
+It answers **`mtf.native`** with the method `geometric`, for the request `lv` would make for the same case and
+spec (`lvMtfRequest`, one function for both): what `lv` answers `unsupported`, `replay` answers `unsupported`
+with the same item, a case at LensVisualizer's own best axial focus is answered by both, and a case that is stale
+or came from no LensVisualizer lens is treated as `lv` treats it. Its own two refusals, both of code `option`:
+`method.diffraction` (it has the geometric estimator and no other) and `profile` (it is asked by a spec).
+
+Where `lv` hands the request to `computeMtf`, `replay` replays the sampling (`replayLvMtf`,
+`src/engines/lv/replay.ts`):
+
+| Step | Is |
+|---|---|
+| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
+| the ladder | `MTF_GRID_LADDER` up to the request's `maxGridSize`, restated from `computeMtfSteps` |
+| the image plane | `state.imgZ` plus the focus's applied shift, restated likewise |
+| a field's launch and footprint | LensVisualizer's `prepareMtfFieldLaunch` and `findMtfFieldFootprint`; a field without the one is `chief-ray-failed`, without the other `vignetted` |
+| a grid of a field | every line traced by LensVisualizer's `traceMtfBundle` over the footprint. The first line's chief ray, traced with no aperture checked, is the reference of every line. The counts add up over the lines. Fewer rays at a line than `MTF_MIN_RAYS`, or no flux, is `empty-pupil`, which a finer grid may mend; too much unresolved flux, by LensVisualizer's own `assessUnresolvedFlux`, is `trace-failed`. Restated from `fieldAtGrid` |
+| widening | a grid whose rays reach the guard band of the footprint is traced again over LensVisualizer's `expandMtfFootprint` of it, at most `MTF_MAX_FOOTPRINT_EXPANSIONS` times for a field over all its grids. Restated from `traceField` |
+| the walk through the ladder | LensVisualizer's own `refineMtfField`, on the replay's curves: which grids are traced, and whether a field is converged, are decided by LensVisualizer's code |
+| the curves | the comparator's `polychromaticOtf` (`src/estimators/geometricOtf.ts`) on the landings and weights of the bundles, about the reference: the one thing that is not LensVisualizer's |
+
+Every restated line has a source canary (`test/integration/lv/canaries.test.ts`). The answer has the form `lv`
+gives LensVisualizer's own result, member for member, so the two can be held to each other: a field's status,
+reason, angle and image height; under `sampling` the same names (`gridSize`, `validRays`, `blockedRays`,
+`failedRays`, `unknownFluxFraction`, `maxDelta`, `convergedThroughLpMm`) and two of its own, `gridSizesTraced` and
+`footprintExpansions`; `method.name` is `replay-geometric`, and `method.params` hold the request and the `ladder`.
+A value the rounding of a modulus left above 1 is written as 1, the range the contract gives an MTF. A field the
+estimator has no value for is `unavailable` with the reason `estimator-<why>`
+(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, rung `r4f` counts it.
+
 ### `run-spec`
 
 The user's specification of one run. Only `contract`, `kind`, `name` and `lens` are required; an option left out
@@ -487,10 +577,10 @@ takes the comparator's default.
 | `name` | string | letters, digits, `.`, `_` and `-`; safe as a file name |
 | `lens` | object | `{ kind: "lv", key }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another |
 | `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1. Without `zoomT`, a zoom is run at both ends ([below](#a-zoom-without-a-position)) |
-| `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }` or `{ kind: "stop-radius", mm }` |
+| `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }`, `{ kind: "stop-radius", mm }`, or `{ kind: "lv-f8-comparison" }`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which only a LensVisualizer lens has |
 | `lines?` | object | `{ kind: "reference" \| "cdf" \| "photopic" }` or `{ kind: "explicit", wavelengthsNm, weights? }` |
 | `fields?` | object | `{ kind: "image-height-fractions", values }` 0..1, or `{ kind: "angles-deg", values }` in (−90, 90) |
-| `imagePlane?` | object | `{ kind: "design" \| "lv-best-axial" }` or `{ kind: "shift", mm }` along +z from the design plane |
+| `imagePlane?` | object | `{ kind: "design" }`, `{ kind: "shift", mm }` along +z from the design plane, or `{ kind: "lv-best-axial" }`: LensVisualizer's own best axial focus for the stop and the lines of the run, which only a LensVisualizer lens has |
 | `frequenciesPerMm?` | number[] | spatial frequencies, each ≥ 0, no repeats |
 | `sampling?` | object | `lvGridCap?` (32, 64, 128 or 256), `bundleGrid?` (integer ≥ 1), `engines?` (options per engine id) |
 | `rungs?` | string[] | rungs of the comparison ladder to evaluate |
@@ -502,7 +592,49 @@ takes the comparator's default.
 For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
 1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
 LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
-([its product MTF](#lensvisualizers-product-mtf)); no rung asks for that quantity yet, so no run hands it on yet.
+([its product MTF](#lensvisualizers-product-mtf)). The rung `r4f` hands it to its two engines, and the image plane
+`lv-best-axial` and the MTF recipe of a run are of that cap.
+
+How the stop of `lv-f8-comparison` and the plane of `lv-best-axial` are found is said under
+[Cases from LensVisualizer](#cases-from-lensvisualizer). Both are asked of LensVisualizer when the case is
+exported, so a run with either is a case of its own, with an id of its own, and every engine is asked about that
+case. A case file is taken as it is: neither option moves it.
+
+#### The MTF recipe
+
+An MTF is of a plane, of fields, of lines and of frequencies, and for a LensVisualizer lens each of those is
+LensVisualizer's to state. The **recipe** of a run states them once, as numbers, so that every MTF request about
+the run's case, whichever engine it is asked of, is made from the same ones and no engine resolves a fraction of an
+image height or a best focus by a rule of its own. It comes from the source of the run's case
+(`CaseSource.recipe`), is a pure function of the run and the case, and is recorded in the run's manifest
+(`runs[].recipe`) whenever a rung that is made from it is run. It is no document of the contract: nothing is
+exchanged in it, and a request states what it needs of it in its own spec.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `source` | `"lv"` \| `"run"` | who resolved it: LensVisualizer, or the run itself, for a case read from a file |
+| `plane` | object | `kind`: `design`, `lv-best-axial` or `shift`, read off the case; `shiftMm`: `conditions.imageZ` minus the design plane; `lvBestAxialShiftMm?`: LensVisualizer's best axial shift for the stop and the lines of the case, whatever plane the case is at, null where it finds none |
+| `imageZ`, `stopSemiDiameter`, `lines` | | the case's: `conditions.imageZ`, `conditions.stopSemiDiameter`, and each line's wavelength and weight |
+| `frequenciesPerMm` | number[] | the run's `frequenciesPerMm`, ascending; without them LensVisualizer's own `MTF_FREQUENCIES` (0 to 100 cycles/mm in steps of 2), and 10, 30 and 50 for a case file |
+| `referenceHeightMm` | number \| null | the image height the fractions are of: LensVisualizer's reference image height |
+| `fields` | object[] | in the order of the run: `fraction` (null for a field asked as an angle), `angleDeg` (the chief-ray angle, null where none was found), `targetImageHeightMm`, and `problem?`, why the field has no angle |
+| `lvGridCap?` | integer | the run's `sampling.lvGridCap`, where it states one |
+
+- **For a LensVisualizer lens** (`lvMtfRecipe`, `src/engines/lv/recipe.ts`) everything is the first step of
+  LensVisualizer's own `computeMtfSteps` for the comparator's general request on the spectrum of the case's lines:
+  the angle it solves for each fraction of its reference image height (the run's `fields`, or its own `MTF_FIELDS`:
+  0, 25, 50, 75 and 100 %), and its best axial focus. `plane.kind` is `lv-best-axial` exactly when the image
+  plane of the case is `state.imgZ` plus that shift, to the bit. `shiftMm` is a difference of two rounded numbers
+  and need not be `lvBestAxialShiftMm` in its last bits. A fraction beyond the modeled edge, or without an angle,
+  is a field with a `problem` under LensVisualizer's own code, and the others are not affected. There is no recipe,
+  and a coded problem instead, where LensVisualizer's gate refuses the state (its reason), where the lines of the
+  case are none of its spectra (`lines.custom-spectrum`), and where the run states fields as angles
+  (`fields.angles-deg`).
+- **For a case read from a file** (`fixtureRecipe`, `src/core/mtfRecipe.ts`) the run states the recipe, or there is
+  none. Its `fields` as angles, `{ kind: "angles-deg", values }`, are the recipe's fields, with no fraction and no
+  image height; the plane is the image plane the file has (`design`, or a `shift` of the difference); the stop
+  and the lines are the case's. A run that states no fields, or fractions of an image height, has no recipe
+  (`recipe-needs-field-angles`): nothing says which angle a fraction of a case file's image height is.
 
 #### A zoom without a position
 
@@ -929,6 +1061,17 @@ metric of a recorded rung may have without the pair being marked for attention. 
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
 judged. Two rungs may compare one quantity, each by metrics of its own: `r2` and `r3` both compare `rays.trace`.
 
+The comparator's policy, version 6:
+
+| Rung | Quantity | Mode | Judged |
+|---|---|---|---|
+| `selftest` | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
+| `r0` | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
+| `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
+| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; floor of `lv` |
+| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; floor of `lv` |
+| `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
+
 **The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
 meets a surface within 1e-9 mm of it, and behind a steep surface that becomes more than the 1e-8 mm two exact
 tracers are held to. A rung with a `floor` says which engine that is and which engine arbitrates, and each of its
@@ -966,7 +1109,8 @@ said nothing about whose the excess was, and no longer decides it.
 that built different systems would differ in every ray traced through them, and each such difference would be the
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
-ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`.
+ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`,
+`r4f`.
 Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
 built.
 
@@ -1541,8 +1685,10 @@ set are the tab's own launch rays at that grid, to the bit.
 
 An engine's own MTF of the case: by its own method, with its own sampling of the pupil and its own aiming, as the
 engine presents it to whoever uses it. Nothing of it is the comparator's, and no two engines are expected to
-agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung asks for it
-yet; `lvrtc mtf` does, and presents each engine's answer by itself. F is the number of frequencies.
+agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung sets the MTF
+of two independent engines against each other yet; `lvrtc mtf` presents each engine's answer by itself. One rung,
+`r4f`, asks for it of two engines that are not independent ([below](#rung-r4f-the-fidelity-of-the-replay)). F is
+the number of frequencies.
 
 `spec`:
 
@@ -1610,6 +1756,36 @@ a `reason`, and any other field holds a number from 0 to 1 at every frequency; a
 has an `appliedShiftMm` of 0. That F is the number of the spec's frequencies, and the fields those of the spec,
 needs the spec, which data is validated without: whoever sets an answer beside its request checks it
 (`mtfTableRows`, `src/report/mtfTable.ts`).
+
+#### Rung R4f: the fidelity of the replay
+
+`r4f` asks one `mtf.native` request for a run: the geometric MTF of the run's [recipe](#the-mtf-recipe), with its
+fields as the fractions they were resolved from, its frequencies, and the focus `design`, the image plane of the
+case as it is. It is asked of exactly two engines, `lv` and `replay`, whatever engines the run names, and only for
+a recipe LensVisualizer resolved: a case file has no sampling of LensVisualizer's to replay, and no request. Both
+engines are handed the run's `sampling.lvGridCap` as their option `lvGridCap`. `lv` answers with LensVisualizer's
+own `computeMtf`; `replay` with the comparator's estimator on a replay of the same sampling
+([the engine `replay`](#the-engine-replay)). If the two agree, the comparator understands LensVisualizer's
+sampling: which rays, which reference, which weights, which grids.
+
+The comparator of `mtf.native` for `r4f` (`src/compare/mtfFidelity.ts`):
+
+| Metric | Unit | Is | Gate |
+|---|---|---|---|
+| `mtf.maxAbs` | 1 | the largest difference of two MTF values, over every field with curves in both answers, both cuts and every frequency; `where` names the `field` as requested, the `cut` and the `frequencyPerMm`, the first on a tie | 1e-9 |
+| `sampling.mismatches` | elements | how many of `gridSize`, `validRays`, `blockedRays` and `failedRays`, over the fields, are not the same number in both answers; a value only one answer states is one | 0 |
+| `fields.mismatches` | elements | how many fields have another `status` in one answer than in the other, or another `reason` | 0 |
+
+Where no field has curves in both answers `mtf.maxAbs` is not measured. Answers for different numbers of fields,
+for other fields, of other planes or with curves of different lengths are not comparable (`ERROR`). What each
+answer states of every field's sampling is recorded beside the pair under the four names, one value a field. The
+rung has no floor and blocks nothing; no other rung compares `mtf.native`, and `r4f` compares no other two engines.
+
+The gate of 1e-9 was provisional and is pinned from measurement (the plan, "Amendments since approval"): on the
+96 runs of the benchmark suite, 480 fields at 51 frequencies in both cuts, the largest difference is 1.25e-14,
+which is rounding. LensVisualizer adds a field's terms up plainly and, for an evenly spaced list of frequencies,
+rotates one phasor from frequency to frequency; the estimator compensates its sums and evaluates each frequency on
+its own.
 
 `valid/quantities/mtf.native.data/every-status.json` is a format example of an answer to the spec
 `three-fractions.json`, with a field of each status; `best-focus-three-lines.json` one of an answer to

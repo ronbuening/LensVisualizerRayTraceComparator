@@ -14,6 +14,7 @@ import { validateKind } from "../contract/schemas.ts";
 import { isCompatibleContract } from "../contract/version.ts";
 import type { EngineUnavailableCode } from "../engines/adapter.ts";
 import { writeFileAtomic } from "./atomicFile.ts";
+import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -75,6 +76,11 @@ export interface ManifestRun {
   readonly referenceEngine?: string;
   /** The ray sets of the run; stated exactly when a rung that traces rays was run on it. */
   readonly raySets?: ManifestRaySets;
+  /**
+   * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
+   * a recipe was run on it.
+   */
+  readonly recipe?: MtfRecipeResolution;
 }
 
 /** One request asked of one engine for one run, and how that ended. */

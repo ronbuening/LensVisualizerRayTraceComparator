@@ -208,7 +208,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
-  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3$/m);
+  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4f$/m);
   assert.equal(existsSync(runsDir), false);
 
   const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
@@ -226,7 +226,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, ref$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, ref, replay$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -502,7 +502,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: lv, optiland, ref)\n",
+      "name the engines to run with --engines (built in: lv, optiland, ref, replay)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
@@ -641,17 +641,27 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   writeFileSync(join(rootDir, "own.json"), suite({ engines: ["fake-b"], rungs: ["selftest"] }));
   const own = await inProcess(["own.json"], { rootDir });
   assert.equal(own.code, EXIT_OK, own.err);
-  // The run that names neither gets every configured engine on every rung. A case read from a file has rays on
-  // the axis only, so each rung of traced rays asks one request.
+  // The run that names neither gets every configured engine on every rung that compares the engines of a run. A
+  // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rung that
+  // is about engines of its own, r4f, asks nothing about a case that no LensVisualizer sampled.
+  const shared = RUNGS.filter((rung) => rung.engines === undefined);
+  assert.deepEqual(
+    RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
+    ["r4f"],
+  );
   assert.deepEqual(
     manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
-    [...RUNGS.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]), "choosy selftest fake-b"],
+    [...shared.flatMap((rung) => [`plain ${rung.id} fake-a`, `plain ${rung.id} fake-b`]), "choosy selftest fake-b"],
   );
+  // It has no recipe for a rung to be made from, and the manifest says why.
+  const [plain] = manifestOf(join(rootDir, "runs"), "own").runs;
+  assert.equal(plain.recipe?.recipe, null);
+  assert.match(plain.recipe?.problems[0] ?? "", /^recipe-needs-field-angles: /);
 
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
-  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3\n');
+  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4f\n');
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
   assert.equal(replaced.code, EXIT_OK, replaced.err);

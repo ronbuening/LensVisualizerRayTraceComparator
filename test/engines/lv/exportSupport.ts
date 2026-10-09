@@ -6,6 +6,7 @@ import type {
   LvAsphere,
   LvFiniteConjugate,
   LvMtfOptions,
+  LvMtfResult,
   LvMtfSupport,
   LvPreparedState,
   LvRuntimeLens,
@@ -208,17 +209,64 @@ export function resolvedIndex(nd: number, wavelengthNm: number): number {
 }
 
 /**
+ * The stand-in's best axial focus: a 64th of the stop radius in front of the design plane, and twice as far for a
+ * grid capped at 32. A synthetic rule, so that the stop radius and the cap a focus was asked with show in it.
+ */
+export function standInBestShift(stopSemiDiameterMm: number, maxGridSize?: number): number {
+  return -stopSemiDiameterMm / (maxGridSize === 32 ? 32 : 64);
+}
+
+/**
+ * A stand-in for LensVisualizer's `computeMtfSteps`, as far as the exporter reads it: one step, which states the
+ * focus of the request (`standInBestShift`, applied when the request asks for "best-axial"), with the support
+ * record of `assess`. `asked` takes every request it is given.
+ */
+export function stepsOf(
+  assess: (state: LvPreparedState, options: LvMtfOptions) => LvMtfSupport,
+  asked: LvMtfOptions[] = [],
+): LvExportApi["computeMtfSteps"] {
+  return function* (state, options) {
+    asked.push(options);
+    const best = standInBestShift(options.stopSemiDiameterMm, options.maxGridSize as number | undefined);
+    const refocused = options.focus === "best-axial";
+    const result: LvMtfResult = {
+      method: options.method,
+      spectrum: options.spectrum,
+      support: assess(state, options),
+      frequenciesPerMm: [0],
+      fields: [],
+      geometry: null,
+      focus: {
+        requestedMode: String(options.focus),
+        mode: refocused ? "best-axial" : "design",
+        appliedShiftMm: refocused ? best : 0,
+        bestAxialShiftMm: best,
+      },
+      aperture: null,
+    };
+    yield result;
+    return result;
+  };
+}
+
+/**
  * Stand-ins for the LensVisualizer functions the exporter calls, behaving as LV's do: `prepareRuntimeState` hands
  * out `state` whatever is asked, the wide-open stop radius is the prepared stop surface's `sd`, the widest f-number
- * is 2, and the gate is `gate()`. `overrides` replaces any of them.
+ * is 2 and so is the f-number of the aperture slider at wide open, the entrance pupil is the stop itself, the gate
+ * is `gate()`, and the focus is `stepsOf` that gate. `overrides` replaces any of them.
  */
 export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> = {}): LvExportApi {
+  const assess = overrides.assessMtfSupport ?? gate();
   return {
     prepareRuntimeState: () => state,
     wideOpenStopAtZoom: () => state.surfaces[state.lens.stop.surfaceIndex].sd,
     fopenAtZoom2: () => 2,
+    fNumberAtStopdown: () => 2,
+    computeAnalysisFieldGeometryAtState2: () => ({ yRatio: 1 }),
+    entrancePupilAtState2: (stopSD) => ({ epSD: stopSD, yRatio: 1, b: 0, epRatio: 1 }),
+    computeMtfSteps: stepsOf(assess),
     evaluateAperture: lvEvaluateAperture,
-    assessMtfSupport: gate(),
+    assessMtfSupport: assess,
     mtfIndexResolver: (_state, support, wavelengthNm) =>
       support.useResolvedReference ? (_surfaceIndex, nd) => resolvedIndex(nd, wavelengthNm) : undefined,
     mtfFiniteObjectPoint: (prepared, conjugate) => [0, 0, prepared.surfaces[0].z - conjugate.objectDistanceMm],

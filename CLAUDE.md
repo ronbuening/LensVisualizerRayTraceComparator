@@ -28,7 +28,9 @@ node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral c
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
-node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both
+node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f   # R4f: lv against the replay of its own MTF sampling, 96 runs (about 3 min); asked of lv and replay whatever --engines names
+node bin/lvrtc.mjs engine conformance replay   # the conformance kit on the replay engine (needs LV)
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
@@ -169,8 +171,9 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
-- **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
-  suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+- **Built-in engines (`ref`, `lv`, `replay`, `optiland`) live in `src/engines/builtin.ts`** and run only where
+  named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
+  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay` whatever `--engines` or a run names. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -207,6 +210,40 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **Identical-ray estimators run on the rays valid in every engine** (`src/estimators/validity.ts`):
   `intersectValidity` of each answer's `maskWhere(status, RAY_STATUS.ok)`, handed to the estimator as
   `spots.valid`. Never apply an estimator to a bundle cut by one engine's status alone.
+- **The benchmark is 96 runs: 12 configurations in four conditions** (`suites/benchmark.json`). The 24 runs of
+  the lenses as they open come first and are never reordered; then, per configuration, `-best-`, `-f8-` and
+  `-f8-best-` on both sets of lines. f/8 is `aperture: { kind: "lv-f8-comparison" }`, the stop of the MTF tab's
+  own comparison (`lvHookStop`, `lvTabComparison`, with canaries), never `{ kind: "f-number", value: 8 }`, which
+  is the hook's slider and not the same double on every lens. A test that means "the 12 configurations" filters
+  with `asItOpens` (`test/suites/support.ts`); the optiland rung tests run those 24 (`rungSuite`), and
+  `baseline.test.ts` all 96.
+- **`lv-best-axial` is asked of LensVisualizer, never computed** (`lvBestAxialFocus`, `src/engines/lv/focus.ts`):
+  the first step of `computeMtfSteps` for the stop, the lines and the grid cap of the run. The case is exported at
+  `state.imgZ` plus that shift and is then a case like any other. The plane is of one stop, one spectrum and one
+  cap. `lv` answers `mtf.native` about a case off its design plane only when its own search, asked again for the
+  request, gives that plane to the bit; it then asks LV for `best-axial` and states
+  `{ mode: "design", appliedShiftMm: 0 }`.
+- **The MTF recipe comes from the case source, like the ray sets** (`CaseSource.recipe`; `src/core/mtfRecipe.ts`,
+  `src/engines/lv/recipe.ts`). A rung made from it says `needsRecipe` and reads `RungInputs.recipe`, never an
+  engine or a lens; the manifest records it under `runs[].recipe`. A case file states its fields as angles or has
+  none (`recipe-needs-field-angles`). It is no contract kind: a request states what it needs of it in its own spec.
+- **`replay` is LensVisualizer's rays and the comparator's sums** (`src/engines/lv/replay.ts`, `replayEngine.ts`).
+  It calls what LV exports (the first step of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
+  `traceMtfBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`, `assessUnresolvedFlux`, the
+  constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping and the ladder, each line with a
+  canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
+  that decide which grids are traced (flux, unresolved share) stay LV's plain ones. Its request is `lvMtfRequest`,
+  the one function `lv` builds its own with: never build a second. The stand-in of
+  `test/engines/lv/replay.test.ts` holds each line of the bookkeeping to a closed form: removing one must turn a
+  test red.
+- **A rung may be about engines of its own** (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`
+  whatever `--engines` or a run names, and of no case without a recipe LensVisualizer resolved. A comparison adds
+  no run reference to such a rung, and `baseline check` names an engine that only such a rung has for no other
+  rung (`runEngines`). A hermetic test whose registry knows neither engine names its rungs.
+- **R4f is gated on three figures (policy version 6)**: `mtf.maxAbs` <= 1e-9, pinned at Stage 3.2 on a measured
+  maximum of 1.25e-14; `sampling.mismatches` and `fields.mismatches` at 0; no floor. A grid size, a ray count or a
+  status that differs is a defect of the replay or a change in LV: read the canaries, never widen. R4f is in no
+  committed baseline until Stage 3.8.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.
@@ -234,9 +271,9 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
   `test/fixtures/fault-root` holds the engines that fail.
 - **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
-  test holds the three together. A quantity no rung asks for has no comparator, and the test names each: today
-  `mtf.native`, which is presented (`lvrtc mtf`) and not yet compared. The rung that compares it brings its
-  comparator and its policy entry, and takes it off that list. Raise the policy's `version` when a rung, a class
+  test holds the three together. `mtf.native` has a comparator for `r4f` only (`src/compare/mtfFidelity.ts`); the rung
+  that sets two independent engines' MTF against each other brings its own. No quantity is without a comparator
+  today, and the test says so. Raise the policy's `version` when a rung, a class
   or a limit changes. Two rungs may compare one quantity, each with a comparator that names its rung: `r2`
   (geometry and mask) and `r3` (optical path) both ask the `rays.trace` requests of `rayTraceRequests`, so an
   engine traces a set once.
@@ -244,7 +281,7 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`; policy version 5). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
+  `src/compare/floor.ts`; policy version 6). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
   limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
   it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
   the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
@@ -293,11 +330,18 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   that runs it in this process on a second fake tree closes the binding of the first (`closeBinding`).
 - **Pinned MTF figures are compared only while LV's engine closure and the case are the ones they were measured
   with** (`PINNED_CLOSURE`, `PINNED` in `test/integration/lv/mtf.test.ts`): a lens edit must not turn `test:lv`
-  red. A name added to the import manifest changes the closure: measure and pin again.
+  red. A name added to the import manifest changes the closure: measure and pin again. R4f's pins are
+  `PINNED_CLOSURE` and `PINNED` in `test/integration/lv/fidelity.test.ts` (grid sizes of the 24 opening runs),
+  under the same condition.
 - **The fake LV tree (`test/fixtures/fake-lv-binding`) has a tracer, an MTF launch, a product MTF and tab
   defaults of its own**, with LV's names; its defaults are deliberately not LV's. A name added to the import
   manifest needs a fake of it there, and a new fake file a line in `FAKE_ENGINE_FILES`
-  (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
+  (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test. A lens stating
+  `mtf: { sampled: true }` has its geometric MTF sampled grid by grid (ladder, tolerance, widening and plain sums
+  of the fake's own; `footprintScale` makes its scan too small); every other lens keeps the closed form, and is a
+  FAIL in R4f by design. A test that removes a module to break a binding removes `src/optics/layout.ts`, which
+  nothing else imports; a test binding an edited tree through a case source edits the fresh tree in place, since
+  a `variantOf` copy is closed only by `bind`.
 - **Baselines are the committed record** (`baselines/<suite>.json`, contract kind `baseline`): for every run as
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the

@@ -20,6 +20,7 @@ import { QUANTITIES } from "../quantities/index.ts";
 import type { QuantityModule } from "../quantities/module.ts";
 import { SOURCE_CHANGED, writeRunOutput } from "./manifest.ts";
 import type { ManifestEngine, ManifestJob, ManifestRaySets, ManifestSource, RunManifest } from "./manifest.ts";
+import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import { negotiate } from "./negotiate.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
@@ -193,18 +194,34 @@ async function raySetsOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optic
   return source.raySets(spec, opticalCase);
 }
 
-/** Every job of a suite before it is run, and the ray sets that were generated for its runs. */
+/** Why a run has no MTF recipe when the source of its case resolves none, or no source was given. */
+const NO_RECIPE_SOURCE = "recipe-unavailable: no case source resolves an MTF recipe for this lens";
+
+/**
+ * The MTF recipe of one run, from the source of its lens (`CaseSource.recipe`); none, and the problem that says so,
+ * when no source was given for the lens or the source resolves no recipe.
+ */
+async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: OpticalCase): Promise<MtfRecipeResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.recipe === undefined) return { recipe: null, problems: [NO_RECIPE_SOURCE] };
+  return source.recipe(spec, opticalCase);
+}
+
+/** Every job of a suite before it is run, and what was generated for its runs. */
 interface Plan {
   readonly jobs: readonly PlannedJob[];
   /** The ray sets of each run that a rung needed them for, by run name. */
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The MTF recipe of each run that a rung needed one for, by run name. */
+  readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
 
 /**
  * Every job of the suite, in manifest order, with nothing run and no engine contacted. What was asked for is
  * checked for every run, also one that cannot be run, so that a rung or an engine that does not exist is reported
  * whatever else is wrong. The ray sets of a run are generated here, once, and only when a rung that needs them is
- * one of the run's.
+ * one of the run's; so is its MTF recipe. A rung that is about named engines (`RungDefinition.engines`) is planned
+ * for exactly those, in id order, whatever engines the run names.
  */
 async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const { suite, registry, rungDefinitions = RUNGS } = input;
@@ -230,29 +247,34 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
 
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
+  const recipes = new Map<string, MtfRecipeResolution>();
   for (const [index, { spec, opticalCase }] of suite.runs.entries()) {
     const { rungs, engineIds } = selected[index];
     if (opticalCase === null) continue;
     let inputs = NO_RUNG_INPUTS;
     if (rungs.some((rung) => rung.needsRaySets === true)) {
       const { sets, problems } = await raySetsOf(input, spec, opticalCase);
-      inputs = { raySets: sets };
+      inputs = { ...inputs, raySets: sets };
       raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsRecipe === true)) {
+      const { recipe, problems } = await recipeOf(input, spec, opticalCase);
+      inputs = { ...inputs, recipe };
+      recipes.set(spec.name, { recipe, problems: [...problems] });
     }
     for (const rung of rungs) {
       const quantity = QUANTITIES.get(rung.quantity);
       if (quantity === undefined) throw new Error(`rung ${rung.id}: ${rung.quantity} is not a quantity`);
-      const requests = requestsOf(
-        rung,
-        quantity,
-        opticalCase,
-        spec,
-        rung.needsRaySets === true ? inputs : NO_RUNG_INPUTS,
-      );
-      for (const engineId of engineIds) {
+      const requests = requestsOf(rung, quantity, opticalCase, spec, {
+        raySets: rung.needsRaySets === true ? inputs.raySets : NO_RUNG_INPUTS.raySets,
+        recipe: rung.needsRecipe === true ? inputs.recipe : null,
+      });
+      const ofRung = rung.engineOptions?.(spec);
+      for (const engineId of rung.engines === undefined ? engineIds : [...new Set(rung.engines)].sort()) {
         // An own key: an engine id such as "constructor" must not find what every object inherits.
         const options = spec.sampling?.engines;
-        const engineOptions = options !== undefined && Object.hasOwn(options, engineId) ? options[engineId] : undefined;
+        const ofRun = options !== undefined && Object.hasOwn(options, engineId) ? options[engineId] : undefined;
+        const engineOptions = ofRung === undefined ? ofRun : { ...ofRung, ...ofRun };
         for (const built of requests) {
           const { caseId, spec: requestSpec } = built;
           const request =
@@ -264,7 +286,7 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { jobs, raySets };
+  return { jobs, raySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -418,9 +440,11 @@ function auditSources(
  * A run with a rung that traces rays has its ray sets generated first, by the source of its case
  * (`CaseSource.raySets`), once for all such rungs: the manifest records the identity of each set and, as coded
  * problems, each field that has none. A field without rays fails nothing; the rung asks for the sets there are.
+ * A run with a rung that needs an MTF recipe has it resolved likewise (`CaseSource.recipe`), and the manifest
+ * records the recipe, or why the run has none; such a rung asks nothing of a run without one.
  *
- * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order and each
- * request of the rung, one job:
+ * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order (for a
+ * rung that is about named engines: each of those) and each request of the rung, one job:
  *
  * 1. the engine is created and described, once per suite. One that cannot be used ends each of its jobs as "error"
  *    with the code of why (`ENGINE_UNAVAILABLE_CODES`), and the other engines carry on;
@@ -448,7 +472,7 @@ function auditSources(
  */
 export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
-  const { jobs: planned, raySets } = await planJobs(input);
+  const { jobs: planned, raySets, recipes } = await planJobs(input);
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -502,12 +526,14 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     engines,
     runs: suite.runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
+      const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
         caseId: opticalCase?.id ?? null,
         problems,
         ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
         ...(rays === undefined ? {} : { raySets: rays }),
+        ...(recipe === undefined ? {} : { recipe }),
       };
     }),
     jobs: outcomes.map((outcome) => outcome.job),

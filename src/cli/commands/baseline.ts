@@ -16,6 +16,7 @@ import { REPO_ROOT } from "../../core/config.ts";
 import { MANIFEST_FILE, SOURCE_CHANGED, readRunManifest } from "../../core/manifest.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { runSuite } from "../../core/orchestrator.ts";
+import { RUNGS } from "../../core/rungs.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { reportInputProblems } from "../../report/model.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
@@ -185,7 +186,7 @@ async function check(
     registry: prepared.registry,
     runsDir: loaded.config.runsDir,
     sources: prepared.sources,
-    engines: committed.engines.map((engine) => engine.id),
+    engines: runEngines(committed),
     rungs,
   });
   const directory = dirname(result.manifestPath);
@@ -258,6 +259,23 @@ async function check(
 }
 
 /**
+ * The engines a baseline's suite is run on again: those the baseline names for a rung that compares the engines
+ * of a run. A rung that is about engines of its own (`RungDefinition.engines`) asks those itself, whatever a run
+ * names, so an engine that only such a rung has (the replay, for `r4f`) is named for no other rung, and no rung is
+ * asked of an engine it was never asked of. A baseline of such rungs alone names every engine it has.
+ */
+function runEngines(baseline: Baseline): string[] {
+  const own = new Set(RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id));
+  const shared = new Set(
+    baseline.runs.flatMap((run) =>
+      run.rungs.filter(({ rung }) => !own.has(rung)).flatMap(({ support }) => support.map(({ engine }) => engine)),
+    ),
+  );
+  const ids = baseline.engines.map((engine) => engine.id);
+  return shared.size === 0 ? ids : ids.filter((id) => shared.has(id));
+}
+
+/**
  * Builds `lvrtc baseline write <suite name | run directory> [--root <dir>]` and `lvrtc baseline check <suite name |
  * suite.json> [--root <dir>] [--json]`.
  *
@@ -267,7 +285,8 @@ async function check(
  * the machine: the same run, comparisons and policy give the same bytes anywhere.
  *
  * `check` loads the suite, runs it on the engines and rungs of its baseline (`runSuite`, into the configured runs
- * directory, with the result store answering whatever has not changed), compares it and writes `comparisons.json`
+ * directory, with the result store answering whatever has not changed; `runEngines` says which engines the run is
+ * handed), compares it and writes `comparisons.json`
  * as `lvrtc compare` does, and sets the baseline against the baseline of that run (`checkBaseline`). Every record
  * that is not `OK` is printed as a line, then the counts, then what to do about each state there is.
  *

@@ -330,6 +330,48 @@ test("the spectrum is the one of LensVisualizer whose lines the case has; any ot
   assert.equal((await ask(engine, anchored.opticalCase, SPEC)).unsupported?.[0].item, "lines.custom-spectrum");
 });
 
+// ── A case at LensVisualizer's best axial focus ──────────────────────────────────────────────────────────────────
+
+test("a case at LensVisualizer's own best axial focus is answered: it is asked for best-axial, and the plane is the case's", async (t) => {
+  const binding = await bind(t, freshLv(t));
+  const design = await modelOf(binding, SINGLET, { lines: { kind: "photopic" } });
+  const best = await modelOf(binding, SINGLET, { lines: { kind: "photopic" }, imagePlane: { kind: "lv-best-axial" } });
+  // The fake's best focus is a 128th of the stop radius in front of the design plane: the case lies there.
+  const shift = -6.25 / 128;
+  assert.equal(best.opticalCase.conditions.imageZ, design.opticalCase.conditions.imageZ + shift);
+  assert.equal(best.opticalCase.system.designImageZ, design.opticalCase.conditions.imageZ);
+
+  const { api, asked } = watched(binding);
+  const answer = answerLvMtf(api, best.model, SPEC);
+  assert.ok("data" in answer, JSON.stringify(answer));
+  // LensVisualizer is asked for its own best focus, and what it applies is the plane of the case as it is.
+  assert.deepEqual(
+    asked.map((options) => [options.focus, options.spectrum, options.stopSemiDiameterMm]),
+    [["best-axial", "photopic", 6.25]],
+  );
+  assert.deepEqual(answer.data.focus, { mode: "design", appliedShiftMm: 0 });
+  assert.equal(answer.data.method.params.focus, "best-axial");
+  // The same request as the design-plane case asked for the engine's best focus, which states the shift instead.
+  const fromDesign = answerLvMtf(api, design.model, { ...SPEC, focus: "engine-best" });
+  assert.ok("data" in fromDesign);
+  assert.deepEqual(fromDesign.data.focus, { mode: "best-axial", appliedShiftMm: shift });
+  assert.deepEqual(asked[1], asked[0]);
+  assert.deepEqual(answer.data.fields, fromDesign.data.fields);
+
+  // The focus is of one grid cap: capped at 32 the fake's search finds another plane, and the case is at neither.
+  const capped = answerLvMtf(api, best.model, SPEC, { lvGridCap: 32 });
+  assert.ok("unsupported" in capped);
+  assert.equal(capped.unsupported[0].item, "image-plane.shifted");
+  assert.match(
+    capped.unsupported[0].message,
+    new RegExp(`this grid cap lies ${String(-6.25 / 64).replace(".", "\\.")} mm from it$`),
+  );
+  // The engine's own best focus is asked of a case at its design plane, and a profile is of that plane too.
+  const twice = answerLvMtf(api, best.model, { ...SPEC, focus: "engine-best" });
+  assert.ok("unsupported" in twice && twice.unsupported[0].item === "image-plane.shifted");
+  assert.equal(asked.length, 2, "nothing was computed for a request that is refused");
+});
+
 // ── What LensVisualizer's MTF does not compute ───────────────────────────────────────────────────────────────────
 
 test("a shifted image plane, fields as angles, an unknown profile: each is unsupported, and says why", async (t) => {
@@ -337,16 +379,18 @@ test("a shifted image plane, fields as angles, an unknown profile: each is unsup
   const engine = engineOn(t, binding);
   const design = await modelOf(binding, SINGLET);
 
+  // A plane that is neither the design plane nor the fake's best focus, a 128th of the stop radius in front of it.
   const shifted = await modelOf(binding, SINGLET, { imagePlane: { kind: "shift", mm: 0.25 } });
+  const offDesign =
+    "LensVisualizer's MTF is of its design image plane or of its own best axial focus, and of no plane it " +
+    "is given: the image plane of the case lies 0.25 mm from the design plane";
+  const why = {
+    design: `, and LensVisualizer's best axial focus for this stop, these lines and this grid cap lies ${-6.25 / 128} mm from it`,
+    "engine-best": ", and the engine's own best focus is asked of a case at its design plane",
+  };
   for (const focus of ["design", "engine-best"] as const) {
     assert.deepEqual((await ask(engine, shifted.opticalCase, { ...SPEC, focus })).unsupported, [
-      {
-        code: "feature",
-        item: "image-plane.shifted",
-        message:
-          "LensVisualizer's MTF is of its design image plane or of its own best axial focus, and of no plane it " +
-          "is given: the image plane of the case lies 0.25 mm from the design plane",
-      },
+      { code: "feature", item: "image-plane.shifted", message: offDesign + why[focus] },
     ]);
   }
 

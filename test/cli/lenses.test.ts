@@ -275,12 +275,12 @@ test("a LensVisualizer that is not configured, missing or not loadable is a fail
   assert.match(missing.err, /^lvrtc lenses: LensVisualizer path is not a directory: .*no-lv-here\n$/);
 
   const broken = freshRoot(t);
-  rmSync(join(broken.lv, "src/optics/analysis/mtfTracing.ts"));
+  rmSync(join(broken.lv, "src/optics/layout.ts"));
   const unloadable = await lenses(["list"], { rootDir: broken.rootDir });
   assert.equal(unloadable.code, EXIT_FAILURE);
   assert.match(
     unloadable.err,
-    /^lvrtc lenses: LensVisualizer at .*: 1 of 18 modules cannot be imported: src\/optics\/analysis\/mtfTracing\.ts: /,
+    /^lvrtc lenses: LensVisualizer at .*: 1 of 21 modules cannot be imported: src\/optics\/layout\.ts: /,
   );
 });
 

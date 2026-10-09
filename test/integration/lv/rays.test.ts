@@ -43,7 +43,7 @@ import { DEFAULT_BUNDLE_GRID, DEFAULT_RAY_FIELDS, raySetId } from "../../../src/
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { exactLength } from "../../estimators/support.ts";
 import { suitePath } from "../../suites/support.ts";
-import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE } from "./support.ts";
+import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE, asItOpens } from "./support.ts";
 
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
@@ -528,9 +528,9 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const directory = tempDir(t);
-    // The benchmark at the reference line: its 12 runs of that line, written beside the run output.
+    // The benchmark as the lenses open, at the reference line: its 12 runs of that, written beside the run output.
     const benchmark: Suite = JSON.parse(readFileSync(suitePath("benchmark"), "utf8"));
-    const runs = benchmark.runs.filter((run) => run.lines?.kind === "reference");
+    const runs = benchmark.runs.filter((run) => run.lines?.kind === "reference" && asItOpens(run));
     assert.equal(runs.length, 12);
     const suiteFile = join(directory, "benchmark-reference.json");
     writeFileSync(suiteFile, JSON.stringify({ ...benchmark, name: "benchmark-reference", runs }));

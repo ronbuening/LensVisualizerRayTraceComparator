@@ -2,6 +2,9 @@
 // says which requests of it a case and a run need. The rungs of the comparison ladder register here as their
 // stages land.
 import type { OpticalCase } from "../contract/case.ts";
+import type { JsonObject } from "../contract/json.ts";
+import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
+import type { MtfNativeSpec } from "../contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../contract/quantities/paraxialFirstOrder.ts";
 import { RAYS_TRACE } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
@@ -12,6 +15,7 @@ import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.t
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunSpec } from "../contract/runSpec.ts";
+import type { MtfRecipe } from "./mtfRecipe.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -25,10 +29,15 @@ export interface RungInputs {
    * `needsRaySets`; empty for any other rung, and where the source has no rays for the run.
    */
   readonly raySets: readonly RaysTraceSpec[];
+  /**
+   * The MTF recipe of the run, from the source of its case (`CaseSource.recipe`), for a rung that says it
+   * `needsRecipe`; null, or left out, for any other rung, and where the source has no recipe for the run.
+   */
+  readonly recipe?: MtfRecipe | null;
 }
 
 /** The inputs of a rung that needs none. */
-export const NO_RUNG_INPUTS: RungInputs = Object.freeze({ raySets: Object.freeze([]) });
+export const NO_RUNG_INPUTS: RungInputs = Object.freeze({ raySets: Object.freeze([]), recipe: null });
 
 /** One rung: what is asked of every engine for one case in one run. */
 export interface RungDefinition {
@@ -41,6 +50,22 @@ export interface RungDefinition {
    * when such a rung is run.
    */
   readonly needsRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's MTF recipe: the recipe is resolved, once per run, only
+   * when such a rung is run.
+   */
+  readonly needsRecipe?: boolean;
+  /**
+   * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
+   * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
+   * of the run's engines.
+   */
+  readonly engines?: readonly string[];
+  /**
+   * The options the rung's requests carry for each engine they are asked of, made from the run; the options the
+   * run states for an engine by its id (`sampling.engines`) are laid over them. Without it, only those.
+   */
+  engineOptions?(runSpec: RunSpec): JsonObject | undefined;
   /**
    * The requests of this rung for one case, in a fixed order and without engine options: equal arguments give
    * equal requests, with equal ids. Each is about `opticalCase` and asks for `quantity` with a spec the quantity
@@ -136,12 +161,57 @@ export const r3Rung: RungDefinition = Object.freeze({
     rayTraceRequests(opticalCase, inputs),
 });
 
+/** The engines of the rung `r4f`: LensVisualizer, and the comparator's estimator on a replay of its sampling. */
+export const R4F_ENGINES: readonly string[] = Object.freeze(["lv", "replay"]);
+
+/**
+ * The `mtf.native` spec that asks for the geometric MTF of a recipe, on the plane of the case: the recipe's
+ * frequencies and its fields as the fractions of the reference image height they were resolved from. Null for a
+ * recipe that has a field without a fraction, which no such spec can state.
+ */
+export function geometricMtfSpec(recipe: MtfRecipe): MtfNativeSpec | null {
+  const fractions = recipe.fields.map((field) => field.fraction);
+  if (recipe.fields.length === 0 || fractions.some((fraction) => fraction === null)) return null;
+  return {
+    frequenciesPerMm: [...recipe.frequenciesPerMm],
+    fields: { kind: "image-height-fractions", values: fractions as number[] },
+    method: "geometric",
+    focus: "design",
+  };
+}
+
+/**
+ * The rung `r4f`, the fidelity of the comparator's reading of LensVisualizer's MTF sampling: one `mtf.native`
+ * request for the geometric MTF of the run's recipe on the plane of the case (`geometricMtfSpec`), asked of
+ * LensVisualizer, whose answer is its own `computeMtf`, and of the engine `replay`, whose answer is the
+ * comparator's estimator on a replay of the same sampling. It is asked of those two and of no other engine
+ * (`R4F_ENGINES`), and only for a recipe LensVisualizer resolved: a case read from a file has no sampling of
+ * LensVisualizer's to replay, and no request. Both engines are handed the run's `sampling.lvGridCap` as their
+ * option `lvGridCap`, where the run states one.
+ */
+export const r4fRung: RungDefinition = Object.freeze({
+  id: "r4f",
+  quantity: MTF_NATIVE,
+  needsRecipe: true,
+  engines: R4F_ENGINES,
+  engineOptions: (runSpec: RunSpec): JsonObject | undefined => {
+    const cap = runSpec.sampling?.lvGridCap;
+    return cap === undefined ? undefined : { lvGridCap: cap };
+  },
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    if (recipe === null || recipe.source !== "lv") return [];
+    const spec = geometricMtfSpec(recipe);
+    return spec === null ? [] : [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec })];
+  },
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
  */
-export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, r2Rung, r3Rung]);
+export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4fRung]);
 
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When

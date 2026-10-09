@@ -10,6 +10,8 @@ import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 import { resultDataProblems } from "../core/resultData.ts";
+import { RUNGS } from "../core/rungs.ts";
+import type { RungDefinition } from "../core/rungs.ts";
 import type { ResultStore } from "../core/resultStore.ts";
 import { UsageError } from "../core/usageError.ts";
 import { QUANTITIES } from "../quantities/index.ts";
@@ -38,6 +40,8 @@ export interface CompareManifestInput {
    * such a comparator are `ERROR`, with the comparator's reason.
    */
   readonly cases?: (caseId: string) => OpticalCase | undefined;
+  /** The rungs there are; `RUNGS` unless given. Read for which rungs are about engines of their own. */
+  readonly rungDefinitions?: readonly RungDefinition[];
 }
 
 /** One job as a participant, and the spec of the request it answered, where the store holds its answer. */
@@ -78,7 +82,9 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  *
  * The reference of a group is `reference` when given, else the run's own `referenceEngine`, else
  * `defaultReference`: the first engine in id order that has an "ok" result. A reference that has no job in a group
- * is added to it as a "missing" participant, so that what was asked for is shown as not there.
+ * is added to it as a "missing" participant, so that what was asked for is shown as not there. A rung that is about
+ * named engines (`RungDefinition.engines`) is no comparison against the reference of a run: where the reference is
+ * none of its participants, its groups are compared against their own default and nothing is added to them.
  *
  * Each group gives one set per mode (`compareGroup`). The sets are ordered by run as the suite orders them, then
  * by rung and request as the manifest's jobs do, then by mode. A run without a case has no jobs and no sets. Equal
@@ -98,6 +104,9 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  */
 export function compareManifest(input: CompareManifestInput): ComparisonFile {
   const { manifest, store, policy, reference, modes = COMPARISON_MODES, comparators = COMPARATORS, cases } = input;
+  const ownEngines = new Set(
+    (input.rungDefinitions ?? RUNGS).filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
+  );
   const engineIds = manifest.engines.map((engine) => engine.id);
   if (reference !== undefined && !engineIds.includes(reference)) {
     const ran = engineIds.length === 0 ? "no engine" : engineIds.join(", ");
@@ -140,8 +149,11 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
       const answers = jobs.map(answeredBy);
       const participants = answers.map((answer) => answer.participant);
       const spec = answers.find((answer) => answer.spec !== undefined)?.spec;
-      const against = reference ?? run.referenceEngine ?? defaultReference(participants);
-      if (against !== undefined && !participants.some((participant) => participant.engine === against)) {
+      const named = reference ?? run.referenceEngine;
+      const taking = (engine: string): boolean => participants.some((participant) => participant.engine === engine);
+      const against =
+        named !== undefined && (!ownEngines.has(rung) || taking(named)) ? named : defaultReference(participants);
+      if (against !== undefined && !taking(against)) {
         const fingerprint = fingerprints.get(against) ?? null;
         participants.push({ engine: against, fingerprint, status: "missing", detail: "it has no job in this run" });
       }

@@ -15,8 +15,11 @@
  *
  * What was asked for and cannot be given:
  * - `aperture-faster-than-wide-open`: an f-number below the lens's widest at that zoom position;
- * - `lv-best-axial-needs-mtf-recipe`: the image plane "lv-best-axial" is known only from LensVisualizer's MTF
- *   result; the MTF recipe (Stage 3.2) resolves it;
+ * - `f8-comparison-unavailable`: the aperture "lv-f8-comparison" for a lens LensVisualizer's MTF tab offers no
+ *   f/8 comparison for, with the tab's reason;
+ * - `lv-best-axial-needs-lv-spectrum`: the image plane "lv-best-axial" on lines that are none of LensVisualizer's
+ *   spectra, whose focus search has no other;
+ * - `lv-best-axial-unavailable`: LensVisualizer's focus search finds no best axial focus for the state;
  * - `wavelength-outside-fitted-range`: an explicit wavelength outside the lines LensVisualizer's anchored indices
  *   are fitted between (g to C).
  *
@@ -37,7 +40,9 @@ export const EXPORT_PROBLEM_CODES = [
   "asphere-coefficient-unknown",
   "synthetic-surface-unknown",
   "aperture-faster-than-wide-open",
-  "lv-best-axial-needs-mtf-recipe",
+  "f8-comparison-unavailable",
+  "lv-best-axial-needs-lv-spectrum",
+  "lv-best-axial-unavailable",
   "wavelength-outside-fitted-range",
   "unknown-lens",
   "lens-build-failed",

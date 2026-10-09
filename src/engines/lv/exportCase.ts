@@ -8,7 +8,7 @@ import packageJson from "../../../package.json" with { type: "json" };
 import { finalizeCase } from "../../contract/case.ts";
 import type { OpticalCase, OpticalCaseDraft, SurfaceIR } from "../../contract/case.ts";
 import type { LvProvenance } from "../../contract/provenance.ts";
-import type { RunImagePlane, RunOptions } from "../../contract/runSpec.ts";
+import type { RunImagePlane, RunOptions, RunSampling } from "../../contract/runSpec.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
 import { syntheticKind } from "./binding.ts";
 import { stopRadius, surfaceAperture, wideOpenStopRadius } from "./exportAperture.ts";
@@ -17,10 +17,12 @@ import { exportLight } from "./exportLines.ts";
 import type { LvLightApi } from "./exportLines.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { surfaceShape } from "./exportShape.ts";
+import { lvBestAxialFocus } from "./focus.ts";
+import type { LvFocusApi } from "./focus.ts";
 import type { LvApi, LvPreparedState, LvRuntimeLens } from "./types.ts";
 
 /** The LensVisualizer exports the exporter uses. A test hands it stand-ins; the binding hands it LV's own. */
-export type LvExportApi = Pick<LvApi, "prepareRuntimeState" | "evaluateAperture"> & LvStopApi & LvLightApi;
+export type LvExportApi = Pick<LvApi, "prepareRuntimeState" | "evaluateAperture"> & LvStopApi & LvLightApi & LvFocusApi;
 
 /** The lens file a case is exported from, as the catalog knows it. */
 export interface ExportedLens {
@@ -34,10 +36,12 @@ export interface ExportedLens {
 /**
  * What a case is exported under: the options of a run that concern the case, any of which may be left out and
  * takes its default. The image plane may also be stated as a position, `{ kind: "at", z }`, which is how a case
- * states it: a shift from the design plane does not always add up to the same double again.
+ * states it: a shift from the design plane does not always add up to the same double again. Of `sampling` only
+ * the grid cap is read, and only for the image plane "lv-best-axial", whose focus search is of one cap.
  */
 export interface ExportOptions extends Pick<RunOptions, "state" | "aperture" | "lines"> {
   readonly imagePlane?: RunImagePlane | { readonly kind: "at"; readonly z: number };
+  readonly sampling?: Pick<RunSampling, "lvGridCap">;
 }
 
 /** What `exportCase` is given. */
@@ -111,9 +115,18 @@ function structuralProblems(state: LvPreparedState): ExportProblem[] {
   return problems;
 }
 
-/** The image plane of a case: the design plane, the design plane moved by a shift, or the position asked for. */
-function imageZOf(imagePlane: NonNullable<ExportOptions["imagePlane"]>, designImageZ: number): number {
+/**
+ * The image plane of a case: the design plane, the design plane moved by a shift, or the position asked for.
+ * `bestAxialShiftMm` is the shift of the plane "lv-best-axial", which is added as LensVisualizer adds it
+ * (`context.imagePlaneZ = state.imgZ + result.focus.appliedShiftMm` in its `computeMtfSteps`).
+ */
+function imageZOf(
+  imagePlane: NonNullable<ExportOptions["imagePlane"]>,
+  designImageZ: number,
+  bestAxialShiftMm: number,
+): number {
   if (imagePlane.kind === "at") return imagePlane.z;
+  if (imagePlane.kind === "lv-best-axial") return designImageZ + bestAxialShiftMm;
   return imagePlane.kind === "shift" ? designImageZ + imagePlane.mm : designImageZ;
 }
 
@@ -141,14 +154,19 @@ function notesOf(state: LvPreparedState): string[] {
  *   **designImageZ** = `state.imgZ`.
  * - **conditions.stopSemiDiameter** from the run's aperture (`stopRadius`); the stop surface's aperture carries the
  *   same radius, so every surface clips by its own aperture. **imageZ** = `designImageZ`, plus the run's shift, or
- *   the position that is asked for.
+ *   the position that is asked for; for the image plane "lv-best-axial", `designImageZ` plus LensVisualizer's own
+ *   best axial focus shift for the stop radius and the lines of the case (`lvBestAxialFocus`): the plane its MTF
+ *   evaluates every field on when it is asked for its best focus, at the grid cap of `sampling.lvGridCap`, or at
+ *   its own default without one.
  * - **lines, indexAfterSurface, object** from LV's MTF support gate and index resolver (`exportLight`).
  * - **provenance**: the lens file with its hash and the zoom and focus position of the state, the LV checkout, and
  *   the notes "bulk-absorption" and "projection:<kind>" for what changes no surface.
  *
  * A lens that cannot be exported as asked is a result with every problem found, each with a code: what the contract
  * cannot express (`structuralProblems`, a surface's shape), what LV does not supply (`exportLight`), an f-number
- * faster than wide open, and the image plane "lv-best-axial", which only LV's MTF result knows.
+ * faster than wide open, the f/8 comparison of the MTF tab for a lens the tab offers none for, and the image plane
+ * "lv-best-axial" where LV's focus search has no answer: for lines that are none of its spectra, or a state its
+ * MTF does not cover.
  *
  * Throws, naming the lens, for what would be a defect of the exporter or a change in LV that it does not yet read
  * correctly: a draft that is not a valid case, LV's wide-open stop radius differing from the prepared stop
@@ -192,14 +210,6 @@ function exportChecked(
   if (!stop.ok) problems.push(stop.problem);
 
   const imagePlane = options.imagePlane ?? { kind: "design" };
-  if (imagePlane.kind === "lv-best-axial") {
-    problems.push({
-      code: "lv-best-axial-needs-mtf-recipe",
-      message:
-        "the image plane lv-best-axial is LensVisualizer's best axial focus, which only its MTF result states; " +
-        "the MTF recipe (Stage 3.2) resolves it to a shift. Ask for design or for a shift here",
-    });
-  }
 
   // LensVisualizer's own gate rejects what the structural problems name, with less to say about it.
   const light = problems.some((problem) => STRUCTURAL.has(problem.code))
@@ -207,6 +217,18 @@ function exportChecked(
     : exportLight(api, state, options.lines, wideOpen);
   if (light !== null && !light.ok) problems.push(...light.problems);
   if (problems.length > 0 || light === null || !light.ok || !stop.ok) return { ok: false, problems };
+
+  // Only now: LensVisualizer's focus search is of a stop radius and of lines, which the case has by here.
+  let bestAxialShiftMm = 0;
+  if (imagePlane.kind === "lv-best-axial") {
+    const focus = lvBestAxialFocus(api, runtime, state, {
+      stopSemiDiameterMm: stop.radius,
+      lines: light.light.lines,
+      gridCap: options.sampling?.lvGridCap,
+    });
+    if ("problem" in focus) return { ok: false, problems: [focus.problem] };
+    bestAxialShiftMm = focus.shiftMm;
+  }
 
   const stopIndex = state.lens.stop.surfaceIndex;
   const preparedStop = state.surfaces[stopIndex]?.sd;
@@ -253,7 +275,7 @@ function exportChecked(
     conditions: {
       object,
       stopSemiDiameter: stop.radius,
-      imageZ: imageZOf(imagePlane, state.imgZ),
+      imageZ: imageZOf(imagePlane, state.imgZ, bestAxialShiftMm),
       lines,
       indexAfterSurface: encodeNdArray(indexAfterSurface, [lines.length, surfaces.length]),
     },

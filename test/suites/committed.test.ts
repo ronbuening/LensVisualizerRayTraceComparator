@@ -17,7 +17,7 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { loadSuite } from "../../src/core/suite.ts";
 import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
-import { BENCHMARK_KEYS, SUITES_DIR, SUITE_NAMES, suitePath } from "./support.ts";
+import { BENCHMARK_CONDITIONS, BENCHMARK_KEYS, SUITES_DIR, SUITE_NAMES, asItOpens, suitePath } from "./support.ts";
 
 function readSuite(name: (typeof SUITE_NAMES)[number]): Suite {
   return JSON.parse(readFileSync(suitePath(name), "utf8"));
@@ -45,7 +45,7 @@ for (const name of SUITE_NAMES) {
     // A run uses every judged rung, and the built-in engines unless it is run on others: so the suite runs at the
     // root of this repository, whose configuration defines no engine.
     // optiland is built in too, and joins a suite's own engines with the rungs it answers.
-    assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), ["lv", "optiland", "ref"]);
+    assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), ["lv", "optiland", "ref", "replay"]);
     const builtin = ["lv", "ref"];
     assert.deepEqual(suite.defaults, {
       aperture: { kind: "wide-open" },
@@ -67,7 +67,11 @@ for (const name of SUITE_NAMES) {
         run.name,
       );
       assert.ok(lines?.kind === "reference" || lines?.kind === "photopic", run.name);
-      assert.deepEqual([aperture, imagePlane], [{ kind: "wide-open" }, { kind: "design" }], run.name);
+      // Wide open at the design plane, or one of the two conditions only LensVisualizer can state, which the
+      // benchmark alone asks for: its MTF tab's f/8 comparison, and its own best axial focus.
+      const ofLv = name === "benchmark";
+      assert.ok(aperture?.kind === "wide-open" || (ofLv && aperture?.kind === "lv-f8-comparison"), run.name);
+      assert.ok(imagePlane?.kind === "design" || (ofLv && imagePlane?.kind === "lv-best-axial"), run.name);
     }
   });
 }
@@ -82,9 +86,9 @@ test("the smoke suite is two small primes and one small zoom, which states no zo
   assert.equal(runs.at(-1)?.name, "minolta-af-35-70-f4-ref");
 });
 
-test("the benchmark suite is the 12 configurations, each on the reference line and on the photopic lines", () => {
+test("the benchmark suite is the 12 configurations in four conditions, each on the reference line and on the photopic lines", () => {
   const runs = expandSuite(readSuite("benchmark"));
-  // Every run of a zoom states its position, so the suite is these 24 runs whatever the rule of the zoom does:
+  // Every run of a zoom states its position, so the suite is these 96 runs whatever the rule of the zoom does:
   // its hash, which baselines/benchmark.json names, is that of the file as written, and the baseline's runs are
   // these runs by name.
   const baseline = JSON.parse(readFileSync(join(REPO_ROOT, "baselines", "benchmark.json"), "utf8"));
@@ -102,7 +106,39 @@ test("the benchmark suite is the 12 configurations, each on the reference line a
     ),
   );
   assert.equal(expected.length, 24);
-  assert.deepEqual(runs.map(configuration), expected);
+  // First the lenses as they open, the 24 runs of Phases 1 and 2, in their order; then, configuration by
+  // configuration, the three other conditions of the MTF benchmark, each on both sets of lines.
+  const opening = runs.slice(0, 24);
+  assert.ok(
+    opening.every((run) => asItOpens(readSuite("benchmark").runs.find((each) => each.name === run.name) ?? {})),
+  );
+  assert.deepEqual(opening.map(configuration), expected);
+  assert.equal(runs.length, 96);
+  const conditions = [
+    { aperture: "wide-open", imagePlane: "lv-best-axial" },
+    { aperture: "lv-f8-comparison", imagePlane: "design" },
+    { aperture: "lv-f8-comparison", imagePlane: "lv-best-axial" },
+  ];
+  assert.deepEqual(
+    runs.slice(24).map((run) => `${configuration(run)} ${run.aperture?.kind} ${run.imagePlane?.kind}`),
+    Array.from({ length: 12 }, (_, index) =>
+      conditions.flatMap(({ aperture, imagePlane }) =>
+        expected.slice(2 * index, 2 * index + 2).map((each) => `${each} ${aperture} ${imagePlane}`),
+      ),
+    ).flat(),
+  );
+  // A run is named after its configuration, its condition and its lines.
+  assert.deepEqual(
+    runs.map((run) => run.name),
+    [
+      ...opening.map((run) => run.name),
+      ...Array.from({ length: 12 }, (_, index) =>
+        BENCHMARK_CONDITIONS.slice(1).flatMap((condition) =>
+          opening.slice(2 * index, 2 * index + 2).map((run) => run.name.replace(/-(ref|photopic)$/, `${condition}-$1`)),
+        ),
+      ).flat(),
+    ],
+  );
 });
 
 test("the feature suite has one lens for each translation path, on the reference line first", () => {

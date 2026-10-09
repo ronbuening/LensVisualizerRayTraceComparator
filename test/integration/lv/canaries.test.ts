@@ -1,7 +1,8 @@
 // Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
-// pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40 and those of the geometric OTF's
-// conventions at c05a2ab7. LensVisualizer exports none of these rules as a function, so the comparator restates
-// them; when LV rewrites one, the canary fails and names what to read again. Whitespace is not compared.
+// pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40, those of the geometric OTF's
+// conventions at c05a2ab7 and those of the MTF's refinement, which the replay restates, at 33ebdb30.
+// LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
+// one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -763,3 +764,236 @@ test(
     );
   },
 );
+
+test(
+  "the MTF still sets a request up, walks a field and widens its footprint as the replay restates them",
+  { skip },
+  () => {
+    // Read at 33ebdb30 (engine closure 78215d72).
+    const mtf = "src/optics/analysis/mtf.ts";
+    const job =
+      "replayLvMtf in src/engines/lv/replay.ts takes the request from the first step of computeMtfSteps and " +
+      "restates what follows it: the ladder, the image plane, and which fields are traced";
+    // A request the gate refuses, and one without a field axis, is returned before anything is yielded.
+    assertSource(mtf, "if (!support.available) return result;", job);
+    assertSource(
+      mtf,
+      `if (!geometry) {
+         result.fields = fractions.map((fraction) =>
+           markUnavailable(emptyMtfField(fraction), "chief-ray-failed", "No valid chief ray reaches the image plane."),
+         );
+         return result;
+       }`,
+      job,
+    );
+    assertSource(mtf, "const cap = options.maxGridSize ?? MTF_DEFAULT_GRID_CAP;", job);
+    assertSource(mtf, "ladder: MTF_GRID_LADDER.filter((size) => size <= cap),", job);
+    // The first step states every field's target, pending or outside the model, and the focus that moves the plane.
+    assertSource(
+      mtf,
+      `result.fields = targets.map((target) =>
+         target.outsideModel
+           ? markUnavailable(emptyMtfField(target.fraction, target), "outside-modeled-field", outsideModelMessage(geometry))
+           : emptyMtfField(target.fraction, target),
+       );`,
+      job,
+    );
+    assertSource(
+      mtf,
+      `context.imagePlaneZ = state.imgZ + result.focus.appliedShiftMm;
+       yield result;
+       for (const index of mtfFieldProcessingOrder(fractions)) {
+         if (targets[index].outsideModel) continue;`,
+      job +
+        "; exportCase in src/engines/lv/exportCase.ts adds the best axial shift to the design plane in the same way",
+    );
+    // The focus the first step states: applied for the mode best-axial, and null where there is no axial beam.
+    assertSource(
+      mtf,
+      `if (requestedMode === "best-axial" || (requestedMode === "auto" && focus.imagePlaneInconsistent)) {
+         focus.mode = "best-axial";
+         focus.appliedShiftMm = best.shiftMm;
+       }`,
+      "lvBestAxialFocus in src/engines/lv/focus.ts takes a focus whose mode is best-axial for one that was found",
+    );
+    assertSource(
+      mtf,
+      "const size = Math.min(MTF_FOCUS_GRID, context.ladder.at(-1) ?? MTF_FOCUS_GRID);",
+      "the best axial focus is of one grid cap, which lvBestAxialFocus is handed and CONTRACT.md says",
+    );
+
+    const field = "replayField in src/engines/lv/replay.ts restates traceField, line by line";
+    assertSource(
+      mtf,
+      `const launch =
+         target.fieldAngleDeg === null ? null : prepareMtfFieldLaunch(state, options, support, target.fieldAngleDeg);
+       if (!launch) {
+         yield markUnavailable(
+           emptyMtfField(target.fraction, target),
+           "chief-ray-failed",
+           "No valid chief ray reaches this image height.",
+         );
+         return;
+       }
+       let footprint = findMtfFieldFootprint(state, options, support, launch);
+       if (!footprint) {
+         yield markUnavailable(
+           emptyMtfField(target.fraction, target),
+           "vignetted",
+           "No rays reach this image height through the model's clear apertures.",
+         );
+         return;
+       }
+       let expansions = 0;
+       const evaluate = (size: number): MtfGridOutcome => {
+         for (;;) {
+           const outcome = fieldAtGrid(context, target, launch, footprint!, size);
+           const open = outcome.kind === "curves" ? outcome.openBorders : undefined;
+           if (!open || !(open.x || open.y0 || open.y1)) return outcome;
+           if (expansions >= MTF_MAX_FOOTPRINT_EXPANSIONS) {
+             outcome.field.notes.push(
+               "Transmitted rays reach the edge of the sampled pupil region; some flux may be missing.",
+             );
+             return outcome;
+           }`,
+      field,
+    );
+    assertSource(
+      mtf,
+      `footprint = expandMtfFootprint(footprint!, open);
+           expansions++;
+         }
+       };
+       yield* refineMtfField(context.ladder, evaluate, context.frequencies);`,
+      field,
+    );
+    // The walk through the ladder is LensVisualizer's own function, which the replay calls: it still yields the
+    // best field after every size, ends at a converged one, and goes on after a failure a finer grid may mend.
+    assertSource(
+      mtf,
+      `for (const size of ladder) {
+         const outcome = evaluate(size);
+         if (outcome.kind === "unavailable") {
+           const best = previous ?? outcome.field;
+           yield best;
+           if (outcome.refine) continue;
+           return;
+         }
+         applyConvergence(outcome.field, previous, frequencies);
+         yield outcome.field;
+         if (outcome.field.status === "converged") return;
+         previous = outcome.field;
+       }`,
+      "replayField takes the last field refineMtfField yields for the field's result, as computeMtfSteps does",
+    );
+    assertSource(
+      mtf,
+      `for (const field of traceField(context, targets[index])) {
+         finished = field;
+         result.fields[index] = field;`,
+      "replayField takes the last field refineMtfField yields for the field's result",
+    );
+  },
+);
+
+test("the MTF still accounts for one field at one grid as the replay restates it", { skip }, () => {
+  // Read at 33ebdb30 (engine closure 78215d72).
+  const mtf = "src/optics/analysis/mtf.ts";
+  const mirror = "fieldAtGrid in src/engines/lv/replay.ts restates the bookkeeping, line by line and in this order";
+  assertSource(
+    mtf,
+    `const field = emptyMtfField(target.fraction, target);
+     field.gridSize = size;
+     const unavailable = (reason: MtfUnavailableReason, message: string, refine = false): MtfGridOutcome => ({
+       kind: "unavailable",
+       field: markUnavailable(field, reason, message),
+       refine,
+     });
+     const openBorders: MtfOpenBorders = { x: false, y0: false, y1: false };`,
+    mirror,
+  );
+  assertSource(
+    mtf,
+    `let launchedWeight = 0;
+     let failedWeight = 0;
+     for (const line of support.spectralLines) {
+       const bundle = traceMtfBundle(state, options, support, launch, footprint, size, line, context.imagePlaneZ, {
+         reference: commonReference,
+       });
+       if (!bundle) return unavailable("chief-ray-failed", "No valid chief ray reaches the image plane.");
+       chiefClipped ??= bundle.chiefClipped;
+       commonReference ??= bundle.chief;
+       field.imageHeightMm = Math.hypot(commonReference.x, commonReference.y);
+       field.validRays += bundle.rays.length;
+       field.blockedRays += bundle.blocked;
+       field.failedRays += bundle.failed;
+       openBorders.x ||= bundle.openBorders.x;
+       openBorders.y0 ||= bundle.openBorders.y0;
+       openBorders.y1 ||= bundle.openBorders.y1;
+       const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
+       launchedWeight += transmitted + bundle.failedWeight;
+       failedWeight += bundle.failedWeight;`,
+    mirror,
+  );
+  assertSource(
+    mtf,
+    `if (bundle.rays.length < MTF_MIN_RAYS || !(transmitted > 0))
+       return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);`,
+    mirror,
+  );
+  assertSource(
+    mtf,
+    `field.unknownFluxFraction = launchedWeight > 0 ? failedWeight / launchedWeight : 0;
+     const unresolved = assessUnresolvedFlux(field.failedRays, field.unknownFluxFraction);
+     if (!unresolved.acceptable) return unavailable("trace-failed", "Numerical ray failures prevent an MTF estimate.");
+     if (unresolved.note) field.notes.push(unresolved.note);`,
+    mirror,
+  );
+  assertSource(mtf, 'return { kind: "curves", field, openBorders };', mirror);
+  // The reference a later line is handed stands in only where that line's own chief ray has no image point; the
+  // bundle states the point it used as its chief, and which sides of the footprint carried flux.
+  const tracing = "src/optics/analysis/mtfTracing.ts";
+  const bundle = "the replay reads the reference, the open borders and the unresolved flux off traceMtfBundle's bundle";
+  assertSource(
+    tracing,
+    "const chiefPoint = mtfImagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;",
+    bundle,
+  );
+  assertSource(tracing, "extras: { reference?: MtfSpot; opticalPath?: boolean } = {},", bundle);
+  assertSource(
+    tracing,
+    `if (Math.abs(x) > footprint.x1 - footprint.guardMm) bundle.openBorders.x = true;
+     if (y < footprint.y0 + footprint.guardMm) bundle.openBorders.y0 = true;
+     if (y > footprint.y1 - footprint.guardMm) bundle.openBorders.y1 = true;`,
+    bundle,
+  );
+  assertSource(tracing, "bundle.failedWeight += samples * launchWeight;", bundle);
+  // The constants the replay is handed are still exported under these names, with the values it was read at.
+  const constants = "src/optics/analysis/mtfConstants.ts";
+  const named = "LV_IMPORT_MANIFEST in src/engines/lv/manifest.ts imports the constant by this name";
+  assertSource(constants, "export const MTF_GRID_LADDER = Object.freeze([16, 32, 64, 128, 256] as const);", named);
+  assertSource(constants, "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 128;", named);
+  assertSource(constants, "export const MTF_MAX_FOOTPRINT_EXPANSIONS = 2;", named);
+  assertSource(constants, "export const MTF_MIN_RAYS = 16;", named);
+  assertSource(
+    constants,
+    "export const MTF_FIELDS: readonly number[] = Object.freeze([0, 0.25, 0.5, 0.75, 1]);",
+    named,
+  );
+});
+
+test("the tab's f/8 comparison is still the hook's two radii scaled by the slider's f-number over 8", { skip }, () => {
+  // Read at 33ebdb30. The run aperture lv-f8-comparison is this stop, and the seed of its footprint scan this pupil.
+  const tab = "src/components/display/analysis/MtfTab.tsx";
+  const mirror =
+    "lvTabComparison in src/engines/lv/tabRequest.ts restates the scale and the tab's rule; stopRadius in " +
+    "exportAperture.ts makes the stop of the aperture lv-f8-comparison of it, and lvPupilSeed its seed";
+  assertSource(tab, "const scale = fNumber / COMPARISON_F_NUMBER;", mirror);
+  assertSource(tab, "stopSemiDiameterMm: job.options.stopSemiDiameterMm * scale,", mirror);
+  assertSource(tab, "pupilSemiDiameterMm: job.options.pupilSemiDiameterMm * scale,", mirror);
+  assertSource(
+    tab,
+    "const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;",
+    mirror,
+  );
+});

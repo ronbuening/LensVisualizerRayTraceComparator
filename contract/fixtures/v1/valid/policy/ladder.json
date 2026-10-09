@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 5,
+  "version": 6,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -137,6 +137,25 @@
       "floor": {
         "engine": "lv",
         "arbiter": "ref"
+      }
+    },
+    "r4f": {
+      "quantity": "mtf.native",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "fields.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        },
+        "mtf.maxAbs": {
+          "tolerance": 1e-9,
+          "unit": "1"
+        },
+        "sampling.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        }
       }
     }
   }

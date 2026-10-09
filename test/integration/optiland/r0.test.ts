@@ -29,7 +29,7 @@ import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.t
 import { caseFixture } from "../../core/support.ts";
 import { suitePath } from "../../suites/support.ts";
 import { LV_UNAVAILABLE } from "../lv/support.ts";
-import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, worstOf } from "./support.ts";
+import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, rungSuite, worstOf } from "./support.ts";
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE;
@@ -195,7 +195,7 @@ test(
   "the benchmark on R0: lv, ref and optiland built the same system for all 24 runs, at the reference and photopic lines",
   { skip: skipSuites, timeout: 900_000 },
   (t) => {
-    const { manifest, pairs, verdicts } = r0Cycle(t, suitePath("benchmark"), "benchmark", "lv,ref,optiland");
+    const { manifest, pairs, verdicts } = r0Cycle(t, rungSuite(t, "benchmark"), "benchmark", "lv,ref,optiland");
     // 12 configurations, each at the reference line and at the five photopic lines; one request for each engine.
     assert.equal(manifest.runs.length, 24);
     assert.equal(manifest.jobs.length, 24 * 3);

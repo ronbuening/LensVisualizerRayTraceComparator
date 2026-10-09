@@ -33,7 +33,8 @@ interface Checked {
 }
 
 for (const [suite, records] of [
-  ["benchmark", 24 * 4 * 3],
+  // 12 configurations in four conditions, on two sets of lines: four rungs and three pairs of engines each.
+  ["benchmark", 96 * 4 * 3],
   ["features", 18 * 4 * 3],
 ] as const) {
   test(

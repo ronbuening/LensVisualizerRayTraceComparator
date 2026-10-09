@@ -328,10 +328,11 @@ test(
     const ran = lvrtc(runsDir, "run", suitePath("features"));
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "");
-    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered.
+    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The
+    // last rung, R4f, is asked of lv and of the replay of its sampling, one request each for a run.
     assert.match(
       ran.out,
-      /^features: 756 jobs: 720 ok, 36 unsupported, 0 error, 0 pending \(396 computed, 324 cached\)$/m,
+      /^features: 792 jobs: 756 ok, 36 unsupported, 0 error, 0 pending \(432 computed, 324 cached\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -376,7 +377,7 @@ test(
     assert.equal(compared.code, 0, compared.out);
     assert.match(
       compared.out,
-      /^features: 756 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^features: 792 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
     for (const end of ["wide", "tele"]) {
       for (const rung of ["r0", "r1", "r2", "r3"]) {

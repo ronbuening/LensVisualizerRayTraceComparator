@@ -85,11 +85,12 @@ test("no path, a missing path and a directory that is not an LV checkout are tol
 
 test("a tree missing one module fails with that module named, and leaves no loader behind", async (t) => {
   const lv = freshLv(t);
-  rmSync(join(lv, "src/optics/analysis/mtfTracing.ts"));
+  // A module no other module of the tree imports: its absence is the only failure.
+  rmSync(join(lv, "src/optics/layout.ts"));
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
-  assert.match(error.details[0], /^src\/optics\/analysis\/mtfTracing\.ts: /);
-  assert.match(error.message, /1 of 18 modules cannot be imported/);
+  assert.match(error.details[0], /^src\/optics\/layout\.ts: /);
+  assert.match(error.message, /1 of 21 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -97,28 +98,29 @@ test("a tree missing one module fails with that module named, and leaves no load
 
 test("every module that cannot be imported is listed in one error", async (t) => {
   const lv = freshLv(t);
-  rmSync(join(lv, "src/optics/analysis/mtfTracing.ts"));
+  rmSync(join(lv, "src/optics/layout.ts"));
   writeFileSync(join(lv, "src/optics/analysis/mtfSupport.ts"), 'throw new Error("mtfSupport is broken");\n');
   const error = await refused(loadLvBinding(lv), "import-failed");
-  // The MTF barrel takes its gate from the broken module, so it cannot be imported either.
+  // The MTF module takes its gate from the broken module, and the barrel takes the MTF from that one, so neither
+  // can be imported either. The modules are named in the order of the manifest.
   assert.deepEqual(
     error.details.map((detail) => detail.split(": ")[0]),
-    ["src/optics/analysis/mtfSupport.ts", "src/optics/analysis/mtfTracing.ts", "src/optics/mtf.ts"],
+    ["src/optics/layout.ts", "src/optics/analysis/mtfSupport.ts", "src/optics/analysis/mtf.ts", "src/optics/mtf.ts"],
   );
-  assert.match(error.details[0], /mtfSupport is broken/);
+  assert.match(error.details[1], /mtfSupport is broken/);
 });
 
 test("a module that cannot be imported and an export missing elsewhere are named in the same error", async (t) => {
   const lv = freshLv(t);
-  rmSync(join(lv, "src/optics/analysis/mtfTracing.ts"));
+  rmSync(join(lv, "src/optics/layout.ts"));
   writeFileSync(join(lv, "src/optics/trace/aperture.ts"), "export const renamedAperture = 1;\n");
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 2);
-  assert.match(error.details[0], /^src\/optics\/analysis\/mtfTracing\.ts: /);
+  assert.match(error.details[0], /^src\/optics\/layout\.ts: /);
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 18 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 21 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 

@@ -167,13 +167,30 @@ test("every way a lens has no case is a problem of its run, as <code>: <message>
   assert.deepEqual(problemsOf(await source.resolve(run("zenith-doublet-100", { lines: { kind: "photopic" } }))), [
     "spectral-data-unavailable: Spectral MTF is unavailable because a glass has no Abbe number.",
   ]);
+  // LensVisualizer's focus is asked for a lens that has a case, and for no other.
   const both = await source.resolve(
     run("acme-zoom-24-48", { aperture: { kind: "f-number", value: 2 }, imagePlane: { kind: "lv-best-axial" } }),
   );
-  assert.deepEqual(problemsOf(both).map(problemCode), [
-    "aperture-faster-than-wide-open",
-    "lv-best-axial-needs-mtf-recipe",
-  ]);
+  assert.deepEqual(problemsOf(both).map(problemCode), ["aperture-faster-than-wide-open"]);
+  // Lines that are none of LensVisualizer's spectra have no best axial focus of its own.
+  const custom = await source.resolve(
+    run("acme-singlet-50", {
+      lines: { kind: "explicit", wavelengthsNm: [587.5618, 500] },
+      imagePlane: { kind: "lv-best-axial" },
+    }),
+  );
+  assert.deepEqual(problemsOf(custom).map(problemCode), ["lv-best-axial-needs-lv-spectrum"]);
+  // The two options only a LensVisualizer lens has do give a case where LensVisualizer has an answer: the stop of
+  // the tab's f/8 comparison (the fake singlet is f/2 with an iris of 6.25 mm), and the fake's best axial focus for
+  // that stop, a 128th of it in front of the design plane.
+  const tab = caseOf(
+    await source.resolve(
+      run("acme-singlet-50", { aperture: { kind: "lv-f8-comparison" }, imagePlane: { kind: "lv-best-axial" } }),
+    ),
+  );
+  const stop = ((6.25 * 2) / 2) * (2 / 8);
+  assert.equal(tab.conditions.stopSemiDiameter, stop);
+  assert.equal(tab.conditions.imageZ, tab.system.designImageZ + -stop / 128);
   // The lens that has no spectral data still has its reference line.
   assert.equal((await source.resolve(run("zenith-doublet-100"))).ok, true);
   const fixture: RunSpec = { ...run("x"), lens: { kind: "fixture", path: "a.json" } };
@@ -485,6 +502,8 @@ test("a lens file edited between loading the suite and the end of its run marks 
     registry,
     runsDir: join(rootDir, "runs"),
     sources,
+    // The rungs that compare the engines of a run: this registry has no LensVisualizer for a rung of its own.
+    rungs: ["selftest", "r0"],
     onJob: () => appendFileSync(join(lv, SINGLET_FILE), "// edited while the suite ran\n"),
   });
   assert.equal(result.manifest.sources?.lv.status, SOURCE_CHANGED);

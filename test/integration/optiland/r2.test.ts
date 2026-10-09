@@ -37,13 +37,13 @@ import { RAYS_DATA_SINGLET, RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture } from "../../core/support.ts";
 import { caseOf } from "../../engines/ref/support.ts";
 import { CASE } from "../../engines/support.ts";
-import { suitePath } from "../../suites/support.ts";
 import { LV_UNAVAILABLE } from "../lv/support.ts";
 import {
   OPTILAND_UNAVAILABLE,
   WRAPPER_UNAVAILABLE,
   optilandRoot,
   runAndCompare,
+  rungSuite,
   watchedInterpreter,
 } from "./support.ts";
 import type { RunCycle, RungPair } from "./support.ts";
@@ -287,8 +287,9 @@ test(
 function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Summary; cycle: RunCycle } {
   const engines = "lv,ref,optiland";
   const compiled = watchedInterpreter(t);
+  const suiteFile = rungSuite(t, suite);
   const cycle = runAndCompare(t, {
-    suite: suitePath(suite),
+    suite: suiteFile,
     name: suite,
     engines,
     rungs: "r2",
@@ -313,7 +314,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   // The same again without the JIT. It is another engine to the result store: its fingerprint says so.
   const interpreted = watchedInterpreter(t, { jit: "off" });
   const again = runAndCompare(t, {
-    suite: suitePath(suite),
+    suite: suiteFile,
     name: suite,
     engines,
     rungs: "r2",

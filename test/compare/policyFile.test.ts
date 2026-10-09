@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 5);
+  assert.equal(policy.version, 6);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -109,6 +109,21 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, with th
   );
 });
 
+test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it blocks nothing", () => {
+  const { r4f } = loadPolicy().rungs;
+  assert.deepEqual([r4f.quantity, r4f.mode, r4f.class], ["mtf.native", "direct", "gated"]);
+  assert.deepEqual(r4f.metrics, {
+    "fields.mismatches": { tolerance: 0, unit: "elements" },
+    "mtf.maxAbs": { tolerance: 1e-9, unit: "1" },
+    "sampling.mismatches": { tolerance: 0, unit: "elements" },
+  });
+  assert.equal(r4f.floor, undefined);
+  assert.equal(r4f.blocksLaterRungs, undefined);
+  // Every figure its comparator reports is judged.
+  const reported = COMPARATORS.get("mtf.native", "r4f")?.metrics.map((metric) => metric.name) ?? [];
+  assert.deepEqual(reported.sort(), Object.keys(r4f.metrics).sort());
+});
+
 test("every rung has a policy entry and every entry a rung, with its quantity, a comparator and its metrics", () => {
   assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), []);
   assert.deepEqual(Object.keys(loadPolicy().rungs).sort(), RUNGS.map((rung) => rung.id).sort());
@@ -155,6 +170,7 @@ test("each way a policy and the code can disagree is reported", () => {
     "rung selftest has no policy entry",
     "rung r0 has no policy entry",
     "rung r3 has no policy entry",
+    "rung r4f has no policy entry",
     "policy entry notes is of no registered rung",
     "policy entry r1: the comparator reports no metric efl.abs",
     "policy entry r1: the comparator reports no metric pupil.z.abs",

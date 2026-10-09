@@ -82,6 +82,13 @@
           "additionalProperties": false
         },
         {
+          "description": "The stop of the f/8 comparison of LensVisualizer's MTF tab: only a LensVisualizer lens has one.",
+          "type": "object",
+          "properties": { "kind": { "const": "lv-f8-comparison" } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
           "type": "object",
           "properties": {
             "kind": { "const": "f-number" },

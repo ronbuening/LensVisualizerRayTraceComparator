@@ -250,13 +250,20 @@ test(
     const err: string[] = [];
     const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
     const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
-    const rungs = RUNGS.map((rung) => rung.id);
-    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", rungs.join(",")], io, [
+    const every = RUNGS.map((rung) => rung.id);
+    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", every.join(",")], io, [
       command,
     ]);
     // The standard error names the fields a case file gives no rays for; that fails nothing.
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
+    // Every rung that compares the engines of a run is asked of optiland. The rung that is about engines of its
+    // own, R4f, is not, and of a case that no LensVisualizer sampled it asks nobody anything.
+    const rungs = RUNGS.filter((rung) => rung.engines === undefined).map((rung) => rung.id);
+    assert.deepEqual(
+      every.filter((rung) => !rungs.includes(rung)),
+      ["r4f"],
+    );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
     // The two rungs of traced rays ask the same request, of the one field a case file has rays for, the axis: the

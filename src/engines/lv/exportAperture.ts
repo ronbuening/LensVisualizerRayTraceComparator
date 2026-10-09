@@ -2,10 +2,14 @@
 import type { SurfaceAperture } from "../../contract/case.ts";
 import type { RunAperture } from "../../contract/runSpec.ts";
 import type { ExportProblem } from "./exportProblems.ts";
+import { lvHookStop, lvTabComparison } from "./tabRequest.ts";
 import type { LvApi, LvPreparedState, LvRuntimeLens, LvSurface } from "./types.ts";
 
 /** The LensVisualizer functions that size the stop. */
-export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoom2">;
+export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoom2" | "fNumberAtStopdown">;
+
+/** The code of the problem of a run that asks for the tab's f/8 comparison of a lens the tab offers none for. */
+export const F8_COMPARISON_UNAVAILABLE = "f8-comparison-unavailable";
 
 /** The stop radius of a run, mm, or why there is none. */
 export type StopRadiusResult =
@@ -32,6 +36,12 @@ export function wideOpenStopRadius(api: LvStopApi, runtime: LvRuntimeLens, zoomT
  *   mirrored here, in the hook's order of operations, and an integration test fails when the hook's expression
  *   changes. The widest f-number asked for by number, f/fopen, is therefore the hook's `(w × fopen) / fopen`, which
  *   can differ from `wide-open` in the last bit. An N below the widest is a problem: the hook would clamp it.
+ * - `lv-f8-comparison`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which is not the hook's f/8:
+ *   the radius the hook hands the tab wide open, `(wide-open radius × fopen) / fNumber` with the f-number of the
+ *   aperture slider at wide open, times `fNumber / 8` (`lvHookStop`, `lvTabComparison`, both restated from
+ *   LensVisualizer with source canaries). A lens the tab offers no comparison for, because it is not faster than
+ *   f/7.95 wide open or does not stop down to f/8, is a problem with the tab's own reason
+ *   (`F8_COMPARISON_UNAVAILABLE`).
  * - `stop-radius`: the radius as given.
  */
 export function stopRadius(
@@ -43,6 +53,12 @@ export function stopRadius(
   if (aperture?.kind === "stop-radius") return { ok: true, radius: aperture.mm };
   const wideOpen = wideOpenStopRadius(api, runtime, zoomT);
   if (aperture === undefined || aperture.kind === "wide-open") return { ok: true, radius: wideOpen };
+  if (aperture.kind === "lv-f8-comparison") {
+    const hook = lvHookStop(api, runtime, zoomT);
+    const { scale, unavailable } = lvTabComparison(hook, runtime);
+    if (unavailable !== null) return { ok: false, problem: { code: F8_COMPARISON_UNAVAILABLE, message: unavailable } };
+    return { ok: true, radius: hook.currentPhysStopSD * scale };
+  }
 
   const widest = api.fopenAtZoom2(zoomT, runtime);
   if (aperture.value < widest) {

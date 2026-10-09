@@ -106,13 +106,15 @@ test(
 );
 
 test(
-  "the benchmark cases are 24 different cases of 12 systems: the lines change the conditions only",
+  "the benchmark cases are 96 different cases of 24 systems: the lines and the image plane change the conditions only",
   { skip },
   async () => {
     const cases = (await suiteOf("benchmark")).runs.map((run) => run.opticalCase);
-    assert.equal(cases.length, 24);
-    assert.equal(new Set(cases.map((opticalCase) => opticalCase?.id)).size, 24);
-    assert.equal(new Set(cases.map((opticalCase) => opticalCase?.systemId)).size, 12);
+    assert.equal(cases.length, 96);
+    assert.equal(new Set(cases.map((opticalCase) => opticalCase?.id)).size, 96);
+    // A stop radius is the aperture of the stop surface, which is of the system: 12 configurations wide open and 12
+    // at the tab's f/8. The lines and the image plane are conditions.
+    assert.equal(new Set(cases.map((opticalCase) => opticalCase?.systemId)).size, 24);
     for (let index = 0; index < cases.length; index += 2) {
       const [reference, photopic] = [cases[index], cases[index + 1]];
       assert.ok(reference !== null && photopic !== null);
@@ -122,6 +124,40 @@ test(
       assert.equal(photopic.conditions.lines[0].wavelengthNm, 555);
       // The benchmark is d-referenced throughout.
       assert.deepEqual(reference.conditions.lines[0], { wavelengthNm: 587.5618, weight: 1, indexSource: "authored" });
+    }
+    // After the 24 runs of the lenses as they open: per configuration, the best focus wide open, the f/8
+    // comparison at the design plane, and the f/8 comparison at its own best focus, each on both sets of lines.
+    for (let configuration = 0; configuration < 12; configuration++) {
+      const [open, openPhotopic] = cases.slice(2 * configuration, 2 * configuration + 2);
+      const [best, bestPhotopic, f8, f8Photopic, f8Best, f8BestPhotopic] = cases.slice(
+        24 + 6 * configuration,
+        30 + 6 * configuration,
+      );
+      for (const each of [open, openPhotopic, best, bestPhotopic, f8, f8Photopic, f8Best, f8BestPhotopic]) {
+        assert.ok(each !== null);
+      }
+      const at = open?.label.lensKey;
+      // The best focus is of a stop and of lines: four different planes, none the design plane, each in front of
+      // it or behind it by less than a millimetre.
+      const planes = [best, bestPhotopic, f8Best, f8BestPhotopic].map(
+        (each) => (each?.conditions.imageZ ?? NaN) - (each?.system.designImageZ ?? NaN),
+      );
+      assert.equal(new Set(planes).size, 4, `${at}: ${planes.join(", ")}`);
+      for (const shift of planes) assert.ok(shift !== 0 && Math.abs(shift) < 1, `${at}: ${shift}`);
+      for (const [moved, still] of [
+        [best, open],
+        [bestPhotopic, openPhotopic],
+        [f8Best, f8],
+        [f8BestPhotopic, f8Photopic],
+      ]) {
+        assert.equal(moved?.systemId, still?.systemId, at);
+        assert.equal(moved?.conditions.stopSemiDiameter, still?.conditions.stopSemiDiameter, at);
+        assert.equal(still?.conditions.imageZ, still?.system.designImageZ, at);
+      }
+      // The f/8 comparison is another stop in the same lens: a smaller one.
+      assert.notEqual(f8?.systemId, open?.systemId, at);
+      assert.equal(f8?.systemId, f8Photopic?.systemId, at);
+      assert.ok((f8?.conditions.stopSemiDiameter ?? NaN) < (open?.conditions.stopSemiDiameter ?? NaN), at);
     }
   },
 );
@@ -257,11 +293,13 @@ test(
     assert.equal(ran.status, 0, ran.stderr);
     // Five runs, the zoom at both ends, and two engines. Neither answers the conformance quantity, both answer R0
     // and R1; and the runs have 27 ray sets between them (three fields, at one line four times and at five lines
-    // once), which each engine traces once, for R2, and R3 finds in the store.
+    // once), which each engine traces once, for R2, and R3 finds in the store. The last rung, R4f, is about two
+    // engines of its own, lv and the replay of its sampling: one request of each for a run.
     assert.match(
       ran.stdout,
-      /^smoke: 138 jobs: 128 ok, 10 unsupported, 0 error, 0 pending \(74 computed, 54 cached\)$/m,
+      /^smoke: 148 jobs: 138 ok, 10 unsupported, 0 error, 0 pending \(84 computed, 54 cached\)$/m,
     );
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
     for (const end of ["wide", "tele"]) {
       assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +r3 +lv +ok +cached$`, "m"), end);
     }
@@ -270,7 +308,7 @@ test(
     // At LV ed78cf40 every pair of the smoke suite passes outright: none needs the floor.
     assert.match(
       compared.stdout,
-      /^smoke: 138 pairs: 128 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^smoke: 148 pairs: 138 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
     const reported = lvrtc("report", "smoke");
     assert.equal(reported.status, 0, reported.stderr);
@@ -283,7 +321,7 @@ test(
     }
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["lv", "ref"],
+      ["lv", "ref", "replay"],
     );
   },
 );

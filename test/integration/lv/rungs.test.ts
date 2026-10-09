@@ -173,19 +173,20 @@ test(
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, digest, digestText, verdicts } = cycle(t, "benchmark");
-    // 24 runs; R0 and R1 once each, and 216 ray sets (12 configurations, three fields, one line and five), which
-    // each engine traces once for R2 and R3 together.
-    assert.equal(manifest.jobs.length, 2 * (24 + 24 + 216 + 216));
+    // 96 runs: 12 configurations in four conditions (wide open and the tab's f/8, at the design plane and at
+    // LensVisualizer's best axial focus), on one line and on five. R0 and R1 once each, and 864 ray sets (three
+    // fields a line), which each engine traces once for R2 and R3 together.
+    assert.equal(manifest.jobs.length, 2 * (96 + 96 + 864 + 864));
     assert.equal(
       manifest.runs.reduce((sets, run) => sets + (run.raySets?.sets.length ?? 0), 0),
-      216,
+      864,
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
 
     // Every gated pair is PASS or FLOOR, and nothing else: no failure, no error, nothing blocked.
     assert.match(
       verdicts,
-      /^benchmark: 960 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 3840 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
@@ -210,8 +211,10 @@ test(
     // last surface differs by at most 6.0e-6 waves (the same lens, 510 nm), to the image by 5.3e-6
     // (sony-fe-20mm-f18-g, 470 nm, 47.5 degrees), and relative to the chief ray by 5.5e-6
     // (nikon-z-24-70f4s at its long end, 470 nm). Everything is LensVisualizer's intersection tolerance of 1e-9 mm,
-    // carried through the surfaces behind it.
-    assert.deepEqual(counts, { "r0 PASS": 24, "r1 PASS": 24, "r2 PASS": 216, "r3 PASS": 216 });
+    // carried through the surfaces behind it. At 33ebdb30 (closure 78215d72) the 72 runs of the three other
+    // conditions pass outright too: stopped down the rays are a part of these, and a moved image plane moves
+    // nothing but the landing and the path to it.
+    assert.deepEqual(counts, { "r0 PASS": 96, "r1 PASS": 96, "r2 PASS": 864, "r3 PASS": 864 });
     assert.equal(floors.size, 0);
     assert.ok(r2["hits.maxDistance"].value > 1e-9 && r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9 && r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
@@ -223,14 +226,14 @@ test(
     assert.deepEqual([digest.kind, digest.engine.id, digest.arbiter.id], ["floor-report", "lv", "ref"]);
     assert.equal(digest.engine.fingerprint, lv.fingerprint);
     assert.equal(digest.engine.details.commit, lv.details.commit);
-    assert.equal(digest.rows.length, 4 * 24);
+    assert.equal(digest.rows.length, 4 * 96);
     assert.deepEqual(
       digest.rungs.map((rung) => [rung.rung, rung.requests]),
       [
-        ["r0", 24],
-        ["r1", 24],
-        ["r2", 216],
-        ["r3", 216],
+        ["r0", 96],
+        ["r1", 96],
+        ["r2", 864],
+        ["r3", 864],
       ],
     );
     // Numbers, keys and hashes: no array of rays, no path of this machine, no time.
@@ -238,7 +241,7 @@ test(
       for (const absent of ["$nd", REPO_ROOT, LV_PATH ?? "?", "/Users/", "/home/", "\r"])
         assert.ok(!text.includes(absent), absent);
     }
-    assert.ok(digestText.json.length < 200_000, String(digestText.json.length));
+    assert.ok(digestText.json.length < 800_000, String(digestText.json.length));
 
     // Every run is named with the content hash of its case: what was traced, whatever LensVisualizer's commit and
     // its dirty flag say of a checkout whose lens files change by the day.
@@ -259,7 +262,7 @@ test(
     const records = checkBaseline(read.baseline, fresh, POLICY).filter(
       (record) => record.a === "lv" && record.b === "ref" && record.outcome !== "GONE",
     );
-    assert.equal(records.length, 4 * 24);
+    assert.equal(records.length, 4 * 96);
     const held = records.filter((record) => record.stale.length === 0);
     for (const record of held) {
       assert.equal(record.outcome, "OK", `${record.run} ${record.rung}: ${record.moved.join("; ")}`);

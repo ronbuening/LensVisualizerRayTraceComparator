@@ -81,8 +81,30 @@ repository, whose configuration defines no engine; `--engines` names others.
 | Suite | Is |
 |---|---|
 | `smoke.json` | two small primes, one of them also on the photopic lines, and one small zoom, which states no position and so runs at both ends: five runs |
-| `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines |
+| `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines, in four conditions: 96 runs ([below](#the-benchmark-in-four-conditions)) |
 | `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom (at both ends: it states no position), an asphere without a term, a stop inside an element: 16 runs as written, 18 as run |
+
+#### The benchmark in four conditions
+
+The benchmark of Phase 3 is the 12 configurations wide open and at f/8, at the design plane and at
+LensVisualizer's best axial focus. Each of those is a case of its own (another stop is another system, another
+image plane another set of conditions), so each is a run of its own, and a baseline, which is keyed on runs as
+run, has a record for each. The first 24 runs are the lenses as they open, unchanged since Phase 1; the 72 after
+them state what differs:
+
+| Run name | `aperture` | `imagePlane` | Is |
+|---|---|---|---|
+| `<configuration>-ref`, `-photopic` | (the default, `wide-open`) | (the default, `design`) | the lens as it opens |
+| `<configuration>-best-ref`, `-best-photopic` | (`wide-open`) | `lv-best-axial` | at LensVisualizer's own best axial focus for those lines, wide open |
+| `<configuration>-f8-ref`, `-f8-photopic` | `lv-f8-comparison` | (`design`) | the f/8 comparison of LensVisualizer's MTF tab, at the design plane |
+| `<configuration>-f8-best-ref`, `-f8-best-photopic` | `lv-f8-comparison` | `lv-best-axial` | that comparison at its own best axial focus |
+
+Both options are asked of LensVisualizer when the case is exported
+([Cases from LensVisualizer](../contract/CONTRACT.md#cases-from-lensvisualizer)): the stop is the tab's own
+scaling of its wide-open radius, and the plane the one LensVisualizer's focus search finds for that stop and those
+lines. So the best focus of a lens is four different planes here, and the tab offers f/8 for every lens of the
+benchmark (each is faster than f/7.95 wide open and stops down to f/8 or beyond; measured at `33ebdb30`). The 96
+cases are of 24 systems. The feature suite and the smoke suite stay as they were.
 
 Two translation paths have no run, because no lens of the catalog has a case for them: the one lens that mixes d
 and e references has no wavelength data for every glass (`mixed-reference`), and every lens with an annular
@@ -106,15 +128,25 @@ Python, add `--engines fake-a,fake-b,fake-none`.
   only when a run names one of its lenses.
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. A **built-in engine** is part of the comparator and needs no configuration: `ref`, the reference
-  engine, and `lv`, LensVisualizer itself. It can be named under any root, and is run only where it is named, so a
-  root without an engine of its own runs nothing until `--engines` or the suite names one; the committed suites
-  name both. A configured engine of the same id takes its place.
+  engine, `lv`, LensVisualizer itself, `optiland`, and `replay`, the comparator's estimators on a replay of
+  LensVisualizer's sampling. It can be named under any root, and is run only where it is named, so a root without
+  an engine of its own runs nothing until `--engines` or the suite names one; the committed suites name `lv` and
+  `ref`. A configured engine of the same id takes its place.
 - **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
   of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`), `r1`
-  (`paraxial.first-order`), and `r2` and `r3` (`rays.trace`), which ask every engine to trace the run's ray sets.
-  The two ask the same requests, so an engine traces a set once and the second rung finds the answer in the
-  store. An engine that does not offer a rung's quantity, or implements another version of its definition than
-  the comparator's, is recorded as `unsupported` for it without being asked.
+  (`paraxial.first-order`), `r2` and `r3` (`rays.trace`), which ask every engine to trace the run's ray sets, and
+  `r4f` (`mtf.native`). `r2` and `r3` ask the same requests, so an engine traces a set once and the second rung
+  finds the answer in the store. An engine that does not offer a rung's quantity, or implements another version of
+  its definition than the comparator's, is recorded as `unsupported` for it without being asked.
+- **A rung of its own engines.** `r4f` is no comparison between the engines of a run: it holds `lv` to `replay`
+  ([below](#the-mtf-recipe-the-replay-and-rung-r4f)). It is asked of exactly those two, whatever `--engines` and
+  the run name, so `--engines lv,ref,optiland --rungs r0,r1,r2,r3,r4f` runs the first four rungs on three engines
+  and the fifth on its two, and no engine is recorded as `unsupported` for a rung that was never about it. In a
+  comparison such a rung is not held to a reference that is none of its engines.
+- **The MTF recipe.** A run of a rung that is made from the recipe (`r4f`) has it resolved first, by the source of
+  its case: the plane, the fields, the lines and the frequencies every MTF request about the case is made from
+  ([the contract](../contract/CONTRACT.md#the-mtf-recipe)). The manifest records it, or why the run has none. A
+  run without one has no request of such a rung, and nothing fails.
 - **Ray sets.** A run of a rung that traces rays has its rays generated first, by the source of its case, for the
   run's `fields` (image-height fractions 0, 0.5 and 1 unless it states others) and `sampling.bundleGrid` (32), at
   every line of the case: LensVisualizer's own launch rays for a LensVisualizer lens, probe lattices over the first
@@ -458,8 +490,10 @@ ninety digits of whole-number arithmetic.
 ## LensVisualizer's product MTF
 
 `mtf.native` is the quantity for an engine's own MTF: by its own method, sampling and aiming, as it presents it.
-No two engines are expected to agree on it within a tolerance, and no rung compares it yet. LensVisualizer's is
-the one every later comparison is against, so it has to be obtained exactly as LensVisualizer obtains it.
+No two independent engines are expected to agree on it within a tolerance, and no rung compares two of them yet.
+LensVisualizer's is the one every later comparison is against, so it has to be obtained exactly as LensVisualizer
+obtains it, and the comparator has to understand how LensVisualizer samples it: that is rung R4f
+([below](#the-mtf-recipe-the-replay-and-rung-r4f)).
 
 `lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>] [--aperture wide-open|f/8] [--root <dir>] [--json]`
 asks each named engine (`lv` unless others are named) for its MTF of a LensVisualizer lens, as a profile requests
@@ -548,6 +582,77 @@ report holds are that report's, to its printed precision, although the report as
 own fields and frequencies and radii that are not scaled: none of that enters the axial focus search or the
 traced aperture. The figures are pinned in `test/integration/lv/mtf.test.ts` and compared while LensVisualizer's
 engine files and the case of a configuration are the ones they were measured with.
+
+## The MTF recipe, the replay and rung R4f
+
+Stage 3.2. Before any other engine's MTF is set beside LensVisualizer's, three things have to be settled: what
+exactly is being compared (the recipe), whether the comparator understands how LensVisualizer samples a field (the
+replay), and how well its own estimator reproduces LensVisualizer's sum on the same rays (rung R4f).
+
+**The recipe** is one object for a run: the plane, the fields with their chief-ray angles and target image
+heights, the lines with their weights, the frequencies and the stop radius, each as LensVisualizer resolves it for
+the case. It is the first step of LensVisualizer's own `computeMtfSteps`, which states the field axis, the angle of
+every fraction and the focus before any field is traced. A case file has no LensVisualizer to ask: its run states
+its fields as angles, or it has no recipe. The contract describes its members
+([the MTF recipe](../contract/CONTRACT.md#the-mtf-recipe)); `lvrtc run` records it in the manifest:
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f
+node bin/lvrtc.mjs compare benchmark
+```
+
+**The replay** (`src/engines/lv/replay.ts`) walks a field as LensVisualizer does: the launch and the footprint,
+then grid after grid through `MTF_GRID_LADDER` (16, 32, 64, 128, 256, up to the cap of 128), each grid traced at
+every line by LensVisualizer's own `traceMtfBundle`, the footprint widened and the grid traced again when rays
+reach its guard band, and the walk ended by LensVisualizer's own `refineMtfField` when two grids agree within
+0.01 below 50 cycles/mm. What LensVisualizer exports is called; what it does inline is restated line by line with
+source canaries ([the engine `replay`](../contract/CONTRACT.md#the-engine-replay)). The one thing that is not
+LensVisualizer's is the sum: the comparator's `polychromaticOtf` on the landings of the bundles. For each field the
+replay keeps the grids it traced, the footprint it was left with, the bundles of the final grid (every ray with
+its launch, its landing and its weight) and the reference point.
+
+**Rung R4f** asks `lv` and `replay` the same `mtf.native` request and holds the two answers to each other
+([the contract](../contract/CONTRACT.md#rung-r4f-the-fidelity-of-the-replay)): `mtf.maxAbs` within 1e-9, and not
+one grid size, ray count or field status apart. It is the only rung whose two engines share their rays, so it says
+nothing about LensVisualizer's tracer: it says that the comparator's estimator, handed LensVisualizer's rays, gives
+LensVisualizer's MTF, and that the comparator knows which rays those are. Hermetically it runs on the fake LV tree,
+one lens of which samples its MTF grid by grid with a ladder, a tolerance and plain sums of its own
+(`test/engines/lv/replay.test.ts`, `test/cli/fidelityLadder.test.ts`); a fake lens whose "product MTF" is a closed
+form and no sampling is a `FAIL` there, which is what the rung is for.
+
+Measured at LensVisualizer `33ebdb30` (engine closure `78215d72`) on the benchmark suite: 96 runs, 480 fields, 51
+frequencies, both cuts. Every pair is `PASS`; `sampling.mismatches` and `fields.mismatches` are 0 in every run;
+every field has curves. The worst `mtf.maxAbs` of each configuration over its two sets of lines, and the grids its
+five fields end at on the reference line:
+
+| Configuration | Wide open, design | Wide open, best focus | f/8, design | f/8, best focus | Grids wide open, design (reference line) | Grids at f/8, design |
+|---|---:|---:|---:|---:|---|---|
+| `canon-ef-135-f2l-usm` | 5.0e-15 | 3.4e-15 | 4.6e-15 | 5.9e-15 | 32 32 32 64 64 | 32 32 32 32 64 |
+| `fujifilm-fujinon-gf-63mm-f28-r-wr` | 8.9e-15 | 9.7e-15 | 5.0e-15 | 3.2e-15 | 64 64 128 128 128 | 32 32 64 32 32 |
+| `sigma-35mm-f14-dg-hsm-a` | 1.1e-14 | 1.1e-14 | 5.6e-15 | 4.2e-15 | 32 64 128 128 128 | 32 32 32 64 32 |
+| `nikkor-z50f12` | 8.5e-15 | 1.3e-14 | 4.8e-15 | 3.2e-15 | 128 128 128 128 128 | 32 32 32 32 32 |
+| `sony-fe-20mm-f18-g` | 1.0e-14 | 7.8e-15 | 4.6e-15 | 4.8e-15 | 64 64 128 128 128 | 32 32 32 64 64 |
+| `sony-fe-400mm-f28-gm-oss` | 5.0e-15 | 2.4e-15 | 4.0e-15 | 3.9e-15 | 32 64 64 64 64 | 32 32 32 32 64 |
+| `sigma-105mm-f28-dg-dn-macro-art` | 5.1e-15 | 5.2e-15 | 4.1e-15 | 4.4e-15 | 32 64 32 32 64 | 32 32 32 32 64 |
+| `nikon-z-24-70f4s`, wide | 1.0e-14 | 6.9e-15 | 4.2e-15 | 4.9e-15 | 64 128 64 64 128 | 32 32 32 64 32 |
+| `nikon-z-24-70f4s`, tele | 7.5e-15 | 9.3e-15 | 6.0e-15 | 5.7e-15 | 32 64 64 128 128 | 32 32 32 32 64 |
+| `nikon-z-mc-105f28` | 9.4e-15 | 4.6e-15 | 4.1e-15 | 4.0e-15 | 32 32 32 128 64 | 32 32 32 32 32 |
+| `nikon-z-135f18-plena` | 8.4e-15 | 6.6e-15 | 3.0e-15 | 4.0e-15 | 64 64 64 64 128 | 32 32 32 32 32 |
+| `sigma-45mm-f28-dg-dn-contemporary` | 5.2e-15 | 8.2e-15 | 3.0e-15 | 3.4e-15 | 64 64 64 64 128 | 32 32 32 32 32 |
+
+The largest of all is 1.25e-14, on `nikkor-z50f12` at its best focus on the reference line (half field, sagittal,
+6 cycles/mm); the photopic runs are all below 6.2e-15. It is rounding and nothing else: LensVisualizer adds the
+terms of a field up plainly, in the order of its rays, and for its 51 evenly spaced frequencies rotates one phasor
+from frequency to frequency, while the estimator reduces each phase on its own and compensates its sums. On up to
+63 000 rays a field that is a few units in the last place a term, and no method. The gate of 1e-9 is 80 000 times
+the largest figure. In six runs a footprint is widened once, in LensVisualizer and in the replay alike: the full
+field of `sony-fe-400mm-f28-gm-oss` wide open (both sets of lines, at both planes), and three fields of
+`sony-fe-20mm-f18-g` at f/8 on the photopic lines (at both planes). The feature suite and the smoke suite pass too (23 runs, worst
+1.25e-14). `test/integration/lv/fidelity.test.ts` runs all of it and pins the grids of the 24 runs as the lenses
+open.
+
+R4f takes about three minutes on the benchmark: LensVisualizer's `computeMtf` and the replay each trace every grid
+of every field once.
 
 ## Comparing and reporting
 
@@ -1192,7 +1297,8 @@ Every record that is not `OK` is a line, then the counts, then what to do for ea
 when a record is `DRIFT`, when a pair is `FAIL` or `ERROR` today, and when an engine could not be used or
 LensVisualizer changed under the run; 0 otherwise, stale or not; 2 when nothing was checked (no suite file, no
 baseline). The check leaves the run it made in the runs directory, so `baseline write` after a `REFRESHABLE`
-needs no second run. A baseline is of one selection of engines and rungs, the same for every run of the suite.
+needs no second run. A baseline is of one selection of engines and rungs, the same for every run of the suite;
+a rung that is about engines of its own is checked on those, and they are named for no other rung.
 
 `lvrtc verify [--root <dir>] [--write]` is hermetic and part of `npm run check`: it reads no engine, and passes
 with `LVRTC_LV_PATH` and `LVRTC_OPTILAND_PYTHON` pointing nowhere. Every `baselines/*.json` must be a baseline by
@@ -1206,6 +1312,22 @@ has changed since needs the engines, and is what `baseline check` says.
 or to an adapter (`STALE(engine)`), after LensVisualizer's engine files or the lenses of a suite change, and after
 a suite changes. `npm run test:optiland` runs `baseline check` on both suites and holds every record that is not
 stale to `OK`; a stale record is reported there and fails nothing.
+
+**Since Stage 3.2** the baselines are of policy version 6 and of LensVisualizer `33ebdb30` (the same engine
+closure, `78215d72`). The benchmark's holds the suite's 96 runs
+([the benchmark in four conditions](#the-benchmark-in-four-conditions)): 1152 records, all `PASS`. The 288 records
+of the 24 runs it held before, and the 216 of the feature suite (212 `PASS`, 4 `FLOOR`), are what they were in
+every verdict, figure and count; 864 records are new, those of the 72 runs at f/8 and at LensVisualizer's best
+focus. From an empty store `lvrtc baseline check benchmark`, which is the suite's run on three engines and its
+comparison, takes about two and a half minutes, and the feature suite's 24 s (measured within
+`npm run test:optiland`).
+
+**R4f is in no committed baseline yet**, and the commands above name `--rungs r0,r1,r2,r3` for that reason: the
+MTF baselines are Stage 3.8. A baseline can hold it. One written from a run with `r4f` names the engine `replay`
+and has a record of `lv` and `replay` for every run, and `baseline check` then runs the rungs that compare the
+engines of a run on the engines the baseline names for those, and leaves `r4f` to ask its own two
+(`test/cli/fidelityLadder.test.ts`). Until Stage 3.8, R4f is held by `npm run test:lv`
+(`test/integration/lv/fidelity.test.ts`), on all 96 runs.
 
 ## Workers over stdio
 

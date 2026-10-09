@@ -8,18 +8,18 @@ import type { MtfNativeData, MtfNativeField, MtfNativeSpec } from "../../contrac
 import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
 import type { LvCaseModel } from "./caseModel.ts";
-import { LV_TAB_PROFILE, lvHookAperture, lvPupilSeed, lvTabRequest, lvTabSpec } from "./tabRequest.ts";
+import { LV_MTF_SPECTRA, lvBestAxialFocus, lvGeneralMtfOptions, lvSpectrumOf } from "./focus.ts";
+import { LV_TAB_PROFILE, lvTabRequest, lvTabSpec } from "./tabRequest.ts";
 import type { LvTabApi, LvTabRequest } from "./tabRequest.ts";
 import type { LvApi, LvMtfFieldResult, LvMtfOptions, LvMtfResult, LvMtfSupport, LvPreparedState } from "./types.ts";
 
-/** The LensVisualizer exports an MTF is answered with. */
-export type LvMtfApi = LvTabApi & Pick<LvApi, "computeMtf" | "assessMtfSupport">;
+export { LV_MTF_SPECTRA, lvSpectrumOf } from "./focus.ts";
 
-/**
- * The spectra LensVisualizer's MTF has, by its own names: the reference line, three lines C, d and F, and five
- * photopic lines. A request names one of them; it has no other, and none by wavelength.
- */
-export const LV_MTF_SPECTRA = ["reference", "cdf", "photopic"] as const;
+/** The LensVisualizer exports an MTF request is built with. */
+export type LvMtfRequestApi = LvTabApi & Pick<LvApi, "assessMtfSupport" | "computeMtfSteps">;
+
+/** The LensVisualizer exports an MTF is answered with. */
+export type LvMtfApi = LvMtfRequestApi & Pick<LvApi, "computeMtf">;
 
 /** The pupil grids LensVisualizer's refinement may be capped at. */
 export const LV_GRID_CAPS: readonly number[] = [32, 64, 128, 256];
@@ -35,8 +35,9 @@ export const LV_GRID_CAP_OPTION = "lvGridCap";
  * gate, which are items of code `feature` under LensVisualizer's names (`unsupported-path`, `unverified-scale`):
  *
  * - `customSpectrum` (`feature`): the lines of the case are none of LensVisualizer's three spectra;
- * - `shiftedImagePlane` (`feature`): the image plane of the case is not the design plane, and LensVisualizer's MTF
- *   is of that plane or of its own best focus and of no other;
+ * - `shiftedImagePlane` (`feature`): the image plane of the case is neither the design plane nor LensVisualizer's
+ *   own best axial focus for the request, and its MTF is of no other plane; or it is that best focus and the spec
+ *   asks for the engine's best focus, which is asked of the design plane;
  * - `f8Comparison` (`feature`): the case is stopped down as the tab's f/8 comparison would be, for a lens the tab
  *   offers none for;
  * - `fieldAngles` (`option`): fields as angles, where LensVisualizer takes fractions of its reference image height;
@@ -117,35 +118,8 @@ function specRefusal(
   return null;
 }
 
-function linesText(lines: readonly { readonly wavelengthNm: number }[]): string {
+function linesText(lines: readonly Pick<SpectralLine, "wavelengthNm">[]): string {
   return `${lines.map((line) => line.wavelengthNm).join(", ")} nm`;
-}
-
-/**
- * The spectrum of LensVisualizer whose lines are those of a case, or null when none is: the same wavelengths with
- * the same weights in the same order, as its support gate lists them for that spectrum, traced with the indices the
- * case states (the authored ones exactly where LensVisualizer traces that spectrum with them).
- */
-export function lvSpectrumOf(
-  api: Pick<LvApi, "assessMtfSupport">,
-  state: LvPreparedState,
-  options: LvMtfOptions,
-  lines: readonly SpectralLine[],
-): (typeof LV_MTF_SPECTRA)[number] | null {
-  for (const spectrum of LV_MTF_SPECTRA) {
-    const support = api.assessMtfSupport(state, { ...options, spectrum });
-    const source = support.useResolvedReference ? "anchored" : "authored";
-    const same =
-      support.spectralLines.length === lines.length &&
-      support.spectralLines.every(
-        (line, index) =>
-          line.wavelengthNm === lines[index].wavelengthNm &&
-          line.weight === lines[index].weight &&
-          lines[index].indexSource === source,
-      );
-    if (same) return spectrum;
-  }
-  return null;
 }
 
 function sameList(a: readonly number[], b: readonly number[]): boolean {
@@ -182,7 +156,7 @@ function finiteNumbers(values: Readonly<Record<string, number | null>>): { [name
  * when the field is not the one that was asked for, was left pending, or has curves of another length than the
  * request's frequencies.
  */
-function fieldOf(field: LvMtfFieldResult, requested: number, frequencies: number): MtfNativeField {
+export function fieldOf(field: LvMtfFieldResult, requested: number, frequencies: number): MtfNativeField {
   if (field.fieldFraction !== requested) {
     throw new Error(`LensVisualizer answers the field ${requested} with the field ${field.fieldFraction}`);
   }
@@ -217,7 +191,7 @@ function fieldOf(field: LvMtfFieldResult, requested: number, frequencies: number
 }
 
 /** What LensVisualizer says of a field in words: why it has no curve or an unsettled one, and its qualifications. */
-function fieldNotes(field: LvMtfFieldResult): string[] {
+export function fieldNotes(field: LvMtfFieldResult): string[] {
   const said = field.status === "converged" ? [] : [field.message];
   return [...said, ...field.notes].map((note) => `field ${field.fieldFraction}: ${note}`);
 }
@@ -231,8 +205,11 @@ function fieldNotes(field: LvMtfFieldResult): string[] {
  * - `method`: LensVisualizer's own name of the method, and under `params` the request as it was made: `spectrum`,
  *   `focus` (LensVisualizer's mode), `maxGridSize`, both radii and, where it resolved a field axis, the height the
  *   fractions are of (`referenceHeightMm`) and what that height is (`fieldBasis`), with `extra` beside them.
- * - `focus`: the plane LensVisualizer applied, `design` or `best-axial`, and its shift from the design plane, which
- *   is the image plane of the case. A request without a field axis has no focus search: the design plane.
+ * - `focus`: the plane LensVisualizer applied, `design` or `best-axial`, and its shift from the image plane of the
+ *   case. A request without a field axis has no focus search: the design plane. For a case whose image plane is
+ *   LensVisualizer's own best axial focus (`caseAtBestAxial`), that plane is the plane of the case as it is: the
+ *   mode is the contract's `design` and the shift 0, and `method.params.focus` says that LensVisualizer was asked
+ *   for "best-axial". It throws when LensVisualizer's result is then of another plane than the case's.
  * - `aperture`: `tracedFNumber`, the working f-number of the axial beam LensVisualizer traced, and
  *   `limitingSurfaceIndex`, the index of the surface that bounds that beam: the stop's when LensVisualizer says
  *   the iris does. Empty when LensVisualizer found no axial rim.
@@ -245,8 +222,18 @@ function mtfData(
   fractions: readonly number[],
   result: LvMtfResult,
   extra: { readonly params: JsonObject; readonly notes: readonly string[] },
+  caseAtBestAxial: { readonly imageZ: number } | null = null,
 ): MtfNativeData {
   const frequencies = result.frequenciesPerMm.length;
+  if (caseAtBestAxial !== null) {
+    const applied = result.focus === null ? Number.NaN : state.imgZ + result.focus.appliedShiftMm;
+    if (applied !== caseAtBestAxial.imageZ) {
+      throw new Error(
+        `LensVisualizer's result is of the plane z = ${applied} mm, and the image plane of the case, which is its ` +
+          `best axial focus, lies at ${caseAtBestAxial.imageZ} mm`,
+      );
+    }
+  }
   if (result.fields.length !== fractions.length) {
     throw new Error(`LensVisualizer answers ${fractions.length} fields with ${result.fields.length}`);
   }
@@ -279,7 +266,7 @@ function mtfData(
       },
     },
     focus:
-      result.focus === null
+      result.focus === null || caseAtBestAxial !== null
         ? { mode: MTF_DESIGN_PLANE, appliedShiftMm: 0 }
         : { mode: result.focus.mode, appliedShiftMm: result.focus.appliedShiftMm },
     aperture,
@@ -307,24 +294,47 @@ function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly
   };
 }
 
+/** The request LensVisualizer's MTF is asked for a case and a spec. */
+export interface LvMtfRequest {
+  /** The options `computeMtf` is called with. */
+  readonly options: LvMtfOptions;
+  /** What the answer states beside LensVisualizer's result: of a profile, which request of the tab it was. */
+  readonly extra: { readonly params: JsonObject; readonly notes: readonly string[] };
+  /**
+   * True when the image plane of the case is LensVisualizer's own best axial focus for the request: the request
+   * then asks for the focus "best-axial", and the plane LensVisualizer applies is the plane of the case.
+   */
+  readonly atBestAxial: boolean;
+}
+
 /**
- * Answers an `mtf.native` spec about the state of a case's model with LensVisualizer's `computeMtf`.
+ * The request LensVisualizer's MTF is asked for a spec about the state of a case's model, or the answer that says
+ * why there is none.
  *
  * **What LensVisualizer does not compute** is answered "unsupported", in this order:
  *
  * 1. a state its support gate refuses on the reference line, the least it can refuse: the gate's reason is the item
  *    and its message the message, word for word (a fisheye projection, an annular aperture, an unverified scale);
- * 2. a case whose image plane is not its design plane, and a case whose lines are none of LensVisualizer's spectra
- *    (`lvSpectrumOf`);
+ * 2. a case whose lines are none of LensVisualizer's spectra (`lvSpectrumOf`);
  * 3. fields as angles, a profile other than `LV_TAB_PROFILE`, and a grid cap that is none of `LV_GRID_CAPS`;
  * 4. without a profile, more fields or frequencies, or a higher frequency, than LensVisualizer takes in one request
- *    (`specRefusal`): the limits are LensVisualizer's, and its gate is asked.
+ *    (`specRefusal`): the limits are LensVisualizer's, and its gate is asked;
+ * 5. a case whose image plane is not its design plane, unless that plane is LensVisualizer's own best axial focus
+ *    for the request and the spec asks for the plane of the case (below).
  *
  * **Without a profile** the request is the spec's: its method, its frequencies and its fractions; the spectrum of
  * the case's lines; the focus "design", or LensVisualizer's "best-axial" for "engine-best"; the stop radius of the
  * case; as the seed of the footprint scan the pupil radius the tab's hook would hand over for that stop radius
  * (`lvPupilSeed`), never the nominal pupil LensVisualizer's audit scripts pass; and the grid cap of the engine
  * option `lvGridCap`, 128 without one.
+ *
+ * **A case at LensVisualizer's best axial focus.** LensVisualizer's MTF is of its design plane or of its own best
+ * axial focus, and of no plane it is given. So a case whose image plane is not the design plane is answered only
+ * when that plane is the one LensVisualizer's focus search finds for this very request (`lvBestAxialFocus`, at the
+ * stop radius, the lines and the grid cap of the request): to the bit, `state.imgZ` plus the shift, as
+ * LensVisualizer adds them. The spec then asks for the focus "design", the plane of the case as it is, and
+ * LensVisualizer is asked for "best-axial". Any other plane, and "engine-best" on such a case, is "unsupported"
+ * (`image-plane.shifted`). A profile is of the design plane.
  *
  * **With the profile `lv-tab-default`** the request is the one LensVisualizer's MTF tab makes for the state
  * (`lvTabRequest`), built from LensVisualizer's default preferences as they are when the engine runs. The case says
@@ -333,6 +343,125 @@ function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly
  * resolves for the lens, a spec that states a method, a focus, fields or frequencies other than the tab's, and a
  * grid cap other than the tab's are errors of code `bad-spec`: the profile cannot be about that case, or is not what
  * the spec says. A comparison the tab does not offer for the lens is "unsupported", with the tab's reason.
+ *
+ * Throws when LensVisualizer refuses the comparator's own general request as invalid.
+ */
+export function lvMtfRequest(
+  api: LvMtfRequestApi,
+  model: LvCaseModel,
+  spec: MtfNativeSpec,
+  engineOptions: JsonObject = {},
+): LvMtfRequest | { readonly refused: LvMtfAnswer } {
+  const { runtime, state, exported } = model;
+  const { conditions, system } = exported;
+  const stop = conditions.stopSemiDiameter;
+  const general = lvGeneralMtfOptions(api, runtime, state, stop);
+  const gate = api.assessMtfSupport(state, general);
+  if (!gate.available) return { refused: gateRefusal(gate) };
+
+  const shifted = conditions.imageZ !== system.designImageZ;
+  const offDesign = (why: string): { readonly refused: LvMtfAnswer } => {
+    const message =
+      "LensVisualizer's MTF is of its design image plane or of its own best axial focus, and of no plane it is " +
+      `given: the image plane of the case lies ${conditions.imageZ - system.designImageZ} mm from the design plane` +
+      why;
+    return { refused: unsupported("feature", LV_MTF_UNSUPPORTED.shiftedImagePlane, message) };
+  };
+  const spectrum = lvSpectrumOf(api, state, general, conditions.lines);
+  if (spectrum === null) {
+    if (shifted) return offDesign("");
+    const message =
+      `LensVisualizer's MTF has the spectra ${LV_MTF_SPECTRA.join(", ")} and no other: ` +
+      `the lines of the case (${linesText(conditions.lines)}) are none of them`;
+    return { refused: unsupported("feature", LV_MTF_UNSUPPORTED.customSpectrum, message) };
+  }
+  if (spec.fields.kind !== "image-height-fractions") {
+    const message = "LensVisualizer's MTF takes its fields as fractions of its reference image height, not as angles";
+    return { refused: unsupported("option", LV_MTF_UNSUPPORTED.fieldAngles, message) };
+  }
+  if (spec.profile !== undefined && spec.profile !== LV_TAB_PROFILE) {
+    const message = `the engine has no profile "${spec.profile}": its one profile is ${LV_TAB_PROFILE}`;
+    return { refused: unsupported("option", LV_MTF_UNSUPPORTED.profile, message) };
+  }
+  const cap = Object.hasOwn(engineOptions, LV_GRID_CAP_OPTION) ? engineOptions[LV_GRID_CAP_OPTION] : undefined;
+  if (cap !== undefined && !LV_GRID_CAPS.includes(cap as number)) {
+    const caps = LV_GRID_CAPS.join(", ");
+    const message = `${LV_GRID_CAP_OPTION} is ${JSON.stringify(cap)}: LensVisualizer caps its grid at ${caps}`;
+    return { refused: unsupported("option", LV_MTF_UNSUPPORTED.gridCap, message) };
+  }
+
+  if (spec.profile === undefined) {
+    const refusal = specRefusal(api, state, general, spec);
+    if (refusal !== null) return { refused: refusal };
+    const maxGridSize = (cap as number | undefined) ?? LV_DEFAULT_GRID_CAP;
+    if (shifted) {
+      if (spec.focus !== "design") {
+        return offDesign(", and the engine's own best focus is asked of a case at its design plane");
+      }
+      const best = lvBestAxialFocus(api, runtime, state, {
+        stopSemiDiameterMm: stop,
+        lines: conditions.lines,
+        gridCap: maxGridSize,
+      });
+      if ("problem" in best || state.imgZ + best.shiftMm !== conditions.imageZ) {
+        const found = "problem" in best ? "has none here" : `lies ${best.shiftMm} mm from it`;
+        return offDesign(
+          `, and LensVisualizer's best axial focus for this stop, these lines and this grid cap ${found}`,
+        );
+      }
+    }
+    const options: LvMtfOptions = {
+      ...general,
+      method: spec.method,
+      spectrum,
+      focus: shifted || spec.focus !== "design" ? "best-axial" : "design",
+      maxGridSize,
+      fieldFractions: [...spec.fields.values],
+      frequenciesPerMm: [...spec.frequenciesPerMm],
+    };
+    return { options, extra: { params: {}, notes: [] }, atBestAxial: shifted };
+  }
+
+  if (shifted) return offDesign(`, and the profile ${LV_TAB_PROFILE} is of a case at its design plane`);
+  const tab = tabViewOf(api, model);
+  const profileRefused = (message: string): { readonly refused: LvMtfAnswer } => ({ refused: badSpec(message) });
+  if ("neither" in tab) return profileRefused(`the profile ${LV_TAB_PROFILE} is not about this case: ${tab.neither}`);
+  if (tab.unavailable !== null) {
+    return { refused: unsupported("feature", LV_MTF_UNSUPPORTED.f8Comparison, tab.unavailable) };
+  }
+  if (tab.options.spectrum !== spectrum) {
+    const message =
+      `the profile ${LV_TAB_PROFILE} is not about this case: LensVisualizer's MTF tab asks for its ` +
+      `${tab.options.spectrum} spectrum for this lens, and the lines of the case (${linesText(conditions.lines)}) ` +
+      `are its ${spectrum} spectrum; export the case on the ${tab.options.spectrum} lines, as lvrtc mtf does`;
+    return profileRefused(message);
+  }
+  const mismatch = profileMismatch(spec, lvTabSpec(tab));
+  if (mismatch !== null) return profileRefused(`the spec names the profile ${LV_TAB_PROFILE} and its ${mismatch}`);
+  if (cap !== undefined && cap !== tab.options.maxGridSize) {
+    const message =
+      `the profile ${LV_TAB_PROFILE} caps the grid at ${tab.options.maxGridSize}, ` +
+      `and ${LV_GRID_CAP_OPTION} asks for ${JSON.stringify(cap)}`;
+    return profileRefused(message);
+  }
+  return {
+    options: tab.options,
+    extra: {
+      params: {
+        profile: LV_TAB_PROFILE,
+        view: tab.view,
+        fNumber: tab.fNumber,
+        displayedFrequenciesPerMm: [...tab.displayedFrequenciesPerMm],
+      },
+      notes: tab.spectrumNote === null ? [] : [tab.spectrumNote],
+    },
+    atBestAxial: false,
+  };
+}
+
+/**
+ * Answers an `mtf.native` spec about the state of a case's model with LensVisualizer's `computeMtf`, asked the
+ * request `lvMtfRequest` builds; what that refuses is the answer.
  *
  * The answer is `mtfData` of LensVisualizer's result. Under the profile `method.params` also holds `profile`,
  * `view` ("wide-open" or "f8-comparison"), `fNumber`, the f-number the view is labelled with, and
@@ -348,92 +477,10 @@ export function answerLvMtf(
   spec: MtfNativeSpec,
   engineOptions: JsonObject = {},
 ): LvMtfAnswer {
-  const { runtime, state, exported } = model;
-  const { conditions, system } = exported;
-  const stop = conditions.stopSemiDiameter;
-  const general: LvMtfOptions = {
-    method: "geometric",
-    spectrum: "reference",
-    focus: "design",
-    pupilSemiDiameterMm: lvPupilSeed(lvHookAperture(api, runtime, state), stop),
-    stopSemiDiameterMm: stop,
-    movementActive: false,
-  };
-  const gate = api.assessMtfSupport(state, general);
-  if (!gate.available) return gateRefusal(gate);
-
-  if (conditions.imageZ !== system.designImageZ) {
-    const message =
-      "LensVisualizer's MTF is of its design image plane or of its own best axial focus, and of no plane it is " +
-      `given: the image plane of the case lies ${conditions.imageZ - system.designImageZ} mm from the design plane`;
-    return unsupported("feature", LV_MTF_UNSUPPORTED.shiftedImagePlane, message);
-  }
-  const spectrum = lvSpectrumOf(api, state, general, conditions.lines);
-  if (spectrum === null) {
-    const message =
-      `LensVisualizer's MTF has the spectra ${LV_MTF_SPECTRA.join(", ")} and no other: ` +
-      `the lines of the case (${linesText(conditions.lines)}) are none of them`;
-    return unsupported("feature", LV_MTF_UNSUPPORTED.customSpectrum, message);
-  }
-  if (spec.fields.kind !== "image-height-fractions") {
-    const message = "LensVisualizer's MTF takes its fields as fractions of its reference image height, not as angles";
-    return unsupported("option", LV_MTF_UNSUPPORTED.fieldAngles, message);
-  }
-  if (spec.profile !== undefined && spec.profile !== LV_TAB_PROFILE) {
-    const message = `the engine has no profile "${spec.profile}": its one profile is ${LV_TAB_PROFILE}`;
-    return unsupported("option", LV_MTF_UNSUPPORTED.profile, message);
-  }
-  const cap = Object.hasOwn(engineOptions, LV_GRID_CAP_OPTION) ? engineOptions[LV_GRID_CAP_OPTION] : undefined;
-  if (cap !== undefined && !LV_GRID_CAPS.includes(cap as number)) {
-    const caps = LV_GRID_CAPS.join(", ");
-    const message = `${LV_GRID_CAP_OPTION} is ${JSON.stringify(cap)}: LensVisualizer caps its grid at ${caps}`;
-    return unsupported("option", LV_MTF_UNSUPPORTED.gridCap, message);
-  }
-
-  let options: LvMtfOptions;
-  let extra: { params: JsonObject; notes: string[] } = { params: {}, notes: [] };
-  if (spec.profile === undefined) {
-    const refusal = specRefusal(api, state, general, spec);
-    if (refusal !== null) return refusal;
-    options = {
-      ...general,
-      method: spec.method,
-      spectrum,
-      focus: spec.focus === "design" ? "design" : "best-axial",
-      maxGridSize: cap ?? LV_DEFAULT_GRID_CAP,
-      fieldFractions: [...spec.fields.values],
-      frequenciesPerMm: [...spec.frequenciesPerMm],
-    };
-  } else {
-    const tab = tabViewOf(api, model);
-    if ("neither" in tab) return badSpec(`the profile ${LV_TAB_PROFILE} is not about this case: ${tab.neither}`);
-    if (tab.unavailable !== null) return unsupported("feature", LV_MTF_UNSUPPORTED.f8Comparison, tab.unavailable);
-    if (tab.options.spectrum !== spectrum) {
-      const message =
-        `the profile ${LV_TAB_PROFILE} is not about this case: LensVisualizer's MTF tab asks for its ` +
-        `${tab.options.spectrum} spectrum for this lens, and the lines of the case (${linesText(conditions.lines)}) ` +
-        `are its ${spectrum} spectrum; export the case on the ${tab.options.spectrum} lines, as lvrtc mtf does`;
-      return badSpec(message);
-    }
-    const mismatch = profileMismatch(spec, lvTabSpec(tab));
-    if (mismatch !== null) return badSpec(`the spec names the profile ${LV_TAB_PROFILE} and its ${mismatch}`);
-    if (cap !== undefined && cap !== tab.options.maxGridSize) {
-      const message =
-        `the profile ${LV_TAB_PROFILE} caps the grid at ${tab.options.maxGridSize}, ` +
-        `and ${LV_GRID_CAP_OPTION} asks for ${JSON.stringify(cap)}`;
-      return badSpec(message);
-    }
-    options = tab.options;
-    extra = {
-      params: {
-        profile: LV_TAB_PROFILE,
-        view: tab.view,
-        fNumber: tab.fNumber,
-        displayedFrequenciesPerMm: [...tab.displayedFrequenciesPerMm],
-      },
-      notes: tab.spectrumNote === null ? [] : [tab.spectrumNote],
-    };
-  }
+  const request = lvMtfRequest(api, model, spec, engineOptions);
+  if ("refused" in request) return request.refused;
+  const { state, exported } = model;
+  const { options } = request;
 
   const result = api.computeMtf(state, options);
   if (!result.support.available) return gateRefusal(result.support);
@@ -443,10 +490,13 @@ export function answerLvMtf(
         "were asked for, or other ones",
     );
   }
-  const data = mtfData(state, options, spec.fields.values, result, extra);
+  const plane = request.atBestAxial ? { imageZ: exported.conditions.imageZ } : null;
+  const data = mtfData(state, options, spec.fields.values, result, request.extra, plane);
+  return { data, counts: mtfCounts(data, spec) };
+}
+
+/** The counts of an `mtf.native` answer: its fields, its frequencies, and the fields that have no curve. */
+export function mtfCounts(data: MtfNativeData, spec: MtfNativeSpec): { [name: string]: number } {
   const unavailable = data.fields.filter((field) => field.status === "unavailable").length;
-  return {
-    data,
-    counts: { fields: data.fields.length, frequencies: spec.frequenciesPerMm.length, unavailableFields: unavailable },
-  };
+  return { fields: data.fields.length, frequencies: spec.frequenciesPerMm.length, unavailableFields: unavailable };
 }

@@ -11,6 +11,10 @@ prints the MTF that LensVisualizer's own MTF tab shows. The first external engin
 and answers rungs R0 to R3: the built system, its first-order data, the same rays traced by optiland's own tracer
 and their optical paths, on which the three engines agree on both suites
 ([measured](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines)). Baselines of those runs close the phase.
+Phase 3, MTF, has begun: the comparator's own geometric estimator reproduces LensVisualizer's geometric MTF on a
+replay of LensVisualizer's sampling to 1.3e-14, with every grid size and ray count the same, on the benchmark wide
+open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4f,
+[measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)).
 
 ## Requirements
 
@@ -150,6 +154,14 @@ Adds optiland: it builds every lens in optiland and reads the built system back 
 shows before a ray is traced, gives optiland's own focal length, cardinal points and pupils (R1), and traces the
 very rays LensVisualizer launches with optiland's own tracer: where they go (R2) and how long their paths are
 (R3). What comes of it is in [docs/REFERENCE.md](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines).
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f
+```
+
+Holds LensVisualizer's own geometric MTF to the comparator's estimator on a replay of LensVisualizer's sampling
+(R4f): the same rays, the same grids, the same counts. It is asked of two engines of its own, `lv` and `replay`,
+whatever `--engines` names, and takes about three minutes on the benchmark.
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

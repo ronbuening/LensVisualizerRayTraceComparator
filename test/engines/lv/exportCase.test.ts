@@ -11,7 +11,7 @@ import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { exportCase } from "../../../src/engines/lv/exportCase.ts";
 import type { ExportCaseInput, ExportCaseResult, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
 import { EXPORT_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
-import type { LvPreparedState } from "../../../src/engines/lv/types.ts";
+import type { LvMtfOptions, LvPreparedState } from "../../../src/engines/lv/types.ts";
 import {
   FLAT,
   LENS,
@@ -23,7 +23,9 @@ import {
   inputFor,
   lvEvaluateAperture,
   resolvedIndex,
+  standInBestShift,
   stateOf,
+  stepsOf,
 } from "./exportSupport.ts";
 import type { StateSpec, SurfaceSpec } from "./exportSupport.ts";
 
@@ -301,12 +303,88 @@ test("the provenance states the zoom and focus position of the state the case wa
   assert.deepEqual(refocused.label, { name: "Hand-built lens", lensKey: "hand-built", focusT: 0.4 });
 });
 
-test("LensVisualizer's best axial focus is a problem here, with the stage that resolves it", () => {
-  const result = exportCase(inputFor(tripletState(), { imagePlane: { kind: "lv-best-axial" } }));
-  assert.ok(!result.ok);
-  assert.equal(result.problems.length, 1);
-  assert.equal(result.problems[0].code, "lv-best-axial-needs-mtf-recipe");
-  assert.match(result.problems[0].message, /MTF recipe \(Stage 3\.2\)/);
+test("the image plane lv-best-axial is LensVisualizer's own focus for the stop and the lines of the case, asked of it", () => {
+  const state = tripletState();
+  const asked: LvMtfOptions[] = [];
+  const steps = { computeMtfSteps: stepsOf(gate(), asked) };
+  const design = exported(exportCase(inputFor(state, {}, steps)));
+  assert.equal(asked.length, 0, "a case at its design plane asks no focus of LensVisualizer");
+
+  // Wide open on the reference line: the stop of the triplet is 3 mm, and the stand-in's focus a 64th of it.
+  const best = exported(exportCase(inputFor(state, { imagePlane: { kind: "lv-best-axial" } }, steps)));
+  assert.equal(best.conditions.imageZ, state.imgZ + standInBestShift(3));
+  assert.equal(best.system.designImageZ, state.imgZ);
+  assert.equal(best.systemId, design.systemId, "the system is the same; only the conditions move");
+  assert.notEqual(best.id, design.id);
+  // The request is the comparator's general one, on the spectrum of the lines, with the focus mode best-axial,
+  // the stop radius of the case, the tab's seed for that stop (the stand-in's pupil is its stop), and no grid cap.
+  assert.equal(asked.length, 1);
+  const { fieldFractions, ...request } = asked[0];
+  assert.deepEqual(request, {
+    method: "geometric",
+    spectrum: "reference",
+    focus: "best-axial",
+    pupilSemiDiameterMm: 3,
+    stopSemiDiameterMm: 3,
+    movementActive: false,
+  });
+  assert.deepEqual(fieldFractions, [0]);
+
+  // The focus is of the stop and the lines the run asks for, and of its grid cap.
+  const stopped = exported(
+    exportCase(
+      inputFor(
+        state,
+        {
+          aperture: { kind: "stop-radius", mm: 1.5 },
+          lines: { kind: "photopic" },
+          imagePlane: { kind: "lv-best-axial" },
+          sampling: { lvGridCap: 32 },
+        },
+        steps,
+      ),
+    ),
+  );
+  assert.equal(stopped.conditions.imageZ, state.imgZ + standInBestShift(1.5, 32));
+  assert.deepEqual(
+    [asked[1].spectrum, asked[1].stopSemiDiameterMm, asked[1].pupilSemiDiameterMm, asked[1].maxGridSize],
+    ["photopic", 1.5, 1.5, 32],
+  );
+});
+
+test("lv-best-axial without a focus of LensVisualizer's is a coded problem: other lines, or a search that finds none", () => {
+  const state = tripletState();
+  const plane = { imagePlane: { kind: "lv-best-axial" } } as const;
+  // Lines by wavelength are none of LensVisualizer's spectra, and its focus search has no other.
+  const custom = exportCase(
+    inputFor(state, { ...plane, lines: { kind: "explicit", wavelengthsNm: [LINES_NM.d, 500], weights: [1, 1] } }),
+  );
+  assert.deepEqual(codesOf(custom), ["lv-best-axial-needs-lv-spectrum"]);
+  assert.ok(!custom.ok && /587\.5618, 500 nm are none of them/.test(custom.problems[0].message));
+
+  // A search that applies no shift of its own has found none.
+  const none: Partial<LvExportApi> = {
+    computeMtfSteps: function* (lvState, options) {
+      const steps = stepsOf(gate())(lvState, { ...options, focus: "design" });
+      return yield* steps;
+    },
+  };
+  assert.deepEqual(codesOf(exportCase(inputFor(state, plane, none))), ["lv-best-axial-unavailable"]);
+
+  // A lens outside LensVisualizer's MTF path still has a case on its reference line, at its design plane; it has
+  // no focus search, and the problem of the plane is the gate's own reason.
+  const outside = { assessMtfSupport: gate({ reason: "unverified-scale" }) };
+  assert.equal(exportCase(inputFor(state, {}, outside)).ok, true);
+  const refused = exportCase(inputFor(state, plane, outside));
+  assert.deepEqual(codesOf(refused), ["unverified-scale"]);
+  assert.ok(
+    !refused.ok &&
+      refused.problems[0].message ===
+        "LensVisualizer's MTF, whose focus search finds its best axial focus, refuses this state: LV says unverified-scale.",
+  );
+  for (const code of ["lv-best-axial-needs-lv-spectrum", "lv-best-axial-unavailable", "f8-comparison-unavailable"]) {
+    assert.ok((EXPORT_PROBLEM_CODES as readonly string[]).includes(code), code);
+  }
 });
 
 // ── The stop ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -474,6 +552,7 @@ test("every problem of a lens is reported together, and LensVisualizer's gate is
   const never: Partial<LvExportApi> = {
     assessMtfSupport: () => assert.fail("the gate was asked about a lens the contract cannot express"),
   };
+  // Nor is its focus asked for: a lens without a case has no plane to find.
   const options = { aperture: { kind: "f-number", value: 1 }, imagePlane: { kind: "lv-best-axial" } } as const;
   assert.deepEqual(codesOf(exportCase(inputFor(state, options, never))), [
     "folded-path",
@@ -482,7 +561,6 @@ test("every problem of a lens is reported together, and LensVisualizer's gate is
     "off-axis-image-plane",
     "surface-profile-unsupported",
     "aperture-faster-than-wide-open",
-    "lv-best-axial-needs-mtf-recipe",
   ]);
 });
 

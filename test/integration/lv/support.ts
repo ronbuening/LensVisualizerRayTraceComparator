@@ -19,7 +19,7 @@ export const LV_UNAVAILABLE: string | false = (() => {
   return false;
 })();
 
-export { BENCHMARK_KEYS } from "../../suites/support.ts";
+export { BENCHMARK_CONDITIONS, BENCHMARK_KEYS, asItOpens } from "../../suites/support.ts";
 
 /** One focus station a lens documents (`finiteConjugates` of its file), exported, and what LensVisualizer says of it. */
 export interface FocusStation {

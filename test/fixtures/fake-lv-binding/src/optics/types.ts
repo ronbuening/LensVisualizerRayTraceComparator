@@ -36,7 +36,15 @@ export interface FakeLensData {
   /** The fake's gate refuses the lens every MTF: its scale is "unverified". */
   unverifiedScale?: boolean;
   /** What the fake's product MTF says of the lens beside its curves. */
-  mtf?: { unconvergedFraction?: number; clippedChiefFraction?: number; limitingSurfaceLabel?: string };
+  mtf?: {
+    unconvergedFraction?: number;
+    clippedChiefFraction?: number;
+    limitingSurfaceLabel?: string;
+    /** True: the geometric MTF is sampled, grid by grid, from the fake's own bundles, and is no closed form. */
+    sampled?: boolean;
+    /** The share of the beam the fake's footprint scan finds; 1 without it. */
+    footprintScale?: number;
+  };
   /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
   field?: {
     mmPerDeg?: number;

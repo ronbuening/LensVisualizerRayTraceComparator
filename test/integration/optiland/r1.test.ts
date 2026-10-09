@@ -44,7 +44,7 @@ import { caseOf, sphere } from "../../engines/ref/support.ts";
 import type { SurfaceOf, SystemOf } from "../../engines/ref/support.ts";
 import { suitePath } from "../../suites/support.ts";
 import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE, focusStations } from "../lv/support.ts";
-import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, worstOf } from "./support.ts";
+import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, rungSuite, worstOf } from "./support.ts";
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE;
@@ -362,7 +362,7 @@ test(
   { skip: skipLv, timeout: 900_000 },
   (t) => {
     const { manifest, comparisons, verdicts } = runAndCompare(t, {
-      suite: suitePath("benchmark"),
+      suite: rungSuite(t, "benchmark"),
       name: "benchmark",
       engines: "lv,ref,optiland",
       rungs: "r0,r1",

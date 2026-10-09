@@ -55,7 +55,7 @@ export const LV_ENGINE_MODULE = "engines/lv/engine.ts";
  * What a quantity makes of a model: its data, with the counts it has to report beside the model's; what keeps the
  * model from having any; or why the spec cannot be answered about this case.
  */
-type Answer =
+export type LvAnswer =
   | { readonly data: JsonObject; readonly counts?: { readonly [name: string]: number } }
   | { readonly unsupported: readonly UnsupportedItem[] }
   | { readonly error: ErrorInfo };
@@ -64,13 +64,24 @@ type Answer =
  * One quantity the engine answers: how its spec is checked, what its method is called, and the computation, which
  * is handed the options the request carries for the engine.
  */
-interface Answered {
+export interface LvAnswered {
   readonly quantity: QuantityModule;
   readonly method: string;
-  answer(api: LvApi, model: LvCaseModel, spec: JsonObject, engineOptions: JsonObject): Answer;
+  answer(api: LvApi, model: LvCaseModel, spec: JsonObject, engineOptions: JsonObject): LvAnswer;
 }
 
-const ANSWERED: readonly Answered[] = [
+/**
+ * What tells one engine that answers from LensVisualizer's state from another: its id, the version of the
+ * comparator's own part of it, and its module, relative to the comparator's sources, where its adapter revision
+ * starts from.
+ */
+export interface LvBackedIdentity {
+  readonly id: string;
+  readonly version: string;
+  readonly module: string;
+}
+
+const ANSWERED: readonly LvAnswered[] = [
   {
     quantity: systemDescribeQuantity,
     method: "prepared-state-echo",
@@ -110,19 +121,33 @@ const ANSWERED: readonly Answered[] = [
  * deterministic.
  */
 export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
+  return lvBackedDescriptor(fingerprint, LV_IDENTITY, ANSWERED);
+}
+
+const LV_IDENTITY: LvBackedIdentity = { id: LV_ENGINE_ID, version: LV_ENGINE_VERSION, module: LV_ENGINE_MODULE };
+
+/**
+ * The descriptor of an engine that answers from LensVisualizer's own state: `lvDescriptor` for any such engine,
+ * with its own id, version and adapter revision and the quantities it answers. Its fingerprint is LensVisualizer's.
+ */
+export function lvBackedDescriptor(
+  fingerprint: LvFingerprint,
+  identity: LvBackedIdentity,
+  answered: readonly LvAnswered[],
+): EngineDescriptor {
   const { engineClosureHash, engineFileCount, commit, dirty } = fingerprint;
   return {
     contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
     identity: {
-      id: LV_ENGINE_ID,
-      version: LV_ENGINE_VERSION,
+      id: identity.id,
+      version: identity.version,
       fingerprint: engineClosureHash,
-      adapterRevision: adapterRevision(LV_ENGINE_MODULE).revision,
+      adapterRevision: adapterRevision(identity.module).revision,
       details: { commit, dirty, engineFileCount },
     },
     capabilities: {
       features: { supported: [...FEATURE_FLAGS], limits: {} },
-      quantities: Object.fromEntries(ANSWERED.map(({ quantity }) => [quantity.id, { version: quantity.version }])),
+      quantities: Object.fromEntries(answered.map(({ quantity }) => [quantity.id, { version: quantity.version }])),
       deterministic: true,
       maxConcurrency: 1,
     },
@@ -151,7 +176,19 @@ export function lvDescriptor(fingerprint: LvFingerprint): EngineDescriptor {
  * with the code `engine-failure`, as for every engine behind `createProtocolHandler`.
  */
 export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
-  const descriptor = lvDescriptor(binding.fingerprint());
+  return createLvBackedEngine(binding, LV_IDENTITY, ANSWERED);
+}
+
+/**
+ * An engine that answers from LensVisualizer's own state of a case, on a bound checkout: everything
+ * `createLvEngineOn` says of the engine `lv` holds for it, with its own identity and the quantities it answers.
+ */
+export function createLvBackedEngine(
+  binding: LvBinding,
+  identity: LvBackedIdentity,
+  answeredBy: readonly LvAnswered[],
+): ProtocolHandler {
+  const descriptor = lvBackedDescriptor(binding.fingerprint(), identity, answeredBy);
   const engine = engineStamp(descriptor.identity);
   const build = createLensBuilder(binding);
 
@@ -161,13 +198,13 @@ export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
     const { source } = opticalCase.provenance;
     if (source.kind !== "lv-lens") {
       const message =
-        `the engine ${LV_ENGINE_ID} answers from LensVisualizer's own state of a lens, ` +
+        `the engine ${identity.id} answers from LensVisualizer's own state of a lens, ` +
         `and this case came from a ${source.kind}, not from a LensVisualizer lens`;
       const item: UnsupportedItem = { code: "case-source", item: source.kind, message };
       return makeResult(request, engine, { status: "unsupported", unsupported: [item] });
     }
     // Negotiation has passed, so the quantity is one the engine answers.
-    const answered = ANSWERED.find(({ quantity }) => quantity.id === request.quantity) as Answered;
+    const answered = answeredBy.find(({ quantity }) => quantity.id === request.quantity) as LvAnswered;
     const issues = answered.quantity.validateSpec(request.spec);
     if (issues.length > 0) {
       const message = `spec is not a ${request.quantity} spec: ${formatIssues(issues)}`;
@@ -207,16 +244,23 @@ export function createLvEngineOn(binding: LvBinding): ProtocolHandler {
  * Nothing else is affected: every other engine of a run carries on.
  */
 export async function createLvEngine(lvPath: string | null): Promise<ProtocolHandler> {
-  let binding: LvBinding;
+  return createLvEngineOn(await bindLvFor(LV_ENGINE_ID, lvPath));
+}
+
+/**
+ * The binding of the LensVisualizer checkout at `lvPath` for the engine `engineId`, loaded now, or the one already
+ * loaded: the engines and the case source of one run share it. Rejects with an `EngineUnavailableError` of that
+ * engine as `createLvEngine` says.
+ */
+export async function bindLvFor(engineId: string, lvPath: string | null): Promise<LvBinding> {
   try {
-    binding = await loadLvBinding(lvPath);
+    return await loadLvBinding(lvPath);
   } catch (error) {
     if (!(error instanceof LvBindingError)) throw error;
     if (error.code === "not-configured") {
-      throw new EngineUnavailableError(LV_ENGINE_ID, "not-configured", error.message, { cause: error });
+      throw new EngineUnavailableError(engineId, "not-configured", error.message, { cause: error });
     }
     const detail = `LensVisualizer cannot be loaded (${error.code}): ${error.message}`;
-    throw new EngineUnavailableError(LV_ENGINE_ID, "load-failed", detail, { cause: error });
+    throw new EngineUnavailableError(engineId, "load-failed", detail, { cause: error });
   }
-  return createLvEngineOn(binding);
 }

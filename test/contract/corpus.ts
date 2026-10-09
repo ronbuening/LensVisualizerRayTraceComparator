@@ -263,6 +263,21 @@ export const RUN_SPEC_LV = {
   referenceEngine: "lv",
 } satisfies RunSpec;
 
+/**
+ * A LensVisualizer lens as its MTF tab compares it at f/8, at LensVisualizer's own best axial focus: the two
+ * options only a LensVisualizer lens has.
+ */
+export const RUN_SPEC_LV_MTF = {
+  contract: CONTRACT_VERSION,
+  kind: "run-spec",
+  name: "nikkor-z50f12-f8-best-photopic",
+  lens: { kind: "lv", key: "nikkor-z50f12" },
+  aperture: { kind: "lv-f8-comparison" },
+  lines: { kind: "photopic" },
+  imagePlane: { kind: "lv-best-axial" },
+  rungs: ["r4f"],
+} satisfies RunSpec;
+
 /** The worked example of contract/CONTRACT.md: shared defaults, and runs that replace some of them. */
 export const SUITE_WORKED = {
   contract: CONTRACT_VERSION,
@@ -685,13 +700,13 @@ const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 
 /**
  * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
- * blocks the rungs after it, the first-order data `r1`, and the two rungs of traced rays, `r2` and `r3`, with the
- * floor of `lv` against `ref`.
+ * blocks the rungs after it, the first-order data `r1`, the two rungs of traced rays, `r2` and `r3`, with the
+ * floor of `lv` against `ref`, and the fidelity of the replay of LensVisualizer's MTF sampling, `r4f`.
  */
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 5,
+  version: 6,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -739,6 +754,16 @@ export const POLICY_LADDER = {
         "opticalPathToImage.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
       },
       floor: { engine: "lv", arbiter: "ref" },
+    },
+    r4f: {
+      quantity: MTF_NATIVE,
+      mode: "direct",
+      class: "gated",
+      metrics: {
+        "fields.mismatches": { tolerance: 0, unit: "elements" },
+        "mtf.maxAbs": { tolerance: 1e-9, unit: "1" },
+        "sampling.mismatches": { tolerance: 0, unit: "elements" },
+      },
     },
   },
 } satisfies Policy;
@@ -1397,7 +1422,12 @@ export const BASELINE_RAYS: Baseline = {
 /** Every valid fixture written here: `valid/<kind>/<name>.json` holds exactly this value. */
 export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknown>>>> = {
   "optical-case": { singlet: SINGLET_CASE, "all-features": ALL_FEATURES_CASE },
-  "run-spec": { minimal: RUN_SPEC_MINIMAL, "worked-example": RUN_SPEC_WORKED, "lv-lens-all-options": RUN_SPEC_LV },
+  "run-spec": {
+    minimal: RUN_SPEC_MINIMAL,
+    "worked-example": RUN_SPEC_WORKED,
+    "lv-lens-all-options": RUN_SPEC_LV,
+    "lv-lens-mtf-options": RUN_SPEC_LV_MTF,
+  },
   suite: { minimal: SUITE_MINIMAL, "worked-example": SUITE_WORKED },
   request: { minimal: REQUEST_MINIMAL, "with-engine-options": REQUEST_WITH_OPTIONS },
   result: {
@@ -1552,6 +1582,8 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "state-zoom-above-one": fault(RUN_SPEC_LV, "/state/zoomT", 1.2, "maximum"),
     "state-focus-without-value": fault(RUN_SPEC_LV, "/state/focus", { kind: "focusT" }, "oneOf"),
     "aperture-zero-f-number": fault(RUN_SPEC_LV, "/aperture/value", 0, "oneOf", "/aperture"),
+    // The tab's comparison is at f/8 and at no other: it takes no number.
+    "aperture-f8-comparison-with-value": fault(RUN_SPEC_LV_MTF, "/aperture/value", 8, "oneOf", "/aperture"),
     "lines-unknown-set": fault(RUN_SPEC_WORKED, "/lines/kind", "rgb", "oneOf", "/lines"),
     "fields-angle-of-90": fault(RUN_SPEC_WORKED, "/fields/values", [0, 90], "oneOf", "/fields"),
     "fields-without-values": fault(RUN_SPEC_WORKED, "/fields/values", [], "oneOf", "/fields"),

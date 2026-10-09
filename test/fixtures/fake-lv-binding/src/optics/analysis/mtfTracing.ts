@@ -130,7 +130,9 @@ export function findMtfFieldFootprint(
   const reference = support.spectralLines[0].wavelengthNm;
   const chief = traceSequential(state, mtfLaunchRay(launch, 0, 0), traceOptions(state, options, support, reference));
   if (chief.status !== "ok") return null;
-  const seed = options.pupilSemiDiameterMm;
+  // A lens may state that the fake's scan finds only a part of the beam: the box is then too small, and the bundle
+  // says which of its sides carried flux.
+  const seed = options.pupilSemiDiameterMm * (state.lens.runtime.data.mtf?.footprintScale ?? 1);
   const half = 1.25 * seed;
   return { x0: -half, x1: half, y0: -half, y1: half, beamWidthMm: 2 * seed, beamHeightMm: 2 * seed, guardMm: seed / 16 };
 }
@@ -155,20 +157,22 @@ export function traceMtfBundle(
   gridSize: number,
   line: { wavelengthNm: number; weight: number },
   imagePlaneZ: number = state.imgZ,
-  extras: { opticalPath?: boolean } = {},
+  extras: { reference?: { x: number; y: number; weight: number }; opticalPath?: boolean } = {},
 ): unknown {
   const tracing = traceOptions(state, options, support, line.wavelengthNm, extras.opticalPath);
   const chiefRay = mtfLaunchRay(launch, 0, 0);
   const unchecked = traceSequential(state, chiefRay, { ...tracing, checkSemiDiameter: false, stopOnClip: false });
-  const chief = mtfImagePoint(state, unchecked, imagePlaneZ);
+  const chief = mtfImagePoint(state, unchecked, imagePlaneZ) ?? extras.reference;
   if (!chief) return null;
   const grid = mtfLaunchGrid(footprint, gridSize);
   const source = launch.objectPoint;
   const chiefDistance = source ? Math.hypot(...chiefRay.origin.map((v, i) => v - source[i])) : 0;
   const flip = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];
   const rays: unknown[] = [];
+  const openBorders = { x: false, y0: false, y1: false };
   let blocked = 0;
   let failed = 0;
+  let failedWeight = 0;
   for (let row = 0; row < grid.rows; row++) {
     for (let column = grid.columns / 2; column < grid.columns; column++) {
       const x = grid.x0 + (column + 0.5) * grid.step;
@@ -180,9 +184,15 @@ export function traceMtfBundle(
       const outcome = mtfTraceClassification(trace, state, options.stopSemiDiameterMm);
       const point = outcome === "valid" ? mtfImagePoint(state, trace, imagePlaneZ) : null;
       if (outcome === "blocked") blocked += 2;
-      else if (!point) failed += 2;
+      else if (!point) {
+        failed += 2;
+        failedWeight += 2 * launchWeight;
+      }
       if (!point) continue;
       point.weight *= launchWeight;
+      if (Math.abs(x) > footprint.x1 - footprint.guardMm) openBorders.x = true;
+      if (y < footprint.y0 + footprint.guardMm) openBorders.y0 = true;
+      if (y > footprint.y1 - footprint.guardMm) openBorders.y1 = true;
       const { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm } = trace;
       rays.push({ ...point, column, row, trace: { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm } });
       rays.push({
@@ -204,6 +214,7 @@ export function traceMtfBundle(
     rays,
     blocked,
     failed,
+    failedWeight,
     chief,
     chiefClipped: mtfTraceClassification(traceSequential(state, chiefRay, tracing), state) !== "valid",
     columns: grid.columns,
@@ -211,5 +222,6 @@ export function traceMtfBundle(
     mirrored: true,
     launchStepMm: grid.step,
     objectPoint: source,
+    openBorders,
   };
 }

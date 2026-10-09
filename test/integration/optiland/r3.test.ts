@@ -36,9 +36,8 @@ import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { caseFixture } from "../../core/support.ts";
 import { caseOf } from "../../engines/ref/support.ts";
-import { suitePath } from "../../suites/support.ts";
 import { LV_UNAVAILABLE } from "../lv/support.ts";
-import { OPTILAND_UNAVAILABLE, optilandRoot, runAndCompare } from "./support.ts";
+import { OPTILAND_UNAVAILABLE, optilandRoot, runAndCompare, rungSuite } from "./support.ts";
 import { AGREEMENT, PATHS, PATH_SYSTEMS, SYSTEMS, assertR2, assertR3, f8 } from "./traced.ts";
 import type { R3Summary } from "./traced.ts";
 
@@ -348,7 +347,7 @@ function everyRung(
   suite: "benchmark" | "features",
 ): { paths: R3Summary; verdicts: string; sets: number } {
   const cycle = runAndCompare(t, {
-    suite: suitePath(suite),
+    suite: rungSuite(t, suite),
     name: suite,
     engines: "lv,ref,optiland",
     rungs: "r0,r1,r2,r3",

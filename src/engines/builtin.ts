@@ -4,6 +4,7 @@
 import type { ProtocolHandler } from "../contract/protocol.ts";
 import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
 import { LV_ENGINE_ID, createLvEngine } from "./lv/engine.ts";
+import { LV_REPLAY_ENGINE_ID, createLvReplayEngine } from "./lv/replayEngine.ts";
 import { OPTILAND_ENGINE_ID, OPTILAND_TIMEOUTS, optilandDefinition } from "./optiland/definition.ts";
 import { REF_ENGINE_ID, createRefEngine } from "./ref/engine.ts";
 import type { EngineTimeouts } from "./remote.ts";
@@ -35,15 +36,19 @@ export type BuiltinEngines = { readonly [id: string]: BuiltinEngineFactory | Bui
 /**
  * The built-in engines. `ref` is the comparator's own reference engine (`src/engines/ref`). `lv` is LensVisualizer
  * itself (`src/engines/lv/engine.ts`), loaded from the configuration's `lvPath` when the engine is made: without a
- * LensVisualizer to load it is unavailable, and nothing else is affected. `optiland` is optiland behind the
+ * LensVisualizer to load it is unavailable, and nothing else is affected. `replay` is the comparator's own
+ * estimators on a replay of LensVisualizer's sampling (`src/engines/lv/replayEngine.ts`), on the same checkout and
+ * unavailable without it; it is what rung R4f holds `lv` to. `optiland` is optiland behind the
  * comparator's Python worker (`src/engines/optiland/definition.ts`), run by the interpreter the configuration names
  * as `engines.optiland.python`: without one it is unavailable, and nothing else is affected.
  *
  * A built-in engine can be named with any configuration root (`--engines lv,ref`, a run's `engines`). It is not
- * one of the engines a run that names none is run on: those are the engines the configuration defines.
+ * one of the engines a run that names none is run on: those are the engines the configuration defines. `replay`
+ * is run where the rung that is about it is run (`RungDefinition.engines`), and can be named like any other.
  */
 export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [LV_ENGINE_ID]: ({ config }) => createLvEngine(config.lvPath),
   [OPTILAND_ENGINE_ID]: { worker: (loaded) => optilandDefinition(loaded), timeouts: OPTILAND_TIMEOUTS },
   [REF_ENGINE_ID]: () => createRefEngine(),
+  [LV_REPLAY_ENGINE_ID]: ({ config }) => createLvReplayEngine(config.lvPath),
 });

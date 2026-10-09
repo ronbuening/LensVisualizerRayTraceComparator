@@ -75,30 +75,93 @@ export interface LvHookAperture {
 export function lvHookAperture(api: LvHookApi, runtime: LvRuntimeLens, state: LvPreparedState): LvHookAperture {
   const { focusT, zoomT } = state;
   const aberrationT = 0;
-  const stopdownT = 0;
   const fieldGeometry = api.computeAnalysisFieldGeometryAtState2(focusT, zoomT, runtime, aberrationT);
+  const { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD } = lvHookStop(api, runtime, zoomT);
+  const baseEPSD = api.entrancePupilAtState2(wideOpenStopSD, focusT, zoomT, runtime, fieldGeometry, aberrationT).epSD;
+  const currentEPSD = (baseEPSD * currentFOPEN) / fNumber;
+  return { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD, baseEPSD, currentEPSD };
+}
+
+/** The LensVisualizer exports the hook's stop radius is rebuilt from. */
+export type LvHookStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoom2" | "fNumberAtStopdown">;
+
+/**
+ * The part of the hook's aperture numbers that needs no pupil (`lvHookAperture`): the widest f-number of a zoom
+ * position, the f-number of the aperture slider at wide open, the radius of the iris wide open, and the radius the
+ * hook hands the tab as the stop's. The same expressions, in the same order.
+ */
+export function lvHookStop(
+  api: LvHookStopApi,
+  runtime: LvRuntimeLens,
+  zoomT: number,
+): Pick<LvHookAperture, "currentFOPEN" | "fNumber" | "wideOpenStopSD" | "currentPhysStopSD"> {
+  const stopdownT = 0;
   const currentFOPEN = api.fopenAtZoom2(zoomT, runtime);
   const fNumber = api.fNumberAtStopdown(stopdownT, zoomT, runtime);
   const wideOpenStopSD = api.wideOpenStopAtZoom(zoomT, runtime);
   const currentPhysStopSD = (wideOpenStopSD * currentFOPEN) / fNumber;
-  const baseEPSD = api.entrancePupilAtState2(wideOpenStopSD, focusT, zoomT, runtime, fieldGeometry, aberrationT).epSD;
-  const currentEPSD = (baseEPSD * currentFOPEN) / fNumber;
-  return { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD, baseEPSD, currentEPSD };
+  return { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD };
 }
 
 /**
  * The seed of LensVisualizer's footprint scan for a stop radius, by the hook's rule. The hook derives both radii
  * of a request from one f-number N: the stop's is `(wideOpenStopSD * currentFOPEN) / N` and the pupil's
  * `(baseEPSD * currentFOPEN) / N`. For the stop radius of the hook's own wide-open state, and for the prepared
- * state's, N is the hook's f-number and the seed the hook's own, to the bit. For any other radius N is the
- * f-number that radius is the stop of, `(wideOpenStopSD * currentFOPEN) / radius`: the tab reaches such a state
- * only through a slider position, so it has no number there to be equal to.
+ * state's, N is the hook's f-number and the seed the hook's own, to the bit. For the stop radius of the tab's f/8
+ * comparison, the hook's scaled by `fNumber / 8` (`lvTabComparison`), the seed is the comparison's, the hook's
+ * scaled alike, to the bit. For any other radius N is the f-number that radius is the stop of,
+ * `(wideOpenStopSD * currentFOPEN) / radius`: the tab reaches such a state only through a slider position, so it
+ * has no number there to be equal to.
  */
 export function lvPupilSeed(hook: LvHookAperture, stopSemiDiameterMm: number): number {
   const { wideOpenStopSD, currentFOPEN, currentPhysStopSD, baseEPSD, currentEPSD } = hook;
   if (stopSemiDiameterMm === currentPhysStopSD || stopSemiDiameterMm === wideOpenStopSD) return currentEPSD;
+  const { scale } = lvTabComparison(hook);
+  if (stopSemiDiameterMm === currentPhysStopSD * scale) return currentEPSD * scale;
   const fNumber = (wideOpenStopSD * currentFOPEN) / stopSemiDiameterMm;
   return (baseEPSD * currentFOPEN) / fNumber;
+}
+
+/** The tab's f/8 comparison for a state: what it scales both radii by, and why it offers none, if it offers none. */
+export interface LvTabComparison {
+  /** What the tab multiplies the stop radius and the pupil radius of its wide-open request by. */
+  readonly scale: number;
+  /** Why the tab does not offer the comparison for the state; null when it does. */
+  readonly unavailable: string | null;
+}
+
+/**
+ * The scale of the tab's f/8 comparison, restated from MtfTab.tsx:
+ *
+ * ```
+ * const scale = fNumber / COMPARISON_F_NUMBER;
+ * ```
+ *
+ * with `fNumber` the hook's. Without `runtime` nothing is said of whether the tab offers the comparison. With it,
+ * `unavailable` is the tab's own rule, restated:
+ *
+ * ```
+ * const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;
+ * ```
+ */
+export function lvTabComparison(
+  hook: Pick<LvHookAperture, "fNumber">,
+  runtime?: Pick<LvRuntimeLens, "maxFstop">,
+): LvTabComparison {
+  const { fNumber } = hook;
+  const scale = fNumber / LV_TAB_COMPARISON_F_NUMBER;
+  let unavailable: string | null = null;
+  if (runtime === undefined) return { scale, unavailable };
+  if (!(!!fNumber && fNumber < LV_TAB_COMPARISON_F_NUMBER - 0.05)) {
+    unavailable =
+      `the lens is at f/${fNumber} wide open, and LensVisualizer's MTF tab compares with ` +
+      `f/${LV_TAB_COMPARISON_F_NUMBER} only a lens that is faster than f/${LV_TAB_COMPARISON_F_NUMBER - 0.05}`;
+  } else if (!(runtime.maxFstop >= LV_TAB_COMPARISON_F_NUMBER)) {
+    unavailable =
+      `the lens stops down to f/${runtime.maxFstop} at most, so LensVisualizer's MTF tab has no ` +
+      `f/${LV_TAB_COMPARISON_F_NUMBER} to compare it with`;
+  }
+  return { scale, unavailable };
 }
 
 /**
@@ -192,23 +255,12 @@ export function lvTabRequest(
   };
   if (view === "wide-open") return { view, fNumber: hook.fNumber, options: wideOpen, ...shared, unavailable: null };
 
-  const { fNumber } = hook;
-  const scale = fNumber / LV_TAB_COMPARISON_F_NUMBER;
+  const { scale, unavailable } = lvTabComparison(hook, runtime);
   const options = {
     ...wideOpen,
     pupilSemiDiameterMm: wideOpen.pupilSemiDiameterMm * scale,
     stopSemiDiameterMm: wideOpen.stopSemiDiameterMm * scale,
   };
-  let unavailable: string | null = null;
-  if (!(!!fNumber && fNumber < LV_TAB_COMPARISON_F_NUMBER - 0.05)) {
-    unavailable =
-      `the lens is at f/${fNumber} wide open, and LensVisualizer's MTF tab compares with ` +
-      `f/${LV_TAB_COMPARISON_F_NUMBER} only a lens that is faster than f/${LV_TAB_COMPARISON_F_NUMBER - 0.05}`;
-  } else if (!(runtime.maxFstop >= LV_TAB_COMPARISON_F_NUMBER)) {
-    unavailable =
-      `the lens stops down to f/${runtime.maxFstop} at most, so LensVisualizer's MTF tab has no ` +
-      `f/${LV_TAB_COMPARISON_F_NUMBER} to compare it with`;
-  }
   return { view, fNumber: LV_TAB_COMPARISON_F_NUMBER, options, ...shared, unavailable };
 }
 

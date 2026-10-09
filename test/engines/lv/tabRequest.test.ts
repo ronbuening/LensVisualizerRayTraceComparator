@@ -9,7 +9,9 @@ import {
   LV_TAB_COMPARISON_F_NUMBER,
   LV_TAB_PROFILE,
   lvHookAperture,
+  lvHookStop,
   lvPupilSeed,
+  lvTabComparison,
   lvTabFieldFractions,
   lvTabRequest,
   lvTabSpec,
@@ -216,6 +218,36 @@ test("the f/8 comparison scales both radii of the wide-open request by N over 8,
   assert.deepEqual([comparison.view, comparison.fNumber, comparison.unavailable], ["f8-comparison", 8, null]);
   // It is the tab's own scaling of the radius it traces wide open, which is not the iris to the last bit here.
   assert.equal(comparison.options.stopSemiDiameterMm, 5.999999999999999 * (1.4 / 8));
+});
+
+test("the stop of the f/8 comparison has the comparison's seed, to the bit: the hook's two radii scaled alike", () => {
+  // A zoom state that is f/2.9 on a slider whose widest is f/1.4: the hook's f-number is the slider's.
+  const lens = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
+  const { runtime, state } = lens;
+  const api: LvTabApi = { ...lens.api, fNumberAtStopdown: () => 2.9 };
+  const hook = lvHookAperture(api, runtime, state);
+  assert.equal(hook.fNumber, 2.9);
+  const comparison = lvTabRequest(api, runtime, state, "f8-comparison").options;
+  assert.equal(comparison.stopSemiDiameterMm, hook.currentPhysStopSD * (2.9 / 8));
+  assert.equal(lvPupilSeed(hook, comparison.stopSemiDiameterMm), comparison.pupilSemiDiameterMm);
+  assert.equal(comparison.pupilSemiDiameterMm, hook.currentEPSD * (2.9 / 8));
+  // The general rule, at the f-number that radius is the stop of, gives another number in the last bit here: the
+  // comparison's seed is the tab's own, which is why the rule is not asked for it.
+  const fNumber = (6 * 1.4) / comparison.stopSemiDiameterMm;
+  assert.notEqual((9.6 * 1.4) / fNumber, comparison.pupilSemiDiameterMm);
+  assert.ok(Math.abs((9.6 * 1.4) / fNumber - comparison.pupilSemiDiameterMm) < 1e-14);
+
+  // The scale and the tab's rule on their own, and the part of the hook that needs no pupil.
+  assert.deepEqual(lvTabComparison(hook), { scale: 2.9 / 8, unavailable: null });
+  assert.deepEqual(lvTabComparison(hook, runtime), { scale: 2.9 / 8, unavailable: null });
+  assert.match(lvTabComparison(hook, { maxFstop: 4 }).unavailable ?? "", /^the lens stops down to f\/4 at most/);
+  const { currentFOPEN, fNumber: slider, wideOpenStopSD, currentPhysStopSD } = hook;
+  assert.deepEqual(lvHookStop(api, runtime, state.zoomT), {
+    currentFOPEN,
+    fNumber: slider,
+    wideOpenStopSD,
+    currentPhysStopSD,
+  });
 });
 
 test("the tab offers no f/8 comparison for a lens that is not faster than f/7.95, or that does not reach f/8", () => {

@@ -29,7 +29,10 @@ named there by its content hash. Its figures are those of `3af45e3f` but for one
 whose launch rays moved by 7e-15 mm when the ray sets took the MTF tab's own seed (below): its largest differences
 changed in the fifth digit, and no count changed. Since policy version 4 it has two more figures in R1, the radius
 of a pupil scaled and plain, and `firstOrder.maxAbs` is of the six values that are no pupil's: in the two rows of
-that lens it used to be a pupil's radius, which is now in the column of its own.
+that lens it used to be a pupil's radius, which is now in the column of its own. The figures of the MTF replay and
+of rung R4f were measured at `33ebdb30`, closure `78215d72`, still 151 files: what the replay added to the import
+manifest (the refinement, the footprint's widening, the sampling constants, `computeMtfSteps`) is exported by files
+the closure already held.
 
 Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
 60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
@@ -436,17 +439,99 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   LensVisualizer's lines. The habits it does not share: every frequency is evaluated on its own, the modulus is as
   the sum gives it, and what cannot be computed is an outcome with a reason. The reference point is an argument.
   A chief ray of a ray set is traced as every other ray is, with the apertures checked: one that an aperture stops
-  has no landing in `rays.trace`, and the estimator then says `no-reference`; the replay of LensVisualizer's own
-  MTF (Stage 3.2) has to obtain its reference as LensVisualizer does.
+  has no landing in `rays.trace`, and the estimator then says `no-reference`. The replay of LensVisualizer's own
+  MTF (`src/engines/lv/replay.ts`) obtains its reference as LensVisualizer does: it is the `chief` of the bundle
+  `traceMtfBundle` returns for the first line, which is that unclipped landing, and it is handed to every later
+  line as LensVisualizer hands it.
 - **Class.** convention.
+
+### The MTF of a field is decided grid by grid, and the footprint of one grid is the next grid's
+
+- **Where.** `traceField`, `fieldAtGrid` and `refineMtfField` in `src/optics/analysis/mtf.ts`, the constants of
+  `mtfConstants.ts` and `expandMtfFootprint` in `mtfFootprint.ts` (read at `33ebdb30`). Only `refineMtfField`,
+  `expandMtfFootprint`, `traceMtfBundle` and the constants are exported; the loop that ties them together is not.
+- **Effect.** Which rays an MTF value is of is the outcome of a walk, not of a setting. A field starts at 16 cells
+  across its beam and doubles (32, 64, 128, up to the request's cap) until two successive grids agree within 0.01
+  at every frequency up to 50 cycles/mm, so the grid a field ends at depends on its curves, and two fields of one
+  request end at different grids. A grid with fewer than 16 rays at a line is no pupil and sends the walk on. A
+  grid whose rays reach the guard band of the footprint is traced again over a wider footprint, at most twice for
+  a field over all its grids, and the widened footprint is the one every finer grid is laid over. The counts a
+  result states (`validRays`, `blockedRays`, `failedRays`) are sums over the lines of the last grid. Change one
+  ray's landing by enough to move a curve across 0.01 and the field ends at another grid, with four times the
+  rays.
+- **Handled.** The replay calls what is exported and restates the loop, the bookkeeping of a grid and the ladder
+  line by line, each with a source canary. The walk itself is LensVisualizer's own `refineMtfField`, run on the
+  replay's curves, so the test of convergence is not restated. Rung R4f holds the outcome to `computeMtf`: the
+  grid of every field and its three counts must be the same numbers (`sampling.mismatches` 0), and a field's
+  status the same (`fields.mismatches` 0). On the 480 fields of the benchmark they are. A decision that sat within
+  a rounding of 0.01 could come out the other way in the replay, whose curves differ from LensVisualizer's by
+  1e-14; that would be a mismatch of the sampling, reported as one and no difference of the MTF.
+- **Class.** method.
+
+### Two sums of the same terms differ in the fourteenth place
+
+- **Where.** `geometricOtf` in `src/optics/analysis/mtfMath.ts`: plain sums in the order of the rays, and for a
+  list of three or more evenly spaced frequencies one phasor a ray, turned from frequency to frequency by a
+  rotation whose cosine and sine are rounded once.
+- **Effect.** LensVisualizer's default list is 51 frequencies, 0 to 100 cycles/mm in steps of 2, so every value
+  of its geometric MTF comes from the rotated phasor: the fiftieth value of a ray has been turned fifty times.
+  Against the comparator's estimator, which reduces each phase on its own and compensates every sum, the largest
+  difference over the 96 runs of the benchmark (480 fields, up to 63 000 rays a field and line set, both cuts) is
+  1.25e-14, on `nikkor-z50f12` at its best focus on the reference line; on the photopic lines it is below 6.2e-15
+  everywhere. Asked for 10 and 30 cycles/mm alone, LensVisualizer takes its other branch, a cosine and a sine a
+  term: on two lenses of the benchmark the difference is then 5.0e-15 at most. (The fields end at other grids
+  there: convergence is judged at the frequencies that were asked.)
+- **Handled.** Nothing to handle: it is the size of the agreement rung R4f measures. The gate of the rung, 1e-9,
+  provisional in the plan, was kept on this measurement, 80 000 times above it; no floor was needed. A value of
+  LensVisualizer's that the rounding of a modulus leaves above 1 is cut off at 1 by LensVisualizer, and the engine
+  `replay` writes the estimator's the same way, since the contract gives an MTF the range 0 to 1; at frequency 0
+  both are exactly 1.
+- **Class.** numerical.
+
+### LensVisualizer's best focus is of a stop, of lines and of a grid cap
+
+- **Where.** `resolveMtfFocus` in `src/optics/analysis/mtf.ts` and `findAxialBestFocus` in `mtfFocus.ts`: one
+  search on the axial bundle, traced at every line of the request's spectrum over a grid of
+  `min(MTF_FOCUS_GRID, the last size of the ladder)` cells, 64 unless the cap is 32. It runs for every request and
+  is applied to every field when the focus mode is `best-axial`.
+- **Effect.** "The best-focus plane of a lens" is not one plane. On the benchmark the reference line and the
+  photopic lines of a lens have different best planes (`nikkor-z50f12`: -0.0471 and -0.0515 mm wide open), and so
+  have wide open and f/8 (-0.0010 and -0.0154 mm for the same two sets of lines): four planes a lens. A request
+  capped at 32 searches a coarser bundle and finds a fifth. The method of the request does not enter: the search
+  is geometric whatever is asked.
+- **Handled.** The plane is never computed by the comparator. A run with the image plane `lv-best-axial` is
+  exported at `state.imgZ` plus the shift LensVisualizer states in the first step of `computeMtfSteps` for the
+  stop, the lines and the grid cap of the run (`lvBestAxialFocus`), and is then a case like any other, which every
+  engine is asked about. `lv` answers `mtf.native` about such a case only when its own search, asked again for the
+  request at hand, gives that very plane, to the bit, and asks LensVisualizer for `best-axial`; any other moved
+  plane is `image-plane.shifted`. The shift is added as LensVisualizer adds it (a canary holds the line), and the
+  recipe of a run states it beside `conditions.imageZ - designImageZ`, which is the same shift to a rounding and
+  not always to the bit: a sum and a difference of doubles.
+- **Class.** method.
+
+### The tab's f/8 is not the hook's f/8, though the two are the same number on every benchmark lens
+
+- **Where.** `MtfTab.tsx` scales the two radii of its wide-open request by `fNumber / 8` for its comparison; the
+  aperture slider of `useLensComputation.ts` at f/8 gives `(wideOpenStopSD × currentFOPEN) / 8`.
+- **Effect.** `((w × fopen) / fNumber) × (fNumber / 8)` and `(w × fopen) / 8` are the same real number and two
+  different sequences of roundings. On all 12 benchmark configurations they are the same double (measured at
+  `33ebdb30`); on a synthetic lens of iris 12.7 mm, widest f/1.9 and slider f/2.87 they are one unit in the last
+  place apart. The same holds for the seed of the footprint scan. A case is its numbers to the bit, and the
+  profile `lv-tab-default` is about the tab's stop and no other.
+- **Handled.** A run asks for the tab's comparison by name, `{ "kind": "lv-f8-comparison" }`, and gets the tab's
+  expression, restated with a canary (`lvTabComparison`); `{ "kind": "f-number", "value": 8 }` stays the hook's.
+  The seed for the comparison's stop is the comparison's own (`lvPupilSeed`). A lens the tab offers no comparison
+  for is a run without a case (`f8-comparison-unavailable`), with the tab's reason. Every lens of the benchmark is
+  offered one: the slowest wide open is f/4, and every one stops down to f/16 or beyond.
+- **Class.** numerical.
 
 ### LensVisualizer's MTF has three spectra, two planes and one kind of field
 
 - **Where.** `MtfOptions` (`src/types/mtf.ts`) names a spectrum (`reference`, `cdf`, `photopic`), a focus mode
   (`design`, `best-axial`, `auto`) and fractions of the reference image height. It has no wavelength list, no
   image-plane position and no field angle.
-- **Effect.** A case on other lines, a case whose image plane was moved, and a request for fields by angle have
-  no answer from LensVisualizer's product MTF. Nor has a reference wavelength that was asked for by number: such a
+- **Effect.** A case on other lines, a case whose image plane was moved to anywhere but LensVisualizer's own best
+  axial focus, and a request for fields by angle have no answer from LensVisualizer's product MTF. Nor has a reference wavelength that was asked for by number: such a
   case carries anchored indices, and LensVisualizer traces its reference spectrum with the authored ones. Its gate
   also limits one request: at `ed78cf40` to 101 fields and 501 frequencies, none above 1000 cycles/mm, and calls
   anything beyond `invalid-input`, the same reason it gives a request that is malformed.
@@ -455,8 +540,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   The limits are asked of the gate, not restated: a request it has passed is asked again with the spec's fields
   and then with its frequencies, so a refusal is of that member and no failure of the engine. Its `engine-best`
   is LensVisualizer's `best-axial`: a geometric search on the axial bundle, whatever the method, whose shift the
-  answer states. A later comparison that wants another engine on LensVisualizer's plane asks that engine about a
-  case at that shift.
+  answer states. A comparison that wants another engine on LensVisualizer's plane asks that engine about a case at
+  that plane: a run with the image plane `lv-best-axial` (above, "LensVisualizer's best focus is of a stop, of
+  lines and of a grid cap"), which `lv` answers too, since it recognises its own plane.
 - **Class.** method.
 
 ### A lens outside the MTF path has no MTF, and says why

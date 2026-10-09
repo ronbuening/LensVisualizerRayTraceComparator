@@ -568,9 +568,11 @@ test("the case id of every benchmark configuration is the same in two separate p
   // The second process is started elsewhere and names the checkout another way: neither is part of the identity.
   const second = inProcess(tmpdir(), join(LV_PATH ?? "", "src", ".."));
   assert.deepEqual(second, first);
-  assert.equal(Object.keys(first.runs).length, 24);
+  // 12 configurations on two sets of lines, in four conditions: the stop of the tab's f/8 comparison and
+  // LensVisualizer's best axial focus, which is found by its own search, are the same numbers in every process.
+  assert.equal(Object.keys(first.runs).length, 96);
   for (const [name, id] of Object.entries(first.runs)) assert.match(String(id), /^[0-9a-f]{64}$/, name);
-  assert.equal(new Set(Object.values(first.runs)).size, 24, "24 configurations, 24 cases");
+  assert.equal(new Set(Object.values(first.runs)).size, 96, "96 runs, 96 cases");
 
   // This process, which has by now exported the whole catalog, gives the same ids.
   const sources = { lv: createLvCaseSource(LV_PATH) };

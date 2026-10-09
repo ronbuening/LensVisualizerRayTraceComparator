@@ -415,13 +415,40 @@ export interface LvMtfBundle {
   readonly rays: readonly LvMtfPupilRay[];
   readonly blocked: number;
   readonly failed: number;
+  /** The launch flux of the rays LV could not resolve, in the units of the rays' weights. */
+  readonly failedWeight: number;
+  /** The reference point: where this line's chief ray lands with no aperture checked, or the reference handed in. */
   readonly chief: LvMtfSpot;
   readonly chiefClipped: boolean;
   readonly columns: number;
   readonly rows: number;
   readonly mirrored: boolean;
   readonly launchStepMm: number;
+  /** The sides of the footprint in whose guard band a ray landed: flux may lie outside the box that was sampled. */
+  readonly openBorders: LvMtfOpenBorders;
 }
+
+/** The sides of a footprint: both sides in x, which a footprint has alike, and the lower and the upper side in y. */
+export interface LvMtfOpenBorders {
+  readonly x: boolean;
+  readonly y0: boolean;
+  readonly y1: boolean;
+}
+
+/**
+ * What LV's refinement makes of one field at one grid size: curves, with the sides of the footprint that were left
+ * open, or no curves, and whether a finer grid may still have some.
+ */
+export type LvMtfGridOutcome =
+  | { readonly kind: "curves"; readonly field: LvMtfFieldDraft; readonly openBorders?: LvMtfOpenBorders }
+  | { readonly kind: "unavailable"; readonly field: LvMtfFieldDraft; readonly refine: boolean };
+
+/** One field of an LV result while LV still writes it: `LvMtfFieldResult` with every member open to change. */
+export type LvMtfFieldDraft = { -readonly [Member in keyof LvMtfFieldResult]: LvMtfFieldResult[Member] } & {
+  sagittal: number[];
+  tangential: number[];
+  notes: string[];
+};
 
 /** LV's image-height axis for one state: the height of the 100 % field and how far the model reaches. */
 export interface LvMtfFieldGeometry {
@@ -580,7 +607,7 @@ export interface LvApi {
     gridSize: number,
     line: LvSpectralLine,
     imagePlaneZ?: number,
-    extras?: { readonly opticalPath?: boolean },
+    extras?: { readonly reference?: LvMtfSpot; readonly opticalPath?: boolean },
   ): LvMtfBundle | null;
   /** Where a trace that ended "ok" lands on the image plane, with its bulk transmission; null when it does not. */
   mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
@@ -614,6 +641,44 @@ export interface LvApi {
   ): LvMtfFieldTarget[];
   /** LV's product MTF: what its MTF tab draws, for a request that names method, spectrum, focus and both radii. */
   computeMtf(state: LvPreparedState, options: LvMtfOptions): LvMtfResult;
+  /**
+   * `computeMtf` step by step. The first result it yields is the request before any field is traced: the field
+   * axis, the focus it applies to every field and each field's target, pending or outside the model. A request its
+   * gate refuses, and one without a field axis, is returned at once and nothing is yielded.
+   */
+  computeMtfSteps(state: LvPreparedState, options: LvMtfOptions): Generator<LvMtfResult, LvMtfResult>;
+  /**
+   * LV's refinement of one field through a ladder of grid sizes: `evaluate` is asked for the field at a size, each
+   * result is held to the one before it, and the best field so far is yielded after every size. A converged size
+   * ends it; so does a size without curves that a finer grid cannot help.
+   */
+  refineMtfField(
+    ladder: readonly number[],
+    evaluate: (size: number) => LvMtfGridOutcome,
+    frequencies: readonly number[],
+  ): Generator<LvMtfFieldDraft, void>;
+  /** A field of a result before it is traced: "pending", with the target's height and angle when it has one. */
+  emptyMtfField(
+    fraction: number,
+    target?: { readonly targetImageHeightMm: number | null; readonly fieldAngleDeg: number | null },
+  ): LvMtfFieldDraft;
+  /** Whether a field with this many unresolved rays, of this share of its flux, may still be reported. */
+  assessUnresolvedFlux(
+    failedRays: number,
+    unknownFluxFraction: number,
+  ): { readonly acceptable: boolean; readonly note: string | null };
+  /** A footprint widened on the sides whose guard band carried flux. */
+  expandMtfFootprint(footprint: LvMtfFootprint, sides: LvMtfOpenBorders, fraction?: number): LvMtfFootprint;
+  /** LV's `MTF_GRID_LADDER`: the grid sizes a field is refined through, coarse to fine. */
+  readonly mtfGridLadder: readonly number[];
+  /** LV's `MTF_DEFAULT_GRID_CAP`: the largest grid of a request that names none. */
+  readonly mtfDefaultGridCap: number;
+  /** LV's `MTF_MAX_FOOTPRINT_EXPANSIONS`: how often one field's footprint is widened. */
+  readonly mtfMaxFootprintExpansions: number;
+  /** LV's `MTF_MIN_RAYS`: fewer rays than this at a line are no pupil. */
+  readonly mtfMinRays: number;
+  /** LV's `MTF_FIELDS`: the fractions of the reference image height of a request that names none. */
+  readonly mtfDefaultFields: readonly number[];
   /** The spectrum the MTF tab requests for a preferred one: itself, or the reference line where glass data lacks. */
   resolveMtfSpectrum(state: LvPreparedState, preferred: string): LvMtfSpectrumChoice;
   /** LV's `MTF_FREQUENCIES`: the frequencies `computeMtf` reports for a request that names none, as the tab's does. */
