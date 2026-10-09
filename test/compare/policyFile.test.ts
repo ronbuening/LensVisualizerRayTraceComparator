@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 7);
+  assert.equal(policy.version, 8);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -131,6 +131,19 @@ test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no fl
   );
 });
 
+test("r6a is gated on the wave MTF of the traced rays, at the pin of Stage 3.5, with no floor", () => {
+  const { r6a } = loadPolicy().rungs;
+  assert.deepEqual([r6a.quantity, r6a.mode, r6a.class], ["rays.trace", "identical-rays", "gated"]);
+  // Ten times the largest figure of a judged field of the benchmark, 3.12e-6, rounded up to one digit.
+  assert.deepEqual(r6a.metrics, { "waveMtf.maxAbs": { tolerance: 4e-5, unit: "1" } });
+  assert.equal(r6a.floor, undefined);
+  assert.equal(r6a.blocksLaterRungs, undefined);
+  // The figure of a lattice that is no arbiter is a metric of the comparator and none of the policy.
+  const reported = COMPARATORS.get("rays.trace", "r6a")?.metrics.map((metric) => metric.name) ?? [];
+  assert.ok(reported.includes("waveMtf.maxAbs") && reported.includes("waveMtf.flagged"));
+  assert.notEqual(COMPARATORS.get("rays.trace", "r6a"), COMPARATORS.get("rays.trace", "r4"));
+});
+
 test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it blocks nothing", () => {
   const { r4f } = loadPolicy().rungs;
   assert.deepEqual([r4f.quantity, r4f.mode, r4f.class], ["mtf.native", "direct", "gated"]);
@@ -194,6 +207,8 @@ test("each way a policy and the code can disagree is reported", () => {
     "rung r3 has no policy entry",
     "rung r4 has no policy entry",
     "rung r4f has no policy entry",
+    "rung r6a has no policy entry",
+    "rung r6b has no policy entry",
     "policy entry notes is of no registered rung",
     "policy entry r1: the comparator reports no metric efl.abs",
     "policy entry r1: the comparator reports no metric pupil.z.abs",

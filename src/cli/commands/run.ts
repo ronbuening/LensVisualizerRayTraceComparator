@@ -250,6 +250,9 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         for (const problem of run.raySets?.problems ?? []) {
           io.stderr(`lvrtc run: run ${run.name}: a field has no rays: ${problem}\n`);
         }
+        for (const problem of run.fineRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: a field has no rays on the finer lattice: ${problem}\n`);
+        }
       }
       for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);
       io.stdout(asked.json ? jsonText(result) : summaryText(suite, result));

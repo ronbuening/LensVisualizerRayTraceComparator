@@ -25,7 +25,7 @@ import { negotiate } from "./negotiate.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
-import { raySetId } from "../rays/raySets.ts";
+import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
@@ -212,6 +212,8 @@ interface Plan {
   readonly jobs: readonly PlannedJob[];
   /** The ray sets of each run that a rung needed them for, by run name. */
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The ray sets on the finer lattice of each run that a rung needed them for, by run name. */
+  readonly fineRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -247,6 +249,7 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
 
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
+  const fineRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   for (const [index, { spec, opticalCase }] of suite.runs.entries()) {
     const { rungs, engineIds } = selected[index];
@@ -256,6 +259,12 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       const { sets, problems } = await raySetsOf(input, spec, opticalCase);
       inputs = { ...inputs, raySets: sets };
       raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsFineRaySets === true)) {
+      const finer = { ...spec, sampling: fineSampling(spec.sampling) };
+      const { sets, problems } = await raySetsOf(input, finer, opticalCase);
+      inputs = { ...inputs, fineRaySets: sets };
+      fineRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await recipeOf(input, spec, opticalCase);
@@ -267,6 +276,7 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       if (quantity === undefined) throw new Error(`rung ${rung.id}: ${rung.quantity} is not a quantity`);
       const requests = requestsOf(rung, quantity, opticalCase, spec, {
         raySets: rung.needsRaySets === true ? inputs.raySets : NO_RUNG_INPUTS.raySets,
+        ...(rung.needsFineRaySets === true ? { fineRaySets: inputs.fineRaySets ?? [] } : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       });
       const ofRung = rung.engineOptions?.(spec);
@@ -286,7 +296,7 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { jobs, raySets, recipes };
+  return { jobs, raySets, fineRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -440,6 +450,8 @@ function auditSources(
  * A run with a rung that traces rays has its ray sets generated first, by the source of its case
  * (`CaseSource.raySets`), once for all such rungs: the manifest records the identity of each set and, as coded
  * problems, each field that has none. A field without rays fails nothing; the rung asks for the sets there are.
+ * A run with a rung that also traces a finer lattice (`RungDefinition.needsFineRaySets`) has those sets generated
+ * by the same source, asked with the finer sampling (`fineSampling`), and recorded under `fineRaySets`.
  * A run with a rung that needs an MTF recipe has it resolved likewise (`CaseSource.recipe`), and the manifest
  * records the recipe, or why the run has none; such a rung asks nothing of a run without one.
  *
@@ -472,7 +484,7 @@ function auditSources(
  */
 export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
-  const { jobs: planned, raySets, recipes } = await planJobs(input);
+  const { jobs: planned, raySets, fineRaySets, recipes } = await planJobs(input);
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -526,6 +538,7 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     engines,
     runs: suite.runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
+      const finer = fineRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -533,6 +546,7 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
         problems,
         ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
         ...(rays === undefined ? {} : { raySets: rays }),
+        ...(finer === undefined ? {} : { fineRaySets: finer }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

@@ -14,7 +14,9 @@ import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/s
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
-import type { RunSpec } from "../contract/runSpec.ts";
+import type { RunFields, RunSpec } from "../contract/runSpec.ts";
+import { DEFAULT_RAY_FIELDS } from "../rays/raySets.ts";
+import { waveFrequencies } from "./mtfRecipe.ts";
 import type { MtfRecipe } from "./mtfRecipe.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
@@ -29,6 +31,12 @@ export interface RungInputs {
    * `needsRaySets`; empty for any other rung, and where the source has no rays for the run.
    */
   readonly raySets: readonly RaysTraceSpec[];
+  /**
+   * The ray sets of the run on the lattice of `FINE_GRID_FACTOR` times as many cells across, from the same source
+   * asked with the finer sampling (`fineSampling`), for a rung that says it `needsFineRaySets`; empty, or left out,
+   * for any other rung.
+   */
+  readonly fineRaySets?: readonly RaysTraceSpec[];
   /**
    * The MTF recipe of the run, from the source of its case (`CaseSource.recipe`), for a rung that says it
    * `needsRecipe`; null, or left out, for any other rung, and where the source has no recipe for the run.
@@ -50,6 +58,12 @@ export interface RungDefinition {
    * when such a rung is run.
    */
   readonly needsRaySets?: boolean;
+  /**
+   * True for a rung whose requests are also made from the run's ray sets on the finer lattice
+   * (`RungInputs.fineRaySets`): those are generated, once per run, only when such a rung is run, and no other rung
+   * is handed them.
+   */
+  readonly needsFineRaySets?: boolean;
   /**
    * True for a rung whose requests are made from the run's MTF recipe: the recipe is resolved, once per run, only
    * when such a rung is run.
@@ -125,8 +139,13 @@ export const r1Rung: RungDefinition = Object.freeze({
  * are what every rung that compares traced rays asks, so that such rungs share one answer per engine and set.
  */
 export function rayTraceRequests(opticalCase: OpticalCase, inputs: RungInputs = NO_RUNG_INPUTS): QuantityRequest[] {
+  return requestsOfSets(opticalCase, inputs.raySets);
+}
+
+/** One `rays.trace` request for each of `sets`, in their order, each set once. */
+function requestsOfSets(opticalCase: OpticalCase, sets: readonly RaysTraceSpec[]): QuantityRequest[] {
   const requests = new Map<string, QuantityRequest>();
-  for (const spec of inputs.raySets) {
+  for (const spec of sets) {
     const request = makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec });
     // A Map keeps the first of two equal sets, in its place.
     if (!requests.has(request.id)) requests.set(request.id, request);
@@ -177,6 +196,31 @@ export const r4Rung: RungDefinition = Object.freeze({
     (inputs?.recipe ?? null) === null ? [] : rayTraceRequests(opticalCase, inputs),
 });
 
+/**
+ * The `rays.trace` requests of a run on both lattices: those of the run's own ray sets (`rayTraceRequests`), which
+ * an engine has traced for `r2` to `r4`, and after them those of the sets on the finer lattice.
+ */
+export function waveTraceRequests(opticalCase: OpticalCase, inputs: RungInputs = NO_RUNG_INPUTS): QuantityRequest[] {
+  return requestsOfSets(opticalCase, [...inputs.raySets, ...(inputs.fineRaySets ?? [])]);
+}
+
+/**
+ * The rung `r6a`, the traced rays as a wave MTF: the requests of the run's ray sets, which `r2` to `r4` ask too,
+ * and those of the same fields on a lattice of twice as many cells across (`waveTraceRequests`). The comparator's
+ * wave estimator is applied to each engine's trace of a field at every line of the case, on the finer lattice, and
+ * the curves are compared; the coarser lattice says whether the finer one has converged
+ * (`src/compare/raysWaveMtf.ts`). It is asked of the engines of the run, and only of a run that has a recipe.
+ */
+export const r6aRung: RungDefinition = Object.freeze({
+  id: "r6a",
+  quantity: RAYS_TRACE,
+  needsRaySets: true,
+  needsFineRaySets: true,
+  needsRecipe: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.recipe ?? null) === null ? [] : waveTraceRequests(opticalCase, inputs),
+});
+
 /** The engines of the rung `r4f`: LensVisualizer, and the comparator's estimator on a replay of its sampling. */
 export const R4F_ENGINES: readonly string[] = Object.freeze(["lv", "replay"]);
 
@@ -222,6 +266,56 @@ export const r4fRung: RungDefinition = Object.freeze({
   },
 });
 
+/** The engines of the rung `r6b`: LensVisualizer, and the comparator's wave estimator on LensVisualizer's rays. */
+export const R6B_ENGINES: readonly string[] = Object.freeze(["lv", "wave"]);
+
+/**
+ * The `mtf.native` spec that asks for the diffraction MTF of a recipe, on the plane of the case: the recipe's
+ * frequencies thinned for a wave transfer function (`waveFrequencies`), at the fields the run traces rays for
+ * (`fields`, `DEFAULT_RAY_FIELDS` without them), as fractions of the reference image height, each of them a field
+ * the recipe resolved to an angle. Null where the run's fields are angles, or the recipe resolved none of them.
+ */
+export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_FIELDS): MtfNativeSpec | null {
+  if (fields.kind !== "image-height-fractions") return null;
+  const resolved = fields.values.filter((fraction) =>
+    recipe.fields.some((field) => field.fraction === fraction && field.angleDeg !== null),
+  );
+  if (resolved.length === 0) return null;
+  return {
+    frequenciesPerMm: waveFrequencies(recipe.frequenciesPerMm),
+    fields: { kind: "image-height-fractions", values: resolved },
+    method: "diffraction",
+    focus: "design",
+  };
+}
+
+/**
+ * The rung `r6b`, LensVisualizer's own diffraction MTF beside the comparator's wave estimator on LensVisualizer's
+ * rays: one `mtf.native` request for the diffraction MTF of the run's recipe on the plane of the case
+ * (`waveMtfSpec`), asked of LensVisualizer, whose answer is its own `computeMtf`, and of the engine `wave`, whose
+ * answer is Hopkins' autocorrelation of the optical paths LensVisualizer traces on the lattices rung `r6a` judges.
+ * It is asked of those two and of no other engine (`R6B_ENGINES`), and only for a recipe LensVisualizer resolved.
+ * Both engines are handed the run's `sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and
+ * `bundleGrid`, where the run states them; each reads its own.
+ */
+export const r6bRung: RungDefinition = Object.freeze({
+  id: "r6b",
+  quantity: MTF_NATIVE,
+  needsRecipe: true,
+  engines: R6B_ENGINES,
+  engineOptions: (runSpec: RunSpec): JsonObject | undefined => {
+    const { lvGridCap, bundleGrid } = runSpec.sampling ?? {};
+    if (lvGridCap === undefined && bundleGrid === undefined) return undefined;
+    return { ...(lvGridCap === undefined ? {} : { lvGridCap }), ...(bundleGrid === undefined ? {} : { bundleGrid }) };
+  },
+  buildRequests: (opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    if (recipe === null || recipe.source !== "lv") return [];
+    const spec = waveMtfSpec(recipe, runSpec.fields);
+    return spec === null ? [] : [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec })];
+  },
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
@@ -235,6 +329,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r3Rung,
   r4Rung,
   r4fRung,
+  r6aRung,
+  r6bRung,
 ]);
 
 /**

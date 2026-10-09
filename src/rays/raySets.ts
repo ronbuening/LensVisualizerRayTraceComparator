@@ -4,7 +4,7 @@
 // content: its arrays are part of the spec, the spec is part of the request's id, and nothing of it is kept in the
 // repository.
 import type { RayGroups, RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
-import type { RunFields } from "../contract/runSpec.ts";
+import type { RunFields, RunSampling } from "../contract/runSpec.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 import { encodeNdArray } from "../core/numeric/ndarray.ts";
 import type { RayBundle } from "./generators.ts";
@@ -17,6 +17,20 @@ export const DEFAULT_RAY_FIELDS: RunFields = Object.freeze({
 
 /** The number of lattice cells across a beam when a run states no `sampling.bundleGrid`. */
 export const DEFAULT_BUNDLE_GRID = 32;
+
+/**
+ * How many times as many cells across the finer lattice of a field has than the run's own: the rungs that take a
+ * wave transfer function of a bundle ask for it on both, and say by the two whether the finer one has converged.
+ */
+export const FINE_GRID_FACTOR = 2;
+
+/**
+ * The sampling of a run with its bundle grid made finer by `FINE_GRID_FACTOR`: what a case source is asked with for
+ * the sets of the finer lattice, so that they are made by the generator of the run's own sets and by no other.
+ */
+export function fineSampling(sampling: RunSampling | undefined): RunSampling {
+  return { ...sampling, bundleGrid: FINE_GRID_FACTOR * (sampling?.bundleGrid ?? DEFAULT_BUNDLE_GRID) };
+}
 
 /** The ray sets of one run: a set for every field and line that has one, and why a field has none. */
 export interface RaySetResolution {

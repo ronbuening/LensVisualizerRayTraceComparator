@@ -18,8 +18,12 @@ open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4
 LensVisualizer, the reference tracer and optiland each land them, agrees within 5.4e-8 on the same benchmark, the
 two exact tracers within 1.2e-11 (rung R4, gated at 1e-7,
 [measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)). The comparator's wave estimator, Hopkins'
-autocorrelation of the pupil function from the optical paths of the same rays, is written and held to closed forms
-([the wave OTF](docs/REFERENCE.md#the-wave-otf)); no rung asks for it yet.
+autocorrelation of the pupil function from the optical paths of the same rays, is held to closed forms
+([the wave OTF](docs/REFERENCE.md#the-wave-otf)), and on the three engines' traces of the same rays it agrees
+within 3.2e-6 wherever its lattice samples the wavefront, the two exact tracers within 1.2e-9 (rung R6a, gated at
+4e-5; a fast lens wide open is undersampled and not judged). Beside LensVisualizer's own diffraction MTF it stays
+within the plan's bands at f/8 and marks five of 96 runs for attention (rung R6b, recorded;
+[measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)).
 
 ## Requirements
 
@@ -175,6 +179,17 @@ node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f
 Holds LensVisualizer's own geometric MTF to the comparator's estimator on a replay of LensVisualizer's sampling
 (R4f): the same rays, the same grids, the same counts. It is asked of two engines of its own, `lv` and `replay`,
 whatever `--engines` names, and takes about three minutes on the benchmark.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r6a
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r6b
+```
+
+The wave MTF. R6a applies the comparator's wave estimator to each engine's trace of the same rays, on a lattice
+twice as fine as the run's own, which it traces for that (about 8 minutes and 15 GB of the store on the
+benchmark); a field whose lattice does not sample the wavefront, or has not converged, is reported and not judged.
+R6b sets LensVisualizer's own diffraction MTF beside that estimator on LensVisualizer's rays: two engines of its
+own, `lv` and `wave`, recorded and never gated (about 13 minutes).
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

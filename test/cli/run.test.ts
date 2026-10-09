@@ -208,7 +208,10 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
-  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f$/m);
+  assert.match(
+    unknown.err,
+    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r6a, r6b$/m,
+  );
   assert.equal(existsSync(runsDir), false);
 
   const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
@@ -226,7 +229,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, ref, replay$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, ref, replay, wave$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -502,7 +505,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: lv, optiland, ref, replay)\n",
+      "name the engines to run with --engines (built in: lv, optiland, ref, replay, wave)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
@@ -616,19 +619,23 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   ]);
   assert.equal(manifestOf(join(rootDir, "runs"), "probe").runs[0].raySets?.problems.length, 2);
 
-  // A run that names no rung is run on every rung, the three of traced rays among them: with its fields stated as
+  // A run that names no rung is run on every rung, the four of traced rays among them: with its fields stated as
   // angles the run has an MTF recipe, so the rung that takes an MTF of the traced rays, r4, asks for them too, and
-  // finds every answer in the store. One that names rungs without rays has no ray sets generated for it.
+  // finds every answer in the store; the rung that takes a wave MTF of them, r6a, asks for them and for the same
+  // field on the finer lattice. One that names rungs without rays has no ray sets generated for it.
   const plain = await inProcess(["angles.json", "--engines", "ref"], { rootDir });
   const everyRung = manifestOf(join(rootDir, "runs"), "probe");
   assert.deepEqual(
     [...new Set(everyRung.jobs.map((job) => job.rung))],
-    ["selftest", "r0", "r1", "r2", "r3", "r4"],
+    ["selftest", "r0", "r1", "r2", "r3", "r4", "r6a"],
     plain.err,
   );
   const ofRung = (rung: string) =>
     everyRung.jobs.filter((job) => job.rung === rung).map((job) => [job.requestId, job.storeKey]);
   assert.deepEqual(ofRung("r4"), ofRung("r2"));
+  assert.deepEqual(ofRung("r6a").slice(0, ofRung("r2").length), ofRung("r2"));
+  assert.equal(ofRung("r6a").length, 2 * ofRung("r2").length);
+  assert.equal(everyRung.runs[0].fineRaySets?.sets.length, everyRung.runs[0].raySets?.sets.length);
   assert.deepEqual(everyRung.runs[0].recipe?.recipe?.frequenciesPerMm, [10, 30, 50]);
   await inProcess(["angles.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir });
   assert.equal(Object.hasOwn(manifestOf(join(rootDir, "runs"), "probe").runs[0], "raySets"), false);
@@ -648,17 +655,18 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   const own = await inProcess(["own.json"], { rootDir });
   assert.equal(own.code, EXIT_OK, own.err);
   // The run that names neither gets every configured engine on every rung that compares the engines of a run. A
-  // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rung that
-  // is about engines of its own, r4f, asks nothing about a case that no LensVisualizer sampled, and the rung that
-  // takes an MTF of the traced rays, r4, nothing of a run without a recipe to take its frequencies from.
+  // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rungs that
+  // are about engines of their own, r4f and r6b, ask nothing about a case that no LensVisualizer sampled, and the
+  // rungs that take an MTF of the traced rays, r4 and r6a, nothing of a run without a recipe to take its
+  // frequencies from.
   const shared = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true);
   assert.deepEqual(
     RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
-    ["r4", "r4f"],
+    ["r4", "r4f", "r6a", "r6b"],
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
-    ["r4f"],
+    ["r4f", "r6b"],
   );
   assert.deepEqual(
     manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
@@ -674,7 +682,7 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.equal(worked.code, EXIT_USAGE);
   assert.equal(
     worked.err,
-    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f\n',
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r6a, r6b\n',
   );
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });

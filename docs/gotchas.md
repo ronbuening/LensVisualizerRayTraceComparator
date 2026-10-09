@@ -515,8 +515,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` fills the cosines
     of dark cells along a line by a straight line. Sums are plain.
 - **Handled.** Nothing is ported. The difference between LensVisualizer's sheared estimate and the comparator's
-  estimator on the same rays is rung R6b, recorded and not gated (Stage 3.5); R6a, the comparator's estimator on
-  two engines' traces of the same rays, does not depend on any of it.
+  estimator on the same rays is rung R6b, recorded and not gated: on one grid the two agree to about 5e-4 on the
+  benchmark at f/8, and what the rung shows beyond that is the grid LensVisualizer stops at (below). R6a, the
+  comparator's estimator on two engines' traces of the same rays, does not depend on any of it.
 - **Class.** method.
 
 ### LensVisualizer's best focus is of a stop, of lines and of a grid cap
@@ -671,7 +672,74 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   authored ones either.
 - **Class.** convention.
 
+### LensVisualizer's launch lattice has more columns than the cells it is asked for
+
+- **Where.** `mtfLaunchGrid` in `src/optics/analysis/mtfTracing.ts`: the step is of the beam,
+  `max(beamWidth, beamHeight) / n`, and the lattice is laid over the whole scan window of the footprint, which is
+  wider than the beam: `2 ceil(halfWidth / step)` columns.
+- **Effect.** A lattice "at 64 cells" has 54 to 80 columns on the benchmark (72 for most fields), and one "at 32"
+  half as many. `gridSize` in LensVisualizer's result is the n it asked for, never the columns.
+- **Handled.** The engine `wave` states its `gridSize` as LensVisualizer does, the cells asked for; a ray set
+  states the lattice as it is (`groups.lattice`), and the comparator of R6a reports those columns
+  (`lattice.columns`). Never read one as the other. Measured at `33ebdb30`, closure `78215d72`.
+- **Class.** convention.
+
+### LensVisualizer stops refining a field where its own figure stops moving, and that is often 32 cells
+
+- **Where.** `refineMtfField` in `src/optics/analysis/mtf.ts`: the grid of a field is the first of the ladder
+  whose curves are within 0.01 of the grid before at the frequencies up to 50 cycles/mm
+  (`MTF_CONVERGENCE_TOLERANCE`, `MTF_CONVERGENCE_BAND_LPMM`); its `maxDelta` is 1e-3 to 1e-2 where it stops.
+- **Effect.** At f/8 that is 32 cells for 119 of the 144 fields of the benchmark. The diffraction estimate of such
+  a field is that of a lattice of 32 cells, whose rim is a staircase. On the same 32 cells the comparator's wave
+  estimator agrees with it to 4.5e-4 on average; at 64 cells the estimator itself has moved by 1e-3 to 8e-3, and
+  R6b shows that difference, 2.9e-3 on average and 7.75e-3 at most.
+- **Handled.** R6b is recorded, with bands of 0.005 and 0.01, and no pair is marked at f/8. The band on the axis
+  is half of what LensVisualizer itself calls converged. A row near its band there is the difference of two
+  lattices and no error of either method (`docs/REFERENCE.md`, "Rungs R6a and
+  R6b"). To see the methods alone, run the rung with `sampling.bundleGrid: 16`, which puts the estimator on 32
+  cells. Measured at `33ebdb30`, closure `78215d72`.
+- **Class.** method (sampling).
+
 ## Any two engines
+
+### A fast lens wide open is undersampled by any lattice a run can afford
+
+- **Where.** The comparator's wave estimator (`src/estimators/waveOtf.ts`), on any engine's trace: the step of a
+  wavefront from one cell of a lattice to the next is the transverse aberration times the step of the direction
+  cosine, in waves.
+- **Effect.** A lens at f/1.2 with a spot of 20 µm turns by a wave a cell at 32 cells across the beam and by half
+  a wave at 64. On the benchmark `nikkor-z50f12` and `sony-fe-20mm-f18-g` have no field within a quarter wave a
+  cell at 64 wide open, and the photopic lines of one lens reach 51 waves. Stopped down to f/8 every field is
+  within 0.15 waves a cell.
+- **Handled.** Such a field is flagged `undersampled`: its estimate may alias, R6a does not judge it and R6b puts
+  it in no band. It would need 128 to 256 cells, sixteen to sixty-four times the rays; and there the transfer
+  function is geometric to the accuracy that matters, which R4 holds on the lattice the run has. Never raise
+  `QUARTER_WAVE`, and never judge a flagged field, to cover a lens.
+- **Class.** numerical.
+
+### A wave estimate on a lattice is good to about what it moves by on doubling, and the rim decides that
+
+- **Where.** The same estimator: inside the pupil it is of second order in the cell; at the rim the pupil is the
+  union of whole cells, a staircase, of first order.
+- **Effect.** On the benchmark at f/8, where every lattice samples its wavefront, the wave MTF moves by 1e-3 to
+  1.5e-2 from 32 cells to 64 (2e-3 to 5e-3 for most fields). That is common to every engine that traced the same
+  rays and cancels in R6a, whose figures are a thousand times smaller. It does not cancel against another method.
+- **Handled.** `CONVERGENCE_BANDS` are the bands of such a comparison, 0.005 on the axis and 0.01 off it, and a
+  field that moves by more is flagged `not-converged`. The estimate of a converged field is still only within a
+  band of its limit: it is an arbiter of a row that is far outside its band, and of none that is near it.
+- **Class.** numerical.
+
+### The gate of R6a is LensVisualizer's 1e-9 mm in the optical path
+
+- **Where.** LensVisualizer meets a surface within 1e-9 mm of it ("A hit lies within 1e-9 mm of its surface",
+  above), and the optical path carries that: 1.7e-6 of a wave at 590 nm for each surface it is off at.
+- **Effect.** In a wave transfer function it shows as 1e-6 to 3e-6 of MTF (3.12e-6 at worst on the benchmark),
+  where the two exact tracers agree to 1.15e-9.
+- **Handled.** R6a's gate, 4e-5, is ten times LensVisualizer's figure and so 35 000 times that of the exact
+  tracers: it measures nothing of them, as R3's gate does not. A pair of `ref` and optiland near it would be a
+  defect; whether the rung gets a floor, and the exact tracers a gate of their own, is the owner's. Measured at
+  `33ebdb30`, closure `78215d72`, optiland `4e893f53`.
+- **Class.** numerical.
 
 ### A pupil that is metres away cannot be placed to 1e-9 mm
 

@@ -295,12 +295,15 @@ test(
     assert.equal(ran.status, 0, ran.stderr);
     // Five runs, the zoom at both ends, and two engines. Neither answers the conformance quantity, both answer R0
     // and R1; and the runs have 27 ray sets between them (three fields, at one line four times and at five lines
-    // once), which each engine traces once, for R2, and R3 and R4 find in the store. The last rung, R4f, is about
-    // two engines of its own, lv and the replay of its sampling: one request of each for a run.
+    // once), which each engine traces once, for R2, and R3 and R4 find in the store. R4f is about two engines of
+    // its own, lv and the replay of its sampling: one request of each for a run. R6a finds the 27 sets in the store
+    // and has each engine trace the same fields on the finer lattice, 27 sets more; and R6b is about lv and the
+    // wave estimator on its rays, one request of each for a run.
     assert.match(
       ran.stdout,
-      /^smoke: 202 jobs: 192 ok, 10 unsupported, 0 error, 0 pending \(84 computed, 108 cached\)$/m,
+      /^smoke: 320 jobs: 310 ok, 10 unsupported, 0 error, 0 pending \(148 computed, 162 cached\)$/m,
     );
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +ok +computed$/m);
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
     for (const end of ["wide", "tele"]) {
       for (const rung of ["r3", "r4"]) {
@@ -312,14 +315,30 @@ test(
     // At LV ed78cf40 every pair of the smoke suite passes outright: none needs the floor. R4 has no floor to
     // need: at LV 33ebdb30 (engine closure 78215d72) the geometric MTF of LensVisualizer's landings is within
     // 2.2e-8 of the reference engine's on every field of the suite, against a gate of 1e-7.
-    assert.match(
-      compared.stdout,
-      /^smoke: 178 pairs: 168 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+    // R6a is of a field on both lattices, fifteen fields like R4, and passes wherever it is judged; R6b is
+    // recorded, one pair a run, and whether it is marked for attention is no matter of this test. A pair is counted
+    // in both modes.
+    const summary =
+      /^smoke: 218 pairs: 198 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+        compared.stdout,
+      );
+    assert.ok(
+      summary !== null,
+      compared.stdout.split("\n").find((line) => line.startsWith("smoke: ")),
     );
+    assert.equal(Number(summary[1]) + Number(summary[2]), 10);
     // R4 is of a field at every line of its run: fifteen fields, where R2 and R3 judge 27 ray sets each.
     const { comparisons }: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "smoke", COMPARISONS_FILE), "utf8"));
     const sets = (rung: string) => comparisons.filter((set) => set.rung === rung && set.mode === "pairwise");
     assert.deepEqual([sets("r2").length, sets("r3").length, sets("r4").length], [27, 27, 15]);
+    assert.deepEqual([sets("r6a").length, sets("r6b").length], [15, 5]);
+    for (const set of sets("r6a")) {
+      const [pair] = set.pairs;
+      assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], set.run);
+      // A field is judged, or says why its lattice is no arbiter.
+      const judged = pair.metrics.some((metric) => metric.name === "waveMtf.maxAbs");
+      assert.equal(pair.reason === undefined, judged, `${set.run}: ${pair.reason ?? ""}`);
+    }
     for (const set of sets("r4")) {
       const [pair] = set.pairs;
       assert.deepEqual([pair.a, pair.b, pair.verdict, pair.reason], ["lv", "ref", "PASS", undefined], set.run);
@@ -338,7 +357,7 @@ test(
     }
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["lv", "ref", "replay"],
+      ["lv", "ref", "replay", "wave"],
     );
   },
 );

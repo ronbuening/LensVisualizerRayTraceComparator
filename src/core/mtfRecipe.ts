@@ -65,6 +65,25 @@ export interface MtfRecipeResolution {
 /** The frequencies of a recipe whose run states none, for a case read from a file, cycles/mm. */
 export const DEFAULT_RECIPE_FREQUENCIES: readonly number[] = Object.freeze([10, 30, 50]);
 
+/** The most frequencies a wave MTF is taken at for one field. */
+export const MAX_WAVE_FREQUENCIES = 11;
+
+/**
+ * The frequencies of a recipe at which a wave MTF is taken: all of them where there are no more than
+ * `MAX_WAVE_FREQUENCIES`, else that many of them, evenly spaced by their place in the list, the first and the last
+ * included. A wave transfer function costs a search of the pupil for every cell and frequency, where a geometric
+ * one costs a phasor; of LensVisualizer's 51 frequencies from 0 to 100 cycles a millimetre these are every fifth:
+ * 0, 10, ... 100.
+ */
+export function waveFrequencies(frequenciesPerMm: readonly number[]): number[] {
+  const count = frequenciesPerMm.length;
+  if (count <= MAX_WAVE_FREQUENCIES) return [...frequenciesPerMm];
+  const last = MAX_WAVE_FREQUENCIES - 1;
+  return Array.from({ length: MAX_WAVE_FREQUENCIES }, (_unused, index) => {
+    return frequenciesPerMm[Math.round((index * (count - 1)) / last)];
+  });
+}
+
 /** A coded problem of a recipe as one line: `<code>: <message>`. */
 export function recipeProblem(code: string, message: string): string {
   return `${code}: ${message}`;

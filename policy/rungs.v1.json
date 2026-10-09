@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 7,
+  "version": 8,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -78,6 +78,23 @@
         "fields.mismatches": { "tolerance": 0, "unit": "elements" },
         "mtf.maxAbs": { "tolerance": 1e-9, "unit": "1" },
         "sampling.mismatches": { "tolerance": 0, "unit": "elements" }
+      }
+    },
+    "r6a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "waveMtf.maxAbs": { "tolerance": 4e-5, "unit": "1" }
+      }
+    },
+    "r6b": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
+        "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     }
   }

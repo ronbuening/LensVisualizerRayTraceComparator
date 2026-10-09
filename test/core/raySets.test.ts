@@ -199,14 +199,17 @@ test("the sets are generated only when a rung that needs them is run, and never 
     plain.manifest.runs.map((run) => Object.hasOwn(run, "raySets")),
     [false, false],
   );
-  // A run that names no rung gets every rung, the two of traced rays among them: the sets are made once for both.
+  // A run that names no rung gets every rung, those of traced rays among them: the sets are made once for all of
+  // them. The rung that takes a wave MTF of the rays, r6a, has no recipe to take it at here and asks nothing; the
+  // sets of its finer lattice are made for it all the same, once, by the same source with the finer sampling.
   const every = await runSuite({
     suite,
     registry: watchedRegistry({ tracer }).registry,
     runsDir: tempDir(t),
     sources,
   });
-  assert.deepEqual(asked.splice(0), [`singlet ${SINGLET.id.slice(0, 8)}`]);
+  assert.deepEqual(asked.splice(0), [`singlet ${SINGLET.id.slice(0, 8)}`, `singlet ${SINGLET.id.slice(0, 8)}`]);
+  assert.equal(Object.hasOwn(every.manifest.runs[0], "fineRaySets"), true);
   assert.deepEqual(
     every.manifest.jobs.map((job) => `${job.rung} ${job.status}`),
     ["selftest unsupported", "r0 unsupported", "r1 unsupported", "r2 ok", "r2 ok", "r3 ok", "r3 ok"],
@@ -222,6 +225,7 @@ test("the sets are generated only when a rung that needs them is run, and never 
   assert.deepEqual(asked, [`singlet ${SINGLET.id.slice(0, 8)}`]);
   assert.deepEqual(traced.manifest.runs[1], { name: "no-case", caseId: null, problems: ["its lens has no case"] });
   assert.equal(traced.manifest.runs[0].raySets?.sets.length, 2);
+  assert.equal(Object.hasOwn(traced.manifest.runs[0], "fineRaySets"), false);
   // A rung that needs no rays is handed none: r0 asks what it always asks.
   assert.deepEqual(
     traced.manifest.jobs.map((job) => `${job.rung} ${job.status}`),

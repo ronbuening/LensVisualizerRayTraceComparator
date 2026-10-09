@@ -77,6 +77,11 @@ export interface ManifestRun {
   /** The ray sets of the run; stated exactly when a rung that traces rays was run on it. */
   readonly raySets?: ManifestRaySets;
   /**
+   * The ray sets of the run on the finer lattice (`fineSampling`); stated exactly when a rung that takes a wave
+   * transfer function of the traced rays was run on it.
+   */
+  readonly fineRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

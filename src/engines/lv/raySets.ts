@@ -255,17 +255,49 @@ export function lvRayWeights(
 }
 
 /**
- * The ray sets of a case that came from a LensVisualizer lens: for every field of `fields` (`DEFAULT_RAY_FIELDS`
- * without them) LensVisualizer's own launch rays (`lvFieldRays`) at `sampling.bundleGrid` cells across the beam
- * (`DEFAULT_BUNDLE_GRID` without it), as one set for each line of the case. The rays of a field are the same at
- * every line, as in LensVisualizer, which finds a field's chief ray and footprint once, at the reference line; the
- * weights are those of the line (`lvRayWeights`). Each set states its field, its lattice and the index of its chief
- * ray under `groups`. Collimated bundles and the bundles of a certified finite conjugate are made alike.
+ * The ray sets of one field of a case: LensVisualizer's own launch rays for it (`lvFieldRays`) at `cells` cells
+ * across the beam, as one set for each line of the case, in the order of the lines; or the coded problem of a field
+ * that has none. The rays are the same at every line, as in LensVisualizer, which finds a field's chief ray and
+ * footprint once, at the reference line; the weights are those of the line (`lvRayWeights`). Each set states its
+ * field, its lattice and the index of its chief ray under `groups`.
  *
- * A field without rays is a coded problem, and the other fields are not affected (`lvFieldAngles`, `lvFieldRays`);
- * so is a field whose rays would not start in front of the first surface of the case, as the contract requires of
- * every ray (`launch-behind-first-surface`). A state LensVisualizer's launch does not cover is one problem for all
- * of them (`lvLaunchSetup`).
+ * A field whose rays would not start in front of the first surface of the case, as the contract requires of every
+ * ray, has the problem `launch-behind-first-surface`.
+ */
+export function lvFieldRaySets(
+  api: LvRaySetApi,
+  model: LvCaseModel,
+  setup: LvLaunchSetup,
+  field: { readonly angleDeg: number; readonly heightFraction?: number },
+  cells: number,
+): { readonly sets: RaysTraceSpec[] } | { readonly problem: string } {
+  const rays = lvFieldRays(api, model, setup, field.angleDeg, cells);
+  if ("problem" in rays) return rays;
+  // LensVisualizer launches from a plane in front of the first surface's rim; the contract is held to here.
+  if (!startsInFront(model.exported.system.surfaces[0], rays.origins)) {
+    return { problem: launchBehindProblem(field.angleDeg) };
+  }
+  const { columns, rows, step } = rays.grid;
+  const groups: RayGroups = { field, lattice: { columns, rows, step }, chiefIndex: rays.chiefIndex };
+  // One encoding of the rays serves every line: only the weights are the line's.
+  const { origins, directions } = raySetSpec(0, { ...rays, weights: rays.launchWeights });
+  return {
+    sets: model.exported.conditions.lines.map((_line, line) => {
+      const weights = encodeNdArray(lvRayWeights(api, model, rays, line));
+      return { line, origins, directions, weights, groups };
+    }),
+  };
+}
+
+/**
+ * The ray sets of a case that came from a LensVisualizer lens: for every field of `fields` (`DEFAULT_RAY_FIELDS`
+ * without them) the sets of the field (`lvFieldRaySets`) at `sampling.bundleGrid` cells across the beam
+ * (`DEFAULT_BUNDLE_GRID` without it). Collimated bundles and the bundles of a certified finite conjugate are made
+ * alike.
+ *
+ * A field without rays is a coded problem, and the other fields are not affected (`lvFieldAngles`, `lvFieldRays`,
+ * `lvFieldRaySets`). A state LensVisualizer's launch does not cover is one problem for all of them
+ * (`lvLaunchSetup`).
  */
 export function lvRaySets(
   api: LvRaySetApi,
@@ -278,28 +310,9 @@ export function lvRaySets(
   const sets: RaysTraceSpec[] = [];
   const problems: string[] = [];
   for (const field of lvFieldAngles(api, model, setup, options.fields ?? DEFAULT_RAY_FIELDS)) {
-    if ("problem" in field) {
-      problems.push(field.problem);
-      continue;
-    }
-    const rays = lvFieldRays(api, model, setup, field.angleDeg, cells);
-    if ("problem" in rays) {
-      problems.push(rays.problem);
-      continue;
-    }
-    // LensVisualizer launches from a plane in front of the first surface's rim; the contract is held to here.
-    if (!startsInFront(model.exported.system.surfaces[0], rays.origins)) {
-      problems.push(launchBehindProblem(field.angleDeg));
-      continue;
-    }
-    const { columns, rows, step } = rays.grid;
-    const groups: RayGroups = { field, lattice: { columns, rows, step }, chiefIndex: rays.chiefIndex };
-    // One encoding of the rays serves every line: only the weights are the line's.
-    const { origins, directions } = raySetSpec(0, { ...rays, weights: rays.launchWeights });
-    model.exported.conditions.lines.forEach((_line, line) => {
-      const weights = encodeNdArray(lvRayWeights(api, model, rays, line));
-      sets.push({ line, origins, directions, weights, groups });
-    });
+    const made = "problem" in field ? field : lvFieldRaySets(api, model, setup, field, cells);
+    if ("problem" in made) problems.push(made.problem);
+    else sets.push(...made.sets);
   }
   return { sets, problems };
 }

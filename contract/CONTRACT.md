@@ -565,6 +565,37 @@ A value the rounding of a modulus left above 1 is written as 1, the range the co
 estimator has no value for is `unavailable` with the reason `estimator-<why>`
 (`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, rung `r4f` counts it.
 
+### The engine `wave`
+
+`wave` (`src/engines/lv/waveEngine.ts`) is the comparator's wave estimator on LensVisualizer's own rays. It is built
+in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays are LensVisualizer's,
+launched and traced by LensVisualizer. What is its own is the estimate, Hopkins' autocorrelation of the pupil
+function from the optical paths (`src/estimators/waveOtf.ts`), and whether a lattice may carry it. Rung `r6b` sets
+it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
+comparator's code behind it, in which the estimator is and which is not `lv`'s.
+
+It answers **`mtf.native`** with the method `diffraction`, on the image plane of the case as it is:
+
+| Step | Is |
+|---|---|
+| the rays of a field | the run's own [ray sets](#ray-sets) for it (`lvFieldRaySets`): LensVisualizer's launch lattice over the footprint it finds, at `bundleGrid` cells across the beam and at twice as many, each at every line of the case. `bundleGrid` is the engine option of that name, a run's `sampling.bundleGrid`; 32 without it |
+| the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
+| the reference point | the flux-weighted centroid of the first line's landings, on `conditions.imageZ` |
+| the curves | the moduli of the comparator's `polychromaticWaveOtf` on the finer lattice, at the frequencies of the spec; a value the rounding of a modulus left above 1 is written as 1 |
+| a field's `status` | `ok` where the finer lattice may be used as an arbiter; `unconverged`, with the flags joined by `+` as its `reason`, where it may not: `undersampled` (neighbouring cells more than a quarter wave apart), `not-converged` (the MTF moved by more than 0.005 on the axis, 0.01 off it, from the coarser lattice to the finer) or `convergence-unknown` (the coarser lattice has no estimate); `unavailable`, with LensVisualizer's code or the estimator's reason, where the field has no chief-ray angle, no rays or no estimate |
+
+Under `sampling` a field states `gridSize` and `coarseGridSize` (the cells its two lattices were asked for across
+the beam, as LensVisualizer states its own grid), `validRays`, `blockedRays` and `failedRays` (the cells of the
+finer lattice by how LensVisualizer ended them, summed over the lines), `phaseStepWaves` (the largest step of the
+path between neighbouring lit cells, in waves) and `maxDelta` (how far the MTF moved from the coarser lattice to
+the finer). `method.name` is `hopkins-autocorrelation`, and `method.params` hold the two grids and the limits.
+
+Its refusals, all of code `option`: `method.geometric` (it has the wave estimator and no other), `profile` (it is
+asked by a spec), `focus.engine-best` (the estimator has no focus criterion) and `option.bundleGrid` (no whole
+number from 2 to 128). A state LensVisualizer's launch does not cover is `unsupported` as a `feature`, with the
+reason of LensVisualizer's gate; a case that is stale or came from no LensVisualizer lens is treated as `lv`
+treats it.
+
 ### `run-spec`
 
 The user's specification of one run. Only `contract`, `kind`, `name` and `lens` are required; an option left out
@@ -1060,9 +1091,9 @@ A rung:
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
-`rays.trace`.
+`rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 7:
+The comparator's policy, version 8:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1073,6 +1104,8 @@ The comparator's policy, version 7:
 | `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; floor of `lv` |
 | `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
 | `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
+| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 4e-5, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
+| `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
 
 **The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
 meets a surface within 1e-9 mm of it, and behind a steep surface that becomes more than the 1e-8 mm two exact
@@ -1206,9 +1239,10 @@ first request's, and each of its participants is one engine's answers to all of 
 `src/compare/span.ts`). An engine that has no `ok` answer to one request of a span has no answer to the span: it
 is a participant with the status of the first such request, so its pairs say why nothing of the span was measured,
 and no figure is taken of the requests that are left. A request whose spec is not at hand, because no engine
-answered it, is a set of its own. Today one comparator is of spans, R4's: [a field at every line of its
-case](#raystrace). The schema of a set is what it was: the requests a set spans beyond the first are those of the
-same field, and its pairs say how many (`lines.compared`).
+answered it, is a set of its own. Today two comparators are of spans: R4's, [a field at every line of its
+case](#raystrace), and R6a's, a field at every line on both of its lattices. The schema of a set is what it was:
+the requests a set spans beyond the first are those of the same field, and its pairs say how many
+(`lines.compared`).
 
 ### `baseline`
 
@@ -1672,6 +1706,50 @@ equal and state a `field`), are one comparison.
   from which a line is missing is another spectrum. A ray that an engine calls ok and lands at no finite point is
   a defect of the answer and no ray to leave out: the pair is `ERROR`.
 
+*R6a, the wave MTF* (`src/compare/raysWaveMtf.ts`): the comparator's own wave estimator
+(`src/estimators/waveOtf.ts`: Hopkins' autocorrelation of the pupil function in direction-cosine space, from the
+optical paths) applied to each of two engines' traces of the rays of a field, and the two curves set against each
+other. The rung asks the requests of R2 to R4 and, after them, those of the same fields on a lattice of twice as
+many cells across (the run's `fineRaySets`, [below](#ray-sets)), and only of a run that has an
+[MTF recipe](#the-mtf-recipe). Its sets [span requests](#comparison): the sets of one field on both lattices and
+at every line of the case (those that state the same `groups.field`, and a `lattice`) are one comparison.
+
+| Metric | Unit | Is |
+|---|---|---|
+| `waveMtf.maxAbs` | 1 | the largest difference of the two wave MTFs on the finer lattice, over both cuts and the frequencies; `where` has the `field` angle, the `cut` and the `frequencyPerMm`. Reported, and so judged, only where the lattice is an arbiter |
+| `waveMtf.flagged` | 1 | the same figure where the lattice is no arbiter: written down, named by no policy and judged by nothing |
+| `phaseStep.waves` | waves | the largest step of the path between neighbouring lit cells of the finer lattice, of either engine's estimate; `where` has the `line` and the `ray` |
+| `convergence.maxAbs` | 1 | the largest difference between the wave MTF of the finer lattice and that of the coarser, of either engine; left out where there is no coarser estimate |
+| `lattice.columns` | cells | the columns of the finer lattice |
+| `rays.compared`, `rays.dropped`, `lines.compared` | | as R4 counts them, on the finer lattice |
+
+- **An arbiter** is a lattice whose estimate may be believed (`waveFlags`, `src/estimators/waveValidity.ts`): its
+  neighbouring cells are within a quarter wave of each other in both estimates, and neither estimate moved by more
+  than 0.005 for a field on the axis, 0.01 for one off it, from the coarser lattice to the finer: the bands within
+  which an MTF is held to another method's. A field that fails either, or has rays on one lattice only, is
+  **flagged**: `waveMtf.maxAbs` is not measured, the pair's reason says which fact flagged it with its figure, and
+  the difference of the two engines is recorded as `waveMtf.flagged`. A flagged field passes, as every metric that
+  was not measured does: it is no evidence for the gate and none against it.
+- **The rays, the weights and the reference point** are R4's: the rays both engines brought to the image, the
+  request's weights, the case's line weights, and one reference point for both engines and every line, midway
+  between the two engines' flux-weighted centroids of the first line's rays on that lattice. The modulus does not
+  depend on the point; the step from cell to cell does, and it is smallest amid the spot.
+- **What is read** of an answer is `imagePoint` with `opticalPathToImage`, the better conditioned of the two
+  points a trace has behind the last surface, and `exitDirection`; of the request the weights, and from origins
+  and directions the path from the incident wavefront to each origin (`launchPaths`); of the case each line's
+  wavelength and weight, the object's conjugate and the index behind the last surface.
+- **The frequencies** are the recipe's, thinned to at most eleven, evenly spaced by their place in the list with
+  the first and the last kept (`waveFrequencies`, `src/core/mtfRecipe.ts`): of LensVisualizer's 51, every fifth, 0
+  to 100 cycles/mm in steps of 10. A wave transfer function costs a search of the pupil for every cell and
+  frequency.
+- **Not measured** where a line has no ray that is ok in both answers, none that carries flux, or lit cells that
+  cannot be laid out as a pupil (`degenerate-pupil`). **Not comparable** as R4 is not, and for a set that states no
+  field or no lattice.
+
+The gate of 4e-5 is pinned from measurement (the plan, "Amendments since approval"): ten times the largest figure
+of a judged field of the benchmark in its four conditions, 3.12e-6, rounded up to one digit. That figure is
+LensVisualizer's: the two exact tracers agree within 1.15e-9 on the same fields.
+
 Answers for different numbers of rays or surfaces are not comparable; nor are any two without the case (R2: its
 apertures) or without the request and the case (R3: the line and its wavelength).
 
@@ -1689,6 +1767,12 @@ its arrays are in the spec, the spec is in the request's `id`, and its identity,
 of the spec, is what a run's manifest records under `runs[].raySets.sets`. Nothing of a set is kept in the
 repository. A field that has no rays is a coded problem of that field, recorded under `runs[].raySets.problems`
 as `<code>: <message>`; the other fields are traced, and the run fails for none of it.
+
+**The finer lattice.** A rung that takes a wave transfer function of the traced rays (`r6a`) asks for a field's
+rays on two lattices, the run's own and one of twice as many cells across (`fineSampling`, `src/rays/raySets.ts`),
+and says by the two whether the finer has converged. The finer sets are made by the same source, asked with
+`sampling.bundleGrid` doubled, and are recorded under `runs[].fineRaySets`, sets and problems as above. They are
+generated only when such a rung is run and are asked of no other rung: R2, R3 and R4 judge the run's own sets.
 
 **For a case read from a file** (`src/rays/probe.ts`) the sets are probe lattices made from the case alone:
 
@@ -1830,7 +1914,8 @@ The comparator of `mtf.native` for `r4f` (`src/compare/mtfFidelity.ts`):
 Where no field has curves in both answers `mtf.maxAbs` is not measured. Answers for different numbers of fields,
 for other fields, of other planes or with curves of different lengths are not comparable (`ERROR`). What each
 answer states of every field's sampling is recorded beside the pair under the four names, one value a field. The
-rung has no floor and blocks nothing; no other rung compares `mtf.native`, and `r4f` compares no other two engines.
+rung has no floor and blocks nothing; `r4f` compares no other two engines, and the one other rung that compares
+`mtf.native` is [`r6b`](#rung-r6b-lensvisualizers-diffraction-mtf-beside-the-wave-estimator).
 
 The gate of 1e-9 was provisional and is pinned from measurement (the plan, "Amendments since approval"): on the
 96 runs of the benchmark suite, 480 fields at 51 frequencies in both cuts, the largest difference is 1.25e-14,
@@ -1841,6 +1926,35 @@ its own.
 `valid/quantities/mtf.native.data/every-status.json` is a format example of an answer to the spec
 `three-fractions.json`, with a field of each status; `best-focus-three-lines.json` one of an answer to
 `angles-and-profile.json`. Their numbers describe no lens.
+
+#### Rung R6b: LensVisualizer's diffraction MTF beside the wave estimator
+
+`r6b` asks one `mtf.native` request for a run: the diffraction MTF of the run's [recipe](#the-mtf-recipe), at the
+fields the run traces rays for (0, 0.5 and 1 of the image height unless it states others), as fractions, of those
+the recipe resolved to an angle; at the recipe's frequencies thinned to at most eleven (`waveFrequencies`); with
+the focus `design`, the image plane of the case as it is. It is asked of exactly two engines, `lv` and `wave`,
+whatever engines the run names, and only for a recipe LensVisualizer resolved. Both are handed the run's
+`sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and `bundleGrid`; each reads its own.
+`lv` answers with LensVisualizer's own `computeMtf`, whose diffraction estimate is its own;
+[`wave`](#the-engine-wave) with the comparator's wave estimator on the rays LensVisualizer launches and traces.
+Two methods, each with its own sampling: the rung is **recorded**, and no figure of it fails anything.
+
+The comparator of `mtf.native` for `r6b` (`src/compare/mtfWave.ts`) gives each field the class of its difference,
+and each class its own figure:
+
+| Class | A field is of it when | Its figure | Band |
+|---|---|---|---|
+| method | both answers stand by its curves (`status` `ok` in both) | `mtfOnAxis.maxAbs` for the field requested as 0, `mtfOffAxis.maxAbs` for every other: the largest difference of two MTF values over both cuts and every frequency | 0.005 and 0.01 |
+| numerical | an answer says its sampling did not settle (`unconverged`) | `mtfFlagged.maxAbs`: the same, written down and in no band | none |
+| unsupported | an answer has no curve of it (`unavailable`) | none | none |
+
+`fields.compared`, `fields.flagged` and `fields.unavailable` count the fields of each class. A pair is `ATTENTION`
+when a figure of the class method is outside its band, else `RECORDED`. A band that has no field is not measured,
+and the reason says what each answer said of the fields left out, by its method's name. What each answer states
+of every field's sampling is recorded beside the pair (`gridSize`, `validRays`, `maxDelta`, `phaseStepWaves`,
+`convergedThroughLpMm`, one value a field), and under `settled` whether it stands by the field: 1 for `ok`, 0 for
+`unconverged`. Answers for different numbers of fields, for other fields, of other planes or with curves of
+different lengths are not comparable (`ERROR`).
 
 ## Schemas and the validator
 

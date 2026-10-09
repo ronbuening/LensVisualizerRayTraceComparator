@@ -257,15 +257,16 @@ test(
     // The standard error names the fields a case file gives no rays for; that fails nothing.
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
-    // Every rung that compares the engines of a run is asked of optiland. The rung that is about engines of its
-    // own, R4f, is not, and of a case that no LensVisualizer sampled it asks nobody anything; nor does the rung
-    // that takes an MTF of the traced rays, R4, of a run that has no recipe to take its frequencies from.
+    // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
+    // their own, R4f and R6b, are not, and of a case that no LensVisualizer sampled they ask nobody anything; nor
+    // do the rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its
+    // frequencies from.
     const rungs = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true).map(
       (rung) => rung.id,
     );
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
-      ["r4", "r4f"],
+      ["r4", "r4f", "r6a", "r6b"],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());

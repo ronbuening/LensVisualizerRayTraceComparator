@@ -128,23 +128,30 @@ Python, add `--engines fake-a,fake-b,fake-none`.
   only when a run names one of its lenses.
 - **Engines** are every engine the configuration defines, unless the run lists its own `engines`; `--engines`
   replaces both. A **built-in engine** is part of the comparator and needs no configuration: `ref`, the reference
-  engine, `lv`, LensVisualizer itself, `optiland`, and `replay`, the comparator's estimators on a replay of
-  LensVisualizer's sampling. It can be named under any root, and is run only where it is named, so a root without
+  engine, `lv`, LensVisualizer itself, `optiland`, `replay`, the comparator's estimators on a replay of
+  LensVisualizer's sampling, and `wave`, its wave estimator on LensVisualizer's rays. It can be named under any
+  root, and is run only where it is named, so a root without
   an engine of its own runs nothing until `--engines` or the suite names one; the committed suites name `lv` and
   `ref`. A configured engine of the same id takes its place.
 - **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
   of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`), `r1`
   (`paraxial.first-order`), `r2`, `r3` and `r4` (`rays.trace`), which ask every engine to trace the run's ray
-  sets, and `r4f` (`mtf.native`). `r2`, `r3` and `r4` ask the same requests, so an engine traces a set once and
-  the later rungs find the answer in the store; `r4` asks them only of a run that has an MTF recipe
-  ([below](#rung-r4-the-geometric-mtf-of-the-same-rays)). An engine that does not offer a rung's quantity, or implements another version of
+  sets, `r4f` (`mtf.native`), `r6a` (`rays.trace`) and `r6b` (`mtf.native`). `r2`, `r3` and `r4` ask the same
+  requests, so an engine traces a set once and the later rungs find the answer in the store; `r4` asks them only
+  of a run that has an MTF recipe ([below](#rung-r4-the-geometric-mtf-of-the-same-rays)). `r6a` asks them too, and
+  after them the same fields on a lattice twice as fine, which every engine has to trace for it: four times the
+  rays of the other rungs together, so a run that names no rungs is a long one on a suite of real lenses
+  ([below](#rungs-r6a-and-r6b-the-wave-mtf)). An engine that does not offer a rung's quantity, or implements
+  another version of
   its definition than the comparator's, is recorded as `unsupported` for it without being asked.
 - **A rung of its own engines.** `r4f` is no comparison between the engines of a run: it holds `lv` to `replay`
   ([below](#the-mtf-recipe-the-replay-and-rung-r4f)). It is asked of exactly those two, whatever `--engines` and
   the run name, so `--engines lv,ref,optiland --rungs r0,r1,r2,r3,r4f` runs the first four rungs on three engines
   and the fifth on its two, and no engine is recorded as `unsupported` for a rung that was never about it. In a
-  comparison such a rung is not held to a reference that is none of its engines.
-- **The MTF recipe.** A run of a rung that is made from the recipe (`r4f`) has it resolved first, by the source of
+  comparison such a rung is not held to a reference that is none of its engines. `r6b` is the second such rung:
+  it sets `lv` beside `wave`, the comparator's wave estimator on LensVisualizer's rays.
+- **The MTF recipe.** A run of a rung that is made from the recipe (`r4`, `r4f`, `r6a`, `r6b`) has it resolved
+  first, by the source of
   its case: the plane, the fields, the lines and the frequencies every MTF request about the case is made from
   ([the contract](../contract/CONTRACT.md#the-mtf-recipe)). The manifest records it, or why the run has none. A
   run without one has no request of such a rung, and nothing fails.
@@ -492,7 +499,8 @@ ninety digits of whole-number arithmetic.
 ### The wave OTF
 
 `src/estimators/waveOtf.ts` is the comparator's wave estimator: Hopkins' formula, the autocorrelation of the pupil
-function, from the optical paths of a bundle traced on a lattice. No rung asks for it yet (R6 is Stage 3.5).
+function, from the optical paths of a bundle traced on a lattice. Rungs R6a and R6b apply it
+([below](#rungs-r6a-and-r6b-the-wave-mtf)).
 
 `waveOtf(bundle, reference, frequencies)` gives the `sagittal` cut (frequency along image x) and the `tangential`
 one (along image y) as the geometric estimator does, at any frequencies, with `phaseStep` and `undersampled`
@@ -777,6 +785,116 @@ of the gate, and the rung has no floor. See [docs/gotchas.md](gotchas.md).
 
 R4 adds no tracing: on a warm store the benchmark's run takes 85 s with it and 55 s without (the recipe of each
 run is LensVisualizer's focus search), and its comparison 48 s in place of 33 s.
+
+## Rungs R6a and R6b: the wave MTF
+
+`lvrtc run <suite> --engines lv,ref,optiland --rungs r6a` asks the `rays.trace` requests of R2 to R4 and, after
+them, those of the same fields on a lattice of twice as many cells across; `lvrtc compare` applies the
+comparator's wave estimator ([above](#the-wave-otf)) to each engine's trace of a field and sets the curves of two
+engines against each other: `waveMtf.maxAbs`, gated at 4e-5 with no floor, wherever the lattice may carry the
+figure. `lvrtc run <suite> --rungs r6b` sets LensVisualizer's own diffraction MTF beside the same estimator on
+LensVisualizer's rays, and is recorded. The metrics and their rules are in
+[the contract](../contract/CONTRACT.md#raystrace); the comparators are `src/compare/raysWaveMtf.ts` and
+`src/compare/mtfWave.ts`, and the engine of R6b `src/engines/lv/waveEngine.ts`.
+
+What was decided in Stage 3.5, and why:
+
+| Question | Decision | Why |
+|---|---|---|
+| Which lattices | The run's own ray sets (`sampling.bundleGrid`, 32 cells across the beam) and the same fields at twice as many (64): the finer is judged, and the coarser says whether it has converged. The finer sets are made by the same case source with the sampling doubled (`fineSampling`), recorded under `runs[].fineRaySets`, and asked of R6a alone. | A convergence flag needs two lattices. The coarser costs nothing, since R2 to R4 have traced it; R2, R3 and R4 keep judging the sets they judged, and their baselines the figures they held. A lattice of 128 would be sixteen times the rays of the run's own for three engines to trace and the store to keep (48 GB for the benchmark), and 16 beside 32 leaves almost no field converged. |
+| When a lattice is an arbiter | Neighbouring cells within a quarter wave in both estimates (`QUARTER_WAVE`), and neither estimate moved by more than 0.005 on the axis, 0.01 off it, from the coarser lattice (`CONVERGENCE_BANDS`, `waveFlags`). | The first is the estimator's own limit: beyond it the sum may alias. The second is the plan's band for an MTF held to another method's: the rim of a lattice is a staircase of first order in the cell, so what an estimate moves by on doubling is about what the finer one is still off by, and an estimate that moves by more than the band cannot say on which side of it another figure lies. |
+| A field that is flagged | Its figure is written down as `waveMtf.flagged`, `waveMtf.maxAbs` is not measured, and the pair's reason says which fact flagged it. It passes, as whatever was not measured does, and is in no pin. | Two estimates of one undersampled lattice still compare two traces of the same rays, but the estimate is no arbiter of anything; nothing is widened to cover such a field. |
+| Which frequencies | The recipe's, thinned to at most eleven evenly spaced ones (`waveFrequencies`): 0 to 100 cycles/mm in steps of 10. | A wave transfer function costs a search of the pupil for every cell and frequency: 51 frequencies would make the benchmark's comparison a quarter of an hour. |
+| Rays, weights, plane, reference point | As R4: the rays both engines of a pair land, the request's weights, the case's plane, and the point midway between the two engines' flux-weighted centroids. | The step of the path from cell to cell includes the tilt of the reference: the point belongs amid the spot. |
+| R6b's other side | An engine, `wave`: LensVisualizer's launch lattices for each field, traced by LensVisualizer as `lv` answers `rays.trace`, and the estimator on them. It answers `mtf.native` for the method `diffraction`, as `replay` answers the geometric one. | A rung compares two answers to one request. The rays are the ones R6a judges for `lv`, generated by the same function. |
+| R6b's bands | `mtfOnAxis.maxAbs` 0.005, `mtfOffAxis.maxAbs` 0.01, over the fields both answers stand by; a field an answer calls unconverged is written down as `mtfFlagged.maxAbs`, in no band. | The plan's attention band. Each field has the class of its difference: method, numerical (a sampling that did not settle) or unsupported. |
+
+**R6a, measured** (LensVisualizer `33ebdb30`, engine closure `78215d72`; optiland `4e893f53`), on the benchmark in
+its four conditions: 96 runs, 288 fields, LensVisualizer's lattice at 64 cells across the beam (54 to 80 columns)
+with the one at 32 beside it, eleven frequencies, both cuts. Every pair is `PASS`; no ray is dropped in any pair.
+208 fields are judged and 80 flagged (25 undersampled, 17 not converged, 38 both), the same fields in each of the
+three pairs.
+
+| Condition | Fields judged | `lv` – `ref` | `lv` – optiland | optiland – `ref` |
+|---|---|---|---|---|
+| wide open, design plane, reference line | 18 of 36 | 2.74e-6 | 2.74e-6 | 7.80e-10 |
+| wide open, design plane, photopic | 13 of 36 | 1.61e-6 | 1.62e-6 | 5.06e-10 |
+| wide open, best focus, reference line | 21 of 36 | 2.84e-6 | 2.84e-6 | 1.15e-9 |
+| wide open, best focus, photopic | 14 of 36 | 1.31e-6 | 1.31e-6 | 4.18e-10 |
+| f/8, design plane, reference line | 35 of 36 | 3.12e-6 | 3.11e-6 | 1.05e-9 |
+| f/8, design plane, photopic | 36 of 36 | 2.17e-6 | 2.17e-6 | 5.99e-10 |
+| f/8, best focus, reference line | 35 of 36 | 3.11e-6 | 3.11e-6 | 9.65e-10 |
+| f/8, best focus, photopic | 36 of 36 | 2.16e-6 | 2.16e-6 | 7.05e-10 |
+
+The largest judged figure is 3.12e-6: `lv` against `ref` on `sony-fe-20mm-f18-g` at f/8, design plane, reference
+line, full field (47.5°), tangential, 30 cycles/mm; `lv` against optiland is 3.11e-6 on the same field. The two
+exact tracers are within 1.15e-9 (`nikon-z-24-70f4s` at its wide end and best focus, reference line, full field,
+tangential, 50 cycles/mm). **The pin**: ten times 3.12e-6, rounded up to one digit, **4e-5**. It is a pin of
+LensVisualizer's rounding, its 1e-9 mm at a surface carried into the path, and not of the two exact tracers,
+which agree 2700 times closer. On the flagged fields the figures are of the same size (`lv` up to 1.84e-6,
+optiland against `ref` up to 6.6e-10): they are left out because the lattice is no arbiter, not because they
+would move the pin.
+
+**Not covered.** Wide open, 66 of 144 fields are judged, and of two lenses none at the design plane:
+
+| Lens, wide open | Judged at the design plane | at best focus |
+|---|---|---|
+| `nikkor-z50f12` | 0 of 6 | 1 of 6 |
+| `sony-fe-20mm-f18-g` | 0 of 6 | 0 of 6 |
+| `sigma-35mm-f14-dg-hsm-a` | 1 of 6 | 1 of 6 |
+| the other nine configurations | 2 to 5 of 6 | 2 to 6 of 6 |
+
+A fast lens wide open has a wavefront that turns by 0.5 to 1 wave from cell to cell of a 64-cell lattice (51 waves
+on the photopic lines of one), and would need 128 to 256 cells; in that regime the transfer function is geometric
+and R4 holds it. At f/8, 142 of 144 fields are judged (the two that are not, the full field of
+`sigma-35mm-f14-dg-hsm-a` on the reference line at both planes, moved by 0.015 on doubling).
+
+**What it costs.** The finer lattice is 3.5 million rays an engine on the benchmark, four times the run's own:
+4 GB of the store for each engine. From an empty store `lvrtc run --rungs r6a` on three engines takes about
+8 minutes and writes 15 GB; `lvrtc compare`, 3.6 minutes for the three pairs. For that reason R6a and R6b are in
+no committed baseline (the MTF baselines are Stage 3.8), `npm run test:optiland` holds R6a on 17 of the 96 runs
+(the three lenses of the largest figures and of the uncovered condition, 50 s), and the figures above are of a run
+made once for the pin.
+
+**R6b, measured** on the same benchmark (96 runs, three fields each, eleven frequencies; LensVisualizer's grid cap
+at its default of 128, the estimator at 64 cells with 32 beside it): 91 pairs `RECORDED` and 5 `ATTENTION`, none
+an error. 208 fields are compared in a band; 80 are flagged, all of them by the estimator (LensVisualizer calls
+one field unconverged, which the estimator flags too); none is unavailable.
+
+| Condition | Fields in a band | Largest on the axis (band 0.005) | Largest off the axis (band 0.01) | Largest flagged | `ATTENTION` |
+|---|---|---|---|---|---|
+| wide open, design plane, reference line | 18 of 36 | 7.54e-3 | 7.88e-3 | 1.26e-2 | 2 of 12 |
+| wide open, design plane, photopic | 13 of 36 | 6.57e-3 | 5.47e-3 | 1.67e-2 | 3 of 12 |
+| wide open, best focus, reference line | 21 of 36 | 4.83e-3 | 6.35e-3 | 1.36e-2 | 0 |
+| wide open, best focus, photopic | 14 of 36 | 3.78e-3 | 5.86e-3 | 1.29e-2 | 0 |
+| f/8, design plane, reference line | 35 of 36 | 4.85e-3 | 7.75e-3 | 3.07e-3 | 0 |
+| f/8, design plane, photopic | 36 of 36 | 3.54e-3 | 5.96e-3 | none | 0 |
+| f/8, best focus, reference line | 35 of 36 | 4.99e-3 | 7.37e-3 | 3.06e-3 | 0 |
+| f/8, best focus, photopic | 36 of 36 | 4.22e-3 | 6.96e-3 | none | 0 |
+
+The five `ATTENTION` rows are all on the axis, wide open at the design plane: `nikon-z-24-70f4s` at its tele end
+(7.5e-3 on the reference line, 5.5e-3 photopic), `nikon-z-135f18-plena` (6.6e-3, photopic), `nikon-z-mc-105f28`
+(5.8e-3, photopic) and `canon-ef-135-f2l-usm` (5.5e-3, reference line).
+
+**The class of the difference.** Both answers stand by every field in a band, so its class is *method*; what the
+two methods differ by is mostly their lattices. LensVisualizer ends a field's refinement at the first grid whose
+change from the grid before is within its own tolerance, 0.01 up to 50 cycles/mm (its `maxDelta` is 1e-3 to 1e-2
+where it stops; the band of R6b on the axis is half that tolerance): 32 cells for 119 of the 144 fields at f/8,
+64 or 128 for the rest. Over the fields the estimator samples:
+
+| At f/8, LensVisualizer's grid against the estimator's | Fields | Mean difference | Largest |
+|---|---|---|---|
+| the same (64 and 64) | 23 | 5.7e-4 | 2.5e-3 |
+| 32 against 64 | 119 | 2.9e-3 | 7.75e-3 |
+| the same, with the estimator at 32 (`sampling.bundleGrid: 16`) | 119 | 4.5e-4 | 5.9e-3 |
+
+On one grid the sheared estimate and Hopkins' autocorrelation agree to about 5e-4 on average; with LensVisualizer
+at 32 cells and the estimator at 64 they differ by six times that, which is what the estimator's own figure moves
+by from 32 to 64 (its `maxDelta`, 1e-3 to 8e-3 at f/8). So a row of R6b near its band at f/8 says that
+LensVisualizer stopped refining at 32 cells, not that its method errs; and since the estimator at 64 cells is
+itself still within a band of its limit and no closer, neither side is the other's arbiter there. The rung is
+recorded for that reason. On the benchmark it takes about 13 minutes, nearly all of it LensVisualizer tracing the
+lattices of the photopic runs; `npm run test:lv` holds it on six runs of the reference line (7 s).
 
 ## Comparing and reporting
 
@@ -1461,6 +1579,13 @@ and has a record of `lv` and `replay` for every run, and `baseline check` then r
 engines of a run on the engines the baseline names for those, and leaves `r4f` to ask its own two
 (`test/cli/fidelityLadder.test.ts`). Until Stage 3.8, R4f is held by `npm run test:lv`
 (`test/integration/lv/fidelity.test.ts`), on all 96 runs.
+
+**R6a and R6b are in no committed baseline either.** R6a's finer lattice is 15 GB of traces and 8 minutes on the
+benchmark, which every `baseline check` would repeat; R6b is 13 minutes of LensVisualizer. Until Stage 3.8 decides
+what the MTF baselines hold, R6a is held by `npm run test:optiland` on 17 runs
+(`test/integration/optiland/r6a.test.ts`) and R6b by `npm run test:lv` on six
+(`test/integration/lv/wave.test.ts`); their figures on all 96 runs are
+[above](#rungs-r6a-and-r6b-the-wave-mtf).
 
 ## Workers over stdio
 

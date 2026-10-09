@@ -17,18 +17,35 @@ import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import {
   DEFAULT_RECIPE_FREQUENCIES,
+  MAX_WAVE_FREQUENCIES,
   fixtureRecipe,
   recipeFrequencies,
   recipeOfCase,
+  waveFrequencies,
 } from "../../src/core/mtfRecipe.ts";
 import type { MtfRecipe } from "../../src/core/mtfRecipe.ts";
 import { runSuite } from "../../src/core/orchestrator.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../src/core/resultStore.ts";
-import { R4F_ENGINES, geometricMtfSpec, r4fRung, selftestRung } from "../../src/core/rungs.ts";
+import {
+  R4F_ENGINES,
+  R6B_ENGINES,
+  geometricMtfSpec,
+  r2Rung,
+  r3Rung,
+  r4Rung,
+  r4fRung,
+  r6aRung,
+  r6bRung,
+  selftestRung,
+  waveMtfSpec,
+  waveTraceRequests,
+} from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { createFixtureCaseSource } from "../../src/core/suite.ts";
 import type { CaseSource } from "../../src/core/suite.ts";
 import { mtfNativeQuantity } from "../../src/quantities/mtfNative.ts";
+import { DEFAULT_BUNDLE_GRID, FINE_GRID_FACTOR, fineSampling } from "../../src/rays/raySets.ts";
+import { RAYS_SPEC_LATTICE, RAYS_SPEC_SINGLET } from "../contract/corpus.ts";
 import { DOUBLE_GAUSS, SINGLET, fakeEngine, suiteOf, tempDir, watchedRegistry } from "./support.ts";
 
 const RUN: RunSpec = {
@@ -153,6 +170,116 @@ test("r4f hands the run's grid cap to its engines as their option lvGridCap, and
   assert.equal(r4fRung.engineOptions?.(RUN), undefined);
   assert.equal(r4fRung.engineOptions?.({ ...RUN, sampling: { bundleGrid: 16 } }), undefined);
   assert.deepEqual(r4fRung.engineOptions?.({ ...RUN, sampling: { lvGridCap: 64 } }), { lvGridCap: 64 });
+});
+
+// ── The rungs of the wave MTF ────────────────────────────────────────────────────────────────────────────────────
+
+test("a wave MTF is taken at no more than eleven frequencies of a recipe, evenly spaced by their place", () => {
+  assert.equal(MAX_WAVE_FREQUENCIES, 11);
+  // Up to eleven: all of them, in a list of its own.
+  const few = [0, 10, 30, 50];
+  assert.deepEqual(waveFrequencies(few), few);
+  assert.notEqual(waveFrequencies(few), few);
+  const eleven = Array.from({ length: 11 }, (_unused, index) => 3 * index);
+  assert.deepEqual(waveFrequencies(eleven), eleven);
+  assert.deepEqual(waveFrequencies([]), []);
+  // LensVisualizer's 51, 0 to 100 in steps of 2: every fifth, 0, 10, ... 100, so the last is kept too.
+  const lv = Array.from({ length: 51 }, (_unused, index) => 2 * index);
+  assert.deepEqual(waveFrequencies(lv), [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  // Twelve: the places 0, 1.1, 2.2, ... 11, rounded: the sixth of them, 5.5, goes to 6, and 5 is left out.
+  const twelve = Array.from({ length: 12 }, (_unused, index) => index);
+  assert.deepEqual(waveFrequencies(twelve), [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11]);
+});
+
+test("r6a asks the run's ray sets and those of the finer lattice, each once, and nothing without a recipe", () => {
+  assert.deepEqual(
+    [r6aRung.id, r6aRung.quantity, r6aRung.needsRaySets, r6aRung.needsFineRaySets, r6aRung.needsRecipe],
+    ["r6a", "rays.trace", true, true, true],
+  );
+  assert.equal(r6aRung.engines, undefined);
+  const raySets = [RAYS_SPEC_SINGLET];
+  const fineRaySets = [{ ...RAYS_SPEC_LATTICE, line: 0 }];
+  const recipe = fixtureRecipe({ fields: { kind: "angles-deg", values: [0] } }, SINGLET).recipe;
+  assert.ok(recipe !== null);
+  assert.deepEqual(r6aRung.buildRequests(SINGLET, RUN, { raySets, fineRaySets, recipe: null }), []);
+  assert.deepEqual(r6aRung.buildRequests(SINGLET, RUN, { raySets, fineRaySets }), []);
+  const requests = r6aRung.buildRequests(SINGLET, RUN, { raySets, fineRaySets, recipe });
+  // The run's own sets first: the requests rungs R2 to R4 ask, so their answers are found in the store.
+  assert.deepEqual(
+    requests.map((request) => request.spec),
+    [...raySets, ...fineRaySets],
+  );
+  assert.deepEqual(requests.slice(0, 1), r4Rung.buildRequests(SINGLET, RUN, { raySets, recipe }));
+  assert.deepEqual(waveTraceRequests(SINGLET, { raySets, fineRaySets }), requests);
+  // Without sets of a finer lattice it asks the run's own; a set that is in both is asked once.
+  assert.deepEqual(r6aRung.buildRequests(SINGLET, RUN, { raySets, recipe }), requests.slice(0, 1));
+  assert.deepEqual(
+    r6aRung.buildRequests(SINGLET, RUN, { raySets, fineRaySets: raySets, recipe }),
+    requests.slice(0, 1),
+  );
+  // No other rung of traced rays is handed the finer lattice, whatever its inputs hold.
+  for (const rung of [r2Rung, r3Rung, r4Rung]) {
+    assert.equal(rung.needsFineRaySets, undefined);
+    assert.equal(rung.buildRequests(SINGLET, RUN, { raySets, fineRaySets, recipe }).length, 1, rung.id);
+  }
+});
+
+test("the finer lattice has twice the cells of the run's bundle grid, whatever else the sampling states", () => {
+  assert.equal(FINE_GRID_FACTOR, 2);
+  assert.deepEqual(fineSampling(undefined), { bundleGrid: 2 * DEFAULT_BUNDLE_GRID });
+  assert.deepEqual(fineSampling({}), { bundleGrid: 64 });
+  assert.deepEqual(fineSampling({ bundleGrid: 12, lvGridCap: 64, engines: { lv: { a: 1 } } }), {
+    bundleGrid: 24,
+    lvGridCap: 64,
+    engines: { lv: { a: 1 } },
+  });
+});
+
+test("r6b asks one diffraction mtf.native at the run's ray fields and the recipe's thinned frequencies", () => {
+  assert.deepEqual([r6bRung.id, r6bRung.quantity, r6bRung.needsRecipe], ["r6b", MTF_NATIVE, true]);
+  assert.equal(r6bRung.needsRaySets, undefined);
+  assert.deepEqual(r6bRung.engines, ["lv", "wave"]);
+  assert.equal(r6bRung.engines, R6B_ENGINES);
+  assert.ok(Object.isFrozen(R6B_ENGINES));
+  const requests = r6bRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: RECIPE });
+  assert.equal(requests.length, 1);
+  const [request] = requests;
+  assert.deepEqual([request.caseId, request.quantity], [SINGLET.id, MTF_NATIVE]);
+  assert.deepEqual(request.spec, {
+    frequenciesPerMm: [10, 30],
+    // The fields a run traces rays for, 0, 0.5 and 1, less the one the recipe has no angle for.
+    fields: { kind: "image-height-fractions", values: [0, 0.5] },
+    method: "diffraction",
+    focus: "design",
+  });
+  assert.deepEqual(mtfNativeQuantity.validateSpec(request.spec), []);
+  assert.deepEqual(waveMtfSpec(RECIPE), request.spec);
+  // The run's own fields, where it states them: those of them the recipe resolved, in the run's order.
+  const stated = { ...RUN, fields: { kind: "image-height-fractions", values: [0.5, 0.25, 0] } } as const;
+  assert.deepEqual(
+    (r6bRung.buildRequests(SINGLET, stated, { raySets: [], recipe: RECIPE })[0].spec as { fields: unknown }).fields,
+    { kind: "image-height-fractions", values: [0.5, 0] },
+  );
+  // A recipe of 51 frequencies is asked at eleven.
+  const lv = Array.from({ length: 51 }, (_unused, index) => 2 * index);
+  assert.deepEqual(waveMtfSpec({ ...RECIPE, frequenciesPerMm: lv })?.frequenciesPerMm, waveFrequencies(lv));
+
+  // Nothing without a recipe of LensVisualizer's, for fields as angles, or where the recipe resolved none of them.
+  assert.deepEqual(r6bRung.buildRequests(SINGLET, RUN), []);
+  const ofRun = fixtureRecipe({ fields: { kind: "angles-deg", values: [0, 7] } }, SINGLET).recipe;
+  assert.deepEqual(r6bRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: ofRun }), []);
+  assert.equal(waveMtfSpec(RECIPE, { kind: "angles-deg", values: [0] }), null);
+  assert.equal(waveMtfSpec(RECIPE, { kind: "image-height-fractions", values: [1, 0.75] }), null);
+});
+
+test("r6b hands the run's grid cap and bundle grid to its engines, each under its own name", () => {
+  assert.equal(r6bRung.engineOptions?.(RUN), undefined);
+  assert.deepEqual(r6bRung.engineOptions?.({ ...RUN, sampling: { bundleGrid: 16 } }), { bundleGrid: 16 });
+  assert.deepEqual(r6bRung.engineOptions?.({ ...RUN, sampling: { lvGridCap: 64 } }), { lvGridCap: 64 });
+  assert.deepEqual(r6bRung.engineOptions?.({ ...RUN, sampling: { lvGridCap: 64, bundleGrid: 16 } }), {
+    lvGridCap: 64,
+    bundleGrid: 16,
+  });
 });
 
 // ── In a run ─────────────────────────────────────────────────────────────────────────────────────────────────────

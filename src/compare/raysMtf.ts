@@ -9,12 +9,12 @@ import type { JsonObject } from "../contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
-import { createExactSum } from "../core/numeric/exact.ts";
 import { decodeNdArray } from "../core/numeric/ndarray.ts";
 import { polychromaticOtf } from "../estimators/geometricOtf.ts";
-import type { ImagePlanePoint, OtfUnavailable, PolychromaticOtf, SpectralSpots } from "../estimators/geometricOtf.ts";
+import type { OtfUnavailable, PolychromaticOtf, SpectralSpots } from "../estimators/geometricOtf.ts";
 import { countValid, intersectValidity, maskWhere } from "../estimators/validity.ts";
 import type { ComparatorOutcome, ComparisonContext, ComputedMetric, QuantityComparator } from "./comparator.ts";
+import { fluxCentroid } from "../rays/wavefront.ts";
 import { decodeLandings } from "./raysRead.ts";
 import type { DecodedLandings } from "./raysRead.ts";
 import type { SpanAnswer } from "./span.ts";
@@ -45,22 +45,6 @@ interface TracedLine {
   readonly b: DecodedLandings;
   /** The rays that are ok in both answers: the only ones either engine's sum takes. */
   readonly valid: Uint8Array;
-}
-
-/**
- * The flux-weighted centroid of the rays `valid` takes, or null when they carry no flux. Every sum is compensated
- * and the rays are added in their order, so equal landings give equal bits.
- */
-function centroid(landings: DecodedLandings, weights: Float64Array, valid: Uint8Array): ImagePlanePoint | null {
-  const [flux, x, y] = [createExactSum(), createExactSum(), createExactSum()];
-  for (let ray = 0; ray < landings.rays; ray++) {
-    if (!valid[ray] || !(weights[ray] > 0)) continue;
-    flux.add(weights[ray], 1);
-    x.add(weights[ray], landings.x[ray]);
-    y.add(weights[ray], landings.y[ray]);
-  }
-  const total = flux.value();
-  return total > 0 ? { x: x.value() / total, y: y.value() / total } : null;
 }
 
 function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonContext): ComparatorOutcome {
@@ -142,8 +126,8 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   // first line's flux. The modulus does not depend on it; a point amid the spot keeps every phase small.
   const [first] = traced;
   const [centreA, centreB] = [
-    centroid(first.a, first.weights, first.valid),
-    centroid(first.b, first.weights, first.valid),
+    fluxCentroid(first.a, first.weights, first.valid),
+    fluxCentroid(first.b, first.weights, first.valid),
   ];
   if (centreA === null || centreB === null)
     return unmeasured("no ray of line 0 that carries flux is ok in both answers");
