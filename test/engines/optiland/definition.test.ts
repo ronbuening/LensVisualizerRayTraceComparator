@@ -10,6 +10,7 @@ import { systemProbe } from "../../../src/cli/commands/doctor.ts";
 import { createRunCommand } from "../../../src/cli/commands/run.ts";
 import { EXIT_FAILURE, EXIT_OK, runCli } from "../../../src/cli/main.ts";
 import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
+import { SELFTEST_ECHO } from "../../../src/contract/quantities/selftestEcho.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
 import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
 import { CONFIG_FILE, loadConfig } from "../../../src/core/config.ts";
@@ -33,6 +34,7 @@ import {
 } from "../../../src/engines/optiland/definition.ts";
 import type { InterpreterProbe } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
+import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -323,25 +325,26 @@ test("with an interpreter and no other configuration the engine answers hello as
     scipy: "0.2.fake",
     sourceFiles: 3,
   });
-  // Every feature flag of the contract, without a limit; the built-system echo, the first-order data and the trace
-  // of given rays, each at the version of its definition that the comparator holds an answer to.
+  // Every feature flag of the contract, without a limit; the built-system echo, the first-order data, the trace of
+  // given rays and its own MTF, each at the version of its definition that the comparator holds an answer to.
   assert.deepEqual(capabilities, {
     features: { supported: [...FEATURE_FLAGS], limits: {} },
     quantities: {
       "system.describe": { version: systemDescribeQuantity.version },
       "paraxial.first-order": { version: paraxialFirstOrderQuantity.version },
       "rays.trace": { version: raysTraceQuantity.version },
+      "mtf.native": { version: mtfNativeQuantity.version },
     },
     deterministic: true,
     maxConcurrency: 1,
   });
 
   // A quantity it does not offer is answered "unsupported", by the engine itself, stamped with both hashes.
-  const request = makeRequest({ caseId: CASE.id, quantity: "mtf.native", spec: {} });
+  const request = makeRequest({ caseId: CASE.id, quantity: SELFTEST_ECHO, spec: {} });
   const result = await adapter.run(request, CASE);
   assert.equal(result.status, "unsupported");
   assert.deepEqual(result.unsupported, [
-    { code: "quantity", item: "mtf.native", message: "the engine does not offer mtf.native" },
+    { code: "quantity", item: SELFTEST_ECHO, message: `the engine does not offer ${SELFTEST_ECHO}` },
   ]);
   assert.deepEqual(result.engine, {
     id: "optiland",

@@ -21,9 +21,12 @@ from .support import (
     UNOFFERED_QUANTITY,
     TempDirTest,
     describe_line,
+    mtf_request,
+    mtf_spec,
     ray_spec,
     read_fixture,
     run_line,
+    run_message,
     trace_line,
     unoffered_line,
     unoffered_request,
@@ -89,6 +92,7 @@ class WorkerTest(TempDirTest):
                     "system.describe": {"version": 2},
                     "paraxial.first-order": {"version": 1},
                     "rays.trace": {"version": 1},
+                    "mtf.native": {"version": 1},
                 },
                 "deterministic": True,
                 "maxConcurrency": 1,
@@ -186,6 +190,30 @@ class WorkerTest(TempDirTest):
         self.assertEqual((asked["quantity"], traced["result"]["requestId"]), ("rays.trace", asked["id"]))
         self.assertEqual((again["result"]["status"], bye["ok"]), ("unsupported", True))
         self.assertEqual(log.count("ModuleNotFoundError"), 2)
+
+    def test_an_mtf_is_refused_or_found_unsupported_before_optiland_is_asked_and_fails_as_a_request_after(self) -> None:
+        # The fake optiland has no MTF. What the engine has no answer to is said without it; what it would answer
+        # needs optiland's MTF, whose import fails: the engine's failure on that request, and no field's status.
+        site = self.fake_site()
+        case = read_fixture("valid", "optical-case", "singlet.json")
+        lines = (
+            HELLO
+            + run_message(mtf_request(case, mtf_spec([0], [30, 10])), case)
+            + run_message(mtf_request(case, mtf_spec([0], method="geometric")), case)
+            + run_message(mtf_request(case, mtf_spec([0])), case)
+            + SHUTDOWN
+        )
+        (hello, bad, refused, failed, bye), log = self.replies(site, lines)
+        self.assertEqual(hello["result"]["capabilities"]["quantities"]["mtf.native"], {"version": 1})
+        for answered in (bad, refused, failed):
+            self.assertIs(answered["ok"], True)
+            self.assertEqual(validate_kind("result", answered["result"]), [])
+        self.assertEqual((bad["result"]["status"], bad["result"]["error"]["code"]), ("error", "bad-spec"))
+        self.assertEqual(refused["result"]["status"], "unsupported")
+        self.assertEqual([item["item"] for item in refused["result"]["unsupported"]], ["method.geometric"])
+        self.assertEqual((failed["result"]["status"], failed["result"]["error"]["code"]), ("error", "engine-failure"))
+        self.assertIn("No module named 'optiland.", failed["result"]["error"]["message"])
+        self.assertEqual((log.count("ModuleNotFoundError"), bye["ok"]), (1, True))
 
     def test_the_fingerprint_is_the_same_in_another_process_and_another_for_another_source(self) -> None:
         site = self.fake_site()

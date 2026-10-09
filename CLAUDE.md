@@ -124,10 +124,49 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   when the worker loads: the hermetic tier runs the worker on `test/fixtures/fake-optiland`, which has no
   geometries, materials, apertures or rays. A test that needs the real optiland skips with
   `real_optiland_missing()`.
+- **`mtf.native` of `optiland` is optiland's own `ScalarFFTMTF`, read from its attributes**
+  (`workers/python/lvrtc_optiland/mtf.py`): one line, one field and one sampling a call, each on a new optic
+  (`field_optic`), since optiland's aimer keeps what it solved and a number must not depend on what was asked
+  before it. The field is optiland's angle field at the spec's angle, alone, without a vignetting factor
+  (optiland's frame is the contract's mirrored in y); the pupil is the stop surface out to its clip radius
+  (`ray_tracer.set_aiming("robust", max_iter=50, tol=1e-10)`), never `conditions.stopSemiDiameter`; the reference
+  is `chief_ray`, tilt kept; `grid_size = 2 * num_rays` is always stated (without it `num_rays` is OpticStudio's
+  sampling number: 64 rays for 128). `tangential` is `mtf[0][0]` on `freq_tang`, `sagittal` `mtf[0][1]` on
+  `freq_sag`. Fields as fractions, a geometric method, `engine-best`, a profile and a finite object are
+  `unsupported`. optiland's FFT takes a grid even on the stop for one even in direction cosines and calibrates its
+  axes with four rim rays whatever became of them: both are in `docs/gotchas.md` and neither is corrected by the
+  worker.
+- **What the worker adds to an optic for an MTF is read back, like the build** (`verify_field`, `probe_field`,
+  `fft_step`): the one field, its type, angle, weight and vignetting factors, the normalised coordinate, the
+  aiming, the stop radius the aimer takes, no apodization or polarization, the launch direction and the landing
+  plane of the chief ray, and what the analysis says it computed with (`num_rays`, `grid_size`, wavelength, field,
+  strategy, `remove_tilt`, the number and lengths of its curves). A difference is `build-mismatch`. A check added
+  there needs a test that makes the mistake on purpose (`RealReadBackTest` in `test_mtf.py`).
+- **A field optiland cannot compute is a row with a reason, never a number and never the request's failure**
+  (`answer_field`): `optiland-raised-<class>`, `no-frequency-axis`, `frequency-beyond-axis` and
+  `mtf-not-a-modulus` are `unavailable`, with NaN curves and the chief ray's landing still said; `not-converged`
+  (a move above 0.005 on the axis, 0.01 off it, from the coarser step to the finer) and `convergence-unknown` are
+  `unconverged`. `BuildMismatch`, `MemoryError` and `ImportError` are never a field's (`FATAL`). Each cut is
+  interpolated linearly on optiland's own axis of that cut, and nothing beyond its last sample.
+- **No polychromatic MTF is formed of optiland's moduli.** A case of several lines is `unsupported`
+  (`lines.polychromatic`) unless the engine option `line` names one; never average moduli. The 512 step is the
+  engine option `fftRays` (256 or 512: the ladder is that and half of it): an option is in the result store's key
+  and not in a request's id, so never add a sampling member to the `mtf.native` spec for it.
+- **The worker gives an MTF request up between two fields after `REQUEST_BUDGET_S`** (300 s), as the error
+  `time-budget`, which the result store does not keep. `OPTILAND_TIMEOUTS` states only `helloMs`: the default run
+  wait of ten minutes holds `mtf.native` (a field takes 0.2 to 2.9 s, a failing one 7 to 14 s, one failing 512
+  step 45 s), and a killed worker is not restarted within a run. Ask few fields a request.
+- **Expected values of the worker's MTF tests are derived in the test** (`test_mtf.py`): the lag of one ray and
+  the f-number from the marginal ray in 60 digits (`exact.py`), the tangential lag off the axis from the two rim
+  rays of the meridian, the chief ray's landing, the diffraction limit by counting the cells of the sampled disc,
+  the labelling of the cuts by the spot of exact rays. Hermetic tests use a stand-in measure (`StandIn`) whose
+  curves are binary fractions. A test that needs a quantity the optiland worker does not offer uses
+  `selftest.echo` (`UNOFFERED_QUANTITY`), never `mtf.native`.
 - **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
   `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
-  `system.describe` is version 2 (`innerClipRadius`); `paraxial.first-order` is version 1.
+  `system.describe` is version 2 (`innerClipRadius`); `paraxial.first-order` is version 1. `mtf.native` is version
+  1 and is answered by `lv`, `replay`, `wave` and `optiland`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
   from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the

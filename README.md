@@ -23,7 +23,9 @@ autocorrelation of the pupil function from the optical paths of the same rays, i
 within 3.2e-6 wherever its lattice samples the wavefront, the two exact tracers within 1.2e-9 (rung R6a, gated at
 4e-5; a fast lens wide open is undersampled and not judged). Beside LensVisualizer's own diffraction MTF it stays
 within the plan's bands at f/8 and marks five of 96 runs for attention (rung R6b, recorded;
-[measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)).
+[measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)). The engine `optiland` answers with optiland's own
+FFT MTF, one line and one field at a time, a field it cannot compute being a row with the reason
+([optiland's own MTF](docs/REFERENCE.md#optilands-own-mtf)); the rung that sets it beside LensVisualizer's is next.
 
 ## Requirements
 

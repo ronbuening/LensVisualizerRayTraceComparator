@@ -896,6 +896,70 @@ itself still within a band of its limit and no closer, neither side is the other
 recorded for that reason. On the benchmark it takes about 13 minutes, nearly all of it LensVisualizer tracing the
 lattices of the photopic runs; `npm run test:lv` holds it on six runs of the reference line (7 s).
 
+## optiland's own MTF
+
+`optiland` answers `mtf.native` with optiland's FFT MTF, the class `ScalarFFTMTF`
+(`workers/python/lvrtc_optiland/mtf.py`; the contract has the answer member by member under
+[the engine `optiland`](../contract/CONTRACT.md#the-engine-optiland)). It is an independent method with a sampling
+of its own: rung R5, which sets it beside LensVisualizer's MTF, is recorded and never gated, and comes with Stage
+3.7. This is the engine side: what is asked of optiland, what is read back, and what a field becomes when optiland
+cannot compute it.
+
+A request states frequencies, fields as angles (the angles of the run's [recipe](#the-mtf-recipe-the-replay-and-rung-r4f)),
+the method `diffraction` and the focus `design`: the plane is the image plane of the case, so LensVisualizer's best
+axial focus is a case at that plane and optiland needs to know nothing of LensVisualizer.
+
+| | |
+|---|---|
+| One call | one field, one sampling, one new optic: built and verified as for every quantity, then given the field and read back (`field_optic`, `verify_field`). A step never depends on what was asked before it: the 256 rays of the ladder 128, 256 are the 256 of the ladder 256, 512, bit for bit |
+| Field | optiland's `angle` field at the angle asked, alone in the optic, no vignetting factor. optiland's frame is the contract's mirrored in y; the chief ray's launch direction is held to (0, sin, cos) |
+| Pupil | optiland's own grid on the stop surface (`ray_tracer.set_aiming("robust", max_iter=50, tol=1e-10)`), out to the stop's clip radius, clipped by every surface's aperture |
+| Reference sphere | optiland's `chief_ray` strategy, `remove_tilt=False`: centred on the chief ray's landing, which is `imageHeightMm`, with the distance to the paraxial exit pupil for its radius |
+| Ladder | `num_rays` 128 then 256, `grid_size = 2 * num_rays` stated; with the engine option `fftRays: 512`, 256 then 512. The curves are the finer step's; a move above 0.005 on the axis, 0.01 off it, is `unconverged` |
+| Frequencies | linear interpolation on optiland's own axis of each cut (`freq_tang`, `freq_sag`, cycles/mm), never beyond its last sample |
+| Lines | one: the case's only line, or the engine option `line`. A case of several lines without it is `unsupported` (`lines.polychromatic`): optiland gives a modulus per wavelength, and no polychromatic MTF is formed of moduli |
+| A field optiland cannot compute | a row: `unavailable` with `optiland-raised-<class>`, `no-frequency-axis`, `frequency-beyond-axis` or `mtf-not-a-modulus`; its curves are NaN, and where its chief ray landed is still said |
+
+An engine option is no part of a request's identity and is part of the result store's key
+(`storeKey`), so the answer at 512 rays is kept beside the answer at 256 and never found in its place.
+
+**What it costs**, measured through the worker on this machine (optiland `4e893f53`, JIT on): a field of the
+Double-Gauss takes 0.2 to 0.3 s at 128 and 256 rays and 0.6 to 0.7 s at 256 and 512; of the Nikkor Z 50 mm f/1.2
+(35 surfaces) 0.7 to 0.9 s and 2.0 to 2.2 s; of the Sony FE 20 mm f/1.8 (27 surfaces) 0.8 to 1.1 s and 2.2 to
+2.9 s. A field optiland fails on costs more, while its aimer tries every fallback: 6.7 s at 128 rays and 14 s at
+256 on the Z 50 at 23°, where the ladder ends, and 45 s for one step of 512 rays asked by itself. The caches change
+nothing of a field: on an empty cache directory the worker's start takes 17 s where it takes 3 s, and the first
+MTF 1.0 s where it takes 0.33 s. The worker holds 0.9 GiB at 256 rays and 1.5 to 2.9 GiB at 512: optiland keeps
+every ray at every surface. All of it is far inside the adapter's wait for a run, ten minutes, which the engine
+keeps (`OPTILAND_TIMEOUTS`); a request that has nevertheless taken five minutes when its next field is to be
+begun is answered as the error `time-budget`, which the result store does not keep, so that the worker is not
+killed with the rest of a run still to answer. Each MTF is one line of the worker's log:
+
+```
+lvrtc_optiland: mtf.native fields=3 ok=3 unconverged=0 unavailable=0 surfaces=11 rays=128,256 field_ms=215,292,299 request_ms=833 peak_mib=889.2 pid=92708
+```
+
+**The Double-Gauss fixture**, optiland's own sample at f/5 on its one line, on the plane of the case:
+
+| Field | Image height | 10 cycles/mm T, S | 30 T, S | 50 T, S | Moved 128 to 256 | Status |
+|---|---|---|---|---|---|---|
+| 0° | 0 | 0.8962, 0.8962 | 0.5603, 0.5603 | 0.3290, 0.3290 | 0.0014 | `ok` |
+| 10° | 17.546 mm | 0.7223, 0.4663 | 0.0453, 0.0062 | 0.0071, 0.0041 | 0.0025 | `ok` |
+| 14° | 24.671 mm | 0.4232, 0.0647 | 0.0130, 0.0047 | 0.0038, 0.0114 | 0.0077 | `ok` |
+| 40° | none | none | none | none | | `unavailable`, `optiland-raised-ValueError` |
+
+At 512 rays the axis reads 0.8962, 0.5599, 0.3288 and has moved by 0.0004. The traced f-number is 4.9808, of the
+stop's clip radius of 6.35 mm (the stop radius of the case, 6.3412 mm, is the paraxial pupils', at f/4.99). The
+tests of the worker (`test_mtf.py`) hold these to what they derive: the lag of one ray and the f-number to the
+marginal ray traced in 60 digits (to 1e-7 of the cut-off), the tangential lag at 10° to the two rim rays of the
+meridian, each chief ray's landing to the ray through the centre of the stop (to 1e-8 mm), every value on the axis
+to the diffraction limit of the sampled pupil, counted cell by cell, and the two cuts on the axis to each other.
+
+On lenses of LensVisualizer wide open, as the plan expected: the Z 50 mm f/1.2 is `unconverged` on the axis between
+128 and 256 rays (0.017) and between 256 and 512 (0.008), and has no row at 18° and 23°; the 20 mm f/1.8 is `ok`
+on the axis and at 28° and `unconverged` at 47°, where a stopped rim ray leaves the lens and optiland's tangential
+axis with it ([docs/gotchas.md](gotchas.md#optiland-calibrates-its-frequency-axes-with-four-rim-rays-whatever-became-of-them)).
+
 ## Comparing and reporting
 
 `lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--json]`
@@ -1002,8 +1066,8 @@ The comparator supplies the rest (`src/engines/optiland/definition.ts`): the com
 and where the worker's caches go.
 
 **It answers `system.describe`, `paraxial.first-order` and `rays.trace`, which are rungs R0 to R3**: R2 and R3 ask
-the same traces, and judge where the rays went and how long their paths are. Any other quantity is answered
-`unsupported`. What the four rungs find on three engines is under
+the same traces, and judge where the rays went and how long their paths are. It answers `mtf.native` with
+[optiland's own FFT MTF](#optilands-own-mtf). Any other quantity is answered `unsupported`. What the four rungs find on three engines is under
 [Phase 2](#phase-2-r0-to-r3-on-three-engines).
 
 ```bash

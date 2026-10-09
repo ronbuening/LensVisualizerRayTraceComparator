@@ -29,6 +29,7 @@ import { decodeNdArray, encodeNdArray } from "../../../src/core/numeric/ndarray.
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { createEngineRegistry } from "../../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
+import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -67,6 +68,7 @@ test(
       [systemDescribeQuantity.id]: { version: systemDescribeQuantity.version },
       [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
       [RAYS_TRACE]: { version: raysTraceQuantity.version },
+      [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
     });
 
     const request = makeRequest({ caseId: CASE.id, quantity: RAYS_TRACE, spec: RAYS_SPEC_SINGLET });

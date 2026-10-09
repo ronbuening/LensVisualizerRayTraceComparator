@@ -114,6 +114,24 @@ def ray_spec(
     return spec
 
 
+def mtf_spec(angles: list[float], frequencies: list[float] | None = None, **more: Any) -> dict[str, Any]:
+    """An ``mtf.native`` spec the engine answers: the diffraction MTF of fields given as angles, on the plane of the
+    case, at 10, 30 and 50 cycles/mm unless ``frequencies`` says otherwise. ``more`` replaces or adds members."""
+    return {
+        "frequenciesPerMm": [10, 30, 50] if frequencies is None else frequencies,
+        "fields": {"kind": "angles-deg", "values": angles},
+        "method": "diffraction",
+        "focus": "design",
+        **more,
+    }
+
+
+def mtf_request(case: dict[str, Any], spec: dict[str, Any], **options: Any) -> dict[str, Any]:
+    """An ``mtf.native`` request about ``case``, with a made-up id; ``options`` are the engine's options."""
+    request = {**describe_request(case, spec), "id": "3" * 64, "quantity": "mtf.native"}
+    return {**request, "engineOptions": options} if options else request
+
+
 def trace_request(case: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     """A ``rays.trace`` request about ``case``, with a made-up id."""
     return {**describe_request(case, spec), "id": "7" * 64, "quantity": "rays.trace"}

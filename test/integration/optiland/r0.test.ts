@@ -23,6 +23,7 @@ import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { createEngineRegistry } from "../../../src/engines/registry.ts";
+import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -135,6 +136,7 @@ test(
       [SYSTEM_DESCRIBE]: { version: systemDescribeQuantity.version },
       [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
       [raysTraceQuantity.id]: { version: raysTraceQuantity.version },
+      [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
     });
     const opticalCase: OpticalCase = JSON.parse(readFileSync(caseFixture("all-features"), "utf8"));
     const request = makeRequest({ caseId: opticalCase.id, quantity: SYSTEM_DESCRIBE, spec: {} });

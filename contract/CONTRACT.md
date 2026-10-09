@@ -873,7 +873,8 @@ and two installs of one commit say the same of themselves.
 
 `optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
 each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
-declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order` and `rays.trace`.
+declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order`, `rays.trace` and
+`mtf.native`.
 
 | The case | `optiland` answers |
 |---|---|
@@ -1022,6 +1023,40 @@ direction 4.5e-13 longer has its hit 1.0e-11 mm from the contract's and its path
 a spec may be off by, 2.2e-11 mm and 1.9e-8 waves. The worker moves no point and bends no ray: that difference is
 optiland's, in R2 and in R3, and is in the answer. No ray set of LensVisualizer or of a case file has such a
 direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-16.
+
+**`mtf.native`** is optiland's own FFT MTF, its class `ScalarFFTMTF`, asked as anyone would ask it and read from
+its own attributes (`lvrtc_optiland/mtf.py`): the method `diffraction`, of fields stated as angles, on the image
+plane of the case as it is. Nothing of the transfer function is the worker's. What is, is stated in the answer:
+
+| Step | Is |
+|---|---|
+| the line | one line of the case: its only one, or the one the engine option `line` names by its index in `conditions.lines`. optiland's class is of one wavelength and gives a modulus, and a polychromatic MTF is the modulus of a sum of complex transfer functions about one image point: of the lines' moduli, each about its own chief ray, none can be formed (the lateral colour and every phase between the lines are lost). `lines` of the answer holds the one line |
+| the call | one field, one sampling and one new optic a call: optiland computes every field of a call before it gives any, and one it cannot compute raises for all. The optic is the builder's, verified as above, with the field added and read back |
+| the field | optiland's field type `angle`, the only field of the optic, at the angle of the spec, without a vignetting factor. optiland's positive angle is an object toward −y: the optic is the mirror image in y of the contract's system, which changes no MTF of a system of revolution. `fieldAngleDeg` is the angle optiland holds, and the direction it launches the chief ray in is held to (0, sin, cos) of it |
+| the pupil | optiland's own grid of `num_rays` by `num_rays` normalised pupil coordinates, laid on the stop surface by its ray aiming (`robust`, 50 iterations, 1e-10 mm), out to the clip radius of that surface (`aperture.aimedStopRadiusMm`), and clipped by the aperture of every surface. `conditions.stopSemiDiameter` takes no part: it is the paraxial pupils' |
+| the reference | optiland's `chief_ray` strategy, tilt not removed: a sphere centred where the chief ray, through the centre of the stop, meets the image plane, with the distance to the paraxial exit pupil for its radius. `imageHeightMm` is how far from the axis that ray lands, by the call optiland's strategy makes |
+| the sampling | `num_rays` 128 and then 256, each with `grid_size` twice that, stated to optiland (a call without a grid size takes `num_rays` for OpticStudio's sampling number: 64 rays across the pupil for 128). The curves are the finer step's. The engine option `fftRays` 512 asks for 256 and 512 instead |
+| the frequencies | optiland gives each cut at the lags of its grid, on an axis of its own (`freq_tang`, `freq_sag`: cycles/mm on the image surface, calibrated with the four rays through the rim of its pupil). A frequency of the spec is interpolated linearly between the two samples that enclose it, on the axis of its cut; `tangential` is optiland's `mtf[0][0]` and `sagittal` its `mtf[0][1]` |
+| a field's `status` | `ok` where no value moved by more than 0.005 on the axis, 0.01 off it, from the coarser step to the finer; `unconverged` with the reason `not-converged` where one did, or `convergence-unknown` where the coarser step has no curve; `unavailable` where the finer step has none: `optiland-raised-<class>` (an exception of optiland, which ends the field's ladder), `no-frequency-axis` (an axis that does not start at 0 and ascend: a rim ray that did not arrive leaves a NaN in its step), `frequency-beyond-axis` (a frequency above the last sample of an axis, the cut-off: nothing is extrapolated) or `mtf-not-a-modulus` (a sample that is a NaN or outside 0 to 1). `notes` says of each such field what optiland said, and both steps' figures where it moved |
+
+Under `sampling` a field states `numRays`, `gridSize` and `coarseNumRays`; `frequencyStepTangentialPerMm` and
+`frequencyStepSagittalPerMm`, the lag of one ray on each axis; `maxDelta`, the largest move between the two steps;
+`workingFNumber`, optiland's working f-number of the field; `rimRaysLit` and `rimRaysLost`, how many of the four
+rim rays reach the image with light and how many have no landing; `rimLandingSpreadMm`, the largest distance from
+the chief ray's landing to a rim ray's (optiland calibrates its axes with the rim rays whatever became of them, and
+a ray an aperture stopped is traced on: a path that leaves the lens shows here); and `optilandWarnings`. `aperture`
+states `tracedFNumber` (optiland's working f-number on the axis, of the rays through the rim of the stop),
+`limitingSurfaceIndex` and `aimedStopRadiusMm`. `method.name` is `scalar-fft-mtf`, and `method.params` hold every
+setting above.
+
+Its refusals: of code `option`, `profile` (it is asked by a spec), `method.geometric`, `focus.engine-best`
+(optiland has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height),
+`option.fftRays` (not 256 or 512) and `option.line` (no index of a line of the case); of code `feature`,
+`lines.polychromatic` (a case of several lines asked without the option `line`) and `object.finite` (optiland
+measures a field angle at its paraxial entrance pupil then, and no spec says where the contract's is measured).
+An optic or an analysis that is not what was asked is the error `build-mismatch`, as for every quantity. A request
+that has taken five minutes when its next field is to be begun is the error `time-budget`: an error is not kept by
+the result store, and the worker lives on.
 
 **The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
 is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
@@ -1822,8 +1857,9 @@ An engine's own MTF of the case: by its own method, with its own sampling of the
 engine presents it to whoever uses it. Nothing of it is the comparator's, and no two engines are expected to
 agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung sets the MTF
 of two independent engines against each other yet; `lvrtc mtf` presents each engine's answer by itself. One rung,
-`r4f`, asks for it of two engines that are not independent ([below](#rung-r4f-the-fidelity-of-the-replay)). F is
-the number of frequencies.
+`r4f`, asks for it of two engines that are not independent ([below](#rung-r4f-the-fidelity-of-the-replay)). It is
+answered by `lv` ([LensVisualizer's product MTF](#lensvisualizers-product-mtf)), `replay`, `wave` and
+[`optiland`](#the-engine-optiland), each by a method of its own. F is the number of frequencies.
 
 `spec`:
 

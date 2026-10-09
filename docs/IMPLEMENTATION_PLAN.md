@@ -369,6 +369,18 @@ Gates changed after the plan was approved, each on a measured numerical floor an
 | R6b (Stage 3.5, policy version 8) | The rung is in the policy, **recorded**, of the two engines `lv` and `wave`: LensVisualizer's own diffraction MTF beside the comparator's wave estimator on the rays LensVisualizer launches and traces, the lattices R6a judges. It has the plan's attention band, 0.005 for the field on the axis (`mtfOnAxis.maxAbs`) and 0.01 off it (`mtfOffAxis.maxAbs`), over the fields both answers stand by; a field an answer calls unconverged is written down in no band (`mtfFlagged.maxAbs`). Nothing of it is gated, and it is in no committed baseline. | On the same benchmark (three fields a run, eleven frequencies): 91 pairs `RECORDED`, 5 `ATTENTION`, none an error; 208 fields in a band, 80 flagged, every one by the estimator. At f/8 no pair is marked: at most 4.99e-3 on the axis and 7.75e-3 off it. The five marked are on the axis, wide open at the design plane, 5.5e-3 to 7.5e-3 (`nikon-z-24-70f4s` tele on both sets of lines, `nikon-z-135f18-plena`, `nikon-z-mc-105f28`, `canon-ef-135-f2l-usm`). The class of the differences is method, and within it the lattice: LensVisualizer ends its refinement at 32 cells for 119 of 144 fields at f/8, where the estimator is at 64. On one grid the two methods differ by 5e-4 on average (4.5e-4 at 32 cells, 5.7e-4 at 64); with 32 against 64 by 2.9e-3, which is what the estimator itself moves by on doubling (`docs/REFERENCE.md`). |
 | R2, R3 (Stage 2.6, policy version 5) | The floor of `lv` no longer needs every other engine within `agreement` of `ref`. A witness beyond it is named in the reason and withholds nothing; only a witness nearer to `lv` than to `ref` fails the pair, as arbiter-suspect. No limit moved ([below](#a-witness-does-not-withhold-a-floor)). | On four catalog lenses outside the suites optiland is about 9e-10 mm from the exact hit where `ref` is 6e-12 mm and `lv` 2e-8 mm: beyond the 1e-10 mm of agreement, and about 25 times nearer to `ref` than to `lv`. 14 of 50 floors in R2 and 9 of 11 in R3 were `FAIL` beside it. The suites keep their verdicts. |
 
+### optiland's MTF is of one line
+
+A decision of Stage 3.6, on the question the stage was handed: how a polychromatic MTF is formed of optiland's
+per-line results. It is not.
+
+| What | Decision | Why |
+|---|---|---|
+| A case of several lines | `mtf.native` of `optiland` answers one line: the case's only line, or the one the engine option `line` names. Without it the request is `unsupported` (`lines.polychromatic`). | optiland's `ScalarFFTMTF` is of one wavelength and gives a modulus, each line's PSF centred on its own chief ray. A polychromatic MTF is the modulus of a sum of complex transfer functions about one image point: of moduli none is formed, and a mean of moduli is an upper bound that is no MTF. |
+| R5 in Phase 3 | The reference-line runs of the benchmark carry it. A photopic run has no optiland row until Stage 4.3, which forms the sum from optiland's wavefront with the comparator's estimator, as planned. | Nothing is substituted for what an engine cannot compute. |
+| The pupil | The plan's `set_aiming('robust', max_iter=50, tol=1e-10)`: optiland's grid lies on the stop surface, out to its clip radius. | Without aiming the grid is the paraxial entrance pupil, which the beam of a fast lens does not fill. |
+| The 512 step | The engine option `fftRays: 512`, which the result store keys by; no change to the quantity, which stays at version 1. | The comparator asks it only for an ATTENTION row (Stage 3.7). |
+
 ### Zoom lenses at both ends
 
 Not a gate, a rule of what is compared, added at the owner's request in Stage 1.8.

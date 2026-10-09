@@ -1589,6 +1589,98 @@ shares no code with any engine.
   reflected ray in front of a flat-base asphere and finds its neighbours on the base plane, to the bit.
 - **Class.** numerical.
 
+### optiland's FFT MTF is of one wavelength and gives a modulus: no polychromatic MTF is formed of it
+
+- **Where.** `optiland/mtf/base.py` resolves one wavelength (`resolve_wavelength`), and `ScalarFFTMTF` keeps
+  `abs(fft2(psf))`, each field's PSF centred by its own reference: the chief ray of that wavelength.
+- **Effect.** A polychromatic MTF is the modulus of a weighted sum of the lines' complex transfer functions about
+  one image point. Of the lines' moduli it cannot be formed: the lateral colour (each line's chief ray lands
+  elsewhere) and every phase between the lines are lost, and a mean of moduli is an upper bound that is no MTF:
+  two lines whose transfer functions have opposite signs at a frequency add up to their difference.
+- **Handled.** `mtf.native` of `optiland` is of one line: a case of several lines is `unsupported`
+  (`lines.polychromatic`) unless the engine option `line` names one, and the answer's `lines` holds that line
+  alone. A test asks a case of two lines for its second and finds the answer of that line as a case of its own.
+  The reference-line runs of the benchmark are answered as they are; the external counterpart of a photopic MTF
+  is Stage 4.3, by the comparator's estimator on optiland's wavefront.
+- **Class.** none of the ladder's: a limit of the method.
+
+### One field optiland cannot compute raises for every field of the call
+
+- **Where.** `BaseMTF.__init__` computes the PSF and the MTF of every field before it returns, and
+  `ScalarFFTMTF.__init__` then asks `get_working_FNO` for each: a field whose four rim rays all fail raises
+  `ValueError("Working F/# could not be calculated due to raytrace errors.")`, a field without a valid sample
+  `ValueError("No valid ray samples found for chief-ray wavefront.")`.
+- **Effect.** Asked for the axis and one such field at once, optiland gives neither.
+- **Handled.** The worker asks one field a call, on an optic of its own, and an exception is that field's row:
+  `unavailable`, with the class of the exception in its reason and optiland's words in a note. A test asks three
+  fields with the middle one failing and finds the other two as they are alone, and asks optiland itself for two
+  at once and is raised at. On the Nikkor Z 50 mm f/1.2 wide open the fields at 18° and 23° are such rows.
+- **Class.** none of the ladder's.
+
+### `num_rays` is OpticStudio's sampling number unless a grid size is stated
+
+- **Where.** `ScalarFFTMTF.__init__`: without `grid_size` it calls `calculate_grid_size(num_rays)`
+  (`optiland/psf/fft.py`), which puts `floor(32 * 2^((log2(num_rays) - 5) / 2))` rays across the pupil on a grid
+  of `2 * num_rays`: 64 rays for 128, 90 for 256.
+- **Effect.** A ladder of 128 and 256 asked that way is one of 64 and 90 rays.
+- **Handled.** The worker states `grid_size = 2 * num_rays`, so `num_rays` is the rays across the pupil and the
+  `num_rays` samples optiland gives end at the cut-off, and reads both numbers back from the analysis
+  (`build-mismatch` otherwise). A test pins optiland's 64 on 256 and makes the mistake on purpose.
+- **Class.** convention.
+
+### optiland's positive field angle is an object toward -y, and its own rays fill the stop's clip radius
+
+- **Where.** `AngleField.get_ray_origins` launches a field at `y` degrees from below the axis, toward +y; the
+  contract's positive angle is an object toward +y. With `ray_tracer.set_aiming("robust")` a pupil coordinate of
+  1 is a point at `aperture.r_max` of the stop surface (`FloatByStopStrategy`); without aiming it is a point of
+  the paraxial entrance pupil, which the real beam of a fast lens does not fill (on the Nikkor Z 50 mm f/1.2 the
+  rays through its rim are clipped at the stop, and `get_working_FNO` gives 1.185 where the stop's is 1.229).
+- **Effect.** The optic of an MTF is the contract's system mirrored in y: the same MTF, and the chief ray's
+  landing with the other sign. The pupil of optiland's own analyses is the clip radius of the stop, which for a
+  case from LensVisualizer is the stop radius plus 1e-9 mm and in the Double-Gauss fixture 6.35 mm against a stop
+  radius of 6.3412 mm.
+- **Handled.** The worker gives optiland the angle as it is, reports the distance of the landing from the axis,
+  and holds the launch direction of the chief ray to (0, sin, cos) of the angle; it sets the plan's aiming
+  (`robust`, 50 iterations, 1e-10 mm) and reads back the radius the aimer takes. Tests hold the chief ray's
+  landing and the frequency axis to rays through the centre and the rim of the stop traced in 60 digits, and
+  find optiland's unaimed f-number of the Double-Gauss to be another.
+- **Class.** convention.
+
+### optiland calibrates its frequency axes with four rim rays, whatever became of them
+
+- **Where.** `ScalarFFTMTF._get_mtf_frequency_steps` traces the rays at pupil (0, ±1) and (±1, 0) and takes the
+  difference of each pair's directions, on the image surface, for the width of the pupil: the lag of one ray is
+  that over `(num_rays - 1) * wavelength`. It does not read their intensity. A ray that an aperture stopped is
+  traced on through the mathematical surfaces.
+- **Effect.** Where the rim rays pass, or are stopped and stay near the beam, the axis is the beam's: on the
+  Double-Gauss at 14° all four are stopped, land within 0.06 mm of the chief ray, and the field has its curves.
+  Where a stopped ray leaves the lens the axis is that ray's: on the Nikkor Z 50 mm f/1.2 at 12° one lands 5 mm
+  from the chief ray and the tangential lag is 6.14 cycles/mm beside a sagittal one of 5.33 (5.43 on the axis);
+  on the Sony FE 20 mm f/1.8 at 47° one lands 19 mm away and the tangential lag is twice the sagittal. A rim ray
+  that has no direction leaves a NaN in its lag.
+- **Handled.** Nothing is corrected: the curves are optiland's. Each field states `rimRaysLit`, `rimRaysLost`
+  and `rimLandingSpreadMm` under `sampling`, and an axis with a NaN is the status `no-frequency-axis`. The
+  check of the tangential lag on a vignetted pupil is Stage 4.2. Measured at optiland `4e893f53` on cases of
+  LensVisualizer `33ebdb30`.
+- **Class.** engine behaviour: recorded.
+
+### optiland's FFT takes a grid that is even on the stop for one that is even in direction cosines
+
+- **Where.** `ScalarFFTPSF._generate_pupils` lays the wavefront on `linspace(-1, 1, num_rays)` in both normalised
+  pupil coordinates and transforms that array as it is; `ScalarFFTMTF._get_mtf_frequency_steps` gives a lag of one
+  cell one frequency, the rim rays' width over `num_rays - 1`, and says of itself that it "assumes approximately
+  affine pupil-to-cosine mapping". With the worker's aiming a pupil coordinate is a point of the stop surface.
+- **Effect.** The cut-off is the rim rays' and is right (held to a 60-digit marginal ray within 1e-7). Between 0
+  and the cut-off a lag is a frequency only as far as a step on the stop is the same step in the direction cosine
+  behind the lens everywhere on the pupil: true of a slow lens, and not of a fast one wide open, whose pupil
+  aberration and sine condition bend that mapping, nor of a field whose pupil is cut by vignetting on one side.
+  A wave OTF summed over the cosines themselves (the comparator's estimator, `docs/REFERENCE.md`) has no such
+  assumption. The difference is of the method, not of the sampling: more rays do not remove it.
+- **Handled.** Nothing is corrected: the curves are optiland's, and `method.params.pupil` says
+  `stop-surface-grid`. Not measured in Stage 3.6; R5 (Stage 3.7) records the differences and R6c (Stage 4.1)
+  sets the comparator's estimator on optiland's wavefront beside them.
+- **Class.** method.
+
 ### numba's JIT changes no bit of a trace
 
 - **Where.** `optiland/backend/numpy_backend/conic.py` compiles the conic intersection with
@@ -1613,7 +1705,7 @@ shares no code with any engine.
 - **Handled.** What it refuses is an optic that is not the case. Whatever of the build comes back from optiland
   as another value than the case states is an error of the code `build-mismatch`, with the surface, the field and
   both values, and nothing is described; a call of optiland that optiland has deprecated is an error too, not a
-  warning in a log. Every other quantity than `system.describe`, `paraxial.first-order` and `rays.trace` is
-  `unsupported` until its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order
+  warning in a log. Every other quantity than `system.describe`, `paraxial.first-order`, `rays.trace` and
+  `mtf.native` is `unsupported` until its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order
   data of every one.
 - **Class.** none of the ladder's.

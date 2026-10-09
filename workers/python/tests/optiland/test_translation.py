@@ -30,7 +30,7 @@ from lvrtc_optiland.engine import DEFAULT_SAG_FRACTIONS, QUANTITIES, SUPPORTED_F
 from lvrtc_worker_kit.fake_engine import FEATURE_FLAGS
 from lvrtc_worker_kit.validate import validate_kind
 
-from .support import describe_request, read_fixture
+from .support import UNOFFERED_QUANTITY, describe_request, read_fixture
 
 SINGLET = read_fixture("valid", "optical-case", "singlet.json")
 DOUBLE_GAUSS = read_fixture("valid", "optical-case", "double-gauss.json")
@@ -211,7 +211,7 @@ class ContractSagTest(unittest.TestCase):
 
 
 class DeclarationTest(unittest.TestCase):
-    def test_the_engine_declares_every_feature_flag_no_limit_and_the_three_quantities_it_answers(self) -> None:
+    def test_the_engine_declares_every_feature_flag_no_limit_and_the_four_quantities_it_answers(self) -> None:
         descriptor = OptilandEngine(IDENTITY).describe()
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         capabilities = descriptor["capabilities"]
@@ -219,7 +219,12 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(tuple(capabilities["features"]["supported"]), SUPPORTED_FEATURES)
         self.assertEqual(
             capabilities["quantities"],
-            {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}, "rays.trace": {"version": 1}},
+            {
+                "system.describe": {"version": 2},
+                "paraxial.first-order": {"version": 1},
+                "rays.trace": {"version": 1},
+                "mtf.native": {"version": 1},
+            },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])
         self.assertIs(capabilities["deterministic"], True)
@@ -237,7 +242,7 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(set(ALL_FEATURES["features"]), set(SUPPORTED_FEATURES), "the case that has every feature")
 
     def test_what_its_descriptor_rules_out_is_refused_in_the_order_of_the_comparators_negotiation(self) -> None:
-        request = {**describe_request(SINGLET), "quantity": "mtf.native", "contract": "2.0"}
+        request = {**describe_request(SINGLET), "quantity": UNOFFERED_QUANTITY, "contract": "2.0"}
         case = {**SINGLET, "contract": "1.1", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
         self.assertEqual(
             refusals(request, case),
@@ -252,7 +257,7 @@ class DeclarationTest(unittest.TestCase):
                     "item": "2.0",
                     "message": "the engine speaks contract 1.0 to 1.0; the request is written to 2.0",
                 },
-                {"code": "quantity", "item": "mtf.native", "message": "the engine does not offer mtf.native"},
+                {"code": "quantity", "item": "selftest.echo", "message": "the engine does not offer selftest.echo"},
                 {
                     "code": "feature",
                     "item": "surface.grating",
@@ -284,10 +289,10 @@ class RunTest(unittest.TestCase):
 
     def test_an_unsupported_request_and_a_bad_spec_are_answered_before_anything_is_built(self) -> None:
         engine, built = self.engine()
-        refused = engine.run({**describe_request(SINGLET), "quantity": "mtf.native"}, SINGLET)
+        refused = engine.run({**describe_request(SINGLET), "quantity": UNOFFERED_QUANTITY}, SINGLET)
         self.assertEqual(validate_kind("result", refused), [])
         self.assertEqual(refused["status"], "unsupported")
-        self.assertEqual([item["item"] for item in refused["unsupported"]], ["mtf.native"])
+        self.assertEqual([item["item"] for item in refused["unsupported"]], [UNOFFERED_QUANTITY])
 
         for spec, said in (
             (

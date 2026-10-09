@@ -8,6 +8,9 @@ optics, one for each line (``build``), each is read back and held to the case, a
 optics alone (``build.describe_optics``, ``first_order.first_order_of``, ``trace.trace_rays``). A trace of rays is
 of one line, and builds that line's optic alone. An optic that is not the case is answered as an error that names
 the surface and the field, and nothing is said about it.
+
+It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``): of one line, a field at a time, each on an optic of
+its own that is built, read back and given its field there. A field optiland cannot compute is a row of the answer.
 """
 
 from __future__ import annotations
@@ -38,6 +41,8 @@ from .build import ASPHERE_MAX_ITERATIONS, ASPHERE_TOLERANCE_MM, BuildMismatch, 
 from .first_order import AFOCAL_RELATIVE_POWER, PARAXIAL_FIRST_ORDER, first_order_of, term_refusals
 from .hygiene import CacheDirs, check
 from .identity import adapter_revision, engine_identity
+from .mtf import MTF_NATIVE, TIME_BUDGET, MtfMeasure, OptilandMtf, TimeBudgetExceeded, answer_mtf, field_counts
+from .mtf import read_request as read_mtf_request
 from .trace import METHOD_NAME as TRACE_METHOD_NAME
 from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
 
@@ -70,11 +75,19 @@ QUANTITIES: dict[str, dict[str, int]] = {
     SYSTEM_DESCRIBE: {"version": 2},
     PARAXIAL_FIRST_ORDER: {"version": 1},
     RAYS_TRACE: {"version": 1},
+    MTF_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
 DEFAULT_SAG_FRACTIONS: tuple[float, ...] = (0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0)
 """The fractions of ``system.describe`` when a spec names none (contract/CONTRACT.md)."""
+
+_ASCENDING: dict[str, tuple[str, str, tuple[float, ...]]] = {
+    SYSTEM_DESCRIBE: ("sagFractions", "fractions", DEFAULT_SAG_FRACTIONS),
+    MTF_NATIVE: ("frequenciesPerMm", "frequencies", ()),
+}
+"""The list of a spec that must ascend, for each quantity that has one: its member, what its elements are called, and
+what stands for a list that is left out."""
 
 BUILD_MISMATCH = "build-mismatch"
 """The ``error.code`` of a result about a case that optiland did not build as it is stated."""
@@ -127,18 +140,20 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
 def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list[ValidationIssue]:
     """What keeps ``spec`` from being a spec of ``quantity``: by its schema, and then by the rule no schema states.
 
-    The rule of ``system.describe`` (``src/quantities/systemDescribe.ts``) is here: the fractions ascend. Those of
+    The rules of ``system.describe`` (``src/quantities/systemDescribe.ts``) and of ``mtf.native``
+    (``src/quantities/mtfNative.ts``) are here: the fractions ascend, and so do the frequencies. Those of
     ``rays.trace`` need its arrays decoded, and are ``trace.read_spec``'s, which hands the rays on.
     """
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
-    if issues or quantity != SYSTEM_DESCRIBE:
+    if issues or quantity not in _ASCENDING:
         return issues
-    stated = spec.get("sagFractions", DEFAULT_SAG_FRACTIONS)
+    member, name, default = _ASCENDING[quantity]
+    stated = spec.get(member, default)
     unordered = next((at for at in range(1, len(stated)) if not stated[at] > stated[at - 1]), None)
     if unordered is None:
         return []
-    said = f"the fractions must ascend: {stated[unordered]} follows {stated[unordered - 1]}"
-    return [ValidationIssue(f"/sagFractions/{unordered}", "invariant", said)]
+    said = f"the {name} must ascend: {stated[unordered]} follows {stated[unordered - 1]}"
+    return [ValidationIssue(f"/{member}/{unordered}", "invariant", said)]
 
 
 def peak_memory_mib() -> float | None:
@@ -161,7 +176,9 @@ class OptilandEngine:
     """optiland, for the protocol loop: ``describe()`` and ``run(request, case)``.
 
     ``build`` makes the optics of a case and verifies them; it is ``build.build_case`` unless a test says otherwise.
-    ``log`` is given one line for each trace of rays, with what its steps cost; without one nothing is logged.
+    ``log`` is given one line for each trace of rays and for each MTF, with what its steps cost; without one nothing
+    is logged. ``mtf`` is what an MTF asks of optiland (``mtf.OptilandMtf``, made when the first is asked, which is
+    when optiland's MTF is imported), and ``clock`` the seconds its budget is counted in.
     """
 
     def __init__(
@@ -171,10 +188,14 @@ class OptilandEngine:
         schemas: SchemaSet | None = None,
         build: Callable[..., BuiltCase] = build_case,
         log: Callable[[str], None] | None = None,
+        mtf: MtfMeasure | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._schemas = schemas if schemas is not None else contract_schemas()
         self._build = build
         self._log = log
+        self._mtf = mtf
+        self._clock = clock
         self._descriptor: dict[str, Any] = {
             "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION},
             "identity": identity,
@@ -202,6 +223,9 @@ class OptilandEngine:
           optic.
         - A system optiland has no first-order data of (an afocal one, one whose entrance pupil is at infinity) is
           a result of status "unsupported", found when optiland was asked.
+        - An MTF the engine has no answer to (``mtf.read_request``) is a result of status "unsupported"; one whose
+          request outran its budget is a result of status "error" with the code ``time-budget``. A field optiland
+          cannot compute is neither: it is a field of the answer, with its status and its reason.
         - Anything else that goes wrong is raised, and the protocol loop answers it as ``engine-failure``.
         """
         engine = engine_stamp(self._descriptor)
@@ -220,6 +244,8 @@ class OptilandEngine:
             message = f"spec is not a {quantity} spec: {format_issues(issues)}"
             return make_result(request, engine, "error", error={"code": BAD_SPEC, "message": message})
         read = time.perf_counter()
+        if quantity == MTF_NATIVE:
+            return self._run_mtf(request, case, engine)
 
         try:
             # A trace is of one line, and needs that line's optic alone.
@@ -263,6 +289,44 @@ class OptilandEngine:
             raise RuntimeError(f"the answer is not {quantity} data: {format_issues(issues)}")
         diagnostics = {"warnings": [], "counts": counts}
         return make_result(request, engine, "ok", method=method, data=data, diagnostics=diagnostics)
+
+    def _run_mtf(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of an ``mtf.native`` request whose spec is one: see ``run``."""
+        asked = read_mtf_request(request["spec"], request.get("engineOptions") or {}, case)
+        if isinstance(asked, list):
+            return make_result(request, engine, "unsupported", unsupported=asked)
+        started = time.perf_counter()
+        if self._mtf is None:
+            # Outside what an answer catches: an optiland whose MTF cannot be imported is no field's status.
+            self._mtf = OptilandMtf()
+        try:
+            data, seconds = answer_mtf(asked, case, self._mtf, self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        issues = validate(self._schemas, quantity_schema_id(MTF_NATIVE, "data"), data)
+        if issues:
+            raise RuntimeError(f"the answer is not {MTF_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), "lines": 1, **field_counts(data)}
+        if self._log is not None:
+            self._log(mtf_log_line(counts, asked.ladder, seconds, time.perf_counter() - started))
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+def mtf_log_line(counts: dict[str, int], ladder: tuple[int, int], seconds: list[float], whole: float) -> str:
+    """One line of the worker's log for one MTF: what was asked, what became of the fields and what each cost.
+
+    A field's cost is that of its optics, its chief ray and both steps of the ladder, in milliseconds; the request's
+    is theirs, that of the axial beam and, for the first MTF of a worker, of importing optiland's MTF. It is a log
+    line and no part of an answer: an answer holds no time.
+    """
+    said = " ".join(f"{name}={counts[name]}" for name in ("fields", "ok", "unconverged", "unavailable", "surfaces"))
+    cost = f"field_ms={','.join(f'{1000 * each:.0f}' for each in seconds)} request_ms={1000 * whole:.0f}"
+    peak = peak_memory_mib()
+    memory = "" if peak is None else f" peak_mib={peak:.1f}"
+    return f"lvrtc_optiland: {MTF_NATIVE} {said} rays={ladder[0]},{ladder[1]} {cost}{memory} pid={os.getpid()}"
 
 
 def trace_log_line(counts: dict[str, int], steps: tuple[tuple[str, float], ...]) -> str:
