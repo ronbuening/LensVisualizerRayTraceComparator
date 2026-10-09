@@ -16,16 +16,16 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | features |
 | Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | c2dea755cec5f87b42098577eb7493ecc86145830979da0a8cec50d659c955ea |
+| Baseline hash | cfcedf82fe3906c5ea896e7890c19a015740b0a2fb4baf1c6deb0f3bb8141142 |
 | Contract version | 1.0 |
 | Policy | rungs v5 |
 | Policy hash | a8f4e2615c842b14d14a4c49fe35c44ad6afdcece70151894393b84e2a79207c |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | 2efc32aeb7dbe2cd49ff21ac914be6ba22902b693cfdb581dd01c4de171c1cab | commit c05a2ab75b4aa5bcd8563a46e5c5a21a5d7f99a5, dirty false, engineFileCount 151 |
+| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | 51202ba5f582611402f303c0ddfd045ddf6be8fde4f6b6a1ad7bd5e6a014f331 | commit c05a2ab75b4aa5bcd8563a46e5c5a21a5d7f99a5, dirty false, engineFileCount 151 |
 | optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 81fae6bce47637151e2c76ce9558c03cc7cc0153ba60ff68720656f018b90480 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | 149b5767ccdc11aa92a72f44fd4bdc9be81c59b6c22fa79b08cdddc7646b8655 | 80c13cacede1a68a60ac3576520818be5465c216290f4f966aea7fd803ea09c1 | sourceFiles 12 |
+| ref | 1 | cf9f034646e8fb811815bc6335e461ce69caf5da94a7b39b428c0146c996fe38 | 8e98f6976845a9bcd8794386f7e74ea2af13ebc647eaddb24dc0cf6f01d05b39 | sourceFiles 11 |
 
 | Run | Case |
 |---|---|
@@ -249,7 +249,7 @@ By run, each pair with its verdict and the judged metric that is largest against
 | odd-asphere-ref | 3 | PASS: opticalPathToImage.maxAbs 2.85e-6 waves | PASS: opticalPathToImage.maxAbs 2.85e-6 waves | PASS: opd.maxAbs 1.60e-9 waves |
 | odd-asphere-photopic | 15 | PASS: opd.maxAbs 4.18e-6 waves | PASS: opd.maxAbs 4.18e-6 waves | PASS: opticalPathToImage.maxAbs 2.00e-9 waves |
 | e-line-ref | 3 | PASS: opd.maxAbs 3.52e-6 waves | PASS: opd.maxAbs 3.52e-6 waves | PASS: opticalPathToImage.maxAbs 1.04e-10 waves |
-| e-line-photopic | 15 | PASS: opd.maxAbs 4.63e-6 waves | PASS: opd.maxAbs 4.63e-6 waves | PASS: opd.maxAbs 1.54e-10 waves |
+| e-line-photopic | 15 | PASS: opd.maxAbs 4.63e-6 waves | PASS: opd.maxAbs 4.63e-6 waves | PASS: opd.maxAbs 1.28e-10 waves |
 | asphere-a20-ref | 3 | PASS: opd.maxAbs 3.20e-6 waves | PASS: opd.maxAbs 3.20e-6 waves | PASS: opticalPathToImage.maxAbs 2.42e-9 waves |
 | asphere-a20-photopic | 15 | PASS: opd.maxAbs 3.81e-6 waves | PASS: opd.maxAbs 3.81e-6 waves | PASS: opticalPathToImage.maxAbs 3.14e-9 waves |
 | flat-base-asphere-ref | 3 | PASS: opd.maxAbs 2.69e-6 waves | PASS: opd.maxAbs 2.69e-6 waves | PASS: opticalPath.maxAbs 1.28e-9 waves |

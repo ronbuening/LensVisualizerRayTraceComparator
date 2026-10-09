@@ -16,16 +16,16 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | benchmark |
 | Suite hash | 27333fa1ef567a2ac3310215fc3e886a6ba2aa55f30c5177c6d6d951fb067b09 |
-| Baseline hash | 6f75ad7d56b4162500ce4b838363c62159a955d27a26ea43e10a8a913b8ddb3d |
+| Baseline hash | 776cad8200d9289512c1c102e15e6bcc8d5410fd2cb49fea721d205237a86748 |
 | Contract version | 1.0 |
 | Policy | rungs v5 |
 | Policy hash | a8f4e2615c842b14d14a4c49fe35c44ad6afdcece70151894393b84e2a79207c |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | 2efc32aeb7dbe2cd49ff21ac914be6ba22902b693cfdb581dd01c4de171c1cab | commit c05a2ab75b4aa5bcd8563a46e5c5a21a5d7f99a5, dirty false, engineFileCount 151 |
+| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | 51202ba5f582611402f303c0ddfd045ddf6be8fde4f6b6a1ad7bd5e6a014f331 | commit c05a2ab75b4aa5bcd8563a46e5c5a21a5d7f99a5, dirty false, engineFileCount 151 |
 | optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 81fae6bce47637151e2c76ce9558c03cc7cc0153ba60ff68720656f018b90480 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | 149b5767ccdc11aa92a72f44fd4bdc9be81c59b6c22fa79b08cdddc7646b8655 | 80c13cacede1a68a60ac3576520818be5465c216290f4f966aea7fd803ea09c1 | sourceFiles 12 |
+| ref | 1 | cf9f034646e8fb811815bc6335e461ce69caf5da94a7b39b428c0146c996fe38 | 8e98f6976845a9bcd8794386f7e74ea2af13ebc647eaddb24dc0cf6f01d05b39 | sourceFiles 11 |
 
 | Run | Case |
 |---|---|
@@ -271,7 +271,7 @@ By run, each pair with its verdict and the judged metric that is largest against
 | Run | Requests | lv – optiland | lv – ref | optiland – ref |
 |---|---|---|---|---|
 | canon-ef-135-f2l-usm-ref | 3 | PASS: opd.maxAbs 2.48e-6 waves | PASS: opd.maxAbs 2.48e-6 waves | PASS: opticalPathToImage.maxAbs 2.42e-10 waves |
-| canon-ef-135-f2l-usm-photopic | 15 | PASS: opd.maxAbs 4.99e-6 waves | PASS: opd.maxAbs 4.99e-6 waves | PASS: opd.maxAbs 3.63e-10 waves |
+| canon-ef-135-f2l-usm-photopic | 15 | PASS: opd.maxAbs 4.99e-6 waves | PASS: opd.maxAbs 4.98e-6 waves | PASS: opd.maxAbs 3.63e-10 waves |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 3 | PASS: opd.maxAbs 4.47e-6 waves | PASS: opd.maxAbs 4.47e-6 waves | PASS: opd.maxAbs 1.93e-10 waves |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 15 | PASS: opd.maxAbs 4.80e-6 waves | PASS: opd.maxAbs 4.80e-6 waves | PASS: opticalPathToImage.maxAbs 3.02e-10 waves |
 | sigma-35mm-f14-dg-hsm-a-ref | 3 | PASS: opticalPath.maxAbs 4.22e-6 waves | PASS: opticalPath.maxAbs 4.22e-6 waves | PASS: opticalPath.maxAbs 1.21e-9 waves |
