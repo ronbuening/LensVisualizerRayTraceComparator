@@ -33,7 +33,7 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2   # three ways: optiland builds every case (R0), gives its own first-order data (R1) and traces LV's launch rays (R2)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3   # Phase 2, three ways: built system, first-order data, LV's launch rays, optical path
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -154,8 +154,12 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   where its Snell radicand is negative; a conic the line misses), and `failed` otherwise.
   `ON_SURFACE_TOLERANCE_MM` tells a hit from a point elsewhere and judges no precision: never tighten it to a
   gate.
-- **Expected values of the worker's ray tests are derived in the test** (`test_trace.py`: closed forms and
-  `exact_trace`, a 60-digit trace written from the contract), never taken from an engine's output. A behaviour of
+- **optiland's optical path is its `opd`, corrected once** (`trace.path_lengths`): optiland's step is the line
+  parameter along a direction it never normalises, so the worker adds `stretch x (|d| - 1)` per stretch, the
+  excess computed exactly (`length_excess`). `verify_optic` reads back the index in front of every surface, since
+  a path is charged to the medium between two surfaces. Tests are in `test_path.py`.
+- **Expected values of the worker's ray tests are derived in the test** (closed forms, and `exact.py`, a
+  60-digit trace written from the contract), never taken from an engine's output. A behaviour of
   optiland that `docs/gotchas.md` describes has a test that pins it.
 - **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR and to no failure (`assertR2`),
   and asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test

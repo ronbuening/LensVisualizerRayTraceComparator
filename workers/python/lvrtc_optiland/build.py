@@ -320,6 +320,11 @@ class SurfaceReadback:
     """The name of the class of its coating, or None without one."""
     index_after: float
     """The index of the medium after it at the wavelength it was read at."""
+    index_before: float
+    """The index of the medium optiland has in front of it (``material_pre``) at that wavelength: what optiland
+    refracts a ray out of there, and what it charges the ray's stretch to the surface to in the optical path. It is
+    no value of the surface's own but the medium after the surface before it in optiland's list, and the surface's
+    own for the object surface."""
 
 
 def _float(value: Any) -> float:
@@ -361,6 +366,7 @@ def read_optic(optic: Any, wavelength: float, api: OptilandApi | None = None) ->
             interaction=type(model).__name__,
             coating=None if coating is None else type(coating).__name__,
             index_after=_float(surface.material_post.n(wavelength)),
+            index_before=_float(surface.material_pre.n(wavelength)),
         )
         read.append(row)
     return read
@@ -409,10 +415,12 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     the count of surfaces, the object and image planes, and for each surface its vertex (in the geometry's frame
     and on the paraxial axis alike), the class of its geometry, its radius, conic constant and terms, the Newton
     settings of an asphere, its aperture's class and two radii, its semi-aperture, whether it is the stop, that it
-    refracts by optiland's ordinary model (no mirror, no thin lens, no coating), and the index after it; then the
-    index of the image space, which optiland reads from the image surface; then the system's aperture and the
-    wavelength. So a keyword the factory dropped, a coefficient list one place off and a diameter taken for a
-    radius are each found, and named.
+    refracts by optiland's ordinary model (no mirror, no thin lens, no coating), the index after it, and the index
+    optiland has in front of it, which is the medium after the surface before and is what a ray is refracted out
+    of and its stretch to the surface charged to; then the index of the image space, which optiland reads from the
+    image surface, and the index in front of that surface; then the system's aperture and the wavelength. So a
+    keyword the factory dropped, a coefficient list one place off and a diameter taken for a radius are each found,
+    and named.
 
     Then the surface optiland evaluates is held to the surface of the case: its sag at ``SAG_PROBE_FRACTIONS`` of
     the nominal semi-diameter against ``contract_sag``, within ``SAG_PROBE_TOLERANCE`` on the scale of the sag's
@@ -466,6 +474,9 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
             ("the model of its interaction", built.interaction, "RefractiveReflectiveModel"),
             ("its coating", built.coating, None),
             ("the index after it", built.index_after, float(indices[number])),
+            # The medium a ray reaches the surface in: air in front of the first, as the contract has it, and the
+            # medium after the surface before for every other. optiland finds it by a link between its surfaces.
+            ("the index in front of it", built.index_before, 1.0 if number == 0 else float(indices[number - 1])),
         ]
         for field, value, expected in checks:
             hold(where, field, value, expected)
@@ -488,6 +499,8 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     hold("the image surface", "the class of its geometry", image.geometry, "Plane")
     hold("the image surface", "aperture", image.aperture, None)
     hold("the image surface", "the index of the image space", image.index_after, float(indices[-1]))
+    # What a ray's last stretch, to the image plane, is charged to in optiland's optical path.
+    hold("the image surface", "the index in front of it", image.index_before, float(indices[-1]))
 
     hold("the system", "the index of the stop surface", int(optic.surfaces.stop_index) - 1, system["stopIndex"])
     hold("the system", "the type of its aperture", optic.aperture.ap_type, "float_by_stop_size")

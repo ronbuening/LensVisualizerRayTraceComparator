@@ -34,6 +34,41 @@ to the surface, a ray that has ended among them. On a curved base that is a roun
 has a point and no direction, one that was totally reflected further up, is 1e14 times its z from the base plane,
 and every ray of its batch is left on that plane and answered so (docs/gotchas.md).
 
+**The optical path** is optiland's own (``path_lengths``), and what its ``opd`` holds was read in its source, at
+optiland 4e893f53, rule by rule against the contract's (contract/CONTRACT.md, ``rays.trace``):
+
+- *Where it starts.* ``RealRays.__init__`` sets ``opd`` to 0 and ``ObjectSurface._trace_real`` does nothing: the
+  path is 0 at the ray's own origin, wherever the object surface stands. ``record`` holds the first row to it.
+- *What a stretch adds.* ``Surface._trace_real`` adds ``t * material_pre.n(w)`` on the way to each surface, the
+  image surface included (``ImageSurface`` has no kernel of its own for real rays), and nothing else does: a
+  refraction adds no path, and the model that would (a phase profile, a thin lens) is none ``verify_optic`` lets
+  through. ``t`` is the step of the surface's intersection along the ray, with its sign: a step backwards is
+  subtracted, as the contract counts it.
+- *Which medium it is charged to.* ``material_pre`` is the medium after the surface before: air, of index 1, in
+  front of the first surface (optiland's object surface states it, and ``verify_optic`` holds it to 1), and behind
+  the last surface the index after that surface, which is the contract's image space. The image surface's own
+  medium takes no part in a path, whatever it states. ``verify_optic`` reads the index in front of every surface.
+- *What a step is.* ``t`` is the parameter of the line ``p + t d`` with ``d`` the direction optiland holds, which
+  it takes for a unit vector and never makes one: neither the direction a ray is given with, which a spec may
+  state to 1e-12 of a unit vector, nor the ones ``RealRays.refract`` computes, each from the one before, whose
+  lengths keep what every refraction rounded and are within 8e-15 of 1 behind thirty surfaces. The contract's
+  path is index times *length*, and the length of a stretch is ``t`` times the length of ``d``. That is the one
+  thing made here of what optiland recorded. On LensVisualizer's rays it moves a path by up to twenty units of
+  its last place, 2e-9 waves, and toward the contract's: on a ray whose hits are right to 5e-14 mm, optiland's
+  own sum is 7e-10 waves from the path and the sum of lengths 4e-11 (docs/gotchas.md).
+- *Which ray it is the path of.* The one optiland traced, and nothing here makes it another. For a direction
+  that is given longer or shorter than a unit vector that is not quite the ray of the contract:
+  ``RealRays.refract`` takes the direction for a unit vector as the steps do, and bends one that is ``e`` longer
+  as if its sine of incidence were ``e`` larger. Behind 100 mm of glass met 30 degrees off the normal, a direction
+  4.5e-13 longer has its hit 1.0e-11 mm from the contract's and its path 8.6e-9 waves. That is optiland's
+  refraction, and it is left in the answer for both rungs to measure; a direction as LensVisualizer gives it,
+  1.6e-16 from a unit vector, is bent to a rounding.
+
+Whatever optiland's arithmetic costs a path is left in it, for the comparison to measure: the sum is a plain one,
+whose every addition rounds at the size of the path so far; a hit that is off moves the path by about half of
+what it is off by; and a conic met from far away is off by the square of the distance over its radius
+(docs/gotchas.md).
+
 Nothing of optiland or numpy is imported when this module is: ``build.optiland_api`` imports them when the first
 case is built. The spec is checked with the standard library alone (``read_spec``).
 """
@@ -86,6 +121,10 @@ records eight arrays for each surface and each ray of a batch, 1 MB for a batch 
 METHOD_NAME = "surfaces-trace"
 """The name of the method the answer states: ``optic.surfaces.trace`` on given ``RealRays``."""
 
+OPTICAL_PATH_RULE = "opd-stretches-times-direction-length"
+"""How an answer's optical path is made of optiland's ``opd``, as the method's ``params`` state it: each stretch
+optiland added, times the length of the direction it was taken along (``path_lengths``)."""
+
 
 def method_params(asphere_tolerance: float, asphere_max_iterations: int) -> dict[str, Any]:
     """The ``params`` of the method: how the rays were traced and how optiland's rows were read."""
@@ -97,6 +136,8 @@ def method_params(asphere_tolerance: float, asphere_max_iterations: int) -> dict
         "maxBatchRays": MAX_BATCH_RAYS,
         # optiland traces to its image surface itself: the landing and the path to it are its own rows.
         "landing": "image-surface",
+        # optiland's own sum of index times step, each step made a length by the direction it was taken along.
+        "opticalPath": OPTICAL_PATH_RULE,
     }
 
 
@@ -257,6 +298,88 @@ def record(optic: Any, origins: Any, directions: Any, api: OptilandApi | None = 
     return rows
 
 
+# ── The optical path: optiland's steps as lengths ────────────────────────────────────────────────────────────────
+
+_SPLITTER = 134217729.0
+"""2^27 + 1 (Veltkamp): a double times this, less what the product's rounding dropped, is the double's upper half,
+and the products of two such halves are exact."""
+
+
+def _exact_square(value: Any) -> tuple[Any, Any]:
+    """A square in two doubles: the rounded ``value * value``, and what the rounding left out, exactly (Dekker)."""
+    square = value * value
+    scaled = _SPLITTER * value
+    high = scaled - (scaled - value)
+    low = value - high
+    return square, ((high * high - square) + 2.0 * (high * low)) + low * low
+
+
+def _exact_sum(a: Any, b: Any) -> tuple[Any, Any]:
+    """A sum in two doubles: the rounded ``a + b``, and what the rounding left out, exactly (Knuth)."""
+    total = a + b
+    virtual = total - a
+    return total, (a - (total - virtual)) + (b - virtual)
+
+
+def length_excess(np: Any, L: Any, M: Any, N: Any) -> Any:
+    """How much longer than 1 a direction is: ``sqrt(L^2 + M^2 + N^2) - 1``, to a rounding of that small number
+    or to 1e-31, whichever is more.
+
+    A direction that is a unit vector to a rounding has a length within 2e-16 of 1, and the plain expression is
+    0 or a rounding for it: the difference is lost where it is formed. Here the three squares and their sum are
+    carried in two doubles each, so ``L^2 + M^2 + N^2 - 1`` is exact before it is rounded once; the excess of the
+    length is that over ``1 + sqrt(1 + it)``, which is ``(l^2 - 1) / (l + 1)`` and cancels nothing.
+
+    The arrays are float64 of one shape; a direction that is no number has an excess that is none.
+    """
+    (xx, x_rest), (yy, y_rest), (zz, z_rest) = _exact_square(L), _exact_square(M), _exact_square(N)
+    partial, first_rest = _exact_sum(xx, yy)
+    whole, second_rest = _exact_sum(partial, zz)
+    # The sum of the squares is within a factor of two of 1, so taking 1 from it rounds nothing (Sterbenz); the five
+    # remainders are each below 1e-16 and add up to a rounding of their own sum.
+    square_excess = (whole - 1.0) + ((first_rest + second_rest) + ((x_rest + y_rest) + z_rest))
+    return square_excess / (1.0 + np.sqrt(1.0 + square_excess))
+
+
+def path_lengths(rows: Rows, api: OptilandApi | None = None) -> Any:
+    """The optical path of each ray at each row of what optiland recorded, mm, as the contract defines a path.
+
+    optiland's ``opd`` at a row is the sum, over the stretches up to it, of the index of the medium in front of
+    the surface times the step ``t`` of the surface's intersection: the parameter of the line ``p + t d`` along the
+    direction ``d`` that optiland holds, which is a length only where ``d`` is a unit vector. optiland takes every
+    direction for one and makes none: a ray's first direction is the one it was given with, to 1e-12 of a unit
+    vector by the contract, and every later one is what ``RealRays.refract`` computed from the one before, whose
+    length it keeps to within what that refraction rounds (of a direction ``1 + e`` long it makes one
+    ``1 + e (n / n')^2`` long). The contract's path is index times the *length* of each stretch, and the length
+    of the stretch from ``p`` to ``p + t d`` is ``t |d|`` whatever ``d`` is.
+
+    So each stretch optiland added (the difference of ``opd`` between two rows, which is index times step as
+    optiland summed it) is taken times the length of the direction recorded on the row before it, the direction the
+    stretch was travelled along. It is added as what it changes, ``stretch * (|d| - 1)`` (``length_excess``), on top
+    of optiland's own sum, which is otherwise left as optiland has it, the rounding of its plain sum included.
+
+    How much that is depends on the lengths. A direction as LensVisualizer launches it is within 1.6e-16 of a unit
+    vector; optiland's own, behind 20 to 40 surfaces, within 8e-15, and the paths of the benchmark move by up to
+    twenty units of their last place, 2e-9 waves. For a direction given 1e-12 long it is 1e-12 of the first
+    stretch, which from an origin 16 m away is 1.6e-8 mm, 3e-5 waves: more than the gate of rung R3.
+
+    The lengths are those of the stretches optiland travelled: the points it recorded are not moved, and a ray
+    that its refraction bent by a direction it took for a unit vector (the module's note) keeps the path of where
+    it went.
+
+    Returns a float64 array of the shape of ``rows.opd``: row 0 is 0, as optiland's is. A ray has a number at a row
+    while it has one for its path and for its direction on every row before; whether it is alive is not asked here.
+    """
+    api = api if api is not None else optiland_api()
+    np = api.np
+    with np.errstate(all="ignore"):
+        stretches = np.diff(rows.opd, axis=0)
+        excess = length_excess(np, rows.L[:-1], rows.M[:-1], rows.N[:-1])
+        path = np.array(rows.opd, dtype=np.float64)
+        path[1:] += np.cumsum(stretches * excess, axis=0)
+    return path
+
+
 # ── From optiland's rows to the contract's answer ────────────────────────────────────────────────────────────────
 
 
@@ -379,6 +502,10 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
     whose exit point lies behind the plane within that reach lands where it left, with the path it has. Any other
     ray lands where optiland's image surface has it, with optiland's path to it; the point's z is written as the
     plane's, which optiland's own must be within ``ON_SURFACE_TOLERANCE_MM``, or the ray is failed.
+
+    The two paths of an answer are optiland's own sum on the last surface of the case and on the image surface,
+    each stretch of it a length (``path_lengths``): to the last surface in the media of the case, and from there
+    to the image plane in the index after the last surface, which is what optiland charges that stretch to.
     """
     api = api if api is not None else optiland_api()
     np = api.np
@@ -387,6 +514,7 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
     status = np.zeros(count, dtype=np.uint8)
     end = np.full(count, surfaces, dtype=np.int32)
     alive = np.ones(count, dtype=bool)
+    path = path_lengths(rows, api)
 
     with np.errstate(all="ignore"), warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -422,14 +550,14 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
         left = alive
         image_z = float(optic.surfaces[surfaces + 1].geometry.cs.z)
         exit_x, exit_y, exit_z = rows.x[surfaces], rows.y[surfaces], rows.z[surfaces]
-        exit_path = rows.opd[surfaces]
+        exit_path = path[surfaces]
         # The contract's own measure of the way to the plane: one division, as every engine's landing has it.
         along = (image_z - exit_z) / rows.N[surfaces]
         reach = left & (rows.N[surfaces] > 0) & (along >= -IMAGE_PLANE_TOLERANCE_MM)
         status[left & ~reach] = STATUS_BLOCKED
         at_exit = reach & ~(along > 0)
         beyond = reach & (along > 0)
-        image_x, image_y, image_path = rows.x[surfaces + 1], rows.y[surfaces + 1], rows.opd[surfaces + 1]
+        image_x, image_y, image_path = rows.x[surfaces + 1], rows.y[surfaces + 1], path[surfaces + 1]
         on_plane = np.abs(rows.z[surfaces + 1] - image_z) <= ON_SURFACE_TOLERANCE_MM
         landed = beyond & _finite(np, image_x, image_y, image_path) & on_plane & (rows.intensity[surfaces + 1] > 0)
         status[beyond & ~landed] = STATUS_FAILED

@@ -7,8 +7,9 @@ runs on the real optiland and skips, with the reason, under an interpreter that 
 
 Every expected value is derived here, and never taken from an engine: closed forms of a plate, of one sphere, of
 the aplanatic points and of the two Cartesian conics, and for everything else a trace in 60-digit decimal
-arithmetic (``exact_trace``) that is written from the contract alone: Newton's method on the contract's sag from
-the surface's vertex plane, the textbook vector form of Snell's law, and the contract's rules of where a ray ends.
+arithmetic (``exact.exact_trace``) that is written from the contract alone: Newton's method on the contract's sag
+from the surface's vertex plane, the textbook vector form of Snell's law, and the contract's rules of where a ray
+ends. What an answer's optical path is made of, and what it is held to, is ``test_path.py``'s.
 """
 
 from __future__ import annotations
@@ -21,13 +22,14 @@ from decimal import Decimal, getcontext
 from typing import Any
 
 from lvrtc_optiland import trace
-from lvrtc_optiland.build import BuildMismatch, build_case, index_rows, optiland_api
+from lvrtc_optiland.build import BuildMismatch, build_case, optiland_api
 from lvrtc_optiland.engine import QUANTITIES, OptilandEngine
 from lvrtc_optiland.trace import (
     DIRECTION_NORM_TOLERANCE,
     IMAGE_PLANE_TOLERANCE_MM,
     MAX_BATCH_RAYS,
     ON_SURFACE_TOLERANCE_MM,
+    OPTICAL_PATH_RULE,
     RAYS_TRACE,
     STATUS_BLOCKED,
     STATUS_FAILED,
@@ -35,8 +37,9 @@ from lvrtc_optiland.trace import (
     read_spec,
 )
 from lvrtc_worker_kit.ndarray import decode_ndarray, encode_ndarray
-from lvrtc_worker_kit.validate import contract_schemas, format_issues, quantity_schema_id, validate, validate_kind
+from lvrtc_worker_kit.validate import contract_schemas, quantity_schema_id, validate, validate_kind
 
+from .exact import Point, exact_sag, exact_trace
 from .support import (
     PLANE,
     REPO_ROOT,
@@ -50,6 +53,7 @@ from .support import (
     surface,
     trace_request,
 )
+from .traced import AXIS, IDENTITY, Answer, TracedRays, is_finite, unit
 
 MISSING = real_optiland_missing()
 getcontext().prec = 60
@@ -57,24 +61,6 @@ getcontext().prec = 60
 SINGLET = read_fixture("valid", "optical-case", "singlet.json")
 WORKED_SPEC = read_fixture("valid", "quantities", "rays.trace.spec", "singlet-axis-and-rim.json")
 WORKED_DATA = read_fixture("valid", "quantities", "rays.trace.data", "singlet-axis-and-rim.json")
-
-IDENTITY: dict[str, Any] = {
-    "id": "optiland",
-    "version": "0.0.0+test",
-    "fingerprint": "f" * 64,
-    "adapterRevision": "a" * 64,
-    "details": {"jit": True},
-}
-
-Point = tuple[float, float, float]
-AXIS: Point = (0.0, 0.0, 1.0)
-
-
-def unit(x: float, y: float, z: float) -> Point:
-    """The direction of a vector, as doubles: a unit vector to a rounding, which is what a spec asks."""
-    length = math.sqrt(x * x + y * y + z * z)
-    return (x / length, y / length, z / length)
-
 
 # ── Without optiland: the spec ───────────────────────────────────────────────────────────────────────────────────
 
@@ -222,219 +208,12 @@ class RunTest(unittest.TestCase):
             engine.run(trace_request(SINGLET, WORKED_SPEC), SINGLET)
 
 
-# ── The contract, in 60 digits ───────────────────────────────────────────────────────────────────────────────────
-
-
-@dataclasses.dataclass(frozen=True)
-class Exact:
-    """One ray traced by the contract's rules in 60-digit arithmetic."""
-
-    status: int
-    end: int
-    hits: tuple[tuple[Decimal, Decimal, Decimal], ...]
-    direction: tuple[Decimal, Decimal, Decimal] | None = None
-    path: Decimal | None = None
-    image: tuple[Decimal, Decimal, Decimal] | None = None
-    path_image: Decimal | None = None
-
-
-def exact_sag(shape: dict[str, Any], r: Decimal) -> Decimal | None:
-    """The contract's sag (contract/CONTRACT.md, "Sag"); None beyond the height at which a conic ends."""
-    total = Decimal(0)
-    if shape["kind"] != "plane" and shape["radius"] is not None:
-        c = 1 / Decimal(shape["radius"])
-        inside = 1 - (1 + Decimal(shape["conic"])) * c * c * r * r
-        if inside < 0:
-            return None
-        total = c * r * r / (1 + inside.sqrt())
-    for term in shape.get("terms", []):
-        total += Decimal(term["coeff"]) * r ** term["power"]
-    return total
-
-
-def exact_slope(shape: dict[str, Any], r: Decimal) -> Decimal:
-    """The derivative of that sag by the height."""
-    total = Decimal(0)
-    if shape["kind"] != "plane" and shape["radius"] is not None:
-        c = 1 / Decimal(shape["radius"])
-        total = c * r / (1 - (1 + Decimal(shape["conic"])) * c * c * r * r).sqrt()
-    for term in shape.get("terms", []):
-        total += term["power"] * Decimal(term["coeff"]) * r ** (term["power"] - 1)
-    return total
-
-
-def exact_trace(case: dict[str, Any], origin: Point, direction: Point, line: int = 0) -> Exact:
-    """Carries one ray through a case as the contract defines a trace (contract/CONTRACT.md, ``rays.trace``).
-
-    The numbers of the case and of the ray are taken as the doubles they are. At each surface the line is met with
-    the sag by Newton's method from the point where it crosses the surface's vertex plane, which on the surfaces of
-    these tests is the crossing nearest that plane; the step may be negative. A line that leaves the heights at
-    which the surface has a sag misses it. The aperture is inclusive at both radii. A ray is bent by Snell's law in
-    its vector form, and ends where it is totally reflected. The optical path is index times the signed step.
-    """
-    surfaces = case["system"]["surfaces"]
-    indices = [Decimal(value) for value in index_rows(case)[line]]
-    p = tuple(Decimal(value) for value in origin)
-    d = tuple(Decimal(value) for value in direction)
-    index, path = Decimal(1), Decimal(0)
-    hits: list[tuple[Decimal, Decimal, Decimal]] = []
-    for number, entry in enumerate(surfaces):
-        if d[2] <= 0:
-            return Exact(STATUS_BLOCKED, number, tuple(hits))
-        shape, vertex = entry["shape"], Decimal(entry["z"])
-        length = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
-        step = (vertex - p[2]) / d[2]
-        for _ in range(200):
-            x, y = p[0] + step * d[0], p[1] + step * d[1]
-            r = (x * x + y * y).sqrt()
-            sag = exact_sag(shape, r)
-            if sag is None:
-                return Exact(STATUS_BLOCKED, number, tuple(hits))
-            radial = (x * d[0] + y * d[1]) / r if r != 0 else Decimal(0)
-            change = (p[2] + step * d[2] - vertex - sag) / (d[2] - exact_slope(shape, r) * radial)
-            step -= change
-            if abs(change) < Decimal(10) ** -45:
-                break
-        else:
-            raise AssertionError(f"the exact trace did not settle on surface {number}")
-        q = (p[0] + step * d[0], p[1] + step * d[1], p[2] + step * d[2])
-        r = (q[0] * q[0] + q[1] * q[1]).sqrt()
-        aperture = entry["aperture"]
-        if r > Decimal(aperture["semiDiameter"]) or r < Decimal(aperture["innerSemiDiameter"]):
-            return Exact(STATUS_BLOCKED, number, tuple(hits))
-        slope = exact_slope(shape, r)
-        gx, gy = (slope * q[0] / r, slope * q[1] / r) if r != 0 else (Decimal(0), Decimal(0))
-        size = (gx * gx + gy * gy + 1).sqrt()
-        normal = (gx / size, gy / size, -1 / size)
-        heading = tuple(part / length for part in d)
-        cosine = -(heading[0] * normal[0] + heading[1] * normal[1] + heading[2] * normal[2])
-        if cosine < 0:
-            normal, cosine = tuple(-part for part in normal), -cosine
-        ratio = index / indices[number]
-        radicand = 1 - ratio * ratio * (1 - cosine * cosine)
-        if radicand < 0:
-            return Exact(STATUS_BLOCKED, number, tuple(hits))
-        factor = ratio * cosine - radicand.sqrt()
-        path += index * step * length
-        hits.append(q)
-        p, d, index = q, tuple(ratio * heading[axis] + factor * normal[axis] for axis in range(3)), indices[number]
-    count = len(surfaces)
-    reached = (Decimal(case["conditions"]["imageZ"]) - p[2]) / d[2] if d[2] > 0 else None
-    if reached is None or reached < -Decimal(IMAGE_PLANE_TOLERANCE_MM):
-        return Exact(STATUS_BLOCKED, count, tuple(hits), d, path)
-    along = max(reached, Decimal(0))
-    image = (p[0] + along * d[0], p[1] + along * d[1], Decimal(case["conditions"]["imageZ"]))
-    return Exact(STATUS_OK, -1, tuple(hits), d, path, image, path + index * along)
-
-
 # ── On the real optiland ─────────────────────────────────────────────────────────────────────────────────────────
 
 
-@dataclasses.dataclass(frozen=True)
-class Answer:
-    """A ``rays.trace`` answer with its arrays decoded: n rays through S surfaces."""
-
-    status: list[int]
-    end: list[int]
-    hits: list[list[Point]]
-    """``hits[surface][ray]``."""
-    exit_point: list[Point]
-    exit_direction: list[Point]
-    image: list[Point]
-    path: list[float]
-    path_image: list[float]
-    result: dict[str, Any]
-
-
-def triples(values: list[float]) -> list[Point]:
-    return [(values[at], values[at + 1], values[at + 2]) for at in range(0, len(values), 3)]
-
-
-def is_nan(point: Point) -> bool:
-    return all(math.isnan(value) for value in point)
-
-
-def is_finite(point: Point) -> bool:
-    return all(math.isfinite(value) for value in point)
-
-
 @unittest.skipIf(MISSING is not None, MISSING)
-class TraceTest(unittest.TestCase):
+class TraceTest(TracedRays):
     """Given rays through optiland, held to what the contract says of them."""
-
-    def answer(self, case: dict[str, Any], origins: list[Point], directions: list[Point], line: int = 0) -> Answer:
-        """Asks the engine, and holds the answer to the quantity's schema and to its rule of numbers and NaN."""
-        result = OptilandEngine(IDENTITY).run(trace_request(case, ray_spec(origins, directions, line=line)), case)
-        self.assertEqual(validate_kind("result", result), [])
-        self.assertEqual(result["status"], "ok", result.get("error"))
-        data = result["data"]
-        issues = validate(contract_schemas(), quantity_schema_id(RAYS_TRACE, "data"), data)
-        self.assertEqual(issues, [], format_issues(issues))
-        rays, surfaces = len(origins), len(case["system"]["surfaces"])
-        self.assertEqual(data["hits"]["$nd"]["shape"], [surfaces, rays, 3])
-        every_hit = triples(f8(data["hits"]))
-        answer = Answer(
-            status=decode_ndarray(data["status"]).values(),
-            end=decode_ndarray(data["endSurface"]).values(),
-            hits=[every_hit[surface * rays : (surface + 1) * rays] for surface in range(surfaces)],
-            exit_point=triples(f8(data["exitPoint"])),
-            exit_direction=triples(f8(data["exitDirection"])),
-            image=triples(f8(data["imagePoint"])),
-            path=f8(data["opticalPath"]),
-            path_image=f8(data["opticalPathToImage"]),
-            result=result,
-        )
-        self.assert_numbers_up_to_where_each_ray_ended(answer, surfaces)
-        return answer
-
-    def assert_numbers_up_to_where_each_ray_ended(self, answer: Answer, surfaces: int) -> None:
-        """The contract's rule: a number in every member of a ray that is ok, and NaN from where any other ended."""
-        for ray, status in enumerate(answer.status):
-            end = answer.end[ray]
-            self.assertIn(status, (STATUS_OK, STATUS_BLOCKED, STATUS_FAILED))
-            self.assertEqual(end == -1, status == STATUS_OK, ray)
-            reached = surfaces if status == STATUS_OK else end
-            self.assertTrue(0 <= reached <= surfaces, ray)
-            for number in range(surfaces):
-                hit = answer.hits[number][ray]
-                self.assertTrue(is_finite(hit) if number < reached else is_nan(hit), (ray, number, hit))
-            left = reached == surfaces
-            self.assertTrue(is_finite(answer.exit_point[ray]) if left else is_nan(answer.exit_point[ray]), ray)
-            self.assertTrue(is_finite(answer.exit_direction[ray]) if left else is_nan(answer.exit_direction[ray]), ray)
-            self.assertEqual(math.isfinite(answer.path[ray]), left, ray)
-            self.assertEqual(math.isnan(answer.path[ray]), not left, ray)
-            landed = status == STATUS_OK
-            self.assertTrue(is_finite(answer.image[ray]) if landed else is_nan(answer.image[ray]), ray)
-            self.assertEqual(math.isfinite(answer.path_image[ray]), landed, ray)
-            if left:
-                self.assertEqual(answer.exit_point[ray], answer.hits[surfaces - 1][ray], "the exit point is that hit")
-
-    def assert_near(self, actual: Point | float, expected: Any, within: float, said: Any = None) -> None:
-        got = actual if isinstance(actual, tuple) else (actual,)
-        wanted = expected if isinstance(expected, tuple) else (expected,)
-        self.assertEqual(len(got), len(wanted), said)
-        for value, target in zip(got, wanted, strict=True):
-            self.assertTrue(math.isfinite(value), (said, got))
-            self.assertLessEqual(abs(Decimal(value) - Decimal(target)), Decimal(within), (said, got, wanted))
-
-    def assert_is_the_exact_trace(
-        self, case: dict[str, Any], answer: Answer, origins: list[Point], directions: list[Point], within: float
-    ) -> None:
-        """Every ray of an answer against the trace in 60 digits: where it ended, and each number it has.
-
-        ``within`` is in mm for a point and a path; a direction is held ten times as closely.
-        """
-        for ray, (origin, direction) in enumerate(zip(origins, directions, strict=True)):
-            exact = exact_trace(case, origin, direction)
-            self.assertEqual((answer.status[ray], answer.end[ray]), (exact.status, exact.end), ray)
-            for number, hit in enumerate(exact.hits):
-                self.assert_near(answer.hits[number][ray], hit, within, (ray, number))
-            if exact.direction is not None and len(exact.hits) == len(answer.hits):
-                self.assert_near(answer.exit_direction[ray], exact.direction, within / 10, ray)
-                self.assert_near(answer.path[ray], exact.path, within, ray)
-            if exact.image is not None:
-                self.assert_near(answer.image[ray], exact.image, within, ray)
-                self.assert_near(answer.path_image[ray], exact.path_image, within, ray)
 
     # ── Closed forms ──
 
@@ -565,6 +344,7 @@ class TraceTest(unittest.TestCase):
                     "imagePlaneTolerance": IMAGE_PLANE_TOLERANCE_MM,
                     "maxBatchRays": MAX_BATCH_RAYS,
                     "landing": "image-surface",
+                    "opticalPath": OPTICAL_PATH_RULE,
                 },
             },
         )

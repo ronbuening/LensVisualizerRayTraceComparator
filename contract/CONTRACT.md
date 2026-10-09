@@ -718,8 +718,10 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
   must be the number of the case: each vertex, in the geometry's frame and on the paraxial axis; the class of each
   geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
   intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
-  ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface; the object
-  and image planes; the index of the image space, which optiland reads from the image surface; the stop diameter;
+  ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface, and the index
+  optiland has in front of it, which it finds by a link to the surface before and which is what it refracts a ray
+  out of and charges the ray's stretch to the surface to; the object and image planes; the index of the image
+  space, which optiland reads from the image surface, and the index in front of that surface; the stop diameter;
   the wavelength. Then the sag optiland evaluates on each surface, at a quarter, a half, three quarters and the
   whole of its nominal semi-diameter, must be the contract's sag of the case's surface within 1e-9 on the scale of
   the sag's rounding (the scale of `sag.maxScaled`, below). The first thing that differs is the error's message,
@@ -750,7 +752,8 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
   anything is read, what optiland holds at its object surface is held to the rays it was given, bit for bit. The
   method is named `surfaces-trace`, and its `params` state `asphereTolerance`, `asphereMaxIterations`, the two
   tolerances of the rules below (`onSurfaceTolerance`, `imagePlaneTolerance`), `maxBatchRays`, the most rays handed
-  to optiland at once, and `landing`, which is `image-surface`. How its rows become an answer is below.
+  to optiland at once, `landing`, which is `image-surface`, and `opticalPath`, which is
+  `opd-stretches-times-direction-length`. How its rows become an answer is below.
 - **What it does not answer** is said in two ways. A quantity it does not offer, a contract version it does
   not speak and what its first-order data has no answer for, below, are `unsupported`, by items as those of
   negotiation. A spec that is not the quantity's is `bad-spec`: fractions that do not ascend, rays whose arrays
@@ -791,8 +794,9 @@ optical path from where it was launched. The answer to `rays.trace` is those row
 | Of `rays.trace` | Is, in optiland |
 |---|---|
 | `hits` | the point each surface of the case recorded (`surfaces.x`, `y`, `z`), which is global |
-| `exitPoint`, `exitDirection`, `opticalPath` | the point, the direction cosines and the path (`opd`) the last surface of the case recorded. The path starts at 0 where the ray was launched, and a step backwards counts with its sign |
-| `imagePoint`, `opticalPathToImage` | the point and the path optiland's image surface recorded: optiland carries a ray to the image plane itself, by the division, the multiplication and the addition of the comparator's own projection, in the index the image surface states. The point's z is written as the plane's own number. For a ray whose exit point lies behind the plane within the contract's 1e-9 mm they are the exit point and its path, as the contract says, where optiland would step back |
+| `exitPoint`, `exitDirection` | the point and the direction cosines the last surface of the case recorded |
+| `opticalPath` | optiland's own sum (`opd`) on the last surface of the case, with each stretch of it a length (below, "The optical path is optiland's own sum"). It starts at 0 where the ray was launched, and a step backwards counts with its sign |
+| `imagePoint`, `opticalPathToImage` | the point optiland's image surface recorded, and its sum there, made of lengths in the same way: optiland carries a ray to the image plane itself, by the division, the multiplication and the addition of the comparator's own projection, and charges that stretch to the medium in front of the image surface, which is the one after the last surface of the case. The point's z is written as the plane's own number. For a ray whose exit point lies behind the plane within the contract's 1e-9 mm they are the exit point and its path, as the contract says, where optiland would step back |
 | `status`, `endSurface` | the worker's, from the rows, by the rules below |
 
 optiland carries every ray to the image surface whatever became of it, and says of a ray only its intensity: 0
@@ -819,6 +823,39 @@ root of a negative number for a miss or a reflection, are not passed on. What th
 a ray that optiland could not trace is counted as failed and is in no mask count, and a ray that optiland passes
 where the surface of the case is not, as on the far side of a hemisphere, is a ray it lands, and a mismatch of
 the mask in R2.
+
+**The optical path is optiland's own sum, and one thing is made of it.**
+What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`) against each
+rule of [`rays.trace`](#raystrace):
+
+| The contract's path | optiland's `opd` |
+|---|---|
+| starts at the ray's own origin | is 0 in a new `RealRays`, and the object surface adds nothing to it, wherever it stands. The worker holds the first row to 0 |
+| adds, for each stretch, the index of the medium the ray is in | adds `t` times the index of `material_pre`, the medium after the surface before, on the way to every surface. In front of the first surface that is the object surface's medium, air of index 1, which the worker holds to 1. A refraction adds nothing; the interaction models that would (a phase profile, a thin lens) are refused when the optic is verified |
+| counts a stretch that runs backwards with its sign | has `t` with its sign: a step backwards is subtracted |
+| continues to the image plane in the index after the last surface | adds the step to the image surface times the index in front of it, which is the index after the last surface of the case whatever the image surface itself states; the worker reads that index back |
+| times the **length** of the stretch | times the **step** `t`: the parameter of the line `p + t d` along the direction `d` optiland holds, which it takes for a unit vector and never makes one |
+
+The last row is the one difference, and it is one of definition: a ray's first direction is the one it was given
+with, which a spec may state within 1e-12 of a unit vector, and every later one is what optiland's refraction
+computed from the one before, without making it a unit vector again, so that its length keeps what each
+refraction rounded. The length of a stretch from `p` to `p + t d` is `t |d|`. So the worker takes each stretch
+optiland added (the difference of `opd` between two surfaces) times the length of the direction it was travelled
+along, as what that changes, `stretch × (|d| − 1)`, with `|d| − 1` computed without the rounding that loses it,
+and adds that to optiland's sum. LensVisualizer's launch directions are within 1.6e-16 of unit vectors and
+optiland's own, behind the 18 to 39 surfaces of a benchmark lens, within 7.8e-15: the paths of the benchmark move
+by up to twenty units of their last place, 1.9e-9 waves, and toward the contract's. For a direction 4.5e-13
+longer than a unit vector and an origin 16 m away it is 7.3e-9 mm, 1.2e-5 waves, most of the gate of R3. Nothing
+else is made of optiland's number: its sum is a plain one, and what its arithmetic costs a path is left in the
+answer for R3 to measure ([docs/gotchas.md](../docs/gotchas.md#optiland)).
+
+The path is that of the ray optiland traced, and for a direction that is given off a unit vector that is not
+quite the contract's ray. optiland's refraction takes the direction for a unit vector as its steps do, and bends
+one that is e longer as if its sine of incidence were e larger: behind 100 mm of glass met 30° off the normal, a
+direction 4.5e-13 longer has its hit 1.0e-11 mm from the contract's and its path 8.6e-9 waves, and at the 1e-12
+a spec may be off by, 2.2e-11 mm and 1.9e-8 waves. The worker moves no point and bends no ray: that difference is
+optiland's, in R2 and in R3, and is in the answer. No ray set of LensVisualizer or of a case file has such a
+direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-16.
 
 **The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
 is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray

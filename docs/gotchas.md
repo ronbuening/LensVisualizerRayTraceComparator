@@ -243,7 +243,11 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   rule does what it says, and what it says is strict: an engine whose own arithmetic is a hundred times coarser
   than the arbiter's is no witness on a lens that magnifies arithmetic a thousand times, and LensVisualizer's floor
   is then not granted. Nothing is widened for it: whether a witness that is inside every gate by a factor of ten or
-  more should withhold a floor is the owner's to decide, on these figures.
+  more should withhold a floor is the owner's to decide, on these figures. In R3 it is the same on a smaller
+  scale (Stage 2.5, LensVisualizer `c05a2ab7`, the same closure): in the suites optiland is within 3.5e-9 waves of
+  `ref`, a thirtieth of the 1e-7 the rule asks, and the two floors of the Hologon in R3 are floors against both;
+  on four of those lenses it is up to 9.7e-7 waves from `ref`, and 9 of 11 floors of R3 are `FAIL` beside it
+  ([optiland's path](#optilands-optical-path-is-a-plain-sum-and-as-exact-as-its-hits)).
 - **Before and after policy version 4**, over that sweep at `1ed8cc3d`: R2 had 14 235 `PASS`, 39 `FLOOR` and 96
   `FAIL`, and has 14 235, 53 and 82; R3 has 14 345, 24 and 1, as it had. The 14 pairs that changed are the six of
   `apple-iphone-12-main-wide`, the five of `apple-iphone-7-wide-camera-lens` and three of
@@ -640,11 +644,15 @@ the traced rays, were taken with LensVisualizer at `14da71d9` (the same closure)
 sets and 421 334 rays, and over nineteen lenses of the catalog that are in no suite and that other entries of this
 file name, each on its reference line and on the photopic lines, a zoom at both ends, 460 ray sets and 561 506
 rays; and at the 24 focus stations LensVisualizer certifies at `f3b4a337` (the same closure, six lens models more),
-on the reference line, 72 ray sets and 100 004 rays from object points 40 mm to 2.3 m in front of the lens, where
-all three engines stop the same rays and optiland is within 4.5e-12 mm, 6.8e-14 and 4.6e-12 mm of `ref`. Two entries below were found on synthetic systems
-instead: 280 made at random, 2240 probe lattices traced by `ref` and optiland, in no test. Where an entry says
-whose error a difference is, the ray was traced in 60-digit decimal arithmetic by a tracer that shares no code
-with any engine.
+on the reference line, 72 ray sets and 100 004 rays that diverge from object points 40 mm to 2.3 m in front of the
+lens, where all three engines stop the same rays and optiland is within 4.5e-12 mm, 6.8e-14 and 4.6e-12 mm of
+`ref`. Those of rung R3, the optical path, were taken with LensVisualizer at `c05a2ab7` (the same closure; the
+commit corrected rims and labels of six lens files, none of a suite): over the two suites, over the stations
+again, and over the four lenses of the catalog on which optiland is no witness in R2, each on its reference line
+and on the photopic lines, the zoom among them at both ends, 90 ray sets. Two entries below were found on
+synthetic systems instead: 280 made at random, 2240 probe lattices traced by `ref` and optiland, in no test. Where
+an entry says whose error a difference is, the ray was traced in 60-digit decimal arithmetic by a tracer that
+shares no code with any engine.
 
 ### Importing optiland writes into its own checkout
 
@@ -1038,6 +1046,84 @@ with any engine.
   (`trace.settle`), each with a test on a plate whose rear face is, or lies just behind, the image plane.
 - **Class.** convention.
 
+### optiland's optical path is a sum of steps, and a step is a length only along a unit vector
+
+- **Where.** `Surface._trace_real` in `optiland/surfaces/standard_surface.py` adds `t * self.material_pre.n(rays.w)`
+  to `rays.opd` on the way to each surface, with `t` the distance its geometry gives: `-z / N` for a plane, a root
+  of `a t^2 + b t + c = 0` with `a = L^2 + M^2 + (1 + k) N^2` for a conic, and where the iteration ends for an
+  asphere. That is the parameter of the line `p + t d`, for whatever length `d` has. `RealRays.__init__`
+  normalises nothing, and `RealRays.refract` computes a direction from the one before without normalising it: of
+  a direction `1 + e` long it makes one `1 + e (n / n')^2` long. `ObjectSurface._trace_real` does nothing, the
+  image surface has the kernel of every surface, and `material_pre` is the medium after the surface before, found
+  through a link between the two.
+- **Effect.** Rule by rule the sum is the contract's. It starts at 0 at the ray's own origin; each stretch is
+  charged to the medium the ray is in, which is air in front of the first surface and, on the way to the image
+  plane, the medium after the last surface, whatever the image surface itself states; a step backwards is
+  subtracted; a refraction adds nothing. But the contract's path is index times length, and `t` is a length only
+  where `d` is a unit vector. A spec may state a direction within 1e-12 of one: with a direction 4.5e-13 longer,
+  a ray from 16 m away has an `opd` 7.3e-9 mm short of its path, 1.2e-5 waves, where `ref`, which takes a step
+  times the length of its direction, has the path. **And between unit vectors it shows too, in the last digits.**
+  LensVisualizer's launch directions are within 1.6e-16 of unit vectors, by rational arithmetic on all 235 812
+  rays of the benchmark. optiland's own are not: along the axis of a plate of index 1.5 it holds the direction
+  `1 - 1.1e-16`, takes a step of 6.000000000000001 through 6 mm of glass, and has 14.000000000000002 for a path
+  of 14; and what each refraction rounds stays in every direction after it, so that behind the 18 to 39 surfaces
+  of a benchmark lens the directions of the rays that land are within 7.8e-15 of unit vectors (5.4e-15 in the
+  feature suite, 7.5e-15 at the focus stations). On an axial ray of `nikon-z-mc-105f28` at 650 nm, whose every hit
+  optiland has within 4.9e-14 mm of the 60-digit trace, its `opd` is 5.9e-10 waves from the path on the last
+  surface and 7.4e-10 on the image plane, and 9.8e-10 relative to the chief ray's.
+- **Handled.** In the adapter, as a matter of definition and not of precision: each stretch optiland added is
+  taken times the length of the direction optiland held along it, added as `stretch x (|d| - 1)` with that excess
+  exact before it is rounded once (`path_lengths`, `length_excess` in `workers/python/lvrtc_optiland/trace.py`),
+  and the method's `params` say so (`opticalPath`). Otherwise the number is optiland's, the rounding of its sum
+  included. On that ray the answer is 6.3e-11, 4.3e-11 and 6.5e-11 waves from the truth. Over the benchmark it
+  moves a path by up to twenty units of its last place, 1.9e-9 waves (13 units and 5.6e-10 waves in the feature
+  suite, 19 and 1.2e-9 at the stations), and leaves one path in seven as optiland's own bits; where optiland's hits
+  are what is off, as on the rays that set the largest figures of R3, it changes nothing that shows (2.7e-9
+  waves before and after). `verify_optic` reads the index optiland has in front of every surface, the image
+  surface among them, and holds it to the case: a path is charged to a link, and to no value of a surface's own.
+  Tests: the longer direction from 16 m, the plate along its axis, sixty spheres behind which optiland's sum is
+  4 units of its last place from the 60-digit path and the sum of lengths 1.5, a link bent on purpose (6 mm of
+  glass counted as 6 mm of air), and an image surface in another medium than the image space, which changes no
+  path and is refused all the same (`test_path.py`, `test_build.py`). That the excess is exact shows on one
+  stretch: over 500 directions from a point 20 m in front of a plane the answer is the length to a unit of its
+  last place, half of it the rounding of optiland's division, where optiland's own sum, and the same sum times a
+  length formed in doubles, are each up to one and a half units off. And the two engines are set against each
+  other on it: the same 145 rays from 2 m, stated once with unit directions and once with directions 2^-41
+  longer, have the same paths in optiland within 2.8e-8 waves and in `ref` within 1.5e-9, where a sum of steps
+  would be 1.5e-6 short (`r3.test.ts`).
+- **Class.** convention.
+
+### optiland refracts a direction as a unit vector, and bends one that is longer as if it leaned more
+
+- **Where.** `RealRays.refract` in `optiland/rays/real_rays.py`: `dot = L0 nx + M0 ny + N0 nz`,
+  `root = sqrt(1 - u^2 (1 - dot^2))` with `u = n1 / n2`, and the refracted vector `u d0 + n (root - u dot)`. That
+  is Snell's law for a unit vector `d0`. Nothing makes the direction one, neither where a ray is handed over nor
+  after a refraction (the entry above).
+- **Effect.** For a direction `1 + e` long the sine of incidence that the formula uses is `1 + e` times the
+  ray's, so the ray is bent as if it met the surface that much more steeply, and what follows is another ray. At
+  a plane across the axis a direction `(0, dy, dz)` becomes `(0, dy / n, sqrt(1 - (1 - dz^2) / n^2))` in the
+  glass, where the ray of the contract has the sine `dy / (n |d|)`. Measured on a plate 100 mm thick that a ray
+  meets 30° off its axis, against that closed form and against the trace in 60 digits: with a direction
+  4.5e-13 longer than a unit vector the hit on the rear face is 1.0e-11 mm from the contract's and the path to it
+  5.0e-12 mm, 8.6e-9 waves; at the 1e-12 that a spec may be off a unit vector by, 2.2e-11 mm and 1.9e-8 waves. It
+  grows with the glass and with the lean: with the same direction through two lenses 13 mm long, 4e-13 mm in a
+  hit, 1.4e-13 in the exit direction, 4e-10 waves to the last surface and 3e-9 to the image plane; through thirty
+  spheres over 200 mm, 5e-12 mm, 1e-13 and 2e-10 waves. All of it is inside the gates of R2 and R3 by a factor
+  of some hundreds, and at the contract's 1e-12 inside what the floor rule asks of a witness (1e-10 mm, 1e-12,
+  1e-7 waves) by five on that plate, which a longer or steeper system would use up. `ref` divides a direction by
+  its length before it bends it, and has the contract's ray. With the directions optiland computes itself, 8e-15
+  from unit vectors behind the surfaces of a benchmark lens, the effect is a rounding.
+- **Handled.** Nothing, and by intent: the worker hands a ray to optiland bit for bit, moves no point of the
+  answer and bends no ray, so this is in the answer for R2 and R3 to measure. The lengths the worker makes of
+  optiland's steps (the entry above) are the lengths of the ray optiland traced: of the 5.1e-8 waves that
+  optiland's own sum is off on that plate, 8.6e-9 are left. No ray set has such a direction today:
+  LensVisualizer's launch directions are within 1.6e-16 of unit vectors, and the probe lattice of a case file
+  states `(0, -sin, cos)` of the field angle or divides each direction by its length. A source of rays that
+  states directions to 1e-12 and no closer would make optiland a poorer witness by this much; the tolerance of
+  the contract is the owner's to keep or to tighten. A test holds optiland's hit to the closed form above and
+  the answer's path to index times length along that ray (`test_path.py`).
+- **Class.** numerical.
+
 ### A conic is met in front of the ray, inside the aperture, or else on its far side
 
 - **Where.** `_conic_candidates` and `_select_distance` in `optiland/backend/_conic.py`. Of the two roots of a line
@@ -1130,22 +1216,82 @@ with any engine.
   widened for it. In the suites optiland is within 1.2e-12 mm and 2.1e-14 of `ref` on every ray.
 - **Class.** numerical.
 
+### optiland's optical path is a plain sum, and as exact as its hits
+
+- **Where.** The same line of `Surface._trace_real`: one multiplication and one addition a surface, in double
+  precision, on a sum that starts at the ray's origin, over the hits optiland has
+  ([above](#on-an-asphere-optiland-is-as-exact-as-a-plain-sum-of-its-terms)).
+- **Effect.** Two things, the second the larger. **The sum.** Each addition rounds at the size of the path so far:
+  a unit in the last place of 250 mm is 2.8e-14 mm, 5e-11 waves, and thirty surfaces add a few of those, where
+  `ref` carries the path as a compensated sum and rounds once. **The hits.** A hit that is e off along the ray
+  moves the path by about e/2, as a conic met from far away does (below): where optiland's hits are 1e-12 mm from
+  the truth, its paths are some 2e-9 waves from it. In the two suites (378 ray sets, 242 442 rays that every
+  engine lands) optiland is within 2.7e-9 waves of `ref` on the benchmark and 3.5e-9 on the feature suite, in the
+  path to the last surface, to the image plane and relative to the chief ray; at the 24 focus stations within
+  3.9e-9. Traced in 60 digits, the worst rays of those three have optiland 2.7e-9, 3.5e-9 and 3.9e-9 waves from the
+  truth and `ref` within 1.6e-10: each figure is optiland's, and a twenty-fifth of the 1e-7 waves the floor rule
+  asks of a witness. On the four lenses on which its hits are no witness in R2 it is none in R3 on three, each on
+  its worst ray, in waves from the truth, to the last surface, to the image plane and relative to the chief ray:
+
+  | Lens | Ray | optiland | `ref` | LensVisualizer |
+  |---|---|---|---|---|
+  | `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr`, wide end | 62.8°, 610 nm | 4.3e-7, 4.5e-7, 4.5e-7 | 2.9e-9, 3.1e-9, 3.0e-9 | 1.1e-5, 1.2e-5, 1.2e-5 |
+  | `fujifilm-fujinon-xf-27mm-f28` | 27.6°, 510 nm | 8.9e-7, 9.7e-7, 9.7e-7 | 5.5e-10, 5.9e-10, 6.0e-10 | 6.6e-6, 7.1e-6, 5.7e-6 |
+  | `russar-22-70f8` | 65.1°, 510 nm | 1.2e-9, 2.7e-7, 2.8e-7 | 6.5e-11, 3.7e-10, 8.4e-10 | 4.4e-9, 2.1e-7, 2.7e-6 |
+  | `apple-iphone-7-wide-camera-lens` | 21.0°, 470 nm | 1.7e-8, 1.8e-8, 1.7e-8 | 1.0e-11, 9.3e-12, 1.3e-11 | 5.6e-7, 5.5e-7, 4.5e-7 |
+
+  The figures of optiland against `ref` over those sets are the same to two digits (9.7e-7 waves at most, on the
+  27 mm), and 1.8e-8 at the zoom's tele end. On the Russar the path to the last surface is right and the way from
+  there to the image plane is not: the ray leaves 65° off the axis in a direction 2.9e-13 off, behind the normal
+  near the equator of a hemisphere, and lands 1.5e-10 mm away after 132 mm. LensVisualizer's own worst rays of
+  those lenses are 7.8e-5 waves (the zoom, 470 nm), 1.4e-4 (the 27 mm) and 2.7e-5 (the Russar) from the truth,
+  where `ref` is within 5.7e-10 and optiland within 5.2e-7.
+- **Handled.** Nothing: each such figure is inside the gate of R3 (2e-5 waves) by a factor of twenty or more, and
+  every pair of optiland passes R3 on those lenses, all 90 ray sets. What it costs is the floor, as in R2. Of the
+  11 pairs of `lv` and `ref` that are `FLOOR` in R3 on those lenses when the two are compared alone (4 of the
+  zoom's wide end, 2 of the 27 mm, 5 of the Russar), 9 are `FAIL` beside optiland, with the reason "optiland does
+  not agree with ref" (4, 2 and 3), and 2 of the Russar stay floors; the phone lens has no floor in R3. In R2 it
+  is 14 of 17 on the same sets. No limit was changed for it: whether a witness that is inside the gate by a
+  factor of twenty should withhold a floor is the owner's to decide, on these figures.
+- **Class.** numerical.
+
 ### A conic is met from where the ray is, and from far away that costs the square of the distance
 
 - **Where.** `_conic_candidates` forms the quadratic of the line with the conic from the ray's own position:
   `c = x^2 + y^2 + z (k z - 2 R)` and `b = 2 (L x + M y + N (k z - R))`, whose terms are of the size of the
   distance squared and cancel to the size of the lens.
-- **Effect.** The hit is off optiland's own sag by a rounding of those terms. Measured on a sphere of radius 30 mm
-  with rays from a point at each distance: 8e-14 mm from 100 mm, 7e-12 mm from 1 m, 6e-10 mm from 10 m, 6e-8 mm
-  from 100 m and 2e-6 mm from 1 km. An asphere does better, because the iteration brings its hit home to the
-  rounding of the distance and no further: 1.6e-11 mm from 100 m. LensVisualizer's rays for an object at infinity
-  start 10 mm in front of the lens, and nothing of this shows in the suites; the rays of a finite conjugate start
-  at the object point, and from 16 m (a 400 mm lens at 1:40) a spherical front surface is met to some 2e-9 mm:
-  inside the gate of R2 and outside what the floor rule asks of a witness. `ref` carries the line to the surface's
-  vertex plane first and solves from there.
-- **Handled.** Nothing: it is a difference for R2 to measure. It is why the worker takes a point within 1e-6 mm
-  of the surface for a point of the surface (`ON_SURFACE_TOLERANCE_MM`) and not within 1e-10 mm: that tolerance
-  tells a hit from a point that is somewhere else, and judges no precision. A test finds both figures at 100 m.
+- **Effect.** The hit is off optiland's own sag by a rounding of those terms, which is of the size of the square
+  of the distance over the radius, in units of the last place of 1. Measured on a sphere of radius 30 mm with
+  rays from a point at each distance: 8e-14 mm from 100 mm, 7e-12 mm from 1 m, 6e-10 mm from 10 m, 6e-8 mm from
+  100 m and 2e-6 mm from 1 km. An asphere does better, because the iteration brings its hit home to the rounding
+  of the distance and no further: 1.6e-11 mm from 100 m. `ref` carries the line to the surface's vertex plane
+  first and solves from there.
+- **What it costs the optical path** is half of it. The point optiland has lies on the ray's line, e beyond the
+  surface or short of it, and the ray is refracted there: it has travelled e further in air and starts e nearer
+  in the glass, along a direction the surface hardly turned, so its path is off by e (1 − n cos(turn)), half of e
+  in a glass of 1.5. Measured on a lens whose front surface is that sphere, against the trace in 60 digits, over
+  twenty rays from one point: from 2.3 m the first hit is 2.6e-11 mm off and the path to the image 1.3e-11 mm,
+  2.2e-8 waves (3.8e-8 relative to another ray of the set); from 16 m, 7.6e-10 mm and 3.8e-10 mm, 6.5e-7 waves:
+  inside the gate of R3 by a factor of thirty, and no longer the 1e-7 waves the floor rule asks of a witness; from
+  100 m, 6.4e-8 mm and 3.2e-8 mm, 5.5e-5 waves: beyond the gate of R3 (2e-5), where R2 is beyond its own. A front
+  surface of ten times the radius costs about a tenth: 3.1e-9 waves from 2.3 m, 1.1e-7 from 16 m and 4.4e-6 from
+  100 m on a radius of 300 mm. With an asphere or a plane in front the path is right to a few
+  units in the last place of the distance at every one of them (2.7e-11 mm, 4.7e-8 waves, from 100 m): what is
+  left there is optiland's plain sum, each addition of which rounds at the size of the path so far, where `ref`
+  carries a path as a compensated sum.
+- **Where it arises.** Not in the suites, and not at a focus station. LensVisualizer's rays for an object at
+  infinity start 10 mm or more in front of the lens, and its rays for a certified finite conjugate diverge from
+  the object point but do not start there: it launches them from a plane in front of the lens, 18 mm to 75 mm from
+  the first vertex at the 24 stations it certifies (halfway to an object nearer than that), and a ray's path is
+  counted from that plane. The object of a station lies up to 2.3 m away, and optiland is within 4.5e-12 mm and
+  3.9e-9 waves of `ref` there, as in the suites. The rays that do start at an object point are the probe lattices
+  of a case file with a finite object, and any ray set that a later source launches from the object: a 400 mm lens
+  focused at 1:40 has its object 16 m away.
+- **Handled.** Nothing: it is a difference for R2 and R3 to measure. It is why the worker takes a point within
+  1e-6 mm of the surface for a point of the surface (`ON_SURFACE_TOLERANCE_MM`) and not within 1e-10 mm: that
+  tolerance tells a hit from a point that is somewhere else, and judges no precision. A test finds the two
+  figures of the hit at 100 m (`test_trace.py`), and another the path's at 2.3 m, 16 m and 100 m, and that it is
+  half the hit's (`test_path.py`).
 - **Class.** numerical.
 
 ### The tolerance of an asphere's iteration is that of the batch it is traced in

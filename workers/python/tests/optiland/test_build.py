@@ -703,6 +703,39 @@ class VerificationTest(unittest.TestCase):
                 verify_optic(optic, case, 0)
             self.assertEqual(str(raised.exception), f"{said} (line 0, 587.5618 nm)")
 
+    def test_the_medium_in_front_of_a_surface_is_held_to_the_medium_after_the_one_before_it(self) -> None:
+        # optiland keeps no index in front of a surface: it follows a link to the surface before (material_pre). A
+        # ray is refracted out of that medium, and its stretch to the surface is charged to it in the optical path,
+        # on the image surface as on any other. Each link is bent here on an optic that had passed: the second
+        # surface of the lens made to follow the object, the first to follow a glass, and the image surface to
+        # follow the first glass where the case ends in air.
+        case = self.CASE
+        optic = build_optic(case, 0)
+        wavelength = D_LINE / 1000.0
+        in_front = [row.index_before for row in read_optic(optic, wavelength)]
+        self.assertEqual(in_front, [1.0, 1.0, 1.58913, 1.0, 1.0, 1.8061, 1.0, 1.5168, 1.0])
+        for edit, said in (
+            (
+                lambda optic: setattr(optic.surfaces[2], "previous_surface", optic.surfaces[0]),
+                "surface 1 (2): the index in front of it is 1.0 in the optic optiland built and 1.58913 in the case",
+            ),
+            (
+                lambda optic: setattr(optic.surfaces[1], "previous_surface", optic.surfaces[4]),
+                "surface 0 (1): the index in front of it is 1.8061 in the optic optiland built and 1.0 in the case",
+            ),
+            (
+                lambda optic: setattr(optic.surfaces[-1], "previous_surface", optic.surfaces[1]),
+                "the image surface: the index in front of it is 1.58913 in the optic optiland built and 1.0 in the "
+                "case",
+            ),
+        ):
+            optic = build_optic(case, 0)
+            verify_optic(optic, case, 0)
+            edit(optic)
+            with self.assertRaises(BuildMismatch) as raised:
+                verify_optic(optic, case, 0)
+            self.assertEqual(str(raised.exception), f"{said} (line 0, 587.5618 nm)")
+
     def test_the_axis_optilands_paraxial_rays_run_along_is_held_to_the_vertices_too(self) -> None:
         # optiland keeps a second account of where its surfaces stand, the axis its first-order data is traced
         # along (surfaces.positions), which is the vertices' z only while the path is straight. It is given here as

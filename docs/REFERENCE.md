@@ -301,7 +301,8 @@ rules are in [contract/CONTRACT.md](../contract/CONTRACT.md#raystrace).
 - **`optiland` traces every ray with optiland's own tracer** (`workers/python/lvrtc_optiland/trace.py`): the rays
   go into its `RealRays` bit for bit, and what it records on each surface is the answer. optiland says of a ray
   only whether it still carries light, so the worker says why a ray ended only where optiland's numbers show it,
-  and answers a ray optiland keeps as optiland has it. See [the engine `optiland`](#the-engine-optiland).
+  and answers a ray optiland keeps as optiland has it. The optical path is optiland's own sum of index times
+  step, with each step made the length the contract counts. See [the engine `optiland`](#the-engine-optiland).
 - **`r2` and `r3`** are the rungs that ask for it and compare the answers: `lvrtc run <suite> --rungs r2,r3`. See
   [the two rungs](#rungs-r2-and-r3-and-the-floor) below.
 
@@ -585,12 +586,13 @@ The comparator supplies the rest (`src/engines/optiland/definition.ts`): the com
 `<python> -m lvrtc_optiland`, `PYTHONPATH` set to `workers/python` of this repository, so that nothing is installed,
 and where the worker's caches go.
 
-**It answers `system.describe`, `paraxial.first-order` and `rays.trace`, which are rungs R0, R1 and R2.** The
-trace carries the optical path too, so the requests of R3 are answered as well; holding that rung three ways is
-the next stage's. Any other quantity is answered `unsupported`.
+**It answers `system.describe`, `paraxial.first-order` and `rays.trace`, which are rungs R0 to R3**: R2 and R3 ask
+the same traces, and judge where the rays went and how long their paths are. Any other quantity is answered
+`unsupported`. What the four rungs find on three engines is under
+[Phase 2](#phase-2-r0-to-r3-on-three-engines).
 
 ```bash
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
 ```
 
 Builds every case of the suite in optiland and asks all three engines for the system they built, for its
@@ -735,8 +737,9 @@ request. optiland records every ray on every surface, and the answer is those ro
 | Of the answer | Is, in optiland |
 |---|---|
 | `hits` | the point each surface recorded |
-| `exitPoint`, `exitDirection`, `opticalPath` | the point, the direction and the path the last surface of the case recorded |
-| `imagePoint`, `opticalPathToImage` | the point and the path optiland's image surface recorded: optiland lands a ray itself, by the arithmetic of the comparator's own projection |
+| `exitPoint`, `exitDirection` | the point and the direction the last surface of the case recorded |
+| `opticalPath` | optiland's own sum on that surface, each stretch of it a length (below) |
+| `imagePoint`, `opticalPathToImage` | the point optiland's image surface recorded and its sum there: optiland lands a ray itself, by the arithmetic of the comparator's own projection, and charges the way to the plane to the medium after the last surface of the case |
 | `status`, `endSurface` | the worker's, from the rows, below |
 
 - **Handed over bit for bit.** Nothing is normalised, mirrored, sorted or left out. The first row optiland
@@ -759,6 +762,24 @@ request. optiland records every ray on every surface, and the answer is those ro
 - **A ray optiland keeps is answered as optiland has it**, whether or not its point lies on the surface. Where
   optiland carries a ray through the far side of a hemisphere, or on from a point its iteration did not bring
   home, that ray is in the answer, and R2 finds it. The worker hides no ray and repairs none.
+- **The optical path is optiland's own sum, with each step a length.** Read in optiland's source, its `opd` is
+  the contract's path rule by rule: 0 at the ray's own origin, the index of the medium the ray is in times each
+  step (air in front of the first surface; the medium after the last surface on the way to the image plane,
+  whatever the image surface itself states), a step backwards subtracted, nothing added by a refraction. One
+  thing differs: a step is the parameter of the line along the direction optiland holds, which is a length only
+  for a unit vector, and optiland never makes a direction one. A spec may state a direction within 1e-12 of a
+  unit vector, and optiland's own drift to 7.8e-15 from one behind the surfaces of a benchmark lens. So the worker
+  takes each stretch optiland added times the length of the direction it was travelled along
+  (`trace.path_lengths`), and says so in the method's `params`. That moves the paths of the benchmark by up to
+  1.9e-9 waves, toward the contract's: on a ray whose hits optiland has right to 5e-14 mm, its own sum is 7.4e-10
+  waves from the 60-digit path and the answer 4.3e-11. `verify_optic` reads the index optiland has in front of
+  every surface, since a path is charged to a link between surfaces. A rear plate is a surface like any other,
+  and an image space that is not air is charged at its own index; both have tests
+  ([docs/gotchas.md](gotchas.md#optilands-optical-path-is-a-sum-of-steps-and-a-step-is-a-length-only-along-a-unit-vector)).
+  The path is that of the ray optiland traced. Its refraction takes a direction for a unit vector too, and bends
+  one that is given 4.5e-13 longer as if it leaned that much more: 1.0e-11 mm in a hit and 8.6e-9 waves behind
+  100 mm of glass met at 30°. The worker bends no ray, so that is in the answer; no ray set has such a direction
+  ([docs/gotchas.md](gotchas.md#optiland-refracts-a-direction-as-a-unit-vector-and-bends-one-that-is-longer-as-if-it-leaned-more)).
 - **One batch a request.** A set goes to optiland whole, and a request of more than 16 384 rays in batches of that
   size, in the order given; the answer does not show the seam. A request of 20 000 rays through the 11 surfaces of
   the Double-Gauss is answered in 0.17 s, the worker's first trace among it. What optiland answers of a ray is not
@@ -775,7 +796,7 @@ that are ok in both engines, with where it occurs:
 | `benchmark`, 216 ray sets, 137 596 rays ok in every engine | 648 `PASS` | hit 1.2e-12 mm, `nikon-z-24-70f4s` wide at 650 nm, 24.2°; direction 2.1e-14 and landing 8.9e-13 mm, `sony-fe-20mm-f18-g` at 47.5° | hit 6.8e-9 mm, direction 3.1e-10, landing 9.1e-9 mm: `sigma-35mm-f14-dg-hsm-a` at 650 nm, 31.9° | the same ray, the same figures |
 | `features`, 162 ray sets, 104 846 rays ok in every engine | 482 `PASS`, 4 `FLOOR` | hit 1.1e-12 mm and landing 5.9e-13 mm, `rear-plate-rim`; direction 1.3e-14, `fixed-iris-zoom` wide | hit 2.3e-9 mm, `e-line`; direction 2.1e-10 and landing 1.10e-8 mm, `stop-inside-element` at 470 nm, 55.3° | the same rays, the same figures |
 | the contract's three cases and nine systems made for the rung, 42 ray sets, against `ref` | 42 `PASS` | hit 1.0e-12 mm, direction 4.1e-15, landing 5.1e-13 mm | no case of LensVisualizer | |
-| the 24 focus stations LensVisualizer certifies, on the reference line: 72 ray sets from object points 40 mm to 2.3 m away, 50 365 rays ok in every engine | 214 `PASS`, 2 `FLOOR` | hit 4.5e-12 mm, direction 6.8e-14, landing 4.6e-12 mm: `fujifilm-gf80-f17` at its closest focus, 18.3° | hit 1.12e-8 mm, direction 1.4e-10, landing 1.14e-8 mm: the same station and field | the same ray, the same figures |
+| the 24 focus stations LensVisualizer certifies, on the reference line: 72 ray sets that diverge from object points 40 mm to 2.3 m away and start on LensVisualizer's launch plane, 18 mm to 75 mm in front of the lens; 50 365 rays ok in every engine | 214 `PASS`, 2 `FLOOR` | hit 4.5e-12 mm, direction 6.8e-14, landing 4.6e-12 mm: `fujifilm-gf80-f17` at its closest focus, 18.3° | hit 1.12e-8 mm, direction 1.4e-10, landing 1.14e-8 mm: the same station and field | the same ray, the same figures |
 
 Not one ray of either suite is stopped by one engine and passed by another, in the rim band or outside it, and no
 engine fails a ray: each of the three lands 242 442 of the 421 334 rays and stops 178 892, every one at the same
@@ -819,6 +840,71 @@ optiland, in no test and on no lens of the catalog:
 
 Each is a finding about optiland, attributed ray by ray in 60 digits where it is a matter of precision, and none
 is in a suite. No gate and no limit was changed for any of them.
+
+Rung R3, measured at optiland `4e893f53` and LensVisualizer `c05a2ab7` (engine closure `78215d72`, 151 files),
+with the command above and `lvrtc compare`. Each figure is the largest of its kind over the rays that are ok in
+both engines, in waves of the line: of the path to the last surface, of the path to the image plane, and of the
+path relative to the chief ray's:
+
+| Suite | R3, pairs of two engines | optiland against `ref` | `lv` against `ref` |
+|---|---|---|---|
+| `benchmark`, 216 ray sets | 648 `PASS` | 2.7e-9, 2.7e-9, 2.7e-9: `nikon-z-24-70f4s` wide at 470 nm, 43.3° | 6.0e-6, `sigma-35mm-f14-dg-hsm-a` at 510 nm, 31.9°; 5.3e-6, `sony-fe-20mm-f18-g` at 470 nm, 47.5°; 5.5e-6, `nikon-z-24-70f4s` tele at 470 nm, 16.6° |
+| `features`, 162 ray sets | 482 `PASS`, 4 `FLOOR` | 3.0e-9, `fixed-iris-zoom` wide at 39.3°; 3.1e-9, `asphere-a20` at 24.2°; 3.5e-9, `rear-plate-rim` at 17.7°: all at 470 nm | 3.8e-6, `e-line` at 12.1°; 2.07e-5 and 2.28e-5, `stop-inside-element` at 470 nm, 55.3° |
+| the contract's three cases and twelve systems made for the two rungs, 51 ray sets, against `ref` | 51 `PASS` | 2.5e-9, a surface set into the curve before it; 1.9e-9, the case of every feature; with a chief ray, in a request of the test's own, 1.7e-9 | no case of LensVisualizer |
+| the 24 focus stations LensVisualizer certifies, on the reference line, 72 ray sets | 216 `PASS` | 3.9e-9, `sigma-35mm-f12-dg-ii-art` at its closest focus, 17.8°; 3.0e-9, `fujifilm-gf80-f17`, 18.3°; 3.3e-9, `sigma-50mm-f12-dg-dn-art`, 25.4° | 8.1e-6 and 8.3e-6, `fujifilm-gf80-f17` at its closest focus, 18.3°; 5.9e-6, `sigma-24mm-f2-dg-dn-contemporary`, 44.5° |
+
+`lv` against optiland has the figures of `lv` against `ref` to two digits. The four floors are the Hologon's again,
+at its full field at 470 nm and 510 nm, against `ref` and against optiland alike: the ray leaves 54° off the axis,
+and LensVisualizer's 2.2e-9 mm on the last surface is 2.07e-5 waves on the image plane. The reason names the
+witness:
+
+```
+opd.maxAbs 2.28e-5 exceeds its tolerance 2.00e-5 at field 5.53e1, line 1, ray 264; opticalPathToImage.maxAbs
+2.07e-5 exceeds its tolerance 2.00e-5 at field 5.53e1, line 1, ray 264; floor of lv: optiland against ref
+opd.maxAbs 4.23e-10 within 1.00e-7, optiland against ref opticalPath.maxAbs 6.05e-11 within 1.00e-7, optiland
+against ref opticalPathToImage.maxAbs 4.23e-10 within 1.00e-7, lv against ref opd.maxAbs 2.28e-5 within 2.00e-4,
+lv against ref opticalPath.maxAbs 1.73e-6 within 2.00e-4, lv against ref opticalPathToImage.maxAbs 2.07e-5 within
+2.00e-4
+```
+
+The path relative to the chief ray is measured wherever every engine lands that ray: in every set of the
+benchmark, in all but six of the feature suite (the full field of `fixed-iris-zoom` at its wide end, where an
+aperture stops the chief ray for all three) and in all but one at the stations; there the two paths are judged
+alone, and the pair says so. A case file's probe lattice states no chief ray at all. Traced in 60-digit
+arithmetic, the rays that set optiland's figures above have optiland 2.7e-9, 3.5e-9 and 3.9e-9 waves from the
+truth and `ref` within 1.6e-10; the Hologon's ray has LensVisualizer 2.07e-5 and 2.28e-5 from it, optiland
+1.8e-10 and `ref` 6e-11. So in the suites and at the stations optiland agrees with the arbiter twenty-five times
+more closely than the floor rule asks of a witness (1e-7 waves), and what it differs by is its own: the hits of its
+plain sums on an asphere, which move a path by half of what they are off
+([docs/gotchas.md](gotchas.md#optilands-optical-path-is-a-plain-sum-and-as-exact-as-its-hits)).
+
+**Outside the suites it does not always, in R3 as in R2.** On the four lenses on which optiland's hits are no
+witness, each on its reference line and the photopic lines, the zoom at both ends (90 ray sets, outside the
+tests), every pair of optiland passes R3, and optiland is this far from `ref`, in waves, where the 60-digit trace
+puts `ref` within 3.1e-9 of the truth on the worst ray and the rest on optiland:
+
+| Lens | optiland against `ref`: path, to the image, relative | R3 of `lv` against `ref`, alone | beside optiland |
+|---|---|---|---|
+| `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr`, wide end | 4.3e-7, 4.5e-7, 4.5e-7 at 62.8°, 610 nm | 14 `PASS`, 4 `FLOOR` | 14 `PASS`, 4 `FAIL` |
+| the same, tele end | 1.6e-8, 1.7e-8, 1.8e-8 | 18 `PASS` | 18 `PASS` |
+| `fujifilm-fujinon-xf-27mm-f28` | 8.9e-7, 9.7e-7, 9.7e-7 at 27.6°, 510 nm | 16 `PASS`, 2 `FLOOR` | 16 `PASS`, 2 `FAIL` |
+| `apple-iphone-7-wide-camera-lens` | 1.7e-8, 1.8e-8, 1.7e-8 at 21.0°, 470 nm | 18 `PASS` | 18 `PASS` |
+| `russar-22-70f8` | 1.2e-9, 2.7e-7, 2.8e-7 at 65.1°, 510 nm | 13 `PASS`, 5 `FLOOR` | 13 `PASS`, 2 `FLOOR`, 3 `FAIL` |
+
+Every figure is inside the gate of R3 by a factor of twenty or more. What it costs is the floor: 9 of the 11
+pairs of `lv` that are `FLOOR` beside `ref` alone are `FAIL` beside optiland, "optiland does not agree with ref",
+as 14 of 17 are in R2 on the same sets. LensVisualizer's own largest figures there are 7.8e-5 waves (the zoom),
+1.4e-4 (the 27 mm) and 3.4e-5 (the Russar), all inside the floor's limit of 2e-4. Nothing was changed for it:
+whether a witness that is inside the gate by a factor of twenty should withhold a floor is for the owner to
+decide.
+
+**A far origin** is what would cost optiland's path most, and no ray of LensVisualizer has one. optiland solves a
+conic from where the ray is, and half of what that costs the hit is in the path: on a front sphere of radius
+30 mm, 2.2e-8 waves from 2.3 m, 6.5e-7 from 16 m and 5.5e-5 from 100 m, beyond the gate; a tenth of that on a
+radius of 300 mm. LensVisualizer launches the rays of a finite conjugate from a plane 18 mm to 75 mm in front of
+the lens, along the lines from the object point, so a station's paths start there. The probe lattice of a case
+file with a finite object does start at the object point
+([docs/gotchas.md](gotchas.md#a-conic-is-met-from-where-the-ray-is-and-from-far-away-that-costs-the-square-of-the-distance)).
 
 **What a trace costs**, measured on the benchmark's 216 ray sets (235 812 rays, 18 to 39 surfaces) sent to one
 worker one after another: 14 ms a set, of which 0.8 ms are reading the request's arrays and checking them, 2.8 ms
@@ -912,9 +998,77 @@ too. `r1.test.ts` also asks the three engines in its own process, without ray se
 LensVisualizer certifies, and optiland against `ref` over every lens of the catalog that exports, a zoom at both
 ends. `r2.test.ts` holds every pair of a suite to `PASS` or `FLOOR` with no ray stopped by one engine and passed
 by another, and optiland to the agreement with `ref` that the floor rule asks of a witness; it runs each suite a
-second time with optiland without the JIT, and counts the worker processes a run starts, which is one. It holds
-the rays of every focus station LensVisualizer certifies, which start at an object point, to the same. Each test
-skips with the reason when optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
+second time with optiland without the JIT, and counts the worker processes a run starts, which is one.
+`r3.test.ts` runs each suite on all four rungs, as Phase 2 states its benchmark, holds every pair of R3 to `PASS`
+or `FLOOR` and optiland's paths to 1e-7 waves of `ref`'s, to the last surface, to the image plane and relative to
+the chief ray; a request of its own gives the contract's cases a chief ray, which their probe lattices lack, and
+another states the same rays with directions 4.5e-13 longer and holds each engine to the same paths.
+`stations.test.ts` holds the rays of every focus station LensVisualizer certifies, which diverge from an object
+point, to both rungs. What the three share is `traced.ts`. The Python tests of the path are `test_path.py`: what
+optiland's sum is made of, and closed forms of a plate, of the two Cartesian conics, of the aplanatic points of a
+sphere, of a lens of two spheres traced by hand and of a step backwards; and what optiland makes of a direction
+that is no unit vector, in its steps and in its refraction. Each test skips with the reason when
+optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
+
+## Phase 2: R0 to R3 on three engines
+
+Phase 2 of the plan ends with the two suites on `lv`, `ref` and `optiland` through rungs R0 to R3, at the
+reference line and the five photopic lines, every gated pair `PASS` or `FLOOR`.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
+```
+
+Has each of the three engines build every case, give its first-order data and trace the rays LensVisualizer
+launches; `lvrtc compare benchmark` then judges every two of them on every rung, and exits with 1 if a pair
+fails. The benchmark takes 28 s and the feature suite (`suites/features.json`) 19 s.
+
+Measured at optiland `4e893f53` and LensVisualizer `c05a2ab7` (engine closure `78215d72`, 151 files), under policy
+version 4. Pairs of two engines, as each rung judges them:
+
+| | Runs, ray sets, rays that every engine lands | R0 | R1 | R2 | R3 |
+|---|---|---|---|---|---|
+| `benchmark` | 24 runs, 216 ray sets, 137 596 of 235 812 rays | 72 `PASS` | 72 `PASS` | 648 `PASS` | 648 `PASS` |
+| `features` | 18 runs, 162 ray sets, 104 846 of 185 522 rays | 54 `PASS` | 54 `PASS` | 482 `PASS`, 4 `FLOOR` | 482 `PASS`, 4 `FLOOR` |
+| the 24 focus stations LensVisualizer certifies, on the reference line | 24 runs, 72 ray sets, 50 357 of 100 004 rays | 72 `PASS` | 72 `PASS` | 214 `PASS`, 2 `FLOOR` | 216 `PASS` |
+
+`lvrtc compare` counts a pair in both of its modes and says 2400 `PASS` for the benchmark, 1784 `PASS` and 16
+`FLOOR` for the feature suite, and 956 and 4 for the stations: no `FAIL`, no `ERROR`, nothing `UNSUPPORTED` and
+nothing `BLOCKED`. No ray is stopped by one engine and passed by another, none lies in a rim band, and no engine
+fails one. The largest figure of each kind, of optiland against `ref` and, after the stroke, of `lv` against `ref`
+(`lv` against optiland is the same to two digits):
+
+| Rung | Figure, and its gate | `benchmark` | `features` | focus stations |
+|---|---|---|---|---|
+| R0 | sag on the scale of its rounding, 1e-12; every other value of the built system is equal | 4.5e-16 / 4.0e-16 | 3.3e-16 / 2.7e-16 | 6.0e-16 / 3.8e-16 |
+| R1 | a value that is no pupil's, 1e-9 mm | 1.8e-12 / 1.6e-12 | 5.0e-14 / 5.3e-14 | 3.3e-13 / 3.8e-13 |
+| R1 | a pupil's position, 1e-9 mm | 1.0e-12 / 3.4e-13 | 9.9e-14 / 8.5e-14 | 7.1e-14 / 2.0e-13 |
+| R1 | a pupil's radius, 1e-9 mm | 5.7e-14 / 4.3e-14 | 9.8e-15 / 7.1e-15 | 4.6e-14 / 3.9e-14 |
+| R2 | a hit on a surface, 1e-8 mm | 1.2e-12 / 6.8e-9 | 1.1e-12 / 2.3e-9 | 4.5e-12 / 1.12e-8 |
+| R2 | the exit direction, 1e-9 | 2.1e-14 / 3.1e-10 | 1.3e-14 / 2.1e-10 | 6.8e-14 / 1.4e-10 |
+| R2 | the landing, 1e-8 mm | 8.9e-13 / 9.1e-9 | 5.9e-13 / 1.10e-8 | 4.6e-12 / 1.14e-8 |
+| R3 | the path to the last surface, 2e-5 waves | 2.7e-9 / 6.0e-6 | 3.0e-9 / 3.8e-6 | 3.9e-9 / 8.1e-6 |
+| R3 | the path to the image plane, 2e-5 waves | 2.7e-9 / 5.3e-6 | 3.1e-9 / 2.07e-5 | 3.0e-9 / 8.3e-6 |
+| R3 | the path relative to the chief ray's, 2e-5 waves | 2.7e-9 / 5.5e-6 | 3.5e-9 / 2.28e-5 | 3.3e-9 / 5.9e-6 |
+
+- **optiland and `ref`** share no code and agree on every traced ray to a two-thousandth of each gate of R2 and
+  R3 or better: inside what the floor rule asks of a witness (1e-10 mm, 1e-12, 1e-7 waves) by a factor of 22 in a
+  hit, 14 in the exit direction and 25 in a path, each at its worst, which is a focus station's. What they differ
+  by is optiland's, by the 60-digit trace of the rays that set each figure.
+- **The floors are LensVisualizer's**: the Hologon of the feature suite (`stop-inside-element`) at its full field
+  at 470 nm and 510 nm, in R2 by its landing and in R3 by its path to the image plane, against `ref` and against
+  optiland alike; and one station, `fujifilm-gf80-f17` at its closest focus and full field, in R2 by a hit
+  1.12e-8 mm off. Each is its intersection tolerance of 1e-9 mm behind a steep surface, a figure a tighter
+  tolerance in LensVisualizer would turn into a `PASS` ([docs/gotchas.md](gotchas.md)).
+- **What these tables do not say** is in the sections above and in [docs/gotchas.md](gotchas.md#optiland): on
+  some lenses outside the suites optiland loses rays or carries them where the case has no surface, which fails
+  its pairs in R2, and on four it is far enough from `ref` to withhold a floor from LensVisualizer, in R2 and in
+  R3. The record of `lv` against `ref` alone is [reports/benchmark/lv-floor.md](../reports/benchmark/lv-floor.md);
+  baselines of the three-way runs, and what marks one stale, are the next stage's.
+
+The tests that hold all of it are `npm run test:optiland`: `r0.test.ts` to `r3.test.ts` and `stations.test.ts`
+in `test/integration/optiland`. `r3.test.ts` runs the command above on each suite, all four rungs at once, and
+`stations.test.ts` the two rungs of traced rays.
 
 ## Workers over stdio
 

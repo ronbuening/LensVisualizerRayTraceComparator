@@ -3,9 +3,10 @@
 // engine's and LensVisualizer's, through the commands as a user runs them: where each ray meets each surface, the
 // direction it leaves in, where it lands, and which rays got through.
 //
-// The contract's cases and the systems made here need optiland only; the suites and the focus stations need
-// LensVisualizer too. Each test skips with the reason when one of them is missing. Run output goes to a temporary
-// directory, and the worker's caches under this repository's gitignored cache directory.
+// The contract's cases and the systems made for the rung need optiland only; the suites need LensVisualizer too.
+// Each test skips with the reason when one of them is missing. Run output goes to a temporary directory, and the
+// worker's caches under this repository's gitignored cache directory. What a pair is held to is `assertR2`
+// (traced.ts), which the focus stations (stations.test.ts) are held to as well.
 //
 // The figures quoted in comments were measured at optiland 4e893f53 and LensVisualizer 14da71d9 (engine closure
 // 78215d72, 151 files). Nothing is pinned to them: every gate is the policy's, a pair of LensVisualizer may be PASS
@@ -16,20 +17,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
-import { loadPolicy } from "../../../src/compare/policyFile.ts";
 import { raysGeometryComparator } from "../../../src/compare/raysGeometry.ts";
-import type { OpticalCase, SurfaceShape } from "../../../src/contract/case.ts";
+import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RaysTraceData, RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
 import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
-import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { decodeNdArray, encodeNdArray } from "../../../src/core/numeric/ndarray.ts";
-import { STORE_DIRECTORY } from "../../../src/core/resultStore.ts";
-import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
-import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { createEngineRegistry } from "../../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
@@ -39,120 +35,26 @@ import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.t
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { RAYS_DATA_SINGLET, RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture } from "../../core/support.ts";
-import { caseOf, sphere } from "../../engines/ref/support.ts";
-import type { SurfaceOf, SystemOf } from "../../engines/ref/support.ts";
+import { caseOf } from "../../engines/ref/support.ts";
 import { CASE } from "../../engines/support.ts";
 import { suitePath } from "../../suites/support.ts";
-import { LV_PATH, LV_UNAVAILABLE, focusStations } from "../lv/support.ts";
+import { LV_UNAVAILABLE } from "../lv/support.ts";
 import {
   OPTILAND_UNAVAILABLE,
   WRAPPER_UNAVAILABLE,
   optilandRoot,
-  pairsOf,
   runAndCompare,
   watchedInterpreter,
-  worstOf,
 } from "./support.ts";
 import type { RunCycle, RungPair } from "./support.ts";
+import { AGREEMENT, GEOMETRY, SYSTEMS, assertR2, f8, figuresOf, optilandAnswers } from "./traced.ts";
+import type { R2Summary } from "./traced.ts";
 
 const skip = OPTILAND_UNAVAILABLE;
 /** The suites are of LensVisualizer lenses, and are run on an interpreter that is watched. */
 const skipSuites = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE || WRAPPER_UNAVAILABLE;
-const R2 = loadPolicy().rungs.r2;
-/** The three figures of R2 that are of the rays both engines land. */
-const GEOMETRY = ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"] as const;
-/** How closely the policy asks another engine to agree with the arbiter before it believes the arbiter. */
-const AGREEMENT = Object.fromEntries(GEOMETRY.map((name) => [name, R2.metrics[name].floor?.agreement ?? NaN]));
-
-/** How the rays of each engine ended, over every ray set of rung R2. */
-function rayCounts(comparisons: ComparisonFile): Record<string, { ok: number; blocked: number; failed: number }> {
-  const counts: Record<string, { ok: number; blocked: number; failed: number }> = {};
-  for (const set of comparisons.comparisons) {
-    if (set.mode !== "pairwise" || set.rung !== "r2") continue;
-    for (const { engine, recorded } of set.participants) {
-      const of = (counts[engine] ??= { ok: 0, blocked: 0, failed: 0 });
-      of.ok += recorded?.["rays.ok"]?.[0] ?? 0;
-      of.blocked += recorded?.["rays.blocked"]?.[0] ?? 0;
-      of.failed += recorded?.["rays.failed"]?.[0] ?? 0;
-    }
-  }
-  return counts;
-}
-
-/** What `assertR2` found, for a second run to be held to. */
-interface R2Summary {
-  readonly pairs: readonly RungPair[];
-  readonly verdicts: Readonly<Record<string, number>>;
-  readonly counts: ReturnType<typeof rayCounts>;
-}
-
-/**
- * Holds every pair of a compared run to rung R2: PASS, or FLOOR where the policy allows one, never anything else;
- * not one ray that one engine stopped and the other passed; and no ray that an engine could not trace. A pair of
- * optiland and the reference engine is held to more: the agreement the floor rule asks of a witness. Says, for
- * each two engines, the largest of each figure and where it is.
- */
-function assertR2(t: TestContext, label: string, comparisons: ComparisonFile): R2Summary {
-  const pairs = pairsOf(comparisons, "r2", RAYS_TRACE);
-  assert.ok(pairs.length > 0);
-  const verdicts: Record<string, number> = {};
-  for (const pair of pairs) {
-    const reason = pair.reason ?? "";
-    const said = `${label}, ${pair.run}, ${pair.engines}: ${pair.verdict} ${reason}`;
-    verdicts[`${pair.engines} ${pair.verdict}`] = (verdicts[`${pair.engines} ${pair.verdict}`] ?? 0) + 1;
-    assert.ok(pair.verdict === "PASS" || pair.verdict === "FLOOR", said);
-    assert.equal(pair.metrics["mask.mismatches"]?.value, 0, said);
-    if (pair.verdict === "FLOOR") {
-      // Only LensVisualizer has a floor, and the reason gives both figures: what the witness is off the arbiter
-      // by, which is no longer nothing with a third engine, and what LensVisualizer is.
-      assert.ok(pair.engines.split(" / ").includes("lv"), said);
-      for (const name of GEOMETRY) {
-        const limits = R2.metrics[name].floor;
-        assert.ok(limits !== undefined);
-        const number = String.raw`\d(\.\d+)?(e-?\d+)?`;
-        const escaped = name.replace(".", String.raw`\.`);
-        const witness = new RegExp(
-          `optiland against ref ${escaped} ${number} within ${limits.agreement.toExponential(2)}`,
-        );
-        const floored = new RegExp(`lv against ref ${escaped} ${number} within ${limits.limit.toExponential(2)}`);
-        assert.match(reason, witness, said);
-        assert.match(reason, floored, said);
-      }
-      assert.match(reason, /; floor of lv: optiland against ref /, said);
-    }
-    if (pair.engines === "optiland / ref") {
-      // The arbiter and its witness: what the floor rule needs before it believes either.
-      assert.equal(pair.verdict, "PASS", said);
-      for (const name of GEOMETRY) {
-        const value = pair.metrics[name]?.value;
-        assert.ok(value !== null && value !== undefined && value <= AGREEMENT[name], `${said} ${name} ${value}`);
-      }
-    }
-  }
-  const counts = rayCounts(comparisons);
-  for (const [engine, of] of Object.entries(counts)) {
-    assert.equal(of.failed, 0, `${label}: ${engine} could not trace ${of.failed} rays`);
-    assert.ok(of.ok > 0 && of.blocked > 0, `${label}: ${engine} ${JSON.stringify(of)}`);
-  }
-  const rimBand = pairs.reduce((total, pair) => total + (pair.metrics["mask.rimBand"]?.value ?? 0), 0);
-  t.diagnostic(`${label}: ${JSON.stringify(verdicts)}; rays ${JSON.stringify(counts)}; rim band ${rimBand}`);
-  for (const engines of [...new Set(pairs.map((pair) => pair.engines))].sort()) {
-    const of = pairs.filter((pair) => pair.engines === engines);
-    const compared = of.reduce((total, pair) => total + (pair.metrics["rays.compared"]?.value ?? 0), 0);
-    const figures = GEOMETRY.map((name) => {
-      const { value, at } = worstOf(of, name);
-      return `${name} ${value} (${at})`;
-    });
-    t.diagnostic(`${label}, R2, ${engines}, ${of.length} pairs, ${compared} rays ok in both: ${figures.join("; ")}`);
-  }
-  return { pairs, verdicts, counts };
-}
 
 // ── One request, straight to the engine ──────────────────────────────────────────────────────────────────────────
-
-function f8(wire: RaysTraceData[keyof RaysTraceData]): number[] {
-  return [...decodeNdArray(wire).values];
-}
 
 test(
   "optiland traces the contract's worked rays to a rounding, says how, and refuses rays that are none",
@@ -201,6 +103,7 @@ test(
         imagePlaneTolerance: 1e-9,
         maxBatchRays: 16384,
         landing: "image-surface",
+        opticalPath: "opd-stretches-times-direction-length",
       },
     });
     assert.deepEqual(result.diagnostics, {
@@ -299,128 +202,6 @@ test(
 
 // ── The contract's cases and systems made for the rung: optiland against the reference engine ────────────────────
 
-const AIR = 1;
-const GLASS = 1.5;
-const PLANE: SurfaceShape = { kind: "plane" };
-
-/**
- * Systems that put to the test what a trace of given rays must get right beside a lens: a surface that lies behind
- * the one before it, where the ray steps backwards; a surface that reflects totally; a central obstruction; even
- * and odd aspheres, one on a flat base; a finite object; a second line. The reference engine's own proof is
- * analytic (test/engines/ref), and the worker's rays are held to closed forms and to a trace in 60 digits by its
- * own tests (workers/python/tests/optiland/test_trace.py): here the two are set against each other.
- */
-const SYSTEMS: Readonly<Record<string, readonly [surfaces: readonly SurfaceOf[], more?: SystemOf]>> = {
-  plate: [
-    [
-      { z: 0, shape: PLANE, index: GLASS },
-      { z: 6, shape: PLANE, index: AIR },
-    ],
-  ],
-  "plane-set-into-a-curve": [
-    [
-      { z: 0, shape: sphere(10), index: GLASS, semiDiameter: 6 },
-      { z: 0.5, shape: PLANE, index: AIR, semiDiameter: 6 },
-      { z: 4, shape: sphere(-30), index: AIR, semiDiameter: 6 },
-    ],
-    { stopIndex: 1 },
-  ],
-  "sphere-set-into-a-curve": [
-    [
-      { z: 0, shape: sphere(10), index: GLASS, semiDiameter: 6 },
-      { z: 0.3, shape: sphere(-50), index: AIR, semiDiameter: 6 },
-    ],
-  ],
-  "asphere-set-into-a-curve": [
-    [
-      { z: 0, shape: sphere(10), index: GLASS, semiDiameter: 6 },
-      {
-        z: 0.3,
-        shape: { kind: "asphere", radius: -50, conic: 0, terms: [{ power: 4, coeff: 1e-5 }] },
-        index: AIR,
-        semiDiameter: 6,
-      },
-    ],
-  ],
-  "hemisphere-out-of-glass": [
-    [
-      { z: 0, shape: PLANE, index: GLASS, semiDiameter: 9.5 },
-      { z: 10, shape: sphere(-10), index: AIR, semiDiameter: 9.5 },
-    ],
-  ],
-  annulus: [
-    [
-      { z: 0, shape: sphere(50), index: GLASS },
-      { z: 4, shape: sphere(-50), index: AIR },
-      { z: 9, shape: PLANE, index: AIR, semiDiameter: 8, innerSemiDiameter: 2.5 },
-    ],
-    { stopIndex: 2 },
-  ],
-  "even-and-odd-aspheres": [
-    [
-      {
-        z: 0,
-        shape: {
-          kind: "asphere",
-          radius: 30,
-          conic: -0.7,
-          terms: [
-            { power: 4, coeff: 2e-5 },
-            { power: 6, coeff: -3e-8 },
-            { power: 8, coeff: 1e-11 },
-          ],
-        },
-        index: GLASS,
-        semiDiameter: 9,
-      },
-      {
-        z: 5,
-        shape: {
-          kind: "asphere",
-          radius: -40,
-          conic: 0.3,
-          terms: [
-            { power: 3, coeff: 1e-5 },
-            { power: 4, coeff: -2e-6 },
-            { power: 5, coeff: 1e-8 },
-          ],
-        },
-        index: AIR,
-        semiDiameter: 9,
-      },
-      {
-        z: 9,
-        shape: {
-          kind: "asphere",
-          radius: null,
-          conic: 0,
-          terms: [
-            { power: 4, coeff: -3e-5 },
-            { power: 6, coeff: 2e-8 },
-          ],
-        },
-        index: GLASS,
-        semiDiameter: 9,
-      },
-      { z: 11, shape: PLANE, index: AIR, semiDiameter: 9 },
-    ],
-  ],
-  "finite-object": [
-    [
-      { z: 0, shape: sphere(50), index: GLASS },
-      { z: 4, shape: sphere(-50), index: AIR },
-    ],
-    { objectZ: -200 },
-  ],
-  "two-lines": [
-    [
-      { z: 0, shape: sphere(50), index: [1.5168, 1.5224] },
-      { z: 4, shape: sphere(-50), index: AIR },
-    ],
-    { lines: 2 },
-  ],
-};
-
 test(
   "R2 of the contract's cases and of systems made for it: optiland's rays are ref's, ray by ray and surface by surface",
   { skip, timeout: 900_000 },
@@ -498,22 +279,6 @@ test(
 );
 
 // ── The suites: lv, ref and optiland ─────────────────────────────────────────────────────────────────────────────
-
-/** The pairs of a compared run, each by its ray set (the run and the request) and its two engines. */
-function figuresOf(pairs: readonly RungPair[]): Map<string, RungPair> {
-  return new Map(pairs.map((pair) => [`${pair.run} ${pair.requestId} ${pair.engines}`, pair]));
-}
-
-/** The stored answer of each ray set of rung R2 that optiland gave in a run, by request id. */
-function optilandAnswers(cycle: RunCycle): Map<string, RaysTraceData> {
-  const answers = new Map<string, RaysTraceData>();
-  for (const job of cycle.manifest.jobs) {
-    if (job.engine !== "optiland" || job.rung !== "r2" || job.storeKey === null) continue;
-    const stored = JSON.parse(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json`), "utf8"));
-    answers.set(`${job.run} ${job.requestId}`, stored.result.data as RaysTraceData);
-  }
-  return answers;
-}
 
 /**
  * A suite on rung R2 by all three engines, then once more with optiland run without numba's JIT, into the same
@@ -646,67 +411,5 @@ test(
     const floors = on.pairs.filter((pair) => pair.verdict === "FLOOR");
     t.diagnostic(`features: floors ${JSON.stringify(floors.map((pair) => `${pair.run} ${pair.engines}`))}`);
     for (const pair of floors) t.diagnostic(`features: ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
-  },
-);
-
-// ── The focus stations: rays from an object point ────────────────────────────────────────────────────────────────
-
-test(
-  "at every focus station LensVisualizer certifies, R2 passes three ways and optiland is ref's witness",
-  { skip: OPTILAND_UNAVAILABLE || LV_UNAVAILABLE, timeout: 1_800_000 },
-  async (t) => {
-    // Which stations there are is asked of LensVisualizer in this process; the rays go through the commands. Every
-    // ray of a station starts at its object point, 40 mm to 2.3 m in front of the lens at f3b4a337: optiland
-    // solves a conic from where the ray is, which costs it the square of that distance (docs/gotchas.md).
-    const binding = await loadLvBinding(LV_PATH);
-    const stations = (await focusStations(binding, createLvExporter(binding))).flatMap((station) =>
-      station.refused === null && station.exported.ok
-        ? [{ ...station, opticalCase: station.exported.opticalCase }]
-        : [],
-    );
-    assert.ok(stations.length >= 10, String(stations.length));
-    const distances = stations.map(({ opticalCase, at }) => {
-      const placed = opticalCase.conditions.object;
-      assert.ok(placed.kind === "finite", at);
-      return -placed.z;
-    });
-
-    const { rootDir } = optilandRoot(t);
-    const suite = {
-      contract: CONTRACT_VERSION,
-      kind: "suite",
-      name: "focus-stations",
-      defaults: { aperture: { kind: "wide-open" }, lines: { kind: "reference" }, imagePlane: { kind: "design" } },
-      runs: stations.map(({ key, focusT, zoomT }, at) => ({
-        name: `${key}-station-${at}`,
-        lens: { kind: "lv", key },
-        state: { zoomT, focus: { kind: "focusT", value: focusT } },
-      })),
-    };
-    writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
-    const cycle = runAndCompare(t, {
-      suite: "suite.json",
-      name: "focus-stations",
-      engines: "lv,ref,optiland",
-      rungs: "r2",
-      root: rootDir,
-    });
-    const { manifest } = cycle;
-    assert.equal(manifest.runs.length, stations.length);
-    assert.deepEqual(
-      manifest.jobs.filter((job) => job.status !== "ok").map((job) => [job.run, job.engine, job.status, job.error]),
-      [],
-    );
-    // Every station has rays, of the three fields of a run, and every set was traced by all three.
-    for (const run of manifest.runs) assert.ok((run.raySets?.sets.length ?? 0) > 0, run.name);
-    const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
-    assert.equal(manifest.jobs.length, 3 * sets);
-    const { pairs } = assertR2(t, "focus stations", cycle.comparisons);
-    assert.equal(pairs.length, 3 * sets);
-    t.diagnostic(
-      `focus stations: ${stations.length} stations of ${new Set(stations.map(({ key }) => key)).size} lenses, ` +
-        `${sets} ray sets, the object ${Math.min(...distances).toFixed(0)} mm to ` +
-        `${Math.max(...distances).toFixed(0)} mm in front of the first vertex`,
-    );
   },
 );
