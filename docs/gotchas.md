@@ -153,8 +153,10 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   and the path to the image is not in the result at all.
 - **Handled.** The contract defines `opticalPath` exactly so, from the origin to the last surface, and
   `opticalPathToImage` as its continuation in the index of the image space; `lv` reports LensVisualizer's number
-  for the first, bit for bit, and adds `finalMedium` times the projection's distance for the second. An estimator
-  takes differences against the chief ray, whose index a ray set states.
+  for the first, bit for bit, and adds `finalMedium` times the projection's distance for the second. The wave
+  estimator adds what is missing, the path from the incident wavefront to the origin, from the request's own
+  origins and directions (`launchPaths` in `src/estimators/waveOtf.ts`): the projection of the origin on the
+  direction for an object at infinity, the length from the object plane for a finite one. It needs no chief ray.
 - **Class.** convention.
 
 ### A hit lies within 1e-9 mm of its surface, not on it
@@ -487,6 +489,35 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `replay` writes the estimator's the same way, since the contract gives an MTF the range 0 to 1; at frequency 0
   both are exactly 1.
 - **Class.** numerical.
+
+### LensVisualizer has two wave estimates, and the one it shows reads no optical path
+
+- **Where.** `shearedOtf` in `src/optics/analysis/mtfShearedOtf.ts`, the method "diffraction" of the MTF tab, and
+  `waveLatticeOtf` in `mtfWavefront.ts`, which LensVisualizer's tests and chart report hold the first against and
+  which is no product path.
+- **Effect.** Both are Hopkins' autocorrelation on the launch lattice with the shear `lambda nu` in direction
+  cosine times index, and both differ from the comparator's estimator (`src/estimators/waveOtf.ts`) in method:
+  - `shearedOtf` reads no path at all. The phase of a pair is `-2 pi nu` times a mean of the landing errors of
+    five rays along the shear (Boole's rule; Simpson's on three where an obstruction hides one), exact for a
+    wavefront up to the sixth order along the shear and approximate beyond, and for a pair that straddles a gap
+    the mean of its two ends. Sine and cosine come from a table of 4096 entries, good to 3e-7. It needs no
+    quarter-wave validity and tends to the geometric OTF at low frequency.
+  - `waveLatticeOtf` reads the path as the comparator does: launch phase, `opticalPathLengthMm`, and the stretch
+    to the foot of the perpendicular from the reference, with the same quarter-wave criterion
+    (`waveLatticePhaseStep`).
+  - Both shear along the lines of the lattice: rows for the cut along x, columns for the one along y, the cosine
+    looked up along that line alone. Off the axis a row is no line of constant cosine. The comparator finds the
+    sheared point in both coordinates.
+  - Both take the square root of the flux for the amplitude, without the area of cosine space a cell covers, and a
+    pair is centred on a cell with both ends interpolated, so the overlap of two cells is a product of two ramps
+    and not the area they share. The comparator's modulus is flux over area, each cell is one end of its pairs,
+    and on an even lattice the overlap is the staircase's exactly.
+  - `shearedOtf` traces half the lattice of a meridional field and mirrors it; `waveLatticeOtf` fills the cosines
+    of dark cells along a line by a straight line. Sums are plain.
+- **Handled.** Nothing is ported. The difference between LensVisualizer's sheared estimate and the comparator's
+  estimator on the same rays is rung R6b, recorded and not gated (Stage 3.5); R6a, the comparator's estimator on
+  two engines' traces of the same rays, does not depend on any of it.
+- **Class.** method.
 
 ### LensVisualizer's best focus is of a stop, of lines and of a grid cap
 

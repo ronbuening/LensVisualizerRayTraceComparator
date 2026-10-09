@@ -185,10 +185,14 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **An estimator is a pure function of a trace** (`src/estimators`): no engine, no file, only IEEE 754 basic
   operations (no `Math.sin`, `Math.cos` or `Math.hypot`), every sum that can cancel compensated
   (`src/core/numeric/exact.ts`), so equal input gives equal bits. It imports nothing of an engine.
-  `imageProjection.ts` is in the closures of `lv` and `ref`; `geometricOtf.ts` and `validity.ts` are in no engine's
-  closure and must stay out. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
+  `imageProjection.ts` is in the closures of `lv` and `ref`, and `geometricOtf.ts` in that of `replay` (an edit
+  there moves an adapter revision: keep every operation bit for bit, or refresh the baselines); `validity.ts` and
+  `waveOtf.ts` are in no engine's closure and must stay out. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
   bound, and whole-number arithmetic (`test/estimators/support.ts`: `exactTransfer`, `exactLength`), never an
-  engine's output.
+  engine's output. The wave estimator's tests (`waveOtf.test.ts`) build spherical waves from their geometry: the
+  staircase from whole-number pair counts, discs and the annulus in closed form, Hopkins' integral by a
+  Gauss-Legendre rule written in the test, each bound derived beside its assertion; a lattice with pupil
+  aberration holds the search to the closed forms.
 - **A landing's distance is a length, whatever the length of the direction** (`projectToImagePlane`): the line
   parameter times `lengthOf(direction)`, formed without rounding and rounded once. Never charge a path by a line
   parameter. Which rays land is decided by the parameter, as LensVisualizer's `mtfImagePoint` decides it. A
@@ -207,6 +211,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   exactly only below that, so never raise it without a test against the whole-number definition. A spectrum with a
   line that has no valid ray or no flux is unavailable as a whole and names the line: a line is never dropped.
   Arrays of unequal length throw. A ray of weight 0 adds nothing, but must have landed if it is taken.
+  `WaveOtfUnavailable` has the same reasons except `bad-landing`, and `bad-line`, `bad-ray` and `degenerate-pupil`
+  (lit cells on one line of the lattice, or a map from cells to cosines that folds or collapses at a cell).
 - **Identical-ray estimators run on the rays valid in every engine** (`src/estimators/validity.ts`):
   `intersectValidity` of each answer's `maskWhere(status, RAY_STATUS.ok)`, handed to the estimator as
   `spots.valid`. Never apply an estimator to a bundle cut by one engine's status alone.
@@ -264,6 +270,33 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **R4 has no floor, and its gate is tighter than R2's**: a landing within R2's 1e-8 mm may turn a term by 6e-6
   at 100 cycles/mm. A FAIL of R4 is attributed with R2's figures for the same ray sets before anything is
   concluded; whether R4 gets a floor is the owner's.
+- **The wave OTF is Hopkins' autocorrelation in cosine space, from optical paths** (`src/estimators/waveOtf.ts`):
+  the pupil coordinate is index times direction cosine at the image side and the shear `lambda nu`, wherever the
+  exit pupil is; a cell's path is `launch + path + n d . (R - Q)`, the path to the foot of the perpendicular from
+  the reference point, so a late ray has the larger W and the phase has the geometric estimator's sign; the
+  modulus is `sqrt(flux / area)`, the area being the Jacobian of cells to cosines; no obliquity factor. Each lit
+  cell is the lower and the upper end of a pair, so the value at `-nu` is the conjugate bit for bit. The phasors
+  are `spotSums`'s, unchanged.
+- **A sheared point is located by patch, never by a search across the lattice** (`locatePatches`, `shearedPoint`):
+  only the patches with a lit corner exist, binned by where they lie in cosine space, and the point is solved in
+  its own patch's bilinear map, in both coordinates, with the interpolation its path is read with (which keeps a
+  tilt out of the modulus). Never shear along a row of the lattice, and never read the cosines of a dark cell that
+  is not beside a lit one: the lattice says nothing of them, and a search that crossed them lost pairs without a
+  flag.
+- **The wave estimator reads a `rays.trace` request and answer and nothing else** (`TracedLattice`): the request's
+  weights, `imagePoint` with `opticalPathToImage` (or `exitPoint` with `opticalPath`), `exitDirection`, the mask of
+  the rays valid in every engine, the line's wavelength and image-space index, and
+  `launchPaths(origins, directions, conditions.object)`, since a ray's `opticalPath` starts at its own origin. Ray
+  `row * columns + column` is the cell (`groups.lattice`); what follows the cells, the chief ray, is not looked
+  at. It needs no chief ray and no lattice step.
+- **The rim of a lattice is a staircase, and `undersampled` is a fact about a lattice** (`waveOtf.ts`): on an even
+  lattice the estimate is the autocorrelation of the lit cells to a rounding, and against the true aperture it is
+  of first order in the cell (`3 e / (1 - e)`); never claim more of it. `phaseStep` above `QUARTER_WAVE` between
+  neighbouring lit cells sets `undersampled`: such an estimate is no arbiter, though it still compares two
+  engines' traces of the same rays. The step includes the tilt of the reference: keep the reference amid the spot.
+  `gridConvergence` is the figure of two lattices.
+- **`npm run format` does not cover `docs/`**: never run prettier on a Markdown file there; it realigns every
+  table.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.

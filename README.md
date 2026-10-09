@@ -17,7 +17,9 @@ open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4
 [measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)); and the geometric MTF of the same rays, as
 LensVisualizer, the reference tracer and optiland each land them, agrees within 5.4e-8 on the same benchmark, the
 two exact tracers within 1.2e-11 (rung R4, gated at 1e-7,
-[measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)).
+[measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)). The comparator's wave estimator, Hopkins'
+autocorrelation of the pupil function from the optical paths of the same rays, is written and held to closed forms
+([the wave OTF](docs/REFERENCE.md#the-wave-otf)); no rung asks for it yet.
 
 ## Requirements
 

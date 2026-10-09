@@ -766,6 +766,67 @@ test(
 );
 
 test(
+  "LensVisualizer's two wave estimates still differ from the comparator's as docs/gotchas.md says they do",
+  { skip },
+  () => {
+    const wave = "src/optics/analysis/mtfWavefront.ts";
+    const sheared = "src/optics/analysis/mtfShearedOtf.ts";
+    const shared =
+      "src/estimators/waveOtf.ts states the same conventions for the comparator's own estimator, and shares no line " +
+      "with it: the pupil coordinate, the shear, the path to the foot of the perpendicular and the sign of the phase";
+    const differs =
+      "docs/gotchas.md, 'LensVisualizer has two wave estimates', says how each differs from src/estimators/waveOtf.ts";
+    // What the comparator's estimator shares: optical cosines, a shear of lambda nu, the path, the sign.
+    assertSource(wave, "lattice.cosineX[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[0];", shared);
+    assertSource(wave, "lattice.cosineY[cell] = ray.trace.finalMedium * ray.trace.terminalDirection[1];", shared);
+    assertSource(wave, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
+    assertSource(sheared, "const halfShear = (frequency * wavelengthMm) / 2;", shared);
+    assertSource(
+      wave,
+      `const along = (image[0] - p[0]) * d[0] + (image[1] - p[1]) * d[1] + (image[2] - p[2]) * d[2];
+       return launchPhaseMm(ray, objectPoint) + ray.opticalPathLengthMm! + ray.finalMedium * along;`,
+      shared,
+    );
+    assertSource(
+      wave,
+      `return objectPoint
+         ? Math.hypot(origin[0] - objectPoint[0], origin[1] - objectPoint[1], origin[2] - objectPoint[2])
+         : origin[0] * direction[0] + origin[1] * direction[1] + origin[2] * direction[2];`,
+      "launchPaths in src/estimators/waveOtf.ts: the projection of the origin, or the length from the object",
+    );
+    assertSource(
+      wave,
+      `const phase = (2 * Math.PI * (plus.pathMm - minus.pathMm)) / wavelengthMm;
+       re += pair * Math.cos(phase);
+       im += pair * Math.sin(phase);`,
+      shared,
+    );
+    assertSource(wave, "is trustworthy while this stays under a quarter wave.", shared);
+    // What it does otherwise: the square root of flux without the area, pairs centred on a cell, lines of the
+    // lattice for lines of constant cosine, and in the product path landing errors for the path.
+    assertSource(wave, "lattice.amplitude[cell] = Math.sqrt(ray.weight);", differs);
+    assertSource(sheared, "amplitude[line * stride + cell] = Math.sqrt(ray.weight);", differs);
+    assertSource(
+      wave,
+      `const plus = waveAt(line, line.cosine[slot] + halfShear);
+       const minus = waveAt(line, line.cosine[slot] - halfShear);
+       const pair = plus.amplitude * minus.amplitude;`,
+      differs,
+    );
+    assertSource(wave, 'axis === "x" ? [rows, columns, columns, 1] : [columns, rows, 1, columns];', differs);
+    assertSource(sheared, "const scale = -frequency * TURN;", differs);
+    assertSource(sheared, "const TURN = 4096;", differs);
+    assertSource(sheared, ": (errorMinus + 4 * errorCentre + errorPlus) / 6;", differs);
+    assertSource(sheared, "12 * errorCentre) / 90", differs);
+    assertSource(
+      sheared,
+      "const half = bundle.mirrored && bundle.columns === columns && columns % 2 === 0 ? columns / 2 : 0;",
+      differs,
+    );
+  },
+);
+
+test(
   "the MTF still sets a request up, walks a field and widens its footprint as the replay restates them",
   { skip },
   () => {

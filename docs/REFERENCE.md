@@ -427,8 +427,9 @@ An estimator is the comparator's own arithmetic on a trace: pure functions in `s
 every engine's answer for the same rays, so that two engines never differ by how each turns rays into a figure.
 They read no engine and no file and use only IEEE 754 basic operations (`+ - * /` and square root), so equal input
 gives equal bits on any machine. The error-free sums they share with `ref` are in `src/core/numeric/exact.ts`: in
-the adapter revision of whatever reaches them, in no engine's fingerprint. Two rungs take the transfer function:
-R4f, on a replay of LensVisualizer's sampling, and R4, on every engine's trace of the same rays.
+the adapter revision of whatever reaches them, in no engine's fingerprint. Two rungs take the geometric transfer
+function: R4f, on a replay of LensVisualizer's sampling, and R4, on every engine's trace of the same rays. The
+wave transfer function has [a section of its own](#the-wave-otf).
 
 - **The image projection** (`imageProjection.ts`) lands a ray that left the last surface: the point of its line on
   the image plane, and the length of that stretch, which the optical path to the image is charged with. The length
@@ -487,6 +488,81 @@ a uniform disc of 14 400 rays in rings of equal area against `2 J1(z) / z` withi
 Jacobi-Anger expansion and the midpoint rule (below 4e-5), a shift that changes the phase alone, weights, symmetry,
 the two axes, two lines `d` apart, unequal flux, the common reference, and the definition itself carried out in
 ninety digits of whole-number arithmetic.
+
+### The wave OTF
+
+`src/estimators/waveOtf.ts` is the comparator's wave estimator: Hopkins' formula, the autocorrelation of the pupil
+function, from the optical paths of a bundle traced on a lattice. No rung asks for it yet (R6 is Stage 3.5).
+
+`waveOtf(bundle, reference, frequencies)` gives the `sagittal` cut (frequency along image x) and the `tangential`
+one (along image y) as the geometric estimator does, at any frequencies, with `phaseStep` and `undersampled`
+beside them; `polychromaticWaveOtf(lines, reference, frequencies)` adds the lines of a spectrum; `pupilFunction`
+shows the pupil it autocorrelates; `waveOtfSums` gives the sums before they are divided.
+
+- **The input is a `rays.trace` request and an answer to it, as decoded** (`TracedLattice`): the weights of the
+  request; of the answer either `imagePoint` with `opticalPathToImage` or `exitPoint` with `opticalPath` (`point`,
+  `path`: any point of a ray behind the last surface and the path to it; the image point is the better conditioned)
+  and `exitDirection`; a mask of the rays valid in every engine; the wavelength of the line and the index of the
+  image space there; and `launchPath`, from `launchPaths(origins, directions, conditions.object)`. Which ray is
+  which cell is `groups.lattice` of the set: ray `row * columns + column`, and whatever follows the cells (the
+  chief ray) is not looked at. Neither the lattice's step nor a chief ray is needed. `reference` is a point of the
+  image plane with its z: for two engines, one both can form, as rung R4's is.
+- **The pupil coordinate** is the optical direction cosine at the image side, `c = (n L, n M)`. A frequency `nu`
+  shears the pupil by `lambda nu` in these units, with `lambda` the vacuum wavelength, wherever the exit pupil is.
+- **The path** of a cell is `W = launch + path + n d . (R - Q)`: the optical path from the incident wavefront to
+  the foot of the perpendicular dropped on the ray from the reference point `R`. A ray that is late has the larger
+  `W`; a ray that lands at `x` has `dW/dc = -(x - x_ref)`, so the phase is `-2 pi nu (x - x_ref)` for a small
+  shear, the geometric estimator's convention. A piston is of no account. Moving the reference adds a tilt that is
+  exactly linear in `c`: it turns the phase and leaves the modulus alone, to a rounding.
+- **The launch path** is what a ray's `opticalPath`, which starts at 0 at its origin, lacks: from an object at
+  infinity the projection of the origin on the ray's direction, from an object plane the length of the ray from
+  that plane to its origin. It needs no ray the set does not hold.
+- **The modulus** is `sqrt(w / J)`: the flux of a cell (the weight of the request, and no other apodisation) over
+  the area `J` of cosine space the cell covers, by central differences of its neighbours' cosines. No obliquity
+  factor is applied.
+- **The sum** is a midpoint rule over cosine space with each lit cell a node of weight `J`, once as the lower and
+  once as the upper end of a pair, so the value at `-nu` is the conjugate in every bit. The other end of a pair is
+  looked for in both coordinates: a row of the lattice is no line of constant cosine. It lies in a patch, the
+  square between four neighbouring cells; the patches with a lit corner are kept by where they lie in cosine
+  space, and the point is found in its patch by Newton's method on the patch's bilinear map. No search crosses
+  dark cells, so a hole or a vignetted crescent costs no pair. Modulus and path there are bilinear interpolants;
+  the path is never wrapped. The phasors are added by the geometric estimator's `spotSums`, so the value at
+  frequency 0 is exactly 1 and the arithmetic is IEEE 754 basic operations only.
+- **The rim.** A lattice has no partial cells: the pupil is the staircase of its lit cells, and on an even lattice
+  of uniform flux the estimate is the autocorrelation of that staircase to a rounding. Against the true aperture
+  the error is of first order in the cell, at most `3 e / (1 - e)` with `e` the area between the two over the
+  aperture's (`e <= 4 sqrt(2) / n` for a disc `n` cells across); measured, it falls as `n^-1.5`. Inside the rim the
+  rule is of second order. Beyond the cut-off of the lit cells a value is exactly 0.
+- **Validity.** `phaseStep` is the largest step of `W` between two lit cells that are neighbours in a row or a
+  column, in waves, with the two rays; `undersampled` is true above a quarter wave (`QUARTER_WAVE`), where the
+  phase of a pair may turn by more than half a cycle from one cell to the next: such an estimate is not to be used
+  as an arbiter. The step includes the tilt of a reference that lies beside the spot. `gridConvergence(coarse,
+  fine)` is the largest difference of the MTFs of two estimates of one bundle on two lattices.
+- **Unavailable, never NaN**: the reasons of the geometric estimator (`bad-frequency`, `no-reference`,
+  `bad-weight`, `no-rays`, `no-flux`, `out-of-range`, `no-lines`, `bad-line-weight`) and three of its own:
+  `bad-line` (a wavelength or an index that is not finite and above 0), `bad-ray` (a point, direction or path of a
+  ray that is taken is not finite) and `degenerate-pupil` (the lit cells lie on one line of the lattice, or the map
+  from cells to cosines folds: such a pupil has no single pupil function).
+
+The proof is analytic (`test/estimators/waveOtf.test.ts`), on spherical waves built from their geometry:
+
+| Control | Expected value, derived in the test | Measured |
+|---|---|---|
+| clear disc, 32 to 256 cells across | `2/pi (acos s - s sqrt(1 - s^2))`, within the rim's bound (0.64 to 0.068) | 3.2e-3, 1.2e-3, 5.9e-4, 1.3e-4 |
+| the same, and a lattice turned by 30 degrees, mirrored, with a notch | the autocorrelation of the staircase, from counts of pairs of cells | within 1e-12 |
+| annulus, obscuration 0.4, 128 cells | areas shared by discs, in closed form | 1.4e-3 (bound 0.24) |
+| defocused square pupil, half a wave, 32 / 64 / 128 cells | Hopkins' integral by a 96-point Gauss-Legendre rule, within a bound of second order (0.15 / 0.036 / 0.0087) | 4.3e-4, 9.0e-5, 3.8e-5 |
+| defocused disc, 0.4 waves, 128 cells | the same integral over the lens between two circles | 4.6e-4 (bound 0.14) |
+| a lattice whose cells are seven times as wide at its sides as amid it | the triangle `1 - s`: the modulus is flux over area | exact across, 3.8e-4 along |
+| disc and annulus on a lattice with pupil aberration (a sheared point lies cells from where the local slope puts it), 64 and 128 cells | the closed forms, the flux of a cell being its area | 2.2e-3 and 3.6e-3; 9.6e-4 and 1.3e-3 |
+| tilt of six waves, on an even and on a warped lattice | the phase `exp(-2 pi i nu d)` and the same modulus | within 1e-9, the rounding of the paths |
+
+and the cut-off, the two axes, a wave in glass, the quarter-wave flag at steps of 0.22 and 0.27 waves, two lines
+with lateral colour, the launch path, and every outcome. An estimate of a bundle 32 cells across at three
+frequencies takes 6 ms; of one 128 across, 50 ms.
+
+How LensVisualizer's own two wave estimates differ is in
+[docs/gotchas.md](gotchas.md#lensvisualizer-has-two-wave-estimates-and-the-one-it-shows-reads-no-optical-path).
 
 ## LensVisualizer's product MTF
 
