@@ -161,6 +161,22 @@ export const r3Rung: RungDefinition = Object.freeze({
     rayTraceRequests(opticalCase, inputs),
 });
 
+/**
+ * The rung `r4`, the traced rays as a geometric MTF: the same requests as `r2` and `r3`, so an engine that has
+ * traced a set for one has traced it for all three. The comparator's binless estimator is applied to where each
+ * engine lands the rays of a field, at every line of the case, on the plane of the case and at the frequencies of
+ * the run's MTF recipe, and the curves are compared (`src/compare/raysMtf.ts`). It is asked of the engines of the
+ * run, and only of a run that has a recipe: without one nothing says at which frequencies an MTF is to be taken.
+ */
+export const r4Rung: RungDefinition = Object.freeze({
+  id: "r4",
+  quantity: RAYS_TRACE,
+  needsRaySets: true,
+  needsRecipe: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.recipe ?? null) === null ? [] : rayTraceRequests(opticalCase, inputs),
+});
+
 /** The engines of the rung `r4f`: LensVisualizer, and the comparator's estimator on a replay of its sampling. */
 export const R4F_ENGINES: readonly string[] = Object.freeze(["lv", "replay"]);
 
@@ -211,7 +227,15 @@ export const r4fRung: RungDefinition = Object.freeze({
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
  */
-export const RUNGS: readonly RungDefinition[] = Object.freeze([selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4fRung]);
+export const RUNGS: readonly RungDefinition[] = Object.freeze([
+  selftestRung,
+  r0Rung,
+  r1Rung,
+  r2Rung,
+  r3Rung,
+  r4Rung,
+  r4fRung,
+]);
 
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When

@@ -701,12 +701,13 @@ const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 /**
  * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
  * blocks the rungs after it, the first-order data `r1`, the two rungs of traced rays, `r2` and `r3`, with the
- * floor of `lv` against `ref`, and the fidelity of the replay of LensVisualizer's MTF sampling, `r4f`.
+ * floor of `lv` against `ref`, the geometric MTF of those rays, `r4`, and the fidelity of the replay of
+ * LensVisualizer's MTF sampling, `r4f`.
  */
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 6,
+  version: 7,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -754,6 +755,12 @@ export const POLICY_LADDER = {
         "opticalPathToImage.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
       },
       floor: { engine: "lv", arbiter: "ref" },
+    },
+    r4: {
+      quantity: RAYS_TRACE,
+      mode: "identical-rays",
+      class: "gated",
+      metrics: { "mtf.maxAbs": { tolerance: 1e-7, unit: "1" } },
     },
     r4f: {
       quantity: MTF_NATIVE,

@@ -27,7 +27,7 @@ node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for 
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f   # R4f: lv against the replay of its own MTF sampling, 96 runs (about 3 min); asked of lv and replay whatever --engines names
 node bin/lvrtc.mjs engine conformance replay   # the conformance kit on the replay engine (needs LV)
@@ -37,7 +37,7 @@ node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes b
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3   # Phase 2, three ways: built system, first-order data, LV's launch rays, optical path
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -244,6 +244,26 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   maximum of 1.25e-14; `sampling.mismatches` and `fields.mismatches` at 0; no floor. A grid size, a ray count or a
   status that differs is a defect of the replay or a change in LV: read the canaries, never widen. R4f is in no
   committed baseline until Stage 3.8.
+- **R4 is the geometric MTF of the run's ray sets** (`src/compare/raysMtf.ts`): the rays are the sets R2 and R3
+  judge (`rayTraceRequests`), never the grid a field's refinement ends at, which is R4f's; the landing is each
+  engine's own `imagePoint` on the plane of the run's case, which is the recipe's plane (a recipe of another plane
+  is not comparable; nothing is projected a second time); a ray counts by its weight in the request and a line by
+  its weight in the case; the frequencies are the recipe's, so a run without a recipe is not asked. The reference
+  point is midway between the two engines' flux-weighted centroids of the first line's rays, never a chief ray's
+  landing.
+- **In R4 "valid in every engine" is of the two engines of a pair**: a ray that is ok in one answer and not in the
+  other is left out of both sums and counted (`rays.dropped`); it is R2's to judge, never R4's. `no-rays` and
+  `no-flux` are "not measured", which is a pass: a tier-3 test of R4 asserts the figure was measured. Any other
+  reason the estimator has no value is not comparable.
+- **A figure of several requests is a span** (`QuantityComparator.spanOf`, `src/compare/span.ts`):
+  `compareManifest` puts the groups of a rung together by the comparator's span key, the set stands under the
+  `requestId` of its first request, and each participant is a `SpanAnswer`; an engine without an ok answer to one
+  request of a span enters as that request left it. `comparePair`, `compareGroup` and the floor rule know nothing
+  of spans; a baseline's `requests` counts sets. A comparator of spans takes its members in an order of its own
+  (R4: by line), never the order handed over.
+- **R4 has no floor, and its gate is tighter than R2's**: a landing within R2's 1e-8 mm may turn a term by 6e-6
+  at 100 cycles/mm. A FAIL of R4 is attributed with R2's figures for the same ray sets before anything is
+  concluded; whether R4 gets a floor is the owner's.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.
@@ -274,14 +294,14 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   test holds the three together. `mtf.native` has a comparator for `r4f` only (`src/compare/mtfFidelity.ts`); the rung
   that sets two independent engines' MTF against each other brings its own. No quantity is without a comparator
   today, and the test says so. Raise the policy's `version` when a rung, a class
-  or a limit changes. Two rungs may compare one quantity, each with a comparator that names its rung: `r2`
-  (geometry and mask) and `r3` (optical path) both ask the `rays.trace` requests of `rayTraceRequests`, so an
-  engine traces a set once.
+  or a limit changes. Three rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
+  (geometry and mask), `r3` (optical path) and `r4` (geometric MTF) all ask the `rays.trace` requests of
+  `rayTraceRequests`, so an engine traces a set once.
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`; policy version 6). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
+  `src/compare/floor.ts`; policy version 7). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
   limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
   it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
   the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
@@ -349,7 +369,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
-  A policy change therefore needs the baselines rewritten, which needs LV and optiland. `report --floor` remains
+  The baselines hold R0 to R4 (R4f not until Stage 3.8): a policy change therefore needs them rewritten with
+  `--rungs r0,r1,r2,r3,r4`, which needs LV and optiland. `report --floor` remains
   a local tool. The contract stays at 1.0.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and

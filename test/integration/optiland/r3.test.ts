@@ -20,6 +20,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 
+import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { raysGeometryComparator } from "../../../src/compare/raysGeometry.ts";
 import { raysPathComparator } from "../../../src/compare/raysPath.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
@@ -37,7 +38,7 @@ import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { caseFixture } from "../../core/support.ts";
 import { caseOf } from "../../engines/ref/support.ts";
 import { LV_UNAVAILABLE } from "../lv/support.ts";
-import { OPTILAND_UNAVAILABLE, optilandRoot, runAndCompare, rungSuite } from "./support.ts";
+import { OPTILAND_UNAVAILABLE, optilandRoot, pairsOf, runAndCompare, rungSuite } from "./support.ts";
 import { AGREEMENT, PATHS, PATH_SYSTEMS, SYSTEMS, assertR2, assertR3, f8 } from "./traced.ts";
 import type { R3Summary } from "./traced.ts";
 
@@ -338,9 +339,34 @@ function assertTracedOnce(jobs: readonly { rung: string; storeKey: string | null
 }
 
 /**
- * A suite on rungs R0 to R3 by all three engines, as Phase 2 states its benchmark:
- * `lvrtc run <suite> --engines lv,ref,optiland --rungs r0,r1,r2,r3`, then `lvrtc compare`, which must find no
- * failure on any rung. R3 is then held pair by pair; R0, R1 and R2 have tests of their own.
+ * Holds rung R4 of a compared suite: the geometric MTF of the same rays, a field at every line of its run as one
+ * comparison, is within the gate for every two engines. The policy gives the rung no floor, so a pair that is
+ * judged is `PASS`. Says the largest figure of each pair of engines, with its run and its place.
+ */
+function assertR4(t: TestContext, suite: string, comparisons: ComparisonFile, runs: number): void {
+  const pairs = pairsOf(comparisons, "r4", RAYS_TRACE);
+  // Three fields a run, each once whatever the number of its lines, and three pairs of engines.
+  assert.equal(pairs.length, 3 * 3 * runs);
+  const worst = new Map<string, { value: number; at: string }>();
+  for (const pair of pairs) {
+    assert.equal(pair.verdict, "PASS", `${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
+    const mtf = pair.metrics["mtf.maxAbs"];
+    // A pair whose MTF was not measured is a pass too, and would hold nothing here: every field of a suite has one.
+    assert.ok(mtf !== undefined && mtf.value !== null, `${pair.run}, ${pair.engines}: the MTF was not measured`);
+    if (mtf.value > (worst.get(pair.engines)?.value ?? -1)) {
+      worst.set(pair.engines, { value: mtf.value, at: `${pair.run} ${mtf.where}` });
+    }
+  }
+  for (const [engines, { value, at }] of [...worst].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    t.diagnostic(`${suite}: R4, ${engines}: mtf.maxAbs ${value.toExponential(2)} at ${at}`);
+  }
+}
+
+/**
+ * A suite on rungs R0 to R4 by all three engines: what Phase 2 states as its benchmark,
+ * `lvrtc run <suite> --engines lv,ref,optiland --rungs r0,r1,r2,r3`, with the rung of Phase 3 that asks the same
+ * requests, R4, beside them; then `lvrtc compare`, which must find no failure on any rung. R3 and R4 are then held
+ * pair by pair; R0, R1 and R2 have tests of their own.
  */
 function everyRung(
   t: TestContext,
@@ -350,7 +376,7 @@ function everyRung(
     suite: rungSuite(t, suite),
     name: suite,
     engines: "lv,ref,optiland",
-    rungs: "r0,r1,r2,r3",
+    rungs: "r0,r1,r2,r3,r4",
   });
   const { manifest } = cycle;
   assert.deepEqual(
@@ -358,9 +384,12 @@ function everyRung(
     [],
   );
   const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
-  // The built system and its first-order data of each run, and each ray set on two rungs, of three engines.
-  assert.equal(manifest.jobs.length, 3 * (2 * manifest.runs.length + 2 * sets));
+  // The built system and its first-order data of each run, and each ray set on three rungs, of three engines.
+  assert.equal(manifest.jobs.length, 3 * (2 * manifest.runs.length + 3 * sets));
   assertTracedOnce(manifest.jobs);
+  const answers = (rung: string) => manifest.jobs.filter((job) => job.rung === rung).map((job) => job.storeKey);
+  assert.deepEqual(answers("r4"), answers("r2"), "the answer of a set to R4 is its answer to R2");
+  assertR4(t, suite, cycle.comparisons, manifest.runs.length);
   const paths = assertR3(t, suite, cycle.comparisons);
   assert.equal(paths.pairs.length, 3 * sets);
   assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))].sort(), [
@@ -371,13 +400,13 @@ function everyRung(
   for (const pair of paths.pairs.filter((pair) => pair.verdict === "FLOOR")) {
     t.diagnostic(`${suite}: floor of R3, ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
   }
-  t.diagnostic(`${suite}, R0 to R3 on three engines in ${cycle.runSeconds.toFixed(1)} s: ${cycle.verdicts}`);
+  t.diagnostic(`${suite}, R0 to R4 on three engines in ${cycle.runSeconds.toFixed(1)} s: ${cycle.verdicts}`);
   t.diagnostic(`${suite}: no chief ray landed in ${paths.withoutChief.length} of ${sets} ray sets`);
   return { paths, verdicts: cycle.verdicts, sets };
 }
 
 test(
-  "the benchmark on R0 to R3, three ways: no pair fails a rung, and optiland's paths are ref's on every ray set",
+  "the benchmark on R0 to R4, three ways: no pair fails a rung, and optiland's paths are ref's on every ray set",
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "benchmark");
@@ -385,10 +414,12 @@ test(
     assert.equal(sets, 216);
     // Measured: optiland within 2.7e-9 waves of ref in every path and relative to every chief ray, over 137 596
     // rays, and LensVisualizer within 6.0e-6 waves of both: every pair inside the gate, so the benchmark has no
-    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 216 ray sets on R2 and on R3, five pairs each.
+    // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 216 ray sets on R2 and on R3, and 72 fields
+    // on R4, five pairs each. On R4 (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of
+    // both, and optiland within 1.2e-11 of ref, against a gate of 1e-7.
     assert.match(
       verdicts,
-      /^benchmark: 2400 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 2760 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     // Every chief ray of the benchmark lands, in every engine: the path relative to it is measured in every pair.
     assert.deepEqual(paths.withoutChief, []);
@@ -396,7 +427,7 @@ test(
 );
 
 test(
-  "the feature suite on R0 to R3, three ways: no pair fails a rung, and a floor of R3 names its witness",
+  "the feature suite on R0 to R4, three ways: no pair fails a rung, and a floor of R3 names its witness",
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "features");
@@ -404,7 +435,7 @@ test(
     assert.equal(sets, 162);
     assert.match(
       verdicts,
-      /^features: 1800 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 2070 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     // Measured: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field at 470 nm and
     // 510 nm, are floors of LensVisualizer against ref and against optiland alike (2.07e-5 waves to the image and

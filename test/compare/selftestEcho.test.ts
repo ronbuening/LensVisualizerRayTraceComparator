@@ -149,6 +149,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["paraxial.first-order", undefined],
       ["rays.trace", "r2"],
       ["rays.trace", "r3"],
+      ["rays.trace", "r4"],
       ["selftest.echo", undefined],
       ["system.describe", undefined],
     ],

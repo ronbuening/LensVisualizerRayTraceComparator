@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 6,
+  "version": 7,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -136,6 +136,17 @@
       "floor": {
         "engine": "lv",
         "arbiter": "ref"
+      }
+    },
+    "r4": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "mtf.maxAbs": {
+          "tolerance": 1e-7,
+          "unit": "1"
+        }
       }
     },
     "r4f": {

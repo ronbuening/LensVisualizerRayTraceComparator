@@ -9,7 +9,7 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
 import type { MetricPolicy, Policy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { RUNGS, r0Rung, r1Rung, selftestRung } from "../../src/core/rungs.ts";
+import { RUNGS, r0Rung, r1Rung, r4Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 6);
+  assert.equal(policy.version, 7);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -109,6 +109,28 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, with th
   );
 });
 
+test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no floor, and it blocks nothing", () => {
+  const { r4 } = loadPolicy().rungs;
+  assert.deepEqual([r4.quantity, r4.mode, r4.class], ["rays.trace", "identical-rays", "gated"]);
+  assert.deepEqual(r4.metrics, { "mtf.maxAbs": { tolerance: 1e-7, unit: "1" } });
+  assert.equal(r4.floor, undefined);
+  assert.equal(r4.blocksLaterRungs, undefined);
+  // Its comparator is its own, a comparator of spans, and what it reports beside the MTF is counted and shown:
+  // the rays one engine lost are R2's to judge.
+  const comparator = COMPARATORS.get("rays.trace", "r4");
+  assert.equal(comparator?.rung, "r4");
+  assert.equal(typeof comparator?.spanOf, "function");
+  assert.deepEqual(
+    comparator?.metrics.map((metric) => `${metric.name} ${metric.unit}`),
+    ["mtf.maxAbs 1", "rays.compared rays", "rays.dropped rays", "lines.compared lines"],
+  );
+  // The rung asks the requests of R2 and R3, of a run that has a recipe.
+  assert.deepEqual(
+    [r4Rung.quantity, r4Rung.needsRaySets, r4Rung.needsRecipe, r4Rung.engines],
+    ["rays.trace", true, true, undefined],
+  );
+});
+
 test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it blocks nothing", () => {
   const { r4f } = loadPolicy().rungs;
   assert.deepEqual([r4f.quantity, r4f.mode, r4f.class], ["mtf.native", "direct", "gated"]);
@@ -170,6 +192,7 @@ test("each way a policy and the code can disagree is reported", () => {
     "rung selftest has no policy entry",
     "rung r0 has no policy entry",
     "rung r3 has no policy entry",
+    "rung r4 has no policy entry",
     "rung r4f has no policy entry",
     "policy entry notes is of no registered rung",
     "policy entry r1: the comparator reports no metric efl.abs",

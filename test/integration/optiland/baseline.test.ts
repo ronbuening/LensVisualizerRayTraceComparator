@@ -33,9 +33,11 @@ interface Checked {
 }
 
 for (const [suite, records] of [
-  // 12 configurations in four conditions, on two sets of lines: four rungs and three pairs of engines each.
-  ["benchmark", 96 * 4 * 3],
-  ["features", 18 * 4 * 3],
+  // 12 configurations in four conditions, on two sets of lines: five rungs, R0 to R4, and three pairs of engines
+  // each. R4 is held here on every run of both suites: its requests are those of R2 and R3, so the check traces
+  // nothing more for it.
+  ["benchmark", 96 * 5 * 3],
+  ["features", 18 * 5 * 3],
 ] as const) {
   test(
     `baseline check ${suite}: every record of the cases and engines at hand is OK`,

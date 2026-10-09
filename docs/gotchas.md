@@ -765,6 +765,28 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   and six of the features suite by at most 5.6e-11 waves, 3e-6 of the gate, and every record is `REFRESHABLE`.
 - **Class.** numerical.
 
+### A landing that passes R2 may be sixty times the gate of R4 in the phase of an MTF
+
+- **Where.** The geometric MTF is the modulus of a sum of one term a ray, `w exp(-2 pi i nu (u - u_ref))`. A
+  landing that is δ off turns its term by 2πνδ. R2 holds a landing to 1e-8 mm; at 100 cycles/mm that is a phase of
+  6.3e-6, and R4 holds the MTF to 1e-7. So R2's gate does not imply R4's, on any engine: R4 is the tighter of the
+  two by a factor of sixty at the highest frequency of LensVisualizer's MTF, and of thirty at 50 cycles/mm.
+- **Effect.** On the benchmark (96 runs, 288 fields, 51 frequencies; LensVisualizer `33ebdb30`, closure
+  `78215d72`) the largest difference of `lv` from `ref` is 5.39e-8, `sigma-45mm-f28-dg-dn-contemporary` at f/8 and
+  best focus, full field, tangential, 98 cycles/mm, where R2 has LensVisualizer's landings within 7.6e-10 mm of
+  `ref`'s: a bound of 4.7e-7 for that field, and a ninth of it measured, because the rays of a bundle are not off
+  alike and what is common to them is a phase the modulus does not see. The largest landing of the benchmark is
+  9.1e-9 mm (`sigma-35mm-f14-dg-hsm-a`, photopic), which would allow 5.7e-6. The two exact tracers, `ref` and
+  optiland, are within 1.2e-11 of each other on every field: the 5e-8 is LensVisualizer's 1e-9 mm at a surface
+  ([above](#a-hit-lies-within-1e-9-mm-of-its-surface-not-on-it)). At 10, 30 and 50 cycles/mm the largest of `lv`
+  is 8.0e-9, 1.8e-8 and 4.0e-8.
+- **Handled.** Nothing is widened. Every pair of both suites is `PASS`, LensVisualizer at 54 % of the gate at
+  worst (48 % on the feature suite, on the Hologon), and R4 has no floor: a lens on which LensVisualizer's landings
+  move the MTF by more than 1e-7 is `FAIL`, to be attributed with R2's figures for the same rays (they are the same
+  ray sets) before anything else is concluded. Whether R4 is to have a floor of `lv` against `ref`, as R2 and R3
+  have, is the owner's decision and was not taken in Stage 3.3.
+- **Class.** numerical.
+
 ## optiland
 
 Measured at optiland `4e893f53` (numba 0.65.1, numpy 2.3.5, Python 3.14.8). The figures of rung R0 were taken

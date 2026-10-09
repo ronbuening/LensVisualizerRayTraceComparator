@@ -21,6 +21,7 @@ import type { ComparisonFile } from "./comparisonFile.ts";
 import { compareGroup, defaultReference } from "./group.ts";
 import { COMPARATORS } from "./index.ts";
 import type { ParticipantResult } from "./pair.ts";
+import type { SpanMember } from "./span.ts";
 
 /** What `compareManifest` is given. */
 export interface CompareManifestInput {
@@ -73,6 +74,34 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
 }
 
 /**
+ * The participants of a span: every engine with a job in one of its groups, in the order they first appear. An
+ * engine with an "ok" answer to every request of the span is "ok", and its data is the `SpanAnswer` of those
+ * answers in the order of the requests. Any other enters as the first request it has no such answer to left it; one
+ * without a job for a request of the span is "missing".
+ */
+function spanParticipants(
+  unit: readonly (readonly ManifestJob[])[],
+  answeredBy: (job: ManifestJob) => Answered,
+  fingerprints: ReadonlyMap<string, string | null>,
+): ParticipantResult[] {
+  const engines = [...new Set(unit.flatMap((jobs) => jobs.map((job) => job.engine)))];
+  return engines.map((engine): ParticipantResult => {
+    const fingerprint = fingerprints.get(engine) ?? null;
+    const members: SpanMember[] = [];
+    for (const jobs of unit) {
+      const job = jobs.find((candidate) => candidate.engine === engine);
+      if (job === undefined) {
+        return { engine, fingerprint, status: "missing", detail: "it has no job for a request of the span" };
+      }
+      const { participant, spec } = answeredBy(job);
+      if (participant.status !== "ok" || participant.data === undefined || spec === undefined) return participant;
+      members.push({ requestId: job.requestId, spec, data: participant.data });
+    }
+    return { engine, fingerprint, status: "ok", data: { members } };
+  });
+}
+
+/**
  * Compares everything one run of a suite asked of more than nobody, and returns the comparison file.
  *
  * The jobs of the manifest are grouped by run, rung and request: a group is what several engines were asked alike.
@@ -91,8 +120,17 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
  * manifests, store entries, cases and policies give an equal file, in any directory and on any machine.
  *
  * A comparator is the one of the quantity for the rung (`ComparatorLookup.get`), and is handed what the answers
- * are answers to: the spec of the request, from the store entry of an engine that answered it, and the case of the
- * run, from `cases`. An answer the store holds is read once for a run, however many rungs and modes compare it.
+ * are answers to: the spec of the request, from the store entry of an engine that answered it, the case of the
+ * run, from `cases`, and the MTF recipe of the run, where the manifest records one. An answer the store holds is
+ * read once for a run, however many rungs and modes compare it.
+ *
+ * A comparator of spans (`QuantityComparator.spanOf`) judges a figure that is of several requests of a run at once.
+ * The groups of its rung in a run are then put together by the span each request's spec belongs to, and each span
+ * gives one set per mode, in the place and under the `requestId` of the first of its requests. A participant of a
+ * span that has an "ok" answer to every request of it is handed over as a `SpanAnswer` of those answers, in the
+ * order of the requests; one that has not enters as the first of them left it (unsupported, in error, missing), so
+ * its pairs say why nothing of the span was measured. A request whose spec is not at hand, because no engine
+ * answered it, and one the comparator names no span for, is a span of its own.
  *
  * The groups of a run are compared in the order of the manifest's jobs, which is the order of the ladder. Where
  * the policy of a rung says `blocksLaterRungs`, two engines whose pair in that rung is `FAIL` or `ERROR` are not
@@ -137,18 +175,38 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
       return known;
     };
     const opticalCase = run.caseId === null ? undefined : cases?.(run.caseId);
+    const recipe = run.recipe?.recipe ?? undefined;
+    const specOf = (jobs: readonly ManifestJob[]): JsonObject | undefined =>
+      jobs.map(answeredBy).find((answer) => answer.spec !== undefined)?.spec;
+
+    // What is compared as one set: a request, or for a comparator of spans the requests of one span. A Map keeps
+    // its keys in the order they were first set, so a span stands where its first request does.
+    const units = new Map<string, ManifestJob[][]>();
     for (const jobs of groups.values()) {
-      const [{ run: runName, caseId, rung, quantity, requestId }] = jobs;
+      const [{ run: runName, rung, quantity, requestId }] = jobs;
       if (runName !== run.name) continue;
+      const comparator = comparators.get(quantity, rung);
+      const spec = comparator?.spanOf === undefined ? undefined : specOf(jobs);
+      const span = spec === undefined ? undefined : comparator?.spanOf?.(spec);
+      const key = JSON.stringify(span === undefined ? [rung, "request", requestId] : [rung, "span", span]);
+      units.set(key, [...(units.get(key) ?? []), jobs]);
+    }
+
+    for (const unit of units.values()) {
+      const [jobs] = unit;
+      const [{ run: runName, caseId, rung, quantity, requestId }] = jobs;
       if (!Object.hasOwn(policy.rungs, rung)) throw new UsageError(`the policy has no entry for the rung ${rung}`);
       const rungPolicy = policy.rungs[rung];
       if (rungPolicy.quantity !== quantity) {
         throw new UsageError(`rung ${rung}: the run asked for ${quantity}; the policy judges ${rungPolicy.quantity}`);
       }
 
-      const answers = jobs.map(answeredBy);
-      const participants = answers.map((answer) => answer.participant);
-      const spec = answers.find((answer) => answer.spec !== undefined)?.spec;
+      const comparator = comparators.get(quantity, rung);
+      const spec = specOf(jobs);
+      const participants =
+        comparator?.spanOf === undefined
+          ? jobs.map((job) => answeredBy(job).participant)
+          : spanParticipants(unit, answeredBy, fingerprints);
       const named = reference ?? run.referenceEngine;
       const taking = (engine: string): boolean => participants.some((participant) => participant.engine === engine);
       const against =
@@ -166,9 +224,13 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
         requestId,
         participants,
         policy: rungPolicy,
-        comparator: comparators.get(quantity, rung),
+        comparator,
         blocked: ledger.blockedIn(rung),
-        context: { ...(spec === undefined ? {} : { spec }), ...(opticalCase === undefined ? {} : { opticalCase }) },
+        context: {
+          ...(spec === undefined ? {} : { spec }),
+          ...(opticalCase === undefined ? {} : { opticalCase }),
+          ...(recipe === undefined ? {} : { recipe }),
+        },
       };
       const sets = COMPARISON_MODES.filter((mode) => modes.includes(mode)).map((mode) =>
         compareGroup(group, mode, against),

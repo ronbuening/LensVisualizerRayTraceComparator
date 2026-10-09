@@ -14,7 +14,10 @@ and their optical paths, on which the three engines agree on both suites
 Phase 3, MTF, has begun: the comparator's own geometric estimator reproduces LensVisualizer's geometric MTF on a
 replay of LensVisualizer's sampling to 1.3e-14, with every grid size and ray count the same, on the benchmark wide
 open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4f,
-[measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)).
+[measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)); and the geometric MTF of the same rays, as
+LensVisualizer, the reference tracer and optiland each land them, agrees within 5.4e-8 on the same benchmark, the
+two exact tracers within 1.2e-11 (rung R4, gated at 1e-7,
+[measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)).
 
 ## Requirements
 
@@ -154,6 +157,14 @@ Adds optiland: it builds every lens in optiland and reads the built system back 
 shows before a ray is traced, gives optiland's own focal length, cardinal points and pupils (R1), and traces the
 very rays LensVisualizer launches with optiland's own tracer: where they go (R2) and how long their paths are
 (R3). What comes of it is in [docs/REFERENCE.md](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines).
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r2,r3,r4
+```
+
+Adds the geometric MTF of those rays (R4): one estimator, the comparator's own, on where each engine lands the
+rays of a field, at every line of the lens and at the frequencies of LensVisualizer's MTF. It traces nothing that
+R2 and R3 have not traced.
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f

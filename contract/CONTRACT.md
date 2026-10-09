@@ -1059,9 +1059,10 @@ A rung:
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
-judged. Two rungs may compare one quantity, each by metrics of its own: `r2` and `r3` both compare `rays.trace`.
+judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
+`rays.trace`.
 
-The comparator's policy, version 6:
+The comparator's policy, version 7:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1070,6 +1071,7 @@ The comparator's policy, version 6:
 | `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
 | `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; floor of `lv` |
 | `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; floor of `lv` |
+| `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
 | `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
 
 **The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
@@ -1110,7 +1112,7 @@ that built different systems would differ in every ray traced through them, and 
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
 ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`,
-`r4f`.
+`r4`, `r4f`.
 Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
 built.
 
@@ -1190,10 +1192,23 @@ participants, the first of them the reference when there is one.
 of the manifest and of the policy the sets were made from, and the sets ordered by run, rung, request and mode.
 
 A comparator is given the two answers and what they are answers to: the spec of the request, which the result
-store keeps with each answer, and the case of the run, which the run directory keeps under `cases/`. Some need
-them: a clip radius says which rays lie in a rim band, a line's wavelength turns a path into waves, an image plane
-gives a pupil's distance. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
+store keeps with each answer, the case of the run, which the run directory keeps under `cases/`, and the MTF
+recipe of the run, where its manifest records one. Some need them: a clip radius says which rays lie in a rim
+band, a line's wavelength turns a path into waves, an image plane gives a pupil's distance, a recipe's frequencies
+say where an MTF is taken. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
 nothing is guessed in its place.
+
+**A set that spans requests.** A figure may be of several requests of a run at once: the MTF of a spectrum is of
+the rays of every line, and each line's rays are a request of their own. The comparator of such a figure says
+which requests belong together (`QuantityComparator.spanOf`, from a request's spec), and the requests of one run
+and rung that do are compared as **one** set: it stands where the first of them stands, its `requestId` is that
+first request's, and each of its participants is one engine's answers to all of them (`SpanAnswer`,
+`src/compare/span.ts`). An engine that has no `ok` answer to one request of a span has no answer to the span: it
+is a participant with the status of the first such request, so its pairs say why nothing of the span was measured,
+and no figure is taken of the requests that are left. A request whose spec is not at hand, because no engine
+answered it, is a set of its own. Today one comparator is of spans, R4's: [a field at every line of its
+case](#raystrace). The schema of a set is what it was: the requests a set spans beyond the first are those of the
+same field, and its pairs say how many (`lines.compared`).
 
 ### `baseline`
 
@@ -1215,7 +1230,8 @@ A record is keyed on the run's `name` and its `caseId`, the content hash of the 
 the suite file alone: a zoom that a suite names once is two runs, `<name>-wide` and `<name>-tele`, each with its
 own case and its own records. A rung of a run is `{ rung, quantity, requests, support, rays?, pairs }`:
 
-- `requests`: how many requests of the rung the engines were compared on (one per ray set, in `r2` and `r3`);
+- `requests`: how many sets of the rung the engines were compared on: one per request, which in `r2` and `r3` is
+  one per ray set, and in `r4`, whose sets span requests, one per field;
 - `support`: per engine, sorted, `{ engine, status, detail? }`: `ok` when every job of the engine ended so, else
   the status of the first that did not, with its codes (`quantity rays.trace`, an error code);
 - `rays`: per engine, sorted, `{ engine, ok, blocked, failed }`, added up over the requests; left out by a rung
@@ -1579,10 +1595,10 @@ answers a line the case does not have with the error `bad-spec`. Data: the shape
 least 1; `status` is 0, 1 or 2; `endSurface` is −1 exactly for a ray that is ok and else from 0 to S; and the rule
 above for where a ray has numbers and where NaN holds for every ray.
 
-**Compared by two rungs**, which ask the same requests, so that an engine traces a set once for both and the
-result store holds one answer. Each has a comparator of its own. Positions and paths are compared on the rays
-that are ok in both answers; every metric's `where` has the `ray` of its largest value, with the `line` of the
-spec and, where the set states one, its `field` angle in degrees.
+**Compared by three rungs**, which ask the same requests, so that an engine traces a set once for all of them
+and the result store holds one answer. Each has a comparator of its own. Positions, paths and the MTF are compared
+on the rays that are ok in both answers; in R2 and R3 every metric's `where` has the `ray` of its largest value,
+with the `line` of the spec and, where the set states one, its `field` angle in degrees.
 
 *R2, the geometry* (`src/compare/raysGeometry.ts`):
 
@@ -1620,6 +1636,41 @@ difference in mm over `wavelengthNm` × 1e-6:
 `opd.maxAbs` is measured where the set states a `chiefIndex` and that ray is ok in both answers; elsewhere it is
 not measured, which fails nothing, and the two raw paths stand alone. A ray that is not ok in both has no path in
 one answer: that is a matter of the mask, which R2 judges.
+
+*R4, the geometric MTF* (`src/compare/raysMtf.ts`): the comparator's own binless estimator
+(`src/estimators/geometricOtf.ts`: one term a ray, no bin, no transform, every sum compensated) applied to where
+each of two engines lands the rays of a field, and the two curves set against each other. The rung asks the
+requests of R2 and R3, and only of a run that has an [MTF recipe](#the-mtf-recipe). Its sets
+[span requests](#comparison): the sets of one field, one for each line of the case (those whose `groups` are
+equal and state a `field`), are one comparison.
+
+| Metric | Unit | Is |
+|---|---|---|
+| `mtf.maxAbs` | 1 | the largest difference of the two MTFs, over the sagittal and the tangential cut and every frequency of the recipe; `where` has the `field` angle in degrees, the `cut` and the `frequencyPerMm` |
+| `rays.compared` | rays | the rays that are ok in both answers, over the lines |
+| `rays.dropped` | rays | the rays that are ok in one answer and not in the other, over the lines: left out of both sums, counted and never judged; `where` has the `line` and the `ray` of the first |
+| `lines.compared` | lines | how many lines of the case, and so how many requests, the figure is of |
+
+- **The rays** of each line are the ones both engines brought to the image. A ray one engine lost is in neither
+  engine's sum, so the two curves are of one bundle; that the engines disagree about a ray is R2's to judge, and
+  here it is only counted. "Valid in every engine" is of the two engines of a pair: what a third engine lost
+  changes nothing between two others, and a pair's figures depend on its own two answers alone.
+- **The landing** is the engine's own `imagePoint`, on `conditions.imageZ`. That is the plane of the recipe: a run
+  at another focus (`imagePlane: lv-best-axial`) has a case at that plane, so nothing is projected a second time.
+  A recipe of another plane than the case's is not comparable.
+- **The weights**: a ray counts by its `weights` element in the request, the flux it carries to the image, which
+  is the same number for both engines; a line counts by its `weight` in the case times the flux of its rays
+  (`polychromaticOtf`): OTF(ν) = Σ W_l S_l(ν) / Σ W_l T_l, the lines added as complex numbers before the modulus
+  is taken. With one line it is that line's MTF.
+- **The reference point** is one for both engines and for every line: midway between the two engines'
+  flux-weighted centroids of the first line's rays. No chief ray is needed for it, so it is not lost when a chief
+  ray is clipped; and the modulus does not depend on it (moving it turns every term of the sum by one phase), so
+  it decides nothing but how small the phases are.
+- **Not measured** where a line has no ray that is ok in both answers, or none that carries flux: the pair says
+  so and fails for none of it. **Not comparable** without the recipe or the case, with a recipe of another plane
+  or without a frequency, and where the sets of a field are not of every line of the case, each once: a spectrum
+  from which a line is missing is another spectrum. A ray that an engine calls ok and lands at no finite point is
+  a defect of the answer and no ray to leave out: the pair is `ERROR`.
 
 Answers for different numbers of rays or surfaces are not comparable; nor are any two without the case (R2: its
 apertures) or without the request and the case (R3: the line and its wavelength).

@@ -16,10 +16,10 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | features |
 | Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | 6b4e34932c04736911c1fff8f8ee931ee433d207be42aadbc8faf7cbb1fbd0cd |
+| Baseline hash | 8074c177cebdc5c8b0d112732f03ed3ffd7dec2fcab66e849e089c037566260a |
 | Contract version | 1.0 |
-| Policy | rungs v6 |
-| Policy hash | 32ebd4d215c0802e4ed0c8098a1a1af6338ef21c65646a27961995a9f30d7bbc |
+| Policy | rungs v7 |
+| Policy hash | 0250572b61bb3371cdce2698bb9c7cbb17a91c2ef8b2358abb13263869057767 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
@@ -64,6 +64,9 @@ which is within the policy's floor limit of the arbiter while no other engine si
 | r3 | rays.trace | 18 | 162 | lv – optiland | 17 PASS, 1 FLOOR | 160 PASS, 2 FLOOR |
 | r3 | rays.trace | 18 | 162 | lv – ref | 17 PASS, 1 FLOOR | 160 PASS, 2 FLOOR |
 | r3 | rays.trace | 18 | 162 | optiland – ref | 18 PASS | 162 PASS |
+| r4 | rays.trace | 18 | 54 | lv – optiland | 18 PASS | 54 PASS |
+| r4 | rays.trace | 18 | 54 | lv – ref | 18 PASS | 54 PASS |
+| r4 | rays.trace | 18 | 54 | optiland – ref | 18 PASS | 54 PASS |
 
 ## Support
 
@@ -84,6 +87,9 @@ with the code and the item it names; that is an answer and not a failure.
 | r3 | lv | 18 ok |
 | r3 | optiland | 18 ok |
 | r3 | ref | 18 ok |
+| r4 | lv | 18 ok |
+| r4 | optiland | 18 ok |
+| r4 | ref | 18 ok |
 
 ## r0
 
@@ -264,3 +270,45 @@ By run, each pair with its verdict and the judged metric that is largest against
 | zero-asphere-photopic | 15 | PASS: opticalPath.maxAbs 3.58e-6 waves | PASS: opticalPath.maxAbs 3.58e-6 waves | PASS: opd.maxAbs 5.59e-10 waves |
 | stop-inside-element-ref | 3 | PASS: opd.maxAbs 1.66e-5 waves | PASS: opd.maxAbs 1.66e-5 waves | PASS: opticalPathToImage.maxAbs 3.39e-10 waves |
 | stop-inside-element-photopic | 15 | FLOOR: opd.maxAbs 2.28e-5 waves | FLOOR: opd.maxAbs 2.28e-5 waves | PASS: opticalPathToImage.maxAbs 4.74e-10 waves |
+
+## r4
+
+Quantity `rays.trace`. The worst of every metric over the suite:
+
+| Pair | Metric | Worst, or total | Run | Where |
+|---|---|---|---|---|
+| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 4.79e-8 | stop-inside-element-ref | cut tangential, field 5.53e1, frequencyPerMm 94 |
+| lv – optiland | rays.compared [rays] | 104846 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | — | — |
+| lv – optiland | lines.compared [lines] | 5 | odd-asphere-photopic | — |
+| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 4.79e-8 | stop-inside-element-ref | cut tangential, field 5.53e1, frequencyPerMm 94 |
+| lv – ref | rays.compared [rays] | 104846 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | — | — |
+| lv – ref | lines.compared [lines] | 5 | odd-asphere-photopic | — |
+| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 6.70e-12 | flat-base-asphere-ref | cut sagittal, field 0, frequencyPerMm 100 |
+| optiland – ref | rays.compared [rays] | 104846 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | — | — |
+| optiland – ref | lines.compared [lines] | 5 | odd-asphere-photopic | — |
+
+By run, each pair with its verdict and the judged metric that is largest against its tolerance:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref |
+|---|---|---|---|---|
+| odd-asphere-ref | 3 | PASS: mtf.maxAbs 1.15e-8 | PASS: mtf.maxAbs 1.15e-8 | PASS: mtf.maxAbs 1.20e-12 |
+| odd-asphere-photopic | 3 | PASS: mtf.maxAbs 7.07e-9 | PASS: mtf.maxAbs 7.07e-9 | PASS: mtf.maxAbs 1.29e-12 |
+| e-line-ref | 3 | PASS: mtf.maxAbs 1.40e-8 | PASS: mtf.maxAbs 1.40e-8 | PASS: mtf.maxAbs 7.44e-13 |
+| e-line-photopic | 3 | PASS: mtf.maxAbs 1.11e-8 | PASS: mtf.maxAbs 1.11e-8 | PASS: mtf.maxAbs 3.87e-13 |
+| asphere-a20-ref | 3 | PASS: mtf.maxAbs 3.08e-8 | PASS: mtf.maxAbs 3.08e-8 | PASS: mtf.maxAbs 5.50e-12 |
+| asphere-a20-photopic | 3 | PASS: mtf.maxAbs 1.08e-8 | PASS: mtf.maxAbs 1.08e-8 | PASS: mtf.maxAbs 5.25e-12 |
+| flat-base-asphere-ref | 3 | PASS: mtf.maxAbs 2.11e-8 | PASS: mtf.maxAbs 2.11e-8 | PASS: mtf.maxAbs 6.70e-12 |
+| flat-base-asphere-photopic | 3 | PASS: mtf.maxAbs 1.66e-8 | PASS: mtf.maxAbs 1.66e-8 | PASS: mtf.maxAbs 6.31e-12 |
+| rear-plate-rim-ref | 3 | PASS: mtf.maxAbs 9.72e-9 | PASS: mtf.maxAbs 9.72e-9 | PASS: mtf.maxAbs 4.85e-12 |
+| rear-plate-rim-photopic | 3 | PASS: mtf.maxAbs 4.12e-9 | PASS: mtf.maxAbs 4.12e-9 | PASS: mtf.maxAbs 4.31e-12 |
+| fixed-iris-zoom-ref-wide | 3 | PASS: mtf.maxAbs 3.93e-9 | PASS: mtf.maxAbs 3.93e-9 | PASS: mtf.maxAbs 3.37e-12 |
+| fixed-iris-zoom-ref-tele | 3 | PASS: mtf.maxAbs 1.22e-8 | PASS: mtf.maxAbs 1.22e-8 | PASS: mtf.maxAbs 1.26e-12 |
+| fixed-iris-zoom-photopic-wide | 3 | PASS: mtf.maxAbs 3.37e-9 | PASS: mtf.maxAbs 3.37e-9 | PASS: mtf.maxAbs 2.01e-12 |
+| fixed-iris-zoom-photopic-tele | 3 | PASS: mtf.maxAbs 1.22e-8 | PASS: mtf.maxAbs 1.22e-8 | PASS: mtf.maxAbs 1.16e-12 |
+| zero-asphere-ref | 3 | PASS: mtf.maxAbs 2.59e-9 | PASS: mtf.maxAbs 2.59e-9 | PASS: mtf.maxAbs 4.32e-13 |
+| zero-asphere-photopic | 3 | PASS: mtf.maxAbs 1.88e-9 | PASS: mtf.maxAbs 1.88e-9 | PASS: mtf.maxAbs 4.95e-13 |
+| stop-inside-element-ref | 3 | PASS: mtf.maxAbs 4.79e-8 | PASS: mtf.maxAbs 4.79e-8 | PASS: mtf.maxAbs 4.19e-12 |
+| stop-inside-element-photopic | 3 | PASS: mtf.maxAbs 3.31e-8 | PASS: mtf.maxAbs 3.31e-8 | PASS: mtf.maxAbs 9.85e-13 |

@@ -328,11 +328,12 @@ test(
     const ran = lvrtc(runsDir, "run", suitePath("features"));
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "");
-    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The
-    // last rung, R4f, is asked of lv and of the replay of its sampling, one request each for a run.
+    // 18 runs on two engines: neither answers the conformance quantity, and every other job is answered. The 162
+    // ray sets are traced once by each engine, for R2, and R3 and R4 find them in the store. The last rung, R4f,
+    // is asked of lv and of the replay of its sampling, one request each for a run.
     assert.match(
       ran.out,
-      /^features: 792 jobs: 756 ok, 36 unsupported, 0 error, 0 pending \(432 computed, 324 cached\)$/m,
+      /^features: 1116 jobs: 1080 ok, 36 unsupported, 0 error, 0 pending \(432 computed, 648 cached\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -377,10 +378,10 @@ test(
     assert.equal(compared.code, 0, compared.out);
     assert.match(
       compared.out,
-      /^features: 792 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^features: 900 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
     for (const end of ["wide", "tele"]) {
-      for (const rung of ["r0", "r1", "r2", "r3"]) {
+      for (const rung of ["r0", "r1", "r2", "r3", "r4"]) {
         assert.match(
           compared.out,
           new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +pairwise +lv +ref +PASS`, "m"),

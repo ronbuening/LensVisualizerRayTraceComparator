@@ -208,7 +208,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   const unknown = fakePair(runsDir, "--rungs", "selftest,R0");
   assert.equal(unknown.code, EXIT_USAGE);
   assert.equal(unknown.out, "");
-  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4f$/m);
+  assert.match(unknown.err, /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f$/m);
   assert.equal(existsSync(runsDir), false);
 
   const named = fakePair(runsDir, "--rungs", "selftest", "--engines", "fake-a");
@@ -616,14 +616,20 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   ]);
   assert.equal(manifestOf(join(rootDir, "runs"), "probe").runs[0].raySets?.problems.length, 2);
 
-  // A run that names no rung is run on every rung, the two of traced rays among them; one that names rungs
-  // without rays has no ray sets generated for it.
+  // A run that names no rung is run on every rung, the three of traced rays among them: with its fields stated as
+  // angles the run has an MTF recipe, so the rung that takes an MTF of the traced rays, r4, asks for them too, and
+  // finds every answer in the store. One that names rungs without rays has no ray sets generated for it.
   const plain = await inProcess(["angles.json", "--engines", "ref"], { rootDir });
+  const everyRung = manifestOf(join(rootDir, "runs"), "probe");
   assert.deepEqual(
-    [...new Set(manifestOf(join(rootDir, "runs"), "probe").jobs.map((job) => job.rung))],
-    ["selftest", "r0", "r1", "r2", "r3"],
+    [...new Set(everyRung.jobs.map((job) => job.rung))],
+    ["selftest", "r0", "r1", "r2", "r3", "r4"],
     plain.err,
   );
+  const ofRung = (rung: string) =>
+    everyRung.jobs.filter((job) => job.rung === rung).map((job) => [job.requestId, job.storeKey]);
+  assert.deepEqual(ofRung("r4"), ofRung("r2"));
+  assert.deepEqual(everyRung.runs[0].recipe?.recipe?.frequenciesPerMm, [10, 30, 50]);
   await inProcess(["angles.json", "--engines", "ref", "--rungs", "r0,r1"], { rootDir });
   assert.equal(Object.hasOwn(manifestOf(join(rootDir, "runs"), "probe").runs[0], "raySets"), false);
 });
@@ -643,8 +649,13 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.equal(own.code, EXIT_OK, own.err);
   // The run that names neither gets every configured engine on every rung that compares the engines of a run. A
   // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rung that
-  // is about engines of its own, r4f, asks nothing about a case that no LensVisualizer sampled.
-  const shared = RUNGS.filter((rung) => rung.engines === undefined);
+  // is about engines of its own, r4f, asks nothing about a case that no LensVisualizer sampled, and the rung that
+  // takes an MTF of the traced rays, r4, nothing of a run without a recipe to take its frequencies from.
+  const shared = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true);
+  assert.deepEqual(
+    RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
+    ["r4", "r4f"],
+  );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
     ["r4f"],
@@ -661,7 +672,10 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
-  assert.equal(worked.err, 'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4f\n');
+  assert.equal(
+    worked.err,
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f\n',
+  );
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
   assert.equal(replaced.code, EXIT_OK, replaced.err);

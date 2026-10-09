@@ -20,6 +20,7 @@ import {
   r1Rung,
   r2Rung,
   r3Rung,
+  r4Rung,
   r4fRung,
   rayTraceRequests,
   selectRungs,
@@ -55,21 +56,21 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the rungs are selftest, r0 to r3 and r4f, in ladder order, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest, r0 to r4 and r4f, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
-    ["selftest", "r0", "r1", "r2", "r3", "r4f"],
+    ["selftest", "r0", "r1", "r2", "r3", "r4", "r4f"],
   );
-  assert.deepEqual([...RUNGS], [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4fRung]);
-  // The rungs that trace rays are the two that compare traced rays.
+  assert.deepEqual([...RUNGS], [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4Rung, r4fRung]);
+  // The rungs that trace rays are the three that compare traced rays.
   assert.deepEqual(
     RUNGS.filter((definition) => definition.needsRaySets === true),
-    [r2Rung, r3Rung],
+    [r2Rung, r3Rung, r4Rung],
   );
-  // One rung is made from the run's MTF recipe, and it is the one that is about engines of its own.
+  // Two rungs are made from the run's MTF recipe, and one of them is about engines of its own.
   assert.deepEqual(
     RUNGS.filter((definition) => definition.needsRecipe === true),
-    [r4fRung],
+    [r4Rung, r4fRung],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.engines !== undefined),
@@ -237,7 +238,7 @@ test("the id of a rays request is the content of its set: the same rays give the
 // ── Selection ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 test("a run that names no rungs gets every rung, in ladder order", () => {
-  assert.deepEqual(selectRungs(undefined), [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4fRung]);
+  assert.deepEqual(selectRungs(undefined), [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4Rung, r4fRung]);
   assert.deepEqual(selectRungs(undefined), [...RUNGS]);
   assert.notEqual(selectRungs(undefined), RUNGS, "a list of its own");
   const three = [rung("a"), rung("b"), rung("c")];
@@ -260,11 +261,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4f',
+    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4f',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -289,6 +290,6 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4f",
+    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f",
   );
 });

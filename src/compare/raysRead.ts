@@ -46,6 +46,30 @@ export function decodeTrace(data: JsonObject): DecodedTrace {
   };
 }
 
+/** Where the rays of a `rays.trace` answer land, and how each ended: what an estimator of the image reads. */
+export interface DecodedLandings {
+  readonly rays: number;
+  readonly status: Uint8Array;
+  /** The x of each ray's `imagePoint`, mm; NaN for a ray that did not arrive. */
+  readonly x: Float64Array;
+  /** The y of each ray's `imagePoint`, mm; NaN for a ray that did not arrive. */
+  readonly y: Float64Array;
+}
+
+/** Decodes the landings of an answer and nothing else of it. The data is valid by the quantity's rules. */
+export function decodeLandings(data: JsonObject): DecodedLandings {
+  const trace = data as RaysTraceData;
+  const rays = trace.status.$nd.shape[0];
+  const imagePoint = elements(trace.imagePoint, "f8", "imagePoint");
+  const x = new Float64Array(rays);
+  const y = new Float64Array(rays);
+  for (let ray = 0; ray < rays; ray++) {
+    x[ray] = imagePoint[3 * ray];
+    y[ray] = imagePoint[3 * ray + 1];
+  }
+  return { rays, status: elements(trace.status, "u1", "status"), x, y };
+}
+
 /** Why two answers are not traces of the same rays through the same surfaces, or null when they are. */
 export function differentRays(a: DecodedTrace, b: DecodedTrace): string | null {
   if (a.rays !== b.rays) return `the answers are for different numbers of rays: ${a.rays} and ${b.rays}`;

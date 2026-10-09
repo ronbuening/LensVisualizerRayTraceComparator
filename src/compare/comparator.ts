@@ -3,6 +3,7 @@
 import type { OpticalCase } from "../contract/case.ts";
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
+import type { MtfRecipe } from "../core/mtfRecipe.ts";
 
 /** A metric a comparator reports: its name and the unit of its value. */
 export interface MetricDeclaration {
@@ -50,6 +51,8 @@ export interface ComparisonContext {
   readonly spec?: JsonObject;
   /** The case the request is about. */
   readonly opticalCase?: OpticalCase;
+  /** The MTF recipe of the run, where the run has one: its frequencies, and the plane it is of. */
+  readonly recipe?: MtfRecipe;
 }
 
 /** The comparison of one quantity. */
@@ -64,11 +67,20 @@ export interface QuantityComparator {
   /** Every metric it reports, in the order it reports them. */
   readonly metrics: readonly MetricDeclaration[];
   /**
+   * For a comparator whose figures are each of several requests of a run at once (a spectrum's MTF is of the rays
+   * of every line): the span a request belongs to, from its spec. The requests of one run and rung that give one
+   * key are compared as one set, under the id of the first of them, and `compare` and `recorded` are then handed,
+   * in the place of an answer, an engine's answers to every request of the span (`SpanAnswer`,
+   * src/compare/span.ts). Undefined for a request that is a span of its own. A comparator without it compares
+   * each request by itself.
+   */
+  spanOf?(spec: JsonObject): string | undefined;
+  /**
    * The metrics of two answers. A pure function of its arguments: equal data and context give equal metrics, on
    * any machine, and swapping the two answers changes no value. Both are data of the quantity, valid by its schema
-   * and with arrays that decode; for anything else it may throw. Answers that are valid and still cannot be set
-   * against each other (arrays of different shapes, a context it needs and was not given) are not comparable, with
-   * a reason that quotes nothing but the data.
+   * and with arrays that decode (for a comparator of spans: a `SpanAnswer` of such data); for anything else it may
+   * throw. Answers that are valid and still cannot be set against each other (arrays of different shapes, a
+   * context it needs and was not given) are not comparable, with a reason that quotes nothing but the data.
    */
   compare(a: JsonObject, b: JsonObject, context?: ComparisonContext): ComparatorOutcome;
   /**

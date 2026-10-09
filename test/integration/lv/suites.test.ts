@@ -8,6 +8,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
+import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import { deriveFeatures } from "../../../src/contract/features.ts";
 import { REPO_ROOT } from "../../../src/core/config.ts";
@@ -293,23 +295,38 @@ test(
     assert.equal(ran.status, 0, ran.stderr);
     // Five runs, the zoom at both ends, and two engines. Neither answers the conformance quantity, both answer R0
     // and R1; and the runs have 27 ray sets between them (three fields, at one line four times and at five lines
-    // once), which each engine traces once, for R2, and R3 finds in the store. The last rung, R4f, is about two
-    // engines of its own, lv and the replay of its sampling: one request of each for a run.
+    // once), which each engine traces once, for R2, and R3 and R4 find in the store. The last rung, R4f, is about
+    // two engines of its own, lv and the replay of its sampling: one request of each for a run.
     assert.match(
       ran.stdout,
-      /^smoke: 148 jobs: 138 ok, 10 unsupported, 0 error, 0 pending \(84 computed, 54 cached\)$/m,
+      /^smoke: 202 jobs: 192 ok, 10 unsupported, 0 error, 0 pending \(84 computed, 108 cached\)$/m,
     );
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
     for (const end of ["wide", "tele"]) {
-      assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +r3 +lv +ok +cached$`, "m"), end);
+      for (const rung of ["r3", "r4"]) {
+        assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +${rung} +lv +ok +cached$`, "m"), end);
+      }
     }
     const compared = lvrtc("compare", "smoke");
     assert.equal(compared.status, 0, compared.stderr + compared.stdout);
-    // At LV ed78cf40 every pair of the smoke suite passes outright: none needs the floor.
+    // At LV ed78cf40 every pair of the smoke suite passes outright: none needs the floor. R4 has no floor to
+    // need: at LV 33ebdb30 (engine closure 78215d72) the geometric MTF of LensVisualizer's landings is within
+    // 2.2e-8 of the reference engine's on every field of the suite, against a gate of 1e-7.
     assert.match(
       compared.stdout,
-      /^smoke: 148 pairs: 138 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^smoke: 178 pairs: 168 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
     );
+    // R4 is of a field at every line of its run: fifteen fields, where R2 and R3 judge 27 ray sets each.
+    const { comparisons }: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "smoke", COMPARISONS_FILE), "utf8"));
+    const sets = (rung: string) => comparisons.filter((set) => set.rung === rung && set.mode === "pairwise");
+    assert.deepEqual([sets("r2").length, sets("r3").length, sets("r4").length], [27, 27, 15]);
+    for (const set of sets("r4")) {
+      const [pair] = set.pairs;
+      assert.deepEqual([pair.a, pair.b, pair.verdict, pair.reason], ["lv", "ref", "PASS", undefined], set.run);
+      const lines = pair.metrics.find((metric) => metric.name === "lines.compared")?.value;
+      assert.equal(lines, set.run.endsWith("-photopic") ? 5 : 1, set.run);
+      assert.ok((pair.metrics.find((metric) => metric.name === "rays.compared")?.value ?? 0) > 0, set.run);
+    }
     const reported = lvrtc("report", "smoke");
     assert.equal(reported.status, 0, reported.stderr);
     // The manifest states, for each engine, the comparator's own code behind it beside the engine's fingerprint.
