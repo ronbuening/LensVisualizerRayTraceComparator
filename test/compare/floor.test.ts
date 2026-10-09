@@ -1,6 +1,7 @@
 // The floor rule: a pair of the engine with a known numerical floor that is above a tolerance is FLOOR, not FAIL,
-// exactly when the arbiter agrees with every other engine and is within the floor's limit of that one. Each of the
-// rule's conditions is failed here on its own.
+// exactly when that engine is within the floor's limit of the arbiter and no witness sides with it against the
+// arbiter. Each of the rule's conditions is failed here on its own, and a witness is shown in each of its three
+// parts: corroborating, not corroborating, and siding with the floored engine.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -107,7 +108,7 @@ test("condition 1: without a metric above its gate there is nothing to attribute
   assert.deepEqual([pairs["lv ref"].verdict, pairs["lv ref"].reason], ["PASS", undefined]);
 });
 
-test("condition 3: lv more than the floor's limit from ref is no floor: FAIL, with the figure that is too large", () => {
+test("condition 2: lv more than the floor's limit from ref is no floor: FAIL, with the figure that is too large", () => {
   const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(1.5e-7)), tracer("ref", BASE)]));
   assert.equal(pairs["lv ref"].verdict, "FAIL");
   assert.equal(
@@ -155,18 +156,85 @@ test("three engines: lv is FLOOR against ref and against the engine that agrees 
   );
 });
 
-test("condition 2: an engine that does not agree with ref leaves it open whose rounding it is: FAIL", () => {
+test("a witness that does not corroborate withholds nothing: still FLOOR, and the reason says how far it is", () => {
   // The third engine is 3e-10 mm from ref: inside the gate, so it passes against ref, and outside the agreement.
+  // It is a hundred times nearer to ref than to lv: whose rounding the excess is stays plain.
   const other = offBy(3e-10);
   const pairs = pairsOf(groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", other), tracer("ref", BASE)]));
   assert.equal(pairs["optiland ref"].verdict, "PASS");
   for (const name of ["lv ref", "lv optiland"]) {
-    assert.equal(pairs[name].verdict, "FAIL", name);
+    assert.equal(pairs[name].verdict, "FLOOR", name);
     assert.match(
       pairs[name].reason ?? "",
-      /; not a floor of lv: optiland does not agree with ref: hits\.maxDistance 3\.00e-10 exceeds 1\.00e-10$/,
+      /; floor of lv: optiland against ref direction\.maxAbs 0 within 1\.00e-12, optiland against ref landing\.maxDistance 0 within 1\.00e-10, lv against ref direction\.maxAbs 0 within 1\.00e-8, lv against ref hits\.maxDistance 3\.00e-8 within 1\.00e-7, lv against ref landing\.maxDistance 0 within 1\.00e-7; the witness did not corroborate: optiland against ref hits\.maxDistance 3\.00e-10 exceeds 1\.00e-10$/,
     );
   }
+  // A witness that is off the arbiter by more than the gate fails against the arbiter by itself; the floor of lv
+  // is still lv's, as long as that witness is not nearer to lv.
+  const far = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", offBy(-5e-8)), tracer("ref", BASE)]),
+  );
+  assert.equal(far["optiland ref"].verdict, "FAIL");
+  assert.equal(far["lv ref"].verdict, "FLOOR");
+  assert.equal(far["lv optiland"].verdict, "FAIL");
+  assert.match(
+    far["lv optiland"].reason ?? "",
+    /; not a floor of lv: the excess is of optiland: hits\.maxDistance 5\.00e-8 against ref, lv 3\.00e-8$/,
+  );
+  assert.match(
+    far["lv ref"].reason ?? "",
+    /; the witness did not corroborate: optiland against ref hits\.maxDistance 5\.00e-8 exceeds 1\.00e-10$/,
+  );
+});
+
+test("condition 4: in the pair of lv with a witness that is as far from ref as lv is, the excess is no floor of lv", () => {
+  // lv and the witness are the same distance from ref, on either side of it (a power of two, so the two distances
+  // are the same double): the witness is nearer to ref than to lv, so it does not side with lv, and of the pair of
+  // the two nobody can say whose the excess is.
+  const pairs = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(-(2 ** -25))), tracer("ref", BASE)]),
+  );
+  assert.equal(pairs["lv ref"].verdict, "FLOOR");
+  assert.equal(pairs["lv optiland"].verdict, "FAIL");
+  assert.match(pairs["lv optiland"].reason ?? "", /; not a floor of lv: the excess is of optiland: hits\.maxDistance /);
+});
+
+test("condition 3: a witness that sides with lv against ref makes the arbiter suspect: FAIL", () => {
+  // lv is 1.2e-8 mm from ref and the third engine 9e-9 mm, the same way: it passes against ref, and is three
+  // times nearer to lv than to ref. Two engines of different code that agree against the arbiter are no floor.
+  const pairs = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(1.2e-8)), tracer("optiland", offBy(9e-9)), tracer("ref", BASE)]),
+  );
+  assert.equal(pairs["optiland ref"].verdict, "PASS");
+  assert.equal(pairs["lv optiland"].verdict, "PASS");
+  assert.equal(pairs["lv ref"].verdict, "FAIL");
+  assert.match(
+    pairs["lv ref"].reason ?? "",
+    /^hits\.maxDistance 1\.20e-8 exceeds its tolerance 1\.00e-8 at .*; not a floor of lv: arbiter-suspect: the witness optiland sides with lv against ref: hits\.maxDistance 3\.00e-9 against lv, 9\.00e-9 against ref$/,
+  );
+  // Exactly between the two it sides with neither: the comparison is strict.
+  const between = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(2 ** -25)), tracer("optiland", offBy(2 ** -26)), tracer("ref", BASE)]),
+  );
+  assert.equal(between["lv ref"].verdict, "FLOOR");
+  assert.match(
+    between["lv ref"].reason ?? "",
+    /; the witness did not corroborate: optiland against ref hits\.maxDistance /,
+  );
+  // A witness that sides with lv fails both pairs of lv that are above a gate.
+  const both = pairsOf(
+    groupOf("r2", [tracer("lv", offBy(6e-8)), tracer("optiland", offBy(4.5e-8)), tracer("ref", BASE)]),
+  );
+  for (const name of ["lv ref", "lv optiland"]) {
+    assert.equal(both[name].verdict, "FAIL", name);
+    assert.match(
+      both[name].reason ?? "",
+      /; not a floor of lv: arbiter-suspect: the witness optiland sides with lv against ref: /,
+    );
+  }
+});
+
+test("an engine that did not answer is no witness", () => {
   // An engine that did not answer is no witness for or against: the two that did are judged as two.
   const absent: ParticipantResult = {
     engine: "optiland",
@@ -187,9 +255,12 @@ test("only a pair of lv can be a floor: two other engines that far apart FAIL, w
     "hits.maxDistance 3.00e-8 exceeds its tolerance 1.00e-8 at field 0, line 0, ray 2, surface 1",
   );
   assert.equal(pairs["lv ref"].verdict, "PASS");
-  // lv against the engine that is off: lv is on ref, so the excess is not lv's, and the other engine says so.
+  // lv against the engine that is off: lv is on ref, so the excess is not lv's, and the reason says whose it is.
   assert.equal(pairs["lv optiland"].verdict, "FAIL");
-  assert.match(pairs["lv optiland"].reason ?? "", /; not a floor of lv: optiland does not agree with ref: /);
+  assert.match(
+    pairs["lv optiland"].reason ?? "",
+    /; not a floor of lv: the excess is of optiland: hits\.maxDistance 3\.00e-8 against ref, lv 0$/,
+  );
 });
 
 test("a metric without a floor never is one: a mask mismatch, or a number that is none", () => {
@@ -298,7 +369,7 @@ test("the exit direction, condition 3: lv beyond ten times the gate is no floor,
   assert.equal(verdictAt(2 ** -27 * (1 + 2 ** -52)), "FAIL");
 });
 
-test("the exit direction, condition 2: a third engine must agree with ref within 1e-12 in direction", () => {
+test("the exit direction: a third engine corroborates ref within 1e-12 in direction, and is named beyond it", () => {
   // The third engine's direction is 5e-13 from ref's: its own rounding, and a witness that ref is right.
   const near = pairsOf(
     groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(5e-13)), tracer("ref", BASE)]),
@@ -316,37 +387,36 @@ test("the exit direction, condition 2: a third engine must agree with ref within
       "lv against ref landing.maxDistance 0 within 1.00e-7",
   );
 
-  // 2e-12 from ref is far inside the gate, so that engine passes against ref, and outside the agreement: it
-  // leaves open whose rounding lv's excess is.
+  // 2e-12 from ref is far inside the gate, so that engine passes against ref, and outside the agreement: it does
+  // not corroborate, and is named with its distance.
   const apart = pairsOf(
     groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
   );
   assert.equal(apart["optiland ref"].verdict, "PASS");
   for (const name of ["lv ref", "lv optiland"]) {
-    assert.equal(apart[name].verdict, "FAIL", name);
+    assert.equal(apart[name].verdict, "FLOOR", name);
     assert.match(
       apart[name].reason ?? "",
-      /^direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 at .*; not a floor of lv: optiland does not agree with ref: direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
+      /^direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 at .*; floor of lv: .*; the witness did not corroborate: optiland against ref direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
     );
   }
-  // The witness is held to every metric that has floor limits, whichever of them lv exceeds: a hit of lv that is
-  // within its floor is no floor while another engine's direction is not ref's.
+  // The witness is looked at in every metric that has floor limits, whichever of them lv exceeds.
   const hit = pairsOf(
     groupOf("r2", [tracer("lv", offBy(3e-8)), tracer("optiland", turnedBy(2e-12)), tracer("ref", BASE)]),
   );
-  assert.equal(hit["lv ref"].verdict, "FAIL");
+  assert.equal(hit["lv ref"].verdict, "FLOOR");
   assert.match(
     hit["lv ref"].reason ?? "",
-    /^hits\.maxDistance 3\.00e-8 exceeds .*; not a floor of lv: optiland does not agree with ref: direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
+    /^hits\.maxDistance 3\.00e-8 exceeds .*; the witness did not corroborate: optiland against ref direction\.maxAbs 2\.00e-12 exceeds 1\.00e-12$/,
   );
-  // And a direction of lv within its floor is none while another engine's hits are not ref's.
-  const direction = pairsOf(
-    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", offBy(3e-10)), tracer("ref", BASE)]),
+  // A witness whose direction is nearer to lv's than to ref's makes the arbiter suspect.
+  const sided = pairsOf(
+    groupOf("r2", [tracer("lv", turnedBy(5e-9)), tracer("optiland", turnedBy(4e-9)), tracer("ref", BASE)]),
   );
-  assert.equal(direction["lv ref"].verdict, "FAIL");
+  assert.equal(sided["lv ref"].verdict, "FAIL");
   assert.match(
-    direction["lv ref"].reason ?? "",
-    /; not a floor of lv: optiland does not agree with ref: hits\.maxDistance 3\.00e-10 exceeds 1\.00e-10$/,
+    sided["lv ref"].reason ?? "",
+    /; not a floor of lv: arbiter-suspect: the witness optiland sides with lv against ref: direction\.maxAbs /,
   );
 });
 
@@ -396,7 +466,7 @@ test("without the arbiter there is nothing to hold lv to: a pair above its gate 
   assert.match(two["lv optiland"].reason ?? "", /the arbiter ref has no answer$/);
 });
 
-test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witness must agree within 1e-7", () => {
+test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witness corroborates within 1e-7", () => {
   const floor = pairsOf(groupOf("r3", [tracer("lv", longerBy(5e-5)), tracer("ref", BASE)]))["lv ref"];
   assert.equal(floor.verdict, "FLOOR");
   assert.match(
@@ -409,17 +479,26 @@ test("rung r3: a path 5e-5 waves off is a floor, 3e-4 is beyond it, and a witnes
     beyond.reason ?? "",
     /; not a floor of lv: opd\.maxAbs against ref 3\.00e-4 exceeds the floor limit 2\.00e-4$/,
   );
-  // A third engine 5e-8 waves from ref is a witness; one 5e-7 waves from it is not.
-  for (const [waves, verdict] of [
-    [5e-8, "FLOOR"],
-    [5e-7, "FAIL"],
+  // A third engine 5e-8 waves from ref corroborates it; one 5e-7 waves from it does not, and withholds nothing;
+  // one 4e-5 waves from it is nearer to lv, and the arbiter is suspect.
+  for (const [waves, verdict, said] of [
+    [5e-8, "FLOOR", /floor of lv: optiland against ref opd\.maxAbs 5\.00e-8 within 1\.00e-7, [^;]*$/],
+    [5e-7, "FLOOR", /; the witness did not corroborate: optiland against ref opd\.maxAbs 5\.00e-7 exceeds 1\.00e-7, /],
+    [
+      4e-5,
+      "FAIL",
+      /; not a floor of lv: arbiter-suspect: the witness optiland sides with lv against ref: opd\.maxAbs /,
+    ],
   ] as const) {
     const pairs = pairsOf(
       groupOf("r3", [tracer("lv", longerBy(5e-5)), tracer("optiland", longerBy(waves)), tracer("ref", BASE)]),
     );
     assert.equal(pairs["lv ref"].verdict, verdict, String(waves));
-    assert.equal(pairs["lv optiland"].verdict, verdict, String(waves));
-    assert.equal(pairs["optiland ref"].verdict, "PASS");
+    assert.match(pairs["lv ref"].reason ?? "", said);
+    if (waves < 1e-5) {
+      assert.equal(pairs["lv optiland"].verdict, verdict, String(waves));
+      assert.equal(pairs["optiland ref"].verdict, "PASS");
+    }
   }
   // A metric that was not measured is no part of the rule: without a chief ray the two raw paths decide.
   const { chiefIndex: _chief, ...groups } = SPEC.groups ?? {};

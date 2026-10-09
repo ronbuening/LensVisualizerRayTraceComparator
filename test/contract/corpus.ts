@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { sha256Hex } from "../../src/core/numeric/hash.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { finalizeCase } from "../../src/contract/case.ts";
+import type { Baseline } from "../../src/contract/baseline.ts";
 import type { OpticalCaseDraft } from "../../src/contract/case.ts";
 import type { ComparisonSet } from "../../src/contract/comparison.ts";
 import type { EngineDescriptor } from "../../src/contract/engine.ts";
@@ -690,7 +691,7 @@ const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 4,
+  version: 5,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -1213,6 +1214,186 @@ export const EXTERNAL_VALID: Readonly<Partial<Record<ContractKind, readonly stri
   "engine-descriptor": ["integers-as-floats"],
 };
 
+// ── baseline ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The baseline of a suite of one run on `selftest`: two fake engines that agree. */
+export const BASELINE_SELFTEST: Baseline = {
+  contract: CONTRACT_VERSION,
+  kind: "baseline",
+  suite: { name: "example", hash: sha256Hex("example suite") },
+  policy: { version: 1, hash: sha256Hex("example policy") },
+  engines: [
+    { id: "fake-a", version: "1", fingerprint: sha256Hex("fake-a sources"), details: { bias: 0 } },
+    { id: "fake-near", version: "1", fingerprint: sha256Hex("fake-near sources"), details: { bias: 2e-14 } },
+  ],
+  runs: [
+    {
+      name: "singlet",
+      caseId: sha256Hex("singlet case"),
+      rungs: [
+        {
+          rung: "selftest",
+          quantity: SELFTEST_ECHO,
+          requests: 1,
+          support: [
+            { engine: "fake-a", status: "ok" },
+            { engine: "fake-near", status: "ok" },
+          ],
+          pairs: [
+            {
+              a: "fake-a",
+              b: "fake-near",
+              verdict: "PASS",
+              verdicts: [{ verdict: "PASS", count: 1 }],
+              metrics: [
+                { name: "values.maxAbs", unit: "1", value: 2e-14, where: { index: 3 }, tolerance: 1e-12 },
+                { name: "sum.abs", unit: "1", value: 1.25e-13, tolerance: 1e-12 },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/**
+ * The baseline of a suite of traced rays on three engines: two requests of `r2`, one of them a floor of `lv`; an
+ * engine with an adapter revision; ray counts; and a rung one engine does not support.
+ */
+export const BASELINE_RAYS: Baseline = {
+  contract: CONTRACT_VERSION,
+  kind: "baseline",
+  suite: { name: "rays", hash: sha256Hex("rays suite") },
+  policy: { version: 5, hash: sha256Hex("ladder policy") },
+  engines: [
+    {
+      id: "lv",
+      version: "0.0.0",
+      fingerprint: sha256Hex("lv sources"),
+      adapterRevision: sha256Hex("lv adapter"),
+      details: { commit: "0123456789abcdef0123456789abcdef01234567", dirty: false },
+    },
+    { id: "other", version: "1.2", fingerprint: sha256Hex("other sources"), details: {} },
+    {
+      id: "ref",
+      version: "1",
+      fingerprint: sha256Hex("ref sources"),
+      adapterRevision: sha256Hex("ref adapter"),
+      details: { sourceFiles: 12 },
+    },
+  ],
+  runs: [
+    {
+      name: "zoom-wide",
+      caseId: sha256Hex("zoom at its wide end"),
+      rungs: [
+        {
+          rung: "r1",
+          quantity: PARAXIAL_FIRST_ORDER,
+          requests: 1,
+          support: [
+            { engine: "lv", status: "ok" },
+            { engine: "other", status: "unsupported", detail: "quantity paraxial.first-order" },
+            { engine: "ref", status: "ok" },
+          ],
+          pairs: [
+            {
+              a: "lv",
+              b: "other",
+              verdict: "UNSUPPORTED",
+              verdicts: [{ verdict: "UNSUPPORTED", count: 1 }],
+              metrics: [],
+            },
+            {
+              a: "lv",
+              b: "ref",
+              verdict: "PASS",
+              verdicts: [{ verdict: "PASS", count: 1 }],
+              metrics: [{ name: "firstOrder.maxAbs", unit: "mm", value: 2.5e-13, where: { line: 0 }, tolerance: 1e-9 }],
+            },
+            {
+              a: "other",
+              b: "ref",
+              verdict: "UNSUPPORTED",
+              verdicts: [{ verdict: "UNSUPPORTED", count: 1 }],
+              metrics: [],
+            },
+          ],
+        },
+        {
+          rung: "r2",
+          quantity: RAYS_TRACE,
+          requests: 2,
+          support: [
+            { engine: "lv", status: "ok" },
+            { engine: "other", status: "ok" },
+            { engine: "ref", status: "ok" },
+          ],
+          rays: [
+            { engine: "lv", ok: 10, blocked: 6, failed: 0 },
+            { engine: "other", ok: 10, blocked: 6, failed: 0 },
+            { engine: "ref", ok: 10, blocked: 6, failed: 0 },
+          ],
+          pairs: [
+            {
+              a: "lv",
+              b: "other",
+              verdict: "FLOOR",
+              verdicts: [
+                { verdict: "PASS", count: 1 },
+                { verdict: "FLOOR", count: 1 },
+              ],
+              metrics: [
+                {
+                  name: "landing.maxDistance",
+                  unit: "mm",
+                  value: 1.25e-8,
+                  where: { field: 54, line: 0, ray: 4 },
+                  tolerance: 1e-8,
+                },
+                { name: "mask.mismatches", unit: "rays", value: 0, tolerance: 0 },
+                { name: "mask.rimBand", unit: "rays", value: 1 },
+              ],
+            },
+            {
+              a: "lv",
+              b: "ref",
+              verdict: "FLOOR",
+              verdicts: [
+                { verdict: "PASS", count: 1 },
+                { verdict: "FLOOR", count: 1 },
+              ],
+              metrics: [
+                {
+                  name: "landing.maxDistance",
+                  unit: "mm",
+                  value: 1.25e-8,
+                  where: { field: 54, line: 0, ray: 4 },
+                  tolerance: 1e-8,
+                },
+                { name: "mask.mismatches", unit: "rays", value: 0, tolerance: 0 },
+                { name: "mask.rimBand", unit: "rays", value: 1 },
+              ],
+            },
+            {
+              a: "other",
+              b: "ref",
+              verdict: "PASS",
+              verdicts: [{ verdict: "PASS", count: 2 }],
+              metrics: [
+                { name: "landing.maxDistance", unit: "mm", value: null, tolerance: 1e-8 },
+                { name: "mask.mismatches", unit: "rays", value: 0, tolerance: 0 },
+                { name: "mask.rimBand", unit: "rays", value: 0 },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 /** Every valid fixture written here: `valid/<kind>/<name>.json` holds exactly this value. */
 export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknown>>>> = {
   "optical-case": { singlet: SINGLET_CASE, "all-features": ALL_FEATURES_CASE },
@@ -1242,6 +1423,7 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     blocked: COMPARISON_BLOCKED,
     floor: COMPARISON_FLOOR,
   },
+  baseline: { selftest: BASELINE_SELFTEST, rays: BASELINE_RAYS },
 };
 
 /** Where the validator must report an invalid fixture: its one issue has this instance path and this keyword. */
@@ -1565,6 +1747,39 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
       "/participants/0/recorded/epZRelStop/1",
       "NaN",
       "type",
+    ),
+  },
+  baseline: {
+    "missing-runs": fault(BASELINE_SELFTEST, "/runs", REMOVE, "required", ""),
+    "kind-of-another-document": fault(BASELINE_SELFTEST, "/kind", "comparison", "const"),
+    "suite-hash-not-a-hash": fault(BASELINE_SELFTEST, "/suite/hash", "example", "pattern"),
+    "policy-version-zero": fault(BASELINE_SELFTEST, "/policy/version", 0, "minimum"),
+    "engine-missing-fingerprint": fault(BASELINE_SELFTEST, "/engines/0/fingerprint", REMOVE, "required", "/engines/0"),
+    "engine-id-uppercase": fault(BASELINE_SELFTEST, "/engines/1/id", "Fake", "pattern"),
+    "engine-with-path": fault(BASELINE_RAYS, "/engines/0/path", "/somewhere/lv", "additionalProperties"),
+    "run-case-not-a-hash": fault(BASELINE_SELFTEST, "/runs/0/caseId", "singlet", "pattern"),
+    "run-with-time": fault(BASELINE_SELFTEST, "/runs/0/writtenAt", "2020-01-01", "additionalProperties"),
+    "rung-requests-negative": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/requests", -1, "minimum"),
+    "rung-missing-support": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/support", REMOVE, "required", "/runs/0/rungs/0"),
+    "support-unknown-status": fault(BASELINE_RAYS, "/runs/0/rungs/0/support/1/status", "cached", "enum"),
+    "rays-count-as-fraction": fault(BASELINE_RAYS, "/runs/0/rungs/1/rays/0/ok", 9.5, "type"),
+    "pair-unknown-verdict": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/verdict", "OK", "enum"),
+    "pair-verdict-count-zero": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/verdicts/0/count", 0, "minimum"),
+    "pair-with-reason": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/reason", "none", "additionalProperties"),
+    "metric-value-as-string": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/metrics/0/value", "2e-14", "type"),
+    "metric-missing-unit": fault(
+      BASELINE_SELFTEST,
+      "/runs/0/rungs/0/pairs/0/metrics/1/unit",
+      REMOVE,
+      "required",
+      "/runs/0/rungs/0/pairs/0/metrics/1",
+    ),
+    "metric-negative-tolerance": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/metrics/0/tolerance", -1, "minimum"),
+    "metric-with-array": fault(
+      BASELINE_RAYS,
+      "/runs/0/rungs/1/pairs/0/metrics/0/values",
+      [1, 2],
+      "additionalProperties",
     ),
   },
 };

@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 4,
+  "version": 5,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",

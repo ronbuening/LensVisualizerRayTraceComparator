@@ -14,8 +14,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
-import { isDeepStrictEqual } from "node:util";
 
+import { buildBaseline, parseBaseline } from "../../../src/baseline/build.ts";
+import { checkBaseline } from "../../../src/baseline/check.ts";
 import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { compareGroup } from "../../../src/compare/group.ts";
@@ -50,8 +51,8 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const POLICY = loadPolicy();
-/** The digest of the benchmark that is committed: the Phase 1 numerical-floor report. */
-const COMMITTED_DIGEST = join(REPO_ROOT, "reports", "benchmark", "lv-floor.json");
+/** The baseline of the benchmark that is committed: lv, ref and optiland on R0 to R3. */
+const COMMITTED_BASELINE = join(REPO_ROOT, "baselines", "benchmark.json");
 
 function tempDir(t: TestContext): string {
   const directory = mkdtempSync(join(tmpdir(), "lvrtc-lv-rungs-"));
@@ -168,7 +169,7 @@ const R3_METRICS = ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxA
 // ── The benchmark ────────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "the benchmark: lv and ref agree on R0 to R3 at the reference and the photopic lines, and the digest is the committed one",
+  "the benchmark: lv and ref agree on R0 to R3 at the reference and the photopic lines, as the committed baseline records",
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, digest, digestText, verdicts } = cycle(t, "benchmark");
@@ -247,26 +248,26 @@ test(
     );
     assert.ok(digest.runs.every((run) => /^[0-9a-f]{64}$/.test(run.caseId ?? "")));
 
-    // The committed digest is this one, wherever it was taken, as long as LensVisualizer's engine files and the
-    // cases it makes of the benchmark's lenses are the ones it names: the same figures for every run and rung.
-    // With other engine files, or a lens that has been edited since, it is a record of what it names.
-    assert.ok(existsSync(COMMITTED_DIGEST), "reports/benchmark/lv-floor.json is committed");
-    const committed: FloorReport = JSON.parse(readFileSync(COMMITTED_DIGEST, "utf8"));
-    assert.deepEqual([committed.kind, committed.suite.name], ["floor-report", "benchmark"]);
-    const sameEngine = committed.engine.fingerprint === digest.engine.fingerprint;
-    const sameCases = isDeepStrictEqual(committed.runs, digest.runs) && committed.suite.hash === digest.suite.hash;
-    if (sameEngine && sameCases) {
-      assert.deepEqual(committed.rows, digest.rows, "regenerate reports/benchmark as README.md says");
-      assert.deepEqual(committed.rungs, digest.rungs);
-    } else {
-      const edited = digest.runs.filter((run, at) => committed.runs?.[at]?.caseId !== run.caseId);
-      t.diagnostic(
-        `the committed digest was taken of LensVisualizer ${committed.engine.fingerprint} ` +
-          `(commit ${String(committed.engine.details.commit)}); the one here is ${digest.engine.fingerprint}, and ` +
-          `${edited.length} of its ${digest.runs.length} cases are other cases: ` +
-          `${edited.map((run) => run.name).join(", ") || "none"}`,
-      );
+    // The committed baseline holds these figures for lv against ref, wherever it was taken, as long as both
+    // engines, the policy and the case of a run are the ones it names. The baseline is of three engines; this run
+    // is of two, so only the records of this pair are held. A record that is stale is a record of what it names:
+    // `lvrtc baseline check benchmark` says whether it still holds.
+    assert.ok(existsSync(COMMITTED_BASELINE), "baselines/benchmark.json is committed");
+    const read = parseBaseline(readFileSync(COMMITTED_BASELINE, "utf8"));
+    assert.ok("baseline" in read, JSON.stringify(read));
+    const fresh = buildBaseline(manifest, comparisons, POLICY);
+    const records = checkBaseline(read.baseline, fresh, POLICY).filter(
+      (record) => record.a === "lv" && record.b === "ref" && record.outcome !== "GONE",
+    );
+    assert.equal(records.length, 4 * 24);
+    const held = records.filter((record) => record.stale.length === 0);
+    for (const record of held) {
+      assert.equal(record.outcome, "OK", `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
     }
+    t.diagnostic(
+      `baselines/benchmark.json: ${held.length} of ${records.length} records of lv and ref are of the cases and ` +
+        `engines here and hold; ${records.filter((record) => record.outcome === "DRIFT").length} drifted`,
+    );
   },
 );
 

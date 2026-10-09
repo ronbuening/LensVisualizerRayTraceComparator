@@ -30,8 +30,10 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # 
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
-node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
+node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
+node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
+node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3   # Phase 2, three ways: built system, first-order data, LV's launch rays, optical path
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
@@ -213,10 +215,12 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`). Only a pair of the floored engine (`lv`) can be `FLOOR`; a metric without floor limits
-  (the mask) always fails. Every metric that has floor limits is held to them together, whichever is above its
-  gate: hits, landing and, since policy version 4, the exit direction (1e-8, with the others within 1e-12 of
-  `ref`). Never add a floor limit, or widen one, to make a lens pass.
+  `src/compare/floor.ts`; policy version 5). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
+  limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
+  it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
+  the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
+  far from `ref` as `lv` is. A metric without floor limits (the mask) always fails. Never add a floor limit, or
+  widen one, to make a lens pass.
 - **In R1 a pupil is judged on the scale of its distance from the image plane, in position and in radius**
   (`pupilZ.maxScaled`, `pupilRadius.maxScaled`; `PUPIL_RADII` in `src/compare/paraxialFirstOrder.ts` pairs each
   radius with the position of its own pupil). The six values that are no pupil's keep the plain 1e-9 mm, and so
@@ -265,11 +269,15 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   defaults of its own**, with LV's names; its defaults are deliberately not LV's. A name added to the import
   manifest needs a fake of it there, and a new fake file a line in `FAKE_ENGINE_FILES`
   (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
-- **`reports/benchmark/lv-floor.{json,md}` is the committed digest of the benchmark** (`src/report/floor.ts`):
-  results, counts, run names and hashes only. An integration test holds its figures to a fresh run while LV's
-  engine closure is the one it names. Regenerate it with `run ... --rungs r0,r1,r2,r3`, `compare` and
-  `report --floor` after a change to `ref`, to the `lv` adapter, to the import manifest (the closure it names) or
-  to the figures: it names both engines by hash.
+- **Baselines are the committed record** (`baselines/<suite>.json`, contract kind `baseline`): for every run as
+  run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
+  adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
+  baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
+  ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
+  REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
+  last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
+  A policy change therefore needs the baselines rewritten, which needs LV and optiland. `report --floor` remains
+  a local tool. The contract stays at 1.0.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
   `renderMarkdown` are pure functions and stay so.

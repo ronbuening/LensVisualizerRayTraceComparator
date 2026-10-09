@@ -134,7 +134,7 @@ test("doctor is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "doctor"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}doctor {3}Report the Node version/m);
+  assert.match(out.join(""), /^ {2}doctor {4}Report the Node version/m);
 });
 
 test("everything present: the full report, exit 0", async (t) => {

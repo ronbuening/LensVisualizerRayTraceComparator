@@ -85,9 +85,14 @@ test("the smoke suite is two small primes and one small zoom, which states no zo
 test("the benchmark suite is the 12 configurations, each on the reference line and on the photopic lines", () => {
   const runs = expandSuite(readSuite("benchmark"));
   // Every run of a zoom states its position, so the suite is these 24 runs whatever the rule of the zoom does:
-  // its hash, which reports/benchmark/lv-floor.json names, is that of the file as written.
-  const digest = JSON.parse(readFileSync(join(REPO_ROOT, "reports", "benchmark", "lv-floor.json"), "utf8"));
-  assert.equal(hashCanonical({ name: "benchmark", runs }), digest.suite.hash);
+  // its hash, which baselines/benchmark.json names, is that of the file as written, and the baseline's runs are
+  // these runs by name.
+  const baseline = JSON.parse(readFileSync(join(REPO_ROOT, "baselines", "benchmark.json"), "utf8"));
+  assert.equal(hashCanonical({ name: "benchmark", runs }), baseline.suite.hash);
+  assert.deepEqual(
+    baseline.runs.map((run: { name: string }) => run.name),
+    runs.map((run) => run.name),
+  );
   for (const run of runs.filter((each) => each.lens.kind === "lv" && each.lens.key === "nikon-z-24-70f4s")) {
     assert.ok(run.state?.zoomT === 0 || run.state?.zoomT === 1, run.name);
   }

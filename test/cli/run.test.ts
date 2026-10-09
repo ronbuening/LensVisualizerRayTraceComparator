@@ -118,7 +118,7 @@ test("run is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "run"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}run {6}Run a suite on the configured engines, reusing stored results$/m);
+  assert.match(out.join(""), /^ {2}run {7}Run a suite on the configured engines, reusing stored results$/m);
 });
 
 test("lvrtc run: a line per job and a summary, exit 0; the second run finds every answer in the store", (t) => {

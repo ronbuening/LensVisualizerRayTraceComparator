@@ -71,8 +71,8 @@ test("compare and report are registered commands, with help", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "compare"));
   assert.ok(COMMANDS.some((command) => command.name === "report"));
   const list = lvrtc("unused", ["--help"]);
-  assert.match(list.out, /^ {2}compare {2}Compare the engines of a run, against a reference and pairwise$/m);
-  assert.match(list.out, /^ {2}report {3}Write the report of a compared run as JSON and Markdown$/m);
+  assert.match(list.out, /^ {2}compare {3}Compare the engines of a run, against a reference and pairwise$/m);
+  assert.match(list.out, /^ {2}report {4}Write the report of a compared run as JSON and Markdown$/m);
   for (const [command, synopsis] of [
     ["compare", COMPARE_SYNOPSIS],
     ["report", REPORT_SYNOPSIS],

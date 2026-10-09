@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 import type { ResultStatus } from "../../contract/result.ts";
 import { REPO_ROOT, loadConfig } from "../../core/config.ts";
+import type { LoadedConfig } from "../../core/config.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { SOURCE_CHANGED } from "../../core/manifest.ts";
 import { runSuite } from "../../core/orchestrator.ts";
@@ -13,6 +14,7 @@ import type { CaseSources, LoadedSuite } from "../../core/suite.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { createLvCaseSource } from "../../engines/lv/caseSource.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
+import type { EngineRegistry } from "../../engines/registry.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -81,6 +83,39 @@ function readArguments(args: readonly string[]): RunArguments {
     rungs: list("--rungs"),
     json: flags.has("--json"),
   };
+}
+
+/** A suite ready to be run on a configuration root: what `runSuite` is given. */
+export interface PreparedSuiteRun {
+  readonly loaded: LoadedConfig;
+  readonly registry: EngineRegistry;
+  readonly sources: CaseSources;
+  readonly suite: LoadedSuite;
+}
+
+/**
+ * Loads the configuration of a root (`root` when given, relative to `inputs.cwd`, else `inputs.rootDir`), makes its
+ * engine registry and its case sources (fixture lenses from the root, LensVisualizer lenses from `lvPath`), and
+ * loads the suite file, relative to `inputs.cwd`. Throws a `UsageError` for a `root` that is not a directory and
+ * for a file that is not a suite.
+ */
+export async function prepareSuiteRun(
+  inputs: RunCommandInputs,
+  suiteFile: string,
+  root: string | undefined,
+): Promise<PreparedSuiteRun> {
+  const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd, root);
+  if (root !== undefined && !statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
+    throw new UsageError(`--root ${root}: not a directory`);
+  }
+  const loaded = loadConfig({ rootDir, env: inputs.env });
+  const registry = createEngineRegistry(loaded);
+  const sources: CaseSources = {
+    fixture: createFixtureCaseSource(loaded.rootDir),
+    lv: createLvCaseSource(loaded.config.lvPath),
+  };
+  const suite = await loadSuite(resolve(inputs.cwd, suiteFile), { rootDir: loaded.rootDir, sources });
+  return { loaded, registry, sources, suite };
 }
 
 /** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
@@ -179,17 +214,9 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
       let suite: LoadedSuite;
       let result: SuiteRunResult;
       try {
-        const rootDir = asked.root === undefined ? inputs.rootDir : resolve(inputs.cwd, asked.root);
-        if (asked.root !== undefined && !statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
-          throw new UsageError(`--root ${asked.root}: not a directory`);
-        }
-        const loaded = loadConfig({ rootDir, env: inputs.env });
-        const registry = createEngineRegistry(loaded);
-        const sources: CaseSources = {
-          fixture: createFixtureCaseSource(loaded.rootDir),
-          lv: createLvCaseSource(loaded.config.lvPath),
-        };
-        suite = await loadSuite(resolve(inputs.cwd, asked.suite), { rootDir: loaded.rootDir, sources });
+        const prepared = await prepareSuiteRun(inputs, asked.suite, asked.root);
+        suite = prepared.suite;
+        const { registry } = prepared;
 
         const widths = [
           Math.max(0, ...suite.runs.map((run) => run.spec.name.length)),
@@ -201,8 +228,8 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         result = await runSuite({
           suite,
           registry,
-          runsDir: loaded.config.runsDir,
-          sources,
+          runsDir: prepared.loaded.config.runsDir,
+          sources: prepared.sources,
           engines: asked.engines,
           rungs: asked.rungs,
           onJob: asked.json ? undefined : (outcome) => io.stdout(jobLine(outcome, widths)),

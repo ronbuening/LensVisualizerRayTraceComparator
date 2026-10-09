@@ -349,14 +349,17 @@ path altogether (`unsupported-path`), which is one problem for each of them.
 - **The chief ray.** `opd.maxAbs` needs a chief ray that is ok in both engines. Where there is none it is not
   measured, the pair says so, and the two raw paths are judged alone.
 - **`FLOOR`.** LensVisualizer meets a surface within 1e-9 mm of it, and a steep surface behind makes more of that.
-  A pair of `lv` that is above a gate is `FLOOR`, a pass that is counted apart, when the arbiter `ref` agrees with
-  every other engine within 1e-10 mm, 1e-12 in direction and 1e-7 waves, and `lv` is within 1e-7 mm, 1e-8 in
-  direction and 2e-4 waves of `ref`: ten times each gate. Otherwise it is `FAIL`. Every one of those figures is
-  held together, whichever is above its gate: a direction within its limit excuses no hit beyond its own. The
-  limits are in `policy/rungs.v1.json`. A mask mismatch has no floor: a ray that one engine stopped and the other
-  passed always fails. With two engines the first condition is empty; with optiland as a third the reason of a
-  floor names what optiland is off `ref` by, and a floor is refused where optiland is no witness
-  ([the engine `optiland`](#the-engine-optiland)).
+  A pair of `lv` that is above a gate is `FLOOR`, a pass that is counted apart, when `lv` is within 1e-7 mm, 1e-8
+  in direction and 2e-4 waves of the arbiter `ref`: ten times each gate. Otherwise it is `FAIL`. Every one of
+  those figures is held together, whichever is above its gate: a direction within its limit excuses no hit beyond
+  its own. The limits are in `policy/rungs.v1.json`. A mask mismatch has no floor: a ray that one engine stopped
+  and the other passed always fails. Every other engine is a **witness** (policy version 5). Within 1e-10 mm,
+  1e-12 in direction and 1e-7 waves of `ref` it corroborates the arbiter, and the reason says by how much. Beyond
+  that it does not, and withholds nothing: the pair is still `FLOOR`, and the reason says "the witness did not
+  corroborate" with the witness's own distance from `ref`. Only a witness that is beyond that agreement and
+  nearer to `lv` than to `ref` blocks the floor: the pair is `FAIL`, "arbiter-suspect". And in the pair of `lv`
+  with a witness, an excess where the witness is as far from `ref` as `lv` is, or farther, is the witness's and no
+  floor ([the engine `optiland`](#the-engine-optiland)).
 
 Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
 `lvrtc run <suite> --engines lv,ref --rungs r0,r1,r2,r3`, `lvrtc compare` and `lvrtc report`:
@@ -378,14 +381,12 @@ zooms do so at their tele end only), or because a steep surface carries its tole
 [docs/gotchas.md](gotchas.md). Until policy version 4 a direction had no floor, and 14 more pairs failed by it
 alone.
 
-**The committed record** is [reports/benchmark/lv-floor.md](../reports/benchmark/lv-floor.md), with
-`lv-floor.json` beside it: for every run and rung of the benchmark the largest value of each metric, the verdicts,
-and how the rays of each engine ended, with the LensVisualizer commit and engine closure it was taken at, the hashes
-of both engines' code here, and the content hash of each run's case. The last says what was traced even where the
-commit cannot, in a checkout whose lens files are being edited (`dirty`). It holds results, counts, run names and
-hashes, and nothing an engine traced. The three commands that write it are in [the README](../README.md#compare-engines); an
-integration test holds its figures to a fresh run for as long as LensVisualizer's engine files and those cases are
-the ones it names. It names `ref` and the `lv` adapter by hash too: write it again after changing either.
+**The committed record** is the baseline of each suite and the report rendered from it
+([Baselines](#baselines)): [reports/benchmark/rays.md](../reports/benchmark/rays.md) has the pair of `lv` and
+`ref` beside the pairs of each with optiland. It replaced `reports/benchmark/lv-floor.md`, the digest of Phase 1;
+`lvrtc report --floor <dir>` still writes that digest of any run, for reading, and nothing of it is committed.
+`test/integration/lv/rungs.test.ts` holds the baseline's records of `lv` and `ref` to a fresh run of the two for
+as long as both engines and the cases are the ones the baseline names.
 
 ## LensVisualizer's product MTF
 
@@ -519,7 +520,7 @@ verdicts are, and 2 when the run has no comparisons or they were made from anoth
 files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the same run gives the same
 bytes anywhere. With `--floor <dir>` it also writes the numerical-floor digest of the run into that directory,
 `lv-floor.json` and `lv-floor.md`: the pairs of the engine the policy gives a floor and its arbiter, rung by rung
-and run by run. The digest lists the metrics in the order the comparator reports them, so there too a plain
+and run by run; it is for reading, and what is committed of a suite is its [baseline](#baselines). The digest lists the metrics in the order the comparator reports them, so there too a plain
 figure follows its scaled one.
 
 The expected reports of the fixture suites are in `test/fixtures/golden`; `node test/report/writeGolden.ts`
@@ -891,12 +892,14 @@ puts `ref` within 3.1e-9 of the truth on the worst ray and the rest on optiland:
 | `apple-iphone-7-wide-camera-lens` | 1.7e-8, 1.8e-8, 1.7e-8 at 21.0°, 470 nm | 18 `PASS` | 18 `PASS` |
 | `russar-22-70f8` | 1.2e-9, 2.7e-7, 2.8e-7 at 65.1°, 510 nm | 13 `PASS`, 5 `FLOOR` | 13 `PASS`, 2 `FLOOR`, 3 `FAIL` |
 
-Every figure is inside the gate of R3 by a factor of twenty or more. What it costs is the floor: 9 of the 11
-pairs of `lv` that are `FLOOR` beside `ref` alone are `FAIL` beside optiland, "optiland does not agree with ref",
-as 14 of 17 are in R2 on the same sets. LensVisualizer's own largest figures there are 7.8e-5 waves (the zoom),
-1.4e-4 (the 27 mm) and 3.4e-5 (the Russar), all inside the floor's limit of 2e-4. Nothing was changed for it:
-whether a witness that is inside the gate by a factor of twenty should withhold a floor is for the owner to
-decide.
+Every figure is inside the gate of R3 by a factor of twenty or more. Under policy version 4, which the last
+column is of, it cost the floor: 9 of the 11 pairs of `lv` that are `FLOOR` beside `ref` alone were `FAIL` beside
+optiland, "optiland does not agree with ref", as 14 of 17 were in R2 on the same sets. LensVisualizer's own
+largest figures there are 7.8e-5 waves (the zoom), 1.4e-4 (the 27 mm) and 3.4e-5 (the Russar), all inside the
+floor's limit of 2e-4. The owner decided it on these figures: since policy version 5 a witness that does not
+corroborate withholds no floor, and is named in the reason; only one that sides with `lv` against `ref` does
+([the plan's amendment](IMPLEMENTATION_PLAN.md#a-witness-does-not-withhold-a-floor)). These lenses are outside
+the suites and were not run again for it.
 
 **A far origin** is what would cost optiland's path most, and no ray of LensVisualizer has one. optiland solves a
 conic from where the ray is, and half of what that costs the hit is in the path: on a front sphere of radius
@@ -1023,8 +1026,9 @@ Has each of the three engines build every case, give its first-order data and tr
 launches; `lvrtc compare benchmark` then judges every two of them on every rung, and exits with 1 if a pair
 fails. The benchmark takes 28 s and the feature suite (`suites/features.json`) 19 s.
 
-Measured at optiland `4e893f53` and LensVisualizer `c05a2ab7` (engine closure `78215d72`, 151 files), under policy
-version 4. Pairs of two engines, as each rung judges them:
+Measured at optiland `4e893f53` and LensVisualizer `c05a2ab7` (engine closure `78215d72`, 151 files), and
+committed as baselines under policy version 5, which gives these suites the verdicts version 4 gave them
+([Baselines](#baselines)). Pairs of two engines, as each rung judges them:
 
 | | Runs, ray sets, rays that every engine lands | R0 | R1 | R2 | R3 |
 |---|---|---|---|---|---|
@@ -1063,12 +1067,78 @@ fails one. The largest figure of each kind, of optiland against `ref` and, after
 - **What these tables do not say** is in the sections above and in [docs/gotchas.md](gotchas.md#optiland): on
   some lenses outside the suites optiland loses rays or carries them where the case has no surface, which fails
   its pairs in R2, and on four it is far enough from `ref` to withhold a floor from LensVisualizer, in R2 and in
-  R3. The record of `lv` against `ref` alone is [reports/benchmark/lv-floor.md](../reports/benchmark/lv-floor.md);
-  baselines of the three-way runs, and what marks one stale, are the next stage's.
+  R3 until policy version 5 changed what a witness may withhold. The committed record of the two suites is
+  [reports/benchmark/rays.md](../reports/benchmark/rays.md) and
+  [reports/features/rays.md](../reports/features/rays.md), each rendered from its baseline.
 
 The tests that hold all of it are `npm run test:optiland`: `r0.test.ts` to `r3.test.ts` and `stations.test.ts`
 in `test/integration/optiland`. `r3.test.ts` runs the command above on each suite, all four rungs at once, and
 `stations.test.ts` the two rungs of traced rays.
+
+## Baselines
+
+A baseline is the committed record of one compared run of a suite: `baselines/<suite>.json`
+([the contract's `baseline`](../contract/CONTRACT.md#baseline)). For every run **as it was run** (a zoom at each
+end), every rung and every pair of engines it holds the verdict, each metric with its worst value and where it
+occurs, how the rays of each engine ended and the rim band's count, and what all of that is of: the content hash
+of the run's case, each engine's id, fingerprint and adapter revision with the commit it states, and the policy's
+version and hash. It holds no ray, no prescription, no time and no path, and is canonical JSON: the same run gives
+the same bytes anywhere.
+
+**To write the two that are committed**, on the checkouts of `lvrtc.config.json`:
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
+node bin/lvrtc.mjs compare benchmark
+node bin/lvrtc.mjs baseline write benchmark
+node bin/lvrtc.mjs run suites/features.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
+node bin/lvrtc.mjs compare features
+node bin/lvrtc.mjs baseline write features
+```
+
+`lvrtc baseline write <suite name | run directory> [--root <dir>]` asks no engine anything. It writes
+`<root>/baselines/<suite>.json` and the report rendered from it, `<root>/reports/<suite>/rays.md` and `rays.json`:
+the inputs (engines with fingerprints and what they were taken at, the policy, every run with its case hash), per
+rung the pairs of engines by verdict, the support matrix, the worst of every metric of every pair with its run and
+place, and a row per run with each pair's verdict, the judged metric that is largest against its tolerance, and
+the ray counts. It refuses (exit 2) a run with an engine that could not be used, a run that was not started, a
+LensVisualizer that changed during the run, and comparisons of another manifest or policy; and (exit 1) a run with
+a pair that is `FAIL` or `ERROR`: a baseline records what the engines agreed on.
+
+`lvrtc baseline check <suite name | suite.json> [--root <dir>] [--json]` needs the engines. A suite name is
+`<root>/suites/<name>.json`. It runs the suite again on the baseline's engines and rungs into the configured runs
+directory, where the result store answers whatever has not changed, compares it and writes `comparisons.json` as
+`lvrtc compare` does, and sets every record of the baseline (a pair of engines in one rung of one run) against the
+same record of that run:
+
+| State | When | What to do |
+|---|---|---|
+| `OK` | the case hash, both engines' fingerprints and adapter revisions and the policy are the baseline's, and the record is what it was | nothing |
+| `STALE(case)` | LensVisualizer now exports another case for the run: a lens file was edited | see the outcome |
+| `STALE(engine)` | the fingerprint or the adapter revision of one of the two engines is another | see the outcome |
+| `STALE(policy)` | the policy's hash is another | see the outcome |
+| `REFRESHABLE` | stale, and the verdicts are the same and no judged metric moved by more than its tolerance | `lvrtc baseline write <suite>`, then commit `baselines/` and `reports/` |
+| `DRIFT` | stale or not, a verdict changed or a judged metric moved by more than its rung's tolerance | find the cause first (`lvrtc report <suite>`, [docs/gotchas.md](gotchas.md)); only then write |
+| `NEW`, `GONE` | the suite as it runs has a record the baseline lacks, or lacks one it has | `lvrtc baseline write <suite>` once the suite is what is wanted |
+
+Every record that is not `OK` is a line, then the counts, then what to do for each state present. Exit code: 1
+when a record is `DRIFT`, when a pair is `FAIL` or `ERROR` today, and when an engine could not be used or
+LensVisualizer changed under the run; 0 otherwise, stale or not; 2 when nothing was checked (no suite file, no
+baseline). The check leaves the run it made in the runs directory, so `baseline write` after a `REFRESHABLE`
+needs no second run. A baseline is of one selection of engines and rungs, the same for every run of the suite.
+
+`lvrtc verify [--root <dir>] [--write]` is hermetic and part of `npm run check`: it reads no engine, and passes
+with `LVRTC_LV_PATH` and `LVRTC_OPTILAND_PYTHON` pointing nowhere. Every `baselines/*.json` must be a baseline by
+its schema and its rules, be the canonical text of its content (an edit by hand is not), be named after its suite
+and be judged by the policy at hand; `reports/<suite>/rays.md` and `rays.json` must be, byte for byte, what the
+baseline renders; no such report may be without its baseline. `--write` writes the reports anew from the baselines
+(after a change to the renderer) and never writes a baseline. **It cannot see `STALE`**: a case or an engine that
+has changed since needs the engines, and is what `baseline check` says.
+
+**When to rewrite.** After a change to the policy (verify fails until the baselines are of the new one), to `ref`
+or to an adapter (`STALE(engine)`), after LensVisualizer's engine files or the lenses of a suite change, and after
+a suite changes. `npm run test:optiland` runs `baseline check` on both suites and holds every record that is not
+stale to `OK`; a stale record is reported there and fails nothing.
 
 ## Workers over stdio
 

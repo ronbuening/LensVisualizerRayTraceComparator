@@ -125,8 +125,9 @@ const HOW_TO_READ: readonly string[] = [
       [
         "FLOOR",
         "A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two " +
-          "engines. The rung's arbiter agrees with every other engine, and that engine is within the floor limit " +
-          "of the arbiter; the note gives the figures. It counts as a pass.",
+          "engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with " +
+          "it against the arbiter; the note gives the figures, and names a witness that did not corroborate the " +
+          "arbiter. It counts as a pass.",
       ],
       ["FAIL", "A gated rung: a judged metric is above its tolerance, or is not a number."],
       ["RECORDED", "A recorded rung: the difference is written down. It is not a failure."],

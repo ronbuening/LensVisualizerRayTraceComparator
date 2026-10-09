@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:baseline",
+  "title": "Baseline",
+  "description": "The committed record of one compared run of a suite: for every run as it was run (a zoom at each end), every rung and every pair of engines, the verdict, each metric with its worst value and where it occurs, and the counts, with what they were taken of: the hash of each run's case, each engine's fingerprint and adapter revision, and the policy. It holds numbers, hashes, counts and names: no ray, no prescription, no time and no path. Code checks that engines, runs, rungs and pairs are each listed once and in order, that a pair names two engines of its rung, and that a pair's verdicts add up to the requests of its rung with its verdict the gravest of them.",
+  "type": "object",
+  "properties": {
+    "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
+    "kind": { "const": "baseline" },
+    "suite": {
+      "description": "The suite's name and the hash of the suite file as written.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+        "hash": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+      },
+      "required": ["name", "hash"],
+      "additionalProperties": false
+    },
+    "policy": {
+      "description": "The policy the pairs were judged by: its version and its content hash.",
+      "type": "object",
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "hash": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+      },
+      "required": ["version", "hash"],
+      "additionalProperties": false
+    },
+    "engines": {
+      "description": "Every engine of the record, sorted by id.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/engine" }
+    },
+    "runs": {
+      "description": "Every run of the suite as it was run, in suite order.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/run" }
+    }
+  },
+  "required": ["contract", "kind", "suite", "policy", "engines", "runs"],
+  "additionalProperties": false,
+  "$defs": {
+    "engine": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "version": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "fingerprint": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "adapterRevision": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "details": {
+          "description": "What the engine says of itself beside its hashes: a commit, a dirty flag, a file count.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/scalarMap"
+        }
+      },
+      "required": ["id", "version", "fingerprint", "details"],
+      "additionalProperties": false
+    },
+    "run": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
+        "caseId": {
+          "description": "The content hash of the run's case: with the name, what the record is keyed on.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+        },
+        "rungs": { "type": "array", "items": { "$ref": "#/$defs/rung" } }
+      },
+      "required": ["name", "caseId", "rungs"],
+      "additionalProperties": false
+    },
+    "rung": {
+      "type": "object",
+      "properties": {
+        "rung": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "quantity": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/quantityId" },
+        "requests": {
+          "description": "How many requests of the rung the engines were compared on.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+        },
+        "support": {
+          "description": "How the jobs of each engine ended, sorted by engine: ok when every one did, else the status of the first that did not, with its codes.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "status": { "enum": ["ok", "unsupported", "error", "pending", "missing"] },
+              "detail": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+            },
+            "required": ["engine", "status"],
+            "additionalProperties": false
+          }
+        },
+        "rays": {
+          "description": "How the rays of each engine ended, added up over the requests, sorted by engine; left out by a rung without rays.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "ok": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "blocked": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "failed": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" }
+            },
+            "required": ["engine", "ok", "blocked", "failed"],
+            "additionalProperties": false
+          }
+        },
+        "pairs": { "type": "array", "items": { "$ref": "#/$defs/pair" } }
+      },
+      "required": ["rung", "quantity", "requests", "support", "pairs"],
+      "additionalProperties": false
+    },
+    "pair": {
+      "description": "Two engines over the requests of one rung of one run, the first before the second by id.",
+      "type": "object",
+      "properties": {
+        "a": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "b": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+        "verdict": {
+          "description": "The gravest verdict of the pair over the requests.",
+          "$ref": "#/$defs/verdict"
+        },
+        "verdicts": {
+          "description": "How many requests came to each verdict, without the verdicts none came to.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "verdict": { "$ref": "#/$defs/verdict" },
+              "count": { "type": "integer", "minimum": 1 }
+            },
+            "required": ["verdict", "count"],
+            "additionalProperties": false
+          }
+        },
+        "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } }
+      },
+      "required": ["a", "b", "verdict", "verdicts", "metrics"],
+      "additionalProperties": false
+    },
+    "verdict": { "enum": ["PASS", "FLOOR", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] },
+    "metric": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "value": {
+          "description": "The largest value over the requests, or the sum for a metric counted in rays or elements; null when a value is not a finite number.",
+          "type": ["number", "null"]
+        },
+        "where": {
+          "description": "Where the largest value occurs: an index, a field, a ray.",
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string"] }
+        },
+        "tolerance": {
+          "description": "The tolerance the policy judges the metric by, when it judges it.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        }
+      },
+      "required": ["name", "unit", "value"],
+      "additionalProperties": false
+    }
+  }
+}

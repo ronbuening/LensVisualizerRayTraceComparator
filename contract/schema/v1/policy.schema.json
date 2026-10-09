@@ -63,7 +63,7 @@
         },
         "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
         "floor": {
-          "description": "The floor limits of the metric: the largest value between the rung's floored engine and its arbiter, and the largest between any other engine and the arbiter.",
+          "description": "The floor limits of the metric: the largest value between the rung's floored engine and its arbiter, and the largest between any other engine (a witness) and the arbiter for the witness to corroborate the arbiter. A witness beyond its agreement withholds no floor unless it is nearer to the floored engine than to the arbiter.",
           "type": "object",
           "properties": {
             "limit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative" },

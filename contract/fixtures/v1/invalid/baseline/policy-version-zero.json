@@ -1,0 +1,83 @@
+{
+  "contract": "1.0",
+  "kind": "baseline",
+  "suite": {
+    "name": "example",
+    "hash": "de37777926c98d2aaa01b27776b4e022d735022fefaaac72829325349722c46b"
+  },
+  "policy": {
+    "version": 0,
+    "hash": "ba4459ca47bff03dc292cf6b637c9674578f89b0a627a4c6b270db18516afa82"
+  },
+  "engines": [
+    {
+      "id": "fake-a",
+      "version": "1",
+      "fingerprint": "7d1bcbc14a023d7349cadc6dcc3002de217d9ed2acc455e9de2cb09b17bf1c8c",
+      "details": {
+        "bias": 0
+      }
+    },
+    {
+      "id": "fake-near",
+      "version": "1",
+      "fingerprint": "e44017af64b41b3f180626ecdcfb9889550d36e9cbd0e8c4cad061bb644acad6",
+      "details": {
+        "bias": 2e-14
+      }
+    }
+  ],
+  "runs": [
+    {
+      "name": "singlet",
+      "caseId": "41a1e9ed34af15892d9085785bda9c25430204ca16e73f591ecfea3b4a1a5526",
+      "rungs": [
+        {
+          "rung": "selftest",
+          "quantity": "selftest.echo",
+          "requests": 1,
+          "support": [
+            {
+              "engine": "fake-a",
+              "status": "ok"
+            },
+            {
+              "engine": "fake-near",
+              "status": "ok"
+            }
+          ],
+          "pairs": [
+            {
+              "a": "fake-a",
+              "b": "fake-near",
+              "verdict": "PASS",
+              "verdicts": [
+                {
+                  "verdict": "PASS",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "values.maxAbs",
+                  "unit": "1",
+                  "value": 2e-14,
+                  "where": {
+                    "index": 3
+                  },
+                  "tolerance": 1e-12
+                },
+                {
+                  "name": "sum.abs",
+                  "unit": "1",
+                  "value": 1.25e-13,
+                  "tolerance": 1e-12
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

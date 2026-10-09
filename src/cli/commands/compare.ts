@@ -78,6 +78,30 @@ function linesText(file: ComparisonFile): string {
 }
 
 /**
+ * The comparisons of the run directory `directory`, judged by `policy` (`compareManifest`): the manifest and the
+ * cases are read from the directory, each answer from the store beside it. Nothing is written. Throws as
+ * `readRunManifest` and `compareManifest` do.
+ */
+export function compareRunDirectory(
+  directory: string,
+  policy: Policy,
+  options: { readonly reference?: string; readonly modes?: readonly ComparisonMode[] } = {},
+): ComparisonFile {
+  const cases = new Map<string, OpticalCase | undefined>();
+  return compareManifest({
+    manifest: readRunManifest(directory),
+    store: createResultStore(join(dirname(directory), STORE_DIRECTORY)),
+    policy,
+    reference: options.reference,
+    modes: options.modes,
+    cases: (caseId) => {
+      if (!cases.has(caseId)) cases.set(caseId, readRunCase(directory, caseId));
+      return cases.get(caseId);
+    },
+  });
+}
+
+/**
  * Builds `lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode <mode>]
  * [--json]`.
  *
@@ -113,17 +137,9 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
         }
         json = asked.flags.has("--json");
         const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
-        const cases = new Map<string, OpticalCase | undefined>();
-        file = compareManifest({
-          manifest: readRunManifest(directory),
-          store: createResultStore(join(dirname(directory), STORE_DIRECTORY)),
-          policy: inputs.policy ?? loadPolicy(),
+        file = compareRunDirectory(directory, inputs.policy ?? loadPolicy(), {
           reference: asked.values.get("--reference"),
           modes: MODE_CHOICES[mode],
-          cases: (caseId) => {
-            if (!cases.has(caseId)) cases.set(caseId, readRunCase(directory, caseId));
-            return cases.get(caseId);
-          },
         });
         path = join(directory, COMPARISONS_FILE);
       } catch (error) {

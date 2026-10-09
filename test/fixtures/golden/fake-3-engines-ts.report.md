@@ -7,8 +7,8 @@
 | Suite | fake-3-engines-ts |
 | Suite hash | d9a47b16c3b04fcb18d8caadae50aa24e457148d86e938eb28632a5d1dd75a85 |
 | Contract version | 1.0 |
-| Policy | rungs v4 |
-| Policy hash | 01abb393f5fd737168b05920418e8e79d4c921e26adb994b1062d559ea5cbfbb |
+| Policy | rungs v5 |
+| Policy hash | a8f4e2615c842b14d14a4c49fe35c44ad6afdcece70151894393b84e2a79207c |
 
 ### Engines
 
@@ -98,7 +98,7 @@ Each pair of engines that answered one request gets one verdict.
 | Verdict | Meaning |
 |---|---|
 | PASS | A gated rung: every judged metric is at or below its tolerance. |
-| FLOOR | A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two engines. The rung's arbiter agrees with every other engine, and that engine is within the floor limit of the arbiter; the note gives the figures. It counts as a pass. |
+| FLOOR | A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with it against the arbiter; the note gives the figures, and names a witness that did not corroborate the arbiter. It counts as a pass. |
 | FAIL | A gated rung: a judged metric is above its tolerance, or is not a number. |
 | RECORDED | A recorded rung: the difference is written down. It is not a failure. |
 | ATTENTION | A recorded rung: a metric is outside its attention band. It is worth a look and is not a failure. |

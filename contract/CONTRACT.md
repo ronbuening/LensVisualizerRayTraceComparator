@@ -108,8 +108,10 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 ## Versioning
 
 Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.0`.
-It is still being written: until the first baseline is committed, nothing outside this repository has read a
-document of it, and what a stage adds is added to `1.0`. From then on the rules below hold.
+Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
+written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
+stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
+here on the rules below hold, and what a stage adds raises the minor.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -134,6 +136,7 @@ document of it, and what a stage adds is added to `1.0`. From then on the rules 
 | `protocol-response` | `protocol-response.schema.json` | `protocol.ts` | an engine's reply |
 | `policy` | `policy.schema.json` | `policy.ts` | how the results of each rung are judged |
 | `comparison` | `comparison.schema.json` | `comparison.ts` | the answers of several engines to one request, compared pair by pair |
+| `baseline` | `baseline.schema.json` | `baseline.ts` | the committed record of one compared run of a suite |
 
 `common.schema.json` holds the definitions the others share. `validateKind(kind, value)` in
 `src/contract/schemas.ts` validates a document against the schema of its kind. In the tables below a member is
@@ -935,19 +938,29 @@ otherwise:
 
 1. every metric of the pair that is above its tolerance is a number and has floor limits. A metric without them
    is never excused: a count of rays the two engines disagree about is right or it is not;
-2. the arbiter answered, and every other engine of the comparison that answered is within `agreement` of the
-   arbiter in every metric that has floor limits: an arbiter that agrees with the others to rounding is right
-   about the rays;
-3. `floor.engine` is within `limit` of the arbiter in every metric that has floor limits: what it is off by is of
-   the size of its known tolerance, and not a defect of another kind.
+2. the arbiter answered, and `floor.engine` is within `limit` of it in every metric that has floor limits: what it
+   is off by is of the size of its known tolerance, and not a defect of another kind;
+3. no **witness** sides with `floor.engine` against the arbiter. A witness is every other engine of the
+   comparison that answered. In each metric that has floor limits, a witness within `agreement` of the arbiter
+   corroborates it. A witness beyond `agreement`, or one that cannot be measured against the arbiter, does not
+   corroborate, and withholds nothing: the pair is still `FLOOR`, and its `reason` names the witness with its own
+   distance from the arbiter. Only a witness that is beyond `agreement` and nearer to `floor.engine` than to the
+   arbiter in that metric blocks the floor: two engines of different code that agree against the arbiter make the
+   arbiter suspect, and the pair is `FAIL` with a `reason` that says `arbiter-suspect`;
+4. in the pair of `floor.engine` with a witness, no metric above its tolerance has the witness as far from the
+   arbiter as `floor.engine` is, or farther: there the excess is the witness's own and no floor of anybody.
 
-A metric that two answers have nothing to measure on takes no part in 2 or 3. Every metric that has floor limits
-takes part in both, whether or not it is the one above its tolerance: a direction within its limit excuses no hit
-beyond its own, and an engine whose directions are not the arbiter's is no witness for a hit. The comparator's
-policy gives `lv` this floor against `ref` in `r2` and `r3`: lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm,
-a component of the exit direction with 1e-8 and 1e-12, optical paths with 2e-4 waves and 1e-7 waves; each limit is
-ten times its tolerance. Which rays got through, `mask.mismatches`, has none. The limits are in the policy and
-nowhere in the code.
+A metric that two answers have nothing to measure on takes no part in 2, 3 or 4. Every metric that has floor
+limits takes part in 2 and 3, whether or not it is the one above its tolerance: a direction within its limit
+excuses no hit beyond its own. The comparator's policy gives `lv` this floor against `ref` in `r2` and `r3`:
+lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, a component of the exit direction with 1e-8 and 1e-12,
+optical paths with 2e-4 waves and 1e-7 waves; each limit is ten times its tolerance. Which rays got through,
+`mask.mismatches`, has none. The limits are in the policy and nowhere in the code.
+
+Until policy version 5 a witness beyond `agreement` withheld the floor. A third engine has rounding of its own:
+optiland is about 9e-10 mm from the exact hit on lenses where `ref` is 6e-12 mm and LensVisualizer 2e-8 mm from
+it, beyond the 1e-10 mm of agreement and twenty-five times nearer to `ref` than to LensVisualizer. Its own error
+said nothing about whose the excess was, and no longer decides it.
 
 **Blocking.** A rung with `blocksLaterRungs` establishes what the rungs after it take for granted: two engines
 that built different systems would differ in every ray traced through them, and each such difference would be the
@@ -1016,7 +1029,7 @@ relative to a chief ray that one engine stopped, for one).
 | `BLOCKED` | both engines answered, and their pair in an earlier rung that blocks later ones is `FAIL` or `ERROR`. The two answers are not set against each other |
 | `ERROR` | the two answers cannot be compared at all, as arrays of different shapes cannot |
 | `PASS` | the rung is gated and every metric the policy names is at or below its `tolerance` |
-| `FLOOR` | the rung is gated, a metric the policy names is above its `tolerance`, and the excess is the numerical floor of the rung's floored engine, by the three conditions of [the floor](#policy). The `reason` gives what exceeded its tolerance and the figures against the arbiter |
+| `FLOOR` | the rung is gated, a metric the policy names is above its `tolerance`, and the excess is the numerical floor of the rung's floored engine, by the conditions of [the floor](#policy). The `reason` gives what exceeded its tolerance and the figures against the arbiter, and names a witness that did not corroborate the arbiter |
 | `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number, and the pair is no floor. Where the rung has a floor and the pair is of its engine, the `reason` says which condition did not hold |
 | `RECORDED` | the rung is recorded and no metric that has an `attention` band is above it |
 | `ATTENTION` | the rung is recorded and a metric that has an `attention` band is above it, or is not a number. It is not a failure |
@@ -1037,6 +1050,47 @@ store keeps with each answer, and the case of the run, which the run directory k
 them: a clip radius says which rays lie in a rim band, a line's wavelength turns a path into waves, an image plane
 gives a pupil's distance. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
 nothing is guessed in its place.
+
+### `baseline`
+
+The committed record of one compared run of a suite (`baselines/<suite>.json`): what the engines agreed on, and
+of what. It is built from the run's manifest, its comparisons and the policy (`buildBaseline`,
+`src/baseline/build.ts`), and holds numbers, hashes, counts and names only: no ray, no prescription, no time, no
+path.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `contract` | string | the contract version |
+| `kind` | `"baseline"` | |
+| `suite` | `{ name, hash }` | the suite, and the hash of the suite file as written |
+| `policy` | `{ version, hash }` | the policy the pairs were judged by |
+| `engines` | engine[] | every engine, sorted by id: `{ id, version, fingerprint, adapterRevision?, details }` |
+| `runs` | run[] | every run **as it was run**, in suite order: `{ name, caseId, rungs }` |
+
+A record is keyed on the run's `name` and its `caseId`, the content hash of the case that was computed, never on
+the suite file alone: a zoom that a suite names once is two runs, `<name>-wide` and `<name>-tele`, each with its
+own case and its own records. A rung of a run is `{ rung, quantity, requests, support, rays?, pairs }`:
+
+- `requests`: how many requests of the rung the engines were compared on (one per ray set, in `r2` and `r3`);
+- `support`: per engine, sorted, `{ engine, status, detail? }`: `ok` when every job of the engine ended so, else
+  the status of the first that did not, with its codes (`quantity rays.trace`, an error code);
+- `rays`: per engine, sorted, `{ engine, ok, blocked, failed }`, added up over the requests; left out by a rung
+  whose answers record no rays;
+- `pairs`: every two engines, the first before the second by id, sorted: `{ a, b, verdict, verdicts, metrics }`.
+  `verdicts` counts the requests by verdict, in the order of the verdicts; `verdict` is the gravest of them
+  (`PASS`, `RECORDED`, `FLOOR`, `UNSUPPORTED`, `ATTENTION`, `BLOCKED`, `FAIL`, `ERROR`, from the least);
+- a metric is `{ name, unit, value, where?, tolerance? }`: the largest value over the requests with where it
+  occurs, or the sum of a metric counted in `rays` or `elements` (the rim band is `mask.rimBand`); null when a
+  value is not a finite number; `tolerance` is what the policy judges it by, when it judges it.
+
+**Invariants checked in code** (`baselineProblems`): engines sorted, each once; no run and no rung of a run twice;
+the engines of `support` and `rays` are engines of the baseline, sorted; a pair names two engines of its rung's
+`support` in order, and the pairs are sorted; a pair's verdicts are in order, add up to the rung's `requests`, and
+its `verdict` is the gravest of them. A baseline file is the canonical JSON of its content and a newline
+(`parseBaseline` refuses any other text of the same content, which is what an edit by hand looks like).
+
+`lvrtc baseline write` writes it, `lvrtc baseline check` sets it against the suite as it runs today, and
+`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md).
 
 ## Quantities
 

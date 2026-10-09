@@ -159,12 +159,38 @@ Compares the stored answers of that run and gives each pair of engines a verdict
 pair is `FAIL` or `ERROR`.
 
 ```bash
-node bin/lvrtc.mjs report benchmark --floor reports/benchmark
+node bin/lvrtc.mjs report benchmark
 ```
 
-Writes `runs/benchmark/report.md`. With `--floor` it also rewrites the committed
-[numerical-floor record](reports/benchmark/lv-floor.md): the largest difference between `lv` and `ref` on every
-rung of every benchmark lens.
+Writes `runs/benchmark/report.md`: every run, rung and pair, with where each largest difference occurs.
+
+### Baselines
+
+```bash
+node bin/lvrtc.mjs baseline write benchmark
+```
+
+After the three-engine `run` and `compare` above: rewrites the committed record of what the engines agreed on,
+[baselines/benchmark.json](baselines/benchmark.json), and the report rendered from it,
+[reports/benchmark/rays.md](reports/benchmark/rays.md). The same three commands with `features` rewrite the
+feature suite's. That sequence regenerates everything that is committed under `baselines/` and `reports/` except
+the census.
+
+```bash
+node bin/lvrtc.mjs baseline check benchmark
+```
+
+Runs the suite again on the baseline's engines and says, record by record, whether the baseline is still of the
+lenses and engines at hand: `OK`, `STALE` (a lens or an engine has changed; `REFRESHABLE` if the figures still
+hold) or `DRIFT` (a verdict changed or a figure moved past its tolerance). Only `DRIFT`, `FAIL` and `ERROR` exit 1.
+
+```bash
+node bin/lvrtc.mjs verify
+```
+
+Needs no engine and is part of `npm run check`: validates every committed baseline and makes the committed
+reports anew from the baselines, failing on a byte of difference. It cannot see a lens that has changed;
+`baseline check` does.
 
 ```bash
 node bin/lvrtc.mjs engine conformance ref

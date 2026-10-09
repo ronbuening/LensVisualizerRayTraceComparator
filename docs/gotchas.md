@@ -242,8 +242,10 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   ([optiland's sums on an asphere](#on-an-asphere-optiland-is-as-exact-as-a-plain-sum-of-its-terms)). So the floor
   rule does what it says, and what it says is strict: an engine whose own arithmetic is a hundred times coarser
   than the arbiter's is no witness on a lens that magnifies arithmetic a thousand times, and LensVisualizer's floor
-  is then not granted. Nothing is widened for it: whether a witness that is inside every gate by a factor of ten or
-  more should withhold a floor is the owner's to decide, on these figures. In R3 it is the same on a smaller
+  was then not granted. That was policy version 4. The owner decided it on these figures: since policy version 5
+  such a witness is named in the reason ("the witness did not corroborate", with its distance from `ref`) and
+  withholds nothing, and only a witness that is nearer to `lv` than to `ref` fails the pair ("arbiter-suspect").
+  No limit moved. The 14 pairs were not run again under version 5: they are outside the suites. In R3 it is the same on a smaller
   scale (Stage 2.5, LensVisualizer `c05a2ab7`, the same closure): in the suites optiland is within 3.5e-9 waves of
   `ref`, a thirtieth of the 1e-7 the rule asks, and the two floors of the Hologon in R3 are floors against both;
   on four of those lenses it is up to 9.7e-7 waves from `ref`, and 9 of 11 floors of R3 are `FAIL` beside it

@@ -18,7 +18,7 @@ import { escapeCell } from "./markdown.ts";
 export const COUNT_UNITS: readonly string[] = ["rays", "elements"];
 
 /** The recorded values of a `rays.trace` answer that say how its rays ended, in the order they are listed. */
-const RAY_ENDINGS = ["rays.ok", "rays.blocked", "rays.failed"] as const;
+export const RAY_ENDINGS = ["rays.ok", "rays.blocked", "rays.failed"] as const;
 
 /** An engine of the digest: who answered. */
 export interface FloorEngine {
@@ -121,7 +121,7 @@ function engineOf(manifest: RunManifest, id: string): FloorEngine {
 }
 
 /** A metric being gathered over requests. */
-interface Gathered {
+export interface Gathered {
   name: string;
   unit: string;
   value: number | null;
@@ -131,7 +131,7 @@ interface Gathered {
 }
 
 /** Takes one more value of a metric: a count is added, any other value kept when it is the largest so far. */
-function gather(into: Map<string, Gathered>, metric: ComparisonMetric, run: string): void {
+export function gather(into: Map<string, Gathered>, metric: ComparisonMetric, run: string): void {
   const known = into.get(metric.name) ?? { name: metric.name, unit: metric.unit, value: 0, seen: false };
   into.set(metric.name, known);
   const first = !known.seen;
@@ -145,7 +145,12 @@ function gather(into: Map<string, Gathered>, metric: ComparisonMetric, run: stri
   }
 }
 
-function finished(gathered: Gathered, policy: Policy, rung: string, withRun: boolean): FloorMetric & { run?: string } {
+export function finished(
+  gathered: Gathered,
+  policy: Policy,
+  rung: string,
+  withRun: boolean,
+): FloorMetric & { run?: string } {
   const { name, unit, value, where, run } = gathered;
   const judged = Object.hasOwn(policy.rungs, rung) ? policy.rungs[rung].metrics[name] : undefined;
   const counted = COUNT_UNITS.includes(unit);
@@ -159,7 +164,7 @@ function finished(gathered: Gathered, policy: Policy, rung: string, withRun: boo
   };
 }
 
-function verdictCounts(pairs: readonly PairComparison[]): FloorRow["verdicts"] {
+export function verdictCounts(pairs: readonly PairComparison[]): FloorRow["verdicts"] {
   return VERDICTS.map((verdict) => ({
     verdict,
     count: pairs.filter((pair) => pair.verdict === verdict).length,
