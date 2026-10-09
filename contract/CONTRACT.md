@@ -1026,7 +1026,10 @@ direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-1
 
 **`mtf.native`** is optiland's own FFT MTF, its class `ScalarFFTMTF`, asked as anyone would ask it and read from
 its own attributes (`lvrtc_optiland/mtf.py`): the method `diffraction`, of fields stated as angles, on the image
-plane of the case as it is. Nothing of the transfer function is the worker's. What is, is stated in the answer:
+plane of the case as it is. Fields stated as fractions of an image height are answered only with the engine option
+`fieldAnglesDeg`, the angle of each in degrees in the order of the spec, which is what a run's
+[recipe](#the-mtf-recipe) resolved them to: the answer then names each field by its fraction (`field`) and states
+the angle it computed with (`fieldAngleDeg`). For a spec of angles the option is not read. Nothing of the transfer function is the worker's. What is, is stated in the answer:
 
 | Step | Is |
 |---|---|
@@ -1050,7 +1053,8 @@ states `tracedFNumber` (optiland's working f-number on the axis, of the rays thr
 setting above.
 
 Its refusals: of code `option`, `profile` (it is asked by a spec), `method.geometric`, `focus.engine-best`
-(optiland has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height),
+(optiland has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height, and the
+option `fieldAnglesDeg` was not given), `option.fieldAnglesDeg` (not one finite angle for each field of the spec),
 `option.fftRays` (not 256 or 512) and `option.line` (no index of a line of the case); of code `feature`,
 `lines.polychromatic` (a case of several lines asked without the option `line`) and `object.finite` (optiland
 measures a field angle at its paraxial entrance pupil then, and no spec says where the contract's is measured).
@@ -1128,7 +1132,7 @@ is `1` for a number without one. A metric the comparison reports and the policy 
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
 `rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 8:
+The comparator's policy, version 9:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1139,6 +1143,7 @@ The comparator's policy, version 8:
 | `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; floor of `lv` |
 | `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
 | `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
+| `r5` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
 | `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 4e-5, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
 | `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
 
@@ -1950,8 +1955,9 @@ The comparator of `mtf.native` for `r4f` (`src/compare/mtfFidelity.ts`):
 Where no field has curves in both answers `mtf.maxAbs` is not measured. Answers for different numbers of fields,
 for other fields, of other planes or with curves of different lengths are not comparable (`ERROR`). What each
 answer states of every field's sampling is recorded beside the pair under the four names, one value a field. The
-rung has no floor and blocks nothing; `r4f` compares no other two engines, and the one other rung that compares
-`mtf.native` is [`r6b`](#rung-r6b-lensvisualizers-diffraction-mtf-beside-the-wave-estimator).
+rung has no floor and blocks nothing; `r4f` compares no other two engines, and the other rungs that compare
+`mtf.native` are [`r5`](#rung-r5-the-engines-own-mtf) and
+[`r6b`](#rung-r6b-lensvisualizers-diffraction-mtf-beside-the-wave-estimator).
 
 The gate of 1e-9 was provisional and is pinned from measurement (the plan, "Amendments since approval"): on the
 96 runs of the benchmark suite, 480 fields at 51 frequencies in both cuts, the largest difference is 1.25e-14,
@@ -1991,6 +1997,51 @@ of every field's sampling is recorded beside the pair (`gridSize`, `validRays`, 
 `convergedThroughLpMm`, one value a field), and under `settled` whether it stands by the field: 1 for `ok`, 0 for
 `unconverged`. Answers for different numbers of fields, for other fields, of other planes or with curves of
 different lengths are not comparable (`ERROR`).
+
+#### Rung R5: the engines' own MTF
+
+`r5` asks the one request of `r6b` of three engines, `lv`, [`optiland`](#the-engine-optiland) and
+[`wave`](#the-engine-wave), whatever engines the run names, only for a recipe LensVisualizer resolved, and only
+where the rung is named. `lv` and `wave` are handed the options `r6b` hands them; `optiland` is handed the recipe's
+angle of each field of the spec as its option `fieldAnglesDeg`. Three methods, each with its own sampling: the rung
+is **recorded**, and no figure of it fails anything.
+
+The comparator of `mtf.native` for `r5` (`src/compare/mtfNative.ts`) sorts each field before any difference is
+taken, by the classes of a difference in their order, and each kind of field has its own figure:
+
+| Class | Reason | A field is of it when | Its figure | Band |
+|---|---|---|---|---|
+| unsupported | `no-curve` | an answer has no curve of it (`unavailable`) | none | none |
+| data | `lines-differ` | the two answers are of other lines | none: no difference is shown | none |
+| data | `chief-landing-unknown` | an answer states no `imageHeightMm` for it | none | none |
+| data | `chief-landing-apart` | the two `imageHeightMm` differ by more than the band of `chiefLanding.maxAbs` | none | none |
+| numerical | `unconverged` | an answer says its sampling did not settle | `mtfFlagged.maxAbs` | none |
+| method | `rim-rays-lost` | an answer states `rimRaysLost` above 0 in its sampling | `mtfRimLost.maxAbs` | none |
+| method | `two-methods` | both answers stand by its curves | `mtfOnAxis.maxAbs` for the field requested as 0, `mtfOffAxis.maxAbs` for every other: the largest difference of two MTF values over both cuts and every frequency | 0.005 and 0.01 |
+
+The class `convention` (a declared transform that is missing) is never given: both answers state their cuts by the
+image axes of the contract, on the plane of the case. `chiefLanding.maxAbs`, in mm, is the largest distance
+between the two answers' chief-ray landings over the fields both have curves and a landing for; its band, 1e-7
+mm, is the limit of the sorting, and a pair with a field beyond it is `ATTENTION`. `fields.compared`,
+`fields.flagged`, `fields.rimLost`, `fields.data` and `fields.unavailable` count the fields of each kind. A pair is
+`ATTENTION` when a figure with a band is outside it, else `RECORDED`; a band that has no field is not measured.
+The reason of a pair names every field that is in no band, with its class, its reason and what the answers say.
+The comparator needs the spec of the request and the policy of the rung; answers for different numbers of fields,
+for other fields, of other planes or with curves that have not one value a frequency are not comparable (`ERROR`).
+
+**The second step.** When the jobs of the rung for a run have ended and the pair of `lv` and `optiland` has
+`mtfOnAxis.maxAbs` or `mtfOffAxis.maxAbs` outside its band, optiland is asked the same request once more with the
+option `fftRays: 512`. The run manifest records that as a job of `optiland` with `step: "fft512"`, after the
+rung's other jobs of the run. In a comparison a step is no participant: it is its engine's later answer. A pair
+of that engine is judged by the last step, with the two band figures of the first answers beside them
+(`mtfOnAxis.firstStepMaxAbs`, `mtfOffAxis.firstStepMaxAbs`), and a step that is no answer is named in the reason.
+
+**Recorded** beside the pair, one value a field: `field`, `fieldAngleDeg`, `imageHeightMm`, `settled` (1 for `ok`,
+0 for `unconverged`), the sampling an answer states (`gridSize`, `numRays`, `coarseNumRays`, `validRays`,
+`maxDelta`, `phaseStepWaves`, `convergedThroughLpMm`, `rimRaysLit`, `rimRaysLost`, `rimLandingSpreadMm`,
+`workingFNumber`), and every MTF value as `sagittal@<frequency>` and `tangential@<frequency>`;
+`lineWavelengthNm` has one value a line. The values of a later step have the same names followed by `#<step>`.
+A report makes its table of the rung from these alone.
 
 ## Schemas and the validator
 

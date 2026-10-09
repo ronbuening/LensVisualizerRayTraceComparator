@@ -702,13 +702,14 @@ const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
  * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
  * blocks the rungs after it, the first-order data `r1`, the two rungs of traced rays, `r2` and `r3`, with the
  * floor of `lv` against `ref`, the geometric MTF of those rays, `r4`, the fidelity of the replay of
- * LensVisualizer's MTF sampling, `r4f`, the wave MTF of the traced rays, `r6a`, and LensVisualizer's own
- * diffraction MTF beside the comparator's wave estimator, `r6b`, which is recorded.
+ * LensVisualizer's MTF sampling, `r4f`, the engines' own MTF side by side, `r5`, which is recorded, the wave MTF
+ * of the traced rays, `r6a`, and LensVisualizer's own diffraction MTF beside the comparator's wave estimator,
+ * `r6b`, which is recorded.
  */
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 8,
+  version: 9,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -771,6 +772,16 @@ export const POLICY_LADDER = {
         "fields.mismatches": { tolerance: 0, unit: "elements" },
         "mtf.maxAbs": { tolerance: 1e-9, unit: "1" },
         "sampling.mismatches": { tolerance: 0, unit: "elements" },
+      },
+    },
+    r5: {
+      quantity: MTF_NATIVE,
+      mode: "independent-method",
+      class: "recorded",
+      metrics: {
+        "chiefLanding.maxAbs": { attention: 1e-7, unit: "mm" },
+        "mtfOffAxis.maxAbs": { attention: 0.01, unit: "1" },
+        "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
       },
     },
     r6a: {

@@ -13,7 +13,7 @@ import { pairKey } from "./blocking.ts";
 import type { BlockedPairs } from "./blocking.ts";
 import type { ComparisonContext, QuantityComparator } from "./comparator.ts";
 import { attributeFloor } from "./floor.ts";
-import { comparePair } from "./pair.ts";
+import { comparePair, stepAnswers } from "./pair.ts";
 import type { ParticipantResult } from "./pair.ts";
 
 /** The answers of several engines to one request, and what they are judged by. */
@@ -40,17 +40,30 @@ function byEngine(a: ParticipantResult, b: ParticipantResult): number {
   return a.engine < b.engine ? -1 : a.engine > b.engine ? 1 : 0;
 }
 
+/** The name a recorded value of a later step of an engine has beside those of its first answer: `<name>#<step>`. */
+export function stepValueName(name: string, step: string): string {
+  return `${name}#${step}`;
+}
+
 /**
  * A participant as a set states it: who it is, how its job ended and, for an answer, the values the quantity's
  * comparator says it reports beside what is compared, by name in sorted order, with null for a value that is not
- * finite. `recorded` is left out when there is no answer, no such comparator or no such value.
+ * finite. The values of a later step that is an answer are beside them, each under `stepValueName`. `recorded` is
+ * left out when there is no answer, no such comparator or no such value.
  */
 function statedParticipant(
   participant: ParticipantResult,
   comparator: QuantityComparator | undefined,
+  context: ComparisonContext | undefined,
 ): ComparisonParticipant {
   const { engine, fingerprint, status, data } = participant;
-  const reported = status === "ok" && data !== undefined ? (comparator?.recorded?.(data) ?? {}) : {};
+  const reported: { [name: string]: readonly number[] } = {
+    ...(status === "ok" && data !== undefined ? comparator?.recorded?.(data, context) : {}),
+  };
+  for (const { step, data: later } of stepAnswers(participant)) {
+    const values = comparator?.recorded?.(later, context) ?? {};
+    for (const name of Object.keys(values)) reported[stepValueName(name, step)] = values[name];
+  }
   const names = Object.keys(reported).sort();
   if (names.length === 0) return { engine, fingerprint, status };
   const recorded: RecordedValues = Object.fromEntries(
@@ -119,7 +132,7 @@ export function compareGroup(group: ComparisonGroup, mode: ComparisonMode, refer
     rung,
     quantity,
     requestId,
-    participants: participants.map((participant) => statedParticipant(participant, comparator)),
+    participants: participants.map((participant) => statedParticipant(participant, comparator, context)),
     mode,
     ...(mode === "reference-vs-each" ? { reference } : {}),
     pairs,

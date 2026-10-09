@@ -20,7 +20,7 @@ import type { ComparatorLookup } from "./comparator.ts";
 import type { ComparisonFile } from "./comparisonFile.ts";
 import { compareGroup, defaultReference } from "./group.ts";
 import { COMPARATORS } from "./index.ts";
-import type { ParticipantResult } from "./pair.ts";
+import type { ParticipantResult, ParticipantStep } from "./pair.ts";
 import type { SpanMember } from "./span.ts";
 
 /** What `compareManifest` is given. */
@@ -73,6 +73,11 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
   return { participant: { engine, fingerprint, status: "ok", data: result.data }, spec: request.spec };
 }
 
+/** The jobs of a group that are an engine's first for its request: those that follow another (`step`) left out. */
+function firstJobs(jobs: readonly ManifestJob[]): ManifestJob[] {
+  return jobs.filter((job) => job.step === undefined);
+}
+
 /**
  * The participants of a span: every engine with a job in one of its groups, in the order they first appear. An
  * engine with an "ok" answer to every request of the span is "ok", and its data is the `SpanAnswer` of those
@@ -105,7 +110,8 @@ function spanParticipants(
  * Compares everything one run of a suite asked of more than nobody, and returns the comparison file.
  *
  * The jobs of the manifest are grouped by run, rung and request: a group is what several engines were asked alike.
- * Each engine with a job in the group is a participant. One whose job ended "ok" takes its data from the store; if
+ * Each engine with a job in the group is a participant. A job that follows another of its engine (`ManifestJob.step`)
+ * is no participant of its own: it is a later step of that engine's, handed to the comparator with the first. One whose job ended "ok" takes its data from the store; if
  * the store no longer holds it, or holds something that is not valid data of the quantity, the participant is
  * "missing", which makes its pairs `ERROR`. The store is never written.
  *
@@ -205,8 +211,23 @@ export function compareManifest(input: CompareManifestInput): ComparisonFile {
       const spec = specOf(jobs);
       const participants =
         comparator?.spanOf === undefined
-          ? jobs.map((job) => answeredBy(job).participant)
-          : spanParticipants(unit, answeredBy, fingerprints);
+          ? firstJobs(jobs).map((job): ParticipantResult => {
+              const steps = jobs.flatMap((later): ParticipantStep[] => {
+                if (later.engine !== job.engine || later.step === undefined) return [];
+                const { status, detail, data } = answeredBy(later).participant;
+                return [
+                  {
+                    step: later.step,
+                    status,
+                    ...(detail === undefined ? {} : { detail }),
+                    ...(data === undefined ? {} : { data }),
+                  },
+                ];
+              });
+              const { participant } = answeredBy(job);
+              return steps.length === 0 ? participant : { ...participant, steps };
+            })
+          : spanParticipants(unit.map(firstJobs), answeredBy, fingerprints);
       const named = reference ?? run.referenceEngine;
       const taking = (engine: string): boolean => participants.some((participant) => participant.engine === engine);
       const against =

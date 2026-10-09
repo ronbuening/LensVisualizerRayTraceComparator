@@ -25,7 +25,11 @@ within 3.2e-6 wherever its lattice samples the wavefront, the two exact tracers 
 within the plan's bands at f/8 and marks five of 96 runs for attention (rung R6b, recorded;
 [measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)). The engine `optiland` answers with optiland's own
 FFT MTF, one line and one field at a time, a field it cannot compute being a row with the reason
-([optiland's own MTF](docs/REFERENCE.md#optilands-own-mtf)); the rung that sets it beside LensVisualizer's is next.
+([optiland's own MTF](docs/REFERENCE.md#optilands-own-mtf)). Rung R5 sets it beside LensVisualizer's product MTF
+and the wave estimator, field by field, with the class of every difference: recorded and never gated. At f/8 all
+24 reference-line runs of the benchmark are inside the plan's bands (at most 0.0041 on the axis, 0.0088 off it);
+wide open 15 of 24 are marked for attention ([measured](docs/REFERENCE.md#rung-r5-the-engines-own-mtf)). A report
+states what it does not cover, and its wording is linted.
 
 ## Requirements
 
@@ -192,6 +196,16 @@ twice as fine as the run's own, which it traces for that (about 8 minutes and 15
 benchmark); a field whose lattice does not sample the wavefront, or has not converged, is reported and not judged.
 R6b sets LensVisualizer's own diffraction MTF beside that estimator on LensVisualizer's rays: two engines of its
 own, `lv` and `wave`, recorded and never gated (about 13 minutes).
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5
+```
+
+R5 sets three engines' own diffraction MTF side by side: LensVisualizer's product MTF (`lv`), optiland's FFT MTF
+(`optiland`) and the comparator's wave estimator on LensVisualizer's rays (`wave`). It is run only where it is
+named, since it needs optiland, and is recorded and never gated; a run whose figures are outside their band asks
+optiland once more, at 512 rays. About 8 minutes on the benchmark. A photopic run has no optiland row: its FFT
+MTF is of one line.
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

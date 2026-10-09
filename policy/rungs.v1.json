@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 8,
+  "version": 9,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -78,6 +78,16 @@
         "fields.mismatches": { "tolerance": 0, "unit": "elements" },
         "mtf.maxAbs": { "tolerance": 1e-9, "unit": "1" },
         "sampling.mismatches": { "tolerance": 0, "unit": "elements" }
+      }
+    },
+    "r5": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-7, "unit": "mm" },
+        "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
+        "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
       }
     },
     "r6a": {

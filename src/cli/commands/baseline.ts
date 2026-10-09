@@ -7,6 +7,7 @@ import type { CheckRecord } from "../../baseline/check.ts";
 import { baselineFile, baselineReportFiles } from "../../baseline/files.ts";
 import { renderBaselineReport } from "../../baseline/report.ts";
 import { COMPARISONS_FILE, comparisonFileText, readComparisonFile } from "../../compare/comparisonFile.ts";
+import { followUpsOf } from "../../compare/followUp.ts";
 import { loadPolicy } from "../../compare/policyFile.ts";
 import type { Baseline } from "../../contract/baseline.ts";
 import { FAILING_VERDICTS } from "../../contract/comparison.ts";
@@ -188,6 +189,7 @@ async function check(
     sources: prepared.sources,
     engines: runEngines(committed),
     rungs,
+    followUps: followUpsOf(policy),
   });
   const directory = dirname(result.manifestPath);
   const comparisons = compareRunDirectory(directory, policy);

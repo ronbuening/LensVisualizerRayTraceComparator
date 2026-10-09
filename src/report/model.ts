@@ -15,6 +15,10 @@ import { CONTRACT_VERSION } from "../contract/version.ts";
 import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
+import { NATIVE_MTF_RUNG } from "../compare/mtfNative.ts";
+import { buildMtfComparison } from "./mtfComparison.ts";
+import type { MtfComparison } from "./mtfComparison.ts";
+import { NOT_COVERED } from "./wording.ts";
 
 /**
  * An engine of the run, as the report names it. `adapterRevision` is stated for an engine that has one: the hash
@@ -135,6 +139,11 @@ export interface ReportSection {
   } | null;
   /** The values the engines' answers only record; null when no answer has any. */
   readonly recorded: RecordedTable | null;
+  /**
+   * For a request of the rung that sets the engines' own MTF side by side: the table of it, at every frequency of
+   * the request (`buildMtfComparison`). Left out by every other section.
+   */
+  readonly mtf?: MtfComparison;
 }
 
 /** A report of one run of a suite. */
@@ -154,6 +163,8 @@ export interface ReportModel {
   readonly support: readonly SupportRow[];
   /** One section per request, in the order of the comparisons. */
   readonly sections: readonly ReportSection[];
+  /** What the comparison does not show, whatever its verdicts: the fixed sentences of `NOT_COVERED`. */
+  readonly notCovered: readonly string[];
 }
 
 /**
@@ -326,6 +337,14 @@ function sectionOf(
             }),
           ),
         };
+  const mtf =
+    rung !== NATIVE_MTF_RUNG
+      ? null
+      : buildMtfComparison({
+          participants: sets[0].participants,
+          pairs: sets.flatMap((set) => set.pairs),
+          policy: rungPolicy,
+        });
   return {
     run,
     rung,
@@ -339,6 +358,7 @@ function sectionOf(
     pairwise,
     // Every set of a request states the same participants, so the first one says it for all.
     recorded: recordedOf(sets[0]),
+    ...(mtf === null ? {} : { mtf }),
   };
 }
 
@@ -352,7 +372,9 @@ function sectionOf(
  * - `support` has a row for every request of the manifest, in the order of its jobs, and says for every engine how
  *   its job ended. It comes from the manifest alone, so it is the same whatever was compared.
  * - `sections` has one entry per request that was compared, in the order of the comparisons: the sets of one run,
- *   rung and request that follow each other are one section. A section also lists what the answers only record.
+ *   rung and request that follow each other are one section. A section also lists what the answers only record,
+ *   and a section of the rung of the engines' own MTF has the table of it (`ReportSection.mtf`).
+ * - `notCovered` is the fixed list of what no comparison of this tool shows.
  *
  * It does not check that the three belong together; `reportInputProblems` does.
  */
@@ -399,5 +421,6 @@ export function buildReport(manifest: RunManifest, comparisons: ComparisonFile, 
     failing,
     support: supportOf(manifest, labelOf),
     sections: grouped.map((sets) => sectionOf(sets, policy, labelOf)),
+    notCovered: [...NOT_COVERED],
   };
 }

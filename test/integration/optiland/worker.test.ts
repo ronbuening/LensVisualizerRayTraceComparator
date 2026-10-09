@@ -272,15 +272,14 @@ test(
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
-    // their own, R4f and R6b, are not, and of a case that no LensVisualizer sampled they ask nobody anything; nor
-    // do the rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its
-    // frequencies from.
+    // their own, R4f, R5 and R6b, ask nobody anything of a case that no LensVisualizer sampled; nor do the rungs
+    // that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its frequencies from.
     const rungs = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true).map(
       (rung) => rung.id,
     );
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
-      ["r4", "r4f", "r6a", "r6b"],
+      ["r4", "r4f", "r5", "r6a", "r6b"],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());

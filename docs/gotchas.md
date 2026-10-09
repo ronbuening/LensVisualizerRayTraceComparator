@@ -1664,6 +1664,38 @@ shares no code with any engine.
   LensVisualizer `33ebdb30`.
 - **Class.** engine behaviour: recorded.
 
+### A rim ray that was stopped and left the lens is counted by optiland's worker as neither lit nor lost
+
+- **Where.** `FieldProbe` of `workers/python/lvrtc_optiland/mtf.py`: `rimRaysLost` counts the rim rays that have no
+  landing or no direction, `rimRaysLit` those with an intensity above 0. A rim ray that an aperture stopped and
+  that optiland traced on through the mathematical surfaces has a landing, a direction and no light.
+- **Effect.** `rimRaysLost` above 0 means an axis that is a NaN, and such a field has no curve: on the benchmark
+  all 10 fields with a lost rim ray are `unavailable`. The fields whose axis is a stopped ray's are not among
+  them: full field of the Nikon Z 24-70 mm f/4 at its tele end (a rim ray 6.6 mm from the chief ray, and 0.31
+  between LensVisualizer's tangential MTF and optiland's at 50 cycles/mm) and half field of the Z 50 mm f/1.2
+  (5 mm, 0.07 to 0.10). A rim ray that is not lit says nothing by itself either: 96 of 134 fields with curves
+  have fewer than four lit, most of them at f/8 and inside every band, since a ray aimed at the rim of the stop
+  is clipped there by a rounding.
+- **Handled.** Rung R5 keeps a field with `rimRaysLost` above 0 out of its bands (`rim-rays-lost`), which on the
+  benchmark sets nothing aside, and shows `rimLandingSpreadMm` in the table of the fields beside every row. The
+  fields above stand as `ATTENTION`, class `method`. A limit on the distance of a rim ray from the chief ray
+  would tell them; none is pinned, and the check of the tangential step on a vignetted pupil is Stage 4.2.
+  Measured at optiland `4e893f53` on cases of LensVisualizer `33ebdb30`.
+- **Class.** method.
+
+### A fraction of an image height is no field of optiland
+
+- **Where.** `mtf.read_request`: optiland's fields are angles, and a case states no image height.
+- **Effect.** A request that states its fields as fractions cannot be resolved by optiland, and a second request
+  by angles would be another comparison than LensVisualizer's.
+- **Handled.** Rung R5 hands optiland the angle the run's recipe resolved each fraction to, as the engine option
+  `fieldAnglesDeg`, one for each field in their order; the answer names a field by its fraction and states the
+  angle it computed with. Without the option such a spec is `unsupported` (`fields.image-height-fractions`), and
+  an option that is not one finite angle a field is `option.fieldAnglesDeg`. For a spec of angles the option is
+  not read. The landing of each engine's own chief ray is then held to the other's before any row
+  (`chiefLanding.maxAbs`, 1e-7 mm).
+- **Class.** convention.
+
 ### optiland's FFT takes a grid that is even on the stop for one that is even in direction cosines
 
 - **Where.** `ScalarFFTPSF._generate_pupils` lays the wavefront on `linspace(-1, 1, num_rays)` in both normalised

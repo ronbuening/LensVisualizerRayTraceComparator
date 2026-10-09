@@ -7,9 +7,9 @@ import { test } from "node:test";
 import { createComparatorLookup } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
-import type { MetricPolicy, Policy } from "../../src/contract/policy.ts";
+import type { MetricPolicy, Policy, RungPolicy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
-import { RUNGS, r0Rung, r1Rung, r4Rung, selftestRung } from "../../src/core/rungs.ts";
+import { RUNGS, r0Rung, r1Rung, r4Rung, r5Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 8);
+  assert.equal(policy.version, 9);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -159,6 +159,35 @@ test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it 
   assert.deepEqual(reported.sort(), Object.keys(r4f.metrics).sort());
 });
 
+test("r5 is recorded, of two methods: the plan's bands on and off the axis, and the limit of the chief rays' landing", () => {
+  const { r2, r6b } = loadPolicy().rungs;
+  const r5: RungPolicy = loadPolicy().rungs.r5;
+  assert.deepEqual([r5.quantity, r5.mode, r5.class], ["mtf.native", "independent-method", "recorded"]);
+  assert.deepEqual(
+    { ...r5.metrics },
+    {
+      "chiefLanding.maxAbs": { attention: 1e-7, unit: "mm" },
+      "mtfOffAxis.maxAbs": { attention: 0.01, unit: "1" },
+      "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
+    },
+  );
+  // The bands are those of R6b, the plan's; the landing of two chief rays is held to the scale of R2: as far as
+  // R2 lets LensVisualizer land a ray from the arbiter's.
+  for (const name of ["mtfOffAxis.maxAbs", "mtfOnAxis.maxAbs"]) assert.deepEqual(r5.metrics[name], r6b.metrics[name]);
+  assert.equal(r5.metrics["chiefLanding.maxAbs"].attention, r2.metrics["landing.maxDistance"].floor?.limit);
+  // Nothing of it is gated, floored or blocking, and no metric has a tolerance.
+  assert.equal(r5.floor, undefined);
+  assert.equal(r5.blocksLaterRungs, undefined);
+  assert.ok(Object.values(r5.metrics).every((metric) => metric.tolerance === undefined && metric.floor === undefined));
+  const comparator = COMPARATORS.get("mtf.native", "r5");
+  assert.equal(comparator?.rung, "r5");
+  const reported = comparator?.metrics.map((metric) => metric.name) ?? [];
+  for (const name of Object.keys(r5.metrics)) assert.ok(reported.includes(name), name);
+  // The rung is of three engines, asks the one request of R6b, and is run only where it is named.
+  assert.deepEqual([r5Rung.quantity, r5Rung.needsRecipe, r5Rung.onlyWhereNamed], ["mtf.native", true, true]);
+  assert.deepEqual(r5Rung.engines, ["lv", "optiland", "wave"]);
+});
+
 test("every rung has a policy entry and every entry a rung, with its quantity, a comparator and its metrics", () => {
   assert.deepEqual(policyRegistryProblems(loadPolicy(), RUNGS, COMPARATORS), []);
   assert.deepEqual(Object.keys(loadPolicy().rungs).sort(), RUNGS.map((rung) => rung.id).sort());
@@ -213,7 +242,8 @@ test("each way a policy and the code can disagree is reported", () => {
     "policy entry r1: the comparator reports no metric efl.abs",
     "policy entry r1: the comparator reports no metric pupil.z.abs",
     "policy entry r2: the comparator reports no metric clip.mismatches",
-    "policy entry r5 is of no registered rung",
+    "policy entry r5: the comparator reports no metric mtf.maxAbs",
+    "policy entry r5: the comparator reports no metric mtf.rms",
   ]);
   // A quantity that is compared for other rungs only has no comparator for this one.
   const stray: RungDefinition = { id: "r9", quantity: "rays.trace", buildRequests: () => [] };

@@ -14,7 +14,10 @@ request needs around the class, and each of these is stated in the answer:
   -y, the contract's one toward +y: the optic is the mirror image in y of the contract's, which changes no MTF
   of a system of revolution and the sign of where the chief ray lands, whose distance from the axis is what is
   reported. Finite objects are not answered: an angle of optiland is then measured at its paraxial entrance pupil,
-  and no spec says where the contract's is.
+  and no spec says where the contract's is. A spec that states its fields as fractions of an image height is
+  answered only with the engine option ``fieldAnglesDeg``: the angle each fraction was resolved to by whoever
+  knows the image height, one for each, in their order. A case states no image height, so the engine resolves
+  none; the answer names each field as it was requested and states the angle it computed with.
 - **The pupil** is the stop: ``ray_tracer.set_aiming("robust", max_iter=50, tol=1e-10)``, so optiland's grid of
   ``num_rays`` by ``num_rays`` normalised pupil coordinates is laid on the stop surface, out to the radius of that
   surface's own aperture (the case's clip radius of the stop), and every ray is clipped by every surface's
@@ -88,6 +91,10 @@ RAYS_OPTION = "fftRays"
 LINE_OPTION = "line"
 """The engine option that names the line of the case the MTF is of: its index in ``conditions.lines``."""
 
+ANGLES_OPTION = "fieldAnglesDeg"
+"""The engine option that states, for a spec whose fields are fractions of an image height, the angle of each in
+degrees, in the order of the spec: what the run's MTF recipe resolved them to."""
+
 AIMING_MODE = "robust"
 AIMING_MAX_ITERATIONS = 50
 AIMING_TOLERANCE_MM = 1e-10
@@ -118,6 +125,7 @@ UNSUPPORTED = {
     "fractions": "fields.image-height-fractions",
     "rays": f"option.{RAYS_OPTION}",
     "line": f"option.{LINE_OPTION}",
+    "angles": f"option.{ANGLES_OPTION}",
     "polychromatic": "lines.polychromatic",
     "finite": "object.finite",
 }
@@ -159,6 +167,9 @@ class MtfRequest:
     """The index of the line of the case."""
     ladder: tuple[int, int]
     """``num_rays`` of the coarser and of the finer step."""
+    fractions: tuple[float, ...] = ()
+    """For a spec that states its fields as fractions of an image height: those fractions, which ``angles`` were
+    given for (``ANGLES_OPTION``) and which the answer names its fields by. Empty for a spec of angles."""
 
 
 def _item(code: str, name: str, message: str) -> dict[str, str]:
@@ -188,9 +199,28 @@ def read_request(
     if spec["focus"] != "design":
         message = "optiland has no focus search for an MTF: the plane is the image plane of the case"
         refused.append(_item(BAD_OPTION, "engine_best", message))
-    if spec["fields"]["kind"] != "angles-deg":
-        message = "a case states no image height a fraction could be of: state the fields as angles"
-        refused.append(_item(BAD_OPTION, "fractions", message))
+    stated = spec["fields"]["values"]
+    angles = stated
+    fractions = spec["fields"]["kind"] != "angles-deg"
+    if fractions:
+        angles = options.get(ANGLES_OPTION)
+        if angles is None:
+            message = (
+                "a case states no image height a fraction could be of: state the fields as angles, or give the "
+                f"angle of each fraction with the engine option {ANGLES_OPTION}"
+            )
+            refused.append(_item(BAD_OPTION, "fractions", message))
+        elif not (
+            isinstance(angles, list)
+            and len(angles) == len(stated)
+            and all(isinstance(angle, (int, float)) and not isinstance(angle, bool) for angle in angles)
+            and all(math.isfinite(angle) for angle in angles)
+        ):
+            message = (
+                f"the option {ANGLES_OPTION} is one angle in degrees for each of the {len(stated)} fields of the "
+                f"spec; got {angles!r}"
+            )
+            refused.append(_item(BAD_OPTION, "angles", message))
 
     rays = options.get(RAYS_OPTION, DEFAULT_RAYS)
     if not _whole(rays) or rays not in LADDER[1:]:
@@ -220,7 +250,8 @@ def read_request(
         return refused
     return MtfRequest(
         frequencies=tuple(float(frequency) for frequency in spec["frequenciesPerMm"]),
-        angles=tuple(float(angle) for angle in spec["fields"]["values"]),
+        angles=tuple(float(angle) for angle in angles),
+        fractions=tuple(float(field) for field in stated) if fractions else (),
         line=0 if line is None else int(line),
         ladder=(LADDER[LADDER.index(rays) - 1], int(rays)),
     )
@@ -659,7 +690,7 @@ def _curve(values: Sequence[float]) -> dict[str, Any]:
 
 
 def answer_field(
-    asked: MtfRequest, case: dict[str, Any], angle_deg: float, measure: MtfMeasure
+    asked: MtfRequest, case: dict[str, Any], angle_deg: float, measure: MtfMeasure, stated: float | None = None
 ) -> tuple[dict[str, Any], list[str]]:
     """The entry of one field of an answer, and what is noted of it for people.
 
@@ -668,6 +699,7 @@ def answer_field(
     still said if that was found. The curves are the finer step's. A field whose finer step has none is
     "unavailable"; one whose coarser step has none is "unconverged", nothing saying that it settled; one that
     moved by more than the band between the steps is "unconverged". ``FATAL`` exceptions are not a field's.
+    ``stated`` is the field as the spec states it, where that is no angle: the entry is named by it.
     """
     count = len(asked.frequencies)
     named = f"the field at {angle_deg!r} degrees"
@@ -678,7 +710,7 @@ def answer_field(
     def entry(status: str, reason: str | None, curves: tuple[list[float], list[float]] | None) -> dict[str, Any]:
         blank = [math.nan] * count
         field: dict[str, Any] = {
-            "field": angle_deg,
+            "field": angle_deg if stated is None else stated,
             "fieldAngleDeg": None if probe is None else probe.angle_deg,
             "imageHeightMm": None if probe is None else probe.image_height_mm,
             "sagittal": _curve(blank if curves is None else curves[1]),
@@ -785,7 +817,7 @@ def answer_mtf(
                 f"the request had taken {begun - started:.0f} s when field {number} of {len(asked.angles)} was to be "
                 f"begun, and {REQUEST_BUDGET_S:.0f} s are its budget: ask fewer fields at once"
             )
-        field, noted = answer_field(asked, case, angle_deg, measure)
+        field, noted = answer_field(asked, case, angle_deg, measure, asked.fractions[number] if asked.fractions else None)
         fields.append(field)
         notes.extend(noted)
         seconds.append(clock() - begun)

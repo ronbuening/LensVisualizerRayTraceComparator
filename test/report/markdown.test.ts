@@ -56,6 +56,7 @@ test("the Markdown has LF line endings, one newline at the end, and its sections
       "## Support matrix",
       "## Results",
       "### tele",
+      "## Not covered",
       "## How to read this",
     ],
   );

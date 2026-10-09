@@ -1,6 +1,9 @@
 import { statSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { followUpsOf } from "../../compare/followUp.ts";
+import { loadPolicy } from "../../compare/policyFile.ts";
+import type { Policy } from "../../contract/policy.ts";
 import type { ResultStatus } from "../../contract/result.ts";
 import { REPO_ROOT, loadConfig } from "../../core/config.ts";
 import type { LoadedConfig } from "../../core/config.ts";
@@ -26,6 +29,8 @@ export interface RunCommandInputs {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** The directory that the suite file and `--root` are relative to. */
   readonly cwd: string;
+  /** The policy the follow-ups of a rung are decided by (`followUpsOf`); the committed one unless given. */
+  readonly policy?: Policy;
 }
 
 const SYNOPSIS = "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]\n";
@@ -42,9 +47,11 @@ const HELP = [
   "  --engines <ids>  engines for every run, in place of the run's own list and of every configured engine;",
   "                   a built-in engine (lv, ref, optiland) is run only where it is named",
   "  --rungs <ids>    rungs for every run, in place of the run's own list and of every rung: selftest, r0, r1,",
-  "                   r2, r3, r4 and r4f; r2, r3 and r4 trace each run's ray sets, and share one answer per",
-  "                   engine and set; r4f is asked of lv and of replay, the replay of its MTF sampling, whatever",
-  "                   is named",
+  "                   r2, r3, r4, r4f, r6a and r6b; r2, r3 and r4 trace each run's ray sets, and share one answer",
+  "                   per engine and set; r4f is asked of lv and of replay, the replay of its MTF sampling, and",
+  "                   r6b of lv and of wave, whatever is named. r5 is run only where it is named: it is asked",
+  "                   of lv, optiland and wave, and asks optiland once more, at 512 rays, for a run whose",
+  "                   figures are outside their band",
   "  --json           print one JSON object in place of the lines",
   "",
   "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
@@ -123,7 +130,8 @@ export async function prepareSuiteRun(
 /** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
 function jobLine(outcome: JobOutcome, widths: readonly number[]): string {
   const { job, source, detail } = outcome;
-  const cells = [job.run, job.rung, job.engine, job.status, source].map((cell, column) => cell.padEnd(widths[column]));
+  const engine = job.step === undefined ? job.engine : `${job.engine} +${job.step}`;
+  const cells = [job.run, job.rung, engine, job.status, source].map((cell, column) => cell.padEnd(widths[column]));
   const said = job.error === undefined ? detail : `${job.error.code}: ${detail ?? ""}`;
   return `${[...cells, ...(said === null ? [] : [said])].join("  ").trimEnd()}\n`;
 }
@@ -234,6 +242,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
           sources: prepared.sources,
           engines: asked.engines,
           rungs: asked.rungs,
+          followUps: followUpsOf(inputs.policy ?? loadPolicy()),
           onJob: asked.json ? undefined : (outcome) => io.stdout(jobLine(outcome, widths)),
         });
       } catch (error) {

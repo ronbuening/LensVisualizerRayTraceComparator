@@ -28,14 +28,17 @@ import { runSuite } from "../../src/core/orchestrator.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../src/core/resultStore.ts";
 import {
   R4F_ENGINES,
+  R5_ENGINES,
   R6B_ENGINES,
   geometricMtfSpec,
   r2Rung,
   r3Rung,
   r4Rung,
   r4fRung,
+  r5Rung,
   r6aRung,
   r6bRung,
+  recipeAngles,
   selftestRung,
   waveMtfSpec,
   waveTraceRequests,
@@ -280,6 +283,64 @@ test("r6b hands the run's grid cap and bundle grid to its engines, each under it
     lvGridCap: 64,
     bundleGrid: 16,
   });
+});
+
+test("r5 asks r6b's one request of three engines, and hands optiland alone the recipe's angle of each field", () => {
+  assert.deepEqual([r5Rung.id, r5Rung.quantity, r5Rung.needsRecipe], ["r5", MTF_NATIVE, true]);
+  assert.deepEqual([r5Rung.engines, r5Rung.onlyWhereNamed], [["lv", "optiland", "wave"], true]);
+  assert.equal(r5Rung.engines, R5_ENGINES);
+  const inputs = { raySets: [], recipe: RECIPE };
+  // One request, r6b's, so the three answers are one comparison and r6b's answers are not computed again.
+  assert.deepEqual(r5Rung.buildRequests(SINGLET, RUN, inputs), r6bRung.buildRequests(SINGLET, RUN, inputs));
+  assert.equal(r5Rung.buildRequests(SINGLET, RUN, inputs).length, 1);
+  assert.deepEqual(r5Rung.buildRequests(SINGLET, RUN), []);
+
+  // The fields of the spec are 0 and 0.5 (the recipe has no angle for 1): one angle for each, in their order.
+  assert.deepEqual(r5Rung.engineOptions?.(RUN, inputs, "optiland"), { fieldAnglesDeg: [0, 11.25] });
+  const stated = { ...RUN, fields: { kind: "image-height-fractions", values: [0.5, 0.25, 0] } } as const;
+  assert.deepEqual(r5Rung.engineOptions?.(stated, inputs, "optiland"), { fieldAnglesDeg: [11.25, 0] });
+  // The angles are by fraction, never by place: a recipe that lists its fields in another order gives the same.
+  const reversed = { ...RECIPE, fields: [...RECIPE.fields].reverse() };
+  assert.deepEqual(r5Rung.engineOptions?.(RUN, { raySets: [], recipe: reversed }, "optiland"), {
+    fieldAnglesDeg: [0, 11.25],
+  });
+  // optiland is not handed the options of the other two, and they are handed r6b's and no angle.
+  const sampled: RunSpec = { ...RUN, sampling: { lvGridCap: 64, bundleGrid: 16 } };
+  assert.deepEqual(r5Rung.engineOptions?.(sampled, inputs, "optiland"), { fieldAnglesDeg: [0, 11.25] });
+  for (const engine of ["lv", "wave"]) {
+    assert.deepEqual(r5Rung.engineOptions?.(sampled, inputs, engine), { lvGridCap: 64, bundleGrid: 16 });
+    assert.equal(r5Rung.engineOptions?.(RUN, inputs, engine), undefined);
+  }
+  // Without a recipe, or for fields the recipe resolved to no angle, optiland is handed nothing.
+  assert.equal(r5Rung.engineOptions?.(RUN, { raySets: [], recipe: null }, "optiland"), undefined);
+  assert.equal(r5Rung.engineOptions?.(RUN, undefined, "optiland"), undefined);
+  const spec = waveMtfSpec(RECIPE);
+  assert.ok(spec !== null);
+  assert.deepEqual(recipeAngles(RECIPE, spec), [0, 11.25]);
+  assert.equal(recipeAngles(RECIPE, { ...spec, fields: { ...spec.fields, values: [0, 1] } }), null);
+  assert.equal(recipeAngles(RECIPE, { ...spec, fields: { ...spec.fields, values: [0.25] } }), null);
+});
+
+test("a rung's options are made for each engine it is asked of, from the run's recipe", async (t) => {
+  const perEngine: RungDefinition = {
+    ...ownRung,
+    engineOptions: (_runSpec, inputs, engineId) =>
+      engineId === "fake-b" ? { height: inputs?.recipe?.referenceHeightMm ?? null } : undefined,
+  };
+  const engines = watchedRegistry({ "fake-a": fakeEngine(), "fake-b": fakeEngine() });
+  await runSuite({
+    suite: suiteOf("options", [{ name: "with", opticalCase: SINGLET }]),
+    registry: engines.registry,
+    runsDir: tempDir(t),
+    sources: { fixture: recipeSource() },
+    rungDefinitions: [perEngine],
+  });
+  assert.deepEqual(engines.ran, ["fake-a", "fake-b"]);
+  assert.deepEqual(
+    engines.requests.map((request) => request.engineOptions),
+    [undefined, { height: 20 }],
+  );
+  assert.equal(engines.requests[0].id, engines.requests[1].id);
 });
 
 // ── In a run ─────────────────────────────────────────────────────────────────────────────────────────────────────

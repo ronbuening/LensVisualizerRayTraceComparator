@@ -155,6 +155,35 @@ class ReadRequestTest(unittest.TestCase):
             alone = read_request(mtf_spec([0], **{name: value}), {}, DOUBLE_GAUSS)
             self.assertEqual([entry["item"] for entry in alone], [item])
 
+    def test_fractions_of_an_image_height_are_answered_only_with_the_angle_of_each(self) -> None:
+        spec = mtf_spec([0], [0, 12.5])
+        spec["fields"] = {"kind": "image-height-fractions", "values": [0, 0.5, 1]}
+        asked = read_request(spec, {"fieldAnglesDeg": [0, 7.25, 14]}, DOUBLE_GAUSS)
+        self.assertEqual(asked.angles, (0.0, 7.25, 14.0))
+        self.assertEqual(asked.fractions, (0.0, 0.5, 1.0))
+        # A spec of angles is its own: the option is not read for it.
+        self.assertEqual(read_request(mtf_spec([3]), {"fieldAnglesDeg": [9]}, DOUBLE_GAUSS).angles, (3.0,))
+        self.assertEqual(read_request(mtf_spec([3]), {"fieldAnglesDeg": [9]}, DOUBLE_GAUSS).fractions, ())
+        without = read_request(spec, {}, DOUBLE_GAUSS)
+        self.assertEqual([item["item"] for item in without], ["fields.image-height-fractions"])
+        self.assertIn("fieldAnglesDeg", without[0]["message"])
+        for value in ([0, 7.25], [0, 7.25, 14, 20], [0, "7", 14], [0, True, 14], [0, math.nan, 14], 7.25, "0,7,14"):
+            wrong = read_request(spec, {"fieldAnglesDeg": value}, DOUBLE_GAUSS)
+            self.assertEqual(
+                [(item["code"], item["item"]) for item in wrong], [("option", "option.fieldAnglesDeg")], value
+            )
+
+    def test_a_field_asked_as_a_fraction_is_named_by_it_and_computed_at_its_angle(self) -> None:
+        asked = MtfRequest(ASKED.frequencies, (0.0, 10.0), 0, (128, 256), (0.0, 0.5))
+        data, _ = answer_mtf(asked, DOUBLE_GAUSS, StandIn(settled(0.0, 10.0)))
+        angles = MtfRequest(ASKED.frequencies, (0.0, 10.0), 0, (128, 256))
+        as_angles, _ = answer_mtf(angles, DOUBLE_GAUSS, StandIn(settled(0.0, 10.0)))
+        self.assertEqual([field["field"] for field in data["fields"]], [0.0, 0.5])
+        self.assertEqual([field["fieldAngleDeg"] for field in data["fields"]], [0.0, 10.0])
+        # Nothing else of the answer knows how the field was stated.
+        for named, angled in zip(data["fields"], as_angles["fields"], strict=True):
+            self.assertEqual({**named, "field": angled["field"]}, angled)
+
     def test_a_case_of_several_lines_is_answered_one_line_at_a_time_and_not_without_one(self) -> None:
         case = two_lines(DOUBLE_GAUSS, 486.1327, 0.5)
         refused = read_request(mtf_spec([0]), {}, case)

@@ -12,10 +12,21 @@ import { join } from "node:path";
 import { REPORT_MARKDOWN_FILE, renderReport } from "../../src/report/index.ts";
 import { PYTHON_MISSING } from "../engines/support.ts";
 import { COMPARISONS, MANIFEST, POLICY } from "./handBuilt.ts";
+import { R5_GOLDEN, r5Cycle } from "./r5Fixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile } from "./support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
 writeFileSync(goldenFile("hand-built"), renderReport(MANIFEST, COMPARISONS, POLICY).markdown);
+{
+  // Rung R5 on stand-ins that know no optics: a run, a comparison and a report in this process.
+  const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-golden-"));
+  try {
+    writeFileSync(goldenFile(R5_GOLDEN), (await r5Cycle(runsDir)).report.markdown);
+    console.log(`${R5_GOLDEN}: written`);
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+}
 for (const suite of GOLDEN_SUITES) {
   if (suite.needsPython && PYTHON_MISSING !== false) {
     console.log(`${suite.name}: not written: ${PYTHON_MISSING}`);

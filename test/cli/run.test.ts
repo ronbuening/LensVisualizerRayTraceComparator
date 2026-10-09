@@ -210,7 +210,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   assert.equal(unknown.out, "");
   assert.match(
     unknown.err,
-    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r6a, r6b$/m,
+    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r6a, r6b$/m,
   );
   assert.equal(existsSync(runsDir), false);
 
@@ -656,17 +656,17 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.equal(own.code, EXIT_OK, own.err);
   // The run that names neither gets every configured engine on every rung that compares the engines of a run. A
   // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rungs that
-  // are about engines of their own, r4f and r6b, ask nothing about a case that no LensVisualizer sampled, and the
+  // are about engines of their own, r4f, r5 and r6b, ask nothing about a case that no LensVisualizer sampled, and the
   // rungs that take an MTF of the traced rays, r4 and r6a, nothing of a run without a recipe to take its
   // frequencies from.
   const shared = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true);
   assert.deepEqual(
     RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
-    ["r4", "r4f", "r6a", "r6b"],
+    ["r4", "r4f", "r5", "r6a", "r6b"],
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
-    ["r4f", "r6b"],
+    ["r4f", "r5", "r6b"],
   );
   assert.deepEqual(
     manifestOf(join(rootDir, "runs"), "own").jobs.map((job) => `${job.run} ${job.rung} ${job.engine}`),
@@ -682,7 +682,7 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.equal(worked.code, EXIT_USAGE);
   assert.equal(
     worked.err,
-    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r6a, r6b\n',
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r6a, r6b\n',
   );
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });

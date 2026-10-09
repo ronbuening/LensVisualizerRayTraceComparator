@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { createComparatorLookup } from "../../src/compare/comparator.ts";
 import type { ComputedMetric } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
+import { mtfNativeComparator } from "../../src/compare/mtfNative.ts";
 import { selftestEchoComparator } from "../../src/compare/selftestEcho.ts";
 import type { JsonObject } from "../../src/contract/json.ts";
 import { RUNGS } from "../../src/core/rungs.ts";
@@ -112,12 +113,13 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   const registered = QUANTITIES.list().map((quantity) => quantity.id);
   for (const quantity of compared) assert.ok(registered.includes(quantity), quantity);
   // A quantity without a comparator is one that no rung asks for: it is presented, and not compared. Today there
-  // is none. An engine's own MTF has a comparator for each of the two rungs that ask for it, r4f and r6b, and for
-  // no other: the rung that sets engines' MTF against each other brings its own.
+  // is none. An engine's own MTF has a comparator for each of the three rungs that ask for it, r4f, r5 and r6b,
+  // and for no other.
   const presented = registered.filter((quantity) => !compared.includes(quantity));
   assert.deepEqual(presented, []);
   assert.equal(COMPARATORS.get("mtf.native"), undefined);
-  assert.equal(COMPARATORS.get("mtf.native", "r5"), undefined);
+  assert.equal(COMPARATORS.get("mtf.native", "r5"), mtfNativeComparator);
+  assert.equal(COMPARATORS.get("mtf.native", "r6c"), undefined);
   for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
   assert.equal(COMPARATORS.get("selftest.echo"), selftestEchoComparator);
   assert.equal(COMPARATORS.get("constructor"), undefined);
@@ -146,6 +148,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
     COMPARATORS.list().map((comparator) => [comparator.quantity, comparator.rung]),
     [
       ["mtf.native", "r4f"],
+      ["mtf.native", "r5"],
       ["mtf.native", "r6b"],
       ["paraxial.first-order", undefined],
       ["rays.trace", "r2"],

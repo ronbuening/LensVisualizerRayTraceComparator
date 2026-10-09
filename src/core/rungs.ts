@@ -76,10 +76,16 @@ export interface RungDefinition {
    */
   readonly engines?: readonly string[];
   /**
-   * The options the rung's requests carry for each engine they are asked of, made from the run; the options the
-   * run states for an engine by its id (`sampling.engines`) are laid over them. Without it, only those.
+   * True for a rung that is run only where it is named, by `--rungs` or by a run's `rungs`: a run that names no
+   * rung is not asked it. For a rung that needs an engine not every machine has.
    */
-  engineOptions?(runSpec: RunSpec): JsonObject | undefined;
+  readonly onlyWhereNamed?: boolean;
+  /**
+   * The options the rung's requests carry for the engine `engineId`, made from the run and from what the run's
+   * case source made for the rung; the options the run states for an engine by its id (`sampling.engines`) are
+   * laid over them. Without it, only those.
+   */
+  engineOptions?(runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined;
   /**
    * The requests of this rung for one case, in a fixed order and without engine options: equal arguments give
    * equal requests, with equal ids. Each is about `opticalCase` and asks for `quantity` with a spec the quantity
@@ -316,6 +322,53 @@ export const r6bRung: RungDefinition = Object.freeze({
   },
 });
 
+/** The engines of the rung `r5`: LensVisualizer, optiland, and the comparator's wave estimator on LensVisualizer's rays. */
+export const R5_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "wave"]);
+
+/** The engine of `r5` that is handed the angles of the fields, and the option it is handed them as. */
+export const R5_ANGLES_ENGINE = "optiland";
+export const R5_ANGLES_OPTION = "fieldAnglesDeg";
+
+/**
+ * The angle the recipe resolved each field of an `mtf.native` spec of fractions to, degrees, in the order of the
+ * spec; null where the recipe has no angle for one of them.
+ */
+export function recipeAngles(recipe: MtfRecipe, spec: MtfNativeSpec): number[] | null {
+  const angles = spec.fields.values.map(
+    (fraction) => recipe.fields.find((field) => field.fraction === fraction && field.angleDeg !== null)?.angleDeg,
+  );
+  return angles.some((angle) => angle === undefined || angle === null) ? null : (angles as number[]);
+}
+
+/**
+ * The rung `r5`, LensVisualizer's product MTF beside an engine's own: the one `mtf.native` request of `r6b`
+ * (`waveMtfSpec`: the diffraction MTF of the run's recipe on the plane of the case, at the fields the run traces
+ * rays for, as fractions of the reference image height), asked of LensVisualizer, of optiland, whose answer is its
+ * FFT MTF, and of the engine `wave`, the comparator's wave estimator on LensVisualizer's rays. One request, so
+ * the three answers are one comparison and an answer `r6b` has in the store is not computed again.
+ *
+ * No engine but LensVisualizer knows which angle a fraction of its image height is. The recipe states it, and
+ * optiland is handed the recipe's angles as its option `fieldAnglesDeg`, one for each field of the spec; the other
+ * two are handed the options `r6b` hands them. It is asked of those three and of no other engine (`R5_ENGINES`),
+ * only for a recipe LensVisualizer resolved, and only where the rung is named: optiland is not on every machine.
+ */
+export const r5Rung: RungDefinition = Object.freeze({
+  id: "r5",
+  quantity: MTF_NATIVE,
+  needsRecipe: true,
+  engines: R5_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined => {
+    if (engineId !== R5_ANGLES_ENGINE) return r6bRung.engineOptions?.(runSpec);
+    const recipe = inputs?.recipe ?? null;
+    const spec = recipe === null ? null : waveMtfSpec(recipe, runSpec.fields);
+    const angles = recipe === null || spec === null ? null : recipeAngles(recipe, spec);
+    return angles === null ? undefined : { [R5_ANGLES_OPTION]: angles };
+  },
+  buildRequests: (opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    r6bRung.buildRequests(opticalCase, runSpec, inputs),
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
@@ -329,20 +382,22 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r3Rung,
   r4Rung,
   r4fRung,
+  r5Rung,
   r6aRung,
   r6bRung,
 ]);
 
 /**
  * The rungs that `ids` name, in the order of `rungs` and each once, however `ids` orders or repeats them. When
- * `ids` is undefined, as for a run that states none: every rung. Throws a `UsageError` naming every id that is not
+ * `ids` is undefined, as for a run that states none: every rung but those that are run only where they are named
+ * (`RungDefinition.onlyWhereNamed`). Throws a `UsageError` naming every id that is not
  * a rung, and for an empty list, which asks for nothing.
  */
 export function selectRungs(
   ids: readonly string[] | undefined,
   rungs: readonly RungDefinition[] = RUNGS,
 ): RungDefinition[] {
-  if (ids === undefined) return [...rungs];
+  if (ids === undefined) return rungs.filter((rung) => rung.onlyWhereNamed !== true);
   const known = rungs.map((rung) => rung.id);
   const unknown = [...new Set(ids)].filter((id) => !known.includes(id));
   if (unknown.length > 0) {
