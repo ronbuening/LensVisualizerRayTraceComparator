@@ -150,6 +150,7 @@ first two are gated.
 | R4 | Binless geometric MTF, reference line and polychromatic, on rays valid in every engine | identical-rays | 1e-7, as planned; a field at every line is one comparison, and "every engine" is the two of a pair (see Amendments) |
 | R4f | Fidelity: comparator estimator on a replay of LV's own sampling vs `computeMtf` geometric | direct | 1e-9, pinned at Stage 3.2; grid sizes, ray counts and field statuses equal (see Amendments) |
 | R5 | LV product MTF vs engine-native MTF (first engine: `ScalarFFTMTF`) | independent | recorded; attention band 0.005 on axis / 0.01 off axis, over the fields of two methods whose chief rays land within 1e-7 mm (see Amendments) |
+| R5g | LV geometric product MTF vs engine-native geometric MTF (first engine: optiland's own geometric MTF) | independent | recorded; attention band 0.005 on axis / 0.01 off axis (added by the owner, Stage 3.9) |
 | R6 | Comparator wave OTF: on identical rays (a); vs LV's estimate (b); vs engine wavefront (c) | identical / independent | (a) gated at 4e-5, pinned at Stage 3.5 at 10× the measured maximum, on the fields whose lattice is an arbiter (see Amendments); (b) recorded, attention band 0.005 on axis / 0.01 off axis; (c) recorded |
 
 Statuses: PASS; FLOOR; FAIL; RECORDED; ATTENTION (recorded, outside its band; not a failure); UNSUPPORTED; STALE;
@@ -240,6 +241,7 @@ and `reports/benchmark/mtf.md` is committed.
 | 3.6 optiland FFT MTF op | One field per call; ladder 128 and 256 rays with grid = 2 × rays, 512 only for ATTENTION rows; per-axis frequency interpolation; chief-landing check against LV before any row; reference-sphere strategy recorded; NaN axis and exceptions become status rows | `unittest` on optiland's Double-Gauss sample; failing-field isolation test |
 | 3.7 MTF comparison and report | R5 table, difference classes, wording templates with a lint test and a fixed "Not covered" block | Golden report; lint rejects banned claims |
 | 3.8 `lvrtc mtf` and baselines | Multi-engine `lvrtc mtf`; MTF baselines; `reports/benchmark/mtf.md` | Benchmark suite end to end; `baseline check` reports no DRIFT |
+| 3.9 optiland geometric MTF, R5g | Added by the owner on 2026-10-09 and run before 3.8, so that 3.8's report and baselines hold it: some manufacturers publish only geometric MTF, so LensVisualizer's geometric curve needs an independent external counterpart beside the identical-ray agreement of R4. The optiland worker answers `mtf.native` for the method geometric with optiland's own geometric MTF on its own rays (field, plane and stop read back as for the FFT); rung R5g, its comparator and its rows in the MTF report beside R5's. Whether a polychromatic geometric curve can be formed faithfully from optiland's per-line spot landings is decided in the stage from optiland's source | `unittest` with expectations derived in the test; hermetic band and status tests; benchmark rows recorded with classes |
 
 ### Phase 4 — LV's default view, attribution and validation statement
 
