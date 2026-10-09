@@ -28,8 +28,12 @@ FFT MTF, one line and one field at a time, a field it cannot compute being a row
 ([optiland's own MTF](docs/REFERENCE.md#optilands-own-mtf)). Rung R5 sets it beside LensVisualizer's product MTF
 and the wave estimator, field by field, with the class of every difference: recorded and never gated. At f/8 all
 24 reference-line runs of the benchmark are inside the plan's bands (at most 0.0041 on the axis, 0.0088 off it);
-wide open 15 of 24 are marked for attention ([measured](docs/REFERENCE.md#rung-r5-the-engines-own-mtf)). A report
-states what it does not cover, and its wording is linted.
+wide open 15 of 24 are marked for attention ([measured](docs/REFERENCE.md#rung-r5-the-engines-own-mtf)). Rung R5g
+does the same for the geometric MTF, which some manufacturers publish alone: LensVisualizer's beside optiland's
+own, on the reference line and on the photopic lines, recorded and never gated. At 10, 30 and 50 cycles/mm no row
+at f/8 is outside the bands (at most 0.0087); wide open 69 of 144 fields are marked
+([measured](docs/REFERENCE.md#rung-r5g-the-engines-own-geometric-mtf)). A report states what it does not cover,
+and its wording is linted.
 
 ## Requirements
 
@@ -206,6 +210,17 @@ R5 sets three engines' own diffraction MTF side by side: LensVisualizer's produc
 named, since it needs optiland, and is recorded and never gated; a run whose figures are outside their band asks
 optiland once more, at 512 rays. About 8 minutes on the benchmark. A photopic run has no optiland row: its FFT
 MTF is of one line.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5g
+```
+
+R5g sets three engines' own geometric MTF side by side: LensVisualizer's (`lv`), optiland's own (`optiland`) and
+the comparator's estimator on a replay of LensVisualizer's sampling (`replay`), one request a field. Run only
+where it is named, recorded and never gated; a field on one line that is outside its band asks optiland once
+more, at 512 rays. A photopic run has an optiland row: the rays are optiland's and the sum over the lines the
+worker's, and the report says so. About 37 minutes on the benchmark, most of it two fast lenses wide open at
+full field.
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

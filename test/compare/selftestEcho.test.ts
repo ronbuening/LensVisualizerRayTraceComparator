@@ -113,7 +113,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   const registered = QUANTITIES.list().map((quantity) => quantity.id);
   for (const quantity of compared) assert.ok(registered.includes(quantity), quantity);
   // A quantity without a comparator is one that no rung asks for: it is presented, and not compared. Today there
-  // is none. An engine's own MTF has a comparator for each of the three rungs that ask for it, r4f, r5 and r6b,
+  // is none. An engine's own MTF has a comparator for each of the four rungs that ask for it, r4f, r5, r5g and r6b,
   // and for no other.
   const presented = registered.filter((quantity) => !compared.includes(quantity));
   assert.deepEqual(presented, []);
@@ -149,6 +149,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
     [
       ["mtf.native", "r4f"],
       ["mtf.native", "r5"],
+      ["mtf.native", "r5g"],
       ["mtf.native", "r6b"],
       ["paraxial.first-order", undefined],
       ["rays.trace", "r2"],

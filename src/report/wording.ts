@@ -38,10 +38,42 @@ export const FIELD_REASON_TEXT: { readonly [reason in NativeFieldReason]: string
   "two-methods": "both engines stand by their curves; the difference is held to the attention band",
 };
 
-/** The sentences above the tables of an MTF comparison. */
-export const MTF_COMPARISON_INTRO: readonly string[] = [
-  "Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No",
-  "column is a reference for another, and no difference in this table is held to a tolerance.",
+/** Which MTF a comparison of the engines' own is of: the diffraction MTF of rung R5, the geometric MTF of R5g. */
+export type MtfComparisonKind = "diffraction" | "geometric";
+
+/** The sentences above the tables of an MTF comparison, by the MTF it is of. */
+export const MTF_COMPARISON_INTROS: { readonly [kind in MtfComparisonKind]: readonly string[] } = {
+  diffraction: [
+    "Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No",
+    "column is a reference for another, and no difference in this table is held to a tolerance.",
+  ],
+  geometric: [
+    "Each column is one engine's own estimate of the geometric MTF, of its own rays through its own sampling of the",
+    "pupil, without diffraction. No column is a reference for another, and no difference in this table is held to a",
+    "tolerance.",
+  ],
+};
+
+/** The sentences above the tables of a comparison of the diffraction MTF. */
+export const MTF_COMPARISON_INTRO: readonly string[] = MTF_COMPARISON_INTROS.diffraction;
+
+/**
+ * What is said of a geometric comparison whose judged column of optiland is of several lines: the rays are
+ * optiland's and the sum over them is the worker's.
+ */
+export const GEOMETRIC_SEVERAL_LINES: readonly string[] = [
+  "On several lines the column of optiland is not a curve of optiland's own class, which is of one line: the rays",
+  "and their landings are optiland's, a line a call, and the sum over them, the lines added as complex numbers with",
+  "their weights before the modulus is taken, is the worker's.",
+];
+
+/** The sentences under the fields of a geometric comparison: what the two samplings are. */
+export const GEOMETRIC_SAMPLING: readonly string[] = [
+  "optiland's rays are an even grid on the stop surface, out to its clip radius; LensVisualizer's are a lattice",
+  "across the entrance beam, refined by LensVisualizer; neither is weighted by direction cosine. On one line",
+  "optiland counts its landings into bins, and gives a curve only where the bins move it by less than a band.",
+  "Beside each engine's flag is its own sampling of the field: cells or rays across the pupil, and how far its",
+  "curves moved between its last two samplings, which is that engine's own measure and judges no other.",
 ];
 
 /** The sentence under the table of rows. */
@@ -58,8 +90,16 @@ export const NOT_COVERED: readonly string[] = [
   "optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, " +
     "reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.",
   "The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on " +
-    "several lines has no optiland row; its external counterpart is the comparator's estimator on optiland's " +
-    "wavefront, which is a later stage.",
+    "several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on " +
+    "optiland's wavefront, which is a later stage.",
+  "optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to " +
+    "the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction " +
+    "cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not " +
+    "explained.",
+  "The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a " +
+    "field whose bins move a value by more than a band has no optiland curve. On several lines the sum over " +
+    "optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's " +
+    "is about a chief ray's landing.",
   "Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer " +
     "states; no glass catalog and no spectrum is checked against another.",
   "The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine " +
@@ -88,8 +128,8 @@ const mentions =
     patterns.every((pattern) => pattern.test(sentence));
 
 const AN_MTF = /\b(MTF|OTF|transfer function)s?\b/i;
-// The rung of the engines' own MTF is recorded whatever it is called: a sentence that names it is one of a recorded row.
-const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|[Rr]5)\b/;
+// The rungs of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
+const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|[Rr]5g?)\b/;
 
 /** The claims that are rejected. */
 export const BANNED_CLAIMS: readonly BannedClaim[] = [

@@ -2,7 +2,7 @@
 import { createComparatorLookup } from "./comparator.ts";
 import type { ComparatorLookup } from "./comparator.ts";
 import { mtfFidelityComparator } from "./mtfFidelity.ts";
-import { mtfNativeComparator } from "./mtfNative.ts";
+import { mtfGeometricComparator, mtfNativeComparator } from "./mtfNative.ts";
 import { mtfWaveComparator } from "./mtfWave.ts";
 import { paraxialFirstOrderComparator } from "./paraxialFirstOrder.ts";
 import { raysGeometryComparator } from "./raysGeometry.ts";
@@ -15,8 +15,8 @@ import { systemDescribeComparator } from "./systemDescribe.ts";
 /**
  * The comparators of the comparator's quantities; nothing can be added to them while the program runs. `rays.trace`
  * has four, one for each rung that compares it: its geometry for `r2`, its optical path for `r3`, the geometric
- * MTF of its landings for `r4` and the wave MTF of its optical paths for `r6a`. `mtf.native` has three, for the rungs
- * `r4f`, `r5` and `r6b`; the one of `r5` compares it as the engines' own MTF.
+ * MTF of its landings for `r4` and the wave MTF of its optical paths for `r6a`. `mtf.native` has four, for the rungs
+ * `r4f`, `r5`, `r5g` and `r6b`; those of `r5` and `r5g` are one comparator of the engines' own MTF, made for each.
  */
 export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   selftestEchoComparator,
@@ -28,5 +28,6 @@ export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   raysWaveMtfComparator,
   mtfFidelityComparator,
   mtfNativeComparator,
+  mtfGeometricComparator,
   mtfWaveComparator,
 ]);

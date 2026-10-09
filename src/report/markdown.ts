@@ -8,7 +8,9 @@ import type { MetricColumn, ReportModel, ReportSection, SupportCell } from "./mo
 import {
   DIFFERENCE_CLASS_TEXT,
   FIELD_REASON_TEXT,
-  MTF_COMPARISON_INTRO,
+  GEOMETRIC_SAMPLING,
+  GEOMETRIC_SEVERAL_LINES,
+  MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
   MTF_ROW_STATUS_TEXT,
@@ -71,6 +73,12 @@ function supportText(cell: SupportCell): string {
 const MTF_DECIMALS = 4;
 const ANGLE_DECIMALS = 3;
 
+/** The first words of an MTF comparison, by the MTF it is of. */
+const OWN_MTF_HEADING = {
+  diffraction: "The engines' own MTF, side by side.",
+  geometric: "The engines' own geometric MTF, side by side.",
+} as const;
+
 /**
  * The table of an MTF comparison: the fields with what each engine says of them and the class of their
  * difference, then a row for every field, cut and shown frequency. Every sentence is a template of
@@ -84,8 +92,8 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
   const bandText = (value: number | null): string => (value === null ? "none" : numberText(value));
   const lines = [
     "",
-    `The engines' own MTF, side by side. The difference of a row is ${difference}.`,
-    ...MTF_COMPARISON_INTRO,
+    `${OWN_MTF_HEADING[mtf.kind]} The difference of a row is ${difference}.`,
+    ...MTF_COMPARISON_INTROS[mtf.kind],
     "",
     `Attention bands: ${bandText(bands.onAxis)} on the axis, ${bandText(bands.offAxis)} off it. Two chief rays that land`,
     `more than ${bandText(bands.chiefLandingMm)} mm apart are of two fields.`,
@@ -101,13 +109,26 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
       "",
     );
   }
+  // The rim rays are of a method that calibrates its frequency axes with them; a geometric MTF has none.
+  const rim = mtf.kind === "diffraction";
+  // Of a geometric MTF the two judged columns' own sampling is beside their flags: cells or rays across the pupil,
+  // and how far the curves moved between the last two samplings.
+  const sampled = mtf.kind === "geometric" ? columns.flatMap((column, index) => (column.judged ? [index] : [])) : [];
   const fieldRows = mtf.fields.map((field) => [
     String(field.field),
     field.fieldAngleDeg === null ? NOTHING : formatFixed(field.fieldAngleDeg, ANGLE_DECIMALS),
     ...field.flags.map((flag) => flag ?? NOTHING),
+    ...sampled.flatMap((column) => {
+      const { across, lastChange } = field.samplings[column];
+      return [across === null ? NOTHING : numberText(across), lastChange === null ? NOTHING : numberText(lastChange)];
+    }),
     field.chiefLandingMm === null ? NOTHING : numberText(field.chiefLandingMm),
-    field.rimRaysLost === null ? NOTHING : numberText(field.rimRaysLost),
-    field.rimLandingSpreadMm === null ? NOTHING : numberText(field.rimLandingSpreadMm),
+    ...(rim
+      ? [
+          field.rimRaysLost === null ? NOTHING : numberText(field.rimRaysLost),
+          field.rimLandingSpreadMm === null ? NOTHING : numberText(field.rimLandingSpreadMm),
+        ]
+      : []),
     field.class ?? NOTHING,
     field.reason === null ? NOTHING : `${field.reason}: ${FIELD_REASON_TEXT[field.reason]}`,
   ]);
@@ -117,9 +138,9 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
         "Field",
         "Angle [deg]",
         ...names,
+        ...sampled.flatMap((column) => [`${names[column]}: across`, `${names[column]}: last change`]),
         "Chief rays apart [mm]",
-        "Rim rays lost",
-        "Rim rays from chief ray [mm]",
+        ...(rim ? ["Rim rays lost", "Rim rays from chief ray [mm]"] : []),
         "Class",
         "Reason",
       ],
@@ -127,6 +148,11 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
     ),
     "",
   );
+  if (mtf.kind === "geometric") {
+    lines.push(...GEOMETRIC_SAMPLING, "");
+    // The second engine of the pair is the one whose curve of several lines is a sum of the worker's.
+    if ((mtf.lineCounts[1] ?? 0) > 1) lines.push(...GEOMETRIC_SEVERAL_LINES, "");
+  }
   const rows = mtf.rows
     .filter((row) => row.shown)
     .map((row) => [

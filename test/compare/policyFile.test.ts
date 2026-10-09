@@ -18,7 +18,7 @@ test("the policy file is policy/rungs.v1.json, and holds the comparator's own po
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
   assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 9);
+  assert.equal(policy.version, 10);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -236,6 +236,7 @@ test("each way a policy and the code can disagree is reported", () => {
     "rung r3 has no policy entry",
     "rung r4 has no policy entry",
     "rung r4f has no policy entry",
+    "rung r5g has no policy entry",
     "rung r6a has no policy entry",
     "rung r6b has no policy entry",
     "policy entry notes is of no registered rung",

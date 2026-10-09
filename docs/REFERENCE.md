@@ -136,9 +136,9 @@ Python, add `--engines fake-a,fake-b,fake-none`.
 - **Rungs** are every rung, unless the run lists its own `rungs`; `--rungs` replaces both. They are, in the order
   of the ladder: `selftest` (the conformance quantity `selftest.echo`), `r0` (`system.describe`), `r1`
   (`paraxial.first-order`), `r2`, `r3` and `r4` (`rays.trace`), which ask every engine to trace the run's ray
-  sets, `r4f` (`mtf.native`), `r5` (`mtf.native`), `r6a` (`rays.trace`) and `r6b` (`mtf.native`). `r5` is run only
-  where it is named, by `--rungs` or by a run's `rungs`: it needs optiland, which is not on every machine
-  ([below](#rung-r5-the-engines-own-mtf)). `r2`, `r3` and `r4` ask the same
+  sets, `r4f` (`mtf.native`), `r5` and `r5g` (`mtf.native`), `r6a` (`rays.trace`) and `r6b` (`mtf.native`). `r5`
+  and `r5g` are run only where they are named, by `--rungs` or by a run's `rungs`: they need optiland, which is not
+  on every machine ([below](#rung-r5-the-engines-own-mtf), [and](#rung-r5g-the-engines-own-geometric-mtf)). `r2`, `r3` and `r4` ask the same
   requests, so an engine traces a set once and the later rungs find the answer in the store; `r4` asks them only
   of a run that has an MTF recipe ([below](#rung-r4-the-geometric-mtf-of-the-same-rays)). `r6a` asks them too, and
   after them the same fields on a lattice twice as fine, which every engine has to trace for it: four times the
@@ -152,8 +152,8 @@ Python, add `--engines fake-a,fake-b,fake-none`.
   and the fifth on its two, and no engine is recorded as `unsupported` for a rung that was never about it. In a
   comparison such a rung is not held to a reference that is none of its engines. `r6b` is the second such rung:
   it sets `lv` beside `wave`, the comparator's wave estimator on LensVisualizer's rays; `r5` is the third, of `lv`,
-  `optiland` and `wave`.
-- **The MTF recipe.** A run of a rung that is made from the recipe (`r4`, `r4f`, `r5`, `r6a`, `r6b`) has it resolved
+  `optiland` and `wave`, and `r5g` the fourth, of `lv`, `optiland` and `replay`.
+- **The MTF recipe.** A run of a rung that is made from the recipe (`r4`, `r4f`, `r5`, `r5g`, `r6a`, `r6b`) has it resolved
   first, by the source of
   its case: the plane, the fields, the lines and the frequencies every MTF request about the case is made from
   ([the contract](../contract/CONTRACT.md#the-mtf-recipe)). The manifest records it, or why the run has none. A
@@ -1038,6 +1038,70 @@ is the check Stage 4.2 makes.
 R5 is in no committed baseline until Stage 3.8. It is exercised on four runs by `npm run test:optiland`
 (`test/integration/optiland/r5.test.ts`), and hermetically on stand-ins (`test/report/r5.test.ts`).
 
+## Rung R5g: the engines' own geometric MTF
+
+`lvrtc run <suite> --rungs r5g` sets three engines' own geometric MTF of a case side by side: LensVisualizer's
+(`lv`, method geometric), optiland's own (`optiland`: its `GeometricMTF` on one line, the worker's sum of
+optiland's landings on several, [above](#optilands-own-mtf)) and the comparator's estimator on a replay of
+LensVisualizer's sampling (`replay`, the other side of R4f). It was added by the owner because some manufacturers
+publish only a geometric MTF. The rung is **recorded and never gated**: optiland's geometric MTF takes no rays of
+another engine. It is rung R5 on another method, and everything of R5 that is not named here is R5's: the
+comparator (`nativeMtfComparator` in `src/compare/mtfNative.ts`, made once for each rung), the sorting of a field
+into its class, the bands, the statuses of a row, the wording and its lint.
+
+| What | Decision | Why |
+|---|---|---|
+| The requests | One for each field the run traces rays for (0, 0.5 and 1 of the reference image height unless the run states others), each the geometric MTF of the recipe on the plane of the case at the frequencies of R5 (`geometricFieldMtfSpecs`). | optiland's geometric MTF of a fast lens wide open takes minutes at full field, and a request has a budget of time ([docs/gotchas.md](gotchas.md#optilands-geometric-mtf-of-a-fast-lens-wide-open-takes-minutes-at-full-field)): with a field a request one field's cost is one request's. It is not R4f's request, which is of five fields and 51 frequencies; LensVisualizer and the replay answer these anew. |
+| The fields of optiland | The recipe's angle of the request's field, as the engine option `fieldAnglesDeg`: a rung is asked for the options of each of its requests (`RungDefinition.engineOptions`). | As in R5. |
+| Engines | `lv`, `optiland` and `replay`, whatever `--engines` names; only where the rung is named. | As R5. |
+| Photopic runs | optiland answers, by the worker's sum of optiland's own landings over the lines of the case; the report says under such a table whose rays and whose sum the column is. | A landing is a point of the image plane, so the lines can be added as complex numbers before the modulus is taken; the FFT's moduli cannot. |
+| The 512 step | A field whose pair of `lv` and `optiland` is outside its band asks optiland that request once more with `geometricRays: 512` (a job that states `step: "geo512"`), and only where optiland's answer is of one line. | The finer ladder costs four to seven times the first, and five lines of it are more than a worker may take for one request. |
+| The chief-landing limit | `chiefLanding.maxAbs` of `r5g` is **1e-3 mm**, not R5's 1e-7. | The modulus of a geometric MTF does not depend on the point its phases are measured from, so a chief ray's landing is no input of either curve, only a check that both answers are of one field. On several lines the two engines call different rays the chief ray ([docs/gotchas.md](gotchas.md#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line)) and land up to 3.0e-4 mm apart at one field angle; a micrometre still tells one field of a request from another, which is millimetres away. |
+
+**The report** has, for each field, the table of R5 without the rim rays, which a geometric MTF has none of, and
+with each of the two engines' own sampling beside its flag: cells (`gridSize`) or rays (`numRays`) across the
+pupil, and how far its curves moved between its last two samplings (`maxDelta`). LensVisualizer ends its
+refinement when two grids agree within 0.01 up to 50 cycles/mm, so its own last change is of the size of the
+bands. The third column is `replay`. The comparator's estimator on the rays of R4 is not in the table: it is a
+figure of `rays.trace` on the 32-cell launch lattice, of another request, and `replay` is that estimator on the
+rays LensVisualizer's curve is of.
+
+**Measured** on the benchmark in its four conditions (96 runs, three fields each, 288 requests; LensVisualizer
+`33ebdb30`, closure `78215d72`; optiland `4e893f53`; 36 min 52 s, 904 jobs, none an error; 40 fields asked again
+at 512 rays). `lv` against `optiland`, fields RECORDED / ATTENTION, and the largest difference of a field in a
+band over the eleven frequencies to 100 cycles/mm:
+
+| | wide open | wide open, best focus | f/8 | f/8, best focus |
+|---|---|---|---|---|
+| reference line: RECORDED / ATTENTION | 16 / 20 | 21 / 15 | 34 / 2 | 33 / 3 |
+| reference line: largest on the axis / off it | 2.7e-2 / 2.8e-2 | 1.3e-2 / 2.5e-2 | 4.9e-3 / 1.4e-2 | 3.8e-4 / 1.3e-2 |
+| reference line: rows at 10 / 30 / 50 cycles/mm, RECORDED / ATTENTION / SET ASIDE | 168 / 42 / 6 | 191 / 19 / 6 | 216 / 0 / 0 | 216 / 0 / 0 |
+| photopic: RECORDED / ATTENTION | 16 / 20 | 22 / 14 | 35 / 1 | 35 / 1 |
+| photopic: largest on the axis / off it | 2.6e-2 / 2.6e-2 | 1.4e-2 / 2.4e-2 | 2.6e-3 / 1.3e-2 | 9.3e-4 / 1.3e-2 |
+| photopic: rows at 10 / 30 / 50 cycles/mm, RECORDED / ATTENTION / SET ASIDE | 172 / 38 / 6 | 185 / 25 / 6 | 216 / 0 / 0 | 216 / 0 / 0 |
+
+Of the 288 fields 284 are of two methods and 4 numerical: full field of `sigma-35mm-f14-dg-hsm-a` wide open, in
+each of its four runs, which LensVisualizer and optiland both call unconverged. None is without a curve, none of
+class data. All 76 marked fields are of class `method`; 69 of them are wide open, of eleven of the twelve lens states (most on
+`sigma-105mm-f28-dg-dn-macro-art` 12, `sony-fe-20mm-f18-g` 11, `nikon-z-135f18-plena` 10 with the largest
+differences, 0.023 to 0.028 in every marked field, and `nikkor-z50f12` 9), and 7 at f/8, all off the
+axis and between 0.011 and 0.014, above 50 cycles/mm: at 10, 30 and 50 cycles/mm no row at f/8 is marked, and the
+largest is 0.0087. In 73 of the 76 the difference is larger than the two engines' own last changes together;
+LensVisualizer's is 0.0015 to 0.0098 in the marked fields and optiland's at most 0.0046. The 512 step moved the figure of
+a band by at most 4.4e-4, so no marked difference of one line is of optiland's sampling between those steps. The
+chief rays land within 9.2e-10 mm of each other on the reference line and within 3.0e-4 mm on the photopic lines.
+`lv` against `replay` differs by at most 7.9e-15 in all 288 fields, which is R4f's result on these requests, and
+`optiland` against `replay` is marked in 76 as well.
+
+**Not covered**, beside the block every report ends with: why the two pupil samplings differ where they do (an
+even grid on the stop against a lattice across the entrance beam, neither weighted by direction cosine) is named
+and not measured; a marked field on several lines is not asked again at 512 rays; a field at full field of a
+fast lens costs optiland minutes, and the slowest request is within a factor of 1.7 of the time after which the
+comparator ends the worker.
+
+R5g is in no committed baseline until Stage 3.8. It is exercised on three runs by `npm run test:optiland`
+(`test/integration/optiland/r5g.test.ts`), and hermetically on stand-ins (`test/report/r5g.test.ts`).
+
 ## Comparing and reporting
 
 `lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--json]`
@@ -1073,7 +1137,7 @@ and not judged stands beside the judged one of the same subject: the plain `pupi
 field and surface of a mismatch, the quantity and line of the largest first-order difference, the line, field, ray
 and surface of the largest distance between two hits. It exits 0 when the report is written, whatever the
 verdicts are, and 2 when the run has no comparisons or they were made from another manifest or policy. A section
-of rung R5 has the table of the engines' own MTF ([above](#rung-r5-the-engines-own-mtf)), and every report states,
+of rung R5 or R5g has the table of the engines' own MTF ([above](#rung-r5-the-engines-own-mtf)), and every report states,
 in a fixed block, what no comparison of this tool shows (`NOT_COVERED`, `src/report/wording.ts`). Both
 files, like `comparisons.json`, hold no time, no path and nothing of the machine, so the same run gives the same
 bytes anywhere. With `--floor <dir>` it also writes the numerical-floor digest of the run into that directory,

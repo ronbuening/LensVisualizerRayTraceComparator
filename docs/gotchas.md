@@ -447,6 +447,28 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   line as LensVisualizer hands it.
 - **Class.** convention.
 
+### The chief ray of an MTF field is one launch for every line
+
+- **Where.** `prepareMtfFieldLaunch` and `traceMtfBundle` in `src/optics/analysis/mtfTracing.ts` ("One field's
+  chief-ray launch, shared by every wavelength and refinement level"), and `solveChiefRay2` in
+  `src/optics/field/chiefRay.ts`, whose residual at the stop is `CHIEF_RAY_RESIDUAL_TOLERANCE`, 1e-7 mm (read at
+  `33ebdb30`).
+- **Effect.** LensVisualizer solves the launch of a field's chief ray once and traces that one ray at every line.
+  The reference point of a field, and the `imageHeightMm` its MTF states, is where that launch lands at the first
+  line of the spectrum: at a line that is not the one the launch was solved at, it is a ray that misses the centre
+  of the stop by the chromatic shift of the pupil. An engine that aims the chief ray of the first line at the
+  centre of the stop for that line lands elsewhere. Measured on the benchmark against optiland's chief ray, at one
+  field angle, bit for bit the same in both: on the reference line the two land within 9.2e-10 mm of each other in
+  every one of 144 fields; on the photopic lines, whose first is 555 nm, 95 of the 96 off-axis fields land more
+  than 1e-7 mm apart, by up to 3.0e-4 mm (`sony-fe-20mm-f18-g` at full field).
+- **Handled.** Nothing is corrected. The modulus of a geometric MTF does not depend on the point its phases are
+  measured from when one point serves every line, so the landing of a chief ray is no input of either curve of
+  rung R5g, only a check that the two answers are of one field. That rung's limit on it is 1e-3 mm
+  (`chiefLanding.maxAbs` of `r5g` in the policy), and every field's distance is in its table. Rung R5 keeps
+  1e-7 mm: it has no optiland row on several lines. A comparison of a polychromatic diffraction MTF (Stage 4.3)
+  has to state which ray its reference is.
+- **Class.** convention.
+
 ### The MTF of a field is decided grid by grid, and the footprint of one grid is the next grid's
 
 - **Where.** `traceField`, `fieldAtGrid` and `refineMtfField` in `src/optics/analysis/mtf.ts`, the constants of
@@ -1815,6 +1837,25 @@ shares no code with any engine.
   of a line lies from that line's sum. Lost: nothing of the lateral colour; the worker's sum is not a number of
   optiland's. A test sets two lines 14 micrometres apart behind a stop of half a micrometre and finds the closed
   form of two points, with the distance from chief rays traced in 60 digits.
+- **Class.** method: recorded.
+
+### optiland's geometric MTF of a fast lens wide open takes minutes at full field
+
+- **Where.** `GeometricMTF` traces its grid through `optic.trace` with the aiming the worker states (`robust`, 50
+  iterations, 1e-10 mm), all rays of a line in one batch.
+- **Effect.** What a field costs depends on the lens and the field, by a factor of fifty. Measured on the
+  benchmark at optiland `4e893f53` on this machine, a field and line on the ladder of 128 and 256 rays: about a
+  second for most lenses and fields, 19 s at full field of the Z 50 mm f/1.2 wide open and 56 s at full field of
+  the Sigma 35 mm f/1.4 wide open; on the five photopic lines those two fields take 87 s and 359 s. On the
+  ladder of 256 and 512 rays three fields of the Sigma on one line took 405 s. At f/8 no field of the benchmark
+  takes more than a few seconds. Where the time goes inside optiland was not measured.
+- **Handled.** Two limits bound a request: the worker answers `time-budget` when a request has taken 300 s as
+  its next field is begun, and the comparator ends a worker that has not answered in ten minutes and starts no
+  other within a run. Rung R5g therefore asks one request a field (`geometricFieldMtfSpecs`), so that one field's
+  cost is one request's, and asks the finer ladder only for a field on one line that is outside its band
+  (`followUpsOf`). The slowest request of the benchmark, 359 s, is within a factor of 1.7 of the ten minutes: a
+  slower machine, or a faster lens added to a suite, can pass it, and every job of optiland after it in that run
+  is then an error.
 - **Class.** method: recorded.
 
 ### A ray that ends at the last surface stays in optiland's spot, without a landing

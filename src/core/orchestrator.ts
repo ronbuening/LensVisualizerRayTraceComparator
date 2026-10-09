@@ -320,12 +320,12 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       };
       const requests = requestsOf(rung, quantity, opticalCase, spec, rungInputs);
       for (const engineId of rung.engines === undefined ? engineIds : [...new Set(rung.engines)].sort()) {
-        const ofRung = rung.engineOptions?.(spec, rungInputs, engineId);
         // An own key: an engine id such as "constructor" must not find what every object inherits.
         const options = spec.sampling?.engines;
         const ofRun = options !== undefined && Object.hasOwn(options, engineId) ? options[engineId] : undefined;
-        const engineOptions = ofRung === undefined ? ofRun : { ...ofRung, ...ofRun };
         for (const built of requests) {
+          const ofRung = rung.engineOptions?.(spec, rungInputs, engineId, built);
+          const engineOptions = ofRung === undefined ? ofRun : { ...ofRung, ...ofRun };
           const { caseId, spec: requestSpec } = built;
           const request =
             engineOptions === undefined

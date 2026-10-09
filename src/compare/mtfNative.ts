@@ -1,7 +1,9 @@
-// The comparator of `mtf.native` for rung R5: two engines' own diffraction MTF of one case, each by its own method
-// and its own sampling, set beside each other field by field. LensVisualizer's product MTF beside optiland's FFT
-// MTF is the pair the rung is named for; the comparator's wave estimator on LensVisualizer's rays stands beside
-// both. Nothing here is gated, and no figure of it says that one method is right.
+// The comparator of `mtf.native` for the rungs R5 and R5g: two engines' own MTF of one case, each by its own method
+// and its own sampling, set beside each other field by field. In R5 it is the diffraction MTF: LensVisualizer's
+// product MTF beside optiland's FFT MTF is the pair the rung is named for, and the comparator's wave estimator on
+// LensVisualizer's rays stands beside both. In R5g it is the geometric MTF: LensVisualizer's beside optiland's,
+// with the comparator's estimator on a replay of LensVisualizer's sampling beside both. One comparator, made once
+// for each rung (`nativeMtfComparator`). Nothing here is gated, and no figure of it says that one method is right.
 //
 // A field is sorted before any difference is taken (`classifyNativeField`), by the classes of the comparison
 // ladder in their order, and only a field of two methods that both stand by their curves, of one image point,
@@ -21,8 +23,19 @@ import type {
 } from "./comparator.ts";
 import { numberText } from "./metricText.ts";
 
-/** The rung this comparator is of. */
+/** The rung of the engines' own diffraction MTF. */
 export const NATIVE_MTF_RUNG = "r5";
+/** The rung of the engines' own geometric MTF. */
+export const GEOMETRIC_MTF_RUNG = "r5g";
+/** The rungs this comparator is of, in ladder order. */
+export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG] as const;
+/** One of them. */
+export type NativeMtfRung = (typeof NATIVE_MTF_RUNGS)[number];
+
+/** Whether `rung` is one of the engines' own MTF, side by side. */
+export function isNativeMtfRung(rung: string): rung is NativeMtfRung {
+  return (NATIVE_MTF_RUNGS as readonly string[]).includes(rung);
+}
 
 /** The two cuts of an MTF, in the order a table lists them. */
 export const MTF_CUTS = ["sagittal", "tangential"] as const;
@@ -37,8 +50,10 @@ export const OFF_AXIS_METRIC = "mtfOffAxis.maxAbs";
 
 /**
  * What each answer states of how a field was sampled, recorded beside the comparison, by the engines' own names:
- * the grid and the rays its curves are of, how far they moved between its last two samplings, and, of optiland,
- * what became of the four rim rays it calibrates its frequency axes with. An engine states the ones it has.
+ * the grid and the rays its curves are of, how far they moved between its last two samplings, of optiland's FFT
+ * what became of the four rim rays it calibrates its frequency axes with, and of optiland's geometric MTF how many
+ * rays it launched and kept, how wide its bins are and how far they moved its curve from the sum without bins. An
+ * engine states the ones it has.
  */
 export const NATIVE_SAMPLING = [
   "gridSize",
@@ -52,6 +67,14 @@ export const NATIVE_SAMPLING = [
   "rimRaysLost",
   "rimLandingSpreadMm",
   "workingFNumber",
+  "blockedRays",
+  "failedRays",
+  "raysLaunched",
+  "raysLit",
+  "numPoints",
+  "binWidthSagittalMm",
+  "binWidthTangentialMm",
+  "binningMaxDelta",
 ] as const;
 
 /** The name a recorded MTF value has: the cut and the frequency, cycles/mm, as `sagittal@30`. */
@@ -426,7 +449,9 @@ function recorded(data: JsonObject, context?: ComparisonContext): { readonly [na
 }
 
 /**
- * The comparator of `mtf.native` for rung R5: two engines' own diffraction MTF of one case. The rung is recorded:
+ * The comparator of `mtf.native` for one of the rungs R5 and R5g (`rung`): two engines' own MTF of one case, the
+ * diffraction MTF in R5 and the geometric MTF in R5g. The two differ in nothing but the rung they name: which
+ * engines are asked, and for which method, is the rung's (`src/core/rungs.ts`). The rung is recorded:
  * a figure outside its band is marked for attention and fails nothing, and one inside it is a difference that was
  * written down, not a tolerance that was met.
  *
@@ -452,23 +477,26 @@ function recorded(data: JsonObject, context?: ComparisonContext): { readonly [na
  * rays' landing; without either the answers are not comparable. Answers for different numbers of fields, for
  * other fields, of other planes, or with curves that have not one value a frequency are not comparable.
  */
-export const mtfNativeComparator: QuantityComparator = Object.freeze({
-  quantity: MTF_NATIVE,
-  rung: NATIVE_MTF_RUNG,
-  metrics: Object.freeze([
-    { name: CHIEF_LANDING_METRIC, unit: "mm" },
-    { name: ON_AXIS_METRIC, unit: "1" },
-    { name: OFF_AXIS_METRIC, unit: "1" },
-    { name: "mtfOnAxis.firstStepMaxAbs", unit: "1" },
-    { name: "mtfOffAxis.firstStepMaxAbs", unit: "1" },
-    { name: "mtfFlagged.maxAbs", unit: "1" },
-    { name: "mtfRimLost.maxAbs", unit: "1" },
-    { name: "fields.compared", unit: "elements" },
-    { name: "fields.flagged", unit: "elements" },
-    { name: "fields.rimLost", unit: "elements" },
-    { name: "fields.data", unit: "elements" },
-    { name: "fields.unavailable", unit: "elements" },
-  ]),
-  compare,
-  recorded,
-});
+export function nativeMtfComparator(rung: NativeMtfRung): QuantityComparator {
+  return Object.freeze({ quantity: MTF_NATIVE, rung, metrics: NATIVE_METRICS, compare, recorded });
+}
+
+const NATIVE_METRICS = Object.freeze([
+  { name: CHIEF_LANDING_METRIC, unit: "mm" },
+  { name: ON_AXIS_METRIC, unit: "1" },
+  { name: OFF_AXIS_METRIC, unit: "1" },
+  { name: "mtfOnAxis.firstStepMaxAbs", unit: "1" },
+  { name: "mtfOffAxis.firstStepMaxAbs", unit: "1" },
+  { name: "mtfFlagged.maxAbs", unit: "1" },
+  { name: "mtfRimLost.maxAbs", unit: "1" },
+  { name: "fields.compared", unit: "elements" },
+  { name: "fields.flagged", unit: "elements" },
+  { name: "fields.rimLost", unit: "elements" },
+  { name: "fields.data", unit: "elements" },
+  { name: "fields.unavailable", unit: "elements" },
+]);
+
+/** The comparator of rung R5, the engines' own diffraction MTF. */
+export const mtfNativeComparator: QuantityComparator = nativeMtfComparator(NATIVE_MTF_RUNG);
+/** The comparator of rung R5g, the engines' own geometric MTF. */
+export const mtfGeometricComparator: QuantityComparator = nativeMtfComparator(GEOMETRIC_MTF_RUNG);

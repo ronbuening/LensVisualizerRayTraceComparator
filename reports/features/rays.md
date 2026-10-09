@@ -16,10 +16,10 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | features |
 | Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | 3b71f41238e2be50894b4685985434ea4499c2529515455a1dcdf06bd7265571 |
+| Baseline hash | 483369138ad93f1ddfa9cd0a4bedf0ba850a056417d96eabe71eef465c3c3461 |
 | Contract version | 1.0 |
-| Policy | rungs v9 |
-| Policy hash | a5c3fe2d2ff49927b3a099111a9fafd4de789437ad721463374f3b2eeb27d1c3 |
+| Policy | rungs v10 |
+| Policy hash | 239a222c5dfcfcad8847826fcd136bfec8d42663cda84f3b26febae191a79c62 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|

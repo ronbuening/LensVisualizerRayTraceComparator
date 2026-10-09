@@ -30,14 +30,14 @@ function broken(part: "spec" | "data", value: unknown): string[] {
   return issues.map((issue) => `${issue.path}: ${issue.message}`);
 }
 
-test("mtf.native is registered at the version the contract states, and the rungs that ask for it are r4f, r5 and r6b", () => {
+test("mtf.native is registered at the version the contract states, and the rungs that ask for it are r4f, r5, r5g and r6b", () => {
   assert.equal(MTF_NATIVE, "mtf.native");
   assert.equal(MTF_NATIVE_VERSION, 1);
   assert.equal(QUANTITIES.get("mtf.native"), mtfNativeQuantity);
   assert.deepEqual([mtfNativeQuantity.id, mtfNativeQuantity.version], [MTF_NATIVE, 1]);
   assert.deepEqual(
     RUNGS.filter((rung) => rung.quantity === MTF_NATIVE).map((rung) => rung.id),
-    ["r4f", "r5", "r6b"],
+    ["r4f", "r5", "r5g", "r6b"],
   );
   assert.equal(MTF_DESIGN_PLANE, "design");
 });

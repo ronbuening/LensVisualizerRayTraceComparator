@@ -141,24 +141,38 @@ export interface R5Cycle {
   readonly watched: WatchedRegistry;
 }
 
-/** Runs the three runs on the stand-ins into `runsDir`, compares them by `policy` and reports them. */
-export async function r5Cycle(runsDir: string, policy: Policy = R5_POLICY): Promise<R5Cycle> {
-  const suite = suiteOf("r5-stand-ins", [
+/**
+ * Runs the three runs of the suite `name` on `engines`, asked the one rung `rung`, into `runsDir`, compares them by
+ * `policy` and reports them.
+ */
+export async function standInCycle(
+  runsDir: string,
+  name: string,
+  rung: RungDefinition,
+  engines: { readonly [engine: string]: EngineMaker },
+  policy: Policy,
+): Promise<R5Cycle> {
+  const suite = suiteOf(name, [
     { name: "edge", opticalCase: SINGLET },
     { name: "beyond", opticalCase: DOUBLE_GAUSS },
     { name: "polychromatic", opticalCase: ALL_FEATURES_CASE },
   ]);
-  const watched = watchedRegistry(standIns());
-  const rungDefinitions = [R5_FIXTURE_RUNG];
+  const watched = watchedRegistry(engines);
+  const rungDefinitions = [rung];
   const { manifest, outcomes } = await runSuite({
     suite,
     registry: watched.registry,
     runsDir,
     rungDefinitions,
-    rungs: ["r5"],
+    rungs: [rung.id],
     followUps: followUpsOf(policy),
   });
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const comparisons = compareManifest({ manifest, store, policy, rungDefinitions });
   return { manifest, comparisons, report: renderReport(manifest, comparisons, policy), outcomes, watched };
+}
+
+/** Runs the three runs on the stand-ins into `runsDir`, compares them by `policy` and reports them. */
+export function r5Cycle(runsDir: string, policy: Policy = R5_POLICY): Promise<R5Cycle> {
+  return standInCycle(runsDir, "r5-stand-ins", R5_FIXTURE_RUNG, standIns(), policy);
 }

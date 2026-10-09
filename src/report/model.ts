@@ -15,7 +15,7 @@ import { CONTRACT_VERSION } from "../contract/version.ts";
 import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
-import { NATIVE_MTF_RUNG } from "../compare/mtfNative.ts";
+import { GEOMETRIC_MTF_RUNG, isNativeMtfRung } from "../compare/mtfNative.ts";
 import { buildMtfComparison } from "./mtfComparison.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
 import { NOT_COVERED } from "./wording.ts";
@@ -337,14 +337,14 @@ function sectionOf(
             }),
           ),
         };
-  const mtf =
-    rung !== NATIVE_MTF_RUNG
-      ? null
-      : buildMtfComparison({
-          participants: sets[0].participants,
-          pairs: sets.flatMap((set) => set.pairs),
-          policy: rungPolicy,
-        });
+  const mtf = !isNativeMtfRung(rung)
+    ? null
+    : buildMtfComparison({
+        participants: sets[0].participants,
+        pairs: sets.flatMap((set) => set.pairs),
+        policy: rungPolicy,
+        kind: rung === GEOMETRIC_MTF_RUNG ? "geometric" : "diffraction",
+      });
   return {
     run,
     rung,

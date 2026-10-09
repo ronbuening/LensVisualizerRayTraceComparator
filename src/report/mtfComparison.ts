@@ -1,5 +1,6 @@
-// The table of rung R5: LensVisualizer's product MTF beside optiland's FFT MTF and the comparator's wave estimator,
-// field by field, cut by cut and frequency by frequency, with the class of every difference. It is built from what
+// The table of the rungs R5 and R5g: LensVisualizer's MTF beside optiland's own and an estimator of the comparator's
+// (in R5 the product MTF, optiland's FFT MTF and the wave estimator; in R5g the geometric MTF of each and the
+// estimator on a replay of LensVisualizer's sampling), field by field, cut by cut and frequency by frequency, with the class of every difference. It is built from what
 // a comparison states (the values each participant's answer records, the pair of the two engines, the bands of the
 // policy) and from nothing else: no answer is read here, so the same table can be made from any record that keeps
 // those. Pure: equal inputs, an equal table.
@@ -17,7 +18,7 @@ import {
 import type { MtfCut, NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import type { RecordedValues, Verdict } from "../contract/comparison.ts";
 import type { RungPolicy } from "../contract/policy.ts";
-import type { MtfRowStatus } from "./wording.ts";
+import type { MtfComparisonKind, MtfRowStatus } from "./wording.ts";
 
 /** The two engines the difference of a row is of, the first minus the second. */
 export const MTF_COMPARISON_PAIR = ["lv", "optiland"] as const;
@@ -41,6 +42,8 @@ export interface MtfComparisonInput {
   }[];
   /** The policy of the rung: its bands. */
   readonly policy: RungPolicy | null;
+  /** Which MTF the rung sets side by side; the diffraction MTF where it is left out. */
+  readonly kind?: MtfComparisonKind;
 }
 
 /** One column of the table: an engine's answer, or a later step of one. */
@@ -63,6 +66,12 @@ export interface MtfComparisonField {
   readonly fieldAngleDeg: number | null;
   /** One per column. */
   readonly flags: readonly (MtfFieldFlag | null)[];
+  /**
+   * What each column states of its sampling of the field: how many cells or rays across (`gridSize`, or `numRays`
+   * for an engine that states no grid), and how far its curves moved between its last two samplings (`maxDelta`).
+   * One per column; null where the column states none.
+   */
+  readonly samplings: readonly { readonly across: number | null; readonly lastChange: number | null }[];
   /** How far apart the chief rays of the two judged columns land, mm; null where one does not say. */
   readonly chiefLandingMm: number | null;
   /**
@@ -94,8 +103,15 @@ export interface MtfComparisonRow {
   readonly class: NativeDifferenceClass | null;
 }
 
-/** The table of one request of rung R5. */
+/** The table of one request of rung R5 or R5g. */
 export interface MtfComparison {
+  /** Which MTF the table is of: the diffraction MTF of R5, the geometric MTF of R5g. */
+  readonly kind: MtfComparisonKind;
+  /**
+   * How many lines each of the two judged columns says its answer is of, in the order of the pair; null for a
+   * column that did not answer.
+   */
+  readonly lineCounts: readonly (number | null)[];
   /** The two engines the differences are of, their verdict as a pair and its reason; null verdict without a pair. */
   readonly pair: { readonly a: string; readonly b: string; readonly verdict: Verdict | null; readonly reason?: string };
   readonly columns: readonly MtfComparisonColumn[];
@@ -218,6 +234,10 @@ export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | n
       field: field ?? Number.NaN,
       fieldAngleDeg: valueAt(a?.values, "fieldAngleDeg", index) ?? valueAt(b?.values, "fieldAngleDeg", index),
       flags: columns.map(({ values }) => flagOf(values, index)),
+      samplings: columns.map(({ values }) => ({
+        across: valueAt(values, "gridSize", index) ?? valueAt(values, "numRays", index),
+        lastChange: valueAt(values, "maxDelta", index),
+      })),
       chiefLandingMm: sorting?.landingMm ?? null,
       rimRaysLost: largest("rimRaysLost", index),
       rimLandingSpreadMm: largest("rimLandingSpreadMm", index),
@@ -251,6 +271,8 @@ export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | n
     }
   }
   return {
+    kind: input.kind ?? "diffraction",
+    lineCounts: [a, b].map((column) => column?.values?.lineWavelengthNm?.length ?? null),
     pair: {
       a: first,
       b: second,

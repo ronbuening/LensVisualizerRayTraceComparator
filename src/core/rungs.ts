@@ -83,9 +83,15 @@ export interface RungDefinition {
   /**
    * The options the rung's requests carry for the engine `engineId`, made from the run and from what the run's
    * case source made for the rung; the options the run states for an engine by its id (`sampling.engines`) are
-   * laid over them. Without it, only those.
+   * laid over them. Without it, only those. `request` is the one of the rung's requests the options are for, for a
+   * rung whose requests do not all carry the same.
    */
-  engineOptions?(runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined;
+  engineOptions?(
+    runSpec: RunSpec,
+    inputs?: RungInputs,
+    engineId?: string,
+    request?: QuantityRequest,
+  ): JsonObject | undefined;
   /**
    * The requests of this rung for one case, in a fixed order and without engine options: equal arguments give
    * equal requests, with equal ids. Each is about `opticalCase` and asks for `quantity` with a spec the quantity
@@ -276,12 +282,16 @@ export const r4fRung: RungDefinition = Object.freeze({
 export const R6B_ENGINES: readonly string[] = Object.freeze(["lv", "wave"]);
 
 /**
- * The `mtf.native` spec that asks for the diffraction MTF of a recipe, on the plane of the case: the recipe's
- * frequencies thinned for a wave transfer function (`waveFrequencies`), at the fields the run traces rays for
+ * The `mtf.native` spec that asks for the MTF of a recipe by `method`, on the plane of the case: the recipe's
+ * frequencies thinned as for a wave transfer function (`waveFrequencies`), at the fields the run traces rays for
  * (`fields`, `DEFAULT_RAY_FIELDS` without them), as fractions of the reference image height, each of them a field
  * the recipe resolved to an angle. Null where the run's fields are angles, or the recipe resolved none of them.
  */
-export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_FIELDS): MtfNativeSpec | null {
+export function rayFieldsMtfSpec(
+  recipe: MtfRecipe,
+  method: MtfNativeSpec["method"],
+  fields: RunFields = DEFAULT_RAY_FIELDS,
+): MtfNativeSpec | null {
   if (fields.kind !== "image-height-fractions") return null;
   const resolved = fields.values.filter((fraction) =>
     recipe.fields.some((field) => field.fraction === fraction && field.angleDeg !== null),
@@ -290,9 +300,14 @@ export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_F
   return {
     frequenciesPerMm: waveFrequencies(recipe.frequenciesPerMm),
     fields: { kind: "image-height-fractions", values: resolved },
-    method: "diffraction",
+    method,
     focus: "design",
   };
+}
+
+/** The `mtf.native` spec that asks for the diffraction MTF of a recipe: `rayFieldsMtfSpec` for that method. */
+export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_FIELDS): MtfNativeSpec | null {
+  return rayFieldsMtfSpec(recipe, "diffraction", fields);
 }
 
 /**
@@ -325,7 +340,7 @@ export const r6bRung: RungDefinition = Object.freeze({
 /** The engines of the rung `r5`: LensVisualizer, optiland, and the comparator's wave estimator on LensVisualizer's rays. */
 export const R5_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "wave"]);
 
-/** The engine of `r5` that is handed the angles of the fields, and the option it is handed them as. */
+/** The engine of `r5` and `r5g` that is handed the angles of the fields, and the option it is handed them as. */
 export const R5_ANGLES_ENGINE = "optiland";
 export const R5_ANGLES_OPTION = "fieldAnglesDeg";
 
@@ -369,6 +384,68 @@ export const r5Rung: RungDefinition = Object.freeze({
     r6bRung.buildRequests(opticalCase, runSpec, inputs),
 });
 
+/** The engines of the rung `r5g`: LensVisualizer, optiland, and the comparator's estimator on a replay of LensVisualizer's sampling. */
+export const R5G_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "replay"]);
+
+/**
+ * The `mtf.native` specs of `r5g`, one for each field: the geometric MTF of a recipe at the fields and the
+ * frequencies `r5` asks the diffraction MTF at (`rayFieldsMtfSpec`), each field in a spec of its own, in their
+ * order. Empty where `r5` would have no spec.
+ */
+export function geometricFieldMtfSpecs(recipe: MtfRecipe, fields?: RunFields): MtfNativeSpec[] {
+  const every = rayFieldsMtfSpec(recipe, "geometric", fields);
+  if (every === null) return [];
+  return every.fields.values.map((fraction) => ({
+    ...every,
+    fields: { kind: "image-height-fractions", values: [fraction] },
+  }));
+}
+
+/**
+ * The rung `r5g`, LensVisualizer's geometric MTF beside an engine's own: the geometric MTF of the run's recipe on
+ * the plane of the case, at the fields the run traces rays for, as fractions of the reference image height, at the
+ * frequencies of `r5` (`geometricFieldMtfSpecs`), asked of LensVisualizer, of optiland, whose answer is its own
+ * geometric MTF, and of the engine `replay`, the comparator's estimator on a replay of LensVisualizer's sampling.
+ *
+ * **One request a field.** optiland's geometric MTF of a fast lens wide open has been measured at 26 s a field and
+ * line on its ladder of 128 and 256 rays and at 135 s on the finer one, a request of the worker has a budget of
+ * 300 s when its last field is begun, and a worker that has not answered in ten minutes is ended
+ * (docs/gotchas.md). A request of three fields on five lines was within a sixth of that budget. With a field a
+ * request, one field's cost is one request's, and the finer step is asked for the field that is outside its band
+ * and for no other. It is therefore not the request of `r4f` either, which is of every field and frequency of the
+ * recipe.
+ *
+ * optiland is handed the recipe's angle of the request's field as its option `fieldAnglesDeg`, as in `r5`. The
+ * other two are handed the options `r4f` hands them. It is asked of those three and of no other engine
+ * (`R5G_ENGINES`), only for a recipe LensVisualizer resolved, and only where the rung is named.
+ */
+export const r5gRung: RungDefinition = Object.freeze({
+  id: "r5g",
+  quantity: MTF_NATIVE,
+  needsRecipe: true,
+  engines: R5G_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (
+    runSpec: RunSpec,
+    inputs?: RungInputs,
+    engineId?: string,
+    request?: QuantityRequest,
+  ): JsonObject | undefined => {
+    if (engineId !== R5_ANGLES_ENGINE) return r4fRung.engineOptions?.(runSpec);
+    const recipe = inputs?.recipe ?? null;
+    const angles =
+      recipe === null || request === undefined ? null : recipeAngles(recipe, request.spec as MtfNativeSpec);
+    return angles === null ? undefined : { [R5_ANGLES_OPTION]: angles };
+  },
+  buildRequests: (opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    if (recipe === null || recipe.source !== "lv") return [];
+    return geometricFieldMtfSpecs(recipe, runSpec.fields).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec }),
+    );
+  },
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
@@ -383,6 +460,7 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r4Rung,
   r4fRung,
   r5Rung,
+  r5gRung,
   r6aRung,
   r6bRung,
 ]);
