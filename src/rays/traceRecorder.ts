@@ -22,11 +22,12 @@ export interface TraceRecorder {
   /** Ends a ray at the surface it did not pass, as "blocked" or "failed". Its hits before that surface stay. */
   stop(ray: number, status: "blocked" | "failed", endSurface: number): void;
   /**
-   * Ends a ray that passed every surface: it left the last one at `exitPoint` along the unit vector
-   * `exitDirection`, with the optical path `opticalPath` behind it, into a medium of index `imageIndex`. It is
-   * landed on the image plane (`projectToImagePlane`), and its path continued over the landing's distance
-   * (`continuedOpticalPath`): status ok. A ray that does not reach the plane is blocked, with the number of
-   * surfaces as its end surface, and keeps its exit point, exit direction and optical path. Returns how it ended.
+   * Ends a ray that passed every surface: it left the last one at `exitPoint` along `exitDirection`, with the
+   * optical path `opticalPath` behind it, into a medium of index `imageIndex`. It is landed on the image plane
+   * (`projectToImagePlane`), and its path continued over the landing's distance (`continuedOpticalPath`), which is
+   * the length of that stretch whether the engine's direction is a unit vector to the last bit or not: status ok.
+   * A ray that does not reach the plane is blocked, with the number of surfaces as its end surface, and keeps its
+   * exit point, exit direction and optical path. Returns how it ended.
    */
   exit(ray: number, exitPoint: Vec3, exitDirection: Vec3, opticalPath: number, imageIndex: number): "ok" | "blocked";
   /** The answer as data of the quantity, and how many rays ended in each way. */

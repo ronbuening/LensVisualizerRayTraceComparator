@@ -10,7 +10,7 @@
 // sag of a millimetre. It is therefore summed with the rounding error of every product and of every addition
 // carried along (`polynomial`), which gives the sum as if it had been computed in twice the working precision.
 import type { AsphereTerm, SurfaceShape } from "../../contract/case.ts";
-import { twoProductError, twoSumError } from "./exact.ts";
+import { twoProductError, twoSumError } from "../../core/numeric/exact.ts";
 
 /** A surface of revolution as the reference engine holds it. */
 export interface SurfaceProfile {

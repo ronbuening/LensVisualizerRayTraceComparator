@@ -3,6 +3,10 @@
 // had been added up in twice the precision. Only IEEE 754 basic operations are used, each correctly rounded, so a
 // result is the same bits on every platform.
 //
+// They are shared: the reference engine sums a sag and an optical path with them, and the comparator's estimators
+// a length and an optical transfer function. They are in the adapter revision of every engine that reaches them
+// and in no engine's fingerprint.
+//
 // The algorithms are the classical ones: Knuth's TwoSum, Dekker's product with Veltkamp's split, and the
 // compensated dot product of Ogita, Rump and Oishi.
 

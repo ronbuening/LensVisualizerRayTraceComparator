@@ -111,8 +111,10 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
 test("the fingerprint is a hash of the engine's own source files, by path and content", (t) => {
   const files = readdirSync(REF_SOURCE_DIRECTORY).sort();
   assert.ok(files.includes("engine.ts") && files.includes("surface.ts") && files.includes("paraxial.ts"));
-  // The tracer and everything under it are the engine's own, and so are in its fingerprint.
-  for (const file of ["trace.ts", "intersect.ts", "refract.ts", "exact.ts", "rays.ts"]) assert.ok(files.includes(file));
+  // The tracer and everything under it are the engine's own, and so are in its fingerprint. The error-free sums it
+  // adds up with are shared with the estimators (src/core/numeric/exact.ts): in its adapter revision, not here.
+  for (const file of ["trace.ts", "intersect.ts", "refract.ts", "rays.ts"]) assert.ok(files.includes(file));
+  assert.ok(!files.includes("exact.ts"));
   assert.ok(files.every((file) => file.endsWith(".ts")));
   const lines = files.map((file) => `${file}\0${sha256Hex(readFileSync(join(REF_SOURCE_DIRECTORY, file)))}\n`);
   assert.deepEqual(refFingerprint(), { fingerprint: sha256Hex(lines.join("")), fileCount: files.length });

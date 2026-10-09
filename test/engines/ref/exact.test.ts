@@ -1,10 +1,11 @@
-// The error-free transformations of the reference engine, held to whole-number arithmetic: a double is a whole
-// number times a power of two, so the sum and the product of two doubles are known without rounding.
+// The error-free transformations (src/core/numeric/exact.ts) and the sums the reference engine makes with them,
+// held to whole-number arithmetic: a double is a whole number times a power of two, so the sum and the product of
+// two doubles are known without rounding.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { AsphereTerm } from "../../../src/contract/case.ts";
-import { createExactSum, twoProductError, twoSumError } from "../../../src/engines/ref/exact.ts";
+import { createExactSum, twoProductError, twoSumError } from "../../../src/core/numeric/exact.ts";
 import { polynomial, profileOf, sag, slope } from "../../../src/engines/ref/surface.ts";
 import { exactPolynomial, termScale, ulp } from "./support.ts";
 

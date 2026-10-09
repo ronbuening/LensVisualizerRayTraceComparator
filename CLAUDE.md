@@ -174,10 +174,39 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
-  cancel is compensated (`src/engines/ref/exact.ts`): the polynomial of a sag, an optical path. A ray is blocked
+  cancel is compensated (`src/core/numeric/exact.ts`, shared with the estimators: in the adapter revision of every
+  engine that reaches it, in no engine's fingerprint): the polynomial of a sag, an optical path. A ray is blocked
   only where the line was looked at: where Newton's method settles on no hit, the stretch inside the clear aperture
   is scanned for crossings (`crossingSteps`), and what cannot be decided is failed. When `lv` and `ref` differ,
   check the ray in extended precision before believing either; no gate is widened for it.
+- **An estimator is a pure function of a trace** (`src/estimators`): no engine, no file, only IEEE 754 basic
+  operations (no `Math.sin`, `Math.cos` or `Math.hypot`), every sum that can cancel compensated
+  (`src/core/numeric/exact.ts`), so equal input gives equal bits. It imports nothing of an engine.
+  `imageProjection.ts` is in the closures of `lv` and `ref`; `geometricOtf.ts` and `validity.ts` are in no engine's
+  closure and must stay out. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
+  bound, and whole-number arithmetic (`test/estimators/support.ts`: `exactTransfer`, `exactLength`), never an
+  engine's output.
+- **A landing's distance is a length, whatever the length of the direction** (`projectToImagePlane`): the line
+  parameter times `lengthOf(direction)`, formed without rounding and rounded once. Never charge a path by a line
+  parameter. Which rays land is decided by the parameter, as LensVisualizer's `mtfImagePoint` decides it. A
+  direction whose squares add up to exactly 1 gives the parameter in every bit; `test/integration/lv/rays.test.ts`
+  holds every landing ray's path to the length worked out in whole numbers.
+- **The geometric OTF has LensVisualizer's conventions and none of its code** (`src/estimators/geometricOtf.ts`):
+  phase `-2 pi nu (u - u_ref)`, x the sagittal cut and y the tangential one, one reference point for every line of
+  a spectrum, lines added as complex numbers by weight times flux before the modulus (`polychromaticOtf`). A source
+  canary holds LV's lines (`canaries.test.ts`); a change there changes the estimator's note, its convention test
+  and the canary. The modulus is not cut off at 1, and a frequency's value never depends on which others are
+  asked. LV's reference is its chief ray traced with no aperture checked: a replay obtains it as LV does.
+- **What an estimator cannot compute is an outcome with a reason, never a NaN and never a wrong number**
+  (`OtfUnavailable`: `bad-frequency`, `no-reference`, `bad-landing`, `bad-weight`, `no-rays`, `no-flux`,
+  `out-of-range`, `no-lines`, `bad-line-weight`, with the ray or line it is about). A ray more than
+  `MAX_PHASE_CYCLES` (2^32) cycles of phase from the reference is `out-of-range` and named: the phase is reduced
+  exactly only below that, so never raise it without a test against the whole-number definition. A spectrum with a
+  line that has no valid ray or no flux is unavailable as a whole and names the line: a line is never dropped.
+  Arrays of unequal length throw. A ray of weight 0 adds nothing, but must have landed if it is taken.
+- **Identical-ray estimators run on the rays valid in every engine** (`src/estimators/validity.ts`):
+  `intersectValidity` of each answer's `maskWhere(status, RAY_STATUS.ok)`, handed to the estimator as
+  `spots.valid`. Never apply an estimator to a bundle cut by one engine's status alone.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.

@@ -388,6 +388,73 @@ alone.
 `test/integration/lv/rungs.test.ts` holds the baseline's records of `lv` and `ref` to a fresh run of the two for
 as long as both engines and the cases are the ones the baseline names.
 
+## Estimators
+
+An estimator is the comparator's own arithmetic on a trace: pure functions in `src/estimators`, applied alike to
+every engine's answer for the same rays, so that two engines never differ by how each turns rays into a figure.
+They read no engine and no file and use only IEEE 754 basic operations (`+ - * /` and square root), so equal input
+gives equal bits on any machine. The error-free sums they share with `ref` are in `src/core/numeric/exact.ts`: in
+the adapter revision of whatever reaches them, in no engine's fingerprint. No rung asks for the transfer function
+yet; R4 is the first.
+
+- **The image projection** (`imageProjection.ts`) lands a ray that left the last surface: the point of its line on
+  the image plane, and the length of that stretch, which the optical path to the image is charged with. The length
+  is the line's parameter times the length of the direction (`lengthOf`, in two doubles), rounded once, whatever
+  that length is: a direction is a unit vector to a rounding at best
+  ([docs/gotchas.md](gotchas.md#a-direction-is-a-unit-vector-to-a-rounding-and-a-stretch-is-charged-by-its-length)).
+- **The geometric OTF** (`geometricOtf.ts`) is the sum over the rays that land, with no bin and no transform, at
+  any frequency in cycles a millimetre:
+
+  `OTF(nu) = sum of w exp(-2 pi i nu (u - u_ref)) / sum of w`
+
+  `geometricOtf(spots, reference, frequencies)` gives both cuts: `sagittal` with `u` along image x, `tangential`
+  with `u` along image y, each as real part, imaginary part and modulus (the MTF) at every frequency. `spots` are
+  the landings `x`, `y` and the weights of the rays, the flux each carries; a ray of weight 0, as a chief ray, adds
+  nothing. `reference` is one point of the image plane. These are the conventions of LensVisualizer's
+  `geometricOtf`, read there and restated
+  ([docs/gotchas.md](gotchas.md#the-geometric-otf-is-a-sum-about-the-chief-ray-of-the-first-line-and-its-magnitude-is-cut-off-at-1)).
+- **A spectrum** (`polychromaticOtf(lines, reference, frequencies)`) adds its lines up as complex numbers before
+  any modulus: the sum over the lines of weight times a line's own sum (`spotSums`), over the sum of weight times
+  the flux of the line's rays, every line about the **same** reference. Lateral colour therefore lowers the
+  modulus, and a line whose rays carry less flux counts for less. Two lines that land `d` apart give
+  `|cos(pi nu d)|` when they count alike.
+- **The arithmetic.** The phase of a ray is reduced before it is an angle: the cycles `nu (u - u_ref)` are formed
+  with the rounding of the subtraction and of the product carried along, whole and quarter cycles are taken off
+  exactly, and the sine and cosine of the eighth of a cycle that is left are Taylor polynomials. Every sum is
+  compensated. A value is within 1e-15 of the sum taken exactly, at a phase of a hundredth of a cycle as at ten
+  million (measured against the definition in whole numbers: 2.2e-16 at worst over 20 000 single rays, 1.1e-16
+  over sums of 200); at frequency 0 it is exactly 1; a spot a whole number of quarter cycles from the reference
+  gives exactly 1, -1 or 0. A value does not depend on which other frequencies were asked. The modulus is not cut
+  off at 1. 65 536 rays at three frequencies take 20 ms.
+- **Unavailable, never NaN.** What cannot be computed is `{ available: false, reason, message }`, with the index
+  of the ray or the line it is about, and holds no number:
+
+  | Reason | When |
+  |---|---|
+  | `bad-frequency` | a frequency is not a finite number |
+  | `no-reference` | the reference is no finite point: a chief ray that did not land has none |
+  | `bad-landing`, `bad-weight` | a ray that is taken has a landing that is not finite, or a weight that is not a finite number of at least 0 (the first such ray) |
+  | `no-rays` | no ray is taken |
+  | `no-flux` | the rays taken all weigh 0 |
+  | `out-of-range` | a ray more than 2^32 cycles of phase from the reference (`MAX_PHASE_CYCLES`; it is named), or a sum that is no finite number |
+  | `no-lines`, `bad-line-weight` | a spectrum without a line; a line whose weight is not a finite number above 0 |
+
+  The request is looked at first, then the rays in their order. In a spectrum every line must have an answer of
+  its own: a line without a valid ray or without flux makes the whole sum unavailable and is named (`line`), since
+  a spectrum from which a line is missing is another spectrum. Arrays of unequal length are an error, not an
+  outcome.
+- **Rays valid in every engine** (`validity.ts`). `spots.valid` is a mask, 0 for a ray that is left out, and a ray
+  that is left out is not looked at (its landing is NaN in a trace). `maskWhere(status, ok)` is the mask of one
+  answer and `intersectValidity(masks)` the rays every engine brought to the image, so that one estimator is
+  applied to the same subset of every engine's bundle.
+
+The proof is analytic (`test/estimators`): two points against a cosine, N equally spaced points against the
+Dirichlet kernel, a uniform line of 2000 rays against the sinc within the bound of the midpoint rule (below 5e-7),
+a uniform disc of 14 400 rays in rings of equal area against `2 J1(z) / z` within a bound derived from the
+Jacobi-Anger expansion and the midpoint rule (below 4e-5), a shift that changes the phase alone, weights, symmetry,
+the two axes, two lines `d` apart, unequal flux, the common reference, and the definition itself carried out in
+ninety digits of whole-number arithmetic.
+
 ## LensVisualizer's product MTF
 
 `mtf.native` is the quantity for an engine's own MTF: by its own method, sampling and aiming, as it presents it.

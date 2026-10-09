@@ -419,6 +419,27 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   test holds the two statements together: the cases are the same exactly where the two radii are.
 - **Class.** numerical.
 
+### The geometric OTF is a sum about the chief ray of the first line, and its magnitude is cut off at 1
+
+- **Where.** `geometricOtf`, `combineOtfs` and `otfMagnitude` in `src/optics/analysis/mtfMath.ts`, as `fieldAtGrid`
+  in `src/optics/analysis/mtf.ts` calls them (read at `c05a2ab7`).
+- **Effect.** Four conventions and three habits, none of them exported as a rule. The conventions: the phase of a
+  ray is `-2 pi nu u`; the cut along image x is the sagittal one and the cut along y the tangential one; `u` is
+  measured from one point for every line of the spectrum, the landing of the chief ray at the first line, which
+  LensVisualizer traces with no aperture checked, so that a clipped chief ray still gives a reference; and the
+  lines add up as complex numbers, each weighted by its weight times the flux its rays carry, before the magnitude
+  is taken. The habits: the magnitude is `min(1, ...)`; a list of three or more evenly spaced frequencies is
+  answered by turning one phasor from frequency to frequency, so a value depends by a rounding on which list it
+  was asked in; and a bundle without flux is an empty list, not a reason.
+- **Handled.** The comparator's estimator (`src/estimators/geometricOtf.ts`) states the conventions and takes over
+  no line: the sign, the axes and the weighting are tested on closed forms, and a source canary holds
+  LensVisualizer's lines. The habits it does not share: every frequency is evaluated on its own, the modulus is as
+  the sum gives it, and what cannot be computed is an outcome with a reason. The reference point is an argument.
+  A chief ray of a ray set is traced as every other ray is, with the apertures checked: one that an aperture stops
+  has no landing in `rays.trace`, and the estimator then says `no-reference`; the replay of LensVisualizer's own
+  MTF (Stage 3.2) has to obtain its reference as LensVisualizer does.
+- **Class.** convention.
+
 ### LensVisualizer's MTF has three spectra, two planes and one kind of field
 
 - **Where.** `MtfOptions` (`src/types/mtf.ts`) names a spectrum (`reference`, `cdf`, `photopic`), a focus mode
@@ -631,6 +652,31 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   either engine may be left with a rounding where the other has a zero.
 - **Handled.** Nothing: no gate is written for it. No lens of the catalog is telecentric to the bit; the nearest
   has its exit pupil 7.7 m to 20 m away (above), where every engine has a number.
+- **Class.** numerical.
+
+### A direction is a unit vector to a rounding, and a stretch is charged by its length
+
+- **Where.** Every tracer holds a direction in three doubles, and the stretch from `p` to `p + t d` is `t |d|`
+  long: the parameter `t` is a length only where `|d|` is 1. LensVisualizer and `ref` make unit vectors, to a
+  rounding (a vector normalised in doubles is within 2.2e-16 of one); optiland makes none
+  ([below](#optilands-optical-path-is-a-sum-of-steps-and-a-step-is-a-length-only-along-a-unit-vector)); a given
+  ray may be 1e-12 from one by the contract.
+- **Effect.** Until Stage 3.1 the comparator's own projection took the parameter to the image plane for the length
+  of the last stretch, so `opticalPathToImage` of `lv` and of `ref` was charged index times parameter: off by the
+  stretch times `|d| - 1`. For a unit vector to a rounding that is a unit or two in the last place of the stretch;
+  for a direction twice as long it would have been half the stretch. No verdict rested on it.
+- **Handled.** `projectToImagePlane` (`src/estimators/imageProjection.ts`) charges the length: the parameter times
+  the length of the direction, that length carried in two doubles (`lengthOf`) and the product rounded once, to
+  half a unit in its last place. The landing point is the same arithmetic as before, in every bit. A direction
+  whose squares add up to exactly 1, or to within 5.5e-17 of it, gives the distance it gave before in every bit.
+  Of directions normalised in doubles (200 000 of them, synthetic) 31 % give a distance one or two units in the
+  last place away from the parameter, and 6 % of the paths to the image move by one unit of theirs. Of the 22 918
+  rays of the benchmark that `lv` lands at the reference line, 721 have another path to the image than index
+  times parameter, each held bit for bit to the length worked out in whole numbers
+  (`test/integration/lv/rays.test.ts`). Which rays land is decided by the parameter, as before and as
+  LensVisualizer's `mtfImagePoint` decides it. On the two suites (LensVisualizer `c05a2ab7`, closure `78215d72`;
+  504 records) no figure of R0, R1 or R2 moved; in R3 six figures of the benchmark moved by at most 6.0e-11 waves
+  and six of the features suite by at most 5.6e-11 waves, 3e-6 of the gate, and every record is `REFRESHABLE`.
 - **Class.** numerical.
 
 ## optiland

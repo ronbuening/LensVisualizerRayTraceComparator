@@ -1,7 +1,7 @@
 // Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
-// pinned as text at LV commit d36f44b3, and those of the MTF tab's request at ed78cf40. LensVisualizer exports none
-// of these rules as a function, so the comparator restates them; when LV rewrites one, the canary fails and names
-// what to read again. Whitespace is not compared.
+// pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40 and those of the geometric OTF's
+// conventions at c05a2ab7. LensVisualizer exports none of these rules as a function, so the comparator restates
+// them; when LV rewrites one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -691,6 +691,75 @@ test(
       "src/optics/math/paraxial.ts",
       "const refractivePower = Math.abs(surface.R) < FLAT_R_THRESHOLD ? (nextN - n) / surface.R : 0;",
       mirror,
+    );
+  },
+);
+
+test(
+  "the geometric OTF still has the sign, the axes, the reference and the weights the comparator's estimator states",
+  { skip },
+  () => {
+    const math = "src/optics/analysis/mtfMath.ts";
+    const mirror =
+      "src/estimators/geometricOtf.ts states the same conventions for the comparator's own sum, and shares no line " +
+      "with it: minus in the phase, the weights as flux, the sum over the total weight";
+    assertSource(math, "const position = point[axis];", mirror);
+    assertSource(
+      math,
+      `const phase = -2 * Math.PI * frequencies[i] * position;
+       real[i] += point.weight * Math.cos(phase);
+       imaginary[i] += point.weight * Math.sin(phase);`,
+      mirror,
+    );
+    // The same sign in the branch for an evenly spaced list, which the estimator has no counterpart of.
+    assertSource(
+      math,
+      `const start = -2 * Math.PI * frequencies[0] * position;
+       const rotation = -2 * Math.PI * step * position;`,
+      mirror,
+    );
+    assertSource(
+      math,
+      `const total = points.reduce((sum, p) => sum + p.weight, 0);
+       if (!(total > 0)) return { real: [], imaginary: [] };`,
+      "spotSums answers no-flux where LensVisualizer returns empty lists",
+    );
+    assertSource(
+      math,
+      "return { real: Array.from(real, (v) => v / total), imaginary: Array.from(imaginary, (v) => v / total) };",
+      mirror,
+    );
+    assertSource(
+      math,
+      "return otf.real.map((re, i) => Math.min(1, Math.hypot(re, otf.imaginary[i])));",
+      "the estimator's modulus is not cut off at 1, and src/estimators/geometricOtf.ts says so",
+    );
+    // The lines of a spectrum: complex sums weighted before the magnitude, each by line weight times flux.
+    const spectrum =
+      "polychromaticOtf in src/estimators/geometricOtf.ts adds the lines up by weight times flux, about one point";
+    assertSource(
+      math,
+      `real: samples[0].otf.real.map((_, i) => samples.reduce((sum, s) => sum + s.weight * s.otf.real[i], 0) / total),`,
+      spectrum,
+    );
+    const mtf = "src/optics/analysis/mtf.ts";
+    assertSource(mtf, "const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);", spectrum);
+    assertSource(mtf, "const weight = line.weight * transmitted;", spectrum);
+    // One reference for every line, the chief ray's landing at the first: x is the sagittal cut, y the tangential.
+    assertSource(mtf, "commonReference ??= bundle.chief;", spectrum);
+    assertSource(
+      mtf,
+      `const reference = commonReference;
+       const points = bundle.rays.map((p) => ({ x: p.x - reference.x, y: p.y - reference.y, weight: p.weight }));
+       sagittal.push({ otf: geometricOtf(points, context.frequencies, "x"), weight });
+       tangential.push({ otf: geometricOtf(points, context.frequencies, "y"), weight });`,
+      "geometricOtf takes positions about one reference, the cut along x for sagittal and along y for tangential",
+    );
+    assertSource(
+      mtf,
+      `field.sagittal = otfMagnitude(combineOtfs(sagittal));
+       field.tangential = otfMagnitude(combineOtfs(tangential));`,
+      spectrum,
     );
   },
 );

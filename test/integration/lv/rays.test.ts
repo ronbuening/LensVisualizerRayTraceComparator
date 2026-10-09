@@ -41,6 +41,7 @@ import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { startsInFront } from "../../../src/rays/probe.ts";
 import { DEFAULT_BUNDLE_GRID, DEFAULT_RAY_FIELDS, raySetId } from "../../../src/rays/raySets.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
+import { exactLength } from "../../estimators/support.ts";
 import { suitePath } from "../../suites/support.ts";
 import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 
@@ -339,7 +340,8 @@ function fieldCheck(binding: LvBinding, model: LvCaseModel, angleDeg: number, li
  * Holds the answer to one ray set to LensVisualizer itself and returns how many rays were held to it bit for bit.
  *
  * - Every ray that is ok lands where LensVisualizer's `mtfImagePoint` lands its trace, and has its optical path,
- *   bit for bit; every other ray has no image point there either.
+ *   bit for bit; every other ray has no image point there either. Its path to the image is that path and the index
+ *   LensVisualizer ends in times the length of the stretch to the plane (`distanceToPlane`), bit for bit.
  * - The rays of the lattice that are ok are as many as LensVisualizer's own bundle counts as valid, the blocked
  *   and the failed ones as many as it counts as blocked and as failed.
  * - Each ray of the bundle that LensVisualizer traced (it traces half the columns) starts where the set starts the
@@ -353,7 +355,7 @@ function heldToLensVisualizer(
   data: RaysTraceData,
   check: FieldCheck,
   at: string,
-): { exact: number; mirrored: number; worstMirrored: number } {
+): { exact: number; mirrored: number; worstMirrored: number; landed: number; notTheParameter: number } {
   const { api } = binding;
   const { columns, rows } = check.rays.grid;
   const cells = columns * rows;
@@ -368,6 +370,7 @@ function heldToLensVisualizer(
 
   const { imageZ } = model.exported.conditions;
   const counts = [0, 0, 0];
+  let [landed, notTheParameter] = [0, 0];
   for (let ray = 0; ray < rays; ray++) {
     const trace = traced(binding, model, spec, ray);
     const spot = api.mtfImagePoint(model.state, trace, imageZ);
@@ -377,8 +380,13 @@ function heldToLensVisualizer(
     assert.ok(sameBits(image[3 * ray], spot.x) && sameBits(image[3 * ray + 1], spot.y), `${at} ray ${ray} lands`);
     assert.equal(image[3 * ray + 2], imageZ, at);
     assert.ok(sameBits(path[ray], trace.opticalPathLengthMm as number), `${at} ray ${ray} optical path`);
-    const expected = (trace.opticalPathLengthMm as number) + trace.finalMedium * distanceToPlane(trace, imageZ);
+    const { parameter, length } = distanceToPlane(trace, imageZ);
+    const expected = (trace.opticalPathLengthMm as number) + trace.finalMedium * length;
     assert.ok(sameBits(toImage[ray], expected), `${at} ray ${ray} optical path to the image`);
+    // LensVisualizer's directions are unit vectors to a rounding: the length is the parameter or a neighbour of it.
+    assert.ok(Math.abs(length - parameter) <= 4 * Number.EPSILON * parameter, `${at} ray ${ray}: ${length}`);
+    landed++;
+    if (!sameBits(expected, (trace.opticalPathLengthMm as number) + trace.finalMedium * parameter)) notTheParameter++;
   }
   assert.deepEqual(counts, [check.bundle.rays.length, check.bundle.blocked, check.bundle.failed], at);
 
@@ -403,12 +411,17 @@ function heldToLensVisualizer(
       mirrored++;
     }
   }
-  return { exact, mirrored, worstMirrored };
+  return { exact, mirrored, worstMirrored, landed, notTheParameter };
 }
 
-/** The length of a trace's last stretch to the image plane, as LensVisualizer's `mtfImagePoint` takes it. */
-function distanceToPlane(trace: LvTraceResult, imageZ: number): number {
-  return Math.max(0, (imageZ - trace.terminalPoint[2]) / trace.terminalDirection[2]);
+/**
+ * A trace's last stretch to the image plane: the parameter of its line there, as LensVisualizer's `mtfImagePoint`
+ * takes it, and the length of the stretch, which is that parameter times the length of the direction LensVisualizer
+ * ends with, rounded once. The length is worked out in whole numbers (`exactLength`), by nothing of the comparator.
+ */
+function distanceToPlane(trace: LvTraceResult, imageZ: number): { parameter: number; length: number } {
+  const parameter = Math.max(0, (imageZ - trace.terminalPoint[2]) / trace.terminalDirection[2]);
+  return { parameter, length: exactLength(parameter, trace.terminalDirection) };
 }
 
 /**
@@ -538,6 +551,7 @@ test(
     const store = createResultStore(join(runsDir, STORE_DIRECTORY));
     const binding = await loadLvBinding(LV_PATH);
     const totals = { rays: 0, ok: 0, exact: 0, mirrored: 0, worstMirrored: 0, worstOffSurface: 0 };
+    const stretch = { landed: 0, notTheParameter: 0 };
     const configurations = new Set<string>();
     for (const run of runs) {
       const key = run.lens.kind === "lv" ? run.lens.key : "";
@@ -593,6 +607,8 @@ test(
         totals.exact += held.exact;
         totals.mirrored += held.mirrored;
         totals.worstMirrored = Math.max(totals.worstMirrored, held.worstMirrored);
+        stretch.landed += held.landed;
+        stretch.notTheParameter += held.notTheParameter;
       }
     }
     assert.equal(configurations.size, 12);
@@ -606,6 +622,12 @@ test(
       `benchmark at the reference line: ${totals.rays} rays in 36 sets, ${totals.ok} ok; ${totals.exact} held to ` +
         `LensVisualizer's own traced rays bit for bit, ${totals.mirrored} to its mirrored ones within ` +
         `${totals.worstMirrored} mm; the worst hit lies ${totals.worstOffSurface} mm off its surface`,
+    );
+    // The path to the image is charged by the length of the last stretch, which is the line's parameter only where
+    // LensVisualizer's direction is a unit vector to the bit: for the others the path is its neighbour.
+    t.diagnostic(
+      `of ${stretch.landed} rays that land, ${stretch.notTheParameter} have a path to the image that is not the ` +
+        "index times the parameter of the line, by the length of LensVisualizer's direction",
     );
     // At d36f44b3: 39 302 rays, of which 22 918 are ok (36 of them chief rays); 11 441 are held to the rays
     // LensVisualizer traced, bit for bit, and 11 441 to the ones it mirrored, within 3.5e-13 mm. No ray failed. By

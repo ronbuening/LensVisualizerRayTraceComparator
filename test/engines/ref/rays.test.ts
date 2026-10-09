@@ -260,7 +260,7 @@ test("the tracer and the recorder are in the engine's adapter revision, and the 
     "engines/ref/trace.ts",
     "engines/ref/intersect.ts",
     "engines/ref/refract.ts",
-    "engines/ref/exact.ts",
+    "core/numeric/exact.ts",
     "engines/ref/rays.ts",
     "rays/traceRecorder.ts",
     "estimators/imageProjection.ts",
