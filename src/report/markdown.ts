@@ -125,8 +125,9 @@ const HOW_TO_READ: readonly string[] = [
       [
         "FLOOR",
         "A gated rung: a judged metric is above its tolerance by the known numerical floor of one of the two " +
-          "engines. The rung's arbiter agrees with every other engine, and that engine is within the floor limit " +
-          "of the arbiter; the note gives the figures. It counts as a pass.",
+          "engines. That engine is within the floor limit of the rung's arbiter, and no other engine sides with " +
+          "it against the arbiter; the note gives the figures, and names a witness that did not corroborate the " +
+          "arbiter. It counts as a pass.",
       ],
       ["FAIL", "A gated rung: a judged metric is above its tolerance, or is not a number."],
       ["RECORDED", "A recorded rung: the difference is written down. It is not a failure."],
@@ -151,7 +152,8 @@ const HOW_TO_READ: readonly string[] = [
   "",
   "A limit is shown in the heading of its metric: `≤` is the tolerance of a gated rung, `band` the attention band",
   "of a recorded one, and `floor ≤` how far the engine with a floor may be from the arbiter for a FLOOR. A metric",
-  "without a limit is shown and not judged.",
+  "without a limit is shown and not judged. Where its name begins as a judged one's does, it stands beside that",
+  "one: `pupilZ.maxAbs`, the plain difference, beside `pupilZ.maxScaled`, the one on the scale that is judged.",
   `Numbers have ${METRIC_DIGITS} significant digits, and a whole number, such as a count, is written in full.`,
   `A recorded value has ${RECORDED_DIGITS} significant digits, or is a whole number in full, and is named with the index of its`,
   `element. \`${NOTHING}\` marks a place with nothing to compare, and \`not finite\` a number that is a NaN or an infinity.`,

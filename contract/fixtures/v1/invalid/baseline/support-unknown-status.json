@@ -1,0 +1,264 @@
+{
+  "contract": "1.0",
+  "kind": "baseline",
+  "suite": {
+    "name": "rays",
+    "hash": "c1130f7a90b98309dd878b436c83bbd1d91df7c4463b39b9dcc520d2a4da77e9"
+  },
+  "policy": {
+    "version": 5,
+    "hash": "4bf353de006bb276cc256907298a03e5bb2f7fced71c75d96daba8b4fa6aa1d6"
+  },
+  "engines": [
+    {
+      "id": "lv",
+      "version": "0.0.0",
+      "fingerprint": "a5218c82fa7cfc822c5f6e7412f7eb818985255f09a7cf211226e93069ece7e1",
+      "adapterRevision": "2b0bfb3cac94df9a7f539c3c8d63da97d3b12412033cdf3891e0bfc0e4ff93ac",
+      "details": {
+        "commit": "0123456789abcdef0123456789abcdef01234567",
+        "dirty": false
+      }
+    },
+    {
+      "id": "other",
+      "version": "1.2",
+      "fingerprint": "2ad694673bcefd3fbd0647cab78136b1b51401e654298cb55aedfad576984a3c",
+      "details": {}
+    },
+    {
+      "id": "ref",
+      "version": "1",
+      "fingerprint": "874110a11991233d73d1cd46195d7b01cc20b4d99aad22116fc69474136bb4d6",
+      "adapterRevision": "92e814ba1d8f0d56fb4d9666af428fc0a3690ebe003fd0de7d1422f782951936",
+      "details": {
+        "sourceFiles": 12
+      }
+    }
+  ],
+  "runs": [
+    {
+      "name": "zoom-wide",
+      "caseId": "18cff1481e2bf901ff2bb73d8752cd55376f40736e262c91640668696494a4aa",
+      "rungs": [
+        {
+          "rung": "r1",
+          "quantity": "paraxial.first-order",
+          "requests": 1,
+          "support": [
+            {
+              "engine": "lv",
+              "status": "ok"
+            },
+            {
+              "engine": "other",
+              "status": "cached",
+              "detail": "quantity paraxial.first-order"
+            },
+            {
+              "engine": "ref",
+              "status": "ok"
+            }
+          ],
+          "pairs": [
+            {
+              "a": "lv",
+              "b": "other",
+              "verdict": "UNSUPPORTED",
+              "verdicts": [
+                {
+                  "verdict": "UNSUPPORTED",
+                  "count": 1
+                }
+              ],
+              "metrics": []
+            },
+            {
+              "a": "lv",
+              "b": "ref",
+              "verdict": "PASS",
+              "verdicts": [
+                {
+                  "verdict": "PASS",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "firstOrder.maxAbs",
+                  "unit": "mm",
+                  "value": 2.5e-13,
+                  "where": {
+                    "line": 0
+                  },
+                  "tolerance": 1e-9
+                }
+              ]
+            },
+            {
+              "a": "other",
+              "b": "ref",
+              "verdict": "UNSUPPORTED",
+              "verdicts": [
+                {
+                  "verdict": "UNSUPPORTED",
+                  "count": 1
+                }
+              ],
+              "metrics": []
+            }
+          ]
+        },
+        {
+          "rung": "r2",
+          "quantity": "rays.trace",
+          "requests": 2,
+          "support": [
+            {
+              "engine": "lv",
+              "status": "ok"
+            },
+            {
+              "engine": "other",
+              "status": "ok"
+            },
+            {
+              "engine": "ref",
+              "status": "ok"
+            }
+          ],
+          "rays": [
+            {
+              "engine": "lv",
+              "ok": 10,
+              "blocked": 6,
+              "failed": 0
+            },
+            {
+              "engine": "other",
+              "ok": 10,
+              "blocked": 6,
+              "failed": 0
+            },
+            {
+              "engine": "ref",
+              "ok": 10,
+              "blocked": 6,
+              "failed": 0
+            }
+          ],
+          "pairs": [
+            {
+              "a": "lv",
+              "b": "other",
+              "verdict": "FLOOR",
+              "verdicts": [
+                {
+                  "verdict": "PASS",
+                  "count": 1
+                },
+                {
+                  "verdict": "FLOOR",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "landing.maxDistance",
+                  "unit": "mm",
+                  "value": 1.25e-8,
+                  "where": {
+                    "field": 54,
+                    "line": 0,
+                    "ray": 4
+                  },
+                  "tolerance": 1e-8
+                },
+                {
+                  "name": "mask.mismatches",
+                  "unit": "rays",
+                  "value": 0,
+                  "tolerance": 0
+                },
+                {
+                  "name": "mask.rimBand",
+                  "unit": "rays",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "a": "lv",
+              "b": "ref",
+              "verdict": "FLOOR",
+              "verdicts": [
+                {
+                  "verdict": "PASS",
+                  "count": 1
+                },
+                {
+                  "verdict": "FLOOR",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "landing.maxDistance",
+                  "unit": "mm",
+                  "value": 1.25e-8,
+                  "where": {
+                    "field": 54,
+                    "line": 0,
+                    "ray": 4
+                  },
+                  "tolerance": 1e-8
+                },
+                {
+                  "name": "mask.mismatches",
+                  "unit": "rays",
+                  "value": 0,
+                  "tolerance": 0
+                },
+                {
+                  "name": "mask.rimBand",
+                  "unit": "rays",
+                  "value": 1
+                }
+              ]
+            },
+            {
+              "a": "other",
+              "b": "ref",
+              "verdict": "PASS",
+              "verdicts": [
+                {
+                  "verdict": "PASS",
+                  "count": 2
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "landing.maxDistance",
+                  "unit": "mm",
+                  "value": null,
+                  "tolerance": 1e-8
+                },
+                {
+                  "name": "mask.mismatches",
+                  "unit": "rays",
+                  "value": 0,
+                  "tolerance": 0
+                },
+                {
+                  "name": "mask.rimBand",
+                  "unit": "rays",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

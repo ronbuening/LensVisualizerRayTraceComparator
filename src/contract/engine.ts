@@ -7,9 +7,10 @@ export interface EngineIdentity {
   readonly version: string;
   readonly fingerprint: string;
   /**
-   * For an engine that is part of the comparator: a content hash of the comparator's own code that its answers
-   * pass through, the adapter and the shared kernels the adapter calls. Results are keyed by it beside the
-   * fingerprint, so that a change to the adapter retires them and the fingerprint stays the engine's own.
+   * For an engine that is part of the comparator, or whose worker is: a content hash of the comparator's own code
+   * that its answers pass through, the adapter and the shared kernels the adapter calls, or the worker's sources.
+   * Results are keyed by it beside the fingerprint, so that a change to the adapter retires them and the
+   * fingerprint stays the engine's own.
    */
   readonly adapterRevision?: string;
   readonly details: EngineDetails;

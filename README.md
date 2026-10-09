@@ -7,14 +7,18 @@ and compares the answers rung by rung: the built system, paraxial data, identica
 **Status.** Phases 0 and 1 of the [plan](docs/IMPLEMENTATION_PLAN.md) are complete. LensVisualizer (`lv`) and the
 comparator's own reference tracer (`ref`) answer rungs R0 to R3 and agree on the benchmark suite, and `lvrtc mtf`
 prints the MTF that LensVisualizer's own MTF tab shows. The first external engine,
-[optiland](https://github.com/optiland/optiland), is Phase 2.
+[optiland](https://github.com/optiland/optiland), is Phase 2: the engine `optiland` builds every case in optiland
+and answers rungs R0 to R3: the built system, its first-order data, the same rays traced by optiland's own tracer
+and their optical paths, on which the three engines agree on both suites
+([measured](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines)). Baselines of those runs close the phase.
 
 ## Requirements
 
 - Node `>=24.15.0 <25`. The sources are TypeScript run directly by Node; there is no build step.
 - Python `>=3.10` as `python3`, for the worker kit and its tests. Nothing is installed into it.
 - A LensVisualizer checkout, for anything that involves a real lens.
-- A Python interpreter that can import optiland, from Phase 2 on.
+- A Python interpreter that can import optiland, for the engine `optiland`. Nothing is installed into it and
+  nothing is written into the optiland checkout.
 
 ## Setup
 
@@ -48,8 +52,9 @@ node bin/lvrtc.mjs doctor
 ```
 
 Shows what the comparator found: the Node version, every configuration value and which file or variable set it,
-the LensVisualizer checkout with its commit, the Python interpreter and the optiland installation. A missing
-LensVisualizer or optiland is reported, not an error, so run this to check your paths.
+the LensVisualizer checkout with its commit, the Python interpreter, and the optiland the engine `optiland` runs:
+its commit, a hash of its sources, the versions it computes with and its fingerprint. A missing LensVisualizer or
+optiland is reported, not an error, so run this to check your paths.
 
 ## Try it without LensVisualizer or optiland
 
@@ -91,6 +96,14 @@ npm run test:lv
 Runs the tests that need the real LensVisualizer checkout. They are not part of `npm run check`; each skips,
 saying why, when LensVisualizer is not configured. They write nothing into LensVisualizer.
 
+```bash
+npm run test:optiland
+```
+
+Runs the tests that need the real optiland, with the interpreter of `engines.optiland.python`. They are not part
+of `npm run check` either, skip the same way, and prove that nothing was written into the optiland checkout. The
+tests that set optiland against LensVisualizer need both.
+
 ### Look at LensVisualizer's lenses
 
 ```bash
@@ -130,6 +143,15 @@ Runs a suite: for every lens, rung and engine it asks the engine and stores the 
 so a run that was interrupted resumes by being run again. `--engines` and `--rungs` are optional.
 
 ```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
+```
+
+Adds optiland: it builds every lens in optiland and reads the built system back (R0), so a translation error
+shows before a ray is traced, gives optiland's own focal length, cardinal points and pupils (R1), and traces the
+very rays LensVisualizer launches with optiland's own tracer: where they go (R2) and how long their paths are
+(R3). What comes of it is in [docs/REFERENCE.md](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines).
+
+```bash
 node bin/lvrtc.mjs compare benchmark
 ```
 
@@ -137,18 +159,50 @@ Compares the stored answers of that run and gives each pair of engines a verdict
 pair is `FAIL` or `ERROR`.
 
 ```bash
-node bin/lvrtc.mjs report benchmark --floor reports/benchmark
+node bin/lvrtc.mjs report benchmark
 ```
 
-Writes `runs/benchmark/report.md`. With `--floor` it also rewrites the committed
-[numerical-floor record](reports/benchmark/lv-floor.md): the largest difference between `lv` and `ref` on every
-rung of every benchmark lens.
+Writes `runs/benchmark/report.md`: every run, rung and pair, with where each largest difference occurs.
+
+### Baselines
+
+```bash
+node bin/lvrtc.mjs baseline write benchmark
+```
+
+After the three-engine `run` and `compare` above: rewrites the committed record of what the engines agreed on,
+[baselines/benchmark.json](baselines/benchmark.json), and the report rendered from it,
+[reports/benchmark/rays.md](reports/benchmark/rays.md). The same three commands with `features` rewrite the
+feature suite's. That sequence regenerates everything that is committed under `baselines/` and `reports/` except
+the census.
+
+```bash
+node bin/lvrtc.mjs baseline check benchmark
+```
+
+Runs the suite again on the baseline's engines and says, record by record, whether the baseline is still of the
+lenses and engines at hand: `OK`, `STALE` (a lens or an engine has changed; `REFRESHABLE` if the figures still
+hold) or `DRIFT` (a verdict changed or a figure moved past its tolerance). Only `DRIFT`, `FAIL` and `ERROR` exit 1.
+
+```bash
+node bin/lvrtc.mjs verify
+```
+
+Needs no engine and is part of `npm run check`: validates every committed baseline and makes the committed
+reports anew from the baselines, failing on a byte of difference. It cannot see a lens that has changed;
+`baseline check` does.
 
 ```bash
 node bin/lvrtc.mjs engine conformance ref
 ```
 
 Checks that one engine speaks the contract correctly, whatever way it is reached.
+
+```bash
+node bin/lvrtc.mjs engine conformance optiland
+```
+
+The same for optiland: it starts the Python worker with the configured interpreter, which takes a few seconds.
 
 ### LensVisualizer's own MTF
 

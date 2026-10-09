@@ -486,8 +486,8 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
     'unknown profile "zemax-default": the profiles are lv-tab-default',
   );
   await usage(
-    ["acme-singlet-50", "--engines", "lv,optiland"],
-    'unknown engine "optiland": the configuration defines no engine; built in: lv, ref',
+    ["acme-singlet-50", "--engines", "lv,zemax"],
+    'unknown engine "zemax": the configuration defines no engine; built in: lv, optiland, ref',
   );
   await usage(["acme-singlet-50", "--root", "no-such-root"], "--root no-such-root: not a directory");
   // The tab reaches any other aperture only through its slider: the profile has no request for one.

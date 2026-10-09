@@ -116,7 +116,8 @@ function compare(a: SystemDescribeData, b: SystemDescribeData): ComparatorOutcom
   const shape: Tally = { count: 0 };
   const aperture: Tally = { count: 0 };
   const index: Tally = { count: 0 };
-  const perSurface = (tally: Tally, field: "vertexZ" | "curvature" | "conic" | "clipRadius"): void => {
+  type SurfaceField = "vertexZ" | "curvature" | "conic" | "clipRadius" | "innerClipRadius";
+  const perSurface = (tally: Tally, field: SurfaceField): void => {
     const [one, other] = [elements(a[field]), elements(b[field])];
     for (let surface = 0; surface < surfaces; surface++) {
       if (!sameNumber(one[surface], other[surface])) miss(tally, { field, surface });
@@ -137,6 +138,7 @@ function compare(a: SystemDescribeData, b: SystemDescribeData): ComparatorOutcom
   if (a.stopIndex !== b.stopIndex) miss(aperture, { field: "stopIndex" });
   if (!sameNumber(a.stopSemiDiameter, b.stopSemiDiameter)) miss(aperture, { field: "stopSemiDiameter" });
   perSurface(aperture, "clipRadius");
+  perSurface(aperture, "innerClipRadius");
   const [radiiA, radiiB] = [elements(a.sagRadii), elements(b.sagRadii)];
   for (let element = 0; element < surfaces * samples; element++) {
     if (sameNumber(radiiA[element], radiiB[element])) continue;
@@ -199,7 +201,7 @@ function compare(a: SystemDescribeData, b: SystemDescribeData): ComparatorOutcom
  * - `layout.mismatches`: `surfaceCount`, `vertexZ`, `imageZ`;
  * - `shape.mismatches`: `curvature`, `conic`, and `terms`, where a surface counts once when its two lists of terms
  *   are not the same list, with the `power` of the first term that differs;
- * - `aperture.mismatches`: `stopIndex`, `stopSemiDiameter`, `clipRadius`, `sagRadii`;
+ * - `aperture.mismatches`: `stopIndex`, `stopSemiDiameter`, `clipRadius`, `innerClipRadius`, `sagRadii`;
  * - `index.mismatches`: `indexAfterSurface`.
  *
  * Two are of the sag, each with the `surface` and the `sample` (the index of the radius) of its largest value:

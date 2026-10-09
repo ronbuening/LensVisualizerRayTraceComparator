@@ -469,14 +469,14 @@ test("what a factory rejects with is what create rejects with", async (t) => {
 
 // ── Built-in engines ─────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the built-in engines are lv and ref, and the registry lists them apart from the configured ones", (t) => {
-  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["lv", "ref"]);
+test("the built-in engines are lv, optiland and ref, and the registry lists them apart from the configured ones", (t) => {
+  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["lv", "optiland", "ref"]);
   assert.ok(Object.isFrozen(BUILTIN_ENGINES));
   const registry = createEngineRegistry(
     loadConfig({ rootDir: rootWith(t, { fake: inProcess(FAKE_ENGINE) }), env: {} }),
   );
   assert.deepEqual(registry.ids(), ["fake"]);
-  assert.deepEqual(registry.builtinIds(), ["lv", "ref"]);
+  assert.deepEqual(registry.builtinIds(), ["lv", "optiland", "ref"]);
   assert.deepEqual(registryOf(rootWith(t, {})).builtinIds(), []);
 });
 
@@ -524,7 +524,7 @@ test("a definition replaces a built-in engine of the same id", async (t) => {
   const rootDir = rootWith(t, { ref: inProcess(FAKE_ENGINE, { id: "ref" }) });
   const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
   assert.deepEqual(registry.ids(), ["ref"]);
-  assert.deepEqual(registry.builtinIds(), ["lv", "ref"]);
+  assert.deepEqual(registry.builtinIds(), ["lv", "optiland", "ref"]);
   const adapter = await registry.create("ref");
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();

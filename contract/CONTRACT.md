@@ -108,8 +108,10 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 ## Versioning
 
 Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.0`.
-It is still being written: until the first baseline is committed, nothing outside this repository has read a
-document of it, and what a stage adds is added to `1.0`. From then on the rules below hold.
+Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
+written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
+stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
+here on the rules below hold, and what a stage adds raises the minor.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -134,6 +136,7 @@ document of it, and what a stage adds is added to `1.0`. From then on the rules 
 | `protocol-response` | `protocol-response.schema.json` | `protocol.ts` | an engine's reply |
 | `policy` | `policy.schema.json` | `policy.ts` | how the results of each rung are judged |
 | `comparison` | `comparison.schema.json` | `comparison.ts` | the answers of several engines to one request, compared pair by pair |
+| `baseline` | `baseline.schema.json` | `baseline.ts` | the committed record of one compared run of a suite |
 
 `common.schema.json` holds the definitions the others share. `validateKind(kind, value)` in
 `src/contract/schemas.ts` validates a document against the schema of its kind. In the tables below a member is
@@ -355,7 +358,10 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   entrance pupil and a ray from the stop's centre the exit pupil. LensVisualizer's own first-order module answers
   for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
   bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
-  LensVisualizer displays.
+  LensVisualizer displays. The kernel is handed the radius of a surface and nothing else of its shape, so a case
+  with a term of power 1 or of power 2 is answered `unsupported`, with the item `surface.asphere.linear-term` or
+  `surface.asphere.quadratic-term`, before the kernel is asked. No lens of LensVisualizer has either: its
+  coefficients start at `A3`.
 - **`rays.trace`** is every ray of the request traced for real by LensVisualizer's sequential tracer,
   `traceEngineRay2`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
   ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
@@ -644,10 +650,11 @@ that answers only about cases of its own source, the kind of the source the case
 `feature` and `option`: what about the case, or about the spec, it has no answer for (`system.afocal`,
 `lines.custom-spectrum`, `fields.angles-deg`). Each is listed with the quantity or with the engine.
 
-The `code` of a result's `error` is the engine's to choose. Three are written by the comparator's own engines:
+The `code` of a result's `error` is the engine's to choose. Four are written by the comparator's own engines:
 `engine-failure` for an exception while an engine computed, `bad-spec` for a spec that is not the quantity's or that
-cannot be about the case (a line the case does not have), and `stale-case` for a case that is no longer what its
-source gives ([the engine `lv`](#the-engine-lv)).
+cannot be about the case (a line the case does not have), `stale-case` for a case that is no longer what its
+source gives ([the engine `lv`](#the-engine-lv)), and `build-mismatch` for a case that an engine's own model did
+not come to hold as the case states it ([the engine `optiland`](#the-engine-optiland)).
 
 **Invariants checked in code** (`resultInvariantProblems`): status `ok` needs `data`; status `unsupported` needs a
 non-empty `unsupported` list; status `error` needs `error`.
@@ -659,7 +666,7 @@ non-empty `unsupported` list; status `error` needs `error`.
 | `contract` | object | `min` and `max`: the range of contract versions the engine speaks, both included |
 | `identity` | object | `id`, `version`, `fingerprint`, `adapterRevision?`, `details` |
 | `capabilities.features` | object | `supported`, a list of feature flags, and `limits`, a map from limit to the largest value handled |
-| `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1 |
+| `capabilities.quantities` | object | a map from quantity id to `{ version }`: the version of the quantity's definition that the engine implements, an integer of at least 1. An engine that implements another version than the comparator's is not asked for that quantity: the job is `unsupported`, with an item of the code `quantity` whose message states both versions |
 | `capabilities.deterministic` | boolean | whether equal requests give bit-equal results |
 | `capabilities.maxConcurrency` | integer ≥ 1 | how many requests the engine works on at once |
 
@@ -667,19 +674,199 @@ non-empty `unsupported` list; status `error` needs `error`.
 A limit an engine leaves out is unbounded.
 
 **Fingerprint and adapter revision.** An answer depends on two bodies of code: the engine, and whatever of the
-comparator stands between the contract and the engine. For an engine in another process the second is the
-engine's own worker, whose sources its fingerprint covers. For an engine that is part of the comparator the two
-are apart, and each has its own hash:
+comparator stands between the contract and the engine. For an engine whose worker is someone else's the second is
+that worker, whose sources its fingerprint covers. For an engine that is part of the comparator, and for one whose
+worker is the comparator's own, the two are apart, and each has its own hash:
 
 | | Is the hash of | Changes when |
 |---|---|---|
-| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref` | the engine changes |
-| `adapterRevision` | the comparator's code the answer passes through: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`). For `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection | the comparator changes how it asks the engine, reads its answer or writes it down |
+| `fingerprint` | the engine itself: LensVisualizer's engine files for `lv`, the reference engine's own files for `ref`, optiland and what it computes with for `optiland` | the engine changes |
+| `adapterRevision` | the comparator's code the answer passes through. For `lv` and `ref`: the engine's module and every TypeScript file of the comparator it imports a value from, directly or through other files (`src/engines/adapterRevision.ts`); for `lv` that is its adapter, the exporter it holds a case to, the array codec, the validator and the image projection. For `optiland`: the Python sources of its worker and of the worker kit (`workers/python/lvrtc_optiland`, `workers/python/lvrtc_worker_kit`) | the comparator changes how it asks the engine, reads its answer or writes it down |
 
-`adapterRevision` is a SHA-256, stated by `lv` and `ref` and by no engine outside the comparator. A result carries
-the one of its engine's descriptor, and the result store keys an answer by both: so a fix to the adapter retires
-the answers the old adapter wrote, and the fingerprint of `lv` stays what it says it is, the identity of
-LensVisualizer's code. A run's manifest records both for each engine.
+`adapterRevision` is a SHA-256, stated by `lv`, `ref` and `optiland`; an engine whose worker is not the
+comparator's states none. A result carries the one of its engine's descriptor, and the result store keys an answer
+by both: so a fix to the adapter retires the answers the old adapter wrote, and the fingerprint of `lv` stays what
+it says it is, the identity of LensVisualizer's code. A run's manifest records both for each engine.
+
+**The identity of `optiland`.** optiland states no version of its own, and the version of its distribution ends in
+the day it was installed, so neither identifies its code. The fingerprint is a SHA-256 over these, each of which
+the descriptor's `details` also carry:
+
+| Detail | Is |
+|---|---|
+| `commit`, `dirty` | the commit of the optiland checkout the package is imported from, and whether `git status` lists anything in it; both `null` for a package that is in no checkout of its own |
+| `sourceHash` | a SHA-256 over every `.py` file of the package: its path relative to the package, a NUL, its bytes, a NUL, in the order of the paths |
+| `python`, `numpy`, `scipy`, `numba` | the versions of the interpreter and of what optiland computes with |
+| `jit` | whether numba's JIT is on. The worker leaves it on; it is off only in a worker that was started with `LVRTC_OPTILAND_JIT=off`, which nothing sets but a test that compares the two, and which is then another engine to the result store |
+
+`details` carry beside them `sourceFiles` (how many files the hash covers), `distVersion` (the distribution's
+version string without the day of the install, which is also the descriptor's `version`), `backend` (`numpy`) and
+`precision` (`float64`): the worker computes in nothing else and refuses `hello` when optiland is in another state.
+The day is left off wherever the engine states its version: an ending `.dYYYYMMDD`, as in
+`0.6.2.post117+g4e893f53.d20261007`, is removed, so that a manifest and a report that name the engine hold no date,
+and two installs of one commit say the same of themselves.
+
+### The engine `optiland`
+
+`optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
+each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
+declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order` and `rays.trace`.
+
+| The case | `optiland` answers |
+|---|---|
+| is built by optiland as it is stated | the quantity, from the optics it built |
+| comes back from optiland as another system | status `error`, code `build-mismatch` |
+
+- **Verified before it is answered.** Every value handed to optiland is read back from optiland's own objects and
+  must be the number of the case: each vertex, in the geometry's frame and on the paraxial axis; the class of each
+  geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
+  intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
+  ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface, and the index
+  optiland has in front of it, which it finds by a link to the surface before and which is what it refracts a ray
+  out of and charges the ray's stretch to the surface to; the object and image planes; the index of the image
+  space, which optiland reads from the image surface, and the index in front of that surface; the stop diameter;
+  the wavelength. Then the sag optiland evaluates on each surface, at a quarter, a half, three quarters and the
+  whole of its nominal semi-diameter, must be the contract's sag of the case's surface within 1e-9 on the scale of
+  the sag's rounding (the scale of `sag.maxScaled`, below). The first thing that differs is the error's message,
+  with the surface, the field and both values. Nothing is answered about such an optic: a translation error is an
+  error of the engine, never a difference between engines.
+- **`system.describe`** is written from the optics, by a function that is not given the case. `vertexZ` and
+  `imageZ` are the `z` of each surface's coordinate system; `curvature` is one division, 1 over the radius the
+  geometry holds, which is 0 for an infinite one; `conic` is the geometry's conic constant, and 0 for a plane,
+  which has none; `terms` are the coefficients of an asphere read by optiland's rule, an entry of an even asphere
+  being the term of twice its place, those that are not 0; `clipRadius` and `innerClipRadius` are the two radii of
+  the surface's aperture; `stopSemiDiameter` is half the stop diameter the system's aperture states;
+  `indexAfterSurface` has a row from each line's optic, the index of each surface's material at that optic's
+  wavelength; `sagRadii` are the fractions of the semi-aperture optiland holds for each surface, which the builder
+  set to the nominal semi-diameter; and `sag` is the geometry's own sag at those heights. The method is named
+  `optic-readback`, and its `params` say how the optic was made: `asphereTolerance`, `asphereMaxIterations` and
+  `positioning`, which is `absolute-z`.
+- **Where a surface stands** is the case's `z`, given to optiland as a position. A thickness is not given: optiland
+  would place the surface at a sum of thicknesses, which is the case's `z` within the 1e-9 mm the invariants of a
+  case allow and not always to the bit, and no thickness states an image plane that was shifted.
+- **The image space** is the medium after the last surface of the case, and the image surface of the optic states
+  it: optiland takes the index of the image space from the image surface and refracts its paraxial rays there.
+- **`paraxial.first-order`** is optiland's own first-order data, each line's from that line's optic
+  (`first_order.py`): what `optic.paraxial` gives, with only its reference changed to the contract's, as the table
+  below states. The method is named `paraxial-accessors`, and its `params` state `afocalRelativePower`.
+- **`rays.trace`** is optiland's own sequential trace of the rays as they are given (`trace.py`): every origin and
+  direction goes into a `RealRays` as the float64 it is, with the wavelength of the spec's line, and
+  `optic.surfaces.trace` carries them through that line's optic, the only one built for the request. Before
+  anything is read, what optiland holds at its object surface is held to the rays it was given, bit for bit. The
+  method is named `surfaces-trace`, and its `params` state `asphereTolerance`, `asphereMaxIterations`, the two
+  tolerances of the rules below (`onSurfaceTolerance`, `imagePlaneTolerance`), `maxBatchRays`, the most rays handed
+  to optiland at once, `landing`, which is `image-surface`, and `opticalPath`, which is
+  `opd-stretches-times-direction-length`. How its rows become an answer is below.
+- **What it does not answer** is said in two ways. A quantity it does not offer, a contract version it does
+  not speak and what its first-order data has no answer for, below, are `unsupported`, by items as those of
+  negotiation. A spec that is not the quantity's is `bad-spec`: fractions that do not ascend, rays whose arrays
+  are not one set or whose directions are not unit vectors toward +z, a line the case does not have.
+
+| Of `paraxial.first-order` | Is, in optiland | Which optiland measures from |
+|---|---|---|
+| `efl` | `f2()` | nothing: a length |
+| `frontFocalZ`, `frontPrincipalZ` | `F1()`, `P1()`, plus the first vertex | the first surface |
+| `rearFocalZ`, `rearPrincipalZ` | `F2()`, `P2()`, plus the image plane | the image surface, wherever the case put it |
+| `backFocus` | that `rearFocalZ` minus the vertex of the surface `lastLensSurfaceIndex` | optiland reports its back focal point from the image surface, and knows no rear plate: the index is the one number taken from the case |
+| `entrancePupilZ` | `EPL()`, plus the first vertex | the first surface |
+| `exitPupilZ` | `XPL()`, plus the image plane | the image surface |
+| `entrancePupilSemiDiameter`, `exitPupilSemiDiameter` | half of `EPD()` and of `XPD()`, without the sign | a diameter of optiland is negative where the stop is imaged upside down |
+| `recorded.optilandFNumber` | `FNO()`, which for a stop given by its size is `f2() / EPD()`: the focal length over the diameter of the entrance pupil, whatever the object distance, with the sign of that diameter | |
+| `recorded.magnification`, for a finite object | `magnification()` | |
+
+The vertices and the image plane are read from the optic (`surfaces.positions`). The pupils are images of the stop
+radius of the case: `EPD()` divides the stop diameter of the system's aperture, which the builder set to twice
+`conditions.stopSemiDiameter`, and never reads the clip limit of the stop surface. A pupil at infinity in image
+space is what optiland's own division gives, an infinity in position and in diameter.
+
+`optiland` answers `paraxial.first-order` with status `unsupported`, each with one item of code `feature`, for:
+
+| Item | The case | Decided |
+|---|---|---|
+| `surface.asphere.linear-term` | has a term of power 1 with a coefficient other than 0, as for every engine | from the case, before anything is built |
+| `surface.asphere.quadratic-term` | has a term of power 2 with a coefficient other than 0, as for every engine whose paraxial model reads the radius alone ([`paraxial.first-order`](#paraxialfirst-order)): optiland's paraxial power of a surface is `(n2 − n1) / radius`. `system.describe` of such a case is answered: the term is in the surface optiland builds | from the case, before anything is built |
+| `system.afocal` | has no finite focal length at a line: `f2()` is an infinity, or the power it stands for is at most 1e-12 of the sum of the magnitudes of the surfaces' powers. optiland has no test of its own | from optiland's answer |
+| `system.telecentric.object-space` | has its entrance pupil at infinity (`EPL()` or `EPD()` is an infinity). optiland sizes the exit pupil with a marginal ray it launches at the rim of the entrance pupil, so its `XPD()` is a NaN there, and a NaN is never a value | from optiland's answer |
+
+A value of optiland that is a NaN for any other reason, or an infinity that is no pupil's, is no answer and no
+`unsupported`: it is the engine's failure on that request (`engine-failure`).
+
+optiland records, on every surface, each ray's point, its direction behind the surface, its intensity and its
+optical path from where it was launched. The answer to `rays.trace` is those rows:
+
+| Of `rays.trace` | Is, in optiland |
+|---|---|
+| `hits` | the point each surface of the case recorded (`surfaces.x`, `y`, `z`), which is global |
+| `exitPoint`, `exitDirection` | the point and the direction cosines the last surface of the case recorded |
+| `opticalPath` | optiland's own sum (`opd`) on the last surface of the case, with each stretch of it a length (below, "The optical path is optiland's own sum"). It starts at 0 where the ray was launched, and a step backwards counts with its sign |
+| `imagePoint`, `opticalPathToImage` | the point optiland's image surface recorded, and its sum there, made of lengths in the same way: optiland carries a ray to the image plane itself, by the division, the multiplication and the addition of the comparator's own projection, and charges that stretch to the medium in front of the image surface, which is the one after the last surface of the case. The point's z is written as the plane's own number. For a ray whose exit point lies behind the plane within the contract's 1e-9 mm they are the exit point and its path, as the contract says, where optiland would step back |
+| `status`, `endSurface` | the worker's, from the rows, by the rules below |
+
+optiland carries every ray to the image surface whatever became of it, and says of a ray only its intensity: 0
+once an aperture has stopped it, with coordinates that go on. A ray that missed a surface, or was totally
+reflected, has NaN from there. It has no word for why a ray ended, and none for a failure of its own: its
+iteration on an asphere ends after its last step whether or not it met its tolerance, and its conic solver falls
+back to a root on the other sheet of a conic where none is admissible. So the worker decides, surface by surface:
+
+| A ray | Is |
+|---|---|
+| has an intensity above 0 and a number for its point, its direction and its path on every surface, and for its point and its path on the image surface | *ok*: optiland's own measure of a ray that arrived. Its hits are the points optiland has, whether or not one lies on the surface: what optiland lets through is answered as it is, and R2 judges it |
+| travels toward +z no longer in front of a surface | *blocked* there, by the contract's rule, whatever optiland has on that surface |
+| has an intensity of 0 at a point that lies on optiland's own sag of the surface, within 1e-6 mm along the normal | *blocked* there: an aperture stopped it |
+| has such a point, an intensity, and no direction behind it, and optiland's radicand of Snell's law is negative there | *blocked* there: it was totally reflected |
+| has no point on a conic, and the discriminant of its line with the conic is below 0 by more than a rounding of its terms | *blocked* there: it provably misses the surface |
+| passed every surface and travels away from the image plane, or has the plane more than 1e-9 mm behind its exit point | *blocked*, with S as its end surface |
+| ended in any other way | *failed* at that surface: no point on an asphere, where optiland's iteration starts from the base conic's hit and has none when the line misses that, whether or not it meets the asphere; a point that does not lie on the surface, at which optiland's aperture test stopped the ray; a direction lost where Snell's law has one |
+
+Every value of a ray that did not arrive is NaN from its end surface on, as for every engine, whatever optiland
+recorded there. The 1e-6 mm tells a point of the surface from a point that is somewhere else, and is no judge of
+precision: a conic that optiland meets from far away is off its own sag by rounding that grows with the square of
+the distance ([docs/gotchas.md](../docs/gotchas.md#optiland)). Warnings of numpy inside the trace, of the square
+root of a negative number for a miss or a reflection, are not passed on. What the rule means for a comparison:
+a ray that optiland could not trace is counted as failed and is in no mask count, and a ray that optiland passes
+where the surface of the case is not, as on the far side of a hemisphere, is a ray it lands, and a mismatch of
+the mask in R2.
+
+**The optical path is optiland's own sum, and one thing is made of it.**
+What optiland's `opd` holds was read in its source (`Surface._trace_real`, `RealRays`, at `4e893f53`) against each
+rule of [`rays.trace`](#raystrace):
+
+| The contract's path | optiland's `opd` |
+|---|---|
+| starts at the ray's own origin | is 0 in a new `RealRays`, and the object surface adds nothing to it, wherever it stands. The worker holds the first row to 0 |
+| adds, for each stretch, the index of the medium the ray is in | adds `t` times the index of `material_pre`, the medium after the surface before, on the way to every surface. In front of the first surface that is the object surface's medium, air of index 1, which the worker holds to 1. A refraction adds nothing; the interaction models that would (a phase profile, a thin lens) are refused when the optic is verified |
+| counts a stretch that runs backwards with its sign | has `t` with its sign: a step backwards is subtracted |
+| continues to the image plane in the index after the last surface | adds the step to the image surface times the index in front of it, which is the index after the last surface of the case whatever the image surface itself states; the worker reads that index back |
+| times the **length** of the stretch | times the **step** `t`: the parameter of the line `p + t d` along the direction `d` optiland holds, which it takes for a unit vector and never makes one |
+
+The last row is the one difference, and it is one of definition: a ray's first direction is the one it was given
+with, which a spec may state within 1e-12 of a unit vector, and every later one is what optiland's refraction
+computed from the one before, without making it a unit vector again, so that its length keeps what each
+refraction rounded. The length of a stretch from `p` to `p + t d` is `t |d|`. So the worker takes each stretch
+optiland added (the difference of `opd` between two surfaces) times the length of the direction it was travelled
+along, as what that changes, `stretch × (|d| − 1)`, with `|d| − 1` computed without the rounding that loses it,
+and adds that to optiland's sum. LensVisualizer's launch directions are within 1.6e-16 of unit vectors and
+optiland's own, behind the 18 to 39 surfaces of a benchmark lens, within 7.8e-15: the paths of the benchmark move
+by up to twenty units of their last place, 1.9e-9 waves, and toward the contract's. For a direction 4.5e-13
+longer than a unit vector and an origin 16 m away it is 7.3e-9 mm, 1.2e-5 waves, most of the gate of R3. Nothing
+else is made of optiland's number: its sum is a plain one, and what its arithmetic costs a path is left in the
+answer for R3 to measure ([docs/gotchas.md](../docs/gotchas.md#optiland)).
+
+The path is that of the ray optiland traced, and for a direction that is given off a unit vector that is not
+quite the contract's ray. optiland's refraction takes the direction for a unit vector as its steps do, and bends
+one that is e longer as if its sine of incidence were e larger: behind 100 mm of glass met 30° off the normal, a
+direction 4.5e-13 longer has its hit 1.0e-11 mm from the contract's and its path 8.6e-9 waves, and at the 1e-12
+a spec may be off by, 2.2e-11 mm and 1.9e-8 waves. The worker moves no point and bends no ray: that difference is
+optiland's, in R2 and in R3, and is in the answer. No ray set of LensVisualizer or of a case file has such a
+direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-16.
+
+**The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
+is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
+that is furthest from the surface, a ray that has ended among them. On a curved base that is a matter of
+rounding. On an asphere of a flat base one ray of the batch that was totally reflected further up leaves every
+ray on the base plane, off the surface by its sag, and optiland carries each on from there as a ray that
+arrived: the worker answers it so, and R2 fails the pairs of optiland on that set
+([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
 
 ### `protocol-request` and `protocol-response`
 
@@ -695,7 +882,10 @@ between messages.
 A request is `{ contract, id, method, params }`. A response is `{ contract, id, ok: true, result }` or
 `{ contract, id, ok: false, error: { code, message } }`, with the `id` of the request it answers. `ok: false`
 means the message could not be handled at all. An engine that handled a `run` and failed answers `ok: true` with a
-`result` of status `error`.
+`result` of status `error`: an exception while it computed is a result with the code `engine-failure`, from an
+engine in the comparator's process and from a worker of the Python kit alike. A worker refuses with `ok: false`
+and that code only where no result can be written: an exception while it describes itself, which `hello` asks
+for and which every result is stamped with.
 
 A protocol message is one of two whole shapes, so the validator reports any fault in one at the root of the
 message, with the keyword `oneOf`; the issue's message quotes the first fault of each shape with its own path.
@@ -747,16 +937,30 @@ metrics that the floor may excuse carries `floor: { limit, agreement }`, both in
 otherwise:
 
 1. every metric of the pair that is above its tolerance is a number and has floor limits. A metric without them
-   is never excused: a count of rays the two engines disagree about, the direction of a ray;
-2. the arbiter answered, and every other engine of the comparison that answered is within `agreement` of the
-   arbiter in every metric that has floor limits: an arbiter that agrees with the others to rounding is right
-   about the rays;
-3. `floor.engine` is within `limit` of the arbiter in every metric that has floor limits: what it is off by is of
-   the size of its known tolerance, and not a defect of another kind.
+   is never excused: a count of rays the two engines disagree about is right or it is not;
+2. the arbiter answered, and `floor.engine` is within `limit` of it in every metric that has floor limits: what it
+   is off by is of the size of its known tolerance, and not a defect of another kind;
+3. no **witness** sides with `floor.engine` against the arbiter. A witness is every other engine of the
+   comparison that answered. In each metric that has floor limits, a witness within `agreement` of the arbiter
+   corroborates it. A witness beyond `agreement`, or one that cannot be measured against the arbiter, does not
+   corroborate, and withholds nothing: the pair is still `FLOOR`, and its `reason` names the witness with its own
+   distance from the arbiter. Only a witness that is beyond `agreement` and nearer to `floor.engine` than to the
+   arbiter in that metric blocks the floor: two engines of different code that agree against the arbiter make the
+   arbiter suspect, and the pair is `FAIL` with a `reason` that says `arbiter-suspect`;
+4. in the pair of `floor.engine` with a witness, no metric above its tolerance has the witness as far from the
+   arbiter as `floor.engine` is, or farther: there the excess is the witness's own and no floor of anybody.
 
-A metric that two answers have nothing to measure on takes no part in 2 or 3. The comparator's policy gives `lv`
-this floor against `ref` in `r2` and `r3`: lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, optical paths
-with 2e-4 waves and 1e-7 waves. The limits are in the policy and nowhere in the code.
+A metric that two answers have nothing to measure on takes no part in 2, 3 or 4. Every metric that has floor
+limits takes part in 2 and 3, whether or not it is the one above its tolerance: a direction within its limit
+excuses no hit beyond its own. The comparator's policy gives `lv` this floor against `ref` in `r2` and `r3`:
+lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, a component of the exit direction with 1e-8 and 1e-12,
+optical paths with 2e-4 waves and 1e-7 waves; each limit is ten times its tolerance. Which rays got through,
+`mask.mismatches`, has none. The limits are in the policy and nowhere in the code.
+
+Until policy version 5 a witness beyond `agreement` withheld the floor. A third engine has rounding of its own:
+optiland is about 9e-10 mm from the exact hit on lenses where `ref` is 6e-12 mm and LensVisualizer 2e-8 mm from
+it, beyond the 1e-10 mm of agreement and twenty-five times nearer to `ref` than to LensVisualizer. Its own error
+said nothing about whose the excess was, and no longer decides it.
 
 **Blocking.** A rung with `blocksLaterRungs` establishes what the rungs after it take for granted: two engines
 that built different systems would differ in every ray traced through them, and each such difference would be the
@@ -825,7 +1029,7 @@ relative to a chief ray that one engine stopped, for one).
 | `BLOCKED` | both engines answered, and their pair in an earlier rung that blocks later ones is `FAIL` or `ERROR`. The two answers are not set against each other |
 | `ERROR` | the two answers cannot be compared at all, as arrays of different shapes cannot |
 | `PASS` | the rung is gated and every metric the policy names is at or below its `tolerance` |
-| `FLOOR` | the rung is gated, a metric the policy names is above its `tolerance`, and the excess is the numerical floor of the rung's floored engine, by the three conditions of [the floor](#policy). The `reason` gives what exceeded its tolerance and the figures against the arbiter |
+| `FLOOR` | the rung is gated, a metric the policy names is above its `tolerance`, and the excess is the numerical floor of the rung's floored engine, by the conditions of [the floor](#policy). The `reason` gives what exceeded its tolerance and the figures against the arbiter, and names a witness that did not corroborate the arbiter |
 | `FAIL` | the rung is gated and a metric the policy names is above its `tolerance`, or is not a number, and the pair is no floor. Where the rung has a floor and the pair is of its engine, the `reason` says which condition did not hold |
 | `RECORDED` | the rung is recorded and no metric that has an `attention` band is above it |
 | `ATTENTION` | the rung is recorded and a metric that has an `attention` band is above it, or is not a number. It is not a failure |
@@ -847,6 +1051,47 @@ them: a clip radius says which rays lie in a rim band, a line's wavelength turns
 gives a pupil's distance. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
 nothing is guessed in its place.
 
+### `baseline`
+
+The committed record of one compared run of a suite (`baselines/<suite>.json`): what the engines agreed on, and
+of what. It is built from the run's manifest, its comparisons and the policy (`buildBaseline`,
+`src/baseline/build.ts`), and holds numbers, hashes, counts and names only: no ray, no prescription, no time, no
+path.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `contract` | string | the contract version |
+| `kind` | `"baseline"` | |
+| `suite` | `{ name, hash }` | the suite, and the hash of the suite file as written |
+| `policy` | `{ version, hash }` | the policy the pairs were judged by |
+| `engines` | engine[] | every engine, sorted by id: `{ id, version, fingerprint, adapterRevision?, details }` |
+| `runs` | run[] | every run **as it was run**, in suite order: `{ name, caseId, rungs }` |
+
+A record is keyed on the run's `name` and its `caseId`, the content hash of the case that was computed, never on
+the suite file alone: a zoom that a suite names once is two runs, `<name>-wide` and `<name>-tele`, each with its
+own case and its own records. A rung of a run is `{ rung, quantity, requests, support, rays?, pairs }`:
+
+- `requests`: how many requests of the rung the engines were compared on (one per ray set, in `r2` and `r3`);
+- `support`: per engine, sorted, `{ engine, status, detail? }`: `ok` when every job of the engine ended so, else
+  the status of the first that did not, with its codes (`quantity rays.trace`, an error code);
+- `rays`: per engine, sorted, `{ engine, ok, blocked, failed }`, added up over the requests; left out by a rung
+  whose answers record no rays;
+- `pairs`: every two engines, the first before the second by id, sorted: `{ a, b, verdict, verdicts, metrics }`.
+  `verdicts` counts the requests by verdict, in the order of the verdicts; `verdict` is the gravest of them
+  (`PASS`, `RECORDED`, `FLOOR`, `UNSUPPORTED`, `ATTENTION`, `BLOCKED`, `FAIL`, `ERROR`, from the least);
+- a metric is `{ name, unit, value, where?, tolerance? }`: the largest value over the requests with where it
+  occurs, or the sum of a metric counted in `rays` or `elements` (the rim band is `mask.rimBand`); null when a
+  value is not a finite number; `tolerance` is what the policy judges it by, when it judges it.
+
+**Invariants checked in code** (`baselineProblems`): engines sorted, each once; no run and no rung of a run twice;
+the engines of `support` and `rays` are engines of the baseline, sorted; a pair names two engines of its rung's
+`support` in order, and the pairs are sorted; a pair's verdicts are in order, add up to the rung's `requests`, and
+its `verdict` is the gravest of them. A baseline file is the canonical JSON of its content and a newline
+(`parseBaseline` refuses any other text of the same content, which is what an edit by hand looks like).
+
+`lvrtc baseline write` writes it, `lvrtc baseline check` sets it against the suite as it runs today, and
+`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md).
+
 ## Quantities
 
 A quantity is what a request asks for, identified by a dotted id (`system.describe`, `paraxial.first-order`,
@@ -854,7 +1099,8 @@ A quantity is what a request asks for, identified by a dotted id (`system.descri
 [`schema/v1/quantities/`](schema/v1/quantities/README.md): `<id>.spec.schema.json` for the `spec` of a request and
 `<id>.data.schema.json` for the `data` of a result of status `ok`. The definition of a quantity, which is its two
 schemas and what this document says they mean, has a version: an integer from 1 that rises when the definition
-changes incompatibly. An engine states the version it implements under `capabilities.quantities`.
+changes incompatibly. An engine states the version it implements under `capabilities.quantities`, and is asked for
+a quantity only when that is the version of the table below (`negotiate`, `src/core/negotiate.ts`).
 
 The schemas of `request` and `result` accept any object as `spec` and `data`. Whoever knows the quantity validates
 them against its own schemas; in TypeScript that is the quantity's module in `src/quantities/`, with `validateSpec`
@@ -863,7 +1109,7 @@ and `validateData`.
 | Quantity | Version | TypeScript | Is |
 |---|---|---|---|
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
-| `system.describe` | 1 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
+| `system.describe` | 2 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
@@ -940,6 +1186,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
 | `curvature` | NdArray | float64 `[S]`: the base curvature, `1/radius` as one division; 0 for a plane and for a flat base |
 | `conic` | NdArray | float64 `[S]`: the conic constant the engine holds; 0 for a plane |
 | `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface |
+| `innerClipRadius` | NdArray | float64 `[S]`: the radial height below which the engine stops a ray at the surface, the radius of a central obstruction; 0 for a surface without one |
 | `indexAfterSurface` | NdArray | float64 `[L, S]`: the index of the medium that follows each surface, per line |
 | `sagRadii` | NdArray | float64 `[S, K]`: the heights the sag is given at, each fraction times the surface's `nominalSemiDiameter` as one multiplication |
 | `sag` | NdArray | float64 `[S, K]`: the sag at those heights as the engine itself evaluates it; NaN where the surface has no real sag |
@@ -949,6 +1196,13 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   the stop setting of the case, which is the stop surface's own `aperture.semiDiameter`; it is never the limit of the
   stop wide open, nor `stopSemiDiameter` itself. `sagRadii` of the stop surface scale with its
   `nominalSemiDiameter`, which a case source writes as the stop setting.
+- **`innerClipRadius`** is the engine's own limit, like `clipRadius`: a ray at exactly that height passes, and one
+  below it is stopped. It was added in version 2 of the quantity, with the first engine beside `ref` that builds an
+  annular aperture: a central obstruction an engine left out, or built another size, is found here and not in the
+  rays it lets through. `lv` states the inner semi-diameter LensVisualizer's `evaluateAperture` reports, which is
+  the case's `innerSemiDiameter`; LensVisualizer itself lets a ray pass down to `max(1e-9, 1e-12 × that radius)` mm
+  below it, a tolerance the case carries for the outer limit, in `semiDiameter`, and not for the inner one. A ray
+  that close to either limit is in the rim band of R2, and no lens LensVisualizer exports has an annular aperture.
 - **`terms`** lists only terms whose coefficient is not 0, in ascending order of power, each power once. A
   coefficient of 0 adds nothing to a surface, and an engine that stores one cannot tell it from none.
 - **Zeros.** −0 is written as 0, in the arrays as in the numbers: a case's identity does not tell the two apart.
@@ -956,7 +1210,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   `1 − (1 + conic) c² r²` is negative.
 
 **Invariants checked in code** (`src/quantities/systemDescribe.ts`): a spec's fractions ascend; in the data,
-`stopIndex` is below S, the four per-surface arrays have S elements, `indexAfterSurface` has S columns and at
+`stopIndex` is below S, the five per-surface arrays have S elements, `indexAfterSurface` has S columns and at
 least one row, `sagRadii` has S rows and at least one column and `sag` its shape, and `terms` has S lists, each
 ascending in power.
 
@@ -968,7 +1222,7 @@ such element by `field`, with its `surface` and, where the field has them, its `
 |---|---|---|
 | `layout.mismatches` | elements | `surfaceCount`, `vertexZ`, `imageZ` |
 | `shape.mismatches` | elements | `curvature`, `conic`, and `terms`: a surface counts once when its two lists are not the same list |
-| `aperture.mismatches` | elements | `stopIndex`, `stopSemiDiameter`, `clipRadius`, `sagRadii` |
+| `aperture.mismatches` | elements | `stopIndex`, `stopSemiDiameter`, `clipRadius`, `innerClipRadius`, `sagRadii` |
 | `index.mismatches` | elements | `indexAfterSurface` |
 
 Two are of the sag, each with the `surface` and the `sample` (the index of the radius) of its largest value. A sag
@@ -1026,36 +1280,53 @@ states after it.
 
 - **The stop surface's own refraction** bends a ray without moving it, so it changes neither pupil: with the stop
   on the first surface the entrance pupil is the stop, and with the stop on the last surface the exit pupil is.
-- **A pupil at infinity**, as a telecentric system has, is the infinity of its sign, in position and in radius. A
-  NaN is never a value.
+- **A pupil at infinity**, as a telecentric system has, is the infinity of its sign in position, and the positive
+  infinity in radius: a radius is a size, and is never below 0 on either side of the lens. A NaN is never a value.
 - **`recorded`** is where an engine puts what it knows and no other engine need have: LensVisualizer's stored
-  pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv). For a finite object
+  pupil constants, for one, under the names listed with [the engine `lv`](#the-engine-lv), and optiland's paraxial
+  f-number, `optilandFNumber`, listed with [the engine `optiland`](#the-engine-optiland). For a finite object
   every engine gives the paraxial lateral magnification of the object plane there, as `magnification`. A recorded
   value may be a NaN, where the engine has no such value at that line.
-- **No first-order data.** Two kinds of case are answered with status `unsupported`, each with one item of code
-  `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is zero, or zero to
-  rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a coefficient other than
-  0, since a cone has a corner at its vertex and no curvature there.
+- **No first-order data.** Two kinds of case are answered with status `unsupported` by every engine, each with
+  one item of code `feature`: `system.afocal`, when the system has no finite focal length at a line (its power is
+  zero, or zero to rounding); and `surface.asphere.linear-term`, when a surface has a term of power 1 with a
+  coefficient other than 0, since a cone has a corner at its vertex and no curvature there.
+- **A term of power 2 that an engine's own model does not see.** An engine whose paraxial model reads the base
+  radius of a surface alone has no first-order data of a case with a term of power 2 whose coefficient is not 0:
+  it answers `unsupported` with one item of code `feature`, `surface.asphere.quadratic-term`, and never with the
+  focal length of the lens without the term. `lv` and `optiland` are such engines; `ref`, whose model is the rule
+  above, answers. An engine may name further things of its own model, listed with the engine: `optiland` an
+  entrance pupil at infinity ([the engine `optiland`](#the-engine-optiland)).
 
 **Invariant checked in code** (`src/quantities/paraxialFirstOrder.ts`): every array, the recorded ones included,
 has the same length, of at least 1.
 
-**Compared** (`src/compare/paraxialFirstOrder.ts`) by three metrics, each in mm, with the `quantity` and the `line`
+**Compared** (`src/compare/paraxialFirstOrder.ts`) by five metrics, each in mm, with the `quantity` and the `line`
 of its largest value in `where`:
 
 | Metric | Is the largest, over the lines, of |
 |---|---|
-| `firstOrder.maxAbs` | \|a − b\| of the eight values that are not the position of a pupil |
+| `firstOrder.maxAbs` | \|a − b\| of the six values that are neither the position nor the radius of a pupil |
 | `pupilZ.maxScaled` | \|a − b\| / max(1, d / 1000 mm) of `entrancePupilZ` and `exitPupilZ`, with d the pupil's distance from the image plane of the case, the farther of the two answers |
 | `pupilZ.maxAbs` | \|a − b\| of the same two |
+| `pupilRadius.maxScaled` | \|a − b\| / max(1, d / 1000 mm) of `entrancePupilSemiDiameter` and `exitPupilSemiDiameter`, with d the distance of the pupil the radius is of, as above: by `entrancePupilZ` for the first and `exitPupilZ` for the second |
+| `pupilRadius.maxAbs` | \|a − b\| of the same two |
 
 The position of a pupil is a quotient, a height over an angle, and in a nearly telecentric system the angle is the
 small remainder of a sum that cancels: a pupil 20 m away cannot be placed to 1e-9 mm by any arithmetic in doubles,
 of which one unit in the last place is 3.6e-12 mm there. So a pupil's position is judged on the scale of its
 distance: `pupilZ.maxScaled` is the plain difference for a pupil within a metre of the image plane, and beyond that
 the difference as a fraction of the distance, in units of 1e-3, so that a gate of 1e-9 mm on it is 1e-12 of the
-distance. The plain difference is reported beside it and not judged. Every other value keeps the plain measure,
-the radius of a pupil included.
+distance. The plain difference is reported beside it and not judged.
+
+The radius of a pupil is the stop's radius times that same quotient: a pupil metres away is metres wide, and its
+radius is known as well as the pupil is placed and no better. So it is judged on the same scale, the distance of
+its own pupil from the image plane, and never on its own size: `pupilRadius.maxScaled`, with the plain
+`pupilRadius.maxAbs` beside it. The radius of a pupil within a metre of the image plane is held to the plain
+difference, however wide the pupil. Where that distance is no finite number, because an answer puts the pupil at
+infinity or gives it no position, there is no scale, and two radii that are numbers are compared plainly. A pupil
+at infinity has the infinity for its radius, and the same infinity in both answers is no difference. Every other
+value keeps the plain measure.
 
 Two values that are the same infinity differ by 0 in every metric, an infinity against anything else by an
 infinity, and a NaN is a NaN. `recorded` is not compared: each participant of a comparison carries its own, and a

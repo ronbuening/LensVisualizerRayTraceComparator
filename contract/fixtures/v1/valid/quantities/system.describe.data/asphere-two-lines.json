@@ -43,6 +43,16 @@
       "sha256": "181e04d1edcf9e6a35ca3da9d3094dc3bbbdcd5242037ce3c458746e1a2cb466"
     }
   },
+  "innerClipRadius": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAA+D8AAAAAAAAAAA==",
+      "sha256": "2e51c1c130078f6ec1d99777e7c51753c682fc3eadb8ce49e2c01d8826395a51"
+    }
+  },
   "indexAfterSurface": {
     "$nd": {
       "dtype": "f8",

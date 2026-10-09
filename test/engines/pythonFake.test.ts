@@ -9,9 +9,11 @@ import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { EXIT_OK } from "../../src/cli/main.ts";
+import { engineStamp } from "../../src/contract/engine.ts";
 import type { EngineDescriptor } from "../../src/contract/engine.ts";
 import { makeRequest } from "../../src/contract/request.ts";
 import type { QuantityRequest } from "../../src/contract/request.ts";
+import { makeResult } from "../../src/contract/result.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import { REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
@@ -171,6 +173,40 @@ test("a run that is no request is refused by the worker, and the worker goes on 
   await python.close();
   assert.deepEqual(worker.exitStatus(), { code: 0, signal: null, forced: false });
 });
+
+test(
+  "an exception in a Python engine is a result of status error, and what the engine prints never reaches a reply",
+  { skip },
+  async (t) => {
+    // The kit's noisy engine prints, writes to file descriptor 1, warns and starts a child that prints, at import,
+    // in describe and in every run; and with --raise its first run, and every second one after, raises.
+    const worker = createStdioTransport({
+      command: [PYTHON, "-m", "tests.kit.noisy_worker", "--raise"],
+      env: workerEnvironment(process.env, {}, { PYTHONPATH: WORKER_KIT_PATH }),
+      cwd: tempDir(t),
+    });
+    const adapter = new RemoteEngineAdapter({ id: "fake", transport: worker });
+    t.after(() => adapter.close());
+    const descriptor = await adapter.describe();
+    const request = echoRequest(Float64Array.of(1, 2));
+
+    const failed = await adapter.run(request, CASE);
+    assert.deepEqual(
+      failed,
+      makeResult(request, engineStamp(descriptor.identity), {
+        status: "error",
+        error: { code: "engine-failure", message: "ZeroDivisionError: the ray went sideways" },
+      }),
+      "the engine's own failure, with the engine's code: not a refusal, which would be protocol-error",
+    );
+    // The worker goes on, and its next answer is an answer.
+    const answered = await adapter.run(request, CASE);
+    assert.equal(answered.status, "unsupported");
+    assert.equal((await adapter.run(request, CASE)).error?.code, "engine-failure");
+    await adapter.close();
+    assert.deepEqual(worker.exitStatus(), { code: 0, signal: null, forced: false });
+  },
+);
 
 test("the fixture root's fake-py passes the conformance kit", { skip }, async () => {
   const loaded = fixtureRoot();

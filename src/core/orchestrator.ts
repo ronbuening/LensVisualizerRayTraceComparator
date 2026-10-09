@@ -328,7 +328,8 @@ export interface EngineAnswer {
 
 /**
  * Asks one engine one request, as every job of a suite is asked: the request is negotiated against the engine's
- * descriptor, and an engine that cannot answer is not asked ("negotiated"); the store is looked up under the key of
+ * descriptor and the version of the quantity's definition the answer will be held to, and an engine that cannot
+ * answer, or implements another version, is not asked ("negotiated"); the store is looked up under the key of
  * the request, the engine's id, fingerprint and adapter revision and the engine options, and a hit whose data is
  * still valid is the answer ("cached"); else the engine is asked ("computed"), an "ok" result whose data is not the
  * quantity's becomes an "error" with the code `INVALID_DATA`, and a result of status "ok" or "unsupported" is
@@ -338,7 +339,7 @@ export async function askEngine(question: EngineQuestion): Promise<EngineAnswer>
   const { adapter, descriptor, quantity, request, opticalCase, store, warnings } = question;
   const stamp = engineStamp(descriptor.identity);
 
-  const items = negotiate(opticalCase, request, descriptor);
+  const items = negotiate(opticalCase, request, descriptor, quantity.version);
   if (items.length > 0) {
     const refusal = makeResult(request, stamp, { status: "unsupported", unsupported: items });
     return { result: refusal, storeKey: null, source: "negotiated" };

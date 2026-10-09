@@ -18,7 +18,8 @@ const R0 = loadPolicy().rungs.r0;
 /** Two surfaces, two lines, two radii each: a paraboloid with two terms, and a ball whose second sag is a NaN. */
 const BASE: SystemDescribeData = DESCRIBE_DATA_ASPHERE;
 
-type ArrayMember = "vertexZ" | "curvature" | "conic" | "clipRadius" | "indexAfterSurface" | "sagRadii" | "sag";
+type ArrayMember =
+  "vertexZ" | "curvature" | "conic" | "clipRadius" | "innerClipRadius" | "indexAfterSurface" | "sagRadii" | "sag";
 
 /** `data` with one element of one of its arrays replaced. */
 function withElement(data: SystemDescribeData, member: ArrayMember, index: number, value: number): SystemDescribeData {
@@ -120,6 +121,9 @@ test("each field is counted in its metric, and the first mismatch is named by fi
     [{ ...BASE, stopIndex: 0 }, "aperture.mismatches", { field: "stopIndex" }],
     [{ ...BASE, stopSemiDiameter: 2.2 }, "aperture.mismatches", { field: "stopSemiDiameter" }],
     [withElement(BASE, "clipRadius", 1, 2.25), "aperture.mismatches", { field: "clipRadius", surface: 1 }],
+    // A central obstruction that one engine built another size, and one that the other engine did not build at all.
+    [withElement(BASE, "innerClipRadius", 0, 1.25), "aperture.mismatches", { field: "innerClipRadius", surface: 0 }],
+    [withElement(BASE, "innerClipRadius", 0, 0), "aperture.mismatches", { field: "innerClipRadius", surface: 0 }],
     // Element 3 of a [2, 2] array: surface 1, the second radius.
     [withElement(BASE, "sagRadii", 3, 8.5), "aperture.mismatches", { field: "sagRadii", surface: 1, sample: 1 }],
     // Element 2 of the [2, 2] index table: the second line, the first surface.
@@ -142,6 +146,8 @@ test("several mismatches are all counted, and the place is that of the first in 
   changed = withElement(changed, "conic", 0, 0);
   changed = withElement(changed, "conic", 1, 2);
   changed = withElement(changed, "clipRadius", 0, 13);
+  changed = withElement(changed, "innerClipRadius", 1, 0.5);
+  changed = withElement(changed, "sagRadii", 0, 6.5);
   changed = { ...changed, stopSemiDiameter: 3 };
   const metrics = metricsOf(BASE, changed);
   // curvature comes before conic, whatever the surface.
@@ -150,11 +156,17 @@ test("several mismatches are all counted, and the place is that of the first in 
     value: 3,
     where: { field: "curvature", surface: 1 },
   });
-  // stopSemiDiameter comes before clipRadius.
+  // stopSemiDiameter comes before clipRadius, which comes before innerClipRadius and the radii of the sag.
   assert.deepEqual(metrics["aperture.mismatches"], {
     name: "aperture.mismatches",
-    value: 2,
+    value: 4,
     where: { field: "stopSemiDiameter" },
+  });
+  const inner = withElement(withElement(BASE, "innerClipRadius", 1, 0.5), "sagRadii", 0, 6.5);
+  assert.deepEqual(metricsOf(BASE, inner)["aperture.mismatches"], {
+    name: "aperture.mismatches",
+    value: 2,
+    where: { field: "innerClipRadius", surface: 1 },
   });
 });
 
@@ -327,6 +339,7 @@ test("another number of surfaces is a mismatch, and the surfaces both answers ha
     curvature: encodeNdArray(Float64Array.of(1 / 50, 1 / -50, 0)),
     conic: encodeNdArray(new Float64Array(3)),
     clipRadius: encodeNdArray(Float64Array.of(10, 10, 10)),
+    innerClipRadius: encodeNdArray(new Float64Array(3)),
     indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1), [1, 3]),
     sagRadii: encodeNdArray(Float64Array.of(0, 5, 10, 0, 5, 10, 0, 5, 10), [3, 3]),
     sag: encodeNdArray(Float64Array.of(...decodeNdArray(DESCRIBE_DATA_SINGLET.sag).values, 0, 0, 0), [3, 3]),
@@ -360,6 +373,7 @@ test("with another number of surfaces and several lines, each answer's index tab
     curvature: encodeNdArray(Float64Array.of(0.025, 1 / -6, 0)),
     conic: encodeNdArray(Float64Array.of(-1, 0, 0)),
     clipRadius: encodeNdArray(Float64Array.of(12.000000001, 2.250000001, 5)),
+    innerClipRadius: encodeNdArray(Float64Array.of(1.5, 0, 0)),
     // Row by row: the second line starts at element 3 here, and at element 2 in the base.
     indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1, 1.5224, 1, 1), [2, 3]),
     sagRadii: encodeNdArray(Float64Array.of(6, 12, 4, 8, 2.5, 5), [3, 2]),

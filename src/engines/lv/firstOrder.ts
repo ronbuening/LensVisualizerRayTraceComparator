@@ -7,7 +7,12 @@
 // its own `buildCardinalElementsFromMatrix2` gives the cardinal points, and two rays to the stop give the entrance
 // pupil (as its `paraxialPupilGeometry2` does). The values are the kernel's, not numbers LensVisualizer displays.
 import type { OpticalCase } from "../../contract/case.ts";
-import { AFOCAL_SYSTEM, FIRST_ORDER_VALUES } from "../../contract/quantities/paraxialFirstOrder.ts";
+import {
+  AFOCAL_SYSTEM,
+  FIRST_ORDER_VALUES,
+  LINEAR_SAG_TERM,
+  QUADRATIC_SAG_TERM,
+} from "../../contract/quantities/paraxialFirstOrder.ts";
 import type { FirstOrderValue, ParaxialFirstOrderData } from "../../contract/quantities/paraxialFirstOrder.ts";
 import type { UnsupportedItem } from "../../contract/result.ts";
 import { decodeNdArray, encodeF8, ndRow } from "../../core/numeric/ndarray.ts";
@@ -125,6 +130,34 @@ function storedConstants(api: LvFirstOrderApi, model: LvCaseModel): Record<LvSto
   };
 }
 
+/**
+ * What the polynomial terms of a case keep LensVisualizer's kernel from answering; empty when nothing does. The
+ * kernel is handed the radius of a surface and nothing else of its shape, so it sees neither a term of power 1,
+ * which has no first-order data in any engine, nor a term of power 2, which the contract counts as curvature at
+ * the vertex. One item of code `feature` for each, naming the first surface that has one, the linear one first.
+ *
+ * No lens of LensVisualizer has either: its aspheric schema starts at `A3`. The rule is here so that one that came
+ * to have one would be answered as unsupported, and not with the focal length of the lens without the term.
+ */
+function termItems(opticalCase: OpticalCase): UnsupportedItem[] {
+  const reasons = [
+    [1, LINEAR_SAG_TERM, "a cone has no curvature at its vertex"],
+    [
+      2,
+      QUADRATIC_SAG_TERM,
+      "LensVisualizer's paraxial kernel reads the radius of a surface alone, which does not see it",
+    ],
+  ] as const;
+  const items: UnsupportedItem[] = [];
+  for (const [power, item, why] of reasons) {
+    const at = opticalCase.system.surfaces.findIndex(
+      ({ shape }) => shape.kind === "asphere" && shape.terms.some((term) => term.power === power && term.coeff !== 0),
+    );
+    if (at >= 0) items.push({ code: "feature", item, message: `surface ${at} has a term of power ${power}: ${why}` });
+  }
+  return items;
+}
+
 /** The index of the medium after each surface at each line of a case: one row per line. */
 function indexRows(opticalCase: OpticalCase): Float64Array[] {
   const table = decodeNdArray(opticalCase.conditions.indexAfterSurface);
@@ -149,11 +182,14 @@ function indexRows(opticalCase: OpticalCase): Float64Array[] {
  *   other line of such a case they are NaN, and a case without such a line, or away from infinity focus, has none.
  *
  * A system that LensVisualizer finds afocal at a line (its cardinal construction gives nothing) is answered as
- * unsupported, with one item of code `feature` and item `system.afocal` that names every such line.
+ * unsupported, with one item of code `feature` and item `system.afocal` that names every such line. So is a case
+ * with a term of power 1 or 2, which the kernel does not see (`termItems`), before the kernel is asked.
  */
 export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): LvFirstOrderAnswer {
   const { state, exported } = model;
   const { lines, object } = exported.conditions;
+  const unseen = termItems(exported);
+  if (unseen.length > 0) return { supported: false, items: unseen };
   const columns = Object.fromEntries(FIRST_ORDER_VALUES.map((name) => [name, []])) as unknown as Record<
     FirstOrderValue,
     number[]

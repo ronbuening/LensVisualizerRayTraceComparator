@@ -21,7 +21,11 @@ export type RungClass = (typeof RUNG_CLASSES)[number];
 export interface MetricFloor {
   /** The largest value the metric may have between the floored engine and the arbiter. */
   readonly limit: number;
-  /** The largest value it may have between any other engine of the comparison and the arbiter. */
+  /**
+   * The largest value it may have between a witness, any other engine of the comparison, and the arbiter for the
+   * witness to corroborate the arbiter. A witness beyond it withholds no floor unless it is nearer to the floored
+   * engine than to the arbiter.
+   */
   readonly agreement: number;
 }
 
@@ -64,9 +68,9 @@ export interface RungPolicy {
   readonly blocksLaterRungs?: boolean;
   /**
    * The floor of the rung, for one whose metrics have floor limits: a pair of `floor.engine` that is above a
-   * tolerance is `FLOOR`, not `FAIL`, when every metric above its tolerance has floor limits, every other engine
-   * of the comparison is within `agreement` of `floor.arbiter` in each metric that has them, and `floor.engine` is
-   * within `limit` of it.
+   * tolerance is `FLOOR`, not `FAIL`, when every metric above its tolerance has floor limits, `floor.engine` is
+   * within `limit` of `floor.arbiter` in each metric that has them, and no other engine of the comparison (a
+   * witness) is both beyond `agreement` of the arbiter and nearer to `floor.engine` than to it.
    */
   readonly floor?: RungFloor;
 }

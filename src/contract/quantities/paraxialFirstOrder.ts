@@ -58,6 +58,14 @@ export const AFOCAL_SYSTEM = "system.afocal";
  */
 export const LINEAR_SAG_TERM = "surface.asphere.linear-term";
 
+/**
+ * The `item` of the "unsupported" answer that an engine whose own paraxial model reads the base radius of a surface
+ * alone gives to a case with a polynomial term of power 2. The first-order curvature of such a surface is the base
+ * curvature plus twice the coefficient, so that engine has no first-order data of the case; an engine whose model
+ * is the contract's answers it. Its `code` is `feature`.
+ */
+export const QUADRATIC_SAG_TERM = "surface.asphere.quadratic-term";
+
 /** What a `paraxial.first-order` request asks for: nothing is left to choose. */
 export type ParaxialFirstOrderSpec = Readonly<Record<string, never>>;
 

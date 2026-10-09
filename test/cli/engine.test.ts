@@ -10,12 +10,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createEngineCommand } from "../../src/cli/commands/engine.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
+import type { EngineDefinition } from "../../src/core/config.ts";
 import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
+import type { BuiltinEngines } from "../../src/engines/builtin.ts";
 import { tempDir } from "../core/support.ts";
 import { STDIO_FAKE_ENGINE } from "../engines/support.ts";
 
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
+const STDIO_WORKER = fileURLToPath(new URL("../fixtures/stdio-worker/worker.mjs", import.meta.url));
 const SYNOPSIS = "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n";
 
 function inProcess(options: Record<string, unknown>): Record<string, unknown> {
@@ -66,7 +69,7 @@ test("engine is a registered command, and --help says what conformance checks", 
   assert.ok(help.stdout.startsWith(SYNOPSIS));
   assert.match(help.stdout, /PASS, FAIL or SKIPPED with a reason/);
   const list = spawnSync(process.execPath, [BIN, "--help"], { encoding: "utf8", cwd: REPO_ROOT });
-  assert.match(list.stdout, /^ {2}engine {3}Check that an engine conforms to the contract$/m);
+  assert.match(list.stdout, /^ {2}engine {4}Check that an engine conforms to the contract$/m);
 });
 
 test("an engine that conforms: a line per check, a count, exit 0", async (t) => {
@@ -107,6 +110,28 @@ test("the built-in engine ref conforms under a root that defines no engine; it o
   assert.match(ended.out, /^SKIPPED {2}echo\.matrix +the engine does not offer selftest\.echo$/m);
   assert.match(ended.out, /^PASS {5}deterministic /m);
   assert.match(ended.out, /^ref: conforms: 8 passed, 0 failed, 7 skipped$/m);
+});
+
+test("a built-in engine in a worker is waited for as long as it says, unless the command is given other waits", async (t) => {
+  // A worker that never answers: how long hello was waited for is in the reason of the failed check.
+  const silent: EngineDefinition = {
+    transport: "stdio",
+    command: [process.execPath, STDIO_WORKER, "hang"],
+    options: {},
+    env: {},
+  };
+  const builtins: BuiltinEngines = { sleepy: { worker: () => silent, timeouts: { helloMs: 40 } } };
+  const rootDir = rootWith(t, {});
+  const conformance = async (timeouts?: { helloMs: number }): Promise<string> => {
+    const out: string[] = [];
+    const command = createEngineCommand({ rootDir, env: {}, cwd: rootDir, builtins, timeouts });
+    const io = { stdout: (text: string) => void out.push(text), stderr: () => undefined };
+    assert.equal(await runCli(["engine", "conformance", "sleepy"], io, [command]), EXIT_FAILURE);
+    return out.join("");
+  };
+  const waited = /^FAIL {5}hello +engine sleepy is unavailable \(hello-failed\): no reply to hello within (\d+) ms$/m;
+  assert.equal(waited.exec(await conformance())?.[1], "40", "the engine's own wait, not the default of 30 s");
+  assert.equal(waited.exec(await conformance({ helloMs: 25 }))?.[1], "25");
 });
 
 test("an engine that does not conform exits 1 and says which checks failed and why", async (t) => {
@@ -178,12 +203,12 @@ test("--root names the configuration root, relative to the working directory", a
 
 test("an engine that is neither configured nor built in is a usage error that lists the engines there are", async (t) => {
   const builtin = Object.keys(BUILTIN_ENGINES).sort().join(", ");
-  const ended = await engine(["conformance", "optiland"], { rootDir: rootWith(t, ENGINES) });
+  const ended = await engine(["conformance", "zemax"], { rootDir: rootWith(t, ENGINES) });
   assert.equal(ended.code, EXIT_USAGE);
   assert.equal(ended.out, "");
   assert.equal(
     ended.err,
-    'lvrtc engine: unknown engine "optiland": the configuration defines ' +
+    'lvrtc engine: unknown engine "zemax": the configuration defines ' +
       `absent, biased, good, none, renamed, unstarted, worker; built in: ${builtin}\n`,
   );
   const empty = await engine(["conformance", "good"], { rootDir: rootWith(t, {}) });

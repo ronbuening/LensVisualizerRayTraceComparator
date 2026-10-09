@@ -29,15 +29,17 @@ export interface EngineAdapter {
  * Why an engine cannot be used at all:
  *
  * - `not-configured`: the configuration defines no engine with this id, or does not say where what a built-in
- *   engine runs is: the engine `lv` without an `lvPath`;
+ *   engine runs is: the engine `lv` without an `lvPath`, the engine `optiland` without `engines.optiland.python`;
  * - `unsupported-transport`: its definition names a transport that has no implementation here;
  * - `load-failed`: an in-process engine's module is missing or could not be imported, or what a built-in engine
  *   runs cannot be loaded: the engine `lv` with an `lvPath` that holds no LensVisualizer it can load;
  * - `bad-module`: the module does not export a `createEngine` function;
  * - `create-failed`: `createEngine` threw, as it does for options it does not know, or did not return a handler;
  *   or a built-in engine could not be made;
- * - `spawn-failed`: the transport did not open, as when a worker's process does not start;
- * - `hello-failed`: `hello` got no usable reply: none in time, a refusal, or something that is not a reply to it;
+ * - `spawn-failed`: the transport did not open, as when a worker's process does not start, or the interpreter a
+ *   built-in engine's worker is run by is not on this machine;
+ * - `hello-failed`: `hello` got no usable reply: none in time, a refusal (as from the worker of `optiland` when its
+ *   interpreter cannot import optiland), or something that is not a reply to it;
  * - `bad-descriptor`: the reply to `hello` is not a valid engine descriptor;
  * - `contract-mismatch`: the engine does not speak this contract version;
  * - `id-mismatch`: the descriptor names another engine than the one configured.

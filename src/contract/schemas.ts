@@ -28,6 +28,7 @@ export const CONTRACT_KINDS = [
   "protocol-response",
   "policy",
   "comparison",
+  "baseline",
 ] as const;
 /** One kind of contract document. */
 export type ContractKind = (typeof CONTRACT_KINDS)[number];

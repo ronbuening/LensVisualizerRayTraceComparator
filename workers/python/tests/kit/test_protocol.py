@@ -6,12 +6,15 @@ import copy
 import io
 import json
 import math
+import os
+import subprocess
 import sys
 import unittest
 from typing import Any
 
 from lvrtc_worker_kit import CONTRACT_VERSION
 from lvrtc_worker_kit.protocol import (
+    ENGINE_FAILURE,
     ERROR_CODES,
     NO_ID,
     case_array_problems,
@@ -21,11 +24,10 @@ from lvrtc_worker_kit.protocol import (
     parse_json,
     result_problems,
     serve,
-    serve_stdio,
 )
 from lvrtc_worker_kit.validate import validate_kind
 
-from .support import read_fixture
+from .support import REPO_ROOT, read_fixture
 
 DESCRIPTOR: dict[str, Any] = read_fixture("valid", "engine-descriptor", "minimal.json")
 HELLO: dict[str, Any] = read_fixture("valid", "protocol-request", "hello.json")
@@ -290,24 +292,53 @@ class LoopTest(unittest.TestCase):
 
     # ── What an engine does wrong ────────────────────────────────────────────────────────────────────────────────
 
-    def test_an_exception_in_the_engine_is_answered_and_logged_never_a_crash(self) -> None:
+    def test_an_exception_in_run_is_a_result_of_status_error_stamped_by_the_engine_and_logged(self) -> None:
         def explode(*_: Any) -> Any:
             raise RuntimeError("the ray went sideways")
 
-        engine = StubEngine(answer=explode, descriptor=explode)
-        text = self.refusal(engine, line_of(RUN), "engine-failure", RUN["id"])
-        self.assertEqual(text, "RuntimeError: the ray went sideways")
+        (reply,) = self.converse(StubEngine(answer=explode), line_of(RUN))
+        self.assertEqual((reply["id"], reply["ok"]), (RUN["id"], True))
+        self.assertEqual(validate_kind("protocol-response", reply), [])
+        request, case = RUN["params"]["request"], RUN["params"]["case"]
+        self.assertEqual(
+            reply["result"],
+            make_result(
+                request,
+                engine_stamp(DESCRIPTOR),
+                "error",
+                error={"code": ENGINE_FAILURE, "message": "RuntimeError: the ray went sideways"},
+            ),
+        )
+        self.assertEqual((reply["result"]["requestId"], reply["result"]["caseId"]), (request["id"], case["id"]))
+        self.assertEqual(ENGINE_FAILURE, "engine-failure")
         self.assertIn("Traceback", self.log.getvalue())
         self.assertIn("the ray went sideways", self.log.getvalue())
+
+    def test_an_exception_where_no_result_can_say_so_is_a_refusal(self) -> None:
+        def explode(*_: Any) -> Any:
+            raise RuntimeError("the ray went sideways")
+
+        # hello has no result to carry a failure, and a run cannot be stamped without a descriptor.
+        engine = StubEngine(answer=explode, descriptor=explode)
+        for message in (HELLO, RUN):
+            self.assertEqual(
+                self.refusal(engine, line_of(message), "engine-failure", message["id"]),
+                "RuntimeError: the ray went sideways",
+            )
+        broken = copy.deepcopy(DESCRIPTOR)
+        del broken["identity"]["fingerprint"]
+        unstamped = StubEngine(answer=explode, descriptor=broken)
         self.assertEqual(
-            self.refusal(engine, line_of(HELLO), "engine-failure", HELLO["id"]), "RuntimeError: the ray went sideways"
+            self.refusal(unstamped, line_of(RUN), "engine-failure", RUN["id"]), "RuntimeError: the ray went sideways"
         )
 
+    def test_the_loop_goes_on_after_an_engine_raised(self) -> None:
         def quit_engine(*_: Any) -> Any:
             raise ZeroDivisionError("division by zero")
 
         replies = self.converse(StubEngine(answer=quit_engine), line_of(RUN), line_of(HELLO))
-        self.assertEqual([reply["ok"] for reply in replies], [False, True])
+        self.assertEqual([reply["ok"] for reply in replies], [True, True])
+        self.assertEqual(replies[0]["result"]["error"]["message"], "ZeroDivisionError: division by zero")
 
     def test_an_answer_that_is_not_a_valid_result_is_refused_in_the_engine_s_place(self) -> None:
         request = RUN["params"]["request"]
@@ -387,6 +418,15 @@ class LoopTest(unittest.TestCase):
         request = {"id": "r" * 64, "caseId": "c" * 64}
         stamp = engine_stamp(DESCRIPTOR)
         self.assertEqual(stamp, {name: DESCRIPTOR["identity"][name] for name in ("id", "fingerprint", "details")})
+        # An engine whose worker is the comparator's own states an adapter revision, and every result carries it.
+        revised = copy.deepcopy(DESCRIPTOR)
+        revised["identity"]["adapterRevision"] = "a" * 64
+        self.assertEqual(validate_kind("engine-descriptor", revised), [])
+        self.assertEqual(
+            engine_stamp(revised),
+            {"id": stamp["id"], "fingerprint": stamp["fingerprint"], "adapterRevision": "a" * 64, "details": {}},
+        )
+        self.assertEqual(list(engine_stamp(revised)), ["id", "fingerprint", "adapterRevision", "details"])
         result = make_result(request, stamp, "error", error={"code": "x", "message": "y"}, data=None)
         self.assertEqual(
             result,
@@ -406,30 +446,64 @@ class LoopTest(unittest.TestCase):
 
 
 class StandardStreamsTest(unittest.TestCase):
-    def test_the_standard_output_carries_replies_only_and_a_print_in_an_engine_goes_to_the_log(self) -> None:
-        class Streams:
-            def __init__(self, data: bytes = b"") -> None:
-                self.buffer = io.BytesIO(data)
+    """The reply stream of a real process: nothing but replies reaches it, whoever writes to the standard output."""
 
-        def noisy() -> dict[str, Any]:
-            print("loading the engine")
-            return DESCRIPTOR
+    def noisy(self, *arguments: str) -> subprocess.CompletedProcess[bytes]:
+        inherited = {name: os.environ[name] for name in ("PATH", "SYSTEMROOT") if name in os.environ}
+        return subprocess.run(
+            [sys.executable, "-B", "-m", "tests.kit.noisy_worker", *arguments],
+            input=line_of(HELLO) + line_of(RUN) + line_of(SHUTDOWN),
+            capture_output=True,
+            cwd=REPO_ROOT / "workers" / "python",
+            env={**inherited, "PYTHONDONTWRITEBYTECODE": "1"},
+            timeout=120,
+            check=False,
+        )
 
-        saved = sys.stdin, sys.stdout, sys.stderr
-        fake_out = Streams()
-        log = io.StringIO()
-        replaced = Streams(line_of(HELLO) + line_of(SHUTDOWN)), fake_out, log
-        sys.stdin, sys.stdout, sys.stderr = replaced  # type: ignore[assignment]
-        try:
-            code = serve_stdio(StubEngine(descriptor=noisy))
-            restored = sys.stdout
-        finally:
-            sys.stdin, sys.stdout, sys.stderr = saved
-        self.assertEqual(code, 0)
-        self.assertIs(restored, fake_out)
-        lines = fake_out.buffer.getvalue().splitlines()
-        self.assertEqual([parse_json(line)["id"] for line in lines], [HELLO["id"], SHUTDOWN["id"]])
-        self.assertEqual(log.getvalue(), "loading the engine\n")
+    def test_a_print_a_write_to_descriptor_1_a_warning_and_a_child_process_all_go_to_the_log(self) -> None:
+        ended = self.noisy()
+        self.assertEqual(ended.returncode, 0, ended.stderr)
+        replies = [parse_json(line) for line in ended.stdout.splitlines()]
+        self.assertEqual(
+            [(reply["id"], reply["ok"]) for reply in replies],
+            [(HELLO["id"], True), (RUN["id"], True), (SHUTDOWN["id"], True)],
+        )
+        self.assertEqual(replies[1]["result"]["status"], "unsupported")
+        log = ended.stderr.decode("utf-8")
+        for where in ("at import", "in describe", "in run"):
+            for how in ("print", "fd1", "dunder", "child"):
+                self.assertIn(f"{how} {where}\n", log)
+            self.assertIn(f"RuntimeWarning: warning {where}", log)
+
+    def test_serve_stdio_reserves_the_stream_itself_for_a_worker_that_did_not(self) -> None:
+        ended = self.noisy("--late")
+        self.assertEqual(ended.returncode, 0, ended.stderr)
+        self.assertEqual(
+            [parse_json(line)["id"] for line in ended.stdout.splitlines()], [HELLO["id"], RUN["id"], SHUTDOWN["id"]]
+        )
+        self.assertIn(b"fd1 in describe\n", ended.stderr)
+        self.assertNotIn(b"at import", ended.stderr)
+
+    def test_the_duplicate_of_the_reply_stream_is_not_inherited_by_a_child(self) -> None:
+        script = (
+            "import os, subprocess, sys\n"
+            "from lvrtc_worker_kit.protocol import protect_stdout\n"
+            "replies = protect_stdout()\n"
+            "fd = replies.fileno()\n"
+            "probe = 'import os, sys\\ntry:\\n os.fstat(int(sys.argv[1]))\\n print(\"open\")\\n"
+            "except OSError:\\n print(\"closed\")'\n"
+            "out = subprocess.run([sys.executable, '-c', probe, str(fd)], capture_output=True, check=True).stdout\n"
+            "replies.write(out)\n"
+            "replies.flush()\n"
+        )
+        ended = subprocess.run(
+            [sys.executable, "-B", "-c", script],
+            capture_output=True,
+            cwd=REPO_ROOT / "workers" / "python",
+            timeout=120,
+            check=False,
+        )
+        self.assertEqual((ended.returncode, ended.stdout), (0, b"closed\n"), ended.stderr)
 
 
 if __name__ == "__main__":

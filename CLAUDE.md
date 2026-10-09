@@ -11,8 +11,9 @@ npm run typecheck      # tsc --noEmit
 npm run lint           # eslint .
 npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
-npm run test:python    # unittest for the Python worker kit (workers/python/tests/kit); part of check
+npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -29,8 +30,12 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # 
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3   # with LV's own launch rays traced
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
-node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
+node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
+node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
+node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
+node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3   # Phase 2, three ways: built system, first-order data, LV's launch rays, optical path
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -60,10 +65,110 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   `test/integration/lv/canaries.test.ts`. Hermetic tests use synthetic numbers only, never an LV-derived value.
 - **A zoom is compared at both ends wherever no zoom position is stated** (`src/engines/lv/zoomEnds.ts`): a suite
   run of an LV zoom without `state.zoomT` is two runs, `<name>-wide` and `<name>-tele`; the census and `lvrtc mtf`
-  without `--zoom` do the same. The expansion is the LV case source's (`CaseSource.expand`), never `expandSuite`'s,
-  and the runs it gives are ordinary runs; a suite's hash is that of the file as written. An explicit position is
-  one state. A prime has no zoom position: one stated for it is taken as 0 (`exportCase`). Middle stations are
-  Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and hint at `--zoom 1` on stderr.
+  without `--zoom` do the same. Baselines (Stage 2.6) are keyed on those runs as run, by name and case id as the
+  manifest lists them, never on the suite file as written. The expansion is the LV case source's
+  (`CaseSource.expand`), never `expandSuite`'s, and the runs it gives are ordinary runs; a suite's hash is that of
+  the file as written. An explicit position is one state. A prime has no zoom position: one stated for it is taken
+  as 0 (`exportCase`). Middle stations are Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and
+  hint at `--zoom 1` on stderr.
+- **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
+  `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
+  (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the
+  worker with it (`workers/python/tests/optiland`, none skipped there), and each test skips with a reason
+  (`OPTILAND_UNAVAILABLE`) without it. Hermetic tests of the optiland worker use the fake package
+  `test/fixtures/fake-optiland`, copied to a temporary directory (`fakeOptilandRoot`): in place it lies inside this
+  repository, whose commit is not the fake's.
+- **`optiland` is a built-in engine in a worker** (`src/engines/optiland/definition.ts`): the stdio definition is
+  built from `engines.optiland.python` and `cacheDir` and nothing else is configured. Without an interpreter it is
+  unavailable (`not-configured`, `spawn-failed`, `hello-failed`), with a message that says what to set, and every
+  other engine carries on. Its `hello` may take three minutes (`OPTILAND_TIMEOUTS`); a built-in worker states its
+  waits there, never by widening `DEFAULT_ENGINE_TIMEOUTS`.
+- **Never start the optiland interpreter without the worker's environment** (`optilandWorkerEnvironment`; in a
+  test `optilandPython` of `test/integration/optiland/support.ts`): `NUMBA_CACHE_DIR`, `MPLCONFIGDIR`,
+  `PYTHONPYCACHEPREFIX` under `.cache`, `PYTHONDONTWRITEBYTECODE=1`, `MPLBACKEND=Agg`. A bare `import optiland`
+  already writes into the checkout: numba probes each `__pycache__` it would cache in. The worker applies the same
+  itself (`lvrtc_optiland/hygiene.py`) before it imports optiland, and reserves file descriptor 1 for replies
+  first (`protect_stdout`). A cache that would lie inside the optiland checkout or its virtual environment is
+  refused before a directory is made or numba is imported (`prepare`), never afterwards. Bytecode is cached under
+  `<cacheDir>/optiland/pycache`: `prepare` refuses a prefix inside optiland, names it (`sys.pycache_prefix`) and
+  only then sets `sys.dont_write_bytecode = False`; `check` refuses an interpreter whose prefix is not the
+  cache's. Never give the optiland definition an empty `PYTHONDONTWRITEBYTECODE`. In `zsh` an unquoted
+  `$VARS` holding several assignments is one word: write them out. The JIT stays on, and the backend is numpy in
+  float64: never switch either. `NUMBA_DISABLE_JIT` is not obeyed; the one switch is the worker's own
+  `LVRTC_OPTILAND_JIT=off`, set only by the test that compares the two, and it changes the fingerprint.
+- **The fingerprint of `optiland` is optiland's, the adapter revision the worker's** (`lvrtc_optiland/identity.py`):
+  commit and dirty flag of the checkout, a hash of the package's `.py` files, the versions of Python, numpy, scipy
+  and numba, the JIT flag; never the distribution's version, which ends in an install date. The adapter revision
+  is a hash of the `.py` files of `lvrtc_optiland` and the kit. The result store keys by both. The version the
+  engine states, and `details.distVersion`, drop a trailing `.dYYYYMMDD` (`identity.stated_version`), so no
+  manifest or report holds a date.
+- **The optiland builder hands over, verifies, then describes** (`workers/python/lvrtc_optiland/build.py`).
+  `build_optic` gives the case to optiland; `verify_optic` reads every value back from optiland's own objects
+  (vertex, geometry class, radius, conic, terms, `tol`, `max_iter`, aperture class and both radii, stop,
+  interaction model, coating, index, the index of the image space, object and image planes, stop diameter,
+  wavelength) and holds it to the
+  case, then holds optiland's sag to the contract's; `describe_optics` writes `system.describe` from the optics
+  and is never given the case. An optic that differs is the error `build-mismatch`, naming surface and field. A
+  keyword added to the build needs its read-back check and a test that makes the mistake on purpose
+  (`test_build.py`): removing a check must turn a test red.
+- **How a case becomes an Optic**: every surface placed by `z=`, never by thickness; one Optic per line
+  (`IdealMaterial` is constant and first-order data is the primary wavelength's); `RadialAperture(r_max, r_min)`
+  on every surface, the stop included; `float_by_stop_size` takes the stop diameter; an asphere stays
+  `even_asphere` or `odd_asphere` whatever its coefficients, the list starting at r^2 (even) or r^1 (odd), with
+  `tol=1e-12` and `max_iter=100`; the image surface states the medium after the last surface (optiland takes the
+  image space from it); only the non-deprecated API, a deprecated call being an error. Each has an entry under
+  optiland in `docs/gotchas.md`.
+- **What the builder needs of optiland is imported when the first case is built** (`build.optiland_api`), never
+  when the worker loads: the hermetic tier runs the worker on `test/fixtures/fake-optiland`, which has no
+  geometries, materials, apertures or rays. A test that needs the real optiland skips with
+  `real_optiland_missing()`.
+- **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
+  `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
+  table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
+  `system.describe` is version 2 (`innerClipRadius`); `paraxial.first-order` is version 1.
+- **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
+  accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
+  from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
+  image plane); the back focus is that rear focal point minus the vertex of the case's `lastLensSurfaceIndex`. A
+  pupil's radius is half the magnitude of `EPD()` / `XPD()`, which are negative for an inverted pupil and are
+  images of the system aperture's value (twice `conditions.stopSemiDiameter`), never of the stop surface's
+  `r_max`. `FNO()` and, for a finite object, `magnification()` are recorded. Never call
+  `updater.update_paraxial`. A NaN, the focal length's included, is `engine-failure`, never a value.
+- **What an engine's paraxial model does not see is `unsupported`, never the focal length of another lens.** A
+  term of power 1 is `surface.asphere.linear-term` in every engine; a term of power 2 is
+  `surface.asphere.quadratic-term` in `lv` and `optiland`, whose kernels read the radius alone, and is answered
+  by `ref` by the contract's rule. Both are decided from the case before anything is built or asked. optiland
+  also answers `system.afocal` (`f2()` an infinity, or a power of at most 1e-12 of the sum of the surfaces'
+  powers) and `system.telecentric.object-space` (`EPL()` or `EPD()` an infinity). A canary in
+  `test/integration/lv/canaries.test.ts` fails when LV's aspheric schema gains a coefficient below `A3`.
+- **Expected first-order values of the worker's tests are derived in the test** (`test_first_order.py`: closed
+  forms and an exact `fractions.Fraction` trace), never taken from an engine's output. Synthetic cases come from
+  `tests/optiland/support.py`; tier-3 helpers are in `test/integration/optiland/support.ts`.
+- **`rays.trace` of `optiland` is optiland's own rows** (`lvrtc_optiland/trace.py`): the rays of a spec go into
+  one `RealRays` bit for bit and through one `optic.surfaces.trace` of the spec's line's optic, the only one
+  built. `hits`, exit and path are the rows of the case's surfaces; the landing and the path to it are optiland's
+  image row. A request above `MAX_BATCH_RAYS` is traced in batches, in order. The rays of a request are one batch
+  as given: optiland's tolerance on an asphere is the batch's (`docs/gotchas.md`); whether to shield a batch from
+  its ended rays is the owner's open decision.
+- **A ray optiland keeps is answered as optiland has it; why a ray ended needs evidence** (`trace.settle`). ok is
+  optiland's own measure: intensity above 0 and a number for point, direction and path on every surface. An ended
+  ray is `blocked` only where optiland's numbers show why (a point on its own sag with intensity 0; no direction
+  where its Snell radicand is negative; a conic the line misses), and `failed` otherwise.
+  `ON_SURFACE_TOLERANCE_MM` tells a hit from a point elsewhere and judges no precision: never tighten it to a
+  gate.
+- **optiland's optical path is its `opd`, corrected once** (`trace.path_lengths`): optiland's step is the line
+  parameter along a direction it never normalises, so the worker adds `stretch x (|d| - 1)` per stretch, the
+  excess computed exactly (`length_excess`). `verify_optic` reads back the index in front of every surface, since
+  a path is charged to the medium between two surfaces. Tests are in `test_path.py`.
+- **Expected values of the worker's ray tests are derived in the test** (closed forms, and `exact.py`, a
+  60-digit trace written from the contract), never taken from an engine's output. A behaviour of
+  optiland that `docs/gotchas.md` describes has a test that pins it.
+- **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR and to no failure (`assertR2`),
+  and asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
+  red.
+- **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
+  Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
+  engine that cannot describe itself.
 - **Built-in engines (`ref`, `lv`) live in `src/engines/builtin.ts`** and run only where named: `--engines` or a
   suite's `engines`. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
@@ -87,7 +192,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only** (`workers/python/lvrtc_worker_kit`, Python `>=3.10`, type hints, 120
   columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
-  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`.
+  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
+  standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
 - **`validate.py` is a port of `src/contract/validate.ts`, and `ndarray.py` of the array codec.** Change both
   sides together; the fixture corpus in `contract/fixtures` holds them to the same answers. Workers echo ids and
   never recompute a hash.
@@ -109,8 +215,19 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`). Only a pair of the floored engine (`lv`) can be `FLOOR`; a metric without floor limits
-  (the mask, the direction) always fails. Never add a floor limit, or widen one, to make a lens pass.
+  `src/compare/floor.ts`; policy version 5). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
+  limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
+  it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
+  the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
+  far from `ref` as `lv` is. A metric without floor limits (the mask) always fails. Never add a floor limit, or
+  widen one, to make a lens pass.
+- **In R1 a pupil is judged on the scale of its distance from the image plane, in position and in radius**
+  (`pupilZ.maxScaled`, `pupilRadius.maxScaled`; `PUPIL_RADII` in `src/compare/paraxialFirstOrder.ts` pairs each
+  radius with the position of its own pupil). The six values that are no pupil's keep the plain 1e-9 mm, and so
+  does a pupil within a metre of the image plane. A distance that is no finite number scales nothing.
+- **A metric that is shown and not judged is named after what it is a figure of**: `<subject>.maxAbs` beside the
+  judged `<subject>.maxScaled`. A report puts it in the column after the judged one (`subjectOf`,
+  `src/report/model.ts`).
 - **Rays come from the case source, never from a rung or an engine.** `CaseSource.raySets` makes the ray sets of a
   run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
@@ -152,11 +269,15 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   defaults of its own**, with LV's names; its defaults are deliberately not LV's. A name added to the import
   manifest needs a fake of it there, and a new fake file a line in `FAKE_ENGINE_FILES`
   (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test.
-- **`reports/benchmark/lv-floor.{json,md}` is the committed digest of the benchmark** (`src/report/floor.ts`):
-  results, counts, run names and hashes only. An integration test holds its figures to a fresh run while LV's
-  engine closure is the one it names. Regenerate it with `run ... --rungs r0,r1,r2,r3`, `compare` and
-  `report --floor` after a change to `ref`, to the `lv` adapter, to the import manifest (the closure it names) or
-  to the figures: it names both engines by hash.
+- **Baselines are the committed record** (`baselines/<suite>.json`, contract kind `baseline`): for every run as
+  run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
+  adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
+  baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
+  ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
+  REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
+  last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
+  A policy change therefore needs the baselines rewritten, which needs LV and optiland. `report --floor` remains
+  a local tool. The contract stays at 1.0.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
   them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
   `renderMarkdown` are pure functions and stay so.

@@ -118,7 +118,7 @@ test("run is a registered command", async () => {
   assert.ok(COMMANDS.some((command) => command.name === "run"));
   const out: string[] = [];
   assert.equal(await runCli(["--help"], { stdout: (text) => void out.push(text), stderr: () => {} }), EXIT_OK);
-  assert.match(out.join(""), /^ {2}run {6}Run a suite on the configured engines, reusing stored results$/m);
+  assert.match(out.join(""), /^ {2}run {7}Run a suite on the configured engines, reusing stored results$/m);
 });
 
 test("lvrtc run: a line per job and a summary, exit 0; the second run finds every answer in the store", (t) => {
@@ -221,12 +221,12 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
 
 test("an unknown engine is a usage error that lists the engines there are, and nothing is written", (t) => {
   const runsDir = join(tempDir(t), "runs");
-  const ended = fakePair(runsDir, "--engines", "fake-a,optiland");
+  const ended = fakePair(runsDir, "--engines", "fake-a,zemax");
   assert.equal(ended.code, EXIT_USAGE);
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "optiland": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, ref$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, ref$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -280,10 +280,10 @@ test("a job that ends as an error exits 1, and the console says why where the ma
   assert.equal(ended.code, EXIT_FAILURE, ended.err);
   const lines = ended.out.split("\n");
   assert.deepEqual(lines.slice(0, 3), [
-    "singlet       selftest  absent   error        unavailable  load-failed: engine absent is unavailable " +
+    "singlet       selftest  absent    error        unavailable  load-failed: engine absent is unavailable " +
       "(load-failed): its module engines/none.ts does not exist",
-    "singlet       selftest  fake-a   ok           computed",
-    "singlet       selftest  refuses  error        computed     protocol-error: the engine refused the message " +
+    "singlet       selftest  fake-a    ok           computed",
+    "singlet       selftest  refuses   error        computed     protocol-error: the engine refused the message " +
       "(fake-failure): the fake engine is set to fail (failMode protocol-error)",
   ]);
   assert.equal(lines[6], "pair: 6 jobs: 2 ok, 0 unsupported, 4 error, 0 pending (4 computed, 0 cached)");
@@ -469,8 +469,8 @@ test("without --root the command's own root is the configuration root, and its r
   assert.equal(
     ended.out,
     [
-      "singlet       selftest  fake-a  ok           computed",
-      "double-gauss  selftest  fake-a  ok           computed",
+      "singlet       selftest  fake-a    ok           computed",
+      "double-gauss  selftest  fake-a    ok           computed",
       "pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
       `manifest: ${manifestPath}`,
       "",
@@ -483,7 +483,7 @@ test("without --root the command's own root is the configuration root, and its r
   const other = rootWith(t, { "fake-z": fake({ id: "fake-z" }) });
   const elsewhere = await inProcess(["suite.json", "--root", other], { rootDir });
   assert.equal(elsewhere.code, EXIT_OK, elsewhere.err);
-  assert.match(elsewhere.out, /^singlet {7}selftest {2}fake-z {2}ok {11}computed$/m);
+  assert.match(elsewhere.out, /^singlet {7}selftest {2}fake-z {4}ok {11}computed$/m);
   assert.ok(existsSync(join(other, "runs", "pair", MANIFEST_FILE)));
 });
 
@@ -502,7 +502,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: lv, ref)\n",
+      "name the engines to run with --engines (built in: lv, optiland, ref)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
@@ -515,10 +515,10 @@ test("the built-in engine ref runs under any root when it is named, and only the
   assert.equal(
     named.out,
     [
-      "singlet       r0        ref  ok           computed",
-      "singlet       r1        ref  ok           computed",
-      "double-gauss  r0        ref  ok           computed",
-      "double-gauss  r1        ref  ok           computed",
+      "singlet       r0        ref       ok           computed",
+      "singlet       r1        ref       ok           computed",
+      "double-gauss  r0        ref       ok           computed",
+      "double-gauss  r1        ref       ok           computed",
       "pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
       `manifest: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
       "",
@@ -542,9 +542,9 @@ test("the built-in engine ref runs under any root when it is named, and only the
   // ref does not answer the conformance quantity, and says so before it is asked.
   assert.match(
     both.out,
-    /^singlet {7}selftest {2}ref {5}unsupported {2}negotiated {3}the engine does not offer selftest\.echo$/m,
+    /^singlet {7}selftest {2}ref {7}unsupported {2}negotiated {3}the engine does not offer selftest\.echo$/m,
   );
-  assert.match(both.out, /^singlet {7}selftest {2}fake-a {2}ok {11}cached$/m);
+  assert.match(both.out, /^singlet {7}selftest {2}fake-a {4}ok {11}cached$/m);
 });
 
 test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
@@ -572,7 +572,7 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   assert.equal(
     angles.out,
     [
-      ...new Array(3).fill("singlet  r2        ref  ok           computed"),
+      ...new Array(3).fill("singlet  r2        ref       ok           computed"),
       "probe: 3 jobs: 3 ok, 0 unsupported, 0 error, 0 pending (3 computed, 0 cached)",
       `manifest: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
       "",
@@ -725,8 +725,8 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
   // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_FAILURE, "the refocused runs cannot be started");
-  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {2}ok {11}computed$/m);
-  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {2}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {4}ok {11}computed$/m);
+  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {4}ok {11}computed$/m);
   // The refocused run states no zoom position of a zoom: it is two runs, one for each end, and neither starts.
   for (const [end, zoom] of [
     ["wide", 0],

@@ -10,14 +10,18 @@ What the loop guarantees, whatever arrives and whatever the engine does:
     the reply stream: logging goes to the log stream;
   - a reply is ASCII and holds no ``NaN`` or ``Infinity`` token;
   - a line that is not JSON, a message that is not an object or not a protocol request, an unknown method, a run
-    whose request or case is not valid, an exception in the engine and an answer that is not valid are all
-    answered ``{ "ok": false, "error": { "code", "message" } }``, with the message's ``id`` when one can be read;
+    whose request or case is not valid and an answer that is not valid are all answered
+    ``{ "ok": false, "error": { "code", "message" } }``, with the message's ``id`` when one can be read;
+  - an exception in an engine's ``run`` is the engine's failure on that request, not a fault of the protocol: it is
+    answered ``ok: true`` with a result of status "error" and the code ``engine-failure``, stamped with the engine's
+    own descriptor, as every engine of the comparator answers it;
   - ids are echoed, never recomputed: Python does not write numbers the way the hashes need them written.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 import traceback
 from typing import Any, BinaryIO, Protocol, TextIO
@@ -45,9 +49,14 @@ ERROR_CODES: tuple[str, ...] = (
 - ``bad-request``: the message is not a protocol request, or a run's request or case is not valid by its own kind,
   holds an array that does not decode, or the request is about another case;
 - ``unknown-method``: the method is none of ``METHODS``;
-- ``engine-failure``: the engine raised an exception;
+- ``engine-failure``: the engine raised an exception where no result can say so: in ``describe``, which ``hello``
+  asks and which stamps every result. (An exception in ``run`` is a result of status "error" with this code.)
 - ``invalid-result``: what the engine returned is not a valid descriptor or result, or does not echo the ids.
 """
+
+
+ENGINE_FAILURE = "engine-failure"
+"""The ``error.code`` of the result that answers a ``run`` in which the engine raised an exception."""
 
 
 class Engine(Protocol):
@@ -58,14 +67,24 @@ class Engine(Protocol):
         ...
 
     def run(self, request: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
-        """Answers one request about one case; both have been validated. "unsupported" is returned, not raised."""
+        """Answers one request about one case; both have been validated. "unsupported" is returned, not raised.
+
+        Raising means the engine failed on this request: the loop answers a result of status "error" for it.
+        """
         ...
 
 
 def engine_stamp(descriptor: dict[str, Any]) -> dict[str, Any]:
-    """The ``engine`` member of every result an engine with this descriptor gives: its id, fingerprint and details."""
+    """The ``engine`` member of every result an engine with this descriptor gives.
+
+    Its id, its fingerprint, its adapter revision when the descriptor states one, and its details.
+    """
     identity = descriptor["identity"]
-    return {"id": identity["id"], "fingerprint": identity["fingerprint"], "details": dict(identity["details"])}
+    stamp: dict[str, Any] = {"id": identity["id"], "fingerprint": identity["fingerprint"]}
+    if "adapterRevision" in identity:
+        stamp["adapterRevision"] = identity["adapterRevision"]
+    stamp["details"] = dict(identity["details"])
+    return stamp
 
 
 def make_result(request: dict[str, Any], engine: dict[str, Any], status: str, **parts: Any) -> dict[str, Any]:
@@ -148,6 +167,21 @@ def _answered(message_id: str, result: dict[str, Any]) -> dict[str, Any]:
     return {"contract": CONTRACT_VERSION, "id": message_id, "ok": True, "result": result}
 
 
+def _failure_result(
+    engine: Engine, request: dict[str, Any], text: str, schemas: SchemaSet, log: TextIO
+) -> dict[str, Any] | None:
+    """The result that says the engine raised on ``request``, or None when the engine has no valid descriptor."""
+    try:
+        descriptor = engine.describe()
+    except Exception:  # noqa: BLE001
+        traceback.print_exc(file=log)
+        return None
+    if validate_kind("engine-descriptor", descriptor, schemas):
+        return None
+    error = {"code": ENGINE_FAILURE, "message": text}
+    return make_result(request, engine_stamp(descriptor), "error", error=error)
+
+
 def _run(engine: Engine, message_id: str, params: Any, schemas: SchemaSet, log: TextIO) -> dict[str, Any]:
     if not isinstance(params, dict):
         return _refused(message_id, "bad-request", "params is not an object")
@@ -174,7 +208,10 @@ def _run(engine: Engine, message_id: str, params: Any, schemas: SchemaSet, log: 
         result = engine.run(request, case)
     except Exception as error:  # noqa: BLE001 - whatever an engine raises is answered, never a crash
         traceback.print_exc(file=log)
-        return _refused(message_id, "engine-failure", f"{type(error).__name__}: {error}")
+        result = _failure_result(engine, request, f"{type(error).__name__}: {error}", schemas, log)
+        if result is None:
+            # No valid descriptor to stamp a result with: only then is an engine's exception a refusal.
+            return _refused(message_id, "engine-failure", f"{type(error).__name__}: {error}")
     issues = validate_kind("result", result, schemas)
     if issues:
         return _refused(message_id, "invalid-result", f"the engine's answer is not a result: {format_issues(issues)}")
@@ -278,15 +315,34 @@ def serve(
             return 0
 
 
-def serve_stdio(engine: Engine, *, schemas: SchemaSet | None = None) -> int:
+def protect_stdout() -> BinaryIO:
+    """Reserves this process's standard output for replies, at the level of the file descriptor.
+
+    Returns a binary stream on a duplicate of file descriptor 1 as it was: the only way left to what the
+    comparator reads. File descriptor 1 itself is then pointed at the standard error stream, and so is
+    ``sys.stdout``. After that nothing but a write to the returned stream can reach the reply stream: not a
+    ``print``, not a warning, not ``os.write(1, ...)``, not a C library writing to its ``stdout``, and not a process
+    this one starts, which inherits descriptors 1 and 2 and never the duplicate (it is not inheritable).
+
+    Call it once, before importing anything that may write: an engine's package, numpy. It is not undone.
+    """
+    try:
+        sys.stdout.flush()
+    except (AttributeError, ValueError, OSError):
+        pass
+    replies = os.fdopen(os.dup(1), "wb")
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
+    return replies
+
+
+def serve_stdio(engine: Engine, *, schemas: SchemaSet | None = None, replies: BinaryIO | None = None) -> int:
     """Runs the message loop on this process's standard streams and returns the exit code.
 
-    The standard output is reserved for replies: ``sys.stdout`` is pointed at the standard error stream for as
-    long as the loop runs, so that a ``print`` in an engine is a log line and not a broken reply.
+    The standard output is reserved for replies. ``replies`` is the stream ``protect_stdout`` returned to a worker
+    that called it before it loaded its engine; without one it is called here, so that from now on a ``print`` in
+    an engine, a warning, or a write to file descriptor 1 from any library is a log line and not a broken reply.
     """
-    replies = sys.stdout.buffer
-    printed, sys.stdout = sys.stdout, sys.stderr
-    try:
-        return serve(engine, sys.stdin.buffer, replies, schemas=schemas, log=sys.stderr)
-    finally:
-        sys.stdout = printed
+    if replies is None:
+        replies = protect_stdout()
+    return serve(engine, sys.stdin.buffer, replies, schemas=schemas, log=sys.stderr)

@@ -200,7 +200,16 @@ test("a document that names its kind names the kind its schema is filed under", 
     assert.deepEqual(properties.kind, { const: kind });
     return true;
   });
-  assert.deepEqual(named, ["optical-case", "run-spec", "suite", "request", "result", "policy", "comparison"]);
+  assert.deepEqual(named, [
+    "optical-case",
+    "run-spec",
+    "suite",
+    "request",
+    "result",
+    "policy",
+    "comparison",
+    "baseline",
+  ]);
 });
 
 test("every schema file is a kind's own or is referenced from one", () => {

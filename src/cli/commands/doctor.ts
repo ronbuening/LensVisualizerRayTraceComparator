@@ -7,9 +7,13 @@ import type { ConfigKey, ConfigLayer, LoadedConfig } from "../../core/config.ts"
 import { commandSucceeded as succeeded, runSystemCommand } from "../../core/systemCommand.ts";
 import type { CommandResult } from "../../core/systemCommand.ts";
 import { LV_MARKER, loadLvBinding } from "../../engines/lv/binding.ts";
+import { EngineUnavailableError } from "../../engines/adapter.ts";
+import type { EngineAdapter } from "../../engines/adapter.ts";
 import { LvBindingError } from "../../engines/lv/errors.ts";
 import { lvGitState } from "../../engines/lv/gitState.ts";
 import type { LvGitState } from "../../engines/lv/gitState.ts";
+import { OPTILAND_ENGINE_ID } from "../../engines/optiland/definition.ts";
+import { createEngineRegistry } from "../../engines/registry.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 
@@ -23,6 +27,20 @@ export type DoctorLvBinding =
   | { readonly status: "loaded"; readonly engineFileCount: number; readonly engineClosureHash: string }
   | { readonly status: "failed"; readonly code: string; readonly message: string };
 
+/**
+ * What asking the engine `optiland` for its descriptor gave: who it is, or why it cannot be used. `details` are the
+ * descriptor's own: the commit and dirty flag of the optiland checkout, the hash and count of its Python sources,
+ * the versions of Python, numpy, scipy and numba, and whether the JIT is on.
+ */
+export type DoctorOptilandEngine =
+  | {
+      readonly status: "available";
+      readonly fingerprint: string;
+      readonly adapterRevision: string | null;
+      readonly details: Readonly<Record<string, string | number | boolean | null>>;
+    }
+  | { readonly status: "unavailable"; readonly code: string; readonly message: string };
+
 /** Everything doctor reads from the machine besides the configuration, injected so tests are hermetic. */
 export interface DoctorProbe {
   /** The running Node version, without a leading "v". */
@@ -32,6 +50,11 @@ export interface DoctorProbe {
   run(command: string, args: readonly string[]): CommandResult | null;
   /** Loads LensVisualizer from a checkout that is present and reports its engine closure; never rejects. */
   lvBinding(path: string): Promise<DoctorLvBinding>;
+  /**
+   * Starts the engine `optiland` as a run would, asks it who it is and lets it go; never rejects. The worker
+   * writes its caches under the configuration's `cacheDir` and nothing anywhere else.
+   */
+  optilandEngine(loaded: LoadedConfig): Promise<DoctorOptilandEngine>;
 }
 
 /** What `lvrtc doctor` is wired to: where the configuration lives, the environment, and the machine. */
@@ -66,6 +89,8 @@ export interface DoctorReport {
     readonly interpreterVersion: string | null;
     /** Version of the installed optiland distribution, or null when the interpreter cannot find one. */
     readonly version: string | null;
+    /** Null unless the interpreter is present: only then is the engine started. */
+    readonly engine: DoctorOptilandEngine | null;
   };
 }
 
@@ -114,22 +139,27 @@ async function probeLensVisualizer(path: string | null, probe: DoctorProbe): Pro
   return { status: "present", path, git: lvGitState(path, probe.run), binding: await probe.lvBinding(path) };
 }
 
-function probeOptiland(python: string | null, probe: DoctorProbe): DoctorReport["optiland"] {
-  if (python === null) return { python: null, interpreter: "not configured", interpreterVersion: null, version: null };
+async function probeOptiland(loaded: LoadedConfig, probe: DoctorProbe): Promise<DoctorReport["optiland"]> {
+  const python = loaded.config.engines.optiland.python;
+  const absent = { interpreterVersion: null, version: null, engine: null };
+  if (python === null) return { python: null, interpreter: "not configured", ...absent };
   const version = interpreterVersion(python, probe);
-  if (version === null) return { python, interpreter: "missing", interpreterVersion: null, version: null };
+  if (version === null) return { python, interpreter: "missing", ...absent };
   const distribution = probe.run(python, ["-c", OPTILAND_VERSION_SCRIPT]);
   return {
     python,
     interpreter: "present",
     interpreterVersion: version,
     version: succeeded(distribution) ? distribution.stdout.trim() : null,
+    engine: await probe.optilandEngine(loaded),
   };
 }
 
 /**
- * Gathers the report. Probes only read: nothing is written or installed, and nothing of optiland is imported.
+ * Gathers the report. Probes only read LensVisualizer and optiland: nothing is written into either or installed.
  * A LensVisualizer checkout that is present is loaded through the binding, in this process, to fingerprint it.
+ * An optiland interpreter that is present runs the engine's worker once, to fingerprint optiland: the worker's
+ * caches go under the configuration's `cacheDir`.
  */
 export async function collectDoctorReport(loaded: LoadedConfig, probe: DoctorProbe): Promise<DoctorReport> {
   const { config, sources } = loaded;
@@ -141,7 +171,7 @@ export async function collectDoctorReport(loaded: LoadedConfig, probe: DoctorPro
     ) as DoctorReport["config"],
     lensVisualizer: await probeLensVisualizer(config.lvPath, probe),
     python: { command: config.python, version: interpreterVersion(config.python, probe) },
-    optiland: probeOptiland(config.engines.optiland.python, probe),
+    optiland: await probeOptiland(loaded, probe),
   };
 }
 
@@ -150,6 +180,27 @@ type Row = readonly [label: string, value: string];
 function section(title: string, rows: readonly Row[]): string {
   const width = Math.max(...rows.map(([label]) => label.length));
   return [title, ...rows.map(([label, value]) => `  ${label.padEnd(width)}  ${value}`)].join("\n");
+}
+
+/** The rows that say who the engine `optiland` is, or why it cannot be used. */
+function optilandEngineRows(engine: DoctorOptilandEngine | null): Row[] {
+  if (engine === null) return [];
+  if (engine.status === "unavailable") return [["engine", `unavailable (${engine.code}): ${engine.message}`]];
+  const { details } = engine;
+  const said = (name: string): string => String(details[name] ?? "unknown");
+  const commit =
+    details.commit === null || details.commit === undefined
+      ? "not a git checkout"
+      : `${said("commit")} (${details.dirty === true ? "dirty" : details.dirty === false ? "clean" : "unknown"})`;
+  const versions = `Python ${said("python")}, numpy ${said("numpy")}, scipy ${said("scipy")}, numba ${said("numba")}`;
+  return [
+    ["engine", `fingerprint ${engine.fingerprint}`],
+    ["git", commit],
+    ["sources", `${said("sourceFiles")} files, hash ${said("sourceHash")}`],
+    ["versions", versions],
+    ["jit", details.jit === true ? "on" : details.jit === false ? "off" : "unknown"],
+    ["adapter", engine.adapterRevision ?? "none stated"],
+  ];
 }
 
 /** The human-readable report: a pure function of the report, with no timestamps. */
@@ -174,6 +225,7 @@ export function renderDoctorText(report: DoctorReport): string {
   if (optiland.interpreter === "present") {
     optilandRows[optilandRows.length - 1] = ["interpreter", `present (${optiland.interpreterVersion})`];
     optilandRows.push(["version", optiland.version ?? "not importable"]);
+    optilandRows.push(...optilandEngineRows(optiland.engine));
   }
 
   const sections = [
@@ -210,8 +262,8 @@ export function renderDoctorJson(report: DoctorReport): string {
 
 /**
  * Builds `lvrtc doctor [--json]`. It exits 1 only when the Node version is out of range; a missing LensVisualizer,
- * one that is present and cannot be loaded, and a missing Python or optiland are reported and exit 0. A
- * configuration file that cannot be read is an error.
+ * one that is present and cannot be loaded, a missing Python or optiland and an engine `optiland` that cannot be used
+ * are reported and exit 0. A configuration file that cannot be read is an error.
  */
 export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
   return {
@@ -248,6 +300,22 @@ async function loadedBinding(path: string): Promise<DoctorLvBinding> {
   }
 }
 
+/** Asks the engine `optiland` of a configuration who it is; a failure becomes the report of it. */
+async function describedOptiland(loaded: LoadedConfig): Promise<DoctorOptilandEngine> {
+  let adapter: EngineAdapter | undefined;
+  try {
+    adapter = await createEngineRegistry(loaded).create(OPTILAND_ENGINE_ID);
+    const { identity } = await adapter.describe();
+    const { fingerprint, adapterRevision = null, details } = identity;
+    return { status: "available", fingerprint, adapterRevision, details };
+  } catch (error) {
+    const code = error instanceof EngineUnavailableError ? error.code : "create-failed";
+    return { status: "unavailable", code, message: error instanceof Error ? error.message : String(error) };
+  } finally {
+    await adapter?.close().catch(() => undefined);
+  }
+}
+
 /**
  * Probes this machine. Commands run as `runSystemCommand` runs them: without a shell, under a time limit, Python
  * told not to write bytecode and git not handed a repository inherited from a parent git.
@@ -257,6 +325,7 @@ export const systemProbe: DoctorProbe = {
   exists: (path) => existsSync(path),
   run: runSystemCommand,
   lvBinding: loadedBinding,
+  optilandEngine: describedOptiland,
 };
 
 /** `lvrtc doctor` wired to this repository, the process environment and this machine. */

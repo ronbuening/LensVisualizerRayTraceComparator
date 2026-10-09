@@ -1,6 +1,7 @@
 import packageJson from "../../package.json" with { type: "json" };
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
 import type { CliCommand, CliIo } from "./command.ts";
+import { baselineCommand } from "./commands/baseline.ts";
 import { compareCommand } from "./commands/compare.ts";
 import { doctorCommand } from "./commands/doctor.ts";
 import { engineCommand } from "./commands/engine.ts";
@@ -9,6 +10,7 @@ import { lensesCommand } from "./commands/lenses.ts";
 import { mtfCommand } from "./commands/mtf.ts";
 import { reportCommand } from "./commands/report.ts";
 import { runCommand } from "./commands/run.ts";
+import { verifyCommand } from "./commands/verify.ts";
 
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
 export type { CliCommand, CliIo };
@@ -19,6 +21,8 @@ export const COMMANDS: readonly CliCommand[] = [
   runCommand,
   compareCommand,
   reportCommand,
+  baselineCommand,
+  verifyCommand,
   engineCommand,
   lensesCommand,
   exportCommand,

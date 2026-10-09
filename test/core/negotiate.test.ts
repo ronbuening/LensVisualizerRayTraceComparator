@@ -78,11 +78,43 @@ test("a quantity the engine does not offer is listed by its id", () => {
       { code: "quantity", item: request.quantity, message: `the engine does not offer ${request.quantity}` },
     ]);
   }
-  // Which version of the quantity the engine implements is not negotiated here.
+  // Without the version of a definition to hold it to, which version the engine implements is not negotiated: an
+  // engine that negotiates against its own descriptor gives none.
   assert.deepEqual(
     negotiate(SINGLET_CASE, requestAbout(SINGLET_CASE), engineWith("/capabilities/quantities/rays.trace/version", 9)),
     [],
   );
+});
+
+test("an engine that implements another version of the quantity's definition is not asked", () => {
+  const request = requestAbout(SINGLET_CASE);
+  assert.deepEqual(negotiate(SINGLET_CASE, request, CAPABLE, 1), []);
+  for (const [implemented, asked] of [
+    [1, 2],
+    [2, 1],
+    [9, 3],
+  ]) {
+    const descriptor = engineWith("/capabilities/quantities/rays.trace/version", implemented);
+    assert.deepEqual(negotiate(SINGLET_CASE, request, descriptor, asked), [
+      {
+        code: "quantity",
+        item: "rays.trace",
+        message: `the engine implements version ${implemented} of rays.trace; the comparator asks for version ${asked}`,
+      },
+    ]);
+    assert.deepEqual(negotiate(SINGLET_CASE, request, descriptor, implemented), []);
+  }
+  // A quantity the engine does not offer is said once, as not offered, whatever version is asked for.
+  assert.deepEqual(found(negotiate(SINGLET_CASE, requestAbout(SINGLET_CASE, "mtf.native"), CAPABLE, 4)), [
+    ["quantity", "mtf.native"],
+  ]);
+  // It stands where the quantity stands in the order: after the contract, before the features.
+  const old = engineWith("/capabilities/quantities/rays.trace/version", 7);
+  const few = edited(old, "/capabilities/features/supported", []) as EngineDescriptor;
+  assert.deepEqual(found(negotiate(HARD, HARD_REQUEST, few, 1)).slice(0, 2), [
+    ["quantity", "rays.trace"],
+    ["feature", FEATURE_FLAGS[0]],
+  ]);
 });
 
 test("each feature flag of the case that the engine does not support is listed, in the case's order", () => {

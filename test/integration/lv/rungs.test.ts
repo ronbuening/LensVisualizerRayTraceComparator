@@ -4,7 +4,9 @@
 // Run output goes to a temporary directory.
 //
 // The numbers quoted in comments, and the pinned ones, were measured at LV commit 3af45e3f with the catalog of that
-// commit; its engine files are those of the d36f44b3 working tree the earlier stages name (closure f6681074).
+// commit; its engine files are those of the d36f44b3 working tree the earlier stages name (closure f6681074). The
+// verdicts under the floor of the exit direction (policy version 4) were taken at 1ed8cc3d (closure ff670f03), where
+// the figures of these lenses are those of 3af45e3f to every digit quoted.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -12,8 +14,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
-import { isDeepStrictEqual } from "node:util";
 
+import { buildBaseline, parseBaseline } from "../../../src/baseline/build.ts";
+import { checkBaseline } from "../../../src/baseline/check.ts";
 import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { compareGroup } from "../../../src/compare/group.ts";
@@ -48,8 +51,8 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const POLICY = loadPolicy();
-/** The digest of the benchmark that is committed: the Phase 1 numerical-floor report. */
-const COMMITTED_DIGEST = join(REPO_ROOT, "reports", "benchmark", "lv-floor.json");
+/** The baseline of the benchmark that is committed: lv, ref and optiland on R0 to R3. */
+const COMMITTED_BASELINE = join(REPO_ROOT, "baselines", "benchmark.json");
 
 function tempDir(t: TestContext): string {
   const directory = mkdtempSync(join(tmpdir(), "lvrtc-lv-rungs-"));
@@ -166,7 +169,7 @@ const R3_METRICS = ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxA
 // ── The benchmark ────────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "the benchmark: lv and ref agree on R0 to R3 at the reference and the photopic lines, and the digest is the committed one",
+  "the benchmark: lv and ref agree on R0 to R3 at the reference and the photopic lines, as the committed baseline records",
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, digest, digestText, verdicts } = cycle(t, "benchmark");
@@ -245,26 +248,26 @@ test(
     );
     assert.ok(digest.runs.every((run) => /^[0-9a-f]{64}$/.test(run.caseId ?? "")));
 
-    // The committed digest is this one, wherever it was taken, as long as LensVisualizer's engine files and the
-    // cases it makes of the benchmark's lenses are the ones it names: the same figures for every run and rung.
-    // With other engine files, or a lens that has been edited since, it is a record of what it names.
-    assert.ok(existsSync(COMMITTED_DIGEST), "reports/benchmark/lv-floor.json is committed");
-    const committed: FloorReport = JSON.parse(readFileSync(COMMITTED_DIGEST, "utf8"));
-    assert.deepEqual([committed.kind, committed.suite.name], ["floor-report", "benchmark"]);
-    const sameEngine = committed.engine.fingerprint === digest.engine.fingerprint;
-    const sameCases = isDeepStrictEqual(committed.runs, digest.runs) && committed.suite.hash === digest.suite.hash;
-    if (sameEngine && sameCases) {
-      assert.deepEqual(committed.rows, digest.rows, "regenerate reports/benchmark as README.md says");
-      assert.deepEqual(committed.rungs, digest.rungs);
-    } else {
-      const edited = digest.runs.filter((run, at) => committed.runs?.[at]?.caseId !== run.caseId);
-      t.diagnostic(
-        `the committed digest was taken of LensVisualizer ${committed.engine.fingerprint} ` +
-          `(commit ${String(committed.engine.details.commit)}); the one here is ${digest.engine.fingerprint}, and ` +
-          `${edited.length} of its ${digest.runs.length} cases are other cases: ` +
-          `${edited.map((run) => run.name).join(", ") || "none"}`,
-      );
+    // The committed baseline holds these figures for lv against ref, wherever it was taken, as long as both
+    // engines, the policy and the case of a run are the ones it names. The baseline is of three engines; this run
+    // is of two, so only the records of this pair are held. A record that is stale is a record of what it names:
+    // `lvrtc baseline check benchmark` says whether it still holds.
+    assert.ok(existsSync(COMMITTED_BASELINE), "baselines/benchmark.json is committed");
+    const read = parseBaseline(readFileSync(COMMITTED_BASELINE, "utf8"));
+    assert.ok("baseline" in read, JSON.stringify(read));
+    const fresh = buildBaseline(manifest, comparisons, POLICY);
+    const records = checkBaseline(read.baseline, fresh, POLICY).filter(
+      (record) => record.a === "lv" && record.b === "ref" && record.outcome !== "GONE",
+    );
+    assert.equal(records.length, 4 * 24);
+    const held = records.filter((record) => record.stale.length === 0);
+    for (const record of held) {
+      assert.equal(record.outcome, "OK", `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
     }
+    t.diagnostic(
+      `baselines/benchmark.json: ${held.length} of ${records.length} records of lv and ref are of the cases and ` +
+        `engines here and hold; ${records.filter((record) => record.outcome === "DRIFT").length} drifted`,
+    );
   },
 );
 
@@ -321,7 +324,7 @@ test(
     }
     assert.match(
       floors.get("stop-inside-element-photopic r2") ?? "",
-      /^landing\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at field 5\.53e1, line \d, ray \d+; floor of lv: lv against ref hits\.maxDistance \d\.\d\de-9 within 1\.00e-7, lv against ref landing\.maxDistance 1\.\d\de-8 within 1\.00e-7$/,
+      /^landing\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at field 5\.53e1, line \d, ray \d+; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-10 within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-9 within 1\.00e-7, lv against ref landing\.maxDistance 1\.\d\de-8 within 1\.00e-7$/,
     );
     // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that is not.
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
@@ -547,18 +550,34 @@ test(
   async (t) => {
     const ask = await engines(t);
     const seen: string[] = [];
-    const verdictsOf = async (key: string): Promise<{ r2: string[]; r3: string[]; sets: TracedSet[] }> => {
-      const sets = await tracedSets(ask, key);
-      const worst = (name: string, rung: "r2" | "r3"): number =>
-        Math.max(...sets.map((set) => metricOf(set[rung], name).value ?? NaN));
+    const worstOver = (sets: readonly TracedSet[], name: string, rung: "r2" | "r3"): number =>
+      Math.max(...sets.map((set) => metricOf(set[rung], name).value ?? NaN));
+    const verdictsOf = async (
+      key: string,
+      options: RunOptions = {},
+    ): Promise<{ r2: string[]; r3: string[]; sets: TracedSet[] }> => {
+      const sets = await tracedSets(ask, key, options);
       seen.push(
-        `${key}: hits ${worst("hits.maxDistance", "r2")} mm, direction ${worst("direction.maxAbs", "r2")}, landing ` +
-          `${worst("landing.maxDistance", "r2")} mm, path to image ${worst("opticalPathToImage.maxAbs", "r3")} waves`,
+        `${key}${options.lines?.kind === "photopic" ? " (photopic)" : ""}: hits ` +
+          `${worstOver(sets, "hits.maxDistance", "r2")} mm, direction ${worstOver(sets, "direction.maxAbs", "r2")}, ` +
+          `landing ${worstOver(sets, "landing.maxDistance", "r2")} mm, path to image ` +
+          `${worstOver(sets, "opticalPathToImage.maxAbs", "r3")} waves; R2 ${sets.map((set) => set.r2.verdict).join(" ")}`,
       );
       // Whatever else: not one ray that one engine stopped and the other passed.
       for (const set of sets) assert.equal(metricOf(set.r2, "mask.mismatches").value, 0, key);
       return { r2: sets.map((set) => set.r2.verdict), r3: sets.map((set) => set.r3.verdict), sets };
     };
+    /** The set of the full field at a line, of sets that are in the order of the fields and then of the lines. */
+    const fullField = (sets: readonly TracedSet[], line: number): TracedSet => {
+      const set = sets.find(({ spec }) => spec.line === line && spec.groups?.field?.heightFraction === 1);
+      assert.ok(set !== undefined, `line ${line}`);
+      return set;
+    };
+    const limitOf = (rung: "r2" | "r3", name: string): number => POLICY.rungs[rung].metrics[name].floor?.limit ?? NaN;
+    assert.deepEqual(
+      ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"].map((name) => limitOf("r2", name)),
+      [1e-7, 1e-8, 1e-7],
+    );
 
     // Within the floor's limits, at the full field only: a hit 4e-8 mm off behind a surface that magnifies what
     // came before it forty times, on a wide zoom; a landing 2.2e-8 mm off behind an exit 64 degrees off the axis.
@@ -568,21 +587,101 @@ test(
       assert.deepEqual(r3, ["PASS", "PASS", "FLOOR"], key);
       assert.match(
         sets[2].r2.reason ?? "",
-        /; floor of lv: lv against ref hits\.maxDistance \d\.\d\de-\d+ within 1\.00e-7, /,
+        /; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-\d+ within 1\.00e-7, /,
       );
     }
 
-    // Beyond them. A direction has no floor: 3.1e-9 on apple-iphone-12-main-wide, three times its gate, where the
-    // hit is 1.09e-8 mm off; and on fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr a landing 1.02e-7 mm off, past the
-    // limit of 1e-7 mm, behind a hit 9.8e-8 mm off. Both fail R2, and stay failed.
-    for (const key of ["apple-iphone-12-main-wide", "fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr"]) {
-      const { r2, sets } = await verdictsOf(key);
-      assert.deepEqual(r2, ["PASS", "PASS", "FAIL"], key);
+    // A direction above its gate, which until policy version 4 had no floor and always failed. On
+    // apple-iphone-12-main-wide at its full field the exit direction is 3.1e-9 off, three times its gate, behind a
+    // hit that is 1.09e-8 mm off; the landing and the optical path are inside their gates. Both figures are within
+    // ten times their gates, and R2 is a floor now. R3 passed and passes.
+    {
+      const { r2, r3, sets } = await verdictsOf("apple-iphone-12-main-wide");
+      assert.deepEqual(r2, ["PASS", "PASS", "FLOOR"]);
+      assert.deepEqual(r3, ["PASS", "PASS", "PASS"]);
       assert.match(
         sets[2].r2.reason ?? "",
-        /direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 .*; not a floor of lv: direction\.maxAbs has no floor$/,
+        /^direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 at .*; hits\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-9 within 1\.00e-8, lv against ref hits\.maxDistance 1\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-9 within 1\.00e-7$/,
       );
-      assert.ok((metricOf(sets[2].r2, "hits.maxDistance").value ?? 0) > 1e-8, key);
+      const direction = metricOf(sets[2].r2, "direction.maxAbs").value ?? NaN;
+      assert.ok(direction > 1e-9 && direction < limitOf("r2", "direction.maxAbs"), String(direction));
+    }
+    // The direction alone, with every hit and landing inside its gate: apple-iphone-7-wide-camera-lens at half its
+    // field, on the photopic lines only, 1.0e-9 to 1.4e-9. Five floors, and nothing else of its 15 sets.
+    {
+      const { r2, r3, sets } = await verdictsOf("apple-iphone-7-wide-camera-lens", { lines: { kind: "photopic" } });
+      assert.equal(sets.length, 15);
+      assert.ok(r3.every((verdict) => verdict === "PASS"));
+      const floors = sets.filter((set) => set.r2.verdict === "FLOOR");
+      assert.deepEqual(
+        r2.filter((verdict) => verdict !== "FLOOR"),
+        Array.from({ length: 10 }, () => "PASS"),
+      );
+      for (const { spec, r2: pair } of floors) {
+        assert.equal(spec.groups?.field?.heightFraction, 0.5);
+        assert.match(
+          pair.reason ?? "",
+          /^direction\.maxAbs 1\.\d\de-9 exceeds its tolerance 1\.00e-9 at [^;]*; floor of lv: /,
+        );
+        assert.ok((metricOf(pair, "hits.maxDistance").value ?? NaN) < 1e-8);
+        assert.ok((metricOf(pair, "landing.maxDistance").value ?? NaN) < 1e-8);
+      }
+    }
+
+    // Beyond the limits, and still failing: nothing was widened for these, and each stays a finding about
+    // LensVisualizer. fujifilm-fujinon-xf-27mm-f28 at 510 nm, on a ray that leaves a surface 3 degrees short of the
+    // perpendicular to the axis: a hit 1.8e-7 mm off, where the limit of a floor is 1e-7 mm.
+    {
+      const { sets } = await verdictsOf("fujifilm-fujinon-xf-27mm-f28", { lines: { kind: "photopic" } });
+      const { r2, r3 } = fullField(sets, 2);
+      assert.equal(r2.verdict, "FAIL");
+      assert.match(
+        r2.reason ?? "",
+        /; not a floor of lv: hits\.maxDistance against ref 1\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
+      );
+      // Its direction, 3.5e-9, is within the limit a direction has now: it is the hit that decides.
+      const direction = metricOf(r2, "direction.maxAbs").value ?? NaN;
+      assert.ok(direction > 1e-9 && direction < limitOf("r2", "direction.maxAbs"), String(direction));
+      assert.equal(r3.verdict, "FLOOR");
+    }
+    // leica-apo-summicron-m-35f2 at 555 nm, behind an exit 64 degrees off the axis: a landing 2.0e-7 mm off and a
+    // path 3.3e-4 waves off, each beyond its limit, with every hit inside its gate.
+    {
+      const { sets } = await verdictsOf("leica-apo-summicron-m-35f2", { lines: { kind: "photopic" } });
+      const { r2, r3 } = fullField(sets, 0);
+      assert.deepEqual([r2.verdict, r3.verdict], ["FAIL", "FAIL"]);
+      assert.match(
+        r2.reason ?? "",
+        /; not a floor of lv: landing\.maxDistance against ref \d\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
+      );
+      assert.match(
+        r3.reason ?? "",
+        /; not a floor of lv: opd\.maxAbs against ref 3\.\d\de-4 exceeds the floor limit 2\.00e-4$/,
+      );
+      assert.ok((metricOf(r2, "hits.maxDistance").value ?? NaN) < 1e-8);
+    }
+    // fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr at its full field of 63 degrees, where hits and landings run from
+    // 2.5e-8 mm to 1.2e-7 mm with the line and the direction from 1.1e-9 to 4.0e-9: no pair passes, and each is
+    // a floor exactly where every figure is within its limit. At 470 nm a hit is 1.15e-7 mm off, which is not.
+    {
+      const { sets } = await verdictsOf("fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr", { lines: { kind: "photopic" } });
+      const full = sets.filter(({ spec }) => spec.groups?.field?.heightFraction === 1);
+      assert.equal(full.length, 5);
+      for (const { spec, r2 } of full) {
+        const within = (["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"] as const).every(
+          (name) => (metricOf(r2, name).value ?? NaN) <= limitOf("r2", name),
+        );
+        assert.equal(r2.verdict, within ? "FLOOR" : "FAIL", `line ${spec.line}: ${r2.reason}`);
+        assert.ok((metricOf(r2, "direction.maxAbs").value ?? NaN) > 1e-9, `line ${spec.line}`);
+      }
+      const verdicts = full.map(({ r2 }) => r2.verdict);
+      assert.ok(verdicts.includes("FLOOR") && verdicts.includes("FAIL"), verdicts.join(" "));
+      const blue = fullField(sets, 1).r2;
+      assert.equal(blue.verdict, "FAIL");
+      assert.match(
+        blue.reason ?? "",
+        /; not a floor of lv: hits\.maxDistance against ref 1\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
+      );
     }
     t.diagnostic(seen.join("; "));
   },

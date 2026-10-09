@@ -213,6 +213,11 @@ test("the Double-Gauss is described as the case states it, and its sag is that o
     surfaces.map((surface) => surface.aperture.semiDiameter),
   );
   assert.ok(f8(data.clipRadius)[stopIndex] > data.stopSemiDiameter);
+  // No surface of it has a central obstruction.
+  assert.deepEqual(
+    f8(data.innerClipRadius),
+    surfaces.map(() => 0),
+  );
   assert.deepEqual(data.indexAfterSurface, DOUBLE_GAUSS.conditions.indexAfterSurface);
   assert.deepEqual(
     data.terms,
@@ -256,6 +261,12 @@ test("an asphere is described with its terms, a flat base with curvature 0, and 
   );
   assert.deepEqual(data.indexAfterSurface, plain.conditions.indexAfterSurface);
   assert.equal(data.indexAfterSurface.$nd.shape[0], plain.conditions.lines.length);
+  // The annular aperture is part of what was built: its inner radius, and 0 on every other surface.
+  assert.deepEqual(
+    f8(data.innerClipRadius),
+    surfaces.map((surface) => surface.aperture.innerSemiDiameter),
+  );
+  assert.deepEqual(f8(data.innerClipRadius), [0, 0, 0, 2, 0, 0, 0]);
 
   // The flat-base asphere, surface 4 of the case: its sag is its two terms alone.
   const flat = surfaces.findIndex(({ shape }) => shape.kind === "asphere" && shape.radius === null);

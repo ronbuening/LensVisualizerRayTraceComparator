@@ -3,7 +3,8 @@
 // tab asks: the answer is LensVisualizer's own `computeMtf` for a request this file spells out again from the tab's
 // source, bit for bit. Run output goes to a temporary directory.
 //
-// The figures pinned below were measured at LV commit ed78cf40 with the engine closure 1827eefe. They are compared
+// The figures pinned below were measured at LV commit ed78cf40 with the engine closure 1827eefe, and again, with
+// every figure and every case the same, at e9475ff4 with the closure ff670f03 (`PINNED_CLOSURE`). They are compared
 // only while the engine closure and the case of a configuration are still the ones they were measured with: the
 // checkout changes by the day, and a lens that was edited is another lens.
 import assert from "node:assert/strict";
@@ -55,8 +56,13 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
   { key: "sigma-45mm-f28-dg-dn-contemporary", zoomT: 0, run: "sigma-45mm-f28-dg-dn-contemporary" },
 ];
 
-/** The engine closure the pinned figures were measured with, at LV commit ed78cf40. */
-const PINNED_CLOSURE = "1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0";
+/**
+ * The engine closure the pinned figures are held with. They were measured at LV commit ed78cf40, closure 1827eefe,
+ * and measured again, the same in every figure and every case, at e9475ff4, closure ff670f03: LensVisualizer had
+ * edited partial-dispersion fields of its glass catalogue, which is in the closure and changed no case of these
+ * twelve configurations.
+ */
+const PINNED_CLOSURE = "ff670f03d42e55f8d3467347eaebfd37fa10f21bf5cec2c7087895509d797ffd";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

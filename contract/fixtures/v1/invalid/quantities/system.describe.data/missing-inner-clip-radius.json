@@ -1,0 +1,83 @@
+{
+  "surfaceCount": 2,
+  "stopIndex": 0,
+  "imageZ": 100,
+  "stopSemiDiameter": 5,
+  "vertexZ": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAQQA==",
+      "sha256": "be4b0657519c5344e2777459e347d495622f55f283448a89075f8a0c521d6279"
+    }
+  },
+  "curvature": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "exSuR+F6lD97FK5H4XqUvw==",
+      "sha256": "3ba8ddb347a900fb7b143f8f205733715218a9d30553f93441211c042c955d40"
+    }
+  },
+  "conic": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAAAA==",
+      "sha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    }
+  },
+  "clipRadius": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2
+      ],
+      "data": "AAAAAAAAJEAAAAAAAAAkQA==",
+      "sha256": "6d2c110c804affccb3b428d36d8904bca68270352a61440d6c2208d411e329f3"
+    }
+  },
+  "indexAfterSurface": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        2
+      ],
+      "data": "MCqpE9BE+D8AAAAAAADwPw==",
+      "sha256": "97263b9734c627d6df5c284aa480a76920f617bf73bc53dddb29b78dc3cafed2"
+    }
+  },
+  "sagRadii": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        3
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAUQAAAAAAAACRAAAAAAAAAAAAAAAAAAAAUQAAAAAAAACRA",
+      "sha256": "10de069c47f1dfbd36dcc227254af4681a7a4c4d9b3796ed918c00eed1fe8f95"
+    }
+  },
+  "sag": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        2,
+        3
+      ],
+      "data": "AAAAAAAAAACW3zOhSgrQP73Qkt7MKfA/AAAAAAAAAACW3zOhSgrQv73Qkt7MKfC/",
+      "sha256": "f20ab5245e7dd8fd879375adedfd7a8b8d7589b372f97184e67f4480cfcd9b14"
+    }
+  },
+  "terms": [
+    [],
+    []
+  ]
+}

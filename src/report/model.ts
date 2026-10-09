@@ -203,7 +203,19 @@ function supportOf(manifest: RunManifest, labelOf: ReturnType<typeof requestLabe
   });
 }
 
-/** The metric columns of a section: the metrics the policy names, by name, then any other a pair reports. */
+/** What a metric is a figure of: its name up to the last dot, so `pupilZ` for `pupilZ.maxScaled` and `pupilZ.maxAbs`. */
+function subjectOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? name : name.slice(0, dot);
+}
+
+/**
+ * The metric columns of a section: the metrics the policy names, by name, and any other a pair reports. A metric
+ * the policy does not name stands beside the ones it names of the same subject (`subjectOf`), after the last of
+ * them: the plain difference of a pupil's position next to the scaled one that is judged. One whose subject the
+ * policy names no metric of comes after every other column. Either way they keep the order the pairs report them
+ * in.
+ */
 function columnsOf(policy: RungPolicy | null, pairs: readonly PairComparison[]): MetricColumn[] {
   const reported = pairs.flatMap((pair) => pair.metrics);
   const gated = policy?.class === "gated";
@@ -215,8 +227,13 @@ function columnsOf(policy: RungPolicy | null, pairs: readonly PairComparison[]):
       const floorLimit = floor === undefined ? {} : { floorLimit: floor.limit };
       return { name, unit, limit, limitKind: gated ? "tolerance" : "attention", ...floorLimit };
     });
+  const named = new Set(columns.map((column) => subjectOf(column.name)));
   for (const { name, unit } of reported) {
-    if (!columns.some((column) => column.name === name)) columns.push({ name, unit });
+    if (columns.some((column) => column.name === name)) continue;
+    const beside = named.has(subjectOf(name))
+      ? columns.findLastIndex((column) => subjectOf(column.name) === subjectOf(name))
+      : columns.length - 1;
+    columns.splice(beside + 1, 0, { name, unit });
   }
   return columns;
 }

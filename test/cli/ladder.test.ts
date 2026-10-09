@@ -157,6 +157,13 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
       { name: "firstOrder.maxAbs", value: 0, unit: "mm", where: { quantity: "efl", line: 0 } },
       { name: "pupilZ.maxScaled", value: 0, unit: "mm", where: { quantity: "entrancePupilZ", line: 0 } },
       { name: "pupilZ.maxAbs", value: 0, unit: "mm", where: { quantity: "entrancePupilZ", line: 0 } },
+      {
+        name: "pupilRadius.maxScaled",
+        value: 0,
+        unit: "mm",
+        where: { quantity: "entrancePupilSemiDiameter", line: 0 },
+      },
+      { name: "pupilRadius.maxAbs", value: 0, unit: "mm", where: { quantity: "entrancePupilSemiDiameter", line: 0 } },
     ],
     class: "gated",
     verdict: "PASS",
@@ -196,33 +203,40 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
   assert.match(markdown, /^\| FAIL \| 1 \| 2 \|$/m);
   assert.match(markdown, /^\| BLOCKED \| 1 \| 2 \|$/m);
 
-  // R0: the counts read as counts, the limits as limits, and the place of the mismatch is in its cell.
+  // R0: the counts read as counts, the limits as limits, and the place of the mismatch is in its cell. The plain
+  // difference of the sag, which is shown and not judged, stands beside the scaled one that is.
   const header =
     "| Engine | aperture.mismatches (≤ 0 elements) | index.mismatches (≤ 0 elements) | " +
-    "layout.mismatches (≤ 0 elements) | sag.maxScaled (≤ 1.00e-12) | shape.mismatches (≤ 0 elements) | " +
-    "sag.maxAbs [mm] | Verdict | Note |";
+    "layout.mismatches (≤ 0 elements) | sag.maxScaled (≤ 1.00e-12) | sag.maxAbs [mm] | " +
+    "shape.mismatches (≤ 0 elements) | Verdict | Note |";
   assert.ok(markdown.includes(`\n${header}\n`), markdown);
   assert.match(
     markdown,
-    /^\| ref-bent \| 0 \| 0 \| 0 \| \d\.\d\de-(9|10) at sample 8, surface 8 \| 1 at field curvature, surface 8 \| 4\.\d\de-9 at sample 8, surface 8 \| FAIL \| sag\.maxScaled /m,
+    /^\| ref-bent \| 0 \| 0 \| 0 \| \d\.\d\de-(9|10) at sample 8, surface 8 \| 4\.\d\de-9 at sample 8, surface 8 \| 1 at field curvature, surface 8 \| FAIL \| sag\.maxScaled /m,
   );
   assert.match(
     markdown,
-    /^\| ref-twin \| 0 \| 0 \| 0 \| 0 at sample 0, surface 0 \| 0 \| 0 at sample 0, surface 0 \| PASS \| {2}\|$/m,
+    /^\| ref-twin \| 0 \| 0 \| 0 \| 0 at sample 0, surface 0 \| 0 at sample 0, surface 0 \| 0 \| PASS \| {2}\|$/m,
   );
   assert.match(markdown, /^Quantity `system\.describe`, compared direct, gated\. /m);
 
   // R1: the worst quantity and its line for the pair that was judged, and the blocked pair with why.
-  // The position of a pupil has its own two columns: on the scale of its distance, which is judged, and plain.
+  // The radius and the position of a pupil have two columns each: on the scale of the pupil's distance, which is
+  // judged, and the plain figure beside it.
   const firstOrder =
-    "| Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | pupilZ.maxScaled (≤ 1.00e-9 mm) | pupilZ.maxAbs [mm] | " +
-    "Verdict | Note |";
+    "| Engine | firstOrder.maxAbs (≤ 1.00e-9 mm) | pupilRadius.maxScaled (≤ 1.00e-9 mm) | pupilRadius.maxAbs [mm] | " +
+    "pupilZ.maxScaled (≤ 1.00e-9 mm) | pupilZ.maxAbs [mm] | Verdict | Note |";
   assert.ok(markdown.includes(`\n${firstOrder}\n`));
   const pupil = "0 at line 0, quantity entrancePupilZ";
-  assert.ok(markdown.includes(`\n| ref-twin | 0 at line 0, quantity efl | ${pupil} | ${pupil} | PASS |  |\n`));
+  const radius = "0 at line 0, quantity entrancePupilSemiDiameter";
+  assert.ok(
+    markdown.includes(
+      `\n| ref-twin | 0 at line 0, quantity efl | ${radius} | ${radius} | ${pupil} | ${pupil} | PASS |  |\n`,
+    ),
+  );
   assert.match(
     markdown,
-    /^\| ref-bent \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed for ref and ref-bent on this case \|$/m,
+    /^\| ref-bent \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed for ref and ref-bent on this case \|$/m,
   );
   // And in the pairwise matrix of that rung.
   assert.match(markdown, /^\| ref-bent \| BLOCKED \| — \| BLOCKED \|$/m);
