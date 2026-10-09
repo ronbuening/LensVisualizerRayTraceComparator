@@ -313,6 +313,26 @@ the existing result store and baselines.
 | 8.2 Charts | MTF overlays, difference curves, ladder heat map, per-surface ray deviation | Snapshot tests on fixture runs |
 | 8.3 Run control | Start a suite and collect pending jobs from the UI | Starts the fake suite end to end |
 
+## How stages are run, and economy mode
+
+Each stage is implemented by one agent, reviewed by a second, then verified and committed by the main session.
+Since Stage 2.6 the stages run in **economy mode**, which the owner approved on 2026-10-08 because the weekly
+token allowance was nearly used. It stays in force until the owner lifts it.
+
+| | Standard (through Stage 2.5) | Economy (Stage 2.6 onward) |
+|---|---|---|
+| Implementer effort | extra-high for numerics, high for plumbing | unchanged |
+| Reviewer effort | extra-high | high |
+| Catalog-wide sweeps, large fault-injection runs, fuzzing | run in review as a matter of course | only when a gated rung fails or a specific doubt needs it |
+| Extended-precision attribution (50 to 60 digits) | run on figures near a gate | only when a gated rung fails |
+| Reports from agents | full | short: what changed, what was measured, what is left |
+
+What economy mode does not change: every stage still has its tests, the three test tiers must be green before a
+commit, no gate is loosened, and a rung that fails is still attributed before anything else is concluded. What it
+costs: review is less likely to find a defect that no test and no gate shows.
+
+Work stops at the end of each phase for the owner's go-ahead while economy mode is in force.
+
 ## Relation to MTF_ACCURACY_PLAN.md
 
 | MTF-plan item | Disposition |
