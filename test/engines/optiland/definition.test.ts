@@ -34,10 +34,12 @@ import {
 import type { InterpreterProbe } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
+import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
 import type { Transport } from "../../../src/transports/transport.ts";
+import { RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture, tempDir } from "../../core/support.ts";
 import { CASE, echoRequest } from "../support.ts";
 import { FAKE_OPTILAND_MISSING, fakeOptilandRoot } from "./support.ts";
@@ -321,24 +323,25 @@ test("with an interpreter and no other configuration the engine answers hello as
     scipy: "0.2.fake",
     sourceFiles: 3,
   });
-  // Every feature flag of the contract, without a limit; the built-system echo and the first-order data, each at
-  // the version of its definition that the comparator holds an answer to.
+  // Every feature flag of the contract, without a limit; the built-system echo, the first-order data and the trace
+  // of given rays, each at the version of its definition that the comparator holds an answer to.
   assert.deepEqual(capabilities, {
     features: { supported: [...FEATURE_FLAGS], limits: {} },
     quantities: {
       "system.describe": { version: systemDescribeQuantity.version },
       "paraxial.first-order": { version: paraxialFirstOrderQuantity.version },
+      "rays.trace": { version: raysTraceQuantity.version },
     },
     deterministic: true,
     maxConcurrency: 1,
   });
 
   // A quantity it does not offer is answered "unsupported", by the engine itself, stamped with both hashes.
-  const request = makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: {} });
+  const request = makeRequest({ caseId: CASE.id, quantity: "mtf.native", spec: {} });
   const result = await adapter.run(request, CASE);
   assert.equal(result.status, "unsupported");
   assert.deepEqual(result.unsupported, [
-    { code: "quantity", item: "rays.trace", message: "the engine does not offer rays.trace" },
+    { code: "quantity", item: "mtf.native", message: "the engine does not offer mtf.native" },
   ]);
   assert.deepEqual(result.engine, {
     id: "optiland",
@@ -359,11 +362,27 @@ test("with an interpreter and no other configuration the engine answers hello as
       "spec is not a system.describe spec: /sagFractions/1 [invariant] the fractions must ascend: 0.25 follows 0.5",
     ],
   );
+  // So is a set of rays that is none for this case: a line the singlet does not have, found with the standard
+  // library before numpy or optiland is asked for anything.
+  const noLine = await adapter.run(
+    makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: { ...RAYS_SPEC_SINGLET, line: 2 } }),
+    CASE,
+  );
+  assert.deepEqual(
+    [noLine.status, noLine.error?.code, noLine.error?.message],
+    ["error", "bad-spec", "spec is not a rays.trace spec: /line [invariant] 2 is not a line of the case, which has 1"],
+  );
   // The fake optiland has nothing to build a case with: the builder's imports fail when the first case is built,
-  // not when the worker starts, and the failure is the engine's answer to that request.
-  const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "system.describe", spec: {} }), CASE);
-  assert.deepEqual([built.status, built.error?.code], ["error", "engine-failure"]);
-  assert.match(built.error?.message ?? "", /^ModuleNotFoundError: No module named 'optiland\.geometries'/);
+  // not when the worker starts, and the failure is the engine's answer to that request, for each quantity that
+  // needs an optic.
+  for (const [quantity, spec] of [
+    ["system.describe", {}],
+    ["rays.trace", RAYS_SPEC_SINGLET],
+  ] as const) {
+    const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec }), CASE);
+    assert.deepEqual([built.status, built.error?.code], ["error", "engine-failure"], quantity);
+    assert.match(built.error?.message ?? "", /^ModuleNotFoundError: No module named 'optiland\.geometries'/);
+  }
   await adapter.close();
 
   // The caches are under the root's cache directory. Bytecode is cached there, of what the worker imported once it
@@ -530,20 +549,15 @@ test(
   { skip },
   async (t) => {
     const fake = fakeOptilandRoot(t);
-    // The rungs of traced rays are not the worker's yet; the first-order data, rung r1, is since Stage 2.3.
+    // Every rung of the ladder so far asks a quantity the worker answers, from an optic the fake cannot build. The
+    // conformance quantity, which needs no optics, is the one it does not offer.
     const rootDir = suiteRoot(t, ["selftest", "r0", "r1", "r2"], fake);
-    const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest,r2"]);
-    // A case file states no image height, so its fields given as fractions have no rays: said, and no failure.
-    const said = ended.err.split("\n").filter((line) => line !== "");
-    assert.deepEqual(
-      said.filter((line) => !line.includes("a field has no rays: field-fraction-unresolved")),
-      [],
-    );
+    const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest"]);
+    assert.equal(ended.err, "");
     assert.equal(ended.code, EXIT_OK, ended.out);
     const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
     assert.deepEqual(rows, [
       "singlet  selftest  optiland  unsupported  negotiated   the engine does not offer selftest.echo",
-      "singlet  r2        optiland  unsupported  negotiated   the engine does not offer rays.trace",
     ]);
     assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));

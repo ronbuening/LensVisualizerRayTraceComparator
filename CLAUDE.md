@@ -13,7 +13,7 @@ npm run format         # prettier --write
 npm test               # node --test on test/**/*.test.ts, except test/integration
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
-npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too
+npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
@@ -33,7 +33,7 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs report benchmark --floor reports/benchmark   # after the two above: rewrites lv-floor.{json,md}
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1   # R0 and R1 three ways: optiland builds every case, reads it back and gives its own first-order data
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2   # three ways: optiland builds every case (R0), gives its own first-order data (R1) and traces LV's launch rays (R2)
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 ```
@@ -92,7 +92,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   only then sets `sys.dont_write_bytecode = False`; `check` refuses an interpreter whose prefix is not the
   cache's. Never give the optiland definition an empty `PYTHONDONTWRITEBYTECODE`. In `zsh` an unquoted
   `$VARS` holding several assignments is one word: write them out. The JIT stays on, and the backend is numpy in
-  float64: never switch either.
+  float64: never switch either. `NUMBA_DISABLE_JIT` is not obeyed; the one switch is the worker's own
+  `LVRTC_OPTILAND_JIT=off`, set only by the test that compares the two, and it changes the fingerprint.
 - **The fingerprint of `optiland` is optiland's, the adapter revision the worker's** (`lvrtc_optiland/identity.py`):
   commit and dirty flag of the checkout, a hash of the package's `.py` files, the versions of Python, numpy, scipy
   and numba, the JIT flag; never the distribution's version, which ends in an install date. The adapter revision
@@ -117,7 +118,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   optiland in `docs/gotchas.md`.
 - **What the builder needs of optiland is imported when the first case is built** (`build.optiland_api`), never
   when the worker loads: the hermetic tier runs the worker on `test/fixtures/fake-optiland`, which has no
-  geometries, materials or apertures. A test that needs the real optiland skips with `real_optiland_missing()`.
+  geometries, materials, apertures or rays. A test that needs the real optiland skips with
+  `real_optiland_missing()`.
 - **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
   `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
@@ -140,6 +142,24 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **Expected first-order values of the worker's tests are derived in the test** (`test_first_order.py`: closed
   forms and an exact `fractions.Fraction` trace), never taken from an engine's output. Synthetic cases come from
   `tests/optiland/support.py`; tier-3 helpers are in `test/integration/optiland/support.ts`.
+- **`rays.trace` of `optiland` is optiland's own rows** (`lvrtc_optiland/trace.py`): the rays of a spec go into
+  one `RealRays` bit for bit and through one `optic.surfaces.trace` of the spec's line's optic, the only one
+  built. `hits`, exit and path are the rows of the case's surfaces; the landing and the path to it are optiland's
+  image row. A request above `MAX_BATCH_RAYS` is traced in batches, in order. The rays of a request are one batch
+  as given: optiland's tolerance on an asphere is the batch's (`docs/gotchas.md`); whether to shield a batch from
+  its ended rays is the owner's open decision.
+- **A ray optiland keeps is answered as optiland has it; why a ray ended needs evidence** (`trace.settle`). ok is
+  optiland's own measure: intensity above 0 and a number for point, direction and path on every surface. An ended
+  ray is `blocked` only where optiland's numbers show why (a point on its own sag with intensity 0; no direction
+  where its Snell radicand is negative; a conic the line misses), and `failed` otherwise.
+  `ON_SURFACE_TOLERANCE_MM` tells a hit from a point elsewhere and judges no precision: never tighten it to a
+  gate.
+- **Expected values of the worker's ray tests are derived in the test** (`test_trace.py`: closed forms and
+  `exact_trace`, a 60-digit trace written from the contract), never taken from an engine's output. A behaviour of
+  optiland that `docs/gotchas.md` describes has a test that pins it.
+- **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR and to no failure (`assertR2`),
+  and asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
+  red.
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.

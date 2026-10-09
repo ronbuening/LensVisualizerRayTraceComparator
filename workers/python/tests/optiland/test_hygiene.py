@@ -15,6 +15,7 @@ from typing import Any
 from lvrtc_optiland.hygiene import (
     CACHE_DIR_VARIABLE,
     DEFAULT_CACHE_NAME,
+    JIT_VARIABLE,
     CacheDirs,
     HygieneError,
     check,
@@ -60,6 +61,32 @@ class PrepareTest(TempDirTest):
         # prefix; a process it starts is told not to write, by the variable above.
         self.assertEqual(sys.pycache_prefix, str(base / "pycache"))
         self.assertIs(sys.dont_write_bytecode, False)
+
+    def test_the_jit_is_off_only_for_the_worker_that_was_started_to_run_without_it(self) -> None:
+        base = self.tmp / "cache"
+        # numba's own variable is never obeyed, whatever it says; the comparator's own is, and says it to numba.
+        for stated, numbas, jit in (
+            ({}, {}, True),
+            ({JIT_VARIABLE: "on"}, {}, True),
+            ({JIT_VARIABLE: ""}, {}, True),
+            ({JIT_VARIABLE: "off"}, {"NUMBA_DISABLE_JIT": "1"}, False),
+            ({JIT_VARIABLE: "off", "NUMBA_DISABLE_JIT": "0"}, {"NUMBA_DISABLE_JIT": "1"}, False),
+            ({JIT_VARIABLE: "on", "NUMBA_DISABLE_JIT": "1"}, {}, True),
+        ):
+            environ = {CACHE_DIR_VARIABLE: str(base), **stated}
+            dirs = prepare(environ)
+            self.assertIs(dirs.jit, jit, stated)
+            self.assertEqual({name: value for name, value in environ.items() if name == "NUMBA_DISABLE_JIT"}, numbas)
+        self.assertEqual(JIT_VARIABLE, "LVRTC_OPTILAND_JIT")
+        # Any other word is refused before a directory is made or a variable set: a misspelling runs nothing.
+        elsewhere = self.tmp / "elsewhere"
+        for word in ("0", "false", "OFF", "no"):
+            environ = {CACHE_DIR_VARIABLE: str(elsewhere), JIT_VARIABLE: word}
+            with self.assertRaises(HygieneError) as raised:
+                prepare(environ)
+            self.assertEqual(str(raised.exception), f"{JIT_VARIABLE} is {word!r}: it is on, as without it, or off")
+            self.assertEqual(environ, {CACHE_DIR_VARIABLE: str(elsewhere), JIT_VARIABLE: word})
+        self.assertFalse(elsewhere.exists())
 
     def test_what_is_imported_after_prepare_is_cached_under_the_prefix_and_not_beside_its_source(self) -> None:
         # An interpreter started as the comparator starts the worker, told to write no bytecode: nothing is written
@@ -219,6 +246,15 @@ class CheckTest(TempDirTest):
             with self.assertRaises(HygieneError) as raised:
                 check(*self.modules(**changes))
             self.assertIn(message, str(raised.exception))
+
+    def test_a_worker_that_was_to_run_without_the_jit_is_held_to_that_too(self) -> None:
+        dirs, optiland, numba = self.modules(disable_jit=1)
+        interpreted = CacheDirs(dirs.numba, dirs.matplotlib, dirs.pycache, jit=False)
+        check(interpreted, optiland, numba)
+        numba.config.DISABLE_JIT = 0
+        with self.assertRaises(HygieneError) as raised:
+            check(interpreted, optiland, numba)
+        self.assertEqual(str(raised.exception), "numba's JIT is on, against LVRTC_OPTILAND_JIT=off")
 
     def test_a_cache_inside_the_checkout_of_optiland_is_refused(self) -> None:
         dirs, optiland, numba = self.modules()

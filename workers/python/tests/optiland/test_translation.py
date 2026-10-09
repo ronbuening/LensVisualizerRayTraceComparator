@@ -211,14 +211,15 @@ class ContractSagTest(unittest.TestCase):
 
 
 class DeclarationTest(unittest.TestCase):
-    def test_the_engine_declares_every_feature_flag_no_limit_the_built_system_echo_and_first_order_data(self) -> None:
+    def test_the_engine_declares_every_feature_flag_no_limit_and_the_three_quantities_it_answers(self) -> None:
         descriptor = OptilandEngine(IDENTITY).describe()
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         capabilities = descriptor["capabilities"]
         self.assertEqual(capabilities["features"], {"supported": list(FEATURE_FLAGS), "limits": {}})
         self.assertEqual(tuple(capabilities["features"]["supported"]), SUPPORTED_FEATURES)
         self.assertEqual(
-            capabilities["quantities"], {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}}
+            capabilities["quantities"],
+            {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}, "rays.trace": {"version": 1}},
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])
         self.assertIs(capabilities["deterministic"], True)
@@ -236,7 +237,7 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(set(ALL_FEATURES["features"]), set(SUPPORTED_FEATURES), "the case that has every feature")
 
     def test_what_its_descriptor_rules_out_is_refused_in_the_order_of_the_comparators_negotiation(self) -> None:
-        request = {**describe_request(SINGLET), "quantity": "rays.trace", "contract": "2.0"}
+        request = {**describe_request(SINGLET), "quantity": "mtf.native", "contract": "2.0"}
         case = {**SINGLET, "contract": "1.1", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
         self.assertEqual(
             refusals(request, case),
@@ -251,7 +252,7 @@ class DeclarationTest(unittest.TestCase):
                     "item": "2.0",
                     "message": "the engine speaks contract 1.0 to 1.0; the request is written to 2.0",
                 },
-                {"code": "quantity", "item": "rays.trace", "message": "the engine does not offer rays.trace"},
+                {"code": "quantity", "item": "mtf.native", "message": "the engine does not offer mtf.native"},
                 {
                     "code": "feature",
                     "item": "surface.grating",

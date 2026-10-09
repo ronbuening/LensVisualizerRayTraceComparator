@@ -15,7 +15,19 @@ from lvrtc_optiland.identity import adapter_revision, fingerprint_of, source_has
 from lvrtc_worker_kit.protocol import parse_json
 from lvrtc_worker_kit.validate import validate_kind
 
-from .support import HELLO, SHUTDOWN, TempDirTest, describe_line, read_fixture, run_line
+from .support import (
+    HELLO,
+    SHUTDOWN,
+    UNOFFERED_QUANTITY,
+    TempDirTest,
+    describe_line,
+    ray_spec,
+    read_fixture,
+    run_line,
+    trace_line,
+    unoffered_line,
+    unoffered_request,
+)
 
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -73,7 +85,11 @@ class WorkerTest(TempDirTest):
             descriptor["capabilities"],
             {
                 "features": {"supported": list(SUPPORTED_FEATURES), "limits": {}},
-                "quantities": {"system.describe": {"version": 2}, "paraxial.first-order": {"version": 1}},
+                "quantities": {
+                    "system.describe": {"version": 2},
+                    "paraxial.first-order": {"version": 1},
+                    "rays.trace": {"version": 1},
+                },
                 "deterministic": True,
                 "maxConcurrency": 1,
             },
@@ -91,12 +107,14 @@ class WorkerTest(TempDirTest):
 
     def test_a_quantity_it_does_not_offer_is_answered_unsupported_and_stamped_with_both_hashes(self) -> None:
         site = self.fake_site()
-        (hello, ran), _ = self.replies(site, HELLO + run_line())
-        request = read_fixture("valid", "protocol-request", "run.json")["params"]["request"]
+        (hello, ran), _ = self.replies(site, HELLO + unoffered_line())
+        request = unoffered_request()
         identity = hello["result"]["identity"]
         self.assertIs(ran["ok"], True)
         self.assertEqual(validate_kind("result", ran["result"]), [])
         quantity = request["quantity"]
+        self.assertEqual(quantity, UNOFFERED_QUANTITY)
+        self.assertNotIn(quantity, QUANTITIES)
         self.assertEqual(
             ran["result"],
             {
@@ -133,22 +151,41 @@ class WorkerTest(TempDirTest):
             self.assertEqual((result["status"], result["error"]["code"]), ("error", "bad-spec"), spec)
             self.assertTrue(result["error"]["message"].startswith("spec is not a system.describe spec: "), result)
             self.assertIn(said, result["error"]["message"])
+        # Rays that are not a set of rays for this case: a direction that is no unit vector, which optiland would
+        # take for one, and a line the case does not have. Each is found with the standard library, before numpy.
+        start = [(0.0, 0.0, -10.0)]
+        for spec, said in (
+            (ray_spec(start, [(0.0, 0.6, 0.6)]), "/directions [invariant] the direction of ray 0 is not a unit vector"),
+            (ray_spec(start, [(0.0, 0.0, 1.0)], line=3), "/line [invariant] 3 is not a line of the case, which has 1"),
+            ({"line": 0}, " [required] "),
+        ):
+            (ran,), _ = self.replies(site, trace_line(case, spec))
+            result = ran["result"]
+            self.assertEqual((result["status"], result["error"]["code"]), ("error", "bad-spec"), spec)
+            self.assertTrue(result["error"]["message"].startswith("spec is not a rays.trace spec: "), result)
+            self.assertIn(said, result["error"]["message"])
 
     def test_what_the_builder_needs_of_optiland_is_imported_when_a_case_is_built_and_not_before(self) -> None:
-        # The fake optiland has no geometries, materials or apertures. The worker starts on it and says who it is;
-        # a case cannot be built, which is the engine's failure on that request and leaves the worker a worker.
+        # The fake optiland has no geometries, materials, apertures or rays. The worker starts on it and says who
+        # it is; a case cannot be built, which is the engine's failure on that request and leaves the worker a
+        # worker. The contract's own ``run`` message asks for a trace of rays, whose spec is read before the case
+        # is built: it is a good one, and the request fails where the other does.
         site = self.fake_site()
         case = read_fixture("valid", "optical-case", "singlet.json")
-        (hello, ran, again, bye), log = self.replies(site, HELLO + describe_line(case) + run_line() + SHUTDOWN)
+        lines = HELLO + describe_line(case) + run_line() + unoffered_line() + SHUTDOWN
+        (hello, ran, traced, again, bye), log = self.replies(site, lines)
         self.assertIs(hello["ok"], True)
-        self.assertIs(ran["ok"], True)
-        result = ran["result"]
-        self.assertEqual(validate_kind("result", result), [])
-        self.assertEqual((result["status"], result["error"]["code"]), ("error", "engine-failure"))
-        self.assertIn("No module named 'optiland.geometries'", result["error"]["message"])
-        self.assertEqual(result["engine"]["fingerprint"], hello["result"]["identity"]["fingerprint"])
+        for answered in (ran, traced):
+            self.assertIs(answered["ok"], True)
+            result = answered["result"]
+            self.assertEqual(validate_kind("result", result), [])
+            self.assertEqual((result["status"], result["error"]["code"]), ("error", "engine-failure"))
+            self.assertIn("No module named 'optiland.geometries'", result["error"]["message"])
+            self.assertEqual(result["engine"]["fingerprint"], hello["result"]["identity"]["fingerprint"])
+        asked = read_fixture("valid", "protocol-request", "run.json")["params"]["request"]
+        self.assertEqual((asked["quantity"], traced["result"]["requestId"]), ("rays.trace", asked["id"]))
         self.assertEqual((again["result"]["status"], bye["ok"]), ("unsupported", True))
-        self.assertIn("ModuleNotFoundError", log)
+        self.assertEqual(log.count("ModuleNotFoundError"), 2)
 
     def test_the_fingerprint_is_the_same_in_another_process_and_another_for_another_source(self) -> None:
         site = self.fake_site()
@@ -179,7 +216,7 @@ class WorkerTest(TempDirTest):
         self.assertNotEqual(upgraded["fingerprint"], added["fingerprint"])
         self.assertEqual(upgraded["details"]["sourceHash"], added["details"]["sourceHash"])
 
-    def test_the_caches_are_where_it_was_told_and_the_jit_cannot_be_turned_off_from_outside(self) -> None:
+    def test_the_caches_are_where_it_was_told_and_numbas_own_variable_does_not_turn_the_jit_off(self) -> None:
         site = self.fake_site()
         identity = self.identity(site, env={"NUMBA_DISABLE_JIT": "1"})
         self.assertIs(identity["details"]["jit"], True)
@@ -194,6 +231,25 @@ class WorkerTest(TempDirTest):
         cached = {path.name.split(".")[0] for path in (cache / "pycache").joinpath(*site.parts[1:]).rglob("*.pyc")}
         self.assertEqual(cached, {"__init__"}, "the fake numpy, scipy, numba and optiland, each an __init__")
         self.assertEqual(sorted(str(path.relative_to(site)) for path in site.rglob("*.pyc")), [])
+
+    def test_a_worker_started_to_run_without_the_jit_says_so_and_is_another_engine_to_the_result_store(self) -> None:
+        site = self.fake_site()
+        compiled = self.identity(site)
+        # The comparator's own switch, which nothing sets but the test that compares the two; numba's own variable
+        # beside it changes nothing.
+        for env in ({"LVRTC_OPTILAND_JIT": "off"}, {"LVRTC_OPTILAND_JIT": "off", "NUMBA_DISABLE_JIT": "0"}):
+            interpreted = self.identity(site, env=env)
+            self.assertIs(interpreted["details"]["jit"], False)
+            self.assertNotEqual(interpreted["fingerprint"], compiled["fingerprint"])
+            self.assertEqual(interpreted["adapterRevision"], compiled["adapterRevision"])
+            without_jit = {**interpreted["details"], "jit": True}
+            self.assertEqual(without_jit, compiled["details"], "nothing else of the identity differs")
+        self.assertEqual(self.identity(site, env={"LVRTC_OPTILAND_JIT": "on"}), compiled)
+        # Any other word is refused, with the two there are, before anything is imported.
+        (hello,), log = self.replies(site, HELLO, env={"LVRTC_OPTILAND_JIT": "0"})
+        self.assertIs(hello["ok"], False)
+        self.assertIn("LVRTC_OPTILAND_JIT is '0': it is on, as without it, or off", hello["error"]["message"])
+        self.assertNotIn("fake optiland: imported", log)
 
     def test_an_interpreter_that_cannot_import_optiland_refuses_hello_and_says_what_to_set(self) -> None:
         site = self.fake_site()

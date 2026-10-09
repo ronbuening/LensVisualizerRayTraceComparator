@@ -13,14 +13,25 @@ import unittest
 from pathlib import Path
 from typing import Any
 
-from lvrtc_optiland.build import build_case
+from lvrtc_optiland import trace
+from lvrtc_optiland.build import build_case, optiland_api
 from lvrtc_optiland.hygiene import check, protected_directories
 from lvrtc_optiland.identity import adapter_revision, source_hash, stated_version
 from lvrtc_worker_kit.protocol import parse_json
 from lvrtc_worker_kit.validate import validate_kind
 
 from . import CACHE_DIRS
-from .support import HELLO, SHUTDOWN, WORKERS_DIR, TempDirTest, read_fixture, real_optiland_missing, run_line
+from .support import (
+    HELLO,
+    SHUTDOWN,
+    WORKERS_DIR,
+    TempDirTest,
+    f8,
+    read_fixture,
+    real_optiland_missing,
+    run_line,
+    unoffered_line,
+)
 
 MISSING = real_optiland_missing()
 
@@ -38,8 +49,8 @@ class RealOptilandTest(TempDirTest):
         return [parse_json(line) for line in ended.stdout.splitlines()], ended.stderr
 
     def test_the_worker_identifies_the_optiland_it_runs(self) -> None:
-        (hello, ran, bye), _ = self.converse(HELLO + run_line() + SHUTDOWN)
-        self.assertEqual([reply["ok"] for reply in (hello, ran, bye)], [True, True, True])
+        (hello, ran, refused, bye), log = self.converse(HELLO + run_line() + unoffered_line() + SHUTDOWN)
+        self.assertEqual([reply["ok"] for reply in (hello, ran, refused, bye)], [True, True, True, True])
         descriptor = hello["result"]
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         identity = descriptor["identity"]
@@ -76,9 +87,27 @@ class RealOptilandTest(TempDirTest):
             if named is not None:
                 self.assertTrue(details["commit"].startswith(named.group(1)), details)
 
-        self.assertEqual(validate_kind("result", ran["result"]), [])
-        self.assertEqual(ran["result"]["status"], "unsupported")
-        self.assertEqual(ran["result"]["engine"]["fingerprint"], identity["fingerprint"])
+        # The contract's own ``run`` message asks for two rays through the singlet: the worker answers it, and the
+        # answer is the contract's worked one, the ray along the axis exact but for the last bit of its direction.
+        result = ran["result"]
+        self.assertEqual(validate_kind("result", result), [])
+        self.assertEqual((result["status"], result["engine"]["fingerprint"]), ("ok", identity["fingerprint"]))
+        worked = read_fixture("valid", "quantities", "rays.trace.data", "singlet-axis-and-rim.json")
+        self.assertEqual(result["data"]["status"], worked["status"])
+        self.assertEqual(result["data"]["endSurface"], worked["endSurface"])
+        self.assertEqual(f8(result["data"]["imagePoint"])[:3], [0.0, 0.0, 100.0])
+        self.assertAlmostEqual(f8(result["data"]["opticalPathToImage"])[0], 112.0672, delta=1e-13)
+        counts = {"surfaces": 2, "rays": 2, "ok": 1, "blocked": 1, "failed": 0, "batches": 1}
+        self.assertEqual(result["diagnostics"]["counts"], counts)
+        # What the trace cost is a line of the log, and no part of the answer.
+        self.assertRegex(
+            log.decode("utf-8"),
+            r"(?m)^lvrtc_optiland: rays\.trace rays=2 surfaces=2 batches=1 ok=1 blocked=1 failed=0 "
+            r"read_ms=\S+ build_ms=\S+ trace_ms=\S+ encode_ms=\S+( peak_mib=\S+)? pid=\d+$",
+        )
+        self.assertNotIn("_ms", repr(result))
+        self.assertEqual(refused["result"]["status"], "unsupported")
+        self.assertEqual(refused["result"]["engine"]["fingerprint"], identity["fingerprint"])
 
     def test_the_fingerprint_is_the_same_in_two_processes(self) -> None:
         (first,), _ = self.converse(HELLO)
@@ -99,28 +128,26 @@ class RealOptilandTest(TempDirTest):
         self.assertEqual(protected_directories()[0], home)
 
     def test_what_the_jit_compiles_is_cached_where_the_worker_said_and_not_beside_the_source(self) -> None:
-        # A ray through two spherical surfaces: optiland's conic intersection is a function numba compiles and
+        # Rays through two spherical surfaces: optiland's conic intersection is a function numba compiles and
         # caches (@njit(cache=True)), which without NUMBA_CACHE_DIR goes into __pycache__ beside conic.py.
-        # The optic is the builder's, of the contract's singlet. The rays are still made here, with optiland's own
-        # class: the worker traces rays from Stage 2.4 on, and this import goes then.
+        # The optic is the builder's, of the contract's singlet, and the rays go through the worker's own tracer.
         import numba  # noqa: PLC0415
-        import numpy as np  # noqa: PLC0415
-        from optiland.rays import RealRays  # noqa: PLC0415
 
+        np = optiland_api().np
         self.assertFalse(numba.config.DISABLE_JIT)
         (optic,) = build_case(read_fixture("valid", "optical-case", "singlet.json")).optics
         count = 5
         heights = np.linspace(-4.0, 4.0, count)
-        zeros, ones = np.zeros(count), np.ones(count)
-        rays = RealRays(heights, zeros, np.full(count, -10.0), zeros, zeros, ones, ones, np.full(count, 0.5875618))
-        optic.surfaces.trace(rays)
-        landed = np.asarray(optic.surfaces.x)[-1]
+        origins = np.stack((heights, np.zeros(count), np.full(count, -10.0)), axis=1)
+        directions = np.tile(np.array([0.0, 0.0, 1.0]), (count, 1))
+        traced, batches = trace.trace_rays(optic, origins, directions)
+        self.assertEqual((batches, traced.status.tolist()), (1, [0] * count), "every ray inside the apertures arrived")
+        landed = traced.image_point[:, 0]
         self.assertEqual(landed.dtype, np.float64)
         self.assertEqual(float(landed[2]), 0.0)
         self.assertTrue(np.allclose(landed, -landed[::-1], rtol=0.0, atol=1e-12), landed)
-        # The image surface is where the case says, and every ray inside the apertures arrived.
-        self.assertEqual([float(value) for value in np.asarray(optic.surfaces.z)[-1]], [100.0] * count)
-        self.assertTrue(bool(np.all(np.asarray(optic.surfaces.intensity)[-1] > 0)))
+        # The image plane is where the case says.
+        self.assertEqual(traced.image_point[:, 2].tolist(), [100.0] * count)
 
         assert CACHE_DIRS is not None
         index_files = sorted(path.name for path in CACHE_DIRS.numba.rglob("*.nbi"))

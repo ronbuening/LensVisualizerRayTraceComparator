@@ -38,8 +38,26 @@ def read_fixture(*parts: str) -> Any:
 
 
 def run_line() -> bytes:
-    """The contract's ``run`` message, as one line."""
+    """The contract's ``run`` message, as one line: a ``rays.trace`` request about the singlet."""
     return FIXTURE_DIR.joinpath("valid", "protocol-request", "run.json").read_bytes().replace(b"\n", b"") + b"\n"
+
+
+UNOFFERED_QUANTITY = "selftest.echo"
+"""A quantity of the contract that the engine does not offer: the conformance quantity, which needs no optics."""
+
+
+def unoffered_request() -> dict[str, Any]:
+    """The request of the contract's ``run`` message, asking for a quantity the engine does not offer.
+
+    The engine refuses it by its descriptor before it looks at the spec, so the spec may stay what it is.
+    """
+    request = read_fixture("valid", "protocol-request", "run.json")["params"]["request"]
+    return {**request, "quantity": UNOFFERED_QUANTITY}
+
+
+def unoffered_line() -> bytes:
+    """The ``run`` message that asks the contract's singlet for a quantity the engine does not offer, as one line."""
+    return run_message(unoffered_request(), read_fixture("valid", "protocol-request", "run.json")["params"]["case"])
 
 
 def describe_request(case: dict[str, Any], spec: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -73,6 +91,37 @@ def describe_line(case: dict[str, Any], spec: dict[str, Any] | None = None) -> b
 def first_order_line(case: dict[str, Any], spec: dict[str, Any] | None = None) -> bytes:
     """The ``run`` message that asks ``paraxial.first-order`` of ``case``, as one line."""
     return run_message(first_order_request(case, spec), case)
+
+
+def ray_spec(
+    origins: list[tuple[float, float, float]],
+    directions: list[tuple[float, float, float]],
+    *,
+    line: int = 0,
+    weights: list[float] | None = None,
+    **groups: Any,
+) -> dict[str, Any]:
+    """A ``rays.trace`` spec of the rays given, each number as the float64 it is; every weight is 1 unless given."""
+    count = len(origins)
+    spec: dict[str, Any] = {
+        "line": line,
+        "origins": encode_ndarray("f8", [value for point in origins for value in point], [count, 3]),
+        "directions": encode_ndarray("f8", [value for vector in directions for value in vector], [count, 3]),
+        "weights": encode_ndarray("f8", [1.0] * count if weights is None else weights, [count]),
+    }
+    if groups:
+        spec["groups"] = groups
+    return spec
+
+
+def trace_request(case: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+    """A ``rays.trace`` request about ``case``, with a made-up id."""
+    return {**describe_request(case, spec), "id": "7" * 64, "quantity": "rays.trace"}
+
+
+def trace_line(case: dict[str, Any], spec: dict[str, Any]) -> bytes:
+    """The ``run`` message that asks ``rays.trace`` of ``case``, as one line."""
+    return run_message(trace_request(case, spec), case)
 
 
 # ── Synthetic cases ──────────────────────────────────────────────────────────────────────────────────────────────

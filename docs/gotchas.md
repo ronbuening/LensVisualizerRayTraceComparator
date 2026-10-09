@@ -227,12 +227,23 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `fujifilm-fujinon-xf-27mm-f28`, and within 4.6e-12 mm of landing, 4.2e-14 in direction and 7.6e-9 waves on the Leica.
   None is in a suite. A tighter or caller-set intersection tolerance in LensVisualizer would turn every one of them, and
   every `FLOOR`, into a `PASS`.
-- **To watch with a third engine.** A floor needs every other engine within 1e-12 of `ref` in direction, a thousandth of
-  the gate, where a length has a hundredth. On the zoom above `ref` itself is up to 4.9e-13 from the truth in direction,
-  half of that agreement, so an engine as exact as `ref` may be more than 1e-12 from it there: the three pairs of that
-  zoom that are floors would then be `FAIL`, by the condition and not by a defect of either. Nothing is widened for it
-  ahead of a measurement. On the Hologon, whose floors are the ones in a suite, `ref` is within 6.5e-16 of the truth in
-  direction, 4.0e-14 mm in landing and 7.9e-11 waves on every ray of its full field.
+- **With a third engine.** A floor needs every other engine within 1e-12 of `ref` in direction, a thousandth of the
+  gate, and within 1e-10 mm in a hit and a landing, a hundredth. Stage 2.4 measured it with optiland (LensVisualizer
+  `14da71d9`, closure `78215d72`). In the two suites the witness is there on every one of the 378 ray sets: optiland
+  and `ref` are within 1.2e-12 mm in every hit, 2.1e-14 in direction and 8.9e-13 mm in landing, and the four floors of
+  the Hologon are floors against `ref` and against optiland alike, with the reason naming both figures: optiland
+  2.8e-15 in direction and 2.2e-13 mm in landing from `ref`, LensVisualizer 2.07e-10 and 1.10e-8 mm. Outside the
+  suites it is not: on nineteen lenses of the catalog that the entries of this file name (460 ray sets), 50 pairs of
+  `lv` and `ref` are `FLOOR` when the two are compared alone, and 36 with optiland beside them. The other 14 are
+  `FAIL` with the reason "optiland does not agree with ref": three of `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` at
+  its wide end, three of `fujifilm-fujinon-xf-27mm-f28`, five of `apple-iphone-7-wide-camera-lens` and three of
+  `russar-22-70f8`. In each the 60-digit trace puts the difference on optiland: on the worst ray of the first it is
+  3.2e-11 from the truth in direction and 8.6e-10 mm in a hit, where `ref` is within 2.2e-13 and 5.8e-12 mm
+  ([optiland's sums on an asphere](#on-an-asphere-optiland-is-as-exact-as-a-plain-sum-of-its-terms)). So the floor
+  rule does what it says, and what it says is strict: an engine whose own arithmetic is a hundred times coarser
+  than the arbiter's is no witness on a lens that magnifies arithmetic a thousand times, and LensVisualizer's floor
+  is then not granted. Nothing is widened for it: whether a witness that is inside every gate by a factor of ten or
+  more should withhold a floor is the owner's to decide, on these figures.
 - **Before and after policy version 4**, over that sweep at `1ed8cc3d`: R2 had 14 235 `PASS`, 39 `FLOOR` and 96
   `FAIL`, and has 14 235, 53 and 82; R3 has 14 345, 24 and 1, as it had. The 14 pairs that changed are the six of
   `apple-iphone-12-main-wide`, the five of `apple-iphone-7-wide-camera-lens` and three of
@@ -624,7 +635,16 @@ the catalog: 2267 cases of 1173 systems, the primes once and the zooms at both e
 and on the photopic lines, 53 378 surfaces in all. LensVisualizer moved to `1bf669ee` (closure `66027121`) while
 the stage was written; the suites were run again there, with every figure the same. The figures of rung R1 were
 taken with LensVisualizer at `5278694b` (engine closure `78215d72`, 151 files), over the suites, the 22 focus
-stations LensVisualizer certifies there, and the 1173 cases of the catalog on the reference line.
+stations LensVisualizer certifies there, and the 1173 cases of the catalog on the reference line. Those of rung R2,
+the traced rays, were taken with LensVisualizer at `14da71d9` (the same closure): over the two suites, 378 ray
+sets and 421 334 rays, and over nineteen lenses of the catalog that are in no suite and that other entries of this
+file name, each on its reference line and on the photopic lines, a zoom at both ends, 460 ray sets and 561 506
+rays; and at the 24 focus stations LensVisualizer certifies at `f3b4a337` (the same closure, six lens models more),
+on the reference line, 72 ray sets and 100 004 rays from object points 40 mm to 2.3 m in front of the lens, where
+all three engines stop the same rays and optiland is within 4.5e-12 mm, 6.8e-14 and 4.6e-12 mm of `ref`. Two entries below were found on synthetic systems
+instead: 280 made at random, 2240 probe lattices traced by `ref` and optiland, in no test. Where an entry says
+whose error a difference is, the ray was traced in 60-digit decimal arithmetic by a tracer that shares no code
+with any engine.
 
 ### Importing optiland writes into its own checkout
 
@@ -768,7 +788,8 @@ stations LensVisualizer certifies there, and the 1173 cases of the catalog on th
   to the bit, is stopped; one unit in the last place inside it passes.
 - **Handled.** Nothing: R0 compares the limit itself, which is the case's number, and a ray within 1e-8 mm of a
   limit is in the rim band of R2, where two engines may differ and nothing fails. No two engines could agree
-  there in any case: `ref` compares a radius with the limit, optiland a square with a square.
+  there in any case: `ref` compares a radius with the limit, optiland a square with a square. In the suites no ray
+  comes that close: of the 421 334 rays of rung R2 not one is in a rim band, between any two of the three engines.
 - **Class.** numerical.
 
 ### An ideal material has one index, and first-order data is that of the primary wavelength
@@ -974,6 +995,213 @@ stations LensVisualizer certifies there, and the 1173 cases of the catalog on th
   entrance pupil at infinity.
 - **Class.** method.
 
+### optiland says of a ray only its intensity
+
+- **Where.** `Surface._trace_real` in `optiland/surfaces/standard_surface.py` finds the distance to the surface,
+  moves every ray there, adds index times distance to its path, clips (`BaseAperture.clip` sets the intensity of a
+  ray outside the aperture to 0, and `RadialAperture.contains` is false for a NaN) and refracts. `SurfaceGroup.trace`
+  does that on every surface in turn, the image surface included, for every ray, whatever became of it.
+- **Effect.** A ray that an aperture stopped keeps its coordinates and is traced on to the image; one that missed a
+  surface or was totally reflected is NaN from there, and is "stopped" by the next aperture test. Read by its
+  numbers alone, a stopped ray lands like any other. optiland has no word for why a ray ended, and none for a
+  failure of its own: an iteration that did not converge returns the point it has, and that point passes or fails
+  the aperture test like a hit.
+- **Handled.** A ray is ok when optiland's own measure says so: an intensity above 0 and a number for its point, its
+  direction and its path on every surface, and for its point and its path on the image surface. It ended at the
+  first surface where that is not so. Why it ended is said only on evidence
+  ([contract](../contract/CONTRACT.md#the-engine-optiland)): a point
+  on optiland's own sag of the surface with an intensity of 0 is an aperture; such a point with no direction, where
+  optiland's radicand of Snell's law is negative, a total reflection; no point on a conic whose quadratic with the
+  line has no root, a miss; anything else is `failed`, which is in no count of the mask in R2 and is listed beside
+  it. Every value of a ray is NaN from its end surface on, whatever optiland recorded there. In the two suites
+  optiland fails no ray: 242 442 of its 421 334 rays are ok and 178 892 blocked, each at the surface where `ref`
+  and LensVisualizer end it.
+- **Class.** convention.
+
+### optiland takes the rays as they are, and lands them itself
+
+- **Where.** `RealRays.__init__` keeps the arrays it is given and normalises nothing; `RealRays.refract` computes a
+  direction from the one before and does not normalise it either. `ObjectSurface._trace_real` does nothing. The
+  image surface is a surface like the others: a ray is carried to its plane by `t = -z / N`, its path grows by
+  `t` times the index in front of it, and it is "refracted" into the same index.
+- **Effect.** The rays of a request go in bit for bit, a `-0` included, and the first row optiland records is the
+  rays as they were launched. The landing is the comparator's own projection, operation for operation: one
+  division, and a multiplication and an addition a coordinate, so that two engines with one exit point and one
+  direction land to the bit. A ray along the axis leaves a plane in the direction `u + 1 - u`, which is 1 less a
+  rounding for most indices: optiland's directions are unit vectors to 1e-16, not to the bit. And optiland steps
+  backwards to an image plane that lies behind the exit point, where the contract blocks the ray, or lands it at
+  its exit point when the plane is within 1e-9 mm.
+- **Handled.** The worker holds what optiland has at its object surface to the rays it was given, bit for bit, and
+  refuses to answer about rays optiland changed. A spec whose directions are not unit vectors within 1e-12 is
+  `bad-spec` before optiland sees it. The landing and the path to it are optiland's own image row, with the z of
+  the point written as the plane's number; the contract's two rules of the image plane are the worker's
+  (`trace.settle`), each with a test on a plate whose rear face is, or lies just behind, the image plane.
+- **Class.** convention.
+
+### A conic is met in front of the ray, inside the aperture, or else on its far side
+
+- **Where.** `_conic_candidates` and `_select_distance` in `optiland/backend/_conic.py`. Of the two roots of a line
+  with a conic, one is admissible when it lies in front of the ray (`t > 0`) and on the sheet the sag describes;
+  among admissible roots one inside the surface's aperture is preferred, then the nearer. Where no root is
+  admissible optiland falls back to the root nearer the vertex, whatever sheet it is on and wherever on the line.
+- **Effect.** The fallback is what makes optiland step backwards where two neighbouring surfaces cross: the hit
+  behind the ray is the root nearer the vertex, a plane is met at `-z / N` whatever its sign, and an asphere's
+  iteration starts there. On the eight lenses of the catalog where LensVisualizer loses rays at such a crossing,
+  optiland passes them where `ref` does. It is a fallback, though, and no rule: optiland steps backwards only
+  where no root is admissible. A ray behind the surface is inside its ball, and its line leaves the ball in front
+  of it: through the far half for a ray near the axis of a sphere, which is no admissible root, but through the
+  half the sag describes for a steep ray, and for most rays on a conic that reaches far (a conic constant toward
+  −1 and below). optiland takes that crossing, far beyond the rim, and its aperture stops the ray there, where the
+  contract passes it at the crossing behind it, inside the clear aperture. Measured on 160 synthetic systems made
+  with gaps thinner than a sag (1280 probe lattices, 737 280 rays, in no test): on four of them optiland meets
+  776 rays in front where `ref` steps back, 770 beyond the rim and 6 inside it, where they are totally
+  reflected; 510 of them are rays `ref` lands, and the 60-digit trace is with `ref` on every one it settles, all
+  but four at most. The fallback is also what carries a ray through the far side of a sphere: on a
+  hemisphere whose clear aperture reaches its equator, a steep line that cuts the sphere only beyond the equator
+  has no admissible root, the fallback root lies inside the aperture, and optiland refracts the ray there and
+  carries it on. `russar-22-70f8` has two such surfaces (1 and 9): at its full field optiland passes 942 rays there
+  that `ref` and LensVisualizer stop, and lands 874 rays more than either, 8 % of them all.
+- **Handled.** Nothing is hidden: a ray optiland keeps alive is answered with the point optiland has, so those
+  rays are mismatches of the mask and the pairs of optiland fail R2 on that lens (6 of its 18 ray sets, all at the
+  full field), as they should. A test builds the hemisphere and finds the ray landed a quarter of a metre from
+  the axis. A ray optiland stops at the crossing in front of it is `blocked`, at a point of the surface that an
+  aperture stopped, and a mismatch of the mask where `ref` passes it; a test puts a steep ray behind a sphere set
+  into the curve before it and finds it stopped 40 mm from the axis. optiland's own MTF of such a lens counts, or
+  loses, those rays. No lens of a suite has such a surface, and at the 24 focus stations LensVisualizer certifies
+  the three engines stop the same rays.
+- **Class.** method.
+
+### On an asphere optiland's iteration starts at the base conic, and goes where that leads
+
+- **Where.** `NewtonRaphsonGeometry._solve_distance_primal` in `optiland/geometries/newton_raphson.py` starts
+  Newton's method at the distance to the base conic and iterates on `sag(x, y) - z` until every ray of the batch is
+  within the tolerance, or 100 times. Nothing restricts it to the clear aperture, and what it ends with is the
+  answer.
+- **Effect.** Three things, each measured on lenses of the catalog that are in no suite.
+  **No start.** Where the line misses the base conic there is no start and no hit, whether or not the line meets
+  the surface. A phone lens has surfaces whose polynomial undoes most of a steep base: surface 11 of
+  `apple-iphone-12-main-wide` is a paraboloid that would be 1.1 mm deep at its rim and is 0.09 mm deep. optiland
+  loses 3656 rays there over the 18 ray sets of that lens, and 2690 on surface 9 of
+  `apple-iphone-7-wide-camera-lens`: 3576 and 2426 of them rays that `ref` and LensVisualizer land, 29 % and 20 %
+  of the light of those sets.
+  **Another crossing.** The polynomial of a surface, fitted to its clear aperture, turns back beyond the rim and
+  may cross the line again there. From a flat base the iteration can reach that crossing first: on surface 2 of
+  `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` at its wide end, at the full field, optiland meets 162 rays 24.9 mm
+  from the axis, 3 mm beyond the rim, and stops them, where the line meets the surface 20.8 mm from the axis and
+  the contract passes it. `ref` and LensVisualizer stop the same rays one surface later, so no light is at stake
+  there, and the mask differs.
+  **No convergence.** Where it settles on nothing, the point it ends with is somewhere near: 0.6 mm and 1.6 mm from
+  the surface on two rays of `fujifilm-fujinon-xf-27mm-f28` (surface 7, whose 18 terms cancel heavily). Outside
+  the aperture such a point stops the ray; inside it the ray is refracted there and carried on, and 26 rays of
+  that lens, 24 of `fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii`, 5 of `fujinon-xf-23mm-f14-r` and 5 of
+  `apple-iphone-12-main-wide` pass a surface so that `ref` and LensVisualizer stop them at, 16 of the first to the
+  image.
+- **Handled.** By the rule of the entry above: no hit on an asphere is `failed`, as is a ray optiland stopped at a
+  point that is not on the surface (7728 rays of those lenses in all), never `blocked`, which would claim a
+  reason; a ray optiland carries on is answered as optiland has it. So the pairs of optiland fail R2 on the mask
+  wherever it passed or stopped a ray on its own (27 ray sets of those lenses), and where it only lost rays they
+  pass on the rays that are left: on the two phone lenses a fifth and a seventh of all rays are in no count. Read
+  the count of failed rays beside a verdict. A test builds a paraboloid made shallow by a term and finds the ray
+  lost that the contract passes. With a NaN in a batch the iteration also runs all its 100 steps for every ray of
+  it, which is why a set takes 10 ms on most lenses and 200 ms on these.
+- **Class.** method.
+
+### On an asphere optiland is as exact as a plain sum of its terms
+
+- **Where.** `EvenAsphere.sag` and `_surface_normal`, and the same of `OddAsphere`, add the terms of the polynomial
+  one by one in double precision, and the normal's conic part is `x / (R sqrt(1 - (1 + k) r^2 / R^2))`, which loses
+  its digits where a conic ends.
+- **Effect.** The residual optiland iterates on and the normal it refracts with carry the rounding of those sums:
+  on a surface whose terms reach 6e4 and sum to 0.09 that is some 1e-11 of slope. Traced in 60 digits, the two
+  worst rays of the benchmark have optiland within 1.2e-12 mm of the truth in every hit and 2.0e-14 in direction,
+  where `ref` is within 1.9e-14 mm and 1.2e-15. On lenses that magnify arithmetic it does not stay there: at the
+  wide end of `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr`, at its full field, optiland is 7e-13 mm off after the first
+  aspheres, 9e-12 mm off 22 surfaces on, and 8.6e-10 mm off at the end, 3.2e-11 in direction and 9.0e-10 mm in
+  landing, on a ray where `ref` ends 5.8e-12 mm, 2.2e-13 and 6.1e-12 mm from the truth and LensVisualizer 2.1e-8
+  mm. On `fujifilm-fujinon-xf-27mm-f28` it is 7.5e-10 mm and 1.0e-11 off (`ref` 4.5e-13 mm and 5.9e-15), on
+  `apple-iphone-7-wide-camera-lens` 3.2e-11 mm and 1.3e-11 (`ref` 1.2e-14 mm and 4.9e-15). On `russar-22-70f8`,
+  which has no asphere, it is the normal near the equator of a hemisphere: 1.5e-10 mm in landing (`ref` 1.9e-13).
+  It is not the tolerance of the iteration: with 1e-13, 1e-14, 1e-15 and 0 in place of 1e-12 the largest figures
+  of those lenses are 9e-10 mm to 1.5e-9 mm and 3e-11 to 4e-11, as before.
+- **Handled.** Every such figure is far inside the gates of R2 (1e-8 mm, 1e-9), so the pairs of optiland pass on
+  what they measure. What it costs is the floor: an engine that is 3e-11 from `ref` is not within the 1e-12 the
+  floor rule asks of a witness, and on those four lenses 14 pairs of LensVisualizer that are `FLOOR` beside `ref`
+  alone are `FAIL` beside optiland ("Behind a steep surface 1e-9 mm is not 1e-9 mm any more", above). Nothing is
+  widened for it. In the suites optiland is within 1.2e-12 mm and 2.1e-14 of `ref` on every ray.
+- **Class.** numerical.
+
+### A conic is met from where the ray is, and from far away that costs the square of the distance
+
+- **Where.** `_conic_candidates` forms the quadratic of the line with the conic from the ray's own position:
+  `c = x^2 + y^2 + z (k z - 2 R)` and `b = 2 (L x + M y + N (k z - R))`, whose terms are of the size of the
+  distance squared and cancel to the size of the lens.
+- **Effect.** The hit is off optiland's own sag by a rounding of those terms. Measured on a sphere of radius 30 mm
+  with rays from a point at each distance: 8e-14 mm from 100 mm, 7e-12 mm from 1 m, 6e-10 mm from 10 m, 6e-8 mm
+  from 100 m and 2e-6 mm from 1 km. An asphere does better, because the iteration brings its hit home to the
+  rounding of the distance and no further: 1.6e-11 mm from 100 m. LensVisualizer's rays for an object at infinity
+  start 10 mm in front of the lens, and nothing of this shows in the suites; the rays of a finite conjugate start
+  at the object point, and from 16 m (a 400 mm lens at 1:40) a spherical front surface is met to some 2e-9 mm:
+  inside the gate of R2 and outside what the floor rule asks of a witness. `ref` carries the line to the surface's
+  vertex plane first and solves from there.
+- **Handled.** Nothing: it is a difference for R2 to measure. It is why the worker takes a point within 1e-6 mm
+  of the surface for a point of the surface (`ON_SURFACE_TOLERANCE_MM`) and not within 1e-10 mm: that tolerance
+  tells a hit from a point that is somewhere else, and judges no precision. A test finds both figures at 100 m.
+- **Class.** numerical.
+
+### The tolerance of an asphere's iteration is that of the batch it is traced in
+
+- **Where.** `_effective_tolerance` in `optiland/geometries/newton_raphson.py` raises the tolerance the surface was
+  built with to `8 eps max(1, |t|)`, with `|t|` the largest distance of the base conic from any ray of the batch:
+  above 1e-12 mm once one ray is more than 563 mm from the surface. A ray that an aperture has stopped is still in
+  the batch, on a path of its own.
+- **Effect.** One ray decides how closely every ray of the batch is brought to the surface. With a ray that comes
+  from 10 km away in the batch the tolerance is 1.8e-8 mm, and a ray beside it whose base conic lies 8e-9 mm from
+  the asphere is left there, where alone it is brought within 1e-12 mm. On a curved base a ray without a point or
+  without a direction has no distance, the largest distance is then no number, and the tolerance stays the
+  surface's own.
+  **On a flat base it does not.** The iteration of an asphere of infinite radius starts at the distance to the
+  base plane, `-z / N`, and `_conic_intersection_distance` puts 1e-14 in place of an `N` that is not above it in
+  magnitude, which a NaN is not. A ray that was totally reflected further up keeps its point and has no direction:
+  it is 1e14 times its `z` from the plane, the tolerance of the batch is of the order of a millimetre, the base
+  plane is within it for every ray, and no ray of the batch is brought to the surface. Each is left on the base
+  plane, off the surface by its whole sag, with an intensity above 0, and is refracted there. The reflected ray
+  need carry no light: one that an aperture stopped surfaces before is traced on like any other. Measured on 280
+  synthetic systems, 98 of them with an asphere on a flat base (2240 probe lattices, in no test): 42 ray sets of
+  11 systems have a hit of optiland 2e-4 mm to 0.17 mm from `ref`'s on such a surface, and the same ray traced
+  alone is within 1e-12 mm of it; the 60-digit trace is within 2.3e-12 mm of `ref` on every ray of those sets
+  that both engines land. In every one of the 42 a
+  ray with a point and without a direction stands in front of the surface, and in 35 of them only rays that an
+  aperture had stopped before: a probe lattice reaches past the first rim, and the rays it loses there are the
+  ones that are reflected later.
+- **Handled.** The rays of a request are one batch, as they were given: nothing is sorted or split to shield a ray
+  from its neighbours, and a hit is answered as optiland has it, for R2 to measure. A set that this strikes fails
+  R2 in the pairs of optiland, by a hit on a flat-base asphere that is off by the surface's sag, and the pair of
+  LensVisualizer and `ref` is untouched; a floor of LensVisualizer on that set has no witness. Measured on the
+  suites, where it does not arise: no ray that had ended is more than 22.5 mm from an asphere, the tolerance is
+  1e-12 mm at every one of the 972 aspheric surfaces traced, and tracing the rays of each of the 378 sets again in
+  groups that ended alike changed no bit of any answer, at four times the cost. The catalog has two lenses with
+  an asphere on a flat base, `zeiss-zx1-distagon-35mm-f2`, which is in the feature suite, and
+  `fujifilm-fujinar-210mm-f45`: with LensVisualizer's rays at six fields, wide open and at f/8, on lattices of 32
+  and 64 cells (168 ray sets, 489 034 rays) no ray is reflected in front of either surface, and optiland is
+  within 1.5e-12 mm of `ref` in every hit. A request of more than 16 384 rays is traced in batches of that size, in
+  the order given. One test puts the far ray into the batch and finds the hit 8e-9 mm off; another puts a
+  reflected ray in front of a flat-base asphere and finds its neighbours on the base plane, to the bit.
+- **Class.** numerical.
+
+### numba's JIT changes no bit of a trace
+
+- **Where.** `optiland/backend/numpy_backend/conic.py` compiles the conic intersection with
+  `@njit(cache=True, error_model="numpy")`, without fast-math; everything else of a trace is numpy.
+- **Effect.** None on a figure: all 378 answers of the two suites are the same bytes with the JIT on and with it
+  off, every array of every one. Off, the benchmark's 216 sets take the worker 20 s where they take 5 s.
+- **Handled.** The JIT stays on, as optiland runs for its users. The comparison is repeated by a test
+  (`test/integration/optiland/r2.test.ts`), which starts a second worker with the worker's own switch,
+  `LVRTC_OPTILAND_JIT=off`: that worker states `jit: false`, so its fingerprint is another and none of its answers
+  is ever found in the result store for one of the engine as it runs. numba's own `NUMBA_DISABLE_JIT` is not
+  obeyed. The test holds every figure of every pair to 1e-13 between the two and every answer to 1e-12, and says
+  how many answers are the same bytes.
+- **Class.** none of the ladder's.
+
 ### What the builder refuses
 
 - **Where.** `workers/python/lvrtc_optiland/build.py` and `engine.py`.
@@ -984,6 +1212,7 @@ stations LensVisualizer certifies there, and the 1173 cases of the catalog on th
 - **Handled.** What it refuses is an optic that is not the case. Whatever of the build comes back from optiland
   as another value than the case states is an error of the code `build-mismatch`, with the surface, the field and
   both values, and nothing is described; a call of optiland that optiland has deprecated is an error too, not a
-  warning in a log. Every other quantity than `system.describe` and `paraxial.first-order` is `unsupported` until
-  its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order data of every one.
+  warning in a log. Every other quantity than `system.describe`, `paraxial.first-order` and `rays.trace` is
+  `unsupported` until its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order
+  data of every one.
 - **Class.** none of the ladder's.

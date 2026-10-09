@@ -3,18 +3,21 @@
 ``load_engine`` imports optiland, after ``hygiene.prepare`` has run, and gives the engine; when optiland cannot be
 imported it gives an engine that says so to every ``hello``, with what to set, and the worker stays a worker.
 
-The engine answers ``system.describe`` and ``paraxial.first-order``: the case is built as optiland optics, one for
-each line (``build``), each is read back and held to the case, and the answer is written from the optics alone
-(``build.describe_optics``, ``first_order.first_order_of``). An optic that is not the case is answered as an error
-that names the surface and the field, and nothing is said about it.
+The engine answers ``system.describe``, ``paraxial.first-order`` and ``rays.trace``: the case is built as optiland
+optics, one for each line (``build``), each is read back and held to the case, and the answer is written from the
+optics alone (``build.describe_optics``, ``first_order.first_order_of``, ``trace.trace_rays``). A trace of rays is
+of one line, and builds that line's optic alone. An optic that is not the case is answered as an error that names
+the surface and the field, and nothing is said about it.
 """
 
 from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import os
 import platform
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -35,6 +38,8 @@ from .build import ASPHERE_MAX_ITERATIONS, ASPHERE_TOLERANCE_MM, BuildMismatch, 
 from .first_order import AFOCAL_RELATIVE_POWER, PARAXIAL_FIRST_ORDER, first_order_of, term_refusals
 from .hygiene import CacheDirs, check
 from .identity import adapter_revision, engine_identity
+from .trace import METHOD_NAME as TRACE_METHOD_NAME
+from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
@@ -61,7 +66,11 @@ builder counts lines or surfaces."""
 SYSTEM_DESCRIBE = "system.describe"
 """The id of the quantity that echoes the built system."""
 
-QUANTITIES: dict[str, dict[str, int]] = {SYSTEM_DESCRIBE: {"version": 2}, PARAXIAL_FIRST_ORDER: {"version": 1}}
+QUANTITIES: dict[str, dict[str, int]] = {
+    SYSTEM_DESCRIBE: {"version": 2},
+    PARAXIAL_FIRST_ORDER: {"version": 1},
+    RAYS_TRACE: {"version": 1},
+}
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
 DEFAULT_SAG_FRACTIONS: tuple[float, ...] = (0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0)
@@ -118,7 +127,8 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
 def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list[ValidationIssue]:
     """What keeps ``spec`` from being a spec of ``quantity``: by its schema, and then by the rule no schema states.
 
-    The one such rule is of ``system.describe`` (``src/quantities/systemDescribe.ts``): the fractions ascend.
+    The rule of ``system.describe`` (``src/quantities/systemDescribe.ts``) is here: the fractions ascend. Those of
+    ``rays.trace`` need its arrays decoded, and are ``trace.read_spec``'s, which hands the rays on.
     """
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity != SYSTEM_DESCRIBE:
@@ -131,10 +141,27 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
     return [ValidationIssue(f"/sagFractions/{unordered}", "invariant", said)]
 
 
+def peak_memory_mib() -> float | None:
+    """The most memory this process has held at once, MiB; None on a system that does not say."""
+    try:
+        import resource  # noqa: PLC0415 - not on every system
+    except ImportError:
+        return None
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # Bytes on macOS, kilobytes elsewhere.
+    return peak / (1024 * 1024) if sys.platform == "darwin" else peak / 1024
+
+
+def stderr_log(line: str) -> None:
+    """Writes one line to the worker's log: the standard error, which no reply is read from."""
+    print(line, file=sys.stderr, flush=True)
+
+
 class OptilandEngine:
     """optiland, for the protocol loop: ``describe()`` and ``run(request, case)``.
 
     ``build`` makes the optics of a case and verifies them; it is ``build.build_case`` unless a test says otherwise.
+    ``log`` is given one line for each trace of rays, with what its steps cost; without one nothing is logged.
     """
 
     def __init__(
@@ -142,10 +169,12 @@ class OptilandEngine:
         identity: dict[str, Any],
         *,
         schemas: SchemaSet | None = None,
-        build: Callable[[dict[str, Any]], BuiltCase] = build_case,
+        build: Callable[..., BuiltCase] = build_case,
+        log: Callable[[str], None] | None = None,
     ) -> None:
         self._schemas = schemas if schemas is not None else contract_schemas()
         self._build = build
+        self._log = log
         self._descriptor: dict[str, Any] = {
             "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION},
             "identity": identity,
@@ -166,7 +195,8 @@ class OptilandEngine:
 
         - What the engine's own descriptor rules out, and what the quantity has no answer about in this case, is a
           result of status "unsupported" (``refusals``).
-        - A spec that is not the quantity's is a result of status "error" with the code ``bad-spec``.
+        - A spec that is not the quantity's, or that names a line the case does not have, is a result of status
+          "error" with the code ``bad-spec``.
         - A case that optiland did not build as it is stated is a result of status "error" with the code
           ``build-mismatch``, whose message names the surface and the field: nothing is answered about such an
           optic.
@@ -181,17 +211,36 @@ class OptilandEngine:
 
         quantity = request["quantity"]
         spec = request["spec"]
+        started = time.perf_counter()
         issues = spec_issues(self._schemas, quantity, spec)
+        rays = None
+        if not issues and quantity == RAYS_TRACE:
+            rays, issues = read_spec(spec, len(case["conditions"]["lines"]))
         if issues:
             message = f"spec is not a {quantity} spec: {format_issues(issues)}"
             return make_result(request, engine, "error", error={"code": BAD_SPEC, "message": message})
+        read = time.perf_counter()
 
         try:
-            built = self._build(case)
+            # A trace is of one line, and needs that line's optic alone.
+            built = self._build(case) if rays is None else self._build(case, lines=(rays.line,))
         except BuildMismatch as error:
             return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
         method: dict[str, Any]
-        if quantity == SYSTEM_DESCRIBE:
+        # optiland counts the object surface and the image surface among an optic's surfaces.
+        counts = {"surfaces": int(built.optics[0].surfaces.num_surfaces) - 2, "lines": len(built.optics)}
+        if rays is not None:
+            ready = time.perf_counter()
+            traced, batches = trace_rays(built.optics[0], *ray_columns(rays))
+            done = time.perf_counter()
+            data = encode_trace(traced)
+            method = {"name": TRACE_METHOD_NAME, "params": method_params(ASPHERE_TOLERANCE_MM, ASPHERE_MAX_ITERATIONS)}
+            # One optic was built, the line's: the count of lines is that of a quantity that reads every line.
+            counts = {"surfaces": counts["surfaces"], **ray_counts(traced), "batches": batches}
+            if self._log is not None:
+                steps = (("read", read - started), ("build", ready - read), ("trace", done - ready))
+                self._log(trace_log_line(counts, (*steps, ("encode", time.perf_counter() - done))))
+        elif quantity == SYSTEM_DESCRIBE:
             fractions = [float(fraction) for fraction in spec.get("sagFractions", DEFAULT_SAG_FRACTIONS)]
             data = describe_optics(built.optics, fractions)
             method = {
@@ -212,10 +261,22 @@ class OptilandEngine:
         issues = validate(self._schemas, quantity_schema_id(quantity, "data"), data)
         if issues:
             raise RuntimeError(f"the answer is not {quantity} data: {format_issues(issues)}")
-        # optiland counts the object surface and the image surface among an optic's surfaces.
-        counts = {"surfaces": int(built.optics[0].surfaces.num_surfaces) - 2, "lines": len(built.optics)}
         diagnostics = {"warnings": [], "counts": counts}
         return make_result(request, engine, "ok", method=method, data=data, diagnostics=diagnostics)
+
+
+def trace_log_line(counts: dict[str, int], steps: tuple[tuple[str, float], ...]) -> str:
+    """One line of the worker's log for one trace of rays: what was traced, what each step cost, and the process.
+
+    The steps are the reading of the spec (its arrays decoded and checked), the building and verifying of the
+    line's optic, the tracing and the writing of the answer's arrays, in milliseconds. It is a log line and no part
+    of an answer: an answer holds no time.
+    """
+    said = " ".join(f"{name}={counts[name]}" for name in ("rays", "surfaces", "batches", "ok", "blocked", "failed"))
+    cost = " ".join(f"{name}_ms={1000 * seconds:.3f}" for name, seconds in steps)
+    peak = peak_memory_mib()
+    memory = "" if peak is None else f" peak_mib={peak:.1f}"
+    return f"lvrtc_optiland: {RAYS_TRACE} {said} {cost}{memory} pid={os.getpid()}"
 
 
 class UnavailableEngine:
@@ -269,4 +330,4 @@ def load_engine(dirs: CacheDirs) -> OptilandEngine | UnavailableEngine:
         jit=not bool(numba.config.DISABLE_JIT),
         adapter=adapter_revision(),
     )
-    return OptilandEngine(identity)
+    return OptilandEngine(identity, log=stderr_log)

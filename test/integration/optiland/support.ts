@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -171,24 +172,66 @@ export function optilandRoot(t: TestContext, cacheDir: string = REPO_CACHE_DIR):
   return loadConfig({ rootDir, env: {} });
 }
 
+// ── An interpreter that is watched ───────────────────────────────────────────────────────────────────────────────
+
+/** Why a test that needs a watched interpreter is skipped, or false: the watcher is a shell script. */
+export const WRAPPER_UNAVAILABLE: string | false =
+  process.platform === "win32" ? "the watched interpreter is a shell script" : false;
+
+/** The optiland interpreter behind a script that notes every start of it. */
+export interface WatchedInterpreter {
+  /** The script: what `engines.optiland.python` names in its place. */
+  readonly python: string;
+  /** How many times it was started so far: once for each worker process. */
+  starts(): number;
+}
+
+/**
+ * A script that stands in for the optiland interpreter: it appends a line to a file of its own, then becomes the
+ * interpreter itself (`exec`), with its arguments and the environment it was given. So a test can say how many
+ * worker processes a run started. With `jit: "off"` it also sets the worker's own switch, `LVRTC_OPTILAND_JIT`,
+ * which nothing else sets: the worker then runs optiland without numba's JIT and says so in its fingerprint.
+ * Nothing of it is written outside the test's temporary directory.
+ */
+export function watchedInterpreter(t: TestContext, options: { jit?: "off" } = {}): WatchedInterpreter {
+  const directory = tempDir(t);
+  const [python, log] = [join(directory, "python"), join(directory, "starts")];
+  const quoted = (text: string): string => `'${text.replaceAll("'", `'\\''`)}'`;
+  const jit = options.jit === undefined ? "" : `LVRTC_OPTILAND_JIT=${options.jit} `;
+  const script = `#!/bin/sh\necho start >> ${quoted(log)}\n${jit}exec ${quoted(OPTILAND_PYTHON ?? "")} "$@"\n`;
+  writeFileSync(python, script);
+  chmodSync(python, 0o755);
+  return {
+    python,
+    starts: () =>
+      existsSync(log)
+        ? readFileSync(log, "utf8")
+            .split("\n")
+            .filter((line) => line !== "").length
+        : 0,
+  };
+}
+
 // ── Through the commands ─────────────────────────────────────────────────────────────────────────────────────────
 
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 
 /**
  * Runs one `lvrtc` command as a child process, in `cwd`, on the optiland and the LensVisualizer of this
- * repository's configuration, writing runs into `runsDir`.
+ * repository's configuration, writing runs into `runsDir`. `python` names another interpreter for optiland than the
+ * configuration's: a watched one.
  */
 export function lvrtc(
   runsDir: string,
   cwd: string,
-  ...args: string[]
+  args: readonly string[],
+  python: string | null = OPTILAND_PYTHON,
 ): { code: number | null; out: string; err: string } {
   const env = {
     ...process.env,
     LVRTC_RUNS_DIR: runsDir,
     LVRTC_LV_PATH: LV_PATH ?? "",
-    LVRTC_OPTILAND_PYTHON: OPTILAND_PYTHON ?? "",
+    LVRTC_OPTILAND_PYTHON: python ?? "",
   };
   const child = spawnSync(process.execPath, [BIN, ...args], {
     encoding: "utf8",
@@ -205,6 +248,24 @@ export interface RunCycle {
   readonly comparisons: ComparisonFile;
   /** The summary line of `lvrtc compare`. */
   readonly verdicts: string;
+  /** The runs directory the two wrote into: a second cycle given the same one finds its answers in the store. */
+  readonly runsDir: string;
+  /** How long `lvrtc run` took, in seconds, the start of the engines included. */
+  readonly runSeconds: number;
+}
+
+/** One cycle of `runAndCompare`. */
+export interface RunCycleInput {
+  readonly suite: string;
+  readonly name: string;
+  readonly engines: string;
+  readonly rungs: string;
+  /** A configuration root to run under, with the suite's path relative to it. */
+  readonly root?: string;
+  /** The runs directory to write into; a temporary one of this cycle's own without it. */
+  readonly runsDir?: string;
+  /** Another interpreter for optiland than the configuration's (`watchedInterpreter`). */
+  readonly python?: string;
 }
 
 /**
@@ -212,26 +273,33 @@ export interface RunCycle {
  * exit code 0, into a temporary runs directory. `root` is a configuration root to run under, with the suite's path
  * relative to it; without one the command runs at the root of this repository, as a user runs it.
  */
-export function runAndCompare(
-  t: TestContext,
-  run: { suite: string; name: string; engines: string; rungs: string; root?: string },
-): RunCycle {
-  const runsDir = tempDir(t);
+export function runAndCompare(t: TestContext, run: RunCycleInput): RunCycle {
+  const runsDir = run.runsDir ?? tempDir(t);
   const cwd = run.root ?? REPO_ROOT;
   const rooted = run.root === undefined ? [] : ["--root", run.root];
-  const ran = lvrtc(runsDir, cwd, "run", run.suite, ...rooted, "--engines", run.engines, "--rungs", run.rungs);
+  const python = run.python ?? OPTILAND_PYTHON;
+  const started = performance.now();
+  const ran = lvrtc(
+    runsDir,
+    cwd,
+    ["run", run.suite, ...rooted, "--engines", run.engines, "--rungs", run.rungs],
+    python,
+  );
+  const runSeconds = (performance.now() - started) / 1000;
   assert.equal(ran.code, 0, ran.out + ran.err);
-  const compared = lvrtc(runsDir, cwd, "compare", run.name, ...rooted);
+  const compared = lvrtc(runsDir, cwd, ["compare", run.name, ...rooted], python);
   assert.equal(compared.code, 0, compared.out + compared.err);
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, run.name, MANIFEST_FILE), "utf8"));
   const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, run.name, COMPARISONS_FILE), "utf8"));
   const verdicts = compared.out.split("\n").find((line) => line.startsWith(`${run.name}: `)) ?? "";
-  return { manifest, comparisons, verdicts };
+  return { manifest, comparisons, verdicts, runsDir, runSeconds };
 }
 
 /** One pair of two engines on one request of a rung, with the run it is of. */
 export interface RungPair {
   readonly run: string;
+  /** The request the pair is of: with the run, one ray set of a rung of traced rays. */
+  readonly requestId: string;
   /** The two engines, as `a / b`, in the order of their ids. */
   readonly engines: string;
   readonly verdict: string;
@@ -254,7 +322,14 @@ export function pairsOf(comparisons: ComparisonFile, rung: string, quantity: str
           ]),
         );
         const reason = pair.reason === undefined ? {} : { reason: pair.reason };
-        return { run: set.run, engines: `${pair.a} / ${pair.b}`, verdict: pair.verdict, ...reason, metrics };
+        return {
+          run: set.run,
+          requestId: set.requestId,
+          engines: `${pair.a} / ${pair.b}`,
+          verdict: pair.verdict,
+          ...reason,
+          metrics,
+        };
       });
     });
 }

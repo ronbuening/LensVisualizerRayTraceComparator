@@ -8,6 +8,7 @@ off the reply stream. Its versions are deliberately not optiland's. The distribu
 an install, `.d20260131`, as that of an editable install of a checkout with uncommitted changes does: the worker
 states it without.
 
-The fake has nothing the builder uses (`optiland.geometries`, `optiland.materials`, `optiland.physical_apertures`),
-so the worker starts and identifies itself on it and cannot build a case: a test of the builder needs the real
-optiland, and skips without it.
+The fake has nothing the builder uses (`optiland.geometries`, `optiland.materials`, `optiland.physical_apertures`)
+and no rays (`optiland.rays`), so the worker starts and identifies itself on it and cannot build a case: a test of
+the builder or of a trace needs the real optiland, and skips without it. What the worker does before it builds,
+the rules of a spec among it, is tested on the fake.

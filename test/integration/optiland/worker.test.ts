@@ -1,7 +1,7 @@
 // The engine `optiland` on the real optiland: the worker starts, says who it is, conforms to the contract, describes
-// the system it built, gives its first-order data and answers every other quantity "unsupported" for now, and
-// writes nothing into the optiland checkout or its environment. Rungs R0 and R1 against the other engines are in
-// r0.test.ts and r1.test.ts.
+// the system it built, gives its first-order data, traces given rays and answers every other quantity "unsupported"
+// for now, and writes nothing into the optiland checkout or its environment. Rungs R0, R1 and R2 against the other
+// engines are in r0.test.ts, r1.test.ts and r2.test.ts.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -31,10 +31,13 @@ import { RUNGS } from "../../../src/core/rungs.ts";
 import { runConformance } from "../../../src/engines/conformance.ts";
 import { PYTHON_WORKERS_DIRECTORY } from "../../../src/engines/optiland/definition.ts";
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
+import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
+import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
+import { RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture } from "../../core/support.ts";
 import { CASE } from "../../engines/support.ts";
 import {
@@ -65,6 +68,11 @@ const JIT_TEST = "test_what_the_jit_compiles_is_cached_where_the_worker_said_and
 const START = skip
   ? null
   : { directories: protectedDirectories(), commit: optilandCommit(), entries: snapshot(protectedDirectories()) };
+
+/** The waits of the engine under a configuration: its own where it states one, and the adapter's default else. */
+function engineTimeoutsOf(loaded: Parameters<typeof engineTimeouts>[0]): typeof DEFAULT_ENGINE_TIMEOUTS {
+  return { ...DEFAULT_ENGINE_TIMEOUTS, ...engineTimeouts(loaded, "optiland") };
+}
 
 /** Every `.py` file under a directory. */
 function pythonFiles(directory: string): string[] {
@@ -188,9 +196,9 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.commit, commit);
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
-  // The built-system echo and the first-order data, each at the version of its definition the comparator holds;
-  // every feature flag, no limit.
-  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity];
+  // The built-system echo, the first-order data and the trace of given rays, each at the version of its definition
+  // the comparator holds; every feature flag, no limit.
+  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity, raysTraceQuantity];
   assert.deepEqual(
     capabilities.quantities,
     Object.fromEntries(offered.map((quantity) => [quantity.id, { version: quantity.version }])),
@@ -198,9 +206,11 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.deepEqual(capabilities.features, { supported: [...FEATURE_FLAGS], limits: {} });
   assert.equal(capabilities.deterministic, true);
 
-  // The engine itself answers "unsupported" for each quantity it does not offer, and for one there is not.
+  // The engine itself answers "unsupported" for each quantity it does not offer, and for one there is not. A trace
+  // needs rays: the contract's worked two.
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
-    const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec: {} }), CASE);
+    const spec = quantity === raysTraceQuantity.id ? RAYS_SPEC_SINGLET : {};
+    const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec }), CASE);
     assert.deepEqual(result.engine, {
       id: "optiland",
       fingerprint: identity.fingerprint,
@@ -221,7 +231,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
 });
 
 test(
-  "lvrtc run --engines optiland: R0 and R1 are answered, every other rung unsupported, and nothing fails",
+  "lvrtc run --engines optiland: R0 to R3 are answered, the conformance rung unsupported, and nothing fails",
   { skip },
   async (t) => {
     const loaded = optilandRoot(t);
@@ -249,12 +259,18 @@ test(
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
-    const answered = ["r0", "r1"];
+    // The two rungs of traced rays ask the same request, of the one field a case file has rays for, the axis: the
+    // worker traces the set once, and the second rung finds the answer in the store.
+    const answered = ["r0", "r1", "r2", "r3"];
     for (const job of manifest.jobs) {
       const status = answered.includes(job.rung) ? "ok" : "unsupported";
       assert.deepEqual([job.engine, job.status], ["optiland", status], job.rung);
     }
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
+    const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
+    assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
+    assert.match(out.join(""), /^singlet {2}r2 +optiland {2}ok +computed$/m);
+    assert.match(out.join(""), /^singlet {2}r3 +optiland {2}ok +cached$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);
@@ -305,24 +321,34 @@ test(
 
     const identities: EngineIdentity[] = [];
     const helloMs: number[] = [];
+    const traceMs: number[] = [];
     for (const start of ["cold", "warm"]) {
       const adapter = await createEngineRegistry(loaded).create("optiland");
       try {
         const started = performance.now();
         identities.push((await adapter.describe()).identity);
         helloMs.push(performance.now() - started);
-        const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: {} }), CASE);
-        assert.equal(result.status, "unsupported", start);
+        const refused = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "mtf.native", spec: {} }), CASE);
+        assert.equal(refused.status, "unsupported", start);
         // A case is built: what the builder uses of optiland is imported now, and cached like the rest. Then
         // optiland's paraxial tracer is asked, which is more of optiland that is imported and cached.
         for (const quantity of ["system.describe", "paraxial.first-order"]) {
           const built = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec: {} }), CASE);
           assert.equal(built.status, "ok", `${start} ${quantity}: ${JSON.stringify(built.error)}`);
         }
+        // And rays are traced: on the cold cache numba compiles optiland's conic intersection for it and writes the
+        // machine code, which the second worker reads. The wait of a run covers the first by far.
+        const rays = makeRequest({ caseId: CASE.id, quantity: "rays.trace", spec: RAYS_SPEC_SINGLET });
+        const traceStarted = performance.now();
+        const traced = await adapter.run(rays, CASE);
+        traceMs.push(performance.now() - traceStarted);
+        assert.equal(traced.status, "ok", `${start} rays.trace: ${JSON.stringify(traced.error)}`);
+        assert.deepEqual(raysTraceQuantity.validateData(traced.data), [], start);
       } finally {
         await adapter.close();
       }
     }
+    assert.ok(Math.max(...traceMs) < engineTimeoutsOf(loaded).runMs / 10, `the first trace took ${traceMs[0]} ms`);
 
     // The JIT at work, on the cold cache: the Python test that traces a ray, which numba compiles a function for.
     const traced = optilandPython(["-m", "unittest", `tests.optiland.test_real.RealOptilandTest.${JIT_TEST}`], {
@@ -335,6 +361,7 @@ test(
 
     const after = snapshot(directories);
     t.diagnostic(`hello: cold ${(helloMs[0] / 1000).toFixed(1)} s, warm ${(helloMs[1] / 1000).toFixed(1)} s`);
+    t.diagnostic(`first trace of a worker: cold ${traceMs[0].toFixed(0)} ms, warm ${traceMs[1].toFixed(0)} ms`);
     t.diagnostic(`fingerprint ${identities[0].fingerprint}`);
     t.diagnostic(`snapshot: ${before.size} entries under ${directories.join(", ")}`);
 

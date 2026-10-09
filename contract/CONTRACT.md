@@ -694,7 +694,7 @@ the descriptor's `details` also carry:
 | `commit`, `dirty` | the commit of the optiland checkout the package is imported from, and whether `git status` lists anything in it; both `null` for a package that is in no checkout of its own |
 | `sourceHash` | a SHA-256 over every `.py` file of the package: its path relative to the package, a NUL, its bytes, a NUL, in the order of the paths |
 | `python`, `numpy`, `scipy`, `numba` | the versions of the interpreter and of what optiland computes with |
-| `jit` | whether numba's JIT is on; the worker leaves it on |
+| `jit` | whether numba's JIT is on. The worker leaves it on; it is off only in a worker that was started with `LVRTC_OPTILAND_JIT=off`, which nothing sets but a test that compares the two, and which is then another engine to the result store |
 
 `details` carry beside them `sourceFiles` (how many files the hash covers), `distVersion` (the distribution's
 version string without the day of the install, which is also the descriptor's `version`), `backend` (`numpy`) and
@@ -707,7 +707,7 @@ and two installs of one commit say the same of themselves.
 
 `optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
 each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
-declares every feature flag and no limit, and offers `system.describe` and `paraxial.first-order`.
+declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order` and `rays.trace`.
 
 | The case | `optiland` answers |
 |---|---|
@@ -744,9 +744,17 @@ declares every feature flag and no limit, and offers `system.describe` and `para
 - **`paraxial.first-order`** is optiland's own first-order data, each line's from that line's optic
   (`first_order.py`): what `optic.paraxial` gives, with only its reference changed to the contract's, as the table
   below states. The method is named `paraxial-accessors`, and its `params` state `afocalRelativePower`.
+- **`rays.trace`** is optiland's own sequential trace of the rays as they are given (`trace.py`): every origin and
+  direction goes into a `RealRays` as the float64 it is, with the wavelength of the spec's line, and
+  `optic.surfaces.trace` carries them through that line's optic, the only one built for the request. Before
+  anything is read, what optiland holds at its object surface is held to the rays it was given, bit for bit. The
+  method is named `surfaces-trace`, and its `params` state `asphereTolerance`, `asphereMaxIterations`, the two
+  tolerances of the rules below (`onSurfaceTolerance`, `imagePlaneTolerance`), `maxBatchRays`, the most rays handed
+  to optiland at once, and `landing`, which is `image-surface`. How its rows become an answer is below.
 - **What it does not answer** is said in two ways. A quantity it does not offer, a contract version it does
   not speak and what its first-order data has no answer for, below, are `unsupported`, by items as those of
-  negotiation. A spec that is not the quantity's is `bad-spec`.
+  negotiation. A spec that is not the quantity's is `bad-spec`: fractions that do not ascend, rays whose arrays
+  are not one set or whose directions are not unit vectors toward +z, a line the case does not have.
 
 | Of `paraxial.first-order` | Is, in optiland | Which optiland measures from |
 |---|---|---|
@@ -776,6 +784,49 @@ space is what optiland's own division gives, an infinity in position and in diam
 
 A value of optiland that is a NaN for any other reason, or an infinity that is no pupil's, is no answer and no
 `unsupported`: it is the engine's failure on that request (`engine-failure`).
+
+optiland records, on every surface, each ray's point, its direction behind the surface, its intensity and its
+optical path from where it was launched. The answer to `rays.trace` is those rows:
+
+| Of `rays.trace` | Is, in optiland |
+|---|---|
+| `hits` | the point each surface of the case recorded (`surfaces.x`, `y`, `z`), which is global |
+| `exitPoint`, `exitDirection`, `opticalPath` | the point, the direction cosines and the path (`opd`) the last surface of the case recorded. The path starts at 0 where the ray was launched, and a step backwards counts with its sign |
+| `imagePoint`, `opticalPathToImage` | the point and the path optiland's image surface recorded: optiland carries a ray to the image plane itself, by the division, the multiplication and the addition of the comparator's own projection, in the index the image surface states. The point's z is written as the plane's own number. For a ray whose exit point lies behind the plane within the contract's 1e-9 mm they are the exit point and its path, as the contract says, where optiland would step back |
+| `status`, `endSurface` | the worker's, from the rows, by the rules below |
+
+optiland carries every ray to the image surface whatever became of it, and says of a ray only its intensity: 0
+once an aperture has stopped it, with coordinates that go on. A ray that missed a surface, or was totally
+reflected, has NaN from there. It has no word for why a ray ended, and none for a failure of its own: its
+iteration on an asphere ends after its last step whether or not it met its tolerance, and its conic solver falls
+back to a root on the other sheet of a conic where none is admissible. So the worker decides, surface by surface:
+
+| A ray | Is |
+|---|---|
+| has an intensity above 0 and a number for its point, its direction and its path on every surface, and for its point and its path on the image surface | *ok*: optiland's own measure of a ray that arrived. Its hits are the points optiland has, whether or not one lies on the surface: what optiland lets through is answered as it is, and R2 judges it |
+| travels toward +z no longer in front of a surface | *blocked* there, by the contract's rule, whatever optiland has on that surface |
+| has an intensity of 0 at a point that lies on optiland's own sag of the surface, within 1e-6 mm along the normal | *blocked* there: an aperture stopped it |
+| has such a point, an intensity, and no direction behind it, and optiland's radicand of Snell's law is negative there | *blocked* there: it was totally reflected |
+| has no point on a conic, and the discriminant of its line with the conic is below 0 by more than a rounding of its terms | *blocked* there: it provably misses the surface |
+| passed every surface and travels away from the image plane, or has the plane more than 1e-9 mm behind its exit point | *blocked*, with S as its end surface |
+| ended in any other way | *failed* at that surface: no point on an asphere, where optiland's iteration starts from the base conic's hit and has none when the line misses that, whether or not it meets the asphere; a point that does not lie on the surface, at which optiland's aperture test stopped the ray; a direction lost where Snell's law has one |
+
+Every value of a ray that did not arrive is NaN from its end surface on, as for every engine, whatever optiland
+recorded there. The 1e-6 mm tells a point of the surface from a point that is somewhere else, and is no judge of
+precision: a conic that optiland meets from far away is off its own sag by rounding that grows with the square of
+the distance ([docs/gotchas.md](../docs/gotchas.md#optiland)). Warnings of numpy inside the trace, of the square
+root of a negative number for a miss or a reflection, are not passed on. What the rule means for a comparison:
+a ray that optiland could not trace is counted as failed and is in no mask count, and a ray that optiland passes
+where the surface of the case is not, as on the far side of a hemisphere, is a ray it lands, and a mismatch of
+the mask in R2.
+
+**The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
+is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
+that is furthest from the surface, a ray that has ended among them. On a curved base that is a matter of
+rounding. On an asphere of a flat base one ray of the batch that was totally reflected further up leaves every
+ray on the base plane, off the surface by its sag, and optiland carries each on from there as a ray that
+arrived: the worker answers it so, and R2 fails the pairs of optiland on that set
+([docs/gotchas.md](../docs/gotchas.md#the-tolerance-of-an-aspheres-iteration-is-that-of-the-batch-it-is-traced-in)).
 
 ### `protocol-request` and `protocol-response`
 

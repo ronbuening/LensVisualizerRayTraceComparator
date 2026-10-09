@@ -180,7 +180,7 @@ def shape_keywords(shape: dict[str, Any]) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class OptilandApi:
-    """What the builder uses of optiland and numpy: the classes it calls and the ones it expects to find."""
+    """What the worker uses of optiland and numpy: the classes it calls and the ones it expects to find."""
 
     np: Any
     Optic: Any
@@ -190,16 +190,18 @@ class OptilandApi:
     StandardGeometry: Any
     EvenAsphere: Any
     OddAsphere: Any
+    RealRays: Any
 
 
 @functools.lru_cache(maxsize=1)
 def optiland_api() -> OptilandApi:
-    """Imports what the builder uses of optiland. ``hygiene.prepare`` must have run: importing optiland writes."""
+    """Imports what the worker uses of optiland. ``hygiene.prepare`` must have run: importing optiland writes."""
     import numpy  # noqa: PLC0415 - not before the worker's hygiene
     from optiland.geometries import EvenAsphere, OddAsphere, Plane, StandardGeometry  # noqa: PLC0415
     from optiland.materials import IdealMaterial  # noqa: PLC0415
     from optiland.optic import Optic  # noqa: PLC0415
     from optiland.physical_apertures import RadialAperture  # noqa: PLC0415
+    from optiland.rays import RealRays  # noqa: PLC0415
 
     return OptilandApi(
         np=numpy,
@@ -210,6 +212,7 @@ def optiland_api() -> OptilandApi:
         StandardGeometry=StandardGeometry,
         EvenAsphere=EvenAsphere,
         OddAsphere=OddAsphere,
+        RealRays=RealRays,
     )
 
 
@@ -495,16 +498,22 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
 
 @dataclass(frozen=True)
 class BuiltCase:
-    """A case as optiland holds it: one verified optic for each line, in the order of the lines."""
+    """A case as optiland holds it: one verified optic for each line that was asked for, in the order asked."""
 
     optics: tuple[Any, ...]
 
 
-def build_case(case: dict[str, Any], api: OptilandApi | None = None) -> BuiltCase:
-    """Builds the optic of every line of a case and verifies each. Raises a ``BuildMismatch`` for one that differs."""
+def build_case(
+    case: dict[str, Any], api: OptilandApi | None = None, *, lines: Sequence[int] | None = None
+) -> BuiltCase:
+    """Builds the optic of each of ``lines`` of a case and verifies each; without ``lines``, of every line.
+
+    Raises a ``BuildMismatch`` for an optic that differs from the case. A quantity that is of one line, as a trace of
+    rays is, asks for that line alone: an optic is built and verified in a few milliseconds, and a case may have six.
+    """
     api = api if api is not None else optiland_api()
     optics = []
-    for line in range(len(case["conditions"]["lines"])):
+    for line in range(len(case["conditions"]["lines"])) if lines is None else lines:
         optic = build_optic(case, line, api)
         verify_optic(optic, case, line, api)
         optics.append(optic)

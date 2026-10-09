@@ -8,8 +8,8 @@ and compares the answers rung by rung: the built system, paraxial data, identica
 comparator's own reference tracer (`ref`) answer rungs R0 to R3 and agree on the benchmark suite, and `lvrtc mtf`
 prints the MTF that LensVisualizer's own MTF tab shows. The first external engine,
 [optiland](https://github.com/optiland/optiland), is Phase 2: the engine `optiland` builds every case in optiland
-and answers rungs R0 and R1, the built system and its first-order data, on which it agrees with both; the rungs of
-traced rays follow.
+and answers rungs R0, R1 and R2: the built system, its first-order data and the same rays traced by optiland's own
+tracer, on which the three agree on both suites. The rung of the optical path follows.
 
 ## Requirements
 
@@ -142,12 +142,13 @@ Runs a suite: for every lens, rung and engine it asks the engine and stores the 
 so a run that was interrupted resumes by being run again. `--engines` and `--rungs` are optional.
 
 ```bash
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2
 ```
 
-Adds optiland on rungs R0 and R1: it builds every lens in optiland and reads the built system back, so a
-translation error shows before a ray is traced, and then gives optiland's own focal length, cardinal points and
-pupils. optiland answers the other rungs `unsupported` until their stages land.
+Adds optiland: it builds every lens in optiland and reads the built system back (R0), so a translation error
+shows before a ray is traced, gives optiland's own focal length, cardinal points and pupils (R1), and traces the
+very rays LensVisualizer launches with optiland's own tracer (R2). What comes of it is in
+[docs/REFERENCE.md](docs/REFERENCE.md#the-engine-optiland).
 
 ```bash
 node bin/lvrtc.mjs compare benchmark

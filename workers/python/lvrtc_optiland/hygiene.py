@@ -13,7 +13,12 @@ which writes a cache somewhere unless told where:
 The comparator's engine definition sets all of these in the worker's environment
 (``src/engines/optiland/definition.ts``). ``prepare`` sets them again from inside, for a worker started by hand or
 with a variable missing, before anything of optiland is imported; ``check`` holds the loaded modules to them
-afterwards. The JIT stays on: a variable that would turn it off is removed.
+afterwards. The JIT stays on: numba's own variable that would turn it off (``NUMBA_DISABLE_JIT``) is removed.
+
+One worker runs without the JIT, and says so: the one started with ``LVRTC_OPTILAND_JIT=off``, a variable of the
+comparator's own that nothing sets but a test which shows that compiling changes no figure beyond rounding
+(``test/integration/optiland``). Its descriptor states ``jit: false`` and so another fingerprint: no answer of
+it is ever found in the result store in place of one of optiland as it runs for its users.
 
 Bytecode is cached, under the worker's cache directory and nowhere else. The worker is started with
 ``PYTHONDONTWRITEBYTECODE`` set, so that the interpreter writes nothing while it starts, before anyone has said
@@ -44,6 +49,9 @@ CACHE_DIR_VARIABLE = "LVRTC_CACHE_DIR"
 DEFAULT_CACHE_NAME = "lvrtc-optiland-cache"
 """The directory under the system's temporary directory that is used when no variable says where."""
 
+JIT_VARIABLE = "LVRTC_OPTILAND_JIT"
+"""Says whether numba's JIT is on: ``on``, as without the variable, or ``off``. Any other value is refused."""
+
 
 class HygieneError(RuntimeError):
     """A cache would be written where it must not be, or a module is not in the state the worker needs."""
@@ -51,11 +59,13 @@ class HygieneError(RuntimeError):
 
 @dataclass(frozen=True)
 class CacheDirs:
-    """Where each cache of the worker goes; every path is absolute."""
+    """Where each cache of the worker goes; every path is absolute. And whether numba's JIT is to be on."""
 
     numba: Path
     matplotlib: Path
     pycache: Path
+    jit: bool = True
+    """False only for a worker that was started with ``LVRTC_OPTILAND_JIT=off``."""
 
 
 def protected_directories() -> list[Path]:
@@ -102,13 +112,19 @@ def prepare(environ: MutableMapping[str, str] | None = None, protected: Sequence
     when that is not set either. The directories are created. Returns where the caches go. From then on this
     interpreter writes the bytecode of what it imports under the bytecode cache, whatever it was started with.
 
+    numba's JIT is left on, whatever ``NUMBA_DISABLE_JIT`` says: only ``LVRTC_OPTILAND_JIT=off`` turns it off, for
+    the one test that compares the two.
+
     Raises a ``HygieneError``, with nothing set and no directory made, when a cache would lie inside one of
     ``protected``: by default ``protected_directories()``, the optiland this interpreter would import and its
-    environment.
+    environment; and when ``LVRTC_OPTILAND_JIT`` is neither ``on`` nor ``off``.
     """
     environ = os.environ if environ is None else environ
     stated = environ.get(CACHE_DIR_VARIABLE, "")
     base = Path(stated) if stated != "" else Path(tempfile.gettempdir()) / DEFAULT_CACHE_NAME
+    jit = environ.get(JIT_VARIABLE, "") or "on"
+    if jit not in ("on", "off"):
+        raise HygieneError(f"{JIT_VARIABLE} is {jit!r}: it is on, as without it, or off")
 
     def directory(variable: str, name: str) -> Path:
         value = environ.get(variable, "")
@@ -118,6 +134,7 @@ def prepare(environ: MutableMapping[str, str] | None = None, protected: Sequence
         numba=directory("NUMBA_CACHE_DIR", "numba"),
         matplotlib=directory("MPLCONFIGDIR", "matplotlib"),
         pycache=directory("PYTHONPYCACHEPREFIX", "pycache"),
+        jit=jit == "on",
     )
     _refuse_inside(dirs, protected_directories() if protected is None else protected)
     for variable, path in (
@@ -130,8 +147,10 @@ def prepare(environ: MutableMapping[str, str] | None = None, protected: Sequence
     environ["MPLBACKEND"] = "Agg"
     # A process this one starts writes no bytecode: it has not checked where it would go.
     environ["PYTHONDONTWRITEBYTECODE"] = "1"
-    # The JIT stays on: optiland is compared as it runs for its users.
+    # The JIT stays on: optiland is compared as it runs for its users. numba's own variable is not obeyed.
     environ.pop("NUMBA_DISABLE_JIT", None)
+    if not dirs.jit:
+        environ["NUMBA_DISABLE_JIT"] = "1"
     # The variables above reach the processes this one starts; these two reach this interpreter, which has
     # already read its environment. The place first, then the permission: from here on bytecode is written, under
     # the prefix and nowhere else.
@@ -147,7 +166,8 @@ def check(dirs: CacheDirs, optiland: Any, numba: Any) -> None:
       or the site-packages it is installed into): ``prepare`` refused that for the package it could find, and this
       is the same of the one that is there;
     - bytecode goes to the cache directory ``prepare`` named, never beside a source;
-    - numba caches where it was told to, so it was not imported before ``prepare`` ran, and its JIT is on;
+    - numba caches where it was told to, so it was not imported before ``prepare`` ran, and its JIT is on, or
+      off in the worker that was started to run without it;
     - optiland computes with numpy in float64, its default: the worker never switches backend or precision.
     """
     _refuse_inside(dirs, [Path(optiland.__file__).resolve().parent.parent])
@@ -157,8 +177,8 @@ def check(dirs: CacheDirs, optiland: Any, numba: Any) -> None:
     used = str(getattr(numba.config, "CACHE_DIR", ""))
     if used == "" or Path(used).absolute() != dirs.numba:
         raise HygieneError(f"numba caches in {used or 'the source directories'}, not in {dirs.numba}")
-    if bool(numba.config.DISABLE_JIT):
-        raise HygieneError("numba's JIT is off")
+    if bool(numba.config.DISABLE_JIT) == dirs.jit:
+        raise HygieneError("numba's JIT is off" if dirs.jit else f"numba's JIT is on, against {JIT_VARIABLE}=off")
     backend = optiland.backend.get_backend()
     if backend != "numpy":
         raise HygieneError(f"optiland's backend is {backend}, not numpy")
