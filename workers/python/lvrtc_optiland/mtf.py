@@ -1,4 +1,8 @@
-"""``mtf.native``: optiland's own FFT MTF of a case, one line, one field and one sampling at a time.
+"""``mtf.native``: optiland's own MTF of a case, one line, one field and one sampling at a time.
+
+This module reads the request, asks optiland for the method "diffraction", its FFT MTF, and writes the answer of
+either method. The method "geometric", optiland's ``GeometricMTF``, is ``geometric.py``, which uses the field, the
+probe, the interpolation and the judging of two steps of this module. What follows is the FFT's.
 
 The curves are those of optiland's ``ScalarFFTMTF`` (``optiland/mtf/fft.py``), asked as anyone would ask it and
 read from its own attributes: nothing of the transfer function is computed here. What is the worker's is what the
@@ -59,12 +63,15 @@ import time
 import warnings
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from lvrtc_worker_kit.ndarray import encode_ndarray
 
 from .build import BuildMismatch, OptilandApi, build_optic, optiland_api, verify_optic
 from .trace import IMAGE_PLANE_TOLERANCE_MM
+
+if TYPE_CHECKING:
+    from .geometric import SpotStep
 
 MTF_NATIVE = "mtf.native"
 """The id of the quantity that is an engine's own MTF: what rung R5 records."""
@@ -87,6 +94,9 @@ that the last of the ``grid_size // 2`` samples optiland gives is the cut-off.""
 
 RAYS_OPTION = "fftRays"
 """The engine option that names the finer step: 256, or 512 for the rows the comparator asks again."""
+
+GEOMETRIC_RAYS_OPTION = "geometricRays"
+"""The same for the method "geometric": the finer of the two values of ``num_rays`` its spots are traced with."""
 
 LINE_OPTION = "line"
 """The engine option that names the line of the case the MTF is of: its index in ``conditions.lines``."""
@@ -120,10 +130,10 @@ for a run, ten minutes, and does not start another within a run. A step of one f
 
 UNSUPPORTED = {
     "profile": "profile",
-    "geometric": "method.geometric",
     "engine_best": "focus.engine-best",
     "fractions": "fields.image-height-fractions",
     "rays": f"option.{RAYS_OPTION}",
+    "geometric_rays": f"option.{GEOMETRIC_RAYS_OPTION}",
     "line": f"option.{LINE_OPTION}",
     "angles": f"option.{ANGLES_OPTION}",
     "polychromatic": "lines.polychromatic",
@@ -167,6 +177,11 @@ class MtfRequest:
     """The index of the line of the case."""
     ladder: tuple[int, int]
     """``num_rays`` of the coarser and of the finer step."""
+    method: str = "diffraction"
+    """The method of the spec: "diffraction", optiland's FFT MTF, or "geometric", its geometric MTF."""
+    lines: tuple[int, ...] = ()
+    """Of the method "geometric" alone: the lines of the case the MTF is of, in the order of the case, ``line`` the
+    first. One line is optiland's own curve; several are summed by the worker (``geometric.py``)."""
     fractions: tuple[float, ...] = ()
     """For a spec that states its fields as fractions of an image height: those fractions, which ``angles`` were
     given for (``ANGLES_OPTION``) and which the answer names its fields by. Empty for a spec of angles."""
@@ -187,15 +202,15 @@ def read_request(
     """What a schema-valid spec asks, or every reason why the engine has no answer to it, as unsupported items.
 
     Decided from the spec, the engine's options and the case, before anything is built. An option that is not the
-    engine's is another engine's and is not read.
+    engine's is another engine's and is not read, and of the two that name a finer step only the one of the method
+    asked. A case of several lines is refused for the FFT, which cannot form their MTF, and answered whole for the
+    geometric method.
     """
+    geometric = spec["method"] == "geometric"
     refused: list[dict[str, str]] = []
     if "profile" in spec:
         message = f"the engine has no profile {spec['profile']}: it is asked by a spec"
         refused.append(_item(BAD_OPTION, "profile", message))
-    if spec["method"] != "diffraction":
-        message = f"the engine answers with optiland's {MTF_CLASS}, a diffraction MTF, and with no other"
-        refused.append(_item(BAD_OPTION, "geometric", message))
     if spec["focus"] != "design":
         message = "optiland has no focus search for an MTF: the plane is the image plane of the case"
         refused.append(_item(BAD_OPTION, "engine_best", message))
@@ -222,18 +237,19 @@ def read_request(
             )
             refused.append(_item(BAD_OPTION, "angles", message))
 
-    rays = options.get(RAYS_OPTION, DEFAULT_RAYS)
+    option = GEOMETRIC_RAYS_OPTION if geometric else RAYS_OPTION
+    rays = options.get(option, DEFAULT_RAYS)
     if not _whole(rays) or rays not in LADDER[1:]:
         allowed = " or ".join(str(step) for step in LADDER[1:])
-        message = f"the option {RAYS_OPTION} is {allowed}, the finer step; got {rays!r}"
-        refused.append(_item(BAD_OPTION, "rays", message))
+        message = f"the option {option} is {allowed}, the finer step; got {rays!r}"
+        refused.append(_item(BAD_OPTION, "geometric_rays" if geometric else "rays", message))
 
     lines = case["conditions"]["lines"]
     line = options.get(LINE_OPTION)
     if line is not None and not (_whole(line) and 0 <= line < len(lines)):
         message = f"the option {LINE_OPTION} is the index of a line of the case, 0 to {len(lines) - 1}; got {line!r}"
         refused.append(_item(BAD_OPTION, "line", message))
-    elif line is None and len(lines) > 1:
+    elif line is None and len(lines) > 1 and not geometric:
         message = (
             f"the case has {len(lines)} lines and optiland's {MTF_CLASS} is of one wavelength and gives a modulus: "
             f"no polychromatic MTF is formed of moduli. Ask one line with the engine option {LINE_OPTION}"
@@ -248,12 +264,15 @@ def read_request(
         refused.append(_item(FEATURE, "finite", message))
     if refused:
         return refused
+    of = tuple(range(len(lines))) if line is None else (int(line),)
     return MtfRequest(
         frequencies=tuple(float(frequency) for frequency in spec["frequenciesPerMm"]),
         angles=tuple(float(angle) for angle in angles),
         fractions=tuple(float(field) for field in stated) if fractions else (),
         line=0 if line is None else int(line),
         ladder=(LADDER[LADDER.index(rays) - 1], int(rays)),
+        method="geometric" if geometric else "diffraction",
+        lines=of if geometric else (),
     )
 
 
@@ -309,6 +328,10 @@ class MtfMeasure(Protocol):
 
     def step(self, case: dict[str, Any], line: int, angle_deg: float, num_rays: int) -> StepCurves: ...
 
+    def spot(
+        self, case: dict[str, Any], line: int, angle_deg: float, num_rays: int, frequencies: Sequence[float]
+    ) -> SpotStep: ...
+
 
 @dataclass(frozen=True)
 class MtfApi:
@@ -317,12 +340,13 @@ class MtfApi:
     ScalarFFTMTF: Any
     get_working_FNO: Any
     get_stop_radius_strategy: Any
+    GeometricMTF: Any
 
 
 @functools.lru_cache(maxsize=1)
 def mtf_api() -> MtfApi:
     """Imports optiland's MTF. ``hygiene.prepare`` must have run: the import loads matplotlib and numba."""
-    from optiland.mtf import ScalarFFTMTF  # noqa: PLC0415 - not before the worker's hygiene
+    from optiland.mtf import GeometricMTF, ScalarFFTMTF  # noqa: PLC0415 - not before the worker's hygiene
     from optiland.rays.ray_aiming.initialization import get_stop_radius_strategy  # noqa: PLC0415
     from optiland.utils import get_working_FNO  # noqa: PLC0415
 
@@ -330,6 +354,7 @@ def mtf_api() -> MtfApi:
         ScalarFFTMTF=ScalarFFTMTF,
         get_working_FNO=get_working_FNO,
         get_stop_radius_strategy=get_stop_radius_strategy,
+        GeometricMTF=GeometricMTF,
     )
 
 
@@ -619,6 +644,14 @@ class OptilandMtf:
         optic = field_optic(case, line, angle_deg, self._api, self._tools)
         return fft_step(optic, angle_deg, num_rays, self._api, self._tools)
 
+    def spot(
+        self, case: dict[str, Any], line: int, angle_deg: float, num_rays: int, frequencies: Sequence[float]
+    ) -> SpotStep:
+        from .geometric import geometric_step  # noqa: PLC0415 - that module imports this one
+
+        optic = field_optic(case, line, angle_deg, self._api, self._tools)
+        return geometric_step(optic, angle_deg, num_rays, frequencies, self._api, self._tools)
+
 
 # ── From optiland's samples to the frequencies asked ─────────────────────────────────────────────────────────────
 
@@ -689,6 +722,70 @@ def _curve(values: Sequence[float]) -> dict[str, Any]:
     return encode_ndarray("f8", [math.nan if value != value else value + 0.0 for value in values], [len(values)])
 
 
+Curves = tuple[list[float], list[float]]
+"""The tangential and the sagittal curve of a field at the frequencies asked."""
+
+
+def field_entry(
+    angle_deg: float,
+    probe: FieldProbe | None,
+    sampling: dict[str, float],
+    count: int,
+    status: str,
+    reason: str | None,
+    curves: Curves | None,
+) -> dict[str, Any]:
+    """One field of an answer: NaN at each of ``count`` frequencies without curves; of ``sampling`` only the numbers."""
+    blank = [math.nan] * count
+    field: dict[str, Any] = {
+        "field": angle_deg,
+        "fieldAngleDeg": None if probe is None else probe.angle_deg,
+        "imageHeightMm": None if probe is None else probe.image_height_mm,
+        "sagittal": _curve(blank if curves is None else curves[1]),
+        "tangential": _curve(blank if curves is None else curves[0]),
+        "status": status,
+        "sampling": {name: value for name, value in sampling.items() if math.isfinite(value)},
+    }
+    if reason is not None:
+        field["reason"] = reason
+    return field
+
+
+def judge_steps(
+    frequencies: Sequence[float],
+    angle_deg: float,
+    rays: tuple[int, int],
+    coarser: Curves | str,
+    finer: Curves | str,
+    sampling: dict[str, float],
+    entry: Callable[[str, str | None, Curves | None], dict[str, Any]],
+) -> tuple[dict[str, Any], list[str]]:
+    """The entry of a field from what its two steps gave at the frequencies asked, and what is noted of it.
+
+    Each step gave its curves or the reason why it has none; ``rays`` are the two steps' ``num_rays``. The curves
+    are the finer step's. A field whose finer step has none is "unavailable"; one whose coarser step has none is
+    "unconverged", nothing saying that it settled; one that moved by more than the band between the steps is
+    "unconverged", and how far it moved is written to ``sampling``.
+    """
+    named = f"the field at {angle_deg!r} degrees"
+    if isinstance(finer, str):
+        return entry("unavailable", finer, None), [f"{named}: {finer} at {rays[1]} rays"]
+    if isinstance(coarser, str):
+        note = f"{named}: {coarser} at {rays[0]} rays, so nothing says that {rays[1]} rays settled"
+        return entry("unconverged", REASONS["unknown"], finer), [note]
+    moved, cut, where = largest_move(coarser, finer)
+    sampling["maxDelta"] = moved
+    band = CONVERGENCE_ON_AXIS if angle_deg == 0.0 else CONVERGENCE_OFF_AXIS
+    if moved <= band:
+        return entry("ok", None, finer), []
+    cut_name = ("tangential", "sagittal")[cut]
+    note = (
+        f"{named}: the {cut_name} MTF at {frequencies[where]!r} cycles/mm is {coarser[cut][where]!r} at "
+        f"{rays[0]} rays and {finer[cut][where]!r} at {rays[1]}, further apart than {band!r}"
+    )
+    return entry("unconverged", REASONS["moved"], finer), [note]
+
+
 def answer_field(
     asked: MtfRequest, case: dict[str, Any], angle_deg: float, measure: MtfMeasure, stated: float | None = None
 ) -> tuple[dict[str, Any], list[str]]:
@@ -707,19 +804,10 @@ def answer_field(
     probe: FieldProbe | None = None
     steps: list[StepCurves] = []
 
-    def entry(status: str, reason: str | None, curves: tuple[list[float], list[float]] | None) -> dict[str, Any]:
-        blank = [math.nan] * count
-        field: dict[str, Any] = {
-            "field": angle_deg if stated is None else stated,
-            "fieldAngleDeg": None if probe is None else probe.angle_deg,
-            "imageHeightMm": None if probe is None else probe.image_height_mm,
-            "sagittal": _curve(blank if curves is None else curves[1]),
-            "tangential": _curve(blank if curves is None else curves[0]),
-            "status": status,
-            "sampling": {name: value for name, value in sampling.items() if math.isfinite(value)},
-        }
-        if reason is not None:
-            field["reason"] = reason
+    def entry(status: str, reason: str | None, curves: Curves | None) -> dict[str, Any]:
+        field = field_entry(angle_deg, probe, sampling, count, status, reason, curves)
+        if stated is not None:
+            field["field"] = stated
         return field
 
     at = "its chief ray"
@@ -751,24 +839,8 @@ def answer_field(
     for name, axis in (("Tangential", fine.tangential_axis), ("Sagittal", fine.sagittal_axis)):
         if len(axis) > 1:
             sampling[f"frequencyStep{name}PerMm"] = axis[1] - axis[0]
-    finer = curves_at(fine, asked.frequencies)
-    if isinstance(finer, str):
-        return entry("unavailable", finer, None), [f"{named}: {finer} at {fine.num_rays} rays"]
-    coarser = curves_at(coarse, asked.frequencies)
-    if isinstance(coarser, str):
-        note = f"{named}: {coarser} at {coarse.num_rays} rays, so nothing says that {fine.num_rays} rays settled"
-        return entry("unconverged", REASONS["unknown"], finer), [note]
-    moved, cut, where = largest_move(coarser, finer)
-    sampling["maxDelta"] = moved
-    band = CONVERGENCE_ON_AXIS if angle_deg == 0.0 else CONVERGENCE_OFF_AXIS
-    if moved <= band:
-        return entry("ok", None, finer), []
-    cut_name = ("tangential", "sagittal")[cut]
-    note = (
-        f"{named}: the {cut_name} MTF at {asked.frequencies[where]!r} cycles/mm is {coarser[cut][where]!r} at "
-        f"{coarse.num_rays} rays and {finer[cut][where]!r} at {fine.num_rays}, further apart than {band!r}"
-    )
-    return entry("unconverged", REASONS["moved"], finer), [note]
+    coarser, finer = curves_at(coarse, asked.frequencies), curves_at(fine, asked.frequencies)
+    return judge_steps(asked.frequencies, angle_deg, (coarse.num_rays, fine.num_rays), coarser, finer, sampling, entry)
 
 
 def method_params(asked: MtfRequest) -> dict[str, Any]:
@@ -794,6 +866,15 @@ def method_params(asked: MtfRequest) -> dict[str, Any]:
     }
 
 
+def describe(asked: MtfRequest, case: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+    """Of an answer of the FFT: its method, the one line of the case it is of, and what is noted of that line."""
+    line = case["conditions"]["lines"][asked.line]
+    notes = []
+    if len(case["conditions"]["lines"]) > 1:
+        notes.append(f"of line {asked.line} of the case alone, {line['wavelengthNm']!r} nm: no polychromatic MTF")
+    return {"name": METHOD_NAME, "params": method_params(asked)}, [line], notes
+
+
 def answer_mtf(
     asked: MtfRequest,
     case: dict[str, Any],
@@ -803,8 +884,15 @@ def answer_mtf(
     """``mtf.native`` of a case as optiland computes it, and what each field cost in seconds, which is no part of it.
 
     The axial beam is asked first, so that an optic that is not the case is found before any field. Raises a
-    ``TimeBudgetExceeded`` where the request has taken ``REQUEST_BUDGET_S`` when a field is to be begun.
+    ``TimeBudgetExceeded`` where the request has taken ``REQUEST_BUDGET_S`` when a field is to be begun. The fields,
+    the method and the lines of the method "geometric" are ``geometric.py``'s.
     """
+    if asked.method == "geometric":
+        from . import geometric  # noqa: PLC0415 - that module imports this one
+
+        answer_one, described = geometric.answer_field, geometric.describe
+    else:
+        answer_one, described = answer_field, describe
     started = clock()
     aperture, notes = measure.aperture(case, asked.line)
     notes = list(notes)
@@ -817,20 +905,20 @@ def answer_mtf(
                 f"the request had taken {begun - started:.0f} s when field {number} of {len(asked.angles)} was to be "
                 f"begun, and {REQUEST_BUDGET_S:.0f} s are its budget: ask fewer fields at once"
             )
-        field, noted = answer_field(asked, case, angle_deg, measure, asked.fractions[number] if asked.fractions else None)
+        field, noted = answer_one(asked, case, angle_deg, measure)
+        if asked.fractions:
+            field["field"] = asked.fractions[number]
         fields.append(field)
         notes.extend(noted)
         seconds.append(clock() - begun)
-    line = case["conditions"]["lines"][asked.line]
-    if len(case["conditions"]["lines"]) > 1:
-        notes.append(f"of line {asked.line} of the case alone, {line['wavelengthNm']!r} nm: no polychromatic MTF")
+    method, lines, noted = described(asked, case)
     data = {
         "fields": fields,
-        "method": {"name": METHOD_NAME, "params": method_params(asked)},
+        "method": method,
         "focus": {"mode": "design", "appliedShiftMm": 0},
         "aperture": aperture,
-        "lines": [{"wavelengthNm": line["wavelengthNm"], "weight": line["weight"]}],
-        "notes": notes,
+        "lines": [{"wavelengthNm": line["wavelengthNm"], "weight": line["weight"]} for line in lines],
+        "notes": [*notes, *noted],
     }
     return data, seconds
 

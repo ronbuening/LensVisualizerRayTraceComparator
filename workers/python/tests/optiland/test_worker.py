@@ -199,21 +199,27 @@ class WorkerTest(TempDirTest):
         lines = (
             HELLO
             + run_message(mtf_request(case, mtf_spec([0], [30, 10])), case)
-            + run_message(mtf_request(case, mtf_spec([0], method="geometric")), case)
+            + run_message(mtf_request(case, mtf_spec([0], focus="engine-best")), case)
+            + run_message(mtf_request(case, mtf_spec([0], method="geometric"), geometricRays=64), case)
             + run_message(mtf_request(case, mtf_spec([0])), case)
+            + run_message(mtf_request(case, mtf_spec([0], method="geometric")), case)
             + SHUTDOWN
         )
-        (hello, bad, refused, failed, bye), log = self.replies(site, lines)
+        (hello, bad, refused, option, failed, geometric, bye), log = self.replies(site, lines)
         self.assertEqual(hello["result"]["capabilities"]["quantities"]["mtf.native"], {"version": 1})
-        for answered in (bad, refused, failed):
+        for answered in (bad, refused, option, failed, geometric):
             self.assertIs(answered["ok"], True)
             self.assertEqual(validate_kind("result", answered["result"]), [])
         self.assertEqual((bad["result"]["status"], bad["result"]["error"]["code"]), ("error", "bad-spec"))
         self.assertEqual(refused["result"]["status"], "unsupported")
-        self.assertEqual([item["item"] for item in refused["result"]["unsupported"]], ["method.geometric"])
-        self.assertEqual((failed["result"]["status"], failed["result"]["error"]["code"]), ("error", "engine-failure"))
-        self.assertIn("No module named 'optiland.", failed["result"]["error"]["message"])
-        self.assertEqual((log.count("ModuleNotFoundError"), bye["ok"]), (1, True))
+        self.assertEqual([item["item"] for item in refused["result"]["unsupported"]], ["focus.engine-best"])
+        self.assertEqual([item["item"] for item in option["result"]["unsupported"]], ["option.geometricRays"])
+        # Either method needs optiland's MTF, the FFT's class or the geometric one.
+        for answered in (failed, geometric):
+            result = answered["result"]
+            self.assertEqual((result["status"], result["error"]["code"]), ("error", "engine-failure"))
+            self.assertIn("No module named 'optiland.", result["error"]["message"])
+        self.assertEqual((log.count("ModuleNotFoundError"), bye["ok"]), (2, True))
 
     def test_the_fingerprint_is_the_same_in_another_process_and_another_for_another_source(self) -> None:
         site = self.fake_site()

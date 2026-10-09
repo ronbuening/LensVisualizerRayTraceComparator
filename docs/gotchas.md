@@ -1741,3 +1741,93 @@ shares no code with any engine.
   `mtf.native` is `unsupported` until its stage. Of the 1173 cases of the catalog on the reference line optiland has first-order
   data of every one.
 - **Class.** none of the ladder's.
+
+### optiland's geometric MTF multiplies in a diffraction limit unless it is told not to
+
+- **Where.** `GeometricMTF.__init__` (`optiland/mtf/geometric.py`) has `scale=True`, and `_generate_mtf_data` then
+  multiplies every curve by `(2/π)(φ − cos φ sin φ)`, `cos φ = ν / ν_c`: the MTF of a circular pupil without
+  aberration, with the cut-off of the paraxial f-number, `ν_c = 1 / (λ · optic.paraxial.FNO())`.
+- **Effect.** Asked without its options the class gives no geometric MTF but an estimate of a diffraction MTF: on
+  the Double-Gauss, f/5 at the d line, the cut-off is 340 cycles/mm and a value at 50 cycles/mm is lowered to 0.81
+  of itself.
+- **Handled.** The worker states `scale=False` and reads back the flag and the factor the class says it multiplied
+  by, `diff_limited_mtf` (`build-mismatch` otherwise). A test holds optiland's scaled curve to the unscaled one
+  times the closed form, and makes the mistake on purpose.
+- **Class.** convention.
+
+### optiland's geometric MTF bins the landings, about no point, and counts every lit ray once
+
+- **Where.** `GeometricMTF._compute_field_data`: `histogram(xi, bins=num_points + 1)` over the landings of one
+  axis as the spot diagram recorded them, in the image surface's own coordinates, then the modulus of the sum of
+  `count × exp(2πi ν centre)` over the bins, over the number of rays. `_center_spots`, which the spot diagram has
+  for its radii, is not called; the intensity is read once, to leave out the rays that have none
+  (`SpotDiagram._generate_field_data`). The frequencies are `linspace(0, max_freq, num_points)`: stated, in
+  cycles/mm, with no rim ray traced for them.
+- **Effect.** Nothing of the FFT's frequency axes applies, neither the rim rays that calibrate them nor the grid
+  taken for one that is even in direction cosines: a field whose rim rays are all stopped has the same axis as
+  any other. The bins are as many as the samples of the
+  frequency axis, plus one, whatever the frequencies asked: a ray counts at the centre of its bin, which lowers a
+  value by about `sin(πνw) / (πνw)` for bins of width w and tells nothing above `1 / (2w)`. A spot none of whose
+  rays arrives is a curve of NaN, and nothing is raised. The modulus is of bins laid from the least landing to the
+  greatest, so it knows no reference point, and no phase is kept.
+- **Handled.** The worker asks for 2048 samples, which is 2049 bins, and sums the same landings without bins: a
+  field one of whose values of optiland lies further from that sum than its band has no curves
+  (`frequency-beyond-bins`), and `binningMaxDelta` states the distance for every field. On the Double-Gauss it is
+  3e-6 on the axis, 2e-5 at 10° and 3e-5 at 14°, where the spot is 0.12 mm wide. An empty spot is `no-rays`. Tests
+  write the class's sum out from its landings, move every landing by 3 mm and find the same modulus, hold the
+  distance to the bound `2 sin(πνw / 2)` plus what the interpolation allows, and with nine bins find a field
+  without curves.
+- **Class.** method: recorded.
+
+### `num_rays` of optiland's geometric MTF is rays across a grid that is even on the stop
+
+- **Where.** `GeometricMTF.__init__` hands `num_rays` to `SpotDiagram` as its `num_rings`, with the distribution
+  `"uniform"`: `UniformDistribution.generate_points` takes the points of `linspace(-1, 1, num_rays)` in both
+  normalised pupil coordinates within the unit circle, 51040 for 256, and `optic.trace` launches them in one
+  batch through the optic's aimer. With the worker's aiming a pupil coordinate is a point of the stop surface.
+- **Effect.** Each ray stands for an equal area of the stop, and an aperture elsewhere removes rays: the spot of a
+  vignetted field is that of the rays that arrive, with no rim ray deciding anything. A lattice that is even
+  across the beam in front of the lens, as LensVisualizer's is, weights the same pupil by the distortion between
+  the two: on the Double-Gauss on the axis the ray through the stop at the fraction p of its radius enters at
+  10.015 p mm near the axis and at 10.024 p mm at the rim, a part in a thousand; a fast lens wide open has more.
+  More rays do not remove that difference. Unlike the FFT the class assumes nothing of where a pupil point lies in
+  direction cosines: a landing is a landing.
+- **Handled.** Nothing is corrected: the rays are optiland's, and `method.params.pupil` says `stop-surface-grid`.
+  The ladder is 128 and then 256 rays across, 512 by the engine option `geometricRays`: on the Double-Gauss the
+  largest move of a value at 10, 30 or 50 cycles/mm is 0.0009 on the axis and 0.0013 at 14° from 128 to 256, and
+  0.0004 from 256 to 512. A field takes 0.45 s at the first ladder and 0.95 s at the second, a line; a step of
+  512 rays adds 0.8 GB to the worker's peak memory on that lens of 11 surfaces, as the FFT's does. Measured at
+  optiland `4e893f53`.
+- **Class.** method: recorded.
+
+### optiland's geometric MTF is of one wavelength, and a spectrum is summed from its landings
+
+- **Where.** `GeometricMTF.__init__` resolves one wavelength and `_generate_mtf_data` reads `field_data[0]`, with
+  the note `TODO: add option for polychromatic MTF`. What it keeps is the modulus, of bins about no stated point.
+- **Effect.** As for the FFT, no MTF of a spectrum can be read from the class's curves. Unlike the FFT's, its rays
+  can form one: a landing is a point of the image plane, the same plane for every line.
+- **Handled.** A case of several lines is answered by the worker's sum of optiland's own landings, each line on
+  an optic of its own: the lines' sums of `w exp(−2πi ν u)` about the axis point of the image plane, added with
+  the weights of the case as complex numbers and divided by the weighted flux, then the modulus
+  (`geometric.sum_curves`; the comparator's `polychromaticOtf`). The sum has no bins, and the answer says whose it
+  is: `method.name` is `spot-landings-sum`, and `geometric-mtf` only for one line, the case's only one or the one
+  the engine option `line` names, whose curve is optiland's own. Every answer states how far optiland's own curve
+  of a line lies from that line's sum. Lost: nothing of the lateral colour; the worker's sum is not a number of
+  optiland's. A test sets two lines 14 micrometres apart behind a stop of half a micrometre and finds the closed
+  form of two points, with the distance from chief rays traced in 60 digits.
+- **Class.** method: recorded.
+
+### A ray that ends at the last surface stays in optiland's spot, without a landing
+
+- **Where.** `SpotDiagram._generate_field_data` leaves out the rays whose intensity on the image surface is 0. A
+  ray totally reflected at a surface, or one that misses it, has no number from there on and loses its intensity
+  at the next aperture test. Behind the last surface of a case there is none: the image surface has no aperture.
+- **Effect.** Such a ray is counted into the spot with a landing of NaN, and `numpy.histogram` raises a
+  `ValueError` for a range that is not finite: the geometric MTF of that field is not computed at all, whatever
+  the other rays would give. Measured on glass of index 1.5 that ends in a sphere of radius 6 mm concave toward
+  the image, where a ray along the axis is totally reflected beyond the height of 4 mm (`1.5 h / 6 > 1`): 84 of the
+  172 rays of a grid of 16 across a stop of 5.5 mm.
+- **Handled.** Nothing is removed from optiland's spot: the field is `unavailable` with the reason
+  `optiland-raised-ValueError`, for one line and for several, and the note has optiland's message. A test pins it.
+  No such field is known in the suites, which this half did not run.
+- **Class.** method: recorded.

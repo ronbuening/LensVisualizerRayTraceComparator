@@ -135,25 +135,22 @@ class ReadRequestTest(unittest.TestCase):
             self.assertEqual([(item["code"], item["item"]) for item in refused], [("option", "option.fftRays")], value)
             self.assertIn("256 or 512", refused[0]["message"])
 
-    def test_what_the_engine_has_no_method_for_is_refused_item_by_item(self) -> None:
-        spec = mtf_spec([0], method="geometric", focus="engine-best", profile="lv-tab-default")
+    def test_what_the_engine_has_no_answer_to_is_refused_item_by_item(self) -> None:
+        spec = mtf_spec([0], focus="engine-best", profile="lv-tab-default")
         spec["fields"] = {"kind": "image-height-fractions", "values": [0, 1]}
         refused = read_request(spec, {}, DOUBLE_GAUSS)
         self.assertEqual(
             [(item["code"], item["item"]) for item in refused],
             [
                 ("option", "profile"),
-                ("option", "method.geometric"),
                 ("option", "focus.engine-best"),
                 ("option", "fields.image-height-fractions"),
             ],
         )
-        for name, value, item in (
-            ("method", "geometric", "method.geometric"),
-            ("focus", "engine-best", "focus.engine-best"),
-        ):
-            alone = read_request(mtf_spec([0], **{name: value}), {}, DOUBLE_GAUSS)
-            self.assertEqual([entry["item"] for entry in alone], [item])
+        alone = read_request(mtf_spec([0], focus="engine-best"), {}, DOUBLE_GAUSS)
+        self.assertEqual([entry["item"] for entry in alone], ["focus.engine-best"])
+        # The method "geometric" is answered, by optiland's own class of that name: ``test_geometric.py``.
+        self.assertEqual(read_request(mtf_spec([0], method="geometric"), {}, DOUBLE_GAUSS).method, "geometric")
 
     def test_fractions_of_an_image_height_are_answered_only_with_the_angle_of_each(self) -> None:
         spec = mtf_spec([0], [0, 12.5])
@@ -174,7 +171,7 @@ class ReadRequestTest(unittest.TestCase):
             )
 
     def test_a_field_asked_as_a_fraction_is_named_by_it_and_computed_at_its_angle(self) -> None:
-        asked = MtfRequest(ASKED.frequencies, (0.0, 10.0), 0, (128, 256), (0.0, 0.5))
+        asked = MtfRequest(ASKED.frequencies, (0.0, 10.0), 0, (128, 256), fractions=(0.0, 0.5))
         data, _ = answer_mtf(asked, DOUBLE_GAUSS, StandIn(settled(0.0, 10.0)))
         angles = MtfRequest(ASKED.frequencies, (0.0, 10.0), 0, (128, 256))
         as_angles, _ = answer_mtf(angles, DOUBLE_GAUSS, StandIn(settled(0.0, 10.0)))
@@ -506,9 +503,10 @@ class EngineTest(unittest.TestCase):
             self.assertIn("spec is not a mtf.native spec: ", answered["error"]["message"])
             self.assertIn(said, answered["error"]["message"])
         several = two_lines(DOUBLE_GAUSS, 486.1327, 0.5)
+        FOCUS_ITEM = "focus.engine-best"
         for case, spec, options, items in (
             (several, mtf_spec([0]), {}, ["lines.polychromatic"]),
-            (DOUBLE_GAUSS, mtf_spec([0], method="geometric"), {"fftRays": 64}, ["method.geometric", "option.fftRays"]),
+            (DOUBLE_GAUSS, mtf_spec([0], focus="engine-best"), {"fftRays": 64}, [FOCUS_ITEM, "option.fftRays"]),
         ):
             refused = engine.run(mtf_request(case, spec, **options), case)
             self.assertEqual(validate_kind("result", refused), [])

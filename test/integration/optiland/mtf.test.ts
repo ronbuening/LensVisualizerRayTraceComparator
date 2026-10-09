@@ -1,8 +1,8 @@
-// `mtf.native` of the engine `optiland` through its worker: optiland's own FFT MTF of the contract's Double-Gauss, asked
-// as the comparator asks an engine. What the curves must be is derived in the worker's own tests
-// (`workers/python/tests/optiland/test_mtf.py`, which this tier runs under the optiland interpreter); here the answer
-// is held to the quantity's rules as the comparator checks them, to what a request states, and to itself: asked
-// twice, of two workers, it is the same answer.
+// `mtf.native` of the engine `optiland` through its worker: optiland's own FFT MTF of the contract's Double-Gauss, and
+// its own geometric MTF, asked as the comparator asks an engine. What the curves must be is derived in the worker's
+// own tests (`workers/python/tests/optiland/test_mtf.py` and `test_geometric.py`, which this tier runs under the
+// optiland interpreter); here the answer is held to the quantity's rules as the comparator checks them, to what a
+// request states, and to itself: asked twice, of two workers, it is the same answer.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -145,16 +145,116 @@ test(
     const ratio = coarse.sampling.frequencyStepTangentialPerMm / field.sampling.frequencyStepTangentialPerMm;
     assert.ok(Math.abs(ratio - 511 / 255) < 1e-9, String(ratio));
 
-    // A value the option does not have is refused, and so is what the engine has no method for.
-    const refused = await ask(adapter, DOUBLE_GAUSS, { ...spec, method: "geometric" }, { fftRays: 1024 });
+    // A value the option does not have is refused, and so is what the engine has no answer to.
+    const refused = await ask(adapter, DOUBLE_GAUSS, { ...spec, focus: "engine-best" }, { fftRays: 1024 });
     assert.equal(refused.status, "unsupported");
     assert.deepEqual(
       refused.unsupported?.map((item) => [item.code, item.item]),
       [
-        ["option", "method.geometric"],
+        ["option", "focus.engine-best"],
         ["option", "option.fftRays"],
       ],
     );
+  },
+);
+
+test(
+  "optiland's own geometric MTF of the Double-Gauss: optiland's curve of one line, the worker's sum of several",
+  { skip, timeout: 600_000 },
+  async (t) => {
+    const loaded = optilandRoot(t);
+    const adapter = await createEngineRegistry(loaded).create("optiland");
+    t.after(() => adapter.close());
+    const spec: MtfNativeSpec = { ...SPEC, method: "geometric" };
+
+    const result = await ask(adapter, DOUBLE_GAUSS, spec);
+    const data = dataOf(result);
+    assert.deepEqual(result.method, data.method);
+    assert.equal(data.method.name, "geometric-mtf");
+    assert.deepEqual(
+      [data.method.params.class, data.method.params.numRays, data.method.params.scale, data.method.params.lines],
+      ["GeometricMTF", [128, 256], false, [0]],
+    );
+    assert.deepEqual(data.focus, { mode: "design", appliedShiftMm: 0 });
+    assert.deepEqual(data.lines, [{ wavelengthNm: 587.5618, weight: 1 }]);
+    const rows = mtfTableRows({ spec, data, displayedFrequenciesPerMm: [10, 30, 50] });
+    assert.deepEqual(
+      rows.map((row) => [row.field, row.status, row.reason]),
+      [
+        [0, "ok", undefined],
+        [10, "ok", undefined],
+        [40, "unavailable", "no-rays"],
+      ],
+    );
+    // The chief ray is the FFT's, and so is the aperture: the same field of the same optic, by another method.
+    const fft = dataOf(await ask(adapter, DOUBLE_GAUSS, SPEC));
+    assert.deepEqual(
+      data.fields.map((field) => field.imageHeightMm),
+      fft.fields.map((field) => field.imageHeightMm),
+    );
+    assert.deepEqual(data.aperture, fft.aperture);
+    for (const field of data.fields.slice(0, 2)) {
+      // Every ray of optiland's grid arrives, each counts once, and its bins moved no value by a thousandth.
+      assert.deepEqual(
+        [field.sampling.numRays, field.sampling.coarseNumRays, field.sampling.numPoints],
+        [256, 128, 2048],
+      );
+      assert.equal(field.sampling.raysLit, field.sampling.raysLaunched);
+      assert.ok(field.sampling.binningMaxDelta < 1e-3, String(field.sampling.binningMaxDelta));
+      assert.ok(field.sampling.maxDelta <= 0.01, String(field.sampling.maxDelta));
+    }
+    assert.deepEqual([data.fields[2].sampling.raysLit, data.fields[2].sampling.raysLaunched > 0], [0, true]);
+
+    // The same request again, and of another worker: the same answer, to the byte.
+    assert.equal(canonicalJson((await ask(adapter, DOUBLE_GAUSS, spec)).data), canonicalJson(result.data));
+    const other = await createEngineRegistry(loaded).create("optiland");
+    t.after(() => other.close());
+    assert.equal(canonicalJson((await ask(other, DOUBLE_GAUSS, spec)).data), canonicalJson(result.data));
+
+    // The finer step is an option of this method's own, and the FFT's option is not read for it.
+    const axis: MtfNativeSpec = { ...spec, fields: { kind: "angles-deg", values: [0] } };
+    const finer = dataOf(await ask(adapter, DOUBLE_GAUSS, axis, { geometricRays: 512, fftRays: 512 }));
+    assert.deepEqual(finer.method.params.numRays, [256, 512]);
+    assert.deepEqual([finer.fields[0].sampling.numRays, finer.fields[0].sampling.coarseNumRays], [512, 256]);
+    const plain = dataOf(await ask(adapter, DOUBLE_GAUSS, axis, { fftRays: 512 }));
+    assert.equal(canonicalJson(plain.fields[0]), canonicalJson(data.fields[0]));
+    const refused = await ask(adapter, DOUBLE_GAUSS, axis, { geometricRays: 1024 });
+    assert.deepEqual(
+      refused.unsupported?.map((item) => [item.code, item.item]),
+      [["option", "option.geometricRays"]],
+    );
+
+    // Two lines of the same indices land in the same places: their sum is the sum of one, and optiland's own curve
+    // of that line lies beside it by what its bins moved it.
+    const lines = [...DOUBLE_GAUSS.conditions.lines, { ...DOUBLE_GAUSS.conditions.lines[0], wavelengthNm: 486.1327 }];
+    const two: OpticalCase = {
+      ...DOUBLE_GAUSS,
+      conditions: {
+        ...DOUBLE_GAUSS.conditions,
+        lines,
+        indexAfterSurface: twoRows(DOUBLE_GAUSS.conditions.indexAfterSurface),
+      },
+    };
+    const summed = await ask(adapter, two, axis);
+    const whole = dataOf(summed);
+    assert.equal(whole.method.name, "spot-landings-sum");
+    assert.deepEqual(whole.lines, lines.map(lineOf));
+    assert.equal(summed.diagnostics.counts.lines, 2);
+    assert.deepEqual(whole.method.params.lines, [0, 1]);
+    const [own] = data.fields;
+    const [sum] = whole.fields;
+    assert.equal(sum.status, "ok");
+    const apart = (cut: NdArrayWire, other: NdArrayWire): number =>
+      Math.max(
+        ...Array.from(decodeNdArray(cut).values as Float64Array, (value, at) =>
+          Math.abs(value - (decodeNdArray(other).values as Float64Array)[at]),
+        ),
+      );
+    assert.ok(apart(sum.tangential, own.tangential) <= own.sampling.binningMaxDelta + 1e-12);
+    assert.ok(apart(sum.sagittal, own.sagittal) <= own.sampling.binningMaxDelta + 1e-12);
+    const blue = dataOf(await ask(adapter, two, axis, { line: 1 }));
+    assert.deepEqual([blue.method.name, blue.lines], ["geometric-mtf", [lineOf(lines[1])]]);
+    assert.equal(blue.notes.at(-1), "of line 1 of the case alone, 486.1327 nm");
   },
 );
 

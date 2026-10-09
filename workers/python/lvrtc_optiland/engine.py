@@ -9,8 +9,9 @@ optics alone (``build.describe_optics``, ``first_order.first_order_of``, ``trace
 of one line, and builds that line's optic alone. An optic that is not the case is answered as an error that names
 the surface and the field, and nothing is said about it.
 
-It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``): of one line, a field at a time, each on an optic of
-its own that is built, read back and given its field there. A field optiland cannot compute is a row of the answer.
+It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``), the method "diffraction", and with its own geometric
+MTF (``geometric``), the method "geometric": a line and a field at a time, each on an optic of its own that is built,
+read back and given its field there. A field optiland cannot compute is a row of the answer.
 """
 
 from __future__ import annotations
@@ -308,7 +309,7 @@ class OptilandEngine:
         issues = validate(self._schemas, quantity_schema_id(MTF_NATIVE, "data"), data)
         if issues:
             raise RuntimeError(f"the answer is not {MTF_NATIVE} data: {format_issues(issues)}")
-        counts = {"surfaces": len(case["system"]["surfaces"]), "lines": 1, **field_counts(data)}
+        counts = {"surfaces": len(case["system"]["surfaces"]), "lines": len(data["lines"]), **field_counts(data)}
         if self._log is not None:
             self._log(mtf_log_line(counts, asked.ladder, seconds, time.perf_counter() - started))
         diagnostics = {"warnings": [], "counts": counts}

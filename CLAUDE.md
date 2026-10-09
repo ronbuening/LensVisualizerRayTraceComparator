@@ -132,8 +132,8 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   (`ray_tracer.set_aiming("robust", max_iter=50, tol=1e-10)`), never `conditions.stopSemiDiameter`; the reference
   is `chief_ray`, tilt kept; `grid_size = 2 * num_rays` is always stated (without it `num_rays` is OpticStudio's
   sampling number: 64 rays for 128). `tangential` is `mtf[0][0]` on `freq_tang`, `sagittal` `mtf[0][1]` on
-  `freq_sag`. Fields as fractions, a geometric method, `engine-best`, a profile and a finite object are
-  `unsupported`. optiland's FFT takes a grid even on the stop for one even in direction cosines and calibrates its
+  `freq_sag`. `engine-best`, a profile and a finite object are `unsupported`, and so are fields as fractions
+  without the option `fieldAnglesDeg`; the method "geometric" is answered by `geometric.py`. optiland's FFT takes a grid even on the stop for one even in direction cosines and calibrates its
   axes with four rim rays whatever became of them: both are in `docs/gotchas.md` and neither is corrected by the
   worker.
 - **What the worker adds to an optic for an MTF is read back, like the build** (`verify_field`, `probe_field`,
@@ -148,10 +148,34 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   (a move above 0.005 on the axis, 0.01 off it, from the coarser step to the finer) and `convergence-unknown` are
   `unconverged`. `BuildMismatch`, `MemoryError` and `ImportError` are never a field's (`FATAL`). Each cut is
   interpolated linearly on optiland's own axis of that cut, and nothing beyond its last sample.
-- **No polychromatic MTF is formed of optiland's moduli.** A case of several lines is `unsupported`
-  (`lines.polychromatic`) unless the engine option `line` names one; never average moduli. The 512 step is the
+- **No polychromatic MTF is formed of optiland's moduli.** For the method "diffraction" a case of several lines
+  is `unsupported` (`lines.polychromatic`) unless the engine option `line` names one; never average moduli. The 512 step is the
   engine option `fftRays` (256 or 512: the ladder is that and half of it): an option is in the result store's key
   and not in a request's id, so never add a sampling member to the `mtf.native` spec for it.
+- **`mtf.native` of `optiland` by the method "geometric" is optiland's `GeometricMTF`, a line and a field a call**
+  (`workers/python/lvrtc_optiland/geometric.py`): `distribution="uniform"`, `num_points=2048`, `max_freq` the
+  largest frequency asked, `scale=False`, each read back with the factor the class multiplied by
+  (`build-mismatch` otherwise). A keyword added to the call needs its read-back and a test that makes the mistake
+  on purpose (`test_geometric.py`). Never ask the class without `scale=False`: its default multiplies in a
+  diffraction limit. The ladder is 128 then 256 rays across the stop, 512 by the engine option `geometricRays`;
+  only the option of the method asked is read (`fftRays` is the FFT's).
+- **One line is optiland's own geometric curve; several lines are the worker's sum of optiland's landings**
+  (`geometric.sum_curves`, the convention of `polychromaticOtf`: the case's weights, optiland's intensity as flux,
+  the lines added as complex numbers before the modulus, about the axis point of the image plane, no bins).
+  `method.name` says which: `geometric-mtf` or `spot-landings-sum`. Never form a spectrum's MTF of the lines'
+  moduli, and never answer one line with the worker's sum.
+- **optiland's bins are measured, not trusted.** The worker sums the landings optiland binned
+  (`geometric.landing_sums`: `math.fsum`, no numpy, so the hermetic tier tests it) and gives optiland's value only
+  within the field's band of that sum, 0.005 on the axis and 0.01 off it. Beyond it the field is `unavailable`
+  (`frequency-beyond-bins`) at every frequency, as the contract requires of a field without curves.
+  `binningMaxDelta` is stated for every field and gates nothing for several lines. A spot without rays is
+  `no-rays`: optiland's class gives NaN and does not raise. A ray that ends at the last surface stays in
+  optiland's spot without a landing, and the field is `optiland-raised-ValueError`: never remove a ray from
+  optiland's spot (`docs/gotchas.md`).
+- **`mtf.field_entry` and `mtf.judge_steps` are shared by both methods of `optiland`**, and a field is named by its
+  fraction for either where the spec states fractions (`answer_mtf`). The answer of "diffraction" is held to a
+  literal text, key by key (`DiffractionAsBeforeTest` in `test_geometric.py`); a change to either must leave that
+  text the same. `MtfRequest` is built by keyword beyond its first four members.
 - **The worker gives an MTF request up between two fields after `REQUEST_BUDGET_S`** (300 s), as the error
   `time-budget`, which the result store does not keep. `OPTILAND_TIMEOUTS` states only `helloMs`: the default run
   wait of ten minutes holds `mtf.native` (a field takes 0.2 to 2.9 s, a failing one 7 to 14 s, one failing 512

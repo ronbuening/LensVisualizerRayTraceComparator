@@ -1024,12 +1024,16 @@ a spec may be off by, 2.2e-11 mm and 1.9e-8 waves. The worker moves no point and
 optiland's, in R2 and in R3, and is in the answer. No ray set of LensVisualizer or of a case file has such a
 direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-16.
 
-**`mtf.native`** is optiland's own FFT MTF, its class `ScalarFFTMTF`, asked as anyone would ask it and read from
-its own attributes (`lvrtc_optiland/mtf.py`): the method `diffraction`, of fields stated as angles, on the image
-plane of the case as it is. Fields stated as fractions of an image height are answered only with the engine option
-`fieldAnglesDeg`, the angle of each in degrees in the order of the spec, which is what a run's
+**`mtf.native`** is answered by either method, each with a class of optiland's own, of fields stated as angles, on
+the image plane of the case as it is: `diffraction` with its FFT MTF, and `geometric` with its geometric MTF,
+which follows it here. Fields stated as fractions of an image height are answered, by either method, only with the
+engine option `fieldAnglesDeg`, the angle of each in degrees in the order of the spec, which is what a run's
 [recipe](#the-mtf-recipe) resolved them to: the answer then names each field by its fraction (`field`) and states
-the angle it computed with (`fieldAngleDeg`). For a spec of angles the option is not read. Nothing of the transfer function is the worker's. What is, is stated in the answer:
+the angle it computed with (`fieldAngleDeg`). For a spec of angles the option is not read.
+
+The method `diffraction` is optiland's class `ScalarFFTMTF`, asked as anyone would ask it and read from its own
+attributes (`lvrtc_optiland/mtf.py`). Nothing of the transfer function is the worker's. What is, is stated in the
+answer:
 
 | Step | Is |
 |---|---|
@@ -1052,15 +1056,40 @@ states `tracedFNumber` (optiland's working f-number on the axis, of the rays thr
 `limitingSurfaceIndex` and `aimedStopRadiusMm`. `method.name` is `scalar-fft-mtf`, and `method.params` hold every
 setting above.
 
-Its refusals: of code `option`, `profile` (it is asked by a spec), `method.geometric`, `focus.engine-best`
-(optiland has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height, and the
-option `fieldAnglesDeg` was not given), `option.fieldAnglesDeg` (not one finite angle for each field of the spec),
-`option.fftRays` (not 256 or 512) and `option.line` (no index of a line of the case); of code `feature`,
-`lines.polychromatic` (a case of several lines asked without the option `line`) and `object.finite` (optiland
-measures a field angle at its paraxial entrance pupil then, and no spec says where the contract's is measured).
-An optic or an analysis that is not what was asked is the error `build-mismatch`, as for every quantity. A request
-that has taken five minutes when its next field is to be begun is the error `time-budget`: an error is not kept by
-the result store, and the worker lives on.
+The refusals of either method: of code `option`, `profile` (it is asked by a spec), `focus.engine-best` (optiland
+has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height, and the option `fieldAnglesDeg` was not given),
+`option.fieldAnglesDeg` (not one finite angle for each field of the spec), `option.fftRays`
+or `option.geometricRays` (not 256 or 512; only the option of the method asked is read) and `option.line` (no index
+of a line of the case); of code `feature`, `lines.polychromatic` (a case of several lines asked for the method
+`diffraction` without the option `line`) and `object.finite` (optiland measures a field angle at its paraxial
+entrance pupil then, and no spec says where the contract's is measured). An optic or an analysis that is not what
+was asked is the error `build-mismatch`, as for every quantity. A request that has taken five minutes when its next
+field is to be begun is the error `time-budget`: an error is not kept by the result store, and the worker lives on.
+
+**The method `geometric`** is optiland's class `GeometricMTF`, asked with every option stated and read from its own
+attributes (`lvrtc_optiland/geometric.py`). The line, the call, the field, the aiming and `imageHeightMm` are the
+FFT's above: one line, one field and one sampling a call, each on a new optic that is built, verified and given
+its field; the chief ray through the centre of the stop. What the class computes, and what the worker adds:
+
+| Step | Is |
+|---|---|
+| the rays | optiland's pupil distribution `uniform` with `num_rays`: the points of `linspace(-1, 1, num_rays)` in both normalised pupil coordinates that lie within the unit circle (51040 of 256 by 256), traced in one batch. With the worker's aiming a pupil coordinate is a point of the stop surface, out to its clip radius: the grid is even on the stop |
+| the spot | where optiland's image surface recorded each ray whose intensity there is above 0, in the coordinates of that surface, millimetres from the axis on the plane of the case. A ray an aperture stopped is left out; every other counts once, whatever its intensity. `raysLaunched` and `raysLit` say how many of each |
+| the reference | none. The class takes the landings as they are; the reference of its spot diagram, the chief ray, is not read for the MTF |
+| the transform | the landings along one axis counted into `num_points + 1` bins from the least landing to the greatest, and at each frequency the modulus of the sum of `count × exp(2πi ν centre)` over the bins, over the number of rays: a direct sum, no FFT, 1 at no frequency. `tangential` is optiland's `mtf[0][0]`, of the landings' y, and `sagittal` its `mtf[0][1]`, of their x; the mirror in y changes neither |
+| the frequencies | `linspace(0, max_freq, num_points)`, cycles/mm on the image surface, as stated: no rim ray calibrates them. The worker states the largest frequency of the spec for `max_freq` (1 cycle/mm where that is 0) and 2048 for `num_points`, and interpolates linearly between the two samples that enclose a frequency |
+| no diffraction | the class multiplies its curve by the diffraction limit of a circular pupil at the paraxial f-number unless told otherwise. The worker states `scale=False` and reads back the flag and the factor |
+| the sampling | `num_rays` 128 and then 256; the curves are the finer step's. The engine option `geometricRays` 512 asks for 256 and 512 instead |
+| the bins | a ray counts at the centre of its bin, so optiland's value is that of its own landings moved by up to half a bin of width w: lower by about `sin(πνw) / (πνw)`, off by at most `2 sin(πνw / 2)`, and of no meaning above `1 / (2w)`. The worker sums the same landings without bins and gives optiland's value only where it lies within 0.005 of that sum on the axis, 0.01 off it; `binningMaxDelta` states how far they lie apart, and `binWidthTangentialMm` and `binWidthSagittalMm` the width of a bin of each cut |
+| several lines | optiland's class is of one wavelength and gives a modulus about no stated point. A case of several lines asked without the option `line` is answered by the worker's sum of optiland's landings: each line asked as above, and `OTF(ν) = Σ W_l S_l(ν) / Σ W_l T_l` with `W_l` the weight of the line, `S_l` the sum of `w × exp(−2πi ν u)` over the landings `u` of its lit rays about the axis point of the image plane, `w` the intensity optiland gives a ray (1 for every case, which has no coating), and `T_l` the sum of those: the lines added as complex numbers before the modulus, by the convention of the comparator's `polychromaticOtf`, without bins. `lines` holds every line, and `binningMaxDelta` is then how far optiland's own curve of a line lies from that line's sum, the largest of the lines, which gates nothing |
+| a field's `status` | as for the FFT, `ok`, `unconverged` (`not-converged`, `convergence-unknown`) or `unavailable`: `optiland-raised-<class>`, `no-rays` (no ray of a line arrives: optiland's class gives NaN and does not raise), `no-flux`, `frequency-beyond-bins` (of one line: a value of optiland's further from the sum of its landings than the band), `frequency-beyond-axis`, `no-frequency-axis` or `mtf-not-a-modulus`. A modulus within 1e-12 above 1 is written as 1 |
+
+`method.name` is `geometric-mtf` for one line, whose curves are optiland's own, and `spot-landings-sum` for
+several, whose rays are optiland's and whose sum is the worker's; `method.params` hold every setting above, and
+`curves`, `transform`, `rayWeight` and `polychromatic` say which of the two it was. Under `sampling` a field states
+`numRays`, `coarseNumRays`, `numPoints`, `raysLaunched`, `raysLit`, the two bin widths, `binningMaxDelta`,
+`maxDelta` and `optilandWarnings`: the counts and the widths are the finer step's, of its first line. `aperture` is
+the FFT's.
 
 **The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
 is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
