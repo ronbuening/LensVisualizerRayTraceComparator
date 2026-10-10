@@ -28,9 +28,17 @@ node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral c
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
-node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay
+node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay; r6a traces a lattice twice as fine and r6b adds lv and wave: a long run, so name --rungs r0,r1,r2,r3,r4 for the baselined rays rungs
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f   # R4f: lv against the replay of its own MTF sampling, 96 runs (about 3 min); asked of lv and replay whatever --engines names
 node bin/lvrtc.mjs engine conformance replay   # the conformance kit on the replay engine (needs LV)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r6a   # R6a: the wave MTF of the same rays, on the run's lattice and one twice as fine (about 8 min and 15 GB of the store from empty)
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r6b   # R6b: lv's diffraction MTF beside the wave estimator on its rays; asked of lv and wave whatever --engines names (about 13 min)
+node bin/lvrtc.mjs engine conformance wave   # the conformance kit on the wave engine (needs LV)
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5   # R5: lv, optiland and wave side by side, recorded; run only where named; about 8 min; asks optiland again at 512 rays for a run outside its band
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5g   # R5g: LV's geometric MTF beside optiland's own and the replay, recorded; only where named; about 37 min
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b   # the MTF rungs: about 54 min and 15 GB from an empty store
+node bin/lvrtc.mjs baseline write benchmark --mtf   # after that run and compare: baselines/benchmark.mtf.json, reports/benchmark/mtf.*
+node bin/lvrtc.mjs baseline check benchmark --mtf   # needs the engines; minutes on a warm store; MOVED (a recorded rung) fails nothing
 node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL or ERROR; FLOOR is a pass
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
@@ -40,6 +48,7 @@ node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts th
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g recorded; prints the MTF report, writes runs/mtf-<lensKey>/
 ```
 
 ## Rules
@@ -234,9 +243,10 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
-- **Built-in engines (`ref`, `lv`, `replay`, `optiland`) live in `src/engines/builtin.ts`** and run only where
+- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
-  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay` whatever `--engines` or a run names. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, and `r6b` of `lv` and `wave`, whatever
+  `--engines` or a run names; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -249,8 +259,9 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   operations (no `Math.sin`, `Math.cos` or `Math.hypot`), every sum that can cancel compensated
   (`src/core/numeric/exact.ts`), so equal input gives equal bits. It imports nothing of an engine.
   `imageProjection.ts` is in the closures of `lv` and `ref`, and `geometricOtf.ts` in that of `replay` (an edit
-  there moves an adapter revision: keep every operation bit for bit, or refresh the baselines); `validity.ts` and
-  `waveOtf.ts` are in no engine's closure and must stay out. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
+  there moves an adapter revision: keep every operation bit for bit, or refresh the baselines); `waveOtf.ts`,
+  `waveValidity.ts` and `src/rays/wavefront.ts` are in the closure of `wave` and of no other engine: keep them out
+  of `lv`, `ref` and `replay`, whose adapter revisions the rays baselines hold. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
   bound, and whole-number arithmetic (`test/estimators/support.ts`: `exactTransfer`, `exactLength`), never an
   engine's output. The wave estimator's tests (`waveOtf.test.ts`) build spherical waves from their geometry: the
   staircase from whole-number pair counts, discs and the annulus in closed form, Hopkins' integral by a
@@ -311,8 +322,7 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   rung (`runEngines`). A hermetic test whose registry knows neither engine names its rungs.
 - **R4f is gated on three figures (policy version 6)**: `mtf.maxAbs` <= 1e-9, pinned at Stage 3.2 on a measured
   maximum of 1.25e-14; `sampling.mismatches` and `fields.mismatches` at 0; no floor. A grid size, a ray count or a
-  status that differs is a defect of the replay or a change in LV: read the canaries, never widen. R4f is in no
-  committed baseline until Stage 3.8.
+  status that differs is a defect of the replay or a change in LV: read the canaries, never widen. R4f is in the MTF baselines.
 - **R4 is the geometric MTF of the run's ray sets** (`src/compare/raysMtf.ts`): the rays are the sets R2 and R3
   judge (`rayTraceRequests`), never the grid a field's refinement ends at, which is R4f's; the landing is each
   engine's own `imagePoint` on the plane of the run's case, which is the recipe's plane (a recipe of another plane
@@ -360,6 +370,104 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   `gridConvergence` is the figure of two lattices.
 - **`npm run format` does not cover `docs/`**: never run prettier on a Markdown file there; it realigns every
   table.
+- **`wave` is LensVisualizer's rays and the comparator's wave estimator** (`src/engines/lv/waveEngine.ts`). It
+  answers `mtf.native` for the method diffraction on the plane of the case: the run's own ray sets of a field
+  (`lvFieldRaySets`, which `lvRaySets` loops over; never build a second generator) at `bundleGrid` cells and at
+  twice as many, traced by `answerLvRays`, about the flux centroid of the first line. A field is `ok` only where
+  `waveFlags` is empty, else `unconverged` with the flags joined by `+`. Its `gridSize` is the cells asked for, as
+  LV states its own, never the lattice's columns.
+- **The finer lattice comes from the case source asked with `fineSampling`** (`src/rays/raySets.ts`,
+  `FINE_GRID_FACTOR` 2). A rung that says `needsFineRaySets` is handed `RungInputs.fineRaySets`, and the manifest
+  records them under `runs[].fineRaySets`. Only `r6a` asks them: never hand them to R2, R3 or R4, whose baselines
+  are of the run's own sets.
+- **R6a is the wave MTF of the run's ray sets on two lattices** (`src/compare/raysWaveMtf.ts`). A field's sets on
+  both lattices at every line are one span; the finest lattice is judged and the next coarser gives
+  `convergence.maxAbs`. Rays, weights, plane and reference point (midway between the two engines' flux centroids,
+  per lattice) are R4's. Frequencies are `waveFrequencies(recipe)`, at most eleven. The comparator keeps an outcome
+  by the identity of the two answers and the context (`MEASURED`): never key it by anything else.
+- **A lattice is an arbiter or its field is not judged** (`waveFlags`, `src/estimators/waveValidity.ts`):
+  `phaseStep` within `QUARTER_WAVE` and a move on doubling within `CONVERGENCE_BANDS` (0.005 on the axis, 0.01 off
+  it). A flagged field reports `waveMtf.flagged`, lists `waveMtf.maxAbs` as unmeasured with the fact that flagged
+  it, passes, and is in no pin. Never raise `QUARTER_WAVE` or a band, and never judge a flagged field, to cover a
+  lens; a tier-3 test of R6a asserts that fields were judged.
+- **R6a counts judged fields, not PASS pairs**: a flagged field is PASS; `waveMtf.maxAbs.measured` is the count
+  (benchmark 208 of 288). A metric's `measured` is the number of requests whose pair has the metric, never the
+  requests of the rung; a test holds the two apart (`test/baseline/mtf.test.ts`).
+- **R6a is gated at 4e-5 (policy version 8), pinned at Stage 3.5** at ten times LensVisualizer's 3.12e-6 over the
+  208 judged fields of the benchmark, and measured again at Stage 3.8; the exact tracers agree to 1.15e-9, and a
+  pair of `ref` and optiland above a thousandth of the gate is a defect (`r6a.test.ts` holds it). No floor;
+  whether it gets one is the owner's. The pin is of LensVisualizer's rounding: pin it again from a measurement
+  when LensVisualizer's intersection tolerance changes.
+- **R6b is recorded, never gated** (`src/compare/mtfWave.ts`): `mtfOnAxis.maxAbs` in a band of 0.005 and
+  `mtfOffAxis.maxAbs` of 0.01, over the fields both answers stand by; a field an answer calls unconverged goes to
+  `mtfFlagged.maxAbs`, in no band. A row near its band at f/8 is LensVisualizer's grid of 32 cells against the
+  estimator's 64, not a method error (`docs/gotchas.md`).
+- **`r5` is recorded, of three engines, and run only where it is named** (`r5Rung`, `onlyWhereNamed`): it asks
+  R6b's one request of `lv`, `optiland` and `wave`, and optiland is handed the recipe's angles as its option
+  `fieldAnglesDeg` (`recipeAngles`, matched by fraction, never by place); never a second request by angles. A
+  photopic run has no optiland row (`lines.polychromatic`): never ask optiland line by line before Stage 4.3.
+- **A field of R5 is sorted before any difference is taken** (`classifyNativeField`, `src/compare/mtfNative.ts`):
+  unsupported, data, numerical, method, in that order, and only `two-methods` enters a band. The report repeats
+  the sorting from the recorded values (`factsOfRecorded`), so a fact the sorting reads must be recorded: change
+  `factsOfField`, `factsOfRecorded` and `recorded` together. `chiefLanding.maxAbs` is the limit of the sorting and
+  lives in the policy; the comparator reads it from `ComparisonContext.policy` and is not comparable without it.
+  `rim-rays-lost` is `rimRaysLost` above 0 and nothing else: never set a field aside by `rimRaysLit` or
+  `rimLandingSpreadMm` without a measured limit.
+- **A follow-up is a second job of one engine, decided from stored answers** (`FollowUp`,
+  `src/core/orchestrator.ts`; `followUpsOf(policy)`, `src/compare/followUp.ts`): `ManifestJob.step` names it, it
+  has the request id of the first job and a store entry of its own, it follows the rung's other jobs of the run,
+  and in a comparison it is its engine's later answer (`ParticipantResult.steps`, `ComparisonContext.steps`),
+  never a participant; its recorded values are `<name>#<step>`. A pair is judged by the last step and writes the
+  first beside it (`*.firstStepMaxAbs`). `lvrtc run` and `baseline check` pass `followUpsOf` of the policy they
+  judge by. The finer step is `fft512` for `r5` and `geo512` (`geometricRays: 512`) for `r5g`, the latter only of
+  an answer of one line: a marked field on several lines is judged by its first answer.
+- **`r5g` is `r5` on the geometric MTF, by a parameter** (`nativeMtfComparator(rung)` in
+  `src/compare/mtfNative.ts`; `kind` in `src/report/mtfComparison.ts`): one comparator, one sorting of a field,
+  one table, one wording and lint for both rungs. Its engines are `lv`, `optiland` and `replay`; it is run only
+  where named. Never copy R5's machinery for it: a change to a class, a status or a sentence is a change to both,
+  and to both golden files (`r5-stand-ins`, `r5g-stand-ins`).
+- **`r5g` asks one request a field** (`geometricFieldMtfSpecs`), never R4f's request: optiland's geometric MTF of
+  a fast lens wide open takes minutes at full field (`docs/gotchas.md`), and a worker silent for ten minutes is
+  ended and not restarted within a run. A rung is asked for the options of each of its requests
+  (`RungDefinition.engineOptions`, fourth argument); optiland is handed that request's angle as `fieldAnglesDeg`.
+- **The chief-landing limit is a limit of sorting, per rung, and is no gate**: 1e-7 mm for `r5`, 1e-3 mm for `r5g`
+  (awaiting the owner), because the modulus of a geometric MTF does not depend on its reference point and on
+  several lines LV's chief ray is one launch, solved without a wavelength, traced at every line. Never read
+  `imageHeightMm` of two engines on several lines as the landing of one ray.
+- **On several lines optiland's column in R5g is the worker's sum of optiland's own landings**; the report says so
+  under such a table (`GEOMETRIC_SEVERAL_LINES`), decided from the number of lines the answer records, and a test
+  holds that only such a table carries the sentence.
+- **Every sentence a report writes about a recorded comparison is a template of `src/report/wording.ts`**, and
+  `wordingProblems` lints every golden report (`test/report/wording.test.ts`): a new sentence goes into that file,
+  a new banned claim needs its rejected and its accepted examples in the test. `NOT_COVERED` is rendered in every
+  report and says only what the measurement supports; change it only with the plan.
+- **MTF baselines are files of their own** (`baselines/<suite>.mtf.json`, `reports/<suite>/mtf.{md,json}`;
+  `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
+  rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
+  and r5g, `sets`. The benchmark's holds all six, the feature suite's the three gated (run it with
+  `--rungs r4,r4f,r6a`). The rays baseline, its report and its check stay as they are; R4 is in both. The MTF
+  report is rendered from the baseline alone (`src/baseline/mtfReport.ts`) and ends with the fixed Not covered
+  block; its wording is linted.
+- **Contract minor 1 is stated only by a document that uses it** (`CONTRACT_VERSION_1_1`: a baseline with
+  `measured`, `steps`, `bands` or `sets`). Every case, request, result, manifest, comparison and rays baseline is
+  written as `CONTRACT_VERSION` 1.0; never raise that constant, since it is in every identity.
+- **A run directory is of the last run of its suite.** The rays rungs and the MTF rungs are run, compared and
+  written one after the other: write a baseline directly after its own check. `baseline write` refuses a run that
+  lacks a rung the baseline at hand has, unless `--replace`.
+- **`MOVED` is the `DRIFT` of a recorded rung and fails nothing** (a verdict changed, or a figure moved by more
+  than its attention band); `baseline check` also lists every figure that is not what the baseline has
+  (`summarizeChanges`), and does not compare the per-field values kept in `sets`: read `git diff reports/` after a
+  rewrite. A recorded pair that is ERROR today fails the check.
+- **An edit to a file in a built-in engine's import closure (`src/contract/version.ts`, `src/core/suite.ts`, ...)
+  changes its adapter revision**: all four baselines become STALE(engine) and the store recomputes lv, ref, replay
+  and wave. Check, then write, each kind.
+- **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in
+  `src/cli/commands/mtf.ts`, `loadSuiteValue`): the conditions and cases are the benchmark suite's, so the store
+  answers a benchmark lens; r5 and r5g only where optiland is named; it exits 1 on a FAIL or ERROR pair. Without
+  `--profile benchmark` the command is the single request of `lv-tab-default`. A test of it sets `LVRTC_RUNS_DIR`
+  and closes the binding.
+- **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
+  that follows it, and what was written is read back before a commit says it was.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.
@@ -387,17 +495,17 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   workers: name in-process engines (`--engines fake-a,fake-b,fake-none`) in a test that must run without Python.
   `test/fixtures/fault-root` holds the engines that fail.
 - **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
-  test holds the three together. `mtf.native` has a comparator for `r4f` only (`src/compare/mtfFidelity.ts`); the rung
-  that sets two independent engines' MTF against each other brings its own. No quantity is without a comparator
-  today, and the test says so. Raise the policy's `version` when a rung, a class
-  or a limit changes. Three rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
-  (geometry and mask), `r3` (optical path) and `r4` (geometric MTF) all ask the `rays.trace` requests of
+  test holds the three together. `mtf.native` has a comparator for each of `r4f` (`src/compare/mtfFidelity.ts`),
+  `r5` and `r5g` (`mtfNative.ts`) and `r6b` (`mtfWave.ts`); `r5` and `r6b` ask one request, so an answer is
+  computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
+  or a limit changes. Four rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
+  (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
   `rayTraceRequests`, so an engine traces a set once.
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
 - **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`; policy version 7). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
+  `src/compare/floor.ts`; policy version 10). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
   limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
   it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
   the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
@@ -465,12 +573,15 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; 
   ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
-  The baselines hold R0 to R4 (R4f not until Stage 3.8): a policy change therefore needs them rewritten with
-  `--rungs r0,r1,r2,r3,r4`, which needs LV and optiland. `report --floor` remains
-  a local tool. The contract stays at 1.0.
+  The rays baselines hold R0 to R4: a policy change therefore needs them rewritten with
+  `--rungs r0,r1,r2,r3,r4`, and the MTF baselines with theirs, which needs LV and optiland. `report --floor`
+  remains a local tool. A rays baseline states contract 1.0; an MTF baseline 1.1.
 - **Reports are golden-tested** against `test/fixtures/golden`. A change that is meant to change a report rewrites
-  them with `node test/report/writeGolden.ts`; read the diff. `comparePair`, `compareGroup`, `buildReport` and
-  `renderMarkdown` are pure functions and stay so.
+  them with `node test/report/writeGolden.ts` (also `test/fixtures/golden/*.mtf.md`, the MTF reports of the R5 and
+  R5g stand-ins); read the diff. `comparePair`, `compareGroup`, `buildReport` and `renderMarkdown` are pure
+  functions and stay so. The goldens include `r5-stand-ins.report.md` and `r5g-stand-ins`, written by the same
+  command from `test/report/r5Fixture.ts` (stand-in engines named `lv`, `optiland`, `wave`, a policy of
+  binary-fraction bands).
 - **Reports and baselines are deterministic**: no timestamps, no machine information.
 - **Recorded differences are not errors.** Only direct and identical-ray rungs are gated; see the ladder in the
   plan before adding a tolerance.
