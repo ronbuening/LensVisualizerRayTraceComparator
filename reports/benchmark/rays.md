@@ -16,16 +16,16 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | benchmark |
 | Suite hash | ca12c885c2454c3cb1a8d0c54d51128a20c4919c2ceb84c3d03a7404cceb75fa |
-| Baseline hash | 45ff34cc8ec0b7a9474514baf604e071d1ebdf1e1b06debdb32ad871baecdf1b |
+| Baseline hash | d7bcb177ce89836ed1746d62ddab93f248c49e1d1fed7c2143b655b3641ae3d7 |
 | Contract version | 1.0 |
 | Policy | rungs v10 |
 | Policy hash | 239a222c5dfcfcad8847826fcd136bfec8d42663cda84f3b26febae191a79c62 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | 26f4fdf03497bf33532d4ecb9a6a153103ad2691ae16df7d7fe33e39c433efba | commit 33ebdb30b619a02edcf03f6d930bc1ef5e4e6905, dirty false, engineFileCount 151 |
+| lv | 1 | 78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322 | cdbbbce9025d6af6c839748efb360b839b88c77226660dc39202113aeb1084ce | commit 33ebdb30b619a02edcf03f6d930bc1ef5e4e6905, dirty false, engineFileCount 151 |
 | optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | e505ad9abe7ea56e6e985a4a98ee5b06602adb3e3bd2532941314fb7ba940712 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | cf9f034646e8fb811815bc6335e461ce69caf5da94a7b39b428c0146c996fe38 | 8e98f6976845a9bcd8794386f7e74ea2af13ebc647eaddb24dc0cf6f01d05b39 | sourceFiles 11 |
+| ref | 1 | cf9f034646e8fb811815bc6335e461ce69caf5da94a7b39b428c0146c996fe38 | d94e3fcb4a6cdf6e79745d1a432a75827bfdf20010c163ca7573fcfdf5a7b950 | sourceFiles 11 |
 
 | Run | Case |
 |---|---|
