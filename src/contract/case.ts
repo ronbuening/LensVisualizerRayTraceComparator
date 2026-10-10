@@ -8,7 +8,7 @@ import type { FeatureFlag } from "./features.ts";
 import { deepFreeze } from "./json.ts";
 import type { Provenance } from "./provenance.ts";
 import { assertKind } from "./schemas.ts";
-import { CONTRACT_VERSION } from "./version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2, contractMinor } from "./version.ts";
 
 /** One polynomial term of an asphere: it adds `coeff * r^power` to the sag. `power` is an integer of at least 1. */
 export interface AsphereTerm {
@@ -33,15 +33,25 @@ export type SurfaceShape =
 
 /** A surface's clear aperture, mm. */
 export interface SurfaceAperture {
-  /** The effective clip radius. The limit is inclusive: a ray at exactly this height passes. */
-  readonly semiDiameter: number;
+  /**
+   * The effective clip radius. The limit is inclusive: a ray at exactly this height passes. Null (contract minor 2)
+   * for a surface that does not clip: it stops no ray at any height, and is met wherever a ray's line crosses its
+   * sag.
+   */
+  readonly semiDiameter: number | null;
   /**
    * The clear semi-diameter the clip radius is derived from, before any rule that widens or tightens it: the
-   * prescription's, and on the stop surface the stop setting of the case.
+   * prescription's, and on the stop surface the stop setting of the case. On a surface that does not clip it is
+   * the surface's extent and limits nothing: the heights its sag is described at are fractions of it.
    */
   readonly nominalSemiDiameter: number;
-  /** Radius of a central obstruction; 0 for none. */
+  /** Radius of a central obstruction; 0 for none, and 0 on a surface that does not clip. */
   readonly innerSemiDiameter: number;
+}
+
+/** Whether a surface's aperture stops rays: false for one without a clip radius (`semiDiameter` null). */
+export function clips(aperture: SurfaceAperture): aperture is SurfaceAperture & { readonly semiDiameter: number } {
+  return aperture.semiDiameter !== null;
 }
 
 /** One surface of the system, in the order light meets it. */
@@ -134,12 +144,19 @@ export const Z_TOLERANCE_MM = 1e-9;
  * `stopIndex` and `lastLensSurfaceIndex` are surface indices, and `lastLensSurfaceIndex` is that of the last
  * surface that is not a synthetic plate; each vertex `z`, and `designImageZ` after the last surface, equals the sum
  * of the thicknesses before it within `Z_TOLERANCE_MM`, so the first vertex is at 0; an asphere's term powers are
- * distinct; there is at least one line and every weight is positive; and `indexAfterSurface` decodes to float64 of
+ * distinct; a surface that does not clip (`aperture.semiDiameter` null) has no central obstruction and is not the
+ * stop; there is at least one line and every weight is positive; and `indexAfterSurface` decodes to float64 of
  * shape `[lines, surfaces]` holding positive finite indices. The inputs are expected to be schema-valid.
+ *
+ * `contract` is the version the case states, where the whole case is at hand: a case with a surface that does not
+ * clip uses what minor 2 added, and one that states an earlier version is not what it says it is.
  */
-export function caseInvariantProblems(system: OpticalSystem, conditions: CaseConditions): string[] {
+export function caseInvariantProblems(system: OpticalSystem, conditions: CaseConditions, contract?: string): string[] {
   const problems: string[] = [];
   const { surfaces } = system;
+  if (contract !== undefined && usesMinor2(system) && !((contractMinor(contract) ?? 0) >= 2)) {
+    problems.push(`it states the contract ${contract} and has a surface that does not clip, which minor 2 added`);
+  }
   for (const name of ["stopIndex", "lastLensSurfaceIndex"] as const) {
     const index = system[name];
     if (!Number.isInteger(index) || index < 0 || index >= surfaces.length) {
@@ -162,6 +179,16 @@ export function caseInvariantProblems(system: OpticalSystem, conditions: CaseCon
       problems.push(`system.surfaces[${index}].z is ${surface.z}, but the thicknesses before it sum to ${expectedZ}`);
     }
     expectedZ += surface.thickness;
+    if (surface.aperture.semiDiameter === null) {
+      const at = `system.surfaces[${index}].aperture`;
+      if (surface.aperture.innerSemiDiameter !== 0) {
+        const inner = surface.aperture.innerSemiDiameter;
+        problems.push(`${at} does not clip (semiDiameter is null) and has the inner semi-diameter ${inner}, not 0`);
+      }
+      if (index === system.stopIndex) {
+        problems.push(`${at} does not clip (semiDiameter is null), and the surface is the stop`);
+      }
+    }
     if (surface.shape.kind === "asphere") {
       const powers = surface.shape.terms.map((term) => term.power);
       const repeated = powers.find((power, at) => powers.indexOf(power) !== at);
@@ -207,11 +234,25 @@ export function caseIdentity(system: OpticalSystem, conditions: CaseConditions):
   return { systemId: hashCanonical(system), id: hashCanonical({ system, conditions }) };
 }
 
+/** Whether a system has something contract minor 2 added: a surface whose aperture does not clip. */
+function usesMinor2(system: OpticalSystem): boolean {
+  return system.surfaces.some((surface) => surface.aperture.semiDiameter === null);
+}
+
+/**
+ * The contract version a case of this system is written to: `CONTRACT_VERSION`, or the minor that added what the
+ * system uses. So a case without a surface that does not clip is the document it was before minor 2.
+ */
+export function caseContractVersion(system: OpticalSystem): string {
+  return usesMinor2(system) ? CONTRACT_VERSION_1_2 : CONTRACT_VERSION;
+}
+
 const UNSET_ID = "0".repeat(64);
 
 /**
  * Turns a draft into a case: checks it against the schema and the invariants, derives the feature flags, computes
- * `systemId` and `id`, and returns the case frozen at every depth. The draft is copied, so it is neither frozen
+ * `systemId` and `id`, states the contract version the system needs (`caseContractVersion`), and returns the case
+ * frozen at every depth. The draft is copied, so it is neither frozen
  * nor kept. Throws an error listing every schema issue, or every broken invariant, when the draft is not a case.
  */
 export function finalizeCase(draft: OpticalCaseDraft): OpticalCase {
@@ -233,6 +274,7 @@ export function finalizeCase(draft: OpticalCaseDraft): OpticalCase {
   if (problems.length > 0) throw new Error(`contract: not a valid optical-case: ${problems.join("; ")}`);
   return deepFreeze({
     ...unidentified,
+    contract: caseContractVersion(system),
     ...caseIdentity(system, conditions),
     features: deriveFeatures(system, conditions).flags,
   });

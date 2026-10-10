@@ -1,9 +1,9 @@
 {
   "byState": {
     "prime": {
-      "exported": 572,
+      "exported": 588,
       "notExportable": 22,
-      "states": 594,
+      "states": 610,
       "threw": 0
     },
     "tele": {
@@ -20,24 +20,25 @@
     }
   },
   "contract": "1.0",
-  "exported": 1164,
+  "exported": 1180,
   "features": {
     "aperture.annular": 0,
+    "aperture.unclipped": 232,
     "lines.multiple": 0,
     "object.finite": 0,
-    "surface.asphere.even": 580,
+    "surface.asphere.even": 589,
     "surface.asphere.flat-base": 2,
     "surface.asphere.odd": 78,
-    "surface.conic": 270
+    "surface.conic": 274
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62",
+    "commit": "31c34396df4d28131f3f203dda004dc4796cfcdf",
     "dirty": false,
-    "engineClosureHash": "1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0",
-    "engineFileCount": 151
+    "engineClosureHash": "a52a7b8eadce812a94326633c81d84e3fb5f49aad6989e24595da13ca97112ab",
+    "engineFileCount": 152
   },
-  "lenses": 891,
+  "lenses": 907,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -57,7 +58,7 @@
   "notes": {
     "bulk-absorption": 1,
     "projection:fisheye-equidistant": 3,
-    "projection:fisheye-equisolid": 12
+    "projection:fisheye-equisolid": 13
   },
   "reasons": {
     "diffractive-surface": {
@@ -99,7 +100,7 @@
     },
     "mixed-reference": {
       "lenses": [
-        "sony-fe-14mm-f18-gm"
+        "samyang-af-35mm-f2p8-fe"
       ],
       "states": 1,
       "teleOnly": [],
@@ -162,7 +163,7 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1188,
+  "states": 1204,
   "threw": [],
   "unindexedFiles": 0,
   "zooms": 297

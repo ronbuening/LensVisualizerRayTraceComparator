@@ -18,6 +18,7 @@
     "features": {
       "supported": [
         "aperture.annular",
+        "aperture.unclipped",
         "lines.multiple",
         "object.finite",
         "surface.asphere.even",

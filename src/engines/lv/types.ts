@@ -61,7 +61,8 @@ export interface LvAsphericTerm {
 
 /**
  * One surface of a prepared state. `d` is the resolved gap after the surface, `nd` the index after it (air is
- * exactly 1), `sd` the hard clear semi-diameter and, on the stop surface, the runtime stop radius. LV's surface also
+ * exactly 1), `sd` the hard clear semi-diameter (an envelope and no limit where `clips` is false) and, on the stop
+ * surface, the runtime stop radius. LV's surface also
  * carries `source` and `base`, the authored records: they are deliberately absent here, because their `sd` is not
  * the runtime one. `syntheticKind` of the binding reads the one member of `source` that exists nowhere else.
  */
@@ -75,6 +76,12 @@ export interface LvSurface {
   readonly nd: number;
   readonly sd: number;
   readonly innerSd: number | null;
+  /**
+   * False where `sd` is the rim LensVisualizer generated for a rear plate whose prescription publishes none: such a
+   * surface never clips a ray or limits the field, and its `sd` is only an envelope. True on every other surface;
+   * absent in a LensVisualizer from before it told the two apart, where every surface clips.
+   */
+  readonly clips?: boolean;
   readonly elemId: number;
   readonly asphere: LvAsphere | null;
   /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */

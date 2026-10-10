@@ -6,7 +6,7 @@ import packageJson from "../../../package.json" with { type: "json" };
 import { caseInvariantProblems, verifyCaseIdentity } from "../../../src/contract/case.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import { validateKind } from "../../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { exportCase } from "../../../src/engines/lv/exportCase.ts";
 import type { ExportCaseInput, ExportCaseResult, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
@@ -465,6 +465,40 @@ test("an annular aperture is exported with its inner semi-diameter and the flag"
   const opticalCase = exported(exportCase(inputFor(tripletState({}, surfaces))));
   assert.equal(opticalCase.system.surfaces[4].aperture.innerSemiDiameter, 2.5);
   assert.ok(opticalCase.features.includes("aperture.annular"));
+});
+
+test("a rear plate whose rim LensVisualizer generated is exported as surfaces that do not clip, in a case of 1.2", () => {
+  const generated = TRIPLET.map((surface) =>
+    surface.synthetic === undefined ? surface : { ...surface, clips: false },
+  );
+  const opticalCase = exported(exportCase(inputFor(tripletState({}, generated))));
+  assert.deepEqual(
+    opticalCase.system.surfaces.slice(5).map(({ label, aperture, synthetic }) => ({ label, aperture, synthetic })),
+    [
+      {
+        label: "RP1a",
+        aperture: { semiDiameter: null, nominalSemiDiameter: 12, innerSemiDiameter: 0 },
+        synthetic: "rearPlate",
+      },
+      {
+        label: "RP1b",
+        aperture: { semiDiameter: null, nominalSemiDiameter: 12, innerSemiDiameter: 0 },
+        synthetic: "rearPlate",
+      },
+    ],
+  );
+  assert.equal(opticalCase.contract, CONTRACT_VERSION_1_2);
+  assert.ok(opticalCase.features.includes("aperture.unclipped"));
+  assert.deepEqual(validateKind("optical-case", opticalCase), []);
+
+  // The plate with a published rim is the case it was: another case than the one above, written to 1.0.
+  const published = tripletCase();
+  assert.equal(published.contract, CONTRACT_VERSION);
+  assert.ok(!published.features.includes("aperture.unclipped"));
+  assert.notEqual(published.systemId, opticalCase.systemId);
+  // Whether LensVisualizer states `clips: true` or, as before it told the two apart, nothing: one case.
+  const stated = TRIPLET.map((surface) => ({ ...surface, clips: true }));
+  assert.equal(exported(exportCase(inputFor(tripletState({}, stated)))).id, published.id);
 });
 
 // ── Lines, object and notes ──────────────────────────────────────────────────────────────────────────────────────

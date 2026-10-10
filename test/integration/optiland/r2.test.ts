@@ -144,7 +144,7 @@ test(
 
     // A fan across the first surface and past its rim on both sides, at 8 degrees: more rays than one batch holds.
     const rays = 20_000;
-    const reach = 1.2 * opticalCase.system.surfaces[0].aperture.semiDiameter;
+    const reach = 1.2 * opticalCase.system.surfaces[0].aperture.nominalSemiDiameter;
     const [sine, cosine] = [Math.sin((8 * Math.PI) / 180), Math.cos((8 * Math.PI) / 180)];
     const origins = new Float64Array(3 * rays);
     const directions = new Float64Array(3 * rays);

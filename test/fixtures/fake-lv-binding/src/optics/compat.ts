@@ -12,9 +12,15 @@ export function buildLens2(data: FakeLensData): FakeRuntimeLens {
   const surfaces: FakeSurfaceData[] = data.surfaces.map((surface) => ({ ...surface }));
   const lastLensSurfaceIdx = surfaces.length - 1;
   if (data.rearPlate) {
-    const { d, nd, gap, sd } = data.rearPlate;
-    surfaces.push({ label: "RP1a", R: FLAT_RADIUS, d, nd, sd, synthetic: "rearPlate" });
-    surfaces.push({ label: "RP1b", R: FLAT_RADIUS, d: gap, nd: 1, sd, synthetic: "rearPlate" });
+    const { d, nd, gap } = data.rearPlate;
+    // A published rim is an aperture. Without one the fake generates a rim of its own rule, twice the largest
+    // authored semi-diameter, and marks it as one that does not clip.
+    const rim =
+      data.rearPlate.sd === undefined
+        ? { sd: 2 * Math.max(...surfaces.map((surface) => surface.sd)), clips: false as const }
+        : { sd: data.rearPlate.sd };
+    surfaces.push({ label: "RP1a", R: FLAT_RADIUS, d, nd, ...rim, synthetic: "rearPlate" });
+    surfaces.push({ label: "RP1b", R: FLAT_RADIUS, d: gap, nd: 1, ...rim, synthetic: "rearPlate" });
   }
   const stopIndex = surfaces.findIndex((surface) => surface.label === "STO");
   if (stopIndex < 0) throw new Error(`${data.key}: no STO surface`);
@@ -81,6 +87,7 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       nd: source.nd,
       sd: index === L.stopIndex ? wideOpenStopAtZoom(zoomT, L) : source.sd,
       innerSd: null,
+      clips: source.clips !== false,
       elemId: source.nd === 1 ? 0 : index + 1,
       asphere: source.asphere ?? null,
       diffractive: null,

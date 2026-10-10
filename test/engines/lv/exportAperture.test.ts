@@ -241,3 +241,90 @@ test("an answer that is not what the state implies is refused, naming the surfac
   };
   assert.throws(() => surfaceAperture(noLimit, STATE, STATE.surfaces[0], undefined), /semi-diameter null, expected 9/);
 });
+
+// ── A surface that does not clip ─────────────────────────────────────────────────────────────────────────────────
+
+/** A lens with two rear plates: the first with a rim LensVisualizer generated, the second with a published one. */
+const PLATED = stateOf(
+  [
+    { label: "1", R: 40, d: 3, nd: 1.6, sd: 9 },
+    { label: "STO", R: FLAT, d: 20, sd: 3 },
+    { label: "RP1a", R: FLAT, d: 2, nd: 1.5, sd: 13.5, synthetic: "rearPlate", clips: false },
+    { label: "RP1b", R: FLAT, d: 1, sd: 13.5, synthetic: "rearPlate", clips: false },
+    { label: "RP2a", R: FLAT, d: 2, nd: 1.5, sd: 11, synthetic: "rearPlate", clips: true },
+    { label: "RP2b", R: FLAT, d: 1, sd: 11, synthetic: "rearPlate", clips: true },
+  ],
+  { stopIndex: 1 },
+);
+
+test("a rim LensVisualizer generated is exported as no clip radius, its sd as the extent, after LensVisualizer was asked", () => {
+  const asked: number[] = [];
+  const recording = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) => {
+      if (args[1].label === "RP1a") asked.push(args[2]);
+      return lvEvaluateAperture(...args);
+    },
+  };
+  for (const index of [2, 3]) {
+    assert.deepEqual(surfaceAperture(recording, PLATED, PLATED.surfaces[index], undefined), {
+      semiDiameter: null,
+      nominalSemiDiameter: 13.5,
+      innerSemiDiameter: 0,
+    });
+  }
+  // On the axis, at the envelope, just past where a rim of 13.5 mm would clip, far outside, and at the largest double.
+  assert.deepEqual(asked.slice(0, 3), [0, 0, 13.5]);
+  assert.equal(asked[3], neighbours(13.500000001).above);
+  assert.deepEqual(asked.slice(4), [28, 13.5e6, Number.MAX_VALUE]);
+  // A published rim is an aperture like any other, whatever the surface is.
+  assert.deepEqual(surfaceAperture(API, PLATED, PLATED.surfaces[4], undefined), {
+    semiDiameter: 11.000000001,
+    nominalSemiDiameter: 11,
+    innerSemiDiameter: 0,
+  });
+  // And a surface of a LensVisualizer that has no such mark clips, as every surface did.
+  assert.equal(STATE.surfaces[0].clips, undefined);
+  assert.equal(surfaceAperture(API, STATE, STATE.surfaces[0], undefined).semiDiameter, 9.000000001);
+});
+
+test("what LensVisualizer's state says of a rim and what its tracer does with it must agree, or nothing is exported", () => {
+  const plate = PLATED.surfaces[2];
+  // The state marks the rim as generated, and the tracer clips by it all the same.
+  const clipping = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) =>
+      lvEvaluateAperture(args[0], { ...args[1], clips: true }, args[2], args[3]),
+  };
+  assert.throws(
+    () => surfaceAperture(clipping, PLATED, plate, undefined),
+    /surface RP1a is marked as one that does not clip, and it is traced with the semi-diameter 13\.5/,
+  );
+  // The tracer reports no semi-diameter for a surface the state does not mark: the guard of every other surface.
+  const unmarked = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) =>
+      lvEvaluateAperture(args[0], { ...args[1], clips: false }, args[2], args[3]),
+  };
+  assert.throws(
+    () => surfaceAperture(unmarked, PLATED, PLATED.surfaces[4], undefined),
+    /traces surface RP2a with the semi-diameter null, expected 11/,
+  );
+  // No semi-diameter on the axis, and a ray stopped far outside: an envelope that clips after all.
+  const farRim = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) => {
+      const evaluated = lvEvaluateAperture(...args);
+      return args[2] > 1e6 ? { ...evaluated, state: "outside" as const } : evaluated;
+    },
+  };
+  assert.throws(
+    () => surfaceAperture(farRim, PLATED, plate, undefined),
+    /surface RP1a is marked as one that does not clip, and a ray at the height 13500000 is outside/,
+  );
+  // A hole in a surface that does not clip is nothing the contract states.
+  assert.throws(
+    () => surfaceAperture(API, PLATED, { ...plate, innerSd: 2 }, undefined),
+    /surface RP1a does not clip and has the inner semi-diameter 2/,
+  );
+  assert.throws(
+    () => surfaceAperture(API, PLATED, { ...plate, sd: Number.NaN }, undefined),
+    /surface RP1a does not clip and has the envelope NaN/,
+  );
+});

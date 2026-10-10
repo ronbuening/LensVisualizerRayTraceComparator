@@ -65,7 +65,8 @@ def exact_trace(case: dict[str, Any], origin: Point, direction: Point, line: int
     The numbers of the case and of the ray are taken as the doubles they are. At each surface the line is met with
     the sag by Newton's method from the point where it crosses the surface's vertex plane, which on the surfaces of
     these tests is the crossing nearest that plane; the step may be negative. A line that leaves the heights at
-    which the surface has a sag misses it. The aperture is inclusive at both radii. A ray is bent by Snell's law in
+    which the surface has a sag misses it. The aperture is inclusive at both radii, and a surface
+    without a clip radius (``semiDiameter`` None) has no outer one. A ray is bent by Snell's law in
     its vector form, and ends where it is totally reflected. The optical path is index times the signed step.
     """
     surfaces = case["system"]["surfaces"]
@@ -96,7 +97,9 @@ def exact_trace(case: dict[str, Any], origin: Point, direction: Point, line: int
         q = (p[0] + step * d[0], p[1] + step * d[1], p[2] + step * d[2])
         r = (q[0] * q[0] + q[1] * q[1]).sqrt()
         aperture = entry["aperture"]
-        if r > Decimal(aperture["semiDiameter"]) or r < Decimal(aperture["innerSemiDiameter"]):
+        # A surface without a clip radius stops no ray at any height.
+        outside = aperture["semiDiameter"] is not None and r > Decimal(aperture["semiDiameter"])
+        if outside or r < Decimal(aperture["innerSemiDiameter"]):
             return Exact(STATUS_BLOCKED, number, tuple(hits))
         slope = exact_slope(shape, r)
         gx, gy = (slope * q[0] / r, slope * q[1] / r) if r != 0 else (Decimal(0), Decimal(0))

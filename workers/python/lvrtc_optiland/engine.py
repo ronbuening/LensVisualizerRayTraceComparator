@@ -26,7 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from lvrtc_worker_kit import CONTRACT_VERSION
+from lvrtc_worker_kit import CONTRACT_VERSION, CONTRACT_VERSION_1_2, speaks
 from lvrtc_worker_kit.protocol import engine_stamp, make_result
 from lvrtc_worker_kit.validate import (
     SchemaSet,
@@ -49,6 +49,7 @@ from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_cou
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
+    "aperture.unclipped",
     "lines.multiple",
     "object.finite",
     "surface.asphere.even",
@@ -60,6 +61,7 @@ SUPPORTED_FEATURES: tuple[str, ...] = (
 read back and held to the case by ``build.verify_optic``, and has a test on the real optiland:
 
 - ``aperture.annular``: the inner radius of a ``RadialAperture``, which passes a ray at exactly that height;
+- ``aperture.unclipped``: a surface without a physical aperture, at which optiland clips no ray;
 - ``lines.multiple``: one optic for each line, with that line's indices and wavelength;
 - ``object.finite``: the object surface at the object plane;
 - ``surface.asphere.even``, ``surface.asphere.odd``: optiland's two aspheres, with their coefficient lists;
@@ -110,9 +112,9 @@ class EngineUnavailable(RuntimeError):
 def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, str]]:
     """What keeps the engine from answering ``request`` about ``case``, by its own descriptor; empty when nothing does.
 
-    In the order of the comparator's negotiation (``src/core/negotiate.ts``): a contract version that is not the
-    worker's, the case's first; the quantity, when it is not offered; each feature flag the case states that is not
-    supported. The engine states no limit, so none is exceeded.
+    In the order of the comparator's negotiation (``src/core/negotiate.ts``): a contract version outside the range
+    the worker speaks, the case's first; the quantity, when it is not offered; each feature flag the case states
+    that is not supported. The engine states no limit, so none is exceeded.
 
     Then what the quantity asked for has no answer about in this case, which no flag of a descriptor says: for
     ``paraxial.first-order``, a term of power 1 and a term of power 2 (``first_order.term_refusals``). It is decided
@@ -121,11 +123,11 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     items: list[dict[str, str]] = []
     written = (("the case", case["contract"]), ("the request", request["contract"]))
     for version in dict.fromkeys(stated for _, stated in written):
-        if version == CONTRACT_VERSION:
+        if speaks(version):
             continue
         names = [name for name, stated in written if stated == version]
         said = f"{' and '.join(names)} {'are' if len(names) > 1 else 'is'} written to {version}"
-        message = f"the engine speaks contract {CONTRACT_VERSION} to {CONTRACT_VERSION}; {said}"
+        message = f"the engine speaks contract {CONTRACT_VERSION} to {CONTRACT_VERSION_1_2}; {said}"
         items.append({"code": "contract", "item": version, "message": message})
     quantity = request["quantity"]
     if quantity not in QUANTITIES:
@@ -198,7 +200,7 @@ class OptilandEngine:
         self._mtf = mtf
         self._clock = clock
         self._descriptor: dict[str, Any] = {
-            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION},
+            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION_1_2},
             "identity": identity,
             "capabilities": {
                 "features": {"supported": list(SUPPORTED_FEATURES), "limits": {}},

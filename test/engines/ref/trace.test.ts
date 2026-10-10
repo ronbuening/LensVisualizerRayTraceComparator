@@ -978,6 +978,111 @@ test("an annular aperture stops a ray inside its inner radius, and passes one ex
   }
 });
 
+/** A wide plane in air at the first vertex, to be the stop: a surface that does not clip cannot be one. */
+const OPEN_STOP: SurfaceOf = { z: 0, shape: sphere(Infinity), index: 1 };
+
+test("a surface that does not clip is met wherever the line crosses it: far beyond its extent a ray passes, and is bent", () => {
+  // A plate of two planes, 2 mm in extent, 1 mm behind the stop: with a clip radius of that extent, and without one.
+  const [n, d] = [1.5, 6];
+  const plate = (clipRadius: number | null): OpticalCase =>
+    systemOf([
+      OPEN_STOP,
+      { z: 1, shape: sphere(Infinity), index: n, semiDiameter: 2, clipRadius },
+      { z: 1 + d, shape: sphere(Infinity), index: 1, semiDiameter: 2, clipRadius },
+    ]);
+  const open = plate(null);
+  assert.deepEqual(open.features, ["aperture.unclipped"]);
+  assert.deepEqual(
+    buildRefSystem(open)
+      .surfaces.slice(1)
+      .map((surface) => [surface.clipRadius, surface.nominalSemiDiameter]),
+    [
+      [Infinity, 2],
+      [Infinity, 2],
+    ],
+  );
+  // A ray along the axis keeps its height: it is on both planes at the height it was given, whatever that is.
+  for (const height of [0, 2, 2 + ulp(2), 2.1, 30, 999]) {
+    const traced = trace(open, [0, height, -4], [0, 0, 1]);
+    assert.deepEqual([traced.status, traced.endSurface], ["ok", 3], `height ${height}`);
+    assert.deepEqual(traced.hits.slice(1), [
+      [0, height, 1],
+      [0, height, 1 + d],
+    ]);
+    assert.equal(traced.opticalPath, 5 + n * d);
+  }
+  // The same plate with its extent as a clip radius stops what is beyond it, at its first surface.
+  assert.equal(trace(plate(2), [0, 2, -4], [0, 0, 1]).status, "ok");
+  for (const height of [2 + ulp(2), 2.1, 30]) {
+    const stopped = trace(plate(2), [0, height, -4], [0, 0, 1]);
+    assert.deepEqual([stopped.status, stopped.endSurface, stopped.hits.length], ["blocked", 1, 1]);
+  }
+
+  // It is glass all the same. A ray of the 3-4-5 triangle, sin i = 3/5, meets the first plane 53 mm from the axis,
+  // is bent to sin t = 2/5 and leaves parallel to itself, displaced by d sin i (1 - cos i / sqrt(n^2 - sin^2 i)).
+  const direction: Vec3 = [0, 0.6, 0.8];
+  const steep = trace(open, [0, 50, -3], direction);
+  assert.equal(steep.status, "ok");
+  const tangent = 0.4 / Math.sqrt(1 - 0.4 * 0.4);
+  nearPoint(steep.hits[1], [0, 53, 1], 4 * ulp(53), "first face");
+  nearPoint(steep.hits[2], [0, 53 + d * tangent, 1 + d], 4 * ulp(60), "second face");
+  nearPoint(steep.direction, direction, 2 ** -52, "direction behind the plate");
+  const displacement = d * 0.6 * (1 - 0.8 / Math.sqrt(n * n - 0.36));
+  near((53 + d * 0.75 - steep.hits[2][1]) * 0.8, displacement, 8 * ulp(60), "lateral displacement");
+  near(steep.opticalPath, 4 / 0.8 + (n * d) / Math.sqrt(1 - 0.16), 8 * ulp(20), "optical path");
+});
+
+test("a curved surface that does not clip is its whole sag: a sphere to its equator, a paraboloid at any height", () => {
+  // A sphere of radius 50, 2 mm in extent, its vertex at z = 1. At the height 30 a ray along the axis meets it 10 mm
+  // behind its vertex: 3-4-5.
+  const ball = (clipRadius: number | null): OpticalCase =>
+    systemOf([OPEN_STOP, { z: 1, shape: sphere(50), index: 1.5, semiDiameter: 2, clipRadius }]);
+  const onBall = trace(ball(null), [0, 30, -5], [0, 0, 1]);
+  assert.equal(onBall.status, "ok");
+  nearPoint(onBall.hits[1], [0, 30, 11], 4 * ulp(30), "on the sphere");
+  assert.equal(trace(ball(2), [0, 30, -5], [0, 0, 1]).status, "blocked");
+  // Beside the sphere there is no surface to meet, clipped or not: such a ray is blocked.
+  const beside = trace(ball(null), [0, 50 + 1e-9, -5], [0, 0, 1]);
+  assert.deepEqual([beside.status, beside.endSurface], ["blocked", 1]);
+
+  // A paraboloid z = a r^2 on a flat base, which ends nowhere. Along the axis it is met at a h^2.
+  const a = 0.01;
+  const bowl = (clipRadius: number | null): OpticalCase =>
+    systemOf([
+      OPEN_STOP,
+      {
+        z: 1,
+        shape: { kind: "asphere", radius: null, conic: 0, terms: [{ power: 2, coeff: a }] },
+        index: 1.5,
+        semiDiameter: 2,
+        clipRadius,
+      },
+    ]);
+  const along = trace(bowl(null), [0, 30, -5], [0, 0, 1]);
+  assert.equal(along.status, "ok");
+  nearPoint(along.hits[1], [0, 30, 1 + a * 900], 4 * ulp(30), "on the paraboloid, along the axis");
+  // A line through the point (0, 10, 1) of its vertex plane along (0, 3, 4) / 5 crosses it where
+  // 0.8 s = a (10 + 0.6 s)^2: the smaller root of 0.36 a s^2 + (12 a - 0.8) s + 100 a = 0, some 11 mm from the axis.
+  const [qa, qb, qc] = [0.36 * a, 12 * a - 0.8, 100 * a];
+  const step = (2 * qc) / (-qb + Math.sqrt(qb * qb - 4 * qa * qc));
+  const through = (direction: Vec3): Vec3 => [0, 10 - 5 * direction[1], 1 - 5 * direction[2]];
+  const oblique = trace(bowl(null), through([0, 0.6, 0.8]), [0, 0.6, 0.8]);
+  assert.equal(oblique.status, "ok");
+  assert.ok(10 + 0.6 * step > 5 * 2, "far beyond the extent");
+  nearPoint(oblique.hits[1], [0, 10 + 0.6 * step, 1 + 0.8 * step], 8 * ulp(11), "on the paraboloid, at an angle");
+  assert.equal(trace(bowl(2), through([0, 0.6, 0.8]), [0, 0.6, 0.8]).status, "blocked");
+
+  // A line that passes under the paraboloid crosses it nowhere: dz s = a (10 + dy s)^2 has no root for dy = 0.95.
+  // With a clip radius the stretch of the line within it was looked at, and the ray is blocked; without one the
+  // line has no end to look to, and what was not found is not known to be absent: failed, never blocked.
+  const under: Vec3 = [0, 0.95, Math.sqrt(1 - 0.95 * 0.95)];
+  assert.ok((20 * a * under[1] - under[2]) ** 2 < 4 * (a * under[1] * under[1]) * (100 * a), "no real root");
+  const clipped = trace(bowl(40), through(under), under);
+  assert.deepEqual([clipped.status, clipped.endSurface], ["blocked", 1]);
+  const unclipped = trace(bowl(null), through(under), under);
+  assert.deepEqual([unclipped.status, unclipped.endSurface], ["failed", 1]);
+});
+
 // ── Surfaces that cross ──────────────────────────────────────────────────────────────────────────────────────────
 
 test("a surface that lies behind the last hit is met by a step backwards, and the path counts it with its sign", () => {

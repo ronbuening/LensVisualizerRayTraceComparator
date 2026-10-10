@@ -14,6 +14,8 @@ export interface SurfaceSummary {
   readonly nd: number;
   /** The clear semi-diameter; on the stop surface, the runtime stop radius. */
   readonly sd: number;
+  /** False where `sd` is a rim LV generated for a rear plate: an envelope that clips no ray. */
+  readonly clips: boolean;
   readonly z: number;
   readonly asphere: boolean;
   /** "rearPlate" for a surface LV added, else null. */
@@ -54,6 +56,7 @@ export function summarizeState(state: LvPreparedState): StateSummary {
       d: surface.d,
       nd: surface.nd,
       sd: surface.sd,
+      clips: surface.clips !== false,
       z: surface.z,
       asphere: surface.asphere !== null && surface.asphere !== undefined,
       synthetic: syntheticKind(surface),

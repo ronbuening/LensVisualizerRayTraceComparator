@@ -7,6 +7,8 @@ export interface FakeSurfaceData {
   sd: number;
   asphere?: Record<string, number>;
   synthetic?: "rearPlate";
+  /** False only on a rear plate whose rim the fake generated: it clips no ray, and its `sd` is an envelope. */
+  clips?: false;
 }
 
 export interface FakeFiniteConjugate {
@@ -21,7 +23,8 @@ export interface FakeLensData {
   key: string;
   name: string;
   surfaces: FakeSurfaceData[];
-  rearPlate?: { d: number; nd: number; gap: number; sd: number };
+  /** A plate behind the lens. Without a published `sd` the fake generates a rim, which does not clip. */
+  rearPlate?: { d: number; nd: number; gap: number; sd?: number };
   focusTravel?: number;
   zoomPositions?: number[];
   zoomStopSDs?: number[];
@@ -140,6 +143,7 @@ export interface FakeStateSurface {
   nd: number;
   sd: number;
   innerSd: number | null;
+  clips: boolean;
   elemId: number;
   asphere: Record<string, number> | null;
   diffractive: null;

@@ -1,6 +1,7 @@
 // Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
 // pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40, those of the geometric OTF's
-// conventions at c05a2ab7 and those of the MTF's refinement, which the replay restates, at 33ebdb30.
+// conventions at c05a2ab7, those of the MTF's refinement, which the replay restates, at 33ebdb30, and those of the
+// rear plate whose generated rim does not clip at 31c34396.
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -95,6 +96,32 @@ test(
     );
   },
 );
+
+test("a rim LensVisualizer generated for a rear plate is still the one thing it does not clip by", { skip }, () => {
+  const mirror =
+    "surfaceAperture in src/engines/lv/exportAperture.ts exports a surface marked `clips: false`, for which " +
+    "evaluateAperture reports no semi-diameter, as one without a clip radius, and every other surface with one";
+  const aperture = "src/optics/trace/aperture.ts";
+  assertSource(aperture, 'if (typeof surface.sd !== "number" || !surface.clips) return null;', mirror);
+  assertSource(
+    aperture,
+    'if (semiDiameter !== null && exceedsAperture(radius, semiDiameter)) { apertureState = "outside"; }',
+    mirror,
+  );
+  // Which surfaces are marked: the two of a plate without a published `sd`, and no surface of an authored lens.
+  assertSource(
+    "src/optics/prescription/rearPlates.ts",
+    "plate.sd === undefined ? { sd: generatedSd, clips: false } : { sd: plate.sd };",
+    mirror,
+  );
+  assertSource("src/optics/prescription/normalizeLensData.ts", "clips: surface.clips !== false,", mirror);
+  assertSource("src/optics/validateLensData.ts", "if (s.clips !== undefined) {", mirror);
+  assertSource(
+    "src/optics/types.ts",
+    "clips: boolean;",
+    "LvSurface in src/engines/lv/types.ts reads the member, and takes a surface without it for one that clips",
+  );
+});
 
 test("a flat surface is still one whose radius exceeds 1e10 and that has no asphere", { skip }, () => {
   const mirror =

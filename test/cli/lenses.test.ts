@@ -64,10 +64,11 @@ test("list prints the count, then key, name and file of each lens, sorted by key
   assert.equal(
     run.out,
     [
-      "3 lenses",
+      "4 lenses",
       "acme-singlet-50     ACME Singlet 50mm f/4     src/lens-data/acme/AcmeSinglet50.data.ts",
       "acme-zoom-24-48     ACME Zoom 24-48mm f/4     src/lens-data/acme/AcmeZoom2448.data.ts",
       "zenith-doublet-100  ZENITH Doublet 100mm f/8  src/lens-data/zenith/ZenithDoublet100.data.ts",
+      "zenith-plate-35     ZENITH Plate 35mm f/2.8   src/lens-data/zenith/ZenithPlate35.data.ts",
       "",
     ].join("\n"),
   );
@@ -79,8 +80,8 @@ test("list --json prints one object with the hash of each lens file", async (t) 
   assert.equal(run.code, EXIT_OK);
   const report = JSON.parse(run.out);
   assert.deepEqual(Object.keys(report), ["count", "fileCount", "lenses", "problems"]);
-  assert.equal(report.count, 3);
-  assert.equal(report.fileCount, 3);
+  assert.equal(report.count, 4);
+  assert.equal(report.fileCount, 4);
   assert.deepEqual(report.problems, []);
   assert.deepEqual(report.lenses[1], {
     file: FAKE_LENS_FILES[1][0],
@@ -97,7 +98,7 @@ test("list names the lens files it could not index and exits 1", async (t) => {
   writeFileSync(join(lv, "src/lens-data/acme/NoKey.data.ts"), "export default {};\n");
   const run = await lenses(["list"], { rootDir });
   assert.equal(run.code, EXIT_FAILURE);
-  assert.match(run.out, /^2 lenses\nacme-singlet-50 .*\nzenith-doublet-100 .*\n$/);
+  assert.match(run.out, /^3 lenses\nacme-singlet-50 .*\nzenith-doublet-100 .*\nzenith-plate-35 .*\n$/);
   assert.equal(
     run.err,
     [
@@ -122,14 +123,14 @@ test("show prints the prepared state: surfaces, stop, last lens surface and imag
       "focus  1",
       "zoom   0.5",
       "",
-      "#  label     R    d   nd   sd     z  asphere  synthetic",
-      "0  1        40    8  1.6    9     0  no",
-      "1  2A      -80    2    1    9     8  yes",
-      "2  STO    flat    2    1  4.5    10  no",
-      "3  4        60    3  1.7    7    12  no",
-      "4  5       -60   30    1    7    15  no",
-      "5  RP1a   flat  1.5  1.5   12    45  no       rearPlate",
-      "6  RP1b   flat  0.5    1   12  46.5  no       rearPlate",
+      "#  label     R    d   nd   sd  clips     z  asphere  synthetic",
+      "0  1        40    8  1.6    9  yes       0  no",
+      "1  2A      -80    2    1    9  yes       8  yes",
+      "2  STO    flat    2    1  4.5  yes      10  no",
+      "3  4        60    3  1.7    7  yes      12  no",
+      "4  5       -60   30    1    7  yes      15  no",
+      "5  RP1a   flat  1.5  1.5   12  yes      45  no       rearPlate",
+      "6  RP1b   flat  0.5    1   12  yes    46.5  no       rearPlate",
       "",
       "surfaces           7",
       "stop index         2",
@@ -163,6 +164,7 @@ test("show defaults to zoom 0 and focus 0, and --focus moves the image plane", a
   assert.deepEqual(atInfinity.surfaces[2], {
     R: null,
     asphere: false,
+    clips: true,
     d: 47.5,
     index: 2,
     label: "STO",
@@ -222,7 +224,7 @@ test("--root names the configuration root, relative to the working directory, in
   ]) {
     const run = await lenses(args, { rootDir: elsewhere, cwd: join(rootDir, "sub") });
     assert.equal(run.code, EXIT_OK, args.join(" "));
-    assert.match(run.out, /^3 lenses\n/);
+    assert.match(run.out, /^4 lenses\n/);
   }
   const missing = await lenses(["list", "--root", "nowhere"], { rootDir: elsewhere, cwd: rootDir });
   assert.equal(missing.code, EXIT_USAGE);
@@ -233,7 +235,7 @@ test("the environment may name the LensVisualizer checkout", async (t) => {
   const { rootDir, lv } = freshRoot(t, {});
   const run = await lenses(["list"], { rootDir, env: { LVRTC_LV_PATH: lv } });
   assert.equal(run.code, EXIT_OK);
-  assert.match(run.out, /^3 lenses\n/);
+  assert.match(run.out, /^4 lenses\n/);
 });
 
 test("a command line that is not the synopsis is a usage error, before LensVisualizer is loaded", async (t) => {

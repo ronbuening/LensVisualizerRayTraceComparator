@@ -21,9 +21,12 @@ function countMetric(name: string, tally: Tally, place: Where): ComputedMetric {
   return { name, value: tally.count, ...(tally.count === 0 ? {} : { where: whereOf(place, tally) }) };
 }
 
-/** Whether a hit at the radial height `r` lies in the rim band of an aperture (`RIM_BAND_MM`). */
+/**
+ * Whether a hit at the radial height `r` lies in the rim band of an aperture (`RIM_BAND_MM`). A surface that does
+ * not clip has no rim: two engines that disagree on a ray there differ in more than a rounding at an edge.
+ */
 function inRimBand(aperture: SurfaceAperture, r: number): boolean {
-  if (Math.abs(r - aperture.semiDiameter) <= RIM_BAND_MM) return true;
+  if (aperture.semiDiameter !== null && Math.abs(r - aperture.semiDiameter) <= RIM_BAND_MM) return true;
   return aperture.innerSemiDiameter > 0 && Math.abs(r - aperture.innerSemiDiameter) <= RIM_BAND_MM;
 }
 

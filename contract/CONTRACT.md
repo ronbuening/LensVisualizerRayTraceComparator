@@ -50,6 +50,13 @@ different document with a different identity, and an engine may treat it differe
 **Apertures.** `semiDiameter` is the effective clip radius, and the limit is inclusive: a ray at exactly that
 height passes. `innerSemiDiameter` above 0 is a central obstruction: a ray below it is stopped.
 
+**A surface that does not clip** (minor 2) has no clip radius: its `semiDiameter` is null. It stops no ray at any
+height, and has no central obstruction either. It is a surface all the same: a ray's line is met with its sag
+wherever the two cross, and the ray is refracted there. Its `nominalSemiDiameter` is its extent, the size someone
+drew it or generated it at, and limits nothing: the heights at which `system.describe` gives its sag are fractions
+of it. The stop is never such a surface. It is how a case states a cover glass or a filter whose prescription
+publishes no rim: a rim somebody made up for it would clip rays, and limit the field, that the lens does not.
+
 **The stop** clips like every other surface, by its own `aperture`, which a case source writes for the stop setting
 of the case. `conditions.stopSemiDiameter` states that setting as a radius, for what is derived from the stop and
 not from a clip: the entrance pupil, the f-number, a ray aimed at the stop's rim.
@@ -107,7 +114,7 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.1`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.2`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
@@ -120,6 +127,17 @@ minor 1 added is still written as `1.0`** (`CONTRACT_VERSION`): every case, requ
 and rays baseline. A case's identity, a request's id and a key of the result store are therefore what they were,
 and no engine's `contract.min` or `contract.max` moves; a reader of `1.0` reads all of them, and only an MTF
 baseline needs a reader of `1.1`.
+
+**Minor 2** (Stage 3.10) adds to the kind `optical-case` the surface that does not clip: `aperture.semiDiameter`
+may be null, and a case with such a surface carries the feature flag `aperture.unclipped`. A case that has one
+states `1.2` (`caseContractVersion`), and code refuses one that has one and states `1.0` or `1.1`
+(`caseInvariantProblems`). **A case without such a surface is still written as `1.0`**, with the identity it had:
+its `system` holds nothing new, so its `systemId`, its `id`, the ids of the requests about it and the keys of the
+result store are what they were. A request and a result are written as `1.0` whatever case they are about. The
+engines of this repository state `contract.max` `1.2` and list the flag; an engine that does neither is not asked
+about such a case and is asked about every other as before (`negotiate`). No quantity's version changes:
+`system.describe` answers `clipRadius` with an infinity for such a surface, which is the number its definition
+asks for, the largest height at which a ray passes.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -184,7 +202,7 @@ SurfaceIR:
 | `z` | number | vertex position |
 | `thickness` | number ≥ 0 | distance to the next vertex; after the last surface, to the design image plane |
 | `shape` | object | `{ kind: "plane" }`, `{ kind: "conic", radius, conic }` or `{ kind: "asphere", radius, conic, terms }` |
-| `aperture` | object | `semiDiameter` > 0, `nominalSemiDiameter` > 0 (the clear semi-diameter the clip is derived from: the prescription's; on the stop surface, the stop setting), `innerSemiDiameter` ≥ 0 |
+| `aperture` | object | `semiDiameter` > 0, or null for a surface that does not clip (minor 2); `nominalSemiDiameter` > 0 (the clear semi-diameter the clip is derived from: the prescription's; on the stop surface, the stop setting; on a surface that does not clip, its extent); `innerSemiDiameter` ≥ 0 |
 | `elementId` | integer ≥ 0 | the element whose glass follows the surface; 0 when no element does |
 | `synthetic?` | `"rearPlate"` | set on a surface the case source generated for a cover glass or filter |
 
@@ -220,6 +238,8 @@ writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 - each `z` equals the sum of the thicknesses before it within 1e-9 mm, so the first vertex is at 0, and
   `designImageZ` equals the sum of all thicknesses within the same tolerance;
 - an asphere has at most one term of each power;
+- a surface that does not clip (`semiDiameter` null) has an `innerSemiDiameter` of 0 and is not the stop, and its
+  case states the contract `1.2` or later;
 - there is at least one line, and every weight is positive;
 - `indexAfterSurface` decodes, is float64 of shape `[lines, surfaces]`, and holds positive finite indices.
 
@@ -228,6 +248,7 @@ writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 | Flag | The case has |
 |---|---|
 | `aperture.annular` | a surface with `innerSemiDiameter` > 0 |
+| `aperture.unclipped` | a surface that does not clip: `semiDiameter` null (minor 2) |
 | `lines.multiple` | more than one line |
 | `object.finite` | a finite object |
 | `surface.asphere.even` | an asphere term of even power, whatever its coefficient |
@@ -258,6 +279,7 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 | `aperture.nominalSemiDiameter` | the semi-diameter LensVisualizer traces the surface with: `evaluateAperture(...).semiDiameter`, which is `state.surfaces[i].sd`, or the run's stop radius on the stop surface |
 | `aperture.semiDiameter` | LensVisualizer's inclusive clip limit for it, found by asking `evaluateAperture` for the largest radius it does not call outside: today `sd + max(1e-9, abs(sd) × 1e-12)` |
 | `aperture.innerSemiDiameter` | `innerSd`, or 0 |
+| `aperture` of a surface LensVisualizer does not clip at | `semiDiameter` null, `nominalSemiDiameter` `state.surfaces[i].sd`, `innerSemiDiameter` 0; see below |
 | `synthetic` | `"rearPlate"` on the two flat surfaces LensVisualizer generates for a rear plate, which are surfaces of the state like any other |
 | `stopIndex` | `state.lens.stop.surfaceIndex` |
 | `lastLensSurfaceIndex` | `L.lastLensSurfaceIdx` |
@@ -268,6 +290,19 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 | `conditions.lines` | a named set: `MtfSupport.spectralLines` of `assessMtfSupport` for that spectrum, with LensVisualizer's weights, its reference line first. An explicit list: its own wavelengths and weights (1 each without weights), the first the reference line |
 | `conditions.indexAfterSurface` | per line, `mtfIndexResolver(state, support, wavelength)`: its indices where it gives a resolver (`indexSource` `anchored`), each surface's `nd` where it gives none (`authored`); air is exactly 1 |
 | `provenance.source` | the lens's key, its file and the hash of the file's bytes, and `zoomT` and `focusT` of the state: `state.zoomT`, `state.focusT` |
+
+**A rear plate without a published rim.** A lens file may declare a cover glass or a filter behind the lens
+(`rearPlates`) without its semi-diameter. LensVisualizer then generates a rim for the plate's two surfaces, 1.5
+times the larger of the largest authored semi-diameter and the image semi-diagonal, and from commit `31c34396` on
+marks both surfaces `clips: false`: its tracers clip no ray there (`evaluateAperture` reports no semi-diameter), its
+half-field search skips them, and their `sd` is only an envelope that its ray launch and its intersection bounds
+read. Such a surface is exported as one that does not clip, and only after LensVisualizer was asked
+(`surfaceAperture`, `src/engines/lv/exportAperture.ts`): the state must mark it, `evaluateAperture` must report no
+semi-diameter and no central obstruction, and must call no height outside, of the envelope as little as of a
+million of them. A plate whose rim is published is an aperture like any other and is exported with its clip limit.
+Every other surface is held to what it was held to: a semi-diameter that is the state's `sd`. An answer of
+LensVisualizer's that fits neither is thrown, naming the surface, and nothing is exported. Before that commit the
+generated rim clipped, and limited the field of a compact lens; the cases of such lenses are other cases now.
 
 **The stop radius.** `wide-open` is `wideOpenStopAtZoom(zoomT, L)`, which is the prepared stop surface's `sd`.
 An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoom(zoomT, L)) / N`. That rule is
@@ -388,7 +423,7 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   above LensVisualizer's own flat threshold; `conic` is the asphere's `K`, and 0 for a surface without curvature
   and without a term; `terms` are the coefficients of LensVisualizer's own list of polynomial terms that are not 0;
   `clipRadius` is the largest height its `evaluateAperture` passes a ray at, the stop surface asked with the stop
-  radius of the case; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
+  radius of the case, and an infinity for a surface it clips nothing at; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
   surface ends; `indexAfterSurface` is its index resolver's table for the case's lines. So R0 of `lv` against any
   engine holds the exporter, and that engine's reading of the case, to what LensVisualizer traces.
 - **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`traceParaxialSurfaces2`) on the rows
@@ -892,7 +927,8 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
 - **Verified before it is answered.** Every value handed to optiland is read back from optiland's own objects and
   must be the number of the case: each vertex, in the geometry's frame and on the paraxial axis; the class of each
   geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
-  intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
+  intersection; the class of each aperture and its two radii, and for a surface of the case that does not clip
+  that it has no aperture at all; the stop; that each surface refracts by optiland's
   ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface, and the index
   optiland has in front of it, which it finds by a link to the surface before and which is what it refracts a ray
   out of and charges the ray's stretch to the surface to; the object and image planes; the index of the image
@@ -907,7 +943,8 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
   geometry holds, which is 0 for an infinite one; `conic` is the geometry's conic constant, and 0 for a plane,
   which has none; `terms` are the coefficients of an asphere read by optiland's rule, an entry of an even asphere
   being the term of twice its place, those that are not 0; `clipRadius` and `innerClipRadius` are the two radii of
-  the surface's aperture; `stopSemiDiameter` is half the stop diameter the system's aperture states;
+  the surface's aperture, and an infinity and 0 for a surface optiland holds no aperture for, at which it clips
+  nothing; `stopSemiDiameter` is half the stop diameter the system's aperture states;
   `indexAfterSurface` has a row from each line's optic, the index of each surface's material at that optic's
   wavelength; `sagRadii` are the fractions of the semi-aperture optiland holds for each surface, which the builder
   set to the nominal semi-diameter; and `sag` is the geometry's own sag at those heights. The method is named
@@ -1476,7 +1513,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
 | `vertexZ` | NdArray | float64 `[S]`: the vertex position of each surface |
 | `curvature` | NdArray | float64 `[S]`: the base curvature, `1/radius` as one division; 0 for a plane and for a flat base |
 | `conic` | NdArray | float64 `[S]`: the conic constant the engine holds; 0 for a plane |
-| `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface |
+| `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface; +Infinity for a surface at which it stops no ray at any height |
 | `innerClipRadius` | NdArray | float64 `[S]`: the radial height below which the engine stops a ray at the surface, the radius of a central obstruction; 0 for a surface without one |
 | `indexAfterSurface` | NdArray | float64 `[L, S]`: the index of the medium that follows each surface, per line |
 | `sagRadii` | NdArray | float64 `[S, K]`: the heights the sag is given at, each fraction times the surface's `nominalSemiDiameter` as one multiplication |
@@ -1487,6 +1524,11 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   the stop setting of the case, which is the stop surface's own `aperture.semiDiameter`; it is never the limit of the
   stop wide open, nor `stopSemiDiameter` itself. `sagRadii` of the stop surface scale with its
   `nominalSemiDiameter`, which a case source writes as the stop setting.
+- **A surface the engine does not clip at** has the `clipRadius` +Infinity, and an `innerClipRadius` of 0. That is
+  the answer to what the member asks, and no addition to it: an array holds an infinity as it holds any double. An
+  engine that built a rim on a surface of the case that does not clip (`aperture.semiDiameter` null), however wide,
+  answers a finite number there, and R0 counts it under `aperture.mismatches`. `sagRadii` of such a surface are
+  fractions of its `nominalSemiDiameter` like any other's.
 - **`innerClipRadius`** is the engine's own limit, like `clipRadius`: a ray at exactly that height passes, and one
   below it is stopped. It was added in version 2 of the quantity, with the first engine beside `ref` that builds an
   annular aperture: a central obstruction an engine left out, or built another size, is found here and not in the
@@ -1679,8 +1721,8 @@ differs converts in its adapter, in both directions.
 
 - **A ray is carried surface by surface**, in the order of the case: it is intersected with the surface, tested
   against the surface's aperture at the hit (its distance from the axis against `semiDiameter`, inclusive, and
-  against `innerSemiDiameter`, below which it is stopped), and refracted into the medium that follows, whose index
-  is that of the spec's line. The medium in front of the first surface is air, of index 1.
+  against `innerSemiDiameter`, below which it is stopped; a surface that does not clip stops it at no height), and
+  refracted into the medium that follows, whose index is that of the spec's line. The medium in front of the first surface is air, of index 1.
 - **The order is the order of the case, not of z.** Where two neighbouring surfaces cross within their clear
   apertures, as a stop set into the curve of the surface before it, the next surface lies behind the ray's last
   hit: the ray's line is met with it there, by a step backwards, and the stretch counts in the optical path with
@@ -1693,6 +1735,12 @@ differs converts in its adapter, in both directions.
   that surface, wherever, and whether, it meets the formula's continuation. A line that meets a steep surface more
   than once within the clear aperture passes it at the meeting nearest the surface's vertex plane: on a sphere of
   either curvature that is where a ray in front of the surface enters it.
+- **A surface that does not clip is its sag wherever it has one.** A ray whose line meets it passes it there, at
+  the meeting nearest the surface's vertex plane, however far from the axis that is; a ray whose line provably
+  meets it nowhere, as one that passes a sphere by, is blocked at it. Such a surface is a plane in every case a
+  lens of LensVisualizer's gives. On a curved one whose formula goes on without end, an engine that cannot decide
+  whether a line meets it says *failed*, as of any ray it could not trace: the reference engine does so for a line
+  on which its iteration finds no hit, since no stretch of such a line is the last to look at.
 - **Status.** *ok* (0): the ray passed every surface and reached the image plane. *blocked* (1): the ray carries no
   light to the image and the engine knows why: it met a surface outside its clear aperture or inside its central
   obstruction, it was totally reflected, it provably does not meet a surface, it no longer travels toward +z, or
@@ -1748,7 +1796,9 @@ with the `line` of the spec and, where the set states one, its `field` angle in 
   call the reason.
 - **The rim band.** A disagreement is in the band when that hit lies within 1e-8 mm (`RIM_BAND_MM`) of the
   surface's `semiDiameter`, or of its `innerSemiDiameter` where it has one: each engine has placed the hit to its
-  own tolerance, and the limit is inclusive on a number neither holds exactly. A ray that passed every surface in
+  own tolerance, and the limit is inclusive on a number neither holds exactly. A surface that does not clip has no
+  rim and no band: an engine that stopped a ray there, at whatever height, built an aperture the case does not
+  have, and the ray is a mismatch. A ray that passed every surface in
   both engines and reaches the image plane in only one is a mismatch: there is no rim there.
 - **A ray either engine failed** is in neither count: a failure says nothing about the light. How many rays of
   each answer are ok, blocked and failed is listed with the comparison, as `rays.ok`, `rays.blocked` and
@@ -1875,7 +1925,7 @@ generated only when such a rung is run and are asked of no other rung: R2, R3 an
 
 | | Is |
 |---|---|
-| lattice | `sampling.bundleGrid` cells across (an odd number is raised to the next even one, so that no ray lies on the axis or in a plane through it), laid on the first surface's vertex plane and centred on the axis, with a half width of 1.125 clip radii of the first surface: the cells past the rim are stopped at once |
+| lattice | `sampling.bundleGrid` cells across (an odd number is raised to the next even one, so that no ray lies on the axis or in a plane through it), laid on the first surface's vertex plane and centred on the axis, with a half width of 1.125 clip radii of the first surface: the cells past the rim are stopped at once. A first surface that does not clip is probed over 1.125 times its extent, `nominalSemiDiameter` |
 | object at infinity | a collimated bundle with the field's direction, each ray started on the plane 10 mm in front of the first surface: of its vertex, or of its rim when it is concave toward the object; every weight is 1 |
 | finite object | every ray starts at the object point of the field, `(0, −object.z × tan θ, object.z)`: the field angle is measured at the first vertex; a ray's weight is the solid angle of its cell relative to a cell straight ahead of the point, `(D / d)³`, with D the point's distance from the lattice plane and d its distance from the cell. An object point that is not in front of the first surface, inside the bowl of a concave one, is the problem `launch-behind-first-surface` |
 | fields | angles in degrees as given; of image-height fractions only 0, the axis, since a case states no image height: any other is the problem `field-fraction-unresolved` |
@@ -2167,6 +2217,12 @@ TypeScript type of its kind; `node test/contract/writeCorpus.ts` rewrites the fi
 files and the source differ. Two files are not generated: the Double-Gauss case, below, and
 `valid/engine-descriptor/integers-as-floats.json`, written by hand because its point is the spelling of its
 numbers.
+
+Three cases are generated: `singlet`, the case the example requests and results are about; `all-features`, which
+carries every feature flag of contract `1.0` and every optional member; and `unclipped-plate`, the singlet behind
+a rear plate whose two surfaces do not clip, the one valid case that states `1.2` and carries the flag minor 2
+added. The every-feature case was not given such a plate: it is the case half the tests are written on, and a
+minor does not change a document that uses nothing of it.
 
 Some fixtures exist for what one language gets wrong by default, and an implementation in any language must pass
 them:

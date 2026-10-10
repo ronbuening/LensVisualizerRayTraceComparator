@@ -139,15 +139,17 @@ Lists every lens of the LensVisualizer catalog: key, name and file.
 node bin/lvrtc.mjs lenses show nikkor-z50f12
 ```
 
-Prints one lens as LensVisualizer prepares it for tracing: a row per surface, the stop and its radius, and the
-image plane. Add `--zoom 1` for the tele end of a zoom.
+Prints one lens as LensVisualizer prepares it for tracing: a row per surface, with whether its rim clips, the stop
+and its radius, and the image plane. Add `--zoom 1` for the tele end of a zoom.
 
 ```bash
 node bin/lvrtc.mjs export nikkor-z50f12 --aperture f/2.8 --lines photopic --out /tmp/z50.case.json
 ```
 
 Writes one lens in one state as an optical case, the document every engine is asked about. What a case cannot
-express, such as a mirror or a diffractive surface, is refused with a reason code and never approximated.
+express, such as a mirror or a diffractive surface, is refused with a reason code and never approximated. A cover
+glass or filter whose prescription publishes no rim is exported as LensVisualizer traces it, as a plate that
+clips no ray.
 
 ```bash
 node bin/lvrtc.mjs export --all --census reports/census

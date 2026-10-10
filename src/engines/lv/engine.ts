@@ -16,7 +16,7 @@ import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { ErrorInfo, ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
@@ -137,7 +137,7 @@ export function lvBackedDescriptor(
 ): EngineDescriptor {
   const { engineClosureHash, engineFileCount, commit, dirty } = fingerprint;
   return {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
     identity: {
       id: identity.id,
       version: identity.version,

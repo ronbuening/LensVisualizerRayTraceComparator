@@ -73,7 +73,7 @@ export function createProtocolHandler(engine: EngineImplementation): ProtocolHan
       }
     }
     const { request, case: opticalCase } = message.params;
-    const problems = caseInvariantProblems(opticalCase.system, opticalCase.conditions);
+    const problems = caseInvariantProblems(opticalCase.system, opticalCase.conditions, opticalCase.contract);
     if (problems.length > 0) {
       return refused("bad-request", `params.case is not a valid optical-case: ${problems.join("; ")}`);
     }

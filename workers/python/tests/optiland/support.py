@@ -149,7 +149,11 @@ D_LINE = 587.5618
 
 
 def surface(z: float, shape: dict[str, Any], semi: float = 10.0, **more: Any) -> dict[str, Any]:
-    """One surface of a synthetic case; the thickness is filled in by ``make_case``."""
+    """One surface of a synthetic case; the thickness is filled in by ``make_case``.
+
+    ``clip`` is its clip radius where that is not ``semi``, and None for a surface that does not clip, of which
+    ``semi`` is then the extent.
+    """
     aperture = {
         "semiDiameter": more.pop("clip", semi),
         "nominalSemiDiameter": semi,
@@ -208,7 +212,8 @@ def make_case(
         else [[1.5 if number % 2 == 0 else 1.0 for number in range(len(surfaces))]] * len(lines)
     )
     return {
-        "contract": "1.0",
+        # A surface that does not clip is what contract minor 2 added.
+        "contract": "1.2" if any(entry["aperture"]["semiDiameter"] is None for entry in surfaces) else "1.0",
         "kind": "optical-case",
         "id": "c" * 64,
         "systemId": "5" * 64,

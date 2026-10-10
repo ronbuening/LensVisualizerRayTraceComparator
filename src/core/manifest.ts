@@ -288,7 +288,8 @@ export function readRunCase(directory: string, caseId: string): OpticalCase | un
   }
   if (validateKind("optical-case", parsed).length > 0) return undefined;
   const opticalCase = parsed as OpticalCase;
-  if (caseInvariantProblems(opticalCase.system, opticalCase.conditions).length > 0) return undefined;
+  if (caseInvariantProblems(opticalCase.system, opticalCase.conditions, opticalCase.contract).length > 0)
+    return undefined;
   if (opticalCase.id !== caseId || verifyCaseIdentity(opticalCase).length > 0) return undefined;
   return opticalCase;
 }

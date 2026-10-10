@@ -23,7 +23,7 @@ node test/contract/writeCorpus.ts   # rewrite contract/fixtures after editing te
 node test/report/writeGolden.ts     # rewrite test/fixtures/golden after a change meant to change a report
 node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   # the conformance kit on one engine
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
-node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing (console only)
+node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
@@ -115,7 +115,7 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   manifest or report holds a date.
 - **The optiland builder hands over, verifies, then describes** (`workers/python/lvrtc_optiland/build.py`).
   `build_optic` gives the case to optiland; `verify_optic` reads every value back from optiland's own objects
-  (vertex, geometry class, radius, conic, terms, `tol`, `max_iter`, aperture class and both radii, stop,
+  (vertex, geometry class, radius, conic, terms, `tol`, `max_iter`, aperture class and both radii (none of the three for a surface that does not clip), stop,
   interaction model, coating, index, the index of the image space, object and image planes, stop diameter,
   wavelength) and holds it to the
   case, then holds optiland's sag to the contract's; `describe_optics` writes `system.describe` from the optics
@@ -124,7 +124,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   (`test_build.py`): removing a check must turn a test red.
 - **How a case becomes an Optic**: every surface placed by `z=`, never by thickness; one Optic per line
   (`IdealMaterial` is constant and first-order data is the primary wavelength's); `RadialAperture(r_max, r_min)`
-  on every surface, the stop included; `float_by_stop_size` takes the stop diameter; an asphere stays
+  on every surface that clips, the stop included, and `aperture=None` on a surface of the case that does not clip
+  (`physical_aperture`, `expected_aperture`; never a `RadialAperture` of infinite radius, which is still an
+  aperture); `float_by_stop_size` takes the stop diameter; an asphere stays
   `even_asphere` or `odd_asphere` whatever its coefficients, the list starting at r^2 (even) or r^1 (odd), with
   `tol=1e-12` and `max_iter=100`; the image surface states the medium after the last surface (optiland takes the
   image space from it); only the non-deprecated API, a deprecated call being an error. Each has an entry under
@@ -198,7 +200,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **A quantity's version is negotiated** (`negotiate`): an engine that implements another version is
   `unsupported` without being asked. Raising a version changes together the schema, the corpus, CONTRACT.md's
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
-  `system.describe` is version 2 (`innerClipRadius`); `paraxial.first-order` is version 1. `mtf.native` is version
+  `system.describe` is version 2 (`innerClipRadius`; its `clipRadius` is +Infinity for a surface the engine does not
+  clip at, which raised no version); `paraxial.first-order` is version 1. `mtf.native` is version
   1 and is answered by `lv`, `replay`, `wave` and `optiland`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
@@ -239,7 +242,10 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   optiland that `docs/gotchas.md` describes has a test that pins it.
 - **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR and to no failure (`assertR2`),
   and asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
-  red.
+  red. The tier-2 rung tests hold upper bounds only and count PASS and FLOOR together; what LensVisualizer's old
+  intersection tolerance of 1e-9 mm leaves on steep lenses is compared only at its engine closure
+  (`TOLERANCE_1E9_CLOSURE` in `test/integration/lv/rungs.test.ts`), and at any other closure every pair of those
+  lenses is still held to PASS or FLOOR.
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
@@ -468,6 +474,30 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   and closes the binding.
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
   that follows it, and what was written is read back before a commit says it was.
+- **A surface that does not clip is `aperture.semiDiameter` null (contract minor 2).** A rear plate whose rim
+  LensVisualizer generated (`clips: false` in its state, from `31c34396`) stops no ray and limits no field;
+  `nominalSemiDiameter` is its extent, for the sag samples of R0 and a probe lattice and nothing else. It has no
+  inner semi-diameter and is never the stop (`caseInvariantProblems`). Never read `aperture.semiDiameter` as a
+  number without deciding what a null means there: `ref` holds an infinite clip radius, R2 has no rim band on such
+  a surface (`inRimBand`), `system.describe` answers `clipRadius` +Infinity in every engine.
+- **Contract minor 2 is stated only by a case that uses it** (`CONTRACT_VERSION_1_2`, `caseContractVersion`): a
+  case with a surface that does not clip states 1.2 and carries the flag `aperture.unclipped`; every other case,
+  and every request and result, is still `CONTRACT_VERSION` 1.0. The engines state `contract.max` 1.2 (the kit:
+  `CONTRACT_VERSION_1_2`, `speaks`). No quantity's version moved for it. The fixture `all-features` carries every
+  flag of contract 1.0 and `unclipped-plate` the flag of minor 2: never give `all-features` such a plate.
+- **The exporter writes no clip radius only where LensVisualizer says so twice** (`surfaceAperture`): the state
+  marks the surface `clips: false` and `evaluateAperture` reports no semi-diameter, no hole, and calls no height of
+  `unclippedProbeRadii` outside. Any other answer throws, as before; a plate with a published rim clips. A canary
+  holds the six LensVisualizer lines this rests on.
+- **In `ref` a surface that does not clip is its sag wherever it has one**: a plane and a conic are met in closed
+  form at any height; on an asphere whose conic does not end, a line on which Newton's method settles on no hit is
+  failed, never blocked, since no stretch of it is the last to scan (a line along the axis is still met in closed
+  form).
+- **LensVisualizer's wide-open stop radius is the height of a traced ray**: a change of its intersection numerics
+  moves the stop radius of nearly every lens by up to its tolerance, so every such case has another id and its
+  records are STALE(case), not only STALE(engine). To tell what LensVisualizer changed from what the comparator
+  changed, run the comparator on a `git archive` extract of the older LensVisualizer commit, outside both
+  checkouts, with `LVRTC_LV_PATH` and `LVRTC_RUNS_DIR` set.
 - **A gate is never loosened to make a lens pass.** Classify the lens in `docs/gotchas.md`. A gate changes only on
   a measured numerical floor, recorded under "Amendments since approval" in the plan and by raising the policy's
   `version`.
@@ -565,7 +595,10 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   of the fake's own; `footprintScale` makes its scan too small); every other lens keeps the closed form, and is a
   FAIL in R4f by design. A test that removes a module to break a binding removes `src/optics/layout.ts`, which
   nothing else imports; a test binding an edited tree through a case source edits the fresh tree in place, since
-  a `variantOf` copy is closed only by `bind`.
+  a `variantOf` copy is closed only by `bind`. `zenith-plate-35` has a rear plate without a published `sd` (the fake
+  generates a rim and marks it `clips: false`); `acme-zoom-24-48`'s plate publishes its rim and clips. A lens file
+  added to the fake tree must sort after the existing ones: tests take the first three of `FAKE_LENS_FILES` by
+  index.
 - **Baselines are the committed record** (`baselines/<suite>.json`, contract kind `baseline`): for every run as
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the

@@ -8,13 +8,15 @@ import { sha256Hex } from "../../src/core/numeric/hash.ts";
 import { decodeNdArray, encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import {
   Z_TOLERANCE_MM,
+  caseContractVersion,
   caseIdentity,
   caseInvariantProblems,
+  clips,
   finalizeCase,
   verifyCaseIdentity,
 } from "../../src/contract/case.ts";
 import type { OpticalCase, OpticalCaseDraft } from "../../src/contract/case.ts";
-import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../src/contract/version.ts";
 import {
   ALL_FEATURES_CASE,
   ALL_FEATURES_DRAFT,
@@ -22,6 +24,8 @@ import {
   REMOVE,
   SINGLET_CASE,
   SINGLET_DRAFT,
+  UNCLIPPED_PLATE_CASE,
+  UNCLIPPED_PLATE_DRAFT,
   edited,
 } from "./corpus.ts";
 
@@ -322,6 +326,45 @@ test("positions agree with the thicknesses within 1e-9 mm, and no further", () =
   assert.equal(problemsOf(singletWith("/system/designImageZ", 100 - 2e-9)).length, 1);
 });
 
+test("a surface that does not clip has no hole, is not the stop, and makes its case one of contract 1.2", () => {
+  const { system, conditions } = UNCLIPPED_PLATE_DRAFT;
+  assert.deepEqual(caseInvariantProblems(system, conditions), []);
+  assert.deepEqual(caseInvariantProblems(system, conditions, "1.2"), []);
+  assert.deepEqual(caseInvariantProblems(system, conditions, "1.7"), [], "a later minor only adds");
+  for (const earlier of ["1.0", "1.1"]) {
+    assert.deepEqual(caseInvariantProblems(system, conditions, earlier), [
+      `it states the contract ${earlier} and has a surface that does not clip, which minor 2 added`,
+    ]);
+  }
+  // The case states what its system needs, and a case without such a surface states what it always did.
+  assert.equal(UNCLIPPED_PLATE_CASE.contract, CONTRACT_VERSION_1_2);
+  assert.equal(caseContractVersion(system), "1.2");
+  assert.equal(caseContractVersion(ALL_FEATURES_DRAFT.system), CONTRACT_VERSION);
+  assert.equal(ALL_FEATURES_CASE.contract, "1.0");
+  assert.deepEqual(caseInvariantProblems(SINGLET_DRAFT.system, SINGLET_DRAFT.conditions, "1.0"), []);
+  assert.deepEqual(verifyCaseIdentity(UNCLIPPED_PLATE_CASE), []);
+
+  const plate = "/system/surfaces/2/aperture";
+  const holed = edited(UNCLIPPED_PLATE_DRAFT, `${plate}/innerSemiDiameter`, 1.5) as OpticalCaseDraft;
+  assert.deepEqual(problemsOf(holed), [
+    "system.surfaces[2].aperture does not clip (semiDiameter is null) and has the inner semi-diameter 1.5, not 0",
+  ]);
+  const stop = edited(UNCLIPPED_PLATE_DRAFT, "/system/stopIndex", 3) as OpticalCaseDraft;
+  assert.deepEqual(problemsOf(stop), [
+    "system.surfaces[3].aperture does not clip (semiDiameter is null), and the surface is the stop",
+  ]);
+  assert.throws(() => finalizeCase(stop), /the surface is the stop/);
+  // With a clip radius the same surfaces are an ordinary plate again, in a case of 1.0, and another case.
+  const clipped = [2, 3].reduce<unknown>(
+    (draft, index) => edited(draft, `/system/surfaces/${index}/aperture/semiDiameter`, 15),
+    UNCLIPPED_PLATE_DRAFT,
+  ) as OpticalCaseDraft;
+  assert.equal(finalizeCase(clipped).contract, "1.0");
+  assert.notEqual(finalizeCase(clipped).id, UNCLIPPED_PLATE_CASE.id);
+  assert.equal(clips(clipped.system.surfaces[2].aperture), true);
+  assert.equal(clips(system.surfaces[2].aperture), false);
+});
+
 test("an asphere has at most one term of each power", () => {
   const repeated = [
     { power: 4, coeff: 1e-6 },
@@ -566,5 +609,6 @@ test("each Double-Gauss clear aperture is the paraxial marginal-plus-chief bound
     assert.equal(surface.aperture.nominalSemiDiameter, bound);
     assert.equal(surface.aperture.innerSemiDiameter, 0);
   });
-  assert.ok(DOUBLE_GAUSS.conditions.stopSemiDiameter <= surfaces[stopIndex].aperture.semiDiameter);
+  // The stop clips: a stop without a clip radius would be no case.
+  assert.ok(DOUBLE_GAUSS.conditions.stopSemiDiameter <= (surfaces[stopIndex].aperture.semiDiameter ?? NaN));
 });

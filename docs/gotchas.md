@@ -34,6 +34,10 @@ of rung R4f were measured at `33ebdb30`, closure `78215d72`, still 151 files: wh
 manifest (the refinement, the footprint's widening, the sampling constants, `computeMtfSteps`) is exported by files
 the closure already held.
 
+The figures of the entries on a rear plate that does not clip, on the stop radius and on the tolerance of 1e-12 mm
+were measured at `31c34396` (branch `fix/771-intersection-tolerance`, closure `a52a7b8e`, 152 files), against the
+committed baselines, which are of `33ebdb30`. Every other entry describes LensVisualizer as it is up to `33ebdb30`.
+
 Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
 60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
 sag, and the textbook vector form of Snell's law. For the pairs whose verdict policy version 4 changed, and for
@@ -131,6 +135,65 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 - **Handled.** The comparator reads the prepared state, and takes what only the lens has through LensVisualizer's
   accessors at the state's zoom position (`fopenAtZoom2`, `wideOpenStopAtZoom`, `epAtZoom2`).
 - **Class.** data.
+
+### A rear plate without a published rim is a surface that does not clip
+
+- **Where.** `expandRearPlates` in `src/optics/prescription/rearPlates.ts` makes two flat surfaces of every plate a
+  lens file declares behind the lens. A plate that states no `sd` gets a generated one, 1.5 times the larger of
+  the largest authored semi-diameter and the image semi-diagonal, and from `31c34396` on the two surfaces are
+  marked `clips: false` (`CompiledSurface.clips`, `src/optics/types.ts`): `activeSemiDiameter` in
+  `src/optics/trace/aperture.ts` then has no semi-diameter for them, so `evaluateAperture` calls no height
+  outside, and the two searches for the surface that limits the half field skip them (`buildLens` in
+  `runtimeLens.ts`, `computeFieldGeometryAtState2` in `field/chiefRay.ts`). Their `sd` is left as an envelope
+  that ray launch and intersection bounds read. A plate with a published `sd` clips as before. Up to `33ebdb30`
+  the generated rim clipped like any other.
+- **Effect.** The contract could state no such surface, and the exporter's guard refused every lens that has one
+  (`LensVisualizer traces surface RP1a with the semi-diameter null, expected 41.085`): 232 of the 1180 states of
+  the catalog that can be exported, 6 of the 12 configurations of the benchmark (`fujifilm-fujinon-gf-63mm-f28-r-wr`,
+  `nikkor-z50f12`, `nikon-z-24-70f4s` at both ends, `nikon-z-135f18-plena`, `sigma-45mm-f28-dg-dn-contemporary`) and
+  one lens of the feature suite (`zeiss-touit-50mm-f28-macro`, the runs `odd-asphere-*`). The two plates of the
+  feature suite with a published rim (`nikkor-z-35f18s`, `zeiss-zx1-distagon-35mm-f2`) clip, and are exported as
+  they were. The guard did what it is for: an exporter that had gone on would have written a rim LensVisualizer
+  does not trace by.
+- **Handled.** Contract minor 2 states it: such a surface has `aperture.semiDiameter` null, its `sd` as
+  `nominalSemiDiameter`, and its case the flag `aperture.unclipped` and the version `1.2`
+  ([contract/CONTRACT.md](../contract/CONTRACT.md#cases-from-lensvisualizer)). `surfaceAperture` exports it only
+  where the state marks the surface and `evaluateAperture`, asked at the envelope, beyond it and at the largest
+  double, reports no semi-diameter and calls nothing outside; any other answer is thrown. Every engine builds it
+  as a surface that stops no ray: `ref` with an infinite clip radius, `optiland` without a physical aperture
+  (under optiland, below), and `lv` by asking LensVisualizer, whose tracer is the one that changed. Each answers
+  `clipRadius` +Infinity in `system.describe`, and R0 holds the three to it. R2 has no rim band on such a surface:
+  a ray one engine stopped there is a mismatch at any height. Source canaries hold the lines of LensVisualizer
+  this rests on (`canaries.test.ts`).
+- **Measured.** On the two suites the change moves no number. LensVisualizer at `31c34396` was set beside a copy
+  of it, made outside the repository and outside LensVisualizer, in which the one expression of `rearPlates.ts` is
+  put back so that a generated rim clips: for the six lenses with such a plate every ray set is the same bytes
+  (450 sets), the stop radius, every field angle and the best-focus shift are the same doubles, and every figure
+  of every pair of R0 to R4 is the same (750 pairs), as is every answer of R4f. No ray of these suites reaches a
+  generated rim, and none limited a field: at 1.5 times the largest of the lens and the image the rim was never
+  in the way. What changes is the case, which states another aperture, and with it the case's id and the id of
+  every request about it.
+- **Class.** data.
+
+### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
+
+- **Where.** `buildLens` in `src/optics/runtimeLens.ts` sets the stop surface's `sd` to the height at the stop of
+  a real marginal ray of the nominal entrance pupil (`S[stopIdx].sd = nomRealY`), and for a zoom the same at each
+  station; only a lens that authors its iris (`zoomStopSemiDiameters`, a fixed iris) has the number it states.
+  `wideOpenStopAtZoom` hands that out, and it is the stop radius of a case.
+- **Effect.** The radius is known to LensVisualizer's intersection tolerance and no better, and it is in the
+  identity of the case twice, as `conditions.stopSemiDiameter` and as the stop surface's aperture. When the
+  tolerance went from 1e-9 mm to 1e-12 mm (`31c34396`), the stop radius of 11 of the 12 configurations of the
+  benchmark moved, by 1.6e-13 mm to 2.0e-10 mm (`sony-fe-400mm-f28-gm-oss`), and of 7 of the 9 configurations of
+  the feature suite, by up to 3.3e-11 mm: every one of those cases has another id, and its launch rays, which
+  LensVisualizer aims at that stop, are other bytes. So a change of LensVisualizer's numerics makes nearly every
+  record of a baseline stale by case, and not only by engine. LensVisualizer's best axial focus moves with it, by
+  up to 2.9e-9 mm on the benchmark; the field angles of the benchmark do not move at all, and one of the feature
+  suite's by 6e-8 degrees (`nikon-1-nikkor-vr-10-30mm-f35-56-pd-zoom` at its wide end, full field).
+- **Handled.** Nothing is rounded or pinned: a case is LensVisualizer's numbers to the bit, and `lvrtc baseline
+  check` says STALE(case) and REFRESHABLE where the figures still hold. The canary of `nikkor-z50f12`'s stop
+  radius in `test/integration/lv/export.test.ts` is held to 1e-9 mm, the looser tolerance, and names both values.
+- **Class.** numerical.
 
 ### A sequential trace ends on the last surface, not on the image plane
 
@@ -261,6 +324,61 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr`: each had a direction between 1.0e-9 and 4.1e-9 as its only figure
   without a floor. No other verdict moved. Of the 82 that fail, 77 are rays LensVisualizer loses where two
   surfaces cross (below), which no floor reaches.
+- **Class.** numerical.
+
+### From `31c34396` on a hit lies within 1e-12 mm of its surface
+
+- **Where.** On LensVisualizer's branch `fix/771-intersection-tolerance` (commit `31c34396`, engine closure
+  `a52a7b8e`, 152 files) `INTERSECTION_TOLERANCE` is 1e-12 mm, where it was 1e-9, with 48 iterations for 32. Where
+  rounding keeps the residual from reaching it, `intersectProfile` accepts an iterate that can no longer move,
+  within a bound made of its own operands (`sagResidualRoundoff`, `planeResidualRoundoff` in
+  `src/optics/math/intersectionTolerance.ts`); a hit on a plane is held to the same. The two entries above describe
+  LensVisualizer up to `33ebdb30`.
+- **Effect.** What the tolerance left in every figure is three orders smaller. The committed baselines, of
+  `33ebdb30`, against the same suites at `31c34396`, `lv` against `ref` (against optiland every figure is within
+  a tenth of these):
+
+  | Figure, largest over the suite | benchmark, before | after | features, before | after |
+  |---|---|---|---|---|
+  | R2 `hits.maxDistance`, mm | 6.77e-9 | 1.88e-12 | 2.30e-9 | 1.96e-12 |
+  | R2 `direction.maxAbs` | 3.13e-10 | 7.96e-14 | 2.07e-10 | 1.35e-13 |
+  | R2 `landing.maxDistance`, mm | 9.12e-9 | 2.38e-12 | 1.10e-8 | 6.48e-12 |
+  | R3 `opticalPath.maxAbs`, waves | 6.12e-6 | 5.93e-9 | 3.79e-6 | 4.72e-9 |
+  | R3 `opticalPathToImage.maxAbs`, waves | 5.88e-6 | 5.68e-9 | 2.07e-5 | 1.10e-8 |
+  | R3 `opd.maxAbs`, waves | 7.37e-6 | 5.99e-9 | 2.28e-5 | 1.22e-8 |
+  | R4 `mtf.maxAbs` | 5.39e-8 | 1.19e-10 | 4.79e-8 | 2.43e-11 |
+  | R6a `waveMtf.maxAbs` | 3.12e-6 | 1.73e-9 | 1.45e-6 | 1.13e-9 |
+
+  The two exact tracers differ from each other by 1.2e-12 mm in a hit, 2.7e-9 waves in a path and 1.2e-9 in R6a,
+  before and after: LensVisualizer is now within a factor of about two of what they agree to. The four records
+  of the feature suite that were FLOOR, the steep field of `zeiss-hologon-15f8` in R2 and R3 against `ref` and
+  against optiland (8 of 1242 requests of a pair), are PASS, and no pair of either suite is a floor. The seven
+  runs of catalog lenses on which the floor rule was shown ("Behind a steep surface", above: floors, and failures
+  beyond the floor's limits) are 138 pairs that all pass, the worst hit 7.4e-10 mm
+  (`fujifilm-fujinon-xf-27mm-f28`) and the worst landing 8.5e-10 mm. R4f is where it was (1.2e-14, the same grid
+  in every field of all 96 runs), R6a judges the fields it judged (208 of 288 on the benchmark, 24 of 54 on the
+  feature suite), and no verdict of a recorded rung changed: R5, R5g and R6b set methods against each other, and
+  moved by at most 2.4e-8 (LensVisualizer's diffraction MTF against optiland's), 2.0e-7 (the geometric ones) and
+  3.1e-6 (whatever is set against the wave estimator on LensVisualizer's rays, which is the old tolerance in the
+  optical path).
+- **What moved besides.** The stop radius of nearly every lens, and with it every case ("The wide-open stop
+  radius is the height of a traced ray", above); LensVisualizer's best axial focus, by up to 2.9e-9 mm; and one
+  footprint: for `nikon-z-135f18-plena` on the photopic lines at full field LensVisualizer widens the sampled box
+  once more (25 144 blocked rays become 51 064; the 43 976 that land and the grid of 128 stay). It widens where
+  it finds flux in the guard band of a box that traced rays place, and it does so in the copy with clipping
+  plates too: the numerics, not the plate. The replay follows it, and no figure does.
+  No field angle of the benchmark moved, and no ray that one engine stops and another passes appeared. What does
+  not move is what the tolerance never was: where two surfaces cross LensVisualizer still loses the ray
+  (`noBracket`, below). Its traces cost 2.6 % more time (the 864 ray sets of the benchmark, 49.7 s to 51.0 s) and
+  its product MTF with the replay 4.2 % more (175 s to 183 s).
+- **Handled.** No gate, floor limit or band was changed for it, and none is needed. R6a's gate of 4e-5 was pinned
+  on the old rounding at ten times 3.12e-6; ten times the new maximum, 1.81e-9 against optiland, is 2e-8, and
+  whether to pin it again is the owner's, as is what the floor rule is still for. No test requires LensVisualizer
+  to be as far off as it was: the tier-2 bounds are upper bounds, and what the old tolerance leaves on the steep
+  lenses is compared only at its engine closure (`TOLERANCE_1E9_CLOSURE`, `test/integration/lv/rungs.test.ts`).
+  That the figures above are LensVisualizer's and not the comparator's was held apart: the comparator as it is
+  now, run on LensVisualizer `33ebdb30`, gives every case of both suites the id the baselines have and every
+  figure of R0 to R4 to the last digit (1710 records, none changed).
 - **Class.** numerical.
 
 ### A total internal reflection is "failed", and a miss is "failed" until it is proven
@@ -761,6 +879,10 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   tracers: it measures nothing of them, as R3's gate does not. A pair of `ref` and optiland near it would be a
   defect; whether the rung gets a floor, and the exact tracers a gate of their own, is the owner's. Measured at
   `33ebdb30`, closure `78215d72`, optiland `4e893f53`.
+- **At `31c34396`**, where LensVisualizer meets a surface within 1e-12 mm, its largest figure over the same 208
+  judged fields is 1.73e-9 against `ref` and 1.81e-9 against optiland, beside 1.17e-9 between the two: the gate is
+  then 22 000 times LensVisualizer's figure too. It was not changed (Stage 3.10); a pin on that measurement would
+  be 2e-8.
 - **Class.** numerical.
 
 ### A pupil that is metres away cannot be placed to 1e-9 mm
@@ -986,10 +1108,24 @@ shares no code with any engine.
   pupil, so its own analyses never notice.
 - **Effect.** Rays that are given, as every ray of rungs R2 to R4 is, would pass the iris and every rim: optiland
   would land rays that LensVisualizer and `ref` stop, and its MTF would be another lens's.
-- **Handled.** The builder gives every surface of a case a `RadialAperture` of the case's clip radius, the stop
-  surface like any other with the radius of the stop setting, and the image surface none. `verify_optic` reads
-  each back and refuses an optic in which a surface has none; `system.describe` echoes each as `clipRadius`, and
-  R0 holds it to equality.
+- **Handled.** The builder gives every surface of a case that clips a `RadialAperture` of the case's clip radius,
+  the stop surface like any other with the radius of the stop setting, and the image surface none. `verify_optic`
+  reads each back and refuses an optic in which such a surface has none; `system.describe` echoes each as
+  `clipRadius`, and R0 holds it to equality.
+- **The one exception is the same rule, used on purpose.** A surface of the case that does not clip
+  (`aperture.semiDiameter` null, contract minor 2: a rear plate whose rim LensVisualizer generated) is given no
+  aperture at all, stated as `aperture=None`. That is optiland's own way of clipping nothing: a ray is stopped at
+  no height, and a conic is met at its nearest admissible root, no aperture choosing between two
+  (`_conic_intersection_distance` prefers a root inside the aperture when it is handed one). A
+  `RadialAperture(r_max=inf)` was considered and is not the same thing: it is an aperture where the case has none,
+  it still sets the intensity of a ray whose point is no number to 0 (`contains` is false for a NaN), and it is
+  handed to the conic's root selection. `verify_optic` holds the surface to having none (`expected_aperture`), so
+  a builder that put the plate's extent there as a rim is refused (`the class of its aperture is 'RadialAperture'
+  in the optic optiland built and None in the case`), and one that left a clipping surface bare is refused the
+  other way; a test makes each mistake on purpose (`test_build.py`). `system.describe` reads a surface without an
+  aperture as `clipRadius` +Infinity and `innerClipRadius` 0, from the optic and not from the case. The surface
+  keeps optiland's `semi_aperture` at the case's `nominalSemiDiameter`, which clips nothing: the heights of its
+  sag are fractions of it.
 - **Class.** convention.
 
 ### The surface factory drops a keyword it does not know

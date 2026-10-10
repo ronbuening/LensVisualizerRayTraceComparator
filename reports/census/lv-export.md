@@ -9,20 +9,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62` (clean) |
-| Engine closure | `1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0` (151 files) |
+| LensVisualizer commit | `31c34396df4d28131f3f203dda004dc4796cfcdf` (clean) |
+| Engine closure | `a52a7b8eadce812a94326633c81d84e3fb5f49aad6989e24595da13ca97112ab` (152 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-891 lenses, 297 of them zooms, in 1188 states; 0 lens files not indexed.
+907 lenses, 297 of them zooms, in 1204 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 594 | 572 | 22 | 0 |
+| Primes | 610 | 588 | 22 | 0 |
 | Zooms, wide end | 297 | 296 | 1 | 0 |
 | Zooms, tele end | 297 | 296 | 1 | 0 |
-| All | 1188 | 1164 | 24 | 0 |
+| All | 1204 | 1180 | 24 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -73,7 +73,7 @@ applies to one end only.
 
 ### `mixed-reference` (1 state, 1 lens)
 
-- `sony-fe-14mm-f18-gm`
+- `samyang-af-35mm-f2p8-fe`
 
 ### `non-refract-interaction` (15 states, 15 lenses)
 
@@ -113,12 +113,13 @@ applies to one end only.
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 0 |
+| `aperture.unclipped` | 232 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
-| `surface.asphere.even` | 580 |
+| `surface.asphere.even` | 589 |
 | `surface.asphere.flat-base` | 2 |
 | `surface.asphere.odd` | 78 |
-| `surface.conic` | 270 |
+| `surface.conic` | 274 |
 
 ## Provenance notes of the exported cases
 
@@ -126,7 +127,7 @@ applies to one end only.
 | --- | --- |
 | `bulk-absorption` | 1 |
 | `projection:fisheye-equidistant` | 3 |
-| `projection:fisheye-equisolid` | 12 |
+| `projection:fisheye-equisolid` | 13 |
 
 ## Limits: the largest value an exported case needs
 

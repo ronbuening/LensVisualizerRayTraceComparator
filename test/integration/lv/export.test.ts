@@ -251,8 +251,18 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
   assert.equal(system.stopIndex, 17);
   assert.equal(system.lastLensSurfaceIndex, 32);
   assert.equal(system.designImageZ, 163.306);
-  assert.equal(conditions.stopSemiDiameter, 20.42354482258628);
-  assert.deepEqual(opticalCase.features, ["surface.asphere.even", "surface.conic"]);
+  // LensVisualizer solves the wide-open stop radius with a traced ray, so it has the radius to its intersection
+  // tolerance and no further: 20.42354482258628 at d36f44b3 to 33ebdb30 (tolerance 1e-9 mm), 20.423544822487465 at
+  // 31c34396 (1e-12 mm). The canary is of the lens, to the looser of the two.
+  assert.ok(Math.abs(conditions.stopSemiDiameter - 20.42354482258628) < 1e-9, String(conditions.stopSemiDiameter));
+  // The rim of its rear plate is one LensVisualizer generates: from 31c34396 on the plate does not clip.
+  const generated = state.surfaces.some((surface) => surface.clips === false);
+  assert.deepEqual(opticalCase.features, [
+    ...(generated ? (["aperture.unclipped"] as const) : []),
+    "surface.asphere.even",
+    "surface.conic",
+  ]);
+  assert.equal(opticalCase.contract, generated ? "1.2" : "1.0");
   assert.equal(deriveFeatures(system, conditions).limits["asphere.maxPower"], 16);
 
   // The stop index and stop radius are LensVisualizer's own values, and the stop surface carries the radius.
@@ -275,6 +285,8 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
     assert.ok(Object.is(surface.thickness, prepared.d), at);
     assert.equal(surface.aperture.nominalSemiDiameter, prepared.sd, at);
     assert.equal(surface.aperture.innerSemiDiameter, 0, at);
+    // A surface has no clip radius exactly where LensVisualizer's state says its rim does not clip.
+    assert.equal(surface.aperture.semiDiameter === null, prepared.clips === false, at);
     assert.equal(surface.elementId, prepared.elemId, at);
     assert.equal(surface.synthetic ?? null, syntheticKind(prepared), at);
     const flat = Math.abs(prepared.R) > 1e10;
@@ -493,7 +505,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
 test(
   "every clip radius of the benchmark cases is LensVisualizer's inclusive limit: it passes there, and not above",
   { skip },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const view = new DataView(new ArrayBuffer(8));
     const nextUp = (value: number): number => {
@@ -501,6 +513,7 @@ test(
       view.setBigUint64(0, view.getBigUint64(0) + 1n);
       return view.getFloat64(0);
     };
+    const unclipped: string[] = [];
     for (const key of BENCHMARK_KEYS) {
       const { state } = await prepared(binding, key);
       const { system, conditions } = await exported(binding, key, { aperture: { kind: "f-number", value: 8 } });
@@ -509,13 +522,28 @@ test(
         const { semiDiameter: limit, nominalSemiDiameter: nominal } = surface.aperture;
         const stop = index === system.stopIndex ? conditions.stopSemiDiameter : undefined;
         assert.equal(nominal, stop ?? state.surfaces[index].sd, at);
+        const evaluate = (radius: number) => binding.api.evaluateAperture(state, state.surfaces[index], radius, stop);
+        if (limit === null) {
+          // A rim LensVisualizer generated (31c34396): its state says so, and it calls no height outside, of the
+          // envelope as little as of a thousand of them. Only a rear plate has one.
+          unclipped.push(`${key} ${surface.label}`);
+          assert.equal(state.surfaces[index].clips, false, at);
+          assert.equal(surface.synthetic, "rearPlate", at);
+          for (const radius of [0, nominal, nextUp(nominal + 1e-9), 1e3 * nominal, Number.MAX_VALUE]) {
+            assert.deepEqual([evaluate(radius).state, evaluate(radius).semiDiameter], ["inside", null], at);
+          }
+          return;
+        }
+        assert.notEqual(state.surfaces[index].clips, false, at);
         // LensVisualizer's rule at d36f44b3 (trace/aperture.ts, exceedsAperture).
         assert.equal(limit, nominal + Math.max(1e-9, nominal * 1e-12), at);
-        const evaluate = (radius: number) => binding.api.evaluateAperture(state, state.surfaces[index], radius, stop);
         assert.equal(evaluate(limit).state, "inside", at);
         assert.equal(evaluate(nextUp(limit)).state, "outside", at);
       });
     }
+    // The surfaces without a clip radius come in pairs, the two of a plate, and are those the state marks.
+    assert.equal(unclipped.length % 2, 0);
+    t.diagnostic(`surfaces that do not clip: ${unclipped.length === 0 ? "none" : unclipped.join(", ")}`);
   },
 );
 

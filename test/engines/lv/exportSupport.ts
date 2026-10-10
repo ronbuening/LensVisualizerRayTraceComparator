@@ -34,6 +34,8 @@ export interface SurfaceSpec {
   readonly diffractive?: object | null;
   /** The value of LV's `source.synthetic`. */
   readonly synthetic?: string;
+  /** LV's `clips`: false on a rear plate whose rim it generated. Left out, the surface has no such member. */
+  readonly clips?: boolean;
 }
 
 /** What a hand-built state is, beside its surfaces. */
@@ -65,6 +67,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
       nd: surface.nd ?? 1,
       sd: surface.sd ?? 10,
       innerSd: surface.innerSd ?? null,
+      ...(surface.clips === undefined ? {} : { clips: surface.clips }),
       elemId: surface.elemId ?? ((surface.nd ?? 1) === 1 ? 0 : physicalIndex + 1),
       asphere,
       diffractive: surface.diffractive ?? null,
@@ -113,7 +116,10 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
   };
 }
 
-/** LensVisualizer's clip rule (src/optics/trace/aperture.ts), with the stop override its tracers use. */
+/**
+ * LensVisualizer's clip rule (src/optics/trace/aperture.ts), with the stop override its tracers use: a surface
+ * marked `clips: false` has no semi-diameter and no height is outside it.
+ */
 export function lvEvaluateAperture(
   state: LvPreparedState,
   surface: LvSurface,
@@ -121,11 +127,13 @@ export function lvEvaluateAperture(
   stopSemiDiameter?: number,
 ): LvApertureEvaluation {
   const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
-  const semiDiameter = isStop && stopSemiDiameter !== undefined ? stopSemiDiameter : surface.sd;
+  const overridden = isStop && stopSemiDiameter !== undefined;
+  const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : surface.sd;
   const innerSemiDiameter = surface.innerSd ?? 0;
   let apertureState: LvApertureEvaluation["state"] = "inside";
-  if (radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12)) apertureState = "outside";
-  else if (innerSemiDiameter > 0) {
+  if (semiDiameter !== null && radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12)) {
+    apertureState = "outside";
+  } else if (innerSemiDiameter > 0) {
     const tolerance = Math.max(1e-9, Math.abs(innerSemiDiameter) * 1e-12);
     apertureState = radius >= innerSemiDiameter - tolerance ? "inside" : "inside-hole";
   }

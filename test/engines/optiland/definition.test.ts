@@ -12,7 +12,7 @@ import { EXIT_FAILURE, EXIT_OK, runCli } from "../../../src/cli/main.ts";
 import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import { SELFTEST_ECHO } from "../../../src/contract/quantities/selftestEcho.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
 import { CONFIG_FILE, loadConfig } from "../../../src/core/config.ts";
 import type { EngineDefinition } from "../../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
@@ -290,7 +290,7 @@ test("with an interpreter and no other configuration the engine answers hello as
   const adapter = await createEngineRegistry(loaded).create("optiland");
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();
-  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION });
+  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 });
   const { identity, capabilities } = descriptor;
   assert.equal(identity.id, "optiland");
   assert.equal(identity.version, "0.0.7+fake");

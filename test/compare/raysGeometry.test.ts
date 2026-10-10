@@ -8,11 +8,13 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { comparePair } from "../../src/compare/pair.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import { NO_COMMON_RAY, raysGeometryComparator } from "../../src/compare/raysGeometry.ts";
+import { finalizeCase } from "../../src/contract/case.ts";
+import type { OpticalCase } from "../../src/contract/case.ts";
 import { RIM_BAND_MM } from "../../src/contract/quantities/raysTrace.ts";
 import type { RaysTraceData } from "../../src/contract/quantities/raysTrace.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { raysTraceQuantity } from "../../src/quantities/raysTrace.ts";
-import { SINGLET_CASE } from "../contract/corpus.ts";
+import { SINGLET_CASE, edited } from "../contract/corpus.ts";
 import { DOUBLE_GAUSS } from "../core/support.ts";
 import {
   BASE,
@@ -245,6 +247,28 @@ test("the band is of the surface the two part at: its clip radius, and the radiu
     b: changed(BASE, (arrays) => stopAt(arrays, 0, 2)),
   };
   assert.equal(compared(onAxis.a, onAxis.b).metrics["mask.mismatches"].value, 1);
+});
+
+test("a surface that does not clip has no rim band: a ray one engine stopped there is a mismatch at any height", () => {
+  // `LENS` with its last surface, 8 mm in extent, as one that does not clip: the same surfaces, the same traces.
+  const draft = edited(LENS, "/system/surfaces/4/aperture/semiDiameter", null) as OpticalCase;
+  const open = finalizeCase(draft);
+  assert.deepEqual(open.features, ["aperture.annular", "aperture.unclipped", "lines.multiple"]);
+  const counts = (opticalCase: OpticalCase, radius: number): number[] => {
+    const a = changed(BASE, (arrays) => hitRadius(arrays, 4, 0, radius));
+    const b = changed(BASE, (arrays) => stopAt(arrays, 0, 4));
+    const { metrics } = compared(a, b, { opticalCase, spec: SPEC });
+    return [metrics["mask.mismatches"].value, metrics["mask.rimBand"].value];
+  };
+  // At the extent itself, a hair on either side of it, on the axis and far outside: an engine that stops a ray
+  // on such a surface has built an aperture the case does not have.
+  for (const radius of [8, 8 - 5e-9, 8 + 5e-9, 0, 4, 80]) {
+    assert.deepEqual(counts(open, radius), [1, 0], `radius ${radius}`);
+  }
+  // On the surface as `LENS` has it, with a clip radius of 8 mm, the first three are the rim's.
+  assert.deepEqual(counts(LENS, 8), [0, 1]);
+  assert.deepEqual(counts(LENS, 8 + 5e-9), [0, 1]);
+  assert.deepEqual(counts(LENS, 4), [1, 0]);
 });
 
 test("two engines that stopped a ray at different surfaces part at the first of the two", () => {

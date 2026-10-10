@@ -12,6 +12,7 @@ import type { AsphereTerm } from "../../src/contract/case.ts";
 import type { SystemDescribeData } from "../../src/contract/quantities/systemDescribe.ts";
 import { decodeNdArray, encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../src/core/numeric/ndarray.ts";
+import { systemDescribeQuantity } from "../../src/quantities/systemDescribe.ts";
 import { DESCRIBE_DATA_ASPHERE, DESCRIBE_DATA_SINGLET } from "../contract/corpus.ts";
 
 const R0 = loadPolicy().rungs.r0;
@@ -111,6 +112,25 @@ test("-0 is 0 and a NaN is a NaN; any other two numbers that are not equal are a
 });
 
 // ── Where the first mismatch is ──────────────────────────────────────────────────────────────────────────────────
+
+test("a surface that clips nothing has an infinite clip radius: the same in two answers, and no finite one's equal", () => {
+  // The answer of an engine that built the last surface as one that does not clip, and of one that built a rim.
+  const last = decodeNdArray(BASE.clipRadius).values.length - 1;
+  const open = withElement(BASE, "clipRadius", last, Infinity);
+  assert.deepEqual(systemDescribeQuantity.validateData(open), [], "an infinity is a clip radius of the quantity");
+  assert.equal(elementOf(open.clipRadius, last), Infinity);
+  for (const name of COUNTS) assert.equal(metricsOf(open, open)[name].value, 0, name);
+  for (const rim of [elementOf(BASE.clipRadius, last), 1e300, Number.MAX_VALUE]) {
+    const rimmed = withElement(BASE, "clipRadius", last, rim);
+    assert.deepEqual(metricsOf(open, rimmed)["aperture.mismatches"], {
+      name: "aperture.mismatches",
+      value: 1,
+      where: { field: "clipRadius", surface: last },
+    });
+  }
+  const judged = comparePair(participant("ref", open), participant("other", BASE), R0, systemDescribeComparator);
+  assert.equal(judged.verdict, "FAIL");
+});
 
 test("each field is counted in its metric, and the first mismatch is named by field and surface", () => {
   const cases: [SystemDescribeData, string, ComputedMetric["where"]][] = [

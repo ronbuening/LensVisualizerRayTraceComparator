@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from . import CONTRACT_VERSION
+from . import CONTRACT_VERSION, CONTRACT_VERSION_1_2
 from .ndarray import NdArrayError, decode_ndarray, encode_ndarray_bytes
 from .protocol import engine_stamp, make_result, parse_json, serve_stdio
 from .validate import SchemaSet, contract_schemas, format_issues, quantity_schema_id, validate
@@ -42,6 +42,7 @@ FAKE_ENGINE_VERSION = "1"
 
 FEATURE_FLAGS: tuple[str, ...] = (
     "aperture.annular",
+    "aperture.unclipped",
     "lines.multiple",
     "object.finite",
     "surface.asphere.even",
@@ -186,7 +187,7 @@ class FakeEngine:
         self._schemas = schemas if schemas is not None else contract_schemas()
         quantities = {SELFTEST_ECHO: {"version": SELFTEST_ECHO_VERSION}} if options.offers_quantities else {}
         self._descriptor: dict[str, Any] = {
-            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION},
+            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION_1_2},
             "identity": {
                 "id": options.id,
                 "version": FAKE_ENGINE_VERSION,

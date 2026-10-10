@@ -15,7 +15,7 @@ import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { ErrorInfo, ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
@@ -41,10 +41,12 @@ export const REF_ENGINE_MODULE = "engines/ref/engine.ts";
 
 /**
  * The feature flags of a case that the reference engine handles, which is every one the contract has: an annular
- * aperture, which its tracer clips by, several lines, a finite object, and every shape.
+ * aperture, which its tracer clips by, a surface that does not clip, which its tracer meets wherever a ray's line
+ * crosses it, several lines, a finite object, and every shape.
  */
 export const REF_FEATURES: readonly FeatureFlag[] = Object.freeze([
   "aperture.annular",
+  "aperture.unclipped",
   "lines.multiple",
   "object.finite",
   "surface.asphere.even",
@@ -103,7 +105,7 @@ const ANSWERED: readonly Answered[] = [
 export function refDescriptor(): EngineDescriptor {
   const { fingerprint, fileCount } = refFingerprint();
   return {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
     identity: {
       id: REF_ENGINE_ID,
       version: REF_ENGINE_VERSION,

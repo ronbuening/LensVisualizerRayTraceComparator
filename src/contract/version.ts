@@ -10,6 +10,14 @@ export const CONTRACT_VERSION = "1.0";
  */
 export const CONTRACT_VERSION_1_1 = "1.1";
 
+/**
+ * The version a document states that uses what minor 2 added: today an optical case with a surface whose aperture
+ * does not clip (`aperture.semiDiameter` null, the feature flag `aperture.unclipped`). It is also the newest version
+ * an engine of this repository says it speaks (`contract.max` of its descriptor). A case without such a surface is
+ * written to `CONTRACT_VERSION` as before, and so is every request and result, whatever case it is about.
+ */
+export const CONTRACT_VERSION_1_2 = "1.2";
+
 /** The minor of a version; null when the text is not `<major>.<minor>` in plain decimal. */
 export function contractMinor(version: string): number | null {
   return parseVersion(version)?.[1] ?? null;

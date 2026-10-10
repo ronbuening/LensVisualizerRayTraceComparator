@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 
-/** The fake LV tree: every module and export of the import manifest, trivially implemented, and three lenses. */
+/** The fake LV tree: every module and export of the import manifest, trivially implemented, and four lenses. */
 export const FAKE_LV: string = fileURLToPath(new URL("../../fixtures/fake-lv-binding", import.meta.url));
 
 /** The engine files the fake tree loads for the manifest, sorted: everything but its lens and type files. */
@@ -45,6 +45,7 @@ export const FAKE_LENS_FILES: readonly (readonly [file: string, key: string])[] 
   ["src/lens-data/acme/AcmeSinglet50.data.ts", "acme-singlet-50"],
   ["src/lens-data/acme/AcmeZoom2448.data.ts", "acme-zoom-24-48"],
   ["src/lens-data/zenith/ZenithDoublet100.data.ts", "zenith-doublet-100"],
+  ["src/lens-data/zenith/ZenithPlate35.data.ts", "zenith-plate-35"],
 ];
 
 /**

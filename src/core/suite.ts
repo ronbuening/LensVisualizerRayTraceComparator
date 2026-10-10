@@ -109,7 +109,7 @@ function readCaseFile(file: string, shown: string): CaseResolution {
   const issues = validateKind("optical-case", parsed);
   if (issues.length > 0) return failed([`it is not a valid optical-case: ${formatIssues(issues)}`]);
   const opticalCase = parsed as OpticalCase;
-  const broken = caseInvariantProblems(opticalCase.system, opticalCase.conditions);
+  const broken = caseInvariantProblems(opticalCase.system, opticalCase.conditions, opticalCase.contract);
   if (broken.length > 0) return failed(broken.map((problem) => `it is not a valid optical-case: ${problem}`));
   const mismatches = verifyCaseIdentity(opticalCase);
   if (mismatches.length > 0) {

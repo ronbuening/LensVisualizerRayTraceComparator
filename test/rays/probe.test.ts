@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { finalizeCase } from "../../src/contract/case.ts";
-import type { OpticalCase, SurfaceShape } from "../../src/contract/case.ts";
+import type { OpticalCase, OpticalCaseDraft, SurfaceShape } from "../../src/contract/case.ts";
 import { decodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../src/core/numeric/ndarray.ts";
 import { createFixtureCaseSource } from "../../src/core/suite.ts";
@@ -19,7 +19,7 @@ import {
   startsInFront,
 } from "../../src/rays/probe.ts";
 import { DEFAULT_BUNDLE_GRID, DEFAULT_RAY_FIELDS, rayProblem, raySetId, raySetSpec } from "../../src/rays/raySets.ts";
-import { ALL_FEATURES_CASE, SINGLET_CASE, SINGLET_DRAFT } from "../contract/corpus.ts";
+import { ALL_FEATURES_CASE, SINGLET_CASE, SINGLET_DRAFT, UNCLIPPED_PLATE_CASE, edited } from "../contract/corpus.ts";
 
 function f8(wire: NdArrayWire): Float64Array {
   const decoded = decodeNdArray(wire);
@@ -198,6 +198,31 @@ test("the launch plane lies in front of a first surface that is concave toward t
   const dome = withFirstSurface({ kind: "conic", radius: -8, conic: 0 }, 10);
   const domeFront = firstSurfaceFrontZ(dome.system.surfaces[0]);
   assert.ok(domeFront >= -8 && domeFront < -8 + 1e-4, String(domeFront));
+});
+
+test("a first surface that does not clip is probed over its extent, and a plate behind the lens changes no ray", () => {
+  // The singlet with its first surface as one that does not clip, 10 mm in extent, and the stop on its second.
+  const draft = edited(
+    edited(SINGLET_DRAFT, "/system/surfaces/0/aperture/semiDiameter", null),
+    "/system/stopIndex",
+    1,
+  ) as OpticalCaseDraft;
+  const open = finalizeCase(draft);
+  assert.deepEqual(open.features, ["aperture.unclipped"]);
+  // The singlet's own first surface clips at 10 mm: the two lattices are laid over the same 11.25 mm, bit for bit.
+  for (const angle of [0, 12]) assert.deepEqual(probeLattice(open, angle, 8), probeLattice(SINGLET_CASE, angle, 8));
+  assert.equal(firstSurfaceFrontZ(open.system.surfaces[0]), firstSurfaceFrontZ(SINGLET_CASE.system.surfaces[0]));
+
+  // A plate behind the lens is no part of where a probe ray starts: the sets are the singlet's rays.
+  const fields = { kind: "angles-deg", values: [0, 5] } as const;
+  const [plated, plain] = [UNCLIPPED_PLATE_CASE, SINGLET_CASE].map((opticalCase) =>
+    probeRaySets(opticalCase, { fields }),
+  );
+  assert.deepEqual(plated.problems, []);
+  assert.deepEqual(
+    plated.sets.map(({ origins, directions, weights }) => ({ origins, directions, weights })),
+    plain.sets.map(({ origins, directions, weights }) => ({ origins, directions, weights })),
+  );
 });
 
 test("a ray that would not start in front of the first surface is no ray of a set: its field is a coded problem", () => {

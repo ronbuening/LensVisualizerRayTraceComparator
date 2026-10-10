@@ -101,7 +101,11 @@ export const SINGLET_DRAFT = {
   provenance: { source: { kind: "fixture", name: "singlet" }, producer: PRODUCER },
 } satisfies OpticalCaseDraft;
 
-/** A case that carries every feature flag and every optional field. It is a format example, not a real lens. */
+/**
+ * A case that carries every feature flag of contract 1.0 (`CONTRACT_1_0_FLAGS`) and every optional field. It is a
+ * format example, not a real lens. The flag minor 2 added is carried by `UNCLIPPED_PLATE_DRAFT`, so that this case,
+ * which half the test suite is written on, is the document it was.
+ */
 export const ALL_FEATURES_DRAFT = {
   label: { name: "Every feature", lensKey: "example-zoom", zoomT: 0.5, focusT: 0.25 },
   system: {
@@ -213,10 +217,60 @@ export const ALL_FEATURES_DRAFT = {
   },
 } satisfies OpticalCaseDraft;
 
+/** The feature flags contract 1.0 has: every flag but the one minor 2 added. */
+export const CONTRACT_1_0_FLAGS = FEATURE_FLAGS.filter((flag) => flag !== "aperture.unclipped");
+
+/** The aperture of a surface that does not clip, 15 mm in extent: an object of its own for each surface. */
+const unclipped = () => ({ semiDiameter: null, nominalSemiDiameter: 15, innerSemiDiameter: 0 });
+
+/**
+ * The singlet with a rear plate whose two surfaces do not clip (contract minor 2): their `semiDiameter` is null,
+ * their `nominalSemiDiameter` the extent their sag is described over, and the case states the contract 1.2 and
+ * the flag `aperture.unclipped`. The plate's thickness is taken from the singlet's last gap, so the image plane
+ * stays where it was.
+ */
+export const UNCLIPPED_PLATE_DRAFT = {
+  label: { name: "Biconvex singlet behind a plate that does not clip" },
+  system: {
+    surfaces: [
+      SINGLET_DRAFT.system.surfaces[0],
+      { ...SINGLET_DRAFT.system.surfaces[1], thickness: 90 },
+      {
+        label: "RP1a",
+        z: 94,
+        thickness: 2,
+        shape: { kind: "plane" },
+        aperture: unclipped(),
+        elementId: 2,
+        synthetic: "rearPlate",
+      },
+      {
+        label: "RP1b",
+        z: 96,
+        thickness: 4,
+        shape: { kind: "plane" },
+        aperture: unclipped(),
+        elementId: 0,
+        synthetic: "rearPlate",
+      },
+    ],
+    stopIndex: 0,
+    lastLensSurfaceIndex: 1,
+    designImageZ: 100,
+  },
+  conditions: {
+    ...SINGLET_DRAFT.conditions,
+    indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1.5168, 1), [1, 4]),
+  },
+  provenance: { source: { kind: "fixture", name: "unclipped-plate" }, producer: PRODUCER },
+} satisfies OpticalCaseDraft;
+
 /** The singlet as a finished case; it is the case the example requests, results and messages are about. */
 export const SINGLET_CASE = finalizeCase(SINGLET_DRAFT);
 /** The every-feature draft as a finished case. */
 export const ALL_FEATURES_CASE = finalizeCase(ALL_FEATURES_DRAFT);
+/** The singlet behind its plate as a finished case: the one valid case that states contract 1.2. */
+export const UNCLIPPED_PLATE_CASE = finalizeCase(UNCLIPPED_PLATE_DRAFT);
 
 // ── run-spec and suite ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1591,7 +1645,11 @@ export const BASELINE_RAYS: Baseline = {
 
 /** Every valid fixture written here: `valid/<kind>/<name>.json` holds exactly this value. */
 export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknown>>>> = {
-  "optical-case": { singlet: SINGLET_CASE, "all-features": ALL_FEATURES_CASE },
+  "optical-case": {
+    singlet: SINGLET_CASE,
+    "all-features": ALL_FEATURES_CASE,
+    "unclipped-plate": UNCLIPPED_PLATE_CASE,
+  },
   "run-spec": {
     minimal: RUN_SPEC_MINIMAL,
     "worked-example": RUN_SPEC_WORKED,
@@ -1703,6 +1761,12 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
       `${SURFACE_0}/shape`,
     ),
     "aperture-zero-semi-diameter": fault(SINGLET_CASE, `${SURFACE_0}/aperture/semiDiameter`, 0, "exclusiveMinimum"),
+    "aperture-unclipped-as-false": fault(
+      UNCLIPPED_PLATE_CASE,
+      "/system/surfaces/2/aperture/semiDiameter",
+      false,
+      "type",
+    ),
     "aperture-missing-inner": fault(
       SINGLET_CASE,
       `${SURFACE_0}/aperture/innerSemiDiameter`,

@@ -16,6 +16,14 @@ import type { RaySetResolution } from "./raySets.ts";
  */
 export const PROBE_SPAN = 1.125;
 
+/**
+ * The radius a probe lattice is laid over: the first surface's clip radius, and its extent
+ * (`nominalSemiDiameter`) where it does not clip, which has no rim for a lattice to reach past.
+ */
+function probeRadius(first: SurfaceIR): number {
+  return first.aperture.semiDiameter ?? first.aperture.nominalSemiDiameter;
+}
+
 /** How far in front of the first surface a collimated probe lattice starts, mm. */
 export const LAUNCH_LEAD_MM = 10;
 
@@ -25,16 +33,17 @@ const FRONT_SAMPLES = 256;
 /**
  * The z of the front of a first surface: the smallest z it has anywhere within its clear aperture, which is its
  * vertex for a surface that is convex toward the object and its rim for one that is concave. The sag is sampled
- * at `FRONT_SAMPLES` radii from the vertex to the clip radius, or to the height at which the surface's conic ends
- * where that comes first: the last sample is the rim itself. What the sag formula gives beyond the clear aperture
- * is not looked at: a polynomial fitted to a clear aperture diverges outside it, and no glass is there.
+ * at `FRONT_SAMPLES` radii from the vertex to the clip radius (`probeRadius`), or to the height at which the
+ * surface's conic ends where that comes first: the last sample is the rim itself. What the sag formula gives
+ * beyond the clear aperture is not looked at: a polynomial fitted to a clear aperture diverges outside it, and no
+ * glass is there.
  */
 export function firstSurfaceFrontZ(first: SurfaceIR): number {
   const profile = profileOf(first.shape);
   // A conic has no sag beyond 1 / (|c| sqrt(1 + K)); a hair inside that height it still has one.
   const closing = (1 + profile.conic) * profile.curvature * profile.curvature;
   const end = closing > 0 ? (1 - 1e-12) / Math.sqrt(closing) : Infinity;
-  const reach = Math.min(first.aperture.semiDiameter, end);
+  const reach = Math.min(probeRadius(first), end);
   let least = 0;
   for (let sample = 1; sample <= FRONT_SAMPLES; sample++) {
     const z = sag(profile, (reach * sample) / FRONT_SAMPLES);
@@ -84,7 +93,7 @@ function fieldAngles(fields: RunFields): ({ angleDeg: number; heightFraction?: n
 export function probeLattice(opticalCase: OpticalCase, fieldAngleDeg: number, cells: number): LatticeBundle | null {
   const [first] = opticalCase.system.surfaces;
   const { object } = opticalCase.conditions;
-  const placement = { cells, halfWidth: PROBE_SPAN * first.aperture.semiDiameter, planeZ: first.z };
+  const placement = { cells, halfWidth: PROBE_SPAN * probeRadius(first), planeZ: first.z };
   let bundle: LatticeBundle;
   if (object.kind === "finite") {
     const height = (first.z - object.z) * Math.tan((fieldAngleDeg * Math.PI) / 180);

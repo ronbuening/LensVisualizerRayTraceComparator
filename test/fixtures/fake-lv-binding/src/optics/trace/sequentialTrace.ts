@@ -13,7 +13,10 @@ export function outside(
   stopSemiDiameter?: number,
 ): boolean {
   const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
-  const semiDiameter = isStop && stopSemiDiameter !== undefined ? stopSemiDiameter : surface.sd;
+  const overridden = isStop && stopSemiDiameter !== undefined;
+  // A generated rim clips nothing.
+  if (!overridden && !surface.clips) return false;
+  const semiDiameter = overridden ? stopSemiDiameter : surface.sd;
   return radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12);
 }
 

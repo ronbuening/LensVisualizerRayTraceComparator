@@ -5,6 +5,8 @@
 //
 // A surface is its sag within its clear aperture (contract/CONTRACT.md, `rays.trace`): the line meets the surface
 // where it crosses the sag inside the clear aperture, and nowhere else, whatever the formula does beyond the rim.
+// A surface that does not clip has an infinite clip radius: it is its sag wherever it has one, and no height is
+// outside it.
 //
 // How precision is kept:
 //
@@ -107,6 +109,8 @@ function stretchWithin(
   dx: number,
   dy: number,
 ): { readonly from: number; readonly to: number } | null {
+  // Every point of a line is within an infinite height.
+  if (reach === Infinity) return { from: -Infinity, to: Infinity };
   const a = dx * dx + dy * dy;
   const b = x0 * dx + y0 * dy;
   const constant = x0 * x0 + y0 * y0 - reach * reach;
@@ -269,6 +273,11 @@ function crossingSteps(
  * the rim, nor to an iteration that has no slope to go by, as where the line is tangent to the base conic and cuts
  * the surface on either side of that point. Only a crossing that cannot be decided, where the sag has no value at a
  * point of the stretch, is "failed".
+ *
+ * A surface that does not clip, whose conic does not end either, has no stretch to scan: its sag goes on at every
+ * height. Newton's hit is its answer wherever the hit lies; where Newton's method settles on none, a line parallel
+ * to the axis is still met in closed form, and any other is "failed": a crossing that was not found on a line
+ * without an end is not known to be absent.
  */
 function meetAsphere(
   surface: RefSurface,
@@ -315,6 +324,8 @@ function meetAsphere(
     if (withinAperture(surface, x0 + best.step * dx, y0 + best.step * dy)) return best;
   }
 
+  // A scan is of a finite stretch; an infinite one that `crossingSteps` takes is that of a line along the axis.
+  if (reach === Infinity && transverse !== 0) return "failed";
   const crossings = crossingSteps(surface, stretch, x0, y0, dx, dy, dz);
   if (crossings === "undecided") return "failed";
   for (const crossing of crossings) {

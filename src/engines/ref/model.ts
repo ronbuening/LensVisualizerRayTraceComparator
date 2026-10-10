@@ -10,11 +10,17 @@ export interface RefSurface {
   /** Vertex position, mm. */
   readonly z: number;
   readonly profile: SurfaceProfile;
-  /** The largest radial height at which a ray passes the surface, mm: the limit is inclusive. */
+  /**
+   * The largest radial height at which a ray passes the surface, mm: the limit is inclusive. Infinity for a surface
+   * that does not clip, which a ray passes at any height.
+   */
   readonly clipRadius: number;
   /** The radius of the surface's central obstruction, mm: a ray below it is stopped; 0 for none. */
   readonly innerClipRadius: number;
-  /** The clear semi-diameter the clip radius was derived from, mm: the heights the sag is reported at scale with it. */
+  /**
+   * The clear semi-diameter the clip radius was derived from, mm: the heights the sag is reported at scale with it.
+   * It limits nothing, on a surface that does not clip as little as on any other.
+   */
   readonly nominalSemiDiameter: number;
 }
 
@@ -39,7 +45,9 @@ export interface RefSystem {
  * difference of their vertices: `thickness`, which the case keeps equal to it within 1e-9 mm, is not read, so the
  * model has one statement of where a surface is. The stop surface clips by its own aperture like any other, which
  * a case states for its stop setting; `stopSemiDiameter` is the radius the pupils are images of, and no second
- * clip. The case is expected to be valid by its schema and its invariants, as the protocol handler has checked.
+ * clip. A surface the case gives no clip radius (`aperture.semiDiameter` null) has an infinite one, so that every
+ * height is within it. The case is expected to be valid by its schema and its invariants, as the protocol handler
+ * has checked.
  */
 export function buildRefSystem(opticalCase: OpticalCase): RefSystem {
   const { system, conditions } = opticalCase;
@@ -49,7 +57,7 @@ export function buildRefSystem(opticalCase: OpticalCase): RefSystem {
     surfaces: system.surfaces.map((surface) => ({
       z: surface.z,
       profile: profileOf(surface.shape),
-      clipRadius: surface.aperture.semiDiameter,
+      clipRadius: surface.aperture.semiDiameter ?? Infinity,
       innerClipRadius: surface.aperture.innerSemiDiameter,
       nominalSemiDiameter: surface.aperture.nominalSemiDiameter,
     })),

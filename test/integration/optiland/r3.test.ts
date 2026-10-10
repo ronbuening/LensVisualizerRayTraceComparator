@@ -50,7 +50,7 @@ const skipSuites = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
 /** The cells of a lattice over the middle of a case's first surface: where each ray of it is aimed, on the vertex plane. */
 function latticeCells(opticalCase: OpticalCase): [x: number, y: number][] {
   const across = 12;
-  const reach = 0.4 * opticalCase.system.surfaces[0].aperture.semiDiameter;
+  const reach = 0.4 * (opticalCase.system.surfaces[0].aperture.semiDiameter ?? NaN);
   const cells: [number, number][] = [];
   for (let row = 0; row < across; row++) {
     for (let column = 0; column < across; column++) {

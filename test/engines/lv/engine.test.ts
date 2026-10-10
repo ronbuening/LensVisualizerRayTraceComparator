@@ -20,13 +20,14 @@ import {
 } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
 import type { ParaxialFirstOrderData } from "../../../src/contract/quantities/paraxialFirstOrder.ts";
 import { RAYS_TRACE } from "../../../src/contract/quantities/raysTrace.ts";
+import type { RaysTraceData } from "../../../src/contract/quantities/raysTrace.ts";
 import { SYSTEM_DESCRIBE } from "../../../src/contract/quantities/systemDescribe.ts";
 import type { SystemDescribeData } from "../../../src/contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
 import type { ResultEnvelope } from "../../../src/contract/result.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { validateKind } from "../../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
 import { loadConfig } from "../../../src/core/config.ts";
 import { decodeNdArray, encodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../../src/core/numeric/ndarray.ts";
@@ -320,6 +321,76 @@ test("a central obstruction of the state is the inner clip radius of the echo, a
   );
 });
 
+test("a rear plate with a generated rim clips nothing: an infinite clip radius, and rays far outside its envelope pass", async (t) => {
+  const lv = freshLv(t);
+  const binding = await bind(t, lv);
+  const opticalCase = await exported(binding, "zenith-plate-35");
+  assert.equal(opticalCase.contract, CONTRACT_VERSION_1_2);
+  assert.deepEqual(opticalCase.features, ["aperture.unclipped"]);
+  // The tree's own rule: twice the largest authored semi-diameter, an envelope and no limit.
+  assert.deepEqual(
+    opticalCase.system.surfaces.map(({ aperture }) => [aperture.semiDiameter, aperture.nominalSemiDiameter]),
+    [
+      [7.000000001, 7],
+      [7.000000001, 7],
+      [5.000000001, 5],
+      [null, 14],
+      [null, 14],
+    ],
+  );
+  const [engine, ref] = [engineOn(t, binding), refEngine(t)];
+  const data = dataOf<SystemDescribeData>(await ask(engine, opticalCase, SYSTEM_DESCRIBE), SYSTEM_DESCRIBE);
+  assert.deepEqual(f8(data.clipRadius), [7.000000001, 7.000000001, 5.000000001, Infinity, Infinity]);
+  assert.deepEqual(f8(data.innerClipRadius), [0, 0, 0, 0, 0]);
+  // The heights of the sag are still fractions of the envelope.
+  assert.deepEqual(f8(data.sagRadii).slice(-9), [0, 1.75, 3.5, 5.25, 7, 8.75, 10.5, 12.25, 14]);
+  assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
+
+  // Rays at 30 degrees through the middle of the stop reach the plate some 16 mm from the axis, beyond its 14.
+  const tangent = Math.tan(Math.PI / 6);
+  const heights = [-0.5, 0, 0.5].map((offset) => offset - 15.5 * tangent);
+  const direction = [0, Math.sin(Math.PI / 6), Math.cos(Math.PI / 6)];
+  const spec = {
+    line: 0,
+    origins: encodeNdArray(Float64Array.from(heights.flatMap((y) => [0, y, -10])), [3, 3]),
+    directions: encodeNdArray(Float64Array.from(heights.flatMap(() => direction)), [3, 3]),
+    weights: encodeNdArray(new Float64Array(3).fill(1)),
+  };
+  const traced = async (asked: RemoteEngineAdapter, about: OpticalCase): Promise<RaysTraceData> =>
+    dataOf<RaysTraceData>(await ask(asked, about, RAYS_TRACE, spec), RAYS_TRACE);
+  const [mine, theirs] = [await traced(engine, opticalCase), await traced(ref, opticalCase)];
+  for (const answer of [mine, theirs]) {
+    assert.deepEqual([...decodeNdArray(answer.status).values], [0, 0, 0]);
+    const hits = f8(answer.hits);
+    // Surface 3, the plate's first: its three rays follow the 9 of the surfaces before it.
+    for (let ray = 0; ray < 3; ray++) assert.ok(Math.hypot(hits[27 + 3 * ray], hits[28 + 3 * ray]) > 14.5);
+  }
+  const r2 = COMPARATORS.get(RAYS_TRACE, "r2")?.compare(mine, theirs, { opticalCase, spec });
+  assert.ok(r2?.comparable);
+  assert.deepEqual(r2.metrics.find((metric) => metric.name === "mask.mismatches")?.value, 0);
+  assert.equal(r2.metrics.find((metric) => metric.name === "rays.compared")?.value, 3);
+
+  // The same plate with that rim published is an aperture: the same rays end on its first surface, in both.
+  const published = variantOf(lv, "published", {
+    [FAKE_LENS_FILES[3][0]]: (text) => text.replace("gap: 1 }", "gap: 1, sd: 14 }"),
+  });
+  binding.close();
+  const rimmed = await bind(t, published);
+  const clipping = await exported(rimmed, "zenith-plate-35");
+  assert.equal(clipping.contract, CONTRACT_VERSION);
+  assert.deepEqual(clipping.system.surfaces[3].aperture, {
+    semiDiameter: 14.000000001,
+    nominalSemiDiameter: 14,
+    innerSemiDiameter: 0,
+  });
+  assert.notEqual(clipping.systemId, opticalCase.systemId);
+  for (const asked of [engineOn(t, rimmed), ref]) {
+    const stopped = await traced(asked, clipping);
+    assert.deepEqual([...decodeNdArray(stopped.status).values], [1, 1, 1]);
+    assert.deepEqual([...decodeNdArray(stopped.endSurface).values], [3, 3, 3]);
+  }
+});
+
 // ── paraxial.first-order ─────────────────────────────────────────────────────────────────────────────────────────
 
 test("paraxial.first-order is the kernel on the state: a thin stop behind a singlet, worked out by hand", async (t) => {
@@ -398,6 +469,8 @@ test("lv and ref agree in R0 and R1 on every kind of case the fake tree gives", 
     // The stop behind the lens, and in front of it; a zoom with an asphere and a rear plate, at both ends.
     ["singlet", "acme-singlet-50", {}],
     ["doublet", "zenith-doublet-100", {}],
+    // A rear plate whose rim the tree generated: two surfaces that do not clip.
+    ["plate with a generated rim", "zenith-plate-35", {}],
     ["zoom wide", "acme-zoom-24-48", {}],
     ["zoom tele", "acme-zoom-24-48", { state: { zoomT: 1 } }],
     // Several lines, with anchored indices; a stop setting; an image plane that is not the design plane.

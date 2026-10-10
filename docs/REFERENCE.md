@@ -28,9 +28,10 @@ reads are local (`src/engines/lv/types.ts`), so the type check needs no LensVisu
 `lvrtc lenses show <key> [--zoom <t>] [--focus <t>] [--root <dir>] [--json]` prints the lens as LensVisualizer
 prepares it for tracing at one zoom and focus position (0 to 1, default 0; for a zoom shown without `--zoom` the
 error stream says that `--zoom 1` gives the tele end, and a prime has no zoom position): a row per surface with
-its radius or `flat`, the gap and index after it, the clear semi-diameter and the vertex position, then the stop
-surface and its runtime radius, the last lens surface, the image plane and the surface count. Rear plates are
-surfaces of the prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that
+its radius or `flat`, the gap and index after it, the clear semi-diameter, whether that rim clips (`clips`: `no`
+for the rim LensVisualizer generated for a rear plate that publishes none, which is an envelope and stops no ray)
+and the vertex position, then the stop surface and its runtime radius, the last lens surface, the image plane and
+the surface count. Rear plates are surfaces of the prepared state and are marked `rearPlate`. A key that is not in the catalog is a usage error that
 suggests the nearest keys. Both commands print to the console only.
 
 ### Cases
@@ -49,6 +50,16 @@ the object of a certified focus station), never from authored surface fields. Th
   than wide open is refused, not clamped.
 - **Focus.** Infinity, or a focus position LensVisualizer certifies an object distance for. Any other focus
   position is refused: a refocused lens is never exported with its object at infinity.
+- **A rear plate without a published rim does not clip.** Where a lens file declares a cover glass or a filter
+  without its semi-diameter, LensVisualizer generates a rim for the plate's two surfaces and, from `31c34396` on,
+  clips no ray by it and limits no field by it. The case states that (contract minor 2): the two surfaces have
+  `aperture.semiDiameter` null, the generated rim as `nominalSemiDiameter`, which is their extent and no limit,
+  and the case carries the flag `aperture.unclipped` and the contract version `1.2`. Every engine of this
+  repository builds such a surface as one that stops no ray: `ref` meets it wherever a ray's line crosses it,
+  `optiland` is given no physical aperture for it, and `system.describe` of each answers its `clipRadius` with an
+  infinity, which R0 holds the three to. A plate with a published rim clips, and is exported with its limit. 232
+  of the 1180 exported states of the catalog at `31c34396` have such a plate (`reports/census`); `lvrtc lenses
+  show` says of each surface whether it clips.
 - **What a case cannot express is reported with a code**, never approximated: a folded path, a mirror or a
   blocker, a diffractive surface, a tilted image plane, and what LensVisualizer itself has no data for (lines for a
   lens without dispersion data, mixed d and e references). A lens that cannot be exported as asked exits 1 with
@@ -1286,6 +1297,13 @@ truth, TypeScript types that mirror them, a small validator written here, and a 
 fixtures that every implementation must accept and reject identically. `contract/CONTRACT.md` fixes the frame,
 units, signs, identity hashes and versioning.
 
+The contract is at version 1.2, and a document states the version of what it uses: every request, result,
+manifest, comparison and rays baseline is written as 1.0, an MTF baseline as 1.1 (minor 1 added its members), and
+an optical case as 1.2 exactly when it has a surface that does not clip (minor 2: `aperture.semiDiameter` null,
+the feature flag `aperture.unclipped`). A case without such a surface is the 1.0 document it was, with the id it
+had. The engines of this repository speak 1.0 to 1.2 and list the flag; an engine that does not is `unsupported`
+for such a case and is asked about every other as before.
+
 ## Configuration
 
 Values are layered, lowest precedence first:
@@ -1363,7 +1381,8 @@ of its primary wavelength. It uses only what optiland has not deprecated; a depr
 | `conic` | a `standard` surface with the radius and the conic constant |
 | `asphere` | `even_asphere` when every power it states is even, else `odd_asphere`, with the coefficient list laid out to the highest power and 0 where the case has no term; `radius=inf` on a flat base; `tol=1e-12`, `max_iter=100` |
 | the index after a surface, at the line | `IdealMaterial(n=...)` |
-| `aperture.semiDiameter`, `innerSemiDiameter` | `RadialAperture(r_max=..., r_min=...)` on every surface, the stop like any other |
+| `aperture.semiDiameter`, `innerSemiDiameter` | `RadialAperture(r_max=..., r_min=...)` on every surface that clips, the stop like any other |
+| `aperture.semiDiameter` null: a surface that does not clip | no physical aperture, `aperture=None`: optiland clips only where a surface has one. Read back as `clipRadius` +Infinity |
 | `aperture.nominalSemiDiameter` | the surface's `semi_aperture`, which clips nothing: the heights of the sag are fractions of it |
 | `stopIndex`, `conditions.stopSemiDiameter` | `is_stop=True`, and `set_aperture("float_by_stop_size", 2 x radius)` |
 | `conditions.imageZ` | the image surface at that `z`, flat, without an aperture |

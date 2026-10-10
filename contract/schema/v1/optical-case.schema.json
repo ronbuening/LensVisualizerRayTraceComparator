@@ -25,6 +25,7 @@
         "type": "string",
         "enum": [
           "aperture.annular",
+          "aperture.unclipped",
           "lines.multiple",
           "object.finite",
           "surface.asphere.even",
@@ -131,11 +132,12 @@
       "type": "object",
       "properties": {
         "semiDiameter": {
-          "description": "Effective clip radius, mm. A ray at exactly this height passes.",
-          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          "description": "Effective clip radius, mm. A ray at exactly this height passes. Null (minor 2) for a surface that does not clip: it stops no ray at any height.",
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0
         },
         "nominalSemiDiameter": {
-          "description": "The clear semi-diameter the clip radius is derived from, mm: the prescription's; on the stop surface, the stop setting.",
+          "description": "The clear semi-diameter the clip radius is derived from, mm: the prescription's; on the stop surface, the stop setting; on a surface that does not clip, its extent, which limits nothing.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
         },
         "innerSemiDiameter": {

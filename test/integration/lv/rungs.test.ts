@@ -7,6 +7,10 @@
 // commit; its engine files are those of the d36f44b3 working tree the earlier stages name (closure f6681074). The
 // verdicts under the floor of the exit direction (policy version 4) were taken at 1ed8cc3d (closure ff670f03), where
 // the figures of these lenses are those of 3af45e3f to every digit quoted.
+//
+// All of them are figures of LensVisualizer's intersection tolerance of 1e-9 mm, which it has up to 33ebdb30 (closure
+// 78215d72, `TOLERANCE_1E9_CLOSURE`). No test here requires LensVisualizer to be that far off: an upper bound holds
+// on any LensVisualizer, and what a floor or a failure of that tolerance says is compared only at that closure.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -51,6 +55,11 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const POLICY = loadPolicy();
+/**
+ * The engine closure of LensVisualizer 33ebdb30, the last whose intersection tolerance is 1e-9 mm: the floors and
+ * the failures that tolerance leaves on a few steep lenses are pinned at it, and dormant at any other closure.
+ */
+const TOLERANCE_1E9_CLOSURE = "78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322";
 /** The baseline of the benchmark that is committed: lv, ref and optiland on R0 to R3. */
 const COMMITTED_BASELINE = join(REPO_ROOT, "baselines", "benchmark.json");
 
@@ -213,12 +222,14 @@ test(
     // (nikon-z-24-70f4s at its long end, 470 nm). Everything is LensVisualizer's intersection tolerance of 1e-9 mm,
     // carried through the surfaces behind it. At 33ebdb30 (closure 78215d72) the 72 runs of the three other
     // conditions pass outright too: stopped down the rays are a part of these, and a moved image plane moves
-    // nothing but the landing and the path to it.
+    // nothing but the landing and the path to it. At 31c34396 (closure a52a7b8e), whose intersection tolerance is
+    // 1e-12 mm, the same pairs pass with a hit distance of 1.9e-12 mm, a direction of 8.0e-14 and a landing of
+    // 2.4e-12 mm at the most. The bounds are upper bounds: a more accurate LensVisualizer is not a failure.
     assert.deepEqual(counts, { "r0 PASS": 96, "r1 PASS": 96, "r2 PASS": 864, "r3 PASS": 864 });
     assert.equal(floors.size, 0);
-    assert.ok(r2["hits.maxDistance"].value > 1e-9 && r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
+    assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9 && r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
-    for (const name of R3_METRICS) assert.ok(r3[name].value > 1e-7 && r3[name].value < 2e-5, said(r3, R3_METRICS));
+    for (const name of R3_METRICS) assert.ok(r3[name].value < 2e-5, said(r3, R3_METRICS));
 
     // The digest: who was compared, by hash, and at which commit of LensVisualizer.
     const lv = manifest.engines.find((engine) => engine.id === "lv");
@@ -277,7 +288,7 @@ test(
 // ── The feature suite ────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "the feature suite: every pair is PASS or FLOOR on R0 to R3, and the floors are those of one steep field",
+  "the feature suite: every pair is PASS or FLOOR on R0 to R3, and a floor is of one steep field",
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, verdicts } = cycle(t, "features");
@@ -311,31 +322,42 @@ test(
     // 2.2e-9 mm off along the ray lands 1.10e-8 mm from where it should, and its path to the image plane is
     // 2.07e-5 waves off (2.28e-5 relative to the chief ray). Traced in 60-digit arithmetic, the reference engine
     // is 6e-15 mm and 2e-11 waves from the truth on that ray, and LensVisualizer the rest. See docs/gotchas.md.
-    assert.deepEqual(counts, {
-      "r0 PASS": 18,
-      "r1 PASS": 18,
-      "r2 PASS": 160,
-      "r2 FLOOR": 2,
-      "r3 PASS": 160,
-      "r3 FLOOR": 2,
-    });
-    assert.deepEqual([...floors.keys()], ["stop-inside-element-photopic r2", "stop-inside-element-photopic r3"]);
+    // That is LensVisualizer's intersection tolerance of 1e-9 mm. At 31c34396, where it is 1e-12 mm, no pair is a
+    // floor: every pair of the suite passes. So the counts are of PASS and FLOOR together, a floor is asserted
+    // of only where there is one, and every bound is an upper bound.
+    const passed = (rung: string): number => (counts[`${rung} PASS`] ?? 0) + (counts[`${rung} FLOOR`] ?? 0);
+    assert.deepEqual(
+      ["r0", "r1", "r2", "r3"].map((rung) => [rung, passed(rung)]),
+      [
+        ["r0", 18],
+        ["r1", 18],
+        ["r2", 162],
+        ["r3", 162],
+      ],
+    );
+    assert.deepEqual([counts["r0 FLOOR"], counts["r1 FLOOR"]], [undefined, undefined]);
     for (const [where, reason] of floors) {
-      // Each names what exceeded its gate, and the figures against the arbiter that make it a floor.
+      // A floor is of the one steep field, names what exceeded its gate, and the figures against the arbiter
+      // that make it a floor.
+      assert.match(where, /^stop-inside-element-photopic r[23]$/);
       assert.match(reason, /exceeds its tolerance .*; floor of lv: lv against ref /, where);
       assert.ok(!reason.includes("not a floor"), where);
     }
-    assert.match(
-      floors.get("stop-inside-element-photopic r2") ?? "",
-      /^landing\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at field 5\.53e1, line \d, ray \d+; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-10 within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-9 within 1\.00e-7, lv against ref landing\.maxDistance 1\.\d\de-8 within 1\.00e-7$/,
-    );
-    // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that is not.
+    const landingFloor = floors.get("stop-inside-element-photopic r2");
+    if (landingFloor !== undefined) {
+      assert.match(
+        landingFloor,
+        /^landing\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at field 5\.53e1, line \d, ray \d+; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-10 within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-9 within 1\.00e-7, lv against ref landing\.maxDistance 1\.\d\de-8 within 1\.00e-7$/,
+      );
+    }
+    // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that at a
+    // tolerance of 1e-9 mm is not.
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9, said(r2, R2_METRICS));
-    assert.ok(r2["landing.maxDistance"].value > 1e-8 && r2["landing.maxDistance"].value < 2e-8, said(r2, R2_METRICS));
+    assert.ok(r2["landing.maxDistance"].value < 2e-8, said(r2, R2_METRICS));
     assert.ok(r3["opticalPath.maxAbs"].value < 2e-5, said(r3, R3_METRICS));
-    assert.ok(r3["opticalPathToImage.maxAbs"].value > 2e-5 && r3["opticalPathToImage.maxAbs"].value < 3e-5);
-    assert.ok(r3["opd.maxAbs"].value > 2e-5 && r3["opd.maxAbs"].value < 3e-5, said(r3, R3_METRICS));
+    assert.ok(r3["opticalPathToImage.maxAbs"].value < 3e-5, said(r3, R3_METRICS));
+    assert.ok(r3["opd.maxAbs"].value < 3e-5, said(r3, R3_METRICS));
     for (const name of [...R2_METRICS.slice(0, 1), ...R3_METRICS]) {
       const worst = name === "hits.maxDistance" ? r2[name] : r3[name];
       assert.ok(worst.at.length > 0, name);
@@ -457,10 +479,11 @@ const CROSSING_SURFACES: readonly (readonly [key: string, surface: number, zoomT
   ["nokton-50f1", 7],
   ["olympus-zuiko-auto-s-50f14", 6],
   ["pentax-da-18-55mm-f35-56-al", 15],
-  ["vivitar-series-1-70-210-f35", 21],
-  ["vivitar-series-1-70-210-f35", 21, 1],
   ...TELE_ONLY_CROSSINGS,
 ];
+// vivitar-series-1-70-210-f35 was one of them at both ends, its stop set into surface 21, until LensVisualizer
+// placed the stop 1.2 mm behind that surface (its lens file at 31c34396): a lens whose data was corrected is no
+// example of the defect any more, at either commit's reading of it.
 
 test(
   "where two surfaces cross inside their clear apertures LensVisualizer loses the ray, and R2 says so as a mask mismatch",
@@ -581,6 +604,39 @@ test(
       ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"].map((name) => limitOf("r2", name)),
       [1e-7, 1e-8, 1e-7],
     );
+
+    // Everything below is what LensVisualizer's intersection tolerance of 1e-9 mm leaves on these lenses. With
+    // another engine closure the lenses are still traced, and held to no ray that one engine stopped and the other
+    // passed (`verdictsOf`), and their figures are printed: a LensVisualizer that is more accurate has fewer
+    // floors and failures here, or none, and that is no failure of a test.
+    if (ask.binding.fingerprint().engineClosureHash !== TOLERANCE_1E9_CLOSURE) {
+      const photopic: RunOptions = { lines: { kind: "photopic" } };
+      const lenses: [string, RunOptions][] = [
+        ["fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii", {}],
+        ["leica-apo-summicron-m-35f2", {}],
+        ["apple-iphone-12-main-wide", {}],
+        ["apple-iphone-7-wide-camera-lens", photopic],
+        ["fujifilm-fujinon-xf-27mm-f28", photopic],
+        ["leica-apo-summicron-m-35f2", photopic],
+        ["fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr", photopic],
+      ];
+      const verdicts: string[] = [];
+      for (const [key, options] of lenses) {
+        const { r2, r3 } = await verdictsOf(key, options);
+        verdicts.push(...r2, ...r3);
+      }
+      const count = (verdict: string): number => verdicts.filter((other) => other === verdict).length;
+      t.diagnostic(
+        "the floors and failures pinned here are of LensVisualizer's intersection tolerance of 1e-9 mm, at the " +
+          `closure ${TOLERANCE_1E9_CLOSURE.slice(0, 8)}, and are not compared with this one: of ${verdicts.length} ` +
+          `pairs ${count("PASS")} PASS, ${count("FLOOR")} FLOOR, ${count("FAIL")} FAIL; ${seen.join("; ")}`,
+      );
+      // No floor is required of another LensVisualizer, but every pair is still judged: PASS or FLOOR, as on any
+      // gated rung. The failures pinned below are refusals of the floor rule at the old tolerance alone.
+      assert.equal(count("PASS") + count("FLOOR"), verdicts.length, `a pair is neither PASS nor FLOOR: ${verdicts}`);
+      assert.ok(verdicts.length > 0, "no pair was judged");
+      return;
+    }
 
     // Within the floor's limits, at the full field only: a hit 4e-8 mm off behind a surface that magnifies what
     // came before it forty times, on a wide zoom; a landing 2.2e-8 mm off behind an exit 64 degrees off the axis.

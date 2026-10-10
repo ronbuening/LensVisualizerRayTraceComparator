@@ -464,7 +464,9 @@ function heldToTheCase(opticalCase: OpticalCase, spec: RaysTraceSpec, data: Rays
       const radius = Math.hypot(hit[0], hit[1]);
       const offSurface = Math.abs(hit[2] - (surfaces[surface].z + sag(profiles[surface], radius)));
       assert.ok(offSurface <= 2e-9, `${where}: the hit is ${offSurface} mm off the surface`);
-      assert.ok(radius <= surfaces[surface].aperture.semiDiameter, `${where}: the hit is outside the clip radius`);
+      // A surface that does not clip has no clip radius for a hit to be outside of.
+      const clip = surfaces[surface].aperture.semiDiameter ?? Infinity;
+      assert.ok(radius <= clip, `${where}: the hit is outside the clip radius`);
       worst = Math.max(worst, offSurface);
       const before = surface === 0 ? 1 : indices[surface - 1];
       const into = along(points[surface], hit);

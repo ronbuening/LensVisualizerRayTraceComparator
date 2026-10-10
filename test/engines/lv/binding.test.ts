@@ -245,7 +245,7 @@ test("the catalog indexes every lens file by key, with the hash of the file", as
   const binding = await bind(t, lv);
   const catalog = await binding.catalog();
   assert.deepEqual(catalog, {
-    fileCount: 3,
+    fileCount: 4,
     entries: [
       {
         key: "acme-singlet-50",
@@ -266,6 +266,12 @@ test("the catalog indexes every lens file by key, with the hash of the file", as
         fileSha256: fileHash(lv, FAKE_LENS_FILES[2][0]),
         name: "ZENITH Doublet 100mm f/8",
       },
+      {
+        key: "zenith-plate-35",
+        file: FAKE_LENS_FILES[3][0],
+        fileSha256: fileHash(lv, FAKE_LENS_FILES[3][0]),
+        name: "ZENITH Plate 35mm f/2.8",
+      },
     ],
     problems: [],
   });
@@ -280,13 +286,13 @@ test("a lens is loaded by key from the one scan, and an unknown key suggests nea
   assert.equal(lens.data.key, "acme-zoom-24-48");
   assert.deepEqual(lens.data.zoomPositions, [24, 48]);
   // A lens file written after the scan is not seen: the index is cached for the life of the binding.
-  writeFileSync(join(lv, "src/lens-data/acme/Late.data.ts"), 'export default { key: "late", name: "Late" };\n');
+  writeFileSync(join(lv, "src/lens-data/acme/Late.data.ts"), 'export default { key: "tardy", name: "Late" };\n');
   assert.equal((await binding.lens("acme-zoom-24-48")).data, lens.data);
 
   const error = await refused(binding.lens("acme-zoom-2448"), "unknown-lens");
   assert.equal(error.message, 'unknown lens "acme-zoom-2448"; did you mean acme-zoom-24-48?');
   assert.deepEqual(error.details, ["acme-zoom-24-48"]);
-  assert.equal((await refused(binding.lens("late"), "unknown-lens")).message, 'unknown lens "late"');
+  assert.equal((await refused(binding.lens("tardy"), "unknown-lens")).message, 'unknown lens "tardy"');
 });
 
 test("duplicate keys and bad lens files are reported together and left out of the index", async (t) => {
@@ -303,10 +309,10 @@ test("duplicate keys and bad lens files are reported together and left out of th
 
   const binding = await bind(t, lv);
   const catalog = await binding.catalog();
-  assert.equal(catalog.fileCount, 10);
+  assert.equal(catalog.fileCount, 11);
   assert.deepEqual(
     catalog.entries.map((entry) => entry.key),
-    ["acme-zoom-24-48", "deep", "zenith-doublet-100"],
+    ["acme-zoom-24-48", "deep", "zenith-doublet-100", "zenith-plate-35"],
   );
   assert.equal(catalog.entries[1].file, "src/lens-data/zenith/deep/er/Deep.data.ts");
   assert.deepEqual(catalog.problems, [
@@ -370,6 +376,7 @@ test("a prepared state is summarized from the state itself", async (t) => {
     d: 2,
     nd: 1,
     sd: 9,
+    clips: true,
     z: 13,
     asphere: true,
     synthetic: null,
@@ -381,6 +388,7 @@ test("a prepared state is summarized from the state itself", async (t) => {
     d: 2,
     nd: 1,
     sd: 6,
+    clips: true,
     z: 15,
     asphere: false,
     synthetic: null,
@@ -391,4 +399,19 @@ test("a prepared state is summarized from the state itself", async (t) => {
   );
   assert.equal(syntheticKind(state.surfaces[6]), "rearPlate");
   assert.equal(syntheticKind(state.surfaces[0]), null);
+
+  // A published rim clips; a rim the tree generated is an envelope, and the summary says which a surface has.
+  assert.ok(summary.surfaces.every((surface) => surface.clips));
+  const plate = await binding.lens("zenith-plate-35");
+  const generated = summarizeState(binding.api.prepareRuntimeState(binding.api.buildLens(plate.data), 0, 0));
+  assert.deepEqual(
+    generated.surfaces.map(({ label, sd, clips, synthetic }) => ({ label, sd, clips, synthetic })),
+    [
+      { label: "1", sd: 7, clips: true, synthetic: null },
+      { label: "2", sd: 7, clips: true, synthetic: null },
+      { label: "STO", sd: 5, clips: true, synthetic: null },
+      { label: "RP1a", sd: 14, clips: false, synthetic: "rearPlate" },
+      { label: "RP1b", sd: 14, clips: false, synthetic: "rearPlate" },
+    ],
+  );
 });

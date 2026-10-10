@@ -35,6 +35,7 @@ from .support import UNOFFERED_QUANTITY, describe_request, read_fixture
 SINGLET = read_fixture("valid", "optical-case", "singlet.json")
 DOUBLE_GAUSS = read_fixture("valid", "optical-case", "double-gauss.json")
 ALL_FEATURES = read_fixture("valid", "optical-case", "all-features.json")
+UNCLIPPED_PLATE = read_fixture("valid", "optical-case", "unclipped-plate.json")
 
 IDENTITY: dict[str, Any] = {
     "id": "optiland",
@@ -237,25 +238,29 @@ class DeclarationTest(unittest.TestCase):
         self.assertEqual(len(DEFAULT_SAG_FRACTIONS), 9)
 
     def test_nothing_keeps_it_from_describing_the_contracts_cases(self) -> None:
-        for case in (SINGLET, DOUBLE_GAUSS, ALL_FEATURES):
+        for case in (SINGLET, DOUBLE_GAUSS, ALL_FEATURES, UNCLIPPED_PLATE):
             self.assertEqual(refusals(describe_request(case), case), [], case["label"]["name"])
-        self.assertEqual(set(ALL_FEATURES["features"]), set(SUPPORTED_FEATURES), "the case that has every feature")
+        # The case of every flag of contract 1.0, and the case of the flag minor 2 added, which states 1.2.
+        self.assertEqual(UNCLIPPED_PLATE["contract"], "1.2")
+        self.assertEqual(UNCLIPPED_PLATE["features"], ["aperture.unclipped"])
+        carried = set(ALL_FEATURES["features"]) | set(UNCLIPPED_PLATE["features"])
+        self.assertEqual(carried, set(SUPPORTED_FEATURES), "the two cases that have every feature between them")
 
     def test_what_its_descriptor_rules_out_is_refused_in_the_order_of_the_comparators_negotiation(self) -> None:
         request = {**describe_request(SINGLET), "quantity": UNOFFERED_QUANTITY, "contract": "2.0"}
-        case = {**SINGLET, "contract": "1.1", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
+        case = {**SINGLET, "contract": "1.3", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
         self.assertEqual(
             refusals(request, case),
             [
                 {
                     "code": "contract",
-                    "item": "1.1",
-                    "message": "the engine speaks contract 1.0 to 1.0; the case is written to 1.1",
+                    "item": "1.3",
+                    "message": "the engine speaks contract 1.0 to 1.2; the case is written to 1.3",
                 },
                 {
                     "code": "contract",
                     "item": "2.0",
-                    "message": "the engine speaks contract 1.0 to 1.0; the request is written to 2.0",
+                    "message": "the engine speaks contract 1.0 to 1.2; the request is written to 2.0",
                 },
                 {"code": "quantity", "item": "selftest.echo", "message": "the engine does not offer selftest.echo"},
                 {
@@ -266,11 +271,17 @@ class DeclarationTest(unittest.TestCase):
                 {"code": "feature", "item": "x.y", "message": "the engine does not support x.y"},
             ],
         )
-        both = refusals({**describe_request(SINGLET), "contract": "1.1"}, {**SINGLET, "contract": "1.1"})
+        both = refusals({**describe_request(SINGLET), "contract": "0.9"}, {**SINGLET, "contract": "0.9"})
         self.assertEqual(
             [item["message"] for item in both],
-            ["the engine speaks contract 1.0 to 1.0; the case and the request are written to 1.1"],
+            ["the engine speaks contract 1.0 to 1.2; the case and the request are written to 0.9"],
         )
+        # Every minor up to the worker's newest is spoken; a text that is no version is in no range.
+        for spoken in ("1.0", "1.1", "1.2"):
+            self.assertEqual(refusals(describe_request(SINGLET), {**SINGLET, "contract": spoken}), [], spoken)
+        for unspoken in ("1.10", "2.0", "1.02", "1", "1.x", "١.٠"):
+            items = refusals(describe_request(SINGLET), {**SINGLET, "contract": unspoken})
+            self.assertEqual([item["item"] for item in items], [unspoken])
 
 
 class RunTest(unittest.TestCase):
