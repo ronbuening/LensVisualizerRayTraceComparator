@@ -5,7 +5,7 @@
 // a FAIL. The fake's numbers describe no real lens.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -207,4 +207,125 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
   );
   const verified = lvrtc(rootDir, "verify");
   assert.equal(verified.code, EXIT_OK, verified.err + verified.out);
+});
+
+test("an MTF baseline: write --mtf, verify and check --mtf hold it and its report apart from the rays baseline", (t) => {
+  const rootDir = sampledRoot(t);
+  const lens = { kind: "lv", key: "acme-singlet-50" };
+  const runs = [
+    { name: "sampled-ref", lens, lines: { kind: "reference" } },
+    { name: "sampled-f8-best", lens, aperture: { kind: "lv-f8-comparison" }, imagePlane: { kind: "lv-best-axial" } },
+  ];
+  const suite = join(rootDir, "suite.json");
+  const defaults = { engines: ["lv", "ref"], rungs: ["r1", "r4", "r4f", "r6a", "r6b"] };
+  writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "held", defaults, runs }));
+  const at = (...parts: string[]): string => join(rootDir, ...parts);
+
+  // No MTF baseline yet: there is nothing to check, and a run without an MTF rung has none to write.
+  const none = lvrtc(rootDir, "baseline", "check", suite, "--mtf");
+  assert.equal(none.code, 2);
+  assert.match(
+    none.err,
+    /held\.mtf\.json: the suite held has no MTF baseline; lvrtc baseline write held --mtf writes one/,
+  );
+  assert.equal(lvrtc(rootDir, "run", suite, "--rungs", "r1").code, EXIT_OK);
+  assert.equal(lvrtc(rootDir, "compare", "held").code, EXIT_OK);
+  const without = lvrtc(rootDir, "baseline", "write", "held", "--mtf");
+  assert.equal(without.code, 2);
+  assert.match(
+    without.err,
+    /no MTF baseline is written of this run: it has none of the rungs r4, r4f, r5, r5g, r6a, r6b/,
+  );
+  assert.equal(existsSync(at("baselines")), false);
+
+  assert.equal(lvrtc(rootDir, "run", suite).code, EXIT_OK);
+  assert.equal(lvrtc(rootDir, "compare", "held").code, EXIT_OK);
+  const written = lvrtc(rootDir, "baseline", "write", "held", "--mtf");
+  assert.equal(written.code, EXIT_OK, written.err);
+  assert.deepEqual(readdirSync(at("baselines")), ["held.mtf.json"]);
+  assert.deepEqual(readdirSync(at("reports", "held")).sort(), ["mtf.json", "mtf.md"]);
+  const baseline = JSON.parse(readFileSync(at("baselines", "held.mtf.json"), "utf8"));
+  assert.equal(baseline.contract, "1.1");
+  for (const run of baseline.runs) {
+    // The MTF rungs of the run and no other; every figure with the number of requests it was measured in.
+    assert.deepEqual(
+      run.rungs.map((rung: { rung: string }) => rung.rung),
+      ["r4", "r4f", "r6a", "r6b"],
+      run.name,
+    );
+    for (const rung of run.rungs) {
+      for (const pair of rung.pairs) {
+        for (const metric of pair.metrics)
+          assert.equal(typeof metric.measured, "number", `${rung.rung} ${metric.name}`);
+      }
+    }
+  }
+  const report = readFileSync(at("reports", "held", "mtf.md"), "utf8");
+  assert.match(report, /^# MTF baseline of held$/m);
+  assert.match(report, /^## Not covered$/m);
+
+  // The rays baseline of the same run is written beside it, as it always was, and both are verified.
+  assert.equal(lvrtc(rootDir, "baseline", "write", "held").code, EXIT_OK);
+  assert.equal(JSON.parse(readFileSync(at("baselines", "held.json"), "utf8")).contract, CONTRACT_VERSION);
+  const verified = lvrtc(rootDir, "verify");
+  assert.equal(verified.code, EXIT_OK, verified.err);
+  assert.match(
+    verified.out,
+    /^baselines\/held\.mtf\.json: a baseline of 2 runs and 8 records, policy v\d+; reports\/held\/mtf\.md and mtf\.json are what it renders$/m,
+  );
+  assert.match(verified.out, /^baselines\/held\.json: .* reports\/held\/rays\.md and rays\.json are what it renders$/m);
+
+  // Checked against the engines: the records of the MTF baseline, each OK, and nothing of another rung.
+  const checked = lvrtc(rootDir, "baseline", "check", suite, "--mtf", "--json");
+  assert.equal(checked.code, EXIT_OK, checked.err + checked.out);
+  const said: { records: { rung: string; outcome: string }[]; changes: unknown[]; errors: string[] } = JSON.parse(
+    checked.out,
+  );
+  assert.deepEqual(said.errors, []);
+  assert.deepEqual(said.changes, []);
+  assert.deepEqual(
+    said.records.map((record) => `${record.rung} ${record.outcome}`),
+    ["r4", "r4f", "r6a", "r6b", "r4", "r4f", "r6a", "r6b"].map((rung) => `${rung} OK`),
+  );
+
+  // A report edited by hand is not what the baseline renders; --write makes it anew.
+  const markdown = at("reports", "held", "mtf.md");
+  writeFileSync(markdown, report.replace("8 PASS", "9 PASS").replace("2 PASS", "3 PASS"));
+  assert.notEqual(readFileSync(markdown, "utf8"), report);
+  const edited = lvrtc(rootDir, "verify");
+  assert.equal(edited.code, 1);
+  assert.match(
+    edited.err,
+    /^lvrtc verify: reports\/held\/mtf\.md: it is not what baselines\/held\.mtf\.json renders: it was edited by hand/m,
+  );
+  assert.doesNotMatch(edited.err, /rays\.md/);
+  assert.equal(lvrtc(rootDir, "verify", "--write").code, EXIT_OK);
+  assert.equal(readFileSync(markdown, "utf8"), report);
+
+  // An MTF report without its baseline is a stray, whatever rays baseline the suite has.
+  rmSync(at("baselines", "held.mtf.json"));
+  const stray = lvrtc(rootDir, "verify");
+  assert.equal(stray.code, 1);
+  assert.match(
+    stray.err,
+    /^lvrtc verify: reports\/held\/mtf\.md: there is no baselines\/held\.mtf\.json it is rendered from$/m,
+  );
+  assert.match(
+    stray.err,
+    /^lvrtc verify: reports\/held\/mtf\.json: there is no baselines\/held\.mtf\.json it is rendered from$/m,
+  );
+
+  // A run directory is of the last run: a baseline is not replaced by the run of fewer rungs unless that is asked.
+  assert.equal(lvrtc(rootDir, "run", suite, "--rungs", "r1").code, EXIT_OK);
+  assert.equal(lvrtc(rootDir, "compare", "held").code, EXIT_OK);
+  const rays = readFileSync(at("baselines", "held.json"), "utf8");
+  const fewer = lvrtc(rootDir, "baseline", "write", "held");
+  assert.equal(fewer.code, 2);
+  assert.match(
+    fewer.err,
+    /the run has no rung r4, r4f, r6a, r6b, which .*held\.json has: it is the run of other rungs/,
+  );
+  assert.equal(readFileSync(at("baselines", "held.json"), "utf8"), rays);
+  assert.equal(lvrtc(rootDir, "baseline", "write", "held", "--replace").code, EXIT_OK);
+  assert.notEqual(readFileSync(at("baselines", "held.json"), "utf8"), rays);
 });

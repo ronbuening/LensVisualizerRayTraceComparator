@@ -588,8 +588,8 @@ asks each named engine (`lv` unless others are named) for its MTF of a LensVisua
 it, and prints what each answered: a row per field with the image height, the field angle, the status and the
 sagittal and tangential MTF at the frequencies the profile shows, then the engine's method and its settings, the
 focus shift it applied, the f-number it traced and the surface that limits the axial beam, the lines it computed
-with and its notes. With one engine it only presents; setting engines against each other is Phase 3, and adds
-nothing to this command line.
+with and its notes. With a profile that is one request it only presents; the profile `benchmark` sets the
+engines against each other ([below](#lvrtc-mtf---profile-benchmark)).
 
 **A zoom is asked about at both ends.** Without `--zoom`, a zoom lens gets two requests, two tables and two run
 directories, the wide end (zoom 0) and then the tele end (zoom 1), each table under a line that says which end it
@@ -670,6 +670,35 @@ report holds are that report's, to its printed precision, although the report as
 own fields and frequencies and radii that are not scaled: none of that enters the axial focus search or the
 traced aperture. The figures are pinned in `test/integration/lv/mtf.test.ts` and compared while LensVisualizer's
 engine files and the case of a configuration are the ones they were measured with.
+
+### `lvrtc mtf --profile benchmark`
+
+`lvrtc mtf <lensKey> --profile benchmark --engines lv,ref,optiland` is the MTF benchmark for one lens in one
+command (Stage 3.8). The profile is no one request: it makes a suite of its own, `mtf-<lensKey>`, of the lens in
+the benchmark's conditions, and runs, compares and reports it as `lvrtc run`, `compare` and `baseline write --mtf`
+would, without writing a baseline.
+
+- **The runs** are the lens wide open and at the tab's f/8 (`lv-f8-comparison`), at its design plane and at
+  LensVisualizer's best axial focus (`lv-best-axial`), on the reference line and on the photopic lines: eight,
+  named as the benchmark suite names them (`<lensKey>-ref`, `-best-photopic`, `-f8-ref`, `-f8-best-photopic`, ...).
+  A zoom without `--zoom` is run at both ends by the case source, sixteen runs (`...-wide`, `...-tele`);
+  `--zoom <t>` is that one position (`<lensKey>-zoom<t>-...`). `--aperture wide-open` or `f/8` keeps one aperture,
+  four runs. A lens the tab offers no f/8 for has its f/8 runs not started, each with the tab's reason, and the
+  command exits 1 after running the others.
+- **The rungs** are `r4`, `r4f`, `r6a` and `r6b`, and, where `optiland` is among the engines, `r5` and `r5g`. `r4`
+  and `r6a` compare the named engines; the others ask the engines they are about, whatever is named.
+- **The cases and requests are the benchmark's own** for a lens of the benchmark, so the result store answers
+  them: after the benchmark run the command takes as long as the comparison does. From an empty store a fast lens
+  wide open takes minutes (optiland's geometric MTF is up to six minutes a request); one line on the error stream
+  says which run and rung has begun.
+- **What is printed** is the MTF report of the run, the one an MTF baseline renders
+  ([below](#mtf-baselines)): the gated rungs with their worst figures and the number of requests each was measured
+  in, the recorded rungs, the table of the engines' own MTF at fields 0, 0.5 and 1 and 10, 30 and 50 cycles/mm,
+  every request marked for attention, and the fixed block of what is not covered. `--json` prints the report as
+  one object. The run is `<runsDir>/mtf-<lensKey>/` (`manifest.json`, `comparisons.json`, the cases, `mtf.md`,
+  `mtf.json`), so `lvrtc compare mtf-<lensKey>` and `lvrtc report mtf-<lensKey>` read it as any run.
+- **Exit code**: 1 when a pair is `FAIL` or `ERROR` (each is named once on the error stream), when a job ended in
+  an error, an engine could not be used or a run was not started; 0 otherwise, a recorded rung never failing it.
 
 ## The MTF recipe, the replay and rung R4f
 
@@ -1101,6 +1130,107 @@ comparator ends the worker.
 
 R5g is in no committed baseline until Stage 3.8. It is exercised on three runs by `npm run test:optiland`
 (`test/integration/optiland/r5g.test.ts`), and hermetically on stand-ins (`test/report/r5g.test.ts`).
+
+## Phase 3: the MTF benchmark
+
+Stage 3.8. The benchmark suite in its four conditions (twelve configurations wide open and at the tab's f/8, at
+the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines: 96
+runs, three fields a run) on LensVisualizer, the reference tracer and optiland, every MTF rung in one run:
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b
+```
+
+9367 jobs, 9319 ok, 48 unsupported (optiland's FFT MTF on the photopic lines), none an error; 53 min 42 s on a
+store that held the traces of R2 to R4 and nothing else of these rungs, and 5 min 30 s for `lvrtc compare`, most
+of it the wave estimator of R6a. LensVisualizer `33ebdb30` (clean; engine closure `78215d72`, 151 files);
+optiland `4e893f53` (source hash `279af5c5`); policy version 10. It is what
+[baselines/benchmark.mtf.json](../baselines/benchmark.mtf.json) records (1344 records) and
+[reports/benchmark/mtf.md](../reports/benchmark/mtf.md) shows. `lvrtc baseline check benchmark --mtf` afterwards,
+with the adapter revisions of `lv`, `ref`, `replay` and `wave` changed by the stage's own code so that those four
+answered every request anew (21 min, optiland's answers the store's), found 1344 records `REFRESHABLE` and not
+one figure, count or kept value other than it was: the baseline written from that second run has the same runs,
+byte for byte. Every figure below is that of the stage that delivered the rung, to
+its last digit: a second measurement of all 96 runs, from an empty store for R4f, R5, R5g, R6a and R6b.
+
+**The gated rungs.** Every pair is `PASS`; no ray is dropped.
+
+| Rung | Gate | Pair | Worst | Of the gate | Where |
+|---|---:|---|---:|---:|---|
+| R4 | 1e-7 | `lv` – `ref` | 5.39e-8 | 54 % | `sigma-45mm-f28-dg-dn-contemporary`, f/8, best focus, reference line, full field (25.6°), tangential, 98 cycles/mm |
+| R4 | 1e-7 | `lv` – `optiland` | 5.39e-8 | 54 % | the same |
+| R4 | 1e-7 | `optiland` – `ref` | 1.20e-11 | 0.012 % | `nikon-z-24-70f4s` wide, wide open, best focus, reference line, full field, sagittal, 68 cycles/mm |
+| R4f | 1e-9 | `lv` – `replay` | 1.25e-14 | 0.0013 % | `nikkor-z50f12`, wide open, best focus, reference line, half field, sagittal, 6 cycles/mm; no grid size, ray count or status differs |
+| R6a | 4e-5 | `lv` – `ref` | 3.12e-6 | 7.8 % | `sony-fe-20mm-f18-g`, f/8, design plane, reference line, full field (47.5°), tangential, 30 cycles/mm |
+| R6a | 4e-5 | `lv` – `optiland` | 3.11e-6 | 7.8 % | the same |
+| R6a | 4e-5 | `optiland` – `ref` | 1.15e-9 | 0.003 % | `nikon-z-24-70f4s` wide, wide open, best focus, reference line, full field, tangential, 50 cycles/mm |
+
+R4 by condition, `lv` against `ref`: wide open 3.4e-8 at the design plane and 3.0e-8 at best focus; at f/8 5.2e-8
+and 5.4e-8; on the photopic lines at most 2.9e-8. **R6a is judged on 208 of 288 fields**, and a flagged field is
+`PASS` in the verdict counts, so the count is of fields and not of pairs: wide open 31 of 72 at the design plane
+and 35 of 72 at best focus (66 of 144), at f/8 71 of 72 at each plane (142 of 144). By condition its worst is
+2.7e-6, 2.8e-6, 3.1e-6 and 3.1e-6. The 80 flagged fields are of the same size (`lv` up to 1.84e-6, the two exact
+tracers 6.6e-10). **The pin of R6a stands**: ten times 3.12e-6, rounded up to one digit, is 4e-5, measured twice
+on all 96 runs.
+
+**The recorded rungs.** Nothing is gated, and nothing is an error.
+
+| Rung | Pair | Runs or fields | `RECORDED` | `ATTENTION` | `UNSUPPORTED` | Largest on the axis | Largest off it |
+|---|---|---:|---:|---:|---:|---:|---:|
+| R6b | `lv` – `wave` | 96 runs | 91 | 5 | 0 | 7.5e-3 | 7.9e-3 |
+| R5 | `lv` – `optiland` | 96 runs | 33 | 15 | 48 | 2.7e-2 | 3.1e-1 |
+| R5g | `lv` – `optiland` | 288 fields | 212 | 76 | 0 | 2.7e-2 | 2.8e-2 |
+
+By condition, over the eleven frequencies of a request (0 to 100 cycles/mm):
+
+| Rung | Condition | `RECORDED` | `ATTENTION` | On the axis | Off it |
+|---|---|---:|---:|---:|---:|
+| R6b | wide open, design, reference / photopic | 10 / 9 | 2 / 3 | 7.5e-3 / 6.6e-3 | 7.9e-3 / 5.5e-3 |
+| R6b | wide open, best focus | 12 / 12 | 0 / 0 | 4.8e-3 / 3.8e-3 | 6.4e-3 / 5.9e-3 |
+| R6b | f/8, design | 12 / 12 | 0 / 0 | 4.9e-3 / 3.5e-3 | 7.7e-3 / 6.0e-3 |
+| R6b | f/8, best focus | 12 / 12 | 0 / 0 | 5.0e-3 / 4.2e-3 | 7.4e-3 / 7.0e-3 |
+| R5 | wide open, design, reference | 4 | 8 | 2.7e-2 | 3.1e-1 |
+| R5 | wide open, best focus, reference | 5 | 7 | 1.3e-2 | 3.0e-1 |
+| R5 | f/8, design, reference | 12 | 0 | 4.0e-3 | 8.8e-3 |
+| R5 | f/8, best focus, reference | 12 | 0 | 4.1e-3 | 8.6e-3 |
+| R5g | wide open, design, reference / photopic | 16 / 16 | 20 / 20 | 2.7e-2 / 2.6e-2 | 2.8e-2 / 2.6e-2 |
+| R5g | wide open, best focus | 21 / 22 | 15 / 14 | 1.3e-2 / 1.3e-2 | 2.5e-2 / 2.4e-2 |
+| R5g | f/8, design | 34 / 35 | 2 / 1 | 4.9e-3 / 2.5e-3 | 1.4e-2 / 1.3e-2 |
+| R5g | f/8, best focus | 33 / 35 | 3 / 1 | 3.8e-4 / 9.3e-4 | 1.3e-2 / 1.3e-2 |
+
+R5's 48 photopic runs are `UNSUPPORTED` (`lines.polychromatic`). R6b's five marked runs are on the axis, wide
+open at the design plane.
+
+**The table the plan asks for**, fields 0, 0.5 and 1 at 10, 30 and 50 cycles/mm, sagittal and tangential, the
+three estimates of each rung side by side with each method's own flag, is in
+[reports/benchmark/mtf.md](../reports/benchmark/mtf.md): 288 rows of R5 (48 reference-line runs) and 576 of R5g
+(96 runs). At those three frequencies, `lv` minus optiland:
+
+| Rung | Rows | `RECORDED` | `ATTENTION` | `SET ASIDE` | `UNSUPPORTED` | Wide open: on the axis / off it | f/8: on the axis / off it |
+|---|---:|---:|---:|---:|---:|---|---|
+| R5 | 288 | 231 | 33 | 4 | 20 | 2.6e-2 / 3.1e-1 | 1.9e-3 / 6.5e-3 |
+| R5g | 576 | 494 | 74 | 8 | 0 | 2.5e-2 / 2.6e-2 | 1.7e-3 / 8.7e-3 |
+
+**No row at f/8 is marked at 10, 30 or 50 cycles/mm, in either rung.** Wide open the largest of R5 is 0.026 on the
+axis (`sony-fe-20mm-f18-g`, sagittal, 50 cycles/mm) and 0.31 off it (`nikon-z-24-70f4s` tele, full field,
+tangential, 50 cycles/mm: the field whose tangential axis optiland calibrated with a stopped rim ray that left the
+lens, [above](#rung-r5-the-engines-own-mtf)); of R5g 0.025 on the axis (`sony-fe-20mm-f18-g` photopic, tangential,
+30 cycles/mm) and 0.026 off it (`nikon-z-135f18-plena`, half field, sagittal, 50 cycles/mm). The classes of the
+rows: R5 has 264 of two methods, 4 numerical (an answer calls its field unconverged) and 20 without a curve from
+optiland; R5g 568 of two methods and 8 numerical; none of class data in either. optiland was asked again at 512
+rays for 15 runs of R5 and 40 fields of R5g, every one answered.
+
+**Every `ATTENTION`** is listed in the report under "Marked", request by request with each figure above its band:
+15 runs of R5 (`lv` – `optiland`), all wide open; 76 fields of R5g, 69 wide open and 7 at f/8 (the seven above 50
+cycles/mm only); 5 runs of R6b. The report lists the same requests again for the pairs of the comparator's
+estimator with optiland (11 of R5, 76 of R5g) and with `lv` in R5 (5, R6b's own).
+
+**Not covered**, beside the block every report ends with: R6a at 64 cells judges 66 of the 144 wide-open fields,
+and of `nikkor-z50f12` and `sony-fe-20mm-f18-g` none at the design plane; R5 has no optiland row on the photopic
+lines and none for 10 fields of 144 that optiland gives no curve of; why the two pupil samplings of R5g differ
+wide open is named and not measured; the middle of a zoom's range and finite conjugates are no run of the suite.
+The feature suite's MTF baseline holds the gated rungs only (18 runs: R4 at most 4.8e-8, R4f 1.2e-14, R6a 1.45e-6
+over 24 of 54 fields, all `PASS`).
 
 ## Comparing and reporting
 
@@ -1781,19 +1911,104 @@ more for it, `reports/<suite>/rays.md` states its worst figure for every pair of
 and the frequency, and `npm run test:optiland` holds it on all 96 runs without a second trace. On a warm store it
 adds about 45 s to `lvrtc baseline check benchmark`: the recipe of each run, and the estimator.
 
-**R4f is in no committed baseline yet**, and the commands above do not name it for that reason: the
-MTF baselines are Stage 3.8. A baseline can hold it. One written from a run with `r4f` names the engine `replay`
-and has a record of `lv` and `replay` for every run, and `baseline check` then runs the rungs that compare the
-engines of a run on the engines the baseline names for those, and leaves `r4f` to ask its own two
-(`test/cli/fidelityLadder.test.ts`). Until Stage 3.8, R4f is held by `npm run test:lv`
-(`test/integration/lv/fidelity.test.ts`), on all 96 runs.
+**The rays baselines hold R0 to R4 and no other rung**, and the commands above name those for that reason: the
+MTF rungs are in baselines of their own ([below](#mtf-baselines)). A rays baseline can hold `r4f` all the same
+(`test/cli/fidelityLadder.test.ts`): `baseline write` without `--mtf` records every rung of the run it is given.
 
-**R6a and R6b are in no committed baseline either.** R6a's finer lattice is 15 GB of traces and 8 minutes on the
-benchmark, which every `baseline check` would repeat; R6b is 13 minutes of LensVisualizer. Until Stage 3.8 decides
-what the MTF baselines hold, R6a is held by `npm run test:optiland` on 17 runs
-(`test/integration/optiland/r6a.test.ts`) and R6b by `npm run test:lv` on six
-(`test/integration/lv/wave.test.ts`); their figures on all 96 runs are
-[above](#rungs-r6a-and-r6b-the-wave-mtf).
+### MTF baselines
+
+Stage 3.8. The MTF rungs of a suite are in a second baseline, `baselines/<suite>.mtf.json`, with its own report,
+`reports/<suite>/mtf.md` and `mtf.json`. It is a `baseline` like the other and is keyed the same way, on runs as
+run by name and case hash; `lvrtc baseline write`, `baseline check` and `verify` take it with `--mtf`.
+
+| | Rays baseline | MTF baseline |
+|---|---|---|
+| File | `baselines/<suite>.json` | `baselines/<suite>.mtf.json` |
+| Reports | `reports/<suite>/rays.md`, `rays.json` | `reports/<suite>/mtf.md`, `mtf.json` |
+| Rungs | every rung of the run it is written from: R0 to R4 as committed | `r4`, `r4f`, `r6a` (gated) and `r5`, `r5g`, `r6b` (recorded), those of them the run has |
+| Contract | 1.0 | 1.1: each metric's `measured`, a rung's `steps`, `bands` and `sets` |
+| From an empty store | about 3 minutes for the benchmark | about an hour and 15 GB for the benchmark |
+
+**Why a file of its own.** The rays baseline, its report and their verification stay what they were, byte for
+byte. A check of the rays rungs stays a matter of minutes, where the MTF rungs cost an hour from an empty store
+and need optiland for a third of it. And an MTF baseline holds more than verdicts and worst figures: a recorded
+rung has no gate, so what is worth keeping of it is the table. R4 is in both: its requests are R2's and R3's, so
+it costs the rays baseline nothing, and the MTF report is rendered from the MTF baseline alone and has to show it.
+
+**What it holds beyond a rays baseline** (the members of contract 1.1,
+[contract/CONTRACT.md](../contract/CONTRACT.md#baseline)):
+
+- each metric of a pair with the number of requests it was `measured` in. R6a judges a field only where its
+  lattice is an arbiter: `waveMtf.maxAbs` is measured in the judged fields, `waveMtf.flagged` in the others, and a
+  flagged field is `PASS` in the verdict counts. The report therefore states "208 of 288" beside the figure, and
+  the counts of judged fields are a figure a check sees move;
+- the later steps of an engine (`fft512`, `geo512`): how many requests were asked again, and how they ended. They
+  are no part of `support`, which is of an engine's first answers;
+- for R5 and R5g, every request as it was compared: what each engine's answer records (every field's status,
+  sampling, chief-ray landing and both curves at all eleven frequencies) and each pair's verdict, reason and
+  figures, with the attention bands of the policy. The class and the reason code of every field are derived from
+  these as the comparator derives them (`classifyNativeField`), so a field without a curve is in the table with
+  its reason and not only in a pair's sentence.
+
+It holds no ray, no prescription, no time and no path.
+
+**The report** (`src/baseline/mtfReport.ts`, rendered from the baseline alone): the inputs; per rung the pairs by
+verdict and the support; for each rung the worst of every metric with its run, field, cut and frequency and the
+requests it was measured in; for a gated rung a row per run; for R5 and R5g the table of the three estimates, a
+row per run, field and cut at 10, 30 and 50 cycles/mm with each engine's own flag (ok, unconverged, no curve), the
+step optiland's row is of, the class and reason of the field, the gravest status of the three frequencies and the
+verdict over all eleven; the requests without a table by reason; the later steps; every request marked
+`ATTENTION` with each figure above its band; the fixed block **Not covered**; and how the tables are read. Its
+wording is held by the lint of `src/report/wording.ts`.
+
+**To write the two that are committed**, after the run of the MTF rungs:
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b
+node bin/lvrtc.mjs compare benchmark
+node bin/lvrtc.mjs baseline write benchmark --mtf
+node bin/lvrtc.mjs run suites/features.json --engines lv,ref,optiland --rungs r4,r4f,r6a
+node bin/lvrtc.mjs compare features
+node bin/lvrtc.mjs baseline write features --mtf
+```
+
+The feature suite's holds the gated rungs only; the recorded rungs are of the benchmark. A run directory is of
+the last run of its suite, so the rays rungs and the MTF rungs are run, compared and written one after the other;
+the result store keeps the answers of both.
+
+**`lvrtc baseline check <suite> --mtf`** runs the rungs of the MTF baseline again on its engines and sets every
+record against the run, as for a rays baseline. Two things are added, for either kind of baseline:
+
+| State | When | What to do |
+|---|---|---|
+| `MOVED` | a record of a rung that is only recorded: a verdict changed (`RECORDED` to `ATTENTION`, a pair that lost its curve), or a figure with an attention band moved by more than the band | read what moved; `lvrtc baseline write <suite> --mtf` records it. It fails nothing: a recorded rung has no gate |
+| `DRIFT` | as before, and only of a gated rung | find the cause first |
+
+and after the counts, **every figure that is not what the baseline has**, however little it moved: for each rung,
+pair and metric, in how many records, the largest change and the run it is in (`changes` of a record and of the
+whole check with `--json`). A gate says whether a change matters; this list says what changed, which is the
+record wanted when an engine is changed on purpose. The values a kept request records are not set against each
+other one by one: the figures of each pair are their maxima, and the tables of the two reports can be compared
+once the baseline is written anew (`git diff reports/<suite>/mtf.md`). A pair that is `ERROR` today fails the
+check in a recorded rung as in a gated one.
+
+**After a change to LensVisualizer's engine files**, to see what moved and to record it:
+
+```bash
+node bin/lvrtc.mjs baseline check benchmark            # rays: R0 to R4, minutes
+node bin/lvrtc.mjs baseline check benchmark --mtf      # MTF: lv's answers anew; optiland's own are the store's while the case is the same
+node bin/lvrtc.mjs baseline check features
+node bin/lvrtc.mjs baseline check features --mtf
+# then, where nothing is DRIFT, FAIL or ERROR, each run directory being of the check that was last:
+node bin/lvrtc.mjs baseline check benchmark && node bin/lvrtc.mjs baseline write benchmark
+node bin/lvrtc.mjs baseline check benchmark --mtf && node bin/lvrtc.mjs baseline write benchmark --mtf
+```
+
+A check leaves its run in the runs directory, and `baseline write` reads the run that is there: write a baseline
+directly after its own check, as above. Written after the check of the other kind it would lose its rungs, so
+`baseline write` refuses (exit 2) a run that lacks a rung the baseline at hand has, unless `--replace` is given. A run at LensVisualizer's best
+focus has another case when the focus search moves in its last digit, and optiland then computes its own MTF of
+that case again.
 
 ## Workers over stdio
 

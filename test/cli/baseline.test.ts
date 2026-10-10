@@ -143,7 +143,10 @@ test("baseline and verify are registered commands, with help", async () => {
   for (const name of ["baseline", "verify"]) assert.ok(COMMANDS.some((command) => command.name === name));
   const help = await lvrtc(REPO_ROOT, ["baseline", "--help"]);
   assert.equal(help.code, EXIT_OK);
-  assert.match(help.out, /^Usage: lvrtc baseline write <suite name \| run directory> \[--root <dir>\]$/m);
+  assert.match(
+    help.out,
+    /^Usage: lvrtc baseline write <suite name \| run directory> \[--root <dir>\] \[--mtf\] \[--replace\]$/m,
+  );
   assert.match(help.out, /^Exit code: write: 0 when /m);
   const verify = await lvrtc(REPO_ROOT, ["verify", "--help"]);
   assert.match(verify.out, /^Usage: lvrtc verify \[--root <dir>\] \[--write\]$/m);
@@ -241,13 +244,13 @@ test("check: nothing changed is OK for every record, and exits 0", async (t) => 
   assert.equal(lines.code, EXIT_OK, lines.err);
   assert.match(
     lines.out,
-    /^pair: 2 records: 2 OK, 0 REFRESHABLE, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 0, by policy 0$/m,
+    /^pair: 2 records: 2 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 0, by policy 0$/m,
   );
   assert.match(lines.out, /^OK: the baseline is of the cases, engines and policy at hand\. Nothing to do\.$/m);
   // The same with an empty store: every answer is computed again, and is what it was.
   const { ended, said } = await checked(rootDir, { runs: "other-runs" });
   assert.equal(ended.code, EXIT_OK);
-  assert.deepEqual(said.counts, { OK: 2, REFRESHABLE: 0, DRIFT: 0, NEW: 0, GONE: 0 });
+  assert.deepEqual(said.counts, { OK: 2, REFRESHABLE: 0, MOVED: 0, DRIFT: 0, NEW: 0, GONE: 0 });
   // By the suite file too.
   assert.equal((await lvrtc(rootDir, ["baseline", "check", "suites/pair.json"])).code, EXIT_OK);
 });
@@ -258,7 +261,7 @@ test("check: an engine with another fingerprint is STALE(engine); what still hol
   writeConfig(rootDir, { ...PAIR, "fake-near": { bias: 2e-14, fingerprint: "another build of fake-near" } });
   const { ended, said } = await checked(rootDir);
   assert.equal(ended.code, EXIT_OK);
-  assert.deepEqual(said.counts, { OK: 0, REFRESHABLE: 2, DRIFT: 0, NEW: 0, GONE: 0 });
+  assert.deepEqual(said.counts, { OK: 0, REFRESHABLE: 2, MOVED: 0, DRIFT: 0, NEW: 0, GONE: 0 });
   assert.deepEqual(said.stale, { case: 0, engine: 2, policy: 0 });
   assert.ok(said.records.every((record) => record.stale.join() === "engine"));
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
@@ -266,7 +269,14 @@ test("check: an engine with another fingerprint is STALE(engine); what still hol
   assert.match(lines.out, /^REFRESHABLE: .* lvrtc baseline write pair, then commit baselines\/ and reports\/\.$/m);
   // Writing it anew records the engine as it is: the next check is OK.
   assert.equal((await lvrtc(rootDir, ["baseline", "write", "pair"])).code, EXIT_OK);
-  assert.deepEqual((await checked(rootDir)).said.counts, { OK: 2, REFRESHABLE: 0, DRIFT: 0, NEW: 0, GONE: 0 });
+  assert.deepEqual((await checked(rootDir)).said.counts, {
+    OK: 2,
+    REFRESHABLE: 0,
+    MOVED: 0,
+    DRIFT: 0,
+    NEW: 0,
+    GONE: 0,
+  });
   assert.equal((await lvrtc(rootDir, ["verify"])).code, EXIT_OK);
 });
 
@@ -296,7 +306,7 @@ test("check: an engine whose answers moved past the tolerance is DRIFT, stale or
   writeConfig(rootDir, { ...PAIR, "fake-near": { bias: 5e-12 } });
   const stale = await checked(rootDir);
   assert.equal(stale.ended.code, EXIT_FAILURE);
-  assert.deepEqual(stale.said.counts, { OK: 0, REFRESHABLE: 0, DRIFT: 2, NEW: 0, GONE: 0 });
+  assert.deepEqual(stale.said.counts, { OK: 0, REFRESHABLE: 0, MOVED: 0, DRIFT: 2, NEW: 0, GONE: 0 });
   assert.ok(stale.said.records.every((record) => record.stale.join() === "engine"));
   assert.match(
     stale.said.records[0].moved.join("; "),
@@ -344,7 +354,7 @@ test("check: a run the baseline lacks is NEW, one the suite lacks is GONE; neith
   assert.match(lines.out, /^double-gauss +selftest +fake-a +fake-near +GONE$/m);
   assert.match(lines.out, /^third +selftest +fake-a +fake-near +NEW +PASS$/m);
   assert.match(lines.out, /^pair: the suite file is not the one the baseline names/m);
-  assert.match(lines.out, /^pair: 3 records: 1 OK, 0 REFRESHABLE, 0 DRIFT, 1 NEW, 1 GONE; /m);
+  assert.match(lines.out, /^pair: 3 records: 1 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 1 NEW, 1 GONE; /m);
 });
 
 test("exit code 2: no baseline, no comparisons, an unknown action, a root that is not there", async (t) => {
@@ -549,7 +559,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   assert.match(staleCase.out, /^singlet +r1 +lv +ref +STALE\(case\) REFRESHABLE +PASS$/m);
   assert.match(
     staleCase.out,
-    /^lenses: 6 records: 4 OK, 2 REFRESHABLE, 0 DRIFT, 0 NEW, 0 GONE; stale by case 2, by engine 0, by policy 0$/m,
+    /^lenses: 6 records: 4 OK, 2 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 2, by engine 0, by policy 0$/m,
   );
   // verify reads no engine and cannot see it.
   assert.equal(child(rootDir, "verify").code, EXIT_OK);
@@ -562,7 +572,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   assert.equal(staleEngine.code, EXIT_OK, staleEngine.err + staleEngine.out);
   assert.match(
     staleEngine.out,
-    /^lenses: 6 records: 0 OK, 6 REFRESHABLE, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 6, by policy 0$/m,
+    /^lenses: 6 records: 0 OK, 6 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 6, by policy 0$/m,
   );
 });
 
@@ -594,7 +604,14 @@ test(
         ["fake-near", "optiland", "UNSUPPORTED"],
       ],
     );
-    assert.deepEqual((await checked(rootDir)).said.counts, { OK: 3, REFRESHABLE: 0, DRIFT: 0, NEW: 0, GONE: 0 });
+    assert.deepEqual((await checked(rootDir)).said.counts, {
+      OK: 3,
+      REFRESHABLE: 0,
+      MOVED: 0,
+      DRIFT: 0,
+      NEW: 0,
+      GONE: 0,
+    });
 
     // Another optiland: one source file of the package differs.
     const source = join(fake.site, "optiland", "__init__.py");

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lvrtc:contract:v1:baseline",
   "title": "Baseline",
-  "description": "The committed record of one compared run of a suite: for every run as it was run (a zoom at each end), every rung and every pair of engines, the verdict, each metric with its worst value and where it occurs, and the counts, with what they were taken of: the hash of each run's case, each engine's fingerprint and adapter revision, and the policy. It holds numbers, hashes, counts and names: no ray, no prescription, no time and no path. Code checks that engines, runs, rungs and pairs are each listed once and in order, that a pair names two engines of its rung, and that a pair's verdicts add up to the requests of its rung with its verdict the gravest of them.",
+  "description": "The committed record of one compared run of a suite: for every run as it was run (a zoom at each end), every rung and every pair of engines, the verdict, each metric with its worst value and where it occurs, and the counts, with what they were taken of: the hash of each run's case, each engine's fingerprint and adapter revision, and the policy. It holds numbers, hashes, counts and names: no ray, no prescription, no time and no path. Minor 1 of the contract added the members marked \"Since 1.1\": a baseline that has one states 1.1 or later. Code checks that engines, runs, rungs and pairs are each listed once and in order, that a pair names two engines of its rung, and that a pair's verdicts add up to the requests of its rung with its verdict the gravest of them.",
   "type": "object",
   "properties": {
     "contract": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/contractVersion" },
@@ -107,7 +107,33 @@
             "additionalProperties": false
           }
         },
-        "pairs": { "type": "array", "items": { "$ref": "#/$defs/pair" } }
+        "pairs": { "type": "array", "items": { "$ref": "#/$defs/pair" } },
+        "steps": {
+          "description": "Since 1.1. The jobs that followed another of the same request and engine (a later step of an engine, such as fft512), by engine and step, sorted: how many there were, ok when every one ended so, else the status of the first that did not, with its codes. Left out by a rung without such a job.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "step": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+              "jobs": { "type": "integer", "minimum": 1 },
+              "status": { "enum": ["ok", "unsupported", "error", "pending", "missing"] },
+              "detail": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+            },
+            "required": ["engine", "step", "jobs", "status"],
+            "additionalProperties": false
+          }
+        },
+        "bands": {
+          "description": "Since 1.1. The attention bands the policy holds the rung's metrics to, by the name of the metric; left out by a rung without one.",
+          "type": "object",
+          "additionalProperties": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative" }
+        },
+        "sets": {
+          "description": "Since 1.1. For a rung of the engines' own MTF: each request of the rung as it was compared, in the order of the requests: what each engine's answer records and what each two engines came to. Left out by every other rung.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/set" }
+        }
       },
       "required": ["rung", "quantity", "requests", "support", "pairs"],
       "additionalProperties": false
@@ -158,9 +184,66 @@
         "tolerance": {
           "description": "The tolerance the policy judges the metric by, when it judges it.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        },
+        "measured": {
+          "description": "Since 1.1. In how many requests of the rung the pair has a value of the metric.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
         }
       },
       "required": ["name", "unit", "value"],
+      "additionalProperties": false
+    },
+    "set": {
+      "description": "One request of a rung as it was compared: the engines sorted by id, and every two of them.",
+      "type": "object",
+      "properties": {
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "engine": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "status": { "enum": ["ok", "unsupported", "error", "pending", "missing"] },
+              "recorded": {
+                "description": "The values the engine's answer records, by name; null for a value that is not a finite number.",
+                "type": "object",
+                "additionalProperties": { "type": "array", "items": { "type": ["number", "null"] } }
+              }
+            },
+            "required": ["engine", "status"],
+            "additionalProperties": false
+          }
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "a": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "b": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/engineId" },
+              "verdict": { "$ref": "#/$defs/verdict" },
+              "reason": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+                    "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+                    "value": { "type": ["number", "null"] },
+                    "where": { "type": "object", "additionalProperties": { "type": ["number", "string"] } }
+                  },
+                  "required": ["name", "unit", "value"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["a", "b", "verdict", "metrics"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["participants", "pairs"],
       "additionalProperties": false
     }
   }

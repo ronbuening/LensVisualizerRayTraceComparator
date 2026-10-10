@@ -1,11 +1,27 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
-import { baselineText, baselineWriteProblems, buildBaseline, parseBaseline } from "../../baseline/build.ts";
-import { CHECK_OUTCOMES, STALE_REASONS, checkBaseline, checkFails, stateText } from "../../baseline/check.ts";
+import {
+  MTF_BASELINE,
+  MTF_BASELINE_RUNGS,
+  baselineText,
+  baselineWriteProblems,
+  buildBaseline,
+  parseBaseline,
+} from "../../baseline/build.ts";
+import {
+  CHECK_OUTCOMES,
+  STALE_REASONS,
+  checkBaseline,
+  checkFails,
+  stateText,
+  summarizeChanges,
+} from "../../baseline/check.ts";
 import type { CheckRecord } from "../../baseline/check.ts";
-import { baselineFile, baselineReportFiles } from "../../baseline/files.ts";
+import { baselineFile, baselineReportFiles, mtfBaselineFile, mtfBaselineReportFiles } from "../../baseline/files.ts";
+import { renderMtfBaselineReport } from "../../baseline/mtfReport.ts";
 import { renderBaselineReport } from "../../baseline/report.ts";
+import { numberText } from "../../compare/metricText.ts";
 import { COMPARISONS_FILE, comparisonFileText, readComparisonFile } from "../../compare/comparisonFile.ts";
 import { followUpsOf } from "../../compare/followUp.ts";
 import { loadPolicy } from "../../compare/policyFile.ts";
@@ -34,8 +50,8 @@ export interface BaselineCommandInputs extends RunTargetInputs {
 }
 
 const SYNOPSIS =
-  "Usage: lvrtc baseline write <suite name | run directory> [--root <dir>]\n" +
-  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--json]\n";
+  "Usage: lvrtc baseline write <suite name | run directory> [--root <dir>] [--mtf] [--replace]\n" +
+  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "write   Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report that",
@@ -52,10 +68,20 @@ const HELP = [
   "                                    same and no judged metric moved by more than its tolerance",
   "          STALE(engine) REFRESHABLE an engine's fingerprint or adapter revision is another; likewise",
   "          DRIFT                     a verdict changed, or a judged metric moved by more than its tolerance",
+  "          MOVED                     of a rung that is only recorded: a verdict changed, or a figure moved by",
+  "                                    more than its attention band. It is written down and fails nothing",
   "          NEW, GONE                 the suite has a record the baseline lacks, or lacks one it has",
-  "        A suite name is <root>/suites/<name>.json.",
+  "        Then, for each rung, pair and figure that is not what the baseline has, however little it moved: in",
+  "        how many records, and the largest change with its run. A suite name is <root>/suites/<name>.json.",
   "",
   "  --root <dir>  the directory that holds lvrtc.config.json, baselines/ and reports/ (default: this repository)",
+  `  --mtf         the MTF baseline of the suite, <root>/baselines/<suite>.mtf.json, with its reports mtf.md and`,
+  `                mtf.json: the rungs ${MTF_BASELINE_RUNGS.join(", ")} of the run, each metric with the number of`,
+  "                requests it was measured in, and the requests of the engines' own MTF as they were compared.",
+  "                Without it, the rays baseline: <suite>.json, rays.md and rays.json, every rung of the run",
+  "  --replace     write: write the baseline although the one that is there has a rung this run lacks. Without",
+  "                it such a run is refused: a run directory is of the last run of its suite, which may be the",
+  "                run of other rungs (of the other kind of baseline, or of lvrtc run --rungs)",
   "  --json        check: print the records as one JSON object in place of the lines",
   "",
   "Exit code: write: 0 when the baseline was written; 1 when a pair is FAIL or ERROR; 2 when the run cannot be a",
@@ -72,14 +98,18 @@ function rootOf(root: string | undefined, inputs: RunTargetInputs): string {
   return rootDir;
 }
 
-/** Writes a baseline and its two report files under a root, and returns the three paths. */
-export function writeBaselineFiles(rootDir: string, baseline: Baseline): string[] {
+/**
+ * Writes a baseline and its two report files under a root, and returns the three paths: the rays baseline with
+ * `rays.md` and `rays.json`, or, with `mtf`, the MTF baseline with `mtf.md` and `mtf.json`.
+ */
+export function writeBaselineFiles(rootDir: string, baseline: Baseline, mtf = false): string[] {
   const text = baselineText(baseline);
   const read = parseBaseline(text);
   if ("problems" in read) throw new Error(`the baseline is not one that can be read back: ${read.problems.join("; ")}`);
-  const reports = baselineReportFiles(rootDir, baseline.suite.name);
-  const rendered = renderBaselineReport(baseline);
-  const file = baselineFile(rootDir, baseline.suite.name);
+  const { name } = baseline.suite;
+  const reports = mtf ? mtfBaselineReportFiles(rootDir, name) : baselineReportFiles(rootDir, name);
+  const rendered = mtf ? renderMtfBaselineReport(baseline) : renderBaselineReport(baseline);
+  const file = mtf ? mtfBaselineFile(rootDir, name) : baselineFile(rootDir, name);
   writeFileAtomic(file, text);
   writeFileAtomic(reports.markdown, rendered.markdown);
   writeFileAtomic(reports.json, rendered.json);
@@ -91,7 +121,8 @@ async function write(
   inputs: BaselineCommandInputs,
   io: Parameters<CliCommand["run"]>[1],
 ): Promise<number> {
-  const asked = parseTargetArguments(args, ["--root"], []);
+  const asked = parseTargetArguments(args, ["--root"], ["--mtf", "--replace"]);
+  const mtf = asked.flags.has("--mtf");
   const rootDir = rootOf(asked.values.get("--root"), inputs);
   const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
   const manifest = readRunManifest(directory);
@@ -102,7 +133,12 @@ async function write(
   const problems = baselineWriteProblems(manifest);
   if (problems.length > 0)
     throw new UsageError(`${directory}: no baseline is written of this run: ${problems.join("; ")}`);
-  const baseline = buildBaseline(manifest, comparisons, policy);
+  const baseline = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
+  if (mtf && baseline.runs.every((run) => run.rungs.length === 0)) {
+    throw new UsageError(
+      `${directory}: no MTF baseline is written of this run: it has none of the rungs ${MTF_BASELINE_RUNGS.join(", ")}`,
+    );
+  }
   const failing = baseline.runs.flatMap((run) =>
     run.rungs.flatMap((rung) =>
       rung.pairs
@@ -118,8 +154,26 @@ async function write(
     );
     return EXIT_FAILURE;
   }
+  // The run directory of a suite is of its last run, which may be the run of other rungs: a baseline is not
+  // replaced by one that has lost a rung unless that is asked for.
+  const target = mtf ? mtfBaselineFile(rootDir, baseline.suite.name) : baselineFile(rootDir, baseline.suite.name);
+  const before = existsSync(target) ? parseBaseline(readFileSync(target, "utf8")) : undefined;
+  if (before !== undefined && "baseline" in before && !asked.flags.has("--replace")) {
+    const rungsOf = (each: Baseline): string[] => [
+      ...new Set(each.runs.flatMap((run) => run.rungs.map(({ rung }) => rung))),
+    ];
+    const has = rungsOf(baseline);
+    const lost = rungsOf(before.baseline).filter((rung) => !has.includes(rung));
+    if (lost.length > 0) {
+      throw new UsageError(
+        `${directory}: the run has no rung ${lost.join(", ")}, which ${target} has: it is the run of other rungs. ` +
+          `Run the suite on the rungs of the baseline first (lvrtc baseline check ${baseline.suite.name}${mtf ? " --mtf" : ""} does), ` +
+          "or write it all the same with --replace",
+      );
+    }
+  }
   const records = baseline.runs.reduce((sum, run) => sum + run.rungs.reduce((n, rung) => n + rung.pairs.length, 0), 0);
-  const [file, markdown, json] = writeBaselineFiles(rootDir, baseline);
+  const [file, markdown, json] = writeBaselineFiles(rootDir, baseline, mtf);
   io.stdout(
     `${baseline.suite.name}: ${baseline.runs.length} runs, ${records} records, engines ${baseline.engines.map((engine) => engine.id).join(", ")}, policy v${baseline.policy.version}\n` +
       `baseline: ${file}\nreport: ${markdown}\nreport: ${json}\n`,
@@ -128,15 +182,21 @@ async function write(
 }
 
 /** What to do about each state there is among the records, one line each. */
-function nextSteps(name: string, records: readonly CheckRecord[], failing: boolean): string[] {
+function nextSteps(suite: string, records: readonly CheckRecord[], failing: boolean, mtf: boolean): string[] {
+  const name = mtf ? `${suite} --mtf` : suite;
   const has = (outcome: string): boolean => records.some((record) => record.outcome === outcome);
   const steps: string[] = [];
   if (has("DRIFT")) {
     steps.push(
-      `DRIFT: a verdict changed or a judged metric moved by more than its tolerance. Do not write the baseline anew before the cause is known: lvrtc report ${name} shows the run as it is now, and docs/gotchas.md classifies the causes that are known.`,
+      `DRIFT: a verdict changed or a judged metric moved by more than its tolerance. Do not write the baseline anew before the cause is known: lvrtc report ${suite} shows the run as it is now, and docs/gotchas.md classifies the causes that are known.`,
     );
   }
-  if (failing) steps.push(`FAIL or ERROR today: lvrtc compare ${name} names each pair and its reason.`);
+  if (has("MOVED")) {
+    steps.push(
+      `MOVED: a rung that is only recorded has another verdict, or a figure of it moved by more than its attention band. It fails nothing: read what moved, then lvrtc baseline write ${name} records it as it is now.`,
+    );
+  }
+  if (failing) steps.push(`FAIL or ERROR today: lvrtc compare ${suite} names each pair and its reason.`);
   if (has("REFRESHABLE")) {
     steps.push(
       `REFRESHABLE: the baseline is of another case, engine or policy, and what it records still holds. To record it as it is now: lvrtc baseline write ${name}, then commit baselines/ and reports/.`,
@@ -156,7 +216,8 @@ async function check(
   inputs: BaselineCommandInputs,
   io: Parameters<CliCommand["run"]>[1],
 ): Promise<number> {
-  const asked = parseTargetArguments(args, ["--root"], ["--json"]);
+  const asked = parseTargetArguments(args, ["--root"], ["--json", "--mtf"]);
+  const mtf = asked.flags.has("--mtf");
   const root = asked.values.get("--root");
   const rootDir = rootOf(root, inputs);
   const { target } = asked;
@@ -166,13 +227,13 @@ async function check(
   const prepared = await prepareSuiteRun(inputs, suiteFile, root);
   const { suite, loaded } = prepared;
 
-  const file = baselineFile(rootDir, suite.name);
+  const file = mtf ? mtfBaselineFile(rootDir, suite.name) : baselineFile(rootDir, suite.name);
   let text: string;
   try {
     text = readFileSync(file, "utf8");
   } catch {
     throw new UsageError(
-      `${file}: the suite ${suite.name} has no baseline; lvrtc baseline write ${suite.name} writes one`,
+      `${file}: the suite ${suite.name} has no ${mtf ? "MTF " : ""}baseline; lvrtc baseline write ${suite.name}${mtf ? " --mtf" : ""} writes one`,
     );
   }
   const read = parseBaseline(text);
@@ -195,8 +256,9 @@ async function check(
   const comparisons = compareRunDirectory(directory, policy);
   writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
   const { manifest } = result;
-  const fresh = buildBaseline(manifest, comparisons, policy);
+  const fresh = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
   const records = checkBaseline(committed, fresh, policy);
+  const changes = summarizeChanges(records);
 
   // What kept the suite from running as the baseline's did: each is an error of the check, whatever the records say.
   const errors: string[] = [];
@@ -220,7 +282,7 @@ async function check(
   );
   const suiteChanged = committed.suite.hash !== manifest.suite.hash;
   if (asked.flags.has("--json")) {
-    const said = { suite: suite.name, records, counts, stale: staleCounts, suiteChanged, errors, failed };
+    const said = { suite: suite.name, records, counts, stale: staleCounts, changes, suiteChanged, errors, failed };
     io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(said)), null, 2)}\n`);
     return failed ? EXIT_FAILURE : EXIT_OK;
   }
@@ -255,7 +317,16 @@ async function check(
     `${suite.name}: ${records.length} records: ${CHECK_OUTCOMES.map((outcome) => `${counts[outcome]} ${outcome}`).join(", ")}; ` +
       `stale by ${STALE_REASONS.map((reason) => `${reason} ${staleCounts[reason]}`).join(", by ")}\n`,
   );
-  for (const step of nextSteps(suite.name, records, failingToday)) io.stdout(`${step}\n`);
+  if (changes.length > 0) {
+    io.stdout("What is not what the baseline has, by rung, pair and figure (records, largest change, its run):\n");
+    for (const change of changes) {
+      const size = change.largest === null ? "a value that is no number" : numberText(change.largest);
+      io.stdout(
+        `  ${change.rung}  ${change.a} ${change.b}  ${change.name}: ${change.records} of ${change.of} records, at most ${size} (${change.run})\n`,
+      );
+    }
+  }
+  for (const step of nextSteps(suite.name, records, failingToday, mtf)) io.stdout(`${step}\n`);
   io.stdout(`run: ${join(directory, MANIFEST_FILE)}\n`);
   return failed ? EXIT_FAILURE : EXIT_OK;
 }
@@ -290,7 +361,10 @@ function runEngines(baseline: Baseline): string[] {
  * directory, with the result store answering whatever has not changed; `runEngines` says which engines the run is
  * handed), compares it and writes `comparisons.json`
  * as `lvrtc compare` does, and sets the baseline against the baseline of that run (`checkBaseline`). Every record
- * that is not `OK` is printed as a line, then the counts, then what to do about each state there is.
+ * that is not `OK` is printed as a line, then the counts, then every figure that is not what the baseline has
+ * (`summarizeChanges`), then what to do about each state there is. With `--mtf` both actions are of the suite's MTF
+ * baseline (`MTF_BASELINE`, `<suite>.mtf.json`, `mtf.md`, `mtf.json`), which is written, checked and reported
+ * without the rays baseline.
  *
  * Exit codes: as the help says; 2, with nothing written, for a command line that is not the synopsis, a `--root`
  * that is not a directory, a run that has no manifest or no comparisons, comparisons of another manifest or

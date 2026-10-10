@@ -73,8 +73,8 @@ function supportText(cell: SupportCell): string {
 const MTF_DECIMALS = 4;
 const ANGLE_DECIMALS = 3;
 
-/** The first words of an MTF comparison, by the MTF it is of. */
-const OWN_MTF_HEADING = {
+/** The first sentence above a table of the engines' own MTF, by the MTF it is of. */
+export const OWN_MTF_HEADING = {
   diffraction: "The engines' own MTF, side by side.",
   geometric: "The engines' own geometric MTF, side by side.",
 } as const;
@@ -284,7 +284,7 @@ const HOW_TO_READ: readonly string[] = [
 ];
 
 /** How to read a table of the engines' own MTF: what a row's status and a field's class say. Templates only. */
-const HOW_TO_READ_MTF: readonly string[] = [
+export const HOW_TO_READ_MTF: readonly string[] = [
   "### The engines' own MTF",
   "",
   "A row of such a table is one field, cut and frequency, and has a status of its own:",

@@ -2,7 +2,14 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { parseBaseline } from "../../baseline/build.ts";
-import { BASELINES_DIRECTORY, REPORTS_DIRECTORY, baselineReportFiles } from "../../baseline/files.ts";
+import {
+  BASELINES_DIRECTORY,
+  MTF_BASELINE_MARK,
+  REPORTS_DIRECTORY,
+  baselineReportFiles,
+  mtfBaselineReportFiles,
+} from "../../baseline/files.ts";
+import { MTF_REPORT_JSON, MTF_REPORT_MARKDOWN, renderMtfBaselineReport } from "../../baseline/mtfReport.ts";
 import { BASELINE_REPORT_JSON, BASELINE_REPORT_MARKDOWN, renderBaselineReport } from "../../baseline/report.ts";
 import { loadPolicy } from "../../compare/policyFile.ts";
 import type { Policy } from "../../contract/policy.ts";
@@ -31,7 +38,8 @@ const HELP = [
   "LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a baseline by its schema and",
   "its rules, be the canonical text of what it holds, be named after its suite and be judged by the policy at",
   "hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no",
-  "such report may be without its baseline.",
+  "such report may be without its baseline. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
+  "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
   "",
   "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
   "engines, and is what lvrtc baseline check says.",
@@ -59,7 +67,9 @@ function readText(file: string): string | undefined {
  * contract version, the rules of a baseline, canonical text), its name must be its suite's, and its policy hash
  * that of the policy at hand, since a baseline judged by other limits is no record of these. The two report files
  * under `reports/<suite>/` must be what `renderBaselineReport` gives, byte for byte; with `--write` they are
- * written instead. A `reports/<name>/rays.md` or `rays.json` whose suite has no baseline is a problem too. Each
+ * written instead. A `reports/<name>/rays.md` or `rays.json` whose suite has no baseline is a problem too. A file
+ * `baselines/<suite>.mtf.json` is the MTF baseline of the suite (unless a suite is itself named `<suite>.mtf`): it
+ * is held the same way, to `reports/<suite>/mtf.md` and `mtf.json` as `renderMtfBaselineReport` gives them. Each
  * problem is a line on the error stream; each baseline that holds is a line on the output.
  *
  * Exit codes: 0 when nothing is wrong, also when there is no baseline at all; 1 when something is; 2 for a command
@@ -101,33 +111,46 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         }
       };
       const problems: string[] = [];
+      // The suites that have a rays baseline, and those that have an MTF baseline.
       const suites = new Set<string>();
+      const mtfSuites = new Set<string>();
       const files = list(join(rootDir, BASELINES_DIRECTORY)).filter((name) => name.endsWith(".json"));
       for (const name of files) {
         const at = `${BASELINES_DIRECTORY}/${name}`;
-        const suite = name.slice(0, -".json".length);
-        suites.add(suite);
+        const stem = name.slice(0, -".json".length);
+        const marked = stem.endsWith(MTF_BASELINE_MARK) ? stem.slice(0, -MTF_BASELINE_MARK.length) : undefined;
         const read = parseBaseline(readText(join(rootDir, BASELINES_DIRECTORY, name)) ?? "");
         if ("problems" in read) {
+          // Whichever baseline it was to be, its reports are not strays.
+          suites.add(stem);
+          if (marked !== undefined) mtfSuites.add(marked);
           problems.push(`${at}: not a baseline: ${read.problems.join("; ")}`);
           continue;
         }
         const { baseline } = read;
+        // A file named `<suite>.mtf.json` is the MTF baseline of the suite, unless a suite is itself named so.
+        const mtf = marked !== undefined && baseline.suite.name !== stem;
+        const suite = mtf ? marked : stem;
+        (mtf ? mtfSuites : suites).add(suite);
+        const [reportMarkdown, reportJson] = mtf
+          ? [MTF_REPORT_MARKDOWN, MTF_REPORT_JSON]
+          : [BASELINE_REPORT_MARKDOWN, BASELINE_REPORT_JSON];
+        const check = mtf ? `lvrtc baseline check ${suite} --mtf` : `lvrtc baseline check ${suite}`;
         const before = problems.length;
         if (baseline.suite.name !== suite)
           problems.push(`${at}: it is the baseline of the suite ${baseline.suite.name}`);
         if (baseline.policy.hash !== policyHash) {
           problems.push(
             `${at}: it was judged by policy v${baseline.policy.version} (${baseline.policy.hash}), not by the policy ` +
-              `at hand, v${policy.version}: lvrtc baseline check ${suite} says whether it still holds, and lvrtc ` +
-              `baseline write ${suite} records it`,
+              `at hand, v${policy.version}: ${check} says whether it still holds, and ${check.replace(" check ", " write ")} ` +
+              `records it`,
           );
         }
-        const rendered = renderBaselineReport(baseline);
-        const reports = baselineReportFiles(rootDir, suite);
+        const rendered = mtf ? renderMtfBaselineReport(baseline) : renderBaselineReport(baseline);
+        const reports = mtf ? mtfBaselineReportFiles(rootDir, suite) : baselineReportFiles(rootDir, suite);
         for (const [file, text, said] of [
-          [reports.markdown, rendered.markdown, `${REPORTS_DIRECTORY}/${suite}/${BASELINE_REPORT_MARKDOWN}`],
-          [reports.json, rendered.json, `${REPORTS_DIRECTORY}/${suite}/${BASELINE_REPORT_JSON}`],
+          [reports.markdown, rendered.markdown, `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown}`],
+          [reports.json, rendered.json, `${REPORTS_DIRECTORY}/${suite}/${reportJson}`],
         ] as const) {
           if (rewrite) {
             writeFileAtomic(file, text);
@@ -150,17 +173,22 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           );
           io.stdout(
             `${at}: a baseline of ${baseline.runs.length} runs and ${records} records, policy v${baseline.policy.version}; ` +
-              `${REPORTS_DIRECTORY}/${suite}/${BASELINE_REPORT_MARKDOWN} and ${BASELINE_REPORT_JSON} are ${rewrite ? "written from it" : "what it renders"}\n`,
+              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} are ${rewrite ? "written from it" : "what it renders"}\n`,
           );
         }
       }
       for (const suite of list(join(rootDir, REPORTS_DIRECTORY))) {
-        if (suites.has(suite)) continue;
-        for (const name of [BASELINE_REPORT_MARKDOWN, BASELINE_REPORT_JSON]) {
-          if (readText(join(rootDir, REPORTS_DIRECTORY, suite, name)) !== undefined) {
-            problems.push(
-              `${REPORTS_DIRECTORY}/${suite}/${name}: there is no ${BASELINES_DIRECTORY}/${suite}.json it is rendered from`,
-            );
+        for (const [has, names, mark] of [
+          [suites, [BASELINE_REPORT_MARKDOWN, BASELINE_REPORT_JSON], ""],
+          [mtfSuites, [MTF_REPORT_MARKDOWN, MTF_REPORT_JSON], MTF_BASELINE_MARK],
+        ] as const) {
+          if (has.has(suite)) continue;
+          for (const name of names) {
+            if (readText(join(rootDir, REPORTS_DIRECTORY, suite, name)) !== undefined) {
+              problems.push(
+                `${REPORTS_DIRECTORY}/${suite}/${name}: there is no ${BASELINES_DIRECTORY}/${suite}${mark}.json it is rendered from`,
+              );
+            }
           }
         }
       }

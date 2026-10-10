@@ -107,11 +107,19 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.0`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.1`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
 here on the rules below hold, and what a stage adds raises the minor.
+
+**Minor 1** (Stage 3.8) adds four optional members to the kind `baseline`, for the MTF baselines
+(`baselines/<suite>.mtf.json`): a metric's `measured`, and a rung's `steps`, `bands` and `sets`. A baseline that
+has one of them states `1.1`, and code refuses one that has them and states `1.0`. **A document that uses nothing
+minor 1 added is still written as `1.0`** (`CONTRACT_VERSION`): every case, request, result, manifest, comparison
+and rays baseline. A case's identity, a request's id and a key of the result store are therefore what they were,
+and no engine's `contract.min` or `contract.max` moves; a reader of `1.0` reads all of them, and only an MTF
+baseline needs a reader of `1.1`.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -1346,14 +1354,34 @@ own case and its own records. A rung of a run is `{ rung, quantity, requests, su
   occurs, or the sum of a metric counted in `rays` or `elements` (the rim band is `mask.rimBand`); null when a
   value is not a finite number; `tolerance` is what the policy judges it by, when it judges it.
 
+**Since 1.1**, in an MTF baseline (`buildBaseline` with `MTF_BASELINE`: the rungs `r4`, `r4f`, `r5`, `r5g`, `r6a`
+and `r6b` of a run, in a file of its own, `baselines/<suite>.mtf.json`):
+
+- a metric's `measured`: in how many requests of the rung the pair has a value of the metric. A rung may measure a
+  figure only where its sampling can arbitrate: of `r6a`, `waveMtf.maxAbs` is measured in the fields that are
+  judged and `waveMtf.flagged` in the others, so the two counts say how many fields the gate was held on;
+- a rung's `steps`: per engine and step, sorted, `{ engine, step, jobs, status, detail? }`: the jobs that asked an
+  engine a request once more (`fft512`, `geo512`), how many, and `ok` or the status of the first that did not end
+  so. Such a job is no part of `support`, which says how an engine's first answers ended;
+- a rung's `bands`: the attention bands of the policy for the rung, by metric; left out by a rung without one;
+- a rung's `sets`, for a rung of the engines' own MTF (`r5`, `r5g`): each request as it was compared, in the order
+  of the requests: `{ participants, pairs }`, with every engine's `{ engine, status, recorded? }` (the values its
+  answer records: every field's status, sampling, chief-ray landing and its curves at every frequency of the
+  request, a later step under `<name>#<step>`) and every two engines' `{ a, b, verdict, reason?, metrics }`. The
+  tables of the MTF report are made from these and from `bands`, with nothing else at hand.
+
 **Invariants checked in code** (`baselineProblems`): engines sorted, each once; no run and no rung of a run twice;
 the engines of `support` and `rays` are engines of the baseline, sorted; a pair names two engines of its rung's
 `support` in order, and the pairs are sorted; a pair's verdicts are in order, add up to the rung's `requests`, and
-its `verdict` is the gravest of them. A baseline file is the canonical JSON of its content and a newline
-(`parseBaseline` refuses any other text of the same content, which is what an edit by hand looks like).
+its `verdict` is the gravest of them. A baseline with a member of 1.1 states a contract of that minor or later;
+its `sets` are one for each request of the rung, each with its engines sorted and its pairs of two of them in
+order; a step is of an engine of the rung's `support`; no metric is `measured` in more requests than the rung has.
+A baseline file is the canonical JSON of its content and a newline (`parseBaseline` refuses any other text of the
+same content, which is what an edit by hand looks like).
 
 `lvrtc baseline write` writes it, `lvrtc baseline check` sets it against the suite as it runs today, and
-`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md).
+`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md);
+each with `--mtf` for the MTF baseline, whose reports are `reports/<suite>/mtf.md` and `mtf.json`.
 
 ## Quantities
 

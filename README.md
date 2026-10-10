@@ -256,6 +256,19 @@ lenses and engines at hand: `OK`, `STALE` (a lens or an engine has changed; `REF
 hold) or `DRIFT` (a verdict changed or a figure moved past its tolerance). Only `DRIFT`, `FAIL` and `ERROR` exit 1.
 
 ```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b
+node bin/lvrtc.mjs compare benchmark
+node bin/lvrtc.mjs baseline write benchmark --mtf
+node bin/lvrtc.mjs baseline check benchmark --mtf
+```
+
+The MTF baseline is a record of its own, [baselines/benchmark.mtf.json](baselines/benchmark.mtf.json), with its
+report [reports/benchmark/mtf.md](reports/benchmark/mtf.md): the gated MTF rungs with the number of fields each
+figure was judged on, the recorded rungs, every row marked for attention, and the engines' own MTF side by side.
+From an empty result store the run takes about an hour and 15 GB; the check answers from the store what has not
+changed, and says of a recorded rung what `MOVED`, which fails nothing.
+
+```bash
 node bin/lvrtc.mjs verify
 ```
 
@@ -290,6 +303,20 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s
 
 For a zoom, prints two tables: the wide end and the tele end. `--zoom <t>` asks for one position only, and
 `--aperture f/8` for the tab's f/8 comparison.
+
+### The MTF comparison of one lens
+
+```bash
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland
+```
+
+Does for one lens what the MTF benchmark does for twelve: the lens wide open and at the tab's f/8, at its design
+plane and at LensVisualizer's best focus, on the reference line and on the photopic lines (eight runs; a zoom at
+both ends, sixteen), run on the named engines and compared. It prints the MTF report of that run: the gated rungs
+R4, R4f and R6a with their worst figures, the recorded rungs R6b, R5 and R5g, and the engines' own MTF side by
+side at fields 0, 0.5 and 1 and 10, 30 and 50 cycles/mm. Progress is on the error stream; a fast lens wide open
+takes minutes, and what the result store already holds is not computed again. `--aperture f/8` or `wide-open`
+keeps one aperture; without `optiland` among the engines R5 and R5g are left out.
 
 ## Suites
 

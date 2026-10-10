@@ -3,6 +3,18 @@
 /** The contract version this code reads and writes, as `<major>.<minor>`. */
 export const CONTRACT_VERSION = "1.0";
 
+/**
+ * The version a document states that uses what minor 1 added: today a baseline with the members of an MTF baseline
+ * (`steps`, `bands`, `sets`, a metric's `measured`). Every other document is written to `CONTRACT_VERSION` as before,
+ * so no case, request or result changes its identity.
+ */
+export const CONTRACT_VERSION_1_1 = "1.1";
+
+/** The minor of a version; null when the text is not `<major>.<minor>` in plain decimal. */
+export function contractMinor(version: string): number | null {
+  return parseVersion(version)?.[1] ?? null;
+}
+
 /** The major version: the `v1` of the schema directory, of the fixture corpus and of every schema `$id`. */
 export const CONTRACT_MAJOR = 1;
 

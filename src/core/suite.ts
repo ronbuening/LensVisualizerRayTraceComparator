@@ -215,6 +215,15 @@ export async function loadSuite(file: string, options: LoadSuiteOptions): Promis
   } catch (error) {
     throw new UsageError(`${file}: malformed JSON (${reason(error)})`, { cause: error });
   }
+  return loadSuiteValue(parsed, file, options);
+}
+
+/**
+ * The suite a value is, loaded as `loadSuite` loads the content of a file: for a suite that a command makes
+ * instead of reading. `file` is what an error calls it.
+ */
+export async function loadSuiteValue(parsed: unknown, file: string, options: LoadSuiteOptions): Promise<LoadedSuite> {
+  const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
   const issues = validateKind("suite", parsed);
   if (issues.length > 0) throw new UsageError(`${file}: not a valid suite: ${formatIssues(issues)}`);
   const suite = parsed as Suite;

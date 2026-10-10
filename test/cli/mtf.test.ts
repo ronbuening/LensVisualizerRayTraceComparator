@@ -22,6 +22,12 @@ import { adapterRevision } from "../../src/engines/adapterRevision.ts";
 import { LV_ENGINE_MODULE } from "../../src/engines/lv/engine.ts";
 import { mtfNativeQuantity } from "../../src/quantities/mtfNative.ts";
 import { mtfTableText } from "../../src/report/mtfTable.ts";
+import { MTF_REPORT_MARKDOWN } from "../../src/baseline/mtfReport.ts";
+import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
+import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
+import { MANIFEST_FILE } from "../../src/core/manifest.ts";
+import type { RunManifest } from "../../src/core/manifest.ts";
+import { wordingProblems } from "../../src/report/wording.ts";
 import {
   FAKE_ENGINE_FILES,
   FAKE_LENS_FILES,
@@ -483,7 +489,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   await usage(["acme-singlet-50", "--engines", "lv,"], '--engines needs ids separated by commas, got "lv,"');
   await usage(
     ["acme-singlet-50", "--profile", "zemax-default"],
-    'unknown profile "zemax-default": the profiles are lv-tab-default',
+    'unknown profile "zemax-default": the profiles are benchmark, lv-tab-default',
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],
@@ -510,4 +516,131 @@ test("without a LensVisualizer the command fails and says which", async (t) => {
   assert.equal(run.code, EXIT_FAILURE);
   assert.match(run.err, /^lvrtc mtf: LensVisualizer is not configured: set lvPath /);
   assert.equal(run.out, "");
+});
+
+// ── the profile `benchmark` ──────────────────────────────────────────────────────────────────────────────────────
+
+/** A root whose fake tree has a singlet whose geometric MTF is a sampling, so that its replay can reproduce it. */
+function sampledRoot(t: TestContext): { rootDir: string; lv: string; runsDir: string } {
+  const root = freshRoot(t);
+  const singlet = join(root.lv, ...SINGLET_FILE.split("/"));
+  const text = readFileSync(singlet, "utf8");
+  writeFileSync(singlet, text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { sampled: true },"));
+  assert.notEqual(readFileSync(singlet, "utf8"), text);
+  t.after(() => closeBinding(root.lv));
+  return root;
+}
+
+/** What a run of the profile left in its run directory. */
+function benchmarkOf(
+  runsDir: string,
+  lensKey: string,
+): { manifest: RunManifest; comparisons: ComparisonFile; markdown: string } {
+  const directory = join(runsDir, `mtf-${lensKey}`);
+  const read = (file: string): string => readFileSync(join(directory, file), "utf8");
+  return {
+    manifest: JSON.parse(read(MANIFEST_FILE)),
+    comparisons: JSON.parse(read(COMPARISONS_FILE)),
+    markdown: read(MTF_REPORT_MARKDOWN),
+  };
+}
+
+test("--profile benchmark: the lens in its eight conditions, run, compared and reported as a suite of its own", async (t) => {
+  const { rootDir, runsDir } = sampledRoot(t);
+  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  assert.equal(run.code, EXIT_OK, run.err);
+  const { manifest, comparisons, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
+
+  // Wide open and f/8, the design plane and the best focus, the reference line and the photopic lines.
+  const names = ["", "-best", "-f8", "-f8-best"].flatMap((mark) =>
+    ["ref", "photopic"].map((lines) => `acme-singlet-50${mark}-${lines}`),
+  );
+  assert.deepEqual(
+    manifest.runs.map((each) => each.name),
+    names,
+  );
+  assert.equal(new Set(manifest.runs.map((each) => each.caseId)).size, 8, "each condition is a case of its own");
+  assert.ok(manifest.runs.every((each) => each.caseId !== null));
+  // The rungs that need optiland are run only where it is named.
+  assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))], ["r4", "r4f", "r6a", "r6b"]);
+  assert.ok(manifest.jobs.every((job) => job.status === "ok"));
+  assert.deepEqual([...new Set(comparisons.comparisons.map((set) => set.run))], names);
+
+  // What is printed is the MTF report of the run, which is also written beside it; progress is on the error stream.
+  assert.equal(run.out, markdown);
+  assert.match(markdown, /^# MTF of acme-singlet-50$/m);
+  assert.match(markdown, /^\| r4 \| rays\.trace \| 8 \| 24 \| lv – ref \| 8 PASS \| 24 PASS \|$/m);
+  assert.match(markdown, /^\| r4f \| mtf\.native \| 8 \| 8 \| lv – replay \| 8 PASS \| 8 PASS \|$/m);
+  assert.match(markdown, /^\| r6a \| rays\.trace \| 8 \| 24 \| lv – ref \| 8 PASS \| 24 PASS \|$/m);
+  assert.match(markdown, /^\| r6b \| mtf\.native \| 8 \| 8 \| lv – wave \| /m);
+  assert.match(markdown, /^## Not covered$/m);
+  assert.deepEqual(wordingProblems(markdown), []);
+  assert.match(
+    run.err,
+    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, rungs r4, r4f, r6a, r6b \(r5 and r5g need optiland\)/,
+  );
+  assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic r6b$/m);
+  assert.ok(run.err.endsWith(`lvrtc mtf: run: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
+  // Nothing is written outside the run directory and the store.
+  assert.deepEqual(readdirSync(runsDir).sort(), ["mtf-acme-singlet-50", "store"]);
+  assert.equal(existsSync(join(rootDir, "baselines")), false);
+
+  // Asked again, every answer is the store's, and the report is the same bytes.
+  const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
+  assert.equal(again.code, EXIT_OK, again.err);
+  assert.equal(again.out, run.out);
+  assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref r4f \(cached\)$/m);
+
+  // One aperture is four runs; --json prints the report as one object.
+  const f8 = await mtf(
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "f/8", "--json"],
+    rootDir,
+  );
+  assert.equal(f8.code, EXIT_OK, f8.err);
+  const report = JSON.parse(f8.out) as { kind: string; runs: { name: string }[]; rungs: { rung: string }[] };
+  assert.equal(report.kind, "baseline-mtf-report");
+  assert.deepEqual(
+    report.runs.map((each) => each.name),
+    names.slice(4),
+  );
+  assert.deepEqual(
+    report.rungs.map((each) => each.rung),
+    ["r4", "r4f", "r6a", "r6b"],
+  );
+
+  const usage = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/5.6"], rootDir);
+  assert.equal(usage.code, EXIT_USAGE);
+  assert.match(usage.err, /the profile benchmark is of the lens wide open and at the tab's comparison/);
+});
+
+test("--profile benchmark: a zoom is run at both ends, or at the position --zoom names", async (t) => {
+  const { rootDir, runsDir, lv } = freshRoot(t);
+  t.after(() => closeBinding(lv));
+  const args = ["acme-zoom-24-48", "--profile", "benchmark", "--engines", "lv,ref", "--aperture", "wide-open"];
+  await mtf(args, rootDir);
+  const both = benchmarkOf(runsDir, "acme-zoom-24-48").manifest.runs.map((each) => each.name);
+  assert.deepEqual(
+    both,
+    ["", "-best"].flatMap((mark) =>
+      ["ref", "photopic"].flatMap((lines) => ["wide", "tele"].map((end) => `acme-zoom-24-48${mark}-${lines}-${end}`)),
+    ),
+  );
+  await mtf([...args, "--zoom", "1"], rootDir);
+  const tele = benchmarkOf(runsDir, "acme-zoom-24-48").manifest;
+  assert.deepEqual(
+    tele.runs.map((each) => each.name),
+    ["", "-best"].flatMap((mark) => ["ref", "photopic"].map((lines) => `acme-zoom-24-48-zoom1${mark}-${lines}`)),
+  );
+});
+
+test("--profile benchmark: a gated pair that fails is named on the error stream, and the command exits 1", async (t) => {
+  // The fake's geometric MTF is a closed form and no sampling unless a lens says so: its replay cannot be it.
+  const { rootDir, lv } = freshRoot(t);
+  t.after(() => closeBinding(lv));
+  const run = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/8"], rootDir);
+  assert.equal(run.code, EXIT_FAILURE);
+  const failing = run.err.split("\n").filter((line) => /: FAIL: /.test(line));
+  assert.equal(failing.length, 4, "each failing pair is named once");
+  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref r4f lv replay: FAIL: /);
+  assert.match(run.out, /^\| r4f \| mtf\.native \| 4 \| 4 \| lv – replay \| 4 FAIL \| 4 FAIL \|$/m);
 });
