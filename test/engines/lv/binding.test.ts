@@ -30,8 +30,17 @@ async function refused(load: Promise<unknown>, code: string): Promise<LvBindingE
   return error;
 }
 
+/** Moves the fake's threshold and its internal consumers together, as in LV's geometry layout. */
+function geometryThreshold(lv: string): void {
+  renameSync(join(lv, "src/optics/constants.ts"), join(lv, "src/optics/geometry.ts"));
+  for (const file of ["src/optics/compat.ts", "src/optics/math/paraxial.ts"]) {
+    const path = join(lv, file);
+    writeFileSync(path, readFileSync(path, "utf8").replace("/constants.js", "/geometry.js"));
+  }
+}
+
 test("the manifest names each module once and each facade name once", () => {
-  const modules = LV_IMPORT_MANIFEST.map((entry) => entry.module);
+  const modules = LV_IMPORT_MANIFEST.flatMap((entry) => entry.module);
   assert.equal(new Set(modules).size, modules.length);
   const names = LV_IMPORT_MANIFEST.flatMap((entry) => entry.exports.map((item) => item.as));
   assert.equal(new Set(names).size, names.length);
@@ -48,6 +57,71 @@ test("a tree with every module and export loads, and the facade holds every mani
     assert.equal(typeof (binding.api as unknown as Record<string, unknown>)[as], kind, as);
   }
   assert.ok(Object.isFrozen(binding.api));
+});
+
+test("the flat radius threshold loads from geometry when constants no longer exports it", async (t) => {
+  const lv = freshLv(t);
+  geometryThreshold(lv);
+  writeFileSync(join(lv, "src/optics/constants.ts"), "export {};\n");
+  const binding = await bind(t, lv);
+  assert.equal(binding.api.flatRadiusThreshold, 1e10);
+  const files = FAKE_ENGINE_FILES.map((file) =>
+    file === "src/optics/constants.ts" ? "src/optics/geometry.ts" : file,
+  ).sort();
+  assert.deepEqual(binding.engineClosure(), { engineClosureHash: closureOf(lv, files), engineFileCount: files.length });
+});
+
+test("the first valid module supplies the threshold and the unused fallback is not fingerprinted", async (t) => {
+  const lv = freshLv(t);
+  geometryThreshold(lv);
+  writeFileSync(join(lv, "src/optics/geometry.ts"), "export const FLAT_R_THRESHOLD = 42;\n");
+  writeFileSync(join(lv, "src/optics/constants.ts"), "export const FLAT_R_THRESHOLD = 99;\n");
+  const binding = await bind(t, lv);
+  assert.equal(binding.api.flatRadiusThreshold, 42);
+  appendFileSync(join(lv, "src/optics/constants.ts"), "// unused\n");
+  assert.deepEqual(binding.rehash(), []);
+  appendFileSync(join(lv, "src/optics/geometry.ts"), "// used\n");
+  assert.deepEqual(binding.rehash(), ["src/optics/geometry.ts"]);
+});
+
+for (const [reason, source] of [
+  ["has an export of the wrong kind", 'export const FLAT_R_THRESHOLD = "wrong";\n'],
+  ["cannot be imported", 'throw new Error("geometry is broken");\n'],
+]) {
+  test(`the threshold falls back to constants when geometry ${reason}`, async (t) => {
+    const lv = freshLv(t);
+    writeFileSync(join(lv, "src/optics/geometry.ts"), source);
+    const binding = await bind(t, lv);
+    assert.equal(binding.api.flatRadiusThreshold, 1e10);
+    // Even a rejected candidate was loaded: the closure describes every file Node executed.
+    const files = [...FAKE_ENGINE_FILES, "src/optics/geometry.ts"].sort();
+    assert.deepEqual(binding.engineClosure(), {
+      engineClosureHash: closureOf(lv, files),
+      engineFileCount: files.length,
+    });
+  });
+}
+
+test("neither threshold export is valid: every attempted path and its wrong kind are named", async (t) => {
+  const lv = freshLv(t);
+  writeFileSync(join(lv, "src/optics/geometry.ts"), "export {};\n");
+  writeFileSync(join(lv, "src/optics/constants.ts"), 'export const FLAT_R_THRESHOLD = "wrong";\n');
+  const error = await refused(loadLvBinding(lv), "exports-missing");
+  assert.deepEqual(error.details, [
+    "src/optics/geometry.ts: FLAT_R_THRESHOLD (expected number, found undefined)",
+    "src/optics/constants.ts: FLAT_R_THRESHOLD (expected number, found string)",
+  ]);
+  for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
+});
+
+test("neither threshold module imports: every attempted path and its import failure are named", async (t) => {
+  const lv = freshLv(t);
+  writeFileSync(join(lv, "src/optics/geometry.ts"), 'throw new Error("geometry is broken");\n');
+  rmSync(join(lv, "src/optics/constants.ts"));
+  const error = await refused(loadLvBinding(lv), "import-failed");
+  assert.ok(error.details.includes("src/optics/geometry.ts: geometry is broken"));
+  assert.ok(error.details.some((detail) => /^src\/optics\/constants\.ts: .*Cannot find module/.test(detail)));
+  for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
 });
 
 test("there is one binding per process and LV root, however the path is written", async (t) => {

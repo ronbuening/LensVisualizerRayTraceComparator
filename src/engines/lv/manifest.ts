@@ -10,9 +10,9 @@ export interface LvManifestExport {
   readonly kind: LvExportKind;
 }
 
-/** One LensVisualizer module the binding imports, by its POSIX path relative to the LV root. */
+/** One LensVisualizer module, or paths tried in order, by POSIX path relative to the LV root. */
 export interface LvManifestModule {
-  readonly module: string;
+  readonly module: string | readonly [string, ...string[]];
   readonly exports: readonly LvManifestExport[];
 }
 
@@ -24,8 +24,9 @@ function functions<const Name extends string>(
 }
 
 /**
- * Everything the comparator imports from LensVisualizer. The binding imports each module, checks every export at
- * load time and fails with all the missing names at once, so a rename in LV is found before any lens is traced.
+ * Everything the comparator imports from LensVisualizer. The binding takes the first module of an entry that
+ * imports and provides every export of its expected kind, and fails with all the missing names at once, so a
+ * rename in LV is found before any lens is traced.
  *
  * To use one more LV export: add its name to the module's line here (or a line for a new module) and its
  * signature to `LvApi`; the type check fails until the two agree.
@@ -51,7 +52,7 @@ export const LV_IMPORT_MANIFEST = [
     exports: functions("epZRelStopAtZoom", "xpZRelLastSurfAtZoom", "xpAtZoom"),
   },
   {
-    module: "src/optics/constants.ts",
+    module: ["src/optics/geometry.ts", "src/optics/constants.ts"],
     exports: [{ name: "FLAT_R_THRESHOLD", as: "flatRadiusThreshold", kind: "number" }],
   },
   {

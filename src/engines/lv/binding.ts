@@ -115,25 +115,41 @@ function importFromRoot(root: string, file: string): Promise<Record<string, unkn
 /**
  * Imports every module of the manifest and checks every export. Everything at fault is listed in one error: the
  * modules that cannot be imported (`import-failed`, which also lists what the other modules lack), or else every
- * export that is missing or of another kind (`exports-missing`).
+ * export that is missing or of another kind (`exports-missing`). An entry with several paths takes the first that
+ * imports and provides every export of its kind; only when none does are all its attempts listed in the error.
  */
 async function importApi(root: string, manifest: readonly LvManifestModule[]): Promise<LvApi> {
   const failed: string[] = [];
   const missing: string[] = [];
   const api: Record<string, unknown> = {};
   for (const { module, exports } of manifest) {
-    let namespace: Record<string, unknown>;
-    try {
-      namespace = await importFromRoot(root, module);
-    } catch (error) {
-      failed.push(`${module}: ${reasonOf(error)}`);
-      continue;
+    const paths = typeof module === "string" ? [module] : module;
+    const importFailures: string[] = [];
+    const missingExports: string[] = [];
+    for (const path of paths) {
+      let namespace: Record<string, unknown>;
+      try {
+        namespace = await importFromRoot(root, path);
+      } catch (error) {
+        importFailures.push(`${path}: ${reasonOf(error)}`);
+        continue;
+      }
+      const problems = exports.flatMap(({ name, kind }) => {
+        const found = typeof namespace[name];
+        return found === kind ? [] : [`${path}: ${name} (expected ${kind}, found ${found})`];
+      });
+      if (problems.length > 0) {
+        missingExports.push(...problems);
+        continue;
+      }
+      for (const { name, as } of exports) api[as] = namespace[name];
+      // Failed candidates are irrelevant once one module provides the whole entry.
+      importFailures.length = 0;
+      missingExports.length = 0;
+      break;
     }
-    for (const { name, as, kind } of exports) {
-      const found = typeof namespace[name];
-      if (found === kind) api[as] = namespace[name];
-      else missing.push(`${module}: ${name} (expected ${kind}, found ${found})`);
-    }
+    failed.push(...importFailures);
+    missing.push(...missingExports);
   }
   if (failed.length > 0) {
     const also =
