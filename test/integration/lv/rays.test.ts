@@ -801,7 +801,7 @@ test(
 );
 
 test(
-  "the one lens whose glass absorbs: a ray's weight carries LensVisualizer's bulk transmission at that line",
+  "absorbing lenses: a ray's weight carries LensVisualizer's bulk transmission at that line",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -810,34 +810,39 @@ test(
       const runtime = binding.api.buildLens((await binding.lens(key)).data);
       if (runtime.elements.some((element) => (element.absorptionCoefficientPerMm ?? 0) > 0)) absorbing.push(key);
     }
-    // At d36f44b3 the catalog has one such lens, an apodisation element.
-    assert.deepEqual(absorbing, ["minolta-stf-135f28-t45"]);
-    const { opticalCase, model } = await modelOf(binding, absorbing[0]);
-    assert.deepEqual(opticalCase.provenance.notes, ["bulk-absorption"]);
-    const { sets, problems } = lvRaySets(binding.api, model, {
-      fields: { kind: "image-height-fractions", values: [0] },
-    });
-    assert.deepEqual(problems, []);
-    const [spec] = sets;
-    const check = fieldCheck(binding, model, 0, 0);
-    const weights = f8(spec.weights);
-    const { columns } = check.rays.grid;
-    let [least, most] = [1, 0];
-    for (const own of check.bundle.rays) {
-      const weight = weights[own.row * columns + own.column];
-      if (own.column >= columns / 2) assert.ok(sameBits(weight, own.weight), `cell ${own.row}, ${own.column}`);
-      else assert.ok(Math.abs(weight - own.weight) < 1e-12, `cell ${own.row}, ${own.column}`);
-      [least, most] = [Math.min(least, weight), Math.max(most, weight)];
+    // Keep the original apodisation control, and exercise later catalog additions too.
+    assert.ok(absorbing.includes("minolta-stf-135f28-t45"));
+    for (const key of absorbing) {
+      const { opticalCase, model } = await modelOf(binding, key);
+      assert.deepEqual(opticalCase.provenance.notes, ["bulk-absorption"]);
+      const { sets, problems } = lvRaySets(binding.api, model, {
+        fields: { kind: "image-height-fractions", values: [0] },
+      });
+      assert.deepEqual(problems, []);
+      const [spec] = sets;
+      const check = fieldCheck(binding, model, 0, 0);
+      const weights = f8(spec.weights);
+      const { columns } = check.rays.grid;
+      let [least, most] = [1, 0];
+      for (const own of check.bundle.rays) {
+        const weight = weights[own.row * columns + own.column];
+        if (own.column >= columns / 2) assert.ok(sameBits(weight, own.weight), `cell ${own.row}, ${own.column}`);
+        else assert.ok(Math.abs(weight - own.weight) < 1e-12, `cell ${own.row}, ${own.column}`);
+        [least, most] = [Math.min(least, weight), Math.max(most, weight)];
+      }
+      // The element is clear at its centre and dark toward its rim: at d36f44b3 the transmitted rays weigh from 0.84
+      // down to 0.044.
+      t.diagnostic(`${key}: weights of the transmitted rays from ${least} to ${most}`);
+      assert.ok(least > 0 && least < most && most < 1, `${key}: ${least} to ${most}`);
+      if (key === "minolta-stf-135f28-t45") {
+        assert.ok(most > 0.5 && least < 0.5 * most, `${least} to ${most}`);
+      }
+      // A ray that is stopped keeps its launch weight, which nothing reads: the first cell is a corner of the lattice.
+      const corner = traced(binding, model, spec, 0);
+      const stop = opticalCase.conditions.stopSemiDiameter;
+      assert.equal(binding.api.mtfTraceClassification(corner, model.state, stop), "blocked");
+      assert.equal(weights[0], 1);
     }
-    // The element is clear at its centre and dark toward its rim: at d36f44b3 the transmitted rays weigh from 0.84
-    // down to 0.044.
-    t.diagnostic(`${absorbing[0]}: weights of the transmitted rays from ${least} to ${most}`);
-    assert.ok(most < 1 && most > 0.5 && least > 0 && least < 0.5 * most, `${least} to ${most}`);
-    // A ray that is stopped keeps its launch weight, which nothing reads: the first cell is a corner of the lattice.
-    const corner = traced(binding, model, spec, 0);
-    const stop = opticalCase.conditions.stopSemiDiameter;
-    assert.equal(binding.api.mtfTraceClassification(corner, model.state, stop), "blocked");
-    assert.equal(weights[0], 1);
   },
 );
 

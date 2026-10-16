@@ -1,7 +1,8 @@
 // Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
 // pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40, those of the geometric OTF's
 // conventions at c05a2ab7, those of the MTF's refinement, which the replay restates, at 33ebdb30, and those of the
-// rear plate whose generated rim does not clip at 31c34396.
+// rear plate whose generated rim does not clip at 31c34396. Geometry, capture, compiled-state and worker-input
+// canaries were reread against the engine rewrite at 8e1142ab; these assert that checkout's source spelling.
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -91,7 +92,7 @@ test(
     assertSource("src/optics/analysis/mtfTracing.ts", "if (!support.useResolvedReference) return undefined;", mirror);
     assertSource(
       "src/optics/trace/aperture.ts",
-      "if (surface.physicalIndex === state.lens.stop.surfaceIndex && stopSemiDiameter !== undefined) return stopSemiDiameter;",
+      "if (surface.physicalIndex === geometry.stopSurfaceIndex && stopSemiDiameter !== undefined) return stopSemiDiameter;",
       "surfaceAperture in src/engines/lv/exportAperture.ts hands the run's stop radius to evaluateAperture for the stop surface",
     );
   },
@@ -111,11 +112,11 @@ test("a rim LensVisualizer generated for a rear plate is still the one thing it 
   // Which surfaces are marked: the two of a plate without a published `sd`, and no surface of an authored lens.
   assertSource(
     "src/optics/prescription/rearPlates.ts",
-    "plate.sd === undefined ? { sd: generatedSd, clips: false } : { sd: plate.sd };",
+    "plate.sd === undefined ? { sd: generatedSd, clips: false as const } : { sd: plate.sd };",
     mirror,
   );
-  assertSource("src/optics/prescription/normalizeLensData.ts", "clips: surface.clips !== false,", mirror);
-  assertSource("src/optics/validateLensData.ts", "if (s.clips !== undefined) {", mirror);
+  assertSource("src/optics/prescription/surfaces.ts", "clips: surface.clips !== false,", mirror);
+  assertSource("src/optics/prescription/validate/schema.ts", "if (s.clips !== undefined) {", mirror);
   assertSource(
     "src/optics/types.ts",
     "clips: boolean;",
@@ -126,9 +127,9 @@ test("a rim LensVisualizer generated for a rear plate is still the one thing it 
 test("a flat surface is still one whose radius exceeds 1e10 and that has no asphere", { skip }, () => {
   const mirror =
     "surfaceShape in src/engines/lv/exportShape.ts (LV_FLAT_RADIUS) decides plane, conic and asphere by it";
-  assertSource("src/optics/internal/surfaceMath.ts", "export const FLAT_R_THRESHOLD = 1e10;", mirror);
+  assertSource("src/optics/geometry/surfaceProfile.ts", "export const FLAT_R_THRESHOLD = 1e10;", mirror);
   assertSource(
-    "src/optics/math/surfaceProfile.ts",
+    "src/optics/geometry/surfaceProfile.ts",
     "if (Math.abs(surface.R) > FLAT_R_THRESHOLD && !asphere) { return createFlatProfile(); }",
     mirror,
   );
@@ -141,27 +142,38 @@ test(
     const mirror =
       "sagOf in src/engines/lv/describe.ts reports NaN beyond finiteRadiusLimit, where the profile's sag is finite";
     assertSource(
-      "src/optics/math/intersection.ts",
-      "if (domainRadius !== null && radius > domainRadius) return { t, point, radius, value: NaN, derivative: NaN };",
+      "src/optics/geometry/intersect.ts",
+      "if (domainRadius !== null && radius > domainRadius) { return { t, point, radius, sag: NaN, slope: NaN, value: NaN, derivative: NaN }; }",
       mirror,
     );
-    assertSource("src/optics/math/intersection.ts", "const domainRadius = profile.finiteRadiusLimit();", mirror);
+    assertSource("src/optics/geometry/intersect.ts", "const domainRadius = profile.finiteRadiusLimit();", mirror);
     // The clamp that keeps the sag finite out there, and the conic and curvature the sag is evaluated with.
     assertSource(
-      "src/optics/internal/surfaceMath.ts",
-      "const conic = (c * h2) / (1 + Math.sqrt(d > 0 ? d : 1e-12));",
+      "src/optics/geometry/surfaceProfile.ts",
+      "const conic = (c * h2) / (1 + conicRoot(c, K, h2));",
       mirror,
     );
+    assertSource("src/optics/geometry/surfaceProfile.ts", "const CONIC_ROOT_FLOOR = 1e-12;", mirror);
+    assertSource("src/optics/geometry/surfaceProfile.ts", "return Math.sqrt(d > 0 ? d : CONIC_ROOT_FLOOR);", mirror);
     const shape = "describeLvSystem in src/engines/lv/describe.ts reads the curvature and the conic constant this way";
     assertSource(
-      "src/optics/internal/surfaceMath.ts",
-      "const c = Math.abs(R) > FLAT_R_THRESHOLD ? 0 : 1.0 / R;",
+      "src/optics/geometry/surfaceProfile.ts",
+      "return Math.abs(R) > FLAT_R_THRESHOLD ? 0 : 1.0 / R;",
       shape,
     );
-    assertSource("src/optics/internal/surfaceMath.ts", "const K = asph ? asph.K : 0;", shape);
     assertSource(
-      "src/optics/internal/surfaceMath.ts",
-      "even: Float64Array.from(EVEN_TERM_PLANS, (term) => coefficientOf(asph, term.key)),",
+      "src/optics/geometry/surfaceProfile.ts",
+      "return conicPolySagAt(h, baseCurvature(R), asph ? asph.K : 0, asph ? hornerTerms(asph) : null);",
+      shape,
+    );
+    assertSource(
+      "src/optics/geometry/surfaceProfile.ts",
+      "const TERM_SLOTS: readonly TermSlot[] = ASPHERIC_POLYNOMIAL_TERMS.map((term) => {",
+      "termsOf in src/engines/lv/describe.ts takes its terms from the same schema",
+    );
+    assertSource(
+      "src/optics/geometry/surfaceProfile.ts",
+      "for (const term of TERM_SLOTS) { const coefficient = coefficientOf(asph, term.key); (term.even ? evenSag : oddSag)[term.sagSlot] = coefficient;",
       "termsOf in src/engines/lv/describe.ts takes the coefficients of ASPHERIC_POLYNOMIAL_TERMS, as the sag does",
     );
   },
@@ -213,7 +225,7 @@ test(
     );
     assertSource(
       cardinals,
-      "rearLensVertexZ: state.z[state.lens.runtime.lastLensSurfaceIdx ?? state.surfaces.length - 1],",
+      "rearLensVertexZ: state.z[state.lens.lastLensSurfaceIndex ?? state.surfaces.length - 1],",
       mirror,
     );
     const pupils = "src/optics/first-order/pupils.ts";
@@ -248,7 +260,7 @@ test(
       "the binding takes epAtZoom2 for the overlay's epAtZoom",
     );
     // They are found at infinity focus, with real rays and a nominal entrance pupil: recorded, never compared.
-    const runtime = "src/optics/runtimeLens.ts";
+    const runtime = "src/optics/first-order/lensConstants.ts";
     const recorded = "answerLvFirstOrder records them only at infinity focus and at a line of authored indices";
     assertSource(runtime, "const epZRelStop = Math.abs(realYRatio) > 1e-9 ? realB / realYRatio - zStop : 0;", recorded);
     assertSource(runtime, "const xpZRelLastSurf = Math.abs(xpU) > 1e-9 ? -xpY / xpU : Infinity;", recorded);
@@ -263,12 +275,18 @@ test(
     const mirror =
       "lvFieldRays in src/engines/lv/raySets.ts lays the rays of a set on these lattice points, with this launch " +
       "weight, and puts the chief ray after them";
+    assertSource(
+      tracing,
+      `const traceOptions = mtfTraceOptions(state, options, support, line, extras.opticalPath);
+       const traceRay = prepareEngineTrace(state, traceOptions);`,
+      mirror,
+    );
     assertSource(tracing, "const chiefRay = mtfLaunchRay(launch, 0, 0);", mirror);
     assertSource(
       tracing,
       `const x = grid.x0 + (column + 0.5) * grid.step;
      const y = grid.y0 + (row + 0.5) * grid.step;
-     const trace = traceEngineRay2(state, mtfLaunchRay(launch, x, y), traceOptions);`,
+     const trace = traceRay(mtfLaunchRay(launch, x, y));`,
       mirror,
     );
     assertSource(
@@ -339,7 +357,7 @@ test(
       tracing,
       `x: trace.terminalPoint[0] + transfer * trace.terminalDirection[0],
      y: trace.terminalPoint[1] + transfer * trace.terminalDirection[1],
-     weight: bulkTransmissionForTrace(state.lens.runtime, trace.hits),`,
+     weight: bulkTransmissionForTrace(state.lens, trace.hits),`,
       projection,
     );
   },
@@ -355,17 +373,15 @@ test(
       "passed: a clipped hit is recorded, a total reflection marks its hit clipped, a missed surface has no hit";
     assertSource(
       tracer,
-      `if (hitClipped && stopOnClip && !ghost) {
-       hits.push(traceHit);
-       break;
-     }`,
+      `capture.hit(i, hit, direction, hitClipped, clipReason);
+     if (hitClipped && stopOnClip && !ghost) break;`,
       mirror,
     );
     assertSource(
       tracer,
       `failureReason = interaction.failure.failureReason;
-     pushClipEvent(clipEvents, state, i, interaction.failure.clipReason, failureReason);
-     traceHit.clipped = true;`,
+     capture.clip(i, interaction.failure.clipReason, failureReason);
+     capture.failure(failureReason, interaction.failure.clipReason);`,
       mirror,
     );
     assertSource(
@@ -387,6 +403,14 @@ test(
       `if (trace.failureReason === "totalInternalReflection" || (trace.status === "clipped" && !trace.failureReason))
        return "blocked";`,
       "answerLvRays in src/engines/lv/rays.ts takes LensVisualizer's own word for blocked and failed",
+    );
+    assertSource(
+      "src/optics/trace/capture.ts",
+      `failure(failureReason, clipReason) {
+        const hit = hits[hits.length - 1];
+        hit.clipped = true;
+        hit.failureReason = failureReason;`,
+      mirror,
     );
     const path = "opticalPath of lv is LensVisualizer's sum from the ray's origin to its hit on the last surface";
     assertSource(tracer, "let opticalPathLengthMm = 0;", path);
@@ -433,15 +457,14 @@ test("the MTF still puts the field axis together as the ray sets resolve image-h
   // record: the ray sets hand over one whose lines are the case's.
   assertSource(
     "src/optics/analysis/mtfTracing.ts",
-    "const traceOptions = mtfTraceOptions(state, options, support, support.spectralLines[0]);",
+    'const traceOptions = { ...mtfTraceOptions(state, options, support, support.spectralLines[0]), capture: "terminal", } as const;',
     "lvLaunchSetup in src/engines/lv/raySets.ts puts the lines of the case into the support record",
   );
   // The seed of the footprint scan is the pupil radius of the request, which the ray sets take from the hook's rule
   // (the canary of the hook is below).
   assertSource(
     "src/optics/analysis/mtfTracing.ts",
-    `options.stopSemiDiameterMm,
-       ),
+    `(x, y) => mtfTraceClassification(traceRay(mtfLaunchRay(launch, x, y)), state, options.stopSemiDiameterMm),
      options.pupilSemiDiameterMm,
      mtfMirrorSymmetric(state),
      growths,
@@ -655,15 +678,16 @@ test(
     assertSource(worker, "const { focusT, zoomT, aberrationT, options } = message.job;", mirror);
     assertSource(worker, "const state = prepareRuntimeState(lens, focusT, zoomT, aberrationT);", mirror);
     assertSource(worker, "steps: computeMtfSteps(state, options, jobCache(message.job)),", mirror);
-    // The worker builds the lens again from the authored surfaces, as the catalog's lens file is built.
+    // The worker rebuilds the canonical prescription held by the runtime, without duplicating generated surfaces.
     assertSource(
       worker,
-      `lens = buildLens({
-       ...message.data,
-       surfaces: message.data.surfaces.filter((surface) => !surface.synthetic),
-       elements: message.data.elements.filter((element) => !element.synthetic),
-     });`,
-      "lv builds the lens of the catalog, which an integration test holds to this rebuilt one",
+      "lens = buildCanonicalLens(message.input);",
+      "lv builds the catalog prescription; the worker builds its canonical form",
+    );
+    assertSource(
+      "src/components/hooks/mtfWorkerClient.ts",
+      'this.worker.postMessage({ type: "init", input: canonicalLensFromRuntime(this.lens) });',
+      "the worker receives the runtime's canonical prescription",
     );
     const engine = "src/optics/analysis/mtf.ts";
     assertSource(

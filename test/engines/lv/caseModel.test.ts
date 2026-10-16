@@ -8,11 +8,11 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import { exportOptionsOf } from "../../../src/engines/lv/caseModel.ts";
 import { exportCase } from "../../../src/engines/lv/exportCase.ts";
 import type { ExportOptions, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
-import type { LvPreparedState } from "../../../src/engines/lv/types.ts";
-import { LINES_NM, TRIPLET, gate, inputFor, stateOf } from "./exportSupport.ts";
+import type { TestModel } from "./exportSupport.ts";
+import { LINES_NM, TRIPLET, gate, inputFor, modelOf } from "./exportSupport.ts";
 
-function caseOf(state: LvPreparedState, options: ExportOptions, overrides: Partial<LvExportApi> = {}): OpticalCase {
-  const result = exportCase(inputFor(state, options, overrides));
+function caseOf(model: TestModel, options: ExportOptions, overrides: Partial<LvExportApi> = {}): OpticalCase {
+  const result = exportCase(inputFor(model, options, overrides));
   assert.ok(result.ok, JSON.stringify(result));
   return result.opticalCase;
 }
@@ -21,10 +21,10 @@ function caseOf(state: LvPreparedState, options: ExportOptions, overrides: Parti
 function twice(
   options: ExportOptions,
   overrides: Partial<LvExportApi> = {},
-  state = stateOf(TRIPLET, { stopIndex: 2 }),
+  model = modelOf(TRIPLET, { stopIndex: 2 }),
 ) {
-  const first = caseOf(state, options, overrides);
-  const again = caseOf(state, exportOptionsOf(first, state.zoomT, state.focusT), overrides);
+  const first = caseOf(model, options, overrides);
+  const again = caseOf(model, exportOptionsOf(first, model.state.zoomT, model.state.focusT), overrides);
   return { first, again };
 }
 
@@ -67,8 +67,8 @@ test("a mixed-reference lens, whose one line is anchored, and a refocused state 
   assert.equal(mixed.again.id, mixed.first.id);
 
   const conjugate = { focusT: 1, zoomT: 0.5, objectDistanceMm: 650, distanceReference: "first-surface" };
-  const state = stateOf(TRIPLET, { stopIndex: 2, focusT: 1, zoomT: 0.5 });
-  const close = twice({ lines: { kind: "cdf" } }, { assessMtfSupport: gate({ conjugate }) }, state);
+  const model = modelOf(TRIPLET, { stopIndex: 2, focusT: 1, zoomT: 0.5 });
+  const close = twice({ lines: { kind: "cdf" } }, { assessMtfSupport: gate({ conjugate }) }, model);
   assert.deepEqual(close.first.conditions.object, { kind: "finite", z: -650 });
   assert.equal(close.again.id, close.first.id);
 });

@@ -154,7 +154,7 @@ async function show(
   if (!isZoom && zoom !== undefined && zoom !== 0) io.stderr(`lvrtc lenses: ${primeZoomNote(key)}\n`);
   const zoomT = isZoom ? (zoom ?? 0) : 0;
   const runtime = binding.api.buildLens(lens.data);
-  const summary = summarizeState(binding.api.prepareRuntimeState(runtime, focusT, zoomT));
+  const summary = summarizeState(binding.api.prepareRuntimeState(runtime, focusT, zoomT), runtime);
   const { key: lensKey, name, file } = lens.entry;
   io.stdout(json ? jsonText({ key: lensKey, name, file, ...summary }) : showText(lens.entry, summary));
   return EXIT_OK;

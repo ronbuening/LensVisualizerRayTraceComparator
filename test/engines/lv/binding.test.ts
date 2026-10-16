@@ -421,12 +421,18 @@ test("a tree without src/lens-data has an empty catalog", async (t) => {
   assert.deepEqual(await binding.catalog(), { fileCount: 0, entries: [], problems: [] });
 });
 
-test("a prepared state is summarized from the state itself", async (t) => {
+test("a prepared state is summarized with its runtime supplied separately", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { data } = await binding.lens("acme-zoom-24-48");
   const runtime = binding.api.buildLens(data);
   const state = binding.api.prepareRuntimeState(runtime, 0, 1);
-  const summary = summarizeState(state);
+  const summary = summarizeState(state, runtime);
+  // The fixture still models older LV. Current LV retains these fields, with no runtime/data back-pointer.
+  const { key, stop, flags, projection } = state.lens;
+  const current = { ...state, lens: { key, stop, flags, projection } };
+  assert.deepEqual(summarizeState(current, runtime), summary);
+  // Even when the old back-pointer exists, the explicitly supplied runtime is authoritative.
+  assert.equal(summarizeState(state, { ...runtime, lastLensSurfaceIdx: 1 }).lastLensSurfaceIndex, 1);
   assert.deepEqual(
     { ...summary, surfaces: summary.surfaces.length },
     {
@@ -442,7 +448,7 @@ test("a prepared state is summarized from the state itself", async (t) => {
   );
   // The runtime stop radius follows the zoom; the authored one (3) is that of the wide end only.
   assert.equal(summary.stopRadius, binding.api.wideOpenStopAtZoom(1, runtime));
-  assert.equal(summarizeState(binding.api.prepareRuntimeState(runtime, 0, 0)).stopRadius, 3);
+  assert.equal(summarizeState(binding.api.prepareRuntimeState(runtime, 0, 0), runtime).stopRadius, 3);
   assert.deepEqual(summary.surfaces[1], {
     index: 1,
     label: "2A",
@@ -477,7 +483,8 @@ test("a prepared state is summarized from the state itself", async (t) => {
   // A published rim clips; a rim the tree generated is an envelope, and the summary says which a surface has.
   assert.ok(summary.surfaces.every((surface) => surface.clips));
   const plate = await binding.lens("zenith-plate-35");
-  const generated = summarizeState(binding.api.prepareRuntimeState(binding.api.buildLens(plate.data), 0, 0));
+  const plateRuntime = binding.api.buildLens(plate.data);
+  const generated = summarizeState(binding.api.prepareRuntimeState(plateRuntime, 0, 0), plateRuntime);
   assert.deepEqual(
     generated.surfaces.map(({ label, sd, clips, synthetic }) => ({ label, sd, clips, synthetic })),
     [

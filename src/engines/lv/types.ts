@@ -109,7 +109,6 @@ export interface LvPreparedState {
   readonly traceGeometry?: LvTraceGeometry;
   readonly lens: {
     readonly key: string;
-    readonly runtime: LvRuntimeLens;
     readonly stop: { readonly surfaceIndex: number };
     /** `isFoldedOptics` is true for a system whose path turns at a mirror. */
     readonly flags: Readonly<Record<string, boolean>>;

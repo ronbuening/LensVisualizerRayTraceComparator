@@ -88,17 +88,9 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
     return built;
   });
   const imgZ = spec.imgZ ?? position;
-  const runtime: LvRuntimeLens = {
-    lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
-    isZoom: false,
-    elements: [],
-    maxFstop: 22,
-    ...spec.runtime,
-  };
   return {
     lens: {
       key: "hand-built",
-      runtime,
       stop: { surfaceIndex: spec.stopIndex },
       flags: { isFoldedOptics: spec.folded ?? false },
       projection: { kind: spec.projection ?? "rectilinear" },
@@ -115,6 +107,23 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
     // A trap, not a source: the exporter takes the image plane from `imgZ`. A case built from this is not valid.
     totalTrack: Number.NaN,
   };
+}
+
+/** A hand-built model keeps the runtime separate from the prepared state, as current LV does. */
+export interface TestModel {
+  readonly state: LvPreparedState;
+  readonly runtime: LvRuntimeLens;
+}
+
+export function modelOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): TestModel {
+  const runtime: LvRuntimeLens = {
+    lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
+    isZoom: false,
+    elements: [],
+    maxFstop: 22,
+    ...spec.runtime,
+  };
+  return { state: stateOf(surfaces, spec), runtime };
 }
 
 /**
@@ -302,11 +311,11 @@ export const LV_PROVENANCE: ExportCaseInput["lv"] = {
 
 /** The input of `exportCase` for a hand-built state, with any option of the run and any stand-in replaced. */
 export function inputFor(
-  state: LvPreparedState,
+  { state, runtime }: TestModel,
   options: ExportCaseInput["options"] = {},
   overrides: Partial<LvExportApi> = {},
 ): ExportCaseInput {
-  return { api: apiFor(state, overrides), lens: LENS, runtime: state.lens.runtime, options, lv: LV_PROVENANCE };
+  return { api: apiFor(state, overrides), lens: LENS, runtime, options, lv: LV_PROVENANCE };
 }
 
 /**

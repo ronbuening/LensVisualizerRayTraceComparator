@@ -131,9 +131,9 @@ function imageZOf(
 }
 
 /** What the lens has that changes no surface, and that the case therefore does not carry: provenance notes. */
-function notesOf(state: LvPreparedState): string[] {
+function notesOf(state: LvPreparedState, runtime: LvRuntimeLens): string[] {
   const notes: string[] = [];
-  const absorbing = state.lens.runtime.elements.some((element) => (element.absorptionCoefficientPerMm ?? 0) > 0);
+  const absorbing = runtime.elements.some((element) => (element.absorptionCoefficientPerMm ?? 0) > 0);
   if (absorbing) notes.push("bulk-absorption");
   if (state.lens.projection.kind !== "rectilinear") notes.push(`projection:${state.lens.projection.kind}`);
   return notes.sort();
@@ -258,7 +258,7 @@ function exportChecked(
   });
 
   const { object, lines, indexAfterSurface } = light.light;
-  const notes = notesOf(state);
+  const notes = notesOf(state, runtime);
   const draft: OpticalCaseDraft = {
     label: {
       name: lens.name,

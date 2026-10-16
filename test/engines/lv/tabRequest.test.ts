@@ -19,7 +19,7 @@ import {
 import type { LvTabApi } from "../../../src/engines/lv/tabRequest.ts";
 import type { LvMtfPreferences, LvPreparedState, LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
-import { stateOf } from "./exportSupport.ts";
+import { modelOf } from "./exportSupport.ts";
 
 const PREFERENCES: LvMtfPreferences = {
   method: "diffraction",
@@ -48,8 +48,11 @@ type Calls = unknown[][];
 function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: LvPreparedState; calls: Calls } {
   const calls: Calls = [];
   const geometry = { yRatio: lens.yRatio ?? 1, analysis: true };
-  const state = stateOf([{ label: "STO", R: 1e15, d: 50 }], { stopIndex: 0, zoomT: 0.5 });
-  const runtime: LvRuntimeLens = { ...state.lens.runtime, maxFstop: lens.maxFstop ?? 16 };
+  const { state, runtime } = modelOf([{ label: "STO", R: 1e15, d: 50 }], {
+    stopIndex: 0,
+    zoomT: 0.5,
+    runtime: { maxFstop: lens.maxFstop ?? 16 },
+  });
   const api: LvTabApi = {
     wideOpenStopAtZoom: (zoomT, L) => (calls.push(["wideOpenStopAtZoom", zoomT, L]), lens.wideOpen),
     fopenAtZoom2: (zoomT, L) => (calls.push(["fopenAtZoom2", zoomT, L]), lens.fopen),
