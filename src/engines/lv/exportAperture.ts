@@ -3,7 +3,12 @@ import type { SurfaceAperture } from "../../contract/case.ts";
 import type { RunAperture } from "../../contract/runSpec.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { lvHookStop, lvTabComparison } from "./tabRequest.ts";
-import type { LvApi, LvPreparedState, LvRuntimeLens, LvSurface } from "./types.ts";
+import type { LvApi, LvPreparedState, LvRuntimeLens, LvSurface, LvTraceGeometry } from "./types.ts";
+
+/** LensVisualizer engine-next (S4.P1.T1) takes TraceGeometry; LensVisualizer main takes PreparedOpticalState. */
+export function apertureGeometry(state: LvPreparedState): LvTraceGeometry | LvPreparedState {
+  return state.traceGeometry ?? state;
+}
 
 /** The LensVisualizer functions that size the stop. */
 export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoom2" | "fNumberAtStopdown">;
@@ -146,7 +151,7 @@ export function surfaceAperture(
   surface: LvSurface,
   stopRadius: number | undefined,
 ): SurfaceAperture {
-  const evaluate = (radius: number) => api.evaluateAperture(state, surface, radius, stopRadius);
+  const evaluate = (radius: number) => api.evaluateAperture(apertureGeometry(state), surface, radius, stopRadius);
   const onAxis = evaluate(0);
   const nominal = onAxis.semiDiameter;
   const expected = stopRadius ?? surface.sd;

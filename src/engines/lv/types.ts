@@ -99,8 +99,14 @@ export interface LvPlane {
   readonly normal: LvVec3;
 }
 
+/** The member of engine-next's TraceGeometry that `evaluateAperture` reads. */
+export interface LvTraceGeometry {
+  readonly stopSurfaceIndex: number;
+}
+
 /** LV's PreparedOpticalState: a lens at one focus, zoom and aberration-control position. */
 export interface LvPreparedState {
+  readonly traceGeometry?: LvTraceGeometry;
   readonly lens: {
     readonly key: string;
     readonly runtime: LvRuntimeLens;
@@ -567,7 +573,7 @@ export interface LvApi {
   xpAtZoom(zoomT: number, L: LvRuntimeLens): number;
   wideOpenStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
   evaluateAperture(
-    state: LvPreparedState,
+    geometry: LvPreparedState | LvTraceGeometry,
     surface: LvSurface,
     radius: number,
     stopSemiDiameter?: number,

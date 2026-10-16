@@ -188,6 +188,29 @@ const STATE = stateOf(
 );
 const API = { evaluateAperture: lvEvaluateAperture };
 
+for (const version of ["main", "engine-next"] as const) {
+  test(`the ${version} aperture argument preserves the run's stop override`, () => {
+    const geometry = { stopSurfaceIndex: 1 };
+    const state = version === "engine-next" ? { ...STATE, traceGeometry: geometry } : STATE;
+    let calls = 0;
+    const api = {
+      evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) => {
+        assert.equal(args[0], version === "engine-next" ? geometry : state);
+        assert.equal(args[1], state.surfaces[1]);
+        assert.equal(args[3], 1.25);
+        calls++;
+        return lvEvaluateAperture(...args);
+      },
+    };
+    assert.deepEqual(surfaceAperture(api, state, state.surfaces[1], 1.25), {
+      semiDiameter: 1.250000001,
+      nominalSemiDiameter: 1.25,
+      innerSemiDiameter: 0,
+    });
+    assert.ok(calls > 1, "both the on-axis query and the clip-limit probes use the compatible argument");
+  });
+}
+
 test("a surface's aperture is the semi-diameter LensVisualizer traces it with, and its inclusive limit", () => {
   assert.deepEqual(surfaceAperture(API, STATE, STATE.surfaces[0], undefined), {
     semiDiameter: 9.000000001,

@@ -12,6 +12,7 @@ import type {
   LvRuntimeLens,
   LvSpectralLine,
   LvSurface,
+  LvTraceGeometry,
   LvVec3,
 } from "../../../src/engines/lv/types.ts";
 
@@ -121,12 +122,13 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
  * marked `clips: false` has no semi-diameter and no height is outside it.
  */
 export function lvEvaluateAperture(
-  state: LvPreparedState,
+  state: LvPreparedState | LvTraceGeometry,
   surface: LvSurface,
   radius: number,
   stopSemiDiameter?: number,
 ): LvApertureEvaluation {
-  const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
+  const stopIndex = "stopSurfaceIndex" in state ? state.stopSurfaceIndex : state.lens.stop.surfaceIndex;
+  const isStop = surface.physicalIndex === stopIndex;
   const overridden = isStop && stopSemiDiameter !== undefined;
   const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : surface.sd;
   const innerSemiDiameter = surface.innerSd ?? 0;

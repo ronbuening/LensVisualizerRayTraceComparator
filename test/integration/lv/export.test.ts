@@ -22,6 +22,7 @@ import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { CENSUS_FILES, renderCensusMarkdown } from "../../../src/engines/lv/census.ts";
 import type { ExportCensus } from "../../../src/engines/lv/census.ts";
+import { apertureGeometry } from "../../../src/engines/lv/exportAperture.ts";
 import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
 import type { LvMtfOptions, LvPreparedState, LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { suitePath } from "../../suites/support.ts";
@@ -522,7 +523,8 @@ test(
         const { semiDiameter: limit, nominalSemiDiameter: nominal } = surface.aperture;
         const stop = index === system.stopIndex ? conditions.stopSemiDiameter : undefined;
         assert.equal(nominal, stop ?? state.surfaces[index].sd, at);
-        const evaluate = (radius: number) => binding.api.evaluateAperture(state, state.surfaces[index], radius, stop);
+        const evaluate = (radius: number) =>
+          binding.api.evaluateAperture(apertureGeometry(state), state.surfaces[index], radius, stop);
         if (limit === null) {
           // A rim LensVisualizer generated (31c34396): its state says so, and it calls no height outside, of the
           // envelope as little as of a thousand of them. Only a rear plate has one.
