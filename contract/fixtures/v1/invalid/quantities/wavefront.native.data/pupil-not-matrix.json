@@ -1,0 +1,100 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 500,
+    "weight": 1,
+    "imageIndex": 1
+  },
+  "fields": [
+    {
+      "field": 0,
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "status": "ok",
+      "samples": [
+        {
+          "gridSize": 4,
+          "normalizedPupil": {
+            "$nd": {
+              "dtype": "f8",
+              "shape": [
+                16,
+                2
+              ],
+              "data": "AAAAAAAA6L8AAAAAAADovwAAAAAAANC/AAAAAAAA6L8AAAAAAADQPwAAAAAAAOi/AAAAAAAA6D8AAAAAAADovwAAAAAAAOi/AAAAAAAA0L8AAAAAAADQvwAAAAAAANC/AAAAAAAA0D8AAAAAAADQvwAAAAAAAOg/AAAAAAAA0L8AAAAAAADovwAAAAAAANA/AAAAAAAA0L8AAAAAAADQPwAAAAAAANA/AAAAAAAA0D8AAAAAAADoPwAAAAAAANA/AAAAAAAA6L8AAAAAAADoPwAAAAAAANC/AAAAAAAA6D8AAAAAAADQPwAAAAAAAOg/AAAAAAAA6D8AAAAAAADoPw==",
+              "sha256": "183526331f0077c5e204e48e59ddc540f1c6182e7a265a0f0e7391cedbbecfc4"
+            }
+          },
+          "pupilMm": {
+            "$nd": {
+              "dtype": "f8",
+              "shape": [
+                48
+              ],
+              "data": "AAAAAAAA6L8AAAAAAADovwDxlkmn4aw/AAAAAAAA0L8AAAAAAADovwA0Q4prBqA/AAAAAAAA0D8AAAAAAADovwA0Q4prBqA/AAAAAAAA6D8AAAAAAADovwDxlkmn4aw/AAAAAAAA6L8AAAAAAADQvwA0Q4prBqA/AAAAAAAA0L8AAAAAAADQvwCYRzemm3k/AAAAAAAA0D8AAAAAAADQvwCYRzemm3k/AAAAAAAA6D8AAAAAAADQvwA0Q4prBqA/AAAAAAAA6L8AAAAAAADQPwA0Q4prBqA/AAAAAAAA0L8AAAAAAADQPwCYRzemm3k/AAAAAAAA0D8AAAAAAADQPwCYRzemm3k/AAAAAAAA6D8AAAAAAADQPwA0Q4prBqA/AAAAAAAA6L8AAAAAAADoPwDxlkmn4aw/AAAAAAAA0L8AAAAAAADoPwA0Q4prBqA/AAAAAAAA0D8AAAAAAADoPwA0Q4prBqA/AAAAAAAA6D8AAAAAAADoPwDxlkmn4aw/",
+              "sha256": "4ccb4290ba7f96a9f74c074100251df94f2cae87224a97257f74c162bc4d95e5"
+            }
+          },
+          "opdWaves": {
+            "$nd": {
+              "dtype": "f8",
+              "shape": [
+                16
+              ],
+              "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+              "sha256": "38723a2e5e8a17aa7950dc008209944e898f69a7bd10a23c839d341e935fd5ca"
+            }
+          },
+          "intensity": {
+            "$nd": {
+              "dtype": "f8",
+              "shape": [
+                16
+              ],
+              "data": "AAAAAAAAAAAAAAAAAADwPwAAAAAAAPA/AAAAAAAAAAAAAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAAAAAAAAAAAADwPwAAAAAAAPA/AAAAAAAAAAA=",
+              "sha256": "947712c00e5fd3047fc234cdf8bdee9574bc4e05fc815283c19aa2ac87dbc624"
+            }
+          },
+          "valid": {
+            "$nd": {
+              "dtype": "u1",
+              "shape": [
+                16
+              ],
+              "data": "AAEBAAEBAQEBAQEBAAEBAA==",
+              "sha256": "d8eb230c123dabfc12bf87b4daa9c4eb2b6501b4a3fdc15647b6faded0b6e9b8"
+            }
+          },
+          "reference": {
+            "strategy": "chief_ray",
+            "removeTilt": false,
+            "sphereCenterMm": [
+              0,
+              0,
+              10
+            ],
+            "radiusMm": 10,
+            "exitPupilMm": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "field": 10,
+      "fieldAngleDeg": 10,
+      "imageHeightMm": null,
+      "status": "unavailable",
+      "reason": "optiland-raised-ValueError",
+      "samples": []
+    }
+  ],
+  "method": {
+    "name": "synthetic-wavefront",
+    "params": {}
+  },
+  "notes": []
+}

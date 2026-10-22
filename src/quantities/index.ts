@@ -6,6 +6,7 @@ import { createQuantityRegistry } from "./registry.ts";
 import type { QuantityLookup } from "./registry.ts";
 import { selftestEchoQuantity } from "./selftestEcho.ts";
 import { systemDescribeQuantity } from "./systemDescribe.ts";
+import { wavefrontNativeQuantity } from "./wavefrontNative.ts";
 
 const { has, get, list } = createQuantityRegistry([
   selftestEchoQuantity,
@@ -13,6 +14,7 @@ const { has, get, list } = createQuantityRegistry([
   paraxialFirstOrderQuantity,
   raysTraceQuantity,
   mtfNativeQuantity,
+  wavefrontNativeQuantity,
 ]);
 
 /**

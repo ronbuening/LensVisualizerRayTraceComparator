@@ -14,6 +14,7 @@ import {
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
   MTF_ROW_STATUS_TEXT,
+  WAVEFRONT_HEADING,
 } from "./wording.ts";
 
 /** What an empty cell holds: a place where there is nothing to say, as opposed to a value that is missing. */
@@ -77,6 +78,7 @@ const ANGLE_DECIMALS = 3;
 export const OWN_MTF_HEADING = {
   diffraction: "The engines' own MTF, side by side.",
   geometric: "The engines' own geometric MTF, side by side.",
+  wavefront: WAVEFRONT_HEADING,
 } as const;
 
 /**
@@ -84,11 +86,13 @@ export const OWN_MTF_HEADING = {
  * difference, then a row for every field, cut and shown frequency. Every sentence is a template of
  * `src/report/wording.ts`.
  */
-function mtfComparisonLines(mtf: MtfComparison): string[] {
+export function mtfComparisonLines(mtf: MtfComparison): string[] {
   const { pair, columns, bands } = mtf;
   const names = columns.map((column) => (column.step === null ? column.engine : `${column.engine} ${column.step}`));
   const judged = columns.flatMap((column, index) => (column.judged ? [names[index]] : []));
-  const difference = judged.length === 2 ? `${judged[0]} − ${judged[1]}` : `${pair.a} − ${pair.b}`;
+  const difference =
+    mtf.kind === "wavefront" || judged.length !== 2 ? `${pair.a} − ${pair.b}` : `${judged[0]} − ${judged[1]}`;
+  const peers = mtf.peers ?? [];
   const bandText = (value: number | null): string => (value === null ? "none" : numberText(value));
   const lines = [
     "",
@@ -131,6 +135,10 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
       : []),
     field.class ?? NOTHING,
     field.reason === null ? NOTHING : `${field.reason}: ${FIELD_REASON_TEXT[field.reason]}`,
+    ...peers.flatMap((peer) => {
+      const other = peer.fields.find((f) => f.field === field.field);
+      return [other?.class ?? "unsupported", other?.reason ?? peer.pair.reason ?? "no-curve"];
+    }),
   ]);
   lines.push(
     ...table(
@@ -143,6 +151,7 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
         ...(rim ? ["Rim rays lost", "Rim rays from chief ray [mm]"] : []),
         "Class",
         "Reason",
+        ...peers.flatMap((peer) => [`${peer.pair.a} − ${peer.pair.b}: class`, "Reason"]),
       ],
       fieldRows,
     ),
@@ -163,11 +172,33 @@ function mtfComparisonLines(mtf: MtfComparison): string[] {
       row.difference === null ? NOTHING : numberText(row.difference),
       row.status,
       row.class ?? NOTHING,
+      ...peers.flatMap((peer) => {
+        const other = peer.rows.find(
+          (r) => r.field === row.field && r.cut === row.cut && r.frequencyPerMm === row.frequencyPerMm,
+        );
+        return [
+          other?.difference == null ? NOTHING : numberText(other.difference),
+          other?.status ?? "UNSUPPORTED",
+          other?.class ?? "unsupported",
+        ];
+      }),
     ]);
   lines.push(
     ...(rows.length === 0
       ? ["No shown frequency is one of the request."]
-      : table(["Field", "Cut", "Cycles/mm", ...names, difference, "Status", "Class"], rows)),
+      : table(
+          [
+            "Field",
+            "Cut",
+            "Cycles/mm",
+            ...names,
+            difference,
+            "Status",
+            "Class",
+            ...peers.flatMap((peer) => [`${peer.pair.a} − ${peer.pair.b}`, "Status", "Class"]),
+          ],
+          rows,
+        )),
     "",
     ...MTF_COMPARISON_OUTRO,
   );

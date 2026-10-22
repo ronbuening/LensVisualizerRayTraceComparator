@@ -16,15 +16,15 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | benchmark |
 | Suite hash | ca12c885c2454c3cb1a8d0c54d51128a20c4919c2ceb84c3d03a7404cceb75fa |
-| Baseline hash | e06a1176b7237c8b2d1b8a180f6ee2a56cf4feb5eb4230b96a60ccfa0b38d29a |
+| Baseline hash | ce2757dc6460d85fa58348e49c6a17cf117cd061e3c8ed09b5f4594f7b19aff7 |
 | Contract version | 1.0 |
-| Policy | rungs v11 |
-| Policy hash | 1354b9223d85414a98727cd58e674f68fae5c72f125b5aaf93072e414e452188 |
+| Policy | rungs v12 |
+| Policy hash | 1bb254e47a99d76f428414e8dd3d347a4ec653d24f5ff79c2f08dd9ae59d5da1 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
 | lv | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | 945d209ac066e7a29eac584b2bb12580006ca830538f646c4254dbb407b1e6dd | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | d6f6f12e77b180c5405c05a0bb0c7b77a7e09efcb1b7512fafb90932ad9466f6 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 87f99c8718b6386842cdfb9963ee3553e58e6fb2aaa5b129d302cfed7356c3e4 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 2ed2afe63bbcf29a4a1b8fd09c72c015a5aef1ead3e75c97dd4bb9ef6965dc14 | sourceFiles 11 |
 
 | Run | Case |

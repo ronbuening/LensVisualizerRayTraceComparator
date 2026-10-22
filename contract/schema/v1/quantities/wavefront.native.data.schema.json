@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:wavefront.native.data",
+  "title": "wavefront.native data",
+  "type": "object",
+  "properties": {
+    "line": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "wavelengthNm": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        },
+        "weight": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        },
+        "imageIndex": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+        }
+      },
+      "required": ["index", "wavelengthNm", "weight", "imageIndex"],
+      "additionalProperties": false
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "number"
+          },
+          "fieldAngleDeg": {
+            "type": "number",
+            "exclusiveMinimum": -90,
+            "exclusiveMaximum": 90
+          },
+          "imageHeightMm": {
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "status": {
+            "enum": ["ok", "unavailable"]
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "gridSize": {
+                  "type": "integer",
+                  "minimum": 4
+                },
+                "normalizedPupil": {
+                  "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+                },
+                "pupilMm": {
+                  "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+                },
+                "opdWaves": {
+                  "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+                },
+                "intensity": {
+                  "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+                },
+                "valid": {
+                  "description": "An NdArray of float64 with exactly one axis: the ndarray definition with dtype and shape narrowed.",
+                  "type": "object",
+                  "properties": {
+                    "$nd": {
+                      "type": "object",
+                      "properties": {
+                        "dtype": {
+                          "const": "u1"
+                        },
+                        "shape": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+                          },
+                          "minItems": 1,
+                          "maxItems": 1
+                        },
+                        "data": {
+                          "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+                        },
+                        "sha256": {
+                          "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+                        }
+                      },
+                      "required": ["dtype", "shape", "data", "sha256"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["$nd"],
+                  "additionalProperties": false
+                },
+                "reference": {
+                  "type": "object",
+                  "properties": {
+                    "strategy": {
+                      "const": "chief_ray"
+                    },
+                    "removeTilt": {
+                      "const": false
+                    },
+                    "sphereCenterMm": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    "radiusMm": {
+                      "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+                    },
+                    "exitPupilMm": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "required": ["strategy", "removeTilt", "sphereCenterMm", "radiusMm", "exitPupilMm"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["gridSize", "normalizedPupil", "pupilMm", "opdWaves", "intensity", "valid", "reference"],
+              "additionalProperties": false
+            }
+          },
+          "reason": {
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          }
+        },
+        "required": ["field", "fieldAngleDeg", "imageHeightMm", "status", "samples"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["line", "fields", "method", "notes"],
+  "additionalProperties": false
+}

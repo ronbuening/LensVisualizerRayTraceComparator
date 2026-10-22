@@ -39,10 +39,19 @@ export const FIELD_REASON_TEXT: { readonly [reason in NativeFieldReason]: string
 };
 
 /** Which MTF a comparison of the engines' own is of: the diffraction MTF of rung R5, the geometric MTF of R5g. */
-export type MtfComparisonKind = "diffraction" | "geometric";
+export type MtfComparisonKind = "diffraction" | "geometric" | "wavefront";
+export const WAVEFRONT_HEADING = "The three-way diffraction comparison, with FFT and raw wavefront columns.";
 
 /** The sentences above the tables of an MTF comparison, by the MTF it is of. */
 export const MTF_COMPARISON_INTROS: { readonly [kind in MtfComparisonKind]: readonly string[] } = {
+  wavefront: [
+    "The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on",
+    "LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw",
+    "Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.",
+    "Only one line is shown. The last column uses the radial optical cosines of optiland's chief-ray reference",
+    "sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band",
+    "sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.",
+  ],
   diffraction: [
     "Each column is one engine's own estimate of the diffraction MTF, by its own method and its own sampling. No",
     "column is a reference for another, and no difference in this table is held to a tolerance.",
@@ -129,7 +138,7 @@ const mentions =
 
 const AN_MTF = /\b(MTF|OTF|transfer function)s?\b/i;
 // The rungs of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
-const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|[Rr]5g?)\b/;
+const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|[Rr]5g?|[Rr]6c)\b/;
 
 /** The claims that are rejected. */
 export const BANNED_CLAIMS: readonly BannedClaim[] = [

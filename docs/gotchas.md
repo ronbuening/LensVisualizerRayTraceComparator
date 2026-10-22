@@ -2057,3 +2057,68 @@ shares no code with any engine.
   `optiland-raised-ValueError`, for one line and for several, and the note has optiland's message. A test pins it.
   No such field is known in the suites, which this half did not run.
 - **Class.** method: recorded.
+
+### Wavefront.get_data returns a compact reference-sphere wavefront, with the opposite sign to a path
+
+- **Where.** `optiland/wavefront/wavefront.py` resolves fields and wavelengths to objects and `get_data` indexes
+  `data[(field.coord, wavelength.value)]`. `ChiefRayStrategy` returns intersections with its chief-ray reference
+  sphere, not positions on an even exit-pupil plane. OPD is `(opd_ref - opd) / (wavelength_um * 1e-3)`, in vacuum
+  waves; intensity is the image row of its trace. The reference radius is the chief landing's distance to
+  `exit_pupil_point_gcs()`, and its image index is read from the image surface at the primary line.
+- **Effect.** OPD must be negated to use the comparator's path convention. The normalized stop grid is not a grid
+  of these sphere coordinates or image-side optical cosines. A non-air image medium affects the sphere path as
+  well as the optical cosines. An exit pupil's axial zero can be rounded by its paraxial computation.
+- **Handled.** `wavefront.native` v1 preserves the raw sign, units, sphere points, center, radius and exit pupil.
+  Its consumer `wavefrontOtf` states the reference-sphere model it uses: radial directions, n times transverse
+  components, W=-lambda OPD, intensity as midpoint-cell flux. It claims no aberrated exit direction. The pure
+  estimator calls the unchanged Hopkins kernel; all such differences remain recorded. `test_wavefront.py`,
+  `test_opd_sign_units_and_sphere_coordinates_from_an_exact_refracting_surface`, derives a one-surface case in
+  60-digit arithmetic: n=3/2, R=30 mm, paraxial focus 90 mm, stop/exit pupil z=0, ray-sphere intersections and
+  signed OPD. Read-back fault tests change the image index, pupil, strategy, radius, chief plane and data keys.
+- **Class.** convention (raw sign and units); method (the consumer's reference-sphere pupil model).
+
+### Wavefront respects a supplied distribution; uniform includes the rim
+
+- **Where.** `Wavefront._resolve_distribution` generates points only for a string distribution; a supplied
+  `BaseDistribution` is returned as given. `UniformDistribution` uses linspace endpoints -1 and 1 and removes
+  points outside the circle. `Wavefront.get_data` retains the compact order, with no square-grid indices.
+- **Effect.** Asking for uniform points would put rays on the stop edge, where a rounding can clip them, and
+  reshaping the compact result would put rays in the wrong cells. Changing num_rays cannot regenerate a supplied
+  distribution. The FFT's own `_generate_pupils` has its own grid bookkeeping, which this operation does not use.
+- **Handled.** The new worker supplies midpoint coordinates `(2 column + 1)/n - 1`, `(2 row + 1)/n - 1`, for even n,
+  tracing only centers with radius strictly below one. Every returned row is scattered to its original square
+  cell. The analysis's num_rays, both distribution coordinate arrays, their order and every result length are
+  read back. `test_midpoints_strictly_inside_edge_and_row_major` proves the coordinates; real fresh-optic and
+  deliberate-distribution-fault tests pin their use by Wavefront. The chief launch is checked on a separate
+  fresh optic, without any rim trace, so a lost calibration ray cannot withhold a raw wavefront.
+- **Class.** convention.
+
+### Chief-ray wavefront zero-fills a nonfinite sample, including its intensity
+
+- **Where.** `ChiefRayStrategy.compute_wavefront_data` forms a finite mask of OPD, all three pupil coordinates and
+  intensity and writes zero to all five arrays outside it. It raises ValueError when no finite sample exists.
+  A finite sample with intensity zero is not removed from the compact result.
+- **Effect.** A zero OPD or a finite point does not say that a sample carries light. One bad field raises before
+  a multi-field Wavefront construction returns any field.
+- **Handled.** The worker calls one line/field/grid on each fresh optic, retains intensity and derives validity
+  only from finite positive-intensity samples. Outside-circle square cells are zero and dark. A failed field
+  has no samples and a reason; later fields continue. BuildMismatch, MemoryError and ImportError stay FATAL;
+  REQUEST_BUDGET_S is checked between fields. A nonfinite reference sphere is likewise unavailable, not a build
+  mismatch (`test_nonfinite_reference_is_an_unavailable_field_not_a_build_failure`).
+  `test_get_data_zero_fills_a_nonfinite_sample_including_its_intensity`
+  deliberately makes one traced coordinate nonfinite and pins the raw zeros. The real 0/14/40-degree fixture
+  test pins one field's failure and the other's stable values. Stand-ins pin FATAL dispatch and the time budget.
+- **Class.** unsupported where the field has no samples; numerical where a derived lattice is flagged.
+
+### Chief-ray wavefront restores the phase at oblique infinite-conjugate launch planes
+
+- **Where.** `ReferenceStrategy._restore_launch_phase` adds the object index times `d dot (origin - chief_origin)`
+  to each ray's path for an AngleField at infinity, from retained launch states, before OPD is formed. It does
+  not apply that correction to a finite object.
+- **Effect.** Off-axis OPD is not obtained by subtracting the raw accumulated paths alone. Restoring this phase
+  is part of optiland's own wavefront; the new operation must not add the correction again or fit tilt away.
+- **Handled.** No phase is reconstructed by the worker. It reads get_data and retains `remove_tilt=False`.
+  `test_raw_wavefront_restores_oblique_infinite_launch_phase` supplies synthetic retained states to the real
+  strategy and derives the 0.3 mm phase addition from 0.6 times 0.5 mm. The OPD sign/unit test separately pins
+  what get_data returns. Finite objects remain unsupported by this operation, as by the worker's native FFT.
+- **Class.** convention.

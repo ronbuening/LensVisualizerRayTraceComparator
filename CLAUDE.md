@@ -48,7 +48,7 @@ node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts th
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
 ```
 
 ## Rules
@@ -259,9 +259,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
-- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`) live in `src/engines/builtin.ts`** and run only where
+- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
-  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, and `r6b` of `lv` and `wave`, whatever
+  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
   `--engines` or a run names; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
@@ -276,8 +276,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   (`src/core/numeric/exact.ts`), so equal input gives equal bits. It imports nothing of an engine.
   `imageProjection.ts` is in the closures of `lv` and `ref`, and `geometricOtf.ts` in that of `replay` (an edit
   there moves an adapter revision: keep every operation bit for bit, or refresh the baselines); `waveOtf.ts`,
-  `waveValidity.ts` and `src/rays/wavefront.ts` are in the closure of `wave` and of no other engine: keep them out
-  of `lv`, `ref` and `replay`, whose adapter revisions the rays baselines hold. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
+  `waveValidity.ts` are shared by `wave` and `optiland-wave`; `src/rays/wavefront.ts` stays in `wave` alone.
+  Keep all of them out of `lv`, `ref` and `replay`, whose adapter revisions the rays baselines hold. Its proof is
+  analytic (`test/estimators`): closed forms with a derived quadrature
   bound, and whole-number arithmetic (`test/estimators/support.ts`: `exactTransfer`, `exactLength`), never an
   engine's output. The wave estimator's tests (`waveOtf.test.ts`) build spherical waves from their geometry: the
   staircase from whole-number pair counts, discs and the annulus in closed form, Hopkins' integral by a
@@ -481,9 +482,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   and wave. Check, then write, each kind.
 - **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in
   `src/cli/commands/mtf.ts`, `loadSuiteValue`): the conditions and cases are the benchmark suite's, so the store
-  answers a benchmark lens; r5 and r5g only where optiland is named; it exits 1 on a FAIL or ERROR pair. Without
-  `--profile benchmark` the command is the single request of `lv-tab-default`. A test of it sets `LVRTC_RUNS_DIR`
-  and closes the binding.
+  answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c only on the reference line. It exits
+  1 on a FAIL or ERROR pair. Without `--profile benchmark` the command is the single request of `lv-tab-default`.
+  A test of it sets `LVRTC_RUNS_DIR` and closes the binding.
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
   that follows it, and what was written is read back before a commit says it was.
 - **A surface that does not clip is `aperture.semiDiameter` null (contract minor 2).** A rear plate whose rim
@@ -538,8 +539,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   `test/fixtures/fault-root` holds the engines that fail.
 - **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
   test holds the three together. `mtf.native` has a comparator for each of `r4f` (`src/compare/mtfFidelity.ts`),
-  `r5` and `r5g` (`mtfNative.ts`) and `r6b` (`mtfWave.ts`); `r5` and `r6b` ask one request, so an answer is
-  computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
+  `r5` and `r5g` (`mtfNative.ts`), `r6b` (`mtfWave.ts`) and `r6c` (`mtfWavefront.ts`); `r5` and `r6b` ask one
+  request, so an answer is computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
   or a limit changes. Four rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
   (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
   `rayTraceRequests`, so an engine traces a set once.
@@ -633,4 +634,25 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **Reports and baselines are deterministic**: no timestamps, no machine information.
 - **Recorded differences are not errors.** Only direct and identical-ray rungs are gated; see the ladder in the
   plan before adding a tolerance.
+- **`wavefront.native` v1 is raw data, never an OTF** (`lvrtc_optiland/wavefront.py`). One line,
+  field and even midpoint grid per fresh verified optic; `Wavefront.get_data` supplies sphere points, OPD in
+  vacuum waves (reference minus path), intensity and validity. Keep the compact disc in its original order and
+  scatter it into the full square. Read back every analysis setting, distribution coordinate and row count,
+  strategy, image index, reference sphere and exit pupil. Every check has a deliberate fault in
+  `test_wavefront.py`. Probe only the chief launch on a separate optic; no rim ray calibrates this operation.
+  FATAL and REQUEST_BUDGET_S are the MTF worker's, including its noncached time-budget error. Failed fields are
+  unavailable rows with reasons. The schema, corpus and stdlib Python validation port change together.
+- **`optiland-wave` is the comparator's OTF of those raw samples**, never an optiland OTF. Its transport owns and
+  closes the worker and negotiates raw quantity version 1. Its fingerprint is optiland's; its revision combines
+  worker and comparator closures. The pure estimator `wavefrontOtf.ts` takes only decoded arrays, uses radial
+  reference-sphere optical cosines, W=-lambda OPD and intensity as flux, and reuses `waveOtf` without moving any
+  operation. The reference-sphere directions are not traced exit directions: say which model was measured.
+  Analytic disc, tilt, defocus and annulus proofs with rim bounds, whole-number sums of an apodized pupil at
+  an image index, and a translated sphere are in `wavefrontOtf.test.ts`. Keep the new
+  estimator out of `lv`, `ref`, `replay` and the existing `wave` adapter's closure.
+- **R6c is recorded, only where named, one line only** (policy version 12): R5's native request and angles,
+  asked of its own four engines whatever `--engines` names, four columns `lv`, `wave`, `optiland`, `optiland-wave`. Reuse R5 sorting before every subtraction, including
+  report peers. Bands stay 0.005 / 0.01, chief landing 1e-7 mm; no gate or floor. Raw grids 128/256, quarter-wave
+  and doubling flags; no automatic follow-up. Photopic is Stage 4.3. Report sentences are wording templates,
+  goldens come from writeGolden, MTF baselines may add its records; baseline rewrites remain the owner's.
 - Formatting follows LV: double quotes, 120 columns.

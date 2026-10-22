@@ -50,6 +50,7 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "A recorded row has met its band.",
     "The recorded difference passed.",
     "R5 passes for every lens of the benchmark.",
+    "R6c passes for every lens of the benchmark.",
     "| canon-ef-135-f2l-usm-ref | r5 | lv | optiland | PASS |",
   ],
   "band-as-tolerance": [

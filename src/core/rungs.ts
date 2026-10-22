@@ -384,6 +384,17 @@ export const r5Rung: RungDefinition = Object.freeze({
     r6bRung.buildRequests(opticalCase, runSpec, inputs),
 });
 
+/** R6c: one-line four-column comparison; native request and R5 field angles, no automatic follow-up. */
+export const r6cRung: RungDefinition = Object.freeze({
+  ...r5Rung,
+  id: "r6c",
+  engines: Object.freeze(["lv", "wave", "optiland", "optiland-wave"]),
+  engineOptions: (runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined =>
+    r5Rung.engineOptions?.(runSpec, inputs, engineId === "optiland-wave" ? "optiland" : engineId),
+  buildRequests: (opticalCase: OpticalCase, runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    opticalCase.conditions.lines.length === 1 ? r5Rung.buildRequests(opticalCase, runSpec, inputs) : [],
+});
+
 /** The engines of the rung `r5g`: LensVisualizer, optiland, and the comparator's estimator on a replay of LensVisualizer's sampling. */
 export const R5G_ENGINES: readonly string[] = Object.freeze(["lv", "optiland", "replay"]);
 
@@ -463,6 +474,7 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r5gRung,
   r6aRung,
   r6bRung,
+  r6cRung,
 ]);
 
 /**

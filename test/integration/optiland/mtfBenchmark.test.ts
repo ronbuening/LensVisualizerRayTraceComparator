@@ -35,7 +35,7 @@ const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
 const LENS = "sigma-45mm-f28-dg-dn-contemporary";
 const RUNS = ["ref", "photopic", "best-ref", "best-photopic"].map((condition) => `${LENS}-f8-${condition}`);
 const GATED = ["r4", "r4f", "r6a"];
-const RECORDED = ["r5", "r5g", "r6b"];
+const RECORDED = ["r5", "r5g", "r6b", "r6c"];
 
 test(
   "lvrtc mtf --profile benchmark: one lens at f/8 on three engines, every MTF rung, and the committed records of it",

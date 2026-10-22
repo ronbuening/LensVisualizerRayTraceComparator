@@ -1,0 +1,12 @@
+{
+  "fields": {
+    "kind": "angles-deg",
+    "values": [
+      0,
+      10
+    ]
+  },
+  "grids": [
+    4
+  ]
+}

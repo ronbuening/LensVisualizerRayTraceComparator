@@ -28,7 +28,7 @@ export const NATIVE_MTF_RUNG = "r5";
 /** The rung of the engines' own geometric MTF. */
 export const GEOMETRIC_MTF_RUNG = "r5g";
 /** The rungs this comparator is of, in ladder order. */
-export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG] as const;
+export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG, "r6c"] as const;
 /** One of them. */
 export type NativeMtfRung = (typeof NATIVE_MTF_RUNGS)[number];
 

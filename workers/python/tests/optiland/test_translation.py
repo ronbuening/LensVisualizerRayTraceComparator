@@ -225,6 +225,7 @@ class DeclarationTest(unittest.TestCase):
                 "paraxial.first-order": {"version": 1},
                 "rays.trace": {"version": 1},
                 "mtf.native": {"version": 1},
+                    "wavefront.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])

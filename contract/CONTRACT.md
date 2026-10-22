@@ -1221,7 +1221,7 @@ is `1` for a number without one. A metric the comparison reports and the policy 
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
 `rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 11:
+The comparator's policy, version 12:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1236,8 +1236,9 @@ The comparator's policy, version 11:
 | `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
 | `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
 | `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
+| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm; one line, only where named; `lv`, `wave`, `optiland`, `optiland-wave` |
 
-**The floor.** Policy version 11 gives no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
+**The floor.** Policy versions 11 and 12 give no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
 (closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
 over the benchmark and features suites are four to seven orders of magnitude inside the gates. The larger of a
 gate and ten times its measured residual is the gate itself, where a floor cannot be granted. A pair above a gate
@@ -1464,6 +1465,7 @@ and `validateData`.
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
+| `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -1988,6 +1990,68 @@ and the assembly of the field axis.
 Tests hold both to LensVisualizer, the rays to those of its own bundle bit for bit and the source lines to their
 text. The seed is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays of a
 set are the tab's own launch rays at that grid, to the bit.
+
+### `wavefront.native`
+
+Version 1 adds an engine's raw wavefront without changing any existing quantity or contract version. The spec is
+`{ line, fields, grids }`: a zero-based line index, fields as for `mtf.native`, and ascending even grid sizes of at
+least four. Each grid is the square of midpoint coordinates `(2 column + 1)/n - 1`, `(2 row + 1)/n - 1`, in row-major
+order; only centers strictly within the unit circle are traced. With optiland's aiming they are stop coordinates,
+not an even grid in image-side direction cosines. Fractions need the recipe angles in `fieldAnglesDeg`.
+
+| Answer member | Meaning |
+|---|---|
+| `line` | `index`, vacuum `wavelengthNm`, `weight`, image-space `imageIndex` actually used |
+| `fields[]` | `field` as asked, `fieldAngleDeg`, `imageHeightMm`, `status`, optional `reason`, `samples[]` |
+| `status` | `ok` for raw samples, never a convergence claim about an OTF; `unavailable` needs a reason and no samples |
+| `samples[].gridSize` | even grid size, ascending; N is its square |
+| `normalizedPupil` | float64 `[N,2]`, the full midpoint square, including untraced cells outside the circle |
+| `pupilMm` | float64 `[N,3]`, optiland's intersections with its reference sphere, in its stated frame |
+| `opdWaves` | float64 `[N]`, optiland's `(reference path - sample path) / vacuum wavelength`, including its launch phase; no tilt removal |
+| `intensity`, `valid` | float64 `[N]` nonnegative intensity; uint8 `[N]`, 1 iff intensity is positive, 0 otherwise |
+| `reference` | `strategy: chief_ray`, `removeTilt: false`, `sphereCenterMm[3]`, positive `radiusMm`, `exitPupilMm[3]` |
+| `method`, `notes` | algorithm with parameters and human notes; no transfer function |
+
+All arrays are finite. Cells with validity 0 contribute nothing. The worker fills untraced square cells with
+zero pupil, OPD and intensity and validity 0; optiland also zero-fills nonfinite samples. A zero OPD alone is never evidence of light. No positive-intensity cell lies outside the circle.
+The reference sphere is centered on the chief ray's landing on the case image plane; its radius is the distance
+to optiland's paraxial exit pupil. Coordinates and OPD are returned as optiland gave them; the optic is mirrored in
+y as for its FFT. The schemas, corpus, quantity invariants and the stdlib Python port enforce these definitions.
+An absent line, unresolved fractions or a finite object is unsupported; a field optiland raises on has its own
+unavailable row, and the other fields remain. BuildMismatch, MemoryError and ImportError are FATAL. The worker
+checks REQUEST_BUDGET_S between fields, returns `time-budget`, and the result store keeps no such error.
+
+### Rung R6c and the adapter `optiland-wave`
+
+`r6c` uses the one `mtf.native` request of R5, at the recipe's resolved fractions and thinned frequencies, on the
+case plane, and skips cases with several lines. Its four columns are LV's own sheared estimate (`lv`), the wave
+estimator on LV's rays (`wave`), optiland's own FFT MTF (`optiland`), and the comparator's OTF of optiland's raw
+wavefront (`optiland-wave`). It runs only where named. No existing TypeScript optical engine gained a quantity or a new estimator.
+The last adapter owns an ordinary optiland worker connection, negotiates `wavefront.native` version 1 before a
+request, validates its response and its field/line/grid correspondence, and applies the pure TypeScript estimator.
+Its fingerprint is optiland's; its adapter revision combines the worker revision with its own import closure.
+Its lifetime closes the underlying worker. The derived native-shaped answer is the comparator's, never optiland's
+own MTF. Raw requests remain directly available through `optiland`.
+
+The raw grids are 128 and 256 by default (`wavefrontGrids` may name other ascending even grids). The estimator
+uses each sphere point Q about center C as the radial reference direction `(C-Q)/|C-Q|`, coordinates n times its
+transverse components, optical path W = -lambda OPD, and intensity as cell flux. It calls the unchanged Hopkins
+kernel of `waveOtf.ts` through a synthetic lattice about C; it claims no traced exit direction. This reference-
+sphere model, its flux convention and the FFT's different mapping remain method choices. No operation of the old
+wave estimator moved, and the closures of `lv`, `ref`, `replay` and `wave` remain byte-identical.
+
+A fine estimate is numerical when neighboring lit cells exceed a quarter wave, when its modulus moved on doubling
+by more than 0.005 on axis or 0.01 off axis, or when convergence is unknown. Failed fine estimates become unavailable;
+no line or field is dropped. Complex OTFs are formed before moduli; polychromatic combination is Stage 4.3.
+
+The comparator reuses R5's `classifyNativeField`, `factsOfField` and recording. The report reuses `factsOfRecorded`,
+sorting each difference before subtraction: unsupported, data, numerical, method. The table records all four
+columns and three separately classified differences against `optiland-wave` (LV, wave, FFT). Only method fields
+standing by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting retains
+R5's 1e-7 mm, with no new gate, limit or floor. R6c asks no automatic follow-up: the two raw grids already state
+its convergence; optiland's FFT remains its default ladder. No span is needed because one request has all fields
+and each answer all sampling steps. MTF baselines can add R6c records and render these tables from the records alone;
+Stage 4.1 does not rewrite any baseline or committed report.
 
 ### `mtf.native`
 

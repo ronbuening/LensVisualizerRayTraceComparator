@@ -334,6 +334,7 @@ test("with an interpreter and no other configuration the engine answers hello as
       "paraxial.first-order": { version: paraxialFirstOrderQuantity.version },
       "rays.trace": { version: raysTraceQuantity.version },
       "mtf.native": { version: mtfNativeQuantity.version },
+      "wavefront.native": { version: 1 },
     },
     deterministic: true,
     maxConcurrency: 1,
@@ -532,10 +533,10 @@ test("lvrtc run: optiland without an interpreter is unavailable, and the other e
   const rootDir = suiteRoot(t, ["selftest"]);
   const ended = await run(rootDir, ["--engines", "fake-a,optiland"]);
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}ok {11}computed$/m);
   assert.match(
     ended.out,
-    /^singlet {2}selftest {2}optiland {2}error {8}unavailable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it: set engines\.optiland\.python in lvrtc\.local\.json/m,
+    /^singlet {2}selftest {2}optiland {7}error {8}unavailable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it: set engines\.optiland\.python in lvrtc\.local\.json/m,
   );
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
@@ -560,9 +561,9 @@ test(
     assert.equal(ended.code, EXIT_OK, ended.out);
     const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
     assert.deepEqual(rows, [
-      "singlet  selftest  optiland  unsupported  negotiated   the engine does not offer selftest.echo",
+      "singlet  selftest  optiland       unsupported  negotiated   the engine does not offer selftest.echo",
     ]);
-    assert.match(ended.out, /^singlet {2}selftest {2}fake-a {4}ok {11}computed$/m);
+    assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}ok {11}computed$/m);
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
     const engine = manifest.engines.find((entry) => entry.id === "optiland");
     assert.ok(engine !== undefined && engine.status === "available");

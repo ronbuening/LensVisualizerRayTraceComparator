@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:wavefront.native.spec",
+  "title": "wavefront.native spec",
+  "type": "object",
+  "properties": {
+    "line": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fields": {
+      "oneOf": [
+        {
+          "description": "Fractions of the full image height, as the engine itself resolves them to field angles.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "image-height-fractions"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field angles in degrees. A positive angle is an object toward +y.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "angles-deg"
+            },
+            "values": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": -90,
+                "exclusiveMaximum": 90
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "grids": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 4
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": ["line", "fields", "grids"],
+  "additionalProperties": false
+}

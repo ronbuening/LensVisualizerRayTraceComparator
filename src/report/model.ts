@@ -16,7 +16,7 @@ import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 import { GEOMETRIC_MTF_RUNG, isNativeMtfRung } from "../compare/mtfNative.ts";
-import { buildMtfComparison } from "./mtfComparison.ts";
+import { buildMtfComparison, buildWavefrontComparison } from "./mtfComparison.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
 import { NOT_COVERED } from "./wording.ts";
 
@@ -339,7 +339,7 @@ function sectionOf(
         };
   const mtf = !isNativeMtfRung(rung)
     ? null
-    : buildMtfComparison({
+    : (rung === "r6c" ? buildWavefrontComparison : buildMtfComparison)({
         participants: sets[0].participants,
         pairs: sets.flatMap((set) => set.pairs),
         policy: rungPolicy,

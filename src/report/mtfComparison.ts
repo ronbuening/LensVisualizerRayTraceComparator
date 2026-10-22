@@ -44,6 +44,8 @@ export interface MtfComparisonInput {
   readonly policy: RungPolicy | null;
   /** Which MTF the rung sets side by side; the diffraction MTF where it is left out. */
   readonly kind?: MtfComparisonKind;
+  readonly comparisonPair?: readonly [string, string];
+  readonly columnOrder?: readonly string[];
 }
 
 /** One column of the table: an engine's answer, or a later step of one. */
@@ -105,6 +107,8 @@ export interface MtfComparisonRow {
 
 /** The table of one request of rung R5 or R5g. */
 export interface MtfComparison {
+  /** R6c's other differences, sorted separately before subtraction, with the same four columns. */
+  readonly peers?: readonly MtfComparison[];
   /** Which MTF the table is of: the diffraction MTF of R5, the geometric MTF of R5g. */
   readonly kind: MtfComparisonKind;
   /**
@@ -165,13 +169,17 @@ function stepsOf(recorded: RecordedValues | undefined): string[] {
  */
 export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | null {
   const { participants, policy } = input;
-  const [first, second] = MTF_COMPARISON_PAIR;
+  const [first, second] = input.comparisonPair ?? MTF_COMPARISON_PAIR;
   const fieldsOf = (engine: string): readonly (number | null)[] | undefined =>
     participants.find((participant) => participant.engine === engine)?.recorded?.field;
   const fields = fieldsOf(first) ?? fieldsOf(second) ?? participants.map((p) => p.recorded?.field).find((f) => f);
   if (fields === undefined) return null;
 
-  const ordered = [first, second, ...participants.map((p) => p.engine).filter((id) => id !== first && id !== second)];
+  const ordered = input.columnOrder ?? [
+    first,
+    second,
+    ...participants.map((p) => p.engine).filter((id) => id !== first && id !== second),
+  ];
   const columns: (MtfComparisonColumn & { readonly values: RecordedValues | undefined })[] = [];
   for (const engine of ordered) {
     const participant = participants.find((candidate) => candidate.engine === engine);
@@ -284,4 +292,14 @@ export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | n
     fields: outFields,
     rows,
   };
+}
+
+/** Four source columns and three separately classified differences against the raw-wavefront estimate. */
+export function buildWavefrontComparison(input: MtfComparisonInput): MtfComparison | null {
+  const columnOrder = ["lv", "wave", "optiland", "optiland-wave"];
+  const of = (engine: string) =>
+    buildMtfComparison({ ...input, kind: "wavefront", columnOrder, comparisonPair: [engine, "optiland-wave"] });
+  const main = of("lv");
+  if (main === null) return null;
+  return { ...main, peers: [of("wave"), of("optiland")].filter((table): table is MtfComparison => table !== null) };
 }

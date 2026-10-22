@@ -261,8 +261,8 @@ test(
     };
     const first = run();
     assert.equal(first.code, EXIT_OK, first.out + first.err);
-    assert.match(first.out, /^singlet {7}selftest {2}fake-py {4}ok {11}computed$/m);
-    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {4}ok {11}computed$/m);
+    assert.match(first.out, /^singlet {7}selftest {2}fake-py {8}ok {11}computed$/m);
+    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {8}ok {11}computed$/m);
     assert.match(
       first.out,
       /^fake-pair: 12 jobs: 10 ok, 2 unsupported, 0 error, 0 pending \(10 computed, 0 cached\)$/m,

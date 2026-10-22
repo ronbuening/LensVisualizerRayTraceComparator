@@ -20,6 +20,8 @@ import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
+import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.ts";
+import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import type {
@@ -450,6 +452,57 @@ export const RAYS_DATA_STATUSES = {
   opticalPath: encodeNdArray(Float64Array.of(16.5, NaN, NaN, 16.75)),
   opticalPathToImage: encodeNdArray(Float64Array.of(21.5, NaN, NaN, NaN)),
 } satisfies RaysTraceData;
+
+/** Synthetic raw sphere wavefront: zero OPD, no engine or lens values. */
+export const WAVEFRONT_SPEC: WavefrontNativeSpec = {
+  fields: { kind: "angles-deg", values: [0, 10] },
+  line: 0,
+  grids: [4],
+};
+const WF_X = Array.from({ length: 16 }, (_, i) => (2 * (i % 4) + 1) / 4 - 1);
+const WF_Y = Array.from({ length: 16 }, (_, i) => (2 * Math.floor(i / 4) + 1) / 4 - 1);
+const WF_LIT = WF_X.map((x, i) => Number(x * x + WF_Y[i] * WF_Y[i] < 1));
+export const WAVEFRONT_DATA: WavefrontNativeData = {
+  line: { index: 0, wavelengthNm: 500, weight: 1, imageIndex: 1 },
+  fields: [
+    {
+      field: 0,
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      samples: [
+        {
+          gridSize: 4,
+          normalizedPupil: encodeNdArray(Float64Array.from(WF_X.flatMap((x, i) => [x, WF_Y[i]])), [16, 2]),
+          pupilMm: encodeNdArray(
+            Float64Array.from(WF_X.flatMap((x, i) => [x, WF_Y[i], 10 - Math.sqrt(100 - x * x - WF_Y[i] * WF_Y[i])])),
+            [16, 3],
+          ),
+          opdWaves: encodeNdArray(new Float64Array(16)),
+          intensity: encodeNdArray(Float64Array.from(WF_LIT)),
+          valid: encodeNdArray(Uint8Array.from(WF_LIT)),
+          reference: {
+            strategy: "chief_ray",
+            removeTilt: false,
+            sphereCenterMm: [0, 0, 10],
+            radiusMm: 10,
+            exitPupilMm: [0, 0, 0],
+          },
+        },
+      ],
+    },
+    {
+      field: 10,
+      fieldAngleDeg: 10,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "optiland-raised-ValueError",
+      samples: [],
+    },
+  ],
+  method: { name: "synthetic-wavefront", params: {} },
+  notes: [],
+};
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -2090,6 +2143,44 @@ const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
  * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
  */
 export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${WAVEFRONT_NATIVE}.spec`]: {
+    valid: {
+      "one-line": WAVEFRONT_SPEC,
+      "fractions-and-two-grids": {
+        ...WAVEFRONT_SPEC,
+        fields: { kind: "image-height-fractions", values: [0, 1] },
+        grids: [4, 8],
+      } satisfies WavefrontNativeSpec,
+    },
+    invalid: {
+      "missing-line": fault(WAVEFRONT_SPEC, "/line", REMOVE, "required", ""),
+      "missing-fields": fault(WAVEFRONT_SPEC, "/fields", REMOVE, "required", ""),
+      "missing-grids": fault(WAVEFRONT_SPEC, "/grids", REMOVE, "required", ""),
+      "empty-grids": fault(WAVEFRONT_SPEC, "/grids", [], "minItems"),
+      "grid-too-small": fault(WAVEFRONT_SPEC, "/grids/0", 2, "minimum"),
+      "unknown-property": fault(WAVEFRONT_SPEC, "/otf", [], "additionalProperties"),
+    },
+  },
+  [`${WAVEFRONT_NATIVE}.data`]: {
+    valid: {
+      "sphere-and-unavailable": WAVEFRONT_DATA,
+      "sphere-alone": { ...WAVEFRONT_DATA, fields: [WAVEFRONT_DATA.fields[0]] } satisfies WavefrontNativeData,
+    },
+    invalid: {
+      "missing-reference": fault(
+        WAVEFRONT_DATA,
+        "/fields/0/samples/0/reference",
+        REMOVE,
+        "required",
+        "/fields/0/samples/0",
+      ),
+      "wrong-strategy": fault(WAVEFRONT_DATA, "/fields/0/samples/0/reference/strategy", "centroid", "const"),
+      "tilt-removed": fault(WAVEFRONT_DATA, "/fields/0/samples/0/reference/removeTilt", true, "const"),
+      "valid-not-bytes": fault(WAVEFRONT_DATA, "/fields/0/samples/0/valid/$nd/dtype", "f8", "const"),
+      "pupil-not-matrix": fault(WAVEFRONT_DATA, "/fields/0/samples/0/pupilMm/$nd/shape", [48], "minItems"),
+      "otf-not-raw-data": fault(WAVEFRONT_DATA, "/otf", [], "additionalProperties"),
+    },
+  },
   [`${SYSTEM_DESCRIBE}.spec`]: {
     valid: {
       default: {} satisfies SystemDescribeSpec,

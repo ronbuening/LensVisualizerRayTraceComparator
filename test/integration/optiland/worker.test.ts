@@ -36,6 +36,7 @@ import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../
 import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
 import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
+import { wavefrontNativeQuantity } from "../../../src/quantities/wavefrontNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -208,7 +209,13 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
 
   // The built-system echo, the first-order data, the trace of given rays and its own MTF, each at the version of
   // its definition the comparator holds; every feature flag, no limit.
-  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity, raysTraceQuantity, mtfNativeQuantity];
+  const offered = [
+    systemDescribeQuantity,
+    paraxialFirstOrderQuantity,
+    raysTraceQuantity,
+    mtfNativeQuantity,
+    wavefrontNativeQuantity,
+  ];
   assert.deepEqual(
     capabilities.quantities,
     Object.fromEntries(offered.map((quantity) => [quantity.id, { version: quantity.version }])),
@@ -221,6 +228,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   const specs: Record<string, JsonObject> = {
     [raysTraceQuantity.id]: RAYS_SPEC_SINGLET,
     [mtfNativeQuantity.id]: MTF_SPEC_AXIS,
+    [wavefrontNativeQuantity.id]: { line: 0, fields: { kind: "angles-deg", values: [0] }, grids: [8] },
   };
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
     const spec = specs[quantity] ?? {};
@@ -279,7 +287,7 @@ test(
     );
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
-      ["r4", "r4f", "r5", "r5g", "r6a", "r6b"],
+      ["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c"],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
@@ -293,8 +301,8 @@ test(
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
     assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
-    assert.match(out.join(""), /^singlet {2}r2 +optiland {2}ok +computed$/m);
-    assert.match(out.join(""), /^singlet {2}r3 +optiland {2}ok +cached$/m);
+    assert.match(out.join(""), /^singlet {2}r2 +optiland {7}ok +computed$/m);
+    assert.match(out.join(""), /^singlet {2}r3 +optiland {7}ok +cached$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);

@@ -93,6 +93,7 @@ class WorkerTest(TempDirTest):
                     "paraxial.first-order": {"version": 1},
                     "rays.trace": {"version": 1},
                     "mtf.native": {"version": 1},
+                    "wavefront.native": {"version": 1},
                 },
                 "deterministic": True,
                 "maxConcurrency": 1,

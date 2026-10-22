@@ -124,6 +124,7 @@ export async function createEngineTransport(
       try {
         const builtin = builtins[id];
         if (typeof builtin === "function") return createInProcessTransport(await builtin(loaded));
+        if ("transport" in builtin) return builtin.transport(loaded);
         definition = builtin.worker(loaded);
       } catch (error) {
         // A built-in engine that says why it cannot be used is believed.

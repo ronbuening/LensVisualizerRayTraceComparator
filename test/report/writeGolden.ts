@@ -16,6 +16,7 @@ import { PYTHON_MISSING } from "../engines/support.ts";
 import { COMPARISONS, MANIFEST, POLICY } from "./handBuilt.ts";
 import { R5_GOLDEN, R5_POLICY, r5Cycle } from "./r5Fixture.ts";
 import { R5G_GOLDEN, R5G_POLICY, r5gCycle } from "./r5gFixture.ts";
+import { R6C_GOLDEN, R6C_POLICY, r6cCycle } from "./r6cFixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile, mtfGoldenFile } from "./support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
@@ -24,6 +25,7 @@ writeFileSync(goldenFile("hand-built"), renderReport(MANIFEST, COMPARISONS, POLI
 for (const [golden, standIns, policy] of [
   [R5_GOLDEN, r5Cycle, R5_POLICY],
   [R5G_GOLDEN, r5gCycle, R5G_POLICY],
+  [R6C_GOLDEN, r6cCycle, R6C_POLICY],
 ] as const) {
   const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-golden-"));
   try {
