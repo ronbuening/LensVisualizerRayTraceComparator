@@ -49,6 +49,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tmpdir>   # Stage 4.2's evidence: docs/z50f12-investigation.md
 ```
 
 ## Rules
@@ -173,7 +174,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   interpolated linearly on optiland's own axis of that cut, and nothing beyond its last sample.
 - **No polychromatic MTF is formed of optiland's moduli.** For the method "diffraction" a case of several lines
   is `unsupported` (`lines.polychromatic`) unless the engine option `line` names one; never average moduli. The 512 step is the
-  engine option `fftRays` (256 or 512: the ladder is that and half of it): an option is in the result store's key
+  engine option `fftRays` (128, 256 or 512: the ladder is that and half of it; 128 is the Stage 4.2 diagnostic step):
+  an option is in the result store's key
   and not in a request's id, so never add a sampling member to the `mtf.native` spec for it.
 - **`mtf.native` of `optiland` by the method "geometric" is optiland's `GeometricMTF`, a line and a field a call**
   (`workers/python/lvrtc_optiland/geometric.py`): `distribution="uniform"`, `num_points=2048`, `max_freq` the
@@ -527,6 +529,11 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
   optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
   standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
+- **Investigations are result-only and outside every engine** (`src/diagnostics`, `workers/python/diagnostics`,
+  `bin/z50f12-investigation.mjs`; Stage 4.2): no engine imports them, they write only into the temporary
+  directory they are given, LV is reached through the binding and optiland through `lvrtc_optiland` under
+  `optilandWorkerEnvironment`, with `prepare` and `protect_stdout` first. A name they need of LV still goes into
+  the import manifest (`shearedOtf`), which moves the adapter revisions of `lv`, `replay` and `wave`.
 - **`validate.py` is a port of `src/contract/validate.ts`, and `ndarray.py` of the array codec.** Change both
   sides together; the fixture corpus in `contract/fixtures` holds them to the same answers. Workers echo ids and
   never recompute a hash.

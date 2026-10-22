@@ -674,6 +674,18 @@ export interface LvApi {
     imagePlaneZ?: number,
     extras?: { readonly reference?: LvMtfSpot; readonly opticalPath?: boolean },
   ): LvMtfBundle | null;
+  /** LV's own diffraction estimate, for fixed-grid diagnostics without changing its adaptive product path. */
+  shearedOtf(
+    bundle: LvMtfBundle,
+    reference: LvMtfSpot,
+    wavelengthMm: number,
+    frequencies: readonly number[],
+  ): {
+    sagittal: { real: number[]; imaginary: number[] };
+    tangential: { real: number[]; imaginary: number[] };
+    limit: { sagittal: number[]; tangential: number[] };
+    straddling: number[];
+  };
   /** Where a trace that ended "ok" lands on the image plane, with its bulk transmission; null when it does not. */
   mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
   /** Whether a trace is a sample, was stopped by an aperture (a proven miss included) or could not be resolved. */

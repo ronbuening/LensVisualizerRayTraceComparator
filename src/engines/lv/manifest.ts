@@ -71,6 +71,7 @@ export const LV_IMPORT_MANIFEST = [
         "prepareMtfFieldLaunch",
         "findMtfFieldFootprint",
         "traceMtfBundle",
+        "shearedOtf",
       ),
       { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
       { name: "MTF_FIELDS", as: "mtfDefaultFields", kind: "object" },

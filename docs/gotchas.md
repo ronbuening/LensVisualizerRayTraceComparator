@@ -1867,8 +1867,10 @@ shares no code with any engine.
   that has no direction leaves a NaN in its lag.
 - **Handled.** Nothing is corrected: the curves are optiland's. Each field states `rimRaysLit`, `rimRaysLost`
   and `rimLandingSpreadMm` under `sampling`, and an axis with a NaN is the status `no-frequency-axis`. The
-  check of the tangential lag on a vignetted pupil is Stage 4.2. Measured at optiland `4e893f53` on cases of
-  LensVisualizer `33ebdb30`.
+  check of the tangential lag on this vignetted pupil is delivered in [Stage 4.2](z50f12-investigation.md):
+  the settled best-focus half-field offset is class method, from the stop-grid/full-rim affine calibration;
+  the design-plane sampling flag and full-field unavailability remain. Original measurement at optiland
+  `4e893f53` on cases of LensVisualizer `33ebdb30`; Stage 4.2 remeasures at `ab0fd4cf`.
 - **Class.** engine behaviour: recorded.
 
 ### A rim ray that was stopped and left the lens is counted by optiland's worker as neither lit nor lost
@@ -1886,8 +1888,9 @@ shares no code with any engine.
 - **Handled.** Rung R5 keeps a field with `rimRaysLost` above 0 out of its bands (`rim-rays-lost`), which on the
   benchmark sets nothing aside, and shows `rimLandingSpreadMm` in the table of the fields beside every row. The
   fields above stand as `ATTENTION`, class `method`. A limit on the distance of a rim ray from the chief ray
-  would tell them; none is pinned, and the check of the tangential step on a vignetted pupil is Stage 4.2.
-  Measured at optiland `4e893f53` on cases of LensVisualizer `33ebdb30`.
+  would tell them; none is pinned. [Stage 4.2](z50f12-investigation.md) measures the Z 50/1.2's pitches
+  and attributes its settled best-focus half-field difference to method, without introducing such a limit.
+  Original measurement at optiland `4e893f53` on cases of LensVisualizer `33ebdb30`.
 - **Class.** method.
 
 ### A fraction of an image height is no field of optiland
@@ -2122,3 +2125,27 @@ shares no code with any engine.
   strategy and derives the 0.3 mm phase addition from 0.6 times 0.5 mm. The OPD sign/unit test separately pins
   what get_data returns. Finite objects remain unsupported by this operation, as by the worker's native FFT.
 - **Class.** convention.
+
+### A finer vignetted FFT pupil keeps the full-rim affine calibration
+
+- **Where.** optiland `ScalarFFTMTF._get_mtf_frequency_steps`, beside the endpoint stop grid
+  of `ScalarFFTPSF._generate_pupils`; Stage 4.2 at optiland `4e893f53`, LV `ab0fd4cf`, closure `94778d3d`.
+- **Effect.** On `nikkor-z50f12` at half field the tangential steps at 128/256/512 rays are
+  12.270777 / 6.111328 / 3.049684 cycles/mm: the same 1558.3886945 cycles/mm full-rim bandwidth.
+  All four rim rays carry no light, and one lands 4.990835 mm from the chief ray. At best focus
+  T at 100 cycles/mm stays 0.301839 → 0.301717 (FFT 256→512), beside 0.203097 from LV's product,
+  0.202370 from LV's own sheared estimate at 256 cells, 0.202284 from wave at 256, and 0.204518
+  from the comparator's OTF of optiland's raw wavefront at 512. The four methods' last T moves are
+  much smaller than that difference. A clipped mask alone is not a reason to shrink a frequency
+  step: on an affine map the coordinate pitch stays the full grid's pitch, regardless of the mask.
+  Here the transmitted pupil-to-cosine map is not affine; doubling the grid does not change that assumption.
+- **Handled.** The [evidence note](z50f12-investigation.md) retains all frequencies, both cuts, all four
+  conditions, flags, actual pupil extents and fixed-grid LV checks. No frequency scale is corrected and
+  policy 12 is unchanged. The [upstream draft](upstream/optiland-vignetted-pupil-frequency-calibration.md)
+  is a question about the method's supported domain. Pin: `CalibrationTest` in
+  `workers/python/tests/optiland/test_pupil_diagnostic.py` calls the real calibrator on synthetic nonlinear
+  cosine states with a clipped mask; its full-rim bandwidth is unchanged on doubling even though its
+  central pitch differs. The fixture test also reads the real FFT's clipped mask and halved stop step.
+  `test/integration/lv/z50f12.test.ts` holds the bound fixed-grid sheared call to LV's product at its chosen grid.
+- **Class.** method, for the settled best-focus half-field offset. Unsupported full-field FFT and numerical
+  design-plane / undersampled wave fields keep those earlier classes; the attribution does not erase them.
