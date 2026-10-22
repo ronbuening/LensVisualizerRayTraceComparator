@@ -278,7 +278,7 @@ test("a known path perturbation gives its closed form: a cylinder against a sphe
   assert.equal(pair.verdict, "FAIL");
   assert.match(
     pair.reason ?? "",
-    /^waveMtf\.maxAbs 3\.01e-3 exceeds its tolerance 4\.00e-5 at cut sagittal, field 0, frequencyPerMm 125$/,
+    /^waveMtf\.maxAbs 3\.01e-3 exceeds its tolerance 2\.00e-8 at cut sagittal, field 0, frequencyPerMm 125$/,
   );
 
   // A hundredth of it is within the gate, and passes on its figure.

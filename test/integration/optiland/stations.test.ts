@@ -8,8 +8,8 @@
 // temporary directory, and the worker's caches under this repository's gitignored cache directory.
 //
 // The figures quoted in comments were measured at optiland 4e893f53 and LensVisualizer c05a2ab7 (engine closure
-// 78215d72, 151 files). Nothing is pinned to them: every gate is the policy's, a pair of LensVisualizer may be PASS
-// or FLOOR, and none is asked to be a floor.
+// 78215d72, 151 files). These are historical measurements, not current baseline provenance. Every gate is
+// the policy's; policy version 11 has no floors and every compared pair must PASS.
 import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -97,15 +97,12 @@ test(
     t.diagnostic(`focus stations: no chief ray landed in ${JSON.stringify(paths.withoutChief)}`);
     assert.match(
       cycle.verdicts,
-      /^focus-stations: \d+ pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^focus-stations: \d+ pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     t.diagnostic(
       `focus stations: ${stations.length} stations of ${new Set(stations.map(({ key }) => key)).size} lenses, ` +
         `${sets} ray sets, the object ${Math.min(...distances).toFixed(0)} mm to ` +
         `${Math.max(...distances).toFixed(0)} mm in front of the first vertex; ${cycle.verdicts}`,
     );
-    for (const pair of paths.pairs.filter((pair) => pair.verdict === "FLOOR")) {
-      t.diagnostic(`focus stations: ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
-    }
   },
 );

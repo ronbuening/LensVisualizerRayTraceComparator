@@ -22,6 +22,7 @@ import { createRunCommand } from "../../src/cli/commands/run.ts";
 import { EXIT_FAILURE, EXIT_OK, runCli } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
+import { loadPolicy } from "../../src/compare/policyFile.ts";
 import type { ComparisonSet, PairComparison } from "../../src/contract/comparison.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
@@ -151,7 +152,10 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
     assert.equal(bent.verdict, "PASS");
     assert.match(bent.reason ?? "", /^waveMtf\.maxAbs was not measured: the lattice is no arbiter \(/);
   } else {
-    assert.equal(bent.verdict, figure > 4e-5 ? "FAIL" : "PASS");
+    assert.equal(
+      bent.verdict,
+      figure > (loadPolicy().rungs.r6a.metrics["waveMtf.maxAbs"].tolerance as number) ? "FAIL" : "PASS",
+    );
   }
   assert.equal(compared.code, bent.verdict === "FAIL" ? EXIT_FAILURE : EXIT_OK, compared.out);
   // The engine that traces no rays is unsupported, as in every rung of traced rays.
@@ -164,7 +168,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   // The figure that is judged, then the one that is only written down, then what the lattice says of itself.
   assert.match(
     markdown,
-    /^\| Engine \| waveMtf\.maxAbs \(≤ 4\.00e-5\) \| waveMtf\.flagged \| phaseStep\.waves \[waves\] \| convergence\.maxAbs \| /m,
+    /^\| Engine \| waveMtf\.maxAbs \(≤ 2\.00e-8\) \| waveMtf\.flagged \| phaseStep\.waves \[waves\] \| convergence\.maxAbs \| /m,
   );
   assert.doesNotMatch(markdown, /^#### r6a, request 2 of 4$/m);
 });

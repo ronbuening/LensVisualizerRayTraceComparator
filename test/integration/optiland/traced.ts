@@ -2,17 +2,14 @@
 // each ray meets each surface, where it lands, which rays got through) and in R3 (its optical path), the systems
 // made for those rungs, and the answers optiland stored. Nothing here is a test of its own.
 //
-// Nothing is pinned to a figure of LensVisualizer: every gate is the policy's, a pair of LensVisualizer may be
-// PASS or FLOOR, and none is asked to be a floor, so a LensVisualizer that meets its surfaces more closely turns
-// nothing red. What is asked of optiland against the reference engine is the agreement the policy's floor rule
-// asks of a witness, which is far inside each gate.
+// Every pair must PASS under policy version 11, which has no floors. The exact tracers also retain the
+// independent precision bounds formerly used for witnesses: 1e-10 mm, 1e-12 direction and 1e-7 waves.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { TestContext } from "node:test";
 
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
-import { loadPolicy } from "../../../src/compare/policyFile.ts";
 import type { SurfaceShape } from "../../../src/contract/case.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RaysTraceData } from "../../../src/contract/quantities/raysTrace.ts";
@@ -24,19 +21,19 @@ import type { SurfaceOf, SystemOf } from "../../engines/ref/support.ts";
 import { pairsOf, worstOf } from "./support.ts";
 import type { RunCycle, RungPair } from "./support.ts";
 
-const POLICY = loadPolicy();
-const R2 = POLICY.rungs.r2;
-const R3 = POLICY.rungs.r3;
-
 /** The three figures of R2 that are of the rays both engines land. */
 export const GEOMETRY = ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"] as const;
 /** The three figures of R3, each in waves of the line: the path to the last surface, to the image, and relative. */
 export const PATHS = ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxAbs"] as const;
-/** How closely the policy asks another engine to agree with the arbiter before it believes the arbiter. */
-export const AGREEMENT: Readonly<Record<string, number>> = Object.fromEntries([
-  ...GEOMETRY.map((name) => [name, R2.metrics[name].floor?.agreement ?? NaN]),
-  ...PATHS.map((name) => [name, R3.metrics[name].floor?.agreement ?? NaN]),
-]);
+/** Independent precision bounds for optiland against ref, retained from the measured witness agreement. */
+export const AGREEMENT: Readonly<Record<string, number>> = {
+  "hits.maxDistance": 1e-10,
+  "direction.maxAbs": 1e-12,
+  "landing.maxDistance": 1e-10,
+  "opticalPath.maxAbs": 1e-7,
+  "opticalPathToImage.maxAbs": 1e-7,
+  "opd.maxAbs": 1e-7,
+};
 
 /** The elements of a float64 array of an answer, in order. */
 export function f8(wire: RaysTraceData[keyof RaysTraceData]): number[] {
@@ -68,32 +65,12 @@ export interface R2Summary {
   readonly counts: ReturnType<typeof rayCounts>;
 }
 
-/** A number as a verdict's reason writes it. */
-const NUMBER = String.raw`\d(\.\d+)?(e-?\d+)?`;
-
 /**
- * Holds the reason of a floor to naming, for each of `names`, both figures of the floor rule: what the witness is
- * off the arbiter by, which is no longer nothing with a third engine, and what LensVisualizer is.
- */
-function assertFloorNamesItsWitness(rung: typeof R2, names: readonly string[], reason: string, said: string): void {
-  for (const name of names) {
-    const limits = rung.metrics[name].floor;
-    assert.ok(limits !== undefined);
-    const escaped = name.replace(".", String.raw`\.`);
-    const witness = new RegExp(`optiland against ref ${escaped} ${NUMBER} within ${limits.agreement.toExponential(2)}`);
-    const floored = new RegExp(`lv against ref ${escaped} ${NUMBER} within ${limits.limit.toExponential(2)}`);
-    assert.match(reason, witness, said);
-    assert.match(reason, floored, said);
-  }
-  assert.match(reason, /; floor of lv: optiland against ref /, said);
-}
-
-/**
- * Holds every pair of a compared run to rung R2: PASS, or FLOOR where the policy allows one, never anything else;
+ * Holds every pair of a compared run to rung R2: PASS under the policy without floors;
  * not one ray that one engine stopped and the other passed; and no failed ray of LV or ref. An optiland failure
  * on an asphere is allowed only where both other engines block that same ray at that same surface, named below.
  * A pair of
- * optiland and the reference engine is held to more: the agreement the floor rule asks of a witness. Says, for
+ * optiland and the reference engine is held to the independent precision bounds above. Says, for
  * each two engines, the largest of each figure and where it is.
  */
 export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summary {
@@ -105,15 +82,10 @@ export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summ
     const reason = pair.reason ?? "";
     const said = `${label}, ${pair.run}, ${pair.engines}: ${pair.verdict} ${reason}`;
     verdicts[`${pair.engines} ${pair.verdict}`] = (verdicts[`${pair.engines} ${pair.verdict}`] ?? 0) + 1;
-    assert.ok(pair.verdict === "PASS" || pair.verdict === "FLOOR", said);
+    assert.equal(pair.verdict, "PASS", said);
     assert.equal(pair.metrics["mask.mismatches"]?.value, 0, said);
-    if (pair.verdict === "FLOOR") {
-      // Only LensVisualizer has a floor, and the reason gives both figures.
-      assert.ok(pair.engines.split(" / ").includes("lv"), said);
-      assertFloorNamesItsWitness(R2, GEOMETRY, reason, said);
-    }
     if (pair.engines === "optiland / ref") {
-      // The arbiter and its witness: what the floor rule needs before it believes either.
+      // The exact tracers retain their independent precision bounds.
       assert.equal(pair.verdict, "PASS", said);
       for (const name of GEOMETRY) {
         const value = pair.metrics[name]?.value;
@@ -197,26 +169,24 @@ export interface R3Summary {
 const NO_CHIEF = /opd\.maxAbs was not measured: (the set has no chief ray|the chief ray is not ok in both answers)/;
 
 /**
- * Holds every pair of a compared run to rung R3: PASS, or FLOOR where the policy allows one, never anything else.
+ * Holds every pair of a compared run to rung R3: PASS under the policy without floors.
  * The path to the last surface and the path to the image plane are measured in every pair; the path relative to
  * the chief ray's is measured wherever the set has a chief ray that every engine landed, and where it is not, the
  * pair says why and is judged on the other two. A pair of optiland and the reference engine is held to more: the
- * 1e-7 waves the floor rule asks of a witness, in every figure it has. A floor is LensVisualizer's, and with
- * optiland in the comparison its reason names what optiland is off the reference engine by.
+ * independent bound of 1e-7 waves in every figure it has.
  *
  * Says, for each two engines, the largest of each figure and where it is: the run, the line, the field, the ray.
  */
 export function assertR3(t: TestContext, label: string, comparisons: ComparisonFile): R3Summary {
   const pairs = pairsOf(comparisons, "r3", RAYS_TRACE);
   assert.ok(pairs.length > 0);
-  const three = new Set(pairs.flatMap((pair) => pair.engines.split(" / "))).has("lv");
   const verdicts: Record<string, number> = {};
   const withoutChief = new Set<string>();
   for (const pair of pairs) {
     const reason = pair.reason ?? "";
     const said = `${label}, ${pair.run}, ${pair.engines}: ${pair.verdict} ${reason}`;
     verdicts[`${pair.engines} ${pair.verdict}`] = (verdicts[`${pair.engines} ${pair.verdict}`] ?? 0) + 1;
-    assert.ok(pair.verdict === "PASS" || pair.verdict === "FLOOR", said);
+    assert.equal(pair.verdict, "PASS", said);
     const measured = PATHS.filter((name) => pair.metrics[name] !== undefined);
     assert.deepEqual(measured.slice(0, 2), PATHS.slice(0, 2), said);
     if (measured.length < PATHS.length) {
@@ -224,13 +194,8 @@ export function assertR3(t: TestContext, label: string, comparisons: ComparisonF
       withoutChief.add(`${pair.run} ${pair.requestId}`);
     }
     for (const name of measured) assert.ok(pair.metrics[name].value !== null, `${said}: ${name} is not finite`);
-    if (pair.verdict === "FLOOR") {
-      // Only LensVisualizer has a floor; beside ref alone there is no witness to name.
-      assert.ok(pair.engines.split(" / ").includes("lv"), said);
-      if (three) assertFloorNamesItsWitness(R3, measured, reason, said);
-    }
     if (pair.engines === "optiland / ref") {
-      // The arbiter and its witness: the paths of two engines that share no code, to a thousandth of the gate.
+      // The paths of two engines that share no code retain their absolute 1e-7-wave bound.
       assert.equal(pair.verdict, "PASS", said);
       for (const name of measured) {
         const value = pair.metrics[name].value;

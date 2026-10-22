@@ -256,7 +256,7 @@ const TELE_ZOOMS: readonly (readonly [key: string, kind: "constant-aperture" | "
   ];
 
 test(
-  "at the tele end of a constant-aperture, a variable-aperture and a fixed-iris zoom, lv and ref pass R2 and R3 or are FLOOR",
+  "at the tele end of a constant-aperture, a variable-aperture and a fixed-iris zoom, lv and ref PASS R2 and R3 without floors",
   { skip, timeout: 600_000 },
   async (t) => {
     const ask = await engines(t);
@@ -294,10 +294,7 @@ test(
           ["r2", r2],
           ["r3", r3],
         ] as const) {
-          assert.ok(
-            pair.verdict === "PASS" || pair.verdict === "FLOOR",
-            `${at} ${rung}: ${pair.verdict} ${pair.reason}`,
-          );
+          assert.equal(pair.verdict, "PASS", `${at} ${rung}: ${pair.verdict} ${pair.reason}`);
           verdicts[`${rung} ${pair.verdict}`] = (verdicts[`${rung} ${pair.verdict}`] ?? 0) + 1;
         }
         // Not one ray that one engine stopped and the other passed.
@@ -380,7 +377,7 @@ test(
     assert.equal(compared.code, 0, compared.out);
     // R6a adds a pair for each of the 54 fields, and R6b one for each run, recorded: each counted in both modes.
     const summary =
-      /^features: 1044 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^features: 1044 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
         compared.out,
       );
     assert.ok(

@@ -252,11 +252,10 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **Expected values of the worker's ray tests are derived in the test** (closed forms, and `exact.py`, a
   60-digit trace written from the contract), never taken from an engine's output. A behaviour of
   optiland that `docs/gotchas.md` describes has a test that pins it.
-- **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR (`assertR2`). LV and ref must
-  fail no ray; an optiland failure is allowed only on an asphere where LV and ref both block that same ray at
-  that same surface, with each named in a diagnostic (the focus-station case in `docs/gotchas.md`). It
-  asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
-  red. The tier-2 rung tests hold upper bounds only and count PASS and FLOOR together at every engine closure.
+- **Real-policy rung tests require PASS** (`assertR2`, `assertR3`): policy version 11 grants no floors. LV and ref
+  must fail no ray; an optiland failure is allowed only on an asphere where LV and ref both block that same ray
+  at that same surface, with each named in a diagnostic (the focus-station case in `docs/gotchas.md`). The
+  tier-2 rung tests hold upper bounds only. Floor machinery is tested with synthetic policies.
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
@@ -410,11 +409,12 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **R6a counts judged fields, not PASS pairs**: a flagged field is PASS; `waveMtf.maxAbs.measured` is the count
   (benchmark 208 of 288). A metric's `measured` is the number of requests whose pair has the metric, never the
   requests of the rung; a test holds the two apart (`test/baseline/mtf.test.ts`).
-- **R6a is gated at 4e-5 (policy version 8), pinned at Stage 3.5** at ten times LensVisualizer's 3.12e-6 over the
-  208 judged fields of the benchmark, and measured again at Stage 3.8; the exact tracers agree to 1.15e-9, and a
-  pair of `ref` and optiland above a thousandth of the gate is a defect (`r6a.test.ts` holds it). No floor;
-  whether it gets one is the owner's. The pin is of LensVisualizer's rounding: pin it again from a measurement
-  when LensVisualizer's intersection tolerance changes.
+- **R6a is gated at 2e-8 (policy version 11), pinned at Stage 3.12** at ten times the measured maximum 1.18e-9,
+  rounded up to one digit, over 208 judged fields of the benchmark (LensVisualizer `ab0fd4cf`, closure
+  `94778d3d`, 175 files). The bound now comes from the exact tracers' agreement, not LensVisualizer's rounding:
+  `lv` and optiland agree to 1.56e-10, while optiland and `ref` differ by 1.158e-9, the same scale as Stage 3.8's
+  1.15e-9. A pair of `ref` and optiland above an absolute 2e-9 is a defect (`r6a.test.ts` holds it, including
+  flagged fields). No floor. Pin again from a measurement when the engines' numerics change.
 - **R6b is recorded, never gated** (`src/compare/mtfWave.ts`): `mtfOnAxis.maxAbs` in a band of 0.005 and
   `mtfOffAxis.maxAbs` of 0.01, over the fields both answers stand by; a field an answer calls unconverged goes to
   `mtfFlagged.maxAbs`, in no band. A row near its band at f/8 is LensVisualizer's grid of 32 cells against the
@@ -545,13 +545,16 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
-- **`FLOOR` is a pass, counted apart, and its limits live in the policy** (`floor` on a rung and on its metrics;
-  `src/compare/floor.ts`; policy version 10). A pair of `lv` above a gate is FLOOR when `lv` is within the floor
-  limit of the arbiter `ref`. Every other engine is a witness: within `agreement` of `ref` it corroborates; beyond
-  it the pair is still FLOOR and the reason says the witness did not corroborate. A floor is refused (FAIL) when
-  the witness sides with `lv` against `ref` (arbiter-suspect), or when in the `lv`-witness pair the witness is as
-  far from `ref` as `lv` is. A metric without floor limits (the mask) always fails. Never add a floor limit, or
-  widen one, to make a lens pass.
+- **Policy version 11 has no floor on any rung or metric.** A pair above a gate is FAIL. LensVisualizer's
+  1e-12 mm tolerance puts its worst R2/R3 distances from `ref` four to seven orders of magnitude inside the gates;
+  the larger of each gate and ten times its measured residual is the gate, where a floor can never be granted.
+  Phase 5's catalog sweep will show whether a steep lens still needs one. The machinery (`src/compare/floor.ts`)
+  stays for a future engine and is tested with synthetic policies: `FLOOR` is a pass, counted apart, with limits
+  on the rung and its metrics. The floored engine must be within `limit` of the arbiter; every other engine is a
+  witness. A witness within `agreement` corroborates; otherwise its distance is named. A floor is refused when
+  a witness sides with the floored engine against the arbiter (arbiter-suspect), or is as far from the arbiter
+  as the floored engine in their pair. A metric without floor limits always fails above its gate. Never add or
+  widen a floor to make a lens pass.
 - **In R1 a pupil is judged on the scale of its distance from the image plane, in position and in radius**
   (`pupilZ.maxScaled`, `pupilRadius.maxScaled`; `PUPIL_RADII` in `src/compare/paraxialFirstOrder.ts` pairs each
   radius with the position of its own pupil). The six values that are no pupil's keep the plain 1e-9 mm, and so

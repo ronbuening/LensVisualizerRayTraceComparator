@@ -753,7 +753,7 @@ const floorDirection = () => ({ limit: 1e-8, agreement: 1e-12 });
 const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 
 /**
- * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
+ * A synthetic version-10 ladder for contract and floor tests: `selftest`, the built-system echo `r0`, which
  * blocks the rungs after it, the first-order data `r1`, the two rungs of traced rays, `r2` and `r3`, with the
  * floor of `lv` against `ref`, the geometric MTF of those rays, `r4`, the fidelity of the replay of
  * LensVisualizer's MTF sampling, `r4f`, the engines' own MTF side by side, `r5`, and their own geometric MTF,

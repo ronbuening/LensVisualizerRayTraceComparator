@@ -6,8 +6,8 @@
 //
 // The four runs are four of the 96 of `baselines/benchmark.mtf.json`, under the names the suite gives them, so the
 // run is set against the committed records as `lvrtc baseline check benchmark --mtf` sets all of them, which takes
-// an hour from an empty store and is run by hand. The baseline was written at LensVisualizer 33ebdb30 (engine
-// closure 78215d72, 151 files) and optiland 4e893f53 (source hash 279af5c5). A record is held to what it was only
+// an hour from an empty store and is run by hand. The baseline was written at LensVisualizer ab0fd4cf (engine
+// closure 94778d3d, 175 files) and optiland 4e893f53 (source hash 279af5c5). A record is held to what it was only
 // while its case and its engines are the ones the baseline names: a record of an edited lens or engine is stale,
 // which is reported and is no failure of this test.
 import assert from "node:assert/strict";

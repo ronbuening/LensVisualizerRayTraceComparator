@@ -12,9 +12,8 @@
 // an object point, are stations.test.ts.
 //
 // The figures quoted in comments were measured at optiland 4e893f53 and LensVisualizer c05a2ab7 (engine closure
-// 78215d72, 151 files). Nothing is pinned to them: every gate is the policy's, a pair of LensVisualizer may be PASS
-// or FLOOR, and none is asked to be a floor, so a LensVisualizer that meets its surfaces more closely turns nothing
-// red.
+// 78215d72, 151 files). These are historical measurements, not current baseline provenance. Every gate is
+// the policy's; policy version 11 has no floors and every compared pair must PASS.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -397,9 +396,6 @@ function everyRung(
     "lv / ref",
     "optiland / ref",
   ]);
-  for (const pair of paths.pairs.filter((pair) => pair.verdict === "FLOOR")) {
-    t.diagnostic(`${suite}: floor of R3, ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
-  }
   t.diagnostic(`${suite}, R0 to R4 on three engines in ${cycle.runSeconds.toFixed(1)} s: ${cycle.verdicts}`);
   t.diagnostic(`${suite}: no chief ray landed in ${paths.withoutChief.length} of ${sets} ray sets`);
   return { paths, verdicts: cycle.verdicts, sets };
@@ -419,7 +415,7 @@ test(
     // both, and optiland within 1.2e-11 of ref, against a gate of 1e-7.
     assert.match(
       verdicts,
-      /^benchmark: 2760 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 2760 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     // Every chief ray of the benchmark lands, in every engine: the path relative to it is measured in every pair.
     assert.deepEqual(paths.withoutChief, []);
@@ -427,7 +423,7 @@ test(
 );
 
 test(
-  "the feature suite on R0 to R4, three ways: no pair fails a rung, and a floor of R3 names its witness",
+  "the feature suite on R0 to R4, three ways: no pair fails a rung, and R3 has no floor",
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { paths, verdicts, sets } = everyRung(t, "features");
@@ -435,13 +431,12 @@ test(
     assert.equal(sets, 162);
     assert.match(
       verdicts,
-      /^features: 2070 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 2070 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
-    // Measured: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field at 470 nm and
-    // 510 nm, are floors of LensVisualizer against ref and against optiland alike (2.07e-5 waves to the image and
-    // 2.28e-5 relative to the chief ray, where optiland is 4.2e-10 waves from ref). None is asked for here:
-    // `assertR3` holds whatever is a floor to naming both figures. At the wide end of the fixed-iris zoom an
-    // aperture stops the chief ray of the full field for all three engines, on every line: six ray sets whose
+    // Historical at 33ebdb30: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field
+    // at 470 nm and 510 nm, are floors of LensVisualizer against ref and optiland (2.07e-5 waves to the image and
+    // 2.28e-5 relative to the chief ray, where optiland is 4.2e-10 waves from ref). Version 11 grants no floor.
+    // At the wide end of the fixed-iris zoom an aperture stops the chief ray of the full field for all three engines, on every line: six ray sets whose
     // paths are judged without it.
     assert.ok(paths.withoutChief.length <= sets / 10, JSON.stringify(paths.withoutChief));
   },

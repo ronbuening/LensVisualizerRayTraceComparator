@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { createCompareCommand } from "../../src/cli/commands/compare.ts";
 import { createReportCommand } from "../../src/cli/commands/report.ts";
 import { createRunCommand } from "../../src/cli/commands/run.ts";
-import { EXIT_FAILURE, EXIT_OK, runCli } from "../../src/cli/main.ts";
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -135,10 +135,10 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   assert.match(markdown, /^Quantity `rays\.trace`, compared identical-rays, gated\. /m);
   assert.match(markdown, /^\| ref-bent \| — \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed /m);
   assert.match(markdown, /^\| rays\.blocked\[0\] \| \d+ \| \d+ \| \d+ \|$/m);
-  // The policy has no floor for these engines: a digest of the floor has no pair to show, and says nothing wrong.
+  // The real policy has no floor: requesting a digest is refused explicitly.
   const digest = await lvrtc(rootDir, "report", "rays", "--floor", "digest");
-  assert.equal(digest.code, EXIT_OK, digest.err);
-  assert.match(readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8"), /^## By run$/m);
+  assert.equal(digest.code, EXIT_USAGE, digest.err);
+  assert.match(digest.err, /the policy gives no engine a floor/);
 });
 
 test("compare reads each case from the run directory, and a case that is not there is said, not guessed", async (t) => {

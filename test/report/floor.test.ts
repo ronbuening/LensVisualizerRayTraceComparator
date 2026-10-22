@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
-import { loadPolicy } from "../../src/compare/policyFile.ts";
 import type { ComparisonMetric, ComparisonSet, PairComparison, Verdict } from "../../src/contract/comparison.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
@@ -18,8 +17,9 @@ import {
   renderFloorMarkdown,
   renderFloorReport,
 } from "../../src/report/floor.ts";
+import { POLICY_LADDER } from "../contract/corpus.ts";
 
-const POLICY = loadPolicy();
+const POLICY: Policy = structuredClone(POLICY_LADDER);
 const FLOOR = { engine: "lv", arbiter: "ref" } as const;
 const CASE = "c".repeat(64);
 const TELE_CASE = "d".repeat(64);

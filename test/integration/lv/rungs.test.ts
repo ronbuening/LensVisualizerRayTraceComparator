@@ -9,7 +9,7 @@
 // the figures of these lenses are those of 3af45e3f to every digit quoted.
 //
 // Historical figures describe the old intersection tolerance of 1e-9 mm. Assertions hold upper bounds and
-// PASS or FLOOR at every closure, including the rewritten engine with its 1e-12 mm tolerance.
+// PASS under policy version 11, with the rewritten engine and its 1e-12 mm tolerance.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -46,7 +46,6 @@ import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
 import { lvTraceOptions } from "../../../src/engines/lv/rays.ts";
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
-import type { FloorReport } from "../../../src/report/floor.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { suitePath } from "../../suites/support.ts";
 import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
@@ -75,12 +74,10 @@ function lvrtc(runsDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
-/** What a suite came to on the four rungs of the ladder, through `lvrtc run`, `compare` and `report --floor`. */
+/** What a suite came to on the four rungs of the ladder, through `lvrtc run`, `compare` and `report`. */
 interface Cycle {
   readonly manifest: RunManifest;
   readonly comparisons: ComparisonFile;
-  readonly digest: FloorReport;
-  readonly digestText: { readonly json: string; readonly markdown: string };
   /** The summary line of `lvrtc compare`. */
   readonly verdicts: string;
   readonly runsDir: string;
@@ -101,19 +98,15 @@ function cycle(t: TestContext, suite: "benchmark" | "features"): Cycle {
       .filter((line) => / (FAIL|ERROR) /.test(line))
       .join("\n"),
   );
-  const reported = lvrtc(runsDir, "report", suite, "--floor", join(runsDir, "digest"));
+  const reported = lvrtc(runsDir, "report", suite);
   assert.equal(reported.code, 0, reported.err);
+  const refused = lvrtc(runsDir, "report", suite, "--floor", join(runsDir, "digest"));
+  assert.equal(refused.code, 2, refused.err);
+  assert.match(refused.err, /the policy gives no engine a floor/);
   const read = (...path: string[]): string => readFileSync(join(runsDir, ...path), "utf8");
-  const digestText = { json: read("digest", "lv-floor.json"), markdown: read("digest", "lv-floor.md") };
-  // The digest is the same bytes whenever it is written from the same run.
-  assert.equal(lvrtc(runsDir, "report", suite, "--floor", join(runsDir, "again")).code, 0);
-  assert.equal(read("again", "lv-floor.json"), digestText.json);
-  assert.equal(read("again", "lv-floor.md"), digestText.markdown);
   return {
     manifest: JSON.parse(read(suite, MANIFEST_FILE)),
     comparisons: JSON.parse(read(suite, COMPARISONS_FILE)),
-    digest: JSON.parse(digestText.json),
-    digestText,
     verdicts: compared.out.split("\n").find((line) => line.startsWith(`${suite}: `)) ?? "",
     runsDir,
   };
@@ -175,7 +168,7 @@ test(
   "the benchmark: lv and ref agree on R0 to R3 at the reference and the photopic lines, as the committed baseline records",
   { skip, timeout: 600_000 },
   (t) => {
-    const { manifest, comparisons, digest, digestText, verdicts } = cycle(t, "benchmark");
+    const { manifest, comparisons, verdicts } = cycle(t, "benchmark");
     // 96 runs: 12 configurations in four conditions (wide open and the tab's f/8, at the design plane and at
     // LensVisualizer's best axial focus), on one line and on five. R0 and R1 once each, and 864 ray sets (three
     // fields a line), which each engine traces once for R2 and R3 together.
@@ -186,10 +179,10 @@ test(
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
 
-    // Every gated pair is PASS or FLOOR, and nothing else: no failure, no error, nothing blocked.
+    // Every gated pair is PASS, and nothing else: no failure, no error, nothing blocked.
     assert.match(
       verdicts,
-      /^benchmark: 3840 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 3840 pairs: 3840 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
@@ -225,36 +218,11 @@ test(
     assert.ok(r2["direction.maxAbs"].value < 1e-9 && r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     for (const name of R3_METRICS) assert.ok(r3[name].value < 2e-5, said(r3, R3_METRICS));
 
-    // The digest: who was compared, by hash, and at which commit of LensVisualizer.
-    const lv = manifest.engines.find((engine) => engine.id === "lv");
-    assert.ok(lv?.status === "available");
-    assert.deepEqual([digest.kind, digest.engine.id, digest.arbiter.id], ["floor-report", "lv", "ref"]);
-    assert.equal(digest.engine.fingerprint, lv.fingerprint);
-    assert.equal(digest.engine.details.commit, lv.details.commit);
-    assert.equal(digest.rows.length, 4 * 96);
-    assert.deepEqual(
-      digest.rungs.map((rung) => [rung.rung, rung.requests]),
-      [
-        ["r0", 96],
-        ["r1", 96],
-        ["r2", 864],
-        ["r3", 864],
-      ],
-    );
-    // Numbers, keys and hashes: no array of rays, no path of this machine, no time.
-    for (const text of [digestText.json, digestText.markdown]) {
-      for (const absent of ["$nd", REPO_ROOT, LV_PATH ?? "?", "/Users/", "/home/", "\r"])
-        assert.ok(!text.includes(absent), absent);
+    // No floor remains in the real policy, at either rung or metric level.
+    for (const rung of [POLICY.rungs.r2, POLICY.rungs.r3]) {
+      assert.equal(rung.floor, undefined);
+      assert.ok(Object.values(rung.metrics).every((metric) => metric.floor === undefined));
     }
-    assert.ok(digestText.json.length < 800_000, String(digestText.json.length));
-
-    // Every run is named with the content hash of its case: what was traced, whatever LensVisualizer's commit and
-    // its dirty flag say of a checkout whose lens files change by the day.
-    assert.deepEqual(
-      digest.runs,
-      manifest.runs.map(({ name, caseId }) => ({ name, caseId })),
-    );
-    assert.ok(digest.runs.every((run) => /^[0-9a-f]{64}$/.test(run.caseId ?? "")));
 
     // The committed baseline holds these figures for lv against ref, wherever it was taken, as long as both
     // engines, the policy and the case of a run are the ones it names. The baseline is of three engines; this run
@@ -282,7 +250,7 @@ test(
 // ── The feature suite ────────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "the feature suite: every pair is PASS or FLOOR on R0 to R3, and a floor is of one steep field",
+  "the feature suite: every pair is PASS on R0 to R3 under policy version 11, with no R2 or R3 floor",
   { skip, timeout: 600_000 },
   (t) => {
     const { manifest, comparisons, verdicts } = cycle(t, "features");
@@ -295,7 +263,7 @@ test(
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
     assert.match(
       verdicts,
-      /^features: 720 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 720 pairs: 720 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
@@ -317,41 +285,17 @@ test(
     // 2.07e-5 waves off (2.28e-5 relative to the chief ray). Traced in 60-digit arithmetic, the reference engine
     // is 6e-15 mm and 2e-11 waves from the truth on that ray, and LensVisualizer the rest. See docs/gotchas.md.
     // That is LensVisualizer's intersection tolerance of 1e-9 mm. At 31c34396, where it is 1e-12 mm, no pair is a
-    // floor: every pair of the suite passes. So the counts are of PASS and FLOOR together, a floor is asserted
-    // of only where there is one, and every bound is an upper bound.
-    const passed = (rung: string): number => (counts[`${rung} PASS`] ?? 0) + (counts[`${rung} FLOOR`] ?? 0);
-    assert.deepEqual(
-      ["r0", "r1", "r2", "r3"].map((rung) => [rung, passed(rung)]),
-      [
-        ["r0", 18],
-        ["r1", 18],
-        ["r2", 162],
-        ["r3", 162],
-      ],
-    );
-    assert.deepEqual([counts["r0 FLOOR"], counts["r1 FLOOR"]], [undefined, undefined]);
-    for (const [where, reason] of floors) {
-      // A floor is of the one steep field, names what exceeded its gate, and the figures against the arbiter
-      // that make it a floor.
-      assert.match(where, /^stop-inside-element-photopic r[23]$/);
-      assert.match(reason, /exceeds its tolerance .*; floor of lv: lv against ref /, where);
-      assert.ok(!reason.includes("not a floor"), where);
-    }
-    const landingFloor = floors.get("stop-inside-element-photopic r2");
-    if (landingFloor !== undefined) {
-      assert.match(
-        landingFloor,
-        /^landing\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at field 5\.53e1, line \d, ray \d+; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-10 within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-9 within 1\.00e-7, lv against ref landing\.maxDistance 1\.\d\de-8 within 1\.00e-7$/,
-      );
-    }
+    // floor: every pair of the suite passes. Policy version 11 removes the floors entirely.
+    assert.deepEqual(counts, { "r0 PASS": 18, "r1 PASS": 18, "r2 PASS": 162, "r3 PASS": 162 });
+    assert.equal(floors.size, 0);
     // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that at a
     // tolerance of 1e-9 mm is not.
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9, said(r2, R2_METRICS));
-    assert.ok(r2["landing.maxDistance"].value < 2e-8, said(r2, R2_METRICS));
+    assert.ok(r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r3["opticalPath.maxAbs"].value < 2e-5, said(r3, R3_METRICS));
-    assert.ok(r3["opticalPathToImage.maxAbs"].value < 3e-5, said(r3, R3_METRICS));
-    assert.ok(r3["opd.maxAbs"].value < 3e-5, said(r3, R3_METRICS));
+    assert.ok(r3["opticalPathToImage.maxAbs"].value < 2e-5, said(r3, R3_METRICS));
+    assert.ok(r3["opd.maxAbs"].value < 2e-5, said(r3, R3_METRICS));
     for (const name of [...R2_METRICS.slice(0, 1), ...R3_METRICS]) {
       const worst = name === "hits.maxDistance" ? r2[name] : r3[name];
       assert.ok(worst.at.length > 0, name);
@@ -498,10 +442,7 @@ test(
       const first = metricOf(r2, "mask.mismatches");
       assert.equal(first.where?.surface, surface, key);
       assert.equal(metricOf(r2, "mask.rimBand").value, 0, key);
-      assert.match(
-        r2.reason ?? "",
-        /mask\.mismatches \d+ exceeds its tolerance 0 at .*; not a floor of lv: mask\.mismatches has no floor$/,
-      );
+      assert.match(r2.reason ?? "", /mask\.mismatches \d+ exceeds its tolerance 0 at .*$/);
 
       // Whose ray is it? LensVisualizer stopped it at that surface; the reference engine has it there, behind its
       // hit on the surface before: a step backwards along a ray that travels forwards.
@@ -527,7 +468,7 @@ test(
     for (const [key] of TELE_ONLY_CROSSINGS) {
       for (const { r2 } of await tracedSets(ask, key, { state: { zoomT: 0 } })) {
         assert.equal(metricOf(r2, "mask.mismatches").value, 0, `${key} at the wide end`);
-        assert.ok(r2.verdict === "PASS" || r2.verdict === "FLOOR", `${key} at the wide end: ${r2.reason}`);
+        assert.equal(r2.verdict, "PASS", `${key} at the wide end: ${r2.reason}`);
       }
     }
     t.diagnostic(`rays LensVisualizer loses at crossing surfaces, by field: ${seen.join("; ")}`);
@@ -565,7 +506,7 @@ test(
 );
 
 test(
-  "steep catalog fields stay within the gates or their floor limits at any engine closure",
+  "steep catalog fields stay within the gates under policy version 11, without any floor at any engine closure",
   { skip, timeout: 600_000 },
   async (t) => {
     const ask = await engines(t);
@@ -604,9 +545,7 @@ test(
     }
     const count = (verdict: string): number => verdicts.filter((other) => other === verdict).length;
     t.diagnostic(seen.join("; "));
-    // No floor is required of another LensVisualizer, but every pair is still judged: PASS or FLOOR, as on any
-    // gated rung. Historical failures at the old tolerance are no longer pinned here.
-    assert.equal(count("PASS") + count("FLOOR"), verdicts.length, `a pair is neither PASS nor FLOOR: ${verdicts}`);
+    assert.equal(count("PASS"), verdicts.length, `a pair did not PASS: ${verdicts}`);
     assert.ok(verdicts.length > 0, "no pair was judged");
   },
 );

@@ -9,9 +9,8 @@
 // (traced.ts), which the focus stations (stations.test.ts) are held to as well.
 //
 // The figures quoted in comments were measured at optiland 4e893f53 and LensVisualizer 14da71d9 (engine closure
-// 78215d72, 151 files). Nothing is pinned to them: every gate is the policy's, a pair of LensVisualizer may be PASS
-// or FLOOR, and none is asked to be a floor, so a LensVisualizer that meets its surfaces more closely turns nothing
-// red.
+// 78215d72, 151 files). These are historical measurements, not current baseline provenance. Every gate is
+// the policy's; policy version 11 has no floors and every compared pair must PASS.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -390,13 +389,13 @@ test(
     // over 137 596 rays; every pair of LensVisualizer inside its gates, so the benchmark has no floor.
     assert.match(
       cycle.verdicts,
-      /^benchmark: 1080 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 1080 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
   },
 );
 
 test(
-  "the feature suite on R2, three ways: every translation path passes, and a floor would name its witness",
+  "the feature suite on R2, three ways: every translation path passes without a floor",
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { on, cycle } = threeWays(t, "features");
@@ -405,14 +404,9 @@ test(
     assert.equal(on.pairs.length / 3, 162);
     assert.match(
       cycle.verdicts,
-      /^features: 810 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 810 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
-    // Measured: four floors, of the Hologon at its full field at 470 nm and 510 nm, against ref and against
-    // optiland alike, where its landing is 1.10e-8 mm from both and the two are 2.2e-13 mm from each other. None is
-    // asked for here: `assertR2` holds whatever is a floor to naming both figures, and a LensVisualizer that meets
-    // its surfaces more closely has none.
-    const floors = on.pairs.filter((pair) => pair.verdict === "FLOOR");
-    t.diagnostic(`features: floors ${JSON.stringify(floors.map((pair) => `${pair.run} ${pair.engines}`))}`);
-    for (const pair of floors) t.diagnostic(`features: ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
+    // At the historical 1e-9 mm tolerance the Hologon had four floors; version 11 grants none.
+    assert.ok(on.pairs.every((pair) => pair.verdict === "PASS"));
   },
 );

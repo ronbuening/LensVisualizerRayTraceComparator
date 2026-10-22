@@ -52,8 +52,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   available and defining deep modules otherwise. At `643ef5d0` it loads 175 engine files, including non-MTF analysis.
 - **Effect.** A change in those analysis modules can move the engine closure even when MTF values stay the same.
   The prepared-state cache retains two lenses; sweeping a catalog can evict a previous lens (performance only).
-- **Handled.** Fingerprint the actual import closure; refuse a pre-rewrite LV plainly. Stage 3.12 measures the
-  new numerics and rewrites baselines separately.
+- **Handled.** Fingerprint the actual import closure; refuse a pre-rewrite LV plainly. Stage 3.12 measured the
+  new numerics at `ab0fd4cf` (175 files); policy version 11 pins R6a at 2e-8 and removes R2/R3 floors, with
+  baselines rewritten separately by the owner.
 - **Class.** convention.
 
 ### V2 controls and prepared stop radii
@@ -245,6 +246,10 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### A hit lies within 1e-9 mm of its surface, not on it
 
+**History (the 1e-9 mm numerics still in LV `33ebdb30`).** Current LV `ab0fd4cf` uses 1e-12 mm;
+Stage 3.12, policy version 11, removes every R2/R3 floor. A pair above a gate is FAIL. The floor machinery
+stays for a future engine with synthetic tests; Phase 5's catalog sweep will test whether a steep lens needs one.
+
 - **Where.** `intersectProfile` in `src/optics/geometry/intersect.ts` iterates until the z of the ray is within
   `INTERSECTION_TOLERANCE` of the z of the surface (now in `src/optics/math/constants.ts`; historically 1e-9 mm) and takes that point for
   the hit. The tracer has no option for it. A plane is met in closed form, and a hit that lies up to the tolerance
@@ -271,6 +276,10 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 - **Class.** numerical.
 
 ### Behind a steep surface 1e-9 mm is not 1e-9 mm any more
+
+**History (the 1e-9 mm numerics still in LV `33ebdb30`).** Current LV `ab0fd4cf` uses 1e-12 mm;
+Stage 3.12, policy version 11, removes every R2/R3 floor. A pair above a gate is FAIL. The floor machinery
+stays for a future engine with synthetic tests; Phase 5's catalog sweep will test whether a steep lens needs one.
 
 - **Where.** The same tolerance, `INTERSECTION_TOLERANCE`. An error along the ray at one surface is an error across
   it at the next, by the tangent of the angle between them, and a surface met near grazing incidence, or one that
@@ -392,11 +401,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   not move is what the tolerance never was: where two surfaces cross LensVisualizer still loses the ray
   (`noBracket`, below). Its traces cost 2.6 % more time (the 864 ray sets of the benchmark, 49.7 s to 51.0 s) and
   its product MTF with the replay 4.2 % more (175 s to 183 s).
-- **Handled.** No gate, floor limit or band was changed for it, and none is needed. R6a's gate of 4e-5 was pinned
-  on the old rounding at ten times 3.12e-6; ten times the new maximum, 1.81e-9 against optiland, is 2e-8, and
-  whether to pin it again is the owner's, as is what the floor rule is still for. No test requires LensVisualizer
-  to be as far off as it was: the tier-2 bounds are upper bounds, and what the old tolerance leaves on the steep
-  lenses is compared only at its engine closure (`TOLERANCE_1E9_CLOSURE`, `test/integration/lv/rungs.test.ts`).
+- **Handled at Stage 3.10 (history).** No gate, floor limit or band changed then. At Stage 3.12, measured on
+  LV `ab0fd4cf` (closure `94778d3d`, 175 files), policy version 11 pins R6a at 2e-8 and removes R2/R3 floors.
+  Floor tests use synthetic policies; real-policy tests require PASS. The old 4e-5 pin described `33ebdb30`.
   That the figures above are LensVisualizer's and not the comparator's was held apart: the comparator as it is
   now, run on LensVisualizer `33ebdb30`, gives every case of both suites the id the baselines have and every
   figure of R0 to R4 to the last digit (1710 records, none changed).
@@ -892,11 +899,18 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The gate of R6a is LensVisualizer's 1e-9 mm in the optical path
 
+**History at `33ebdb30` (closure `78215d72`).** The 4e-5 gate below is superseded by Stage 3.12,
+policy version 11: **2e-8**, ten times the measured 1.18e-9 rounded up to one digit, with **208 of 288**
+benchmark fields judged. At LV `ab0fd4cf` (closure `94778d3d`, 175 files), `lv/ref` reaches 1.181e-9 and
+`optiland/ref` 1.158e-9, while `lv/optiland` is within 1.560e-10. The bound now comes from the exact tracers'
+agreement, the same scale as Stage 3.8's 1.15e-9, not LensVisualizer's rounding. The ref–optiland test holds
+an absolute **2e-9**, including flagged fields. No floor is granted.
+
 - **Where.** LensVisualizer meets a surface within 1e-9 mm of it ("A hit lies within 1e-9 mm of its surface",
   above), and the optical path carries that: 1.7e-6 of a wave at 590 nm for each surface it is off at.
 - **Effect.** In a wave transfer function it shows as 1e-6 to 3e-6 of MTF (3.12e-6 at worst on the benchmark),
   where the two exact tracers agree to 1.15e-9.
-- **Handled.** R6a's gate, 4e-5, is ten times LensVisualizer's figure and so 35 000 times that of the exact
+- **Handled then.** R6a's gate, 4e-5, was ten times LensVisualizer's figure and so 35 000 times that of the exact
   tracers: it measures nothing of them, as R3's gate does not. A pair of `ref` and optiland near it would be a
   defect; whether the rung gets a floor, and the exact tracers a gate of their own, is the owner's. Measured at
   `33ebdb30`, closure `78215d72`, optiland `4e893f53`.

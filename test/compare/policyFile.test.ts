@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { createComparatorLookup } from "../../src/compare/comparator.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { POLICY_FILE, loadPolicy, policyRegistryProblems } from "../../src/compare/policyFile.ts";
-import type { MetricPolicy, Policy, RungPolicy } from "../../src/contract/policy.ts";
+import type { Policy, RungPolicy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { RUNGS, r0Rung, r1Rung, r4Rung, r5Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
@@ -17,8 +17,7 @@ import { tempDir } from "../core/support.ts";
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.deepEqual(policy, POLICY_LADDER);
-  assert.equal(policy.version, 10);
+  assert.equal(policy.version, 11);
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -63,25 +62,22 @@ test("r0 is gated on every mismatch at 0 and on the scaled sag at 1e-12, and blo
   assert.equal(selftest.blocksLaterRungs, undefined);
 });
 
-test("r2 and r3 are gated on identical rays, at the gates of the ladder, with the floor of lv against ref", () => {
+test("r2 and r3 are gated on identical rays, at the gates of the ladder, without floors", () => {
   const { r2, r3 } = loadPolicy().rungs;
   for (const rung of [r2, r3]) {
     assert.deepEqual([rung.quantity, rung.mode, rung.class], ["rays.trace", "identical-rays", "gated"]);
-    assert.deepEqual(rung.floor, { engine: "lv", arbiter: "ref" });
+    assert.equal(rung.floor, undefined);
     assert.equal(rung.blocksLaterRungs, undefined);
   }
-  // Lengths: 1e-8 mm, a floor of lv up to 1e-7 mm where every other engine is within 1e-10 mm of ref. The exit
-  // direction: 1e-9, a floor of lv up to 1e-8 where every other engine is within 1e-12 of ref. The mask has no
-  // floor: a ray that one engine stopped and the other passed is always a failure.
-  const mm = { tolerance: 1e-8, unit: "mm", floor: { limit: 1e-7, agreement: 1e-10 } };
+  // Lengths keep their 1e-8 mm gates; direction keeps 1e-9. Every excess fails.
+  const mm = { tolerance: 1e-8, unit: "mm" };
   assert.deepEqual(r2.metrics, {
-    "direction.maxAbs": { tolerance: 1e-9, unit: "1", floor: { limit: 1e-8, agreement: 1e-12 } },
+    "direction.maxAbs": { tolerance: 1e-9, unit: "1" },
     "hits.maxDistance": mm,
     "landing.maxDistance": mm,
     "mask.mismatches": { tolerance: 0, unit: "rays" },
   });
-  // Paths: 2e-5 waves, a floor of lv up to 2e-4 waves where every other engine is within 1e-7 waves of ref.
-  const waves = { tolerance: 2e-5, unit: "waves", floor: { limit: 2e-4, agreement: 1e-7 } };
+  const waves = { tolerance: 2e-5, unit: "waves" };
   assert.deepEqual(r3.metrics, {
     "opd.maxAbs": waves,
     "opticalPath.maxAbs": waves,
@@ -93,20 +89,11 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, with th
     reported.filter((name) => !Object.hasOwn(r2.metrics, name)),
     ["mask.rimBand", "rays.compared"],
   );
-  // Every floor limit is ten times its gate, and every agreement at most a hundredth of it.
-  const judged: [string, MetricPolicy][] = [...Object.entries(r2.metrics), ...Object.entries(r3.metrics)];
-  for (const [name, metric] of judged) {
-    if (metric.floor === undefined) continue;
-    const gate = metric.tolerance as number;
-    assert.ok(Math.abs(metric.floor.limit / gate - 10) < 1e-9, name);
-    assert.ok(metric.floor.agreement <= gate / 100, name);
+  // Policy version 11 grants no floor on any rung or metric.
+  for (const rung of Object.values(loadPolicy().rungs)) {
+    assert.equal(rung.floor, undefined);
+    for (const metric of Object.values(rung.metrics)) assert.equal(metric.floor, undefined);
   }
-  // No other rung has a floor.
-  const floored = Object.entries(loadPolicy().rungs).filter(([, rung]) => rung.floor !== undefined);
-  assert.deepEqual(
-    floored.map(([id]) => id),
-    ["r2", "r3"],
-  );
 });
 
 test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no floor, and it blocks nothing", () => {
@@ -131,11 +118,11 @@ test("r4 is gated on identical rays: the MTF at 1e-7, nothing else judged, no fl
   );
 });
 
-test("r6a is gated on the wave MTF of the traced rays, at the pin of Stage 3.5, with no floor", () => {
+test("r6a is gated on the wave MTF of the traced rays, at the pin of Stage 3.12, with no floor", () => {
   const { r6a } = loadPolicy().rungs;
   assert.deepEqual([r6a.quantity, r6a.mode, r6a.class], ["rays.trace", "identical-rays", "gated"]);
-  // Ten times the largest figure of a judged field of the benchmark, 3.12e-6, rounded up to one digit.
-  assert.deepEqual(r6a.metrics, { "waveMtf.maxAbs": { tolerance: 4e-5, unit: "1" } });
+  // Ten times the largest figure of a judged field of the benchmark, 1.18e-9, rounded up to one digit.
+  assert.deepEqual(r6a.metrics, { "waveMtf.maxAbs": { tolerance: 2e-8, unit: "1" } });
   assert.equal(r6a.floor, undefined);
   assert.equal(r6a.blocksLaterRungs, undefined);
   // The figure of a lattice that is no arbiter is a metric of the comparator and none of the policy.
@@ -160,7 +147,7 @@ test("r4f is gated, direct: the MTF at 1e-9, every count at 0, no floor, and it 
 });
 
 test("r5 is recorded, of two methods: the plan's bands on and off the axis, and the limit of the chief rays' landing", () => {
-  const { r2, r6b } = loadPolicy().rungs;
+  const { r6b } = loadPolicy().rungs;
   const r5: RungPolicy = loadPolicy().rungs.r5;
   assert.deepEqual([r5.quantity, r5.mode, r5.class], ["mtf.native", "independent-method", "recorded"]);
   assert.deepEqual(
@@ -171,10 +158,10 @@ test("r5 is recorded, of two methods: the plan's bands on and off the axis, and 
       "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
     },
   );
-  // The bands are those of R6b, the plan's; the landing of two chief rays is held to the scale of R2: as far as
-  // R2 lets LensVisualizer land a ray from the arbiter's.
+  // The bands are those of R6b. The chief-landing sorting limit retains its Stage 3.7 pin,
+  // independently of R2's gates and the removal of its floors.
   for (const name of ["mtfOffAxis.maxAbs", "mtfOnAxis.maxAbs"]) assert.deepEqual(r5.metrics[name], r6b.metrics[name]);
-  assert.equal(r5.metrics["chiefLanding.maxAbs"].attention, r2.metrics["landing.maxDistance"].floor?.limit);
+  assert.equal(r5.metrics["chiefLanding.maxAbs"].attention, 1e-7);
   // Nothing of it is gated, floored or blocking, and no metric has a tolerance.
   assert.equal(r5.floor, undefined);
   assert.equal(r5.blocksLaterRungs, undefined);

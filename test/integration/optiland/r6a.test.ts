@@ -5,14 +5,15 @@
 //
 // The rung on all 96 runs of the benchmark is a measurement of its own, made once for the pin of the gate
 // (docs/IMPLEMENTATION_PLAN.md, "Amendments since approval"): 15 GB of traces and a quarter of an hour. What runs
-// here is 17 of those runs, chosen for what they hold: the run with the largest figure of LensVisualizer
-// (`sony-fe-20mm-f18-g` at f/8), the one with the largest figure of the two exact tracers (`nikon-z-24-70f4s` at
+// here is 17 of those runs, chosen for what they hold: the historical worst of LensVisualizer at 33ebdb30
+// (`sony-fe-20mm-f18-g` at f/8), the current worst against ref (`nikon-z-24-70f4s` at
 // its wide end and best focus), a lens whose every field is undersampled wide open (`nikkor-z50f12`), each in its
 // four conditions on the reference line, and one run on the five photopic lines.
 //
 // Nothing is pinned to a figure of LensVisualizer: every pair is held to the gate of the policy, and a pair of
-// LensVisualizer needs no margin beyond it. What is asked of optiland against the reference engine is a thousandth
-// of the gate: the two exact tracers agree far inside it, and the gate is of LensVisualizer's rounding.
+// LensVisualizer needs no margin beyond it. Stage 3.12 pins the gate at 2e-8, ten times the measured 1.18e-9
+// rounded up. The bound now comes from the exact tracers' agreement, not LensVisualizer's rounding:
+// optiland against ref is held to an absolute 2e-9, including flagged fields.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -106,8 +107,8 @@ test(
         );
         assert.ok(step > QUARTER_WAVE || moved > 0.005, `${pair.run} ${pair.engines}: flagged at ${step}, ${moved}`);
       }
-      // The two exact tracers agree far inside the gate, on a lattice that is an arbiter and on one that is not.
-      if (pair.engines === "optiland / ref") assert.ok(value <= GATE / 1000, `${pair.run}: ${value}`);
+      // The exact tracers keep the absolute Stage 3.12 bound, whether the lattice is an arbiter or not.
+      if (pair.engines === "optiland / ref") assert.ok(value <= 2e-9, `${pair.run}: ${value}`);
       const held = worst.get(pair.engines) ?? { value: -1, at: "", judged: 0, flagged: 0 };
       if (judged) held.judged++;
       else held.flagged++;

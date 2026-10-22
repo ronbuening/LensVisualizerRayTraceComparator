@@ -1,44 +1,44 @@
 {
   "byState": {
     "prime": {
-      "exported": 588,
-      "notExportable": 22,
-      "states": 610,
+      "exported": 647,
+      "notExportable": 23,
+      "states": 670,
       "threw": 0
     },
     "tele": {
-      "exported": 296,
+      "exported": 318,
       "notExportable": 1,
-      "states": 297,
+      "states": 319,
       "threw": 0
     },
     "wide": {
-      "exported": 296,
+      "exported": 318,
       "notExportable": 1,
-      "states": 297,
+      "states": 319,
       "threw": 0
     }
   },
   "contract": "1.0",
-  "exported": 1180,
+  "exported": 1283,
   "features": {
     "aperture.annular": 0,
-    "aperture.unclipped": 232,
+    "aperture.unclipped": 253,
     "lines.multiple": 0,
     "object.finite": 0,
-    "surface.asphere.even": 589,
+    "surface.asphere.even": 632,
     "surface.asphere.flat-base": 2,
-    "surface.asphere.odd": 78,
-    "surface.conic": 274
+    "surface.asphere.odd": 81,
+    "surface.conic": 295
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "31c34396df4d28131f3f203dda004dc4796cfcdf",
+    "commit": "ab0fd4cf94836492b28470953812ed4afc98c0c6",
     "dirty": false,
-    "engineClosureHash": "a52a7b8eadce812a94326633c81d84e3fb5f49aad6989e24595da13ca97112ab",
-    "engineFileCount": 152
+    "engineClosureHash": "94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b",
+    "engineFileCount": 175
   },
-  "lenses": 907,
+  "lenses": 989,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -54,11 +54,11 @@
       "max": 63
     }
   },
-  "notExportable": 24,
+  "notExportable": 25,
   "notes": {
-    "bulk-absorption": 1,
-    "projection:fisheye-equidistant": 3,
-    "projection:fisheye-equisolid": 13
+    "bulk-absorption": 2,
+    "projection:fisheye-equidistant": 4,
+    "projection:fisheye-equisolid": 15
   },
   "reasons": {
     "diffractive-surface": {
@@ -79,6 +79,7 @@
     "folded-path": {
       "lenses": [
         "carl-zeiss-mirotar-500f45",
+        "minolta-250mm-f56-rf",
         "minolta-af-reflex-500mm-f8",
         "nikon-reflex-nikkor-1000mm-f11",
         "nikon-reflex-nikkor-500mm-f8-new",
@@ -94,7 +95,7 @@
         "reference-spherical-primary-mirror",
         "vivitar-s1-450-f45"
       ],
-      "states": 15,
+      "states": 16,
       "teleOnly": [],
       "wideOnly": []
     },
@@ -109,6 +110,7 @@
     "non-refract-interaction": {
       "lenses": [
         "carl-zeiss-mirotar-500f45",
+        "minolta-250mm-f56-rf",
         "minolta-af-reflex-500mm-f8",
         "nikon-reflex-nikkor-1000mm-f11",
         "nikon-reflex-nikkor-500mm-f8-new",
@@ -124,7 +126,7 @@
         "reference-spherical-primary-mirror",
         "vivitar-s1-450-f45"
       ],
-      "states": 15,
+      "states": 16,
       "teleOnly": [],
       "wideOnly": []
     },
@@ -163,8 +165,8 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1204,
+  "states": 1308,
   "threw": [],
   "unindexedFiles": 0,
-  "zooms": 297
+  "zooms": 319
 }
