@@ -110,6 +110,21 @@ Recorded values, as each engine reports them. They are listed and never judged:
 | magnification[0] | -2.50000000e-1 | -2.50000000e-1 |
 | magnification[1] | -2.50100000e-1 | — |
 
+## Not covered
+
+What this comparison does not show, whatever its verdicts:
+
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
+- The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on optiland's wavefront, which is a later stage.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
+- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
+- The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
+- Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
+- Zoom positions between the two ends, and finite conjugates other than the states a run names.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
+
 ## How to read this
 
 Each pair of engines that answered one request gets one verdict.

@@ -463,6 +463,42 @@ class TraceTest(TracedRays):
         self.assertEqual(answer.hits[0][0], (clip, 0.0, 0.0))
         self.assertEqual(answer.hits[1][1][:2], (1.5, 2.0))
 
+    def test_a_surface_that_does_not_clip_passes_a_ray_at_any_height_and_still_bends_it(self) -> None:
+        # Two wide planes of a window, then a plate whose two planes are 2 mm in extent and do not clip.
+        thickness, n = 6.0, 1.5
+
+        def plated(clip: float | None) -> dict[str, Any]:
+            window = [surface(0.0, PLANE, 50.0), surface(2.0, PLANE, 50.0)]
+            plate = [surface(5.0, PLANE, 2.0, clip=clip), surface(5.0 + thickness, PLANE, 2.0, clip=clip)]
+            return make_case(window + plate, last_lens=1)
+
+        case = plated(None)
+        heights = [0.0, 1.9, 2.0, math.nextafter(2.0, 9.0), 2.1, 30.0]
+        origins = [(0.0, height, -1.0) for height in heights]
+        # And one ray at an angle that meets the plate some 19.5 mm out.
+        steep = unit(0.0, 0.6, 1.0)
+        origins.append((0.0, 14.0, -5.0))
+        directions = [AXIS] * len(heights) + [steep]
+        answer = self.answer(case, origins, directions)
+        self.assertEqual(answer.status, [0] * len(origins), "no height is outside a surface that does not clip")
+        self.assertEqual(answer.end, [-1] * len(origins))
+        self.assert_is_the_exact_trace(case, answer, origins, directions, 1e-13)
+        self.assertGreater(math.hypot(*answer.hits[2][-1][:2]), 9 * 2.0, "the steep ray is far beyond the extent")
+        # The plate is glass all the same: it shifts the steep ray sideways by t sin(a) (1 - cos(a) / (n cos(a'))),
+        # which the window before it does as well, by its own thickness.
+        sine = math.hypot(steep[0], steep[1])
+        inside = math.sqrt(1 - sine**2 / n**2)
+        shift = (2.0 + thickness) * sine * (1 - steep[2] / (n * inside))
+        image_z = case["conditions"]["imageZ"]
+        undeviated = origins[-1][1] + ((image_z + 5.0) / steep[2]) * steep[1]
+        self.assertAlmostEqual((undeviated - answer.image[-1][1]) * steep[2], shift, delta=1e-12)
+        self.assert_near(answer.exit_direction[-1], steep, 1e-15)
+
+        # The same plate with a clip radius of its extent stops what is beyond it, at its first surface.
+        clipped = self.answer(plated(2.0), origins, directions)
+        self.assertEqual(clipped.status, [0, 0, 0, 1, 1, 1, 1])
+        self.assertEqual(clipped.end, [-1, -1, -1, 2, 2, 2, 2])
+
     def test_a_ray_lands_on_a_plane_within_its_reach_and_is_blocked_by_one_behind_it(self) -> None:
         thickness = 6.0
         origin, d = [(1.0, 2.0, -5.0), (0.0, 0.0, -5.0)], [unit(0.2, -0.3, 1.0), AXIS]

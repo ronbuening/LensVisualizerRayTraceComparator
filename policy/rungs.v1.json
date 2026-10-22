@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 5,
+  "version": 11,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -40,27 +40,79 @@
       "mode": "identical-rays",
       "class": "gated",
       "metrics": {
-        "direction.maxAbs": { "tolerance": 1e-9, "unit": "1", "floor": { "limit": 1e-8, "agreement": 1e-12 } },
-        "hits.maxDistance": { "tolerance": 1e-8, "unit": "mm", "floor": { "limit": 1e-7, "agreement": 1e-10 } },
-        "landing.maxDistance": { "tolerance": 1e-8, "unit": "mm", "floor": { "limit": 1e-7, "agreement": 1e-10 } },
+        "direction.maxAbs": { "tolerance": 1e-9, "unit": "1" },
+        "hits.maxDistance": { "tolerance": 1e-8, "unit": "mm" },
+        "landing.maxDistance": { "tolerance": 1e-8, "unit": "mm" },
         "mask.mismatches": { "tolerance": 0, "unit": "rays" }
-      },
-      "floor": { "engine": "lv", "arbiter": "ref" }
+      }
     },
     "r3": {
       "quantity": "rays.trace",
       "mode": "identical-rays",
       "class": "gated",
       "metrics": {
-        "opd.maxAbs": { "tolerance": 2e-5, "unit": "waves", "floor": { "limit": 2e-4, "agreement": 1e-7 } },
-        "opticalPath.maxAbs": { "tolerance": 2e-5, "unit": "waves", "floor": { "limit": 2e-4, "agreement": 1e-7 } },
+        "opd.maxAbs": { "tolerance": 2e-5, "unit": "waves" },
+        "opticalPath.maxAbs": { "tolerance": 2e-5, "unit": "waves" },
         "opticalPathToImage.maxAbs": {
           "tolerance": 2e-5,
-          "unit": "waves",
-          "floor": { "limit": 2e-4, "agreement": 1e-7 }
+          "unit": "waves"
         }
-      },
-      "floor": { "engine": "lv", "arbiter": "ref" }
+      }
+    },
+    "r4": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "mtf.maxAbs": { "tolerance": 1e-7, "unit": "1" }
+      }
+    },
+    "r4f": {
+      "quantity": "mtf.native",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "fields.mismatches": { "tolerance": 0, "unit": "elements" },
+        "mtf.maxAbs": { "tolerance": 1e-9, "unit": "1" },
+        "sampling.mismatches": { "tolerance": 0, "unit": "elements" }
+      }
+    },
+    "r5": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-7, "unit": "mm" },
+        "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
+        "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
+      }
+    },
+    "r5g": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-3, "unit": "mm" },
+        "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
+        "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
+      }
+    },
+    "r6a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "waveMtf.maxAbs": { "tolerance": 2e-8, "unit": "1" }
+      }
+    },
+    "r6b": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
+        "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
+      }
     }
   }
 }

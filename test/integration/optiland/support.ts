@@ -26,9 +26,11 @@ import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { CONFIG_FILE, REPO_ROOT, loadConfig } from "../../../src/core/config.ts";
 import type { LoadedConfig } from "../../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
+import type { Suite } from "../../../src/contract/runSpec.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { optilandWorkerEnvironment } from "../../../src/engines/optiland/definition.ts";
 import { workerEnvironment } from "../../../src/transports/stdio.ts";
+import { asItOpens, suitePath } from "../../suites/support.ts";
 import { LV_PATH } from "../lv/support.ts";
 
 const REPO_CONFIG = loadConfig({ rootDir: REPO_ROOT, env: process.env }).config;
@@ -158,6 +160,21 @@ export function tempDir(t: TestContext): string {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "lvrtc-optiland-")));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   return directory;
+}
+
+/**
+ * The suite file a test of one rung runs. The feature suite is the committed file. The benchmark is its 24 runs of
+ * the lenses as they open (wide open, at the design plane), written to a temporary directory under the suite's own
+ * name: what Phase 2 measured and what the figures in these tests are of. The benchmark's 72 runs of its other
+ * conditions (the f/8 comparison, the best axial focus) are traced by all three engines in `baseline.test.ts`,
+ * which runs the suite as it is committed and holds every record of it.
+ */
+export function rungSuite(t: TestContext, suite: "benchmark" | "features"): string {
+  if (suite === "features") return suitePath(suite);
+  const committed: Suite = JSON.parse(readFileSync(suitePath(suite), "utf8"));
+  const file = join(tempDir(t), `${suite}.json`);
+  writeFileSync(file, JSON.stringify({ ...committed, runs: committed.runs.filter(asItOpens) }));
+  return file;
 }
 
 /**

@@ -6,7 +6,8 @@
  * - `not-lv-checkout`: the directory holds no `src/optics/buildLens.ts`;
  * - `loader-conflict`: this process already loads another LensVisualizer tree;
  * - `import-failed`: a module of the import manifest could not be imported; exports missing from the modules that
- *   were imported are listed with it;
+ *   were imported are listed with it. A checkout from before LensVisualizer's engine rewrite fails with this code,
+ *   whatever is missing, and a message that says it is too old;
  * - `exports-missing`: a module was imported and lacks an export, or the export is not of the expected kind;
  * - `unknown-lens`: the catalog holds no lens of the key asked for.
  */

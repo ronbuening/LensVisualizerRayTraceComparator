@@ -1,17 +1,26 @@
 // Local structural types for what the comparator reads from LensVisualizer. Nothing here is imported from the LV
 // checkout, so the type check passes with no LV on disk. Each type lists only the members the comparator uses, as
-// read from LV's sources (src/optics/types.ts, src/types/optics.ts, src/optics/trace/types.ts); the load-time
+// read from LV's sources (src/optics/types.ts, src/types/optics.ts, src/types/lensDataV2.ts, src/types/mtf.ts,
+// src/optics/trace/types.ts, src/optics/analysis/request.ts); the load-time
 // probe of the binding checks that the functions exist, and the integration tests that the shapes still hold.
 
 /** A point or direction: x sagittal, y meridional, z along the axis, in mm. */
 export type LvVec3 = readonly [number, number, number];
 
-/** A lens prescription file's default export. Only its identity is read here; the rest goes to `buildLens`. */
+/**
+ * A lens prescription file's default export, a `schema: 2` lens (LensVisualizer's LensDataV2Input). Only its
+ * identity and whether it is a zoom are read here; the rest goes to `buildLens`, which refuses any other schema.
+ */
 export interface LvLensData {
+  readonly schema: 2;
   readonly key: string;
   readonly name: string;
-  /** Present with two or more entries on a zoom lens. */
-  readonly zoomPositions?: readonly number[];
+  /** Present on a zoom alone: one station per authored zoom position, wide to tele. */
+  readonly zoom?: { readonly stations?: readonly unknown[] };
+  readonly focus?: {
+    readonly keyframes?: readonly number[];
+    readonly conjugates?: readonly { readonly zoomStation: number; readonly keyframe: number }[];
+  };
   readonly [member: string]: unknown;
 }
 
@@ -24,9 +33,13 @@ export interface LvElement {
 
 /**
  * LV's frozen RuntimeLens. Never read `stopPhysSD` (zoom station 0 only) or `totalTrack` from it: the prepared
- * state holds the values of the current zoom and focus.
+ * state holds the values of the current zoom and focus. It holds no authored data: `source` is LensVisualizer's
+ * canonical lens, which the comparator reads only in its integration tests.
  */
 export interface LvRuntimeLens {
+  readonly zoomStopSDs: readonly number[] | null;
+  readonly stopPhysSD: number;
+  readonly source: { readonly key: string; readonly [member: string]: unknown };
   /** Index of the last authored surface; synthetic rear plates come after it. */
   readonly lastLensSurfaceIdx: number;
   readonly isZoom: boolean;
@@ -61,8 +74,9 @@ export interface LvAsphericTerm {
 
 /**
  * One surface of a prepared state. `d` is the resolved gap after the surface, `nd` the index after it (air is
- * exactly 1), `sd` the hard clear semi-diameter and, on the stop surface, the runtime stop radius. LV's surface also
- * carries `source` and `base`, the authored records: they are deliberately absent here, because their `sd` is not
+ * exactly 1), `sd` the hard clear semi-diameter (an envelope and no limit where `clips` is false) and, on the stop
+ * surface, the runtime stop radius. LV's surface also
+ * carries `source`, the canonical record: it is deliberately absent here, because its `sd` is not
  * the runtime one. `syntheticKind` of the binding reads the one member of `source` that exists nowhere else.
  */
 export interface LvSurface {
@@ -75,6 +89,12 @@ export interface LvSurface {
   readonly nd: number;
   readonly sd: number;
   readonly innerSd: number | null;
+  /**
+   * False where `sd` is the rim LensVisualizer generated for a rear plate whose prescription publishes none: such a
+   * surface never clips a ray or limits the field, and its `sd` is only an envelope. True on every other surface;
+   * absent in a LensVisualizer from before it told the two apart, where every surface clips.
+   */
+  readonly clips?: boolean;
   readonly elemId: number;
   readonly asphere: LvAsphere | null;
   /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */
@@ -92,11 +112,17 @@ export interface LvPlane {
   readonly normal: LvVec3;
 }
 
+/** The member of LV's TraceGeometry that `evaluateAperture` reads. */
+export interface LvTraceGeometry {
+  readonly stopSurfaceIndex: number;
+}
+
 /** LV's PreparedOpticalState: a lens at one focus, zoom and aberration-control position. */
 export interface LvPreparedState {
+  /** Always present in a LensVisualizer after its engine rewrite; `evaluateAperture` takes it. */
+  readonly traceGeometry?: LvTraceGeometry;
   readonly lens: {
     readonly key: string;
-    readonly runtime: LvRuntimeLens;
     readonly stop: { readonly surfaceIndex: number };
     /** `isFoldedOptics` is true for a system whose path turns at a mirror. */
     readonly flags: Readonly<Record<string, boolean>>;
@@ -114,7 +140,7 @@ export interface LvPreparedState {
   readonly totalTrack: number;
 }
 
-/** A ray for `traceEngineRay2`. */
+/** A ray for `traceEngineRay`. */
 export interface LvRay {
   readonly origin: LvVec3;
   readonly direction: LvVec3;
@@ -138,9 +164,12 @@ export type LvIndexResolver = (surfaceIndex: number, nd: number) => number;
 /**
  * One surface a traced ray met, the members the comparator reads. A hit is `clipped` when the ray ends on it: beyond
  * the clear aperture, inside an annular hole, or totally reflected. A surface the ray could not be intersected with
- * has no hit at all.
+ * has no hit at all. LV's hit also states the residual of its intersection and the bound it met, which nothing here
+ * reads.
  */
 export interface LvTraceHit {
+  readonly residual?: number;
+  readonly effectiveTolerance?: number;
   readonly surfaceIndex: number;
   readonly point: LvVec3;
   readonly clipped: boolean;
@@ -157,6 +186,7 @@ export interface LvTraceResult {
   readonly opticalPathLengthMm?: number;
   /** The ray as it was traced: its origin, and its direction after any normalisation. */
   readonly input: LvRay;
+  /** Absent only under LV's `capture: "terminal"`, which the comparator never asks for. */
   readonly hits: readonly LvTraceHit[];
   readonly terminalPoint: LvVec3;
   readonly terminalDirection: LvVec3;
@@ -168,7 +198,7 @@ export interface LvTraceResult {
   readonly reachedImagePlane: boolean;
 }
 
-/** The result of LV's meridional `traceRay2`. */
+/** The result of LV's meridional `traceRay`. */
 export interface LvMeridionalTraceResult {
   readonly pts: readonly (readonly number[])[];
   readonly y: number;
@@ -184,7 +214,7 @@ export interface LvParaxialSurface {
   readonly d: number;
 }
 
-/** Options of `traceParaxialSurfaces2`. */
+/** Options of `paraxialTrace`. */
 export interface LvParaxialOptions {
   readonly stopAt?: number;
   readonly skipLastTransfer?: boolean;
@@ -209,7 +239,7 @@ export interface LvSystemMatrix {
   readonly imageIndex: number;
 }
 
-/** What `buildCardinalElementsFromMatrix2` takes: a matrix and the positions it refers to. */
+/** What `buildCardinalElementsFromMatrix` takes: a matrix and the positions it refers to. */
 export interface LvCardinalInput extends LvSystemMatrix {
   readonly frontVertexZ: number;
   readonly rearVertexZ: number;
@@ -219,7 +249,7 @@ export interface LvCardinalInput extends LvSystemMatrix {
 }
 
 /**
- * LV's CardinalElements2, the members the comparator reads: positions and signed distances in mm. `bfd` is the rear
+ * LV's CardinalElements, the members the comparator reads: positions and signed distances in mm. `bfd` is the rear
  * focal point's distance from `rearLensVertexZ`.
  */
 export interface LvCardinalElements {
@@ -250,7 +280,7 @@ export interface LvFieldGeometry {
   readonly [member: string]: unknown;
 }
 
-/** The result of `entrancePupilAtState2`. */
+/** The result of `entrancePupilAtState`. */
 export interface LvEntrancePupil {
   readonly epSD: number;
   readonly yRatio: number;
@@ -258,14 +288,41 @@ export interface LvEntrancePupil {
   readonly epRatio: number;
 }
 
-/** LV's MtfOptions; `method`, `spectrum` and `focus` take LV's own values, which the stage that uses them pins. */
-export interface LvMtfOptions {
+/**
+ * LV's MtfRequestOptions: the settings of an MTF request beside its analysis request, which holds the two radii.
+ * `method`, `spectrum` and `focus` take LV's own values, which the stage that uses them pins.
+ */
+export interface LvMtfRequestOptions {
   readonly method: string;
   readonly spectrum: string;
-  readonly pupilSemiDiameterMm: number;
-  readonly stopSemiDiameterMm: number;
   readonly focus: unknown;
   readonly [member: string]: unknown;
+}
+
+/**
+ * LV's MtfOptions: the settings with the two radii, as LV resolves them from a request (`resolveMtfOptions`) and as
+ * its MTF worker is handed them. Every MTF function below the three entry points takes this form.
+ */
+export interface LvMtfOptions extends LvMtfRequestOptions {
+  readonly pupilSemiDiameterMm: number;
+  readonly stopSemiDiameterMm: number;
+}
+
+/** What LV's `createAnalysisRequest` takes, the members the comparator sets. */
+export interface LvAnalysisRequestParams {
+  readonly preparedState: LvPreparedState;
+  readonly dynamicEFL: number;
+  readonly currentEPSD: number;
+  readonly currentPhysStopSD: number;
+}
+
+/** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
+export interface LvAnalysisRequest {
+  readonly preparedGeometry: LvPreparedState;
+  readonly dynamicEFL: number;
+  readonly aperture: { readonly entrancePupilSemiDiameterMm: number; readonly stopSemiDiameterMm: number };
+  /** A tilt or shift pose; null for a request made without a perspective context, as every request here is. */
+  readonly pose: { readonly active?: boolean } | null;
 }
 
 /** One field of LV's MtfResult, the members the comparator reads. */
@@ -415,13 +472,40 @@ export interface LvMtfBundle {
   readonly rays: readonly LvMtfPupilRay[];
   readonly blocked: number;
   readonly failed: number;
+  /** The launch flux of the rays LV could not resolve, in the units of the rays' weights. */
+  readonly failedWeight: number;
+  /** The reference point: where this line's chief ray lands with no aperture checked, or the reference handed in. */
   readonly chief: LvMtfSpot;
   readonly chiefClipped: boolean;
   readonly columns: number;
   readonly rows: number;
   readonly mirrored: boolean;
   readonly launchStepMm: number;
+  /** The sides of the footprint in whose guard band a ray landed: flux may lie outside the box that was sampled. */
+  readonly openBorders: LvMtfOpenBorders;
 }
+
+/** The sides of a footprint: both sides in x, which a footprint has alike, and the lower and the upper side in y. */
+export interface LvMtfOpenBorders {
+  readonly x: boolean;
+  readonly y0: boolean;
+  readonly y1: boolean;
+}
+
+/**
+ * What LV's refinement makes of one field at one grid size: curves, with the sides of the footprint that were left
+ * open, or no curves, and whether a finer grid may still have some.
+ */
+export type LvMtfGridOutcome =
+  | { readonly kind: "curves"; readonly field: LvMtfFieldDraft; readonly openBorders?: LvMtfOpenBorders }
+  | { readonly kind: "unavailable"; readonly field: LvMtfFieldDraft; readonly refine: boolean };
+
+/** One field of an LV result while LV still writes it: `LvMtfFieldResult` with every member open to change. */
+export type LvMtfFieldDraft = { -readonly [Member in keyof LvMtfFieldResult]: LvMtfFieldResult[Member] } & {
+  sagittal: number[];
+  tangential: number[];
+  notes: string[];
+};
 
 /** LV's image-height axis for one state: the height of the 100 % field and how far the model reaches. */
 export interface LvMtfFieldGeometry {
@@ -484,10 +568,14 @@ export interface LvLineNm {
  * module exports each.
  */
 export interface LvApi {
-  buildLens(data: LvLensData): LvRuntimeLens;
+  buildLens(
+    data:
+      | LvLensData
+      | { readonly kind: "lens"; readonly key: string; readonly name: string; readonly [member: string]: unknown },
+  ): LvRuntimeLens;
   prepareRuntimeState(L: LvRuntimeLens, focusT: number, zoomT: number, aberrationT?: number): LvPreparedState;
-  traceEngineRay2(state: LvPreparedState, ray: LvRay, options?: LvTraceOptions): LvTraceResult;
-  traceRay2(
+  traceEngineRay(state: LvPreparedState, ray: LvRay, options?: LvTraceOptions): LvTraceResult;
+  traceRay(
     y0: number,
     u0: number,
     zPos: number[],
@@ -498,12 +586,12 @@ export interface LvApi {
     L: LvRuntimeLens,
     aberrationT?: number,
   ): LvMeridionalTraceResult;
-  computeCardinalElements2(state: LvPreparedState): LvCardinalElements | null;
+  computeCardinalElementsFromState(state: LvPreparedState): LvCardinalElements | null;
   /**
    * The entrance pupil of a stop radius at a state. `geometry` is a field geometry already computed for the state;
    * without it LV computes its own.
    */
-  entrancePupilAtState2(
+  entrancePupilAtState(
     stopSD: number,
     focusT: number,
     zoomT: number,
@@ -511,8 +599,8 @@ export interface LvApi {
     geometry?: LvFieldGeometry,
     aberrationT?: number,
   ): LvEntrancePupil;
-  /** The field geometry LV's analysis tabs share for a state, which its hook hands to `entrancePupilAtState2`. */
-  computeAnalysisFieldGeometryAtState2(
+  /** The field geometry LV's analysis tabs share for a state, which its hook hands to `entrancePupilAtState`. */
+  computeAnalysisFieldGeometryAtState(
     focusT: number,
     zoomT: number,
     L: LvRuntimeLens,
@@ -520,33 +608,37 @@ export interface LvApi {
   ): LvFieldGeometry;
   /** The marked f-number of an aperture-slider position, 0 for wide open, never below the widest of the zoom state. */
   fNumberAtStopdown(stopdownT: number, zoomT: number, L: LvRuntimeLens): number;
-  fopenAtZoom2(zoomT: number, L: LvRuntimeLens): number;
+  /** The widest f-number at a zoom position, the position clamped to the zoom's range: what LV's hook calls. */
+  fopenAtZoomClamped(zoomT: number, L: LvRuntimeLens): number;
   /**
    * LV's stored pupil constants at a zoom position, which it draws its pupil markers from. They are properties of
    * the lens at infinity focus and at its authored indices, and none of them is a paraxial image of the stop: the
    * entrance pupil's semi-diameter is nominal, focal length over twice the f-number, and the others come from real
    * rays near the axis. The two positions are relative to the stop vertex and to the last vertex.
    */
-  epAtZoom2(zoomT: number, L: LvRuntimeLens): number;
+  epAtZoomClamped(zoomT: number, L: LvRuntimeLens): number;
   epZRelStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
   xpZRelLastSurfAtZoom(zoomT: number, L: LvRuntimeLens): number;
   xpAtZoom(zoomT: number, L: LvRuntimeLens): number;
-  wideOpenStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
+  wideOpenStopAtZoom(zoomT: number, L: Pick<LvRuntimeLens, "zoomStopSDs" | "isZoom" | "stopPhysSD">): number;
+  /** Where a hit of a radius lies against a surface's clear aperture; the geometry is the state's `traceGeometry`. */
   evaluateAperture(
-    state: LvPreparedState,
+    geometry: LvTraceGeometry,
     surface: LvSurface,
     radius: number,
     stopSemiDiameter?: number,
   ): LvApertureEvaluation;
-  traceParaxialSurfaces2(
+  /** LV's paraxial kernel, under the name its optics barrel gives it: a call-through to `traceSurfacesParaxial`. */
+  paraxialTrace(
     surfaces: readonly LvParaxialSurface[],
     y0: number,
     u0: number,
     options?: LvParaxialOptions,
   ): LvParaxialResult;
-  computeSystemMatrix2(state: LvPreparedState): LvSystemMatrix;
-  buildCardinalElementsFromMatrix2(input: LvCardinalInput): LvCardinalElements | null;
-  assessMtfSupport(state: LvPreparedState, options: LvMtfOptions): LvMtfSupport;
+  buildCardinalElementsFromMatrix(input: LvCardinalInput): LvCardinalElements | null;
+  /** An analysis request of a state and the two radii: what LV's MTF entry points take beside their settings. */
+  createAnalysisRequest(params: LvAnalysisRequestParams): LvAnalysisRequest;
+  assessMtfSupport(request: LvAnalysisRequest, settings: LvMtfRequestOptions): LvMtfSupport;
   mtfIndexResolver(state: LvPreparedState, support: LvMtfSupport, wavelengthNm: number): LvIndexResolver | undefined;
   /** The object point of a certified conjugate at a field angle in degrees, or null when LV cannot place it. */
   mtfFiniteObjectPoint(state: LvPreparedState, conjugate: LvFiniteConjugate, fieldAngle: number): LvVec3 | null;
@@ -580,7 +672,7 @@ export interface LvApi {
     gridSize: number,
     line: LvSpectralLine,
     imagePlaneZ?: number,
-    extras?: { readonly opticalPath?: boolean },
+    extras?: { readonly reference?: LvMtfSpot; readonly opticalPath?: boolean },
   ): LvMtfBundle | null;
   /** Where a trace that ended "ok" lands on the image plane, with its bulk transmission; null when it does not. */
   mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
@@ -612,8 +704,46 @@ export interface LvApi {
     chiefHeight: LvMtfChiefHeight,
     infinity: boolean,
   ): LvMtfFieldTarget[];
-  /** LV's product MTF: what its MTF tab draws, for a request that names method, spectrum, focus and both radii. */
-  computeMtf(state: LvPreparedState, options: LvMtfOptions): LvMtfResult;
+  /** LV's product MTF: what its MTF tab draws, for a request with both radii and settings of method, spectrum, focus. */
+  computeMtf(request: LvAnalysisRequest, settings: LvMtfRequestOptions): LvMtfResult;
+  /**
+   * `computeMtf` step by step. The first result it yields is the request before any field is traced: the field
+   * axis, the focus it applies to every field and each field's target, pending or outside the model. A request its
+   * gate refuses, and one without a field axis, is returned at once and nothing is yielded.
+   */
+  computeMtfSteps(request: LvAnalysisRequest, settings: LvMtfRequestOptions): Generator<LvMtfResult, LvMtfResult>;
+  /**
+   * LV's refinement of one field through a ladder of grid sizes: `evaluate` is asked for the field at a size, each
+   * result is held to the one before it, and the best field so far is yielded after every size. A converged size
+   * ends it; so does a size without curves that a finer grid cannot help.
+   */
+  refineMtfField(
+    ladder: readonly number[],
+    evaluate: (size: number) => LvMtfGridOutcome,
+    frequencies: readonly number[],
+  ): Generator<LvMtfFieldDraft, void>;
+  /** A field of a result before it is traced: "pending", with the target's height and angle when it has one. */
+  emptyMtfField(
+    fraction: number,
+    target?: { readonly targetImageHeightMm: number | null; readonly fieldAngleDeg: number | null },
+  ): LvMtfFieldDraft;
+  /** Whether a field with this many unresolved rays, of this share of its flux, may still be reported. */
+  assessUnresolvedFlux(
+    failedRays: number,
+    unknownFluxFraction: number,
+  ): { readonly acceptable: boolean; readonly note: string | null };
+  /** A footprint widened on the sides whose guard band carried flux. */
+  expandMtfFootprint(footprint: LvMtfFootprint, sides: LvMtfOpenBorders, fraction?: number): LvMtfFootprint;
+  /** LV's `MTF_GRID_LADDER`: the grid sizes a field is refined through, coarse to fine. */
+  readonly mtfGridLadder: readonly number[];
+  /** LV's `MTF_DEFAULT_GRID_CAP`: the largest grid of a request that names none. */
+  readonly mtfDefaultGridCap: number;
+  /** LV's `MTF_MAX_FOOTPRINT_EXPANSIONS`: how often one field's footprint is widened. */
+  readonly mtfMaxFootprintExpansions: number;
+  /** LV's `MTF_MIN_RAYS`: fewer rays than this at a line are no pupil. */
+  readonly mtfMinRays: number;
+  /** LV's `MTF_FIELDS`: the fractions of the reference image height of a request that names none. */
+  readonly mtfDefaultFields: readonly number[];
   /** The spectrum the MTF tab requests for a preferred one: itself, or the reference line where glass data lacks. */
   resolveMtfSpectrum(state: LvPreparedState, preferred: string): LvMtfSpectrumChoice;
   /** LV's `MTF_FREQUENCIES`: the frequencies `computeMtf` reports for a request that names none, as the tab's does. */

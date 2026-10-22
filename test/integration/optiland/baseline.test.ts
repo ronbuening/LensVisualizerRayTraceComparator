@@ -3,7 +3,7 @@
 // with the reason when one is missing. Run output goes to a temporary directory: nothing is written into the
 // repository, into LensVisualizer or into optiland.
 //
-// The baselines were written at LensVisualizer c05a2ab7 (engine closure 78215d72, 151 files) and optiland 4e893f53
+// The baselines were written at LensVisualizer ab0fd4cf (engine closure 94778d3d, 175 files) and optiland 4e893f53
 // (source hash 279af5c5). A record is held to OK only while its case and its two engines are the ones the baseline
 // names: LensVisualizer's lens files change by the day, and a record of an edited lens is STALE(case), which is
 // reported and is no failure of this test. What the stale records come to is said in the diagnostics.
@@ -33,8 +33,11 @@ interface Checked {
 }
 
 for (const [suite, records] of [
-  ["benchmark", 24 * 4 * 3],
-  ["features", 18 * 4 * 3],
+  // 12 configurations in four conditions, on two sets of lines: five rungs, R0 to R4, and three pairs of engines
+  // each. R4 is held here on every run of both suites: its requests are those of R2 and R3, so the check traces
+  // nothing more for it.
+  ["benchmark", 96 * 5 * 3],
+  ["features", 18 * 5 * 3],
 ] as const) {
   test(
     `baseline check ${suite}: every record of the cases and engines at hand is OK`,
@@ -50,7 +53,7 @@ for (const [suite, records] of [
       for (const record of current) {
         const at = `${record.run} ${record.rung} ${record.a} ${record.b}`;
         assert.equal(record.outcome, "OK", `${at}: ${record.moved.join("; ")}`);
-        assert.ok(record.verdict === "PASS" || record.verdict === "FLOOR", `${at}: ${record.verdict}`);
+        assert.equal(record.verdict, "PASS", `${at}: ${record.verdict}`);
       }
       // With nothing stale the check is the whole baseline, and the command exits 0.
       if (current.length === said.records.length) assert.equal(ended.code, 0, ended.out);

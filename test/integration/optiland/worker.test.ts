@@ -1,7 +1,7 @@
 // The engine `optiland` on the real optiland: the worker starts, says who it is, conforms to the contract, describes
-// the system it built, gives its first-order data, traces given rays and answers every other quantity "unsupported"
-// for now, and writes nothing into the optiland checkout or its environment. Rungs R0, R1 and R2 against the other
-// engines are in r0.test.ts, r1.test.ts and r2.test.ts.
+// the system it built, gives its first-order data, traces given rays, gives its own MTF and answers every other
+// quantity "unsupported", and writes nothing into the optiland checkout or its environment. Rungs R0, R1 and R2
+// against the other engines are in r0.test.ts, r1.test.ts and r2.test.ts; its MTF is in mtf.test.ts.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -23,8 +23,10 @@ import { createRunCommand } from "../../../src/cli/commands/run.ts";
 import { EXIT_OK, runCli } from "../../../src/cli/main.ts";
 import type { EngineIdentity } from "../../../src/contract/engine.ts";
 import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
+import { SELFTEST_ECHO } from "../../../src/contract/quantities/selftestEcho.ts";
+import type { JsonObject } from "../../../src/contract/json.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
 import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { RUNGS } from "../../../src/core/rungs.ts";
@@ -33,6 +35,7 @@ import { PYTHON_WORKERS_DIRECTORY } from "../../../src/engines/optiland/definiti
 import { createEngineRegistry, createEngineTransport, engineTimeouts } from "../../../src/engines/registry.ts";
 import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
+import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -58,6 +61,13 @@ import {
 const skip = OPTILAND_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const SHA256 = /^[0-9a-f]{64}$/;
+/** An `mtf.native` spec the engine answers about any case of an object at infinity and one line. */
+const MTF_SPEC_AXIS: JsonObject = {
+  frequenciesPerMm: [10, 30],
+  fields: { kind: "angles-deg", values: [0] },
+  method: "diffraction",
+  focus: "design",
+};
 /** The Python test that makes numba compile, and cache, a function of optiland. */
 const JIT_TEST = "test_what_the_jit_compiles_is_cached_where_the_worker_said_and_not_beside_the_source";
 
@@ -178,7 +188,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   const adapter = await createEngineRegistry(loaded).create("optiland");
   t.after(() => adapter.close());
   const { identity, capabilities, contract } = await adapter.describe();
-  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION });
+  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 });
   assert.equal(identity.id, "optiland");
   assert.match(identity.fingerprint, SHA256);
   assert.match(identity.adapterRevision ?? "", SHA256);
@@ -196,9 +206,9 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.commit, commit);
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
-  // The built-system echo, the first-order data and the trace of given rays, each at the version of its definition
-  // the comparator holds; every feature flag, no limit.
-  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity, raysTraceQuantity];
+  // The built-system echo, the first-order data, the trace of given rays and its own MTF, each at the version of
+  // its definition the comparator holds; every feature flag, no limit.
+  const offered = [systemDescribeQuantity, paraxialFirstOrderQuantity, raysTraceQuantity, mtfNativeQuantity];
   assert.deepEqual(
     capabilities.quantities,
     Object.fromEntries(offered.map((quantity) => [quantity.id, { version: quantity.version }])),
@@ -207,9 +217,13 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(capabilities.deterministic, true);
 
   // The engine itself answers "unsupported" for each quantity it does not offer, and for one there is not. A trace
-  // needs rays: the contract's worked two.
+  // needs rays: the contract's worked two. An MTF needs fields and frequencies: the axis of the singlet.
+  const specs: Record<string, JsonObject> = {
+    [raysTraceQuantity.id]: RAYS_SPEC_SINGLET,
+    [mtfNativeQuantity.id]: MTF_SPEC_AXIS,
+  };
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
-    const spec = quantity === raysTraceQuantity.id ? RAYS_SPEC_SINGLET : {};
+    const spec = specs[quantity] ?? {};
     const result = await adapter.run(makeRequest({ caseId: CASE.id, quantity, spec }), CASE);
     assert.deepEqual(result.engine, {
       id: "optiland",
@@ -250,13 +264,23 @@ test(
     const err: string[] = [];
     const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
     const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
-    const rungs = RUNGS.map((rung) => rung.id);
-    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", rungs.join(",")], io, [
+    const every = RUNGS.map((rung) => rung.id);
+    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", every.join(",")], io, [
       command,
     ]);
     // The standard error names the fields a case file gives no rays for; that fails nothing.
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
+    // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
+    // their own, R4f, R5, R5g and R6b, ask nobody anything of a case that no LensVisualizer sampled; nor do the rungs
+    // that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its frequencies from.
+    const rungs = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true).map(
+      (rung) => rung.id,
+    );
+    assert.deepEqual(
+      every.filter((rung) => !rungs.includes(rung)),
+      ["r4", "r4f", "r5", "r5g", "r6a", "r6b"],
+    );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
     // The two rungs of traced rays ask the same request, of the one field a case file has rays for, the axis: the
@@ -322,13 +346,14 @@ test(
     const identities: EngineIdentity[] = [];
     const helloMs: number[] = [];
     const traceMs: number[] = [];
+    const mtfMs: number[] = [];
     for (const start of ["cold", "warm"]) {
       const adapter = await createEngineRegistry(loaded).create("optiland");
       try {
         const started = performance.now();
         identities.push((await adapter.describe()).identity);
         helloMs.push(performance.now() - started);
-        const refused = await adapter.run(makeRequest({ caseId: CASE.id, quantity: "mtf.native", spec: {} }), CASE);
+        const refused = await adapter.run(makeRequest({ caseId: CASE.id, quantity: SELFTEST_ECHO, spec: {} }), CASE);
         assert.equal(refused.status, "unsupported", start);
         // A case is built: what the builder uses of optiland is imported now, and cached like the rest. Then
         // optiland's paraxial tracer is asked, which is more of optiland that is imported and cached.
@@ -344,11 +369,20 @@ test(
         traceMs.push(performance.now() - traceStarted);
         assert.equal(traced.status, "ok", `${start} rays.trace: ${JSON.stringify(traced.error)}`);
         assert.deepEqual(raysTraceQuantity.validateData(traced.data), [], start);
+        // And optiland's own MTF is asked: its MTF, PSF and wavefront modules are imported now, matplotlib's pyplot
+        // and the numba functions of its Huygens kernel with them, and its ray aiming runs.
+        const mtf = makeRequest({ caseId: CASE.id, quantity: mtfNativeQuantity.id, spec: MTF_SPEC_AXIS });
+        const mtfStarted = performance.now();
+        const answered = await adapter.run(mtf, CASE);
+        mtfMs.push(performance.now() - mtfStarted);
+        assert.equal(answered.status, "ok", `${start} mtf.native: ${JSON.stringify(answered.error)}`);
+        assert.deepEqual(mtfNativeQuantity.validateData(answered.data), [], start);
       } finally {
         await adapter.close();
       }
     }
     assert.ok(Math.max(...traceMs) < engineTimeoutsOf(loaded).runMs / 10, `the first trace took ${traceMs[0]} ms`);
+    assert.ok(Math.max(...mtfMs) < engineTimeoutsOf(loaded).runMs / 10, `the first MTF took ${mtfMs[0]} ms`);
 
     // The JIT at work, on the cold cache: the Python test that traces a ray, which numba compiles a function for.
     const traced = optilandPython(["-m", "unittest", `tests.optiland.test_real.RealOptilandTest.${JIT_TEST}`], {
@@ -362,6 +396,7 @@ test(
     const after = snapshot(directories);
     t.diagnostic(`hello: cold ${(helloMs[0] / 1000).toFixed(1)} s, warm ${(helloMs[1] / 1000).toFixed(1)} s`);
     t.diagnostic(`first trace of a worker: cold ${traceMs[0].toFixed(0)} ms, warm ${traceMs[1].toFixed(0)} ms`);
+    t.diagnostic(`first MTF of a worker: cold ${mtfMs[0].toFixed(0)} ms, warm ${mtfMs[1].toFixed(0)} ms`);
     t.diagnostic(`fingerprint ${identities[0].fingerprint}`);
     t.diagnostic(`snapshot: ${before.size} entries under ${directories.join(", ")}`);
 

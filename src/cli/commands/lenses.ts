@@ -101,7 +101,7 @@ async function list(binding: LvBinding, json: boolean, io: CliIo): Promise<numbe
 }
 
 function showText(lens: { key: string; name: string; file: string }, summary: StateSummary): string {
-  const header = ["#", "label", "R", "d", "nd", "sd", "z", "asphere", "synthetic"];
+  const header = ["#", "label", "R", "d", "nd", "sd", "clips", "z", "asphere", "synthetic"];
   const rows = summary.surfaces.map((surface) => [
     String(surface.index),
     surface.label,
@@ -109,6 +109,7 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     numberText(surface.d),
     numberText(surface.nd),
     numberText(surface.sd),
+    surface.clips ? "yes" : "no",
     numberText(surface.z),
     surface.asphere ? "yes" : "no",
     surface.synthetic ?? "",
@@ -126,7 +127,7 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     `focus  ${numberText(summary.focusT)}`,
     `zoom   ${numberText(summary.zoomT)}`,
     "",
-    ...table([header, ...rows], new Set([0, 2, 3, 4, 5, 6])),
+    ...table([header, ...rows], new Set([0, 2, 3, 4, 5, 7])),
     "",
     ...totals,
     "",
@@ -153,7 +154,7 @@ async function show(
   if (!isZoom && zoom !== undefined && zoom !== 0) io.stderr(`lvrtc lenses: ${primeZoomNote(key)}\n`);
   const zoomT = isZoom ? (zoom ?? 0) : 0;
   const runtime = binding.api.buildLens(lens.data);
-  const summary = summarizeState(binding.api.prepareRuntimeState(runtime, focusT, zoomT));
+  const summary = summarizeState(binding.api.prepareRuntimeState(runtime, focusT, zoomT), runtime);
   const { key: lensKey, name, file } = lens.entry;
   io.stdout(json ? jsonText({ key: lensKey, name, file, ...summary }) : showText(lens.entry, summary));
   return EXIT_OK;

@@ -17,7 +17,7 @@ import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { ResultEnvelope } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../contract/version.ts";
 import { sha256Hex } from "../../core/numeric/hash.ts";
 import { decodeNdArray, encodeNdArray } from "../../core/numeric/ndarray.ts";
 import type { NdArray } from "../../core/numeric/ndarray.ts";
@@ -61,7 +61,7 @@ function spoiled(proper: ProtocolResponse, failMode: Exclude<FailMode, "none" | 
 export function createEngine(options: unknown): ProtocolHandler {
   const { id, bias, offersQuantities, failMode, fingerprint } = parseFakeOptions(options);
   const descriptor: EngineDescriptor = {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
     identity: { id, version: FAKE_ENGINE_VERSION, fingerprint, details: { bias, offersQuantities, failMode } },
     capabilities: {
       features: { supported: [...FEATURE_FLAGS], limits: {} },

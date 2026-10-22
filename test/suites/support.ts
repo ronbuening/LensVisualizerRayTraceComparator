@@ -14,6 +14,18 @@ export function suitePath(name: (typeof SUITE_NAMES)[number]): string {
   return join(SUITES_DIR, `${name}.json`);
 }
 
+/**
+ * What a run of the benchmark suite is called for each of its four conditions, between the configuration and the
+ * lines: wide open at the design plane; wide open at LensVisualizer's best axial focus; the f/8 comparison of
+ * LensVisualizer's MTF tab at the design plane; and that comparison at its own best axial focus.
+ */
+export const BENCHMARK_CONDITIONS = ["", "-best", "-f8", "-f8-best"] as const;
+
+/** True for a run as its lens opens: wide open, at the design plane. A suite's defaults are not looked at. */
+export function asItOpens(run: { readonly aperture?: unknown; readonly imagePlane?: unknown }): boolean {
+  return run.aperture === undefined && run.imagePlane === undefined;
+}
+
 /** The lenses of the benchmark suite; `nikon-z-24-70f4s` is run at both ends of its zoom. */
 export const BENCHMARK_KEYS: readonly string[] = [
   "canon-ef-135-f2l-usm",

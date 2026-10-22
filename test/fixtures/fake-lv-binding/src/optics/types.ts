@@ -7,6 +7,8 @@ export interface FakeSurfaceData {
   sd: number;
   asphere?: Record<string, number>;
   synthetic?: "rearPlate";
+  /** False only on a rear plate whose rim the fake generated: it clips no ray, and its `sd` is an envelope. */
+  clips?: false;
 }
 
 export interface FakeFiniteConjugate {
@@ -21,9 +23,11 @@ export interface FakeLensData {
   key: string;
   name: string;
   surfaces: FakeSurfaceData[];
-  rearPlate?: { d: number; nd: number; gap: number; sd: number };
+  /** A plate behind the lens. Without a published `sd` the fake generates a rim, which does not clip. */
+  rearPlate?: { d: number; nd: number; gap: number; sd?: number };
   focusTravel?: number;
-  zoomPositions?: number[];
+  schema: 2;
+  zoom?: { stations: unknown[] };
   zoomStopSDs?: number[];
   zoomGaps?: number[];
   fopen?: number;
@@ -31,12 +35,20 @@ export interface FakeLensData {
   maxFstop?: number;
   /** The height of a ray at the stop per unit of height at the entrance pupil; 1 without it. */
   pupilRatio?: number;
-  finiteConjugates?: FakeFiniteConjugate[];
+  conjugates?: FakeFiniteConjugate[];
   noDispersionData?: boolean;
   /** The fake's gate refuses the lens every MTF: its scale is "unverified". */
   unverifiedScale?: boolean;
   /** What the fake's product MTF says of the lens beside its curves. */
-  mtf?: { unconvergedFraction?: number; clippedChiefFraction?: number; limitingSurfaceLabel?: string };
+  mtf?: {
+    unconvergedFraction?: number;
+    clippedChiefFraction?: number;
+    limitingSurfaceLabel?: string;
+    /** True: the geometric MTF is sampled, grid by grid, from the fake's own bundles, and is no closed form. */
+    sampled?: boolean;
+    /** The share of the beam the fake's footprint scan finds; 1 without it. */
+    footprintScale?: number;
+  };
   /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
   field?: {
     mmPerDeg?: number;
@@ -108,7 +120,7 @@ export interface FakeFootprint {
 }
 
 export interface FakeRuntimeLens {
-  data: FakeLensData;
+  source: FakeLensData;
   surfaces: readonly FakeSurfaceData[];
   lastLensSurfaceIdx: number;
   isZoom: boolean;
@@ -132,6 +144,7 @@ export interface FakeStateSurface {
   nd: number;
   sd: number;
   innerSd: number | null;
+  clips: boolean;
   elemId: number;
   asphere: Record<string, number> | null;
   diffractive: null;
@@ -147,6 +160,7 @@ export interface FakeStateSurface {
 }
 
 export interface FakeState {
+  readonly traceGeometry: { readonly stopSurfaceIndex: number };
   lens: {
     key: string;
     runtime: FakeRuntimeLens;

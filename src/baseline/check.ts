@@ -17,10 +17,14 @@ export type StaleReason = (typeof STALE_REASONS)[number];
  * - `OK`: its case, its two engines and the policy are those of the baseline, and it is what it was;
  * - `REFRESHABLE`: it is stale, and run again its verdicts are the same and no judged metric moved by more than
  *   its tolerance: the baseline can be written anew;
- * - `DRIFT`: a verdict changed or a judged metric moved by more than its tolerance, whether or not it is stale;
+ * - `DRIFT`: of a gated rung, a verdict changed or a judged metric moved by more than its tolerance, whether or
+ *   not it is stale;
+ * - `MOVED`: of a recorded rung, a verdict changed (`RECORDED` to `ATTENTION`, a field that lost its curve) or a
+ *   metric with an attention band moved by more than the band, whether or not it is stale. A recorded rung has no
+ *   gate, so this is written down and fails nothing;
  * - `NEW`, `GONE`: the suite as it runs today has a record the baseline lacks, or lacks one the baseline has.
  */
-export const CHECK_OUTCOMES = ["OK", "REFRESHABLE", "DRIFT", "NEW", "GONE"] as const;
+export const CHECK_OUTCOMES = ["OK", "REFRESHABLE", "MOVED", "DRIFT", "NEW", "GONE"] as const;
 /** What one record came to. */
 export type CheckOutcome = (typeof CHECK_OUTCOMES)[number];
 
@@ -35,8 +39,23 @@ export interface CheckRecord {
   readonly outcome: CheckOutcome;
   /** The verdict of the pair as it runs today; undefined for a record that is `GONE`. */
   readonly verdict?: Verdict;
-  /** What moved, for a `DRIFT`: each change of a verdict and each metric that moved past its tolerance. */
+  /**
+   * What moved, for a `DRIFT` or a `MOVED`: each change of a verdict and each metric that moved past its tolerance
+   * or its band.
+   */
   readonly moved: readonly string[];
+  /**
+   * Every figure of the pair that is not what it was, judged or not, however little it moved: a metric's value
+   * and, where both baselines state it, the number of requests it was measured in. Left out when there is none.
+   */
+  readonly changes?: readonly CheckChange[];
+}
+
+/** One figure of a record that is not what the baseline has: null for a value that is not finite or not there. */
+export interface CheckChange {
+  readonly name: string;
+  readonly was: number | null;
+  readonly now: number | null;
 }
 
 function sameEngine(a: BaselineEngine | undefined, b: BaselineEngine | undefined): boolean {
@@ -66,18 +85,40 @@ function movedBetween(
   const judged = Object.hasOwn(policy.rungs, rung) ? policy.rungs[rung].metrics : {};
   const names = [...new Set([...was.metrics, ...now.metrics].map((metric) => metric.name))];
   for (const name of names) {
-    const tolerance = Object.hasOwn(judged, name) ? judged[name].tolerance : undefined;
-    if (tolerance === undefined) continue;
+    // A gated metric is held to its tolerance, a recorded one to its attention band.
+    const limits = Object.hasOwn(judged, name) ? judged[name] : undefined;
+    const [limit, called] =
+      limits?.tolerance !== undefined
+        ? [limits.tolerance, "tolerance"]
+        : limits?.attention !== undefined
+          ? [limits.attention, "band"]
+          : [undefined, ""];
+    if (limit === undefined) continue;
     const before = was.metrics.find((metric) => metric.name === name)?.value;
     const after = now.metrics.find((metric) => metric.name === name)?.value;
     if (before === after) continue;
     const said = (value: number | null | undefined): string =>
       value === undefined ? "not measured" : value === null ? "not finite" : numberText(value);
-    if (typeof before !== "number" || typeof after !== "number" || Math.abs(after - before) > tolerance) {
-      moved.push(`${name} was ${said(before)}, is ${said(after)} (tolerance ${numberText(tolerance)})`);
+    if (typeof before !== "number" || typeof after !== "number" || Math.abs(after - before) > limit) {
+      moved.push(`${name} was ${said(before)}, is ${said(after)} (${called} ${numberText(limit)})`);
     }
   }
   return moved;
+}
+
+/** Every figure of a pair that is not what it was: values, and the counts of requests where both state them. */
+function changesBetween(was: BaselinePair, now: BaselinePair): CheckChange[] {
+  const changes: CheckChange[] = [];
+  const names = [...new Set([...was.metrics, ...now.metrics].map((metric) => metric.name))];
+  for (const name of names) {
+    const [before, after] = [was, now].map((pair) => pair.metrics.find((metric) => metric.name === name));
+    const [a, b] = [before?.value ?? null, after?.value ?? null];
+    if (a !== b || (before === undefined) !== (after === undefined)) changes.push({ name, was: a, now: b });
+    if (before?.measured !== undefined && after?.measured !== undefined && before.measured !== after.measured) {
+      changes.push({ name: `${name} (requests measured)`, was: before.measured, now: after.measured });
+    }
+  }
+  return changes;
 }
 
 /**
@@ -89,7 +130,8 @@ function movedBetween(
  * adapter revision of either of its engines is another (or the engine is not there today), and by the policy when
  * the policy's hash is another. Stale or not, it is `DRIFT` when a verdict changed or a metric the policy judges
  * moved by more than its tolerance in `policy`, the policy of today; else it is `REFRESHABLE` when stale and `OK`
- * when not. A pure function.
+ * when not. A record of a rung the policy only records is `MOVED` in place of `DRIFT`, a metric of it being held
+ * to its attention band. Every record also lists each figure that is not what it was (`changes`). A pure function.
  */
 export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Policy): CheckRecord[] {
   const records: CheckRecord[] = [];
@@ -113,8 +155,17 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
         if ([a, b].some((id) => !sameEngine(engineOf(committed, id), engineOf(fresh, id)))) stale.push("engine");
         if (policyStale) stale.push("policy");
         const moved = movedBetween(pair, now, rung.requests === rungToday.requests, policy, rung.rung);
-        const outcome = moved.length > 0 ? "DRIFT" : stale.length > 0 ? "REFRESHABLE" : "OK";
-        records.push({ ...key, stale, outcome, verdict: now.verdict, moved });
+        const recorded = Object.hasOwn(policy.rungs, rung.rung) && policy.rungs[rung.rung].class === "recorded";
+        const outcome = moved.length > 0 ? (recorded ? "MOVED" : "DRIFT") : stale.length > 0 ? "REFRESHABLE" : "OK";
+        const changes = changesBetween(pair, now);
+        records.push({
+          ...key,
+          stale,
+          outcome,
+          verdict: now.verdict,
+          moved,
+          ...(changes.length === 0 ? {} : { changes }),
+        });
       }
     }
   }
@@ -152,4 +203,49 @@ export function checkFails(records: readonly CheckRecord[]): boolean {
 export function stateText(record: CheckRecord): string {
   const stale = record.stale.length === 0 ? "" : `STALE(${record.stale.join(",")}) `;
   return `${stale}${record.outcome}`;
+}
+
+/** One metric of one pair of one rung, over the records of a check in which it is not what it was. */
+export interface ChangeSummary {
+  readonly rung: string;
+  readonly a: string;
+  readonly b: string;
+  readonly name: string;
+  /** In how many records the figure changed, and how many records the pair has in the rung. */
+  readonly records: number;
+  readonly of: number;
+  /** The largest change of the figure, as a magnitude, and the run it is in; null where a value was no number. */
+  readonly largest: number | null;
+  readonly run: string;
+}
+
+/**
+ * What moved over a whole check, however little: for each rung, pair and figure that is not what it was in some
+ * record, in how many records, the largest change and the run it is in, in the order the records first have them.
+ * It is the before and after of an engine that changed: a gate says whether a change matters, this says what
+ * changed.
+ */
+export function summarizeChanges(records: readonly CheckRecord[]): ChangeSummary[] {
+  const summaries = new Map<string, ChangeSummary>();
+  const sizes = new Map<string, number>();
+  for (const record of records) {
+    const pairKey = `${record.rung}\0${record.a}\0${record.b}`;
+    sizes.set(pairKey, (sizes.get(pairKey) ?? 0) + 1);
+    for (const change of record.changes ?? []) {
+      const key = `${pairKey}\0${change.name}`;
+      const size = change.was === null || change.now === null ? null : Math.abs(change.now - change.was);
+      const known = summaries.get(key);
+      const { rung, a, b, run } = record;
+      if (known === undefined) {
+        summaries.set(key, { rung, a, b, name: change.name, records: 1, of: 0, largest: size, run });
+      } else {
+        const larger = known.largest !== null && (size === null || size > known.largest);
+        summaries.set(key, { ...known, records: known.records + 1, ...(larger ? { largest: size, run } : {}) });
+      }
+    }
+  }
+  return [...summaries.values()].map((summary) => ({
+    ...summary,
+    of: sizes.get(`${summary.rung}\0${summary.a}\0${summary.b}`) ?? 0,
+  }));
 }

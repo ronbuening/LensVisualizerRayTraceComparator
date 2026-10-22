@@ -1,0 +1,21 @@
+{
+  "contract": "1.0",
+  "kind": "run-spec",
+  "name": "nikkor-z50f12-f8-best-photopic",
+  "lens": {
+    "kind": "lv",
+    "key": "nikkor-z50f12"
+  },
+  "aperture": {
+    "kind": "lv-f8-comparison"
+  },
+  "lines": {
+    "kind": "photopic"
+  },
+  "imagePlane": {
+    "kind": "lv-best-axial"
+  },
+  "rungs": [
+    "r4f"
+  ]
+}

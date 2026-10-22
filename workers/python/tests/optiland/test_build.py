@@ -415,6 +415,50 @@ class BuildTest(unittest.TestCase):
         at_the_rim = optic.surfaces[1].aperture.contains(np.zeros(1), np.array([clip]))
         self.assertEqual(bool(at_the_rim[0]), clip * clip <= clip**2)
 
+    def test_a_surface_that_does_not_clip_is_built_without_an_aperture_and_described_by_an_infinity(self) -> None:
+        # A lens, and behind it a plate of two planes that do not clip: 6 mm is their extent, and no limit.
+        case = make_case(
+            [
+                surface(0.0, sphere(50), 9.0),
+                surface(4.0, sphere(-50), 9.0),
+                surface(10.0, PLANE, 6.0, clip=None),
+                surface(12.0, PLANE, 6.0, clip=None),
+            ],
+            stop_radius=3.0,
+            last_lens=1,
+        )
+        self.assertEqual(case["contract"], "1.2")
+        optic = build_case(case).optics[0]
+        data = self.described(case)
+        self.assertEqual(f8(data["clipRadius"]), [9.0, 9.0, math.inf, math.inf])
+        self.assertEqual(f8(data["innerClipRadius"]), [0.0, 0.0, 0.0, 0.0])
+        # The heights of the sag are still fractions of the extent, and a plane's sag is 0 at each.
+        self.assertEqual(f8(data["sagRadii"])[18:], [fraction * 6.0 for fraction in NINE] * 2)
+        self.assertEqual(f8(data["sag"])[18:], [0.0] * 18)
+        self.assert_sag_is_the_contracts(case, data)
+        for entry in optic.surfaces[1:3]:
+            self.assertEqual(type(entry.aperture).__name__, "RadialAperture")
+        for entry in optic.surfaces[3:5]:
+            self.assertIsNone(entry.aperture, "optiland clips only where a surface has an aperture")
+            self.assertEqual(float(entry.semi_aperture), 6.0, "the extent, which optiland clips nothing by")
+
+        # What the description rests on, asked of optiland: rays far beyond the extent of the plate, traced through
+        # the plate alone, all arrive; with the same plate built as one that clips at 6 mm, those beyond it do not.
+        np = build.optiland_api().np
+        heights = np.array([0.0, 5.9, 6.1, 60.0, 6e6])
+
+        def arriving(clip: float | None) -> list[bool]:
+            plate = make_case([surface(0.0, PLANE, 6.0, clip=clip), surface(2.0, PLANE, 6.0, clip=clip)])
+            built = build_case(plate).optics[0]
+            zeros, ones = np.zeros_like(heights), np.ones_like(heights)
+            launched = (zeros, heights.copy(), zeros - 1.0, zeros, zeros, ones)
+            rays = build.optiland_api().RealRays(*launched, ones, 0.5875618)
+            built.surfaces.trace(rays)
+            return [bool(value > 0.0) for value in np.asarray(built.surfaces.intensity)[-1]]
+
+        self.assertEqual(arriving(None), [True, True, True, True, True])
+        self.assertEqual(arriving(6.0), [True, True, False, False, False])
+
     # ── What optiland's first-order model does not see ───────────────────────────────────────────────────────────
 
     def test_optilands_paraxial_data_does_not_see_a_term_of_power_2(self) -> None:
@@ -492,6 +536,47 @@ class VerificationTest(unittest.TestCase):
 
         self.assertIn(
             "surface 2 (STO): aperture.r_max is 12.0 in the optic optiland built and 6.0", self.mismatch(doubled)
+        )
+
+    def test_an_aperture_on_a_surface_that_does_not_clip_and_none_on_one_that_does_are_each_named(self) -> None:
+        plated = make_case(
+            [
+                surface(0.0, sphere(50), 9.0),
+                surface(4.0, sphere(-50), 9.0),
+                surface(10.0, PLANE, 6.0, clip=None),
+                surface(12.0, PLANE, 6.0, clip=None),
+            ],
+            last_lens=1,
+        )
+        self.assertEqual(len(build_case(plated).optics), 1, "as it is, the case is built and verified")
+        api = build.optiland_api()
+
+        def rimmed(keywords: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any] | None:
+            # The mistake of a builder that knows nothing of such a surface: the extent taken for a clip radius.
+            if entry["label"] != "3":
+                return None
+            return {**keywords, "aperture": api.RadialAperture(r_max=entry["aperture"]["nominalSemiDiameter"])}
+
+        self.assertEqual(
+            self.mismatch(rimmed, plated),
+            "surface 2 (3): the class of its aperture is 'RadialAperture' in the optic optiland built and None in "
+            "the case (line 0, 587.5618 nm)",
+        )
+
+        def unbounded(keywords: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any] | None:
+            # An aperture that cannot clip a ray at a height is still an aperture, where the case has none.
+            return {**keywords, "aperture": api.RadialAperture(r_max=math.inf)} if entry["label"] == "4" else None
+
+        self.assertIn("surface 3 (4): the class of its aperture is 'RadialAperture'", self.mismatch(unbounded, plated))
+
+        def bare(keywords: dict[str, Any], entry: dict[str, Any]) -> dict[str, Any] | None:
+            # And the other way about: a surface of the case that clips, left without an aperture.
+            return {**keywords, "aperture": None} if entry["label"] == "2" else None
+
+        self.assertEqual(
+            self.mismatch(bare, plated),
+            "surface 1 (2): the class of its aperture is None in the optic optiland built and 'RadialAperture' in "
+            "the case (line 0, 587.5618 nm)",
         )
 
     def test_a_tolerance_the_factory_dropped_names_the_surface_and_tol(self) -> None:

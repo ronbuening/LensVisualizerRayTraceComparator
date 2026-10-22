@@ -15,9 +15,13 @@ export interface RunState {
   readonly focus?: { readonly kind: "infinity" } | { readonly kind: "focusT"; readonly value: number };
 }
 
-/** The aperture: wide open, an f-number by LensVisualizer's rule, or a stop radius in mm. */
+/**
+ * The aperture: wide open, an f-number by LensVisualizer's rule, the stop of the f/8 comparison of LensVisualizer's
+ * MTF tab, or a stop radius in mm.
+ */
 export type RunAperture =
   | { readonly kind: "wide-open" }
+  | { readonly kind: "lv-f8-comparison" }
   | { readonly kind: "f-number"; readonly value: number }
   | { readonly kind: "stop-radius"; readonly mm: number };
 

@@ -10,6 +10,7 @@ import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import { makeResult } from "../contract/result.ts";
 import type { ResultEnvelope } from "../contract/result.ts";
+import type { JsonObject } from "../contract/json.ts";
 import type { RunSpec } from "../contract/runSpec.ts";
 import { formatIssues } from "../contract/schemas.ts";
 import { CONTRACT_VERSION } from "../contract/version.ts";
@@ -20,11 +21,13 @@ import { QUANTITIES } from "../quantities/index.ts";
 import type { QuantityModule } from "../quantities/module.ts";
 import { SOURCE_CHANGED, writeRunOutput } from "./manifest.ts";
 import type { ManifestEngine, ManifestJob, ManifestRaySets, ManifestSource, RunManifest } from "./manifest.ts";
+import type { MtfRecipe, MtfRecipeResolution } from "./mtfRecipe.ts";
 import { negotiate } from "./negotiate.ts";
+import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
-import { raySetId } from "../rays/raySets.ts";
+import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
@@ -55,6 +58,36 @@ export interface JobOutcome {
   readonly detail: string | null;
 }
 
+/** What the answers a follow-up is decided from are answers to. */
+export interface FollowUpContext {
+  /** The spec of the request. */
+  readonly spec: JsonObject;
+  readonly opticalCase: OpticalCase;
+  /** The MTF recipe of the run; null where the run has none. */
+  readonly recipe: MtfRecipe | null;
+}
+
+/**
+ * A second question to one engine of a rung, asked only where the first answers call for it: the same request
+ * with `options` laid over the options it had. The comparison ladder asks an engine for a finer sampling only for
+ * the rows that are outside their band, since the finer sampling costs several times the first.
+ */
+export interface FollowUp {
+  /** The rung whose jobs it follows. */
+  readonly rung: string;
+  /** The engine that is asked again. */
+  readonly engine: string;
+  /** What the second job is called in the manifest (`ManifestJob.step`). */
+  readonly step: string;
+  /** The options laid over those of the engine's first job. Where they change none, nothing is asked. */
+  readonly options: JsonObject;
+  /**
+   * Whether the answers to one request call for the second question. `answers` holds the data of every engine of
+   * the rung whose job for the request ended "ok", by engine id, that of `engine` among them. A pure function.
+   */
+  needed(answers: ReadonlyMap<string, JsonObject>, context: FollowUpContext): boolean;
+}
+
 /** What `runSuite` is given. */
 export interface RunSuiteInput {
   readonly suite: LoadedSuite;
@@ -77,6 +110,11 @@ export interface RunSuiteInput {
   readonly rungs?: readonly string[];
   /** The rungs there are; `RUNGS` unless given. */
   readonly rungDefinitions?: readonly RungDefinition[];
+  /**
+   * The follow-ups of the rungs (`FollowUp`); none unless given. Each is decided when the jobs of its rung for a
+   * run have ended, from the answers in the store, and its job is recorded after them.
+   */
+  readonly followUps?: readonly FollowUp[];
   /** Called with each job as it finishes, in manifest order. */
   readonly onJob?: (outcome: JobOutcome) => void;
 }
@@ -105,6 +143,8 @@ interface PlannedJob {
   readonly engineId: string;
   /** The rung's request, with the options the run states for this engine. */
   readonly request: QuantityRequest;
+  /** The step a job that follows another is (`FollowUp.step`). */
+  readonly step?: string;
 }
 
 /** An engine for the length of a suite: reached and described, or found unusable. */
@@ -193,18 +233,36 @@ async function raySetsOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optic
   return source.raySets(spec, opticalCase);
 }
 
-/** Every job of a suite before it is run, and the ray sets that were generated for its runs. */
+/** Why a run has no MTF recipe when the source of its case resolves none, or no source was given. */
+const NO_RECIPE_SOURCE = "recipe-unavailable: no case source resolves an MTF recipe for this lens";
+
+/**
+ * The MTF recipe of one run, from the source of its lens (`CaseSource.recipe`); none, and the problem that says so,
+ * when no source was given for the lens or the source resolves no recipe.
+ */
+async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: OpticalCase): Promise<MtfRecipeResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.recipe === undefined) return { recipe: null, problems: [NO_RECIPE_SOURCE] };
+  return source.recipe(spec, opticalCase);
+}
+
+/** Every job of a suite before it is run, and what was generated for its runs. */
 interface Plan {
   readonly jobs: readonly PlannedJob[];
   /** The ray sets of each run that a rung needed them for, by run name. */
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The ray sets on the finer lattice of each run that a rung needed them for, by run name. */
+  readonly fineRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The MTF recipe of each run that a rung needed one for, by run name. */
+  readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
 
 /**
  * Every job of the suite, in manifest order, with nothing run and no engine contacted. What was asked for is
  * checked for every run, also one that cannot be run, so that a rung or an engine that does not exist is reported
  * whatever else is wrong. The ray sets of a run are generated here, once, and only when a rung that needs them is
- * one of the run's.
+ * one of the run's; so is its MTF recipe. A rung that is about named engines (`RungDefinition.engines`) is planned
+ * for exactly those, in id order, whatever engines the run names.
  */
 async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const { suite, registry, rungDefinitions = RUNGS } = input;
@@ -230,30 +288,44 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
 
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
+  const fineRaySets = new Map<string, ManifestRaySets>();
+  const recipes = new Map<string, MtfRecipeResolution>();
   for (const [index, { spec, opticalCase }] of suite.runs.entries()) {
     const { rungs, engineIds } = selected[index];
     if (opticalCase === null) continue;
     let inputs = NO_RUNG_INPUTS;
     if (rungs.some((rung) => rung.needsRaySets === true)) {
       const { sets, problems } = await raySetsOf(input, spec, opticalCase);
-      inputs = { raySets: sets };
+      inputs = { ...inputs, raySets: sets };
       raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsFineRaySets === true)) {
+      const finer = { ...spec, sampling: fineSampling(spec.sampling) };
+      const { sets, problems } = await raySetsOf(input, finer, opticalCase);
+      inputs = { ...inputs, fineRaySets: sets };
+      fineRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsRecipe === true)) {
+      const { recipe, problems } = await recipeOf(input, spec, opticalCase);
+      inputs = { ...inputs, recipe };
+      recipes.set(spec.name, { recipe, problems: [...problems] });
     }
     for (const rung of rungs) {
       const quantity = QUANTITIES.get(rung.quantity);
       if (quantity === undefined) throw new Error(`rung ${rung.id}: ${rung.quantity} is not a quantity`);
-      const requests = requestsOf(
-        rung,
-        quantity,
-        opticalCase,
-        spec,
-        rung.needsRaySets === true ? inputs : NO_RUNG_INPUTS,
-      );
-      for (const engineId of engineIds) {
+      const rungInputs: RungInputs = {
+        raySets: rung.needsRaySets === true ? inputs.raySets : NO_RUNG_INPUTS.raySets,
+        ...(rung.needsFineRaySets === true ? { fineRaySets: inputs.fineRaySets ?? [] } : {}),
+        recipe: rung.needsRecipe === true ? inputs.recipe : null,
+      };
+      const requests = requestsOf(rung, quantity, opticalCase, spec, rungInputs);
+      for (const engineId of rung.engines === undefined ? engineIds : [...new Set(rung.engines)].sort()) {
         // An own key: an engine id such as "constructor" must not find what every object inherits.
         const options = spec.sampling?.engines;
-        const engineOptions = options !== undefined && Object.hasOwn(options, engineId) ? options[engineId] : undefined;
+        const ofRun = options !== undefined && Object.hasOwn(options, engineId) ? options[engineId] : undefined;
         for (const built of requests) {
+          const ofRung = rung.engineOptions?.(spec, rungInputs, engineId, built);
+          const engineOptions = ofRung === undefined ? ofRun : { ...ofRung, ...ofRun };
           const { caseId, spec: requestSpec } = built;
           const request =
             engineOptions === undefined
@@ -264,7 +336,7 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { jobs, raySets };
+  return { jobs, raySets, fineRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -279,6 +351,7 @@ function jobOf(
     quantity: planned.rung.quantity,
     requestId: planned.request.id,
     engine: planned.engineId,
+    ...(planned.step === undefined ? {} : { step: planned.step }),
     ...ending,
   };
 }
@@ -387,6 +460,46 @@ async function runJob(
 }
 
 /**
+ * The jobs that follow those of one run and rung, which have all ended: for each follow-up of the rung and each
+ * request the engine it names answered, one more job where the answers call for it and its options change the
+ * request's. In the order of `followUps` and then of the requests.
+ */
+function followingJobs(
+  ended: readonly { readonly planned: PlannedJob; readonly outcome: JobOutcome }[],
+  followUps: readonly FollowUp[],
+  recipe: MtfRecipe | null,
+  store: ResultStore,
+): PlannedJob[] {
+  const following: PlannedJob[] = [];
+  const rung = ended[0]?.planned.rung.id;
+  for (const followUp of followUps.filter((candidate) => candidate.rung === rung)) {
+    for (const first of ended.filter(({ planned }) => planned.engineId === followUp.engine)) {
+      const { request, opticalCase } = first.planned;
+      const options = { ...request.engineOptions, ...followUp.options };
+      if (canonicalJson(options) === canonicalJson(request.engineOptions ?? {})) continue;
+      const answers = new Map<string, JsonObject>();
+      for (const { planned, outcome } of ended) {
+        const { status, storeKey: key } = outcome.job;
+        if (planned.request.id !== request.id || status !== "ok" || key === null) continue;
+        const found = store.get(key);
+        if (found.kind === "hit" && found.entry.result.data !== undefined) {
+          answers.set(planned.engineId, found.entry.result.data);
+        }
+      }
+      if (!answers.has(followUp.engine)) continue;
+      if (!followUp.needed(answers, { spec: request.spec, opticalCase, recipe })) continue;
+      const { caseId, quantity, spec } = request;
+      following.push({
+        ...first.planned,
+        request: makeRequest({ caseId, quantity, spec, engineOptions: options }),
+        step: followUp.step,
+      });
+    }
+  }
+  return following;
+}
+
+/**
  * The audit of every case source that serves a run of the suite, by lens kind in sorted order, as the manifest
  * records it; undefined when no source has one. A source that changed is added to `warnings` with what changed.
  */
@@ -418,9 +531,13 @@ function auditSources(
  * A run with a rung that traces rays has its ray sets generated first, by the source of its case
  * (`CaseSource.raySets`), once for all such rungs: the manifest records the identity of each set and, as coded
  * problems, each field that has none. A field without rays fails nothing; the rung asks for the sets there are.
+ * A run with a rung that also traces a finer lattice (`RungDefinition.needsFineRaySets`) has those sets generated
+ * by the same source, asked with the finer sampling (`fineSampling`), and recorded under `fineRaySets`.
+ * A run with a rung that needs an MTF recipe has it resolved likewise (`CaseSource.recipe`), and the manifest
+ * records the recipe, or why the run has none; such a rung asks nothing of a run without one.
  *
- * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order and each
- * request of the rung, one job:
+ * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order (for a
+ * rung that is about named engines: each of those) and each request of the rung, one job:
  *
  * 1. the engine is created and described, once per suite. One that cannot be used ends each of its jobs as "error"
  *    with the code of why (`ENGINE_UNAVAILABLE_CODES`), and the other engines carry on;
@@ -433,6 +550,11 @@ function auditSources(
  *    not decode, becomes "error" with the code `INVALID_DATA`;
  * 5. a result of status "ok" or "unsupported" is stored at once; an "error" or a "pending" job never is. So a run
  *    that is killed has lost nothing it finished, and the next run asks only for what is missing.
+ *
+ * When the jobs of a run and rung have ended, the follow-ups of the rung (`RunSuiteInput.followUps`) are decided
+ * from their answers: an engine is asked the same request again, with other options, where the first answers call
+ * for it, as a job that states its `step`. Whether one is asked depends on the answers alone, so two runs against
+ * the same engines still write the same manifest.
  *
  * When the last job has ended, each case source that built a case of the suite is audited (`CaseSource.audit`):
  * the manifest records what it says identifies its inputs, and "source-changed-during-run" when they are no longer
@@ -448,7 +570,7 @@ function auditSources(
  */
 export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
-  const { jobs: planned, raySets } = await planJobs(input);
+  const { jobs: planned, raySets, fineRaySets, recipes } = await planJobs(input);
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -472,10 +594,24 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
 
   const outcomes: JobOutcome[] = [];
   try {
-    for (const job of planned) {
+    const { followUps = [] } = input;
+    // The jobs of the run and rung that is being run, with how each ended.
+    let ended: { planned: PlannedJob; outcome: JobOutcome }[] = [];
+    const run = async (job: PlannedJob): Promise<JobOutcome> => {
       const outcome = await runJob(job, await sessionOf(job.engineId), store, warnings);
       outcomes.push(outcome);
       input.onJob?.(outcome);
+      return outcome;
+    };
+    for (const [index, job] of planned.entries()) {
+      ended.push({ planned: job, outcome: await run(job) });
+      const next = planned.at(index + 1);
+      if (next !== undefined && next.run === job.run && next.rung === job.rung) continue;
+      if (followUps.length > 0) {
+        const recipe = recipes.get(job.run)?.recipe ?? null;
+        for (const following of followingJobs(ended, followUps, recipe, store)) await run(following);
+      }
+      ended = [];
     }
   } finally {
     for (const adapter of adapters) {
@@ -502,12 +638,16 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     engines,
     runs: suite.runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
+      const finer = fineRaySets.get(spec.name);
+      const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
         caseId: opticalCase?.id ?? null,
         problems,
         ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
         ...(rays === undefined ? {} : { raySets: rays }),
+        ...(finer === undefined ? {} : { fineRaySets: finer }),
+        ...(recipe === undefined ? {} : { recipe }),
       };
     }),
     jobs: outcomes.map((outcome) => outcome.job),

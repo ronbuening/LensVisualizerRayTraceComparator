@@ -51,6 +51,11 @@ export function goldenFile(name: string): string {
   return join(GOLDEN_DIR, `${name}.report.md`);
 }
 
+/** The path of the golden MTF report of a baseline: what `renderMtfBaselineReport` gives of the suite's run. */
+export function mtfGoldenFile(name: string): string {
+  return join(GOLDEN_DIR, `${name}.mtf.md`);
+}
+
 /** The files a cycle writes into the run directory, in the order it writes them. */
 export const CYCLE_FILES: readonly string[] = [MANIFEST_FILE, COMPARISONS_FILE, REPORT_JSON_FILE, REPORT_MARKDOWN_FILE];
 

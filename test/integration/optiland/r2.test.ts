@@ -9,9 +9,8 @@
 // (traced.ts), which the focus stations (stations.test.ts) are held to as well.
 //
 // The figures quoted in comments were measured at optiland 4e893f53 and LensVisualizer 14da71d9 (engine closure
-// 78215d72, 151 files). Nothing is pinned to them: every gate is the policy's, a pair of LensVisualizer may be PASS
-// or FLOOR, and none is asked to be a floor, so a LensVisualizer that meets its surfaces more closely turns nothing
-// red.
+// 78215d72, 151 files). These are historical measurements, not current baseline provenance. Every gate is
+// the policy's; policy version 11 has no floors and every compared pair must PASS.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -29,6 +28,7 @@ import { decodeNdArray, encodeNdArray } from "../../../src/core/numeric/ndarray.
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { createEngineRegistry } from "../../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
+import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -37,13 +37,13 @@ import { RAYS_DATA_SINGLET, RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture } from "../../core/support.ts";
 import { caseOf } from "../../engines/ref/support.ts";
 import { CASE } from "../../engines/support.ts";
-import { suitePath } from "../../suites/support.ts";
 import { LV_UNAVAILABLE } from "../lv/support.ts";
 import {
   OPTILAND_UNAVAILABLE,
   WRAPPER_UNAVAILABLE,
   optilandRoot,
   runAndCompare,
+  rungSuite,
   watchedInterpreter,
 } from "./support.ts";
 import type { RunCycle, RungPair } from "./support.ts";
@@ -67,6 +67,7 @@ test(
       [systemDescribeQuantity.id]: { version: systemDescribeQuantity.version },
       [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
       [RAYS_TRACE]: { version: raysTraceQuantity.version },
+      [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
     });
 
     const request = makeRequest({ caseId: CASE.id, quantity: RAYS_TRACE, spec: RAYS_SPEC_SINGLET });
@@ -142,7 +143,7 @@ test(
 
     // A fan across the first surface and past its rim on both sides, at 8 degrees: more rays than one batch holds.
     const rays = 20_000;
-    const reach = 1.2 * opticalCase.system.surfaces[0].aperture.semiDiameter;
+    const reach = 1.2 * opticalCase.system.surfaces[0].aperture.nominalSemiDiameter;
     const [sine, cosine] = [Math.sin((8 * Math.PI) / 180), Math.cos((8 * Math.PI) / 180)];
     const origins = new Float64Array(3 * rays);
     const directions = new Float64Array(3 * rays);
@@ -246,7 +247,7 @@ test(
       manifest.runs.flatMap((run) => run.raySets?.problems ?? []),
       [],
     );
-    const { pairs, counts } = assertR2(t, "made for R2", cycle.comparisons);
+    const { pairs, counts } = assertR2(t, "made for R2", cycle);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))], ["optiland / ref"]);
     assert.equal(pairs.length, sets);
     // The two engines stopped the same rays, at the same surfaces, for whatever reason each has.
@@ -287,8 +288,9 @@ test(
 function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Summary; cycle: RunCycle } {
   const engines = "lv,ref,optiland";
   const compiled = watchedInterpreter(t);
+  const suiteFile = rungSuite(t, suite);
   const cycle = runAndCompare(t, {
-    suite: suitePath(suite),
+    suite: suiteFile,
     name: suite,
     engines,
     rungs: "r2",
@@ -300,7 +302,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r2"));
   const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
   assert.equal(manifest.jobs.length, 3 * sets);
-  const on = assertR2(t, suite, cycle.comparisons);
+  const on = assertR2(t, suite, cycle);
   assert.equal(on.pairs.length, 3 * sets);
   assert.deepEqual([...new Set(on.pairs.map((pair) => pair.engines))].sort(), [
     "lv / optiland",
@@ -313,7 +315,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   // The same again without the JIT. It is another engine to the result store: its fingerprint says so.
   const interpreted = watchedInterpreter(t, { jit: "off" });
   const again = runAndCompare(t, {
-    suite: suitePath(suite),
+    suite: suiteFile,
     name: suite,
     engines,
     rungs: "r2",
@@ -325,7 +327,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   assert.ok(plain !== undefined && plain.status === "available" && plain.details.jit === false);
   assert.notEqual(plain.fingerprint, optiland.fingerprint);
   assert.equal(plain.adapterRevision, optiland.adapterRevision);
-  const off = assertR2(t, `${suite}, optiland without the JIT`, again.comparisons);
+  const off = assertR2(t, `${suite}, optiland without the JIT`, again);
   assert.deepEqual(off.verdicts, on.verdicts);
   assert.deepEqual(off.counts, on.counts);
 
@@ -387,13 +389,13 @@ test(
     // over 137 596 rays; every pair of LensVisualizer inside its gates, so the benchmark has no floor.
     assert.match(
       cycle.verdicts,
-      /^benchmark: 1080 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^benchmark: 1080 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
   },
 );
 
 test(
-  "the feature suite on R2, three ways: every translation path passes, and a floor would name its witness",
+  "the feature suite on R2, three ways: every translation path passes without a floor",
   { skip: skipSuites, timeout: 1_800_000 },
   (t) => {
     const { on, cycle } = threeWays(t, "features");
@@ -402,14 +404,9 @@ test(
     assert.equal(on.pairs.length / 3, 162);
     assert.match(
       cycle.verdicts,
-      /^features: 810 pairs: \d+ PASS, \d+ FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
+      /^features: 810 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
     );
-    // Measured: four floors, of the Hologon at its full field at 470 nm and 510 nm, against ref and against
-    // optiland alike, where its landing is 1.10e-8 mm from both and the two are 2.2e-13 mm from each other. None is
-    // asked for here: `assertR2` holds whatever is a floor to naming both figures, and a LensVisualizer that meets
-    // its surfaces more closely has none.
-    const floors = on.pairs.filter((pair) => pair.verdict === "FLOOR");
-    t.diagnostic(`features: floors ${JSON.stringify(floors.map((pair) => `${pair.run} ${pair.engines}`))}`);
-    for (const pair of floors) t.diagnostic(`features: ${pair.run}, ${pair.engines}: ${pair.reason ?? ""}`);
+    // At the historical 1e-9 mm tolerance the Hologon had four floors; version 11 grants none.
+    assert.ok(on.pairs.every((pair) => pair.verdict === "PASS"));
   },
 );

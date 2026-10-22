@@ -19,6 +19,7 @@
     "features": {
       "supported": [
         7,
+        "aperture.unclipped",
         "lines.multiple",
         "object.finite",
         "surface.asphere.even",

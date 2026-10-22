@@ -9,15 +9,18 @@ import {
   LV_TAB_COMPARISON_F_NUMBER,
   LV_TAB_PROFILE,
   lvHookAperture,
+  lvHookStop,
   lvPupilSeed,
+  lvTabComparison,
   lvTabFieldFractions,
   lvTabRequest,
+  lvResolvedMtfOptions,
   lvTabSpec,
 } from "../../../src/engines/lv/tabRequest.ts";
 import type { LvTabApi } from "../../../src/engines/lv/tabRequest.ts";
 import type { LvMtfPreferences, LvPreparedState, LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
-import { stateOf } from "./exportSupport.ts";
+import { modelOf } from "./exportSupport.ts";
 
 const PREFERENCES: LvMtfPreferences = {
   method: "diffraction",
@@ -46,22 +49,31 @@ type Calls = unknown[][];
 function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: LvPreparedState; calls: Calls } {
   const calls: Calls = [];
   const geometry = { yRatio: lens.yRatio ?? 1, analysis: true };
-  const state = stateOf([{ label: "STO", R: 1e15, d: 50 }], { stopIndex: 0, zoomT: 0.5 });
-  const runtime: LvRuntimeLens = { ...state.lens.runtime, maxFstop: lens.maxFstop ?? 16 };
+  const { state, runtime } = modelOf([{ label: "STO", R: 1e15, d: 50 }], {
+    stopIndex: 0,
+    zoomT: 0.5,
+    runtime: { maxFstop: lens.maxFstop ?? 16 },
+  });
   const api: LvTabApi = {
+    createAnalysisRequest: (params) => ({
+      preparedGeometry: params.preparedState,
+      dynamicEFL: params.dynamicEFL,
+      aperture: { entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD },
+      pose: null,
+    }),
     wideOpenStopAtZoom: (zoomT, L) => (calls.push(["wideOpenStopAtZoom", zoomT, L]), lens.wideOpen),
-    fopenAtZoom2: (zoomT, L) => (calls.push(["fopenAtZoom2", zoomT, L]), lens.fopen),
+    fopenAtZoomClamped: (zoomT, L) => (calls.push(["fopenAtZoomClamped", zoomT, L]), lens.fopen),
     // As LensVisualizer's: the slider's f-number, never below the widest of the zoom state.
     fNumberAtStopdown: (stopdownT, zoomT, L) => {
       calls.push(["fNumberAtStopdown", stopdownT, zoomT, L]);
       return Math.max(lens.fopen * Math.pow(L.maxFstop / lens.fopen, stopdownT), lens.fopen);
     },
-    computeAnalysisFieldGeometryAtState2: (focusT, zoomT, L, aberrationT) => {
-      calls.push(["computeAnalysisFieldGeometryAtState2", focusT, zoomT, L, aberrationT]);
+    computeAnalysisFieldGeometryAtState: (focusT, zoomT, L, aberrationT) => {
+      calls.push(["computeAnalysisFieldGeometryAtState", focusT, zoomT, L, aberrationT]);
       return geometry;
     },
-    entrancePupilAtState2: (stopSD, focusT, zoomT, L, given, aberrationT) => {
-      calls.push(["entrancePupilAtState2", stopSD, focusT, zoomT, L, given, aberrationT]);
+    entrancePupilAtState: (stopSD, focusT, zoomT, L, given, aberrationT) => {
+      calls.push(["entrancePupilAtState", stopSD, focusT, zoomT, L, given, aberrationT]);
       const yRatio = given?.yRatio ?? Number.NaN;
       return { epSD: Math.abs(stopSD / yRatio), yRatio, b: 0, epRatio: 1 };
     },
@@ -96,10 +108,10 @@ test("the hook's numbers are its own expressions, on its own functions, with the
   assert.deepEqual(
     calls.toSorted(([a], [b]) => (String(a) < String(b) ? -1 : 1)),
     [
-      ["computeAnalysisFieldGeometryAtState2", 0, 0.5, runtime, 0],
-      ["entrancePupilAtState2", 6.25, 0, 0.5, runtime, geometry, 0],
+      ["computeAnalysisFieldGeometryAtState", 0, 0.5, runtime, 0],
+      ["entrancePupilAtState", 6.25, 0, 0.5, runtime, geometry, 0],
       ["fNumberAtStopdown", 0, 0.5, runtime],
-      ["fopenAtZoom2", 0.5, runtime],
+      ["fopenAtZoomClamped", 0.5, runtime],
       ["wideOpenStopAtZoom", 0.5, runtime],
     ],
   );
@@ -148,7 +160,8 @@ test("the fields are the tab's evenly spaced fractions, each one division", () =
 test("the wide-open request is the tab's options, member for member, and names no frequencies", () => {
   const { api, runtime, state } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
   const request = lvTabRequest(api, runtime, state, "wide-open");
-  assert.deepEqual(request, {
+  const { request: _analysis, settings: _settings, ...view } = request;
+  assert.deepEqual(view, {
     view: "wide-open",
     fNumber: 1.4,
     options: {
@@ -218,6 +231,36 @@ test("the f/8 comparison scales both radii of the wide-open request by N over 8,
   assert.equal(comparison.options.stopSemiDiameterMm, 5.999999999999999 * (1.4 / 8));
 });
 
+test("the stop of the f/8 comparison has the comparison's seed, to the bit: the hook's two radii scaled alike", () => {
+  // A zoom state that is f/2.9 on a slider whose widest is f/1.4: the hook's f-number is the slider's.
+  const lens = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
+  const { runtime, state } = lens;
+  const api: LvTabApi = { ...lens.api, fNumberAtStopdown: () => 2.9 };
+  const hook = lvHookAperture(api, runtime, state);
+  assert.equal(hook.fNumber, 2.9);
+  const comparison = lvTabRequest(api, runtime, state, "f8-comparison").options;
+  assert.equal(comparison.stopSemiDiameterMm, hook.currentPhysStopSD * (2.9 / 8));
+  assert.equal(lvPupilSeed(hook, comparison.stopSemiDiameterMm), comparison.pupilSemiDiameterMm);
+  assert.equal(comparison.pupilSemiDiameterMm, hook.currentEPSD * (2.9 / 8));
+  // The general rule, at the f-number that radius is the stop of, gives another number in the last bit here: the
+  // comparison's seed is the tab's own, which is why the rule is not asked for it.
+  const fNumber = (6 * 1.4) / comparison.stopSemiDiameterMm;
+  assert.notEqual((9.6 * 1.4) / fNumber, comparison.pupilSemiDiameterMm);
+  assert.ok(Math.abs((9.6 * 1.4) / fNumber - comparison.pupilSemiDiameterMm) < 1e-14);
+
+  // The scale and the tab's rule on their own, and the part of the hook that needs no pupil.
+  assert.deepEqual(lvTabComparison(hook), { scale: 2.9 / 8, unavailable: null });
+  assert.deepEqual(lvTabComparison(hook, runtime), { scale: 2.9 / 8, unavailable: null });
+  assert.match(lvTabComparison(hook, { maxFstop: 4 }).unavailable ?? "", /^the lens stops down to f\/4 at most/);
+  const { currentFOPEN, fNumber: slider, wideOpenStopSD, currentPhysStopSD } = hook;
+  assert.deepEqual(lvHookStop(api, runtime, state.zoomT), {
+    currentFOPEN,
+    fNumber: slider,
+    wideOpenStopSD,
+    currentPhysStopSD,
+  });
+});
+
 test("the tab offers no f/8 comparison for a lens that is not faster than f/7.95, or that does not reach f/8", () => {
   const view = (lens: Lens) => {
     const { api, runtime, state } = standIn(lens);
@@ -267,4 +310,41 @@ test("LensVisualizer's design plane is the contract's; its best axial focus and 
   assert.throws(() => lvTabSpec(lvTabRequest(api, runtime, state, "wide-open")), {
     message: 'LensVisualizer\'s MTF tab opens with the method "geometric-dl", which the contract does not know',
   });
+});
+
+test("MTF settings omit the radii and f/8 scales the second analysis request", () => {
+  const { api, runtime, state } = standIn({ wideOpen: 7.3, fopen: 1.85 });
+  const open = lvTabRequest(api, runtime, state, "wide-open");
+  const f8 = lvTabRequest(api, runtime, state, "f8-comparison");
+  assert.equal(open.request.preparedGeometry, state);
+  assert.equal(open.request.dynamicEFL, 0);
+  assert.equal(Object.hasOwn(open.settings, "pupilSemiDiameterMm"), false);
+  assert.equal(Object.hasOwn(open.settings, "stopSemiDiameterMm"), false);
+  assert.deepEqual(f8.settings, open.settings);
+  assert.equal(
+    f8.request.aperture.entrancePupilSemiDiameterMm,
+    open.request.aperture.entrancePupilSemiDiameterMm * (open.fNumber / 8),
+  );
+  assert.equal(f8.request.aperture.stopSemiDiameterMm, open.request.aperture.stopSemiDiameterMm * (open.fNumber / 8));
+});
+
+test("lower-level MTF options resolve request radii and the pose's active flag", () => {
+  const { api, state } = standIn({ wideOpen: 4, fopen: 2 });
+  const request = api.createAnalysisRequest({
+    preparedState: state,
+    dynamicEFL: 0,
+    currentEPSD: 7,
+    currentPhysStopSD: 3,
+  });
+  const settings = { method: "geometric", spectrum: "reference", focus: "design", movementActive: true };
+  assert.deepEqual(lvResolvedMtfOptions(request, settings), {
+    ...settings,
+    pupilSemiDiameterMm: 7,
+    stopSemiDiameterMm: 3,
+  });
+  assert.equal(lvResolvedMtfOptions({ ...request, pose: { active: false } }, settings).movementActive, false);
+  assert.equal(
+    lvResolvedMtfOptions({ ...request, pose: { active: true } }, { ...settings, movementActive: false }).movementActive,
+    true,
+  );
 });

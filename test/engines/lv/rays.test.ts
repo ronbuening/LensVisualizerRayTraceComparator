@@ -177,7 +177,7 @@ test("what LensVisualizer's tracer gives is what lv reports, and its own classif
   );
 
   heights.forEach((y, ray) => {
-    const trace = binding.api.traceEngineRay2(model.state, { origin: [0, y, -10], direction: [0, 0, 1] }, options);
+    const trace = binding.api.traceEngineRay(model.state, { origin: [0, y, -10], direction: [0, 0, 1] }, options);
     const outcome = binding.api.mtfTraceClassification(trace, model.state, opticalCase.conditions.stopSemiDiameter);
     assert.equal(status[ray], { valid: 0, blocked: 1, failed: 2 }[outcome], `the ray at ${y} mm`);
     const spot = binding.api.mtfImagePoint(model.state, trace, opticalCase.conditions.imageZ);
@@ -209,7 +209,7 @@ test("a total internal reflection is blocked at the surface that reflects; an un
   const steepBinding = await bind(t, steep);
   const reflected = await modelOf(steepBinding, "acme-singlet-50");
   const spec = parallelRays([1, 6]);
-  const trace = steepBinding.api.traceEngineRay2(
+  const trace = steepBinding.api.traceEngineRay(
     reflected.model.state,
     { origin: [0, 6, -10], direction: [0, 0, 1] },
     lvTraceOptions(reflected.model, 0),
@@ -401,6 +401,7 @@ test("the ray sets of a case are LensVisualizer's launch lattice, every cell of 
     pupilSemiDiameterMm: stop,
     stopSemiDiameterMm: stop,
     focus: "design",
+    movementActive: undefined,
   });
   assert.deepEqual(setup.support.spectralLines, [{ wavelengthNm: 587.5618, weight: 1 }]);
 
@@ -700,7 +701,7 @@ test("where a glass absorbs, a ray's weight is its launch weight times LensVisua
   const direction = row(f8(spec.directions), firstOk) as [number, number, number];
   const spot = api.mtfImagePoint(
     model.state,
-    api.traceEngineRay2(model.state, { origin, direction }, options),
+    api.traceEngineRay(model.state, { origin, direction }, options),
     opticalCase.conditions.imageZ,
   );
   assert.equal(weights[firstOk], spot?.weight);

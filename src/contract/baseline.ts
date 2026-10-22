@@ -1,7 +1,8 @@
 // The baseline: mirrors contract/schema/v1/baseline.schema.json, plus the rules a schema cannot state.
 import { VERDICTS } from "./comparison.ts";
-import type { ComparisonMetric, ParticipantStatus, Verdict } from "./comparison.ts";
+import type { ComparisonMetric, ParticipantStatus, RecordedValues, Verdict } from "./comparison.ts";
 import type { EngineDetails } from "./result.ts";
+import { contractMinor } from "./version.ts";
 
 /** An engine of a baseline: who answered, by the hashes results are keyed by. */
 export interface BaselineEngine {
@@ -29,6 +30,38 @@ export interface BaselineMetric {
   readonly where?: ComparisonMetric["where"];
   /** The tolerance the policy judges the metric by, when it judges it. */
   readonly tolerance?: number;
+  /** Since 1.1: in how many requests of the rung the pair has a value of the metric. */
+  readonly measured?: number;
+}
+
+/** Since 1.1: the jobs of one engine that were a later step of it (`ManifestJob.step`) in one rung of one run. */
+export interface BaselineStep {
+  readonly engine: string;
+  /** The name of the step, such as `fft512`. */
+  readonly step: string;
+  /** How many jobs of the step there were: one for each request that was asked again. */
+  readonly jobs: number;
+  /** "ok" when every job did; else the status of the first that did not. */
+  readonly status: ParticipantStatus;
+  readonly detail?: string;
+}
+
+/** Since 1.1: one request of a rung as it was compared, as far as a table of it is made from. */
+export interface BaselineSet {
+  /** Every engine compared, sorted by id, with what its answer records. */
+  readonly participants: readonly {
+    readonly engine: string;
+    readonly status: ParticipantStatus;
+    readonly recorded?: RecordedValues;
+  }[];
+  /** Every two engines, the first before the second by id, sorted. */
+  readonly pairs: readonly {
+    readonly a: string;
+    readonly b: string;
+    readonly verdict: Verdict;
+    readonly reason?: string;
+    readonly metrics: readonly ComparisonMetric[];
+  }[];
 }
 
 /** How many requests came to one verdict. */
@@ -79,6 +112,15 @@ export interface BaselineRung {
   readonly rays?: readonly BaselineRays[];
   /** Every pair of two engines of `support`, sorted by `a` and then `b`. */
   readonly pairs: readonly BaselinePair[];
+  /** Since 1.1: the later steps of the engines, sorted by engine and step; left out by a rung without one. */
+  readonly steps?: readonly BaselineStep[];
+  /** Since 1.1: the attention bands of the policy for the rung, by metric; left out by a rung without one. */
+  readonly bands?: { readonly [metric: string]: number };
+  /**
+   * Since 1.1: for a rung of the engines' own MTF, each request as it was compared, in the order of the requests:
+   * what the tables of the MTF report are made from. Left out by every other rung.
+   */
+  readonly sets?: readonly BaselineSet[];
 }
 
 /** One run as it was run: with its case hash, what the records below it are keyed on. */
@@ -136,7 +178,11 @@ function unsorted(values: readonly string[]): string | undefined {
  * - the engines of a rung's `support` and `rays` are engines of the baseline, sorted, each once;
  * - a pair names two engines of its rung's `support`, the first before the second, and the pairs are sorted;
  * - a pair's verdicts are in the order of `VERDICTS`, each once, add up to the requests of its rung, and its
- *   verdict is the gravest of them.
+ *   verdict is the gravest of them;
+ * - a baseline that has a member minor 1 added (`steps`, `bands`, `sets`, a metric's `measured`) states a contract
+ *   of minor 1 or later; a rung's `sets` are one for each of its requests, each with its engines sorted and once
+ *   and its pairs of two of them, sorted; a rung's `steps` are of engines of its `support`, sorted by engine and
+ *   step; and no metric is `measured` in more requests than its rung has.
  *
  * The baseline is expected to be schema-valid.
  */
@@ -146,6 +192,18 @@ export function baselineProblems(baseline: Baseline): string[] {
   const misplaced = unsorted(ids);
   if (misplaced !== undefined) problems.push(`engine ${misplaced} is listed out of order or twice`);
   const runNames = new Set<string>();
+  const usesMinor1 = baseline.runs.some((run) =>
+    run.rungs.some(
+      (rung) =>
+        rung.steps !== undefined ||
+        rung.bands !== undefined ||
+        rung.sets !== undefined ||
+        rung.pairs.some((pair) => pair.metrics.some((metric) => metric.measured !== undefined)),
+    ),
+  );
+  if (usesMinor1 && !((contractMinor(baseline.contract) ?? 0) >= 1)) {
+    problems.push(`it states the contract ${baseline.contract} and has a member that minor 1 added`);
+  }
   for (const run of baseline.runs) {
     if (runNames.has(run.name)) problems.push(`run ${run.name} is listed twice`);
     runNames.add(run.name);
@@ -169,8 +227,37 @@ export function baselineProblems(baseline: Baseline): string[] {
       const supported = rung.support.map((entry) => entry.engine);
       const keys = rung.pairs.map((pair) => `${pair.a}\0${pair.b}`);
       if (unsorted(keys) !== undefined) problems.push(`${at}: its pairs are out of order or listed twice`);
+      const stepKeys = (rung.steps ?? []).map((step) => `${step.engine}\0${step.step}`);
+      if (unsorted(stepKeys) !== undefined) problems.push(`${at}: its steps are out of order or listed twice`);
+      for (const step of rung.steps ?? []) {
+        if (!supported.includes(step.engine))
+          problems.push(`${at}: step ${step.step} is of ${step.engine}, which is no engine of the rung`);
+      }
+      if (rung.sets !== undefined && rung.sets.length !== rung.requests) {
+        problems.push(`${at}: it keeps ${rung.sets.length} sets; the rung has ${rung.requests} requests`);
+      }
+      (rung.sets ?? []).forEach((set, index) => {
+        const engines = set.participants.map((participant) => participant.engine);
+        if (unsorted(engines) !== undefined)
+          problems.push(`${at}, set ${index}: its engines are out of order or listed twice`);
+        const pairKeys = set.pairs.map((pair) => `${pair.a}\0${pair.b}`);
+        if (unsorted(pairKeys) !== undefined)
+          problems.push(`${at}, set ${index}: its pairs are out of order or listed twice`);
+        for (const pair of set.pairs) {
+          if (!(pair.a < pair.b) || !engines.includes(pair.a) || !engines.includes(pair.b)) {
+            problems.push(`${at}, set ${index}: ${pair.a} and ${pair.b} are not two of its engines in order`);
+          }
+        }
+      });
       for (const pair of rung.pairs) {
         const of = `${at}, ${pair.a} and ${pair.b}`;
+        for (const metric of pair.metrics) {
+          if (metric.measured !== undefined && metric.measured > rung.requests) {
+            problems.push(
+              `${of}: ${metric.name} is measured in ${metric.measured} requests; the rung has ${rung.requests}`,
+            );
+          }
+        }
         if (!(pair.a < pair.b)) problems.push(`${of}: the first engine does not sort before the second`);
         for (const engine of [pair.a, pair.b]) {
           if (!supported.includes(engine)) problems.push(`${of}: ${engine} is no engine of the rung`);

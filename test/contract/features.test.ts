@@ -5,7 +5,16 @@ import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import type { OpticalCaseDraft } from "../../src/contract/case.ts";
 import { FEATURE_FLAGS, FEATURE_LIMITS, deriveFeatures } from "../../src/contract/features.ts";
 import type { CaseFeatures } from "../../src/contract/features.ts";
-import { ALL_FEATURES_CASE, ALL_FEATURES_DRAFT, SINGLET_CASE, SINGLET_DRAFT, edited } from "./corpus.ts";
+import {
+  ALL_FEATURES_CASE,
+  ALL_FEATURES_DRAFT,
+  CONTRACT_1_0_FLAGS,
+  SINGLET_CASE,
+  SINGLET_DRAFT,
+  UNCLIPPED_PLATE_CASE,
+  UNCLIPPED_PLATE_DRAFT,
+  edited,
+} from "./corpus.ts";
 
 /** The features of the singlet after the given edits, each a JSON Pointer and its replacement. */
 function featuresWith(...edits: [pointer: string, replacement: unknown][]): CaseFeatures {
@@ -28,12 +37,26 @@ test("a spherical singlet at infinity on one line has no flag", () => {
   assert.deepEqual(deriveFeatures(system, conditions), { flags: [], limits: NO_LIMITS_REACHED });
 });
 
-test("the all-features example carries every flag, in the list's order", () => {
+test("the all-features example carries every flag of contract 1.0, in the list's order", () => {
   const { system, conditions } = ALL_FEATURES_DRAFT;
   assert.deepEqual(deriveFeatures(system, conditions), {
-    flags: [...FEATURE_FLAGS],
+    flags: CONTRACT_1_0_FLAGS,
     limits: { "asphere.maxPower": 6, "lines.count": 2, "surfaces.count": 7 },
   });
+  // Together with the case of minor 2 the examples carry every flag the contract has.
+  const carried = new Set([...CONTRACT_1_0_FLAGS, ...UNCLIPPED_PLATE_CASE.features]);
+  assert.deepEqual([...carried].sort(), [...FEATURE_FLAGS]);
+});
+
+test("aperture.unclipped: a surface has no clip radius, whatever its extent", () => {
+  assert.deepEqual(UNCLIPPED_PLATE_CASE.features, ["aperture.unclipped"]);
+  const { system, conditions } = UNCLIPPED_PLATE_DRAFT;
+  assert.deepEqual(deriveFeatures(system, conditions).limits, { ...NO_LIMITS_REACHED, "surfaces.count": 4 });
+  // One such surface is enough, and a clip radius, however large, is one.
+  const one = edited(system, "/surfaces/3/aperture/semiDiameter", 1e9) as typeof system;
+  assert.deepEqual(deriveFeatures(one, conditions).flags, ["aperture.unclipped"]);
+  const none = edited(one, "/surfaces/2/aperture/semiDiameter", 1e9) as typeof system;
+  assert.deepEqual(deriveFeatures(none, conditions).flags, []);
 });
 
 test("the limits always have a value for each limit", () => {
@@ -123,5 +146,5 @@ test("surfaces.count counts every surface, synthetic plates included", () => {
 
 test("a finalised case states exactly its derived flags", () => {
   assert.deepEqual(SINGLET_CASE.features, []);
-  assert.deepEqual(ALL_FEATURES_CASE.features, [...FEATURE_FLAGS]);
+  assert.deepEqual(ALL_FEATURES_CASE.features, CONTRACT_1_0_FLAGS);
 });

@@ -13,7 +13,10 @@ export function outside(
   stopSemiDiameter?: number,
 ): boolean {
   const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
-  const semiDiameter = isStop && stopSemiDiameter !== undefined ? stopSemiDiameter : surface.sd;
+  const overridden = isStop && stopSemiDiameter !== undefined;
+  // A generated rim clips nothing.
+  if (!overridden && !surface.clips) return false;
+  const semiDiameter = overridden ? stopSemiDiameter : surface.sd;
   return radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12);
 }
 
@@ -74,7 +77,7 @@ export function traceSequential(
     ? input.direction
     : [input.direction[0] / length, input.direction[1] / length, input.direction[2] / length];
   const traced: { origin: Vec3; direction: Vec3 } = { origin: input.origin, direction };
-  const fault = state.lens.runtime.data.unresolvedZone;
+  const fault = state.lens.runtime.source.unresolvedZone;
   const hits: FakeTraceHit[] = [];
   let origin: Vec3 = input.origin;
   let index = 1;

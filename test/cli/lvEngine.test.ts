@@ -8,7 +8,9 @@ import { join } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { EXIT_FAILURE, EXIT_OK } from "../../src/cli/main.ts";
+import { createCompareCommand } from "../../src/cli/commands/compare.ts";
+import { createReportCommand } from "../../src/cli/commands/report.ts";
+import { EXIT_FAILURE, EXIT_OK, runCli } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
 import { finalizeCase } from "../../src/contract/case.ts";
@@ -22,6 +24,7 @@ import { decodeNdArray, encodeNdArray } from "../../src/core/numeric/ndarray.ts"
 import { adapterRevision } from "../../src/engines/adapterRevision.ts";
 import { LV_ENGINE_MODULE } from "../../src/engines/lv/engine.ts";
 import { REPORT_MARKDOWN_FILE } from "../../src/report/index.ts";
+import { POLICY_LADDER } from "../contract/corpus.ts";
 import { caseFixture, tempDir } from "../core/support.ts";
 import { FAKE_ENGINE_FILES, FAKE_LV, closureOf } from "../engines/lv/support.ts";
 
@@ -45,6 +48,27 @@ function lvrtc(rootDir: string, ...args: string[]): { code: number | null; out: 
     env,
   });
   return { code: child.status, out: child.stdout, err: child.stderr };
+}
+
+/** Floor machinery is exercised with a synthetic policy, independent of the shipped gates. */
+async function floorCommand(rootDir: string, ...args: string[]) {
+  const inputs = {
+    rootDir,
+    cwd: REPO_ROOT,
+    env: { LVRTC_RUNS_DIR: join(rootDir, "runs") },
+    policy: structuredClone(POLICY_LADDER),
+  };
+  const out: string[] = [];
+  const err: string[] = [];
+  const code = await runCli(
+    args,
+    {
+      stdout: (text) => void out.push(text),
+      stderr: (text) => void err.push(text),
+    },
+    [createCompareCommand(inputs), createReportCommand(inputs)],
+  );
+  return { code, out: out.join(""), err: err.join("") };
 }
 
 function writeSuite(rootDir: string, runs: readonly unknown[]): string {
@@ -303,32 +327,17 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   }
   assert.ok(compared16 > 100, `rays that are ok in both engines: ${compared16}`);
 
-  // The report has a section for each set, with the floor limits in the headings of the metrics that have one.
-  const reported = lvrtc(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
+  // The real policy renders the gates with no floor headings.
+  const reported = lvrtc(rootDir, "report", "lv-ladder");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(report, /^#### r2, request 3 of 3$/m);
-  assert.match(report, /\| direction\.maxAbs \(≤ 1\.00e-9; floor ≤ 1\.00e-8\) \|/);
-  assert.match(report, /\| hits\.maxDistance \(≤ 1\.00e-8 mm; floor ≤ 1\.00e-7\) \|/);
-  // The mask is judged at 0 and has no floor.
+  assert.match(report, /\| direction\.maxAbs \(≤ 1\.00e-9\) \|/);
+  assert.match(report, /\| hits\.maxDistance \(≤ 1\.00e-8 mm\) \|/);
   assert.match(report, /\| mask\.mismatches \(≤ 0 rays\) \|/);
-  assert.match(report, /\| opd\.maxAbs \(≤ 2\.00e-5 waves; floor ≤ 2\.00e-4\) \|/);
+  assert.match(report, /\| opd\.maxAbs \(≤ 2\.00e-5 waves\) \|/);
   assert.match(report, /^\| rays\.ok\[0\] \| \d+ \| \d+ \|$/m);
-  // The engines table states the adapter revision of each of the comparator's own engines.
   assert.match(report, /^\| Engine \| Status \| Version \| Fingerprint \| Adapter revision \|$/m);
-
-  // The digest of the run: numbers, names and hashes, the same bytes each time it is written.
-  const digest = readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8");
-  assert.match(reported.out, /^floor: .*lv-floor\.md$/m);
-  assert.match(digest, /^# Numerical floor of lv against ref: lv-ladder$/m);
-  assert.match(digest, /^Quantity `rays\.trace`: 8 pairs, 8 PASS\.$/m);
-  assert.match(digest, /^\| zoom-photopic \| 5 \| 5 PASS \| /m);
-  const model = JSON.parse(readFileSync(join(rootDir, "digest", "lv-floor.json"), "utf8"));
-  assert.deepEqual([model.kind, model.engine.id, model.arbiter.id], ["floor-report", "lv", "ref"]);
-  assert.equal(model.engine.fingerprint, closureOf(join(rootDir, "lv"), FAKE_ENGINE_FILES));
-  for (const text of [digest, JSON.stringify(model)]) assert.ok(!text.includes(rootDir) && !text.includes("$nd"));
-  assert.equal(lvrtc(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest")).code, EXIT_OK);
-  assert.equal(readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8"), digest);
 });
 
 /** Makes the tracer of a root's LensVisualizer meet every surface `offset` mm behind where the surface is. */
@@ -343,13 +352,20 @@ function displaceHits(rootDir: string, offset: string): void {
   writeFileSync(file, edited);
 }
 
-test("a LensVisualizer whose hits are 3e-8 mm off is the floor of lv: FLOOR, a pass that is counted apart", (t) => {
+test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apart from PASS", async (t) => {
   const rootDir = lvRoot(t);
   // Three times the gate of a hit, and well inside the 1e-7 mm a floor may be.
   displaceHits(rootDir, "3e-8");
   const ran = lvrtc(rootDir, "run", raySuite(rootDir), "--engines", "lv,ref", "--rungs", "r0,r1,r2,r3");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  const compared = lvrtc(rootDir, "compare", "lv-ladder");
+  // The shipped policy has no floor: the same above-gate hits must FAIL before the synthetic policy grants one.
+  const strict = lvrtc(rootDir, "compare", "lv-ladder");
+  assert.equal(strict.code, EXIT_FAILURE, strict.out);
+  assert.deepEqual(
+    verdictsOf(rootDir).filter((said) => / r2: /.test(said)),
+    ["singlet r2: FAIL", "zoom-photopic r2: FAIL"],
+  );
+  const compared = await floorCommand(rootDir, "compare", "lv-ladder");
   // A floor fails nothing: the command exits 0, and says how many pairs are FLOOR beside how many are PASS.
   assert.equal(compared.code, EXIT_OK, compared.out);
   const counts = /^lv-ladder: (\d+) pairs: (\d+) PASS, (\d+) FLOOR, 0 FAIL, .* 0 BLOCKED, 0 ERROR$/m.exec(compared.out);
@@ -379,7 +395,7 @@ test("a LensVisualizer whose hits are 3e-8 mm off is the floor of lv: FLOOR, a p
     /^hits\.maxDistance \d\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-\d+ within 1\.00e-7$/,
   );
 
-  const reported = lvrtc(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
+  const reported = await floorCommand(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(report, /^No pair is FAIL or ERROR, of 40 compared\.$/m);
@@ -389,14 +405,22 @@ test("a LensVisualizer whose hits are 3e-8 mm off is the floor of lv: FLOOR, a p
   const digest = readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8");
   assert.match(digest, /^Quantity `rays\.trace`: 8 pairs, 8 FLOOR\.$/m);
   assert.match(digest, /^\| singlet \| 3 \| 3 FLOOR \| \d\.\d\de-8 \| /m);
+  // The digest retains engine provenance, contains no rays or local path, and is deterministic.
+  const model = JSON.parse(readFileSync(join(rootDir, "digest", "lv-floor.json"), "utf8"));
+  assert.deepEqual([model.kind, model.engine.id, model.arbiter.id], ["floor-report", "lv", "ref"]);
+  assert.equal(model.engine.fingerprint, closureOf(join(rootDir, "lv"), FAKE_ENGINE_FILES));
+  for (const text of [digest, JSON.stringify(model)]) assert.ok(!text.includes(rootDir) && !text.includes("$nd"));
+  const again = await floorCommand(rootDir, "report", "lv-ladder", "--floor", join(rootDir, "digest"));
+  assert.equal(again.code, EXIT_OK, again.err);
+  assert.equal(readFileSync(join(rootDir, "digest", "lv-floor.md"), "utf8"), digest);
 });
 
-test("a LensVisualizer whose hits are 3e-6 mm off is beyond any floor: FAIL, and compare exits 1", (t) => {
+test("a synthetic policy refuses fake LV hits beyond its floor: FAIL, and compare exits 1", async (t) => {
   const rootDir = lvRoot(t);
   displaceHits(rootDir, "3e-6");
   const ran = lvrtc(rootDir, "run", raySuite(rootDir), "--engines", "lv,ref", "--rungs", "r2,r3");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  const compared = lvrtc(rootDir, "compare", "lv-ladder");
+  const compared = await floorCommand(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_FAILURE, compared.out);
   assert.deepEqual(
     verdictsOf(rootDir).filter((said) => / r2: /.test(said)),

@@ -83,7 +83,7 @@ test("every benchmark key resolves, and its prepared state has the shape the com
     const runtime = binding.api.buildLens(data);
     for (const zoomT of entry.zoom ? [0, 1] : [0]) {
       const state = binding.api.prepareRuntimeState(runtime, 0, zoomT);
-      const summary = summarizeState(state);
+      const summary = summarizeState(state, runtime);
       const where = `${key} at zoom ${zoomT}`;
       const last = state.surfaces.length - 1;
       assert.equal(state.z.length, state.surfaces.length, where);
@@ -124,7 +124,7 @@ test(
       if ((entry.zoom === true) !== runtime.isZoom) zoomFlagWrong.push(entry.key);
       for (const zoomT of entry.zoom ? [0, 1] : [0]) {
         const where = `${entry.key} at zoom ${zoomT}`;
-        const summary = summarizeState(binding.api.prepareRuntimeState(runtime, 0, zoomT));
+        const summary = summarizeState(binding.api.prepareRuntimeState(runtime, 0, zoomT), runtime);
         if (summary.stopRadius !== binding.api.wideOpenStopAtZoom(zoomT, runtime)) stopRadiusWrong.push(where);
         for (const surface of summary.surfaces) {
           if ((surface.synthetic !== null) !== surface.index > summary.lastLensSurfaceIndex) {

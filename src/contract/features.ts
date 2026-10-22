@@ -6,6 +6,8 @@ import type { CaseConditions, OpticalSystem } from "./case.ts";
  * ones it supports in its descriptor.
  *
  * - `aperture.annular`: a surface has an inner semi-diameter above 0.
+ * - `aperture.unclipped`: a surface has no clip radius (`semiDiameter` null): it stops no ray at any height. Added
+ *   by contract minor 2.
  * - `lines.multiple`: more than one spectral line.
  * - `object.finite`: the object is at a finite distance.
  * - `surface.asphere.even` / `surface.asphere.odd`: an asphere has a term of even / odd power, whatever its
@@ -15,6 +17,7 @@ import type { CaseConditions, OpticalSystem } from "./case.ts";
  */
 export const FEATURE_FLAGS = [
   "aperture.annular",
+  "aperture.unclipped",
   "lines.multiple",
   "object.finite",
   "surface.asphere.even",
@@ -48,6 +51,7 @@ export function deriveFeatures(system: OpticalSystem, conditions: CaseConditions
   let maxPower = 0;
   for (const { shape, aperture } of system.surfaces) {
     if (aperture.innerSemiDiameter > 0) present.add("aperture.annular");
+    if (aperture.semiDiameter === null) present.add("aperture.unclipped");
     if (shape.kind === "plane") continue;
     // Without a base radius the curvature is 0 and the conic constant has no effect.
     if (shape.radius !== null && shape.conic !== 0) present.add("surface.conic");

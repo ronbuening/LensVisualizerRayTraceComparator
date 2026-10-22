@@ -3,6 +3,8 @@
 import type { OpticalCase } from "../contract/case.ts";
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
+import type { RungPolicy } from "../contract/policy.ts";
+import type { MtfRecipe } from "../core/mtfRecipe.ts";
 
 /** A metric a comparator reports: its name and the unit of its value. */
 export interface MetricDeclaration {
@@ -37,8 +39,20 @@ export type ComparatorOutcome =
       readonly comparable: true;
       readonly metrics: readonly ComputedMetric[];
       readonly unmeasured?: readonly UnmeasuredMetric[];
+      /**
+       * What is to be said of the two answers beside their metrics, in words that quote nothing but the data: which
+       * part of them was set aside from a figure, and why. Each becomes a part of the pair's reason.
+       */
+      readonly notes?: readonly string[];
     }
   | { readonly comparable: false; readonly reason: string };
+
+/** A later answer of an engine to the request of a comparison, by the name of its step (`ManifestJob.step`). */
+export interface StepAnswer {
+  readonly step: string;
+  /** The data of the step's "ok" result: valid by the quantity's schema, with arrays that decode. */
+  readonly data: JsonObject;
+}
 
 /**
  * What two answers are answers to, for a comparator whose metrics need more than the answers: the clip radius of a
@@ -50,6 +64,18 @@ export interface ComparisonContext {
   readonly spec?: JsonObject;
   /** The case the request is about. */
   readonly opticalCase?: OpticalCase;
+  /** The MTF recipe of the run, where the run has one: its frequencies, and the plane it is of. */
+  readonly recipe?: MtfRecipe;
+  /**
+   * The policy of the rung, for a comparator that sorts what it measures by a limit of the policy before any
+   * figure is taken. Judging the figures stays the policy's (`comparePair`).
+   */
+  readonly policy?: RungPolicy;
+  /**
+   * The later steps of the first and of the second answer, in the order they were asked, where an engine was asked
+   * the request again (`FollowUp`); left out where neither was.
+   */
+  readonly steps?: readonly [readonly StepAnswer[], readonly StepAnswer[]];
 }
 
 /** The comparison of one quantity. */
@@ -64,19 +90,29 @@ export interface QuantityComparator {
   /** Every metric it reports, in the order it reports them. */
   readonly metrics: readonly MetricDeclaration[];
   /**
+   * For a comparator whose figures are each of several requests of a run at once (a spectrum's MTF is of the rays
+   * of every line): the span a request belongs to, from its spec. The requests of one run and rung that give one
+   * key are compared as one set, under the id of the first of them, and `compare` and `recorded` are then handed,
+   * in the place of an answer, an engine's answers to every request of the span (`SpanAnswer`,
+   * src/compare/span.ts). Undefined for a request that is a span of its own. A comparator without it compares
+   * each request by itself.
+   */
+  spanOf?(spec: JsonObject): string | undefined;
+  /**
    * The metrics of two answers. A pure function of its arguments: equal data and context give equal metrics, on
    * any machine, and swapping the two answers changes no value. Both are data of the quantity, valid by its schema
-   * and with arrays that decode; for anything else it may throw. Answers that are valid and still cannot be set
-   * against each other (arrays of different shapes, a context it needs and was not given) are not comparable, with
-   * a reason that quotes nothing but the data.
+   * and with arrays that decode (for a comparator of spans: a `SpanAnswer` of such data); for anything else it may
+   * throw. Answers that are valid and still cannot be set against each other (arrays of different shapes, a
+   * context it needs and was not given) are not comparable, with a reason that quotes nothing but the data.
    */
   compare(a: JsonObject, b: JsonObject, context?: ComparisonContext): ComparatorOutcome;
   /**
    * What one answer reports beside what is compared, by name: values that are listed with every comparison of the
    * answer and never judged. A comparator has this only when its quantity has such values. The data is as for
-   * `compare`; the values are as the answer has them, so one may be a NaN or an infinity.
+   * `compare`; the values are as the answer has them, so one may be a NaN or an infinity. `context` is what the
+   * answer is an answer to, for a comparator that names a value after it (the frequency of an MTF value).
    */
-  recorded?(data: JsonObject): { readonly [name: string]: readonly number[] };
+  recorded?(data: JsonObject, context?: ComparisonContext): { readonly [name: string]: readonly number[] };
 }
 
 /** A set of comparators that can be read but not added to. */

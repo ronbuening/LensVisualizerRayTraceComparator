@@ -23,6 +23,15 @@ import type { LvApi, LvLensData, LvSurface } from "./types.ts";
 /** The file whose presence makes a directory a LensVisualizer checkout, relative to its root. */
 export const LV_MARKER = "src/optics/buildLens.ts";
 
+/**
+ * A file that only a LensVisualizer from before its engine rewrite has, relative to its root: the compatibility
+ * layer that rewrite removed.
+ */
+export const LV_PRE_REWRITE_MARKER = "src/optics/compat.ts";
+
+/** The LensVisualizer commit the comparator needs at least: the final merge of its engine rewrite. */
+export const LV_REWRITE_COMMIT = "460f841f";
+
 /** A lens taken from the catalog: its index entry and the prescription `buildLens` takes. */
 export interface LvLoadedLens {
   readonly entry: LvCatalogEntry;
@@ -115,25 +124,41 @@ function importFromRoot(root: string, file: string): Promise<Record<string, unkn
 /**
  * Imports every module of the manifest and checks every export. Everything at fault is listed in one error: the
  * modules that cannot be imported (`import-failed`, which also lists what the other modules lack), or else every
- * export that is missing or of another kind (`exports-missing`).
+ * export that is missing or of another kind (`exports-missing`). An entry with several paths takes the first that
+ * imports and provides every export of its kind; only when none does are all its attempts listed in the error.
  */
 async function importApi(root: string, manifest: readonly LvManifestModule[]): Promise<LvApi> {
   const failed: string[] = [];
   const missing: string[] = [];
   const api: Record<string, unknown> = {};
   for (const { module, exports } of manifest) {
-    let namespace: Record<string, unknown>;
-    try {
-      namespace = await importFromRoot(root, module);
-    } catch (error) {
-      failed.push(`${module}: ${reasonOf(error)}`);
-      continue;
+    const paths = typeof module === "string" ? [module] : module;
+    const importFailures: string[] = [];
+    const missingExports: string[] = [];
+    for (const path of paths) {
+      let namespace: Record<string, unknown>;
+      try {
+        namespace = await importFromRoot(root, path);
+      } catch (error) {
+        importFailures.push(`${path}: ${reasonOf(error)}`);
+        continue;
+      }
+      const problems = exports.flatMap(({ name, kind }) => {
+        const found = typeof namespace[name];
+        return found === kind ? [] : [`${path}: ${name} (expected ${kind}, found ${found})`];
+      });
+      if (problems.length > 0) {
+        missingExports.push(...problems);
+        continue;
+      }
+      for (const { name, as } of exports) api[as] = namespace[name];
+      // Failed candidates are irrelevant once one module provides the whole entry.
+      importFailures.length = 0;
+      missingExports.length = 0;
+      break;
     }
-    for (const { name, as, kind } of exports) {
-      const found = typeof namespace[name];
-      if (found === kind) api[as] = namespace[name];
-      else missing.push(`${module}: ${name} (expected ${kind}, found ${found})`);
-    }
+    failed.push(...importFailures);
+    missing.push(...missingExports);
   }
   if (failed.length > 0) {
     const also =
@@ -156,6 +181,23 @@ async function importApi(root: string, manifest: readonly LvManifestModule[]): P
   return Object.freeze(api) as unknown as LvApi;
 }
 
+/**
+ * The error of a load that failed, said plainly when the checkout predates LensVisualizer's engine rewrite: the
+ * names, the signatures and the shape of the lens files all changed there, and the comparator speaks only the
+ * rewritten LensVisualizer. The code stays `import-failed`, with the original details.
+ */
+function preRewriteRefusal(root: string, error: unknown): unknown {
+  if (!(error instanceof LvBindingError)) return error;
+  if (!statSync(join(root, LV_PRE_REWRITE_MARKER), { throwIfNoEntry: false })?.isFile()) return error;
+  return new LvBindingError(
+    "import-failed",
+    `LensVisualizer at ${root} predates its engine rewrite (it still has ${LV_PRE_REWRITE_MARKER}): the comparator ` +
+      `needs LensVisualizer ${LV_REWRITE_COMMIT} or later. ${error.message}`,
+    error.details,
+    { cause: error },
+  );
+}
+
 async function createBinding(root: string): Promise<LvBinding> {
   const loader = installLoader(root);
   let api: LvApi;
@@ -165,7 +207,7 @@ async function createBinding(root: string): Promise<LvBinding> {
     // What this attempt loaded stays loaded: the next attempt must still count it.
     loadedFiles(root, loader);
     loader.uninstall();
-    throw error;
+    throw preRewriteRefusal(root, error);
   }
   const loaded = (): ReadonlyMap<string, string> => loadedFiles(root, loader);
 
@@ -230,7 +272,8 @@ async function createBinding(root: string): Promise<LvBinding> {
  *
  * Rejects with an `LvBindingError` whose code says why: `not-configured` (`lvPath` is null), `path-missing`,
  * `not-lv-checkout`, `loader-conflict` (another LV tree is bound in this process), `import-failed` and
- * `exports-missing`, the last two with every module or export at fault in `details`. A load that failed leaves
+ * `exports-missing`, the last two with every module or export at fault in `details`. A checkout from before
+ * LensVisualizer's engine rewrite fails as `import-failed`, with a message that says so. A load that failed leaves
  * no loader installed and is tried afresh by the next call; the files it did load stay part of the closure.
  */
 export function loadLvBinding(lvPath: string | null): Promise<LvBinding> {

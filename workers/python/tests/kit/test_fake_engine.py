@@ -12,7 +12,7 @@ import sys
 import unittest
 from typing import Any
 
-from lvrtc_worker_kit import CONTRACT_VERSION
+from lvrtc_worker_kit import CONTRACT_VERSION, CONTRACT_VERSION_1_2
 from lvrtc_worker_kit.fake_engine import (
     FEATURE_FLAGS,
     OPTIONS_VARIABLE,
@@ -250,7 +250,7 @@ class DescriptorAndOptionsTest(unittest.TestCase):
         self.assertEqual(
             descriptor,
             {
-                "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION},
+                "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION_1_2},
                 "identity": {
                     "id": "fake-py",
                     "version": "1",
@@ -266,7 +266,7 @@ class DescriptorAndOptionsTest(unittest.TestCase):
             },
         )
         self.assertEqual(list(FEATURE_FLAGS), sorted(FEATURE_FLAGS))
-        self.assertEqual(len(FEATURE_FLAGS), 7)
+        self.assertEqual(len(FEATURE_FLAGS), 8)
 
     def test_only_id_is_needed_and_the_other_options_default_to_a_well_behaved_engine(self) -> None:
         options = parse_fake_options({"id": "fake"})

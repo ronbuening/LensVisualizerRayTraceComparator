@@ -1,6 +1,7 @@
 // The light of a case: its lines, the index after every surface at each line, and where the object is. All three
 // are LensVisualizer's decisions, taken from its MTF support gate and its index resolver, the path its own MTF
 // traces with. Nothing here computes an index.
+import { lvMtfInputs } from "./tabRequest.ts";
 import type { ObjectConjugate, SpectralLine } from "../../contract/case.ts";
 import type { RunLines } from "../../contract/runSpec.ts";
 import type { ExportProblem } from "./exportProblems.ts";
@@ -9,7 +10,7 @@ import type { LvApi, LvMtfSupport, LvPreparedState } from "./types.ts";
 /** The LensVisualizer exports that decide lines, indices and conjugate. */
 export type LvLightApi = Pick<
   LvApi,
-  "assessMtfSupport" | "mtfIndexResolver" | "mtfFiniteObjectPoint" | "spectralLinesNm"
+  "createAnalysisRequest" | "assessMtfSupport" | "mtfIndexResolver" | "mtfFiniteObjectPoint" | "spectralLinesNm"
 >;
 
 /** What `exportLight` gives when LensVisualizer can supply all of it. */
@@ -90,13 +91,15 @@ export function exportLight(
   seedRadius: number,
 ): LightResult {
   const asked: RunLines = runLines ?? { kind: "reference" };
-  const support = api.assessMtfSupport(state, {
-    method: "geometric",
-    spectrum: asked.kind === "explicit" ? "cdf" : asked.kind,
-    pupilSemiDiameterMm: seedRadius,
-    stopSemiDiameterMm: seedRadius,
-    focus: "design",
-  });
+  const support = api.assessMtfSupport(
+    ...lvMtfInputs(api, state, {
+      method: "geometric",
+      spectrum: asked.kind === "explicit" ? "cdf" : asked.kind,
+      pupilSemiDiameterMm: seedRadius,
+      stopSemiDiameterMm: seedRadius,
+      focus: "design",
+    }),
+  );
   const problems: ExportProblem[] = [];
 
   const object = objectOf(api, state, support);

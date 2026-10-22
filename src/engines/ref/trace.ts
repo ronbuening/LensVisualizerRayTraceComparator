@@ -2,8 +2,8 @@
 // as the contract defines a trace (contract/CONTRACT.md, `rays.trace`). It is written from the optics alone:
 // analytic geometry and Snell's law, and nothing of any other tracer.
 import type { RayStatusName } from "../../contract/quantities/raysTrace.ts";
+import { createExactSum } from "../../core/numeric/exact.ts";
 import type { Vec3 } from "../../estimators/imageProjection.ts";
-import { createExactSum } from "./exact.ts";
 import { intersectSurface } from "./intersect.ts";
 import type { RefSystem } from "./model.ts";
 import { OBJECT_SPACE_INDEX } from "./paraxial.ts";

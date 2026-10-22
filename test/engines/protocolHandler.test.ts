@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { OpticalCase } from "../../src/contract/case.ts";
 import { engineStamp } from "../../src/contract/engine.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
+import { makeRequest } from "../../src/contract/request.ts";
 import type { QuantityRequest } from "../../src/contract/request.ts";
 import { makeResult, resultInvariantProblems } from "../../src/contract/result.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
@@ -11,7 +12,13 @@ import { validateKind } from "../../src/contract/schemas.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
 import { createProtocolHandler } from "../../src/engines/protocolHandler.ts";
 import type { EngineImplementation } from "../../src/engines/protocolHandler.ts";
-import { ALL_FEATURES_CASE, DESCRIPTOR_FULL, REQUEST_WITH_OPTIONS, edited } from "../contract/corpus.ts";
+import {
+  ALL_FEATURES_CASE,
+  DESCRIPTOR_FULL,
+  REQUEST_WITH_OPTIONS,
+  UNCLIPPED_PLATE_CASE,
+  edited,
+} from "../contract/corpus.ts";
 import { CASE, HELLO, runMessage } from "./support.ts";
 
 const STAMP = engineStamp(DESCRIPTOR_FULL.identity);
@@ -135,6 +142,28 @@ test("a run whose request or case is not valid is refused, naming which of the t
     assert.ok(error.message.startsWith(start), `${pointer}: ${error.message}`);
   }
   assert.deepEqual(seen, []);
+});
+
+test("a case with a surface that does not clip is one of contract 1.2: stated so it is run, stated earlier it is refused", async () => {
+  const seen: [QuantityRequest, OpticalCase][] = [];
+  const engine = okEngine(seen);
+  const request = makeRequest({ caseId: UNCLIPPED_PLATE_CASE.id, quantity: "selftest.echo", spec: {} });
+  const message = edited(runMessage(request), "/params/case", UNCLIPPED_PLATE_CASE);
+  const reply = await ask(engine, message);
+  assert.ok(reply.ok);
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0][1].contract, "1.2");
+  // The message and the request are of 1.0 all the same: they use nothing a minor added.
+  assert.deepEqual([reply.contract, request.contract], [CONTRACT_VERSION, CONTRACT_VERSION]);
+  for (const earlier of ["1.0", "1.1"]) {
+    assert.deepEqual(await refusal(engine, edited(message, "/params/case/contract", earlier)), {
+      code: "bad-request",
+      message:
+        `params.case is not a valid optical-case: it states the contract ${earlier} and has a surface that does ` +
+        "not clip, which minor 2 added",
+    });
+  }
+  assert.equal(seen.length, 1);
 });
 
 test("a case whose index table does not hash to its digest is refused: arrays are verified", async () => {

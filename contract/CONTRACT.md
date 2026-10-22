@@ -50,6 +50,13 @@ different document with a different identity, and an engine may treat it differe
 **Apertures.** `semiDiameter` is the effective clip radius, and the limit is inclusive: a ray at exactly that
 height passes. `innerSemiDiameter` above 0 is a central obstruction: a ray below it is stopped.
 
+**A surface that does not clip** (minor 2) has no clip radius: its `semiDiameter` is null. It stops no ray at any
+height, and has no central obstruction either. It is a surface all the same: a ray's line is met with its sag
+wherever the two cross, and the ray is refracted there. Its `nominalSemiDiameter` is its extent, the size someone
+drew it or generated it at, and limits nothing: the heights at which `system.describe` gives its sag are fractions
+of it. The stop is never such a surface. It is how a case states a cover glass or a filter whose prescription
+publishes no rim: a rim somebody made up for it would clip rays, and limit the field, that the lens does not.
+
 **The stop** clips like every other surface, by its own `aperture`, which a case source writes for the stop setting
 of the case. `conditions.stopSemiDiameter` states that setting as a radius, for what is derived from the stop and
 not from a clip: the entrance pupil, the f-number, a ray aimed at the stop's rim.
@@ -107,11 +114,30 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.0`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.2`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
 here on the rules below hold, and what a stage adds raises the minor.
+
+**Minor 1** (Stage 3.8) adds four optional members to the kind `baseline`, for the MTF baselines
+(`baselines/<suite>.mtf.json`): a metric's `measured`, and a rung's `steps`, `bands` and `sets`. A baseline that
+has one of them states `1.1`, and code refuses one that has them and states `1.0`. **A document that uses nothing
+minor 1 added is still written as `1.0`** (`CONTRACT_VERSION`): every case, request, result, manifest, comparison
+and rays baseline. A case's identity, a request's id and a key of the result store are therefore what they were,
+and no engine's `contract.min` or `contract.max` moves; a reader of `1.0` reads all of them, and only an MTF
+baseline needs a reader of `1.1`.
+
+**Minor 2** (Stage 3.10) adds to the kind `optical-case` the surface that does not clip: `aperture.semiDiameter`
+may be null, and a case with such a surface carries the feature flag `aperture.unclipped`. A case that has one
+states `1.2` (`caseContractVersion`), and code refuses one that has one and states `1.0` or `1.1`
+(`caseInvariantProblems`). **A case without such a surface is still written as `1.0`**, with the identity it had:
+its `system` holds nothing new, so its `systemId`, its `id`, the ids of the requests about it and the keys of the
+result store are what they were. A request and a result are written as `1.0` whatever case they are about. The
+engines of this repository state `contract.max` `1.2` and list the flag; an engine that does neither is not asked
+about such a case and is asked about every other as before (`negotiate`). No quantity's version changes:
+`system.describe` answers `clipRadius` with an infinity for such a surface, which is the number its definition
+asks for, the largest height at which a ray passes.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -176,7 +202,7 @@ SurfaceIR:
 | `z` | number | vertex position |
 | `thickness` | number ≥ 0 | distance to the next vertex; after the last surface, to the design image plane |
 | `shape` | object | `{ kind: "plane" }`, `{ kind: "conic", radius, conic }` or `{ kind: "asphere", radius, conic, terms }` |
-| `aperture` | object | `semiDiameter` > 0, `nominalSemiDiameter` > 0 (the clear semi-diameter the clip is derived from: the prescription's; on the stop surface, the stop setting), `innerSemiDiameter` ≥ 0 |
+| `aperture` | object | `semiDiameter` > 0, or null for a surface that does not clip (minor 2); `nominalSemiDiameter` > 0 (the clear semi-diameter the clip is derived from: the prescription's; on the stop surface, the stop setting; on a surface that does not clip, its extent); `innerSemiDiameter` ≥ 0 |
 | `elementId` | integer ≥ 0 | the element whose glass follows the surface; 0 when no element does |
 | `synthetic?` | `"rearPlate"` | set on a surface the case source generated for a cover glass or filter |
 
@@ -212,6 +238,8 @@ writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 - each `z` equals the sum of the thicknesses before it within 1e-9 mm, so the first vertex is at 0, and
   `designImageZ` equals the sum of all thicknesses within the same tolerance;
 - an asphere has at most one term of each power;
+- a surface that does not clip (`semiDiameter` null) has an `innerSemiDiameter` of 0 and is not the stop, and its
+  case states the contract `1.2` or later;
 - there is at least one line, and every weight is positive;
 - `indexAfterSurface` decodes, is float64 of shape `[lines, surfaces]`, and holds positive finite indices.
 
@@ -220,6 +248,7 @@ writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 | Flag | The case has |
 |---|---|
 | `aperture.annular` | a surface with `innerSemiDiameter` > 0 |
+| `aperture.unclipped` | a surface that does not clip: `semiDiameter` null (minor 2) |
 | `lines.multiple` | more than one line |
 | `object.finite` | a finite object |
 | `surface.asphere.even` | an asphere term of even power, whatever its coefficient |
@@ -250,23 +279,68 @@ conjugate of its own. A lens it cannot write exactly is reported with a code, ne
 | `aperture.nominalSemiDiameter` | the semi-diameter LensVisualizer traces the surface with: `evaluateAperture(...).semiDiameter`, which is `state.surfaces[i].sd`, or the run's stop radius on the stop surface |
 | `aperture.semiDiameter` | LensVisualizer's inclusive clip limit for it, found by asking `evaluateAperture` for the largest radius it does not call outside: today `sd + max(1e-9, abs(sd) × 1e-12)` |
 | `aperture.innerSemiDiameter` | `innerSd`, or 0 |
+| `aperture` of a surface LensVisualizer does not clip at | `semiDiameter` null, `nominalSemiDiameter` `state.surfaces[i].sd`, `innerSemiDiameter` 0; see below |
 | `synthetic` | `"rearPlate"` on the two flat surfaces LensVisualizer generates for a rear plate, which are surfaces of the state like any other |
 | `stopIndex` | `state.lens.stop.surfaceIndex` |
 | `lastLensSurfaceIndex` | `L.lastLensSurfaceIdx` |
 | `designImageZ` | `state.imgZ` |
 | `conditions.stopSemiDiameter` | from the run's aperture, below; the stop surface's aperture carries the same radius |
-| `conditions.imageZ` | `state.imgZ`, plus the run's shift |
+| `conditions.imageZ` | `state.imgZ`, plus the run's shift; for the image plane `lv-best-axial`, plus LensVisualizer's own best axial focus shift, below |
 | `conditions.object` | `infinity` at `focusT` 0; else `finite` at the z of `mtfFiniteObjectPoint` for the conjugate LensVisualizer certifies for exactly that focus and zoom position (`MtfSupport.conjugate`) |
 | `conditions.lines` | a named set: `MtfSupport.spectralLines` of `assessMtfSupport` for that spectrum, with LensVisualizer's weights, its reference line first. An explicit list: its own wavelengths and weights (1 each without weights), the first the reference line |
 | `conditions.indexAfterSurface` | per line, `mtfIndexResolver(state, support, wavelength)`: its indices where it gives a resolver (`indexSource` `anchored`), each surface's `nd` where it gives none (`authored`); air is exactly 1 |
 | `provenance.source` | the lens's key, its file and the hash of the file's bytes, and `zoomT` and `focusT` of the state: `state.zoomT`, `state.focusT` |
 
+**A rear plate without a published rim.** A lens file may declare a cover glass or a filter behind the lens
+(`rearPlates`) without its semi-diameter. LensVisualizer then generates a rim for the plate's two surfaces, 1.5
+times the larger of the largest authored semi-diameter and the image semi-diagonal, and from commit `31c34396` on
+marks both surfaces `clips: false`: its tracers clip no ray there (`evaluateAperture` reports no semi-diameter), its
+half-field search skips them, and their `sd` is only an envelope that its ray launch and its intersection bounds
+read. Such a surface is exported as one that does not clip, and only after LensVisualizer was asked
+(`surfaceAperture`, `src/engines/lv/exportAperture.ts`): the state must mark it, `evaluateAperture` must report no
+semi-diameter and no central obstruction, and must call no height outside, of the envelope as little as of a
+million of them. A plate whose rim is published is an aperture like any other and is exported with its clip limit.
+Every other surface is held to what it was held to: a semi-diameter that is the state's `sd`. An answer of
+LensVisualizer's that fits neither is thrown, naming the surface, and nothing is exported. Before that commit the
+generated rim clipped, and limited the field of a compact lens; the cases of such lenses are other cases now.
+
 **The stop radius.** `wide-open` is `wideOpenStopAtZoom(zoomT, L)`, which is the prepared stop surface's `sd`.
-An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoom(zoomT, L)) / N`. That rule is
+An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoomClamped(zoomT, L)) / N`.
+The hook imports `fopenAtZoomClamped as fopenAtZoom`; `fopenAtZoom` in the expressions below is that alias. The rule is
 written only in LensVisualizer's React hook (`useLensComputation.ts`, `currentPhysStopSD`), so the exporter restates
 it, in the hook's order of operations, and a test against LensVisualizer's source fails when the hook's expression
 changes. An N below the widest f-number of that zoom position is a problem, not a clamp. `stop-radius` is taken as
 given.
+
+`lv-f8-comparison` is the stop of the f/8 comparison of LensVisualizer's MTF tab
+([the request of the MTF tab](#the-request-of-the-mtf-tab)): the radius the hook hands the tab wide open,
+`(wide-open radius × fopenAtZoom) / fNumber` with the f-number of the aperture slider at wide open, times
+`fNumber / 8`. It is not the hook's own f/8, `(wide-open radius × fopenAtZoom) / 8`: the two are the same number
+on many lenses and one unit in the last place apart on others, and a case is its numbers to the bit. A lens the tab
+offers no comparison for (it is not faster than f/7.95 wide open, or does not stop down to f/8) has no such stop:
+the run has the problem `f8-comparison-unavailable`, with the tab's reason. Both expressions are the tab's and the
+hook's, restated (`lvHookStop`, `lvTabComparison` in `src/engines/lv/tabRequest.ts`) with source canaries.
+
+**The image plane `lv-best-axial`** is LensVisualizer's own best axial focus for the stop radius and the lines of
+the case: `conditions.imageZ` is `state.imgZ` plus the shift its MTF applies to every field when it is asked for
+its best focus, added as LensVisualizer adds it. The shift is asked of LensVisualizer, never computed
+(`lvBestAxialFocus`, `src/engines/lv/focus.ts`): the first step of its `computeMtfSteps`, before any field is
+traced, states the focus of the request, found by its own search on the axial beam.
+
+| Of the request the focus is asked with | Is |
+|---|---|
+| `stopSemiDiameterMm`, `pupilSemiDiameterMm` | the stop radius of the case, and the seed the tab's hook would hand over for it (`lvPupilSeed`) |
+| `spectrum` | the one of LensVisualizer's three whose lines the case has. Lines that are none of them have no focus of LensVisualizer's: `lv-best-axial-needs-lv-spectrum` |
+| `focus` | `best-axial` |
+| `maxGridSize` | `sampling.lvGridCap` of the run, where it states one; LensVisualizer's own default, 128, without |
+
+So the plane is that of one stop, one spectrum and one grid cap: the reference line and the photopic lines of one
+lens have two best planes, and so have wide open and f/8. The grid cap matters only below 64: the search is of an
+axial bundle of 64 cells, or of the cap when that is smaller. A state LensVisualizer's MTF does not cover has the
+problem of its gate's reason, and a search that finds no focus `lv-best-axial-unavailable`. A case at that plane is
+a case like any other: every engine is asked about `conditions.imageZ`, and none is told where the number came
+from. The engine `lv` recognises it ([its product MTF](#lensvisualizers-product-mtf)), and the
+[MTF recipe](#the-mtf-recipe) of a run names it.
 
 **Lines and indices** are LensVisualizer's decision, not the exporter's. The reference line is the d line, or the
 e line for a lens whose glasses are all e-referenced, and it is traced with the authored `nd`; several lines, and
@@ -284,7 +358,8 @@ its g and C lines, which its anchored indices are fitted between.
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
-| `lv-best-axial-needs-mtf-recipe` | asks for the image plane `lv-best-axial`, which only LensVisualizer's MTF result states; the MTF recipe resolves it to a shift |
+| `f8-comparison-unavailable` | asks for the aperture `lv-f8-comparison` of a lens LensVisualizer's MTF tab offers no f/8 comparison for |
+| `lv-best-axial-needs-lv-spectrum`, `lv-best-axial-unavailable` | asks for the image plane `lv-best-axial` on lines that are none of LensVisualizer's spectra, or in a state its focus search finds no focus for |
 | `wavelength-outside-fitted-range` | lists a wavelength outside LensVisualizer's g to C lines |
 | `finite-conjugate-unavailable` | asks for a focus position that is not a station LensVisualizer certifies. A refocused lens is never exported with its object at infinity |
 | `mixed-reference`, `spectral-data-unavailable` | has no glass data for what was asked: LensVisualizer's own reasons, under its own codes |
@@ -327,6 +402,15 @@ elsewhere occur only in folded systems, and an asphere without a term is the con
 
 ### The engine `lv`
 
+The LV binding uses the public barrels `src/optics/{buildLens,optics,fieldGeometry,analysis,mtf,geometry,chromatic}.ts`
+where they export the required name, and defining deep modules otherwise (the manifest is authoritative).
+It requires the engine rewrite at `460f841f` or later. MTF entry points take an analysis request made by
+`createAnalysisRequest` from `src/optics/analysis.ts`, beside settings without aperture radii; lower-level helpers
+in `src/optics/analysis/mtf/` retain their state and resolved options form. Lens files use V2 `zoom.stations`;
+finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe. `buildLens` takes
+the V2 default export directly; the runtime's canonical lens is `source`. `evaluateAperture` takes
+`state.traceGeometry`. The source stop's `sd` may be a placeholder 0: the prepared stop supplies the radius.
+
 LensVisualizer is also an engine, `lv` (`src/engines/lv/engine.ts`): it answers a request from its own prepared
 state and its own functions, and reads nothing of the surfaces of the case it is handed. Its `fingerprint` is the
 closure hash of LensVisualizer's engine files, the `closureHash` of a case's provenance; its `adapterRevision` is
@@ -349,12 +433,12 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   above LensVisualizer's own flat threshold; `conic` is the asphere's `K`, and 0 for a surface without curvature
   and without a term; `terms` are the coefficients of LensVisualizer's own list of polynomial terms that are not 0;
   `clipRadius` is the largest height its `evaluateAperture` passes a ray at, the stop surface asked with the stop
-  radius of the case; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
+  radius of the case, and an infinity for a surface it clips nothing at; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
   surface ends; `indexAfterSurface` is its index resolver's table for the case's lines. So R0 of `lv` against any
   engine holds the exporter, and that engine's reading of the case, to what LensVisualizer traces.
-- **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`traceParaxialSurfaces2`) on the rows
+- **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`paraxialTrace`) on the rows
   `{ R, d, n }` of the state, with `n` the index of the line: two basis rays give the system matrix, its own
-  `buildCardinalElementsFromMatrix2` the cardinal points and the back focus, two rays to the stop's plane the
+  `buildCardinalElementsFromMatrix` the cardinal points and the back focus, two rays to the stop's plane the
   entrance pupil and a ray from the stop's centre the exit pupil. LensVisualizer's own first-order module answers
   for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
   bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
@@ -363,7 +447,7 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   `surface.asphere.quadratic-term`, before the kernel is asked. No lens of LensVisualizer has either: its
   coefficients start at `A3`.
 - **`rays.trace`** is every ray of the request traced for real by LensVisualizer's sequential tracer,
-  `traceEngineRay2`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
+  `traceEngineRay`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
   ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
   (which are LensVisualizer's own for that line), the direction taken as the unit vector it is, and the optical
   path recorded. These are the options of LensVisualizer's own MTF bundle. What became of a ray is what
@@ -388,20 +472,25 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 |---|---|
 | `lvStoredEntrancePupilZ` | the stop vertex plus `epZRelStopAtZoom(zoomT, L)`: found with real rays near the axis |
 | `lvStoredExitPupilZ` | the last vertex, rear plates included, plus `xpZRelLastSurfAtZoom(zoomT, L)`: likewise |
-| `lvNominalEntrancePupilSemiDiameter` | `epAtZoom2(zoomT, L)`: focal length over twice the nominal f-number |
+| `lvNominalEntrancePupilSemiDiameter` | `epAtZoomClamped(zoomT, L)`: focal length over twice the nominal f-number |
 | `lvStoredExitPupilSemiDiameter` | `xpAtZoom(zoomT, L)`: scaled from that nominal entrance pupil |
-| `lvNominalFNumber` | `fopenAtZoom2(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
+| `lvNominalFNumber` | `fopenAtZoomClamped(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
 
 #### LensVisualizer's product MTF
 
-`lv` answers `mtf.native` (`src/engines/lv/mtf.ts`) with one call of `computeMtf(state, options)`.
+`lv` answers `mtf.native` (`src/engines/lv/mtf.ts`) with one call of `computeMtf(request, settings)`.
+`lvMtfInputs` builds the analysis request with `createAnalysisRequest`, the prepared state, `dynamicEFL: 0`
+as in LV's worker, and the two current radii. The settings carry no radii. The tables below use the resolved
+options' radius names: `stopSemiDiameterMm` is `request.aperture.stopSemiDiameterMm`, and
+`pupilSemiDiameterMm` is `request.aperture.entrancePupilSemiDiameterMm`. Lower-level helpers receive these as
+resolved options through `lvResolvedMtfOptions`, including `request.pose?.active ?? settings.movementActive`.
 
 | Of the request | Is |
 |---|---|
 | `method`, `frequenciesPerMm` | the spec's |
 | `fieldFractions` | the spec's fractions. LensVisualizer takes them of its reference image height, the format corner where the lens declares a format and the modeled edge where it does not, and solves each to a chief-ray angle, which the answer states |
 | `spectrum` | the one of LensVisualizer's three whose lines the case has: `reference`, `cdf` or `photopic`, the same wavelengths with the same weights, as its support gate lists them, traced with the indices of the case |
-| `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best` |
+| `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best`. For a case at LensVisualizer's own best axial focus, `best-axial` for the spec's `design` ([below](#a-case-at-lensvisualizers-best-axial-focus)) |
 | `stopSemiDiameterMm` | `conditions.stopSemiDiameter` |
 | `pupilSemiDiameterMm` | the seed of LensVisualizer's footprint scan: the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`). It is never the nominal pupil of the lens, which LensVisualizer's audit scripts pass and which gives another MTF |
 | `maxGridSize` | the engine option `lvGridCap`: 32, 64, 128 or 256, the grid LensVisualizer's refinement may go up to; 128 without it. It is what `sampling.lvGridCap` of a run is for |
@@ -422,13 +511,34 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 | Code, item | When |
 |---|---|
 | `feature`, a reason of LensVisualizer's support gate (`unsupported-path`, `unverified-scale`, ...) | the gate refuses the state, on any spectrum: a fisheye projection, an annular aperture, a scale it has not verified. The message is the gate's, word for word. It is decided first, whatever the spec asks |
-| `feature`, `image-plane.shifted` | `conditions.imageZ` is not the design image plane: LensVisualizer's MTF is of that plane or of its own best focus, and of no plane it is given |
+| `feature`, `image-plane.shifted` | `conditions.imageZ` is neither the design image plane nor LensVisualizer's own best axial focus for the request: its MTF is of one of those two, and of no plane it is given. Also: `engine-best`, or a profile, asked of a case that is not at its design plane |
 | `feature`, `lines.custom-spectrum` | the lines of the case are none of its three spectra: it has no spectrum by wavelength |
 | `feature`, `aperture.f8-comparison` | the case is stopped down as the tab's f/8 comparison would be, for a lens the tab offers none for |
 | `option`, `fields.angles-deg` | fields as angles: it takes fractions of its reference image height |
 | `option`, `profile` | a profile other than `lv-tab-default` |
 | `option`, `lvGridCap` | a grid cap that is none of the four |
 | `option`, `fields.limits` or `frequenciesPerMm.limits` | without a profile, more fields or frequencies, or a higher frequency, than LensVisualizer takes in one request (at `ed78cf40`: 101 fields, 501 frequencies, 1000 cycles/mm). The limits are not restated: its gate is asked with the spec's fields and then with its frequencies, and the message ends with the gate's |
+
+##### A case at LensVisualizer's best axial focus
+
+LensVisualizer's MTF cannot be handed a plane: it evaluates the design plane, or the plane its own focus search
+finds. So a case whose image plane is not its design plane has an MTF of LensVisualizer's only when that plane
+**is** the one its search finds for the very request: `lv` asks LensVisualizer for its best axial focus at the stop
+radius, the lines and the grid cap of the request (`lvBestAxialFocus`) and holds `state.imgZ` plus that shift to
+`conditions.imageZ`, to the bit. It is what a run with the image plane `lv-best-axial` exports.
+
+| The case is at | The spec's `focus` | `lv` asks LensVisualizer for | The answer's `focus` |
+|---|---|---|---|
+| its design plane | `design` | `design` | `{ mode: "design", appliedShiftMm: 0 }` |
+| its design plane | `engine-best` | `best-axial` | `{ mode: "best-axial", appliedShiftMm }`, LensVisualizer's shift |
+| LensVisualizer's best axial focus | `design` | `best-axial` | `{ mode: "design", appliedShiftMm: 0 }`: the plane of the case as it is. `method.params.focus` says `best-axial` |
+| LensVisualizer's best axial focus | `engine-best` | nothing | `unsupported`, `image-plane.shifted` |
+| any other plane | either | nothing | `unsupported`, `image-plane.shifted` |
+
+The check is of the request, not of the run's words: a case at the best focus of a grid cap of 32 is at no best
+focus of a request capped at 128, and the same plane asked for as a shift by its number is the same case and is
+answered. Should LensVisualizer's result then be of another plane than the case's, the engine fails
+(`engine-failure`) and gives no answer.
 
 ##### The request of the MTF tab
 
@@ -475,6 +585,75 @@ Source canaries (`test/integration/lv/canaries.test.ts`) pin every restated expr
 worker's call; an integration test holds the answers for the 12 benchmark configurations to `computeMtf` called
 with a request spelled out a second time, bit for bit.
 
+### The engine `replay`
+
+`replay` (`src/engines/lv/replayEngine.ts`) is the comparator's own estimators on a replay of LensVisualizer's
+sampling. It is built in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays
+are LensVisualizer's, launched and traced by LensVisualizer. What is its own is which bundles it asks for, what it
+sums and how: the comparator's reading of LensVisualizer's MTF. Rung `r4f` holds it to `lv`. Its `fingerprint` is
+LensVisualizer's engine closure, as `lv`'s is; its `adapterRevision` is the hash of the comparator's code behind
+it, in which the replay and the estimator are and which is not `lv`'s.
+
+It answers **`mtf.native`** with the method `geometric`, for the request `lv` would make for the same case and
+spec (`lvMtfRequest`, one function for both): what `lv` answers `unsupported`, `replay` answers `unsupported`
+with the same item, a case at LensVisualizer's own best axial focus is answered by both, and a case that is stale
+or came from no LensVisualizer lens is treated as `lv` treats it. Its own two refusals, both of code `option`:
+`method.diffraction` (it has the geometric estimator and no other) and `profile` (it is asked by a spec).
+
+Where `lv` hands the request to `computeMtf`, `replay` replays the sampling (`replayLvMtf`,
+`src/engines/lv/replay.ts`):
+
+| Step | Is |
+|---|---|
+| the request before a field is traced | LensVisualizer's own: the first step of `computeMtfSteps` states the support record, the frequencies, the field axis, the focus and each field's target, pending or outside the model |
+| the ladder | `MTF_GRID_LADDER` up to the request's `maxGridSize`, restated from `computeMtfSteps` |
+| the image plane | `state.imgZ` plus the focus's applied shift, restated likewise |
+| a field's launch and footprint | LensVisualizer's `prepareMtfFieldLaunch` and `findMtfFieldFootprint`; a field without the one is `chief-ray-failed`, without the other `vignetted` |
+| a grid of a field | every line traced by LensVisualizer's `traceMtfBundle` over the footprint. The first line's chief ray, traced with no aperture checked, is the reference of every line. The counts add up over the lines. Fewer rays at a line than `MTF_MIN_RAYS`, or no flux, is `empty-pupil`, which a finer grid may mend; too much unresolved flux, by LensVisualizer's own `assessUnresolvedFlux`, is `trace-failed`. Restated from `fieldAtGrid` |
+| widening | a grid whose rays reach the guard band of the footprint is traced again over LensVisualizer's `expandMtfFootprint` of it, at most `MTF_MAX_FOOTPRINT_EXPANSIONS` times for a field over all its grids. Restated from `traceField` |
+| the walk through the ladder | LensVisualizer's own `refineMtfField`, on the replay's curves: which grids are traced, and whether a field is converged, are decided by LensVisualizer's code |
+| the curves | the comparator's `polychromaticOtf` (`src/estimators/geometricOtf.ts`) on the landings and weights of the bundles, about the reference: the one thing that is not LensVisualizer's |
+
+Every restated line has a source canary (`test/integration/lv/canaries.test.ts`). The answer has the form `lv`
+gives LensVisualizer's own result, member for member, so the two can be held to each other: a field's status,
+reason, angle and image height; under `sampling` the same names (`gridSize`, `validRays`, `blockedRays`,
+`failedRays`, `unknownFluxFraction`, `maxDelta`, `convergedThroughLpMm`) and two of its own, `gridSizesTraced` and
+`footprintExpansions`; `method.name` is `replay-geometric`, and `method.params` hold the request and the `ladder`.
+A value the rounding of a modulus left above 1 is written as 1, the range the contract gives an MTF. A field the
+estimator has no value for is `unavailable` with the reason `estimator-<why>`
+(`OtfUnavailableReason`): it is never left out, and since LensVisualizer has no such reason, rung `r4f` counts it.
+
+### The engine `wave`
+
+`wave` (`src/engines/lv/waveEngine.ts`) is the comparator's wave estimator on LensVisualizer's own rays. It is built
+in, runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays are LensVisualizer's,
+launched and traced by LensVisualizer. What is its own is the estimate, Hopkins' autocorrelation of the pupil
+function from the optical paths (`src/estimators/waveOtf.ts`), and whether a lattice may carry it. Rung `r6b` sets
+it beside `lv`. Its `fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the
+comparator's code behind it, in which the estimator is and which is not `lv`'s.
+
+It answers **`mtf.native`** with the method `diffraction`, on the image plane of the case as it is:
+
+| Step | Is |
+|---|---|
+| the rays of a field | the run's own [ray sets](#ray-sets) for it (`lvFieldRaySets`): LensVisualizer's launch lattice over the footprint it finds, at `bundleGrid` cells across the beam and at twice as many, each at every line of the case. `bundleGrid` is the engine option of that name, a run's `sampling.bundleGrid`; 32 without it |
+| the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
+| the reference point | the flux-weighted centroid of the first line's landings, on `conditions.imageZ` |
+| the curves | the moduli of the comparator's `polychromaticWaveOtf` on the finer lattice, at the frequencies of the spec; a value the rounding of a modulus left above 1 is written as 1 |
+| a field's `status` | `ok` where the finer lattice may be used as an arbiter; `unconverged`, with the flags joined by `+` as its `reason`, where it may not: `undersampled` (neighbouring cells more than a quarter wave apart), `not-converged` (the MTF moved by more than 0.005 on the axis, 0.01 off it, from the coarser lattice to the finer) or `convergence-unknown` (the coarser lattice has no estimate); `unavailable`, with LensVisualizer's code or the estimator's reason, where the field has no chief-ray angle, no rays or no estimate |
+
+Under `sampling` a field states `gridSize` and `coarseGridSize` (the cells its two lattices were asked for across
+the beam, as LensVisualizer states its own grid), `validRays`, `blockedRays` and `failedRays` (the cells of the
+finer lattice by how LensVisualizer ended them, summed over the lines), `phaseStepWaves` (the largest step of the
+path between neighbouring lit cells, in waves) and `maxDelta` (how far the MTF moved from the coarser lattice to
+the finer). `method.name` is `hopkins-autocorrelation`, and `method.params` hold the two grids and the limits.
+
+Its refusals, all of code `option`: `method.geometric` (it has the wave estimator and no other), `profile` (it is
+asked by a spec), `focus.engine-best` (the estimator has no focus criterion) and `option.bundleGrid` (no whole
+number from 2 to 128). A state LensVisualizer's launch does not cover is `unsupported` as a `feature`, with the
+reason of LensVisualizer's gate; a case that is stale or came from no LensVisualizer lens is treated as `lv`
+treats it.
+
 ### `run-spec`
 
 The user's specification of one run. Only `contract`, `kind`, `name` and `lens` are required; an option left out
@@ -487,10 +666,10 @@ takes the comparator's default.
 | `name` | string | letters, digits, `.`, `_` and `-`; safe as a file name |
 | `lens` | object | `{ kind: "lv", key }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another |
 | `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1. Without `zoomT`, a zoom is run at both ends ([below](#a-zoom-without-a-position)) |
-| `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }` or `{ kind: "stop-radius", mm }` |
+| `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }`, `{ kind: "stop-radius", mm }`, or `{ kind: "lv-f8-comparison" }`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which only a LensVisualizer lens has |
 | `lines?` | object | `{ kind: "reference" \| "cdf" \| "photopic" }` or `{ kind: "explicit", wavelengthsNm, weights? }` |
 | `fields?` | object | `{ kind: "image-height-fractions", values }` 0..1, or `{ kind: "angles-deg", values }` in (−90, 90) |
-| `imagePlane?` | object | `{ kind: "design" \| "lv-best-axial" }` or `{ kind: "shift", mm }` along +z from the design plane |
+| `imagePlane?` | object | `{ kind: "design" }`, `{ kind: "shift", mm }` along +z from the design plane, or `{ kind: "lv-best-axial" }`: LensVisualizer's own best axial focus for the stop and the lines of the run, which only a LensVisualizer lens has |
 | `frequenciesPerMm?` | number[] | spatial frequencies, each ≥ 0, no repeats |
 | `sampling?` | object | `lvGridCap?` (32, 64, 128 or 256), `bundleGrid?` (integer ≥ 1), `engines?` (options per engine id) |
 | `rungs?` | string[] | rungs of the comparison ladder to evaluate |
@@ -502,7 +681,49 @@ takes the comparator's default.
 For the rays of a run ([ray sets](#ray-sets)), a run without `fields` takes the image-height fractions 0, 0.5 and
 1, and one without `sampling.bundleGrid` 32 cells across the beam. `sampling.lvGridCap` is the largest pupil grid
 LensVisualizer's own MTF may refine to, which the engine `lv` takes as its option `lvGridCap`
-([its product MTF](#lensvisualizers-product-mtf)); no rung asks for that quantity yet, so no run hands it on yet.
+([its product MTF](#lensvisualizers-product-mtf)). The rung `r4f` hands it to its two engines, and the image plane
+`lv-best-axial` and the MTF recipe of a run are of that cap.
+
+How the stop of `lv-f8-comparison` and the plane of `lv-best-axial` are found is said under
+[Cases from LensVisualizer](#cases-from-lensvisualizer). Both are asked of LensVisualizer when the case is
+exported, so a run with either is a case of its own, with an id of its own, and every engine is asked about that
+case. A case file is taken as it is: neither option moves it.
+
+#### The MTF recipe
+
+An MTF is of a plane, of fields, of lines and of frequencies, and for a LensVisualizer lens each of those is
+LensVisualizer's to state. The **recipe** of a run states them once, as numbers, so that every MTF request about
+the run's case, whichever engine it is asked of, is made from the same ones and no engine resolves a fraction of an
+image height or a best focus by a rule of its own. It comes from the source of the run's case
+(`CaseSource.recipe`), is a pure function of the run and the case, and is recorded in the run's manifest
+(`runs[].recipe`) whenever a rung that is made from it is run. It is no document of the contract: nothing is
+exchanged in it, and a request states what it needs of it in its own spec.
+
+| Member | Type | Meaning |
+|---|---|---|
+| `source` | `"lv"` \| `"run"` | who resolved it: LensVisualizer, or the run itself, for a case read from a file |
+| `plane` | object | `kind`: `design`, `lv-best-axial` or `shift`, read off the case; `shiftMm`: `conditions.imageZ` minus the design plane; `lvBestAxialShiftMm?`: LensVisualizer's best axial shift for the stop and the lines of the case, whatever plane the case is at, null where it finds none |
+| `imageZ`, `stopSemiDiameter`, `lines` | | the case's: `conditions.imageZ`, `conditions.stopSemiDiameter`, and each line's wavelength and weight |
+| `frequenciesPerMm` | number[] | the run's `frequenciesPerMm`, ascending; without them LensVisualizer's own `MTF_FREQUENCIES` (0 to 100 cycles/mm in steps of 2), and 10, 30 and 50 for a case file |
+| `referenceHeightMm` | number \| null | the image height the fractions are of: LensVisualizer's reference image height |
+| `fields` | object[] | in the order of the run: `fraction` (null for a field asked as an angle), `angleDeg` (the chief-ray angle, null where none was found), `targetImageHeightMm`, and `problem?`, why the field has no angle |
+| `lvGridCap?` | integer | the run's `sampling.lvGridCap`, where it states one |
+
+- **For a LensVisualizer lens** (`lvMtfRecipe`, `src/engines/lv/recipe.ts`) everything is the first step of
+  LensVisualizer's own `computeMtfSteps` for the comparator's general request on the spectrum of the case's lines:
+  the angle it solves for each fraction of its reference image height (the run's `fields`, or its own `MTF_FIELDS`:
+  0, 25, 50, 75 and 100 %), and its best axial focus. `plane.kind` is `lv-best-axial` exactly when the image
+  plane of the case is `state.imgZ` plus that shift, to the bit. `shiftMm` is a difference of two rounded numbers
+  and need not be `lvBestAxialShiftMm` in its last bits. A fraction beyond the modeled edge, or without an angle,
+  is a field with a `problem` under LensVisualizer's own code, and the others are not affected. There is no recipe,
+  and a coded problem instead, where LensVisualizer's gate refuses the state (its reason), where the lines of the
+  case are none of its spectra (`lines.custom-spectrum`), and where the run states fields as angles
+  (`fields.angles-deg`).
+- **For a case read from a file** (`fixtureRecipe`, `src/core/mtfRecipe.ts`) the run states the recipe, or there is
+  none. Its `fields` as angles, `{ kind: "angles-deg", values }`, are the recipe's fields, with no fraction and no
+  image height; the plane is the image plane the file has (`design`, or a `shift` of the difference); the stop
+  and the lines are the case's. A run that states no fields, or fractions of an image height, has no recipe
+  (`recipe-needs-field-angles`): nothing says which angle a fraction of a case file's image height is.
 
 #### A zoom without a position
 
@@ -710,7 +931,8 @@ and two installs of one commit say the same of themselves.
 
 `optiland` (`workers/python/lvrtc_optiland`) answers a request by building the case in optiland: one `Optic` for
 each line of the case, with that line's indices and that line's wavelength as its only one (`build.py`). It
-declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order` and `rays.trace`.
+declares every feature flag and no limit, and offers `system.describe`, `paraxial.first-order`, `rays.trace` and
+`mtf.native`.
 
 | The case | `optiland` answers |
 |---|---|
@@ -720,7 +942,8 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
 - **Verified before it is answered.** Every value handed to optiland is read back from optiland's own objects and
   must be the number of the case: each vertex, in the geometry's frame and on the paraxial axis; the class of each
   geometry, its radius, conic constant and terms; the tolerance and the iteration count of an asphere's
-  intersection; the class of each aperture and its two radii; the stop; that each surface refracts by optiland's
+  intersection; the class of each aperture and its two radii, and for a surface of the case that does not clip
+  that it has no aperture at all; the stop; that each surface refracts by optiland's
   ordinary model, which a mirror, a thin lens or a coating is not; the index after each surface, and the index
   optiland has in front of it, which it finds by a link to the surface before and which is what it refracts a ray
   out of and charges the ray's stretch to the surface to; the object and image planes; the index of the image
@@ -735,7 +958,8 @@ declares every feature flag and no limit, and offers `system.describe`, `paraxia
   geometry holds, which is 0 for an infinite one; `conic` is the geometry's conic constant, and 0 for a plane,
   which has none; `terms` are the coefficients of an asphere read by optiland's rule, an entry of an even asphere
   being the term of twice its place, those that are not 0; `clipRadius` and `innerClipRadius` are the two radii of
-  the surface's aperture; `stopSemiDiameter` is half the stop diameter the system's aperture states;
+  the surface's aperture, and an infinity and 0 for a surface optiland holds no aperture for, at which it clips
+  nothing; `stopSemiDiameter` is half the stop diameter the system's aperture states;
   `indexAfterSurface` has a row from each line's optic, the index of each surface's material at that optic's
   wavelength; `sagRadii` are the fractions of the semi-aperture optiland holds for each surface, which the builder
   set to the nominal semi-diameter; and `sag` is the geometry's own sag at those heights. The method is named
@@ -860,6 +1084,73 @@ a spec may be off by, 2.2e-11 mm and 1.9e-8 waves. The worker moves no point and
 optiland's, in R2 and in R3, and is in the answer. No ray set of LensVisualizer or of a case file has such a
 direction: theirs are unit vectors to a rounding, LensVisualizer's within 1.6e-16.
 
+**`mtf.native`** is answered by either method, each with a class of optiland's own, of fields stated as angles, on
+the image plane of the case as it is: `diffraction` with its FFT MTF, and `geometric` with its geometric MTF,
+which follows it here. Fields stated as fractions of an image height are answered, by either method, only with the
+engine option `fieldAnglesDeg`, the angle of each in degrees in the order of the spec, which is what a run's
+[recipe](#the-mtf-recipe) resolved them to: the answer then names each field by its fraction (`field`) and states
+the angle it computed with (`fieldAngleDeg`). For a spec of angles the option is not read.
+
+The method `diffraction` is optiland's class `ScalarFFTMTF`, asked as anyone would ask it and read from its own
+attributes (`lvrtc_optiland/mtf.py`). Nothing of the transfer function is the worker's. What is, is stated in the
+answer:
+
+| Step | Is |
+|---|---|
+| the line | one line of the case: its only one, or the one the engine option `line` names by its index in `conditions.lines`. optiland's class is of one wavelength and gives a modulus, and a polychromatic MTF is the modulus of a sum of complex transfer functions about one image point: of the lines' moduli, each about its own chief ray, none can be formed (the lateral colour and every phase between the lines are lost). `lines` of the answer holds the one line |
+| the call | one field, one sampling and one new optic a call: optiland computes every field of a call before it gives any, and one it cannot compute raises for all. The optic is the builder's, verified as above, with the field added and read back |
+| the field | optiland's field type `angle`, the only field of the optic, at the angle of the spec, without a vignetting factor. optiland's positive angle is an object toward −y: the optic is the mirror image in y of the contract's system, which changes no MTF of a system of revolution. `fieldAngleDeg` is the angle optiland holds, and the direction it launches the chief ray in is held to (0, sin, cos) of it |
+| the pupil | optiland's own grid of `num_rays` by `num_rays` normalised pupil coordinates, laid on the stop surface by its ray aiming (`robust`, 50 iterations, 1e-10 mm), out to the clip radius of that surface (`aperture.aimedStopRadiusMm`), and clipped by the aperture of every surface. `conditions.stopSemiDiameter` takes no part: it is the paraxial pupils' |
+| the reference | optiland's `chief_ray` strategy, tilt not removed: a sphere centred where the chief ray, through the centre of the stop, meets the image plane, with the distance to the paraxial exit pupil for its radius. `imageHeightMm` is how far from the axis that ray lands, by the call optiland's strategy makes |
+| the sampling | `num_rays` 128 and then 256, each with `grid_size` twice that, stated to optiland (a call without a grid size takes `num_rays` for OpticStudio's sampling number: 64 rays across the pupil for 128). The curves are the finer step's. The engine option `fftRays` 512 asks for 256 and 512 instead |
+| the frequencies | optiland gives each cut at the lags of its grid, on an axis of its own (`freq_tang`, `freq_sag`: cycles/mm on the image surface, calibrated with the four rays through the rim of its pupil). A frequency of the spec is interpolated linearly between the two samples that enclose it, on the axis of its cut; `tangential` is optiland's `mtf[0][0]` and `sagittal` its `mtf[0][1]` |
+| a field's `status` | `ok` where no value moved by more than 0.005 on the axis, 0.01 off it, from the coarser step to the finer; `unconverged` with the reason `not-converged` where one did, or `convergence-unknown` where the coarser step has no curve; `unavailable` where the finer step has none: `optiland-raised-<class>` (an exception of optiland, which ends the field's ladder), `no-frequency-axis` (an axis that does not start at 0 and ascend: a rim ray that did not arrive leaves a NaN in its step), `frequency-beyond-axis` (a frequency above the last sample of an axis, the cut-off: nothing is extrapolated) or `mtf-not-a-modulus` (a sample that is a NaN or outside 0 to 1). `notes` says of each such field what optiland said, and both steps' figures where it moved |
+
+Under `sampling` a field states `numRays`, `gridSize` and `coarseNumRays`; `frequencyStepTangentialPerMm` and
+`frequencyStepSagittalPerMm`, the lag of one ray on each axis; `maxDelta`, the largest move between the two steps;
+`workingFNumber`, optiland's working f-number of the field; `rimRaysLit` and `rimRaysLost`, how many of the four
+rim rays reach the image with light and how many have no landing; `rimLandingSpreadMm`, the largest distance from
+the chief ray's landing to a rim ray's (optiland calibrates its axes with the rim rays whatever became of them, and
+a ray an aperture stopped is traced on: a path that leaves the lens shows here); and `optilandWarnings`. `aperture`
+states `tracedFNumber` (optiland's working f-number on the axis, of the rays through the rim of the stop),
+`limitingSurfaceIndex` and `aimedStopRadiusMm`. `method.name` is `scalar-fft-mtf`, and `method.params` hold every
+setting above.
+
+The refusals of either method: of code `option`, `profile` (it is asked by a spec), `focus.engine-best` (optiland
+has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height, and the option `fieldAnglesDeg` was not given),
+`option.fieldAnglesDeg` (not one finite angle for each field of the spec), `option.fftRays`
+or `option.geometricRays` (not 256 or 512; only the option of the method asked is read) and `option.line` (no index
+of a line of the case); of code `feature`, `lines.polychromatic` (a case of several lines asked for the method
+`diffraction` without the option `line`) and `object.finite` (optiland measures a field angle at its paraxial
+entrance pupil then, and no spec says where the contract's is measured). An optic or an analysis that is not what
+was asked is the error `build-mismatch`, as for every quantity. A request that has taken five minutes when its next
+field is to be begun is the error `time-budget`: an error is not kept by the result store, and the worker lives on.
+
+**The method `geometric`** is optiland's class `GeometricMTF`, asked with every option stated and read from its own
+attributes (`lvrtc_optiland/geometric.py`). The line, the call, the field, the aiming and `imageHeightMm` are the
+FFT's above: one line, one field and one sampling a call, each on a new optic that is built, verified and given
+its field; the chief ray through the centre of the stop. What the class computes, and what the worker adds:
+
+| Step | Is |
+|---|---|
+| the rays | optiland's pupil distribution `uniform` with `num_rays`: the points of `linspace(-1, 1, num_rays)` in both normalised pupil coordinates that lie within the unit circle (51040 of 256 by 256), traced in one batch. With the worker's aiming a pupil coordinate is a point of the stop surface, out to its clip radius: the grid is even on the stop |
+| the spot | where optiland's image surface recorded each ray whose intensity there is above 0, in the coordinates of that surface, millimetres from the axis on the plane of the case. A ray an aperture stopped is left out; every other counts once, whatever its intensity. `raysLaunched` and `raysLit` say how many of each |
+| the reference | none. The class takes the landings as they are; the reference of its spot diagram, the chief ray, is not read for the MTF |
+| the transform | the landings along one axis counted into `num_points + 1` bins from the least landing to the greatest, and at each frequency the modulus of the sum of `count × exp(2πi ν centre)` over the bins, over the number of rays: a direct sum, no FFT, 1 at no frequency. `tangential` is optiland's `mtf[0][0]`, of the landings' y, and `sagittal` its `mtf[0][1]`, of their x; the mirror in y changes neither |
+| the frequencies | `linspace(0, max_freq, num_points)`, cycles/mm on the image surface, as stated: no rim ray calibrates them. The worker states the largest frequency of the spec for `max_freq` (1 cycle/mm where that is 0) and 2048 for `num_points`, and interpolates linearly between the two samples that enclose a frequency |
+| no diffraction | the class multiplies its curve by the diffraction limit of a circular pupil at the paraxial f-number unless told otherwise. The worker states `scale=False` and reads back the flag and the factor |
+| the sampling | `num_rays` 128 and then 256; the curves are the finer step's. The engine option `geometricRays` 512 asks for 256 and 512 instead |
+| the bins | a ray counts at the centre of its bin, so optiland's value is that of its own landings moved by up to half a bin of width w: lower by about `sin(πνw) / (πνw)`, off by at most `2 sin(πνw / 2)`, and of no meaning above `1 / (2w)`. The worker sums the same landings without bins and gives optiland's value only where it lies within 0.005 of that sum on the axis, 0.01 off it; `binningMaxDelta` states how far they lie apart, and `binWidthTangentialMm` and `binWidthSagittalMm` the width of a bin of each cut |
+| several lines | optiland's class is of one wavelength and gives a modulus about no stated point. A case of several lines asked without the option `line` is answered by the worker's sum of optiland's landings: each line asked as above, and `OTF(ν) = Σ W_l S_l(ν) / Σ W_l T_l` with `W_l` the weight of the line, `S_l` the sum of `w × exp(−2πi ν u)` over the landings `u` of its lit rays about the axis point of the image plane, `w` the intensity optiland gives a ray (1 for every case, which has no coating), and `T_l` the sum of those: the lines added as complex numbers before the modulus, by the convention of the comparator's `polychromaticOtf`, without bins. `lines` holds every line, and `binningMaxDelta` is then how far optiland's own curve of a line lies from that line's sum, the largest of the lines, which gates nothing |
+| a field's `status` | as for the FFT, `ok`, `unconverged` (`not-converged`, `convergence-unknown`) or `unavailable`: `optiland-raised-<class>`, `no-rays` (no ray of a line arrives: optiland's class gives NaN and does not raise), `no-flux`, `frequency-beyond-bins` (of one line: a value of optiland's further from the sum of its landings than the band), `frequency-beyond-axis`, `no-frequency-axis` or `mtf-not-a-modulus`. A modulus within 1e-12 above 1 is written as 1 |
+
+`method.name` is `geometric-mtf` for one line, whose curves are optiland's own, and `spot-landings-sum` for
+several, whose rays are optiland's and whose sum is the worker's; `method.params` hold every setting above, and
+`curves`, `transform`, `rayWeight` and `polychromatic` say which of the two it was. Under `sampling` a field states
+`numRays`, `coarseNumRays`, `numPoints`, `raysLaunched`, `raysLit`, the two bin widths, `binningMaxDelta`,
+`maxDelta` and `optilandWarnings`: the counts and the widths are the finer step's, of its first line. `aperture` is
+the FFT's.
+
 **The rays of a request are one batch to optiland**, or several of `maxBatchRays`, and what it answers of a ray
 is not always that ray's alone: the tolerance of its iteration on an asphere is the batch's, raised by the ray
 that is furthest from the surface, a ray that has ended among them. On a curved base that is a matter of
@@ -927,12 +1218,35 @@ A rung:
 `tolerance` is the largest value a metric of a gated rung may have and pass; `attention` is the largest value a
 metric of a recorded rung may have without the pair being marked for attention. Both are ≥ 0 and in `unit`, which
 is `1` for a number without one. A metric the comparison reports and the policy does not name is shown and not
-judged. Two rungs may compare one quantity, each by metrics of its own: `r2` and `r3` both compare `rays.trace`.
+judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
+`rays.trace`, and so does `r6a`.
 
-**The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
-meets a surface within 1e-9 mm of it, and behind a steep surface that becomes more than the 1e-8 mm two exact
-tracers are held to. A rung with a `floor` says which engine that is and which engine arbitrates, and each of its
-metrics that the floor may excuse carries `floor: { limit, agreement }`, both in the metric's unit. A pair of
+The comparator's policy, version 11:
+
+| Rung | Quantity | Mode | Judged |
+|---|---|---|---|
+| `selftest` | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
+| `r0` | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
+| `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
+| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
+| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
+| `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
+| `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
+| `r5` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
+| `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
+| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
+| `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
+
+**The floor.** Policy version 11 gives no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
+(closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
+over the benchmark and features suites are four to seven orders of magnitude inside the gates. The larger of a
+gate and ten times its measured residual is the gate itself, where a floor cannot be granted. A pair above a gate
+is `FAIL`. The schema and machinery retain the following rule for a future policy; Phase 5's catalog sweep is
+where a steep lens would show whether it still needs one.
+
+One engine of a comparison may be known to compute to a coarser tolerance than a gate. A rung with a `floor`
+says which engine that is and which engine arbitrates, and each metric the floor may excuse carries
+`floor: { limit, agreement }`, both in the metric's unit. A pair of
 `floor.engine` that is above a tolerance is then `FLOOR`, which is a pass, when all of these hold, and `FAIL`
 otherwise:
 
@@ -952,10 +1266,11 @@ otherwise:
 
 A metric that two answers have nothing to measure on takes no part in 2, 3 or 4. Every metric that has floor
 limits takes part in 2 and 3, whether or not it is the one above its tolerance: a direction within its limit
-excuses no hit beyond its own. The comparator's policy gives `lv` this floor against `ref` in `r2` and `r3`:
+excuses no hit beyond its own. Historically, policy version 10 gave `lv` this floor against `ref` in `r2` and `r3`
+(at LensVisualizer `33ebdb30`, intersection tolerance 1e-9 mm):
 lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, a component of the exit direction with 1e-8 and 1e-12,
 optical paths with 2e-4 waves and 1e-7 waves; each limit is ten times its tolerance. Which rays got through,
-`mask.mismatches`, has none. The limits are in the policy and nowhere in the code.
+`mask.mismatches`, had none. Those limits were in the policy, never in the code, and are removed in version 11.
 
 Until policy version 5 a witness beyond `agreement` withheld the floor. A third engine has rounding of its own:
 optiland is about 9e-10 mm from the exact hit on lenses where `ref` is 6e-12 mm and LensVisualizer 2e-8 mm from
@@ -966,7 +1281,8 @@ said nothing about whose the excess was, and no longer decides it.
 that built different systems would differ in every ray traced through them, and each such difference would be the
 first one again. So where the pair of two engines in that rung is `FAIL` or `ERROR`, their pair in every later
 rung of the same run is `BLOCKED`: not judged, with a `reason` that names the rung. "Later" is the order of the
-ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`.
+ladder, in which a run evaluates its rungs and its manifest lists their jobs: `selftest`, `r0`, `r1`, `r2`, `r3`,
+`r4`, `r4f`.
 Blocking is per pair of engines and per case; two engines that agree on the system are judged whatever a third one
 built.
 
@@ -1046,10 +1362,24 @@ participants, the first of them the reference when there is one.
 of the manifest and of the policy the sets were made from, and the sets ordered by run, rung, request and mode.
 
 A comparator is given the two answers and what they are answers to: the spec of the request, which the result
-store keeps with each answer, and the case of the run, which the run directory keeps under `cases/`. Some need
-them: a clip radius says which rays lie in a rim band, a line's wavelength turns a path into waves, an image plane
-gives a pupil's distance. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
+store keeps with each answer, the case of the run, which the run directory keeps under `cases/`, and the MTF
+recipe of the run, where its manifest records one. Some need them: a clip radius says which rays lie in a rim
+band, a line's wavelength turns a path into waves, an image plane gives a pupil's distance, a recipe's frequencies
+say where an MTF is taken. Where a comparator needs one that is not there, its pairs are `ERROR` with that reason;
 nothing is guessed in its place.
+
+**A set that spans requests.** A figure may be of several requests of a run at once: the MTF of a spectrum is of
+the rays of every line, and each line's rays are a request of their own. The comparator of such a figure says
+which requests belong together (`QuantityComparator.spanOf`, from a request's spec), and the requests of one run
+and rung that do are compared as **one** set: it stands where the first of them stands, its `requestId` is that
+first request's, and each of its participants is one engine's answers to all of them (`SpanAnswer`,
+`src/compare/span.ts`). An engine that has no `ok` answer to one request of a span has no answer to the span: it
+is a participant with the status of the first such request, so its pairs say why nothing of the span was measured,
+and no figure is taken of the requests that are left. A request whose spec is not at hand, because no engine
+answered it, is a set of its own. Today two comparators are of spans: R4's, [a field at every line of its
+case](#raystrace), and R6a's, a field at every line on both of its lattices. The schema of a set is what it was:
+the requests a set spans beyond the first are those of the same field, and its pairs say how many
+(`lines.compared`).
 
 ### `baseline`
 
@@ -1071,7 +1401,8 @@ A record is keyed on the run's `name` and its `caseId`, the content hash of the 
 the suite file alone: a zoom that a suite names once is two runs, `<name>-wide` and `<name>-tele`, each with its
 own case and its own records. A rung of a run is `{ rung, quantity, requests, support, rays?, pairs }`:
 
-- `requests`: how many requests of the rung the engines were compared on (one per ray set, in `r2` and `r3`);
+- `requests`: how many sets of the rung the engines were compared on: one per request, which in `r2` and `r3` is
+  one per ray set, and in `r4`, whose sets span requests, one per field;
 - `support`: per engine, sorted, `{ engine, status, detail? }`: `ok` when every job of the engine ended so, else
   the status of the first that did not, with its codes (`quantity rays.trace`, an error code);
 - `rays`: per engine, sorted, `{ engine, ok, blocked, failed }`, added up over the requests; left out by a rung
@@ -1083,14 +1414,34 @@ own case and its own records. A rung of a run is `{ rung, quantity, requests, su
   occurs, or the sum of a metric counted in `rays` or `elements` (the rim band is `mask.rimBand`); null when a
   value is not a finite number; `tolerance` is what the policy judges it by, when it judges it.
 
+**Since 1.1**, in an MTF baseline (`buildBaseline` with `MTF_BASELINE`: the rungs `r4`, `r4f`, `r5`, `r5g`, `r6a`
+and `r6b` of a run, in a file of its own, `baselines/<suite>.mtf.json`):
+
+- a metric's `measured`: in how many requests of the rung the pair has a value of the metric. A rung may measure a
+  figure only where its sampling can arbitrate: of `r6a`, `waveMtf.maxAbs` is measured in the fields that are
+  judged and `waveMtf.flagged` in the others, so the two counts say how many fields the gate was held on;
+- a rung's `steps`: per engine and step, sorted, `{ engine, step, jobs, status, detail? }`: the jobs that asked an
+  engine a request once more (`fft512`, `geo512`), how many, and `ok` or the status of the first that did not end
+  so. Such a job is no part of `support`, which says how an engine's first answers ended;
+- a rung's `bands`: the attention bands of the policy for the rung, by metric; left out by a rung without one;
+- a rung's `sets`, for a rung of the engines' own MTF (`r5`, `r5g`): each request as it was compared, in the order
+  of the requests: `{ participants, pairs }`, with every engine's `{ engine, status, recorded? }` (the values its
+  answer records: every field's status, sampling, chief-ray landing and its curves at every frequency of the
+  request, a later step under `<name>#<step>`) and every two engines' `{ a, b, verdict, reason?, metrics }`. The
+  tables of the MTF report are made from these and from `bands`, with nothing else at hand.
+
 **Invariants checked in code** (`baselineProblems`): engines sorted, each once; no run and no rung of a run twice;
 the engines of `support` and `rays` are engines of the baseline, sorted; a pair names two engines of its rung's
 `support` in order, and the pairs are sorted; a pair's verdicts are in order, add up to the rung's `requests`, and
-its `verdict` is the gravest of them. A baseline file is the canonical JSON of its content and a newline
-(`parseBaseline` refuses any other text of the same content, which is what an edit by hand looks like).
+its `verdict` is the gravest of them. A baseline with a member of 1.1 states a contract of that minor or later;
+its `sets` are one for each request of the rung, each with its engines sorted and its pairs of two of them in
+order; a step is of an engine of the rung's `support`; no metric is `measured` in more requests than the rung has.
+A baseline file is the canonical JSON of its content and a newline (`parseBaseline` refuses any other text of the
+same content, which is what an edit by hand looks like).
 
 `lvrtc baseline write` writes it, `lvrtc baseline check` sets it against the suite as it runs today, and
-`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md).
+`lvrtc verify` holds it and the reports rendered from it together with no engine at hand (docs/REFERENCE.md);
+each with `--mtf` for the MTF baseline, whose reports are `reports/<suite>/mtf.md` and `mtf.json`.
 
 ## Quantities
 
@@ -1185,7 +1536,7 @@ compares. S is the number of surfaces, L the number of lines and K the number of
 | `vertexZ` | NdArray | float64 `[S]`: the vertex position of each surface |
 | `curvature` | NdArray | float64 `[S]`: the base curvature, `1/radius` as one division; 0 for a plane and for a flat base |
 | `conic` | NdArray | float64 `[S]`: the conic constant the engine holds; 0 for a plane |
-| `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface |
+| `clipRadius` | NdArray | float64 `[S]`: the largest radial height at which the engine lets a ray pass the surface; +Infinity for a surface at which it stops no ray at any height |
 | `innerClipRadius` | NdArray | float64 `[S]`: the radial height below which the engine stops a ray at the surface, the radius of a central obstruction; 0 for a surface without one |
 | `indexAfterSurface` | NdArray | float64 `[L, S]`: the index of the medium that follows each surface, per line |
 | `sagRadii` | NdArray | float64 `[S, K]`: the heights the sag is given at, each fraction times the surface's `nominalSemiDiameter` as one multiplication |
@@ -1196,6 +1547,11 @@ compares. S is the number of surfaces, L the number of lines and K the number of
   the stop setting of the case, which is the stop surface's own `aperture.semiDiameter`; it is never the limit of the
   stop wide open, nor `stopSemiDiameter` itself. `sagRadii` of the stop surface scale with its
   `nominalSemiDiameter`, which a case source writes as the stop setting.
+- **A surface the engine does not clip at** has the `clipRadius` +Infinity, and an `innerClipRadius` of 0. That is
+  the answer to what the member asks, and no addition to it: an array holds an infinity as it holds any double. An
+  engine that built a rim on a surface of the case that does not clip (`aperture.semiDiameter` null), however wide,
+  answers a finite number there, and R0 counts it under `aperture.mismatches`. `sagRadii` of such a surface are
+  fractions of its `nominalSemiDiameter` like any other's.
 - **`innerClipRadius`** is the engine's own limit, like `clipRadius`: a ray at exactly that height passes, and one
   below it is stopped. It was added in version 2 of the quantity, with the first engine beside `ref` that builds an
   annular aperture: a central obstruction an engine left out, or built another size, is found here and not in the
@@ -1388,8 +1744,8 @@ differs converts in its adapter, in both directions.
 
 - **A ray is carried surface by surface**, in the order of the case: it is intersected with the surface, tested
   against the surface's aperture at the hit (its distance from the axis against `semiDiameter`, inclusive, and
-  against `innerSemiDiameter`, below which it is stopped), and refracted into the medium that follows, whose index
-  is that of the spec's line. The medium in front of the first surface is air, of index 1.
+  against `innerSemiDiameter`, below which it is stopped; a surface that does not clip stops it at no height), and
+  refracted into the medium that follows, whose index is that of the spec's line. The medium in front of the first surface is air, of index 1.
 - **The order is the order of the case, not of z.** Where two neighbouring surfaces cross within their clear
   apertures, as a stop set into the curve of the surface before it, the next surface lies behind the ray's last
   hit: the ray's line is met with it there, by a step backwards, and the stretch counts in the optical path with
@@ -1402,6 +1758,12 @@ differs converts in its adapter, in both directions.
   that surface, wherever, and whether, it meets the formula's continuation. A line that meets a steep surface more
   than once within the clear aperture passes it at the meeting nearest the surface's vertex plane: on a sphere of
   either curvature that is where a ray in front of the surface enters it.
+- **A surface that does not clip is its sag wherever it has one.** A ray whose line meets it passes it there, at
+  the meeting nearest the surface's vertex plane, however far from the axis that is; a ray whose line provably
+  meets it nowhere, as one that passes a sphere by, is blocked at it. Such a surface is a plane in every case a
+  lens of LensVisualizer's gives. On a curved one whose formula goes on without end, an engine that cannot decide
+  whether a line meets it says *failed*, as of any ray it could not trace: the reference engine does so for a line
+  on which its iteration finds no hit, since no stretch of such a line is the last to look at.
 - **Status.** *ok* (0): the ray passed every surface and reached the image plane. *blocked* (1): the ray carries no
   light to the image and the engine knows why: it met a surface outside its clear aperture or inside its central
   obstruction, it was totally reflected, it provably does not meet a surface, it no longer travels toward +z, or
@@ -1435,10 +1797,10 @@ answers a line the case does not have with the error `bad-spec`. Data: the shape
 least 1; `status` is 0, 1 or 2; `endSurface` is −1 exactly for a ray that is ok and else from 0 to S; and the rule
 above for where a ray has numbers and where NaN holds for every ray.
 
-**Compared by two rungs**, which ask the same requests, so that an engine traces a set once for both and the
-result store holds one answer. Each has a comparator of its own. Positions and paths are compared on the rays
-that are ok in both answers; every metric's `where` has the `ray` of its largest value, with the `line` of the
-spec and, where the set states one, its `field` angle in degrees.
+**Compared by three rungs**, which ask the same requests, so that an engine traces a set once for all of them
+and the result store holds one answer. Each has a comparator of its own. Positions, paths and the MTF are compared
+on the rays that are ok in both answers; in R2 and R3 every metric's `where` has the `ray` of its largest value,
+with the `line` of the spec and, where the set states one, its `field` angle in degrees.
 
 *R2, the geometry* (`src/compare/raysGeometry.ts`):
 
@@ -1457,7 +1819,9 @@ spec and, where the set states one, its `field` angle in degrees.
   call the reason.
 - **The rim band.** A disagreement is in the band when that hit lies within 1e-8 mm (`RIM_BAND_MM`) of the
   surface's `semiDiameter`, or of its `innerSemiDiameter` where it has one: each engine has placed the hit to its
-  own tolerance, and the limit is inclusive on a number neither holds exactly. A ray that passed every surface in
+  own tolerance, and the limit is inclusive on a number neither holds exactly. A surface that does not clip has no
+  rim and no band: an engine that stopped a ray there, at whatever height, built an aperture the case does not
+  have, and the ray is a mismatch. A ray that passed every surface in
   both engines and reaches the image plane in only one is a mismatch: there is no rim there.
 - **A ray either engine failed** is in neither count: a failure says nothing about the light. How many rays of
   each answer are ok, blocked and failed is listed with the comparison, as `rays.ok`, `rays.blocked` and
@@ -1477,6 +1841,88 @@ difference in mm over `wavelengthNm` × 1e-6:
 not measured, which fails nothing, and the two raw paths stand alone. A ray that is not ok in both has no path in
 one answer: that is a matter of the mask, which R2 judges.
 
+*R4, the geometric MTF* (`src/compare/raysMtf.ts`): the comparator's own binless estimator
+(`src/estimators/geometricOtf.ts`: one term a ray, no bin, no transform, every sum compensated) applied to where
+each of two engines lands the rays of a field, and the two curves set against each other. The rung asks the
+requests of R2 and R3, and only of a run that has an [MTF recipe](#the-mtf-recipe). Its sets
+[span requests](#comparison): the sets of one field, one for each line of the case (those whose `groups` are
+equal and state a `field`), are one comparison.
+
+| Metric | Unit | Is |
+|---|---|---|
+| `mtf.maxAbs` | 1 | the largest difference of the two MTFs, over the sagittal and the tangential cut and every frequency of the recipe; `where` has the `field` angle in degrees, the `cut` and the `frequencyPerMm` |
+| `rays.compared` | rays | the rays that are ok in both answers, over the lines |
+| `rays.dropped` | rays | the rays that are ok in one answer and not in the other, over the lines: left out of both sums, counted and never judged; `where` has the `line` and the `ray` of the first |
+| `lines.compared` | lines | how many lines of the case, and so how many requests, the figure is of |
+
+- **The rays** of each line are the ones both engines brought to the image. A ray one engine lost is in neither
+  engine's sum, so the two curves are of one bundle; that the engines disagree about a ray is R2's to judge, and
+  here it is only counted. "Valid in every engine" is of the two engines of a pair: what a third engine lost
+  changes nothing between two others, and a pair's figures depend on its own two answers alone.
+- **The landing** is the engine's own `imagePoint`, on `conditions.imageZ`. That is the plane of the recipe: a run
+  at another focus (`imagePlane: lv-best-axial`) has a case at that plane, so nothing is projected a second time.
+  A recipe of another plane than the case's is not comparable.
+- **The weights**: a ray counts by its `weights` element in the request, the flux it carries to the image, which
+  is the same number for both engines; a line counts by its `weight` in the case times the flux of its rays
+  (`polychromaticOtf`): OTF(ν) = Σ W_l S_l(ν) / Σ W_l T_l, the lines added as complex numbers before the modulus
+  is taken. With one line it is that line's MTF.
+- **The reference point** is one for both engines and for every line: midway between the two engines'
+  flux-weighted centroids of the first line's rays. No chief ray is needed for it, so it is not lost when a chief
+  ray is clipped; and the modulus does not depend on it (moving it turns every term of the sum by one phase), so
+  it decides nothing but how small the phases are.
+- **Not measured** where a line has no ray that is ok in both answers, or none that carries flux: the pair says
+  so and fails for none of it. **Not comparable** without the recipe or the case, with a recipe of another plane
+  or without a frequency, and where the sets of a field are not of every line of the case, each once: a spectrum
+  from which a line is missing is another spectrum. A ray that an engine calls ok and lands at no finite point is
+  a defect of the answer and no ray to leave out: the pair is `ERROR`.
+
+*R6a, the wave MTF* (`src/compare/raysWaveMtf.ts`): the comparator's own wave estimator
+(`src/estimators/waveOtf.ts`: Hopkins' autocorrelation of the pupil function in direction-cosine space, from the
+optical paths) applied to each of two engines' traces of the rays of a field, and the two curves set against each
+other. The rung asks the requests of R2 to R4 and, after them, those of the same fields on a lattice of twice as
+many cells across (the run's `fineRaySets`, [below](#ray-sets)), and only of a run that has an
+[MTF recipe](#the-mtf-recipe). Its sets [span requests](#comparison): the sets of one field on both lattices and
+at every line of the case (those that state the same `groups.field`, and a `lattice`) are one comparison.
+
+| Metric | Unit | Is |
+|---|---|---|
+| `waveMtf.maxAbs` | 1 | the largest difference of the two wave MTFs on the finer lattice, over both cuts and the frequencies; `where` has the `field` angle, the `cut` and the `frequencyPerMm`. Reported, and so judged, only where the lattice is an arbiter |
+| `waveMtf.flagged` | 1 | the same figure where the lattice is no arbiter: written down, named by no policy and judged by nothing |
+| `phaseStep.waves` | waves | the largest step of the path between neighbouring lit cells of the finer lattice, of either engine's estimate; `where` has the `line` and the `ray` |
+| `convergence.maxAbs` | 1 | the largest difference between the wave MTF of the finer lattice and that of the coarser, of either engine; left out where there is no coarser estimate |
+| `lattice.columns` | cells | the columns of the finer lattice |
+| `rays.compared`, `rays.dropped`, `lines.compared` | | as R4 counts them, on the finer lattice |
+
+- **An arbiter** is a lattice whose estimate may be believed (`waveFlags`, `src/estimators/waveValidity.ts`): its
+  neighbouring cells are within a quarter wave of each other in both estimates, and neither estimate moved by more
+  than 0.005 for a field on the axis, 0.01 for one off it, from the coarser lattice to the finer: the bands within
+  which an MTF is held to another method's. A field that fails either, or has rays on one lattice only, is
+  **flagged**: `waveMtf.maxAbs` is not measured, the pair's reason says which fact flagged it with its figure, and
+  the difference of the two engines is recorded as `waveMtf.flagged`. A flagged field passes, as every metric that
+  was not measured does: it is no evidence for the gate and none against it.
+- **The rays, the weights and the reference point** are R4's: the rays both engines brought to the image, the
+  request's weights, the case's line weights, and one reference point for both engines and every line, midway
+  between the two engines' flux-weighted centroids of the first line's rays on that lattice. The modulus does not
+  depend on the point; the step from cell to cell does, and it is smallest amid the spot.
+- **What is read** of an answer is `imagePoint` with `opticalPathToImage`, the better conditioned of the two
+  points a trace has behind the last surface, and `exitDirection`; of the request the weights, and from origins
+  and directions the path from the incident wavefront to each origin (`launchPaths`); of the case each line's
+  wavelength and weight, the object's conjugate and the index behind the last surface.
+- **The frequencies** are the recipe's, thinned to at most eleven, evenly spaced by their place in the list with
+  the first and the last kept (`waveFrequencies`, `src/core/mtfRecipe.ts`): of LensVisualizer's 51, every fifth, 0
+  to 100 cycles/mm in steps of 10. A wave transfer function costs a search of the pupil for every cell and
+  frequency.
+- **Not measured** where a line has no ray that is ok in both answers, none that carries flux, or lit cells that
+  cannot be laid out as a pupil (`degenerate-pupil`). **Not comparable** as R4 is not, and for a set that states no
+  field or no lattice.
+
+The gate of 2e-8 is pinned at Stage 3.12 under policy version 11 (the plan, "Amendments since approval"):
+ten times the largest judged figure, 1.18e-9, rounded up to one digit. At LensVisualizer `ab0fd4cf` (closure
+`94778d3d`, 175 files) and optiland `4e893f53`, 208 of 288 benchmark fields are judged per pair: `lv/ref` reaches
+1.18e-9, optiland against `ref` 1.16e-9, and `lv` against optiland 1.6e-10. The bound is now the exact tracers'
+agreement. The ref–optiland test holds an absolute 2e-9, including flagged fields. The former gate of 4e-5 was
+pinned on LensVisualizer `33ebdb30`'s 1e-9 mm rounding, carried into the optical path; it is historical.
+
 Answers for different numbers of rays or surfaces are not comparable; nor are any two without the case (R2: its
 apertures) or without the request and the case (R3: the line and its wavelength).
 
@@ -1495,11 +1941,17 @@ of the spec, is what a run's manifest records under `runs[].raySets.sets`. Nothi
 repository. A field that has no rays is a coded problem of that field, recorded under `runs[].raySets.problems`
 as `<code>: <message>`; the other fields are traced, and the run fails for none of it.
 
+**The finer lattice.** A rung that takes a wave transfer function of the traced rays (`r6a`) asks for a field's
+rays on two lattices, the run's own and one of twice as many cells across (`fineSampling`, `src/rays/raySets.ts`),
+and says by the two whether the finer has converged. The finer sets are made by the same source, asked with
+`sampling.bundleGrid` doubled, and are recorded under `runs[].fineRaySets`, sets and problems as above. They are
+generated only when such a rung is run and are asked of no other rung: R2, R3 and R4 judge the run's own sets.
+
 **For a case read from a file** (`src/rays/probe.ts`) the sets are probe lattices made from the case alone:
 
 | | Is |
 |---|---|
-| lattice | `sampling.bundleGrid` cells across (an odd number is raised to the next even one, so that no ray lies on the axis or in a plane through it), laid on the first surface's vertex plane and centred on the axis, with a half width of 1.125 clip radii of the first surface: the cells past the rim are stopped at once |
+| lattice | `sampling.bundleGrid` cells across (an odd number is raised to the next even one, so that no ray lies on the axis or in a plane through it), laid on the first surface's vertex plane and centred on the axis, with a half width of 1.125 clip radii of the first surface: the cells past the rim are stopped at once. A first surface that does not clip is probed over 1.125 times its extent, `nominalSemiDiameter` |
 | object at infinity | a collimated bundle with the field's direction, each ray started on the plane 10 mm in front of the first surface: of its vertex, or of its rim when it is concave toward the object; every weight is 1 |
 | finite object | every ray starts at the object point of the field, `(0, −object.z × tan θ, object.z)`: the field angle is measured at the first vertex; a ray's weight is the solid angle of its cell relative to a cell straight ahead of the point, `(D / d)³`, with D the point's distance from the lattice plane and d its distance from the cell. An object point that is not in front of the first surface, inside the bowl of a concave one, is the problem `launch-behind-first-surface` |
 | fields | angles in degrees as given; of image-height fractions only 0, the axis, since a case states no image height: any other is the problem `field-fraction-unresolved` |
@@ -1541,8 +1993,11 @@ set are the tab's own launch rays at that grid, to the bit.
 
 An engine's own MTF of the case: by its own method, with its own sampling of the pupil and its own aiming, as the
 engine presents it to whoever uses it. Nothing of it is the comparator's, and no two engines are expected to
-agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung asks for it
-yet; `lvrtc mtf` does, and presents each engine's answer by itself. F is the number of frequencies.
+agree on it within a tolerance: it is what the independent-method rungs of the ladder record. No rung sets the MTF
+of two independent engines against each other yet; `lvrtc mtf` presents each engine's answer by itself. One rung,
+`r4f`, asks for it of two engines that are not independent ([below](#rung-r4f-the-fidelity-of-the-replay)). It is
+answered by `lv` ([LensVisualizer's product MTF](#lensvisualizers-product-mtf)), `replay`, `wave` and
+[`optiland`](#the-engine-optiland), each by a method of its own. F is the number of frequencies.
 
 `spec`:
 
@@ -1611,9 +2066,115 @@ has an `appliedShiftMm` of 0. That F is the number of the spec's frequencies, an
 needs the spec, which data is validated without: whoever sets an answer beside its request checks it
 (`mtfTableRows`, `src/report/mtfTable.ts`).
 
+#### Rung R4f: the fidelity of the replay
+
+`r4f` asks one `mtf.native` request for a run: the geometric MTF of the run's [recipe](#the-mtf-recipe), with its
+fields as the fractions they were resolved from, its frequencies, and the focus `design`, the image plane of the
+case as it is. It is asked of exactly two engines, `lv` and `replay`, whatever engines the run names, and only for
+a recipe LensVisualizer resolved: a case file has no sampling of LensVisualizer's to replay, and no request. Both
+engines are handed the run's `sampling.lvGridCap` as their option `lvGridCap`. `lv` answers with LensVisualizer's
+own `computeMtf`; `replay` with the comparator's estimator on a replay of the same sampling
+([the engine `replay`](#the-engine-replay)). If the two agree, the comparator understands LensVisualizer's
+sampling: which rays, which reference, which weights, which grids.
+
+The comparator of `mtf.native` for `r4f` (`src/compare/mtfFidelity.ts`):
+
+| Metric | Unit | Is | Gate |
+|---|---|---|---|
+| `mtf.maxAbs` | 1 | the largest difference of two MTF values, over every field with curves in both answers, both cuts and every frequency; `where` names the `field` as requested, the `cut` and the `frequencyPerMm`, the first on a tie | 1e-9 |
+| `sampling.mismatches` | elements | how many of `gridSize`, `validRays`, `blockedRays` and `failedRays`, over the fields, are not the same number in both answers; a value only one answer states is one | 0 |
+| `fields.mismatches` | elements | how many fields have another `status` in one answer than in the other, or another `reason` | 0 |
+
+Where no field has curves in both answers `mtf.maxAbs` is not measured. Answers for different numbers of fields,
+for other fields, of other planes or with curves of different lengths are not comparable (`ERROR`). What each
+answer states of every field's sampling is recorded beside the pair under the four names, one value a field. The
+rung has no floor and blocks nothing; `r4f` compares no other two engines, and the other rungs that compare
+`mtf.native` are [`r5`](#rung-r5-the-engines-own-mtf) and
+[`r6b`](#rung-r6b-lensvisualizers-diffraction-mtf-beside-the-wave-estimator).
+
+The gate of 1e-9 was provisional and is pinned from measurement (the plan, "Amendments since approval"): on the
+96 runs of the benchmark suite, 480 fields at 51 frequencies in both cuts, the largest difference is 1.25e-14,
+which is rounding. LensVisualizer adds a field's terms up plainly and, for an evenly spaced list of frequencies,
+rotates one phasor from frequency to frequency; the estimator compensates its sums and evaluates each frequency on
+its own.
+
 `valid/quantities/mtf.native.data/every-status.json` is a format example of an answer to the spec
 `three-fractions.json`, with a field of each status; `best-focus-three-lines.json` one of an answer to
 `angles-and-profile.json`. Their numbers describe no lens.
+
+#### Rung R6b: LensVisualizer's diffraction MTF beside the wave estimator
+
+`r6b` asks one `mtf.native` request for a run: the diffraction MTF of the run's [recipe](#the-mtf-recipe), at the
+fields the run traces rays for (0, 0.5 and 1 of the image height unless it states others), as fractions, of those
+the recipe resolved to an angle; at the recipe's frequencies thinned to at most eleven (`waveFrequencies`); with
+the focus `design`, the image plane of the case as it is. It is asked of exactly two engines, `lv` and `wave`,
+whatever engines the run names, and only for a recipe LensVisualizer resolved. Both are handed the run's
+`sampling.lvGridCap` and `sampling.bundleGrid` as the options `lvGridCap` and `bundleGrid`; each reads its own.
+`lv` answers with LensVisualizer's own `computeMtf`, whose diffraction estimate is its own;
+[`wave`](#the-engine-wave) with the comparator's wave estimator on the rays LensVisualizer launches and traces.
+Two methods, each with its own sampling: the rung is **recorded**, and no figure of it fails anything.
+
+The comparator of `mtf.native` for `r6b` (`src/compare/mtfWave.ts`) gives each field the class of its difference,
+and each class its own figure:
+
+| Class | A field is of it when | Its figure | Band |
+|---|---|---|---|
+| method | both answers stand by its curves (`status` `ok` in both) | `mtfOnAxis.maxAbs` for the field requested as 0, `mtfOffAxis.maxAbs` for every other: the largest difference of two MTF values over both cuts and every frequency | 0.005 and 0.01 |
+| numerical | an answer says its sampling did not settle (`unconverged`) | `mtfFlagged.maxAbs`: the same, written down and in no band | none |
+| unsupported | an answer has no curve of it (`unavailable`) | none | none |
+
+`fields.compared`, `fields.flagged` and `fields.unavailable` count the fields of each class. A pair is `ATTENTION`
+when a figure of the class method is outside its band, else `RECORDED`. A band that has no field is not measured,
+and the reason says what each answer said of the fields left out, by its method's name. What each answer states
+of every field's sampling is recorded beside the pair (`gridSize`, `validRays`, `maxDelta`, `phaseStepWaves`,
+`convergedThroughLpMm`, one value a field), and under `settled` whether it stands by the field: 1 for `ok`, 0 for
+`unconverged`. Answers for different numbers of fields, for other fields, of other planes or with curves of
+different lengths are not comparable (`ERROR`).
+
+#### Rung R5: the engines' own MTF
+
+`r5` asks the one request of `r6b` of three engines, `lv`, [`optiland`](#the-engine-optiland) and
+[`wave`](#the-engine-wave), whatever engines the run names, only for a recipe LensVisualizer resolved, and only
+where the rung is named. `lv` and `wave` are handed the options `r6b` hands them; `optiland` is handed the recipe's
+angle of each field of the spec as its option `fieldAnglesDeg`. Three methods, each with its own sampling: the rung
+is **recorded**, and no figure of it fails anything.
+
+The comparator of `mtf.native` for `r5` (`src/compare/mtfNative.ts`) sorts each field before any difference is
+taken, by the classes of a difference in their order, and each kind of field has its own figure:
+
+| Class | Reason | A field is of it when | Its figure | Band |
+|---|---|---|---|---|
+| unsupported | `no-curve` | an answer has no curve of it (`unavailable`) | none | none |
+| data | `lines-differ` | the two answers are of other lines | none: no difference is shown | none |
+| data | `chief-landing-unknown` | an answer states no `imageHeightMm` for it | none | none |
+| data | `chief-landing-apart` | the two `imageHeightMm` differ by more than the band of `chiefLanding.maxAbs` | none | none |
+| numerical | `unconverged` | an answer says its sampling did not settle | `mtfFlagged.maxAbs` | none |
+| method | `rim-rays-lost` | an answer states `rimRaysLost` above 0 in its sampling | `mtfRimLost.maxAbs` | none |
+| method | `two-methods` | both answers stand by its curves | `mtfOnAxis.maxAbs` for the field requested as 0, `mtfOffAxis.maxAbs` for every other: the largest difference of two MTF values over both cuts and every frequency | 0.005 and 0.01 |
+
+The class `convention` (a declared transform that is missing) is never given: both answers state their cuts by the
+image axes of the contract, on the plane of the case. `chiefLanding.maxAbs`, in mm, is the largest distance
+between the two answers' chief-ray landings over the fields both have curves and a landing for; its band, 1e-7
+mm, is the limit of the sorting, and a pair with a field beyond it is `ATTENTION`. `fields.compared`,
+`fields.flagged`, `fields.rimLost`, `fields.data` and `fields.unavailable` count the fields of each kind. A pair is
+`ATTENTION` when a figure with a band is outside it, else `RECORDED`; a band that has no field is not measured.
+The reason of a pair names every field that is in no band, with its class, its reason and what the answers say.
+The comparator needs the spec of the request and the policy of the rung; answers for different numbers of fields,
+for other fields, of other planes or with curves that have not one value a frequency are not comparable (`ERROR`).
+
+**The second step.** When the jobs of the rung for a run have ended and the pair of `lv` and `optiland` has
+`mtfOnAxis.maxAbs` or `mtfOffAxis.maxAbs` outside its band, optiland is asked the same request once more with the
+option `fftRays: 512`. The run manifest records that as a job of `optiland` with `step: "fft512"`, after the
+rung's other jobs of the run. In a comparison a step is no participant: it is its engine's later answer. A pair
+of that engine is judged by the last step, with the two band figures of the first answers beside them
+(`mtfOnAxis.firstStepMaxAbs`, `mtfOffAxis.firstStepMaxAbs`), and a step that is no answer is named in the reason.
+
+**Recorded** beside the pair, one value a field: `field`, `fieldAngleDeg`, `imageHeightMm`, `settled` (1 for `ok`,
+0 for `unconverged`), the sampling an answer states (`gridSize`, `numRays`, `coarseNumRays`, `validRays`,
+`maxDelta`, `phaseStepWaves`, `convergedThroughLpMm`, `rimRaysLit`, `rimRaysLost`, `rimLandingSpreadMm`,
+`workingFNumber`), and every MTF value as `sagittal@<frequency>` and `tangential@<frequency>`;
+`lineWavelengthNm` has one value a line. The values of a later step have the same names followed by `#<step>`.
+A report makes its table of the rung from these alone.
 
 ## Schemas and the validator
 
@@ -1682,6 +2243,12 @@ TypeScript type of its kind; `node test/contract/writeCorpus.ts` rewrites the fi
 files and the source differ. Two files are not generated: the Double-Gauss case, below, and
 `valid/engine-descriptor/integers-as-floats.json`, written by hand because its point is the spelling of its
 numbers.
+
+Three cases are generated: `singlet`, the case the example requests and results are about; `all-features`, which
+carries every feature flag of contract `1.0` and every optional member; and `unclipped-plate`, the singlet behind
+a rear plate whose two surfaces do not clip, the one valid case that states `1.2` and carries the flag minor 2
+added. The every-feature case was not given such a plate: it is the case half the tests are written on, and a
+minor does not change a document that uses nothing of it.
 
 Some fixtures exist for what one language gets wrong by default, and an implementation in any language must pass
 them:

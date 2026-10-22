@@ -2,9 +2,10 @@ import type { FakeLensData } from "../../optics/types.js";
 
 // A synthetic zoom for tests, with quoted keys as some LV lens files have: the numbers describe no real design.
 const LENS: FakeLensData = {
+  schema: 2,
   "key": "acme-zoom-24-48",
   "name": "ACME Zoom 24-48mm f/4",
-  "zoomPositions": [24, 48],
+  "zoom": { "stations": [{}, {}] },
   "zoomStopSDs": [3, 6],
   "zoomGaps": [0, 10],
   "fopen": 4,

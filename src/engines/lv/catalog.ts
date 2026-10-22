@@ -90,7 +90,7 @@ export async function buildCatalog(
     else if (typeof data.key !== "string" || data.key === "") problems.push({ file, problem: "no string key" });
     else if (typeof data.name !== "string") problems.push({ file, problem: `no string name (key "${data.key}")` });
     else {
-      const zoom = Array.isArray(data.zoomPositions) && data.zoomPositions.length >= 2;
+      const zoom = Array.isArray(data.zoom?.stations) && data.zoom.stations.length >= 2;
       const entry: LvCatalogEntry = {
         key: data.key,
         file,

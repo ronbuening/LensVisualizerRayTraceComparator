@@ -493,3 +493,14 @@ test("the system probe reports a tree that cannot be loaded instead of failing",
     message: `LensVisualizer path is not a directory: ${join(lv, "nowhere")}`,
   });
 });
+
+test("doctor's binding probe explains a pre-rewrite LensVisualizer refusal", async (t) => {
+  const lv = freshLv(t);
+  writeFileSync(join(lv, "src/optics/compat.ts"), "export {};\n");
+  rmSync(join(lv, "src/optics/fieldGeometry.ts"));
+  const report = await systemProbe.lvBinding(lv);
+  assert.equal(report.status, "failed");
+  assert.ok(report.status === "failed");
+  assert.equal(report.code, "import-failed");
+  assert.match(report.message, /predates its engine rewrite.*460f841f or later/);
+});

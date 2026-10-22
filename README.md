@@ -11,12 +11,37 @@ prints the MTF that LensVisualizer's own MTF tab shows. The first external engin
 and answers rungs R0 to R3: the built system, its first-order data, the same rays traced by optiland's own tracer
 and their optical paths, on which the three engines agree on both suites
 ([measured](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines)). Baselines of those runs close the phase.
+Phase 3, MTF, is delivered through Stage 3.12: the comparator's own geometric estimator reproduces LensVisualizer's
+geometric MTF on a replay of LensVisualizer's sampling to 1.7e-14, with every grid size and ray count the same,
+on the benchmark wide open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4f,
+[measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)); and the geometric MTF of the same rays, as
+LensVisualizer, the reference tracer and optiland each land them, agrees within 1.2e-11 on the same benchmark
+(rung R4, gated at 1e-7,
+[measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)). The comparator's wave estimator, Hopkins'
+autocorrelation of the pupil function from the optical paths of the same rays, is held to closed forms
+([the wave OTF](docs/REFERENCE.md#the-wave-otf)), and on the three engines' traces of the same rays it agrees
+within 1.2e-9 wherever its lattice samples the wavefront (rung R6a, gated at 2e-8; a fast lens wide open is
+undersampled and not judged). Beside LensVisualizer's own diffraction MTF it stays
+within the plan's bands at f/8 and marks five of 96 runs for attention (rung R6b, recorded;
+[measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)). The engine `optiland` answers with optiland's own
+FFT MTF, one line and one field at a time, a field it cannot compute being a row with the reason
+([optiland's own MTF](docs/REFERENCE.md#optilands-own-mtf)). Rung R5 sets it beside LensVisualizer's product MTF
+and the wave estimator, field by field, with the class of every difference: recorded and never gated. At f/8 all
+24 reference-line runs of the benchmark are inside the plan's bands (at most 0.0041 on the axis, 0.0088 off it);
+wide open 15 of 24 are marked for attention ([measured](docs/REFERENCE.md#rung-r5-the-engines-own-mtf)). Rung R5g
+does the same for the geometric MTF, which some manufacturers publish alone: LensVisualizer's beside optiland's
+own, on the reference line and on the photopic lines, recorded and never gated. At 10, 30 and 50 cycles/mm no row
+at f/8 is outside the bands (at most 0.0087); wide open 69 of 144 fields are marked
+([measured](docs/REFERENCE.md#rung-r5g-the-engines-own-geometric-mtf)). A report states what it does not cover,
+and its wording is linted. These figures are measured at Stage 3.12: LensVisualizer `ab0fd4cf` (engine closure
+`94778d3d`, 175 files), optiland `4e893f53`, policy version 11. All four baselines and the census are rewritten;
+baseline check reports every record `OK` ([measured](docs/REFERENCE.md#measured-at-stage-312)).
 
 ## Requirements
 
 - Node `>=24.15.0 <25`. The sources are TypeScript run directly by Node; there is no build step.
 - Python `>=3.10` as `python3`, for the worker kit and its tests. Nothing is installed into it.
-- A LensVisualizer checkout, for anything that involves a real lens.
+- A LensVisualizer checkout at rewrite merge `460f841f` or later, for anything that involves a real lens.
 - A Python interpreter that can import optiland, for the engine `optiland`. Nothing is installed into it and
   nothing is written into the optiland checkout.
 
@@ -116,15 +141,17 @@ Lists every lens of the LensVisualizer catalog: key, name and file.
 node bin/lvrtc.mjs lenses show nikkor-z50f12
 ```
 
-Prints one lens as LensVisualizer prepares it for tracing: a row per surface, the stop and its radius, and the
-image plane. Add `--zoom 1` for the tele end of a zoom.
+Prints one lens as LensVisualizer prepares it for tracing: a row per surface, with whether its rim clips, the stop
+and its radius, and the image plane. Add `--zoom 1` for the tele end of a zoom.
 
 ```bash
 node bin/lvrtc.mjs export nikkor-z50f12 --aperture f/2.8 --lines photopic --out /tmp/z50.case.json
 ```
 
 Writes one lens in one state as an optical case, the document every engine is asked about. What a case cannot
-express, such as a mirror or a diffractive surface, is refused with a reason code and never approximated.
+express, such as a mirror or a diffractive surface, is refused with a reason code and never approximated. A cover
+glass or filter whose prescription publishes no rim is exported as LensVisualizer traces it, as a plate that
+clips no ray.
 
 ```bash
 node bin/lvrtc.mjs export --all --census reports/census
@@ -150,6 +177,54 @@ Adds optiland: it builds every lens in optiland and reads the built system back 
 shows before a ray is traced, gives optiland's own focal length, cardinal points and pupils (R1), and traces the
 very rays LensVisualizer launches with optiland's own tracer: where they go (R2) and how long their paths are
 (R3). What comes of it is in [docs/REFERENCE.md](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines).
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r2,r3,r4
+```
+
+Adds the geometric MTF of those rays (R4): one estimator, the comparator's own, on where each engine lands the
+rays of a field, at every line of the lens and at the frequencies of LensVisualizer's MTF. It traces nothing that
+R2 and R3 have not traced.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r4f
+```
+
+Holds LensVisualizer's own geometric MTF to the comparator's estimator on a replay of LensVisualizer's sampling
+(R4f): the same rays, the same grids, the same counts. It is asked of two engines of its own, `lv` and `replay`,
+whatever `--engines` names, and takes about three minutes on the benchmark.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r6a
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r6b
+```
+
+The wave MTF. R6a applies the comparator's wave estimator to each engine's trace of the same rays, on a lattice
+twice as fine as the run's own, which it traces for that (about 8 minutes and 15 GB of the store on the
+benchmark); a field whose lattice does not sample the wavefront, or has not converged, is reported and not judged.
+R6b sets LensVisualizer's own diffraction MTF beside that estimator on LensVisualizer's rays: two engines of its
+own, `lv` and `wave`, recorded and never gated (about 13 minutes).
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5
+```
+
+R5 sets three engines' own diffraction MTF side by side: LensVisualizer's product MTF (`lv`), optiland's FFT MTF
+(`optiland`) and the comparator's wave estimator on LensVisualizer's rays (`wave`). It is run only where it is
+named, since it needs optiland, and is recorded and never gated; a run whose figures are outside their band asks
+optiland once more, at 512 rays. About 8 minutes on the benchmark. A photopic run has no optiland row: its FFT
+MTF is of one line.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r5g
+```
+
+R5g sets three engines' own geometric MTF side by side: LensVisualizer's (`lv`), optiland's own (`optiland`) and
+the comparator's estimator on a replay of LensVisualizer's sampling (`replay`), one request a field. Run only
+where it is named, recorded and never gated; a field on one line that is outside its band asks optiland once
+more, at 512 rays. A photopic run has an optiland row: the rays are optiland's and the sum over the lines the
+worker's, and the report says so. About 37 minutes on the benchmark, most of it two fast lenses wide open at
+full field.
 
 ```bash
 node bin/lvrtc.mjs compare benchmark
@@ -183,6 +258,19 @@ node bin/lvrtc.mjs baseline check benchmark
 Runs the suite again on the baseline's engines and says, record by record, whether the baseline is still of the
 lenses and engines at hand: `OK`, `STALE` (a lens or an engine has changed; `REFRESHABLE` if the figures still
 hold) or `DRIFT` (a verdict changed or a figure moved past its tolerance). Only `DRIFT`, `FAIL` and `ERROR` exit 1.
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b
+node bin/lvrtc.mjs compare benchmark
+node bin/lvrtc.mjs baseline write benchmark --mtf
+node bin/lvrtc.mjs baseline check benchmark --mtf
+```
+
+The MTF baseline is a record of its own, [baselines/benchmark.mtf.json](baselines/benchmark.mtf.json), with its
+report [reports/benchmark/mtf.md](reports/benchmark/mtf.md): the gated MTF rungs with the number of fields each
+figure was judged on, the recorded rungs, every row marked for attention, and the engines' own MTF side by side.
+From an empty result store the run takes about an hour and 15 GB; the check answers from the store what has not
+changed, and says of a recorded rung what `MOVED`, which fails nothing.
 
 ```bash
 node bin/lvrtc.mjs verify
@@ -220,6 +308,20 @@ node bin/lvrtc.mjs mtf nikon-z-24-70f4s
 For a zoom, prints two tables: the wide end and the tele end. `--zoom <t>` asks for one position only, and
 `--aperture f/8` for the tab's f/8 comparison.
 
+### The MTF comparison of one lens
+
+```bash
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland
+```
+
+Does for one lens what the MTF benchmark does for twelve: the lens wide open and at the tab's f/8, at its design
+plane and at LensVisualizer's best focus, on the reference line and on the photopic lines (eight runs; a zoom at
+both ends, sixteen), run on the named engines and compared. It prints the MTF report of that run: the gated rungs
+R4, R4f and R6a with their worst figures, the recorded rungs R6b, R5 and R5g, and the engines' own MTF side by
+side at fields 0, 0.5 and 1 and 10, 30 and 50 cycles/mm. Progress is on the error stream; a fast lens wide open
+takes minutes, and what the result store already holds is not computed again. `--aperture f/8` or `wide-open`
+keeps one aperture; without `optiland` among the engines R5 and R5g are left out.
+
 ## Suites
 
 A suite is a list of lenses and the states to compare them in. A zoom with no stated position is compared at
@@ -239,9 +341,15 @@ both ends.
 | R1 | focal length, focal and principal points, back focus, pupils | 1e-9 mm |
 | R2 | the same rays in every engine: hits, exit direction, landing, which rays pass | 1e-8 mm; 1e-9 in direction; no ray passing in one engine only |
 | R3 | optical path of those rays | 2e-5 waves |
+| R4 | geometric MTF of the same rays | 1e-7 |
+| R4f | replay of LensVisualizer's geometric MTF sampling | 1e-9; equal sampling and field statuses |
+| R5, R5g | the engines' own diffraction and geometric MTF | recorded; attention bands 0.005 on axis, 0.01 off axis |
+| R6a | wave MTF of the same rays where the lattice can arbitrate | 2e-8 |
+| R6b | LensVisualizer's diffraction MTF beside the wave estimator | recorded; attention bands 0.005 on axis, 0.01 off axis |
 
-Verdicts are `PASS`, `FLOOR` (a pass: LensVisualizer's own intersection tolerance, confirmed by `ref`), `FAIL`,
-`BLOCKED`, `UNSUPPORTED` and `ERROR`. MTF rungs arrive with Phase 3.
+Verdicts are `PASS`, `FLOOR` (a pass under a policy's numerical-floor rule), `FAIL`, `BLOCKED`, `UNSUPPORTED`,
+`ERROR`, `RECORDED` and `ATTENTION`. Policy version 11 gives no rung or metric a floor: a gated pair above its
+limit is `FAIL`. The floor machinery remains available to a future policy.
 
 ## More
 

@@ -1,3 +1,4 @@
+import { lvResolvedMtfOptions } from "../../../src/engines/lv/tabRequest.ts";
 // What the hermetic tests of the case exporter share: prepared states built by hand, and stand-ins for the
 // LensVisualizer functions the exporter calls. Nothing here loads LensVisualizer, and no number describes a real lens.
 import type { ExportCaseInput, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
@@ -6,11 +7,13 @@ import type {
   LvAsphere,
   LvFiniteConjugate,
   LvMtfOptions,
+  LvMtfResult,
   LvMtfSupport,
   LvPreparedState,
   LvRuntimeLens,
   LvSpectralLine,
   LvSurface,
+  LvTraceGeometry,
   LvVec3,
 } from "../../../src/engines/lv/types.ts";
 
@@ -33,6 +36,8 @@ export interface SurfaceSpec {
   readonly diffractive?: object | null;
   /** The value of LV's `source.synthetic`. */
   readonly synthetic?: string;
+  /** LV's `clips`: false on a rear plate whose rim it generated. Left out, the surface has no such member. */
+  readonly clips?: boolean;
 }
 
 /** What a hand-built state is, beside its surfaces. */
@@ -64,6 +69,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
       nd: surface.nd ?? 1,
       sd: surface.sd ?? 10,
       innerSd: surface.innerSd ?? null,
+      ...(surface.clips === undefined ? {} : { clips: surface.clips }),
       elemId: surface.elemId ?? ((surface.nd ?? 1) === 1 ? 0 : physicalIndex + 1),
       asphere,
       diffractive: surface.diffractive ?? null,
@@ -83,17 +89,10 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
     return built;
   });
   const imgZ = spec.imgZ ?? position;
-  const runtime: LvRuntimeLens = {
-    lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
-    isZoom: false,
-    elements: [],
-    maxFstop: 22,
-    ...spec.runtime,
-  };
   return {
+    traceGeometry: { stopSurfaceIndex: spec.stopIndex },
     lens: {
       key: "hand-built",
-      runtime,
       stop: { surfaceIndex: spec.stopIndex },
       flags: { isFoldedOptics: spec.folded ?? false },
       projection: { kind: spec.projection ?? "rectilinear" },
@@ -112,19 +111,45 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
   };
 }
 
-/** LensVisualizer's clip rule (src/optics/trace/aperture.ts), with the stop override its tracers use. */
+/** A hand-built model keeps the runtime separate from the prepared state, as current LV does. */
+export interface TestModel {
+  readonly state: LvPreparedState;
+  readonly runtime: LvRuntimeLens;
+}
+
+export function modelOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): TestModel {
+  const runtime: LvRuntimeLens = {
+    source: { key: "hand-built" },
+    zoomStopSDs: null,
+    stopPhysSD: surfaces[spec.stopIndex].sd ?? 1,
+    lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
+    isZoom: false,
+    elements: [],
+    maxFstop: 22,
+    ...spec.runtime,
+  };
+  return { state: stateOf(surfaces, spec), runtime };
+}
+
+/**
+ * LensVisualizer's clip rule (src/optics/trace/aperture.ts), with the stop override its tracers use: a surface
+ * marked `clips: false` has no semi-diameter and no height is outside it.
+ */
 export function lvEvaluateAperture(
-  state: LvPreparedState,
+  state: LvTraceGeometry,
   surface: LvSurface,
   radius: number,
   stopSemiDiameter?: number,
 ): LvApertureEvaluation {
-  const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
-  const semiDiameter = isStop && stopSemiDiameter !== undefined ? stopSemiDiameter : surface.sd;
+  const stopIndex = state.stopSurfaceIndex;
+  const isStop = surface.physicalIndex === stopIndex;
+  const overridden = isStop && stopSemiDiameter !== undefined;
+  const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : surface.sd;
   const innerSemiDiameter = surface.innerSd ?? 0;
   let apertureState: LvApertureEvaluation["state"] = "inside";
-  if (radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12)) apertureState = "outside";
-  else if (innerSemiDiameter > 0) {
+  if (semiDiameter !== null && radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12)) {
+    apertureState = "outside";
+  } else if (innerSemiDiameter > 0) {
     const tolerance = Math.max(1e-9, Math.abs(innerSemiDiameter) * 1e-12);
     apertureState = radius >= innerSemiDiameter - tolerance ? "inside" : "inside-hole";
   }
@@ -166,8 +191,9 @@ export interface GateSpec {
  * spectrum, the reference line first; resolved indices for a spectral run and for mixed references; and, away from
  * infinity focus, the conjugate, or the refusal "finite-conjugate-unavailable".
  */
-export function gate(spec: GateSpec = {}): (state: LvPreparedState, options: LvMtfOptions) => LvMtfSupport {
-  return (state, options) => {
+export function gate(spec: GateSpec = {}): LvExportApi["assessMtfSupport"] {
+  return (request, options) => {
+    const state = request.preparedGeometry;
     const referenceNm = spec.referenceNm ?? LINES_NM.d;
     const reference = [{ wavelengthNm: referenceNm, weight: 1 }];
     const lines = options.spectrum === "cdf" ? CDF : options.spectrum === "photopic" ? PHOTOPIC : reference;
@@ -208,17 +234,71 @@ export function resolvedIndex(nd: number, wavelengthNm: number): number {
 }
 
 /**
+ * The stand-in's best axial focus: a 64th of the stop radius in front of the design plane, and twice as far for a
+ * grid capped at 32. A synthetic rule, so that the stop radius and the cap a focus was asked with show in it.
+ */
+export function standInBestShift(stopSemiDiameterMm: number, maxGridSize?: number): number {
+  return -stopSemiDiameterMm / (maxGridSize === 32 ? 32 : 64);
+}
+
+/**
+ * A stand-in for LensVisualizer's `computeMtfSteps`, as far as the exporter reads it: one step, which states the
+ * focus of the request (`standInBestShift`, applied when the request asks for "best-axial"), with the support
+ * record of `assess`. `asked` takes every request it is given.
+ */
+export function stepsOf(
+  assess: LvExportApi["assessMtfSupport"],
+  asked: LvMtfOptions[] = [],
+): LvExportApi["computeMtfSteps"] {
+  return function* (request, settings) {
+    const options = lvResolvedMtfOptions(request, settings);
+    asked.push(options);
+    const best = standInBestShift(options.stopSemiDiameterMm, options.maxGridSize as number | undefined);
+    const refocused = options.focus === "best-axial";
+    const result: LvMtfResult = {
+      method: options.method,
+      spectrum: options.spectrum,
+      support: assess(request, settings),
+      frequenciesPerMm: [0],
+      fields: [],
+      geometry: null,
+      focus: {
+        requestedMode: String(options.focus),
+        mode: refocused ? "best-axial" : "design",
+        appliedShiftMm: refocused ? best : 0,
+        bestAxialShiftMm: best,
+      },
+      aperture: null,
+    };
+    yield result;
+    return result;
+  };
+}
+
+/**
  * Stand-ins for the LensVisualizer functions the exporter calls, behaving as LV's do: `prepareRuntimeState` hands
  * out `state` whatever is asked, the wide-open stop radius is the prepared stop surface's `sd`, the widest f-number
- * is 2, and the gate is `gate()`. `overrides` replaces any of them.
+ * is 2 and so is the f-number of the aperture slider at wide open, the entrance pupil is the stop itself, the gate
+ * is `gate()`, and the focus is `stepsOf` that gate. `overrides` replaces any of them.
  */
 export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> = {}): LvExportApi {
+  const assess = overrides.assessMtfSupport ?? gate();
   return {
+    createAnalysisRequest: (params) => ({
+      preparedGeometry: params.preparedState,
+      dynamicEFL: params.dynamicEFL,
+      aperture: { entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD },
+      pose: null,
+    }),
     prepareRuntimeState: () => state,
     wideOpenStopAtZoom: () => state.surfaces[state.lens.stop.surfaceIndex].sd,
-    fopenAtZoom2: () => 2,
+    fopenAtZoomClamped: () => 2,
+    fNumberAtStopdown: () => 2,
+    computeAnalysisFieldGeometryAtState: () => ({ yRatio: 1 }),
+    entrancePupilAtState: (stopSD) => ({ epSD: stopSD, yRatio: 1, b: 0, epRatio: 1 }),
+    computeMtfSteps: stepsOf(assess),
     evaluateAperture: lvEvaluateAperture,
-    assessMtfSupport: gate(),
+    assessMtfSupport: assess,
     mtfIndexResolver: (_state, support, wavelengthNm) =>
       support.useResolvedReference ? (_surfaceIndex, nd) => resolvedIndex(nd, wavelengthNm) : undefined,
     mtfFiniteObjectPoint: (prepared, conjugate) => [0, 0, prepared.surfaces[0].z - conjugate.objectDistanceMm],
@@ -244,11 +324,11 @@ export const LV_PROVENANCE: ExportCaseInput["lv"] = {
 
 /** The input of `exportCase` for a hand-built state, with any option of the run and any stand-in replaced. */
 export function inputFor(
-  state: LvPreparedState,
+  { state, runtime }: TestModel,
   options: ExportCaseInput["options"] = {},
   overrides: Partial<LvExportApi> = {},
 ): ExportCaseInput {
-  return { api: apiFor(state, overrides), lens: LENS, runtime: state.lens.runtime, options, lv: LV_PROVENANCE };
+  return { api: apiFor(state, overrides), lens: LENS, runtime, options, lv: LV_PROVENANCE };
 }
 
 /**

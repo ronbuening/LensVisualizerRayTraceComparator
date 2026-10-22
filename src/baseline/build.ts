@@ -9,13 +9,16 @@ import type {
   BaselineRays,
   BaselineRun,
   BaselineRung,
+  BaselineSet,
+  BaselineStep,
   BaselineSupport,
 } from "../contract/baseline.ts";
 import type { ComparisonSet, PairComparison } from "../contract/comparison.ts";
 import { gravestVerdict } from "../contract/baseline.ts";
 import type { Policy } from "../contract/policy.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
-import { CONTRACT_VERSION, isCompatibleContract } from "../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_1, isCompatibleContract } from "../contract/version.ts";
+import { isNativeMtfRung } from "../compare/mtfNative.ts";
 import { SOURCE_CHANGED, jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
@@ -47,16 +50,75 @@ function byId<T>(key: (value: T) => string): (a: T, b: T) => number {
   return (a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0);
 }
 
-/** How the jobs of each engine ended in one rung of one run. */
+/**
+ * How the jobs of each engine ended in one rung of one run. A job that is a later step of its engine
+ * (`ManifestJob.step`) is no part of it: the engine answered the request before it was asked again, and how the
+ * step ended is `stepsOf`'s to say.
+ */
 function supportOf(jobs: readonly ManifestJob[]): BaselineSupport[] {
   const engines = [...new Set(jobs.map((job) => job.engine))].sort();
   return engines.map((engine): BaselineSupport => {
-    const failed = jobs.find((job) => job.engine === engine && job.status !== "ok");
+    const own = jobs.filter((job) => job.engine === engine);
+    const first = own.some((job) => job.step === undefined) ? own.filter((job) => job.step === undefined) : own;
+    const failed = first.find((job) => job.status !== "ok");
     if (failed === undefined) return { engine, status: "ok" };
     const detail = jobDetail(failed);
     return { engine, status: failed.status, ...(detail === undefined || detail === "" ? {} : { detail }) };
   });
 }
+
+/** The later steps of each engine in one rung of one run, sorted by engine and step. */
+function stepsOf(jobs: readonly ManifestJob[]): BaselineStep[] {
+  const keys = [...new Set(jobs.flatMap((job) => (job.step === undefined ? [] : [`${job.engine}\0${job.step}`])))];
+  return keys.sort().map((key): BaselineStep => {
+    const [engine, step] = key.split("\0");
+    const own = jobs.filter((job) => job.engine === engine && job.step === step);
+    const failed = own.find((job) => job.status !== "ok");
+    const detail = failed === undefined ? undefined : jobDetail(failed);
+    return {
+      engine,
+      step,
+      jobs: own.length,
+      status: failed?.status ?? "ok",
+      ...(detail === undefined || detail === "" ? {} : { detail }),
+    };
+  });
+}
+
+/** One compared request as a baseline keeps it: every engine with what it records, every two engines in order. */
+function keptSet(set: ComparisonSet): BaselineSet {
+  return {
+    participants: [...set.participants]
+      .sort(byId((participant) => participant.engine))
+      .map(({ engine, status, recorded }) => ({ engine, status, ...(recorded === undefined ? {} : { recorded }) })),
+    pairs: set.pairs
+      .map((pair) => {
+        const [a, b] = [pair.a, pair.b].sort();
+        const { verdict, reason, metrics } = pair;
+        return { a, b, verdict, ...(reason === undefined ? {} : { reason }), metrics };
+      })
+      .sort(byId((pair) => `${pair.a}\0${pair.b}`)),
+  };
+}
+
+/** The rungs of an MTF baseline, in ladder order: every rung that judges or records an MTF. */
+export const MTF_BASELINE_RUNGS: readonly string[] = Object.freeze(["r4", "r4f", "r5", "r5g", "r6a", "r6b"]);
+
+/** What a baseline is to hold of a run. */
+export interface BaselineOptions {
+  /** The rungs to record, of those the run was compared on; every one of them when left out. */
+  readonly rungs?: readonly string[];
+  /**
+   * True for a baseline with the members minor 1 of the contract added, which then states that minor: for every
+   * metric of a pair the number of requests it was measured in, the later steps of an engine, and for a rung of
+   * the engines' own MTF (`isNativeMtfRung`) each request as it was compared, and for a rung with attention bands
+   * those bands: what the MTF report is rendered from.
+   */
+  readonly detailed?: boolean;
+}
+
+/** The options of an MTF baseline: the rungs of `MTF_BASELINE_RUNGS`, with the members of minor 1. */
+export const MTF_BASELINE: BaselineOptions = Object.freeze({ rungs: MTF_BASELINE_RUNGS, detailed: true });
 
 /** How the rays of each engine ended, added up over the sets; empty for a rung whose answers record none. */
 function raysOf(sets: readonly ComparisonSet[]): BaselineRays[] {
@@ -87,10 +149,17 @@ function raysOf(sets: readonly ComparisonSet[]): BaselineRays[] {
  * the gravest of them, and each of its metrics is the sum of a metric counted in rays or elements and the largest
  * value of any other, with where that occurs and the tolerance the policy judges it by.
  *
- * The engines are those of the manifest that could be used, each with its fingerprint and adapter revision. A pure
- * function that reads no file and no clock.
+ * The engines are those of the manifest that could be used, each with its fingerprint and adapter revision. With
+ * `options` the baseline holds some of the rungs only, or the members of an MTF baseline (`BaselineOptions`). A
+ * pure function that reads no file and no clock.
  */
-export function buildBaseline(manifest: RunManifest, comparisons: ComparisonFile, policy: Policy): Baseline {
+export function buildBaseline(
+  manifest: RunManifest,
+  comparisons: ComparisonFile,
+  policy: Policy,
+  options: BaselineOptions = {},
+): Baseline {
+  const detailed = options.detailed === true;
   const engines = manifest.engines
     .flatMap((engine): BaselineEngine[] => {
       if (engine.status !== "available") return [];
@@ -106,6 +175,7 @@ export function buildBaseline(manifest: RunManifest, comparisons: ComparisonFile
     const byRung = new Map<string, Map<string, ComparisonSet>>();
     for (const set of comparisons.comparisons) {
       if (set.run !== run.name) continue;
+      if (options.rungs !== undefined && !options.rungs.includes(set.rung)) continue;
       const chosen = byRung.get(set.rung) ?? new Map<string, ComparisonSet>();
       byRung.set(set.rung, chosen);
       if (!chosen.has(set.requestId) || set.mode === "pairwise") chosen.set(set.requestId, set);
@@ -114,45 +184,69 @@ export function buildBaseline(manifest: RunManifest, comparisons: ComparisonFile
       const sets = [...chosen.values()];
       const gathered = new Map<
         string,
-        { a: string; b: string; pairs: PairComparison[]; metrics: Map<string, Gathered> }
+        { a: string; b: string; pairs: PairComparison[]; metrics: Map<string, Gathered>; measured: Map<string, number> }
       >();
       for (const set of sets) {
         for (const pair of set.pairs) {
           const [a, b] = [pair.a, pair.b].sort();
           const key = `${a}\0${b}`;
-          const known = gathered.get(key) ?? { a, b, pairs: [], metrics: new Map<string, Gathered>() };
+          const known = gathered.get(key) ?? {
+            a,
+            b,
+            pairs: [],
+            metrics: new Map<string, Gathered>(),
+            measured: new Map<string, number>(),
+          };
           gathered.set(key, known);
           known.pairs.push(pair);
-          for (const metric of pair.metrics) gather(known.metrics, metric, run.name);
+          for (const metric of pair.metrics) {
+            gather(known.metrics, metric, run.name);
+            known.measured.set(metric.name, (known.measured.get(metric.name) ?? 0) + 1);
+          }
         }
       }
       const pairs = [...gathered.values()]
-        .map(({ a, b, pairs: judged, metrics }): BaselinePair => {
+        .map(({ a, b, pairs: judged, metrics, measured }): BaselinePair => {
           const verdicts = verdictCounts(judged);
           return {
             a,
             b,
             verdict: gravestVerdict(judged.map((pair) => pair.verdict)) ?? "ERROR",
             verdicts,
-            metrics: [...metrics.values()].map((metric) => finished(metric, policy, rung, false)),
+            metrics: [...metrics.values()].map((metric) => ({
+              ...finished(metric, policy, rung, false),
+              ...(detailed ? { measured: measured.get(metric.name) ?? 0 } : {}),
+            })),
           };
         })
         .sort(byId((pair) => `${pair.a}\0${pair.b}`));
       const rays = raysOf(sets);
+      const jobs = manifest.jobs.filter((job) => job.run === run.name && job.rung === rung);
+      const steps = detailed ? stepsOf(jobs) : [];
+      const kept = detailed && isNativeMtfRung(rung);
+      const judgedBy = Object.hasOwn(policy.rungs, rung) ? policy.rungs[rung].metrics : {};
+      const bands = Object.fromEntries(
+        Object.keys(judgedBy)
+          .sort()
+          .flatMap((name) => (judgedBy[name].attention === undefined ? [] : [[name, judgedBy[name].attention]])),
+      );
       return {
         rung,
         quantity: sets[0].quantity,
         requests: sets.length,
-        support: supportOf(manifest.jobs.filter((job) => job.run === run.name && job.rung === rung)),
+        support: supportOf(jobs),
         ...(rays.length === 0 ? {} : { rays }),
         pairs,
+        ...(steps.length === 0 ? {} : { steps }),
+        ...(detailed && Object.keys(bands).length > 0 ? { bands } : {}),
+        ...(kept ? { sets: sets.map(keptSet) } : {}),
       };
     });
     return [{ name: run.name, caseId, rungs }];
   });
 
   return {
-    contract: CONTRACT_VERSION,
+    contract: detailed ? CONTRACT_VERSION_1_1 : CONTRACT_VERSION,
     kind: "baseline",
     suite: { name: manifest.suite.name, hash: manifest.suite.hash },
     policy: { version: policy.version, hash: hashCanonical(policy) },

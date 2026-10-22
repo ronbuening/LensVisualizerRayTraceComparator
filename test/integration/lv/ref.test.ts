@@ -115,7 +115,7 @@ test(
     const hold = async (at: string, opticalCase: OpticalCase): Promise<void> => {
       // LensVisualizer's module reads each surface's authored index: the reference line of a case that has one.
       if (opticalCase.conditions.lines[0].indexSource !== "authored") return;
-      const theirs = binding.api.computeCardinalElements2(await preparedFor(binding, opticalCase));
+      const theirs = binding.api.computeCardinalElementsFromState(await preparedFor(binding, opticalCase));
       assert.ok(theirs !== null, at);
       const answer = answerFirstOrder(buildRefSystem(opticalCase));
       assert.ok(answer.supported, `${at}: ${JSON.stringify(answer)}`);
@@ -173,7 +173,7 @@ test(
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
-    const trace = binding.api.traceParaxialSurfaces2;
+    const trace = binding.api.paraxialTrace;
     const tolerance = POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance;
     assert.equal(tolerance, 1e-9);
 

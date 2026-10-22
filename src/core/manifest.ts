@@ -14,6 +14,7 @@ import { validateKind } from "../contract/schemas.ts";
 import { isCompatibleContract } from "../contract/version.ts";
 import type { EngineUnavailableCode } from "../engines/adapter.ts";
 import { writeFileAtomic } from "./atomicFile.ts";
+import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -75,6 +76,16 @@ export interface ManifestRun {
   readonly referenceEngine?: string;
   /** The ray sets of the run; stated exactly when a rung that traces rays was run on it. */
   readonly raySets?: ManifestRaySets;
+  /**
+   * The ray sets of the run on the finer lattice (`fineSampling`); stated exactly when a rung that takes a wave
+   * transfer function of the traced rays was run on it.
+   */
+  readonly fineRaySets?: ManifestRaySets;
+  /**
+   * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
+   * a recipe was run on it.
+   */
+  readonly recipe?: MtfRecipeResolution;
 }
 
 /** One request asked of one engine for one run, and how that ended. */
@@ -85,6 +96,12 @@ export interface ManifestJob {
   readonly quantity: string;
   readonly requestId: string;
   readonly engine: string;
+  /**
+   * For a job that follows another of the same run, rung, request and engine: the name of the step it is, such as
+   * `fft512`. The engine was asked the same request again with other options, because of what the first answers
+   * came to (`FollowUp`, src/core/orchestrator.ts). Left out by every other job.
+   */
+  readonly step?: string;
   readonly status: ResultStatus;
   /**
    * The key of the store entry that holds the request and the engine's result; null when nothing was stored: an
@@ -115,7 +132,7 @@ export interface RunManifest {
   readonly runs: readonly ManifestRun[];
   /**
    * Every job: runs in suite order, then rungs in ladder order, then engines sorted by id, then the rung's requests
-   * in the order the rung builds them.
+   * in the order the rung builds them; the follow-ups of a run and rung (`step`) come after its other jobs.
    */
   readonly jobs: readonly ManifestJob[];
 }
@@ -213,6 +230,7 @@ export function manifestProblems(value: unknown): string[] {
   list("/jobs", value.jobs, (at, job) => {
     for (const member of ["run", "caseId", "rung", "quantity", "requestId", "engine"])
       text(`${at}/${member}`, job[member]);
+    if (job.step !== undefined) text(`${at}/step`, job.step);
     if (!JOB_STATUSES.includes(job.status)) problems.push(`${at}/status: expected a result status`);
     if (job.storeKey !== null) text(`${at}/storeKey`, job.storeKey);
     if (job.unsupported !== undefined) {
@@ -270,7 +288,8 @@ export function readRunCase(directory: string, caseId: string): OpticalCase | un
   }
   if (validateKind("optical-case", parsed).length > 0) return undefined;
   const opticalCase = parsed as OpticalCase;
-  if (caseInvariantProblems(opticalCase.system, opticalCase.conditions).length > 0) return undefined;
+  if (caseInvariantProblems(opticalCase.system, opticalCase.conditions, opticalCase.contract).length > 0)
+    return undefined;
   if (opticalCase.id !== caseId || verifyCaseIdentity(opticalCase).length > 0) return undefined;
   return opticalCase;
 }

@@ -2,6 +2,8 @@
 // case-source seam of src/core/suite.ts, and what `lvrtc export` drives.
 import type { OpticalCase } from "../../contract/case.ts";
 import type { RunOptions } from "../../contract/runSpec.ts";
+import { recipeProblem } from "../../core/mtfRecipe.ts";
+import type { MtfRecipeResolution } from "../../core/mtfRecipe.ts";
 import type { CaseSource, SourceAudit } from "../../core/suite.ts";
 import { rayProblem } from "../../rays/raySets.ts";
 import type { RaySetResolution } from "../../rays/raySets.ts";
@@ -16,6 +18,7 @@ import { problemText } from "./exportProblems.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
 import { lvRaySets } from "./raySets.ts";
+import { lvMtfRecipe } from "./recipe.ts";
 import { ZOOM_ENDS } from "./zoomEnds.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
@@ -27,7 +30,7 @@ export interface LvExporter {
    */
   exportLens(
     key: string,
-    options: Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane">,
+    options: Pick<RunOptions, "state" | "aperture" | "lines" | "imagePlane" | "sampling">,
   ): Promise<ExportCaseResult>;
   /**
    * Whether the lens `key` is a zoom, as the catalog indexes it (`LvCatalogEntry.zoom`); false for a key the
@@ -41,6 +44,15 @@ export interface LvExporter {
    * `stale-case`. Rejects for a case that did not come from a LensVisualizer lens.
    */
   raySets(opticalCase: OpticalCase, options: Pick<RunOptions, "fields" | "sampling">): Promise<RaySetResolution>;
+  /**
+   * The MTF recipe of a case this checkout exported, under a run's fields, frequencies and grid cap
+   * (`lvMtfRecipe`), from the state the case was exported from, rebuilt and held to the case first. A case that is
+   * no longer what LensVisualizer gives has no recipe, and the one problem `stale-case`.
+   */
+  recipe(
+    opticalCase: OpticalCase,
+    options: Pick<RunOptions, "fields" | "frequenciesPerMm" | "sampling">,
+  ): Promise<MtfRecipeResolution>;
   /**
    * The checkout's fingerprint now, and what has changed since the lenses were read: an engine file or an exported
    * lens's file whose bytes on disk are no longer the ones loaded, and an engine closure that is no longer the one
@@ -86,6 +98,11 @@ export function createLvExporter(binding: LvBinding): LvExporter {
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)] };
       return lvRaySets(binding.api, rebuilt.model, options);
     },
+    recipe: async (opticalCase, options) => {
+      const rebuilt = await rebuildCase(binding, build, opticalCase);
+      if (!rebuilt.ok) return { recipe: null, problems: [recipeProblem(STALE_CASE, rebuilt.reason)] };
+      return lvMtfRecipe(binding.api, rebuilt.model, options);
+    },
     audit: () => {
       const { commit, dirty, engineClosureHash, engineFileCount } = binding.fingerprint();
       const grown = [...stampedClosures].some((stamped) => stamped !== engineClosureHash);
@@ -127,6 +144,9 @@ function unavailable(error: LvBindingError): ExportProblem {
  * `raySets` gives the rays of a case it resolved: LensVisualizer's own launch lattice for each field of the run, at
  * each line of the case (`lvRaySets`).
  *
+ * `recipe` gives the MTF recipe of a case it resolved: the plane, the fields and the frequencies as LensVisualizer
+ * resolves them (`lvMtfRecipe`).
+ *
  * `audit` gives the checkout's fingerprint (`commit`, `dirty`, `engineClosureHash`, `engineFileCount`) and what
  * changed since the cases were built; null while LensVisualizer has not been loaded.
  */
@@ -166,6 +186,11 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       const loaded = await load();
       if ("code" in loaded) return { sets: [], problems: [problemText(loaded)] };
       return loaded.raySets(opticalCase, run);
+    },
+    recipe: async (run, opticalCase) => {
+      const loaded = await load();
+      if ("code" in loaded) return { recipe: null, problems: [problemText(loaded)] };
+      return loaded.recipe(opticalCase, run);
     },
     audit: () => exporter?.audit() ?? null,
   };

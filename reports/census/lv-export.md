@@ -9,20 +9,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `ed78cf40b6ebf24d6583003eaa6e77c1ba8bac62` (clean) |
-| Engine closure | `1827eefe0737daa58c8e34ba1b8e570986fc081fef8b467e325d4896375b16b0` (151 files) |
+| LensVisualizer commit | `ab0fd4cf94836492b28470953812ed4afc98c0c6` (clean) |
+| Engine closure | `94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b` (175 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-891 lenses, 297 of them zooms, in 1188 states; 0 lens files not indexed.
+989 lenses, 319 of them zooms, in 1308 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 594 | 572 | 22 | 0 |
-| Zooms, wide end | 297 | 296 | 1 | 0 |
-| Zooms, tele end | 297 | 296 | 1 | 0 |
-| All | 1188 | 1164 | 24 | 0 |
+| Primes | 670 | 647 | 23 | 0 |
+| Zooms, wide end | 319 | 318 | 1 | 0 |
+| Zooms, tele end | 319 | 318 | 1 | 0 |
+| All | 1308 | 1283 | 25 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -35,9 +35,9 @@ applies to one end only.
 | Reason | States | Lenses |
 | --- | --- | --- |
 | `diffractive-surface` | 9 | 8 |
-| `folded-path` | 15 | 15 |
+| `folded-path` | 16 | 16 |
 | `mixed-reference` | 1 | 1 |
-| `non-refract-interaction` | 15 | 15 |
+| `non-refract-interaction` | 16 | 16 |
 | `off-axis-image-plane` | 2 | 2 |
 | `surface-profile-unsupported` | 2 | 2 |
 | `tilted-image-plane` | 2 | 2 |
@@ -53,9 +53,10 @@ applies to one end only.
 - `nikon-nikkor-z-800mm-f63-vr-s`
 - `reference-folded-diffractive-plate`
 
-### `folded-path` (15 states, 15 lenses)
+### `folded-path` (16 states, 16 lenses)
 
 - `carl-zeiss-mirotar-500f45`
+- `minolta-250mm-f56-rf`
 - `minolta-af-reflex-500mm-f8`
 - `nikon-reflex-nikkor-1000mm-f11`
 - `nikon-reflex-nikkor-500mm-f8-new`
@@ -73,11 +74,12 @@ applies to one end only.
 
 ### `mixed-reference` (1 state, 1 lens)
 
-- `sony-fe-14mm-f18-gm`
+- `samyang-af-35mm-f2p8-fe`
 
-### `non-refract-interaction` (15 states, 15 lenses)
+### `non-refract-interaction` (16 states, 16 lenses)
 
 - `carl-zeiss-mirotar-500f45`
+- `minolta-250mm-f56-rf`
 - `minolta-af-reflex-500mm-f8`
 - `nikon-reflex-nikkor-1000mm-f11`
 - `nikon-reflex-nikkor-500mm-f8-new`
@@ -113,20 +115,21 @@ applies to one end only.
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 0 |
+| `aperture.unclipped` | 253 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
-| `surface.asphere.even` | 580 |
+| `surface.asphere.even` | 632 |
 | `surface.asphere.flat-base` | 2 |
-| `surface.asphere.odd` | 78 |
-| `surface.conic` | 270 |
+| `surface.asphere.odd` | 81 |
+| `surface.conic` | 295 |
 
 ## Provenance notes of the exported cases
 
 | Note | Cases |
 | --- | --- |
-| `bulk-absorption` | 1 |
-| `projection:fisheye-equidistant` | 3 |
-| `projection:fisheye-equisolid` | 12 |
+| `bulk-absorption` | 2 |
+| `projection:fisheye-equidistant` | 4 |
+| `projection:fisheye-equisolid` | 15 |
 
 ## Limits: the largest value an exported case needs
 

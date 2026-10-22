@@ -1,6 +1,6 @@
 import { syntheticKind } from "./binding.ts";
 import { LV_FLAT_RADIUS } from "./exportShape.ts";
-import type { LvPreparedState } from "./types.ts";
+import type { LvPreparedState, LvRuntimeLens } from "./types.ts";
 
 /** One surface of a prepared state, as `lvrtc lenses show` prints it. Lengths are in mm. */
 export interface SurfaceSummary {
@@ -14,6 +14,8 @@ export interface SurfaceSummary {
   readonly nd: number;
   /** The clear semi-diameter; on the stop surface, the runtime stop radius. */
   readonly sd: number;
+  /** False where `sd` is a rim LV generated for a rear plate: an envelope that clips no ray. */
+  readonly clips: boolean;
   readonly z: number;
   readonly asphere: boolean;
   /** "rearPlate" for a surface LV added, else null. */
@@ -34,10 +36,11 @@ export interface StateSummary {
 }
 
 /**
- * Summarizes a prepared state. Everything is read from the state itself: the stop radius is the stop surface's
- * `sd`, never an authored value, and the positions are those of the state's focus and zoom.
+ * Summarizes a prepared state. Everything but the last lens surface is read from the state itself: the stop radius
+ * is the stop surface's `sd`, never an authored value, and the positions are those of the state's focus and zoom.
+ * The last lens surface comes from the runtime lens, since a prepared state no longer points back to it.
  */
-export function summarizeState(state: LvPreparedState): StateSummary {
+export function summarizeState(state: LvPreparedState, runtime: LvRuntimeLens): StateSummary {
   const stopIndex = state.lens.stop.surfaceIndex;
   return {
     focusT: state.focusT,
@@ -45,7 +48,7 @@ export function summarizeState(state: LvPreparedState): StateSummary {
     surfaceCount: state.surfaces.length,
     stopIndex,
     stopRadius: state.surfaces[stopIndex].sd,
-    lastLensSurfaceIndex: state.lens.runtime.lastLensSurfaceIdx,
+    lastLensSurfaceIndex: runtime.lastLensSurfaceIdx,
     imgZ: state.imgZ,
     surfaces: state.surfaces.map((surface, index) => ({
       index,
@@ -54,6 +57,7 @@ export function summarizeState(state: LvPreparedState): StateSummary {
       d: surface.d,
       nd: surface.nd,
       sd: surface.sd,
+      clips: surface.clips !== false,
       z: surface.z,
       asphere: surface.asphere !== null && surface.asphere !== undefined,
       synthetic: syntheticKind(surface),

@@ -45,9 +45,10 @@ function sagOf(surface: LvSurface, radius: number): number {
  *   without curvature and without a term, on which `K` shapes nothing.
  * - `terms` are the coefficients LensVisualizer evaluates (`termsOf`).
  * - `clipRadius` is the largest height at which LensVisualizer's `evaluateAperture` passes a ray, the stop surface
- *   asked with the stop radius of the case, as its tracers ask it; `innerClipRadius` is the inner semi-diameter it
- *   reports there, 0 for a surface without a central obstruction; `sagRadii` are the fractions of the
- *   semi-diameter it reports there. `stopSemiDiameter` is that stop radius.
+ *   asked with the stop radius of the case, as its tracers ask it, and an infinity for a surface it clips no ray
+ *   at (a rear plate whose rim it generated); `innerClipRadius` is the inner semi-diameter it reports there, 0 for
+ *   a surface without a central obstruction; `sagRadii` are the fractions of the semi-diameter it reports there,
+ *   and of the prepared surface's `sd` where it reports none. `stopSemiDiameter` is that stop radius.
  * - `sag` is the profile's at those heights (`sagOf`).
  * - `indexAfterSurface` and `imageZ` are those of the case LensVisualizer exports now: the indices of its own
  *   resolver for each line, and the image plane the case asks for.
@@ -70,7 +71,7 @@ export function describeLvSystem(
     return {
       curvature,
       conic: curvature === 0 && terms.length === 0 ? 0 : (surface.asphere?.K ?? 0),
-      clipRadius: aperture.semiDiameter,
+      clipRadius: aperture.semiDiameter ?? Infinity,
       innerClipRadius: aperture.innerSemiDiameter,
       terms,
       radii,

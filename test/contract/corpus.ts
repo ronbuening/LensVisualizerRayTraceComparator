@@ -101,7 +101,11 @@ export const SINGLET_DRAFT = {
   provenance: { source: { kind: "fixture", name: "singlet" }, producer: PRODUCER },
 } satisfies OpticalCaseDraft;
 
-/** A case that carries every feature flag and every optional field. It is a format example, not a real lens. */
+/**
+ * A case that carries every feature flag of contract 1.0 (`CONTRACT_1_0_FLAGS`) and every optional field. It is a
+ * format example, not a real lens. The flag minor 2 added is carried by `UNCLIPPED_PLATE_DRAFT`, so that this case,
+ * which half the test suite is written on, is the document it was.
+ */
 export const ALL_FEATURES_DRAFT = {
   label: { name: "Every feature", lensKey: "example-zoom", zoomT: 0.5, focusT: 0.25 },
   system: {
@@ -213,10 +217,60 @@ export const ALL_FEATURES_DRAFT = {
   },
 } satisfies OpticalCaseDraft;
 
+/** The feature flags contract 1.0 has: every flag but the one minor 2 added. */
+export const CONTRACT_1_0_FLAGS = FEATURE_FLAGS.filter((flag) => flag !== "aperture.unclipped");
+
+/** The aperture of a surface that does not clip, 15 mm in extent: an object of its own for each surface. */
+const unclipped = () => ({ semiDiameter: null, nominalSemiDiameter: 15, innerSemiDiameter: 0 });
+
+/**
+ * The singlet with a rear plate whose two surfaces do not clip (contract minor 2): their `semiDiameter` is null,
+ * their `nominalSemiDiameter` the extent their sag is described over, and the case states the contract 1.2 and
+ * the flag `aperture.unclipped`. The plate's thickness is taken from the singlet's last gap, so the image plane
+ * stays where it was.
+ */
+export const UNCLIPPED_PLATE_DRAFT = {
+  label: { name: "Biconvex singlet behind a plate that does not clip" },
+  system: {
+    surfaces: [
+      SINGLET_DRAFT.system.surfaces[0],
+      { ...SINGLET_DRAFT.system.surfaces[1], thickness: 90 },
+      {
+        label: "RP1a",
+        z: 94,
+        thickness: 2,
+        shape: { kind: "plane" },
+        aperture: unclipped(),
+        elementId: 2,
+        synthetic: "rearPlate",
+      },
+      {
+        label: "RP1b",
+        z: 96,
+        thickness: 4,
+        shape: { kind: "plane" },
+        aperture: unclipped(),
+        elementId: 0,
+        synthetic: "rearPlate",
+      },
+    ],
+    stopIndex: 0,
+    lastLensSurfaceIndex: 1,
+    designImageZ: 100,
+  },
+  conditions: {
+    ...SINGLET_DRAFT.conditions,
+    indexAfterSurface: encodeNdArray(Float64Array.of(1.5168, 1, 1.5168, 1), [1, 4]),
+  },
+  provenance: { source: { kind: "fixture", name: "unclipped-plate" }, producer: PRODUCER },
+} satisfies OpticalCaseDraft;
+
 /** The singlet as a finished case; it is the case the example requests, results and messages are about. */
 export const SINGLET_CASE = finalizeCase(SINGLET_DRAFT);
 /** The every-feature draft as a finished case. */
 export const ALL_FEATURES_CASE = finalizeCase(ALL_FEATURES_DRAFT);
+/** The singlet behind its plate as a finished case: the one valid case that states contract 1.2. */
+export const UNCLIPPED_PLATE_CASE = finalizeCase(UNCLIPPED_PLATE_DRAFT);
 
 // ── run-spec and suite ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -261,6 +315,21 @@ export const RUN_SPEC_LV = {
   rungs: ["r5"],
   engines: ["lv", "optiland"],
   referenceEngine: "lv",
+} satisfies RunSpec;
+
+/**
+ * A LensVisualizer lens as its MTF tab compares it at f/8, at LensVisualizer's own best axial focus: the two
+ * options only a LensVisualizer lens has.
+ */
+export const RUN_SPEC_LV_MTF = {
+  contract: CONTRACT_VERSION,
+  kind: "run-spec",
+  name: "nikkor-z50f12-f8-best-photopic",
+  lens: { kind: "lv", key: "nikkor-z50f12" },
+  aperture: { kind: "lv-f8-comparison" },
+  lines: { kind: "photopic" },
+  imagePlane: { kind: "lv-best-axial" },
+  rungs: ["r4f"],
 } satisfies RunSpec;
 
 /** The worked example of contract/CONTRACT.md: shared defaults, and runs that replace some of them. */
@@ -684,14 +753,18 @@ const floorDirection = () => ({ limit: 1e-8, agreement: 1e-12 });
 const floorWaves = () => ({ limit: 2e-4, agreement: 1e-7 });
 
 /**
- * The comparator's own policy, as `policy/rungs.v1.json` holds it: `selftest`, the built-system echo `r0`, which
- * blocks the rungs after it, the first-order data `r1`, and the two rungs of traced rays, `r2` and `r3`, with the
- * floor of `lv` against `ref`.
+ * A synthetic version-10 ladder for contract and floor tests: `selftest`, the built-system echo `r0`, which
+ * blocks the rungs after it, the first-order data `r1`, the two rungs of traced rays, `r2` and `r3`, with the
+ * floor of `lv` against `ref`, the geometric MTF of those rays, `r4`, the fidelity of the replay of
+ * LensVisualizer's MTF sampling, `r4f`, the engines' own MTF side by side, `r5`, and their own geometric MTF,
+ * `r5g`, which are recorded, the wave MTF
+ * of the traced rays, `r6a`, and LensVisualizer's own diffraction MTF beside the comparator's wave estimator,
+ * `r6b`, which is recorded.
  */
 export const POLICY_LADDER = {
   contract: CONTRACT_VERSION,
   kind: "policy",
-  version: 5,
+  version: 10,
   rungs: {
     selftest: POLICY_SELFTEST.rungs.selftest,
     r0: {
@@ -739,6 +812,57 @@ export const POLICY_LADDER = {
         "opticalPathToImage.maxAbs": { tolerance: 2e-5, unit: "waves", floor: floorWaves() },
       },
       floor: { engine: "lv", arbiter: "ref" },
+    },
+    r4: {
+      quantity: RAYS_TRACE,
+      mode: "identical-rays",
+      class: "gated",
+      metrics: { "mtf.maxAbs": { tolerance: 1e-7, unit: "1" } },
+    },
+    r4f: {
+      quantity: MTF_NATIVE,
+      mode: "direct",
+      class: "gated",
+      metrics: {
+        "fields.mismatches": { tolerance: 0, unit: "elements" },
+        "mtf.maxAbs": { tolerance: 1e-9, unit: "1" },
+        "sampling.mismatches": { tolerance: 0, unit: "elements" },
+      },
+    },
+    r5: {
+      quantity: MTF_NATIVE,
+      mode: "independent-method",
+      class: "recorded",
+      metrics: {
+        "chiefLanding.maxAbs": { attention: 1e-7, unit: "mm" },
+        "mtfOffAxis.maxAbs": { attention: 0.01, unit: "1" },
+        "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
+      },
+    },
+    r5g: {
+      quantity: MTF_NATIVE,
+      mode: "independent-method",
+      class: "recorded",
+      metrics: {
+        "chiefLanding.maxAbs": { attention: 1e-3, unit: "mm" },
+        "mtfOffAxis.maxAbs": { attention: 0.01, unit: "1" },
+        "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
+      },
+    },
+    r6a: {
+      quantity: RAYS_TRACE,
+      mode: "identical-rays",
+      class: "gated",
+      metrics: { "waveMtf.maxAbs": { tolerance: 4e-5, unit: "1" } },
+    },
+    r6b: {
+      quantity: MTF_NATIVE,
+      mode: "independent-method",
+      class: "recorded",
+      metrics: {
+        "mtfOffAxis.maxAbs": { attention: 0.01, unit: "1" },
+        "mtfOnAxis.maxAbs": { attention: 0.005, unit: "1" },
+      },
     },
   },
 } satisfies Policy;
@@ -1258,6 +1382,131 @@ export const BASELINE_SELFTEST: Baseline = {
 };
 
 /**
+ * An MTF baseline, with the members minor 1 added: one run of the rung `r5` on three engines, one request of two
+ * fields at one frequency, kept as it was compared; optiland asked once more (`fft512`); each metric with the
+ * number of requests it was measured in; the attention bands of the rung. Every number is a binary fraction.
+ */
+export const BASELINE_MTF: Baseline = {
+  contract: "1.1",
+  kind: "baseline",
+  suite: { name: "mtf", hash: sha256Hex("mtf suite") },
+  policy: { version: 10, hash: sha256Hex("mtf policy") },
+  engines: [
+    { id: "lv", version: "0.0.0", fingerprint: sha256Hex("lv sources"), details: {} },
+    { id: "optiland", version: "0.6.2", fingerprint: sha256Hex("optiland sources"), details: {} },
+    { id: "wave", version: "0.0.0", fingerprint: sha256Hex("lv sources"), details: {} },
+  ],
+  runs: [
+    {
+      name: "singlet-ref",
+      caseId: sha256Hex("singlet case"),
+      rungs: [
+        {
+          rung: "r5",
+          quantity: "mtf.native",
+          requests: 1,
+          support: [
+            { engine: "lv", status: "ok" },
+            { engine: "optiland", status: "ok" },
+            { engine: "wave", status: "ok" },
+          ],
+          pairs: [
+            {
+              a: "lv",
+              b: "optiland",
+              verdict: "ATTENTION",
+              verdicts: [{ verdict: "ATTENTION", count: 1 }],
+              metrics: [
+                { name: "mtfOnAxis.maxAbs", unit: "1", value: 0.0078125, where: { field: 0 }, measured: 1 },
+                { name: "mtfOffAxis.maxAbs", unit: "1", value: 0.00390625, where: { field: 1 }, measured: 1 },
+              ],
+            },
+            {
+              a: "lv",
+              b: "wave",
+              verdict: "RECORDED",
+              verdicts: [{ verdict: "RECORDED", count: 1 }],
+              metrics: [{ name: "mtfOnAxis.maxAbs", unit: "1", value: 0, measured: 1 }],
+            },
+            {
+              a: "optiland",
+              b: "wave",
+              verdict: "ATTENTION",
+              verdicts: [{ verdict: "ATTENTION", count: 1 }],
+              metrics: [{ name: "mtfOnAxis.maxAbs", unit: "1", value: 0.0078125, measured: 1 }],
+            },
+          ],
+          steps: [{ engine: "optiland", step: "fft512", jobs: 1, status: "ok" }],
+          bands: {
+            "chiefLanding.maxAbs": 0.0009765625,
+            "mtfOffAxis.maxAbs": 0.0078125,
+            "mtfOnAxis.maxAbs": 0.00390625,
+          },
+          sets: [
+            {
+              participants: [
+                {
+                  engine: "lv",
+                  status: "ok",
+                  recorded: {
+                    field: [0, 1],
+                    settled: [1, 1],
+                    chiefX: [0, 0],
+                    chiefY: [0, 16],
+                    lineWavelengthNm: [587.5625],
+                    "sagittal@32": [0.5, 0.25],
+                    "tangential@32": [0.5, 0.125],
+                  },
+                },
+                {
+                  engine: "optiland",
+                  status: "ok",
+                  recorded: {
+                    field: [0, 1],
+                    settled: [1, 1],
+                    chiefX: [0, 0],
+                    chiefY: [0, 16],
+                    lineWavelengthNm: [587.5625],
+                    "sagittal@32": [0.4921875, 0.25],
+                    "tangential@32": [0.4921875, 0.12890625],
+                    "settled#fft512": [1, null],
+                  },
+                },
+                { engine: "wave", status: "ok", recorded: { field: [0, 1], settled: [1, 0] } },
+              ],
+              pairs: [
+                {
+                  a: "lv",
+                  b: "optiland",
+                  verdict: "ATTENTION",
+                  reason: "mtfOnAxis.maxAbs 7.81e-3 is outside its attention band 3.91e-3",
+                  metrics: [
+                    { name: "mtfOnAxis.maxAbs", value: 0.0078125, unit: "1", where: { field: 0 } },
+                    { name: "mtfOffAxis.maxAbs", value: 0.00390625, unit: "1", where: { field: 1 } },
+                  ],
+                },
+                {
+                  a: "lv",
+                  b: "wave",
+                  verdict: "RECORDED",
+                  metrics: [{ name: "mtfOnAxis.maxAbs", value: 0, unit: "1" }],
+                },
+                {
+                  a: "optiland",
+                  b: "wave",
+                  verdict: "ATTENTION",
+                  metrics: [{ name: "mtfOnAxis.maxAbs", value: 0.0078125, unit: "1" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/**
  * The baseline of a suite of traced rays on three engines: two requests of `r2`, one of them a floor of `lv`; an
  * engine with an adapter revision; ray counts; and a rung one engine does not support.
  */
@@ -1396,8 +1645,17 @@ export const BASELINE_RAYS: Baseline = {
 
 /** Every valid fixture written here: `valid/<kind>/<name>.json` holds exactly this value. */
 export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknown>>>> = {
-  "optical-case": { singlet: SINGLET_CASE, "all-features": ALL_FEATURES_CASE },
-  "run-spec": { minimal: RUN_SPEC_MINIMAL, "worked-example": RUN_SPEC_WORKED, "lv-lens-all-options": RUN_SPEC_LV },
+  "optical-case": {
+    singlet: SINGLET_CASE,
+    "all-features": ALL_FEATURES_CASE,
+    "unclipped-plate": UNCLIPPED_PLATE_CASE,
+  },
+  "run-spec": {
+    minimal: RUN_SPEC_MINIMAL,
+    "worked-example": RUN_SPEC_WORKED,
+    "lv-lens-all-options": RUN_SPEC_LV,
+    "lv-lens-mtf-options": RUN_SPEC_LV_MTF,
+  },
   suite: { minimal: SUITE_MINIMAL, "worked-example": SUITE_WORKED },
   request: { minimal: REQUEST_MINIMAL, "with-engine-options": REQUEST_WITH_OPTIONS },
   result: {
@@ -1423,7 +1681,7 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     blocked: COMPARISON_BLOCKED,
     floor: COMPARISON_FLOOR,
   },
-  baseline: { selftest: BASELINE_SELFTEST, rays: BASELINE_RAYS },
+  baseline: { selftest: BASELINE_SELFTEST, rays: BASELINE_RAYS, mtf: BASELINE_MTF },
 };
 
 /** Where the validator must report an invalid fixture: its one issue has this instance path and this keyword. */
@@ -1503,6 +1761,12 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
       `${SURFACE_0}/shape`,
     ),
     "aperture-zero-semi-diameter": fault(SINGLET_CASE, `${SURFACE_0}/aperture/semiDiameter`, 0, "exclusiveMinimum"),
+    "aperture-unclipped-as-false": fault(
+      UNCLIPPED_PLATE_CASE,
+      "/system/surfaces/2/aperture/semiDiameter",
+      false,
+      "type",
+    ),
     "aperture-missing-inner": fault(
       SINGLET_CASE,
       `${SURFACE_0}/aperture/innerSemiDiameter`,
@@ -1552,6 +1816,8 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "state-zoom-above-one": fault(RUN_SPEC_LV, "/state/zoomT", 1.2, "maximum"),
     "state-focus-without-value": fault(RUN_SPEC_LV, "/state/focus", { kind: "focusT" }, "oneOf"),
     "aperture-zero-f-number": fault(RUN_SPEC_LV, "/aperture/value", 0, "oneOf", "/aperture"),
+    // The tab's comparison is at f/8 and at no other: it takes no number.
+    "aperture-f8-comparison-with-value": fault(RUN_SPEC_LV_MTF, "/aperture/value", 8, "oneOf", "/aperture"),
     "lines-unknown-set": fault(RUN_SPEC_WORKED, "/lines/kind", "rgb", "oneOf", "/lines"),
     "fields-angle-of-90": fault(RUN_SPEC_WORKED, "/fields/values", [0, 90], "oneOf", "/fields"),
     "fields-without-values": fault(RUN_SPEC_WORKED, "/fields/values", [], "oneOf", "/fields"),
@@ -1766,6 +2032,28 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "pair-unknown-verdict": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/verdict", "OK", "enum"),
     "pair-verdict-count-zero": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/verdicts/0/count", 0, "minimum"),
     "pair-with-reason": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/reason", "none", "additionalProperties"),
+    "metric-measured-negative": fault(BASELINE_MTF, "/runs/0/rungs/0/pairs/0/metrics/0/measured", -1, "minimum"),
+    "step-without-jobs": fault(BASELINE_MTF, "/runs/0/rungs/0/steps/0/jobs", 0, "minimum"),
+    "band-as-text": fault(BASELINE_MTF, "/runs/0/rungs/0/bands/mtfOnAxis.maxAbs", "0.005", "type"),
+    "set-participant-with-fingerprint": fault(
+      BASELINE_MTF,
+      "/runs/0/rungs/0/sets/0/participants/0/fingerprint",
+      "abc",
+      "additionalProperties",
+    ),
+    "set-recorded-value-as-text": fault(
+      BASELINE_MTF,
+      "/runs/0/rungs/0/sets/0/participants/0/recorded/field/1",
+      "1",
+      "type",
+    ),
+    "set-pair-missing-metrics": fault(
+      BASELINE_MTF,
+      "/runs/0/rungs/0/sets/0/pairs/0/metrics",
+      REMOVE,
+      "required",
+      "/runs/0/rungs/0/sets/0/pairs/0",
+    ),
     "metric-value-as-string": fault(BASELINE_SELFTEST, "/runs/0/rungs/0/pairs/0/metrics/0/value", "2e-14", "type"),
     "metric-missing-unit": fault(
       BASELINE_SELFTEST,

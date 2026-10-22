@@ -1,7 +1,7 @@
 {
   "contract": "1.0",
   "kind": "policy",
-  "version": 5,
+  "version": 10,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -137,6 +137,100 @@
       "floor": {
         "engine": "LV",
         "arbiter": "ref"
+      }
+    },
+    "r4": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "mtf.maxAbs": {
+          "tolerance": 1e-7,
+          "unit": "1"
+        }
+      }
+    },
+    "r4f": {
+      "quantity": "mtf.native",
+      "mode": "direct",
+      "class": "gated",
+      "metrics": {
+        "fields.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        },
+        "mtf.maxAbs": {
+          "tolerance": 1e-9,
+          "unit": "1"
+        },
+        "sampling.mismatches": {
+          "tolerance": 0,
+          "unit": "elements"
+        }
+      }
+    },
+    "r5": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": {
+          "attention": 1e-7,
+          "unit": "mm"
+        },
+        "mtfOffAxis.maxAbs": {
+          "attention": 0.01,
+          "unit": "1"
+        },
+        "mtfOnAxis.maxAbs": {
+          "attention": 0.005,
+          "unit": "1"
+        }
+      }
+    },
+    "r5g": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": {
+          "attention": 0.001,
+          "unit": "mm"
+        },
+        "mtfOffAxis.maxAbs": {
+          "attention": 0.01,
+          "unit": "1"
+        },
+        "mtfOnAxis.maxAbs": {
+          "attention": 0.005,
+          "unit": "1"
+        }
+      }
+    },
+    "r6a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "waveMtf.maxAbs": {
+          "tolerance": 0.00004,
+          "unit": "1"
+        }
+      }
+    },
+    "r6b": {
+      "quantity": "mtf.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "mtfOffAxis.maxAbs": {
+          "attention": 0.01,
+          "unit": "1"
+        },
+        "mtfOnAxis.maxAbs": {
+          "attention": 0.005,
+          "unit": "1"
+        }
       }
     }
   }

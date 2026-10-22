@@ -274,10 +274,22 @@ test("the descriptor that writes its integers as floats holds the value corpus.t
 test("every valid optical case keeps its invariants and its identity, and finalising it again changes nothing", () => {
   for (const [file, value] of validOnDisk("optical-case")) {
     const opticalCase = value as OpticalCase;
-    assert.deepEqual(caseInvariantProblems(opticalCase.system, opticalCase.conditions), [], file);
+    // With the version the case states: one that uses what a minor added must state that minor.
+    const { system, conditions, contract } = opticalCase;
+    assert.deepEqual(caseInvariantProblems(system, conditions, contract), [], file);
     assert.deepEqual(verifyCaseIdentity(opticalCase), [], file);
     assert.equal(fixtureText(finalizeCase(opticalCase)), readText("valid", "optical-case", file), file);
   }
+  // The versions the cases state: 1.2 for the one with a surface that does not clip, 1.0 for every other.
+  assert.deepEqual(
+    validOnDisk("optical-case").map(([file, value]) => [file, (value as OpticalCase).contract]),
+    [
+      ["all-features.json", "1.0"],
+      ["double-gauss.json", "1.0"],
+      ["singlet.json", "1.0"],
+      ["unclipped-plate.json", "1.2"],
+    ],
+  );
 });
 
 test("every valid request has the id its content gives", () => {

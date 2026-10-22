@@ -12,11 +12,13 @@ import type { UnsupportedItem } from "../../src/contract/result.ts";
 import { negotiate } from "../../src/core/negotiate.ts";
 import {
   ALL_FEATURES_CASE,
+  CONTRACT_1_0_FLAGS,
   DESCRIPTOR_FULL,
   DESCRIPTOR_MINIMAL,
   REQUEST_MINIMAL,
   REQUEST_WITH_OPTIONS,
   SINGLET_CASE,
+  UNCLIPPED_PLATE_CASE,
   edited,
 } from "../contract/corpus.ts";
 
@@ -49,8 +51,8 @@ function found(items: readonly UnsupportedItem[]): [string, string][] {
 const HARD = ALL_FEATURES_CASE;
 const HARD_REQUEST = requestAbout(HARD);
 
-test("the every-feature case needs every flag and these limits", () => {
-  assert.deepEqual(HARD.features, [...FEATURE_FLAGS]);
+test("the every-feature case needs every flag of contract 1.0 and these limits", () => {
+  assert.deepEqual(HARD.features, CONTRACT_1_0_FLAGS);
   assert.deepEqual(deriveFeatures(HARD.system, HARD.conditions).limits, {
     "asphere.maxPower": 6,
     "lines.count": 2,
@@ -121,7 +123,9 @@ test("each feature flag of the case that the engine does not support is listed, 
   for (const flag of FEATURE_FLAGS) {
     const supported = FEATURE_FLAGS.filter((other) => other !== flag);
     const descriptor = engineWith("/capabilities/features/supported", supported);
-    assert.deepEqual(negotiate(HARD, HARD_REQUEST, descriptor), [
+    // The flag minor 2 added is that of the case with a plate that does not clip.
+    const needing = flag === "aperture.unclipped" ? UNCLIPPED_PLATE_CASE : HARD;
+    assert.deepEqual(negotiate(needing, requestAbout(needing), descriptor), [
       { code: "feature", item: flag, message: `the engine does not support ${flag}` },
     ]);
     // A case without the flag does not need it.
@@ -139,8 +143,27 @@ test("each feature flag of the case that the engine does not support is listed, 
   const none = engineWith("/capabilities/features/supported", []);
   assert.deepEqual(
     found(negotiate(HARD, HARD_REQUEST, none)),
-    FEATURE_FLAGS.map((flag) => ["feature", flag]),
+    CONTRACT_1_0_FLAGS.map((flag) => ["feature", flag]),
   );
+});
+
+test("a case with a surface that does not clip is written to 1.2: an engine of 1.0 is not asked about it", () => {
+  const plate = UNCLIPPED_PLATE_CASE;
+  assert.equal(plate.contract, "1.2");
+  assert.equal(requestAbout(plate).contract, "1.0", "a request uses nothing minor 2 added");
+  assert.deepEqual(negotiate(plate, requestAbout(plate), CAPABLE), []);
+  // An engine from before minor 2: it neither speaks the version nor knows the flag, and is told both.
+  const older = edited(
+    engineWith("/contract", { min: "1.0", max: "1.0" }),
+    "/capabilities/features/supported",
+    CONTRACT_1_0_FLAGS,
+  ) as EngineDescriptor;
+  assert.deepEqual(negotiate(plate, requestAbout(plate), older), [
+    { code: "contract", item: "1.2", message: "the engine speaks contract 1.0 to 1.0; the case is written to 1.2" },
+    { code: "feature", item: "aperture.unclipped", message: "the engine does not support aperture.unclipped" },
+  ]);
+  // The case it was before minor 2 is still asked of it.
+  assert.deepEqual(negotiate(HARD, HARD_REQUEST, older), []);
 });
 
 test("a limit is listed when the case needs more than the engine declares, with the limit and both numbers", () => {
@@ -315,7 +338,7 @@ test("negotiation reads its arguments and changes none: frozen ones are fine", (
   const descriptor = deepFreeze(structuredClone(engineWith("/capabilities/features/supported", [])));
   const before = JSON.stringify([HARD, HARD_REQUEST, descriptor]);
   assert.ok(Object.isFrozen(HARD) && Object.isFrozen(HARD_REQUEST));
-  assert.equal(negotiate(HARD, HARD_REQUEST, descriptor).length, FEATURE_FLAGS.length);
+  assert.equal(negotiate(HARD, HARD_REQUEST, descriptor).length, CONTRACT_1_0_FLAGS.length);
   assert.equal(JSON.stringify([HARD, HARD_REQUEST, descriptor]), before);
 });
 

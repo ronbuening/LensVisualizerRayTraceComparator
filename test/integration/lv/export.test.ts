@@ -1,3 +1,5 @@
+import { documentedConjugates } from "./support.ts";
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 // The case exporter against the real LensVisualizer. Numbers pinned here were taken at LV commit d36f44b3 and are
 // canaries: when LV changes the lens or its preparation they fail and say so; they are not tolerances. Nothing is
 // written into the repository or into LensVisualizer: files go to a temporary directory.
@@ -22,6 +24,7 @@ import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { CENSUS_FILES, renderCensusMarkdown } from "../../../src/engines/lv/census.ts";
 import type { ExportCensus } from "../../../src/engines/lv/census.ts";
+import { apertureGeometry } from "../../../src/engines/lv/exportAperture.ts";
 import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
 import type { LvMtfOptions, LvPreparedState, LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { suitePath } from "../../suites/support.ts";
@@ -178,7 +181,9 @@ test(
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
       const radius = binding.api.wideOpenStopAtZoom(0, runtime);
-      const support = binding.api.assessMtfSupport(state, gateOptions("reference", radius));
+      const support = binding.api.assessMtfSupport(
+        ...lvMtfInputs(binding.api, state, gateOptions("reference", radius)),
+      );
       const result = await exporter.exportLens(key, {});
       if (result.ok) {
         exportedCount++;
@@ -215,8 +220,7 @@ test(
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
       const support = binding.api.assessMtfSupport(
-        state,
-        gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime)),
+        ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
       );
       const result = await exporter.exportLens(key, { lines: { kind: "photopic" } });
       if (result.ok !== support.available)
@@ -251,8 +255,18 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
   assert.equal(system.stopIndex, 17);
   assert.equal(system.lastLensSurfaceIndex, 32);
   assert.equal(system.designImageZ, 163.306);
-  assert.equal(conditions.stopSemiDiameter, 20.42354482258628);
-  assert.deepEqual(opticalCase.features, ["surface.asphere.even", "surface.conic"]);
+  // LensVisualizer solves the wide-open stop radius with a traced ray, so it has the radius to its intersection
+  // tolerance and no further: 20.42354482258628 at d36f44b3 to 33ebdb30 (tolerance 1e-9 mm), 20.423544822487465 at
+  // 31c34396 (1e-12 mm). The canary is of the lens, to the looser of the two.
+  assert.ok(Math.abs(conditions.stopSemiDiameter - 20.42354482258628) < 1e-9, String(conditions.stopSemiDiameter));
+  // The rim of its rear plate is one LensVisualizer generates: from 31c34396 on the plate does not clip.
+  const generated = state.surfaces.some((surface) => surface.clips === false);
+  assert.deepEqual(opticalCase.features, [
+    ...(generated ? (["aperture.unclipped"] as const) : []),
+    "surface.asphere.even",
+    "surface.conic",
+  ]);
+  assert.equal(opticalCase.contract, generated ? "1.2" : "1.0");
   assert.equal(deriveFeatures(system, conditions).limits["asphere.maxPower"], 16);
 
   // The stop index and stop radius are LensVisualizer's own values, and the stop surface carries the radius.
@@ -275,6 +289,8 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
     assert.ok(Object.is(surface.thickness, prepared.d), at);
     assert.equal(surface.aperture.nominalSemiDiameter, prepared.sd, at);
     assert.equal(surface.aperture.innerSemiDiameter, 0, at);
+    // A surface has no clip radius exactly where LensVisualizer's state says its rim does not clip.
+    assert.equal(surface.aperture.semiDiameter === null, prepared.clips === false, at);
     assert.equal(surface.elementId, prepared.elemId, at);
     assert.equal(surface.synthetic ?? null, syntheticKind(prepared), at);
     const flat = Math.abs(prepared.R) > 1e10;
@@ -407,8 +423,7 @@ test(
       ],
     );
     const support = binding.api.assessMtfSupport(
-      state,
-      gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime)),
+      ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
     );
     assert.equal(support.available, true);
     const rows = indexRows(opticalCase);
@@ -465,7 +480,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
   ] as const) {
     const { runtime, state } = await prepared(binding, key, zoomT);
     const wideOpen = binding.api.wideOpenStopAtZoom(zoomT, runtime);
-    const widest = binding.api.fopenAtZoom2(zoomT, runtime);
+    const widest = binding.api.fopenAtZoomClamped(zoomT, runtime);
     assert.equal(wideOpen, state.surfaces[state.lens.stop.surfaceIndex].sd, key);
     for (const value of fNumbers) {
       const stopped = await exported(binding, key, { state: { zoomT }, aperture: { kind: "f-number", value } });
@@ -479,7 +494,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
   }
   // Faster than wide open is a problem, at the widest aperture of that zoom position.
   const { runtime } = await prepared(binding, "nikkor-z50f12");
-  const widest = binding.api.fopenAtZoom2(0, runtime);
+  const widest = binding.api.fopenAtZoomClamped(0, runtime);
   const refused = await createLvExporter(binding).exportLens("nikkor-z50f12", {
     aperture: { kind: "f-number", value: widest - 0.01 },
   });
@@ -493,7 +508,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
 test(
   "every clip radius of the benchmark cases is LensVisualizer's inclusive limit: it passes there, and not above",
   { skip },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const view = new DataView(new ArrayBuffer(8));
     const nextUp = (value: number): number => {
@@ -501,6 +516,7 @@ test(
       view.setBigUint64(0, view.getBigUint64(0) + 1n);
       return view.getFloat64(0);
     };
+    const unclipped: string[] = [];
     for (const key of BENCHMARK_KEYS) {
       const { state } = await prepared(binding, key);
       const { system, conditions } = await exported(binding, key, { aperture: { kind: "f-number", value: 8 } });
@@ -509,13 +525,29 @@ test(
         const { semiDiameter: limit, nominalSemiDiameter: nominal } = surface.aperture;
         const stop = index === system.stopIndex ? conditions.stopSemiDiameter : undefined;
         assert.equal(nominal, stop ?? state.surfaces[index].sd, at);
+        const evaluate = (radius: number) =>
+          binding.api.evaluateAperture(apertureGeometry(state), state.surfaces[index], radius, stop);
+        if (limit === null) {
+          // A rim LensVisualizer generated (31c34396): its state says so, and it calls no height outside, of the
+          // envelope as little as of a thousand of them. Only a rear plate has one.
+          unclipped.push(`${key} ${surface.label}`);
+          assert.equal(state.surfaces[index].clips, false, at);
+          assert.equal(surface.synthetic, "rearPlate", at);
+          for (const radius of [0, nominal, nextUp(nominal + 1e-9), 1e3 * nominal, Number.MAX_VALUE]) {
+            assert.deepEqual([evaluate(radius).state, evaluate(radius).semiDiameter], ["inside", null], at);
+          }
+          return;
+        }
+        assert.notEqual(state.surfaces[index].clips, false, at);
         // LensVisualizer's rule at d36f44b3 (trace/aperture.ts, exceedsAperture).
         assert.equal(limit, nominal + Math.max(1e-9, nominal * 1e-12), at);
-        const evaluate = (radius: number) => binding.api.evaluateAperture(state, state.surfaces[index], radius, stop);
         assert.equal(evaluate(limit).state, "inside", at);
         assert.equal(evaluate(nextUp(limit)).state, "outside", at);
       });
     }
+    // The surfaces without a clip radius come in pairs, the two of a plate, and are those the state marks.
+    assert.equal(unclipped.length % 2, 0);
+    t.diagnostic(`surfaces that do not clip: ${unclipped.length === 0 ? "none" : unclipped.join(", ")}`);
   },
 );
 
@@ -527,15 +559,14 @@ test(
   async () => {
     const binding = await loadLvBinding(LV_PATH);
     const key = "sigma-105mm-f28-dg-dn-macro-art";
-    const stations = (await binding.lens(key)).data.finiteConjugates as { focusT: number; zoomT: number }[];
+    const stations = documentedConjugates((await binding.lens(key)).data);
     assert.ok(Array.isArray(stations) && stations.length > 0, "the lens documents finite conjugates");
     for (const { focusT, zoomT } of stations) {
       const { runtime, state } = await prepared(binding, key, zoomT, focusT);
       const options: RunOptions = { state: { zoomT, focus: { kind: "focusT", value: focusT } } };
       const opticalCase = await exported(binding, key, options);
       const support = binding.api.assessMtfSupport(
-        state,
-        gateOptions("reference", binding.api.wideOpenStopAtZoom(zoomT, runtime)),
+        ...lvMtfInputs(binding.api, state, gateOptions("reference", binding.api.wideOpenStopAtZoom(zoomT, runtime))),
       );
       assert.ok(support.conjugate !== undefined, `focus ${focusT}`);
       const point = binding.api.mtfFiniteObjectPoint(state, support.conjugate, 0);
@@ -568,9 +599,11 @@ test("the case id of every benchmark configuration is the same in two separate p
   // The second process is started elsewhere and names the checkout another way: neither is part of the identity.
   const second = inProcess(tmpdir(), join(LV_PATH ?? "", "src", ".."));
   assert.deepEqual(second, first);
-  assert.equal(Object.keys(first.runs).length, 24);
+  // 12 configurations on two sets of lines, in four conditions: the stop of the tab's f/8 comparison and
+  // LensVisualizer's best axial focus, which is found by its own search, are the same numbers in every process.
+  assert.equal(Object.keys(first.runs).length, 96);
   for (const [name, id] of Object.entries(first.runs)) assert.match(String(id), /^[0-9a-f]{64}$/, name);
-  assert.equal(new Set(Object.values(first.runs)).size, 24, "24 configurations, 24 cases");
+  assert.equal(new Set(Object.values(first.runs)).size, 96, "96 runs, 96 cases");
 
   // This process, which has by now exported the whole catalog, gives the same ids.
   const sources = { lv: createLvCaseSource(LV_PATH) };

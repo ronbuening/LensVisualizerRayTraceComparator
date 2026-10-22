@@ -11,15 +11,15 @@ import type { ComparisonGroup } from "../../src/compare/group.ts";
 import { COMPARATORS } from "../../src/compare/index.ts";
 import { comparePair } from "../../src/compare/pair.ts";
 import type { ParticipantResult } from "../../src/compare/pair.ts";
-import { loadPolicy } from "../../src/compare/policyFile.ts";
 import { comparisonInvariantProblems } from "../../src/contract/comparison.ts";
 import type { PairComparison } from "../../src/contract/comparison.ts";
-import type { RungPolicy } from "../../src/contract/policy.ts";
+import type { Policy, RungPolicy } from "../../src/contract/policy.ts";
 import type { RaysTraceData } from "../../src/contract/quantities/raysTrace.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
 import { BASE, LENS, SPEC, STOP_CLIP, WAVE_MM, changed, hitAt, hitRadius, stopAt, tracer } from "./raysSupport.ts";
+import { POLICY_LADDER } from "../contract/corpus.ts";
 
-const POLICY = loadPolicy();
+const POLICY: Policy = structuredClone(POLICY_LADDER);
 const CONTEXT = { spec: SPEC, opticalCase: LENS };
 
 /** A trace whose hit of ray 2 on surface 1 lies `mm` from the base's, along z: one engine's own rounding. */
@@ -63,7 +63,7 @@ function pairsOf(group: ComparisonGroup): Record<string, PairComparison> {
   return Object.fromEntries(set.pairs.map((pair) => [`${pair.a} ${pair.b}`, pair]));
 }
 
-test("the policy gives lv a floor against ref, in the two rungs of traced rays, with limits around each gate", () => {
+test("the synthetic policy gives lv a floor against ref, in the two rungs of traced rays, with limits around each gate", () => {
   for (const rung of ["r2", "r3"] as const)
     assert.deepEqual(POLICY.rungs[rung].floor, { engine: "lv", arbiter: "ref" });
   assert.deepEqual(POLICY.rungs.r2.metrics["hits.maxDistance"].floor, { limit: 1e-7, agreement: 1e-10 });

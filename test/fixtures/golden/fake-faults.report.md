@@ -7,8 +7,8 @@
 | Suite | fake-faults |
 | Suite hash | d0a97adbd49af2fa7095fb5733b69d9e1f76813ad91912feec9f99f6f432d7f9 |
 | Contract version | 1.0 |
-| Policy | rungs v5 |
-| Policy hash | a8f4e2615c842b14d14a4c49fe35c44ad6afdcece70151894393b84e2a79207c |
+| Policy | rungs v11 |
+| Policy hash | 1354b9223d85414a98727cd58e674f68fae5c72f125b5aaf93072e414e452188 |
 
 ### Engines
 
@@ -96,6 +96,21 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | fake-absent | ERROR | — | ERROR | ERROR |
 | fake-broken | ERROR | ERROR | — | ERROR |
 | fake-far | FAIL (sum.abs 1.20e-2) | ERROR | ERROR | — |
+
+## Not covered
+
+What this comparison does not show, whatever its verdicts:
+
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
+- The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on optiland's wavefront, which is a later stage.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
+- The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
+- Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
+- The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
+- The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
+- Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
+- Zoom positions between the two ends, and finite conjugates other than the states a run names.
+- Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
 
 ## How to read this
 

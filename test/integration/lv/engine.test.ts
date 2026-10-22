@@ -46,7 +46,7 @@ import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { suitePath } from "../../suites/support.ts";
-import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE, focusStations } from "./support.ts";
+import { BENCHMARK_CONDITIONS, BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE, focusStations } from "./support.ts";
 
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
@@ -151,15 +151,20 @@ test(
   (t) => {
     const { ran, compared, manifest, comparisons } = ranAndCompared(t, "benchmark");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(ran.out, /^benchmark: 96 jobs: 96 ok, 0 unsupported, 0 error, 0 pending \(96 computed, 0 cached\)$/m);
+    assert.match(
+      ran.out,
+      /^benchmark: 384 jobs: 384 ok, 0 unsupported, 0 error, 0 pending \(384 computed, 0 cached\)$/m,
+    );
     assert.equal(compared.code, 0, compared.err);
-    assert.match(compared.out, /^benchmark: 96 pairs: 96 PASS, 0 FLOOR, 0 FAIL, .* 0 ERROR$/m);
+    assert.match(compared.out, /^benchmark: 384 pairs: 384 PASS, 0 FLOOR, 0 FAIL, .* 0 ERROR$/m);
 
-    // 12 configurations, each on its reference line and on the five photopic lines, in two rungs and two modes.
-    assert.equal(manifest.runs.length, 24);
+    // 12 configurations in four conditions (wide open and the tab's f/8, each at the design plane and at
+    // LensVisualizer's best axial focus), each on its reference line and on the five photopic lines, in two rungs
+    // and two modes.
+    assert.equal(manifest.runs.length, 96);
     assert.deepEqual(notPassing(comparisons), []);
-    assert.equal(comparisons.comparisons.length, 96);
-    const configurations = new Set(manifest.runs.map((run) => run.name.replace(/-(ref|photopic)$/, "")));
+    assert.equal(comparisons.comparisons.length, 384);
+    const configurations = new Set(manifest.runs.map((run) => run.name.replace(/(-f8)?(-best)?-(ref|photopic)$/, "")));
     assert.equal(configurations.size, 12);
     for (const key of BENCHMARK_KEYS) {
       assert.ok(
@@ -167,7 +172,9 @@ test(
         key,
       );
     }
-    for (const configuration of configurations) {
+    for (const configuration of [...configurations].flatMap((each) =>
+      BENCHMARK_CONDITIONS.map((condition) => `${each}${condition}`),
+    )) {
       for (const lines of ["ref", "photopic"]) {
         const sets = comparisons.comparisons.filter((set) => set.run === `${configuration}-${lines}`);
         assert.deepEqual(sets.map((set) => `${set.rung} ${set.mode}`).sort(), [
@@ -352,7 +359,7 @@ test(
 // ── Against LensVisualizer's own first-order module ──────────────────────────────────────────────────────────────
 
 test(
-  "at a line traced with the authored indices, lv's cardinal points are LensVisualizer's computeCardinalElements2",
+  "at a line traced with the authored indices, lv's cardinal points are LensVisualizer's computeCardinalElementsFromState",
   { skip },
   async (t) => {
     const { binding, lv } = await engines(t);
@@ -365,7 +372,7 @@ test(
       const data = result.data as ParaxialFirstOrderData;
       const runtime = binding.api.buildLens((await binding.lens(source.lensKey)).data);
       const state = binding.api.prepareRuntimeState(runtime, source.focusT, source.zoomT);
-      const theirs = binding.api.computeCardinalElements2(state);
+      const theirs = binding.api.computeCardinalElementsFromState(state);
       assert.ok(theirs !== null, at);
       opticalCase.conditions.lines.forEach((line, row) => {
         // LensVisualizer's module reads each surface's authored index, so it speaks for such a line only.
@@ -570,7 +577,7 @@ test(
       for (const fraction of [0.15, 0.4, 0.7, 0.95, 1.05, 1.4]) {
         for (const angle of [0, (2 * Math.PI) / 180]) {
           const height = fraction * pupilRadius;
-          const traced = api.traceEngineRay2(
+          const traced = api.traceEngineRay(
             state,
             { origin: [0.3 * height, height, -5], direction: [0, -Math.sin(angle), Math.cos(angle)] },
             { checkSemiDiameter: true, stopSemiDiameter: data.stopSemiDiameter, stopOnClip: true },

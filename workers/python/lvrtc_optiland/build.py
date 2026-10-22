@@ -229,6 +229,11 @@ def surface_keywords(api: OptilandApi, surface: dict[str, Any], index_after: flo
     - ``aperture`` is a ``RadialAperture`` of the case's clip radius, and of its inner radius: a radius, where a
       bare number given as ``aperture`` would be read as a diameter. Without one nothing is clipped, at the stop
       as little as anywhere.
+    - A surface of the case that does not clip (``semiDiameter`` null) is given no aperture at all, stated as
+      ``aperture=None``: optiland clips only where a surface has one (``if self.aperture: self.aperture.clip(rays)``,
+      surfaces/standard_surface.py), so nothing is stopped there, and a conic is met at the root nearest its vertex,
+      no aperture choosing between two. A ``RadialAperture`` of infinite radius would not be the same thing: it
+      still stops a ray whose point is no number, and it is an aperture where the case has none.
     """
     aperture = surface["aperture"]
     return {
@@ -236,10 +241,27 @@ def surface_keywords(api: OptilandApi, surface: dict[str, Any], index_after: flo
         "z": float(surface["z"]),
         "material": api.IdealMaterial(n=float(index_after)),
         "is_stop": is_stop,
-        "aperture": api.RadialAperture(
-            r_max=float(aperture["semiDiameter"]), r_min=float(aperture["innerSemiDiameter"])
-        ),
+        "aperture": physical_aperture(api, aperture),
     }
+
+
+def physical_aperture(api: OptilandApi, aperture: dict[str, Any]) -> Any:
+    """optiland's physical aperture for a contract aperture: a ``RadialAperture``, or None where the case clips
+    nothing."""
+    if aperture["semiDiameter"] is None:
+        return None
+    return api.RadialAperture(r_max=float(aperture["semiDiameter"]), r_min=float(aperture["innerSemiDiameter"]))
+
+
+def expected_aperture(aperture: dict[str, Any]) -> tuple[str | None, float | None, float | None]:
+    """What a contract aperture must have become in optiland: the class of its physical aperture and both radii.
+
+    A surface that does not clip has no aperture, and so neither radius; every other has a ``RadialAperture`` of
+    the case's clip radius and inner radius.
+    """
+    if aperture["semiDiameter"] is None:
+        return None, None, None
+    return "RadialAperture", float(aperture["semiDiameter"]), float(aperture["innerSemiDiameter"])
 
 
 def build_optic(case: dict[str, Any], line: int, api: OptilandApi | None = None) -> Any:
@@ -414,7 +436,8 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     Everything the builder handed over is read back from optiland's objects and must be the number of the case:
     the count of surfaces, the object and image planes, and for each surface its vertex (in the geometry's frame
     and on the paraxial axis alike), the class of its geometry, its radius, conic constant and terms, the Newton
-    settings of an asphere, its aperture's class and two radii, its semi-aperture, whether it is the stop, that it
+    settings of an asphere, its aperture's class and two radii (no aperture at all where the case does not clip:
+    ``expected_aperture``), its semi-aperture, whether it is the stop, that it
     refracts by optiland's ordinary model (no mirror, no thin lens, no coating), the index after it, and the index
     optiland has in front of it, which is the medium after the surface before and is what a ray is refracted out
     of and its stretch to the surface charged to; then the index of the image space, which optiland reads from the
@@ -454,6 +477,7 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
         built = read[number + 1]
         geometry, radius, conic, terms = _expected_geometry(surface["shape"])
         aperture = surface["aperture"]
+        aperture_class, clip_radius, inner_clip_radius = expected_aperture(aperture)
         asphere = geometry in ("EvenAsphere", "OddAsphere")
         checks: list[tuple[str, Any, Any]] = [
             ("z", built.z, float(surface["z"])),
@@ -465,9 +489,9 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
             ("terms", built.terms, terms),
             ("tol", built.tolerance, ASPHERE_TOLERANCE_MM if asphere else None),
             ("max_iter", built.max_iterations, ASPHERE_MAX_ITERATIONS if asphere else None),
-            ("the class of its aperture", built.aperture, "RadialAperture"),
-            ("aperture.r_max", built.clip_radius, float(aperture["semiDiameter"])),
-            ("aperture.r_min", built.inner_clip_radius, float(aperture["innerSemiDiameter"])),
+            ("the class of its aperture", built.aperture, aperture_class),
+            ("aperture.r_max", built.clip_radius, clip_radius),
+            ("aperture.r_min", built.inner_clip_radius, inner_clip_radius),
             ("semi_aperture", built.semi_aperture, float(aperture["nominalSemiDiameter"])),
             ("is_stop", built.is_stop, number == system["stopIndex"]),
             ("is_reflective", built.reflective, False),
@@ -556,7 +580,8 @@ def describe_optics(
 
     - ``curvature`` is one division, 1 / radius, which is 0 for optiland's infinite radius; ``conic`` is the
       geometry's ``k``, and 0 for a plane, which has none.
-    - ``clipRadius`` and ``innerClipRadius`` are the two radii of each surface's aperture.
+    - ``clipRadius`` and ``innerClipRadius`` are the two radii of each surface's aperture; of a surface optiland has
+      no aperture for, at which it clips nothing, an infinity and 0.
     - ``stopSemiDiameter`` is half the stop diameter optiland derives its pupils from: halving the double of a
       number gives the number back.
     - ``sagRadii`` are the fractions of each surface's semi-aperture, one multiplication each, and ``sag`` what
@@ -584,8 +609,8 @@ def describe_optics(
         "vertexZ": _f8([row.z for row in rows]),
         "curvature": _f8([1.0 / row.radius for row in rows]),
         "conic": _f8([row.conic for row in rows]),
-        "clipRadius": _f8([_clip(row.clip_radius, number) for number, row in enumerate(rows)]),
-        "innerClipRadius": _f8([_clip(row.inner_clip_radius, number) for number, row in enumerate(rows)]),
+        "clipRadius": _f8([_clip(row, row.clip_radius, math.inf, number) for number, row in enumerate(rows)]),
+        "innerClipRadius": _f8([_clip(row, row.inner_clip_radius, 0.0, number) for number, row in enumerate(rows)]),
         "indexAfterSurface": _f8(index_table, [len(optics), count]),
         "sagRadii": _f8([radius for row in radii for radius in row], sag_shape),
         "sag": _f8([value for row in sags for value in row], sag_shape),
@@ -600,8 +625,11 @@ def _semi_aperture(row: SurfaceReadback, number: int) -> float:
     return row.semi_aperture
 
 
-def _clip(radius: float | None, number: int) -> float:
-    """A radius of a surface's aperture as it was read back; a surface without an aperture clips nothing."""
+def _clip(row: SurfaceReadback, radius: float | None, unclipped: float, number: int) -> float:
+    """A radius of a surface's aperture as it was read back: ``unclipped`` for a surface without an aperture, at
+    which optiland clips nothing. An aperture of a class that has no such radius cannot be described."""
+    if row.aperture is None:
+        return unclipped
     if radius is None:
-        raise BuildMismatch(f"surface {number}: it has no aperture in the optic optiland built, so nothing is clipped")
+        raise BuildMismatch(f"surface {number}: its aperture, a {row.aperture}, has no radius to describe it by")
     return radius

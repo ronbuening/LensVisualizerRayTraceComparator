@@ -1,0 +1,116 @@
+{
+  "contract": "1.2",
+  "kind": "optical-case",
+  "id": "35d8654e6998547ef563e0157484e425315c74b1686fa3f5d4f382b75dc1b243",
+  "systemId": "f60ea0b227df5221b91a8e47bfe0d132b787478675437b4d37f407d1872db633",
+  "label": {
+    "name": "Biconvex singlet behind a plate that does not clip"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "1",
+        "z": 0,
+        "thickness": 4,
+        "shape": {
+          "kind": "conic",
+          "radius": 50,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 10,
+          "nominalSemiDiameter": 10,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 1
+      },
+      {
+        "label": "2",
+        "z": 4,
+        "thickness": 90,
+        "shape": {
+          "kind": "conic",
+          "radius": -50,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 10,
+          "nominalSemiDiameter": 10,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "RP1a",
+        "z": 94,
+        "thickness": 2,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": false,
+          "nominalSemiDiameter": 15,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 2,
+        "synthetic": "rearPlate"
+      },
+      {
+        "label": "RP1b",
+        "z": 96,
+        "thickness": 4,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": null,
+          "nominalSemiDiameter": 15,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0,
+        "synthetic": "rearPlate"
+      }
+    ],
+    "stopIndex": 0,
+    "lastLensSurfaceIndex": 1,
+    "designImageZ": 100
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 5,
+    "imageZ": 100,
+    "lines": [
+      {
+        "wavelengthNm": 587.5618,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          4
+        ],
+        "data": "MCqpE9BE+D8AAAAAAADwPzAqqRPQRPg/AAAAAAAA8D8=",
+        "sha256": "e7ae8c5821a985704bca2691c957a938cbb8c3ea356851d2b8ecb93f8198613a"
+      }
+    }
+  },
+  "features": [
+    "aperture.unclipped"
+  ],
+  "provenance": {
+    "source": {
+      "kind": "fixture",
+      "name": "unclipped-plate"
+    },
+    "producer": {
+      "tool": "lvrtc",
+      "version": "0.1.0"
+    }
+  }
+}

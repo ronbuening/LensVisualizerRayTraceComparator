@@ -10,6 +10,8 @@ import { expandSuite, runInvariantProblems } from "../contract/runSpec.ts";
 import type { RunLens, RunSpec, Suite } from "../contract/runSpec.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
 import { probeRaySets } from "../rays/probe.ts";
+import { fixtureRecipe } from "./mtfRecipe.ts";
+import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { UsageError } from "./usageError.ts";
@@ -62,6 +64,13 @@ export interface CaseSource {
    */
   raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
   /**
+   * The MTF recipe of a run of a case this source resolved (`src/core/mtfRecipe.ts`): the plane, the fields, the
+   * lines and the frequencies every MTF request about the case is made from; or no recipe, and each reason why, as
+   * a coded problem. Like the ray sets it is a pure function of the run and the case. A source without this method
+   * has no recipe to give.
+   */
+  recipe?(run: RunSpec, opticalCase: OpticalCase): MtfRecipeResolution | Promise<MtfRecipeResolution>;
+  /**
    * What the cases resolved so far were built from, read again now: called when a run of a suite ends, so that a
    * source that changed under the run is noticed. Null when nothing was built. A source whose cases are whole
    * files, read once, has no such method: a case file's identity is its content.
@@ -100,7 +109,7 @@ function readCaseFile(file: string, shown: string): CaseResolution {
   const issues = validateKind("optical-case", parsed);
   if (issues.length > 0) return failed([`it is not a valid optical-case: ${formatIssues(issues)}`]);
   const opticalCase = parsed as OpticalCase;
-  const broken = caseInvariantProblems(opticalCase.system, opticalCase.conditions);
+  const broken = caseInvariantProblems(opticalCase.system, opticalCase.conditions, opticalCase.contract);
   if (broken.length > 0) return failed(broken.map((problem) => `it is not a valid optical-case: ${problem}`));
   const mismatches = verifyCaseIdentity(opticalCase);
   if (mismatches.length > 0) {
@@ -121,7 +130,8 @@ function readCaseFile(file: string, shown: string): CaseResolution {
  * and `features` that its own system and conditions give. A file is read once, however many runs name it.
  * Problems name the file by its path relative to `rootDir`.
  *
- * Its rays are probe lattices made from the case alone (`probeRaySets`), under the run's fields and sampling.
+ * Its rays are probe lattices made from the case alone (`probeRaySets`), under the run's fields and sampling. Its
+ * MTF recipe is what the run states (`fixtureRecipe`): fields as angles, or none.
  */
 export function createFixtureCaseSource(rootDir: string): CaseSource {
   const read = new Map<string, CaseResolution>();
@@ -137,6 +147,7 @@ export function createFixtureCaseSource(rootDir: string): CaseSource {
       return resolution;
     },
     raySets: (run, opticalCase) => probeRaySets(opticalCase, run),
+    recipe: (run, opticalCase) => fixtureRecipe(run, opticalCase),
   };
 }
 
@@ -204,6 +215,15 @@ export async function loadSuite(file: string, options: LoadSuiteOptions): Promis
   } catch (error) {
     throw new UsageError(`${file}: malformed JSON (${reason(error)})`, { cause: error });
   }
+  return loadSuiteValue(parsed, file, options);
+}
+
+/**
+ * The suite a value is, loaded as `loadSuite` loads the content of a file: for a suite that a command makes
+ * instead of reading. `file` is what an error calls it.
+ */
+export async function loadSuiteValue(parsed: unknown, file: string, options: LoadSuiteOptions): Promise<LoadedSuite> {
+  const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
   const issues = validateKind("suite", parsed);
   if (issues.length > 0) throw new UsageError(`${file}: not a valid suite: ${formatIssues(issues)}`);
   const suite = parsed as Suite;

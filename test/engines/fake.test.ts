@@ -9,7 +9,7 @@ import type { QuantityRequest } from "../../src/contract/request.ts";
 import { resultInvariantProblems } from "../../src/contract/result.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../src/contract/version.ts";
 import { sha256Hex } from "../../src/core/numeric/hash.ts";
 import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { negotiate } from "../../src/core/negotiate.ts";
@@ -161,7 +161,7 @@ test("a fingerprint that is given is the fingerprint, in the descriptor and on e
 test("hello describes an engine of this contract that supports every feature and offers selftest.echo", async () => {
   const options = parseFakeOptions({ id: "fake-a", bias: 0.5 });
   assert.deepEqual(await describe({ id: "fake-a", bias: 0.5 }), {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
     identity: {
       id: "fake-a",
       version: FAKE_ENGINE_VERSION,

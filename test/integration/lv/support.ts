@@ -1,11 +1,13 @@
 // What the tests against the real LensVisualizer share. They run with `npm run test:lv`, never with
 // `npm run check`, and each skips with a stated reason when LensVisualizer is not configured or not on disk.
 // Nothing here writes anything: not into this repository and not into the LV checkout.
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { REPO_ROOT, loadConfig } from "../../../src/core/config.ts";
 import { LV_MARKER } from "../../../src/engines/lv/binding.ts";
+import type { LvLensData } from "../../../src/engines/lv/types.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import type { LvExporter } from "../../../src/engines/lv/caseSource.ts";
 
@@ -19,9 +21,9 @@ export const LV_UNAVAILABLE: string | false = (() => {
   return false;
 })();
 
-export { BENCHMARK_KEYS } from "../../suites/support.ts";
+export { BENCHMARK_CONDITIONS, BENCHMARK_KEYS, asItOpens } from "../../suites/support.ts";
 
-/** One focus station a lens documents (`finiteConjugates` of its file), exported, and what LensVisualizer says of it. */
+/** One focus station a lens documents (`conjugates` of its file), exported, and what LensVisualizer says of it. */
 export interface FocusStation {
   readonly key: string;
   readonly focusT: number;
@@ -46,21 +48,34 @@ export async function focusStations(binding: LvBinding, exporter: LvExporter): P
   const stations: FocusStation[] = [];
   for (const { key } of (await binding.catalog()).entries) {
     const { data } = await binding.lens(key);
-    const documented = data.finiteConjugates as { focusT: number; zoomT: number }[] | undefined;
+    const documented = documentedConjugates(data);
     for (const { focusT, zoomT } of documented ?? []) {
       const exported = await exporter.exportLens(key, { state: { zoomT, focus: { kind: "focusT", value: focusT } } });
       const runtime = binding.api.buildLens(data);
       const radius = binding.api.wideOpenStopAtZoom(zoomT, runtime);
-      const gate = binding.api.assessMtfSupport(binding.api.prepareRuntimeState(runtime, focusT, zoomT), {
-        method: "geometric",
-        spectrum: "reference",
-        pupilSemiDiameterMm: radius,
-        stopSemiDiameterMm: radius,
-        focus: "design",
-      });
+      const gate = binding.api.assessMtfSupport(
+        ...lvMtfInputs(binding.api, binding.api.prepareRuntimeState(runtime, focusT, zoomT), {
+          method: "geometric",
+          spectrum: "reference",
+          pupilSemiDiameterMm: radius,
+          stopSemiDiameterMm: radius,
+          focus: "design",
+        }),
+      );
       const refused = gate.conjugate === undefined ? String(gate.reason) : null;
       stations.push({ key, focusT, zoomT, at: `${key} at focus ${focusT}, zoom ${zoomT}`, exported, refused });
     }
   }
   return stations;
+}
+
+/** Resolve V2's authored station/keyframe addresses to the normalized controls used by prepared states. */
+export function documentedConjugates(data: LvLensData): { focusT: number; zoomT: number }[] {
+  const focus = data.focus;
+  const keyframes = focus?.keyframes ?? [0, 1];
+  const count = data.zoom?.stations?.length ?? 1;
+  return (focus?.conjugates ?? []).map(({ zoomStation, keyframe }) => ({
+    focusT: keyframes[keyframe],
+    zoomT: count > 1 ? zoomStation / (count - 1) : 0,
+  }));
 }

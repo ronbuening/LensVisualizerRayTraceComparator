@@ -6,12 +6,12 @@ import packageJson from "../../../package.json" with { type: "json" };
 import { caseInvariantProblems, verifyCaseIdentity } from "../../../src/contract/case.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import { validateKind } from "../../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { exportCase } from "../../../src/engines/lv/exportCase.ts";
 import type { ExportCaseInput, ExportCaseResult, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
 import { EXPORT_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
-import type { LvPreparedState } from "../../../src/engines/lv/types.ts";
+import type { LvMtfOptions } from "../../../src/engines/lv/types.ts";
 import {
   FLAT,
   LENS,
@@ -23,12 +23,14 @@ import {
   inputFor,
   lvEvaluateAperture,
   resolvedIndex,
-  stateOf,
+  standInBestShift,
+  modelOf,
+  stepsOf,
 } from "./exportSupport.ts";
-import type { StateSpec, SurfaceSpec } from "./exportSupport.ts";
+import type { StateSpec, SurfaceSpec, TestModel } from "./exportSupport.ts";
 
-function tripletState(spec: Partial<StateSpec> = {}, surfaces: readonly SurfaceSpec[] = TRIPLET): LvPreparedState {
-  return stateOf(surfaces, { stopIndex: 2, ...spec });
+function tripletModel(spec: Partial<StateSpec> = {}, surfaces: readonly SurfaceSpec[] = TRIPLET): TestModel {
+  return modelOf(surfaces, { stopIndex: 2, ...spec });
 }
 
 function exported(result: ExportCaseResult): OpticalCase {
@@ -43,7 +45,7 @@ function codesOf(result: ExportCaseResult): string[] {
 
 /** The triplet exported under a run's options. */
 function tripletCase(options: ExportCaseInput["options"] = {}, overrides: Partial<LvExportApi> = {}): OpticalCase {
-  return exported(exportCase(inputFor(tripletState(), options, overrides)));
+  return exported(exportCase(inputFor(tripletModel(), options, overrides)));
 }
 
 // ── A whole case ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -174,7 +176,7 @@ test("equal states give equal cases, and the identity ignores label and provenan
   assert.deepEqual(again, first);
   const elsewhere = exported(
     exportCase({
-      ...inputFor(tripletState()),
+      ...inputFor(tripletModel()),
       lens: { key: "renamed", name: "Renamed", file: "src/lens-data/x/Y.data.ts", fileSha256: "ef".repeat(32) },
       lv: { commit: null, dirty: null, closureHash: "01".repeat(32) },
     }),
@@ -186,17 +188,17 @@ test("equal states give equal cases, and the identity ignores label and provenan
 
 test("the state asked of LensVisualizer is the run's: zoom as given, focus 0 for infinity", () => {
   const asked: [number, number][] = [];
-  const state = tripletState({ runtime: { isZoom: true } });
+  const model = tripletModel({ runtime: { isZoom: true } });
   const recording: Partial<LvExportApi> = {
     prepareRuntimeState: (_runtime, focusT, zoomT) => {
       asked.push([focusT, zoomT]);
-      return state;
+      return model.state;
     },
   };
-  exportCase(inputFor(state, {}, recording));
-  exportCase(inputFor(state, { state: { zoomT: 0.75 } }, recording));
-  exportCase(inputFor(state, { state: { zoomT: 1, focus: { kind: "infinity" } } }, recording));
-  exportCase(inputFor(state, { state: { focus: { kind: "focusT", value: 0.4 } } }, recording));
+  exportCase(inputFor(model, {}, recording));
+  exportCase(inputFor(model, { state: { zoomT: 0.75 } }, recording));
+  exportCase(inputFor(model, { state: { zoomT: 1, focus: { kind: "infinity" } } }, recording));
+  exportCase(inputFor(model, { state: { focus: { kind: "focusT", value: 0.4 } } }, recording));
   assert.deepEqual(asked, [
     [0, 0],
     [0, 0.75],
@@ -207,16 +209,16 @@ test("the state asked of LensVisualizer is the run's: zoom as given, focus 0 for
 
 test("a prime has no zoom position: whatever the run states, LensVisualizer is asked for zoom 0", () => {
   const asked: [number, number][] = [];
-  const state = tripletState();
+  const model = tripletModel();
   const recording: Partial<LvExportApi> = {
     prepareRuntimeState: (_runtime, focusT, zoomT) => {
       asked.push([focusT, zoomT]);
-      return state;
+      return model.state;
     },
   };
-  const plain = exported(exportCase(inputFor(state, {}, recording)));
-  const positioned = exported(exportCase(inputFor(state, { state: { zoomT: 0.5 } }, recording)));
-  exportCase(inputFor(state, { state: { zoomT: 1, focus: { kind: "focusT", value: 0.4 } } }, recording));
+  const plain = exported(exportCase(inputFor(model, {}, recording)));
+  const positioned = exported(exportCase(inputFor(model, { state: { zoomT: 0.5 } }, recording)));
+  exportCase(inputFor(model, { state: { zoomT: 1, focus: { kind: "focusT", value: 0.4 } } }, recording));
   assert.deepEqual(asked, [
     [0, 0],
     [0, 0],
@@ -227,9 +229,9 @@ test("a prime has no zoom position: whatever the run states, LensVisualizer is a
 });
 
 test("the label states the zoom position of a zoom lens only, and the focus position always", () => {
-  const prime = exported(exportCase(inputFor(tripletState({ zoomT: 0.5 }))));
+  const prime = exported(exportCase(inputFor(tripletModel({ zoomT: 0.5 }))));
   assert.deepEqual(prime.label, { name: "Hand-built lens", lensKey: "hand-built", focusT: 0 });
-  const zoom = tripletState({ zoomT: 0.5, runtime: { isZoom: true } });
+  const zoom = tripletModel({ zoomT: 0.5, runtime: { isZoom: true } });
   assert.deepEqual(exported(exportCase(inputFor(zoom))).label, {
     name: "Hand-built lens",
     lensKey: "hand-built",
@@ -246,17 +248,17 @@ test("the last thickness is LensVisualizer's last gap wherever that reaches the 
     { label: "STO", R: FLAT, d: 0.1, sd: 3 },
     { label: "2", R: 50, d: 0.2 },
   ];
-  const state = stateOf(surfaces, { stopIndex: 0 });
-  assert.equal(state.imgZ, 0.1 + 0.2);
-  assert.notEqual(state.imgZ - state.z[1], 0.2);
-  const { system } = exported(exportCase(inputFor(state)));
+  const model = modelOf(surfaces, { stopIndex: 0 });
+  assert.equal(model.state.imgZ, 0.1 + 0.2);
+  assert.notEqual(model.state.imgZ - model.state.z[1], 0.2);
+  const { system } = exported(exportCase(inputFor(model)));
   assert.equal(system.surfaces[1].thickness, 0.2);
   assert.equal(system.designImageZ, 0.1 + 0.2);
 });
 
 test("where the image plane is not one last gap behind the last vertex, the last thickness is the distance to it", () => {
-  const state = tripletState({ imgZ: 45 });
-  const { system, conditions } = exported(exportCase(inputFor(state)));
+  const model = tripletModel({ imgZ: 45 });
+  const { system, conditions } = exported(exportCase(inputFor(model)));
   assert.equal(system.surfaces[6].thickness, 45 - 41.5);
   assert.equal(system.designImageZ, 45);
   assert.equal(conditions.imageZ, 45);
@@ -287,8 +289,8 @@ test("an image plane stated as a position is that position, whatever the design 
 
 test("the provenance states the zoom and focus position of the state the case was read from", () => {
   const conjugate = { focusT: 0.4, zoomT: 0.75, objectDistanceMm: 800, distanceReference: "first-surface" };
-  const state = tripletState({ zoomT: 0.75, focusT: 0.4 });
-  const refocused = exported(exportCase(inputFor(state, {}, { assessMtfSupport: gate({ conjugate }) })));
+  const model = tripletModel({ zoomT: 0.75, focusT: 0.4 });
+  const refocused = exported(exportCase(inputFor(model, {}, { assessMtfSupport: gate({ conjugate }) })));
   assert.deepEqual(refocused.provenance.source, {
     kind: "lv-lens",
     lensKey: LENS.key,
@@ -301,12 +303,88 @@ test("the provenance states the zoom and focus position of the state the case wa
   assert.deepEqual(refocused.label, { name: "Hand-built lens", lensKey: "hand-built", focusT: 0.4 });
 });
 
-test("LensVisualizer's best axial focus is a problem here, with the stage that resolves it", () => {
-  const result = exportCase(inputFor(tripletState(), { imagePlane: { kind: "lv-best-axial" } }));
-  assert.ok(!result.ok);
-  assert.equal(result.problems.length, 1);
-  assert.equal(result.problems[0].code, "lv-best-axial-needs-mtf-recipe");
-  assert.match(result.problems[0].message, /MTF recipe \(Stage 3\.2\)/);
+test("the image plane lv-best-axial is LensVisualizer's own focus for the stop and the lines of the case, asked of it", () => {
+  const model = tripletModel();
+  const asked: LvMtfOptions[] = [];
+  const steps = { computeMtfSteps: stepsOf(gate(), asked) };
+  const design = exported(exportCase(inputFor(model, {}, steps)));
+  assert.equal(asked.length, 0, "a case at its design plane asks no focus of LensVisualizer");
+
+  // Wide open on the reference line: the stop of the triplet is 3 mm, and the stand-in's focus a 64th of it.
+  const best = exported(exportCase(inputFor(model, { imagePlane: { kind: "lv-best-axial" } }, steps)));
+  assert.equal(best.conditions.imageZ, model.state.imgZ + standInBestShift(3));
+  assert.equal(best.system.designImageZ, model.state.imgZ);
+  assert.equal(best.systemId, design.systemId, "the system is the same; only the conditions move");
+  assert.notEqual(best.id, design.id);
+  // The request is the comparator's general one, on the spectrum of the lines, with the focus mode best-axial,
+  // the stop radius of the case, the tab's seed for that stop (the stand-in's pupil is its stop), and no grid cap.
+  assert.equal(asked.length, 1);
+  const { fieldFractions, ...request } = asked[0];
+  assert.deepEqual(request, {
+    method: "geometric",
+    spectrum: "reference",
+    focus: "best-axial",
+    pupilSemiDiameterMm: 3,
+    stopSemiDiameterMm: 3,
+    movementActive: false,
+  });
+  assert.deepEqual(fieldFractions, [0]);
+
+  // The focus is of the stop and the lines the run asks for, and of its grid cap.
+  const stopped = exported(
+    exportCase(
+      inputFor(
+        model,
+        {
+          aperture: { kind: "stop-radius", mm: 1.5 },
+          lines: { kind: "photopic" },
+          imagePlane: { kind: "lv-best-axial" },
+          sampling: { lvGridCap: 32 },
+        },
+        steps,
+      ),
+    ),
+  );
+  assert.equal(stopped.conditions.imageZ, model.state.imgZ + standInBestShift(1.5, 32));
+  assert.deepEqual(
+    [asked[1].spectrum, asked[1].stopSemiDiameterMm, asked[1].pupilSemiDiameterMm, asked[1].maxGridSize],
+    ["photopic", 1.5, 1.5, 32],
+  );
+});
+
+test("lv-best-axial without a focus of LensVisualizer's is a coded problem: other lines, or a search that finds none", () => {
+  const model = tripletModel();
+  const plane = { imagePlane: { kind: "lv-best-axial" } } as const;
+  // Lines by wavelength are none of LensVisualizer's spectra, and its focus search has no other.
+  const custom = exportCase(
+    inputFor(model, { ...plane, lines: { kind: "explicit", wavelengthsNm: [LINES_NM.d, 500], weights: [1, 1] } }),
+  );
+  assert.deepEqual(codesOf(custom), ["lv-best-axial-needs-lv-spectrum"]);
+  assert.ok(!custom.ok && /587\.5618, 500 nm are none of them/.test(custom.problems[0].message));
+
+  // A search that applies no shift of its own has found none.
+  const none: Partial<LvExportApi> = {
+    computeMtfSteps: function* (lvState, options) {
+      const steps = stepsOf(gate())(lvState, { ...options, focus: "design" });
+      return yield* steps;
+    },
+  };
+  assert.deepEqual(codesOf(exportCase(inputFor(model, plane, none))), ["lv-best-axial-unavailable"]);
+
+  // A lens outside LensVisualizer's MTF path still has a case on its reference line, at its design plane; it has
+  // no focus search, and the problem of the plane is the gate's own reason.
+  const outside = { assessMtfSupport: gate({ reason: "unverified-scale" }) };
+  assert.equal(exportCase(inputFor(model, {}, outside)).ok, true);
+  const refused = exportCase(inputFor(model, plane, outside));
+  assert.deepEqual(codesOf(refused), ["unverified-scale"]);
+  assert.ok(
+    !refused.ok &&
+      refused.problems[0].message ===
+        "LensVisualizer's MTF, whose focus search finds its best axial focus, refuses this state: LV says unverified-scale.",
+  );
+  for (const code of ["lv-best-axial-needs-lv-spectrum", "lv-best-axial-unavailable", "f8-comparison-unavailable"]) {
+    assert.ok((EXPORT_PROBLEM_CODES as readonly string[]).includes(code), code);
+  }
 });
 
 // ── The stop ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -345,8 +423,8 @@ test("the stop is the surface LensVisualizer names, whatever its label, also the
     [0, 3],
     [2, 7],
   ] as const) {
-    const state = stateOf(surfaces, { stopIndex });
-    const { system, conditions } = exported(exportCase(inputFor(state, { aperture: { kind: "f-number", value: 4 } })));
+    const model = modelOf(surfaces, { stopIndex });
+    const { system, conditions } = exported(exportCase(inputFor(model, { aperture: { kind: "f-number", value: 4 } })));
     assert.equal(system.stopIndex, stopIndex);
     // The stand-in's widest f-number is 2, so f/4 halves the wide-open radius of the stop surface.
     assert.equal(conditions.stopSemiDiameter, wideOpen / 2);
@@ -359,12 +437,12 @@ test("the stop is the surface LensVisualizer names, whatever its label, also the
 });
 
 test("an f-number faster than wide open is a problem of the run", () => {
-  const result = exportCase(inputFor(tripletState(), { aperture: { kind: "f-number", value: 1.4 } }));
+  const result = exportCase(inputFor(tripletModel(), { aperture: { kind: "f-number", value: 1.4 } }));
   assert.deepEqual(codesOf(result), ["aperture-faster-than-wide-open"]);
 });
 
 test("a wide-open radius that is not the prepared stop surface's is thrown, naming the lens", () => {
-  const input = inputFor(tripletState(), {}, { wideOpenStopAtZoom: () => 3.5 });
+  const input = inputFor(tripletModel(), {}, { wideOpenStopAtZoom: () => 3.5 });
   assert.throws(() => exportCase(input), {
     message: "lens hand-built: LensVisualizer's wide-open stop radius 3.5 is not the prepared stop surface's 3",
   });
@@ -384,9 +462,43 @@ test("the clip radius is asked of LensVisualizer for every surface, with the sto
 
 test("an annular aperture is exported with its inner semi-diameter and the flag", () => {
   const surfaces = TRIPLET.map((surface, index) => (index === 4 ? { ...surface, innerSd: 2.5 } : surface));
-  const opticalCase = exported(exportCase(inputFor(tripletState({}, surfaces))));
+  const opticalCase = exported(exportCase(inputFor(tripletModel({}, surfaces))));
   assert.equal(opticalCase.system.surfaces[4].aperture.innerSemiDiameter, 2.5);
   assert.ok(opticalCase.features.includes("aperture.annular"));
+});
+
+test("a rear plate whose rim LensVisualizer generated is exported as surfaces that do not clip, in a case of 1.2", () => {
+  const generated = TRIPLET.map((surface) =>
+    surface.synthetic === undefined ? surface : { ...surface, clips: false },
+  );
+  const opticalCase = exported(exportCase(inputFor(tripletModel({}, generated))));
+  assert.deepEqual(
+    opticalCase.system.surfaces.slice(5).map(({ label, aperture, synthetic }) => ({ label, aperture, synthetic })),
+    [
+      {
+        label: "RP1a",
+        aperture: { semiDiameter: null, nominalSemiDiameter: 12, innerSemiDiameter: 0 },
+        synthetic: "rearPlate",
+      },
+      {
+        label: "RP1b",
+        aperture: { semiDiameter: null, nominalSemiDiameter: 12, innerSemiDiameter: 0 },
+        synthetic: "rearPlate",
+      },
+    ],
+  );
+  assert.equal(opticalCase.contract, CONTRACT_VERSION_1_2);
+  assert.ok(opticalCase.features.includes("aperture.unclipped"));
+  assert.deepEqual(validateKind("optical-case", opticalCase), []);
+
+  // The plate with a published rim is the case it was: another case than the one above, written to 1.0.
+  const published = tripletCase();
+  assert.equal(published.contract, CONTRACT_VERSION);
+  assert.ok(!published.features.includes("aperture.unclipped"));
+  assert.notEqual(published.systemId, opticalCase.systemId);
+  // Whether LensVisualizer states `clips: true` or, as before it told the two apart, nothing: one case.
+  const stated = TRIPLET.map((surface) => ({ ...surface, clips: true }));
+  assert.equal(exported(exportCase(inputFor(tripletModel({}, stated)))).id, published.id);
 });
 
 // ── Lines, object and notes ──────────────────────────────────────────────────────────────────────────────────────
@@ -409,21 +521,23 @@ test("photopic lines give a case of five lines, with the table one row per line"
 
 test("a certified finite conjugate gives a finite object, and the flag", () => {
   const conjugate = { focusT: 0.5, zoomT: 0, objectDistanceMm: 480, distanceReference: "first-surface" };
-  const state = tripletState({ focusT: 0.5 });
-  const opticalCase = exported(exportCase(inputFor(state, {}, { assessMtfSupport: gate({ conjugate }) })));
+  const model = tripletModel({ focusT: 0.5 });
+  const opticalCase = exported(exportCase(inputFor(model, {}, { assessMtfSupport: gate({ conjugate }) })));
   assert.deepEqual(opticalCase.conditions.object, { kind: "finite", z: -480 });
   assert.equal(opticalCase.label.focusT, 0.5);
   assert.ok(opticalCase.features.includes("object.finite"));
-  assert.deepEqual(codesOf(exportCase(inputFor(state))), ["finite-conjugate-unavailable"]);
+  assert.deepEqual(codesOf(exportCase(inputFor(model))), ["finite-conjugate-unavailable"]);
 });
 
 test("what changes no surface is a provenance note: bulk absorption and a projection that is not rectilinear", () => {
-  const absorbing = tripletState({ runtime: { elements: [{ id: 1 }, { id: 4, absorptionCoefficientPerMm: 0.55 }] } });
+  const absorbing = tripletModel({ runtime: { elements: [{ id: 1 }, { id: 4, absorptionCoefficientPerMm: 0.55 }] } });
+  assert.equal("runtime" in absorbing.state.lens, false);
+  assert.equal("data" in absorbing.state.lens, false);
   assert.deepEqual(exported(exportCase(inputFor(absorbing))).provenance.notes, ["bulk-absorption"]);
-  const clear = tripletState({ runtime: { elements: [{ id: 1, absorptionCoefficientPerMm: 0 }] } });
+  const clear = tripletModel({ runtime: { elements: [{ id: 1, absorptionCoefficientPerMm: 0 }] } });
   assert.equal(exported(exportCase(inputFor(clear))).provenance.notes, undefined);
 
-  const fisheye = tripletState({
+  const fisheye = tripletModel({
     projection: "fisheye-equisolid",
     runtime: { elements: [{ id: 4, absorptionCoefficientPerMm: 0.1 }] },
   });
@@ -437,59 +551,59 @@ test("what changes no surface is a provenance note: bulk absorption and a projec
 // ── What the contract cannot express ─────────────────────────────────────────────────────────────────────────────
 
 test("each thing the contract cannot express is a problem with its code, and no case", () => {
-  const withSurface = (index: number, change: Partial<SurfaceSpec>): LvPreparedState =>
-    tripletState(
+  const withSurface = (index: number, change: Partial<SurfaceSpec>): TestModel =>
+    tripletModel(
       {},
       TRIPLET.map((surface, at) => (at === index ? { ...surface, ...change } : surface)),
     );
-  const cases: [LvPreparedState, string, RegExp][] = [
-    [tripletState({ folded: true }), "folded-path", /optical path is folded/],
+  const cases: [TestModel, string, RegExp][] = [
+    [tripletModel({ folded: true }), "folded-path", /optical path is folded/],
     [withSurface(4, { interaction: "reflect" }), "non-refract-interaction", /reflect or block.*: 5$/],
     [withSurface(0, { interaction: "block" }), "non-refract-interaction", /: 1$/],
     [withSurface(1, { diffractive: { kind: "radial-polynomial" } }), "diffractive-surface", /diffractive phase: 2A$/],
-    [tripletState({ normal: [0, 0.6, 0.8] }), "tilted-image-plane", /not perpendicular/],
-    [tripletState({ normal: [1e-9, 0, 1] }), "tilted-image-plane", /not perpendicular/],
-    [tripletState({ normal: [0, 0, -1] }), "tilted-image-plane", /not perpendicular/],
-    [tripletState({ imagePoint: [0, 12] }), "off-axis-image-plane", /not centred/],
+    [tripletModel({ normal: [0, 0.6, 0.8] }), "tilted-image-plane", /not perpendicular/],
+    [tripletModel({ normal: [1e-9, 0, 1] }), "tilted-image-plane", /not perpendicular/],
+    [tripletModel({ normal: [0, 0, -1] }), "tilted-image-plane", /not perpendicular/],
+    [tripletModel({ imagePoint: [0, 12] }), "off-axis-image-plane", /not centred/],
     [withSurface(6, { synthetic: "sensorStack" }), "synthetic-surface-unknown", /RP1b \(sensorStack\)$/],
     [withSurface(4, { kind: "tilted-plane" }), "surface-profile-unsupported", /surface 5 has/],
     [withSurface(1, { asphere: { K: 0, B4: 1 } }), "asphere-coefficient-unknown", /"B4"/],
   ];
-  for (const [state, code, message] of cases) {
-    const result = exportCase(inputFor(state));
+  for (const [model, code, message] of cases) {
+    const result = exportCase(inputFor(model));
     assert.ok(!result.ok, code);
     assert.deepEqual(codesOf(result), [code]);
     assert.match(result.problems[0].message, message);
     assert.ok((EXPORT_PROBLEM_CODES as readonly string[]).includes(code), code);
   }
   // An image-plane normal within LensVisualizer's own tolerance of +z is perpendicular.
-  assert.equal(exportCase(inputFor(tripletState({ normal: [5e-11, -5e-11, 1] }))).ok, true);
+  assert.equal(exportCase(inputFor(tripletModel({ normal: [5e-11, -5e-11, 1] }))).ok, true);
 });
 
 test("every problem of a lens is reported together, and LensVisualizer's gate is not asked about a lens it rejects", () => {
   const surfaces = TRIPLET.map((surface, index) =>
     index === 4 ? { ...surface, interaction: "reflect", kind: "tilted-plane" } : surface,
   );
-  const state = tripletState({ folded: true, normal: [0, 1, 0], imagePoint: [0, 20] }, surfaces);
+  const model = tripletModel({ folded: true, normal: [0, 1, 0], imagePoint: [0, 20] }, surfaces);
   const never: Partial<LvExportApi> = {
     assessMtfSupport: () => assert.fail("the gate was asked about a lens the contract cannot express"),
   };
+  // Nor is its focus asked for: a lens without a case has no plane to find.
   const options = { aperture: { kind: "f-number", value: 1 }, imagePlane: { kind: "lv-best-axial" } } as const;
-  assert.deepEqual(codesOf(exportCase(inputFor(state, options, never))), [
+  assert.deepEqual(codesOf(exportCase(inputFor(model, options, never))), [
     "folded-path",
     "non-refract-interaction",
     "tilted-image-plane",
     "off-axis-image-plane",
     "surface-profile-unsupported",
     "aperture-faster-than-wide-open",
-    "lv-best-axial-needs-mtf-recipe",
   ]);
 });
 
 test("a problem of the run and a problem of the light are reported together", () => {
   const options = { aperture: { kind: "f-number", value: 1 }, lines: { kind: "photopic" } } as const;
   const refused = { assessMtfSupport: gate({ reason: "spectral-data-unavailable" }) };
-  assert.deepEqual(codesOf(exportCase(inputFor(tripletState(), options, refused))), [
+  assert.deepEqual(codesOf(exportCase(inputFor(tripletModel(), options, refused))), [
     "aperture-faster-than-wide-open",
     "spectral-data-unavailable",
   ]);
@@ -501,7 +615,7 @@ test("a state LensVisualizer cannot prepare is a problem with its reason", () =>
       throw new Error("Resolved thickness for surface 3 must be finite and non-negative");
     },
   };
-  const result = exportCase(inputFor(tripletState({ runtime: { isZoom: true } }), { state: { zoomT: 0.5 } }, failing));
+  const result = exportCase(inputFor(tripletModel({ runtime: { isZoom: true } }), { state: { zoomT: 0.5 } }, failing));
   assert.deepEqual(result, {
     ok: false,
     problems: [
@@ -519,13 +633,13 @@ test("a state LensVisualizer cannot prepare is a problem with its reason", () =>
 
 test("a draft that is not a valid case is the exporter's defect: thrown, naming the lens", () => {
   // The last lens surface is not the last surface that is not a rear plate.
-  const misplaced = tripletState({ runtime: { lastLensSurfaceIdx: 5 } });
+  const misplaced = tripletModel({ runtime: { lastLensSurfaceIdx: 5 } });
   assert.throws(
     () => exportCase(inputFor(misplaced)),
     /^Error: lens hand-built: contract: not a valid optical-case: system\.lastLensSurfaceIndex is 5, which is not/,
   );
   // A negative gap, which only a folded system has, is refused by the schema.
-  const backwards = stateOf(
+  const backwards = modelOf(
     [
       { label: "STO", R: FLAT, d: 5, sd: 3 },
       { label: "2", R: 50, d: -2 },
@@ -534,12 +648,12 @@ test("a draft that is not a valid case is the exporter's defect: thrown, naming 
   );
   assert.throws(() => exportCase(inputFor(backwards)), /^Error: lens hand-built: contract: not a valid optical-case: /);
   // An index that is not a positive finite number.
-  const noIndex = stateOf([{ label: "STO", R: FLAT, d: 5, sd: 3, nd: Number.NaN }], { stopIndex: 0 });
+  const noIndex = modelOf([{ label: "STO", R: FLAT, d: 5, sd: 3, nd: Number.NaN }], { stopIndex: 0 });
   assert.throws(() => exportCase(inputFor(noIndex)), /^Error: lens hand-built: .*not a positive finite number/);
 });
 
 test("the error of a defect keeps its cause", () => {
-  const input = inputFor(tripletState(), {}, { wideOpenStopAtZoom: () => -1 });
+  const input = inputFor(tripletModel(), {}, { wideOpenStopAtZoom: () => -1 });
   try {
     exportCase(input);
     assert.fail("expected a throw");

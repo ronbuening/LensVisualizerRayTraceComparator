@@ -10,16 +10,16 @@ import { CENSUS_FILES, buildCensus, censusJsonText, renderCensusMarkdown } from 
 import type { CensusLens, ExportCensus } from "../../../src/engines/lv/census.ts";
 import { exportCase } from "../../../src/engines/lv/exportCase.ts";
 import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
-import { TRIPLET, gate, inputFor, stateOf } from "./exportSupport.ts";
+import { TRIPLET, gate, inputFor, modelOf } from "./exportSupport.ts";
 
 const FINGERPRINT = { commit: "c".repeat(40), dirty: true, engineClosureHash: "ab".repeat(32), engineFileCount: 141 };
 
 /** The hand-built triplet, exported: a case with aspheres up to the eighth power and seven surfaces. */
-const TRIPLET_RESULT = exportCase(inputFor(stateOf(TRIPLET, { stopIndex: 2 })));
+const TRIPLET_RESULT = exportCase(inputFor(modelOf(TRIPLET, { stopIndex: 2 })));
 /** A two-surface lens with a fisheye projection and an absorbing glass: two notes and no feature. */
 const NOTED_RESULT = exportCase(
   inputFor(
-    stateOf(
+    modelOf(
       [
         { label: "1", R: 30, d: 4, nd: 1.5 },
         { label: "STO", R: 1e15, d: 20, sd: 3 },
@@ -102,6 +102,7 @@ test("the census counts what became of every state, and lists lens keys by reaso
     },
     features: {
       "aperture.annular": 0,
+      "aperture.unclipped": 0,
       "lines.multiple": 0,
       "object.finite": 0,
       "surface.asphere.even": 3,

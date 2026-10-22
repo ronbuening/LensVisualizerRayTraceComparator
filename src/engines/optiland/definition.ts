@@ -32,6 +32,16 @@ export const OPTILAND_CACHE_NAME = "optiland";
  * 20 to 40 surfaces takes 14 ms, of which 9 ms are optiland's trace. The first trace of a worker costs more, once:
  * 0.9 s on an empty cache directory, while numba compiles optiland's conic intersection, and 0.08 s when it reads
  * the machine code from the cache.
+ *
+ * `mtf.native`, optiland's own FFT MTF, is the one quantity that takes seconds, and the default holds it too. A
+ * field at 128 and 256 rays across the pupil takes 0.2 to 1.1 s on lenses of 11 to 35 surfaces, and 0.6 to 2.9 s
+ * at 256 and 512; a field optiland fails on takes 7 to 14 s while its aimer tries every fallback, and one step of
+ * 512 rays on such a field has been seen to take 45 s. The first MTF of a worker costs 1.0 s on an empty cache
+ * directory and 0.33 s on a warm one. Eleven fields that each failed at their 512 step would come to eight
+ * minutes here, and on a slower machine past the ten; so the worker gives a request up, as the error
+ * `time-budget`, when it has taken five minutes and another field is to be begun (`REQUEST_BUDGET_S` in
+ * `lvrtc_optiland/mtf.py`): an adapter that waited in vain kills the worker, and a killed worker is not started
+ * again within a run.
  */
 export const OPTILAND_TIMEOUTS: Partial<EngineTimeouts> = Object.freeze({ helloMs: 180_000 });
 

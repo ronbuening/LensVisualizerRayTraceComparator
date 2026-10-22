@@ -76,3 +76,16 @@ test("the counts of a recorder are its own: a later ray does not change what was
   assert.deepEqual(first, { rays: 2, ok: 0, blocked: 1, failed: 0 });
   assert.deepEqual(recorder.finish().counts, { rays: 2, ok: 0, blocked: 1, failed: 1 });
 });
+
+test("the path to the image is charged by the length of the last stretch, whatever the length of the direction", () => {
+  // Two rays on one line, 4 mm of z from the image plane and 5 mm along the ray: one leaves with a unit vector,
+  // the other with the same direction held twice as long, as an engine that never normalises may hold it.
+  const recorder = createTraceRecorder(2, 1, 10);
+  assert.equal(recorder.exit(0, [0, 2, 6], [0, 0.6, 0.8], 9.5, 1.5), "ok");
+  assert.equal(recorder.exit(1, [0, 2, 6], [0, 1.2, 1.6], 9.5, 1.5), "ok");
+  const { data } = recorder.finish();
+  assert.deepEqual(values(data.imagePoint), [0, 5, 10, 0, 5, 10]);
+  assert.deepEqual(values(data.opticalPathToImage), [9.5 + 1.5 * 5, 9.5 + 1.5 * 5]);
+  // What a ray left with is recorded as it was given.
+  assert.deepEqual(values(data.exitDirection), [0, 0.6, 0.8, 0, 1.2, 1.6]);
+});

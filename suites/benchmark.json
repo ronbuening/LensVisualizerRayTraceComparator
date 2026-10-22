@@ -127,6 +127,474 @@
       "name": "sigma-45mm-f28-dg-dn-contemporary-photopic",
       "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
       "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-best-ref",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-best-photopic",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f8-ref",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f8-photopic",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f8-best-ref",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "canon-ef-135-f2l-usm" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-best-photopic",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f8-ref",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "fujifilm-fujinon-gf-63mm-f28-r-wr" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f8-ref",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f8-photopic",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f8-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-35mm-f14-dg-hsm-a" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikkor-z50f12-best-ref",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikkor-z50f12-best-photopic",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikkor-z50f12-f8-ref",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikkor-z50f12-f8-photopic",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikkor-z50f12-f8-best-ref",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikkor-z50f12-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "nikkor-z50f12" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-best-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-best-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f8-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f8-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f8-best-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-20mm-f18-g" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-best-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-best-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f8-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f8-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f8-best-ref",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "sony-fe-400mm-f28-gm-oss" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f8-ref",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f8-photopic",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f8-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-105mm-f28-dg-dn-macro-art" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-f8-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-f8-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-f8-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-wide-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 0 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-f8-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-f8-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-f8-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-24-70f4s-tele-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-24-70f4s" },
+      "state": { "zoomT": 1 },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f8-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f8-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f8-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-mc-105f28" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f8-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f8-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f8-best-ref",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "nikon-z-135f18-plena" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f8-ref",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f8-photopic",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f8-best-ref",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "reference" },
+      "imagePlane": { "kind": "lv-best-axial" }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic",
+      "lens": { "kind": "lv", "key": "sigma-45mm-f28-dg-dn-contemporary" },
+      "aperture": { "kind": "lv-f8-comparison" },
+      "lines": { "kind": "photopic" },
+      "imagePlane": { "kind": "lv-best-axial" }
     }
   ]
 }

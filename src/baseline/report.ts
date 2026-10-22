@@ -25,7 +25,10 @@ export const BASELINE_REPORT_MARKDOWN = "rays.md";
 /** The statuses of a support cell, in the order they are counted. */
 const STATUSES: readonly ParticipantStatus[] = ["ok", "unsupported", "error", "pending", "missing"];
 
-/** A metric of a pair over every run of a rung: the baseline's metric and the run its worst value occurs in. */
+/**
+ * A metric of a pair over every run of a rung: the baseline's metric and the run its worst value occurs in. Its
+ * `measured`, where the baseline states one, is added up over the runs.
+ */
 export type WorstMetric = BaselineMetric & { readonly run?: string };
 
 /**
@@ -38,6 +41,8 @@ export interface WorstFigure {
   readonly value: number | null;
   readonly tolerance: number;
   readonly ratio: number | null;
+  /** In how many requests of the run the metric was measured, where the baseline says. */
+  readonly measured?: number;
 }
 
 /** One pair of engines in one rung, over every run. */
@@ -120,10 +125,17 @@ function worstFigure(pair: BaselinePair): WorstFigure | undefined {
           ? Infinity
           : 0
         : figure.value / figure.tolerance;
-  for (const { name, unit, value, tolerance } of pair.metrics) {
+  for (const { name, unit, value, tolerance, measured } of pair.metrics) {
     if (tolerance === undefined) continue;
     const ratio = value === null || tolerance === 0 ? null : value / tolerance;
-    const figure: WorstFigure = { name, unit, value, tolerance, ratio };
+    const figure: WorstFigure = {
+      name,
+      unit,
+      value,
+      tolerance,
+      ratio,
+      ...(measured === undefined ? {} : { measured }),
+    };
     if (worst === undefined || rank(figure) > rank(worst)) worst = figure;
   }
   return worst;
@@ -131,6 +143,16 @@ function worstFigure(pair: BaselinePair): WorstFigure | undefined {
 
 /** Takes the metric of one run into the worst over the runs: a count is added, any other kept when it is larger. */
 function takeWorst(into: Map<string, WorstMetric>, metric: BaselineMetric, run: string): void {
+  const before = into.get(metric.name);
+  takeWorstValue(into, metric, run);
+  const after = into.get(metric.name);
+  // In how many requests a metric was measured is a count whatever its unit is.
+  if (after !== undefined && (before?.measured !== undefined || metric.measured !== undefined)) {
+    into.set(metric.name, { ...after, measured: (before?.measured ?? 0) + (metric.measured ?? 0) });
+  }
+}
+
+function takeWorstValue(into: Map<string, WorstMetric>, metric: BaselineMetric, run: string): void {
   const known = into.get(metric.name);
   if (known === undefined) {
     const { where, ...plain } = metric;
@@ -236,17 +258,33 @@ export function buildBaselineReport(baseline: Baseline): BaselineReport {
   };
 }
 
-function table(header: readonly string[], rows: readonly (readonly string[])[]): string[] {
+/** A Markdown table: a header, the rule under it and a line per row, every cell escaped. */
+export function table(header: readonly string[], rows: readonly (readonly string[])[]): string[] {
   const line = (cells: readonly string[]): string => `| ${cells.map(escapeCell).join(" | ")} |`;
   return [line(header), `|${header.map(() => "---").join("|")}|`, ...rows.map(line)];
 }
 
-function count(value: number): string {
+/** A count as text. */
+export function count(value: number): string {
   return formatFixed(value, 0);
 }
 
 function verdictText(verdicts: readonly BaselineVerdictCount[]): string {
   return verdicts.map(({ verdict, count: pairs }) => `${count(pairs)} ${verdict}`).join(", ") || "—";
+}
+
+/** How another report of a baseline lays out what `renderBaselineMarkdown` writes; the rays report gives none. */
+export interface BaselineReportLayout {
+  /** The lines above "Inputs", in place of the title and the introduction of the rays report. */
+  readonly head?: readonly string[];
+  /** True to say, beside every metric, in how many requests it was measured (`WorstMetric.measured`). */
+  readonly measured?: boolean;
+  /** False for a rung whose runs are not listed one by one. */
+  readonly byRun?: (rung: ReportRung) => boolean;
+  /** The lines that end the section of a rung. */
+  readonly afterRung?: (rung: ReportRung) => readonly string[];
+  /** The lines that end the report. */
+  readonly tail?: readonly string[];
 }
 
 function metricHeading(metric: BaselineMetric): string {
@@ -266,10 +304,13 @@ function detailText(details: BaselineEngine["details"]): string {
   return said.join(", ") || "—";
 }
 
-function worstText(verdict: Verdict, worst: WorstFigure | undefined): string {
-  if (worst === undefined) return verdict;
+function worstText(verdict: Verdict, worst: WorstFigure | undefined, requests?: number): string {
+  // With the requests of the run: in how many of them the figure was measured, and that a pair has none.
+  if (worst === undefined) return requests === undefined ? verdict : `${verdict}: no judged figure`;
   const unit = worst.unit === "1" ? "" : ` ${worst.unit}`;
-  return `${verdict}: ${worst.name} ${valueText(worst.value)}${worst.value === null ? "" : unit}`;
+  const of =
+    requests === undefined || worst.measured === undefined ? "" : ` (${count(worst.measured)} of ${count(requests)})`;
+  return `${verdict}: ${worst.name} ${valueText(worst.value)}${worst.value === null ? "" : unit}${of}`;
 }
 
 /**
@@ -281,19 +322,21 @@ function worstText(verdict: Verdict, worst: WorstFigure | undefined): string {
  * matrix; and for each rung the worst of every metric of every pair over the suite, then a row per run with each
  * pair's verdict and worst figure and how the rays of each engine ended.
  */
-export function renderBaselineMarkdown(report: BaselineReport): string {
+export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineReportLayout = {}): string {
   const lines: string[] = [
-    `# Baseline of ${report.suite.name}`,
-    "",
-    "What the engines below agreed on, rung by rung, as the committed baseline of the suite records it: for every",
-    "run as it was run (a zoom at each end) and every pair of engines the verdict and the largest value of each",
-    "metric over the requests of the run (its fields and lines). A metric counted in rays or elements is added up.",
-    "This file is rendered from the baseline alone (`lvrtc verify` makes it anew and fails on a byte of difference):",
-    "it holds results, counts, names and hashes, and nothing an engine traced. The hash of a run's case says what",
-    "its figures are of; `lvrtc baseline check` says whether the case and the engines are still those.",
-    "",
-    "FLOOR is a pass that is counted apart: a metric above its tolerance by the known numerical floor of one engine,",
-    "which is within the policy's floor limit of the arbiter while no other engine sides with it against the arbiter.",
+    ...(layout.head ?? [
+      `# Baseline of ${report.suite.name}`,
+      "",
+      "What the engines below agreed on, rung by rung, as the committed baseline of the suite records it: for every",
+      "run as it was run (a zoom at each end) and every pair of engines the verdict and the largest value of each",
+      "metric over the requests of the run (its fields and lines). A metric counted in rays or elements is added up.",
+      "This file is rendered from the baseline alone (`lvrtc verify` makes it anew and fails on a byte of difference):",
+      "it holds results, counts, names and hashes, and nothing an engine traced. The hash of a run's case says what",
+      "its figures are of; `lvrtc baseline check` says whether the case and the engines are still those.",
+      "",
+      "FLOOR is a pass that is counted apart: a metric above its tolerance by the known numerical floor of one engine,",
+      "which is within the policy's floor limit of the arbiter while no other engine sides with it against the arbiter.",
+    ]),
     "",
     "## Inputs",
     "",
@@ -371,25 +414,33 @@ export function renderBaselineMarkdown(report: BaselineReport): string {
       `Quantity \`${rung.quantity}\`. The worst of every metric over the suite:`,
       "",
     );
+    const measured = layout.measured === true;
     lines.push(
       ...table(
-        ["Pair", "Metric", "Worst, or total", "Run", "Where"],
+        ["Pair", "Metric", "Worst, or total", ...(measured ? ["Requests measured"] : []), "Run", "Where"],
         rung.pairs.flatMap((pair) =>
           pair.metrics.map((metric) => [
             `${pair.a} – ${pair.b}`,
             metricHeading(metric),
             valueText(metric.value),
+            ...(measured
+              ? [metric.measured === undefined ? "—" : `${count(metric.measured)} of ${count(rung.requests)}`]
+              : []),
             metric.run ?? "—",
             whereText(metric.where).replace(/^ at /, "") || "—",
           ]),
         ),
       ),
     );
+    if (layout.byRun?.(rung) === false) {
+      lines.push(...(layout.afterRung?.(rung) ?? []));
+      continue;
+    }
     const pairNames = rung.pairs.map((pair) => [pair.a, pair.b] as const);
     const rayEngines = [...new Set(rung.rows.flatMap((row) => (row.rays ?? []).map((rays) => rays.engine)))].sort();
     lines.push(
       "",
-      "By run, each pair with its verdict and the judged metric that is largest against its tolerance:",
+      `By run, each pair with its verdict and the judged metric that is largest against its tolerance${measured ? ", with the number of the run's requests it was measured in" : ""}:`,
       "",
       ...table(
         [
@@ -403,7 +454,7 @@ export function renderBaselineMarkdown(report: BaselineReport): string {
           count(row.requests),
           ...pairNames.map(([a, b]) => {
             const pair = row.pairs.find((each) => each.a === a && each.b === b);
-            return pair === undefined ? "—" : worstText(pair.verdict, pair.worst);
+            return pair === undefined ? "—" : worstText(pair.verdict, pair.worst, measured ? row.requests : undefined);
           }),
           ...rayEngines.map((engine) => {
             const rays = row.rays?.find((each) => each.engine === engine);
@@ -412,7 +463,9 @@ export function renderBaselineMarkdown(report: BaselineReport): string {
         ]),
       ),
     );
+    lines.push(...(layout.afterRung?.(rung) ?? []));
   }
+  lines.push(...(layout.tail ?? []));
   return `${lines.join("\n")}\n`;
 }
 

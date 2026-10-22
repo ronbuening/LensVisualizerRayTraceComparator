@@ -1,3 +1,4 @@
+import { documentedConjugates } from "./support.ts";
 // Rays against the real LensVisualizer: its own pinned rays reproduced through the binding, the comparator's own
 // canaries on its tracer, and the ray sets of the benchmark lenses traced through `lvrtc run` and held, ray by ray,
 // to LensVisualizer's own MTF bundle. Run output goes to a temporary directory.
@@ -41,8 +42,9 @@ import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { startsInFront } from "../../../src/rays/probe.ts";
 import { DEFAULT_BUNDLE_GRID, DEFAULT_RAY_FIELDS, raySetId } from "../../../src/rays/raySets.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
+import { exactLength } from "../../estimators/support.ts";
 import { suitePath } from "../../suites/support.ts";
-import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE } from "./support.ts";
+import { BENCHMARK_KEYS, LV_PATH, LV_UNAVAILABLE, asItOpens } from "./support.ts";
 
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
@@ -93,7 +95,7 @@ function traced(binding: LvBinding, model: LvCaseModel, spec: RaysTraceSpec, ray
   const [origins, directions] = [f8(spec.origins), f8(spec.directions)];
   const origin: LvVec3 = [origins[3 * ray], origins[3 * ray + 1], origins[3 * ray + 2]];
   const direction: LvVec3 = [directions[3 * ray], directions[3 * ray + 1], directions[3 * ray + 2]];
-  return binding.api.traceEngineRay2(model.state, { origin, direction }, lvTraceOptions(model, spec.line));
+  return binding.api.traceEngineRay(model.state, { origin, direction }, lvTraceOptions(model, spec.line));
 }
 
 // ── LensVisualizer's own pinned rays ─────────────────────────────────────────────────────────────────────────────
@@ -147,7 +149,7 @@ const HEIGHT_TOLERANCE_MM = 5e-7;
 const SLOPE_TOLERANCE = 5e-9;
 
 test(
-  "LensVisualizer's own golden rays are reproduced through the binding: traceRay2, and the tracer lv answers with",
+  "LensVisualizer's own golden rays are reproduced through the binding: traceRay, and the tracer lv answers with",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -165,10 +167,10 @@ test(
       const stop = api.wideOpenStopAtZoom(0, runtime);
 
       // As LensVisualizer's test traces it: the meridional adapter, with the wide-open stop.
-      const meridional = api.traceRay2(marginal.h, 0, [...state.z], 0, 0, stop, true, runtime);
+      const meridional = api.traceRay(marginal.h, 0, [...state.z], 0, 0, stop, true, runtime);
       assert.equal(meridional.clipped, false, key);
-      near(meridional.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceRay2 y`);
-      near(meridional.u, marginal.u, SLOPE_TOLERANCE, `${key} traceRay2 u`);
+      near(meridional.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceRay y`);
+      near(meridional.u, marginal.u, SLOPE_TOLERANCE, `${key} traceRay u`);
 
       // And through the tracer the engine uses, with the engine's options: the end of the trace, carried back to
       // the last vertex plane, is the same ray.
@@ -177,7 +179,7 @@ test(
       const lastZ = state.z[state.z.length - 1];
       const options = { checkSemiDiameter: true, stopSemiDiameter: stop, stopOnClip: true, directionNormalized: true };
       const onLastVertexPlane = (origin: LvVec3) => {
-        const trace = api.traceEngineRay2(state, { origin, direction: [0, 0, 1] }, options);
+        const trace = api.traceEngineRay(state, { origin, direction: [0, 0, 1] }, options);
         assert.equal(trace.status, "ok", key);
         assert.equal(trace.hits.length, state.surfaces.length, key);
         const [point, direction] = [trace.terminalPoint, trace.terminalDirection];
@@ -190,8 +192,8 @@ test(
         };
       };
       const meridionalRay = onLastVertexPlane([0, marginal.h, launchZ]);
-      near(meridionalRay.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceEngineRay2 y`);
-      near(meridionalRay.uy, marginal.u, SLOPE_TOLERANCE, `${key} traceEngineRay2 u`);
+      near(meridionalRay.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceEngineRay y`);
+      near(meridionalRay.uy, marginal.u, SLOPE_TOLERANCE, `${key} traceEngineRay u`);
       assert.deepEqual([meridionalRay.x, meridionalRay.ux], [0, 0], `${key}: a meridional ray stays meridional`);
       const skewRay = onLastVertexPlane([skew.x0, skew.y0, launchZ]);
       near(skewRay.x, skew.x, HEIGHT_TOLERANCE_MM, `${key} skew x`);
@@ -208,7 +210,7 @@ test(
 
 /**
  * One skew ray through each of two benchmark lenses at infinity focus, wide open, on the reference line, traced by
- * `traceEngineRay2` with the engine's options: where it leaves the last surface, in which direction, its optical
+ * `traceEngineRay` with the engine's options: where it leaves the last surface, in which direction, its optical
  * path, and where the comparator's projection lands it. Measured at d36f44b3. A change beyond LensVisualizer's own
  * intersection tolerance of 1e-9 mm means its tracer, or the lens, is no longer the one the numbers were taken of.
  */
@@ -250,7 +252,7 @@ test(
       // The pinned ray, a ray that misses the first surface altogether, and one launched well outside the entrance
       // pupil, which an aperture stops at or before the stop surface.
       const stop = opticalCase.conditions.stopSemiDiameter;
-      const pupil = binding.api.entrancePupilAtState2(stop, 0, 0, model.runtime).epSD;
+      const pupil = binding.api.entrancePupilAtState(stop, 0, 0, model.runtime).epSD;
       const spec: RaysTraceSpec = {
         line: 0,
         origins: encode([...canary.origin, 0, 60, -60, 0, 1.3 * pupil, -60], [3, 3]),
@@ -339,7 +341,8 @@ function fieldCheck(binding: LvBinding, model: LvCaseModel, angleDeg: number, li
  * Holds the answer to one ray set to LensVisualizer itself and returns how many rays were held to it bit for bit.
  *
  * - Every ray that is ok lands where LensVisualizer's `mtfImagePoint` lands its trace, and has its optical path,
- *   bit for bit; every other ray has no image point there either.
+ *   bit for bit; every other ray has no image point there either. Its path to the image is that path and the index
+ *   LensVisualizer ends in times the length of the stretch to the plane (`distanceToPlane`), bit for bit.
  * - The rays of the lattice that are ok are as many as LensVisualizer's own bundle counts as valid, the blocked
  *   and the failed ones as many as it counts as blocked and as failed.
  * - Each ray of the bundle that LensVisualizer traced (it traces half the columns) starts where the set starts the
@@ -353,7 +356,7 @@ function heldToLensVisualizer(
   data: RaysTraceData,
   check: FieldCheck,
   at: string,
-): { exact: number; mirrored: number; worstMirrored: number } {
+): { exact: number; mirrored: number; worstMirrored: number; landed: number; notTheParameter: number } {
   const { api } = binding;
   const { columns, rows } = check.rays.grid;
   const cells = columns * rows;
@@ -368,6 +371,7 @@ function heldToLensVisualizer(
 
   const { imageZ } = model.exported.conditions;
   const counts = [0, 0, 0];
+  let [landed, notTheParameter] = [0, 0];
   for (let ray = 0; ray < rays; ray++) {
     const trace = traced(binding, model, spec, ray);
     const spot = api.mtfImagePoint(model.state, trace, imageZ);
@@ -377,8 +381,13 @@ function heldToLensVisualizer(
     assert.ok(sameBits(image[3 * ray], spot.x) && sameBits(image[3 * ray + 1], spot.y), `${at} ray ${ray} lands`);
     assert.equal(image[3 * ray + 2], imageZ, at);
     assert.ok(sameBits(path[ray], trace.opticalPathLengthMm as number), `${at} ray ${ray} optical path`);
-    const expected = (trace.opticalPathLengthMm as number) + trace.finalMedium * distanceToPlane(trace, imageZ);
+    const { parameter, length } = distanceToPlane(trace, imageZ);
+    const expected = (trace.opticalPathLengthMm as number) + trace.finalMedium * length;
     assert.ok(sameBits(toImage[ray], expected), `${at} ray ${ray} optical path to the image`);
+    // LensVisualizer's directions are unit vectors to a rounding: the length is the parameter or a neighbour of it.
+    assert.ok(Math.abs(length - parameter) <= 4 * Number.EPSILON * parameter, `${at} ray ${ray}: ${length}`);
+    landed++;
+    if (!sameBits(expected, (trace.opticalPathLengthMm as number) + trace.finalMedium * parameter)) notTheParameter++;
   }
   assert.deepEqual(counts, [check.bundle.rays.length, check.bundle.blocked, check.bundle.failed], at);
 
@@ -403,12 +412,17 @@ function heldToLensVisualizer(
       mirrored++;
     }
   }
-  return { exact, mirrored, worstMirrored };
+  return { exact, mirrored, worstMirrored, landed, notTheParameter };
 }
 
-/** The length of a trace's last stretch to the image plane, as LensVisualizer's `mtfImagePoint` takes it. */
-function distanceToPlane(trace: LvTraceResult, imageZ: number): number {
-  return Math.max(0, (imageZ - trace.terminalPoint[2]) / trace.terminalDirection[2]);
+/**
+ * A trace's last stretch to the image plane: the parameter of its line there, as LensVisualizer's `mtfImagePoint`
+ * takes it, and the length of the stretch, which is that parameter times the length of the direction LensVisualizer
+ * ends with, rounded once. The length is worked out in whole numbers (`exactLength`), by nothing of the comparator.
+ */
+function distanceToPlane(trace: LvTraceResult, imageZ: number): { parameter: number; length: number } {
+  const parameter = Math.max(0, (imageZ - trace.terminalPoint[2]) / trace.terminalDirection[2]);
+  return { parameter, length: exactLength(parameter, trace.terminalDirection) };
 }
 
 /**
@@ -451,7 +465,9 @@ function heldToTheCase(opticalCase: OpticalCase, spec: RaysTraceSpec, data: Rays
       const radius = Math.hypot(hit[0], hit[1]);
       const offSurface = Math.abs(hit[2] - (surfaces[surface].z + sag(profiles[surface], radius)));
       assert.ok(offSurface <= 2e-9, `${where}: the hit is ${offSurface} mm off the surface`);
-      assert.ok(radius <= surfaces[surface].aperture.semiDiameter, `${where}: the hit is outside the clip radius`);
+      // A surface that does not clip has no clip radius for a hit to be outside of.
+      const clip = surfaces[surface].aperture.semiDiameter ?? Infinity;
+      assert.ok(radius <= clip, `${where}: the hit is outside the clip radius`);
       worst = Math.max(worst, offSurface);
       const before = surface === 0 ? 1 : indices[surface - 1];
       const into = along(points[surface], hit);
@@ -515,9 +531,9 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const directory = tempDir(t);
-    // The benchmark at the reference line: its 12 runs of that line, written beside the run output.
+    // The benchmark as the lenses open, at the reference line: its 12 runs of that, written beside the run output.
     const benchmark: Suite = JSON.parse(readFileSync(suitePath("benchmark"), "utf8"));
-    const runs = benchmark.runs.filter((run) => run.lines?.kind === "reference");
+    const runs = benchmark.runs.filter((run) => run.lines?.kind === "reference" && asItOpens(run));
     assert.equal(runs.length, 12);
     const suiteFile = join(directory, "benchmark-reference.json");
     writeFileSync(suiteFile, JSON.stringify({ ...benchmark, name: "benchmark-reference", runs }));
@@ -538,6 +554,7 @@ test(
     const store = createResultStore(join(runsDir, STORE_DIRECTORY));
     const binding = await loadLvBinding(LV_PATH);
     const totals = { rays: 0, ok: 0, exact: 0, mirrored: 0, worstMirrored: 0, worstOffSurface: 0 };
+    const stretch = { landed: 0, notTheParameter: 0 };
     const configurations = new Set<string>();
     for (const run of runs) {
       const key = run.lens.kind === "lv" ? run.lens.key : "";
@@ -593,6 +610,8 @@ test(
         totals.exact += held.exact;
         totals.mirrored += held.mirrored;
         totals.worstMirrored = Math.max(totals.worstMirrored, held.worstMirrored);
+        stretch.landed += held.landed;
+        stretch.notTheParameter += held.notTheParameter;
       }
     }
     assert.equal(configurations.size, 12);
@@ -606,6 +625,12 @@ test(
       `benchmark at the reference line: ${totals.rays} rays in 36 sets, ${totals.ok} ok; ${totals.exact} held to ` +
         `LensVisualizer's own traced rays bit for bit, ${totals.mirrored} to its mirrored ones within ` +
         `${totals.worstMirrored} mm; the worst hit lies ${totals.worstOffSurface} mm off its surface`,
+    );
+    // The path to the image is charged by the length of the last stretch, which is the line's parameter only where
+    // LensVisualizer's direction is a unit vector to the bit: for the others the path is its neighbour.
+    t.diagnostic(
+      `of ${stretch.landed} rays that land, ${stretch.notTheParameter} have a path to the image that is not the ` +
+        "index times the parameter of the line, by the length of LensVisualizer's direction",
     );
     // At d36f44b3: 39 302 rays, of which 22 918 are ok (36 of them chief rays); 11 441 are held to the rays
     // LensVisualizer traced, bit for bit, and 11 441 to the ones it mirrored, within 3.5e-13 mm. No ray failed. By
@@ -676,7 +701,8 @@ test(
     // The seed of the footprint is the number the hook of LensVisualizer's MTF tab hands over at this f-number, to
     // the bit: the entrance pupil of the wide-open stop, times the wide-open f-number, over this one.
     const tabSeed =
-      (api.entrancePupilAtState2(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoom2(0, model.runtime)) / fNumber;
+      (api.entrancePupilAtState(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoomClamped(0, model.runtime)) /
+      fNumber;
     assert.equal(setup.options.pupilSemiDiameterMm, tabSeed);
 
     const { sets, problems } = lvRaySets(api, model, {});
@@ -722,7 +748,7 @@ test(
     t.after(() => lv.close());
     // The closest station of a benchmark lens: 1:1, the object 150 mm in front of the image plane.
     const key = "sigma-105mm-f28-dg-dn-macro-art";
-    const stations = (await binding.lens(key)).data.finiteConjugates as { focusT: number; zoomT: number }[];
+    const stations = documentedConjugates((await binding.lens(key)).data);
     const station = stations.find((candidate) => candidate.focusT === 1);
     assert.ok(station !== undefined, JSON.stringify(stations));
     const state = { zoomT: station.zoomT, focus: { kind: "focusT", value: station.focusT } } as const;
@@ -777,7 +803,7 @@ test(
 );
 
 test(
-  "the one lens whose glass absorbs: a ray's weight carries LensVisualizer's bulk transmission at that line",
+  "absorbing lenses: a ray's weight carries LensVisualizer's bulk transmission at that line",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -786,34 +812,39 @@ test(
       const runtime = binding.api.buildLens((await binding.lens(key)).data);
       if (runtime.elements.some((element) => (element.absorptionCoefficientPerMm ?? 0) > 0)) absorbing.push(key);
     }
-    // At d36f44b3 the catalog has one such lens, an apodisation element.
-    assert.deepEqual(absorbing, ["minolta-stf-135f28-t45"]);
-    const { opticalCase, model } = await modelOf(binding, absorbing[0]);
-    assert.deepEqual(opticalCase.provenance.notes, ["bulk-absorption"]);
-    const { sets, problems } = lvRaySets(binding.api, model, {
-      fields: { kind: "image-height-fractions", values: [0] },
-    });
-    assert.deepEqual(problems, []);
-    const [spec] = sets;
-    const check = fieldCheck(binding, model, 0, 0);
-    const weights = f8(spec.weights);
-    const { columns } = check.rays.grid;
-    let [least, most] = [1, 0];
-    for (const own of check.bundle.rays) {
-      const weight = weights[own.row * columns + own.column];
-      if (own.column >= columns / 2) assert.ok(sameBits(weight, own.weight), `cell ${own.row}, ${own.column}`);
-      else assert.ok(Math.abs(weight - own.weight) < 1e-12, `cell ${own.row}, ${own.column}`);
-      [least, most] = [Math.min(least, weight), Math.max(most, weight)];
+    // Keep the original apodisation control, and exercise later catalog additions too.
+    assert.ok(absorbing.includes("minolta-stf-135f28-t45"));
+    for (const key of absorbing) {
+      const { opticalCase, model } = await modelOf(binding, key);
+      assert.deepEqual(opticalCase.provenance.notes, ["bulk-absorption"]);
+      const { sets, problems } = lvRaySets(binding.api, model, {
+        fields: { kind: "image-height-fractions", values: [0] },
+      });
+      assert.deepEqual(problems, []);
+      const [spec] = sets;
+      const check = fieldCheck(binding, model, 0, 0);
+      const weights = f8(spec.weights);
+      const { columns } = check.rays.grid;
+      let [least, most] = [1, 0];
+      for (const own of check.bundle.rays) {
+        const weight = weights[own.row * columns + own.column];
+        if (own.column >= columns / 2) assert.ok(sameBits(weight, own.weight), `cell ${own.row}, ${own.column}`);
+        else assert.ok(Math.abs(weight - own.weight) < 1e-12, `cell ${own.row}, ${own.column}`);
+        [least, most] = [Math.min(least, weight), Math.max(most, weight)];
+      }
+      // The element is clear at its centre and dark toward its rim: at d36f44b3 the transmitted rays weigh from 0.84
+      // down to 0.044.
+      t.diagnostic(`${key}: weights of the transmitted rays from ${least} to ${most}`);
+      assert.ok(least > 0 && least < most && most < 1, `${key}: ${least} to ${most}`);
+      if (key === "minolta-stf-135f28-t45") {
+        assert.ok(most > 0.5 && least < 0.5 * most, `${least} to ${most}`);
+      }
+      // A ray that is stopped keeps its launch weight, which nothing reads: the first cell is a corner of the lattice.
+      const corner = traced(binding, model, spec, 0);
+      const stop = opticalCase.conditions.stopSemiDiameter;
+      assert.equal(binding.api.mtfTraceClassification(corner, model.state, stop), "blocked");
+      assert.equal(weights[0], 1);
     }
-    // The element is clear at its centre and dark toward its rim: at d36f44b3 the transmitted rays weigh from 0.84
-    // down to 0.044.
-    t.diagnostic(`${absorbing[0]}: weights of the transmitted rays from ${least} to ${most}`);
-    assert.ok(most < 1 && most > 0.5 && least > 0 && least < 0.5 * most, `${least} to ${most}`);
-    // A ray that is stopped keeps its launch weight, which nothing reads: the first cell is a corner of the lattice.
-    const corner = traced(binding, model, spec, 0);
-    const stop = opticalCase.conditions.stopSemiDiameter;
-    assert.equal(binding.api.mtfTraceClassification(corner, model.state, stop), "blocked");
-    assert.equal(weights[0], 1);
   },
 );
 

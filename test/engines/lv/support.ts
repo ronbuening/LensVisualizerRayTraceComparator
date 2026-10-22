@@ -10,29 +10,36 @@ import { fileURLToPath } from "node:url";
 import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 
-/** The fake LV tree: every module and export of the import manifest, trivially implemented, and three lenses. */
+/** The fake LV tree: every module and export of the import manifest, trivially implemented, and four lenses. */
 export const FAKE_LV: string = fileURLToPath(new URL("../../fixtures/fake-lv-binding", import.meta.url));
 
 /** The engine files the fake tree loads for the manifest, sorted: everything but its lens and type files. */
 export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/lens-data/defaults.ts",
-  "src/optics/analysis/mtf.ts",
-  "src/optics/analysis/mtfConjugates.ts",
-  "src/optics/analysis/mtfFields.ts",
-  "src/optics/analysis/mtfSupport.ts",
-  "src/optics/analysis/mtfTracing.ts",
-  "src/optics/aperture.ts",
-  "src/optics/apertureStop.ts",
+  "src/optics/analysis.ts",
+  "src/optics/analysis/mtf/mtf.ts",
+  "src/optics/analysis/mtf/mtfConjugates.ts",
+  "src/optics/analysis/mtf/mtfConstants.ts",
+  "src/optics/analysis/mtf/mtfFields.ts",
+  "src/optics/analysis/mtf/mtfFootprint.ts",
+  "src/optics/analysis/mtf/mtfSupport.ts",
+  "src/optics/analysis/mtf/mtfTracing.ts",
+  "src/optics/analysis/request.ts",
   "src/optics/buildLens.ts",
-  "src/optics/compat.ts",
-  "src/optics/constants.ts",
+  "src/optics/chromatic.ts",
+  "src/optics/fieldGeometry.ts",
   "src/optics/first-order/cardinals.ts",
+  "src/optics/first-order/lensConstants.ts",
   "src/optics/first-order/systemMatrix.ts",
-  "src/optics/layout.ts",
-  "src/optics/math/paraxial.ts",
+  "src/optics/geometry.ts",
   "src/optics/mtf.ts",
-  "src/optics/spectralLines.ts",
+  "src/optics/optics.ts",
+  "src/optics/state/aperture.ts",
+  "src/optics/state/fNumber.ts",
+  "src/optics/state/pupils.ts",
+  "src/optics/state/runtime.ts",
   "src/optics/trace/aperture.ts",
+  "src/optics/trace/rayAdapters.ts",
   "src/optics/trace/sequentialTrace.ts",
   "src/types/asphericSchema.ts",
   "src/utils/state/mtfPreferences.ts",
@@ -43,6 +50,7 @@ export const FAKE_LENS_FILES: readonly (readonly [file: string, key: string])[] 
   ["src/lens-data/acme/AcmeSinglet50.data.ts", "acme-singlet-50"],
   ["src/lens-data/acme/AcmeZoom2448.data.ts", "acme-zoom-24-48"],
   ["src/lens-data/zenith/ZenithDoublet100.data.ts", "zenith-doublet-100"],
+  ["src/lens-data/zenith/ZenithPlate35.data.ts", "zenith-plate-35"],
 ];
 
 /**

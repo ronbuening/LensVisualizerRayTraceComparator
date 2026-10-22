@@ -1,0 +1,283 @@
+{
+  "contract": "1.1",
+  "kind": "baseline",
+  "suite": {
+    "name": "mtf",
+    "hash": "7948175818fefaad22bd079ebb9771c35273bdb2077935567fc849cf43b88fb3"
+  },
+  "policy": {
+    "version": 10,
+    "hash": "58a42fe495476e6607035187975dd74979c1698338676c37cc66314d4f563e59"
+  },
+  "engines": [
+    {
+      "id": "lv",
+      "version": "0.0.0",
+      "fingerprint": "a5218c82fa7cfc822c5f6e7412f7eb818985255f09a7cf211226e93069ece7e1",
+      "details": {}
+    },
+    {
+      "id": "optiland",
+      "version": "0.6.2",
+      "fingerprint": "989753400a52393512e1c63eeabd3295b44a9c6e776f3f9b8a68be303a4299de",
+      "details": {}
+    },
+    {
+      "id": "wave",
+      "version": "0.0.0",
+      "fingerprint": "a5218c82fa7cfc822c5f6e7412f7eb818985255f09a7cf211226e93069ece7e1",
+      "details": {}
+    }
+  ],
+  "runs": [
+    {
+      "name": "singlet-ref",
+      "caseId": "41a1e9ed34af15892d9085785bda9c25430204ca16e73f591ecfea3b4a1a5526",
+      "rungs": [
+        {
+          "rung": "r5",
+          "quantity": "mtf.native",
+          "requests": 1,
+          "support": [
+            {
+              "engine": "lv",
+              "status": "ok"
+            },
+            {
+              "engine": "optiland",
+              "status": "ok"
+            },
+            {
+              "engine": "wave",
+              "status": "ok"
+            }
+          ],
+          "pairs": [
+            {
+              "a": "lv",
+              "b": "optiland",
+              "verdict": "ATTENTION",
+              "verdicts": [
+                {
+                  "verdict": "ATTENTION",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "mtfOnAxis.maxAbs",
+                  "unit": "1",
+                  "value": 0.0078125,
+                  "where": {
+                    "field": 0
+                  },
+                  "measured": 1
+                },
+                {
+                  "name": "mtfOffAxis.maxAbs",
+                  "unit": "1",
+                  "value": 0.00390625,
+                  "where": {
+                    "field": 1
+                  },
+                  "measured": 1
+                }
+              ]
+            },
+            {
+              "a": "lv",
+              "b": "wave",
+              "verdict": "RECORDED",
+              "verdicts": [
+                {
+                  "verdict": "RECORDED",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "mtfOnAxis.maxAbs",
+                  "unit": "1",
+                  "value": 0,
+                  "measured": 1
+                }
+              ]
+            },
+            {
+              "a": "optiland",
+              "b": "wave",
+              "verdict": "ATTENTION",
+              "verdicts": [
+                {
+                  "verdict": "ATTENTION",
+                  "count": 1
+                }
+              ],
+              "metrics": [
+                {
+                  "name": "mtfOnAxis.maxAbs",
+                  "unit": "1",
+                  "value": 0.0078125,
+                  "measured": 1
+                }
+              ]
+            }
+          ],
+          "steps": [
+            {
+              "engine": "optiland",
+              "step": "fft512",
+              "jobs": 0,
+              "status": "ok"
+            }
+          ],
+          "bands": {
+            "chiefLanding.maxAbs": 0.0009765625,
+            "mtfOffAxis.maxAbs": 0.0078125,
+            "mtfOnAxis.maxAbs": 0.00390625
+          },
+          "sets": [
+            {
+              "participants": [
+                {
+                  "engine": "lv",
+                  "status": "ok",
+                  "recorded": {
+                    "field": [
+                      0,
+                      1
+                    ],
+                    "settled": [
+                      1,
+                      1
+                    ],
+                    "chiefX": [
+                      0,
+                      0
+                    ],
+                    "chiefY": [
+                      0,
+                      16
+                    ],
+                    "lineWavelengthNm": [
+                      587.5625
+                    ],
+                    "sagittal@32": [
+                      0.5,
+                      0.25
+                    ],
+                    "tangential@32": [
+                      0.5,
+                      0.125
+                    ]
+                  }
+                },
+                {
+                  "engine": "optiland",
+                  "status": "ok",
+                  "recorded": {
+                    "field": [
+                      0,
+                      1
+                    ],
+                    "settled": [
+                      1,
+                      1
+                    ],
+                    "chiefX": [
+                      0,
+                      0
+                    ],
+                    "chiefY": [
+                      0,
+                      16
+                    ],
+                    "lineWavelengthNm": [
+                      587.5625
+                    ],
+                    "sagittal@32": [
+                      0.4921875,
+                      0.25
+                    ],
+                    "tangential@32": [
+                      0.4921875,
+                      0.12890625
+                    ],
+                    "settled#fft512": [
+                      1,
+                      null
+                    ]
+                  }
+                },
+                {
+                  "engine": "wave",
+                  "status": "ok",
+                  "recorded": {
+                    "field": [
+                      0,
+                      1
+                    ],
+                    "settled": [
+                      1,
+                      0
+                    ]
+                  }
+                }
+              ],
+              "pairs": [
+                {
+                  "a": "lv",
+                  "b": "optiland",
+                  "verdict": "ATTENTION",
+                  "reason": "mtfOnAxis.maxAbs 7.81e-3 is outside its attention band 3.91e-3",
+                  "metrics": [
+                    {
+                      "name": "mtfOnAxis.maxAbs",
+                      "value": 0.0078125,
+                      "unit": "1",
+                      "where": {
+                        "field": 0
+                      }
+                    },
+                    {
+                      "name": "mtfOffAxis.maxAbs",
+                      "value": 0.00390625,
+                      "unit": "1",
+                      "where": {
+                        "field": 1
+                      }
+                    }
+                  ]
+                },
+                {
+                  "a": "lv",
+                  "b": "wave",
+                  "verdict": "RECORDED",
+                  "metrics": [
+                    {
+                      "name": "mtfOnAxis.maxAbs",
+                      "value": 0,
+                      "unit": "1"
+                    }
+                  ]
+                },
+                {
+                  "a": "optiland",
+                  "b": "wave",
+                  "verdict": "ATTENTION",
+                  "metrics": [
+                    {
+                      "name": "mtfOnAxis.maxAbs",
+                      "value": 0.0078125,
+                      "unit": "1"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

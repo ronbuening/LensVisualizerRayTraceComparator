@@ -2,7 +2,7 @@
 import type { ComparisonMetric, PairComparison, ParticipantStatus } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 import type { RungPolicy } from "../contract/policy.ts";
-import type { ComparisonContext, ComputedMetric, QuantityComparator } from "./comparator.ts";
+import type { ComparisonContext, ComputedMetric, QuantityComparator, StepAnswer } from "./comparator.ts";
 import { numberText, whereText } from "./metricText.ts";
 
 /** One engine as it enters a comparison: how its job ended and, when it answered, what it answered. */
@@ -18,6 +18,31 @@ export interface ParticipantResult {
   readonly detail?: string;
   /** The data of an "ok" result: valid by the quantity's schema, with arrays that decode. */
   readonly data?: JsonObject;
+  /** The jobs that asked the engine the same request again, in the order they were asked; left out without one. */
+  readonly steps?: readonly ParticipantStep[];
+}
+
+/** One later job of an engine for the request of a comparison: how it ended and, when it answered, what. */
+export interface ParticipantStep {
+  /** The name of the step (`ManifestJob.step`). */
+  readonly step: string;
+  readonly status: ParticipantStatus;
+  /** As `ParticipantResult.detail`. */
+  readonly detail?: string;
+  readonly data?: JsonObject;
+}
+
+/** The steps of a participant that are answers, as a comparator is handed them. */
+export function stepAnswers(participant: ParticipantResult): StepAnswer[] {
+  return (participant.steps ?? []).flatMap(({ step, status, data }) =>
+    status === "ok" && data !== undefined ? [{ step, data }] : [],
+  );
+}
+
+/** What a later step that is no answer is called in a reason. */
+function describeStep(engine: string, { step, status, detail }: ParticipantStep): string {
+  const said = detail === undefined ? "" : ` (${detail})`;
+  return `the step ${step} of ${engine} ${status === "unsupported" ? "is unsupported" : `ended as ${status}`}${said}`;
 }
 
 /** What a participant that did not answer is called in a reason. */
@@ -62,7 +87,9 @@ function stored(metric: ComputedMetric, unit: string): ComparisonMetric {
  *    or has a band and is not a number. A metric without a band is only written down.
  *
  * A metric the policy names that the comparator could not measure on these two answers (`unmeasured`) is not
- * judged: the reason says that it was not measured, and why, whatever the verdict. `FLOOR` is not decided here: it
+ * judged: the reason says that it was not measured, and why, whatever the verdict. The reason also holds what the
+ * comparator notes of the two answers (`notes`), and each later step of a participant that is no answer. The
+ * comparator is handed the policy of the rung with the context, and the later steps that are answers. `FLOOR` is not decided here: it
  * needs the other engines of the comparison (`attributeFloor`).
  *
  * The pair's metrics are the comparator's, in its order and its units, with null for a value that is not finite;
@@ -88,7 +115,13 @@ export function comparePair(
   if (blockedBy !== undefined) return ended("BLOCKED", blockedReason(a.engine, b.engine, blockedBy));
   if (comparator === undefined) return ended("ERROR", `quantity ${policy.quantity} has no comparator`);
 
-  const outcome = comparator.compare(a.data as JsonObject, b.data as JsonObject, context);
+  const steps = [stepAnswers(a), stepAnswers(b)] as const;
+  const stepped = steps.some((answers) => answers.length > 0);
+  const outcome = comparator.compare(a.data as JsonObject, b.data as JsonObject, {
+    ...context,
+    policy,
+    ...(stepped ? { steps } : {}),
+  });
   if (!outcome.comparable) return ended("ERROR", outcome.reason);
   const names = Object.keys(policy.metrics).sort();
   const unmeasured = (outcome.unmeasured ?? []).filter(({ name }) => names.includes(name));
@@ -123,7 +156,15 @@ export function comparePair(
   const verdict = gated ? (beyond.length > 0 ? "FAIL" : "PASS") : beyond.length > 0 ? "ATTENTION" : "RECORDED";
   // In the order of the metrics' names, as the metrics beyond a limit are.
   const missing = names.flatMap((name) => unmeasured.filter((metric) => metric.name === name));
-  const said = [...beyond, ...missing.map(({ name, reason }) => `${name} was not measured: ${reason}`)];
+  const failedSteps = sides.flatMap((side) =>
+    (side.steps ?? []).filter(({ status }) => status !== "ok").map((step) => describeStep(side.engine, step)),
+  );
+  const said = [
+    ...beyond,
+    ...missing.map(({ name, reason }) => `${name} was not measured: ${reason}`),
+    ...(outcome.notes ?? []),
+    ...failedSteps,
+  ];
   return {
     a: a.engine,
     b: b.engine,
