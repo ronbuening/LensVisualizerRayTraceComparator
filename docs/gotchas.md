@@ -15,16 +15,16 @@ Each entry has a **class**, the one the plan's ladder uses when two answers diff
 
 Line numbers are not quoted: LensVisualizer changes daily. The integration tests in
 `test/integration/lv/canaries.test.ts` pin the source lines these entries rest on and fail when one is rewritten.
-Measured numbers are of LensVisualizer commit `d36f44b3`; those of rungs R2 and R3 were taken at `3af45e3f`,
-whose engine files are the same, with two lens files corrected; those of the product MTF at `ed78cf40`, with the
-same engine files again. The engine closure the comparator states has grown with what it loads of LensVisualizer:
-it was `f6681074` (142 files) through rung R3, and `1827eefe` (151 files) from the product MTF on, the same 142
-and the nine files of LensVisualizer's MTF product, its aperture slider and its tab preferences. It is `ff670f03`
-(the same 151 files) since LensVisualizer edited partial-dispersion fields in its glass catalogue: at `1ed8cc3d`
-every case of the benchmark has the content hash it had, and every figure of the digest is the same. The verdicts
-that policy version 4 changed (the floor of the exit direction, the radius of a far pupil) were measured at
+Historical measurements below are of LensVisualizer commit `d36f44b3`; those of rungs R2 and R3 were taken at
+`3af45e3f`, whose engine files are the same, with two lens files corrected; those of the product MTF at `ed78cf40`,
+with the same engine files again. The engine closure the comparator states has grown with what it loads of
+LensVisualizer: it was `f6681074` (142 files) through rung R3, and `1827eefe` (151 files) from the product MTF on,
+the same 142 and the nine files of LensVisualizer's MTF product, its aperture slider and its tab preferences. It became
+`ff670f03` (the same 151 files) when LensVisualizer edited partial-dispersion fields in its glass catalogue:
+at `1ed8cc3d` every case of the benchmark has the content hash it had, and every figure of the digest is the same.
+The verdicts that policy version 4 changed (the floor of the exit direction, the radius of a far pupil) were measured at
 `1ed8cc3d`, closure `ff670f03`, while one lens file of that checkout was being edited, which no result here is of.
-The committed digest of the benchmark was last written at `23631dc0`, with that closure and the same cases, each
+The former digest of the benchmark was last written at `23631dc0`, with that closure and the same cases, each
 named there by its content hash. Its figures are those of `3af45e3f` but for one lens, `sigma-35mm-f14-dg-hsm-a`,
 whose launch rays moved by 7e-15 mm when the ray sets took the MTF tab's own seed (below): its largest differences
 changed in the fifth digit, and no count changed. Since policy version 4 it has two more figures in R1, the radius
@@ -36,7 +36,11 @@ the closure already held.
 
 The figures of the entries on a rear plate that does not clip, on the stop radius and on the tolerance of 1e-12 mm
 were measured at `31c34396` (branch `fix/771-intersection-tolerance`, closure `a52a7b8e`, 152 files), against the
-committed baselines, which are of `33ebdb30`. Every other entry describes LensVisualizer as it is up to `33ebdb30`.
+then-committed baselines of `33ebdb30`. Unless an entry states a later commit, its measurements describe
+LensVisualizer up to `33ebdb30`; its paths name the rewritten modules. Stage 3.12's current baselines and census
+are of `ab0fd4cf` (closure `94778d3d`, 175 files), optiland `4e893f53`, policy version 11: R6a is gated at 2e-8,
+and no rung or metric has a floor. All four saved baseline checks report every record `OK`; the historical
+floor verdicts below are not the current state.
 
 Where an entry says whose error a difference is, the ray was traced a third time, outside the repository, in
 60-digit decimal arithmetic by a tracer that shares no code with either engine: Newton's method on the contract's
@@ -54,7 +58,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   The prepared-state cache retains two lenses; sweeping a catalog can evict a previous lens (performance only).
 - **Handled.** Fingerprint the actual import closure; refuse a pre-rewrite LV plainly. Stage 3.12 measured the
   new numerics at `ab0fd4cf` (175 files); policy version 11 pins R6a at 2e-8 and removes R2/R3 floors, with
-  baselines rewritten separately by the owner.
+  all four baselines and the census rewritten; every record is `OK` in the saved baseline checks.
 - **Class.** convention.
 
 ### V2 controls and prepared stop radii
@@ -199,9 +203,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
 
-- **Where.** `buildLens` in `src/optics/first-order/lensConstants.ts` sets the stop surface's `sd` to the height at the stop of
-  a real marginal ray of the nominal entrance pupil (`S[stopIdx].sd = nomRealY`), and for a zoom the same at each
-  station; only a lens that authors its iris (`zoomStopSemiDiameters`, a fixed iris) has the number it states.
+- **Where.** `computeLensConstants` in `src/optics/first-order/lensConstants.ts`, behind `buildLens`, derives the
+  stop surface's `sd` from a real marginal ray of the nominal entrance pupil (`nomRealY`), and for a zoom the
+  same at each station; a fixed iris keeps its authored radius.
   `wideOpenStopAtZoom` hands that out, and it is the stop radius of a case.
 - **Effect.** The radius is known to LensVisualizer's intersection tolerance and no better, and it is in the
   identity of the case twice, as `conditions.stopSemiDiameter` and as the stop surface's aperture. When the
@@ -271,8 +275,8 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   is 6.8e-9 mm, the largest difference of a direction 3.1e-10 and of a landing 9.1e-9 mm (all three on
   `sigma-35mm-f14-dg-hsm-a` at 650 nm, 31.9°), and the optical path differs by at most 6.0e-6 waves to the last
   surface, 5.3e-6 to the image and 5.5e-6 relative to the chief ray. Not one ray is stopped by one engine and
-  passed by the other, and none is failed. The committed digest is `reports/benchmark/lv-floor.md`. What the
-  tolerance becomes behind a steep surface is the next entry.
+  passed by the other, and none is failed. The former digest was `reports/benchmark/lv-floor.md`; the current
+  record is `reports/benchmark/rays.md`. What the tolerance becomes behind a steep surface is the next entry.
 - **Class.** numerical.
 
 ### Behind a steep surface 1e-9 mm is not 1e-9 mm any more
@@ -761,7 +765,7 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 
 - **Where.** `assessMtfSupport` turns a lens outside its MTF path away (`unsupported-path`) before it looks at the
   focus position, so `MtfSupport.conjugate` is set only for a lens the path covers. A lens file may still list the
-  station under `finiteConjugates`.
+  station under V2 `focus.conjugates`, addressed by zoom station and focus keyframe (`finiteConjugates` in V1).
 - **Effect.** A fisheye that documents a close-focus station has no conjugate LensVisualizer certifies for it. Its
   case at infinity focus exports on the reference line as before; the station does not.
 - **Handled.** The exporter takes the object of a refocused state from `MtfSupport.conjugate` and from nothing
@@ -1061,8 +1065,8 @@ an absolute **2e-9**, including flagged fields. No floor is granted.
 - **Handled.** Nothing is widened. Every pair of both suites is `PASS`, LensVisualizer at 54 % of the gate at
   worst (48 % on the feature suite, on the Hologon), and R4 has no floor: a lens on which LensVisualizer's landings
   move the MTF by more than 1e-7 is `FAIL`, to be attributed with R2's figures for the same rays (they are the same
-  ray sets) before anything else is concluded. Whether R4 is to have a floor of `lv` against `ref`, as R2 and R3
-  have, is the owner's decision and was not taken in Stage 3.3.
+  ray sets) before anything else is concluded. These are Stage 3.3 measurements at `33ebdb30`; policy version 11
+  grants no floor on any rung. The Stage 3.12 measurements are in `docs/REFERENCE.md`.
 - **Class.** numerical.
 
 ## optiland
@@ -1646,8 +1650,8 @@ shares no code with any engine.
   each ray at that same surface, so no light is at stake. This focus-station case is outside the two suites:
   the measured fact above, "in the two suites optiland fails no ray", still stands. `assertR2` keeps LV and
   `ref` at zero failures; an optiland failure is allowed only on an asphere where both block that very ray at
-  that same surface, with every such ray named in a diagnostic. Pair verdicts, mask checks, gates and floors
-  are unchanged.
+  that same surface, with every such ray named in a diagnostic. The exception changes no pair verdict, mask
+  check or gate; policy version 11 grants no floors.
 - **Class.** method.
 
 ### On an asphere optiland is as exact as a plain sum of its terms

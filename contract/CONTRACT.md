@@ -305,7 +305,8 @@ LensVisualizer's that fits neither is thrown, naming the surface, and nothing is
 generated rim clipped, and limited the field of a compact lens; the cases of such lenses are other cases now.
 
 **The stop radius.** `wide-open` is `wideOpenStopAtZoom(zoomT, L)`, which is the prepared stop surface's `sd`.
-An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoom(zoomT, L)) / N`. That rule is
+An f-number N is LensVisualizer's linear stop-down, `(wide-open radius × fopenAtZoomClamped(zoomT, L)) / N`.
+The hook imports `fopenAtZoomClamped as fopenAtZoom`; `fopenAtZoom` in the expressions below is that alias. The rule is
 written only in LensVisualizer's React hook (`useLensComputation.ts`, `currentPhysStopSD`), so the exporter restates
 it, in the hook's order of operations, and a test against LensVisualizer's source fails when the hook's expression
 changes. An N below the widest f-number of that zoom position is a problem, not a clamp. `stop-radius` is taken as
@@ -406,8 +407,9 @@ where they export the required name, and defining deep modules otherwise (the ma
 It requires the engine rewrite at `460f841f` or later. MTF entry points take an analysis request made by
 `createAnalysisRequest` from `src/optics/analysis.ts`, beside settings without aperture radii; lower-level helpers
 in `src/optics/analysis/mtf/` retain their state and resolved options form. Lens files use V2 `zoom.stations`;
-finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe.
-
+finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe. `buildLens` takes
+the V2 default export directly; the runtime's canonical lens is `source`. `evaluateAperture` takes
+`state.traceGeometry`. The source stop's `sd` may be a placeholder 0: the prepared stop supplies the radius.
 
 LensVisualizer is also an engine, `lv` (`src/engines/lv/engine.ts`): it answers a request from its own prepared
 state and its own functions, and reads nothing of the surfaces of the case it is handed. Its `fingerprint` is the
@@ -476,7 +478,12 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 
 #### LensVisualizer's product MTF
 
-`lv` answers `mtf.native` (`src/engines/lv/mtf.ts`) with one call of `computeMtf(state, options)`.
+`lv` answers `mtf.native` (`src/engines/lv/mtf.ts`) with one call of `computeMtf(request, settings)`.
+`lvMtfInputs` builds the analysis request with `createAnalysisRequest`, the prepared state, `dynamicEFL: 0`
+as in LV's worker, and the two current radii. The settings carry no radii. The tables below use the resolved
+options' radius names: `stopSemiDiameterMm` is `request.aperture.stopSemiDiameterMm`, and
+`pupilSemiDiameterMm` is `request.aperture.entrancePupilSemiDiameterMm`. Lower-level helpers receive these as
+resolved options through `lvResolvedMtfOptions`, including `request.pose?.active ?? settings.movementActive`.
 
 | Of the request | Is |
 |---|---|
@@ -1214,25 +1221,32 @@ is `1` for a number without one. A metric the comparison reports and the policy 
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
 `rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 9:
+The comparator's policy, version 11:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
 | `selftest` | `selftest.echo` | direct | `sum.abs`, `values.maxAbs` ≤ 1e-12 |
 | `r0` | `system.describe` | direct | every count of mismatches 0; `sag.maxScaled` ≤ 1e-12. Blocks the later rungs |
 | `r1` | `paraxial.first-order` | direct | `firstOrder.maxAbs`, `pupilZ.maxScaled`, `pupilRadius.maxScaled` ≤ 1e-9 mm |
-| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; floor of `lv` |
-| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; floor of `lv` |
+| `r2` | `rays.trace` | identical-rays | hits and landing ≤ 1e-8 mm, direction ≤ 1e-9, `mask.mismatches` 0; no floor |
+| `r3` | `rays.trace` | identical-rays | the three optical paths ≤ 2e-5 waves; no floor |
 | `r4` | `rays.trace` | identical-rays | `mtf.maxAbs` ≤ 1e-7, of a field at every line of the case; no floor ([`rays.trace`](#raystrace)) |
 | `r4f` | `mtf.native` | direct | `mtf.maxAbs` ≤ 1e-9; `sampling.mismatches` and `fields.mismatches` 0. Of the engines `lv` and `replay` only ([`mtf.native`](#mtfnative)) |
 | `r5` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-7 mm. Of the engines `lv`, `optiland` and `wave` only, and run only where it is named ([`mtf.native`](#rung-r5-the-engines-own-mtf)) |
-| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 4e-5, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
+| `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
+| `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
 | `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
 
-**The floor.** One engine of a comparison may be known to compute to a coarser tolerance than a gate: LensVisualizer
-meets a surface within 1e-9 mm of it, and behind a steep surface that becomes more than the 1e-8 mm two exact
-tracers are held to. A rung with a `floor` says which engine that is and which engine arbitrates, and each of its
-metrics that the floor may excuse carries `floor: { limit, agreement }`, both in the metric's unit. A pair of
+**The floor.** Policy version 11 gives no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
+(closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
+over the benchmark and features suites are four to seven orders of magnitude inside the gates. The larger of a
+gate and ten times its measured residual is the gate itself, where a floor cannot be granted. A pair above a gate
+is `FAIL`. The schema and machinery retain the following rule for a future policy; Phase 5's catalog sweep is
+where a steep lens would show whether it still needs one.
+
+One engine of a comparison may be known to compute to a coarser tolerance than a gate. A rung with a `floor`
+says which engine that is and which engine arbitrates, and each metric the floor may excuse carries
+`floor: { limit, agreement }`, both in the metric's unit. A pair of
 `floor.engine` that is above a tolerance is then `FLOOR`, which is a pass, when all of these hold, and `FAIL`
 otherwise:
 
@@ -1252,10 +1266,11 @@ otherwise:
 
 A metric that two answers have nothing to measure on takes no part in 2, 3 or 4. Every metric that has floor
 limits takes part in 2 and 3, whether or not it is the one above its tolerance: a direction within its limit
-excuses no hit beyond its own. The comparator's policy gives `lv` this floor against `ref` in `r2` and `r3`:
+excuses no hit beyond its own. Historically, policy version 10 gave `lv` this floor against `ref` in `r2` and `r3`
+(at LensVisualizer `33ebdb30`, intersection tolerance 1e-9 mm):
 lengths with `limit` 1e-7 mm and `agreement` 1e-10 mm, a component of the exit direction with 1e-8 and 1e-12,
 optical paths with 2e-4 waves and 1e-7 waves; each limit is ten times its tolerance. Which rays got through,
-`mask.mismatches`, has none. The limits are in the policy and nowhere in the code.
+`mask.mismatches`, had none. Those limits were in the policy, never in the code, and are removed in version 11.
 
 Until policy version 5 a witness beyond `agreement` withheld the floor. A third engine has rounding of its own:
 optiland is about 9e-10 mm from the exact hit on lenses where `ref` is 6e-12 mm and LensVisualizer 2e-8 mm from
@@ -1901,9 +1916,12 @@ at every line of the case (those that state the same `groups.field`, and a `latt
   cannot be laid out as a pupil (`degenerate-pupil`). **Not comparable** as R4 is not, and for a set that states no
   field or no lattice.
 
-The gate of 4e-5 is pinned from measurement (the plan, "Amendments since approval"): ten times the largest figure
-of a judged field of the benchmark in its four conditions, 3.12e-6, rounded up to one digit. That figure is
-LensVisualizer's: the two exact tracers agree within 1.15e-9 on the same fields.
+The gate of 2e-8 is pinned at Stage 3.12 under policy version 11 (the plan, "Amendments since approval"):
+ten times the largest judged figure, 1.18e-9, rounded up to one digit. At LensVisualizer `ab0fd4cf` (closure
+`94778d3d`, 175 files) and optiland `4e893f53`, 208 of 288 benchmark fields are judged per pair: `lv/ref` reaches
+1.18e-9, optiland against `ref` 1.16e-9, and `lv` against optiland 1.6e-10. The bound is now the exact tracers'
+agreement. The ref–optiland test holds an absolute 2e-9, including flagged fields. The former gate of 4e-5 was
+pinned on LensVisualizer `33ebdb30`'s 1e-9 mm rounding, carried into the optical path; it is historical.
 
 Answers for different numbers of rays or surfaces are not comparable; nor are any two without the case (R2: its
 apertures) or without the request and the case (R3: the line and its wavelength).

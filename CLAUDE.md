@@ -358,7 +358,7 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   (R4: by line), never the order handed over.
 - **R4 has no floor, and its gate is tighter than R2's**: a landing within R2's 1e-8 mm may turn a term by 6e-6
   at 100 cycles/mm. A FAIL of R4 is attributed with R2's figures for the same ray sets before anything is
-  concluded; whether R4 gets a floor is the owner's.
+  concluded. Policy version 11 grants no floor on R4, as on every other rung.
 - **The wave OTF is Hopkins' autocorrelation in cosine space, from optical paths** (`src/estimators/waveOtf.ts`):
   the pupil coordinate is index times direction cosine at the image side and the shear `lambda nu`, wherever the
   exit pupil is; a cell's path is `launch + path + n d . (R - Q)`, the path to the foot of the perpendicular from
@@ -462,8 +462,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
   rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
   and r5g, `sets`. The benchmark's holds all six, the feature suite's the three gated (run it with
-  `--rungs r4,r4f,r6a`). The rays baseline, its report and its check stay as they are; R4 is in both. The MTF
-  report is rendered from the baseline alone (`src/baseline/mtfReport.ts`) and ends with the fixed Not covered
+  `--rungs r4,r4f,r6a`). The rays baseline has its own report and check; R4 is in both. Stage 3.12 rewrote
+  all four baselines under policy version 11 at LV `ab0fd4cf`. The MTF report is rendered from the baseline alone
+  (`src/baseline/mtfReport.ts`) and ends with the fixed Not covered
   block; its wording is linted.
 - **Contract minor 1 is stated only by a document that uses it** (`CONTRACT_VERSION_1_1`: a baseline with
   `measured`, `steps`, `bands` or `sets`). Every case, request, result, manifest, comparison and rays baseline is

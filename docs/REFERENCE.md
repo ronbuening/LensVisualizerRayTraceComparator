@@ -19,7 +19,12 @@ where they export the required name, and defining deep modules otherwise (the ma
 It requires the engine rewrite at `460f841f` or later. MTF entry points take an analysis request made by
 `createAnalysisRequest` from `src/optics/analysis.ts`, beside settings without aperture radii; lower-level helpers
 in `src/optics/analysis/mtf/` retain their state and resolved options form. Lens files use V2 `zoom.stations`;
-finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe.
+finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe. `buildLens` takes
+the V2 default export directly, and the runtime's canonical lens is `source`. `evaluateAperture` takes
+`state.traceGeometry`. A source stop's `sd` may be the placeholder 0: read the prepared stop's radius.
+`lvMtfInputs` builds the analysis request with the prepared state, `dynamicEFL: 0` as in LV's worker, and the
+two current radii. `lvResolvedMtfOptions` restates LV's mapping for lower-level helpers, including
+`request.pose?.active ?? settings.movementActive`; source canaries hold both mappings to LV.
 
 - **The engine fingerprint** is `{ engineClosureHash, engineFileCount, commit, dirty }`. The closure hash covers
   the engine source files Node actually loaded. Lens prescription files (`src/lens-data/**/*.data.ts` and
@@ -410,20 +415,17 @@ path altogether (`unsupported-path`), which is one problem for each of them.
   are ok, blocked and failed is listed beside the comparison.
 - **The chief ray.** `opd.maxAbs` needs a chief ray that is ok in both engines. Where there is none it is not
   measured, the pair says so, and the two raw paths are judged alone.
-- **`FLOOR`.** LensVisualizer meets a surface within 1e-9 mm of it, and a steep surface behind makes more of that.
-  A pair of `lv` that is above a gate is `FLOOR`, a pass that is counted apart, when `lv` is within 1e-7 mm, 1e-8
-  in direction and 2e-4 waves of the arbiter `ref`: ten times each gate. Otherwise it is `FAIL`. Every one of
-  those figures is held together, whichever is above its gate: a direction within its limit excuses no hit beyond
-  its own. The limits are in `policy/rungs.v1.json`. A mask mismatch has no floor: a ray that one engine stopped
-  and the other passed always fails. Every other engine is a **witness** (policy version 5). Within 1e-10 mm,
-  1e-12 in direction and 1e-7 waves of `ref` it corroborates the arbiter, and the reason says by how much. Beyond
-  that it does not, and withholds nothing: the pair is still `FLOOR`, and the reason says "the witness did not
-  corroborate" with the witness's own distance from `ref`. Only a witness that is beyond that agreement and
-  nearer to `lv` than to `ref` blocks the floor: the pair is `FAIL`, "arbiter-suspect". And in the pair of `lv`
-  with a witness, an excess where the witness is as far from `ref` as `lv` is, or farther, is the witness's and no
-  floor ([the engine `optiland`](#the-engine-optiland)).
+- **`FLOOR`.** A pass counted apart, available when a policy names a floored engine and an arbiter on a rung,
+  with `limit` and `agreement` on its metrics. The floored engine must be within every limit of the arbiter;
+  another engine is a witness. A witness within `agreement` corroborates; otherwise its distance is named.
+  A witness siding with the floored engine against the arbiter, or an excess belonging to the witness itself,
+  prevents the floor ([the contract's rule](../contract/CONTRACT.md#policy)). **Policy version 11 gives no rung
+  or metric a floor.** At LensVisualizer `ab0fd4cf`, its 1e-12 mm intersection tolerance puts the worst R2/R3
+  distances from `ref` four to seven orders of magnitude inside the gates, so a pair above a gate is `FAIL`.
+  The machinery stays, tested on synthetic policies; Phase 5's catalog sweep will show whether a steep lens
+  still needs one. The floor verdicts in the historical measurements below belong to earlier policies.
 
-Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
+**History.** Measured at LensVisualizer `3af45e3f` (the engine files of `d36f44b3`), with
 `lvrtc run <suite> --engines lv,ref --rungs r0,r1,r2,r3`, `lvrtc compare` and `lvrtc report`:
 
 | Suite | Pairs of R2 and R3 | R2: largest hit, direction, landing | R3: largest path, to image, relative |
@@ -809,7 +811,8 @@ What was decided in Stage 3.3, and why:
 | "Valid in every engine" | Of the two engines of a pair: a ray is in both sums or in neither. | A pair's figures then depend on its own two answers, as its record in a baseline says (it names two fingerprints). Where the engines agree on which rays arrive, which R2 gates, it is the same set for every pair. |
 | The reference point | Midway between the two engines' flux-weighted centroids of the first line's rays. | One point for both engines and every line, lost with no chief ray. The modulus does not depend on it. |
 
-**Measured** (LensVisualizer `33ebdb30`, engine closure `78215d72`; optiland `4e893f53`), on the benchmark in its
+**Historical measurement, Stage 3.3** (LensVisualizer `33ebdb30`, engine closure `78215d72`; optiland
+`4e893f53`); superseded by [Stage 3.12](#measured-at-stage-312). On the benchmark in its
 four conditions: 96 runs, 288 fields (three a run), 611 140 rays that both engines of a pair land, 51 frequencies,
 both cuts. Every pair is `PASS`; no ray is dropped in any pair.
 
@@ -825,7 +828,8 @@ focus, full field). On the feature suite (18 runs, 54 fields, 104 846 rays) ever
 4.8e-8 (the Hologon, `stop-inside-element-ref`, full field, tangential, 94 cycles/mm), optiland – `ref` 6.7e-12;
 the smoke suite, `lv` – `ref` only, 2.2e-8.
 
-**Whose the figure is.** The two exact tracers agree to 1e-11, so what `lv` differs by is LensVisualizer's own: it
+**Whose the historical figure is.** At `33ebdb30` the two exact tracers agree to 1e-11, so `lv` differs by its own
+rounding: it
 meets a surface within 1e-9 mm of it. On the rays of the largest figure R2 has LensVisualizer's landings within
 7.6e-10 mm of `ref`'s (optiland's within 4.2e-13 mm), and a landing that is δ off turns its term of the sum by
 2πνδ, 4.7e-7 at 98 cycles/mm: the measured 5.4e-8 is a ninth of that, since the rays of a bundle are not off
@@ -842,9 +846,9 @@ run is LensVisualizer's focus search), and its comparison 48 s in place of 33 s.
 `lvrtc run <suite> --engines lv,ref,optiland --rungs r6a` asks the `rays.trace` requests of R2 to R4 and, after
 them, those of the same fields on a lattice of twice as many cells across; `lvrtc compare` applies the
 comparator's wave estimator ([above](#the-wave-otf)) to each engine's trace of a field and sets the curves of two
-engines against each other: `waveMtf.maxAbs`, gated at 4e-5 with no floor, wherever the lattice may carry the
-figure. `lvrtc run <suite> --rungs r6b` sets LensVisualizer's own diffraction MTF beside the same estimator on
-LensVisualizer's rays, and is recorded. The metrics and their rules are in
+engines against each other: `waveMtf.maxAbs`, gated at 2e-8 under policy version 11 with no floor, wherever the
+lattice may carry the figure. `lvrtc run <suite> --rungs r6b` sets LensVisualizer's own diffraction MTF beside
+the same estimator on LensVisualizer's rays, and is recorded. The metrics and their rules are in
 [the contract](../contract/CONTRACT.md#raystrace); the comparators are `src/compare/raysWaveMtf.ts` and
 `src/compare/mtfWave.ts`, and the engine of R6b `src/engines/lv/waveEngine.ts`.
 
@@ -860,8 +864,11 @@ What was decided in Stage 3.5, and why:
 | R6b's other side | An engine, `wave`: LensVisualizer's launch lattices for each field, traced by LensVisualizer as `lv` answers `rays.trace`, and the estimator on them. It answers `mtf.native` for the method `diffraction`, as `replay` answers the geometric one. | A rung compares two answers to one request. The rays are the ones R6a judges for `lv`, generated by the same function. |
 | R6b's bands | `mtfOnAxis.maxAbs` 0.005, `mtfOffAxis.maxAbs` 0.01, over the fields both answers stand by; a field an answer calls unconverged is written down as `mtfFlagged.maxAbs`, in no band. | The plan's attention band. Each field has the class of its difference: method, numerical (a sampling that did not settle) or unsupported. |
 
-**R6a, measured** (LensVisualizer `33ebdb30`, engine closure `78215d72`; optiland `4e893f53`), on the benchmark in
-its four conditions: 96 runs, 288 fields, LensVisualizer's lattice at 64 cells across the beam (54 to 80 columns)
+**R6a, historical measurement, Stage 3.5** (LensVisualizer `33ebdb30`, engine closure `78215d72`; optiland
+`4e893f53`). Stage 3.12 supersedes this pin with 2e-8: 1.18e-9 `lv/ref`, 1.16e-9 optiland against `ref`,
+1.6e-10 `lv` against optiland, over 208 of 288 judged benchmark fields per pair
+([measured](#measured-at-stage-312)). The old measurement on the benchmark in its four conditions: 96 runs,
+288 fields, LensVisualizer's lattice at 64 cells across the beam (54 to 80 columns)
 with the one at 32 beside it, eleven frequencies, both cuts. Every pair is `PASS`; no ray is dropped in any pair.
 208 fields are judged and 80 flagged (25 undersampled, 17 not converged, 38 both), the same fields in each of the
 three pairs.
@@ -880,7 +887,7 @@ three pairs.
 The largest judged figure is 3.12e-6: `lv` against `ref` on `sony-fe-20mm-f18-g` at f/8, design plane, reference
 line, full field (47.5°), tangential, 30 cycles/mm; `lv` against optiland is 3.11e-6 on the same field. The two
 exact tracers are within 1.15e-9 (`nikon-z-24-70f4s` at its wide end and best focus, reference line, full field,
-tangential, 50 cycles/mm). **The pin**: ten times 3.12e-6, rounded up to one digit, **4e-5**. It is a pin of
+tangential, 50 cycles/mm). **The former pin**: ten times 3.12e-6, rounded up to one digit, **4e-5**. It was a pin of
 LensVisualizer's rounding, its 1e-9 mm at a surface carried into the path, and not of the two exact tracers,
 which agree 2700 times closer. On the flagged fields the figures are of the same size (`lv` up to 1.84e-6,
 optiland against `ref` up to 6.6e-10): they are left out because the lattice is no arbiter, not because they
@@ -902,8 +909,8 @@ and R4 holds it. At f/8, 142 of 144 fields are judged (the two that are not, the
 
 **What it costs.** The finer lattice is 3.5 million rays an engine on the benchmark, four times the run's own:
 4 GB of the store for each engine. From an empty store `lvrtc run --rungs r6a` on three engines takes about
-8 minutes and writes 15 GB; `lvrtc compare`, 3.6 minutes for the three pairs. For that reason R6a and R6b are in
-no committed baseline (the MTF baselines are Stage 3.8), `npm run test:optiland` holds R6a on 17 of the 96 runs
+8 minutes and writes 15 GB; `lvrtc compare`, 3.6 minutes for the three pairs. R6a and R6b have been committed in
+the MTF baselines since Stage 3.8. `npm run test:optiland` holds R6a on 17 of the 96 runs
 (the three lenses of the largest figures and of the uncovered condition, 50 s), and the figures above are of a run
 made once for the pin.
 
@@ -1043,8 +1050,8 @@ their order, and each class has its reasons:
 
 **The chief-landing check.** `chiefLanding.maxAbs` is how far apart the two answers' chief rays land on the plane
 of the case, each engine's own (`imageHeightMm`). Its band in the policy, **1e-7 mm**, is the limit of the
-sorting: the scale of R2, as far as R2's floor lets LensVisualizer land a ray from the arbiter's. A field beyond
-it is two fields.
+sorting. It was set on the scale of R2's former floor; policy version 11 retains this sorting limit but gives
+R2 no floor. A field beyond it is two fields.
 
 **The report** has, for each run, the table of the fields (what each engine says of each, the distance of the
 chief rays, what optiland says of its rim rays, the class and the reason) and a row for every field, cut and
@@ -1083,7 +1090,7 @@ benchmark aside, and those rows stand as `ATTENTION`, class `method`, with the d
 table of the fields. Setting them aside needs a limit on that distance that nothing measured here supplies; it
 is the check Stage 4.2 makes.
 
-R5 is in no committed baseline until Stage 3.8. It is exercised on four runs by `npm run test:optiland`
+R5 is in the benchmark MTF baseline since Stage 3.8. It is exercised on four runs by `npm run test:optiland`
 (`test/integration/optiland/r5.test.ts`), and hermetically on stand-ins (`test/report/r5.test.ts`).
 
 ## Rung R5g: the engines' own geometric MTF
@@ -1147,10 +1154,67 @@ and not measured; a marked field on several lines is not asked again at 512 rays
 fast lens costs optiland minutes, and the slowest request is within a factor of 1.7 of the time after which the
 comparator ends the worker.
 
-R5g is in no committed baseline until Stage 3.8. It is exercised on three runs by `npm run test:optiland`
+R5g is in the benchmark MTF baseline since Stage 3.8. It is exercised on three runs by `npm run test:optiland`
 (`test/integration/optiland/r5g.test.ts`), and hermetically on stand-ins (`test/report/r5g.test.ts`).
 
 ## Phase 3: the MTF benchmark
+
+### Measured at Stage 3.12
+
+Measured on 2026-10-22 at LensVisualizer `ab0fd4cf` (engine closure `94778d3d`, 175 files), optiland `4e893f53`
+(source hash `279af5c5`, fingerprint `bcfbf3916c1103b3…`; the reports record its dirty flag), on the benchmark's
+96 runs and the features suite's 18. Pass 1 measured under policy version 10; pass 2 rewrote all four baselines
+and reports under **policy version 11**, and rewrote the census.
+
+R6a's worst `waveMtf.maxAbs` over the benchmark's **208 of 288 judged fields per pair** is 1.18e-9 `lv/ref`,
+1.16e-9 optiland against `ref`, and 1.6e-10 `lv` against optiland. Its gate is **2e-8**, ten times 1.18e-9,
+rounded up to one digit. The bound now comes from the exact tracers' agreement; the ref–optiland test holds
+an **absolute 2e-9**, including flagged fields, in place of a thousandth of the gate. A flagged field is still
+`PASS` but is not judged and contributes nothing to the pin. The feature suite reaches 4.43e-10 across pairs.
+
+LensVisualizer's 1e-12 mm intersection tolerance puts every R2/R3 residual four to seven orders of magnitude
+inside its gate. The largest `lv/ref` figures over both suites are:
+
+| Rung | Metric | Worst | Unit |
+|---|---|---:|---|
+| R2 | exit direction | 2.06e-14 | 1 |
+| R2 | surface hit | 1.19e-12 | mm |
+| R2 | landing | 8.96e-13 | mm |
+| R3 | chief-relative OPD | 3.39e-9 | waves |
+| R3 | optical path | 3.05e-9 | waves |
+| R3 | optical path to image | 3.11e-9 | waves |
+
+No mask mismatch occurs. The larger of a gate and ten times its residual is the gate itself, where a floor
+cannot be granted: **policy version 11 gives no rung or metric a floor**. The four features baseline records
+of `stop-inside-element-photopic` in R2/R3 changed from `FLOOR` to `PASS`; no MTF record moved. The floor
+machinery stays, tested on synthetic policies. These are two suites; Phase 5's catalog sweep will show whether
+a steep lens still needs one.
+
+On the benchmark R4 reaches 1.2e-11 across pairs and R4f 1.7e-14, with equal sampling and field statuses.
+The rewritten reports give these counts, one **record per run, rung and engine pair** (not per ray set or field):
+
+| Baseline | Records | `PASS` | `RECORDED` | `ATTENTION` | `UNSUPPORTED` |
+|---|---:|---:|---:|---:|---:|
+| [benchmark rays](../reports/benchmark/rays.md) | 1440 | 1440 | 0 | 0 | 0 |
+| [features rays](../reports/features/rays.md) | 270 | 270 | 0 | 0 | 0 |
+| [benchmark MTF](../reports/benchmark/mtf.md) | 1344 | 672 | 460 | 116 | 96 |
+| [features MTF](../reports/features/mtf.md) | 126 | 126 | 0 | 0 | 0 |
+
+There is no `FLOOR`, `FAIL` or `ERROR`. R5 `lv` against optiland has 33 `RECORDED`, 15 `ATTENTION` and
+48 `UNSUPPORTED` runs; R5g 56 `RECORDED` and 40 `ATTENTION` runs (212 and 76 fields); R6b 91 `RECORDED` and
+5 `ATTENTION` runs. The table counts every pair, including the estimator's; photopic FFT requests account for
+the `UNSUPPORTED` records.
+
+**Baseline check reports every record `OK`**: 1440 and 270 rays records, 1344 and 126 MTF records, with no stale,
+refreshable, moved, drift, new or gone record (the saved pass-2 checks). `lvrtc verify` checks the committed
+reports against those baselines without an engine; it does not rerun those live checks. The rewritten
+[census](../reports/census/lv-export.md) records 989 lenses, 319 zooms, 1308 states: 1283 exported, 25 not
+exportable, none thrown.
+
+### Stage 3.8 measurement (history, policy version 10)
+
+The following tables retain the measurement at `33ebdb30`, including its old R6a gate. They are superseded by
+[Stage 3.12](#measured-at-stage-312); the linked reports now hold the rewritten baselines.
 
 Stage 3.8. The benchmark suite in its four conditions (twelve configurations wide open and at the tab's f/8, at
 the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines: 96
@@ -1163,9 +1227,10 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 9367 jobs, 9319 ok, 48 unsupported (optiland's FFT MTF on the photopic lines), none an error; 53 min 42 s on a
 store that held the traces of R2 to R4 and nothing else of these rungs, and 5 min 30 s for `lvrtc compare`, most
 of it the wave estimator of R6a. LensVisualizer `33ebdb30` (clean; engine closure `78215d72`, 151 files);
-optiland `4e893f53` (source hash `279af5c5`); policy version 10. It is what
-[baselines/benchmark.mtf.json](../baselines/benchmark.mtf.json) records (1344 records) and
-[reports/benchmark/mtf.md](../reports/benchmark/mtf.md) shows. `lvrtc baseline check benchmark --mtf` afterwards,
+optiland `4e893f53` (source hash `279af5c5`); policy version 10. This was the measurement first committed in
+[baselines/benchmark.mtf.json](../baselines/benchmark.mtf.json) (1344 records) and
+[reports/benchmark/mtf.md](../reports/benchmark/mtf.md), both since rewritten at Stage 3.12.
+`lvrtc baseline check benchmark --mtf` afterwards,
 with the adapter revisions of `lv`, `ref`, `replay` and `wave` changed by the stage's own code so that those four
 answered every request anew (21 min, optiland's answers the store's), found 1344 records `REFRESHABLE` and not
 one figure, count or kept value other than it was: the baseline written from that second run has the same runs,
@@ -1189,8 +1254,8 @@ and 5.4e-8; on the photopic lines at most 2.9e-8. **R6a is judged on 208 of 288 
 `PASS` in the verdict counts, so the count is of fields and not of pairs: wide open 31 of 72 at the design plane
 and 35 of 72 at best focus (66 of 144), at f/8 71 of 72 at each plane (142 of 144). By condition its worst is
 2.7e-6, 2.8e-6, 3.1e-6 and 3.1e-6. The 80 flagged fields are of the same size (`lv` up to 1.84e-6, the two exact
-tracers 6.6e-10). **The pin of R6a stands**: ten times 3.12e-6, rounded up to one digit, is 4e-5, measured twice
-on all 96 runs.
+tracers 6.6e-10). **The pin of R6a stood at Stage 3.8**: ten times 3.12e-6, rounded up to one digit, was 4e-5,
+measured twice on all 96 runs; Stage 3.12 re-pins it at 2e-8.
 
 **The recorded rungs.** Nothing is gated, and nothing is an error.
 
@@ -1221,7 +1286,8 @@ R5's 48 photopic runs are `UNSUPPORTED` (`lines.polychromatic`). R6b's five mark
 open at the design plane.
 
 **The table the plan asks for**, fields 0, 0.5 and 1 at 10, 30 and 50 cycles/mm, sagittal and tangential, the
-three estimates of each rung side by side with each method's own flag, is in
+three estimates of each rung side by side with each method's own flag, was committed at Stage 3.8 and is now
+rewritten at Stage 3.12 in
 [reports/benchmark/mtf.md](../reports/benchmark/mtf.md): 288 rows of R5 (48 reference-line runs) and 576 of R5g
 (96 runs). At those three frequencies, `lv` minus optiland:
 
@@ -1778,24 +1844,27 @@ rungs R0, R1 and R2 through the commands: the contract's cases and systems made 
 need optiland only, and the benchmark and feature suites on `lv`, `ref` and `optiland`, which need LensVisualizer
 too. `r1.test.ts` also asks the three engines in its own process, without ray sets: at every focus station
 LensVisualizer certifies, and optiland against `ref` over every lens of the catalog that exports, a zoom at both
-ends. `r2.test.ts` holds every pair of a suite to `PASS` or `FLOOR` with no ray stopped by one engine and passed
-by another, and optiland to the agreement with `ref` that the floor rule asks of a witness; it runs each suite a
+ends. `r2.test.ts` holds every pair of a suite to `PASS` under policy version 11, with no ray stopped by one
+engine and passed by another, and optiland to its measured bounds against `ref`; it runs each suite a
 second time with optiland without the JIT, and counts the worker processes a run starts, which is one.
 `r3.test.ts` runs each suite on all four rungs, as Phase 2 states its benchmark, holds every pair of R3 to `PASS`
-or `FLOOR` and optiland's paths to 1e-7 waves of `ref`'s, to the last surface, to the image plane and relative to
+and optiland's paths to 1e-7 waves of `ref`'s, to the last surface, to the image plane and relative to
 the chief ray; a request of its own gives the contract's cases a chief ray, which their probe lattices lack, and
 another states the same rays with directions 4.5e-13 longer and holds each engine to the same paths.
 `stations.test.ts` holds the rays of every focus station LensVisualizer certifies, which diverge from an object
-point, to both rungs. What the three share is `traced.ts`. The Python tests of the path are `test_path.py`: what
-optiland's sum is made of, and closed forms of a plate, of the two Cartesian conics, of the aplanatic points of a
+point, to both rungs. LV and `ref` must fail no ray; an optiland failure is allowed only on an asphere where both
+block that same ray at that same surface, with each ray named in a diagnostic (the Olympus focus-station case
+in [gotchas.md](gotchas.md)). What the three share is `traced.ts`. The Python tests of the path are `test_path.py`:
+what optiland's sum is made of, and closed forms of a plate, of the two Cartesian conics, of the aplanatic points of a
 sphere, of a lens of two spheres traced by hand and of a step backwards; and what optiland makes of a direction
 that is no unit vector, in its steps and in its refraction. Each test skips with the reason when
 optiland, or LensVisualizer where it is needed, is not configured or cannot be used.
 
 ## Phase 2: R0 to R3 on three engines
 
-Phase 2 of the plan ends with the two suites on `lv`, `ref` and `optiland` through rungs R0 to R3, at the
-reference line and the five photopic lines, every gated pair `PASS` or `FLOOR`.
+Historically, Phase 2 closed with the two suites on `lv`, `ref` and `optiland` through rungs R0 to R3, at the
+reference line and the five photopic lines, every gated pair `PASS` or `FLOOR`. The measurement below is of
+`c05a2ab7` under policy version 5; [Stage 3.12](#measured-at-stage-312) supersedes its floor verdicts.
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3
@@ -1846,12 +1915,13 @@ fails one. The largest figure of each kind, of optiland against `ref` and, after
 - **What these tables do not say** is in the sections above and in [docs/gotchas.md](gotchas.md#optiland): on
   some lenses outside the suites optiland loses rays or carries them where the case has no surface, which fails
   its pairs in R2, and on four it is far enough from `ref` to withhold a floor from LensVisualizer, in R2 and in
-  R3 until policy version 5 changed what a witness may withhold. The committed record of the two suites is
+  R3 until policy version 5 changed what a witness may withhold. The current record, rewritten at Stage 3.12, is
   [reports/benchmark/rays.md](../reports/benchmark/rays.md) and
   [reports/features/rays.md](../reports/features/rays.md), each rendered from its baseline.
 
-The tests that hold all of it are `npm run test:optiland`: `r0.test.ts` to `r3.test.ts` and `stations.test.ts`
-in `test/integration/optiland`. `r3.test.ts` runs the command above on each suite, all four rungs at once, and
+The rungs are exercised by `npm run test:optiland`: `r0.test.ts` to `r3.test.ts` and `stations.test.ts`
+in `test/integration/optiland`. They now require `PASS` under policy version 11; the figures above are history.
+`r3.test.ts` runs the command above on each suite, all four rungs at once, and
 `stations.test.ts` the two rungs of traced rays.
 
 ## Baselines
@@ -1920,7 +1990,12 @@ or to an adapter (`STALE(engine)`), after LensVisualizer's engine files or the l
 a suite changes. `npm run test:optiland` runs `baseline check` on both suites and holds every record that is not
 stale to `OK`; a stale record is reported there and fails nothing.
 
-**Since Stage 3.2** the baselines are of policy version 6 and of LensVisualizer `33ebdb30` (the same engine
+**Current, Stage 3.12.** All four baselines are of policy version 11 and LensVisualizer `ab0fd4cf` (closure
+`94778d3d`, 175 files), with the census rewritten too. The saved baseline checks report every record `OK`;
+[the measurement and verdict counts](#measured-at-stage-312) distinguish baseline records from request pairs.
+The paragraphs below retain the earlier baseline deliveries.
+
+**At Stage 3.2 (history)** the baselines were of policy version 6 and of LensVisualizer `33ebdb30` (the same engine
 closure, `78215d72`). The benchmark's holds the suite's 96 runs
 ([the benchmark in four conditions](#the-benchmark-in-four-conditions)): 1152 records, all `PASS`. The 288 records
 of the 24 runs it held before, and the 216 of the feature suite (212 `PASS`, 4 `FLOOR`), are what they were in
@@ -1929,7 +2004,7 @@ focus. From an empty store `lvrtc baseline check benchmark`, which is the suite'
 comparison, takes about two and a half minutes, and the feature suite's 24 s (measured within
 `npm run test:optiland`).
 
-**Since Stage 3.3** the baselines are of policy version 7 and hold R4 beside R0 to R3: 1440 records of the
+**At Stage 3.3 (history)** the baselines were of policy version 7 and gained R4 beside R0 to R3: 1440 records of the
 benchmark (96 runs, five rungs, three pairs of engines), all `PASS`, and 270 of the feature suite (266 `PASS`,
 4 `FLOOR`). The 1152 and 216 records of R0 to R3 are what they were in every verdict, figure and count; 288 and 54
 are new, those of R4, at the same LensVisualizer `33ebdb30` and the same fingerprints and adapter revisions. R4 is
@@ -1956,8 +2031,9 @@ run by name and case hash; `lvrtc baseline write`, `baseline check` and `verify`
 | Contract | 1.0 | 1.1: each metric's `measured`, a rung's `steps`, `bands` and `sets` |
 | From an empty store | about 3 minutes for the benchmark | about an hour and 15 GB for the benchmark |
 
-**Why a file of its own.** The rays baseline, its report and their verification stay what they were, byte for
-byte. A check of the rays rungs stays a matter of minutes, where the MTF rungs cost an hour from an empty store
+**Why a file of its own.** The rays baseline has its own report and verification; adding MTF baselines at
+Stage 3.8 left those byte-identical then. Stage 3.12 rewrote both kinds. A check of the rays rungs stays a matter
+of minutes, where the MTF rungs cost an hour from an empty store
 and need optiland for a third of it. And an MTF baseline holds more than verdicts and worst figures: a recorded
 rung has no gate, so what is worth keeping of it is the table. R4 is in both: its requests are R2's and R3's, so
 it costs the rays baseline nothing, and the MTF report is rendered from the MTF baseline alone and has to show it.

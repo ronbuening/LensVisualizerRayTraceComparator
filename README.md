@@ -11,17 +11,17 @@ prints the MTF that LensVisualizer's own MTF tab shows. The first external engin
 and answers rungs R0 to R3: the built system, its first-order data, the same rays traced by optiland's own tracer
 and their optical paths, on which the three engines agree on both suites
 ([measured](docs/REFERENCE.md#phase-2-r0-to-r3-on-three-engines)). Baselines of those runs close the phase.
-Phase 3, MTF, has begun: the comparator's own geometric estimator reproduces LensVisualizer's geometric MTF on a
-replay of LensVisualizer's sampling to 1.3e-14, with every grid size and ray count the same, on the benchmark wide
-open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4f,
+Phase 3, MTF, is delivered through Stage 3.12: the comparator's own geometric estimator reproduces LensVisualizer's
+geometric MTF on a replay of LensVisualizer's sampling to 1.7e-14, with every grid size and ray count the same,
+on the benchmark wide open and at f/8, at the design plane and at LensVisualizer's best focus (rung R4f,
 [measured](docs/REFERENCE.md#the-mtf-recipe-the-replay-and-rung-r4f)); and the geometric MTF of the same rays, as
-LensVisualizer, the reference tracer and optiland each land them, agrees within 5.4e-8 on the same benchmark, the
-two exact tracers within 1.2e-11 (rung R4, gated at 1e-7,
+LensVisualizer, the reference tracer and optiland each land them, agrees within 1.2e-11 on the same benchmark
+(rung R4, gated at 1e-7,
 [measured](docs/REFERENCE.md#rung-r4-the-geometric-mtf-of-the-same-rays)). The comparator's wave estimator, Hopkins'
 autocorrelation of the pupil function from the optical paths of the same rays, is held to closed forms
 ([the wave OTF](docs/REFERENCE.md#the-wave-otf)), and on the three engines' traces of the same rays it agrees
-within 3.2e-6 wherever its lattice samples the wavefront, the two exact tracers within 1.2e-9 (rung R6a, gated at
-4e-5; a fast lens wide open is undersampled and not judged). Beside LensVisualizer's own diffraction MTF it stays
+within 1.2e-9 wherever its lattice samples the wavefront (rung R6a, gated at 2e-8; a fast lens wide open is
+undersampled and not judged). Beside LensVisualizer's own diffraction MTF it stays
 within the plan's bands at f/8 and marks five of 96 runs for attention (rung R6b, recorded;
 [measured](docs/REFERENCE.md#rungs-r6a-and-r6b-the-wave-mtf)). The engine `optiland` answers with optiland's own
 FFT MTF, one line and one field at a time, a field it cannot compute being a row with the reason
@@ -33,13 +33,15 @@ does the same for the geometric MTF, which some manufacturers publish alone: Len
 own, on the reference line and on the photopic lines, recorded and never gated. At 10, 30 and 50 cycles/mm no row
 at f/8 is outside the bands (at most 0.0087); wide open 69 of 144 fields are marked
 ([measured](docs/REFERENCE.md#rung-r5g-the-engines-own-geometric-mtf)). A report states what it does not cover,
-and its wording is linted.
+and its wording is linted. These figures are measured at Stage 3.12: LensVisualizer `ab0fd4cf` (engine closure
+`94778d3d`, 175 files), optiland `4e893f53`, policy version 11. All four baselines and the census are rewritten;
+baseline check reports every record `OK` ([measured](docs/REFERENCE.md#measured-at-stage-312)).
 
 ## Requirements
 
 - Node `>=24.15.0 <25`. The sources are TypeScript run directly by Node; there is no build step.
 - Python `>=3.10` as `python3`, for the worker kit and its tests. Nothing is installed into it.
-- A LensVisualizer checkout, for anything that involves a real lens.
+- A LensVisualizer checkout at rewrite merge `460f841f` or later, for anything that involves a real lens.
 - A Python interpreter that can import optiland, for the engine `optiland`. Nothing is installed into it and
   nothing is written into the optiland checkout.
 
@@ -339,9 +341,15 @@ both ends.
 | R1 | focal length, focal and principal points, back focus, pupils | 1e-9 mm |
 | R2 | the same rays in every engine: hits, exit direction, landing, which rays pass | 1e-8 mm; 1e-9 in direction; no ray passing in one engine only |
 | R3 | optical path of those rays | 2e-5 waves |
+| R4 | geometric MTF of the same rays | 1e-7 |
+| R4f | replay of LensVisualizer's geometric MTF sampling | 1e-9; equal sampling and field statuses |
+| R5, R5g | the engines' own diffraction and geometric MTF | recorded; attention bands 0.005 on axis, 0.01 off axis |
+| R6a | wave MTF of the same rays where the lattice can arbitrate | 2e-8 |
+| R6b | LensVisualizer's diffraction MTF beside the wave estimator | recorded; attention bands 0.005 on axis, 0.01 off axis |
 
-Verdicts are `PASS`, `FLOOR` (a pass: LensVisualizer's own intersection tolerance, confirmed by `ref`), `FAIL`,
-`BLOCKED`, `UNSUPPORTED` and `ERROR`. MTF rungs arrive with Phase 3.
+Verdicts are `PASS`, `FLOOR` (a pass under a policy's numerical-floor rule), `FAIL`, `BLOCKED`, `UNSUPPORTED`,
+`ERROR`, `RECORDED` and `ATTENTION`. Policy version 11 gives no rung or metric a floor: a gated pair above its
+limit is `FAIL`. The floor machinery remains available to a future policy.
 
 ## More
 
