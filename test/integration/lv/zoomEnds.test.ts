@@ -266,7 +266,7 @@ test(
       // The lens is the kind of zoom it is here for, by LensVisualizer's own functions.
       const runtime = api.buildLens((await ask.binding.lens(key)).data);
       const [stopWide, stopTele] = [api.wideOpenStopAtZoom(0, runtime), api.wideOpenStopAtZoom(1, runtime)];
-      const [fWide, fTele] = [api.fopenAtZoom2(0, runtime), api.fopenAtZoom2(1, runtime)];
+      const [fWide, fTele] = [api.fopenAtZoomClamped(0, runtime), api.fopenAtZoomClamped(1, runtime)];
       const is = fWide === fTele ? "constant-aperture" : stopWide === stopTele ? "fixed-iris" : "variable-aperture";
       assert.equal(is, kind, `${key}: f/${fWide} to f/${fTele}, stop ${stopWide} mm to ${stopTele} mm`);
       if (kind !== "fixed-iris") assert.notEqual(stopWide, stopTele, key);

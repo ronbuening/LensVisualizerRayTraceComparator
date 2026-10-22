@@ -46,13 +46,34 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ## LensVisualizer
 
+### The rewritten public seam widens the closure
+
+- **Where.** LV's public optics barrels, after rewrite merge `460f841f`; comparator manifest uses barrels where
+  available and defining deep modules otherwise. At `643ef5d0` it loads 175 engine files, including non-MTF analysis.
+- **Effect.** A change in those analysis modules can move the engine closure even when MTF values stay the same.
+  The prepared-state cache retains two lenses; sweeping a catalog can evict a previous lens (performance only).
+- **Handled.** Fingerprint the actual import closure; refuse a pre-rewrite LV plainly. Stage 3.12 measures the
+  new numerics and rewrites baselines separately.
+- **Class.** convention.
+
+### V2 controls and prepared stop radii
+
+- **Where.** V2 zooms have `zoom.stations`; finite stations are `focus.conjugates` with station/keyframe indices.
+  A derived stop's canonical `source.sd` is the placeholder 0. `fopenAtZoom` is the unclamped station function;
+  the UI imports `fopenAtZoomClamped as fopenAtZoom`.
+- **Effect.** Reading V1 `zoomPositions` silently misses both zoom ends. Reading `source.sd` gives no physical
+  stop radius, and using the plain aperture function loses the UI's clamping.
+- **Handled.** Detect two or more V2 stations, resolve finite station controls, read the prepared stop surface's
+  `sd`, and import `fopenAtZoomClamped`. Preserve the hook's multiplication/division order exactly.
+- **Class.** data.
+
 ### The sag function is finite beyond the end of a conic
 
-- **Where.** `conicPolySag` and `sag` in `src/optics/internal/surfaceMath.ts` clamp the root: where
+- **Where.** `conicPolySag` and `sag` in `src/optics/geometry/surfaceProfile.ts` clamp the root: where
   `1 − (1 + K) c² h²` is not above 0 they take it as `1e-12` (0 for a sphere), so the sag is a number at any height.
   The surface profile says where the surface really ends, `finiteRadiusLimit()`: `|R|` for a sphere and
   `1 / sqrt((1 + K) c²)` for a conic that closes. LensVisualizer's own intersection (`evaluateProfile` in
-  `src/optics/math/intersection.ts`) evaluates a point beyond that height as no surface.
+  `src/optics/geometry/intersect.ts`) evaluates a point beyond that height as no surface.
 - **Effect.** The contract's sag is NaN there. An echo of `profile.sag(r)` alone would report a finite sag where
   every other engine reports none, and R0 would fail on a surface whose clear aperture is authored wider than the
   surface is.
@@ -64,7 +85,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The stored pupil constants are not paraxial
 
-- **Where.** `epZRelStop`, `xpZRelLastSurf` and `xpSD` of a RuntimeLens are found in `src/optics/runtimeLens.ts`
+- **Where.** `epZRelStop`, `xpZRelLastSurf` and `xpSD` of a RuntimeLens are found in `src/optics/first-order/lensConstants.ts`
   with real rays a small height and angle off the axis; `EP.epSD` is nominal, focal length over twice the
   f-number. All four are computed once per lens and zoom station, at infinity focus and with the authored indices,
   and read through `epZRelStopAtZoom`, `xpZRelLastSurfAtZoom`, `xpAtZoom` and `epAtZoom`, which interpolate
@@ -80,19 +101,19 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The first-order module answers for the authored indices only
 
-- **Where.** `computeSystemMatrix2` and `computeCardinalElements2` in `src/optics/first-order/` trace
+- **Where.** `computeSystemMatrix` and `computeCardinalElementsFromState` in `src/optics/first-order/` trace
   `state.surfaces`, whose `nd` is the authored index: the d line, or the e line of an all-e lens.
 - **Effect.** LensVisualizer has no cardinal points at the photopic lines, nor at the reference line of a lens that
   mixes d- and e-referenced glasses, which it traces with anchored indices.
-- **Handled.** `lv` runs the kernel under that module, `traceParaxialSurfaces2`, on rows of radius, gap and the
-  line's index, and LensVisualizer's own `buildCardinalElementsFromMatrix2` on the matrix. At a line of authored
-  indices the result is `computeCardinalElements2(state)` to the last bit, on all 868 lenses that export.
+- **Handled.** `lv` runs the kernel under that module, `paraxialTrace`, on rows of radius, gap and the
+  line's index, and LensVisualizer's own `buildCardinalElementsFromMatrix` on the matrix. At a line of authored
+  indices the result is `computeCardinalElementsFromState(state)` to the last bit, on all 868 lenses that export.
 - **Class.** method.
 
 ### The paraxial kernel always starts in air
 
-- **Where.** `traceParaxialSurfaces2` in `src/optics/math/paraxial.ts` starts every ray with the index 1 at the
-  first row it is given.
+- **Where.** `traceParaxialSurfaces` in `src/optics/math/paraxial.ts` (exported as `paraxialTrace` by the optics
+  barrel) starts every ray with the index 1 at the first row it is given.
 - **Effect.** The rear group cannot be traced from the stop by handing the kernel the rows behind the stop: a stop
   inside an element (`zeiss-hologon-15f8`) would be traced as if it stood in air.
 - **Handled.** The exit pupil is traced from a flat row in front that carries the stop's own index and gap: it
@@ -102,7 +123,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The paraxial kernel is handed radii, and no lens has a term below A3
 
-- **Where.** `traceParaxialSurfaces2` takes rows of radius, gap and index; `ASPHERIC_COEFFICIENT_SCHEMA` in
+- **Where.** `paraxialTrace` takes rows of radius, gap and index; `ASPHERIC_COEFFICIENT_SCHEMA` in
   `src/types/asphericSchema.ts` lists the conic constant, the even coefficients `A4` to `A20` and the odd ones
   `A3` to `A19`, and LensVisualizer's validation of a lens file knows no other key.
 - **Effect.** None today. The contract allows a term of any power from 1, counts twice the coefficient of a term
@@ -119,7 +140,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### Afocal is an absolute test
 
-- **Where.** `buildCardinalElementsFromMatrix2` returns nothing when the matrix element `C`, the system's power in
+- **Where.** `buildCardinalElementsFromMatrix` returns nothing when the matrix element `C`, the system's power in
   1/mm, is below `1e-12` in magnitude.
 - **Effect.** The reference engine calls a system afocal when its power is below `1e-12` of the sum of its
   surfaces' powers. A system between the two tests would be answered `unsupported` by one engine and not by the
@@ -133,7 +154,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `L.EP` and `L.totalTrack` are those of the first station or the largest over all.
 - **Effect.** A value read from the RuntimeLens is that of another zoom position.
 - **Handled.** The comparator reads the prepared state, and takes what only the lens has through LensVisualizer's
-  accessors at the state's zoom position (`fopenAtZoom2`, `wideOpenStopAtZoom`, `epAtZoom2`).
+  accessors at the state's zoom position (`fopenAtZoomClamped`, `wideOpenStopAtZoom`, `epAtZoomClamped`).
 - **Class.** data.
 
 ### A rear plate without a published rim is a surface that does not clip
@@ -144,7 +165,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   marked `clips: false` (`CompiledSurface.clips`, `src/optics/types.ts`): `activeSemiDiameter` in
   `src/optics/trace/aperture.ts` then has no semi-diameter for them, so `evaluateAperture` calls no height
   outside, and the two searches for the surface that limits the half field skip them (`buildLens` in
-  `runtimeLens.ts`, `computeFieldGeometryAtState2` in `field/chiefRay.ts`). Their `sd` is left as an envelope
+  `first-order/lensConstants.ts`, `computeFieldGeometryAtState` in `field/geometry.ts`). Their `sd` is left as an envelope
   that ray launch and intersection bounds read. A plate with a published `sd` clips as before. Up to `33ebdb30`
   the generated rim clipped like any other.
 - **Effect.** The contract could state no such surface, and the exporter's guard refused every lens that has one
@@ -177,7 +198,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
 
-- **Where.** `buildLens` in `src/optics/runtimeLens.ts` sets the stop surface's `sd` to the height at the stop of
+- **Where.** `buildLens` in `src/optics/first-order/lensConstants.ts` sets the stop surface's `sd` to the height at the stop of
   a real marginal ray of the nominal entrance pupil (`S[stopIdx].sd = nomRealY`), and for a zoom the same at each
   station; only a lens that authors its iris (`zoomStopSemiDiameters`, a fixed iris) has the number it states.
   `wideOpenStopAtZoom` hands that out, and it is the stop radius of a case.
@@ -199,7 +220,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 - **Where.** `traceSequential` in `src/optics/trace/sequentialTrace.ts` returns `terminalPoint`, the hit on the last
   surface, `terminalDirection`, the direction behind it, and `reachedImagePlane: false`. Every caller carries the
-  ray on by itself; the MTF's own helper is `mtfImagePoint` in `src/optics/analysis/mtfTracing.ts`, which takes an
+  ray on by itself; the MTF's own helper is `mtfImagePoint` in `src/optics/analysis/mtf/mtfTracing.ts`, which takes an
   exit point up to 1e-9 mm behind the plane for a point of it, since a rear plate can end on the image plane.
 - **Effect.** LensVisualizer has no image point and no optical path to the image to report: they depend on who
   projects, and two projections can differ where a plate ends on the plane.
@@ -224,8 +245,8 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### A hit lies within 1e-9 mm of its surface, not on it
 
-- **Where.** `intersectProfile` in `src/optics/math/intersection.ts` iterates until the z of the ray is within
-  `INTERSECTION_TOLERANCE` of the z of the surface (`src/optics/constants.ts`: 1e-9 mm) and takes that point for
+- **Where.** `intersectProfile` in `src/optics/geometry/intersect.ts` iterates until the z of the ray is within
+  `INTERSECTION_TOLERANCE` of the z of the surface (now in `src/optics/math/constants.ts`; historically 1e-9 mm) and takes that point for
   the hit. The tracer has no option for it. A plane is met in closed form, and a hit that lies up to the tolerance
   behind the start of its stretch is moved onto the start.
 - **Effect.** Every hit, and every length and landing behind it, carries an error of up to that size, which no
@@ -332,7 +353,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   `a52a7b8e`, 152 files) `INTERSECTION_TOLERANCE` is 1e-12 mm, where it was 1e-9, with 48 iterations for 32. Where
   rounding keeps the residual from reaching it, `intersectProfile` accepts an iterate that can no longer move,
   within a bound made of its own operands (`sagResidualRoundoff`, `planeResidualRoundoff` in
-  `src/optics/math/intersectionTolerance.ts`); a hit on a plane is held to the same. The two entries above describe
+  `src/optics/geometry/intersectTolerance.ts`); a hit on a plane is held to the same. The two entries above describe
   LensVisualizer up to `33ebdb30`.
 - **Effect.** What the tolerance left in every figure is three orders smaller. The committed baselines, of
   `33ebdb30`, against the same suites at `31c34396`, `lv` against `ref` (against optiland every figure is within
@@ -386,7 +407,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 - **Where.** `finalizeTraceResult` in `src/optics/trace/utils.ts` gives every trace with a failure reason the
   status `failed`: a reflection as well as an intersection that was not found (`noBracket`,
   `noConvergedIntersection`). What is physical and what is numerical is decided afterwards, by
-  `mtfTraceClassification` in `src/optics/analysis/mtfRayClassification.ts`: a clip and a total internal
+  `mtfTraceClassification` in `src/optics/analysis/mtf/mtfRayClassification.ts`: a clip and a total internal
   reflection are `blocked`; a missed surface is `blocked` only where an independent test proves that the ray
   passes outside the surface's clear cap, and `failed` otherwise.
 - **Effect.** Read by its status alone, a ray that passes a lens 60 mm off the axis and meets nothing would be a
@@ -401,7 +422,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### Beyond a clear aperture a hit is computed by rules of LensVisualizer's own
 
-- **Where.** `intersectSurfaceProfile` in `src/optics/math/intersection.ts` restricts an asphere to its authored
+- **Where.** `intersectSurfaceProfile` in `src/optics/geometry/intersect.ts` restricts an asphere to its authored
   cap (`selectAsphericCapHit`), the sag keeps a conic real beyond its end by clamping the root, and the search for
   a surface runs forward only, between bounds taken from the clear semi-diameter (`sequentialSurfaceMinT`,
   `sequentialSurfaceMaxT` in `src/optics/trace/pathPlanner.ts`). A ray stopped by an aperture still has a hit on
@@ -468,7 +489,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The MTF bundle traces half its lattice and mirrors the rest
 
-- **Where.** `traceMtfBundle` in `src/optics/analysis/mtfTracing.ts` starts at `grid.columns / 2` when every
+- **Where.** `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts` starts at `grid.columns / 2` when every
   profile is symmetric in x, and writes each ray a second time with x negated (`mirrorPupilRay`). The lattice has
   an even number of columns, so no cell is on the meridional plane, and the chief ray, `mtfLaunchRay(launch, 0, 0)`,
   is no cell of it.
@@ -515,7 +536,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   that are not scaled by the f-number.
 - **Handled.** `src/engines/lv/tabRequest.ts` restates the hook and the tab expression by expression, on the
   functions and defaults they read, which the binding imports (`fNumberAtStopdown`,
-  `computeAnalysisFieldGeometryAtState2`, `resolveMtfSpectrum`, `DEFAULT_MTF_PREFERENCES`, `MTF_FREQUENCIES`).
+  `computeAnalysisFieldGeometryAtState`, `resolveMtfSpectrum`, `DEFAULT_MTF_PREFERENCES`, `MTF_FREQUENCIES`).
   The profile `lv-tab-default` of `mtf.native` is that request. Source canaries pin every restated expression,
   the defaults and the worker's call. On the 12 benchmark configurations the answer is `computeMtf` of a request
   spelled out a second time in the test, in every bit, and the lens rebuilt as the worker rebuilds it gives the
@@ -544,8 +565,8 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The geometric OTF is a sum about the chief ray of the first line, and its magnitude is cut off at 1
 
-- **Where.** `geometricOtf`, `combineOtfs` and `otfMagnitude` in `src/optics/analysis/mtfMath.ts`, as `fieldAtGrid`
-  in `src/optics/analysis/mtf.ts` calls them (read at `c05a2ab7`).
+- **Where.** `geometricOtf`, `combineOtfs` and `otfMagnitude` in `src/optics/analysis/mtf/mtfMath.ts`, as `fieldAtGrid`
+  in `src/optics/analysis/mtf/mtf.ts` calls them (read at `c05a2ab7`).
 - **Effect.** Four conventions and three habits, none of them exported as a rule. The conventions: the phase of a
   ray is `-2 pi nu u`; the cut along image x is the sagittal one and the cut along y the tangential one; `u` is
   measured from one point for every line of the spectrum, the landing of the chief ray at the first line, which
@@ -567,9 +588,9 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The chief ray of an MTF field is one launch for every line
 
-- **Where.** `prepareMtfFieldLaunch` and `traceMtfBundle` in `src/optics/analysis/mtfTracing.ts` ("One field's
-  chief-ray launch, shared by every wavelength and refinement level"), and `solveChiefRay2` in
-  `src/optics/field/chiefRay.ts`, whose residual at the stop is `CHIEF_RAY_RESIDUAL_TOLERANCE`, 1e-7 mm (read at
+- **Where.** `prepareMtfFieldLaunch` and `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts` ("One field's
+  chief-ray launch, shared by every wavelength and refinement level"), and `solveChiefRay` in
+  `src/optics/field/chiefRaySolve.ts`, whose residual at the stop is `CHIEF_RAY_RESIDUAL_TOLERANCE`, 1e-7 mm (read at
   `33ebdb30`).
 - **Effect.** LensVisualizer solves the launch of a field's chief ray once and traces that one ray at every line.
   The reference point of a field, and the `imageHeightMm` its MTF states, is where that launch lands at the first
@@ -589,7 +610,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### The MTF of a field is decided grid by grid, and the footprint of one grid is the next grid's
 
-- **Where.** `traceField`, `fieldAtGrid` and `refineMtfField` in `src/optics/analysis/mtf.ts`, the constants of
+- **Where.** `traceField`, `fieldAtGrid` and `refineMtfField` in `src/optics/analysis/mtf/mtf.ts`, the constants of
   `mtfConstants.ts` and `expandMtfFootprint` in `mtfFootprint.ts` (read at `33ebdb30`). Only `refineMtfField`,
   `expandMtfFootprint`, `traceMtfBundle` and the constants are exported; the loop that ties them together is not.
 - **Effect.** Which rays an MTF value is of is the outcome of a walk, not of a setting. A field starts at 16 cells
@@ -612,7 +633,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### Two sums of the same terms differ in the fourteenth place
 
-- **Where.** `geometricOtf` in `src/optics/analysis/mtfMath.ts`: plain sums in the order of the rays, and for a
+- **Where.** `geometricOtf` in `src/optics/analysis/mtf/mtfMath.ts`: plain sums in the order of the rays, and for a
   list of three or more evenly spaced frequencies one phasor a ray, turned from frequency to frequency by a
   rotation whose cosine and sine are rounded once.
 - **Effect.** LensVisualizer's default list is 51 frequencies, 0 to 100 cycles/mm in steps of 2, so every value
@@ -632,7 +653,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### LensVisualizer has two wave estimates, and the one it shows reads no optical path
 
-- **Where.** `shearedOtf` in `src/optics/analysis/mtfShearedOtf.ts`, the method "diffraction" of the MTF tab, and
+- **Where.** `shearedOtf` in `src/optics/analysis/mtf/mtfShearedOtf.ts`, the method "diffraction" of the MTF tab, and
   `waveLatticeOtf` in `mtfWavefront.ts`, which LensVisualizer's tests and chart report hold the first against and
   which is no product path.
 - **Effect.** Both are Hopkins' autocorrelation on the launch lattice with the shear `lambda nu` in direction
@@ -662,7 +683,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### LensVisualizer's best focus is of a stop, of lines and of a grid cap
 
-- **Where.** `resolveMtfFocus` in `src/optics/analysis/mtf.ts` and `findAxialBestFocus` in `mtfFocus.ts`: one
+- **Where.** `resolveMtfFocus` in `src/optics/analysis/mtf/mtf.ts` and `findAxialBestFocus` in `mtfFocus.ts`: one
   search on the axial bundle, traced at every line of the request's spectrum over a grid of
   `min(MTF_FOCUS_GRID, the last size of the ladder)` cells, 64 unless the cap is 32. It runs for every request and
   is applied to every field when the focus mode is `best-axial`.
@@ -745,7 +766,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### A field can lie outside the model
 
-- **Where.** `resolveMtfFieldTargets` in `src/optics/analysis/mtfFields.ts` resolves a fraction of the reference
+- **Where.** `resolveMtfFieldTargets` in `src/optics/analysis/mtf/mtfFields.ts` resolves a fraction of the reference
   image height, which is the format corner where a lens declares a format, and marks it `outsideModel` when the
   height lies beyond the last one the authored clear apertures let light reach.
 - **Effect.** The default fields of a ray rung are the fractions 0, 0.5 and 1, and the last of them has no rays on
@@ -799,7 +820,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 ### The tele end is the zoom slider at 1, not the last station to the bit
 
 - **Where.** `prepareRuntimeState` places a variable gap between two zoom stations as `a + (b - a) * t` (`lerp`,
-  in `resolveVariableThickness` of `src/optics/prescription/variables.ts`). At the tele end `t` is 1, and
+  in `resolveVariableThickness` of `src/optics/state/stationTables.ts`). At the tele end `t` is 1, and
   `a + (b - a)` is not always `b` in doubles.
 - **Effect.** At LensVisualizer `ed78cf40`, 278 of the 1320 variable gaps of the 297 zooms at zoom 1, on 229
   lenses, are not the gap authored for the last station: `1.4900000000000002` for `1.49`, at most 3.6e-15 mm off.
@@ -814,7 +835,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### LensVisualizer's launch lattice has more columns than the cells it is asked for
 
-- **Where.** `mtfLaunchGrid` in `src/optics/analysis/mtfTracing.ts`: the step is of the beam,
+- **Where.** `mtfLaunchGrid` in `src/optics/analysis/mtf/mtfTracing.ts`: the step is of the beam,
   `max(beamWidth, beamHeight) / n`, and the lattice is laid over the whole scan window of the footprint, which is
   wider than the beam: `2 ceil(halfWidth / step)` columns.
 - **Effect.** A lattice "at 64 cells" has 54 to 80 columns on the benchmark (72 for most fields), and one "at 32"
@@ -826,7 +847,7 @@ by a tracer written afresh, on every ray both engines land of each set and not o
 
 ### LensVisualizer stops refining a field where its own figure stops moving, and that is often 32 cells
 
-- **Where.** `refineMtfField` in `src/optics/analysis/mtf.ts`: the grid of a field is the first of the ladder
+- **Where.** `refineMtfField` in `src/optics/analysis/mtf/mtf.ts`: the grid of a field is the first of the ladder
   whose curves are within 0.01 of the grid before at the frequencies up to 50 cycles/mm
   (`MTF_CONVERGENCE_TOLERANCE`, `MTF_CONVERGENCE_BAND_LPMM`); its `maxDelta` is 1e-3 to 1e-2 where it stops.
 - **Effect.** At f/8 that is 32 cells for 119 of the 144 fields of the benchmark. The diffraction estimate of such
@@ -1576,7 +1597,7 @@ shares no code with any engine.
   Newton's method at the distance to the base conic and iterates on `sag(x, y) - z` until every ray of the batch is
   within the tolerance, or 100 times. Nothing restricts it to the clear aperture, and what it ends with is the
   answer.
-- **Effect.** Three things, each measured on lenses of the catalog that are in no suite.
+- **Effect.** Three things, first measured on lenses of the catalog that are in no suite.
   **No start.** Where the line misses the base conic there is no start and no hit, whether or not the line meets
   the surface. A phone lens has surfaces whose polynomial undoes most of a steep base: surface 11 of
   `apple-iphone-12-main-wide` is a paraboloid that would be 1.1 mm deep at its rim and is 0.09 mm deep. optiland
@@ -1603,6 +1624,16 @@ shares no code with any engine.
   the count of failed rays beside a verdict. A test builds a paraboloid made shallow by a term and finds the ray
   lost that the contract passes. With a NaN in a batch the iteration also runs all its 100 steps for every ray of
   it, which is why a set takes 10 ms on most lenses and 200 ms on these.
+  At LV `ab0fd4cf` (closure `94778d3d`, 175 files) and optiland `4e893f53`, the close-focus station 6 of
+  `olympus-mzuiko-digital-ed-17mm-f12-pro` has two more such failures: rays 10 and 29 of request
+  `5e3fdbd2d6f2d522e63c7f8c887671763f7e8cc8ce7cfa48d3474cbe15efbf8a`, both at surface 20 (indices are zero-based),
+  an even asphere. Re-tracing the full batch, optiland stops ray 10 with intensity 0 at a point 0.125496 mm off
+  its own surface along the normal; ray 29 has no hit (NaN coordinates and intensity 0). LV and `ref` both block
+  each ray at that same surface, so no light is at stake. This focus-station case is outside the two suites:
+  the measured fact above, "in the two suites optiland fails no ray", still stands. `assertR2` keeps LV and
+  `ref` at zero failures; an optiland failure is allowed only on an asphere where both block that very ray at
+  that same surface, with every such ray named in a diagnostic. Pair verdicts, mask checks, gates and floors
+  are unchanged.
 - **Class.** method.
 
 ### On an asphere optiland is as exact as a plain sum of its terms

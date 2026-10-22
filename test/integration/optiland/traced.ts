@@ -14,8 +14,9 @@ import type { TestContext } from "node:test";
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { loadPolicy } from "../../../src/compare/policyFile.ts";
 import type { SurfaceShape } from "../../../src/contract/case.ts";
-import { RAYS_TRACE } from "../../../src/contract/quantities/raysTrace.ts";
+import { RAYS_TRACE, RAY_STATUS } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RaysTraceData } from "../../../src/contract/quantities/raysTrace.ts";
+import { readRunCase } from "../../../src/core/manifest.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import { STORE_DIRECTORY } from "../../../src/core/resultStore.ts";
 import { sphere } from "../../engines/ref/support.ts";
@@ -89,11 +90,14 @@ function assertFloorNamesItsWitness(rung: typeof R2, names: readonly string[], r
 
 /**
  * Holds every pair of a compared run to rung R2: PASS, or FLOOR where the policy allows one, never anything else;
- * not one ray that one engine stopped and the other passed; and no ray that an engine could not trace. A pair of
+ * not one ray that one engine stopped and the other passed; and no failed ray of LV or ref. An optiland failure
+ * on an asphere is allowed only where both other engines block that same ray at that same surface, named below.
+ * A pair of
  * optiland and the reference engine is held to more: the agreement the floor rule asks of a witness. Says, for
  * each two engines, the largest of each figure and where it is.
  */
-export function assertR2(t: TestContext, label: string, comparisons: ComparisonFile): R2Summary {
+export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summary {
+  const { comparisons } = cycle;
   const pairs = pairsOf(comparisons, "r2", RAYS_TRACE);
   assert.ok(pairs.length > 0);
   const verdicts: Record<string, number> = {};
@@ -119,7 +123,11 @@ export function assertR2(t: TestContext, label: string, comparisons: ComparisonF
   }
   const counts = rayCounts(comparisons);
   for (const [engine, of] of Object.entries(counts)) {
-    assert.equal(of.failed, 0, `${label}: ${engine} could not trace ${of.failed} rays`);
+    if (engine === "optiland" && of.failed > 0) {
+      assert.equal(assertBlockedFailures(t, label, cycle), of.failed, `${label}: unaccounted optiland failures`);
+    } else {
+      assert.equal(of.failed, 0, `${label}: ${engine} could not trace ${of.failed} rays`);
+    }
     assert.ok(of.ok > 0 && of.blocked > 0, `${label}: ${engine} ${JSON.stringify(of)}`);
   }
   const rimBand = pairs.reduce((total, pair) => total + (pair.metrics["mask.rimBand"]?.value ?? 0), 0);
@@ -134,6 +142,45 @@ export function assertR2(t: TestContext, label: string, comparisons: ComparisonF
     t.diagnostic(`${label}, R2, ${engines}, ${of.length} pairs, ${compared} rays ok in both: ${figures.join("; ")}`);
   }
   return { pairs, verdicts, counts };
+}
+
+/** Check each failed ray against stored answers, never aggregate counts or the pair's surviving-ray mask alone. */
+function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): number {
+  const jobs = cycle.manifest.jobs.filter((job) => job.rung === "r2");
+  const answer = (run: string, requestId: string, engine: string): RaysTraceData => {
+    const job = jobs.find((job) => job.run === run && job.requestId === requestId && job.engine === engine);
+    assert.ok(
+      job !== undefined && job.status === "ok" && job.storeKey !== null,
+      `${run} ${requestId}: no ${engine} answer`,
+    );
+    const stored = JSON.parse(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json`), "utf8"));
+    return stored.result.data as RaysTraceData;
+  };
+  let allowed = 0;
+  for (const job of jobs.filter((job) => job.engine === "optiland")) {
+    const data = answer(job.run, job.requestId, "optiland");
+    const failed = f8(data.status).flatMap((status, ray) => (status === RAY_STATUS.failed ? [ray] : []));
+    if (failed.length === 0) continue;
+    const end = f8(data.endSurface);
+    const others = ["lv", "ref"].map((engine) => {
+      const data = answer(job.run, job.requestId, engine);
+      return { engine, status: f8(data.status), end: f8(data.endSurface) };
+    });
+    const opticalCase = readRunCase(join(cycle.runsDir, cycle.manifest.suite.name), job.caseId);
+    assert.ok(opticalCase !== undefined, `${job.run}: no valid case ${job.caseId}`);
+    for (const ray of failed) {
+      const surface = end[ray];
+      const said = `${label}, ${job.run}, request ${job.requestId}, ray ${ray}, surface ${surface}`;
+      assert.equal(opticalCase.system.surfaces[surface]?.shape.kind, "asphere", `${said}: not an asphere`);
+      for (const other of others) {
+        assert.equal(other.status[ray], RAY_STATUS.blocked, `${said}: ${other.engine} did not block it`);
+        assert.equal(other.end[ray], surface, `${said}: ${other.engine} ended at another surface`);
+      }
+      t.diagnostic(`${said}: optiland failed; lv and ref both blocked it here (docs/gotchas.md, asphere iteration)`);
+      allowed++;
+    }
+  }
+  return allowed;
 }
 
 /** What `assertR3` found. */

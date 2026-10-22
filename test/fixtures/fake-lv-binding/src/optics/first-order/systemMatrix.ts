@@ -1,4 +1,4 @@
-import { traceParaxialSurfaces2 } from "../math/paraxial.js";
+import { paraxialTrace } from "./lensConstants.js";
 import type { FakeState } from "../types.js";
 
 export interface FakeSystemMatrix {
@@ -10,9 +10,9 @@ export interface FakeSystemMatrix {
   imageIndex: number;
 }
 
-export function computeSystemMatrix2(state: FakeState): FakeSystemMatrix {
-  const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { skipLastTransfer: true });
-  const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { skipLastTransfer: true });
+export function computeSystemMatrix(state: FakeState): FakeSystemMatrix {
+  const marginal = paraxialTrace(state.surfaces, 1, 0, { skipLastTransfer: true });
+  const chief = paraxialTrace(state.surfaces, 0, 1, { skipLastTransfer: true });
   return {
     A: marginal.y,
     B: chief.y,

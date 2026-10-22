@@ -13,6 +13,7 @@
 // What is pinned (the grid each field's refinement ends at) is compared only while the engine closure and the case
 // of a run are still the ones it was measured with: the checkout changes by the day, and a lens that was edited is
 // another lens.
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -38,8 +39,8 @@ import { BENCHMARK_CONDITIONS, LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 
-/** The engine closure the pinned figures were measured with, at LV commit 33ebdb30. */
-const PINNED_CLOSURE = "78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322";
+/** The engine closure the pinned figures were measured with, at LV 643ef5d0 (same engine closure at ab0fd4cf). */
+const PINNED_CLOSURE = "94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended
@@ -47,93 +48,93 @@ const PINNED_CLOSURE = "78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7
  */
 const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly number[]]>> = {
   "canon-ef-135-f2l-usm-ref": [
-    "a6d48ab35a2b156dfd289972da3c241235e5719e4f44394dba994b88ef855811",
+    "8f1f7d95653af82da64d44b73a272e7eb84232c67ee643e47207e067064ee070",
     [32, 32, 32, 64, 64],
   ],
   "canon-ef-135-f2l-usm-photopic": [
-    "7546b205d77d460b81f5677e6f68df4e9dd48411a4daf40ae81d369241376dfb",
+    "e9e741608e3f5f054625e1189a93c16f57e44893080a8ee4a9451df894df4c60",
     [32, 32, 32, 64, 64],
   ],
   "fujifilm-fujinon-gf-63mm-f28-r-wr-ref": [
-    "0def626662ce8a5a044699cc91f10cdfc2451c31abcd493d9937ea5bdc45c0ec",
+    "a878f44443376f43150577ade0fdbfbebd809fc9bd062250397b27b0ac3eeea6",
     [64, 64, 128, 128, 128],
   ],
   "fujifilm-fujinon-gf-63mm-f28-r-wr-photopic": [
-    "b8f48f28bf24a2f9c1b3a21a1bc99860d4e459b20d1281ec2af3069c9a3111c6",
+    "a193bba6b71293a0b4bac4f7d5a5aff691fc23bc2499284e1c033ad238daec10",
     [64, 64, 128, 64, 128],
   ],
   "sigma-35mm-f14-dg-hsm-a-ref": [
-    "cdac8e4c2106aa6698e08404431909cc479c67ce822c7ec38f4c42fe8c072a4e",
+    "ccc14e33b434a6ec5fa8af08a14217b9ff7dc32c9d4f8b92125186fa3a45c97b",
     [32, 64, 128, 128, 128],
   ],
   "sigma-35mm-f14-dg-hsm-a-photopic": [
-    "1c6f0b1cef5938e7761eb57799b4c1a56426c888a5cd008ac534ec3aed4bc295",
+    "ecd0befffe5b28039511a637f8bd5c08c0932c526a143b07acfdc6e88c6c1ffa",
     [32, 64, 128, 128, 128],
   ],
-  "nikkor-z50f12-ref": ["e1be649bb890ed1a95b7b63fa4aa669de231ce9fb83905644a5845e327992132", [128, 128, 128, 128, 128]],
+  "nikkor-z50f12-ref": ["167e686b31a7497ca34af22c245b0c6cc3ddc6ccd060343c987f04ec18ae4c5f", [128, 128, 128, 128, 128]],
   "nikkor-z50f12-photopic": [
-    "a48cd12c268fce7f40073f4073332978ffe6aa0b31c3df5430eda49655dc8743",
+    "6981c5efa2e0f14d167c0ff9b3465552a294ef75eece6e3af725cabc027843c2",
     [64, 128, 64, 128, 128],
   ],
   "sony-fe-20mm-f18-g-ref": [
-    "50516f089be0c4b129c64debab14519ba562b703940872ad3a5ec7347087014f",
+    "2e2afa23bd756f5a1091b5d7f1e7f85e104c97472530f52a0ea0076b336b4cab",
     [64, 64, 128, 128, 128],
   ],
   "sony-fe-20mm-f18-g-photopic": [
-    "578066dcc4d993c9e2998eed77b34361e33cb29701fa3bfa8ff2c694db137b3c",
+    "23b051950216b1004d67e9984a3181b877a25e5c1f50e7588fe868ade50fed35",
     [64, 64, 64, 64, 64],
   ],
   "sony-fe-400mm-f28-gm-oss-ref": [
-    "6c7a2ee7b7e696475bf459c1e274cb8ab63631b0662c947d03c3b185a1babfb4",
+    "f0819763fb3976af512ce84e17ce149008c06fed4c2f0280f03abc3fe7313fe8",
     [32, 64, 64, 64, 64],
   ],
   "sony-fe-400mm-f28-gm-oss-photopic": [
-    "2a0ec3806b69968108caa7beaf501604584cfad203f842420a3fb7aefa4c6828",
+    "e3fb8ca13685378d51194b1fdc6cc573018861b1913f5e65407774b352c9b811",
     [64, 64, 64, 64, 64],
   ],
   "sigma-105mm-f28-dg-dn-macro-art-ref": [
-    "2c260cf3bcac5229f06ba783a895a8a2d1764c7160a4db212fa8fc82b3b080b4",
+    "e11ed3cae518f0c789667ce443bee69fbbe7fadd303e7a960b052999300848b1",
     [32, 64, 32, 32, 64],
   ],
   "sigma-105mm-f28-dg-dn-macro-art-photopic": [
-    "8894694fd3bae9f442610f1015ab84b93b6e4e002d18d38b39ac103232f48f85",
+    "50d94ea9ff30e0960b74dae45269cecd622dd75af41ca41a945e4761f1839d66",
     [32, 64, 64, 32, 64],
   ],
   "nikon-z-24-70f4s-wide-ref": [
-    "674bf87ee00a2855de1cc25379ed3059c489c6dbce8d3217c4d1569ac61001a9",
+    "327403ce09e2fc94b6122c0799aba12156ffad3f9b726829aeccb18d31efd709",
     [64, 128, 64, 64, 128],
   ],
   "nikon-z-24-70f4s-wide-photopic": [
-    "028766236f660e50f5758c50196a3781bb32d228d8d7b9536f143cdad27d83c4",
+    "06eff99a7dc852d126aa09c9eea6d4e7b19d5fc77d79c520b5624c3211295979",
     [64, 64, 64, 32, 64],
   ],
   "nikon-z-24-70f4s-tele-ref": [
-    "7a9c860bd996825e31a09fd968074bbe7b78fd6e0751b9f24a5f078654aaeada",
+    "ab9c8205a728d127b2ec6bf4b38f868de47d255de7807c917d0ba35ec4b8ca24",
     [32, 64, 64, 128, 128],
   ],
   "nikon-z-24-70f4s-tele-photopic": [
-    "b59d35d7c806b2049983b82296e1bd9c09410a057c81fcc475e497554e09b6aa",
+    "e7c0aa4bf2ee5a2b0afc8ac68e8a6115e586e7adcb01a741e880c320dba248bf",
     [32, 64, 64, 128, 128],
   ],
-  "nikon-z-mc-105f28-ref": ["49213d8444e9b7728378948db9623f6ab5c3224c3b423aa3d49a397150931851", [32, 32, 32, 128, 64]],
+  "nikon-z-mc-105f28-ref": ["b5caeb649af604b677236805c0045528ed083c75a1164f65a9148a11a7bfbc54", [32, 32, 32, 128, 64]],
   "nikon-z-mc-105f28-photopic": [
-    "4f58ff165467b6c0b7bfccdbd29cf02ede1979a7978f3be4737ac4b0a29d05b1",
+    "98d1037760a2c357308bccbe8a4ca815d8c9cce422e54b913d74275645db123d",
     [32, 32, 32, 128, 64],
   ],
   "nikon-z-135f18-plena-ref": [
-    "d793020832ec36218155ce810f9a12833e80ffdb25c3a8fa5f1ff9365e4a288d",
+    "0403f9a540eed64c9b7aeed98d14bde823ac3dc2167b69b0ce5c8447d26227be",
     [64, 64, 64, 64, 128],
   ],
   "nikon-z-135f18-plena-photopic": [
-    "783c198b65d92ad17c8fd60a0b2ebf6db6bb170fe7cecbe9ff5c1d72b5da4cdd",
+    "d99ccec01961ff60514d1ae14ec6b29e59a96d0d11e3f02ea70dbd82169e30d3",
     [64, 64, 32, 64, 128],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-ref": [
-    "35e161a10718741831dac37bbd61a43e14e8850254481ddaeba9e5411e27bab4",
+    "de1fd91c6b96ca5484034ae48a27924000fb59f1e8f719f78e2ee193da29d561",
     [64, 64, 64, 64, 128],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-photopic": [
-    "0d6bf53241b18117397d8e5ed7e0ea2c198ce050f6af301e88ae5e0fffbf2ea7",
+    "3a3ae023a4365a29b0c93a8c939aa2f8c31db5cc4786aa230701c72effd5aac4",
     [64, 64, 64, 64, 64],
   ],
 };
@@ -226,7 +227,9 @@ test(
       // The plane: the design plane, or the plane a whole computeMtf of the same request says it applied.
       if (condition.best) {
         const spectrum = condition.lines === "ref" ? "reference" : "photopic";
-        const whole = api.computeMtf(state, { ...options, spectrum, focus: "best-axial", fieldFractions: [0] });
+        const whole = api.computeMtf(
+          ...lvMtfInputs(api, state, { ...options, spectrum, focus: "best-axial", fieldFractions: [0] }),
+        );
         assert.ok(whole.focus !== null && whole.focus.mode === "best-axial", run.name);
         const shift = whole.focus.appliedShiftMm;
         assert.equal(recipe.plane.kind, "lv-best-axial", run.name);

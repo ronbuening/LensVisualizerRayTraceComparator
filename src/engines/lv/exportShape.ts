@@ -1,4 +1,4 @@
-// A LensVisualizer surface as a contract shape. LV's sag is `conicPolySag` (src/optics/internal/surfaceMath.ts):
+// A LensVisualizer surface as a contract shape. LV's sag is `conicPolySag` (src/optics/geometry/surfaceProfile.ts):
 //
 //   z(h) = c h^2 / (1 + sqrt(1 - (1 + K) c^2 h^2)) + sum A_n h^n,   c = 1/R, or 0 when |R| > 1e10
 //

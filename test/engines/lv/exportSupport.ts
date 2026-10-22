@@ -1,3 +1,4 @@
+import { lvResolvedMtfOptions } from "../../../src/engines/lv/tabRequest.ts";
 // What the hermetic tests of the case exporter share: prepared states built by hand, and stand-ins for the
 // LensVisualizer functions the exporter calls. Nothing here loads LensVisualizer, and no number describes a real lens.
 import type { ExportCaseInput, LvExportApi } from "../../../src/engines/lv/exportCase.ts";
@@ -89,6 +90,7 @@ export function stateOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): LvPr
   });
   const imgZ = spec.imgZ ?? position;
   return {
+    traceGeometry: { stopSurfaceIndex: spec.stopIndex },
     lens: {
       key: "hand-built",
       stop: { surfaceIndex: spec.stopIndex },
@@ -117,6 +119,9 @@ export interface TestModel {
 
 export function modelOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): TestModel {
   const runtime: LvRuntimeLens = {
+    source: { key: "hand-built" },
+    zoomStopSDs: null,
+    stopPhysSD: surfaces[spec.stopIndex].sd ?? 1,
     lastLensSurfaceIdx: surfaces.findLastIndex((surface) => surface.synthetic === undefined),
     isZoom: false,
     elements: [],
@@ -131,12 +136,12 @@ export function modelOf(surfaces: readonly SurfaceSpec[], spec: StateSpec): Test
  * marked `clips: false` has no semi-diameter and no height is outside it.
  */
 export function lvEvaluateAperture(
-  state: LvPreparedState | LvTraceGeometry,
+  state: LvTraceGeometry,
   surface: LvSurface,
   radius: number,
   stopSemiDiameter?: number,
 ): LvApertureEvaluation {
-  const stopIndex = "stopSurfaceIndex" in state ? state.stopSurfaceIndex : state.lens.stop.surfaceIndex;
+  const stopIndex = state.stopSurfaceIndex;
   const isStop = surface.physicalIndex === stopIndex;
   const overridden = isStop && stopSemiDiameter !== undefined;
   const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : surface.sd;
@@ -186,8 +191,9 @@ export interface GateSpec {
  * spectrum, the reference line first; resolved indices for a spectral run and for mixed references; and, away from
  * infinity focus, the conjugate, or the refusal "finite-conjugate-unavailable".
  */
-export function gate(spec: GateSpec = {}): (state: LvPreparedState, options: LvMtfOptions) => LvMtfSupport {
-  return (state, options) => {
+export function gate(spec: GateSpec = {}): LvExportApi["assessMtfSupport"] {
+  return (request, options) => {
+    const state = request.preparedGeometry;
     const referenceNm = spec.referenceNm ?? LINES_NM.d;
     const reference = [{ wavelengthNm: referenceNm, weight: 1 }];
     const lines = options.spectrum === "cdf" ? CDF : options.spectrum === "photopic" ? PHOTOPIC : reference;
@@ -241,17 +247,18 @@ export function standInBestShift(stopSemiDiameterMm: number, maxGridSize?: numbe
  * record of `assess`. `asked` takes every request it is given.
  */
 export function stepsOf(
-  assess: (state: LvPreparedState, options: LvMtfOptions) => LvMtfSupport,
+  assess: LvExportApi["assessMtfSupport"],
   asked: LvMtfOptions[] = [],
 ): LvExportApi["computeMtfSteps"] {
-  return function* (state, options) {
+  return function* (request, settings) {
+    const options = lvResolvedMtfOptions(request, settings);
     asked.push(options);
     const best = standInBestShift(options.stopSemiDiameterMm, options.maxGridSize as number | undefined);
     const refocused = options.focus === "best-axial";
     const result: LvMtfResult = {
       method: options.method,
       spectrum: options.spectrum,
-      support: assess(state, options),
+      support: assess(request, settings),
       frequenciesPerMm: [0],
       fields: [],
       geometry: null,
@@ -277,12 +284,18 @@ export function stepsOf(
 export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> = {}): LvExportApi {
   const assess = overrides.assessMtfSupport ?? gate();
   return {
+    createAnalysisRequest: (params) => ({
+      preparedGeometry: params.preparedState,
+      dynamicEFL: params.dynamicEFL,
+      aperture: { entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD },
+      pose: null,
+    }),
     prepareRuntimeState: () => state,
     wideOpenStopAtZoom: () => state.surfaces[state.lens.stop.surfaceIndex].sd,
-    fopenAtZoom2: () => 2,
+    fopenAtZoomClamped: () => 2,
     fNumberAtStopdown: () => 2,
-    computeAnalysisFieldGeometryAtState2: () => ({ yRatio: 1 }),
-    entrancePupilAtState2: (stopSD) => ({ epSD: stopSD, yRatio: 1, b: 0, epRatio: 1 }),
+    computeAnalysisFieldGeometryAtState: () => ({ yRatio: 1 }),
+    entrancePupilAtState: (stopSD) => ({ epSD: stopSD, yRatio: 1, b: 0, epRatio: 1 }),
     computeMtfSteps: stepsOf(assess),
     evaluateAperture: lvEvaluateAperture,
     assessMtfSupport: assess,

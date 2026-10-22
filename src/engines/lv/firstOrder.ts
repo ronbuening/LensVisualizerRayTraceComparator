@@ -3,9 +3,9 @@
 //
 // LensVisualizer's first-order module reads each surface's authored index and so answers for one line only. The
 // kernel under it takes any rows of radius, gap and index, so every line is answered by the kernel, assembled here
-// the way LensVisualizer assembles it: two basis rays give the system matrix (as its `computeSystemMatrix2` does),
-// its own `buildCardinalElementsFromMatrix2` gives the cardinal points, and two rays to the stop give the entrance
-// pupil (as its `paraxialPupilGeometry2` does). The values are the kernel's, not numbers LensVisualizer displays.
+// the way LensVisualizer assembles it: two basis rays give the system matrix (as its `computeSystemMatrix` does),
+// its own `buildCardinalElementsFromMatrix` gives the cardinal points, and two rays to the stop give the entrance
+// pupil (as its `paraxialPupilGeometry` does). The values are the kernel's, not numbers LensVisualizer displays.
 import type { OpticalCase } from "../../contract/case.ts";
 import {
   AFOCAL_SYSTEM,
@@ -23,10 +23,10 @@ import type { LvApi, LvParaxialSurface } from "./types.ts";
 /** The LensVisualizer exports the first-order data is made from. */
 export type LvFirstOrderApi = Pick<
   LvApi,
-  | "traceParaxialSurfaces2"
-  | "buildCardinalElementsFromMatrix2"
-  | "fopenAtZoom2"
-  | "epAtZoom2"
+  | "paraxialTrace"
+  | "buildCardinalElementsFromMatrix"
+  | "fopenAtZoomClamped"
+  | "epAtZoomClamped"
   | "epZRelStopAtZoom"
   | "xpZRelLastSurfAtZoom"
   | "xpAtZoom"
@@ -65,7 +65,7 @@ function lineValues(
   rows: readonly LvParaxialSurface[],
 ): Record<FirstOrderValue, number> | null {
   const { state, runtime, exported } = model;
-  const trace = api.traceParaxialSurfaces2;
+  const trace = api.paraxialTrace;
   const last = rows.length - 1;
   const stop = state.lens.stop.surfaceIndex;
   const stopRadius = exported.conditions.stopSemiDiameter;
@@ -74,7 +74,7 @@ function lineValues(
   const marginal = trace(rows, 1, 0, { skipLastTransfer: true });
   const chief = trace(rows, 0, 1, { skipLastTransfer: true });
   const imageIndex = marginal.n;
-  const cardinals = api.buildCardinalElementsFromMatrix2({
+  const cardinals = api.buildCardinalElementsFromMatrix({
     A: marginal.y,
     B: chief.y,
     C: imageIndex * marginal.u,
@@ -124,9 +124,9 @@ function storedConstants(api: LvFirstOrderApi, model: LvCaseModel): Record<LvSto
   return {
     lvStoredEntrancePupilZ: state.z[state.lens.stop.surfaceIndex] + api.epZRelStopAtZoom(zoomT, runtime),
     lvStoredExitPupilZ: state.z[state.surfaces.length - 1] + api.xpZRelLastSurfAtZoom(zoomT, runtime),
-    lvNominalEntrancePupilSemiDiameter: api.epAtZoom2(zoomT, runtime),
+    lvNominalEntrancePupilSemiDiameter: api.epAtZoomClamped(zoomT, runtime),
     lvStoredExitPupilSemiDiameter: api.xpAtZoom(zoomT, runtime),
-    lvNominalFNumber: api.fopenAtZoom2(zoomT, runtime),
+    lvNominalFNumber: api.fopenAtZoomClamped(zoomT, runtime),
   };
 }
 
@@ -169,7 +169,7 @@ function indexRows(opticalCase: OpticalCase): Float64Array[] {
  * The first-order data of a model at every line of its case. Each line is LensVisualizer's kernel on the rows
  * `{ R, d, nd }` of its state, with `nd` the index LensVisualizer traces that line with:
  *
- * - the cardinal points and `efl` are those of `buildCardinalElementsFromMatrix2` for the kernel's system matrix,
+ * - the cardinal points and `efl` are those of `buildCardinalElementsFromMatrix` for the kernel's system matrix,
  *   and `backFocus` its `bfd`, which is measured from the last lens vertex, so that a rear plate lies inside it;
  * - the entrance pupil is where the kernel images the stop's vertex plane into object space, and the exit pupil
  *   where it images it into image space, each with the radius of the image of a stop of the case's radius.
@@ -203,7 +203,7 @@ export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): Lv
     for (const name of FIRST_ORDER_VALUES) columns[name].push(values[name]);
     if (object.kind === "finite") {
       // A ray from the axial object point with the angle 1 meets the first vertex plane at the object's distance.
-      const image = api.traceParaxialSurfaces2(rows, state.z[0] - object.z, 1, { skipLastTransfer: true });
+      const image = api.paraxialTrace(rows, state.z[0] - object.z, 1, { skipLastTransfer: true });
       magnifications.push(1 / (image.n * image.u));
     }
   });

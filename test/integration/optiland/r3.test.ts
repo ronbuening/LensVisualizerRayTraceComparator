@@ -317,7 +317,7 @@ test(
     assert.equal(sets, 3 * 17);
     assert.equal(manifest.jobs.length, 2 * 2 * sets);
     assertTracedOnce(manifest.jobs);
-    assert.equal(assertR2(t, "made for R3", cycle.comparisons).pairs.length, sets);
+    assert.equal(assertR2(t, "made for R3", cycle).pairs.length, sets);
     const paths = assertR3(t, "made for R3", cycle.comparisons);
     assert.deepEqual([...new Set(paths.pairs.map((pair) => pair.engines))], ["optiland / ref"]);
     assert.equal(paths.pairs.length, sets);

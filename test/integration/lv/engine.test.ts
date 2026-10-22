@@ -359,7 +359,7 @@ test(
 // ── Against LensVisualizer's own first-order module ──────────────────────────────────────────────────────────────
 
 test(
-  "at a line traced with the authored indices, lv's cardinal points are LensVisualizer's computeCardinalElements2",
+  "at a line traced with the authored indices, lv's cardinal points are LensVisualizer's computeCardinalElementsFromState",
   { skip },
   async (t) => {
     const { binding, lv } = await engines(t);
@@ -372,7 +372,7 @@ test(
       const data = result.data as ParaxialFirstOrderData;
       const runtime = binding.api.buildLens((await binding.lens(source.lensKey)).data);
       const state = binding.api.prepareRuntimeState(runtime, source.focusT, source.zoomT);
-      const theirs = binding.api.computeCardinalElements2(state);
+      const theirs = binding.api.computeCardinalElementsFromState(state);
       assert.ok(theirs !== null, at);
       opticalCase.conditions.lines.forEach((line, row) => {
         // LensVisualizer's module reads each surface's authored index, so it speaks for such a line only.
@@ -577,7 +577,7 @@ test(
       for (const fraction of [0.15, 0.4, 0.7, 0.95, 1.05, 1.4]) {
         for (const angle of [0, (2 * Math.PI) / 180]) {
           const height = fraction * pupilRadius;
-          const traced = api.traceEngineRay2(
+          const traced = api.traceEngineRay(
             state,
             { origin: [0.3 * height, height, -5], direction: [0, -Math.sin(angle), Math.cos(angle)] },
             { checkSemiDiameter: true, stopSemiDiameter: data.stopSemiDiameter, stopOnClip: true },

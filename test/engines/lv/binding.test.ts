@@ -30,15 +30,6 @@ async function refused(load: Promise<unknown>, code: string): Promise<LvBindingE
   return error;
 }
 
-/** Moves the fake's threshold and its internal consumers together, as in LV's geometry layout. */
-function geometryThreshold(lv: string): void {
-  renameSync(join(lv, "src/optics/constants.ts"), join(lv, "src/optics/geometry.ts"));
-  for (const file of ["src/optics/compat.ts", "src/optics/math/paraxial.ts"]) {
-    const path = join(lv, file);
-    writeFileSync(path, readFileSync(path, "utf8").replace("/constants.js", "/geometry.js"));
-  }
-}
-
 test("the manifest names each module once and each facade name once", () => {
   const modules = LV_IMPORT_MANIFEST.flatMap((entry) => entry.module);
   assert.equal(new Set(modules).size, modules.length);
@@ -59,69 +50,23 @@ test("a tree with every module and export loads, and the facade holds every mani
   assert.ok(Object.isFrozen(binding.api));
 });
 
-test("the flat radius threshold loads from geometry when constants no longer exports it", async (t) => {
+test("the flat radius threshold comes from the geometry barrel alone", async (t) => {
   const lv = freshLv(t);
-  geometryThreshold(lv);
-  writeFileSync(join(lv, "src/optics/constants.ts"), "export {};\n");
-  const binding = await bind(t, lv);
-  assert.equal(binding.api.flatRadiusThreshold, 1e10);
-  const files = FAKE_ENGINE_FILES.map((file) =>
-    file === "src/optics/constants.ts" ? "src/optics/geometry.ts" : file,
-  ).sort();
-  assert.deepEqual(binding.engineClosure(), { engineClosureHash: closureOf(lv, files), engineFileCount: files.length });
-});
-
-test("the first valid module supplies the threshold and the unused fallback is not fingerprinted", async (t) => {
-  const lv = freshLv(t);
-  geometryThreshold(lv);
-  writeFileSync(join(lv, "src/optics/geometry.ts"), "export const FLAT_R_THRESHOLD = 42;\n");
   writeFileSync(join(lv, "src/optics/constants.ts"), "export const FLAT_R_THRESHOLD = 99;\n");
   const binding = await bind(t, lv);
-  assert.equal(binding.api.flatRadiusThreshold, 42);
+  assert.equal(binding.api.flatRadiusThreshold, 1e10);
   appendFileSync(join(lv, "src/optics/constants.ts"), "// unused\n");
   assert.deepEqual(binding.rehash(), []);
-  appendFileSync(join(lv, "src/optics/geometry.ts"), "// used\n");
-  assert.deepEqual(binding.rehash(), ["src/optics/geometry.ts"]);
 });
 
-for (const [reason, source] of [
-  ["has an export of the wrong kind", 'export const FLAT_R_THRESHOLD = "wrong";\n'],
-  ["cannot be imported", 'throw new Error("geometry is broken");\n'],
-]) {
-  test(`the threshold falls back to constants when geometry ${reason}`, async (t) => {
-    const lv = freshLv(t);
-    writeFileSync(join(lv, "src/optics/geometry.ts"), source);
-    const binding = await bind(t, lv);
-    assert.equal(binding.api.flatRadiusThreshold, 1e10);
-    // Even a rejected candidate was loaded: the closure describes every file Node executed.
-    const files = [...FAKE_ENGINE_FILES, "src/optics/geometry.ts"].sort();
-    assert.deepEqual(binding.engineClosure(), {
-      engineClosureHash: closureOf(lv, files),
-      engineFileCount: files.length,
-    });
-  });
-}
-
-test("neither threshold export is valid: every attempted path and its wrong kind are named", async (t) => {
+test("a pre-rewrite tree is refused plainly with the existing import-failed code", async (t) => {
   const lv = freshLv(t);
-  writeFileSync(join(lv, "src/optics/geometry.ts"), "export {};\n");
-  writeFileSync(join(lv, "src/optics/constants.ts"), 'export const FLAT_R_THRESHOLD = "wrong";\n');
-  const error = await refused(loadLvBinding(lv), "exports-missing");
-  assert.deepEqual(error.details, [
-    "src/optics/geometry.ts: FLAT_R_THRESHOLD (expected number, found undefined)",
-    "src/optics/constants.ts: FLAT_R_THRESHOLD (expected number, found string)",
-  ]);
-  for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
-});
-
-test("neither threshold module imports: every attempted path and its import failure are named", async (t) => {
-  const lv = freshLv(t);
-  writeFileSync(join(lv, "src/optics/geometry.ts"), 'throw new Error("geometry is broken");\n');
-  rmSync(join(lv, "src/optics/constants.ts"));
+  writeFileSync(join(lv, "src/optics/compat.ts"), "export {};\n");
+  rmSync(join(lv, "src/optics/fieldGeometry.ts"));
   const error = await refused(loadLvBinding(lv), "import-failed");
-  assert.ok(error.details.includes("src/optics/geometry.ts: geometry is broken"));
-  assert.ok(error.details.some((detail) => /^src\/optics\/constants\.ts: .*Cannot find module/.test(detail)));
-  for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
+  assert.match(error.message, /predates its engine rewrite/);
+  assert.match(error.message, /460f841f or later/);
+  assert.ok(error.details.length > 0);
 });
 
 test("there is one binding per process and LV root, however the path is written", async (t) => {
@@ -160,11 +105,11 @@ test("no path, a missing path and a directory that is not an LV checkout are tol
 test("a tree missing one module fails with that module named, and leaves no loader behind", async (t) => {
   const lv = freshLv(t);
   // A module no other module of the tree imports: its absence is the only failure.
-  rmSync(join(lv, "src/optics/layout.ts"));
+  rmSync(join(lv, "src/optics/fieldGeometry.ts"));
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
-  assert.match(error.details[0], /^src\/optics\/layout\.ts: /);
-  assert.match(error.message, /1 of 21 modules cannot be imported/);
+  assert.match(error.details[0], /^src\/optics\/fieldGeometry\.ts: /);
+  assert.match(error.message, /1 of 17 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -172,40 +117,47 @@ test("a tree missing one module fails with that module named, and leaves no load
 
 test("every module that cannot be imported is listed in one error", async (t) => {
   const lv = freshLv(t);
-  rmSync(join(lv, "src/optics/layout.ts"));
-  writeFileSync(join(lv, "src/optics/analysis/mtfSupport.ts"), 'throw new Error("mtfSupport is broken");\n');
+  rmSync(join(lv, "src/optics/fieldGeometry.ts"));
+  writeFileSync(join(lv, "src/optics/analysis/mtf/mtfSupport.ts"), 'throw new Error("mtfSupport is broken");\n');
   const error = await refused(loadLvBinding(lv), "import-failed");
   // The MTF module takes its gate from the broken module, and the barrel takes the MTF from that one, so neither
   // can be imported either. The modules are named in the order of the manifest.
   assert.deepEqual(
     error.details.map((detail) => detail.split(": ")[0]),
-    ["src/optics/layout.ts", "src/optics/analysis/mtfSupport.ts", "src/optics/analysis/mtf.ts", "src/optics/mtf.ts"],
+    ["src/optics/fieldGeometry.ts", "src/optics/mtf.ts", "src/optics/analysis/mtf/mtf.ts"],
   );
-  assert.match(error.details[1], /mtfSupport is broken/);
+  assert.match(error.details[1], /mtfSupport/);
 });
 
 test("a module that cannot be imported and an export missing elsewhere are named in the same error", async (t) => {
   const lv = freshLv(t);
-  rmSync(join(lv, "src/optics/layout.ts"));
+  rmSync(join(lv, "src/optics/fieldGeometry.ts"));
   writeFileSync(join(lv, "src/optics/trace/aperture.ts"), "export const renamedAperture = 1;\n");
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 2);
-  assert.match(error.details[0], /^src\/optics\/layout\.ts: /);
+  assert.match(error.details[0], /^src\/optics\/fieldGeometry\.ts: /);
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 21 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 17 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 
 test("a tree missing two exports fails with both named", async (t) => {
   const lv = freshLv(t);
   // One export renamed away, one that is no longer a function.
-  writeFileSync(join(lv, "src/optics/aperture.ts"), "export const renamedSlider = (): undefined => undefined;\n");
+  const barrel = join(lv, "src/optics/optics.ts");
+  writeFileSync(
+    barrel,
+    readFileSync(barrel, "utf8").replace(
+      'export { fNumberAtStopdown } from "./state/fNumber.ts";',
+      "export const renamedSlider = 1;",
+    ),
+  );
   writeFileSync(join(lv, "src/optics/trace/aperture.ts"), "export const evaluateAperture = 3;\n");
   const error = await refused(loadLvBinding(lv), "exports-missing");
   assert.deepEqual(error.details, [
-    "src/optics/aperture.ts: fNumberAtStopdown (expected function, found undefined)",
+    "src/optics/optics.ts: fNumberAtStopdown (expected function, found undefined)",
     "src/optics/trace/aperture.ts: evaluateAperture (expected function, found number)",
   ]);
   for (const detail of error.details) assert.ok(error.message.includes(detail), detail);
@@ -216,7 +168,7 @@ test("a tree missing two exports fails with both named", async (t) => {
 
 test("a default export that is missing is named as default", async (t) => {
   const lv = freshLv(t);
-  writeFileSync(join(lv, "src/optics/buildLens.ts"), "export const notTheDefault = 1;\n");
+  writeFileSync(join(lv, "src/optics/buildLens.ts"), 'export { prepareRuntimeState } from "./state/runtime.ts";\n');
   const error = await refused(loadLvBinding(lv), "exports-missing");
   assert.deepEqual(error.details, ["src/optics/buildLens.ts: default (expected function, found undefined)"]);
 });
@@ -269,10 +221,10 @@ test("rehash names the engine files edited or removed after load, and no lens fi
   appendFileSync(join(lv, FAKE_LENS_FILES[1][0]), "// edited after load\n");
   assert.deepEqual(binding.rehash(), [], "a lens file is not engine code");
 
-  appendFileSync(join(lv, "src/optics/math/paraxial.ts"), "// edited after load\n");
-  assert.deepEqual(binding.rehash(), ["src/optics/math/paraxial.ts"]);
-  rmSync(join(lv, "src/optics/apertureStop.ts"));
-  assert.deepEqual(binding.rehash(), ["src/optics/apertureStop.ts", "src/optics/math/paraxial.ts"]);
+  appendFileSync(join(lv, "src/optics/first-order/lensConstants.ts"), "// edited after load\n");
+  assert.deepEqual(binding.rehash(), ["src/optics/first-order/lensConstants.ts"]);
+  rmSync(join(lv, "src/optics/state/aperture.ts"));
+  assert.deepEqual(binding.rehash(), ["src/optics/first-order/lensConstants.ts", "src/optics/state/aperture.ts"]);
   // The fingerprint goes on describing the code that was loaded and is running.
   assert.deepEqual(binding.engineClosure(), before);
 });
@@ -287,7 +239,7 @@ test("a tree bound again after close still reports everything Node loaded from i
 
   // Node keeps the modules it loaded, so the second loader sees none of them load: the record must outlive it.
   appendFileSync(join(lv, FAKE_LENS_FILES[0][0]), "// edited after it was loaded\n");
-  appendFileSync(join(lv, "src/optics/math/paraxial.ts"), "// edited after it was loaded\n");
+  appendFileSync(join(lv, "src/optics/first-order/lensConstants.ts"), "// edited after it was loaded\n");
   const second = await bind(t, lv);
   assert.notEqual(second, first);
   assert.deepEqual(second.engineClosure(), closure);
@@ -296,12 +248,12 @@ test("a tree bound again after close still reports everything Node loaded from i
     hashes,
     "a lens file's hash is that of the bytes that were loaded, not of the file as it is now",
   );
-  assert.deepEqual(second.rehash(), ["src/optics/math/paraxial.ts"]);
+  assert.deepEqual(second.rehash(), ["src/optics/first-order/lensConstants.ts"]);
 });
 
 test("a load tried again after it failed reports the engine files the failed attempt loaded too", async (t) => {
   const lv = freshLv(t);
-  const module = join(lv, "src/optics/analysis/mtfTracing.ts");
+  const module = join(lv, "src/optics/analysis/mtf/mtfTracing.ts");
   renameSync(module, `${module}.away`);
   await refused(loadLvBinding(lv), "import-failed");
 
@@ -358,7 +310,7 @@ test("a lens is loaded by key from the one scan, and an unknown key suggests nea
   const lens = await binding.lens("acme-zoom-24-48");
   assert.equal(lens.entry.file, FAKE_LENS_FILES[1][0]);
   assert.equal(lens.data.key, "acme-zoom-24-48");
-  assert.deepEqual(lens.data.zoomPositions, [24, 48]);
+  assert.deepEqual(lens.data.zoom?.stations, [{}, {}]);
   // A lens file written after the scan is not seen: the index is cached for the life of the binding.
   writeFileSync(join(lv, "src/lens-data/acme/Late.data.ts"), 'export default { key: "tardy", name: "Late" };\n');
   assert.equal((await binding.lens("acme-zoom-24-48")).data, lens.data);
@@ -409,14 +361,14 @@ test("duplicate keys and bad lens files are reported together and left out of th
 
 test("a tree without src/lens-data has an empty catalog", async (t) => {
   const lv = freshLv(t);
-  // compat.ts imports defaults.ts from the directory, so the fake engine is given one that does not.
+  // state/runtime.ts imports defaults.ts from the directory, so the fake engine is given one that does not.
   rmSync(join(lv, "src/lens-data"), { recursive: true });
-  const compat = join(lv, "src/optics/compat.ts");
+  const compat = join(lv, "src/optics/state/runtime.ts");
   writeFileSync(
     join(lv, "src/optics/defaults.ts"),
     "export const DEFAULT_FOPEN = 2;\nexport const FLAT_RADIUS = 1e15;\n",
   );
-  writeFileSync(compat, readFileSync(compat, "utf8").replace("../lens-data/defaults.js", "./defaults.js"));
+  writeFileSync(compat, readFileSync(compat, "utf8").replace("../../lens-data/defaults.js", "../defaults.js"));
   const binding = await bind(t, lv);
   assert.deepEqual(await binding.catalog(), { fileCount: 0, entries: [], problems: [] });
 });

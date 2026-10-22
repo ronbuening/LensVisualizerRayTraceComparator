@@ -325,7 +325,7 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
   });
 
   variantOf(lv, "folded", {
-    "src/optics/compat.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
+    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
   });
   await onTree(rootDir, "folded", async () => {
     const folded = await mtf(["acme-zoom-24-48"], rootDir);
@@ -444,7 +444,7 @@ test("a prime has one state: no end is named, and a zoom position given to it is
 test("an end the zoom has no case at fails the command, and the other end is asked all the same", async (t) => {
   const { rootDir, lv, runsDir } = freshRoot(t);
   variantOf(lv, "folded-tele", {
-    "src/optics/compat.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: zoomT === 1"),
+    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: zoomT === 1"),
   });
   await onTree(rootDir, "folded-tele", async () => {
     const run = await mtf(["acme-zoom-24-48"], rootDir);
@@ -459,7 +459,7 @@ test("an end the zoom has no case at fails the command, and the other end is ask
 test("an engine that fails is an error of the run: its code is recorded, and its words are only printed", async (t) => {
   const { rootDir, lv, runsDir } = freshRoot(t);
   variantOf(lv, "broken", {
-    "src/optics/analysis/mtf.ts": (text) =>
+    "src/optics/analysis/mtf/mtf.ts": (text) =>
       text.replace('status: unsettled ? "unconverged" : "converged"', 'status: "pending"'),
   });
   await onTree(rootDir, "broken", async () => {

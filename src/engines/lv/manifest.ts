@@ -28,58 +28,67 @@ function functions<const Name extends string>(
  * imports and provides every export of its expected kind, and fails with all the missing names at once, so a
  * rename in LV is found before any lens is traced.
  *
+ * An export is taken from LensVisualizer's public barrel (`src/optics/{buildLens,optics,fieldGeometry,analysis,mtf,
+ * geometry,chromatic}.ts`) wherever the barrel has it, and from the module that defines it otherwise. Every name is
+ * that of LensVisualizer after its engine rewrite (460f841f): a checkout from before it is refused (`binding.ts`).
+ *
  * To use one more LV export: add its name to the module's line here (or a line for a new module) and its
  * signature to `LvApi`; the type check fails until the two agree.
  */
 export const LV_IMPORT_MANIFEST = [
-  { module: "src/optics/buildLens.ts", exports: [{ name: "default", as: "buildLens", kind: "function" }] },
   {
-    module: "src/optics/compat.ts",
+    module: "src/optics/buildLens.ts",
+    exports: [{ name: "default", as: "buildLens", kind: "function" }, ...functions("prepareRuntimeState")],
+  },
+  {
+    module: "src/optics/optics.ts",
     exports: functions(
-      "prepareRuntimeState",
-      "traceEngineRay2",
-      "traceRay2",
-      "computeCardinalElements2",
-      "entrancePupilAtState2",
-      "computeAnalysisFieldGeometryAtState2",
-      "fopenAtZoom2",
-      "epAtZoom2",
+      "traceEngineRay",
+      "traceRay",
+      "fopenAtZoomClamped",
+      "epAtZoomClamped",
+      "fNumberAtStopdown",
+      "epZRelStopAtZoom",
+      "xpZRelLastSurfAtZoom",
+      "xpAtZoom",
+      "wideOpenStopAtZoom",
+      "paraxialTrace",
     ),
   },
-  { module: "src/optics/aperture.ts", exports: functions("fNumberAtStopdown") },
   {
-    module: "src/optics/layout.ts",
-    exports: functions("epZRelStopAtZoom", "xpZRelLastSurfAtZoom", "xpAtZoom"),
+    module: "src/optics/fieldGeometry.ts",
+    exports: functions("entrancePupilAtState", "computeAnalysisFieldGeometryAtState"),
+  },
+  { module: "src/optics/analysis.ts", exports: functions("computeCardinalElementsFromState", "createAnalysisRequest") },
+  {
+    module: "src/optics/mtf.ts",
+    exports: [
+      ...functions(
+        "assessMtfSupport",
+        "computeMtf",
+        "computeMtfSteps",
+        "resolveMtfSpectrum",
+        "prepareMtfFieldLaunch",
+        "findMtfFieldFootprint",
+        "traceMtfBundle",
+      ),
+      { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
+      { name: "MTF_FIELDS", as: "mtfDefaultFields", kind: "object" },
+    ],
   },
   {
-    module: ["src/optics/geometry.ts", "src/optics/constants.ts"],
+    module: "src/optics/geometry.ts",
     exports: [{ name: "FLAT_R_THRESHOLD", as: "flatRadiusThreshold", kind: "number" }],
   },
-  {
-    module: "src/types/asphericSchema.ts",
-    exports: [{ name: "ASPHERIC_POLYNOMIAL_TERMS", as: "asphericPolynomialTerms", kind: "object" }],
-  },
-  { module: "src/optics/apertureStop.ts", exports: functions("wideOpenStopAtZoom") },
+  { module: "src/optics/chromatic.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
   { module: "src/optics/trace/aperture.ts", exports: functions("evaluateAperture") },
-  { module: "src/optics/math/paraxial.ts", exports: functions("traceParaxialSurfaces2") },
-  { module: "src/optics/first-order/systemMatrix.ts", exports: functions("computeSystemMatrix2") },
-  { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix2") },
-  { module: "src/optics/analysis/mtfSupport.ts", exports: functions("assessMtfSupport") },
+  { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix") },
   {
-    module: "src/optics/analysis/mtfTracing.ts",
-    exports: functions(
-      "mtfIndexResolver",
-      "prepareMtfFieldLaunch",
-      "findMtfFieldFootprint",
-      "mtfLaunchGrid",
-      "mtfLaunchRay",
-      "traceMtfBundle",
-      "mtfImagePoint",
-      "mtfTraceClassification",
-    ),
+    module: "src/optics/analysis/mtf/mtfTracing.ts",
+    exports: functions("mtfIndexResolver", "mtfLaunchGrid", "mtfLaunchRay", "mtfImagePoint", "mtfTraceClassification"),
   },
   {
-    module: "src/optics/analysis/mtfFields.ts",
+    module: "src/optics/analysis/mtf/mtfFields.ts",
     exports: functions(
       "mtfModeledHalfField",
       "mtfChiefHeight",
@@ -88,10 +97,10 @@ export const LV_IMPORT_MANIFEST = [
       "resolveMtfFieldTargets",
     ),
   },
-  { module: "src/optics/analysis/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
-  { module: "src/optics/analysis/mtfFootprint.ts", exports: functions("expandMtfFootprint") },
+  { module: "src/optics/analysis/mtf/mtfConjugates.ts", exports: functions("mtfFiniteObjectPoint") },
+  { module: "src/optics/analysis/mtf/mtfFootprint.ts", exports: functions("expandMtfFootprint") },
   {
-    module: "src/optics/analysis/mtfConstants.ts",
+    module: "src/optics/analysis/mtf/mtfConstants.ts",
     exports: [
       { name: "MTF_GRID_LADDER", as: "mtfGridLadder", kind: "object" },
       { name: "MTF_DEFAULT_GRID_CAP", as: "mtfDefaultGridCap", kind: "number" },
@@ -100,22 +109,17 @@ export const LV_IMPORT_MANIFEST = [
     ],
   },
   {
-    module: "src/optics/analysis/mtf.ts",
+    module: "src/optics/analysis/mtf/mtf.ts",
     exports: functions("refineMtfField", "emptyMtfField", "assessUnresolvedFlux"),
   },
   {
-    module: "src/optics/mtf.ts",
-    exports: [
-      ...functions("computeMtf", "computeMtfSteps", "resolveMtfSpectrum"),
-      { name: "MTF_FREQUENCIES", as: "mtfDefaultFrequencies", kind: "object" },
-      { name: "MTF_FIELDS", as: "mtfDefaultFields", kind: "object" },
-    ],
+    module: "src/types/asphericSchema.ts",
+    exports: [{ name: "ASPHERIC_POLYNOMIAL_TERMS", as: "asphericPolynomialTerms", kind: "object" }],
   },
   {
     module: "src/utils/state/mtfPreferences.ts",
     exports: [{ name: "DEFAULT_MTF_PREFERENCES", as: "mtfDefaultPreferences", kind: "object" }],
   },
-  { module: "src/optics/spectralLines.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
 ] as const satisfies readonly LvManifestModule[];
 
 type ManifestName = (typeof LV_IMPORT_MANIFEST)[number]["exports"][number]["as"];

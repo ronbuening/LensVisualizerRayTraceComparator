@@ -1,6 +1,7 @@
 // `mtf.native` as the engine `lv` answers it: LensVisualizer's product MTF, `computeMtf`, on its own prepared state.
 // It is the MTF LensVisualizer presents, so nothing of it is the comparator's: the method, the sampling, the focus
 // search and the spectra are LensVisualizer's, and the engine only builds the request and writes the answer down.
+import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import type { SpectralLine } from "../../contract/case.ts";
 import type { JsonObject } from "../../contract/json.ts";
 import { MTF_DESIGN_PLANE } from "../../contract/quantities/mtfNative.ts";
@@ -11,12 +12,21 @@ import type { LvCaseModel } from "./caseModel.ts";
 import { LV_MTF_SPECTRA, lvBestAxialFocus, lvGeneralMtfOptions, lvSpectrumOf } from "./focus.ts";
 import { LV_TAB_PROFILE, lvTabRequest, lvTabSpec } from "./tabRequest.ts";
 import type { LvTabApi, LvTabRequest } from "./tabRequest.ts";
-import type { LvApi, LvMtfFieldResult, LvMtfOptions, LvMtfResult, LvMtfSupport, LvPreparedState } from "./types.ts";
+import type {
+  LvAnalysisRequest,
+  LvMtfRequestOptions,
+  LvApi,
+  LvMtfFieldResult,
+  LvMtfOptions,
+  LvMtfResult,
+  LvMtfSupport,
+  LvPreparedState,
+} from "./types.ts";
 
 export { LV_MTF_SPECTRA, lvSpectrumOf } from "./focus.ts";
 
 /** The LensVisualizer exports an MTF request is built with. */
-export type LvMtfRequestApi = LvTabApi & Pick<LvApi, "assessMtfSupport" | "computeMtfSteps">;
+export type LvMtfRequestApi = LvTabApi & Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport" | "computeMtfSteps">;
 
 /** The LensVisualizer exports an MTF is answered with. */
 export type LvMtfApi = LvMtfRequestApi & Pick<LvApi, "computeMtf">;
@@ -91,13 +101,13 @@ function gateRefusal(support: LvMtfSupport): LvMtfAnswer {
  * the gate's.
  */
 function specRefusal(
-  api: Pick<LvApi, "assessMtfSupport">,
+  api: Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport">,
   state: LvPreparedState,
   accepted: LvMtfOptions,
   spec: MtfNativeSpec,
 ): LvMtfAnswer | null {
   const refused = (member: Partial<LvMtfOptions>): string | null => {
-    const support = api.assessMtfSupport(state, { ...accepted, ...member });
+    const support = api.assessMtfSupport(...lvMtfInputs(api, state, { ...accepted, ...member }));
     return support.available ? null : support.message;
   };
   const fields = spec.fields.values;
@@ -296,8 +306,10 @@ function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly
 
 /** The request LensVisualizer's MTF is asked for a case and a spec. */
 export interface LvMtfRequest {
-  /** The options `computeMtf` is called with. */
+  /** Resolved options for lower-level helpers and for recording the request. */
   readonly options: LvMtfOptions;
+  readonly analysisRequest: LvAnalysisRequest;
+  readonly settings: LvMtfRequestOptions;
   /** What the answer states beside LensVisualizer's result: of a profile, which request of the tab it was. */
   readonly extra: { readonly params: JsonObject; readonly notes: readonly string[] };
   /**
@@ -356,7 +368,7 @@ export function lvMtfRequest(
   const { conditions, system } = exported;
   const stop = conditions.stopSemiDiameter;
   const general = lvGeneralMtfOptions(api, runtime, state, stop);
-  const gate = api.assessMtfSupport(state, general);
+  const gate = api.assessMtfSupport(...lvMtfInputs(api, state, general));
   if (!gate.available) return { refused: gateRefusal(gate) };
 
   const shifted = conditions.imageZ !== system.designImageZ;
@@ -419,7 +431,14 @@ export function lvMtfRequest(
       fieldFractions: [...spec.fields.values],
       frequenciesPerMm: [...spec.frequenciesPerMm],
     };
-    return { options, extra: { params: {}, notes: [] }, atBestAxial: shifted };
+    const [analysisRequest, settings] = lvMtfInputs(api, state, options);
+    return {
+      analysisRequest,
+      settings,
+      options: lvResolvedMtfOptions(analysisRequest, settings),
+      extra: { params: {}, notes: [] },
+      atBestAxial: shifted,
+    };
   }
 
   if (shifted) return offDesign(`, and the profile ${LV_TAB_PROFILE} is of a case at its design plane`);
@@ -444,8 +463,11 @@ export function lvMtfRequest(
       `and ${LV_GRID_CAP_OPTION} asks for ${JSON.stringify(cap)}`;
     return profileRefused(message);
   }
+  const { request: analysisRequest, settings } = tab;
   return {
-    options: tab.options,
+    analysisRequest,
+    settings,
+    options: lvResolvedMtfOptions(analysisRequest, settings),
     extra: {
       params: {
         profile: LV_TAB_PROFILE,
@@ -482,7 +504,7 @@ export function answerLvMtf(
   const { state, exported } = model;
   const { options } = request;
 
-  const result = api.computeMtf(state, options);
+  const result = api.computeMtf(request.analysisRequest, request.settings);
   if (!result.support.available) return gateRefusal(result.support);
   if (!sameList(result.frequenciesPerMm, spec.frequenciesPerMm)) {
     throw new Error(

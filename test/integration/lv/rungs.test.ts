@@ -8,9 +8,8 @@
 // verdicts under the floor of the exit direction (policy version 4) were taken at 1ed8cc3d (closure ff670f03), where
 // the figures of these lenses are those of 3af45e3f to every digit quoted.
 //
-// All of them are figures of LensVisualizer's intersection tolerance of 1e-9 mm, which it has up to 33ebdb30 (closure
-// 78215d72, `TOLERANCE_1E9_CLOSURE`). No test here requires LensVisualizer to be that far off: an upper bound holds
-// on any LensVisualizer, and what a floor or a failure of that tolerance says is compared only at that closure.
+// Historical figures describe the old intersection tolerance of 1e-9 mm. Assertions hold upper bounds and
+// PASS or FLOOR at every closure, including the rewritten engine with its 1e-12 mm tolerance.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -55,11 +54,6 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 const POLICY = loadPolicy();
-/**
- * The engine closure of LensVisualizer 33ebdb30, the last whose intersection tolerance is 1e-9 mm: the floors and
- * the failures that tolerance leaves on a few steep lenses are pinned at it, and dormant at any other closure.
- */
-const TOLERANCE_1E9_CLOSURE = "78215d72e89d092a9c325a17ef9dd1e083d6855fa2a511df61d5a8b7f7e6f322";
 /** The baseline of the benchmark that is committed: lv, ref and optiland on R0 to R3. */
 const COMMITTED_BASELINE = join(REPO_ROOT, "baselines", "benchmark.json");
 
@@ -446,7 +440,7 @@ async function lensVisualizerSays(binding: LvBinding, opticalCase: OpticalCase, 
   const { model } = rebuilt;
   const origins = decodeNdArray(spec.origins).values;
   const directions = decodeNdArray(spec.directions).values;
-  const trace = binding.api.traceEngineRay2(
+  const trace = binding.api.traceEngineRay(
     model.state,
     {
       origin: [origins[3 * ray], origins[3 * ray + 1], origins[3 * ray + 2]],
@@ -571,7 +565,7 @@ test(
 );
 
 test(
-  "where a steep surface magnifies LensVisualizer's tolerance, the floor rule says how far: FLOOR within its limits, FAIL beyond",
+  "steep catalog fields stay within the gates or their floor limits at any engine closure",
   { skip, timeout: 600_000 },
   async (t) => {
     const ask = await engines(t);
@@ -593,155 +587,26 @@ test(
       for (const set of sets) assert.equal(metricOf(set.r2, "mask.mismatches").value, 0, key);
       return { r2: sets.map((set) => set.r2.verdict), r3: sets.map((set) => set.r3.verdict), sets };
     };
-    /** The set of the full field at a line, of sets that are in the order of the fields and then of the lines. */
-    const fullField = (sets: readonly TracedSet[], line: number): TracedSet => {
-      const set = sets.find(({ spec }) => spec.line === line && spec.groups?.field?.heightFraction === 1);
-      assert.ok(set !== undefined, `line ${line}`);
-      return set;
-    };
-    const limitOf = (rung: "r2" | "r3", name: string): number => POLICY.rungs[rung].metrics[name].floor?.limit ?? NaN;
-    assert.deepEqual(
-      ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"].map((name) => limitOf("r2", name)),
-      [1e-7, 1e-8, 1e-7],
-    );
-
-    // Everything below is what LensVisualizer's intersection tolerance of 1e-9 mm leaves on these lenses. With
-    // another engine closure the lenses are still traced, and held to no ray that one engine stopped and the other
-    // passed (`verdictsOf`), and their figures are printed: a LensVisualizer that is more accurate has fewer
-    // floors and failures here, or none, and that is no failure of a test.
-    if (ask.binding.fingerprint().engineClosureHash !== TOLERANCE_1E9_CLOSURE) {
-      const photopic: RunOptions = { lines: { kind: "photopic" } };
-      const lenses: [string, RunOptions][] = [
-        ["fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii", {}],
-        ["leica-apo-summicron-m-35f2", {}],
-        ["apple-iphone-12-main-wide", {}],
-        ["apple-iphone-7-wide-camera-lens", photopic],
-        ["fujifilm-fujinon-xf-27mm-f28", photopic],
-        ["leica-apo-summicron-m-35f2", photopic],
-        ["fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr", photopic],
-      ];
-      const verdicts: string[] = [];
-      for (const [key, options] of lenses) {
-        const { r2, r3 } = await verdictsOf(key, options);
-        verdicts.push(...r2, ...r3);
-      }
-      const count = (verdict: string): number => verdicts.filter((other) => other === verdict).length;
-      t.diagnostic(
-        "the floors and failures pinned here are of LensVisualizer's intersection tolerance of 1e-9 mm, at the " +
-          `closure ${TOLERANCE_1E9_CLOSURE.slice(0, 8)}, and are not compared with this one: of ${verdicts.length} ` +
-          `pairs ${count("PASS")} PASS, ${count("FLOOR")} FLOOR, ${count("FAIL")} FAIL; ${seen.join("; ")}`,
-      );
-      // No floor is required of another LensVisualizer, but every pair is still judged: PASS or FLOOR, as on any
-      // gated rung. The failures pinned below are refusals of the floor rule at the old tolerance alone.
-      assert.equal(count("PASS") + count("FLOOR"), verdicts.length, `a pair is neither PASS nor FLOOR: ${verdicts}`);
-      assert.ok(verdicts.length > 0, "no pair was judged");
-      return;
+    const photopic: RunOptions = { lines: { kind: "photopic" } };
+    const lenses: [string, RunOptions][] = [
+      ["fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii", {}],
+      ["leica-apo-summicron-m-35f2", {}],
+      ["apple-iphone-12-main-wide", {}],
+      ["apple-iphone-7-wide-camera-lens", photopic],
+      ["fujifilm-fujinon-xf-27mm-f28", photopic],
+      ["leica-apo-summicron-m-35f2", photopic],
+      ["fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr", photopic],
+    ];
+    const verdicts: string[] = [];
+    for (const [key, options] of lenses) {
+      const { r2, r3 } = await verdictsOf(key, options);
+      verdicts.push(...r2, ...r3);
     }
-
-    // Within the floor's limits, at the full field only: a hit 4e-8 mm off behind a surface that magnifies what
-    // came before it forty times, on a wide zoom; a landing 2.2e-8 mm off behind an exit 64 degrees off the axis.
-    for (const key of ["fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii", "leica-apo-summicron-m-35f2"]) {
-      const { r2, r3, sets } = await verdictsOf(key);
-      assert.deepEqual(r2, ["PASS", "PASS", "FLOOR"], key);
-      assert.deepEqual(r3, ["PASS", "PASS", "FLOOR"], key);
-      assert.match(
-        sets[2].r2.reason ?? "",
-        /; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-\d+ within 1\.00e-8, lv against ref hits\.maxDistance \d\.\d\de-\d+ within 1\.00e-7, /,
-      );
-    }
-
-    // A direction above its gate, which until policy version 4 had no floor and always failed. On
-    // apple-iphone-12-main-wide at its full field the exit direction is 3.1e-9 off, three times its gate, behind a
-    // hit that is 1.09e-8 mm off; the landing and the optical path are inside their gates. Both figures are within
-    // ten times their gates, and R2 is a floor now. R3 passed and passes.
-    {
-      const { r2, r3, sets } = await verdictsOf("apple-iphone-12-main-wide");
-      assert.deepEqual(r2, ["PASS", "PASS", "FLOOR"]);
-      assert.deepEqual(r3, ["PASS", "PASS", "PASS"]);
-      assert.match(
-        sets[2].r2.reason ?? "",
-        /^direction\.maxAbs \d\.\d\de-9 exceeds its tolerance 1\.00e-9 at .*; hits\.maxDistance 1\.\d\de-8 exceeds its tolerance 1\.00e-8 at .*; floor of lv: lv against ref direction\.maxAbs \d\.\d\de-9 within 1\.00e-8, lv against ref hits\.maxDistance 1\.\d\de-8 within 1\.00e-7, lv against ref landing\.maxDistance \d\.\d\de-9 within 1\.00e-7$/,
-      );
-      const direction = metricOf(sets[2].r2, "direction.maxAbs").value ?? NaN;
-      assert.ok(direction > 1e-9 && direction < limitOf("r2", "direction.maxAbs"), String(direction));
-    }
-    // The direction alone, with every hit and landing inside its gate: apple-iphone-7-wide-camera-lens at half its
-    // field, on the photopic lines only, 1.0e-9 to 1.4e-9. Five floors, and nothing else of its 15 sets.
-    {
-      const { r2, r3, sets } = await verdictsOf("apple-iphone-7-wide-camera-lens", { lines: { kind: "photopic" } });
-      assert.equal(sets.length, 15);
-      assert.ok(r3.every((verdict) => verdict === "PASS"));
-      const floors = sets.filter((set) => set.r2.verdict === "FLOOR");
-      assert.deepEqual(
-        r2.filter((verdict) => verdict !== "FLOOR"),
-        Array.from({ length: 10 }, () => "PASS"),
-      );
-      for (const { spec, r2: pair } of floors) {
-        assert.equal(spec.groups?.field?.heightFraction, 0.5);
-        assert.match(
-          pair.reason ?? "",
-          /^direction\.maxAbs 1\.\d\de-9 exceeds its tolerance 1\.00e-9 at [^;]*; floor of lv: /,
-        );
-        assert.ok((metricOf(pair, "hits.maxDistance").value ?? NaN) < 1e-8);
-        assert.ok((metricOf(pair, "landing.maxDistance").value ?? NaN) < 1e-8);
-      }
-    }
-
-    // Beyond the limits, and still failing: nothing was widened for these, and each stays a finding about
-    // LensVisualizer. fujifilm-fujinon-xf-27mm-f28 at 510 nm, on a ray that leaves a surface 3 degrees short of the
-    // perpendicular to the axis: a hit 1.8e-7 mm off, where the limit of a floor is 1e-7 mm.
-    {
-      const { sets } = await verdictsOf("fujifilm-fujinon-xf-27mm-f28", { lines: { kind: "photopic" } });
-      const { r2, r3 } = fullField(sets, 2);
-      assert.equal(r2.verdict, "FAIL");
-      assert.match(
-        r2.reason ?? "",
-        /; not a floor of lv: hits\.maxDistance against ref 1\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
-      );
-      // Its direction, 3.5e-9, is within the limit a direction has now: it is the hit that decides.
-      const direction = metricOf(r2, "direction.maxAbs").value ?? NaN;
-      assert.ok(direction > 1e-9 && direction < limitOf("r2", "direction.maxAbs"), String(direction));
-      assert.equal(r3.verdict, "FLOOR");
-    }
-    // leica-apo-summicron-m-35f2 at 555 nm, behind an exit 64 degrees off the axis: a landing 2.0e-7 mm off and a
-    // path 3.3e-4 waves off, each beyond its limit, with every hit inside its gate.
-    {
-      const { sets } = await verdictsOf("leica-apo-summicron-m-35f2", { lines: { kind: "photopic" } });
-      const { r2, r3 } = fullField(sets, 0);
-      assert.deepEqual([r2.verdict, r3.verdict], ["FAIL", "FAIL"]);
-      assert.match(
-        r2.reason ?? "",
-        /; not a floor of lv: landing\.maxDistance against ref \d\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
-      );
-      assert.match(
-        r3.reason ?? "",
-        /; not a floor of lv: opd\.maxAbs against ref 3\.\d\de-4 exceeds the floor limit 2\.00e-4$/,
-      );
-      assert.ok((metricOf(r2, "hits.maxDistance").value ?? NaN) < 1e-8);
-    }
-    // fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr at its full field of 63 degrees, where hits and landings run from
-    // 2.5e-8 mm to 1.2e-7 mm with the line and the direction from 1.1e-9 to 4.0e-9: no pair passes, and each is
-    // a floor exactly where every figure is within its limit. At 470 nm a hit is 1.15e-7 mm off, which is not.
-    {
-      const { sets } = await verdictsOf("fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr", { lines: { kind: "photopic" } });
-      const full = sets.filter(({ spec }) => spec.groups?.field?.heightFraction === 1);
-      assert.equal(full.length, 5);
-      for (const { spec, r2 } of full) {
-        const within = (["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"] as const).every(
-          (name) => (metricOf(r2, name).value ?? NaN) <= limitOf("r2", name),
-        );
-        assert.equal(r2.verdict, within ? "FLOOR" : "FAIL", `line ${spec.line}: ${r2.reason}`);
-        assert.ok((metricOf(r2, "direction.maxAbs").value ?? NaN) > 1e-9, `line ${spec.line}`);
-      }
-      const verdicts = full.map(({ r2 }) => r2.verdict);
-      assert.ok(verdicts.includes("FLOOR") && verdicts.includes("FAIL"), verdicts.join(" "));
-      const blue = fullField(sets, 1).r2;
-      assert.equal(blue.verdict, "FAIL");
-      assert.match(
-        blue.reason ?? "",
-        /; not a floor of lv: hits\.maxDistance against ref 1\.\d\de-7 exceeds the floor limit 1\.00e-7$/,
-      );
-    }
+    const count = (verdict: string): number => verdicts.filter((other) => other === verdict).length;
     t.diagnostic(seen.join("; "));
+    // No floor is required of another LensVisualizer, but every pair is still judged: PASS or FLOOR, as on any
+    // gated rung. Historical failures at the old tolerance are no longer pinned here.
+    assert.equal(count("PASS") + count("FLOOR"), verdicts.length, `a pair is neither PASS nor FLOOR: ${verdicts}`);
+    assert.ok(verdicts.length > 0, "no pair was judged");
   },
 );

@@ -287,7 +287,7 @@ test("a central obstruction of the state is the inner clip radius of the echo, a
   // The fake tree's state has no inner semi-diameter; this copy of it gives one to the second surface of every lens,
   // as LensVisualizer's state has for an annular aperture.
   const lv = variantOf(freshLv(t), "annular", {
-    "src/optics/compat.ts": (text) => text.replace("innerSd: null,", "innerSd: index === 1 ? 2.5 : null,"),
+    "src/optics/state/runtime.ts": (text) => text.replace("innerSd: null,", "innerSd: index === 1 ? 2.5 : null,"),
   });
   const binding = await bind(t, lv);
   const opticalCase = await exported(binding, "acme-zoom-24-48");
@@ -614,7 +614,7 @@ test("a pupil that is an inverted image of the stop has a positive radius", asyn
     0,
     0,
   );
-  assert.ok(binding.api.traceParaxialSurfaces2(state.surfaces, 1, 0, { stopAt: 2 }).y < 0, "the stop is seen inverted");
+  assert.ok(binding.api.paraxialTrace(state.surfaces, 1, 0, { stopAt: 2 }).y < 0, "the stop is seen inverted");
   const front = dataOf<ParaxialFirstOrderData>(await ask(engine, behind, PARAXIAL_FIRST_ORDER), PARAXIAL_FIRST_ORDER);
   // The entrance pupil is a real image of the stop, in front of the lens.
   assert.ok(f8(front.entrancePupilZ)[0] < 0, String(f8(front.entrancePupilZ)[0]));
@@ -1004,10 +1004,10 @@ test("without a LensVisualizer the engine is unavailable, with a code that says 
     missing.message,
     /^engine lv is unavailable \(load-failed\): LensVisualizer cannot be loaded \(path-missing\): /,
   );
-  rmSync(join(lv, "src/optics/math/paraxial.ts"));
+  rmSync(join(lv, "src/optics/first-order/lensConstants.ts"));
   const broken = await unavailable(lv);
   assert.equal(broken.code, "load-failed");
-  assert.match(broken.message, /cannot be loaded \(import-failed\): .*src\/optics\/math\/paraxial\.ts/);
+  assert.match(broken.message, /cannot be loaded \(import-failed\): .*src\/optics\/first-order\/lensConstants\.ts/);
 });
 
 test("the built-in engine lv is LensVisualizer at the configuration's lvPath", async (t) => {

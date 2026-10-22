@@ -1,14 +1,12 @@
 // Fake compatibility layer: the names the comparator's import manifest takes from LV's compat.ts.
-import { DEFAULT_FOPEN, FLAT_RADIUS } from "../lens-data/defaults.js";
-import { ASPHERIC_POLYNOMIAL_TERMS } from "../types/asphericSchema.js";
-import { wideOpenStopAtZoom } from "./apertureStop.js";
-import { FLAT_R_THRESHOLD } from "./constants.js";
-import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "./types.js";
+import { DEFAULT_FOPEN, FLAT_RADIUS } from "../../lens-data/defaults.js";
+import { ASPHERIC_POLYNOMIAL_TERMS } from "../../types/asphericSchema.js";
+import { wideOpenStopAtZoom } from "./aperture.js";
+import { FLAT_R_THRESHOLD } from "../geometry.js";
+import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "../types.js";
 
-export { computeCardinalElements2 } from "./first-order/cardinals.js";
-export { traceSequential as traceEngineRay2 } from "./trace/sequentialTrace.js";
 
-export function buildLens2(data: FakeLensData): FakeRuntimeLens {
+export function buildLens(data: FakeLensData): FakeRuntimeLens {
   const surfaces: FakeSurfaceData[] = data.surfaces.map((surface) => ({ ...surface }));
   const lastLensSurfaceIdx = surfaces.length - 1;
   if (data.rearPlate) {
@@ -24,10 +22,10 @@ export function buildLens2(data: FakeLensData): FakeRuntimeLens {
   }
   const stopIndex = surfaces.findIndex((surface) => surface.label === "STO");
   if (stopIndex < 0) throw new Error(`${data.key}: no STO surface`);
-  const isZoom = Array.isArray(data.zoomPositions) && data.zoomPositions.length >= 2;
+  const isZoom = Array.isArray(data.zoom?.stations) && data.zoom.stations.length >= 2;
   const stopPhysSD = isZoom && data.zoomStopSDs ? data.zoomStopSDs[0] : surfaces[stopIndex].sd;
   return Object.freeze({
-    data,
+    source: data,
     surfaces,
     lastLensSurfaceIdx,
     isZoom,
@@ -69,7 +67,7 @@ function profileOf(surface: FakeSurfaceData): FakeStateSurface["profile"] {
 
 export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: number, aberrationT = 0): FakeState {
   void aberrationT;
-  const zoomGaps = L.isZoom ? (L.data.zoomGaps ?? null) : null;
+  const zoomGaps = L.isZoom ? (L.source.zoomGaps ?? null) : null;
   const zoomGap = zoomGaps === null ? 0 : zoomGaps[0] + (zoomGaps[zoomGaps.length - 1] - zoomGaps[0]) * zoomT;
   const surfaces: FakeStateSurface[] = [];
   const z: number[] = [];
@@ -78,7 +76,7 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
     // The fake moves the whole lens for focus and opens its first gap for zoom, so both sliders show in the state.
     let d = source.d;
     if (index === 0) d += zoomGap;
-    if (index === L.lastLensSurfaceIdx) d += focusT * (L.data.focusTravel ?? 0);
+    if (index === L.lastLensSurfaceIdx) d += focusT * (L.source.focusTravel ?? 0);
     surfaces.push({
       physicalIndex: index,
       label: source.label,
@@ -100,8 +98,9 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
     position += d;
   });
   return {
+    traceGeometry: { stopSurfaceIndex: L.stopIndex },
     lens: {
-      key: L.data.key,
+      key: L.source.key,
       runtime: L,
       stop: { surfaceIndex: L.stopIndex },
       flags: { isZoom: L.isZoom, isFoldedOptics: false },
@@ -117,30 +116,30 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
   };
 }
 
-export function traceRay2(y0: number, u0: number): unknown {
+export function traceRay(y0: number, u0: number): unknown {
   return { pts: [], ghostPts: [], y: y0, u: u0, clipped: false };
 }
 
 // The field geometry the fake's analyses share: its pupil ratio is the lens's, at any state.
-export function computeAnalysisFieldGeometryAtState2(_focusT: number, _zoomT: number, L: FakeRuntimeLens): unknown {
-  return { yRatio: L.data.pupilRatio ?? 1, b: 0, epRatio: 1, halfFieldDeg: L.data.field?.edgeDeg ?? 20 };
+export function computeAnalysisFieldGeometryAtState(_focusT: number, _zoomT: number, L: FakeRuntimeLens): unknown {
+  return { yRatio: L.source.pupilRatio ?? 1, b: 0, epRatio: 1, halfFieldDeg: L.source.field?.edgeDeg ?? 20 };
 }
 
-export function entrancePupilAtState2(
+export function entrancePupilAtState(
   stopSD: number,
   _focusT: number,
   _zoomT: number,
   L: FakeRuntimeLens,
   geometry?: { yRatio: number },
 ): unknown {
-  const yRatio = geometry?.yRatio ?? L.data.pupilRatio ?? 1;
+  const yRatio = geometry?.yRatio ?? L.source.pupilRatio ?? 1;
   return { epSD: Math.abs(stopSD / yRatio), yRatio, b: 0, epRatio: 1 };
 }
 
-export function fopenAtZoom2(_zoomT: number, L: FakeRuntimeLens): number {
+export function fopenAtZoomClamped(_zoomT: number, L: FakeRuntimeLens): number {
   return L.FOPEN;
 }
 
-export function epAtZoom2(zoomT: number, L: FakeRuntimeLens): number {
+export function epAtZoomClamped(zoomT: number, L: FakeRuntimeLens): number {
   return L.EP.epSD + zoomT;
 }

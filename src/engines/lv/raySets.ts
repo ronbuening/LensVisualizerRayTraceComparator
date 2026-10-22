@@ -6,6 +6,7 @@
 // for, are restated here: where a lattice cell's ray starts and what it weighs, and how the field axis is put
 // together from its parts. Integration tests hold both to LensVisualizer: the rays to those of its own bundle, bit
 // for bit, and the source lines to their text.
+import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import type { RayGroups, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { RunFields, RunSampling } from "../../contract/runSpec.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
@@ -33,6 +34,7 @@ export type LvRaySetApi = LvRaysApi &
   LvHookApi &
   Pick<
     LvApi,
+    | "createAnalysisRequest"
     | "assessMtfSupport"
     | "mtfModeledHalfField"
     | "mtfChiefHeight"
@@ -69,7 +71,7 @@ export interface LvLaunchSetup {
  * reason as its code.
  */
 export function lvLaunchSetup(
-  api: LvHookApi & Pick<LvApi, "assessMtfSupport">,
+  api: LvHookApi & Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport">,
   model: LvCaseModel,
 ): LvLaunchSetup | { readonly problem: string } {
   const { state, runtime, exported } = model;
@@ -83,7 +85,8 @@ export function lvLaunchSetup(
     stopSemiDiameterMm: stopSemiDiameter,
     focus: "design",
   };
-  const gate = api.assessMtfSupport(state, options);
+  const [request, settings] = lvMtfInputs(api, state, options);
+  const gate = api.assessMtfSupport(request, settings);
   if (!gate.available) {
     const message = `LensVisualizer's MTF launch does not cover this state: ${gate.message}`;
     return { problem: rayProblem(gate.reason ?? "launch-unavailable", message) };
@@ -93,7 +96,7 @@ export function lvLaunchSetup(
     referenceWavelengthNm: lines[0].wavelengthNm,
     spectralLines: lines.map(({ wavelengthNm, weight }) => ({ wavelengthNm, weight })),
   };
-  return { options, support };
+  return { options: lvResolvedMtfOptions(request, settings), support };
 }
 
 /** A field of a run as LensVisualizer resolves it: its chief-ray angle, or the coded problem of a field without one. */
@@ -248,7 +251,7 @@ export function lvRayWeights(
     if (ray === rays.chiefIndex) return 0;
     const origin: LvVec3 = [rays.origins[3 * ray], rays.origins[3 * ray + 1], rays.origins[3 * ray + 2]];
     const direction: LvVec3 = [rays.directions[3 * ray], rays.directions[3 * ray + 1], rays.directions[3 * ray + 2]];
-    const trace = api.traceEngineRay2(state, { origin, direction }, options);
+    const trace = api.traceEngineRay(state, { origin, direction }, options);
     const spot = api.mtfImagePoint(state, trace, exported.conditions.imageZ);
     return spot === null ? launchWeight : spot.weight * launchWeight;
   });

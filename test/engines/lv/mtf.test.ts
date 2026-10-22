@@ -1,3 +1,4 @@
+import { lvResolvedMtfOptions } from "../../../src/engines/lv/tabRequest.ts";
 // `mtf.native` of the engine `lv` against the fake LV tree: no LensVisualizer is needed. The fake has a "product
 // MTF" and an "MTF tab" of its own, with LV's names: its curves are a closed form of the request, so what the engine
 // asked shows in what comes back, and its defaults are none of LensVisualizer's. Its numbers describe no real lens.
@@ -119,9 +120,9 @@ function curve(wire: NdArrayWire): number[] {
 /** The API of a binding with its `computeMtf` watched: every request it was made with, in order. */
 function watched(binding: LvBinding): { api: LvMtfApi; asked: LvMtfOptions[] } {
   const asked: LvMtfOptions[] = [];
-  const computeMtf = (state: LvCaseModel["state"], options: LvMtfOptions): LvMtfResult => {
-    asked.push(options);
-    return binding.api.computeMtf(state, options);
+  const computeMtf: LvMtfApi["computeMtf"] = (request, settings) => {
+    asked.push(lvResolvedMtfOptions(request, settings));
+    return binding.api.computeMtf(request, settings);
   };
   return { api: { ...binding.api, computeMtf }, asked };
 }
@@ -537,7 +538,7 @@ test("a request LensVisualizer calls invalid, and an answer that is not one to t
 
   // Through the engine such a throw is a result of status "error", as for every quantity.
   const broken = variantOf(freshLv(t), "broken", {
-    "src/optics/analysis/mtf.ts": (text) =>
+    "src/optics/analysis/mtf/mtf.ts": (text) =>
       text.replace('status: unsettled ? "unconverged" : "converged"', 'status: "pending"'),
   });
   binding.close();
@@ -858,7 +859,7 @@ test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's
 
 test("a lens that has no case has the exporter's problems, and the tab is not asked", async (t) => {
   const lv = variantOf(freshLv(t), "folded", {
-    "src/optics/compat.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
+    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
   });
   const binding = await bind(t, lv);
   const resolve = createLvTabProfileResolver(binding);

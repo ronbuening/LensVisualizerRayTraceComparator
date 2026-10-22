@@ -401,6 +401,14 @@ elsewhere occur only in folded systems, and an asphere without a term is the con
 
 ### The engine `lv`
 
+The LV binding uses the public barrels `src/optics/{buildLens,optics,fieldGeometry,analysis,mtf,geometry,chromatic}.ts`
+where they export the required name, and defining deep modules otherwise (the manifest is authoritative).
+It requires the engine rewrite at `460f841f` or later. MTF entry points take an analysis request made by
+`createAnalysisRequest` from `src/optics/analysis.ts`, beside settings without aperture radii; lower-level helpers
+in `src/optics/analysis/mtf/` retain their state and resolved options form. Lens files use V2 `zoom.stations`;
+finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe.
+
+
 LensVisualizer is also an engine, `lv` (`src/engines/lv/engine.ts`): it answers a request from its own prepared
 state and its own functions, and reads nothing of the surfaces of the case it is handed. Its `fingerprint` is the
 closure hash of LensVisualizer's engine files, the `closureHash` of a case's provenance; its `adapterRevision` is
@@ -426,9 +434,9 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   radius of the case, and an infinity for a surface it clips nothing at; `sag` is its surface profile's, and NaN beyond the height at which the profile says the
   surface ends; `indexAfterSurface` is its index resolver's table for the case's lines. So R0 of `lv` against any
   engine holds the exporter, and that engine's reading of the case, to what LensVisualizer traces.
-- **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`traceParaxialSurfaces2`) on the rows
+- **`paraxial.first-order`** is LensVisualizer's paraxial kernel (`paraxialTrace`) on the rows
   `{ R, d, n }` of the state, with `n` the index of the line: two basis rays give the system matrix, its own
-  `buildCardinalElementsFromMatrix2` the cardinal points and the back focus, two rays to the stop's plane the
+  `buildCardinalElementsFromMatrix` the cardinal points and the back focus, two rays to the stop's plane the
   entrance pupil and a ray from the stop's centre the exit pupil. LensVisualizer's own first-order module answers
   for the authored indices only; at such a line the cardinal points and the back focus of `lv` are that module's,
   bit for bit. The method is named `paraxial-kernel`: the values are the kernel's, and none is a number
@@ -437,7 +445,7 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   `surface.asphere.quadratic-term`, before the kernel is asked. No lens of LensVisualizer has either: its
   coefficients start at `A3`.
 - **`rays.trace`** is every ray of the request traced for real by LensVisualizer's sequential tracer,
-  `traceEngineRay2`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
+  `traceEngineRay`, on the state: clear apertures checked, the stop surface with the stop radius of the case, the
   ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
   (which are LensVisualizer's own for that line), the direction taken as the unit vector it is, and the optical
   path recorded. These are the options of LensVisualizer's own MTF bundle. What became of a ray is what
@@ -462,9 +470,9 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
 |---|---|
 | `lvStoredEntrancePupilZ` | the stop vertex plus `epZRelStopAtZoom(zoomT, L)`: found with real rays near the axis |
 | `lvStoredExitPupilZ` | the last vertex, rear plates included, plus `xpZRelLastSurfAtZoom(zoomT, L)`: likewise |
-| `lvNominalEntrancePupilSemiDiameter` | `epAtZoom2(zoomT, L)`: focal length over twice the nominal f-number |
+| `lvNominalEntrancePupilSemiDiameter` | `epAtZoomClamped(zoomT, L)`: focal length over twice the nominal f-number |
 | `lvStoredExitPupilSemiDiameter` | `xpAtZoom(zoomT, L)`: scaled from that nominal entrance pupil |
-| `lvNominalFNumber` | `fopenAtZoom2(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
+| `lvNominalFNumber` | `fopenAtZoomClamped(zoomT, L)`: the wide-open f-number at the zoom position, whatever the stop of the case |
 
 #### LensVisualizer's product MTF
 

@@ -1,3 +1,4 @@
+import type { FakeAnalysisRequest } from "../request.ts";
 // The fake's product MTF, under LV's names. Its curves are a closed form of the request, so that what was asked
 // shows in what comes back: a straight fall to a cutoff that is the method's and the stop's, lowered with the
 // field. The numbers describe no lens.
@@ -14,7 +15,7 @@ import type {
   FakeMtfResult,
   FakeMtfSupport,
   FakeState,
-} from "../types.js";
+} from "../../types.js";
 import {
   MTF_CONVERGENCE_TOLERANCE,
   MTF_DEFAULT_GRID_CAP,
@@ -25,7 +26,7 @@ import {
 } from "./mtfConstants.js";
 import { mtfChiefHeight, mtfModeledHalfField, resolveMtfFieldGeometry, resolveMtfFieldTargets } from "./mtfFields.js";
 import { expandMtfFootprint } from "./mtfFootprint.js";
-import { assessMtfSupport } from "./mtfSupport.js";
+import { assessMtfSupport, resolveMtfOptions } from "./mtfSupport.js";
 import { findMtfFieldFootprint, prepareMtfFieldLaunch, traceMtfBundle } from "./mtfTracing.js";
 
 /** The frequencies of a request that names none. */
@@ -264,8 +265,10 @@ function* sampledField(job: Job, target: FakeFieldTarget): Generator<FakeMtfFiel
   yield* refineMtfField(job.ladder, evaluate, job.frequencies);
 }
 
-export function* computeMtfSteps(state: FakeState, options: FakeMtfOptions): Generator<FakeMtfResult, FakeMtfResult> {
-  const support = assessMtfSupport(state, options);
+export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<FakeMtfOptions, "pupilSemiDiameterMm" | "stopSemiDiameterMm">): Generator<FakeMtfResult, FakeMtfResult> {
+  const state = request.preparedGeometry;
+  const options = resolveMtfOptions(request, settings);
+  const support = assessMtfSupport(request, settings);
   const frequencies = [...(options.frequenciesPerMm ?? MTF_FREQUENCIES)];
   const fractions = options.fieldFractions ?? MTF_FIELDS;
   const result: FakeMtfResult = {
@@ -308,7 +311,7 @@ export function* computeMtfSteps(state: FakeState, options: FakeMtfOptions): Gen
     appliedShiftMm: refocused ? bestShift : 0,
     bestAxialShiftMm: bestShift,
   };
-  const stated = state.lens.runtime.data.mtf ?? {};
+  const stated = state.lens.runtime.source.mtf ?? {};
   result.aperture = {
     tracedFNumber: state.imgZ / (2 * options.pupilSemiDiameterMm),
     limitingSurfaceLabel: stated.limitingSurfaceLabel ?? null,
@@ -363,8 +366,8 @@ export function* computeMtfSteps(state: FakeState, options: FakeMtfOptions): Gen
   return result;
 }
 
-export function computeMtf(state: FakeState, options: FakeMtfOptions): FakeMtfResult {
-  const steps = computeMtfSteps(state, options);
+export function computeMtf(request: FakeAnalysisRequest, settings: Omit<FakeMtfOptions, "pupilSemiDiameterMm" | "stopSemiDiameterMm">): FakeMtfResult {
+  const steps = computeMtfSteps(request, settings);
   let next = steps.next();
   while (!next.done) next = steps.next();
   return next.value;

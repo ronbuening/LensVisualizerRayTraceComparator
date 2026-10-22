@@ -64,7 +64,10 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   `src/engines/lv/binding.ts`; optiland is called only from `workers/python/lvrtc_optiland`.
 - **The LV binding is the only door to LV.** To use one more LV function, add its name to
   `src/engines/lv/manifest.ts` and its signature to `LvApi` in `src/engines/lv/types.ts`; the type check fails
-  until the two agree, and the binding checks the export at load time. Types of LV values are local structural
+  until the two agree, and the binding checks the export at load time. Prefer LV's public barrels
+  (`buildLens`, `optics`, `fieldGeometry`, `analysis`, `mtf`, `geometry`, `chromatic`) wherever they export the name;
+  use deep modules otherwise. A pre-rewrite checkout with `src/optics/compat.ts` is refused with `import-failed`
+  and a message requiring the rewrite merge `460f841f` or later. Types of LV values are local structural
   types: never `import type` from the LV path, so `npm run typecheck` passes with no LV on disk.
 - **The LV engine fingerprint covers engine code only.** Lens prescription files (`src/lens-data/**/*.data.ts`,
   `*.teleconverter.ts`) are hashed one by one into the catalog and never into the engine closure.
@@ -74,6 +77,15 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **The exporter translates and never approximates.** What the contract cannot express is a coded problem for
   that run. A rule LV keeps only in its UI (the stop-down formula) is mirrored here with a source canary in
   `test/integration/lv/canaries.test.ts`. Hermetic tests use synthetic numbers only, never an LV-derived value.
+- **Lens files are V2.** `buildLens` takes their default export directly. A zoom is detected from
+  `data.zoom?.stations` with at least two stations, never from V1 `zoomPositions`. The runtime's canonical lens is
+  `source`, not `data`; source stop `sd` can be a placeholder 0, so read the prepared stop instead.
+- **MTF entry points take `(request, settings)`**: `assessMtfSupport`, `computeMtf`, `computeMtfSteps`.
+  `lvMtfInputs` in `tabRequest.ts` is the one bridge that calls `createAnalysisRequest`, with the prepared state,
+  `dynamicEFL: 0` as in LV's worker, and the two current radii. Settings omit the radii. Lower-level helpers take
+  `MtfOptions` resolved from `request.aperture` by `lvResolvedMtfOptions`, including
+  `request.pose?.active ?? settings.movementActive`; canaries hold both mappings to LV. `lvMtfRequest` remains the
+  one case/spec request builder shared by product MTF and replay; never duplicate its policy.
 - **A zoom is compared at both ends wherever no zoom position is stated** (`src/engines/lv/zoomEnds.ts`): a suite
   run of an LV zoom without `state.zoomT` is two runs, `<name>-wide` and `<name>-tele`; the census and `lvrtc mtf`
   without `--zoom` do the same. Baselines (Stage 2.6) are keyed on those runs as run, by name and case id as the
@@ -240,12 +252,11 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **Expected values of the worker's ray tests are derived in the test** (closed forms, and `exact.py`, a
   60-digit trace written from the contract), never taken from an engine's output. A behaviour of
   optiland that `docs/gotchas.md` describes has a test that pins it.
-- **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR and to no failure (`assertR2`),
-  and asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
-  red. The tier-2 rung tests hold upper bounds only and count PASS and FLOOR together; what LensVisualizer's old
-  intersection tolerance of 1e-9 mm leaves on steep lenses is compared only at its engine closure
-  (`TOLERANCE_1E9_CLOSURE` in `test/integration/lv/rungs.test.ts`), and at any other closure every pair of those
-  lenses is still held to PASS or FLOOR.
+- **No test requires a `FLOOR`**: a rung test holds gated pairs to PASS or FLOOR (`assertR2`). LV and ref must
+  fail no ray; an optiland failure is allowed only on an asphere where LV and ref both block that same ray at
+  that same surface, with each named in a diagnostic (the focus-station case in `docs/gotchas.md`). It
+  asserts what a floor's reason says only of the pairs that are floors, so a more accurate LV turns no test
+  red. The tier-2 rung tests hold upper bounds only and count PASS and FLOOR together at every engine closure.
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
@@ -593,7 +604,7 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   (`test/engines/lv/support.ts`). `variantOf` rewrites a file of a copy for one test. A lens stating
   `mtf: { sampled: true }` has its geometric MTF sampled grid by grid (ladder, tolerance, widening and plain sums
   of the fake's own; `footprintScale` makes its scan too small); every other lens keeps the closed form, and is a
-  FAIL in R4f by design. A test that removes a module to break a binding removes `src/optics/layout.ts`, which
+  FAIL in R4f by design. A test that removes a module to break a binding removes `src/optics/fieldGeometry.ts`, which
   nothing else imports; a test binding an edited tree through a case source edits the fresh tree in place, since
   a `variantOf` copy is closed only by `bind`. `zenith-plate-35` has a rear plate without a published `sd` (the fake
   generates a rim and marks it `clips: false`); `acme-zoom-24-48`'s plate publishes its rim and clips. A lens file

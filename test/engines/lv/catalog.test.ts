@@ -56,8 +56,8 @@ test("the engine closure hashes the sorted path and hash lines of the engine fil
 
 test("the catalog is sorted by key whatever the order of the files", async () => {
   const modules: Record<string, unknown> = {
-    "b.data.ts": { key: "zeta", name: "Zeta", zoomPositions: [1, 2] },
-    "a.data.ts": { key: "alpha", name: "Alpha", zoomPositions: [1] },
+    "b.data.ts": { key: "zeta", name: "Zeta", schema: 2, zoom: { stations: [{}, {}] } },
+    "a.data.ts": { key: "alpha", name: "Alpha", schema: 2, zoom: { stations: [{}] } },
   };
   const { catalog, data } = await buildCatalog(["b.data.ts", "a.data.ts"], async (file) => ({
     module: { default: modules[file] },

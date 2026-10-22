@@ -1,5 +1,5 @@
 import type { FakeState } from "../types.js";
-import { computeSystemMatrix2 } from "./systemMatrix.js";
+import { computeSystemMatrix } from "./systemMatrix.js";
 
 interface CardinalInput {
   A: number;
@@ -15,7 +15,7 @@ interface CardinalInput {
 }
 
 // The cardinal points of a system matrix, in LV's shape: positions under `points`, signed lengths under `distances`.
-export function buildCardinalElementsFromMatrix2(input: CardinalInput): unknown {
+export function buildCardinalElementsFromMatrix(input: CardinalInput): unknown {
   const { A, C, D, frontVertexZ, rearVertexZ, rearLensVertexZ = rearVertexZ, objectIndex, imageIndex } = input;
   if (!Number.isFinite(C) || Math.abs(C) < 1e-12) return null;
   const frontFocalZ = frontVertexZ + (objectIndex * D) / C;
@@ -40,10 +40,10 @@ export function buildCardinalElementsFromMatrix2(input: CardinalInput): unknown 
   };
 }
 
-export function computeCardinalElements2(state: FakeState): unknown {
+export function computeCardinalElementsFromState(state: FakeState): unknown {
   const last = state.surfaces.length - 1;
-  return buildCardinalElementsFromMatrix2({
-    ...computeSystemMatrix2(state),
+  return buildCardinalElementsFromMatrix({
+    ...computeSystemMatrix(state),
     frontVertexZ: state.z[0],
     rearVertexZ: state.z[last],
     rearLensVertexZ: state.z[state.lens.runtime.lastLensSurfaceIdx],

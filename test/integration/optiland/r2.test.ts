@@ -248,7 +248,7 @@ test(
       manifest.runs.flatMap((run) => run.raySets?.problems ?? []),
       [],
     );
-    const { pairs, counts } = assertR2(t, "made for R2", cycle.comparisons);
+    const { pairs, counts } = assertR2(t, "made for R2", cycle);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))], ["optiland / ref"]);
     assert.equal(pairs.length, sets);
     // The two engines stopped the same rays, at the same surfaces, for whatever reason each has.
@@ -303,7 +303,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r2"));
   const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
   assert.equal(manifest.jobs.length, 3 * sets);
-  const on = assertR2(t, suite, cycle.comparisons);
+  const on = assertR2(t, suite, cycle);
   assert.equal(on.pairs.length, 3 * sets);
   assert.deepEqual([...new Set(on.pairs.map((pair) => pair.engines))].sort(), [
     "lv / optiland",
@@ -328,7 +328,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
   assert.ok(plain !== undefined && plain.status === "available" && plain.details.jit === false);
   assert.notEqual(plain.fingerprint, optiland.fingerprint);
   assert.equal(plain.adapterRevision, optiland.adapterRevision);
-  const off = assertR2(t, `${suite}, optiland without the JIT`, again.comparisons);
+  const off = assertR2(t, `${suite}, optiland without the JIT`, again);
   assert.deepEqual(off.verdicts, on.verdicts);
   assert.deepEqual(off.counts, on.counts);
 

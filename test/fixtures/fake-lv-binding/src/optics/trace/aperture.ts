@@ -1,12 +1,12 @@
-import type { FakeState, FakeStateSurface } from "../types.js";
+import type { FakeStateSurface } from "../types.js";
 
 export function evaluateAperture(
-  state: FakeState,
+  geometry: { readonly stopSurfaceIndex: number },
   surface: FakeStateSurface,
   radius: number,
   stopSemiDiameter?: number,
 ): unknown {
-  const isStop = surface.physicalIndex === state.lens.stop.surfaceIndex;
+  const isStop = surface.physicalIndex === geometry.stopSurfaceIndex;
   // A surface that does not clip has no semi-diameter to clip by; the stop takes the radius it is given.
   const semiDiameter = isStop && stopSemiDiameter !== undefined ? stopSemiDiameter : surface.clips ? surface.sd : null;
   const innerSemiDiameter = surface.innerSd ?? 0;

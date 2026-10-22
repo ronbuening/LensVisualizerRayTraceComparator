@@ -1,7 +1,7 @@
-import type { FakeFiniteConjugate, FakeState } from "../types.js";
+import type { FakeFiniteConjugate, FakeState } from "../../types.js";
 
 export function mtfFiniteConjugate(state: FakeState): FakeFiniteConjugate | undefined {
-  return state.lens.runtime.data.finiteConjugates?.find(
+  return state.lens.runtime.source.conjugates?.find(
     (conjugate) => Math.abs(conjugate.focusT - state.focusT) < 1e-8 && Math.abs(conjugate.zoomT - state.zoomT) < 1e-8,
   );
 }

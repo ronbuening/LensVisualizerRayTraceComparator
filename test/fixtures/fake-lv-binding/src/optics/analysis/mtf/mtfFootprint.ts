@@ -1,6 +1,6 @@
 // The fake's footprint widening, under LV's name: the sides whose guard band carried flux grow by half the box's
 // larger side, where LV's grow by a quarter.
-import type { FakeFootprint } from "../types.js";
+import type { FakeFootprint } from "../../types.js";
 
 export function expandMtfFootprint(
   footprint: FakeFootprint,

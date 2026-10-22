@@ -212,7 +212,7 @@ test("a LensVisualizer that cannot be loaded is the problem of every run, with a
   assert.deepEqual(problemsOf(await missing.resolve(run("acme-singlet-50"))), [
     "lv-path-missing: LensVisualizer cannot be loaded; lvrtc doctor says why",
   ]);
-  rmSync(join(lv, "src/optics/analysis/mtfTracing.ts"));
+  rmSync(join(lv, "src/optics/analysis/mtf/mtfTracing.ts"));
   const broken = createLvCaseSource(lv);
   const [problem] = problemsOf(await broken.resolve(run("acme-singlet-50")));
   assert.equal(problem, "lv-import-failed: LensVisualizer cannot be loaded; lvrtc doctor says why");
@@ -241,11 +241,11 @@ test("the audit gives the checkout's fingerprint, and names an engine file or an
   appendFileSync(join(lv, SINGLET_FILE), "// edited\n");
   assert.deepEqual(source.audit(), { fingerprint, changed: [SINGLET_FILE] });
   appendFileSync(join(lv, "src/optics/trace/aperture.ts"), "// edited\n");
-  rmSync(join(lv, "src/optics/apertureStop.ts"));
+  rmSync(join(lv, "src/optics/state/aperture.ts"));
   // The fingerprint goes on describing what was loaded and built the cases.
   assert.deepEqual(source.audit(), {
     fingerprint,
-    changed: ["src/optics/apertureStop.ts", "src/optics/trace/aperture.ts", SINGLET_FILE],
+    changed: ["src/optics/state/aperture.ts", "src/optics/trace/aperture.ts", SINGLET_FILE],
   });
 });
 

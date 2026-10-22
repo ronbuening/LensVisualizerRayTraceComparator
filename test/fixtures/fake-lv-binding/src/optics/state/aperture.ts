@@ -1,4 +1,4 @@
-import type { FakeRuntimeLens } from "./types.js";
+import type { FakeRuntimeLens } from "../types.js";
 
 export function wideOpenStopAtZoom(zoomT: number, L: FakeRuntimeLens): number {
   const values = L.zoomStopSDs;

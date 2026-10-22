@@ -79,7 +79,7 @@ test(
     const again = manifest.jobs.filter((job) => job.rung === "r3").map((job) => job.storeKey);
     assert.deepEqual(again, computed, "the answer of a set to R3 is its answer to R2");
 
-    const { pairs } = assertR2(t, "focus stations", cycle.comparisons);
+    const { pairs } = assertR2(t, "focus stations", cycle);
     assert.equal(pairs.length, 3 * sets);
     // Measured: optiland within 3.9e-9 waves of ref in every path, to the last surface, to the image and relative to
     // the chief ray, where its hits are within 4.5e-12 mm: a twenty-fifth of what the floor rule asks of a witness.

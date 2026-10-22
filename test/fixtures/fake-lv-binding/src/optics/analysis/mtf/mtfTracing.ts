@@ -1,8 +1,8 @@
 // The fake's MTF launch and bundle, under LV's names: a chief ray per field, a box around it on a launch plane, a
 // lattice of square cells over the box, and the rays of the cells. Its geometry is its own and much cruder than
 // LV's: the chief ray is the straight line to the first vertex, and the box is a fixed multiple of the seed.
-import { LINE_NM } from "../spectralLines.js";
-import { outside, traceSequential } from "../trace/sequentialTrace.js";
+import { LINE_NM } from "../../chromatic.js";
+import { outside, traceSequential } from "../../trace/sequentialTrace.js";
 import type {
   FakeFieldLaunch,
   FakeFootprint,
@@ -12,7 +12,7 @@ import type {
   FakeTraceOptions,
   FakeTraceResult,
   Vec3,
-} from "../types.js";
+} from "../../types.js";
 import { mtfFiniteObjectPoint } from "./mtfConjugates.js";
 
 // A dispersion that is nothing like a glass's and easy to check: 1e-5 of index per nm from the d line, air at 1.
@@ -45,7 +45,7 @@ function traceOptions(
 
 // The fake's glasses absorb where a lens says so: exp(-coefficient x path) over every stretch inside an element.
 function transmission(state: FakeState, trace: FakeTraceResult): number {
-  const coefficient = state.lens.runtime.data.absorptionPerMm ?? 0;
+  const coefficient = state.lens.runtime.source.absorptionPerMm ?? 0;
   if (coefficient === 0) return 1;
   let inGlass = 0;
   for (let i = 0; i + 1 < trace.hits.length; i++) {
@@ -107,7 +107,7 @@ export function prepareMtfFieldLaunch(
   fieldAngleDeg: number,
 ): FakeFieldLaunch | null {
   // Beyond this angle the fake "finds no chief ray".
-  if (!(Math.abs(fieldAngleDeg) <= (state.lens.runtime.data.field?.chiefLimitDeg ?? 60))) return null;
+  if (!(Math.abs(fieldAngleDeg) <= (state.lens.runtime.source.field?.chiefLimitDeg ?? 60))) return null;
   const uField = -Math.tan((fieldAngleDeg * Math.PI) / 180);
   const objectPoint = support.conjugate ? mtfFiniteObjectPoint(state, support.conjugate, fieldAngleDeg) : undefined;
   if (objectPoint === null) return null;
@@ -132,7 +132,7 @@ export function findMtfFieldFootprint(
   if (chief.status !== "ok") return null;
   // A lens may state that the fake's scan finds only a part of the beam: the box is then too small, and the bundle
   // says which of its sides carried flux.
-  const seed = options.pupilSemiDiameterMm * (state.lens.runtime.data.mtf?.footprintScale ?? 1);
+  const seed = options.pupilSemiDiameterMm * (state.lens.runtime.source.mtf?.footprintScale ?? 1);
   const half = 1.25 * seed;
   return { x0: -half, x1: half, y0: -half, y1: half, beamWidthMm: 2 * seed, beamHeightMm: 2 * seed, guardMm: seed / 16 };
 }

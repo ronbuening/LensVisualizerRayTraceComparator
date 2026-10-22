@@ -26,7 +26,8 @@ export interface FakeLensData {
   /** A plate behind the lens. Without a published `sd` the fake generates a rim, which does not clip. */
   rearPlate?: { d: number; nd: number; gap: number; sd?: number };
   focusTravel?: number;
-  zoomPositions?: number[];
+  schema: 2;
+  zoom?: { stations: unknown[] };
   zoomStopSDs?: number[];
   zoomGaps?: number[];
   fopen?: number;
@@ -34,7 +35,7 @@ export interface FakeLensData {
   maxFstop?: number;
   /** The height of a ray at the stop per unit of height at the entrance pupil; 1 without it. */
   pupilRatio?: number;
-  finiteConjugates?: FakeFiniteConjugate[];
+  conjugates?: FakeFiniteConjugate[];
   noDispersionData?: boolean;
   /** The fake's gate refuses the lens every MTF: its scale is "unverified". */
   unverifiedScale?: boolean;
@@ -119,7 +120,7 @@ export interface FakeFootprint {
 }
 
 export interface FakeRuntimeLens {
-  data: FakeLensData;
+  source: FakeLensData;
   surfaces: readonly FakeSurfaceData[];
   lastLensSurfaceIdx: number;
   isZoom: boolean;
@@ -159,6 +160,7 @@ export interface FakeStateSurface {
 }
 
 export interface FakeState {
+  readonly traceGeometry: { readonly stopSurfaceIndex: number };
   lens: {
     key: string;
     runtime: FakeRuntimeLens;

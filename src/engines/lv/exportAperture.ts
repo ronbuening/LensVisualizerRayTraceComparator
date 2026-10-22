@@ -5,13 +5,14 @@ import type { ExportProblem } from "./exportProblems.ts";
 import { lvHookStop, lvTabComparison } from "./tabRequest.ts";
 import type { LvApi, LvPreparedState, LvRuntimeLens, LvSurface, LvTraceGeometry } from "./types.ts";
 
-/** LensVisualizer engine-next (S4.P1.T1) takes TraceGeometry; LensVisualizer main takes PreparedOpticalState. */
-export function apertureGeometry(state: LvPreparedState): LvTraceGeometry | LvPreparedState {
-  return state.traceGeometry ?? state;
+/** The geometry LV clips against, always present after its engine rewrite. */
+export function apertureGeometry(state: LvPreparedState): LvTraceGeometry {
+  if (state.traceGeometry === undefined) throw new Error("LensVisualizer prepared state lacks traceGeometry");
+  return state.traceGeometry;
 }
 
 /** The LensVisualizer functions that size the stop. */
-export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoom2" | "fNumberAtStopdown">;
+export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoomClamped" | "fNumberAtStopdown">;
 
 /** The code of the problem of a run that asks for the tab's f/8 comparison of a lens the tab offers none for. */
 export const F8_COMPARISON_UNAVAILABLE = "f8-comparison-unavailable";
@@ -65,7 +66,7 @@ export function stopRadius(
     return { ok: true, radius: hook.currentPhysStopSD * scale };
   }
 
-  const widest = api.fopenAtZoom2(zoomT, runtime);
+  const widest = api.fopenAtZoomClamped(zoomT, runtime);
   if (aperture.value < widest) {
     return {
       ok: false,

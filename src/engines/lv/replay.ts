@@ -11,12 +11,13 @@
 // (`assessUnresolvedFlux`); and the constants (`MTF_GRID_LADDER`, `MTF_DEFAULT_GRID_CAP`,
 // `MTF_MAX_FOOTPRINT_EXPANSIONS`, `MTF_MIN_RAYS`).
 //
-// What LensVisualizer does inline in `computeMtfSteps`, `traceField` and `fieldAtGrid` (src/optics/analysis/mtf.ts)
+// What LensVisualizer does inline in `computeMtfSteps`, `traceField` and `fieldAtGrid` (src/optics/analysis/mtf/mtf.ts)
 // and exports no function for is restated here, expression by expression and in its order: the ladder of a
 // request, the image plane, the loop that widens a footprint, and the bookkeeping of one field at one grid. Source
 // canaries hold every restated line to LensVisualizer's text (test/integration/lv/canaries.test.ts). The one thing
 // that is not LensVisualizer's is the transfer function: where LensVisualizer calls its own `geometricOtf` and
 // `combineOtfs`, the replay calls the comparator's `polychromaticOtf`.
+import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import { polychromaticOtf } from "../../estimators/geometricOtf.ts";
 import type { SpectralSpots } from "../../estimators/geometricOtf.ts";
 import type {
@@ -40,6 +41,7 @@ import type {
 /** The LensVisualizer exports the replay is made with. */
 export type LvReplayApi = Pick<
   LvApi,
+  | "createAnalysisRequest"
   | "computeMtfSteps"
   | "prepareMtfFieldLaunch"
   | "findMtfFieldFootprint"
@@ -288,7 +290,9 @@ function replayField(api: LvReplayApi, context: ReplayContext, target: LvMtfFiel
  * estimator's.
  */
 export function replayLvMtf(api: LvReplayApi, state: LvPreparedState, options: LvMtfOptions): LvReplay {
-  const first = api.computeMtfSteps(state, options).next().value;
+  const [request, settings] = lvMtfInputs(api, state, options);
+  options = lvResolvedMtfOptions(request, settings);
+  const first = api.computeMtfSteps(request, settings).next().value;
   const { support, geometry, focus } = first;
   const frequencies = [...first.frequenciesPerMm];
   const cap = (options.maxGridSize as number | undefined) ?? api.mtfDefaultGridCap;

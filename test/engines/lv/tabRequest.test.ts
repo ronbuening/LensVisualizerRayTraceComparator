@@ -14,6 +14,7 @@ import {
   lvTabComparison,
   lvTabFieldFractions,
   lvTabRequest,
+  lvResolvedMtfOptions,
   lvTabSpec,
 } from "../../../src/engines/lv/tabRequest.ts";
 import type { LvTabApi } from "../../../src/engines/lv/tabRequest.ts";
@@ -54,19 +55,25 @@ function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: Lv
     runtime: { maxFstop: lens.maxFstop ?? 16 },
   });
   const api: LvTabApi = {
+    createAnalysisRequest: (params) => ({
+      preparedGeometry: params.preparedState,
+      dynamicEFL: params.dynamicEFL,
+      aperture: { entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD },
+      pose: null,
+    }),
     wideOpenStopAtZoom: (zoomT, L) => (calls.push(["wideOpenStopAtZoom", zoomT, L]), lens.wideOpen),
-    fopenAtZoom2: (zoomT, L) => (calls.push(["fopenAtZoom2", zoomT, L]), lens.fopen),
+    fopenAtZoomClamped: (zoomT, L) => (calls.push(["fopenAtZoomClamped", zoomT, L]), lens.fopen),
     // As LensVisualizer's: the slider's f-number, never below the widest of the zoom state.
     fNumberAtStopdown: (stopdownT, zoomT, L) => {
       calls.push(["fNumberAtStopdown", stopdownT, zoomT, L]);
       return Math.max(lens.fopen * Math.pow(L.maxFstop / lens.fopen, stopdownT), lens.fopen);
     },
-    computeAnalysisFieldGeometryAtState2: (focusT, zoomT, L, aberrationT) => {
-      calls.push(["computeAnalysisFieldGeometryAtState2", focusT, zoomT, L, aberrationT]);
+    computeAnalysisFieldGeometryAtState: (focusT, zoomT, L, aberrationT) => {
+      calls.push(["computeAnalysisFieldGeometryAtState", focusT, zoomT, L, aberrationT]);
       return geometry;
     },
-    entrancePupilAtState2: (stopSD, focusT, zoomT, L, given, aberrationT) => {
-      calls.push(["entrancePupilAtState2", stopSD, focusT, zoomT, L, given, aberrationT]);
+    entrancePupilAtState: (stopSD, focusT, zoomT, L, given, aberrationT) => {
+      calls.push(["entrancePupilAtState", stopSD, focusT, zoomT, L, given, aberrationT]);
       const yRatio = given?.yRatio ?? Number.NaN;
       return { epSD: Math.abs(stopSD / yRatio), yRatio, b: 0, epRatio: 1 };
     },
@@ -101,10 +108,10 @@ test("the hook's numbers are its own expressions, on its own functions, with the
   assert.deepEqual(
     calls.toSorted(([a], [b]) => (String(a) < String(b) ? -1 : 1)),
     [
-      ["computeAnalysisFieldGeometryAtState2", 0, 0.5, runtime, 0],
-      ["entrancePupilAtState2", 6.25, 0, 0.5, runtime, geometry, 0],
+      ["computeAnalysisFieldGeometryAtState", 0, 0.5, runtime, 0],
+      ["entrancePupilAtState", 6.25, 0, 0.5, runtime, geometry, 0],
       ["fNumberAtStopdown", 0, 0.5, runtime],
-      ["fopenAtZoom2", 0.5, runtime],
+      ["fopenAtZoomClamped", 0.5, runtime],
       ["wideOpenStopAtZoom", 0.5, runtime],
     ],
   );
@@ -153,7 +160,8 @@ test("the fields are the tab's evenly spaced fractions, each one division", () =
 test("the wide-open request is the tab's options, member for member, and names no frequencies", () => {
   const { api, runtime, state } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
   const request = lvTabRequest(api, runtime, state, "wide-open");
-  assert.deepEqual(request, {
+  const { request: _analysis, settings: _settings, ...view } = request;
+  assert.deepEqual(view, {
     view: "wide-open",
     fNumber: 1.4,
     options: {
@@ -302,4 +310,41 @@ test("LensVisualizer's design plane is the contract's; its best axial focus and 
   assert.throws(() => lvTabSpec(lvTabRequest(api, runtime, state, "wide-open")), {
     message: 'LensVisualizer\'s MTF tab opens with the method "geometric-dl", which the contract does not know',
   });
+});
+
+test("MTF settings omit the radii and f/8 scales the second analysis request", () => {
+  const { api, runtime, state } = standIn({ wideOpen: 7.3, fopen: 1.85 });
+  const open = lvTabRequest(api, runtime, state, "wide-open");
+  const f8 = lvTabRequest(api, runtime, state, "f8-comparison");
+  assert.equal(open.request.preparedGeometry, state);
+  assert.equal(open.request.dynamicEFL, 0);
+  assert.equal(Object.hasOwn(open.settings, "pupilSemiDiameterMm"), false);
+  assert.equal(Object.hasOwn(open.settings, "stopSemiDiameterMm"), false);
+  assert.deepEqual(f8.settings, open.settings);
+  assert.equal(
+    f8.request.aperture.entrancePupilSemiDiameterMm,
+    open.request.aperture.entrancePupilSemiDiameterMm * (open.fNumber / 8),
+  );
+  assert.equal(f8.request.aperture.stopSemiDiameterMm, open.request.aperture.stopSemiDiameterMm * (open.fNumber / 8));
+});
+
+test("lower-level MTF options resolve request radii and the pose's active flag", () => {
+  const { api, state } = standIn({ wideOpen: 4, fopen: 2 });
+  const request = api.createAnalysisRequest({
+    preparedState: state,
+    dynamicEFL: 0,
+    currentEPSD: 7,
+    currentPhysStopSD: 3,
+  });
+  const settings = { method: "geometric", spectrum: "reference", focus: "design", movementActive: true };
+  assert.deepEqual(lvResolvedMtfOptions(request, settings), {
+    ...settings,
+    pupilSemiDiameterMm: 7,
+    stopSemiDiameterMm: 3,
+  });
+  assert.equal(lvResolvedMtfOptions({ ...request, pose: { active: false } }, settings).movementActive, false);
+  assert.equal(
+    lvResolvedMtfOptions({ ...request, pose: { active: true } }, { ...settings, movementActive: false }).movementActive,
+    true,
+  );
 });

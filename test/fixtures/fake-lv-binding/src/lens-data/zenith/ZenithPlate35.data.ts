@@ -2,6 +2,7 @@ import type { FakeLensData } from "../../optics/types.js";
 
 // A synthetic lens for tests, with a rear plate that publishes no rim: the numbers describe no real design.
 const LENS: FakeLensData = {
+  schema: 2,
   key: "zenith-plate-35",
   name: "ZENITH Plate 35mm f/2.8",
   fopen: 2.8,

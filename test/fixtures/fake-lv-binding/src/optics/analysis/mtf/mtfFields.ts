@@ -1,6 +1,6 @@
 // The fake's field axis, under LV's names: image height is proportional to field angle, the model reaches a stated
 // angle, and a lens may state a format corner beyond what its model reaches.
-import type { FakeMtfOptions, FakeMtfSupport, FakeState } from "../types.js";
+import type { FakeMtfOptions, FakeMtfSupport, FakeState } from "../../types.js";
 
 interface FieldModel {
   mmPerDeg: number;
@@ -10,7 +10,7 @@ interface FieldModel {
 }
 
 function fieldModel(state: FakeState): FieldModel {
-  const stated = state.lens.runtime.data.field ?? {};
+  const stated = state.lens.runtime.source.field ?? {};
   return {
     mmPerDeg: stated.mmPerDeg ?? 0.5,
     edgeDeg: stated.edgeDeg ?? 20,
@@ -68,7 +68,7 @@ export function resolveMtfFieldTargets(
   fractions: readonly number[],
 ): unknown {
   const { mmPerDeg } = fieldModel(state);
-  const unsolved = state.lens.runtime.data.field?.unsolvedFraction;
+  const unsolved = state.lens.runtime.source.field?.unsolvedFraction;
   return fractions.map((fraction) => {
     const targetImageHeightMm = fraction * geometry.referenceHeightMm;
     const outsideModel = targetImageHeightMm > geometry.modeledEdgeHeightMm + 1e-9;

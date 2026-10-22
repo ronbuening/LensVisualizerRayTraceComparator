@@ -203,7 +203,7 @@ reference line and the five photopic lines, and an LV numerical-floor report is 
 | 1.2 Case exporter and suites | RunSpec → IR; stop-down rule mirrored from LV's hook with a source canary; `lvrtc export`; census; `suites/{smoke,benchmark,features}.json` | Unit: IR from a synthetic prepared state; integration: census; IR hash stable across runs |
 | 1.3 `ref` first-order, R0/R1 | Sag/slope evaluator and ABCD paraxial on the IR; R0 and R1 evaluators | Analytic tests (singlet, doublet, conic, asphere) at roundoff level |
 | 1.4 `lv` describe and paraxial | `system.describe`; `paraxial.first-order` from LV's paraxial kernel with the line's index table (pupil z from the kernel, not LV's stored constants, which are recorded) | R0 and R1 `lv` vs `ref` on both suites |
-| 1.5 Ray sets and `lv` rays | Generators (probe grids past the rim; LV's MTF launch lattice at any grid, blocked cells and weights included); LV trace export; image-projection estimator | Pins copied from LV's golden-value test (three refractive lenses) reproduced within 5e-7 mm; own `traceEngineRay2` canaries on two benchmark lenses |
+| 1.5 Ray sets and `lv` rays | Generators (probe grids past the rim; LV's MTF launch lattice at any grid, blocked cells and weights included); LV trace export; image-projection estimator | Pins copied from LV's golden-value test (three refractive lenses) reproduced within 5e-7 mm; own `traceEngineRay` canaries on two benchmark lenses |
 | 1.6 `ref` ray kernel, R2/R3 | Machine-precision sequential tracer; R2, R3 and clip-mask evaluators; FLOOR attribution; LV numerical-floor report | Analytic ray tests (hermetic); `lv` vs `ref` on both suites |
 | 1.7 LV product MTF | `mtf.native` for `lv` with profile `lv-tab-default`: LV's own default preferences, fields at 10 % steps, 10 and 30 lp/mm, pupil seed and stop radius by the hook's rule, spectrum fallback recorded, f/8 by the tab's scaling | Source canaries on the tab and hook; focus shift and traced f-number equal LV's committed chart-regression report; a run with the audit-script seed must differ |
 | 1.8 Zooms at both ends | A zoom is compared at both ends wherever no position is stated ([amendment](#zoom-lenses-at-both-ends)): the LV case source makes a suite run of a zoom without `state.zoomT` one run for each end; the census and `lvrtc mtf` follow; `smoke` and `features` run a zoom at both ends | Every zoom of the catalog exports at both ends or says why, with zero throws; R0 and R1 `lv` vs `ref` at the tele end of every zoom; R2 and R3 at the tele end of a constant-aperture, a variable-aperture and a fixed-iris zoom |
@@ -243,6 +243,8 @@ and `reports/benchmark/mtf.md` is committed.
 | 3.8 `lvrtc mtf` and baselines | Multi-engine `lvrtc mtf`; MTF baselines; `reports/benchmark/mtf.md` | Benchmark suite end to end; `baseline check` reports no DRIFT |
 | 3.9 optiland geometric MTF, R5g | Added by the owner on 2026-10-09 and run before 3.8, so that 3.8's report and baselines hold it: some manufacturers publish only geometric MTF, so LensVisualizer's geometric curve needs an independent external counterpart beside the identical-ray agreement of R4. The optiland worker answers `mtf.native` for the method geometric with optiland's own geometric MTF on its own rays (field, plane and stop read back as for the FFT); rung R5g, its comparator and its rows in the MTF report beside R5's. Whether a polychromatic geometric curve can be formed faithfully from optiland's per-line spot landings is decided in the stage from optiland's source. The comparison half asks one request a field, with a chief-landing limit of its own (see Amendments, R5g) | `unittest` with expectations derived in the test; hermetic band and status tests; benchmark rows recorded with classes |
 | 3.10 a surface that does not clip | Added on 2026-10-10, when LensVisualizer stopped clipping by the rim it generates for a rear plate that publishes none (`clips: false`, its commit `31c34396`, with an intersection tolerance of 1e-12 mm) and the exporter's guard refused every lens with such a plate. The contract states the surface (`aperture.semiDiameter` null, the flag `aperture.unclipped`, minor 2, stated only by a case that has one); the exporter reads it from LensVisualizer's state and `evaluateAperture` together, with source canaries; `ref`, `lv` and `optiland` build it as a surface that stops no ray and answer `clipRadius` +Infinity; R2 has no rim band on it. Then the four baselines are checked against LensVisualizer at that commit, and what the tolerance moved is told from what the plate moved (see Amendments, Stage 3.10) | Hermetic: the contract, the exporter on the fake tree, closed forms for `ref`; the optiland builder with the mistakes made on purpose; tiers 2 and 3 green on the branch; `baseline check` of all four baselines, none rewritten |
+| 3.11 binding after LV's engine rewrite | Public barrels where available, deep modules otherwise; new facade names, analysis requests, V2 catalog and fake tree; source canaries and re-measured integration pins | Hermetic check, test:lv at current LV HEAD, doctor, lenses show and two-ended zoom MTF; test:optiland; no baseline or policy edits |
+| 3.12 measure and rewrite baselines (pending) | Measure again with the rewritten LV; re-pin R6a, tighten R2/R3 floor limits from measured residuals, and rewrite the four baselines and reports | Long suites, policy review, baseline checks, committed report verification; separate work after 3.11 |
 
 ### Phase 4 — LV's default view, attribution and validation statement
 
@@ -486,27 +488,21 @@ None is required. Optional, each a user decision on evidence the comparator prod
 
 LV (`LensVisualizer/LensVisualizer/src/`, imported by path, read-only):
 
-- `optics/buildLens.ts` (default export), `optics/compat.ts` — `prepareRuntimeState`, `traceEngineRay2`,
-  `traceRay2`, `computeCardinalElements2`, `entrancePupilAtState2`, `computeAnalysisFieldGeometryAtState2`,
-  `createAnalysisComputationContext`
-- `optics/apertureStop.ts` `wideOpenStopAtZoom`; `optics/aperture.ts` `fNumberAtStopdown`;
-  `optics/trace/aperture.ts` `evaluateAperture`
-- `optics/math/paraxial.ts` `traceParaxialSurfaces2`; `optics/first-order/cardinals.ts`
-  `buildCardinalElementsFromMatrix2`; `optics/first-order/systemMatrix.ts`
-- `optics/mtf.ts` `computeMtf`, `assessMtfSupport`, `resolveMtfSpectrum`
-- `optics/analysis/mtfTracing.ts` `prepareMtfFieldLaunch`, `findMtfFieldFootprint`, `mtfLaunchGrid`,
-  `mtfLaunchRay`, `traceMtfBundle`, `mtfImagePoint`, `mtfIndexResolver`, `mtfTraceOptions`
-- `optics/analysis/mtf.ts` `refineMtfField`; `optics/analysis/mtfFootprint.ts` `expandMtfFootprint`;
-  `optics/analysis/mtfMath.ts` `geometricOtf`, `combineOtfs`; `optics/analysis/mtfConstants.ts`
-- `utils/state/mtfPreferences.ts` (tab defaults); source canaries on `components/display/analysis/MtfTab.tsx`,
-  `components/hooks/useLensComputation.ts`, `components/hooks/mtf.worker.ts` and `optics/analysis/mtf.ts`
+- Public barrels: `optics/buildLens.ts` (`buildLens`, `prepareRuntimeState`), `optics/optics.ts` (trace,
+  aperture, station and paraxial functions), `optics/fieldGeometry.ts` (pupils and field geometry),
+  `optics/analysis.ts` (`computeCardinalElementsFromState`, `createAnalysisRequest`), `optics/mtf.ts`
+  (MTF entry points, launch, footprint and bundles), `optics/geometry.ts`, `optics/chromatic.ts`.
+- Deep modules: `optics/trace/aperture.ts`, `optics/first-order/cardinals.ts`, and the defining modules under
+  `optics/analysis/mtf/` for tracing, fields, conjugates, footprint expansion, refinement and constants.
+- `types/asphericSchema.ts`, `utils/state/mtfPreferences.ts` (tab defaults); source canaries on the tab,
+  `useLensComputation.ts`, `useMtfComputation.ts`, `mtf.worker.ts`, `analysis/request.ts` and MTF internals.
 
 optiland (called, never modified): `Optic.surfaces.add`, `IdealMaterial`, `RadialAperture`, `set_aperture`,
 `ray_tracer.set_aiming`, `RealRays` + `surfaces.trace`, `paraxial.*`, `ScalarFFTMTF`, `Wavefront.get_data`.
 
 ## Risks
 
-- **LV deep imports are unversioned and LV changes daily.** One binding file, load-time probe, canaries, content
+- **LV now documents its public optics seam; deep helpers remain unversioned and LV changes daily.** One binding file, load-time probe, canaries, content
   fingerprints; an unchanged IR hash keeps external baselines valid across LV commits.
 - **optiland FFT cost and fragility** (6–21 s per field at 256 rays without JIT; ~240 field calls per ladder
   level). One field per call, result store, three fields per configuration, 512 rays only on demand.

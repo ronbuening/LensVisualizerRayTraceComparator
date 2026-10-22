@@ -1,3 +1,4 @@
+import { documentedConjugates } from "./support.ts";
 // Rays against the real LensVisualizer: its own pinned rays reproduced through the binding, the comparator's own
 // canaries on its tracer, and the ray sets of the benchmark lenses traced through `lvrtc run` and held, ray by ray,
 // to LensVisualizer's own MTF bundle. Run output goes to a temporary directory.
@@ -94,7 +95,7 @@ function traced(binding: LvBinding, model: LvCaseModel, spec: RaysTraceSpec, ray
   const [origins, directions] = [f8(spec.origins), f8(spec.directions)];
   const origin: LvVec3 = [origins[3 * ray], origins[3 * ray + 1], origins[3 * ray + 2]];
   const direction: LvVec3 = [directions[3 * ray], directions[3 * ray + 1], directions[3 * ray + 2]];
-  return binding.api.traceEngineRay2(model.state, { origin, direction }, lvTraceOptions(model, spec.line));
+  return binding.api.traceEngineRay(model.state, { origin, direction }, lvTraceOptions(model, spec.line));
 }
 
 // ── LensVisualizer's own pinned rays ─────────────────────────────────────────────────────────────────────────────
@@ -148,7 +149,7 @@ const HEIGHT_TOLERANCE_MM = 5e-7;
 const SLOPE_TOLERANCE = 5e-9;
 
 test(
-  "LensVisualizer's own golden rays are reproduced through the binding: traceRay2, and the tracer lv answers with",
+  "LensVisualizer's own golden rays are reproduced through the binding: traceRay, and the tracer lv answers with",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -166,10 +167,10 @@ test(
       const stop = api.wideOpenStopAtZoom(0, runtime);
 
       // As LensVisualizer's test traces it: the meridional adapter, with the wide-open stop.
-      const meridional = api.traceRay2(marginal.h, 0, [...state.z], 0, 0, stop, true, runtime);
+      const meridional = api.traceRay(marginal.h, 0, [...state.z], 0, 0, stop, true, runtime);
       assert.equal(meridional.clipped, false, key);
-      near(meridional.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceRay2 y`);
-      near(meridional.u, marginal.u, SLOPE_TOLERANCE, `${key} traceRay2 u`);
+      near(meridional.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceRay y`);
+      near(meridional.u, marginal.u, SLOPE_TOLERANCE, `${key} traceRay u`);
 
       // And through the tracer the engine uses, with the engine's options: the end of the trace, carried back to
       // the last vertex plane, is the same ray.
@@ -178,7 +179,7 @@ test(
       const lastZ = state.z[state.z.length - 1];
       const options = { checkSemiDiameter: true, stopSemiDiameter: stop, stopOnClip: true, directionNormalized: true };
       const onLastVertexPlane = (origin: LvVec3) => {
-        const trace = api.traceEngineRay2(state, { origin, direction: [0, 0, 1] }, options);
+        const trace = api.traceEngineRay(state, { origin, direction: [0, 0, 1] }, options);
         assert.equal(trace.status, "ok", key);
         assert.equal(trace.hits.length, state.surfaces.length, key);
         const [point, direction] = [trace.terminalPoint, trace.terminalDirection];
@@ -191,8 +192,8 @@ test(
         };
       };
       const meridionalRay = onLastVertexPlane([0, marginal.h, launchZ]);
-      near(meridionalRay.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceEngineRay2 y`);
-      near(meridionalRay.uy, marginal.u, SLOPE_TOLERANCE, `${key} traceEngineRay2 u`);
+      near(meridionalRay.y, marginal.y, HEIGHT_TOLERANCE_MM, `${key} traceEngineRay y`);
+      near(meridionalRay.uy, marginal.u, SLOPE_TOLERANCE, `${key} traceEngineRay u`);
       assert.deepEqual([meridionalRay.x, meridionalRay.ux], [0, 0], `${key}: a meridional ray stays meridional`);
       const skewRay = onLastVertexPlane([skew.x0, skew.y0, launchZ]);
       near(skewRay.x, skew.x, HEIGHT_TOLERANCE_MM, `${key} skew x`);
@@ -209,7 +210,7 @@ test(
 
 /**
  * One skew ray through each of two benchmark lenses at infinity focus, wide open, on the reference line, traced by
- * `traceEngineRay2` with the engine's options: where it leaves the last surface, in which direction, its optical
+ * `traceEngineRay` with the engine's options: where it leaves the last surface, in which direction, its optical
  * path, and where the comparator's projection lands it. Measured at d36f44b3. A change beyond LensVisualizer's own
  * intersection tolerance of 1e-9 mm means its tracer, or the lens, is no longer the one the numbers were taken of.
  */
@@ -251,7 +252,7 @@ test(
       // The pinned ray, a ray that misses the first surface altogether, and one launched well outside the entrance
       // pupil, which an aperture stops at or before the stop surface.
       const stop = opticalCase.conditions.stopSemiDiameter;
-      const pupil = binding.api.entrancePupilAtState2(stop, 0, 0, model.runtime).epSD;
+      const pupil = binding.api.entrancePupilAtState(stop, 0, 0, model.runtime).epSD;
       const spec: RaysTraceSpec = {
         line: 0,
         origins: encode([...canary.origin, 0, 60, -60, 0, 1.3 * pupil, -60], [3, 3]),
@@ -700,7 +701,8 @@ test(
     // The seed of the footprint is the number the hook of LensVisualizer's MTF tab hands over at this f-number, to
     // the bit: the entrance pupil of the wide-open stop, times the wide-open f-number, over this one.
     const tabSeed =
-      (api.entrancePupilAtState2(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoom2(0, model.runtime)) / fNumber;
+      (api.entrancePupilAtState(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoomClamped(0, model.runtime)) /
+      fNumber;
     assert.equal(setup.options.pupilSemiDiameterMm, tabSeed);
 
     const { sets, problems } = lvRaySets(api, model, {});
@@ -746,7 +748,7 @@ test(
     t.after(() => lv.close());
     // The closest station of a benchmark lens: 1:1, the object 150 mm in front of the image plane.
     const key = "sigma-105mm-f28-dg-dn-macro-art";
-    const stations = (await binding.lens(key)).data.finiteConjugates as { focusT: number; zoomT: number }[];
+    const stations = documentedConjugates((await binding.lens(key)).data);
     const station = stations.find((candidate) => candidate.focusT === 1);
     assert.ok(station !== undefined, JSON.stringify(stations));
     const state = { zoomT: station.zoomT, focus: { kind: "focusT", value: station.focusT } } as const;

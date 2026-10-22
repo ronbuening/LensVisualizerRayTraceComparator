@@ -1,3 +1,5 @@
+import { documentedConjugates } from "./support.ts";
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 // The case exporter against the real LensVisualizer. Numbers pinned here were taken at LV commit d36f44b3 and are
 // canaries: when LV changes the lens or its preparation they fail and say so; they are not tolerances. Nothing is
 // written into the repository or into LensVisualizer: files go to a temporary directory.
@@ -179,7 +181,9 @@ test(
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
       const radius = binding.api.wideOpenStopAtZoom(0, runtime);
-      const support = binding.api.assessMtfSupport(state, gateOptions("reference", radius));
+      const support = binding.api.assessMtfSupport(
+        ...lvMtfInputs(binding.api, state, gateOptions("reference", radius)),
+      );
       const result = await exporter.exportLens(key, {});
       if (result.ok) {
         exportedCount++;
@@ -216,8 +220,7 @@ test(
     for (const { key } of (await binding.catalog()).entries) {
       const { runtime, state } = await prepared(binding, key);
       const support = binding.api.assessMtfSupport(
-        state,
-        gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime)),
+        ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
       );
       const result = await exporter.exportLens(key, { lines: { kind: "photopic" } });
       if (result.ok !== support.available)
@@ -420,8 +423,7 @@ test(
       ],
     );
     const support = binding.api.assessMtfSupport(
-      state,
-      gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime)),
+      ...lvMtfInputs(binding.api, state, gateOptions("photopic", binding.api.wideOpenStopAtZoom(0, runtime))),
     );
     assert.equal(support.available, true);
     const rows = indexRows(opticalCase);
@@ -478,7 +480,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
   ] as const) {
     const { runtime, state } = await prepared(binding, key, zoomT);
     const wideOpen = binding.api.wideOpenStopAtZoom(zoomT, runtime);
-    const widest = binding.api.fopenAtZoom2(zoomT, runtime);
+    const widest = binding.api.fopenAtZoomClamped(zoomT, runtime);
     assert.equal(wideOpen, state.surfaces[state.lens.stop.surfaceIndex].sd, key);
     for (const value of fNumbers) {
       const stopped = await exported(binding, key, { state: { zoomT }, aperture: { kind: "f-number", value } });
@@ -492,7 +494,7 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
   }
   // Faster than wide open is a problem, at the widest aperture of that zoom position.
   const { runtime } = await prepared(binding, "nikkor-z50f12");
-  const widest = binding.api.fopenAtZoom2(0, runtime);
+  const widest = binding.api.fopenAtZoomClamped(0, runtime);
   const refused = await createLvExporter(binding).exportLens("nikkor-z50f12", {
     aperture: { kind: "f-number", value: widest - 0.01 },
   });
@@ -557,15 +559,14 @@ test(
   async () => {
     const binding = await loadLvBinding(LV_PATH);
     const key = "sigma-105mm-f28-dg-dn-macro-art";
-    const stations = (await binding.lens(key)).data.finiteConjugates as { focusT: number; zoomT: number }[];
+    const stations = documentedConjugates((await binding.lens(key)).data);
     assert.ok(Array.isArray(stations) && stations.length > 0, "the lens documents finite conjugates");
     for (const { focusT, zoomT } of stations) {
       const { runtime, state } = await prepared(binding, key, zoomT, focusT);
       const options: RunOptions = { state: { zoomT, focus: { kind: "focusT", value: focusT } } };
       const opticalCase = await exported(binding, key, options);
       const support = binding.api.assessMtfSupport(
-        state,
-        gateOptions("reference", binding.api.wideOpenStopAtZoom(zoomT, runtime)),
+        ...lvMtfInputs(binding.api, state, gateOptions("reference", binding.api.wideOpenStopAtZoom(zoomT, runtime))),
       );
       assert.ok(support.conjugate !== undefined, `focus ${focusT}`);
       const point = binding.api.mtfFiniteObjectPoint(state, support.conjugate, 0);

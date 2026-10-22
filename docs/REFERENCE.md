@@ -14,6 +14,13 @@ installs the loader that runs LensVisualizer's TypeScript headless, imports the 
 renamed is reported at load time, with every missing name in one error. The comparator's own types for what it
 reads are local (`src/engines/lv/types.ts`), so the type check needs no LensVisualizer.
 
+The LV binding uses the public barrels `src/optics/{buildLens,optics,fieldGeometry,analysis,mtf,geometry,chromatic}.ts`
+where they export the required name, and defining deep modules otherwise (the manifest is authoritative).
+It requires the engine rewrite at `460f841f` or later. MTF entry points take an analysis request made by
+`createAnalysisRequest` from `src/optics/analysis.ts`, beside settings without aperture radii; lower-level helpers
+in `src/optics/analysis/mtf/` retain their state and resolved options form. Lens files use V2 `zoom.stations`;
+finite conjugates live in `focus.conjugates`, addressed by zoom station and focus keyframe.
+
 - **The engine fingerprint** is `{ engineClosureHash, engineFileCount, commit, dirty }`. The closure hash covers
   the engine source files Node actually loaded. Lens prescription files (`src/lens-data/**/*.data.ts` and
   `*.teleconverter.ts`) are not engine code: each is hashed by itself, so editing a lens never changes the engine
@@ -284,8 +291,9 @@ retires the same answers, and the fingerprint stays LensVisualizer's.
   of its resolver for the case's lines, and the sag of its surface profile, which is NaN beyond the height at which
   the profile says the surface ends. So R0 of `lv` against `ref` holds the exporter, and the reference engine's
   reading of the case, to what LensVisualizer traces. A test against LensVisualizer's own tracer holds the echo to
-  that: every hit of `traceEngineRay2` lies on the surface `lv` describes, within its intersection tolerance of
-  1e-9 mm, and is clipped exactly where it lies beyond the described clip radius, the stop's included.
+  that: every hit of `traceEngineRay` lies on the surface `lv` describes, within the test bound of
+  1e-9 mm (LV now targets 1e-12 mm with a roundoff allowance), and is clipped exactly where it lies beyond the
+  described clip radius, the stop's included.
 - **R1** of `lv` is LensVisualizer's paraxial kernel on the state's radii and gaps with the indices of each line,
   assembled as LensVisualizer assembles it: its own cardinal-point construction on the kernel's system matrix, and
   the pupils as the kernel's images of the stop. LensVisualizer's own first-order module reads the authored indices
@@ -335,7 +343,7 @@ rules are in [contract/CONTRACT.md](../contract/CONTRACT.md#raystrace).
 - **A set is content.** Its arrays are in the request's spec, so its hash is in the request's id: two processes
   that generate the same rays ask the same requests, and find each other's answers in the store. Nothing of a set
   is in the repository; the manifest records the identity of each.
-- **`lv` traces every ray for real**, with LensVisualizer's `traceEngineRay2` and the options of its own MTF bundle,
+- **`lv` traces every ray for real**, with LensVisualizer's `traceEngineRay` and the options of its own MTF bundle,
   the indices of the case's line included, and takes LensVisualizer's own word for what stopped a ray. Its trace
   ends on the last surface: the landing is the comparator's projection (`src/estimators/imageProjection.ts`).
 - **`ref` traces every ray to rounding** (`src/engines/ref/trace.ts`), by analytic geometry and Snell's law: a
@@ -372,7 +380,7 @@ Measured at LensVisualizer `d36f44b3`, on the 12 benchmark configurations at the
 | optical path against `opticalPathLengthMm` | equal in every bit |
 | the 11 441 landing rays LensVisualizer traced itself | origin, weight, landing and optical path equal in every bit |
 | the 11 441 it mirrored instead | within 3.5e-13 mm of a real trace of the cell; 4493 equal in every bit |
-| LensVisualizer's own golden rays (three lenses, 18 numbers) | reproduced through `traceRay2` and `traceEngineRay2` to 2.1e-17 |
+| LensVisualizer's own golden rays (three lenses, 18 numbers) | reproduced through `traceRay` and `traceEngineRay` to 2.1e-17 |
 | every hit against the case's own surface (the reference engine's sag) | within 1.0e-9 mm along z, which is LensVisualizer's intersection tolerance; Snell's law holds with the case's indices to 6e-14 |
 
 On the photopic cases of the same configurations, whose reference line is 555 nm, `lv` traces 196 510 rays in 180

@@ -1,3 +1,4 @@
+import { lvResolvedMtfOptions } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -115,7 +116,7 @@ test("the gate is asked for the spectrum of the run, with the seed radius and no
   const state = lensState();
   const recording: Partial<LvExportApi> = {
     assessMtfSupport: (prepared, options) => {
-      asked.push(options);
+      asked.push(lvResolvedMtfOptions(prepared, options));
       return gate()(prepared, options);
     },
   };
@@ -129,7 +130,14 @@ test("the gate is asked for the spectrum of the run, with the seed radius and no
   for (const options of asked) {
     assert.deepEqual(
       { ...options, spectrum: "" },
-      { method: "geometric", spectrum: "", pupilSemiDiameterMm: 4.25, stopSemiDiameterMm: 4.25, focus: "design" },
+      {
+        method: "geometric",
+        spectrum: "",
+        pupilSemiDiameterMm: 4.25,
+        stopSemiDiameterMm: 4.25,
+        focus: "design",
+        movementActive: undefined,
+      },
     );
   }
 });

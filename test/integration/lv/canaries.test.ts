@@ -1,8 +1,4 @@
-// Source canaries: the lines of LensVisualizer's own source that the exporter and the engine `lv` mirror or rely on,
-// pinned as text at LV commit d36f44b3, those of the MTF tab's request at ed78cf40, those of the geometric OTF's
-// conventions at c05a2ab7, those of the MTF's refinement, which the replay restates, at 33ebdb30, and those of the
-// rear plate whose generated rim does not clip at 31c34396. Geometry, capture, compiled-state and worker-input
-// canaries were reread against the engine rewrite at 8e1142ab; these assert that checkout's source spelling.
+// Source canaries reread at LV ab0fd4cf (closure 94778d3d, 175 files; same closure as 643ef5d0).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -39,21 +35,21 @@ test("the hook still stops down linearly: wide-open radius times the widest f-nu
   assertSource(hook, "const currentFOPEN = L ? fopenAtZoom(zoomT, L) : 1;", mirror);
   assertSource(hook, "const wideOpenStopSD = L ? wideOpenStopAtZoom(zoomT, L) : 0;", mirror);
   assertSource(hook, "const currentPhysStopSD = L ? (wideOpenStopSD * currentFOPEN) / fNumber : 0;", mirror);
-  // The hook's fopenAtZoom is the function the binding imports as fopenAtZoom2, and its f-number never goes below it.
+  // The hook's fopenAtZoom is the function the binding imports as fopenAtZoomClamped, and its f-number never goes below it.
   assertSource(
-    "src/optics/optics.ts",
-    "fopenAtZoom2 as fopenAtZoom,",
-    "the binding takes fopenAtZoom2 for the hook's fopenAtZoom",
+    "src/components/hooks/useLensComputation.ts",
+    "fopenAtZoomClamped as fopenAtZoom,",
+    "the binding takes fopenAtZoomClamped for the hook's fopenAtZoom",
   );
   assertSource(
-    "src/optics/aperture.ts",
-    "return Math.max(requested, fopenAtZoom2(zoomT, L));",
+    "src/optics/state/aperture.ts",
+    "return Math.max(requested, fopenAtZoomClamped(zoomT, L));",
     "stopRadius reports an f-number below the widest as a problem, where the hook clamps it",
   );
 });
 
 test("the support gate still rejects a path for the causes the exporter names, and for no other", { skip }, () => {
-  const gate = "src/optics/analysis/mtfSupport.ts";
+  const gate = "src/optics/analysis/mtf/mtfSupport.ts";
   const mirror =
     "structuralProblems in src/engines/lv/exportCase.ts names each cause, and pathIsExpressible in exportLines.ts " +
     "takes a fisheye projection and an annular aperture for the only ones a case can still be exported with";
@@ -89,7 +85,11 @@ test(
       "const nn = indexAtSurface ? indexAtSurface(i, surface.nd) : surface.nd === 1 ? 1 : surface.nd;",
       mirror,
     );
-    assertSource("src/optics/analysis/mtfTracing.ts", "if (!support.useResolvedReference) return undefined;", mirror);
+    assertSource(
+      "src/optics/analysis/mtf/mtfTracing.ts",
+      "if (!support.useResolvedReference) return undefined;",
+      mirror,
+    );
     assertSource(
       "src/optics/trace/aperture.ts",
       "if (surface.physicalIndex === geometry.stopSurfaceIndex && stopSemiDiameter !== undefined) return stopSemiDiameter;",
@@ -207,12 +207,12 @@ test(
     const matrix = "src/optics/first-order/systemMatrix.ts";
     assertSource(
       matrix,
-      "const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { skipLastTransfer: true });",
+      "const marginal = traceParaxialSurfaces(state.surfaces, 1, 0, { skipLastTransfer: true });",
       mirror,
     );
     assertSource(
       matrix,
-      "const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { skipLastTransfer: true });",
+      "const chief = traceParaxialSurfaces(state.surfaces, 0, 1, { skipLastTransfer: true });",
       mirror,
     );
     assertSource(matrix, "A: marginal.y, B: chief.y, C: imageIndex * marginal.u, D: imageIndex * chief.u,", mirror);
@@ -231,10 +231,10 @@ test(
     const pupils = "src/optics/first-order/pupils.ts";
     assertSource(
       pupils,
-      "const marginal = traceParaxialSurfaces2(state.surfaces, 1, 0, { stopAt: stopIndex });",
+      "const marginal = traceParaxialSurfaces(state.surfaces, 1, 0, { stopAt: stopIndex });",
       mirror,
     );
-    assertSource(pupils, "const chief = traceParaxialSurfaces2(state.surfaces, 0, 1, { stopAt: stopIndex });", mirror);
+    assertSource(pupils, "const chief = traceParaxialSurfaces(state.surfaces, 0, 1, { stopAt: stopIndex });", mirror);
   },
 );
 
@@ -255,9 +255,9 @@ test(
     assertSource(overlay, "movedScreenPoint(zPos[L.stopIdx] + epZRel, 0)", mirror);
     assertSource(overlay, "movedScreenPoint(zPos[L.N - 1] + xpZRel, 0)", mirror);
     assertSource(
-      "src/optics/optics.ts",
-      "epAtZoom2 as epAtZoom,",
-      "the binding takes epAtZoom2 for the overlay's epAtZoom",
+      "src/components/diagram/DiagramOverlayLayer.tsx",
+      "epAtZoomClamped as epAtZoom,",
+      "the binding takes epAtZoomClamped for the overlay's epAtZoom",
     );
     // They are found at infinity focus, with real rays and a nominal entrance pupil: recorded, never compared.
     const runtime = "src/optics/first-order/lensConstants.ts";
@@ -271,7 +271,7 @@ test(
   "the MTF bundle still launches a cell where the ray sets launch it, and still weighs it the same way",
   { skip },
   () => {
-    const tracing = "src/optics/analysis/mtfTracing.ts";
+    const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
     const mirror =
       "lvFieldRays in src/engines/lv/raySets.ts lays the rays of a set on these lattice points, with this launch " +
       "weight, and puts the chief ray after them";
@@ -324,7 +324,7 @@ test(
   "the MTF still traces a pupil sample with the options lv traces a ray with, and lands it by the same rule",
   { skip },
   () => {
-    const tracing = "src/optics/analysis/mtfTracing.ts";
+    const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
     assertSource(
       tracing,
       `return {
@@ -399,7 +399,7 @@ test(
       "a total internal reflection ends as status failed; mtfTraceClassification is what calls it blocked",
     );
     assertSource(
-      "src/optics/analysis/mtfRayClassification.ts",
+      "src/optics/analysis/mtf/mtfRayClassification.ts",
       `if (trace.failureReason === "totalInternalReflection" || (trace.status === "clipped" && !trace.failureReason))
        return "blocked";`,
       "answerLvRays in src/engines/lv/rays.ts takes LensVisualizer's own word for blocked and failed",
@@ -429,7 +429,7 @@ test(
 );
 
 test("the MTF still puts the field axis together as the ray sets resolve image-height fractions", { skip }, () => {
-  const mtf = "src/optics/analysis/mtf.ts";
+  const mtf = "src/optics/analysis/mtf/mtf.ts";
   const mirror =
     "lvFieldAngles in src/engines/lv/raySets.ts assembles the field axis and its targets from the same functions, " +
     "with the same arguments";
@@ -456,14 +456,14 @@ test("the MTF still puts the field axis together as the ray sets resolve image-h
   // The footprint, and at a finite conjugate the aim of the chief ray, are found at the first line of the support
   // record: the ray sets hand over one whose lines are the case's.
   assertSource(
-    "src/optics/analysis/mtfTracing.ts",
+    "src/optics/analysis/mtf/mtfTracing.ts",
     'const traceOptions = { ...mtfTraceOptions(state, options, support, support.spectralLines[0]), capture: "terminal", } as const;',
     "lvLaunchSetup in src/engines/lv/raySets.ts puts the lines of the case into the support record",
   );
   // The seed of the footprint scan is the pupil radius of the request, which the ray sets take from the hook's rule
   // (the canary of the hook is below).
   assertSource(
-    "src/optics/analysis/mtfTracing.ts",
+    "src/optics/analysis/mtf/mtfTracing.ts",
     `(x, y) => mtfTraceClassification(traceRay(mtfLaunchRay(launch, x, y)), state, options.stopSemiDiameterMm),
      options.pupilSemiDiameterMm,
      mtfMirrorSymmetric(state),
@@ -497,7 +497,7 @@ test("the hook still hands the MTF tab the stop and the pupil radius by the expr
     hook,
     `const fieldGeometry = useMemo(
        () => (L ? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT) : null),`,
-    "lvHookAperture hands entrancePupilAtState2 the analysis field geometry, as the hook does",
+    "lvHookAperture hands entrancePupilAtState the analysis field geometry, as the hook does",
   );
   // A lens opens with its aperture slider at 0 and its aberration control neutral.
   assertSource(
@@ -506,19 +506,22 @@ test("the hook still hands the MTF tab the stop and the pupil radius by the expr
     "lvHookAperture takes the aberration control as neutral",
   );
   assertSource(
-    "src/optics/aperture.ts",
+    "src/optics/state/aperture.ts",
     "const requested = L.FOPEN * Math.pow(L.maxFstop / L.FOPEN, stopdownT);",
     "lvHookAperture asks fNumberAtStopdown at the slider position 0, which is wide open",
   );
-  // The hook's functions are the ones the binding imports under their names with a 2.
-  const barrel = "src/optics/optics.ts";
-  const imported = "the binding takes the function of this name with a 2 for the one the hook calls";
-  assertSource(barrel, "fopenAtZoom2 as fopenAtZoom,", imported);
-  assertSource(barrel, "entrancePupilAtState2 as entrancePupilAtState,", imported);
-  assertSource(barrel, "computeAnalysisFieldGeometryAtState2 as computeAnalysisFieldGeometryAtState,", imported);
+  // The hook's functions are the rewritten exports the binding imports.
+  const barrel = "src/components/hooks/useLensComputation.ts";
+  const imported = "the binding takes the same function the hook calls";
+  assertSource(barrel, "fopenAtZoomClamped as fopenAtZoom,", imported);
+  assertSource(
+    barrel,
+    'import { computeAnalysisFieldGeometryAtState, entrancePupilAtState } from "../../optics/fieldGeometry.js";',
+    imported,
+  );
   // The pupil radius the hook derives follows the stop radius through the geometry's pupil ratio alone.
   assertSource(
-    "src/optics/field/chiefRay.ts",
+    "src/optics/field/geometry.ts",
     "const epSD = Math.abs(geom.yRatio) > 1e-9 ? Math.abs(stopSD / geom.yRatio) : 0;",
     "lvHookAperture takes the entrance pupil of the wide-open iris for the pupil the tab scales",
   );
@@ -539,15 +542,13 @@ test(
     // The whole of the options: a member added here, a frequency list for one, is a member lv does not send.
     assertSource(
       tab,
-      `const options: MtfOptions = useMemo(
+      `const options: MtfRequestOptions = useMemo(
        () => ({
          method: preferences.method,
          spectrum: spectrum.spectrum,
          focus: preferences.focus,
          maxGridSize: preferences.maxGridSize,
          fieldFractions: mtfFieldFractions(preferences.fieldStepPercent),
-         pupilSemiDiameterMm: currentEPSD,
-         stopSemiDiameterMm: currentPhysStopSD,
          movementActive,
        }),`,
       mirror,
@@ -563,9 +564,13 @@ test(
     );
     // The request goes to the worker as it is, with the state's own positions, and the tab draws a selection of the
     // frequencies it gets back.
-    assertSource(tab, "const { focusT, zoomT, aberrationT } = preparedState;", mirror);
-    assertSource(tab, "() => (support.available ? { focusT, zoomT, aberrationT, options } : null),", mirror);
-    assertSource(tab, "const { result, stale, running, error } = useMtfComputation(L, job);", mirror);
+    assertSource(
+      tab,
+      `createAnalysisRequest({ preparedState, dynamicEFL: focalLengthMm ?? 0, currentEPSD, currentPhysStopSD, }),`,
+      mirror,
+    );
+    assertSource(tab, "const job = support.available ? request : null;", mirror);
+    assertSource(tab, "const { result, stale, running, error } = useMtfComputation(L, job, options);", mirror);
     assert.equal(occurrences(tab, "frequenciesPerMm"), 0, `${tab} now names the frequencies of its request`);
     assert.equal(occurrences(tab, "frequencies={preferences.frequencies}"), 2, `${tab} draws other frequencies`);
   },
@@ -586,11 +591,13 @@ test(
     assertSource(
       tab,
       `const scale = fNumber / COMPARISON_F_NUMBER;
-     const stopped = {
-       ...job.options,
-       pupilSemiDiameterMm: job.options.pupilSemiDiameterMm * scale,
-       stopSemiDiameterMm: job.options.stopSemiDiameterMm * scale,
-     };`,
+     return createAnalysisRequest({
+       preparedState: job.preparedGeometry,
+       dynamicEFL: job.dynamicEFL,
+       currentEPSD: job.aperture.entrancePupilSemiDiameterMm * scale,
+       currentPhysStopSD: job.aperture.stopSemiDiameterMm * scale,
+       perspectiveTraceContext: job.perspectiveTraceContext,
+     });`,
       mirror,
     );
   },
@@ -615,14 +622,14 @@ test("the tab's defaults are still the ones the profile lv-tab-default is docume
     "the profile lv-tab-default follows it at run time; its documented defaults and pinned figures are of these",
   );
   assertSource(
-    "src/optics/analysis/mtfConstants.ts",
+    "src/optics/analysis/mtf/mtfConstants.ts",
     "export const MTF_FREQUENCIES: readonly number[] = Object.freeze(Array.from({ length: 51 }, (_, i) => i * 2));",
     "the frequencies of the profile are documented as 0 to 100 cycles/mm in steps of 2",
   );
 });
 
 test("the grid caps, the names and the limits of a request are still as lv states, maps or asks them", { skip }, () => {
-  const constants = "src/optics/analysis/mtfConstants.ts";
+  const constants = "src/optics/analysis/mtf/mtfConstants.ts";
   assertSource(
     constants,
     "export const MTF_GRID_CAPS: readonly MtfGridCap[] = Object.freeze([32, 64, 128, 256]);",
@@ -657,7 +664,7 @@ test("the grid caps, the names and the limits of a request are still as lv state
   );
   // The limits on the fields and frequencies of one request are not restated: lv asks the gate, which must still
   // answer for them with the reason lv reads as a refusal of what was added to a request it had passed.
-  const gate = "src/optics/analysis/mtfSupport.ts";
+  const gate = "src/optics/analysis/mtf/mtfSupport.ts";
   const asked = "specRefusal in src/engines/lv/mtf.ts asks the gate with the spec's fields, then its frequencies";
   assertSource(gate, "fields.length > MTF_MAX_FIELDS ||", asked);
   assertSource(gate, "frequencies.length > MTF_MAX_FREQUENCIES ||", asked);
@@ -677,7 +684,13 @@ test(
     const mirror = "answerLvMtf in src/engines/lv/mtf.ts calls computeMtf on the state it prepared for the case";
     assertSource(worker, "const { focusT, zoomT, aberrationT, options } = message.job;", mirror);
     assertSource(worker, "const state = prepareRuntimeState(lens, focusT, zoomT, aberrationT);", mirror);
-    assertSource(worker, "steps: computeMtfSteps(state, options, jobCache(message.job)),", mirror);
+    assertSource(
+      worker,
+      `steps: computeMtfSteps( createAnalysisRequest({ preparedState: state, dynamicEFL: 0,
+      currentEPSD: options.pupilSemiDiameterMm, currentPhysStopSD: options.stopSemiDiameterMm,
+    }), options, jobCache(message.job), ),`,
+      mirror,
+    );
     // The worker rebuilds the canonical prescription held by the runtime, without duplicating generated surfaces.
     assertSource(
       worker,
@@ -689,11 +702,11 @@ test(
       'this.worker.postMessage({ type: "init", input: canonicalLensFromRuntime(this.lens) });',
       "the worker receives the runtime's canonical prescription",
     );
-    const engine = "src/optics/analysis/mtf.ts";
+    const engine = "src/optics/analysis/mtf/mtf.ts";
     assertSource(
       engine,
-      `export function computeMtf(state: PreparedOpticalState, options: MtfOptions): MtfResult {
-       const steps = computeMtfSteps(state, options);
+      `export function computeMtf(request: AnalysisRequest, options: MtfRequestOptions): MtfResult {
+       const steps = computeMtfSteps(request, options);
        let next = steps.next();
        while (!next.done) next = steps.next();
        return next.value;
@@ -751,7 +764,7 @@ test(
   "the geometric OTF still has the sign, the axes, the reference and the weights the comparator's estimator states",
   { skip },
   () => {
-    const math = "src/optics/analysis/mtfMath.ts";
+    const math = "src/optics/analysis/mtf/mtfMath.ts";
     const mirror =
       "src/estimators/geometricOtf.ts states the same conventions for the comparator's own sum, and shares no line " +
       "with it: minus in the phase, the weights as flux, the sum over the total weight";
@@ -794,7 +807,7 @@ test(
       `real: samples[0].otf.real.map((_, i) => samples.reduce((sum, s) => sum + s.weight * s.otf.real[i], 0) / total),`,
       spectrum,
     );
-    const mtf = "src/optics/analysis/mtf.ts";
+    const mtf = "src/optics/analysis/mtf/mtf.ts";
     assertSource(mtf, "const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);", spectrum);
     assertSource(mtf, "const weight = line.weight * transmitted;", spectrum);
     // One reference for every line, the chief ray's landing at the first: x is the sagittal cut, y the tangential.
@@ -820,8 +833,8 @@ test(
   "LensVisualizer's two wave estimates still differ from the comparator's as docs/gotchas.md says they do",
   { skip },
   () => {
-    const wave = "src/optics/analysis/mtfWavefront.ts";
-    const sheared = "src/optics/analysis/mtfShearedOtf.ts";
+    const wave = "src/optics/analysis/mtf/mtfWavefront.ts";
+    const sheared = "src/optics/analysis/mtf/mtfShearedOtf.ts";
     const shared =
       "src/estimators/waveOtf.ts states the same conventions for the comparator's own estimator, and shares no line " +
       "with it: the pupil coordinate, the shear, the path to the foot of the perpendicular and the sign of the phase";
@@ -882,7 +895,7 @@ test(
   { skip },
   () => {
     // Read at 33ebdb30 (engine closure 78215d72).
-    const mtf = "src/optics/analysis/mtf.ts";
+    const mtf = "src/optics/analysis/mtf/mtf.ts";
     const job =
       "replayLvMtf in src/engines/lv/replay.ts takes the request from the first step of computeMtfSteps and " +
       "restates what follows it: the ladder, the image plane, and which fields are traced";
@@ -1010,7 +1023,7 @@ test(
 
 test("the MTF still accounts for one field at one grid as the replay restates it", { skip }, () => {
   // Read at 33ebdb30 (engine closure 78215d72).
-  const mtf = "src/optics/analysis/mtf.ts";
+  const mtf = "src/optics/analysis/mtf/mtf.ts";
   const mirror = "fieldAtGrid in src/engines/lv/replay.ts restates the bookkeeping, line by line and in this order";
   assertSource(
     mtf,
@@ -1064,7 +1077,7 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   assertSource(mtf, 'return { kind: "curves", field, openBorders };', mirror);
   // The reference a later line is handed stands in only where that line's own chief ray has no image point; the
   // bundle states the point it used as its chief, and which sides of the footprint carried flux.
-  const tracing = "src/optics/analysis/mtfTracing.ts";
+  const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
   const bundle = "the replay reads the reference, the open borders and the unresolved flux off traceMtfBundle's bundle";
   assertSource(
     tracing,
@@ -1081,7 +1094,7 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   );
   assertSource(tracing, "bundle.failedWeight += samples * launchWeight;", bundle);
   // The constants the replay is handed are still exported under these names, with the values it was read at.
-  const constants = "src/optics/analysis/mtfConstants.ts";
+  const constants = "src/optics/analysis/mtf/mtfConstants.ts";
   const named = "LV_IMPORT_MANIFEST in src/engines/lv/manifest.ts imports the constant by this name";
   assertSource(constants, "export const MTF_GRID_LADDER = Object.freeze([16, 32, 64, 128, 256] as const);", named);
   assertSource(constants, "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 128;", named);
@@ -1101,11 +1114,63 @@ test("the tab's f/8 comparison is still the hook's two radii scaled by the slide
     "lvTabComparison in src/engines/lv/tabRequest.ts restates the scale and the tab's rule; stopRadius in " +
     "exportAperture.ts makes the stop of the aperture lv-f8-comparison of it, and lvPupilSeed its seed";
   assertSource(tab, "const scale = fNumber / COMPARISON_F_NUMBER;", mirror);
-  assertSource(tab, "stopSemiDiameterMm: job.options.stopSemiDiameterMm * scale,", mirror);
-  assertSource(tab, "pupilSemiDiameterMm: job.options.pupilSemiDiameterMm * scale,", mirror);
+  assertSource(tab, "currentPhysStopSD: job.aperture.stopSemiDiameterMm * scale,", mirror);
+  assertSource(tab, "currentEPSD: job.aperture.entrancePupilSemiDiameterMm * scale,", mirror);
   assertSource(
     tab,
     "const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;",
+    mirror,
+  );
+});
+
+test("the request snapshots both aperture radii, and MTF resolves them with the pose override", { skip }, () => {
+  const mirror = "lvMtfInputs and lvResolvedMtfOptions in src/engines/lv/tabRequest.ts";
+  assertSource(
+    "src/optics/analysis/request.ts",
+    "const { preparedState, perspectiveTraceContext = null } = params;",
+    mirror,
+  );
+  assertSource(
+    "src/optics/analysis/request.ts",
+    "preparedGeometry: preparedState, dynamicEFL: params.dynamicEFL,",
+    mirror,
+  );
+  assertSource("src/optics/analysis/request.ts", "pose: perspectiveTraceContext?.pose ?? null,", mirror);
+  assertSource(
+    "src/optics/analysis/request.ts",
+    `aperture: Object.freeze({
+    entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD, }),`,
+    mirror,
+  );
+  assertSource(
+    "src/optics/analysis/mtf/mtfSupport.ts",
+    `export function resolveMtfOptions(request: AnalysisRequest, options: MtfRequestOptions): MtfOptions {
+    return { ...options, pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
+    stopSemiDiameterMm: request.aperture.stopSemiDiameterMm, movementActive: request.pose?.active ?? options.movementActive, }; }`,
+    mirror,
+  );
+  assertSource(
+    "src/components/hooks/useMtfComputation.ts",
+    `request ? {
+    focusT: request.preparedGeometry.focusT,
+    zoomT: request.preparedGeometry.zoomT,
+    aberrationT: request.preparedGeometry.aberrationT,
+    options: { ...options,
+    pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
+    stopSemiDiameterMm: request.aperture.stopSemiDiameterMm, movementActive: request.pose?.active ?? options.movementActive, },
+    } : null,`,
+    mirror,
+  );
+  assertSource(
+    "src/optics/first-order/lensConstants.ts",
+    "return traceSurfacesParaxial(S, y0, u0, opts);",
+    "firstOrder calls the optics barrel's paraxialTrace",
+  );
+  assertSource(
+    "src/optics/analysis/mtf/mtf.ts",
+    `export function* computeMtfSteps(
+    request: AnalysisRequest, settings: MtfRequestOptions, cache?: MtfJobCache,
+  ): Generator<MtfResult, MtfResult> {`,
     mirror,
   );
 });

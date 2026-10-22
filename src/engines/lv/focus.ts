@@ -2,6 +2,7 @@
 // "lv-best-axial" of a run is, and what the engine `lv` holds a case with a moved image plane to. It is asked of
 // LensVisualizer, never computed here: the first step of its `computeMtfSteps` states the focus the request
 // applies to every field, found by its own search on the axial beam.
+import { lvMtfInputs } from "./tabRequest.ts";
 import type { SpectralLine } from "../../contract/case.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { lvHookAperture, lvPupilSeed } from "./tabRequest.ts";
@@ -9,7 +10,7 @@ import type { LvHookApi } from "./tabRequest.ts";
 import type { LvApi, LvMtfFocus, LvMtfOptions, LvPreparedState, LvRuntimeLens } from "./types.ts";
 
 /** The LensVisualizer exports a focus is asked with. */
-export type LvFocusApi = LvHookApi & Pick<LvApi, "assessMtfSupport" | "computeMtfSteps">;
+export type LvFocusApi = LvHookApi & Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport" | "computeMtfSteps">;
 
 /**
  * The spectra LensVisualizer's MTF has, by its own names: the reference line, three lines C, d and F, and five
@@ -54,13 +55,13 @@ export function lvGeneralMtfOptions(
  * case states (the authored ones exactly where LensVisualizer traces that spectrum with them).
  */
 export function lvSpectrumOf(
-  api: Pick<LvApi, "assessMtfSupport">,
+  api: Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport">,
   state: LvPreparedState,
   options: LvMtfOptions,
   lines: readonly Pick<SpectralLine, "wavelengthNm" | "weight" | "indexSource">[],
 ): (typeof LV_MTF_SPECTRA)[number] | null {
   for (const spectrum of LV_MTF_SPECTRA) {
-    const support = api.assessMtfSupport(state, { ...options, spectrum });
+    const support = api.assessMtfSupport(...lvMtfInputs(api, state, { ...options, spectrum }));
     const source = support.useResolvedReference ? "anchored" : "authored";
     const same =
       support.spectralLines.length === lines.length &&
@@ -80,11 +81,11 @@ export function lvSpectrumOf(
  * field is traced. Null for a request its gate refuses and for a state without a field axis, which have none.
  */
 export function lvAxialFocus(
-  api: Pick<LvApi, "computeMtfSteps">,
+  api: Pick<LvApi, "createAnalysisRequest" | "computeMtfSteps">,
   state: LvPreparedState,
   options: LvMtfOptions,
 ): LvMtfFocus | null {
-  return api.computeMtfSteps(state, options).next().value.focus;
+  return api.computeMtfSteps(...lvMtfInputs(api, state, options)).next().value.focus;
 }
 
 /** What a best axial focus is asked for: the stop radius and the lines of a case, and a grid cap when one is stated. */
@@ -113,7 +114,7 @@ export function lvBestAxialFocus(
   ask: LvBestAxialAsk,
 ): { readonly shiftMm: number } | { readonly problem: ExportProblem } {
   const general = lvGeneralMtfOptions(api, runtime, state, ask.stopSemiDiameterMm);
-  const gate = api.assessMtfSupport(state, general);
+  const gate = api.assessMtfSupport(...lvMtfInputs(api, state, general));
   if (!gate.available) {
     const message = `LensVisualizer's MTF, whose focus search finds its best axial focus, refuses this state: ${gate.message}`;
     return { problem: { code: gate.reason ?? LV_BEST_AXIAL_PROBLEMS.unavailable, message } };

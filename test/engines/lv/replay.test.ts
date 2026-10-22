@@ -5,6 +5,7 @@
 // when a lens says so (a ladder, a test of convergence, a footprint that is widened, plain sums of its own), the
 // replay is held to the fake's own result: the same grids, the same counts, the same status, and the fake's curves
 // to its rounding. The fake's numbers describe no real lens, and none of its constants is LensVisualizer's.
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
@@ -127,6 +128,12 @@ function standIn(spec: StandIn, traced: unknown[][] = []): LvReplayApi {
   const tolerance = spec.tolerance ?? 0.01;
   const footprint: LvMtfFootprint = { x0: -1, x1: 1, y0: -1, y1: 1, beamWidthMm: 2, beamHeightMm: 2, guardMm: 0.1 };
   return {
+    createAnalysisRequest: (params) => ({
+      preparedGeometry: params.preparedState,
+      dynamicEFL: params.dynamicEFL,
+      aperture: { entrancePupilSemiDiameterMm: params.currentEPSD, stopSemiDiameterMm: params.currentPhysStopSD },
+      pose: null,
+    }),
     computeMtfSteps: function* (_state, options) {
       const fractions = (options.fieldFractions as number[] | undefined) ?? [0];
       const result: LvMtfResult = {
@@ -524,7 +531,7 @@ const SPEC: MtfNativeSpec = {
 function both(binding: LvBinding, model: LvCaseModel, spec: MtfNativeSpec = SPEC, engineOptions: JsonObject = {}) {
   const request = lvMtfRequest(binding.api, model, spec, engineOptions);
   assert.ok(!("refused" in request), JSON.stringify(request));
-  const own = binding.api.computeMtf(model.state, request.options);
+  const own = binding.api.computeMtf(...lvMtfInputs(binding.api, model.state, request.options));
   const replay = replayLvMtf(binding.api, model.state, request.options);
   return { request, own, replay };
 }

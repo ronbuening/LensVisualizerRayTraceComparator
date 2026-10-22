@@ -1,6 +1,7 @@
 // The profile `lv-tab-default` from the asking side: for a lens key and a zoom position, the case LensVisualizer's
 // MTF tab is about and the `mtf.native` spec its request is. The engine `lv` rebuilds the same request from the
 // case and holds the spec to it (`answerLvMtf`); this is what builds a case and a spec that it will accept.
+import { lvMtfInputs } from "./tabRequest.ts";
 import type { OpticalCase } from "../../contract/case.ts";
 import type { MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import type { LvBinding } from "./binding.ts";
@@ -94,7 +95,7 @@ export function createLvTabProfileResolver(
         `lens ${lensKey}: LensVisualizer's MTF tab asks for the spectrum "${spectrum}", which is unknown`,
       );
     }
-    const shown = api.assessMtfSupport(state, request.options).available;
+    const shown = api.assessMtfSupport(...lvMtfInputs(api, state, request.options)).available;
     const tabCase = exported({
       aperture: { kind: "stop-radius", mm: request.options.stopSemiDiameterMm },
       lines: { kind: shown ? spectrum : "reference" },

@@ -1,5 +1,6 @@
 // The committed suites against the real LensVisualizer: every run exports, or reports a coded problem, and each
 // lens of the feature suite has the translation path it is there for. Run output goes to a temporary directory.
+import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -87,13 +88,15 @@ test(
       const runtime = binding.api.buildLens((await binding.lens(key)).data);
       const state = binding.api.prepareRuntimeState(runtime, 0, 0);
       const annular = state.surfaces.some((surface) => (surface.innerSd ?? 0) > 0);
-      const gate = binding.api.assessMtfSupport(state, {
-        method: "geometric",
-        spectrum: "reference",
-        pupilSemiDiameterMm: 1,
-        stopSemiDiameterMm: 1,
-        focus: "design",
-      });
+      const gate = binding.api.assessMtfSupport(
+        ...lvMtfInputs(binding.api, state, {
+          method: "geometric",
+          spectrum: "reference",
+          pupilSemiDiameterMm: 1,
+          stopSemiDiameterMm: 1,
+          focus: "design",
+        }),
+      );
       // A lens of mixed references is traced with resolved indices at its reference line, or refused for that.
       const mixed = gate.useResolvedReference || gate.reason === "mixed-reference";
       if (!annular && !mixed) continue;
@@ -209,7 +212,7 @@ test("each lens of the feature suite has the translation path it is there for", 
   assert.equal((await featureCase("fixed-iris-zoom-photopic-tele")).systemId, tele.systemId);
   assert.equal(tele.conditions.stopSemiDiameter, binding.api.wideOpenStopAtZoom(1, zoom));
   assert.equal(binding.api.wideOpenStopAtZoom(0, zoom), binding.api.wideOpenStopAtZoom(1, zoom));
-  assert.ok(binding.api.fopenAtZoom2(1, zoom) > binding.api.fopenAtZoom2(0, zoom));
+  assert.ok(binding.api.fopenAtZoomClamped(1, zoom) > binding.api.fopenAtZoomClamped(0, zoom));
 
   // An asphere without a coefficient is the conic it equals, with its conic constant.
   const zero = await featureCase("zero-asphere-ref");

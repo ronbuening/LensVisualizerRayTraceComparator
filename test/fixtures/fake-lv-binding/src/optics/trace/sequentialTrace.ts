@@ -77,7 +77,7 @@ export function traceSequential(
     ? input.direction
     : [input.direction[0] / length, input.direction[1] / length, input.direction[2] / length];
   const traced: { origin: Vec3; direction: Vec3 } = { origin: input.origin, direction };
-  const fault = state.lens.runtime.data.unresolvedZone;
+  const fault = state.lens.runtime.source.unresolvedZone;
   const hits: FakeTraceHit[] = [];
   let origin: Vec3 = input.origin;
   let index = 1;

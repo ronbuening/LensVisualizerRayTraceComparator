@@ -2,6 +2,7 @@
 // and the frequencies as LensVisualizer itself resolves them for the stop radius and the lines of the case. Every
 // number is asked of LensVisualizer: the first step of its own `computeMtfSteps` states the field axis, the angle
 // of each fraction of the reference image height and its best axial focus, before any field is traced.
+import { lvMtfInputs } from "./tabRequest.ts";
 import type { RunOptions } from "../../contract/runSpec.ts";
 import { recipeFrequencies, recipeOfCase, recipeProblem } from "../../core/mtfRecipe.ts";
 import type { MtfRecipe, MtfRecipeField, MtfRecipeResolution } from "../../core/mtfRecipe.ts";
@@ -68,7 +69,7 @@ export function lvMtfRecipe(
     problems: [recipeProblem(code, message)],
   });
   const general = lvGeneralMtfOptions(api, runtime, state, conditions.stopSemiDiameter);
-  const gate = api.assessMtfSupport(state, general);
+  const gate = api.assessMtfSupport(...lvMtfInputs(api, state, general));
   if (!gate.available) {
     return none(gate.reason ?? "mtf-unavailable", `LensVisualizer's MTF does not cover this state: ${gate.message}`);
   }
@@ -88,14 +89,16 @@ export function lvMtfRecipe(
   const frequenciesPerMm = recipeFrequencies(run, api.mtfDefaultFrequencies);
   const lvGridCap = run.sampling?.lvGridCap;
   const first = api
-    .computeMtfSteps(state, {
-      ...general,
-      spectrum,
-      focus: "best-axial",
-      fieldFractions: fractions,
-      frequenciesPerMm,
-      ...(lvGridCap === undefined ? {} : { maxGridSize: lvGridCap }),
-    })
+    .computeMtfSteps(
+      ...lvMtfInputs(api, state, {
+        ...general,
+        spectrum,
+        focus: "best-axial",
+        fieldFractions: fractions,
+        frequenciesPerMm,
+        ...(lvGridCap === undefined ? {} : { maxGridSize: lvGridCap }),
+      }),
+    )
     .next().value;
   if (!first.support.available) {
     const reason = first.support.reason ?? "mtf-unavailable";

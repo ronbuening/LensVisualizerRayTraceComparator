@@ -1,4 +1,4 @@
-import { FLAT_R_THRESHOLD } from "../constants.js";
+import { FLAT_R_THRESHOLD } from "../geometry.js";
 
 export interface ParaxialRow {
   R: number;
@@ -9,7 +9,7 @@ export interface ParaxialRow {
 // The fake's paraxial kernel, with LV's conventions: the ray starts in air at the first vertex plane, `stopAt`
 // traces the surfaces in front of that index and transfers to its vertex plane, and `skipLastTransfer` leaves the
 // ray on the last surface traced.
-export function traceParaxialSurfaces2(
+export function paraxialTrace(
   surfaces: readonly ParaxialRow[],
   y0: number,
   u0: number,
