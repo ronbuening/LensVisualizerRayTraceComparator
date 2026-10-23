@@ -1,0 +1,28 @@
+{
+  "contract": "1.3",
+  "kind": "suite",
+  "name": "stations",
+  "defaults": {
+    "lines": {
+      "kind": "reference"
+    }
+  },
+  "runs": [
+    {
+      "name": "zoom",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      }
+    },
+    {
+      "name": "certified",
+      "lens": {
+        "kind": "lv",
+        "key": "*",
+        "stations": "certified-focus"
+      }
+    }
+  ]
+}

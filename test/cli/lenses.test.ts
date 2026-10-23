@@ -282,7 +282,7 @@ test("a LensVisualizer that is not configured, missing or not loadable is a fail
   assert.equal(unloadable.code, EXIT_FAILURE);
   assert.match(
     unloadable.err,
-    /^lvrtc lenses: LensVisualizer at .*: 1 of 17 modules cannot be imported: src\/optics\/fieldGeometry\.ts: /,
+    /^lvrtc lenses: LensVisualizer at .*: 1 of 18 modules cannot be imported: src\/optics\/fieldGeometry\.ts: /,
   );
 });
 

@@ -17,19 +17,19 @@ still those, and what moved.
 |---|---|
 | Suite | benchmark |
 | Suite hash | ca12c885c2454c3cb1a8d0c54d51128a20c4919c2ceb84c3d03a7404cceb75fa |
-| Baseline hash | ca2c84a87153304719ef9134943b1bf44fb2dbbc7aa418e124b1bef4f07f1504 |
+| Baseline hash | cfb8a5dbbcc9f4cd00cce2b0b96829f3b7937fe948b183d3feed304230b99b3c |
 | Contract version | 1.1 |
-| Policy | rungs v13 |
-| Policy hash | aea1b9de7ff0dbf4892dd05110bac4e2725fec68f46cdb7b8f4391c9694e4505 |
+| Policy | rungs v14 |
+| Policy hash | 693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | 6314b1ed647e5057a408a7a31d9c7c146ee92edb2158d033451a971b37264325 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
+| lv | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 842d3acb45d7d0bb2ac1adec106bd771ec5f68a5b92662bf76dc5cf887e04725 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
 | optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 905727914f01561fe28be507b27f41e38792efa4cbb3d10e3d0c148b2f147015 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 6c1c6ddf1eaa4f4c6d2f4b47ec4475198b1113082b6f5ae2c23cf498e4b38b44 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 2ed2afe63bbcf29a4a1b8fd09c72c015a5aef1ead3e75c97dd4bb9ef6965dc14 | sourceFiles 11 |
-| replay | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | 83e43b635311d44b07fcd691b8169e962efe2fec6d61874aa1f144b51c4b23e7 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
-| wave | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | bcb6b0072c5be8b706972932fbb581e333d0116a82e734edf769730d9af41b68 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
+| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 706469d945853008c0922c71f1319efd65ffeb4d24bfd24ecf1e6e4f2ba0c48b | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 15a954ff46c3b6c4b9f05371470b3b4f35f5edaea95d1a960e8ff021f1f38c07 | sourceFiles 11 |
+| replay | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 48a9f01030b9996d1a413adf23b5723f7ecd9ed538dcc2e2d4e5f187366751fc | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
+| wave | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | c684bffebe7e5c3de16f624c2d84aec7a5072b4a026524de58385a24363c9d7f | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
 
 | Run | Case |
 |---|---|

@@ -26,6 +26,8 @@ node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key,
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
+node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4   # the stop-down and zoom-station matrix on its own engines (lv, ref, optiland); then compare states, baseline write states
+node bin/lvrtc.mjs run suites/states.json --rungs r4,r4f,r6a        # its gated MTF rungs; then compare states, baseline write states --mtf (the same for focus-stations)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay; r6a traces a lattice twice as fine and r6b adds lv and wave: a long run, so name --rungs r0,r1,r2,r3,r4 for the baselined rays rungs
@@ -93,8 +95,23 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   manifest lists them, never on the suite file as written. The expansion is the LV case source's
   (`CaseSource.expand`), never `expandSuite`'s, and the runs it gives are ordinary runs; a suite's hash is that of
   the file as written. An explicit position is one state. A prime has no zoom position: one stated for it is taken
-  as 0 (`exportCase`). Middle stations are Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and
-  hint at `--zoom 1` on stderr.
+  as 0 (`exportCase`). Middle stations are run only where a run states one or selects them. `lvrtc export <key>`
+  and `lenses show` stay single-state and hint at `--zoom 1` on stderr.
+- **States LensVisualizer selects are `lens.stations`, expanded by the LV case source** (`src/engines/lv/stations.ts`,
+  through `CaseSource.expand` like the ends): `"published-zoom"` is the ends plus LV's `publishedZoomStations`,
+  sorted, each once (`-wide`, `-zoom<T>`, `-tele`; a prime one run); `"certified-focus"` is every conjugate
+  LV declares certified, including a station its MTF gate refuses
+  (`-<key>-zoom<station>-focus<keyframe>`; `key: "*"` is the catalog, for this selector only). A declared station
+  the gate refuses (two fisheyes at `ab0fd4cf`) remains an ordinary run with the coded problem
+  `finite-conjugate-unavailable` (the gate's `unsupported-path` supplies no finite conjugate). A selector with
+  stated coordinates
+  (`station-selection-conflict`) and an empty selection (`no-certified-stations`) are coded problems of one run,
+  never a suite of no runs. The address-to-slider mapping is LV's `mtfFiniteConjugate`, restated with a canary.
+- **Contract minor 3 covers station selectors and policy `attentionSeveralLines`** (`CONTRACT_VERSION_1_3`):
+  `runContractProblems` / `loadSuiteValue` refuse earlier-minor station selectors; policy schema and
+  `policyProblems` refuse earlier-minor several-line bands. `suites/states.json`, `focus-stations.json` and
+  policy version 14 state 1.3. A baseline recording source problems also states 1.3, with nullable `caseId`
+  and `problems`; other baselines, cases, requests, results and manifests are written as before.
 - **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
   `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
   (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the
@@ -316,6 +333,15 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   is the hook's slider and not the same double on every lens. A test that means "the 12 configurations" filters
   with `asItOpens` (`test/suites/support.ts`); the optiland rung tests run those 24 (`rungSuite`), and
   `baseline.test.ts` all 96.
+- **Stage 4.4's suites are `states` and `focus-stations`** (`docs/REFERENCE.md`, "Stage 4.4"): `states` is every
+  benchmark lens at the slider's f/5.6 and f/11 (`f-number`) on both spectra and both planes, and its zoom also wide
+  open and at `lv-f8-comparison`, every run `published-zoom` (128 runs at `ab0fd4cf`); `focus-stations` is
+  `certified-focus` of the catalog, wide open, reference line, design plane (55 runs, 35 lenses; 53 export,
+  two fisheye stations record `finite-conjugate-unavailable`). Both name
+  `lv,ref,optiland` and the gated rungs `r0,r1,r2,r3,r4,r4f,r6a`: run them as features is run, `--rungs
+  r0,r1,r2,r3,r4` for the rays baseline and `--rungs r4,r4f,r6a` for the MTF one, never all seven into one write.
+  An f-number outside the slider (below the widest, above `maxFstop`) is a coded problem
+  (`aperture-faster-than-wide-open`, `aperture-beyond-slider-range`), never clamped.
 - **`lv-best-axial` is asked of LensVisualizer, never computed** (`lvBestAxialFocus`, `src/engines/lv/focus.ts`):
   the first step of `computeMtfSteps` for the stop, the lines and the grid cap of the run. The case is exported at
   `state.imgZ` plus that shift and is then a case like any other. The plane is of one stop, one spectrum and one
@@ -634,7 +660,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
   baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
-  ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
+  ERROR pair. Source refusals are recorded as coded run problems with no ERROR pair.
+  `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
   The rays baselines hold R0 to R4: a policy change therefore needs them rewritten with
@@ -665,7 +692,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Analytic disc, tilt, defocus and annulus proofs with rim bounds, whole-number sums of an apodized pupil at
   an image index, and a translated sphere are in `wavefrontOtf.test.ts`. Keep the new
   estimator out of `lv`, `ref`, `replay` and the existing `wave` adapter's closure.
-- **R6c is recorded, only where named, reference or photopic** (policy version 13): R5's native request and angles,
+- **R6c is recorded, only where named, reference or photopic** (policy version 14, contract 1.3): R5's native request and angles,
   asked of its own four engines whatever `--engines` names, four columns `lv`, `wave`, `optiland`, `optiland-wave`. Reuse R5 sorting before every subtraction, including
   report peers. Bands stay 0.005 / 0.01; chief landing is 1e-7 mm for two one-line answers and 1e-3 mm
   when either records several lines; no gate or floor. Raw grids 128/256, quarter-wave
@@ -687,5 +714,5 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   A failed line makes its field unavailable and names the line; none is dropped. The case plane, including
   LV's photopic best-axial shift, is used unchanged. FFT stays unsupported on several lines.
   Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
-  Policy 13 expands R6c's definition and adds its several-line chief-landing sorting limit; the MTF attention
-  bands, classes, gates and existing quantity versions do not move.
+  Policy 14 states contract 1.3 for the several-line chief-landing member introduced in Stage 4.3;
+  its limits retain policy 13's values. The MTF attention bands, classes, gates and quantity versions do not move.

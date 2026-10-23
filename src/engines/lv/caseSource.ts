@@ -1,7 +1,7 @@
 // Cases from LensVisualizer: a lens key and a run's options in, an optical case out. This is the LV half of the
 // case-source seam of src/core/suite.ts, and what `lvrtc export` drives.
 import type { OpticalCase } from "../../contract/case.ts";
-import type { RunOptions } from "../../contract/runSpec.ts";
+import type { RunSpec, RunOptions } from "../../contract/runSpec.ts";
 import { recipeProblem } from "../../core/mtfRecipe.ts";
 import type { MtfRecipeResolution } from "../../core/mtfRecipe.ts";
 import type { CaseSource, SourceAudit } from "../../core/suite.ts";
@@ -19,10 +19,13 @@ import type { ExportProblem } from "./exportProblems.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
 import { lvRaySets } from "./raySets.ts";
 import { lvMtfRecipe } from "./recipe.ts";
+import { expandLvStations, stationSelectionProblem } from "./stations.ts";
 import { ZOOM_ENDS } from "./zoomEnds.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
 export interface LvExporter {
+  /** Source-owned opt-in station expansion; ordinary runs remain ordinary. */
+  expandStations(run: RunSpec): Promise<readonly RunSpec[]>;
   /**
    * The case of the lens `key` under a run's options (`exportCase`). A key the catalog does not hold
    * (`unknown-lens`) and a lens file LensVisualizer cannot build (`lens-build-failed`) are problems like any other.
@@ -68,6 +71,7 @@ export function createLvExporter(binding: LvBinding): LvExporter {
   const stampedClosures = new Set<string>();
 
   return {
+    expandStations: (run) => expandLvStations(run, binding, build),
     exportLens: async (key, options) => {
       const lens = await build(key);
       if (!lens.ok) return { ok: false, problems: [lens.problem] };
@@ -164,9 +168,13 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
 
   return {
     expand: async (run) => {
-      if (run.lens.kind !== "lv" || run.state?.zoomT !== undefined) return [run];
+      if (run.lens.kind !== "lv") return [run];
+      if (run.lens.stations && stationSelectionProblem(run)) return [run];
+      if (!run.lens.stations && run.state?.zoomT !== undefined) return [run];
       const loaded = await load();
-      if ("code" in loaded || !(await loaded.isZoom(run.lens.key))) return [run];
+      if ("code" in loaded) return [run];
+      if (run.lens.stations) return loaded.expandStations(run);
+      if (!(await loaded.isZoom(run.lens.key))) return [run];
       return ZOOM_ENDS.map(({ end, zoomT }) => ({
         ...run,
         name: `${run.name}-${end}`,
@@ -179,6 +187,10 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       }
       const loaded = await load();
       if ("code" in loaded) return { ok: false, problems: [problemText(loaded)] };
+      const conflict = stationSelectionProblem(run);
+      if (conflict) return { ok: false, problems: [conflict] };
+      if (run.lens.stations)
+        return { ok: false, problems: ["no-certified-stations: the station selection gave no states"] };
       const result = await loaded.exportLens(run.lens.key, run);
       return result.ok ? result : { ok: false, problems: result.problems.map(problemText) };
     },

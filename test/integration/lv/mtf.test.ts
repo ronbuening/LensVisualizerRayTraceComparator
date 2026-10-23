@@ -62,8 +62,12 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
   { key: "sigma-45mm-f28-dg-dn-contemporary", zoomT: 0, run: "sigma-45mm-f28-dg-dn-contemporary" },
 ];
 
-/** Re-measured at LV 643ef5d0; same engine closure at ab0fd4cf. */
-const PINNED_CLOSURE = "94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b";
+/**
+ * Re-measured at LV 643ef5d0 (closure 94778d3d; the same at ab0fd4cf). At Stage 4.4 the binding's import of
+ * src/optics/publishedStations.ts made the closure 7b756ee6 (177 files) at ab0fd4cf; every figure was measured
+ * again there and found unchanged.
+ */
+const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

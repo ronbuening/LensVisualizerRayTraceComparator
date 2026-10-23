@@ -36,6 +36,7 @@ function functions<const Name extends string>(
  * signature to `LvApi`; the type check fails until the two agree.
  */
 export const LV_IMPORT_MANIFEST = [
+  { module: "src/optics/publishedStations.ts", exports: functions("publishedZoomStations") },
   {
     module: "src/optics/buildLens.ts",
     exports: [{ name: "default", as: "buildLens", kind: "function" }, ...functions("prepareRuntimeState")],

@@ -11,13 +11,14 @@ import type { Policy, RungPolicy } from "../../src/contract/policy.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { RUNGS, r0Rung, r1Rung, r4Rung, r5Rung, selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
-import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST } from "../contract/corpus.ts";
+import { POLICY_EVERY_MODE, POLICY_LADDER, POLICY_SELFTEST, POLICY_SEVERAL_LINES } from "../contract/corpus.ts";
 import { tempDir } from "../core/support.ts";
 
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 13);
+  assert.equal(policy.version, 14);
+  assert.equal(policy.contract, "1.3");
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
     mode: "direct",
@@ -276,4 +277,15 @@ test("a policy file that cannot be used is refused with what is wrong, and never
     );
   }
   assert.deepEqual(loadPolicy(write("good.json", JSON.stringify(POLICY_EVERY_MODE))), POLICY_EVERY_MODE);
+});
+
+test("a policy using attentionSeveralLines refuses earlier contract minors", (t) => {
+  const directory = tempDir(t);
+  for (const contract of ["1.0", "1.1", "1.2", "1.3", "1.10"]) {
+    const policy = { ...POLICY_SEVERAL_LINES, contract };
+    const file = join(directory, `policy-${contract}.json`);
+    writeFileSync(file, JSON.stringify(policy));
+    if (["1.0", "1.1", "1.2"].includes(contract)) assert.throws(() => loadPolicy(file), /not a valid policy/);
+    else assert.deepEqual(loadPolicy(file), policy);
+  }
 });

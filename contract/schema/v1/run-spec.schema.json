@@ -30,7 +30,11 @@
           "type": "object",
           "properties": {
             "kind": { "const": "lv" },
-            "key": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+            "key": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+            "stations": {
+              "description": "Case-source expansion: published zoom stations plus ends, or certified finite focus stations. key * selects the catalog only for certified-focus. Explicit state coordinates cannot be combined with a station expansion.",
+              "enum": ["published-zoom", "certified-focus"]
+            }
           },
           "required": ["kind", "key"],
           "additionalProperties": false

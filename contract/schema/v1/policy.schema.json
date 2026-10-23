@@ -20,6 +20,37 @@
   },
   "required": ["contract", "kind", "version", "rungs"],
   "additionalProperties": false,
+  "anyOf": [
+    {
+      "description": "Minor 3 adds attentionSeveralLines; policies using it must state minor 3 or later.",
+      "properties": {
+        "contract": {
+          "pattern": "^1[.]([3-9]|[1-9][0-9]+)$"
+        }
+      }
+    },
+    {
+      "description": "Earlier policies may use only the metric members that preceded minor 3.",
+      "properties": {
+        "rungs": {
+          "additionalProperties": {
+            "properties": {
+              "metrics": {
+                "additionalProperties": {
+                  "description": "This branch requires attentionSeveralLines to be absent: null is ruled out by its nonNegative schema above.",
+                  "properties": {
+                    "attentionSeveralLines": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "rung": {
       "type": "object",

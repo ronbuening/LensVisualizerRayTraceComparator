@@ -1,0 +1,28 @@
+{
+  "contract": "1.3",
+  "kind": "suite",
+  "name": "focus-stations",
+  "defaults": {
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "imagePlane": {
+      "kind": "design"
+    },
+    "engines": ["lv", "ref", "optiland"],
+    "rungs": ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
+    "lines": {
+      "kind": "reference"
+    }
+  },
+  "runs": [
+    {
+      "name": "certified",
+      "lens": {
+        "kind": "lv",
+        "key": "*",
+        "stations": "certified-focus"
+      }
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import { baselineProblems, gravestVerdict } from "../../src/contract/baseline.ts
 import type { Baseline, BaselinePair } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
 import { validateKind } from "../../src/contract/schemas.ts";
-import { BASELINE_RAYS, BASELINE_SELFTEST, POLICY_LADDER, edited } from "../contract/corpus.ts";
+import { BASELINE_RAYS, BASELINE_REFUSED, BASELINE_SELFTEST, POLICY_LADDER, edited } from "../contract/corpus.ts";
 
 const R2 = "/runs/0/rungs/1";
 
@@ -210,4 +210,21 @@ test("check: a record only one of the two has is GONE or NEW", () => {
     "r2 other ref: NEW",
   ]);
   assert.equal(checkFails(checkBaseline(without, BASELINE_RAYS, POLICY_LADDER)), false);
+});
+
+test("a baseline records source refusals under minor 3 and never treats them as an ERROR pair", () => {
+  assert.deepEqual(parseBaseline(baselineText(BASELINE_REFUSED)), { baseline: BASELINE_REFUSED });
+  const { markdown, json } = renderBaselineReport(BASELINE_REFUSED);
+  assert.match(markdown, /finite-conjugate-unavailable:/);
+  assert.match(json, /finite-conjugate-unavailable:/);
+  assert.deepEqual(baselineProblems(changed("/contract", "1.1", BASELINE_REFUSED)), [
+    "run refused-station: source problems require contract minor 3",
+  ]);
+  for (const invalid of [
+    changed("/runs/1/problems", [], BASELINE_REFUSED),
+    changed("/runs/1/rungs", BASELINE_SELFTEST.runs[0].rungs, BASELINE_REFUSED),
+  ])
+    assert.ok(
+      baselineProblems(invalid).includes("run refused-station: a run without a case needs problems and no rungs"),
+    );
 });

@@ -568,6 +568,8 @@ export interface LvLineNm {
  * module exports each.
  */
 export interface LvApi {
+  /** Source-published zoom coordinates, through LV's public station seam. */
+  publishedZoomStations(L: LvRuntimeLens): readonly { readonly index: number; readonly zoomT: number }[];
   buildLens(
     data:
       | LvLensData

@@ -117,10 +117,11 @@ test("the invalid fixtures make every one of these keywords the reported one", (
   const reported = new Set<string>();
   for (const kind of CONTRACT_KINDS)
     for (const { expect } of Object.values(INVALID[kind])) reported.add(expect.keyword);
-  // anyOf and exclusiveMaximum occur in the schemas only inside a oneOf, which is then the keyword reported; the
+  // exclusiveMaximum occurs in the schemas only inside a oneOf, which is then the keyword reported; the
   // validator's own tests cover them. "finite" is the validator's own rule, not a schema keyword.
   assert.deepEqual([...reported].sort(), [
     "additionalProperties",
+    "anyOf",
     "const",
     "enum",
     "exclusiveMinimum",

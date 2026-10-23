@@ -114,7 +114,7 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.2`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.3`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
@@ -138,6 +138,19 @@ engines of this repository state `contract.max` `1.2` and list the flag; an engi
 about such a case and is asked about every other as before (`negotiate`). No quantity's version changes:
 `system.describe` answers `clipRadius` with an infinity for such a surface, which is the number its definition
 asks for, the largest height at which a ray passes.
+
+**Minor 3** (Stages 4.3/4.4) adds policy metric `attentionSeveralLines`, the alternate recorded attention
+band when either answer records several lines, and to the kinds `run-spec` and `suite` the member `stations`
+of a LensVisualizer lens
+([stations selected by LensVisualizer](#stations-selected-by-lensvisualizer)). A run that has one states `1.3`, in
+itself or through its suite, and code refuses one that states an earlier version (`runContractProblems`). The
+selector is consumed when the suite is loaded: the runs it gives, and every case, request, result, manifest,
+comparison and baselines without source problems are written as before, and no engine's `contract.max` moves, since no engine reads a run
+spec. The suites `states` and `focus-stations` state `1.3`; every other suite is still `1.0`, with its hash.
+A policy using `attentionSeveralLines` states `1.3` or later; the schema and loader refuse earlier minors.
+`policy/rungs.v1.json` states `1.3`, version 14: its text changed from version 13, without changing any limit.
+Baselines that record coded source problems state `1.3`, with `runs[].problems` and nullable `caseId`; a run
+without a case has problems and no rungs. Other baselines retain their versions. Refusals fail no comparison.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -358,6 +371,7 @@ its g and C lines, which its anchored indices are fitted between.
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
+| `aperture-beyond-slider-range` | asks for an f-number above the lens's aperture slider maximum |
 | `f8-comparison-unavailable` | asks for the aperture `lv-f8-comparison` of a lens LensVisualizer's MTF tab offers no f/8 comparison for |
 | `lv-best-axial-needs-lv-spectrum`, `lv-best-axial-unavailable` | asks for the image plane `lv-best-axial` on lines that are none of LensVisualizer's spectra, or in a state its focus search finds no focus for |
 | `wavelength-outside-fitted-range` | lists a wavelength outside LensVisualizer's g to C lines |
@@ -664,7 +678,7 @@ takes the comparator's default.
 | `contract` | string | contract version |
 | `kind` | `"run-spec"` | |
 | `name` | string | letters, digits, `.`, `_` and `-`; safe as a file name |
-| `lens` | object | `{ kind: "lv", key }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another |
+| `lens` | object | `{ kind: "lv", key, stations? }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another. `stations` (minor 3) selects states of a LensVisualizer lens ([below](#stations-selected-by-lensvisualizer)) |
 | `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1. Without `zoomT`, a zoom is run at both ends ([below](#a-zoom-without-a-position)) |
 | `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }`, `{ kind: "stop-radius", mm }`, or `{ kind: "lv-f8-comparison" }`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which only a LensVisualizer lens has |
 | `lines?` | object | `{ kind: "reference" \| "cdf" \| "photopic" }` or `{ kind: "explicit", wavelengthsNm, weights? }` |
@@ -742,11 +756,32 @@ it is taken as 0, so its case and its provenance are those of a run that states 
 - A suite's hash is that of the suite as written (`expandSuite`), with or without a LensVisualizer at hand.
   Without one nothing says which lens is a zoom: the run is one run, which cannot be started.
 - The ends are the only states the rule adds. The authored zoom stations between them are not run unless a run
-  states one (Stage 4.4 of the plan).
+  states one, or selects the stations LensVisualizer publishes ([below](#stations-selected-by-lensvisualizer)).
 
 `lvrtc export --all` follows the same rule (every zoom at both ends), and so does `lvrtc mtf <lensKey>` without
 `--zoom`. `lvrtc export <lensKey>` and `lvrtc lenses show <lensKey>` are tools of one state, zoom 0 unless `--zoom`
 names another, and say so on the error stream for a zoom.
+
+#### Stations selected by LensVisualizer
+
+**A run of a LensVisualizer lens may select its states from LensVisualizer** (minor 3, Stage 4.4) with
+`lens.stations`; a run spec or suite that has one states `1.3` or later, and code refuses one that states an earlier
+version (`runContractProblems`, applied when a suite is loaded). Like the ends of a zoom, the selection is the
+LensVisualizer case source's (`CaseSource.expand`, `src/engines/lv/stations.ts`): the runs it gives state their
+coordinates and no selector, and are runs like any other. A suite's hash is that of the file as written, selectors
+and all; a baseline names the runs as run.
+
+- `"published-zoom"`: a zoom at both ends and at every zoom position LensVisualizer publishes
+  (`publishedZoomStations`), in ascending order and each once, named `<name>-wide`, `<name>-zoom<zoomT>` and
+  `<name>-tele`. An authored station LensVisualizer does not publish is not run. A prime is one run, with no state.
+- `"certified-focus"`: every finite-conjugate station the lens declares certified (`focus.conjugates`), each once,
+  named `<name>-<key>-zoom<station>-focus<keyframe>`. All declared stations are expanded, including a station
+  LV's MTF gate refuses: without the gate's conjugate it records `finite-conjugate-unavailable` as a run problem,
+  with no comparison pairs and no failure. At `ab0fd4cf`, 55 stations on 35 lenses include two such fisheye
+  stations (gate reason `unsupported-path`). `key: "*"` selects over the whole catalog, and only for this selector.
+- A run that selects stations and also states `state.zoomT` or `state.focus` is one run that cannot be started
+  (`station-selection-conflict`), and so is a selection of nothing (`no-certified-stations`): neither is a suite of
+  no runs. Without a LensVisualizer the run is one run, which cannot be started.
 
 **Invariant checked in code** (`runInvariantProblems` in `src/contract/runSpec.ts`), because a schema cannot count
 one list against another: explicit lines that give `weights` give exactly one for each wavelength. It holds for a

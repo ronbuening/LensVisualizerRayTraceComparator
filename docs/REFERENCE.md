@@ -89,16 +89,16 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 ### Suites
 
-Three suites of LensVisualizer lenses are in `suites/`. None names a rung: a run uses every rung of the ladder.
+Five suites of LensVisualizer lenses are in `suites/`. The original three use the default ladder; Stage 4.4's two focused suites name only the gated rungs.
 
 **A zoom is compared at both ends wherever no position is stated.** A run of a zoom lens without `state.zoomT`
 is two runs, `<name>-wide` (zoom 0) and `<name>-tele` (zoom 1), each with its own case, rays, comparisons and
 report rows; a run that states `zoomT` is that one state, and a prime is unaffected. Which lens is a zoom is
 LensVisualizer's answer, so the rule is applied when the suite is loaded against the checkout; the authored zoom
-stations between the ends are not run unless a run states one. The contract states the rule under
+stations between the ends are not run unless a run states one or opts into `lens.stations: "published-zoom"`. The contract states the rule under
 [run-spec](../contract/CONTRACT.md#a-zoom-without-a-position).
 
-Each names the built-in engines, `lv` and `ref`, as the engines of its runs, so that it runs at the root of this
+The original three name `lv` and `ref`; the focused suites name `lv`, `ref` and `optiland`. Each runs at the root of this
 repository, whose configuration defines no engine; `--engines` names others.
 
 | Suite | Is |
@@ -106,6 +106,8 @@ repository, whose configuration defines no engine; `--engines` names others.
 | `smoke.json` | two small primes, one of them also on the photopic lines, and one small zoom, which states no position and so runs at both ends: five runs |
 | `benchmark.json` | the 12 benchmark configurations (11 lenses, `nikon-z-24-70f4s` at both ends of its zoom), each on its reference line and on the photopic lines, in four conditions: 96 runs ([below](#the-benchmark-in-four-conditions)) |
 | `features.json` | one lens for each translation path the benchmark lacks, named after the path: an odd-order asphere, an e-line lens, a term of power 20, an asphere on a flat base, an authored rear-plate rim, a fixed-iris zoom (at both ends: it states no position), an asphere without a term, a stop inside an element: 16 runs as written, 18 as run |
+| `states.json` | Stage 4.4: slider f/5.6/f/11 and the benchmark zoom at published stations; 128 runs at `ab0fd4cf`, gated rungs only |
+| `focus-stations.json` | Stage 4.4: runtime selection of LV-certified finite stations; 53 runs at `ab0fd4cf`, gated rungs only |
 
 #### The benchmark in four conditions
 
@@ -2490,3 +2492,137 @@ Verification for the Stage 4.3 follow-up (2026-10-22):
   LV remains clean at `ab0fd4cf`; optiland retains only the supplied `pyproject.toml` and `uv.lock` changes.
   The branch remains `phase-4-validation`, with all Stage 4.3 and follow-up work uncommitted. No commit, push,
   stash, checkout, reset, baseline edit or reports/ edit was performed; no formatter was run on docs/.
+
+
+### Stage 4.4: focused state matrix
+
+`suites/states.json` extends the 12 benchmark configurations with the slider stops f/5.6 and f/11
+(`aperture.kind: "f-number"`), on reference and photopic lines, at design and LV best-axial planes. It also
+asks the benchmark zoom at wide open and `lv-f8-comparison` at both planes/spectra. The f/8 kind retains the
+MTF tab's arithmetic; a slider f/8 has different last bits on some lenses. A requested stop outside the slider
+range is a coded run problem, never another aperture.
+
+All these runs opt into `lens.stations: "published-zoom"`: primes remain one state; zooms expand to their two
+ends plus the coordinates LV's public `publishedZoomStations` publishes, sorted and deduplicated. Unpublished
+interpolator knots are excluded. At LV `ab0fd4cf` this is the Z 24-70/4 S at 0, 0.5 and 1; 128 expanded runs.
+The wide-open/f8 end states overlap the benchmark deliberately, so one suite contains the complete zoom matrix.
+
+`suites/focus-stations.json` asks `{ "kind": "lv", "key": "*", "stations": "certified-focus" }`.
+Only catalog entries declaring V2 focus conjugates are built. Their keyframe and zoom-station addresses are
+resolved at run time. All 55 stations across 35 lenses at `ab0fd4cf` become ordinary runs, wide open at the
+design plane on the reference line. Of these, 53 export finite cases. The declared close-focus stations of
+`olympus-mzuiko-8mm-f18-fisheye-pro` and `sigma-15mm-f14-dg-dn-diagonal-fisheye-art` remain visible runs:
+LV's gate refuses each with `unsupported-path` (fisheye projection) and supplies no finite conjugate, so the
+exporter records `finite-conjugate-unavailable`. They have no comparison pairs and fail nothing.
+No focusT list or prescription is committed. The address-to-slider mapping (`keyframes[keyframe]`, `zoomStation / (count - 1)`) restates LV's
+`mtfFiniteConjugate`, with a source canary; Tier 2 compares the expansion with the stations
+`test/integration/lv/support.ts` derives and exports one by one, and the optiland stations test runs the committed
+suite on R2/R3 and keeps its ray/path assertions.
+
+Both suites state contract `1.3`: minor 3 covers `lens.stations` and policy metric `attentionSeveralLines`.
+The policy now states `1.3`, version 14 (the text changed; limits did not). A policy using that member under an
+earlier minor is refused by the schema and loader. A suite that uses station selectors and states an
+earlier version is refused when it is loaded (`runContractProblems`). The runs the selectors give, and every case,
+request, result and manifest are written as before. Baselines with source problems state `1.3`, preserve
+`problems` and nullable `caseId`, and give refused runs no rungs; other baselines are written as before.
+The benchmark, features and smoke suites keep
+`1.0` and their hashes, and the cases of all their 119 runs as run were compared before and after this stage and
+are the same, problems included.
+
+The selectors are LV case-source expansions (`CaseSource.expand`), not `expandSuite` matrix operations. They
+consume `lens.stations` and produce ordinary runs with explicit coordinates. The suite hash is of the written
+selector; baselines key the expanded names and case ids. A selector cannot also state focus or zoom coordinates.
+Missing LV and an empty selection remain visible run problems. Other suites keep the ends-only default.
+
+Both suites name only R0-R4, R4f and R6a, with `lv,ref,optiland` (R4f uses lv/replay). The recorded rungs are
+outside this delivery. The baseline machinery accepts both suites without special cases; the fake-tree tests
+round trip separate rays and MTF baselines, check them and verify their reports under a temporary root.
+
+The owner records the new baselines and reports. Run each baseline's rungs, compare, write immediately, then
+check; `baseline check` requires an existing baseline, so it follows the first write. On a subsequent refresh,
+check before writing. A suite's run directory always holds its last invocation.
+
+```bash
+export LVRTC_RUNS_DIR="$(mktemp -d /tmp/lvrtc-stage44-owner-XXXXXX)"
+for S in states focus-stations; do
+  node bin/lvrtc.mjs run "suites/$S.json" --rungs r0,r1,r2,r3,r4 &&
+  node bin/lvrtc.mjs compare "$S" &&
+  node bin/lvrtc.mjs baseline write "$S" &&
+  node bin/lvrtc.mjs baseline check "$S"
+  node bin/lvrtc.mjs run "suites/$S.json" --rungs r4,r4f,r6a &&
+  node bin/lvrtc.mjs compare "$S" &&
+  node bin/lvrtc.mjs baseline write "$S" --mtf &&
+  node bin/lvrtc.mjs baseline check "$S" --mtf
+done
+node bin/lvrtc.mjs verify
+```
+
+The published-stations import grows LV's closure from 175 to 177 files (`7b756ee6`) at `ab0fd4cf`, which moves
+the fingerprint of `lv`, `replay` and `wave`, and the stage's edits of files in the built-in engines' import
+closures (`src/contract/runSpec.ts`, `version.ts`, `src/core/suite.ts`, the LV case source) move their adapter
+revisions. Existing baselines require the owner's policy-14 refresh: hermetic verify rejects their policy-13 hashes,
+and their live checks report `STALE(engine|policy)`.
+Refresh them only after inspection, each check immediately followed by its corresponding write.
+No gate, existing baseline or reports/ file was changed by the implementer.
+
+Finite-focus coverage limits are retained: the closest Leica Summilux-C 18/T1.4 and tele Panasonic 12-60
+stations have no full-field set (`outside-modeled-field`); the closest Samyang 14/2.8 also has no half-field
+chief ray. There are 155 available reference-line ray sets from 53 states (four missing field sets).
+For R6a's pairwise mode, 132 pairs have a judged wave residual, 327 record it as flagged by the existing phase-step
+or grid-doubling checks, and six have no wave estimate because the GF80/1.7 finite station's cosine lattice folds.
+These are coverage limits, not newly relaxed gates: PASS is the comparator's verdict on the figures its existing
+policy judges, and does not certify every field as a wave arbiter.
+
+
+Measured at LV `ab0fd4cf`, closure `7b756ee6` (177 files), optiland `4e893f53` (dirty flag true,
+source hash `279af5c5`, unchanged throughout), policy 13. One gated run of each suite used a temporary
+`LVRTC_RUNS_DIR`; all 18,304 state jobs and 2,749 finite-focus jobs answered `ok`, and both LV source audits
+reported unchanged. These are comparison pair counts, including pairwise and reference modes, not baseline records:
+
+| Rung | states PASS | focus-stations PASS |
+|---|---:|---:|
+| r0 | 640 | 265 |
+| r1 | 640 | 265 |
+| r2 | 5,760 | 775 |
+| r3 | 5,760 | 775 |
+| r4 | 1,920 | 775 |
+| r4f | 256 | 106 |
+| r6a | 1,920 | 775 |
+| Total | 16,896 | 3,736 |
+
+Both suites have zero FLOOR, FAIL, RECORDED, ATTENTION, UNSUPPORTED, BLOCKED and ERROR pairs. No gated failure
+required extended-precision attribution, and no gate or floor was changed. The state suite has 1,152 ray sets
+and no missing-field problems. In R6a pairwise mode, 1,110 state pairs have a judged residual and 42 are flagged;
+the finite-focus exclusions are stated above. A verdict count includes the pairs whose wave figure was not an
+arbiter, and is not a count of fully sampled wave fields.
+
+Wall times with the checks overlapping: states run 11.6 min, compare 7.6 min; focus-stations run 3.4 min,
+compare 1.9 min. Budget roughly 40–60 min for the owner's separate rays/MTF run, compare, write and check cycles
+above from a cold store; checks re-evaluate comparisons even when the traced answers are cached.
+
+Initial Stage 4.4 verification, before the 2026-10-23 owner amendment: hermetic
+`LVRTC_LV_PATH=/nonexistent LVRTC_OPTILAND_PYTHON=/nonexistent npm run check` passed
+(1,588 TypeScript tests, Python checks and all four policy-13 baselines verified); `npm run test:lv` passes
+97 tests; `npm run test:optiland` passes 42, including the real worker's Python tests with none skipped.
+The product-MTF and replay pins were revalidated at the new closure. Baseline/report recording remains the
+owner's final step before closing Stage 4.4; the implementation has not written those files or made a commit.
+
+
+Owner amendment verified on 2026-10-23 under policy **14**, contract **1.3**, policy hash
+`693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120`:
+
+- Typecheck, lint and format:check pass. `npm test`: **1,591 pass of 1,592**; its sole failure is the strict
+  `lvrtc verify` test rejecting the four committed baselines' policy-13 hashes. No report-byte failure occurs.
+- `npm run test:python`: 96 kit tests pass; 292 worker tests complete with the expected 153 real-optiland skips
+  in the hermetic tier. The shared schema corpus includes the valid several-line policy and the invalid
+  earlier-minor policy, plus source-refusal baseline fixtures. `npm run test:lv`: **99 pass**.
+  `npm run test:optiland`: **42 pass**, including the real worker's Python tests with none skipped.
+- One focus-stations run on `r0,r1,r2,r3,r4,r4f,r6a` in a temporary `LVRTC_RUNS_DIR`: **55 runs, 35 lenses**,
+  **53 exported cases, 2 refused stations**, **2,749 jobs all ok**, unchanged LV source audit. Comparison:
+  **3,736 PASS**, zero FLOOR, FAIL, RECORDED, ATTENTION, UNSUPPORTED, BLOCKED or ERROR. The per-rung PASS counts
+  remain those in the table above; the two refused stations contribute no pairs. Both rays and MTF baselines
+  were built and validated in memory with all 55 runs and their two `finite-conjugate-unavailable` problems.
+- Hermetic tests round trip a fake gate-refused certified station through run, compare, both baseline writes,
+  checks and report verification under a temporary root. Goldens were regenerated with `writeGolden.ts` and
+  inspected: only the three reports' policy line and hash changed. The states suite retains f/5.6 and f/11.
+  No baselines/ or reports/ file was edited; the owner's recording step remains pending.

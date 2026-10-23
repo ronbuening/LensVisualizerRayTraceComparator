@@ -333,6 +333,11 @@ both ends.
 | `suites/smoke.json` | two small primes and one small zoom |
 | `suites/benchmark.json` | the 12 benchmark configurations, each on its reference line and on the photopic lines |
 | `suites/features.json` | one lens for each kind of surface or aperture the benchmark lacks |
+| `suites/states.json` | slider f/5.6 and f/11, and the benchmark zoom at its published stations; gated rungs |
+| `suites/focus-stations.json` | LV-certified finite focus stations selected at runtime; gated rungs |
+
+The focused suites use `lv,ref,optiland`. See [Stage 4.4](docs/REFERENCE.md#stage-44-focused-state-matrix)
+for their states, measurements and the owner's separate rays/MTF baseline commands.
 
 ## The rungs
 

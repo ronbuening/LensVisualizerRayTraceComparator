@@ -1,4 +1,5 @@
 // The comparison policy: mirrors contract/schema/v1/policy.schema.json, plus the rules a schema cannot state.
+import { contractMinor } from "./version.ts";
 
 /**
  * How the engines of a rung are compared: `direct`, closed-form numbers set against each other; `identical-rays`,
@@ -107,6 +108,11 @@ export function policyProblems(policy: Policy): string[] {
     const { mode, class: rungClass, metrics, blocksLaterRungs, floor } = policy.rungs[rung];
     const names = Object.keys(metrics).sort();
     for (const name of names) {
+      if (metrics[name].attentionSeveralLines !== undefined && (contractMinor(policy.contract) ?? 0) < 3) {
+        problems.push(
+          `rung ${rung}: metric ${name} uses attentionSeveralLines, which minor 3 added; it states ${policy.contract}`,
+        );
+      }
       if (
         metrics[name].attentionSeveralLines !== undefined &&
         (rungClass !== "recorded" || metrics[name].attention === undefined)

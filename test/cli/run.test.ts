@@ -756,7 +756,7 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
   const args = [join(rootDir, "suite.json"), "--root", rootDir];
   // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
-  assert.equal(ended.code, EXIT_FAILURE, "the refocused runs cannot be started");
+  assert.equal(ended.code, EXIT_OK, "finite-conjugate refusals are reported and fail no job");
   assert.match(ended.out, /^singlet {9}selftest {2}fake-a {9}ok {11}computed$/m);
   assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {9}ok {11}computed$/m);
   // The refocused run states no zoom position of a zoom: it is two runs, one for each end, and neither starts.

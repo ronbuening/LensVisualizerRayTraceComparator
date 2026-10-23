@@ -265,7 +265,8 @@ async function check(
   for (const engine of manifest.engines) {
     if (engine.status !== "available") errors.push(`engine ${engine.id} could not be used (${engine.code})`);
   }
-  for (const run of manifest.runs) if (run.caseId === null) errors.push(`run ${run.name} was not started`);
+  for (const run of manifest.runs)
+    if (run.caseId === null && run.problems.length === 0) errors.push(`run ${run.name} was not started`);
   if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) {
     errors.push("LensVisualizer's files changed while the suite ran: run the check again");
   }

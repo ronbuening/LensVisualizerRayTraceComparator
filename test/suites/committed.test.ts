@@ -1,5 +1,5 @@
 // The committed suites, checked without LensVisualizer: each is a valid suite of LensVisualizer lenses, names no
-// rung and the built-in engines, and holds nothing of a prescription. That every run exports is checked against
+// unintended rung or external engine, and holds nothing of a prescription. That every run exports is checked against
 // the real LensVisualizer by test/integration/lv/suites.test.ts.
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -9,10 +9,10 @@ import { test } from "node:test";
 
 import { createRunCommand } from "../../src/cli/commands/run.ts";
 import { EXIT_FAILURE, runCli } from "../../src/cli/main.ts";
-import { expandSuite, runInvariantProblems } from "../../src/contract/runSpec.ts";
+import { expandSuite, runContractProblems, runInvariantProblems } from "../../src/contract/runSpec.ts";
 import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import { formatIssues, validateKind } from "../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_3 } from "../../src/contract/version.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { loadSuite } from "../../src/core/suite.ts";
@@ -29,7 +29,7 @@ function configuration(run: RunSpec): string {
   return `${run.lens.kind === "lv" ? run.lens.key : ""}@${run.state?.zoomT ?? 0} ${run.lines?.kind}`;
 }
 
-test("the suites directory holds the three suites and nothing else", () => {
+test("the suites directory holds the five suites and nothing else", () => {
   assert.deepEqual(
     readdirSync(SUITES_DIR).sort(),
     SUITE_NAMES.map((name) => `${name}.json`),
@@ -37,16 +37,28 @@ test("the suites directory holds the three suites and nothing else", () => {
 });
 
 for (const name of SUITE_NAMES) {
-  test(`suites/${name}.json is a valid suite of LensVisualizer lenses that names no rung, and the built-in engines`, () => {
+  test(`suites/${name}.json is a valid suite of LensVisualizer lenses with its intended rungs and built-in engines`, () => {
     const suite = readSuite(name);
     assert.equal(formatIssues(validateKind("suite", suite)), "");
     assert.equal(suite.name, name);
-    assert.equal(suite.contract, CONTRACT_VERSION);
+    // The two suites of Stage 4.4 select stations, which minor 3 added; every other suite is of 1.0 as before.
+    const stationSuite = name === "states" || name === "focus-stations";
+    assert.equal(suite.contract, stationSuite ? CONTRACT_VERSION_1_3 : CONTRACT_VERSION);
     // A run uses every judged rung, and the built-in engines unless it is run on others: so the suite runs at the
     // root of this repository, whose configuration defines no engine.
     // optiland is built in too, and joins a suite's own engines with the rungs it answers.
     assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), ["lv", "optiland", "optiland-wave", "ref", "replay", "wave"]);
     const builtin = ["lv", "ref"];
+    if (stationSuite) {
+      assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"]);
+      assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
+      for (const run of expandSuite(suite)) {
+        assert.deepEqual(validateKind("run-spec", run), []);
+        assert.deepEqual(runContractProblems(run), []);
+        assert.ok(run.lens.kind === "lv" && run.lens.stations !== undefined, run.name);
+      }
+      return;
+    }
     assert.deepEqual(suite.defaults, {
       aperture: { kind: "wide-open" },
       imagePlane: { kind: "design" },
@@ -211,4 +223,28 @@ test("without a LensVisualizer source every run of a committed suite says so, an
       assert.deepEqual(run.problems, ["no case source builds cases from LensVisualizer lenses"]);
     }
   }
+});
+
+test("states requests both slider stops, spectra and planes for every benchmark lens, and published zoom stations", () => {
+  const runs = expandSuite(readSuite("states"));
+  for (const key of BENCHMARK_KEYS) {
+    const ofLens = runs.filter((run) => run.lens.kind === "lv" && run.lens.key === key);
+    for (const stop of [5.6, 11])
+      for (const lines of ["reference", "photopic"])
+        for (const plane of ["design", "lv-best-axial"]) {
+          const found = ofLens.filter(
+            (run) =>
+              run.aperture?.kind === "f-number" &&
+              run.aperture.value === stop &&
+              run.lines?.kind === lines &&
+              run.imagePlane?.kind === plane,
+          );
+          assert.equal(found.length, 1, `${key} ${stop} ${lines} ${plane}`);
+        }
+    assert.ok(ofLens.every((run) => run.lens.kind === "lv" && run.lens.stations === "published-zoom"));
+  }
+  assert.equal(runs.length, 96);
+  const focus = expandSuite(readSuite("focus-stations"));
+  assert.equal(focus.length, 1);
+  assert.deepEqual(focus[0].lens, { kind: "lv", key: "*", stations: "certified-focus" });
 });

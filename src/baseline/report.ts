@@ -103,7 +103,7 @@ export interface BaselineReport {
   readonly suite: Baseline["suite"];
   readonly policy: Baseline["policy"];
   readonly engines: readonly BaselineEngine[];
-  readonly runs: readonly { readonly name: string; readonly caseId: string }[];
+  readonly runs: readonly Pick<Baseline["runs"][number], "name" | "caseId" | "problems">[];
   readonly rungs: readonly ReportRung[];
 }
 
@@ -253,7 +253,7 @@ export function buildBaselineReport(baseline: Baseline): BaselineReport {
     suite: baseline.suite,
     policy: baseline.policy,
     engines: baseline.engines,
-    runs: baseline.runs.map(({ name, caseId }) => ({ name, caseId })),
+    runs: baseline.runs.map(({ name, caseId, problems }) => ({ name, caseId, ...(problems ? { problems } : {}) })),
     rungs,
   };
 }
@@ -365,9 +365,20 @@ export function renderBaselineMarkdown(report: BaselineReport, layout: BaselineR
     "",
     ...table(
       ["Run", "Case"],
-      report.runs.map((run) => [run.name, run.caseId]),
+      report.runs.map((run) => [run.name, run.caseId ?? "—"]),
     ),
     "",
+    ...(report.runs.some((run) => run.problems?.length)
+      ? [
+          "## Run problems",
+          "",
+          ...table(
+            ["Run", "Problem"],
+            report.runs.flatMap((run) => (run.problems ?? []).map((problem) => [run.name, problem])),
+          ),
+          "",
+        ]
+      : []),
     "## Summary",
     "",
     ...table(

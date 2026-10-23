@@ -18,7 +18,7 @@ import {
 } from "./corpus.ts";
 
 function policyOf(rungs: Record<string, RungPolicy>): Policy {
-  const policy: Policy = { contract: "1.0", kind: "policy", version: 1, rungs };
+  const policy: Policy = { contract: "1.3", kind: "policy", version: 1, rungs };
   assert.deepEqual(validateKind("policy", policy), []);
   return policy;
 }

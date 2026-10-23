@@ -14,6 +14,7 @@
  * - `synthetic-surface-unknown`: LensVisualizer generated a surface of a kind other than a rear plate.
  *
  * What was asked for and cannot be given:
+ * - `aperture-beyond-slider-range`: an f-number above the lens aperture slider maximum;
  * - `aperture-faster-than-wide-open`: an f-number below the lens's widest at that zoom position;
  * - `f8-comparison-unavailable`: the aperture "lv-f8-comparison" for a lens LensVisualizer's MTF tab offers no
  *   f/8 comparison for, with the tab's reason;
@@ -40,6 +41,7 @@ export const EXPORT_PROBLEM_CODES = [
   "asphere-coefficient-unknown",
   "synthetic-surface-unknown",
   "aperture-faster-than-wide-open",
+  "aperture-beyond-slider-range",
   "f8-comparison-unavailable",
   "lv-best-axial-needs-lv-spectrum",
   "lv-best-axial-unavailable",

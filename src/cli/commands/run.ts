@@ -271,7 +271,12 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
 
       const failed = result.outcomes.some((outcome) => outcome.job.status === "error");
       const changed = Object.values(result.manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED);
-      return failed || changed || notStarted.length > 0 ? EXIT_FAILURE : EXIT_OK;
+      const refusedOnly = notStarted.every(
+        (run) =>
+          run.problems.length > 0 &&
+          run.problems.every((problem) => problem.startsWith("finite-conjugate-unavailable: ")),
+      );
+      return failed || changed || !refusedOnly ? EXIT_FAILURE : EXIT_OK;
     },
   };
 }

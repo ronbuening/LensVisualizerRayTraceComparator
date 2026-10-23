@@ -18,6 +18,15 @@ export const CONTRACT_VERSION_1_1 = "1.1";
  */
 export const CONTRACT_VERSION_1_2 = "1.2";
 
+/**
+ * The version a document states that uses what minor 3 added: today a run spec, or a suite with a run, whose
+ * LensVisualizer lens selects stations (`lens.stations`, Stage 4.4), or a policy using `attentionSeveralLines`
+ * (Stage 4.3). A baseline recording source problems also uses minor 3 (`problems`, nullable `caseId`). Selectors
+ * are consumed by case-source expansion. Cases, requests, results and manifests are written as before, as are
+ * baselines without source problems. No engine's `contract.max` moves.
+ */
+export const CONTRACT_VERSION_1_3 = "1.3";
+
 /** The minor of a version; null when the text is not `<major>.<minor>` in plain decimal. */
 export function contractMinor(version: string): number | null {
   return parseVersion(version)?.[1] ?? null;

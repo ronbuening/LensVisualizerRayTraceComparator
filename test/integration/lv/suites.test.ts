@@ -56,11 +56,16 @@ async function featureCase(run: string): Promise<OpticalCase> {
   return found.opticalCase;
 }
 
-test("every committed suite loads, and every run of it exports", { skip }, async () => {
+test("every committed suite loads, and every run exports or records a finite-station refusal", { skip }, async () => {
   for (const name of SUITE_NAMES) {
     const suite = await suiteOf(name);
     for (const run of suite.runs) {
       const at = `${name}/${run.spec.name}`;
+      if (name === "focus-stations" && run.opticalCase === null) {
+        assert.ok(run.problems.length > 0, at);
+        for (const problem of run.problems) assert.match(problem, /^finite-conjugate-unavailable:/, at);
+        continue;
+      }
       assert.ok(run.opticalCase !== null, `${at}: ${run.problems.join("; ")}`);
       assert.deepEqual(run.problems, [], at);
       assert.equal(run.opticalCase.label.lensKey, run.spec.lens.kind === "lv" ? run.spec.lens.key : null, at);
