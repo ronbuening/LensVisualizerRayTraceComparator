@@ -628,3 +628,23 @@ test(
     );
   },
 );
+
+test("run --jobs and baseline check --jobs retain comparisons and baseline/report bytes", async (t) => {
+  const root = pairRoot(t);
+  await written(root);
+  const before = filesOf(root);
+  const comparisons = readFileSync(join(root, "runs/pair/comparisons.json"), "utf8");
+  for (const jobs of [2, 4]) {
+    const runs = `parallel-${jobs}`;
+    const run = await lvrtc(root, ["run", "suites/pair.json", "--jobs", String(jobs)], { runs });
+    assert.equal(run.code, EXIT_OK, run.err);
+    const check = await lvrtc(root, ["baseline", "check", "pair", "--jobs", String(jobs), "--json"], { runs });
+    assert.equal(check.code, EXIT_OK, check.err);
+    assert.equal(readFileSync(join(root, runs, "pair/comparisons.json"), "utf8"), comparisons);
+    assert.deepEqual(filesOf(root), before);
+  }
+  for (const jobs of ["0", "-1", "1.5", "NaN", "9007199254740992", "100000"]) {
+    assert.equal((await lvrtc(root, ["run", "suites/pair.json", "--jobs", jobs])).code, EXIT_USAGE);
+    assert.equal((await lvrtc(root, ["baseline", "check", "pair", "--jobs", jobs])).code, EXIT_USAGE);
+  }
+});

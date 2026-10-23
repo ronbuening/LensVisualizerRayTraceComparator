@@ -2,6 +2,8 @@
 // run that finds an answer there does not ask the engine again, which is all that resuming a run is.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
+import { gunzipSync, gzip, gzipSync } from "node:zlib";
 
 import { deepFreeze } from "../contract/json.ts";
 import type { JsonObject } from "../contract/json.ts";
@@ -12,6 +14,7 @@ import type { ResultEnvelope, ResultStatus } from "../contract/result.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
 import { writeFileAtomic } from "./atomicFile.ts";
 import { canonicalJson } from "./numeric/canonicalJson.ts";
+import { profileAsync, profileSync } from "./profile.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 
 /** The directory below the runs directory that holds the store. No suite can be named after it. */
@@ -84,7 +87,7 @@ export type StoreLookup =
 
 /** A content-keyed store of results in one directory. */
 export interface ResultStore {
-  /** The directory the entries are in, one file `<key>.json` each. */
+  /** The directory of `<key>.json.gz` entries; legacy `<key>.json` entries are also accepted. */
   readonly directory: string;
   /**
    * The entry under `key`, frozen. A file that is there and cannot be trusted is "corrupt", with the reason, and
@@ -97,12 +100,16 @@ export interface ResultStore {
   has(key: string): boolean;
   /**
    * Keeps `result` as the answer to `request` and returns its key, or keeps nothing and returns null when the
-   * result is not storable (`isStorable`). The entry is canonical JSON and a newline, written so that the file is
-   * whole or absent; one already under the key is replaced. Throws when the two are not a valid request and a
+   * result is not storable (`isStorable`). The entry is gzip of canonical JSON and a newline, written so that the
+   * file is whole or absent; one already under the key is replaced. Throws when the two are not a valid request and a
    * valid result that answers it, so that nothing is written that `get` would refuse.
    */
   put(request: QuantityRequest, result: ResultEnvelope): string | null;
+  /** Optional off-thread compression for parallel suites; same validation, bytes and atomic publication. */
+  putAsync?(request: QuantityRequest, result: ResultEnvelope): Promise<string | null>;
 }
+
+const compressAsync = promisify(gzip);
 
 const STORE_KEY = /^[0-9a-f]{64}$/;
 
@@ -132,11 +139,35 @@ function entryProblem(value: unknown): string | null {
   return null;
 }
 
+/** Validates uncompressed entry bytes, including their key, without consulting another file. */
+export function parseStoreEntry(key: string, text: string): StoreLookup {
+  const corrupt = (problem: string): StoreLookup => ({ kind: "corrupt", problem: `store entry ${key}: ${problem}` });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    return corrupt(`it is malformed JSON (${error instanceof Error ? error.message : String(error)})`);
+  }
+  const problem = entryProblem(parsed);
+  if (problem !== null) return corrupt(problem);
+  const entry = parsed as StoreEntry;
+  const belongs = keyOf(entry);
+  if (belongs !== key) return corrupt(`it is the entry of key ${belongs}`);
+  return { kind: "hit", entry: deepFreeze(entry) };
+}
+
 /**
  * The store in `directory`, which is created when the first entry is written. It holds no state of its own: every
  * call reads or writes the directory, so two stores on one directory see each other's entries.
  */
-export function createResultStore(directory: string): ResultStore {
+export function createResultStore(
+  directory: string,
+  options: {
+    readonly parallelCompression?: boolean;
+    /** Suite workers stage exact gzip bytes for ordered publication by their controller. */
+    readonly publish?: (key: string, compressed: Uint8Array) => void;
+  } = {},
+): ResultStore {
   const fileOf = (key: string): string => {
     // A key becomes a file name, so anything else is refused before it reaches the file system.
     if (!STORE_KEY.test(key)) throw new Error(`result store: ${JSON.stringify(key)} is not a store key`);
@@ -147,36 +178,51 @@ export function createResultStore(directory: string): ResultStore {
     const corrupt = (problem: string): StoreLookup => ({ kind: "corrupt", problem: `store entry ${key}: ${problem}` });
     let text: string;
     try {
-      text = readFileSync(file, "utf8");
+      try {
+        text = gunzipSync(readFileSync(`${file}.gz`)).toString("utf8");
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        text = readFileSync(file, "utf8");
+      }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code ?? "unknown error";
       return code === "ENOENT" ? { kind: "miss" } : corrupt(`it cannot be read (${code})`);
     }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch (error) {
-      return corrupt(`it is malformed JSON (${error instanceof Error ? error.message : String(error)})`);
-    }
-    const problem = entryProblem(parsed);
-    if (problem !== null) return corrupt(problem);
-    const entry = parsed as StoreEntry;
-    const belongs = keyOf(entry);
-    if (belongs !== key) return corrupt(`it is the entry of key ${belongs}`);
-    return { kind: "hit", entry: deepFreeze(entry) };
+    return parseStoreEntry(key, text);
+  };
+  const prepare = (request: QuantityRequest, result: ResultEnvelope): { key: string; text: string } | null => {
+    if (!isStorable(result)) return null;
+    const entry: StoreEntry = { request, result };
+    const problem = entryProblem(entry);
+    if (problem !== null) throw new Error(`result store: not an entry: ${problem}`);
+    return { key: keyOf(entry), text: `${canonicalJson(entry)}\n` };
+  };
+  const publish = (key: string, compressed: Uint8Array): void => {
+    const file = `${fileOf(key)}.gz`;
+    if (options.publish) options.publish(key, compressed);
+    else writeFileAtomic(file, compressed);
   };
   return {
     directory,
     get,
     has: (key) => get(key).kind === "hit",
     put: (request, result) => {
-      if (!isStorable(result)) return null;
-      const entry: StoreEntry = { request, result };
-      const problem = entryProblem(entry);
-      if (problem !== null) throw new Error(`result store: not an entry: ${problem}`);
-      const key = keyOf(entry);
-      writeFileAtomic(fileOf(key), `${canonicalJson(entry)}\n`);
-      return key;
+      const entry = profileSync("store.prepare", () => prepare(request, result));
+      if (entry === null) return null;
+      const compressed = profileSync("store.gzip", () => gzipSync(entry.text));
+      profileSync("store.publish", () => publish(entry.key, compressed));
+      return entry.key;
     },
+    ...(options.parallelCompression === true
+      ? {
+          putAsync: async (request: QuantityRequest, result: ResultEnvelope): Promise<string | null> => {
+            const entry = profileSync("store.prepare", () => prepare(request, result));
+            if (entry === null) return null;
+            const compressed = await profileAsync("store.gzip", () => compressAsync(entry.text));
+            profileSync("store.publish", () => publish(entry.key, compressed));
+            return entry.key;
+          },
+        }
+      : {}),
   };
 }

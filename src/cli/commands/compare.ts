@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 
 import { COMPARISONS_FILE, comparisonFileText } from "../../compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../compare/comparisonFile.ts";
+import { compareDirectoryParallel } from "../../compare/parallel.ts";
 import { compareManifest } from "../../compare/manifest.ts";
 import { loadPolicy } from "../../compare/policyFile.ts";
 import { COMPARISON_MODES, FAILING_VERDICTS, VERDICTS } from "../../contract/comparison.ts";
@@ -13,7 +14,9 @@ import { REPO_ROOT } from "../../core/config.ts";
 import { readRunCase, readRunManifest } from "../../core/manifest.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../core/resultStore.ts";
+import { profileAsync } from "../../core/profile.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { jobsOption } from "../jobs.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
@@ -27,7 +30,7 @@ export interface CompareCommandInputs extends RunTargetInputs {
 
 const SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
-  "                     [--mode reference-vs-each|pairwise|both] [--json]\n";
+  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "Compares the answers of a run's engines, request by request, and judges each pair by the policy of its rung.",
@@ -39,6 +42,7 @@ const HELP = [
   "  --reference <engine>  the engine every other is compared against (default: each run's referenceEngine, else",
   '                        the first engine, by id, that has an "ok" result)',
   "  --mode <mode>         reference-vs-each, pairwise or both (default: both)",
+  "  --jobs <n>            parallel comparison workers over runs (default: 1, serial)",
   "  --json                print the comparisons as one JSON object in place of the lines",
   "",
   "Exit code: 0 when no pair is FAIL or ERROR (FLOOR is a pass; UNSUPPORTED, RECORDED and ATTENTION are not",
@@ -101,6 +105,18 @@ export function compareRunDirectory(
   });
 }
 
+/** The same comparisons, with isolated runs scheduled in parallel when asked. */
+export async function compareRunDirectoryWithJobs(
+  directory: string,
+  policy: Policy,
+  jobs: number,
+  options: { readonly reference?: string; readonly modes?: readonly ComparisonMode[] } = {},
+): Promise<ComparisonFile> {
+  return jobs === 1
+    ? compareRunDirectory(directory, policy, options)
+    : compareDirectoryParallel(directory, policy, jobs, options);
+}
+
 /**
  * Builds `lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode <mode>]
  * [--json]`.
@@ -130,17 +146,24 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
       let path: string;
       let json: boolean;
       try {
-        const asked = parseTargetArguments(args, ["--root", "--reference", "--mode"], ["--json"]);
+        const asked = parseTargetArguments(args, ["--root", "--reference", "--mode", "--jobs"], ["--json"]);
         const mode = asked.values.get("--mode") ?? "both";
         if (!Object.hasOwn(MODE_CHOICES, mode)) {
           throw new UsageError(`--mode ${mode}: the modes are ${Object.keys(MODE_CHOICES).join(", ")}`);
         }
         json = asked.flags.has("--json");
         const directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
-        file = compareRunDirectory(directory, inputs.policy ?? loadPolicy(), {
-          reference: asked.values.get("--reference"),
-          modes: MODE_CHOICES[mode],
-        });
+        file = await profileAsync("compare", () =>
+          compareRunDirectoryWithJobs(
+            directory,
+            inputs.policy ?? loadPolicy(),
+            jobsOption(asked.values.get("--jobs")),
+            {
+              reference: asked.values.get("--reference"),
+              modes: MODE_CHOICES[mode],
+            },
+          ),
+        );
         path = join(directory, COMPARISONS_FILE);
       } catch (error) {
         if (!(error instanceof UsageError)) throw error;

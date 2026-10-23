@@ -11,6 +11,7 @@ import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { SOURCE_CHANGED } from "../../core/manifest.ts";
 import { runSuite } from "../../core/orchestrator.ts";
 import type { JobOutcome, JobSource, SuiteRunResult } from "../../core/orchestrator.ts";
+import { createProcessRegistry } from "../../core/processRegistry.ts";
 import { RUNGS } from "../../core/rungs.ts";
 import { createFixtureCaseSource, loadSuite } from "../../core/suite.ts";
 import type { CaseSources, LoadedSuite } from "../../core/suite.ts";
@@ -18,6 +19,7 @@ import { UsageError } from "../../core/usageError.ts";
 import { createLvCaseSource } from "../../engines/lv/caseSource.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
+import { jobsOption } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -33,7 +35,8 @@ export interface RunCommandInputs {
   readonly policy?: Policy;
 }
 
-const SYNOPSIS = "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]\n";
+const SYNOPSIS =
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "Runs every run of the suite on each selected engine, asking an engine only for what the result store does not",
@@ -55,6 +58,7 @@ const HELP = [
   "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
   "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
   "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking",
+  "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
   "  --json           print one JSON object in place of the lines",
   "",
   "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
@@ -65,7 +69,7 @@ const HELP = [
 
 const STATUSES: readonly ResultStatus[] = ["ok", "unsupported", "error", "pending"];
 const SOURCES: readonly JobSource[] = ["computed", "cached", "negotiated", "unavailable"];
-const VALUE_OPTIONS = ["--root", "--engines", "--rungs"] as const;
+const VALUE_OPTIONS = ["--root", "--engines", "--rungs", "--jobs"] as const;
 type ValueOption = (typeof VALUE_OPTIONS)[number];
 
 /** The command line of `lvrtc run`, read. */
@@ -74,6 +78,7 @@ interface RunArguments {
   readonly root: string | undefined;
   readonly engines: readonly string[] | undefined;
   readonly rungs: readonly string[] | undefined;
+  readonly jobs: number;
   readonly json: boolean;
 }
 
@@ -93,6 +98,7 @@ function readArguments(args: readonly string[]): RunArguments {
     root: values.get("--root"),
     engines: list("--engines"),
     rungs: list("--rungs"),
+    jobs: jobsOption(values.get("--jobs")),
     json: flags.has("--json"),
   };
 }
@@ -115,19 +121,26 @@ export async function prepareSuiteRun(
   inputs: RunCommandInputs,
   suiteFile: string,
   root: string | undefined,
+  jobs = 1,
 ): Promise<PreparedSuiteRun> {
   const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd, root);
   if (root !== undefined && !statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
     throw new UsageError(`--root ${root}: not a directory`);
   }
   const loaded = loadConfig({ rootDir, env: inputs.env });
-  const registry = createEngineRegistry(loaded);
-  const sources: CaseSources = {
+  const pool = jobs > 1 ? createProcessRegistry(loaded, jobs) : undefined;
+  const registry = pool ?? createEngineRegistry(loaded);
+  const sources: CaseSources = pool?.sources ?? {
     fixture: createFixtureCaseSource(loaded.rootDir),
     lv: createLvCaseSource(loaded.config.lvPath),
   };
-  const suite = await loadSuite(resolve(inputs.cwd, suiteFile), { rootDir: loaded.rootDir, sources });
-  return { loaded, registry, sources, suite };
+  try {
+    const suite = await loadSuite(resolve(inputs.cwd, suiteFile), { rootDir: loaded.rootDir, sources, jobs });
+    return { loaded, registry, sources, suite };
+  } catch (error) {
+    await pool?.close();
+    throw error;
+  }
 }
 
 /** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
@@ -187,7 +200,7 @@ function jsonText(result: SuiteRunResult): string {
 }
 
 /**
- * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]`.
+ * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
  * configuration defines unless a run or `--engines` names others; a built-in engine, `lv` or `ref`, is run only
@@ -227,7 +240,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
       let suite: LoadedSuite;
       let result: SuiteRunResult;
       try {
-        const prepared = await prepareSuiteRun(inputs, asked.suite, asked.root);
+        const prepared = await prepareSuiteRun(inputs, asked.suite, asked.root, asked.jobs);
         suite = prepared.suite;
         const { registry } = prepared;
 
@@ -240,7 +253,8 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         ];
         result = await runSuite({
           suite,
-          registry,
+          registry: registry,
+          jobs: asked.jobs,
           runsDir: prepared.loaded.config.runsDir,
           sources: prepared.sources,
           engines: asked.engines,

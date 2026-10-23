@@ -1,6 +1,7 @@
 // The orchestrator: runs a loaded suite. For every run, every selected rung and every selected engine it asks the
 // rung's requests of the engine, unless the store already holds the answer, and writes down how each job ended.
-// Jobs run one after another, in an order fixed by the suite, the rungs and the engine ids.
+// Collection follows the suite, rungs and engine ids; isolated workers can compute independent jobs concurrently.
+import { statSync } from "node:fs";
 import { join } from "node:path";
 
 import type { OpticalCase } from "../contract/case.ts";
@@ -32,6 +33,9 @@ import type { RaySetResolution } from "../rays/raySets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedSuite } from "./suite.ts";
+import { orderedMap } from "./orderedMap.ts";
+import type { PoolJobTicket, ProcessRegistry, StoredAdapter } from "./processRegistry.ts";
+import { profileAsync, profileStart, profileSync } from "./profile.ts";
 import { UsageError } from "./usageError.ts";
 
 /** The `error.code` of an "ok" result whose data is not the quantity's data, or holds an array that does not decode. */
@@ -95,6 +99,8 @@ export interface RunSuiteInput {
   readonly registry: EngineRegistry;
   /** The directory that holds the store and, under the suite's name, the output of the run. */
   readonly runsDir: string;
+  /** Maximum concurrent jobs; 1 by default. CLI parallel runs use an isolated process registry. */
+  readonly jobs?: number;
   /**
    * The case sources the suite was loaded with. Each one that serves a run of the suite and can audit itself is
    * recorded in the manifest and asked, when the last job has ended, whether its inputs are still the same. The
@@ -115,7 +121,7 @@ export interface RunSuiteInput {
    * run have ended, from the answers in the store, and its job is recorded after them.
    */
   readonly followUps?: readonly FollowUp[];
-  /** Called with each job as it finishes, in manifest order. */
+  /** Called as finished jobs become available in manifest order, buffering out-of-order completions. */
   readonly onJob?: (outcome: JobOutcome) => void;
 }
 
@@ -135,7 +141,7 @@ export interface SuiteRunResult {
 }
 
 /** One job before it is run. */
-interface PlannedJob {
+export interface PlannedJob {
   readonly run: string;
   readonly opticalCase: OpticalCase;
   readonly rung: RungDefinition;
@@ -247,7 +253,7 @@ async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optica
 }
 
 /** Every job of a suite before it is run, and what was generated for its runs. */
-interface Plan {
+export interface Plan {
   readonly jobs: readonly PlannedJob[];
   /** The ray sets of each run that a rung needed them for, by run name. */
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
@@ -264,7 +270,7 @@ interface Plan {
  * one of the run's; so is its MTF recipe. A rung that is about named engines (`RungDefinition.engines`) is planned
  * for exactly those, in id order, whatever engines the run names.
  */
-async function planJobs(input: RunSuiteInput): Promise<Plan> {
+export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const { suite, registry, rungDefinitions = RUNGS } = input;
   if (suite.name.toLowerCase() === STORE_DIRECTORY) {
     throw new UsageError(`a suite cannot be named "${suite.name}": the runs directory keeps the result store there`);
@@ -286,6 +292,37 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
       ),
   }));
 
+  const pool = input.registry as Partial<ProcessRegistry>;
+  if (pool.planRun && input.rungDefinitions === undefined && input.sources === pool.sources) {
+    const warming = new Set<string>();
+    for (const [index, run] of suite.runs.entries()) {
+      if (run.opticalCase === null) continue;
+      for (const rung of selected[index].rungs)
+        for (const id of rung.engines ?? selected[index].engineIds) warming.add(id);
+    }
+    await pool.warm?.([...warming]);
+    const plans = await orderedMap(suite.runs, input.jobs ?? 1, (run) =>
+      pool.planRun!(
+        run,
+        input.engines,
+        input.rungs,
+        (input.followUps ?? []).map((followUp) => followUp.rung),
+      ),
+    );
+    return {
+      jobs: plans.flatMap((plan, index) =>
+        plan.jobs.map((job) => ({
+          ...job,
+          opticalCase: suite.runs[index].opticalCase!,
+          rung: RUNGS.find((rung) => rung.id === job.rung)!,
+          quantity: QUANTITIES.get(job.quantity)!,
+        })),
+      ),
+      raySets: new Map(plans.flatMap((plan) => [...plan.raySets])),
+      fineRaySets: new Map(plans.flatMap((plan) => [...plan.fineRaySets])),
+      recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
+    };
+  }
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
   const fineRaySets = new Map<string, ManifestRaySets>();
@@ -295,18 +332,18 @@ async function planJobs(input: RunSuiteInput): Promise<Plan> {
     if (opticalCase === null) continue;
     let inputs = NO_RUNG_INPUTS;
     if (rungs.some((rung) => rung.needsRaySets === true)) {
-      const { sets, problems } = await raySetsOf(input, spec, opticalCase);
+      const { sets, problems } = await profileAsync("rays.generate", () => raySetsOf(input, spec, opticalCase));
       inputs = { ...inputs, raySets: sets };
       raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
     if (rungs.some((rung) => rung.needsFineRaySets === true)) {
       const finer = { ...spec, sampling: fineSampling(spec.sampling) };
-      const { sets, problems } = await raySetsOf(input, finer, opticalCase);
+      const { sets, problems } = await profileAsync("rays.fine-generate", () => raySetsOf(input, finer, opticalCase));
       inputs = { ...inputs, fineRaySets: sets };
       fineRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
-      const { recipe, problems } = await recipeOf(input, spec, opticalCase);
+      const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
       recipes.set(spec.name, { recipe, problems: [...problems] });
     }
@@ -357,7 +394,12 @@ function jobOf(
 }
 
 /** A job's outcome from the result that ended it; `key` is the store key the result is kept under, if it is kept. */
-function outcomeOf(planned: PlannedJob, result: ResultEnvelope, key: string | null, source: JobSource): JobOutcome {
+function outcomeOf(
+  planned: PlannedJob,
+  result: Pick<ResultEnvelope, "status" | "unsupported" | "error">,
+  key: string | null,
+  source: JobSource,
+): JobOutcome {
   const { status, unsupported = [], error } = result;
   if (status === "unsupported") {
     const items = unsupported.map(({ code, item }) => ({ code, item }));
@@ -425,21 +467,24 @@ export async function askEngine(question: EngineQuestion): Promise<EngineAnswer>
     adapterRevision: descriptor.identity.adapterRevision,
     engineOptions: request.engineOptions,
   });
-  const found = store.get(key);
+  const found = profileSync("store.read", () => store.get(key));
   if (found.kind === "corrupt") warnings.push(`${found.problem}; the job is computed again`);
   if (found.kind === "hit") {
-    const problems = dataProblems(quantity, found.entry.result);
+    const problems = profileSync("result.validate.cached", () => dataProblems(quantity, found.entry.result));
     if (problems.length === 0) return { result: found.entry.result, storeKey: key, source: "cached" };
     warnings.push(`store entry ${key}: its data cannot be used: ${problems.join("; ")}; the job is computed again`);
   }
 
-  let result = await adapter.run(request, opticalCase);
-  const problems = dataProblems(quantity, result);
+  let result = await profileAsync(`engine.${adapter.id}`, () => adapter.run(request, opticalCase));
+  const problems = profileSync("result.validate", () => dataProblems(quantity, result));
   if (problems.length > 0) {
     const message = `the engine's data cannot be used: ${problems.join("; ")}`;
     result = makeResult(request, stamp, { status: "error", error: { code: INVALID_DATA, message } });
   }
-  return { result, storeKey: store.put(request, result), source: "computed" };
+  const endStore = profileStart("store.write");
+  const stored = store.putAsync === undefined ? store.put(request, result) : await store.putAsync(request, result);
+  endStore();
+  return { result, storeKey: stored, source: "computed" };
 }
 
 /** Runs one job on an engine that is ready or not. A store entry that cannot be trusted is added to `warnings`. */
@@ -448,6 +493,7 @@ async function runJob(
   session: EngineSession,
   store: ResultStore,
   warnings: string[],
+  ticket?: PoolJobTicket,
 ): Promise<JobOutcome> {
   const { opticalCase, quantity, request } = planned;
   if (session.kind === "unavailable") {
@@ -455,7 +501,12 @@ async function runJob(
     return { job, source: "unavailable", detail: session.message };
   }
   const { adapter, descriptor } = session;
-  const answer = await askEngine({ adapter, descriptor, quantity, request, opticalCase, store, warnings });
+  const pooled = (adapter as StoredAdapter).askStored;
+  const answer =
+    pooled === undefined
+      ? await askEngine({ adapter, descriptor, quantity, request, opticalCase, store, warnings })
+      : await pooled(request, opticalCase, warnings, ticket);
+
   return outcomeOf(planned, answer.result, answer.storeKey, answer.source);
 }
 
@@ -481,7 +532,7 @@ function followingJobs(
       for (const { planned, outcome } of ended) {
         const { status, storeKey: key } = outcome.job;
         if (planned.request.id !== request.id || status !== "ok" || key === null) continue;
-        const found = store.get(key);
+        const found = profileSync("store.read", () => store.get(key));
         if (found.kind === "hit" && found.entry.result.data !== undefined) {
           answers.set(planned.engineId, found.entry.result.data);
         }
@@ -539,7 +590,7 @@ function auditSources(
  * Then, for each run in suite order, each selected rung in ladder order, each selected engine in id order (for a
  * rung that is about named engines: each of those) and each request of the rung, one job:
  *
- * 1. the engine is created and described, once per suite. One that cannot be used ends each of its jobs as "error"
+ * 1. the logical engine is created and described once per suite (a process registry owns its replicas). One that cannot be used ends each of its jobs as "error"
  *    with the code of why (`ENGINE_UNAVAILABLE_CODES`), and the other engines carry on;
  * 2. the request is negotiated against the descriptor. An engine that cannot answer is not asked: the job is
  *    "unsupported" with the items negotiation gives, and nothing is stored;
@@ -569,14 +620,25 @@ function auditSources(
  * not its own, a file system that refuses.
  */
 export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
+  try {
+    return await runSuiteWork(input);
+  } finally {
+    await (input.registry as Partial<ProcessRegistry>).close?.();
+  }
+}
+
+async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
-  const { jobs: planned, raySets, fineRaySets, recipes } = await planJobs(input);
-  const store = createResultStore(join(runsDir, STORE_DIRECTORY));
+  const concurrency = input.jobs ?? 1;
+  if (!Number.isSafeInteger(concurrency) || concurrency < 1) throw new UsageError("--jobs must be a positive integer");
+  const { jobs: planned, raySets, fineRaySets, recipes } = await profileAsync("plan", () => planJobs(input));
+  const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
   const adapters: EngineAdapter[] = [];
 
-  const sessionOf = async (engineId: string): Promise<EngineSession> => {
+  const opening = new Map<string, Promise<EngineSession>>();
+  const openSession = async (engineId: string): Promise<EngineSession> => {
     const known = sessions.get(engineId);
     if (known !== undefined) return known;
     let session: EngineSession;
@@ -592,33 +654,127 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     return session;
   };
 
+  const sessionOf = (id: string): Promise<EngineSession> => {
+    let session = opening.get(id);
+    if (session === undefined) {
+      session = openSession(id);
+      opening.set(id, session);
+    }
+    return session;
+  };
   const outcomes: JobOutcome[] = [];
+  // Duplicate requests (r2/r3/r4, for example) see the first answer before asking the store again.
+  const locks = new Map<string, Promise<void>>();
+  const completed = new Map<string, { outcome: JobOutcome; signature: string }>();
+  const signatureOf = (key: string): string | null => {
+    for (const suffix of [".json.gz", ".json"]) {
+      try {
+        const file = statSync(join(store.directory, `${key}${suffix}`), { bigint: true });
+        return file.isFile() ? [suffix, file.dev, file.ino, file.size, file.mtimeNs, file.ctimeNs].join(":") : null;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") return null;
+      }
+    }
+    return null;
+  };
+  const run = async (job: PlannedJob): Promise<JobOutcome> => {
+    const key = canonicalJson([job.engineId, job.request.id, job.request.engineOptions ?? {}]);
+    const ticket = (registry as Partial<ProcessRegistry>).enqueue?.(job.engineId);
+    const previous = locks.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const lock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    locks.set(key, lock);
+    await ticket?.ready;
+    await previous;
+    try {
+      const session = await sessionOf(job.engineId);
+      if (!("planRun" in registry) || session.kind !== "ready")
+        return await runJob(job, session, store, warnings, ticket);
+      const known = completed.get(key);
+      if (known && signatureOf(known.outcome.job.storeKey!) === known.signature) {
+        const { status, storeKey, unsupported } = known.outcome.job;
+        return {
+          job: jobOf(job, { status, storeKey, ...(unsupported === undefined ? {} : { unsupported }) }),
+          source: "cached",
+          detail: known.outcome.detail,
+        };
+      }
+      const expected = storeKey({
+        requestId: job.request.id,
+        engineId: job.engineId,
+        engineFingerprint: session.descriptor.identity.fingerprint,
+        adapterRevision: session.descriptor.identity.adapterRevision,
+        engineOptions: job.request.engineOptions,
+      });
+      const before = signatureOf(expected);
+      const outcome = await runJob(job, session, store, warnings, ticket);
+      const signature = outcome.job.storeKey === null ? null : signatureOf(outcome.job.storeKey);
+      if (signature !== null && (outcome.source === "computed" || signature === before))
+        completed.set(key, { outcome, signature });
+      else completed.delete(key);
+      return outcome;
+    } finally {
+      release();
+      ticket?.release();
+      if (locks.get(key) === lock) locks.delete(key);
+    }
+  };
+  const batch = async (jobs: readonly PlannedJob[]): Promise<JobOutcome[]> => {
+    const answers: JobOutcome[] = new Array(jobs.length);
+    let next = 0;
+    let emitted = 0;
+    let failed = false;
+    const workers = Array.from(
+      { length: Math.min("planRun" in registry ? jobs.length : concurrency, jobs.length) },
+      async () => {
+        while (next < jobs.length && !failed) {
+          const index = next++;
+          try {
+            answers[index] = await run(jobs[index]);
+            while (answers[emitted] !== undefined) {
+              const outcome = answers[emitted++];
+              outcomes.push(outcome);
+              input.onJob?.(outcome);
+            }
+          } catch (error) {
+            failed = true;
+            throw error;
+          }
+        }
+      },
+    );
+    const finished = await Promise.allSettled(workers);
+    const failure = finished.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+    return answers;
+  };
   try {
     const { followUps = [] } = input;
-    // The jobs of the run and rung that is being run, with how each ended.
-    let ended: { planned: PlannedJob; outcome: JobOutcome }[] = [];
-    const run = async (job: PlannedJob): Promise<JobOutcome> => {
-      const outcome = await runJob(job, await sessionOf(job.engineId), store, warnings);
-      outcomes.push(outcome);
-      input.onJob?.(outcome);
-      return outcome;
-    };
+    let start = 0;
     for (const [index, job] of planned.entries()) {
-      ended.push({ planned: job, outcome: await run(job) });
       const next = planned.at(index + 1);
       if (next !== undefined && next.run === job.run && next.rung === job.rung) continue;
-      if (followUps.length > 0) {
-        const recipe = recipes.get(job.run)?.recipe ?? null;
-        for (const following of followingJobs(ended, followUps, recipe, store)) await run(following);
-      }
-      ended = [];
+      // Only a rung with a follow-up needs a barrier. Others can run across run/rung boundaries.
+      if (!followUps.some((followUp) => followUp.rung === job.rung.id)) continue;
+      const jobs = planned.slice(start, index + 1);
+      const answers = await batch(jobs);
+      const ended = jobs.flatMap((candidate, i) =>
+        candidate.run === job.run && candidate.rung === job.rung ? [{ planned: candidate, outcome: answers[i] }] : [],
+      );
+      const recipe = recipes.get(job.run)?.recipe ?? null;
+      await batch(followingJobs(ended, followUps, recipe, store));
+      start = index + 1;
     }
+    await batch(planned.slice(start));
   } finally {
     for (const adapter of adapters) {
       await adapter.close().catch((error: unknown) => {
         warnings.push(`engine ${adapter.id}: it did not close: ${reasonOf(error)}`);
       });
     }
+    await (registry as Partial<ProcessRegistry>).close?.();
   }
 
   const engines = [...sessions]
@@ -653,6 +809,6 @@ export async function runSuite(input: RunSuiteInput): Promise<SuiteRunResult> {
     jobs: outcomes.map((outcome) => outcome.job),
   };
   const cases = suite.runs.flatMap(({ opticalCase }) => (opticalCase === null ? [] : [opticalCase]));
-  const manifestPath = writeRunOutput(join(runsDir, suite.name), manifest, cases);
+  const manifestPath = profileSync("manifest.write", () => writeRunOutput(join(runsDir, suite.name), manifest, cases));
   return { manifest, manifestPath, outcomes, warnings };
 }

@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createCompareCommand } from "../../src/cli/commands/compare.ts";
 import { createReportCommand } from "../../src/cli/commands/report.ts";
 import { createRunCommand } from "../../src/cli/commands/run.ts";
+import { maxJobs } from "../../src/cli/jobs.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
@@ -23,7 +24,7 @@ import { FAULT_ROOT, goldenFile, suiteFile } from "../report/support.ts";
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const COMPARE_SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
-  "                     [--mode reference-vs-each|pairwise|both] [--json]\n";
+  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--json]\n";
 const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]\n";
 
 interface Ended {
@@ -112,6 +113,13 @@ test("run, compare, report through the binary: the all-TypeScript trio exits 0 t
     ].join("\n"),
   );
 
+  const serialBytes = readFileSync(join(directory, COMPARISONS_FILE));
+  for (const jobs of [2, 4]) {
+    const parallel = lvrtc(runsDir, ["compare", "fake-3-engines-ts", "--jobs", String(jobs), ...root]);
+    assert.equal(parallel.code, EXIT_OK, parallel.err);
+    assert.equal(parallel.out, compared.out);
+    assert.deepEqual(readFileSync(join(directory, COMPARISONS_FILE)), serialBytes);
+  }
   const reported = lvrtc(runsDir, ["report", "fake-3-engines-ts", ...root]);
   assert.equal(reported.code, EXIT_OK, reported.err);
   assert.equal(
@@ -187,6 +195,13 @@ test("the command lines that are not the synopsis are usage errors", async (t) =
   const cases: [string[], string][] = [
     [["compare"], "lvrtc compare: no suite name or run directory was given\n"],
     [["compare", "a", "b"], "lvrtc compare: more than one suite or run directory was given: a, b\n"],
+    [["compare", "fake-pair", "--jobs", "0"], 'lvrtc compare: --jobs must be a positive integer, got "0"\n'],
+    [["compare", "fake-pair", "--jobs", "1.5"], 'lvrtc compare: --jobs must be a positive integer, got "1.5"\n'],
+    [
+      ["compare", "fake-pair", "--jobs", String(maxJobs() + 1)],
+      `lvrtc compare: --jobs ${maxJobs() + 1}: at most ${maxJobs()} on this machine (its available parallelism); ` +
+        "each job is a process with its own engine workers, about 2 GiB with optiland\n",
+    ],
     [["compare", "fake-pair", "--frob"], 'lvrtc compare: unknown option "--frob"\n'],
     [["compare", "fake-pair", "--mode"], "lvrtc compare: --mode needs a value\n"],
     [

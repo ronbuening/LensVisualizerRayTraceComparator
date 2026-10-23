@@ -105,6 +105,26 @@ file, byte for byte.
 
 ## Commands
 
+Suite commands accept `--jobs <n>`: `run`, `compare`, `baseline check`, and `mtf --profile benchmark`. The default is
+`--jobs 1` (serial), the most the machine's available parallelism (at least 4); higher values move case/ray preparation and engine/store work into at most n persistent children.
+Comparisons use at most n threads, each processing an independent run and preserving its blocking ladder. Persisted results and
+job order are identical to serial execution. New store entries use gzip; existing plain entries remain readable.
+
+```bash
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 8
+node bin/lvrtc.mjs compare features --jobs 8
+node bin/lvrtc.mjs baseline check features --jobs 8
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 8
+node bin/lvrtc.mjs store compress          # owner only: dry run, file counts and bytes before/after
+node bin/lvrtc.mjs store compress --yes    # owner only: atomically compress legacy entries
+node bin/lvrtc.mjs store prune             # owner only: dry run, unused engine-version files and bytes
+node bin/lvrtc.mjs store prune --yes       # owner only: remove entries unused by any committed baseline engine
+```
+
+Maintenance uses the configured runs directory. Pruning protects exact engine/fingerprint/adapter tuples from
+Git HEAD's committed baselines, so the answers of engines whose baselines are not yet rewritten and committed
+are removable: prune after a baseline refresh is committed. Run maintenance with no other store writer. See [the reference](docs/REFERENCE.md#stage-51-throughput-and-store-maintenance).
+
 ### Check the code
 
 ```bash

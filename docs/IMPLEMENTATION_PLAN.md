@@ -287,10 +287,17 @@ every FAIL has a class and a reproducer command.
 
 | Stage | Deliver | Verify |
 |---|---|---|
-| 5.1 Throughput | Worker pool and parallel suites | Results identical to a serial run |
+| 5.1 Throughput (delivered) | Explicit persistent process pool (CLI default 1; recommend 10 for this machine’s catalog): child export/recipe/ray/request preparation, background engine hello, transient input references, guarded duplicate reuse, gzip staging and planned-order admission; parallel comparison threads. Owner-only compress/prune retained. | Jobs 1/2/4 exact case/store/manifest/comparison/baseline/report parity; death/retry/corruption/filesystem regressions. Check 1,616 TS pass; LV 101; optiland 44. Cold states jobs 1/8/10 rays run 187.94/23.43/23.02 s, compare 70.86/10.52/9.81 s; MTF run 639.85/99.43/89.76 s, compare 436.81/72.28/63.77 s. Combined 7.17x serial-to-10 gain with identical bytes; [profile, worker utilization and memory](REFERENCE.md#stage-51-measurements). |
 | 5.2 Long-tail features | Translator gaps surfaced by the census | Each passes R0–R3 or is declared unsupported with a reason |
 | 5.3 Catalog sweep | Sweep suite and statistics report: every prime, and every zoom at both ends | Sweep completes; report deterministic |
 | 5.4 Real-engine check | `npm run verify:real` (benchmark suite against live LV and optiland) | Runs clean on the development machine |
+
+Stage 5.1 amendment approved by the owner on 2026-10-23: the throughput stage also delivers store compression
+and pruning. Compression changes no identity or uncompressed entry byte, and reads the existing plain store.
+Pruning removes only engine/fingerprint/adapter tuples no committed `baselines/*.json` engine uses. Both commands
+are dry-run-first, with `--yes` for mutation, and only the owner runs them on the real store. The implementer uses
+temporary `LVRTC_RUNS_DIR` directories throughout; baseline/report recording and all Git mutations remain the
+owner's. The default stays serial because replica startup and memory costs are workload-dependent.
 
 ### Phase 6 — Beyond MTF
 
@@ -554,7 +561,7 @@ optiland (called, never modified): `Optic.surfaces.add`, `IdealMaterial`, `Radia
   `lvrtc mtf nikkor-z50f12` must show ATTENTION rows, not FAIL.
 - Phase 4: `lvrtc mtf nikkor-z50f12` shows the photopic best-axial three-way table with a class on every row;
   the validation-statement golden file matches.
-- Phase 5: `lvrtc run suites/catalog.json --rungs r0,r1,r2,r3,r4 --jobs 4`.
+- Phase 5: `lvrtc run suites/catalog.json --rungs r0,r1,r2,r3,r4 --jobs 10`.
 - Phases 6–8: each stage's golden report section, conformance kit, or snapshot test as listed.
 - Regression: with LV and optiland unconfigured, `lvrtc verify` validates baselines and regenerates every report
   byte-for-byte.

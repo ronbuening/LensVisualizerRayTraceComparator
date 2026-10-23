@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -19,7 +20,8 @@ import { FAKE_ENGINE_FILES, FAKE_LENS_FILES, FAKE_LV, closureOf } from "../engin
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
-const SYNOPSIS = "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--json]\n";
+const SYNOPSIS =
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]\n";
 /** The environment variable that tells the engine of the SIGKILL test after how many runs to kill its process. */
 const KILL_AFTER_RUNS = "LVRTC_TEST_KILL_AFTER_RUNS";
 
@@ -402,7 +404,7 @@ test("a run killed with SIGKILL resumes: only the missing jobs are computed, int
   const stored = readdirSync(join(runsDir, STORE_DIRECTORY));
   assert.equal(stored.length, 3, "the three jobs that finished are in the store");
   assert.ok(
-    stored.every((name) => /^[0-9a-f]{64}\.json$/.test(name)),
+    stored.every((name) => /^[0-9a-f]{64}\.json\.gz$/.test(name)),
     stored.join(),
   );
 
@@ -702,10 +704,10 @@ test("a store entry that cannot be trusted is a warning on the error stream, and
   assert.equal((await inProcess(["suite.json"], { rootDir })).code, EXIT_OK);
   const store = join(rootDir, "runs", STORE_DIRECTORY);
   const [entry] = readdirSync(store).sort();
-  writeFileSync(join(store, entry), "");
+  writeFileSync(join(store, entry), gzipSync(""));
   const ended = await inProcess(["suite.json"], { rootDir });
   assert.equal(ended.code, EXIT_OK);
-  const key = entry.replace(".json", "");
+  const key = entry.replace(".json.gz", "");
   assert.match(
     ended.err,
     new RegExp(`^lvrtc run: warning: store entry ${key}: it is malformed JSON .*; the job is computed again\n$`),

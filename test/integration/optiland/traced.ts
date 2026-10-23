@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 // What the tests of the two rungs of traced rays share: what every pair of a compared run is held to in R2 (where
 // each ray meets each surface, where it lands, which rays got through) and in R3 (its optical path), the systems
 // made for those rungs, and the answers optiland stored. Nothing here is a test of its own.
@@ -125,7 +126,9 @@ function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): 
       job !== undefined && job.status === "ok" && job.storeKey !== null,
       `${run} ${requestId}: no ${engine} answer`,
     );
-    const stored = JSON.parse(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json`), "utf8"));
+    const stored = JSON.parse(
+      gunzipSync(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json.gz`))).toString("utf8"),
+    );
     return stored.result.data as RaysTraceData;
   };
   let allowed = 0;
@@ -392,7 +395,9 @@ export function optilandAnswers(cycle: RunCycle, rung: "r2" | "r3" = "r2"): Map<
   const answers = new Map<string, RaysTraceData>();
   for (const job of cycle.manifest.jobs) {
     if (job.engine !== "optiland" || job.rung !== rung || job.storeKey === null) continue;
-    const stored = JSON.parse(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json`), "utf8"));
+    const stored = JSON.parse(
+      gunzipSync(readFileSync(join(cycle.runsDir, STORE_DIRECTORY, `${job.storeKey}.json.gz`))).toString("utf8"),
+    );
     answers.set(`${job.run} ${job.requestId}`, stored.result.data as RaysTraceData);
   }
   return answers;

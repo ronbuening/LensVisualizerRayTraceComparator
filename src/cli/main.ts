@@ -10,6 +10,7 @@ import { lensesCommand } from "./commands/lenses.ts";
 import { mtfCommand } from "./commands/mtf.ts";
 import { reportCommand } from "./commands/report.ts";
 import { runCommand } from "./commands/run.ts";
+import { storeCommand } from "./commands/store.ts";
 import { statementCommand } from "./commands/statement.ts";
 import { verifyCommand } from "./commands/verify.ts";
 
@@ -29,6 +30,7 @@ export const COMMANDS: readonly CliCommand[] = [
   lensesCommand,
   exportCommand,
   mtfCommand,
+  storeCommand,
 ];
 
 function helpText(commands: readonly CliCommand[]): string {

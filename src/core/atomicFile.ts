@@ -13,7 +13,7 @@ export const TEMP_SUFFIX = ".tmp";
  * temporary file is removed and the error is thrown; only a killed process can leave one, and its name ends in
  * `TEMP_SUFFIX`, so nothing mistakes it for the file.
  */
-export function writeFileAtomic(path: string, text: string): void {
+export function writeFileAtomic(path: string, text: string | Uint8Array): void {
   const directory = dirname(path);
   mkdirSync(directory, { recursive: true });
   // The name is never stored, and the random part keeps two writers of one file apart.

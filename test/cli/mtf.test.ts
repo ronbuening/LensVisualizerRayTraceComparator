@@ -89,7 +89,7 @@ function recordOf(runsDir: string, name: string): { record: MtfRun; text: string
 
 const USAGE = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  "                 [--aperture wide-open|f/8] [--root <dir>] [--json]",
+  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--json]",
   "",
 ].join("\n");
 
@@ -167,7 +167,7 @@ test("the tab's request for a lens: a table per engine, and the request, the cas
   assert.deepEqual([record.answers.length, answer.engine, answer.status], [1, "lv", "ok"]);
   assert.deepEqual(validateKind("result", answer.result), []);
   assert.deepEqual(resultDataProblems(mtfNativeQuantity, answer.result?.data), []);
-  assert.ok(existsSync(join(runsDir, "store", `${answer.storeKey}.json`)));
+  assert.ok(existsSync(join(runsDir, "store", `${answer.storeKey}.json.gz`)));
   const data = answer.result?.data as MtfNativeData;
   assert.deepEqual(data.method.params.displayedFrequenciesPerMm, [20, 40]);
 
@@ -693,4 +693,26 @@ test("--profile benchmark: a gated pair that fails is named on the error stream,
   assert.equal(failing.length, 4, "each failing pair is named once");
   assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref r4f lv replay: FAIL: /);
   assert.match(run.out, /^\| r4f \| mtf\.native \| 4 \| 4 \| lv – replay \| 4 FAIL \| 4 FAIL \|$/m);
+});
+
+test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and report bytes", async (t) => {
+  const { rootDir, runsDir } = sampledRoot(t);
+  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"];
+  const serial = await mtf(args, rootDir);
+  assert.equal(serial.code, EXIT_OK, serial.err);
+  const before = benchmarkOf(runsDir, "acme-singlet-50");
+  const parallelRuns = join(rootDir, "parallel");
+  const command = createMtfCommand({ rootDir, cwd: rootDir, env: { LVRTC_RUNS_DIR: parallelRuns } });
+  let err = "";
+  const code = await command.run([...args, "--jobs", "4"], {
+    stdout: () => undefined,
+    stderr: (value) => {
+      err += value;
+    },
+  });
+  assert.equal(code, EXIT_OK, err);
+  assert.deepEqual(benchmarkOf(parallelRuns, "acme-singlet-50"), before);
+  const invalid = await mtf(["acme-singlet-50", "--jobs", "2"], rootDir);
+  assert.equal(invalid.code, EXIT_USAGE);
+  assert.match(invalid.err, /--jobs requires --profile benchmark/);
 });

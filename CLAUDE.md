@@ -16,6 +16,14 @@ npm run test:lv        # tests against the real LensVisualizer (test/integration
 npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 8   # process pool; default --jobs 1 is serial
+node bin/lvrtc.mjs compare features --jobs 8   # parallel comparisons, collected in manifest order
+node bin/lvrtc.mjs baseline check features --jobs 8   # the same pool for baseline suites
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 8   # the same pool for MTF benchmark suites
+node bin/lvrtc.mjs store compress        # OWNER ONLY: dry run; counts and bytes before/after
+node bin/lvrtc.mjs store compress --yes  # OWNER ONLY: atomically gzip legacy plain entries
+node bin/lvrtc.mjs store prune           # OWNER ONLY: dry run; unused engine versions, protected by HEAD baselines
+node bin/lvrtc.mjs store prune --yes     # OWNER ONLY: delete only entries no committed baseline engine can hit
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
 node bin/lvrtc.mjs compare fake-pair --root test/fixtures/fake-root   # compare a run: writes comparisons.json
 node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a compared run: report.json, report.md
@@ -60,6 +68,48 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Node `>=24.15.0 <25`, ESM, no build step.** Sources run under Node's native type stripping, so only erasable
   TypeScript is allowed (`erasableSyntaxOnly`): no enums, namespaces or constructor parameter properties.
 - **Import TypeScript with `.ts` specifiers** and use `import type` for types (`verbatimModuleSyntax`).
+- **Suite concurrency is explicit** (`--jobs <n>` on `run`, `baseline check`, and `mtf --profile benchmark`): a positive
+  integer, default **1 (serial)**, at most the machine's available parallelism and never less than 4 (`maxJobs`,
+  `src/cli/jobs.ts`); a larger value is a usage error. Higher values use at most n Node child processes, each bound to
+  the configuration's one LV tree and owning its engine replicas for the whole suite. Every replica has its own
+  validated hello; optiland is still started only through its definition, `optilandWorkerEnvironment` and its existing
+  timeouts. A slot waits an engine's `runMs` plus `SLOT_MARGIN_MS` (60 s, for the child's store work) before it kills
+  its child, so an in-process engine job, unbounded in a serial run, is bounded there. On SIGINT or SIGTERM the
+  controller ends its children and removes staged entries and prepared inputs before it dies of the signal. No killed
+  worker is restarted. Terminal failures are admitted in request order per engine; later speculative answers of that
+  engine are discarded, so its subsequent jobs fail as in serial execution. Other engines continue. Jobs, callbacks and
+  manifests retain planned order; follow-ups wait for their run's rung and precede its next rung. Duplicate store
+  requests wait for their first answer. Pool code is outside engine import closures: concurrency changes no fingerprint,
+  adapter revision, store key or persisted byte. Parallel suite expansion/export, recipe/ray/request preparation and the
+  store's lookup, validation, canonical JSON, gzip and temporary writes execute in the same persistent children. Large
+  result arrays stay there; the controller receives outcome summaries and atomically renames admitted entries. At most
+  32n jobs compute or await admission; a completed staging file releases its CPU slot and survives later child death.
+  Duplicate waits do not occupy workers; validated outcomes are reused only while the store file's inode, size, mtime
+  and ctime remain unchanged (nanosecond timestamps). Changed files are read and validated again. Speculation after
+  engine death is deleted, and remaining temporary files are cleaned after all workers exit. Prepared request bodies use
+  transient V8 binary files (numeric bits preserved) and a four-run LRU per child. Dispatch sends small references. Full
+  specs remain available to follow-up decisions. Planned-order tickets are assigned before duplicate waits, and
+  requested backend hellos start alongside recipe/ray preparation. Inputs are deleted after every worker exits and never
+  enter store identities. `compare --jobs <n>` uses a separate bounded thread pool across runs, keeping each run's spans
+  and blocking ledger together and collecting in manifest order. Baseline checks and benchmark MTF share both paths. Opt
+  into parallelism for workloads that amortize startup and replica memory. A custom `runSuite` registry supplies its own
+  isolation. `LVRTC_PROFILE_DIR=<temporary directory>` records per-process phase timings and peak RSS outside run
+  artifacts. For Stage 5.3 on the owner's 14-core / 48 GB machine, recommend `--jobs 10` on run and compare: measured
+  combined speed-up is 7.17x versus serial, at roughly 2 GiB per Node/Python pair. See `docs/REFERENCE.md`.
+- **New result-store entries are `<key>.json.gz`**, gzip of exactly the canonical JSON plus newline the plain
+  entry held. Legacy `<key>.json` remains readable; gzip takes precedence when both exist, and corruption is
+  reported rather than hidden by the other copy. No key or identity changes. Writes publish atomically.
+- **Store maintenance is run only by the owner**, never by an implementer against `runs/store`. `lvrtc store
+  compress` and `store prune` are dry runs unless `--yes` is explicit. Compression reports file counts and bytes
+  before/after, writes a temporary gzip, renames it, then removes its plain source; conflicting duplicates are
+  refused. Pruning reads only Git HEAD's committed `baselines/*.json` blobs, protects every exact
+  `(engine id, fingerprint, adapter revision)` tuple they name, and reports retained/removable files and bytes
+  per engine and per removable engine version (with its newest entry), and always states `PRUNE_NOTICE`: the
+  engines as the checkout runs them are protected only once baselines written with them are committed, so prune
+  after a refresh is committed, never before. Missing/invalid committed baselines abort pruning; unreadable/corrupt
+  entries are retained.
+  Run maintenance without concurrent suite/store writers. Tests and measurements use temporary `LVRTC_RUNS_DIR`
+  directories; the real store, LensVisualizer and optiland remain untouched.
 - **Zero runtime npm dependencies.** Validators, hashing and codecs are written here. Dev dependencies are tooling
   only.
 - **Tests are `node:test`** in `test/**/*.test.ts`. Unit tests are hermetic: they need neither LV nor optiland.
@@ -524,7 +574,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   than its attention band); `baseline check` also lists every figure that is not what the baseline has
   (`summarizeChanges`), and does not compare the per-field values kept in `sets`: read `git diff reports/` after a
   rewrite. A recorded pair that is ERROR today fails the check.
-- **An edit to a file in a built-in engine's import closure (`src/contract/version.ts`, `src/core/suite.ts`, ...)
+- **An edit to a file in a built-in engine's import closure (`src/contract/version.ts`, `src/core/negotiate.ts`, ...)
   changes its adapter revision**: all four baselines become STALE(engine) and the store recomputes lv, ref, replay
   and wave. Check, then write, each kind.
 - **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in

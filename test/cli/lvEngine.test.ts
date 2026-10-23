@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 // The engine `lv` through the commands, against a copy of the fake LV tree: `lvrtc run --engines lv,ref`, then
 // `compare` and `report`, each in a child process, so that this process binds no LensVisualizer. The fake has a
 // paraxial kernel and conic surfaces of its own, and its numbers describe no real lens.
@@ -274,7 +275,9 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   assert.equal(new Set(manifest.jobs.map((job) => job.requestId)).size, 8);
   for (const job of manifest.jobs.filter((each) => each.engine === "lv")) {
     assert.deepEqual([job.quantity, job.status], ["rays.trace", "ok"]);
-    const entry = JSON.parse(readFileSync(join(rootDir, "runs", "store", `${job.storeKey}.json`), "utf8"));
+    const entry = JSON.parse(
+      gunzipSync(readFileSync(join(rootDir, "runs", "store", `${job.storeKey}.json.gz`))).toString("utf8"),
+    );
     // 6 columns by 5 rows and the chief ray, through 3 surfaces of the singlet or the 7 of the zoom.
     assert.equal(entry.result.diagnostics.counts.rays, 31);
     assert.equal(entry.request.spec.groups.chiefIndex, 30);

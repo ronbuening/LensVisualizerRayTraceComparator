@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -136,12 +137,12 @@ test("an entry that is put is got back, under the key of its request, engine and
   assert.ok(found.kind === "hit" && Object.isFrozen(found.entry.result.data));
 });
 
-test("an entry is one file, <key>.json, holding canonical JSON and a newline", (t) => {
+test("an entry is one file, <key>.json.gz, holding gzip of canonical JSON and a newline", (t) => {
   const store = newStore(t);
   const result = okResult();
   const key = store.put(REQUEST, result);
-  assert.deepEqual(readdirSync(store.directory), [`${key}.json`]);
-  const text = readFileSync(join(store.directory, `${key}.json`), "utf8");
+  assert.deepEqual(readdirSync(store.directory), [`${key}.json.gz`]);
+  const text = gunzipSync(readFileSync(join(store.directory, `${key}.json.gz`))).toString("utf8");
   assert.equal(text, `${canonicalJson({ request: REQUEST, result })}\n`);
   assert.equal(text.indexOf("\n"), text.length - 1);
 });
@@ -179,7 +180,7 @@ test("writing leaves no temporary file, however many entries are written and rew
   }
   assert.deepEqual(
     readdirSync(store.directory).sort(),
-    [...new Set(keys)].sort().map((key) => `${key}.json`),
+    [...new Set(keys)].sort().map((key) => `${key}.json.gz`),
   );
   assert.equal(new Set(keys).size, 5);
 });
@@ -309,7 +310,7 @@ test("an entry filed under a key that is not its own is corrupt", (t) => {
   const key = store.put(REQUEST, okResult()) ?? "";
   // The same answer, claimed for another engine's fingerprint: what a renamed or copied file is.
   const claimed = keyOf(REQUEST, { ...ENGINE, fingerprint: "e".repeat(64) });
-  copyFileSync(join(store.directory, `${key}.json`), join(store.directory, `${claimed}.json`));
+  copyFileSync(join(store.directory, `${key}.json.gz`), join(store.directory, `${claimed}.json.gz`));
   assert.match(corruption(store.get(claimed)), new RegExp(`^store entry ${claimed}: it is the entry of key ${key}$`));
   assert.equal(store.has(claimed), false);
   assert.equal(store.has(key), true);
@@ -337,7 +338,7 @@ test("a corrupt entry is repaired by putting the answer again", (t) => {
 test("an entry that was removed is a miss again", (t) => {
   const store = newStore(t);
   const key = store.put(REQUEST, okResult()) ?? "";
-  rmSync(join(store.directory, `${key}.json`));
+  rmSync(join(store.directory, `${key}.json.gz`));
   assert.deepEqual(store.get(key), { kind: "miss" });
 });
 
