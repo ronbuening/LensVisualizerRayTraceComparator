@@ -2,6 +2,7 @@
 // may be said of it is narrow: every sentence a report writes about one is a template of this file, and a lint
 // (`wordingProblems`) rejects the claims no recorded row supports, whoever writes them.
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
+import { formatSci, formatSignificant } from "../core/numeric/format.ts";
 
 /** What a row of an MTF comparison came to. */
 export const MTF_ROW_STATUSES = ["RECORDED", "ATTENTION", "SET ASIDE", "UNSUPPORTED", "ERROR"] as const;
@@ -134,7 +135,7 @@ export const NOT_COVERED: readonly string[] = [
   "Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, " +
     "samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not " +
     "explained.",
-  "Zoom positions between the two ends, and finite conjugates other than the states a run names.",
+  "Zoom and focus positions other than the states a run names, and the catalog beyond these suites.",
   "Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.",
 ];
 
@@ -155,19 +156,35 @@ const mentions =
 
 const AN_MTF = /\b(MTF|OTF|transfer function)s?\b/i;
 // The rungs of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
-const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|[Rr]5g?|[Rr]6c)\b/;
+const GATED_IDENTICAL = /\b(gated|R4f?|R6a)\b/i;
+const IDENTICAL_RAYS = /\bidentical[- ]rays?\b/i;
+const GATED_SAME_RAYS =
+  /\btrace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs\b/i;
+const recordedContext = (sentence: string): boolean =>
+  !(GATED_SAME_RAYS.test(sentence) || (GATED_IDENTICAL.test(sentence) && IDENTICAL_RAYS.test(sentence))) ||
+  /\b(R5g?|R6[bc]|recorded|FFT|optiland-wave)\b/i.test(sentence);
+const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|r5g?|r6[bc])\b/i;
 
 /** The claims that are rejected. */
 export const BANNED_CLAIMS: readonly BannedClaim[] = [
   {
     name: "validated",
     why: "two estimates side by side validate neither",
-    matches: mentions(/\b(validat|certif)\w*/i),
+    // A focus station's refusal says which object distances LensVisualizer certifies: that is of a conjugate, not a
+    // comparison, and only that exact phrase is set aside.
+    matches: (sentence) =>
+      /\b(validat(?:e[sd]?|ing)|certif(?:y|ies|ied|ying))\b(?!-)/i.test(
+        sentence.replace(/\bwhose object distance LensVisualizer certifies\b/g, ""),
+      ) ||
+      mentions(/\b(validation|certification)\b/i, AN_MTF)(sentence) ||
+      mentions(/\b(validation|certification)\b/i, RECORDED_ROW)(sentence),
   },
   {
     name: "mtf-agrees",
     why: "an MTF of another method is recorded beside LensVisualizer's, not found to agree with it",
-    matches: mentions(/\b(agree(s|d|ing)?|agreement|match(es|ed|ing)?|consistent|coincide(s|d)?)\b/i, AN_MTF),
+    matches: (sentence) =>
+      recordedContext(sentence) &&
+      mentions(/\b(agree(s|d|ing)?|agreement|match(es|ed|ing)?|consistent|coincide(s|d)?)\b/i, AN_MTF)(sentence),
   },
   {
     name: "mtf-confirmed",
@@ -183,6 +200,26 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
     name: "recorded-as-pass",
     why: "a recorded row passes nothing: it has no tolerance",
     matches: mentions(RECORDED_ROW, /\b(pass(es|ed|ing)?|PASS|succe\w+|met|meets?|satisf\w+)\b/),
+  },
+  {
+    name: "recorded-authority",
+    why: "a recorded rung establishes no accuracy or proof",
+    matches: mentions(RECORDED_ROW, /\b(accurat\w*|prove[sn]?|proved|proven|correct|reliable|trustworthy)\b/i),
+  },
+  {
+    name: "counterpart-preference",
+    why: "neither external diffraction counterpart is given preference",
+    matches: (sentence) => {
+      const affirmative = sentence
+        .replace(/\bno preference (?:is )?claimed\b/gi, "")
+        .replace(/\bwith no preference between them\b/gi, "")
+        .replace(/\bno column is an? arbiter\b/gi, "")
+        .replace(/\bneither (?:column|counterpart) is (?:preferred|an? arbiter)\b/gi, "");
+      return mentions(
+        /\b(FFT|wavefront|optiland-wave|counterpart)s?\b/i,
+        /\b(prefer\w*|better|best (?:counterpart|method|reference)|superior|inferior|arbiter|more accurate|reference standard)\b/i,
+      )(affirmative);
+    },
   },
   {
     name: "band-as-tolerance",
@@ -225,5 +262,112 @@ export function sentencesOf(markdown: string): string[] {
 export function wordingProblems(markdown: string): string[] {
   return sentencesOf(markdown).flatMap((sentence) =>
     BANNED_CLAIMS.filter((claim) => claim.matches(sentence)).map((claim) => `${claim.name}: ${sentence}`),
+  );
+}
+
+/** Stage 4.5's labels and prose; numeric and named-state data are supplied by the reducer. */
+export const STATEMENT_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
+  r0: { mode: "gated", compares: "Built layout, shape, aperture, index and sampled sag" },
+  r1: { mode: "gated", compares: "First-order quantities and pupils" },
+  r2: { mode: "gated", compares: "Hits, directions, image landings and masks of identical rays" },
+  r3: { mode: "gated", compares: "Optical path, path to image and chief-relative OPD of identical rays" },
+  r4: { mode: "gated", compares: "Comparator geometric MTF on identical rays" },
+  r4f: { mode: "gated", compares: "LV geometric MTF beside replay with LV's own sampling" },
+  r5: { mode: "recorded", compares: "LV diffraction MTF beside optiland FFT and the LV-ray wave estimate" },
+  r5g: { mode: "recorded", compares: "Geometric MTF on each method's own pupil sampling" },
+  r6a: { mode: "gated", compares: "Comparator wave MTF on identical rays, in fields whose sampling settled" },
+  r6b: { mode: "recorded", compares: "LV sheared diffraction MTF beside comparator wave OTF on LV rays" },
+  r6c: { mode: "recorded", compares: "LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts" },
+};
+
+/** Included only when the baselines contain the named settled comparison. */
+export const STATEMENT_Z50_ATTRIBUTION =
+  "The Z 50/1.2 FFT attribution is class method on the settled best-focus half field; earlier numerical and unsupported outcomes remain, as described in docs/z50f12-investigation.md.";
+
+export const STATEMENT_TEXT = {
+  intro: "This statement is rendered from the eight baselines alone, with no engine, clock or machine input.",
+  counts:
+    "A configuration is one suite and named run with a case; the same state in two suites counts twice, and R4 in rays and MTF counts once. A configuration pair is two engines on one configuration and rung; a request pair is two engines on one request. Verdict counts count request pairs, including unsupported answers; refused states have no pairs.",
+  worst:
+    "The worst gated residual is the metric largest as a fraction of its own tolerance; zero tolerances rank zero at zero and a nonzero excess above every finite ratio. Each metric maximum is also listed in its own units. A recorded worst is the largest banded MTF difference across all pairs of that rung; set-aside differences of each external diffraction counterpart are listed separately. R6a measured request counts exclude fields set aside for phase step or convergence, even when the request verdict is PASS.",
+  population:
+    "The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each rung.",
+  counterparts:
+    "Both external diffraction counterparts are recorded side by side, with no preference claimed. Row counts include every requested field, cut and frequency at the last recorded sampling, including unavailable and set-aside rows; their classes and statuses are counted separately. Coverage lists the requested LV lines and the lines each counterpart answered, by named state and request.",
+  states:
+    "These are the states as the baselines name them, with their case hashes or coded source refusals. The baselines do not retain numeric slider positions, stop radii or image-plane shifts; those cannot be reconstructed here. The wavelength inventory is the union explicitly retained in the benchmark's recorded diffraction answers; other suites' per-line wavelengths are not retained in these baselines.",
+} as const;
+
+interface SupportFigure {
+  readonly value: number | null;
+  readonly tolerance?: number;
+}
+
+/** The statement's own reduced data, including the class of each counterpart's worst banded row. */
+interface StatementSupportData {
+  readonly agreementConfigurations: number;
+  readonly suites: readonly unknown[];
+  readonly wavelengthsNm: readonly number[];
+  readonly agreementFigures: {
+    readonly landing: SupportFigure | null;
+    readonly opticalPath: SupportFigure | null;
+    readonly geometricMtf: SupportFigure | null;
+    readonly waveMtf: SupportFigure | null;
+  };
+  readonly counterparts: readonly {
+    readonly rung: string;
+    readonly counterpartLinesNm: readonly number[];
+    readonly worstBanded: (SupportFigure & { readonly class: string | null }) | null;
+  }[];
+}
+
+const COUNT_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const countWord = (count: number): string => COUNT_WORDS[count] ?? String(count);
+
+/** Residuals use two significant figures; gates retain the policy's full value, without padded zeros. */
+function supportNumber(value: number, gate = false): string {
+  if (value === 0) return "0";
+  if (Math.abs(value) < 1e-3) return gate ? value.toExponential().replace("e+", "e") : formatSci(value, 2);
+  return gate ? String(value) : formatSignificant(value, 2);
+}
+
+/** Owner-signed wording (2026-10-23); every figure and the recorded row's class come from the statement. */
+export function statementSupport(statement: StatementSupportData, holds: boolean): string {
+  if (!holds || statement.agreementConfigurations === 0)
+    return "The gated records do not support an identical-ray agreement sentence across the requested configurations.";
+  const gated = (figure: SupportFigure | null) =>
+    figure?.value == null || figure.tolerance === undefined
+      ? null
+      : { value: supportNumber(figure.value), gate: supportNumber(figure.tolerance, true) };
+  const landing = gated(statement.agreementFigures.landing);
+  const path = gated(statement.agreementFigures.opticalPath);
+  const geometric = gated(statement.agreementFigures.geometricMtf);
+  const wave = gated(statement.agreementFigures.waveMtf);
+  const fft = statement.counterparts.find((c) => c.rung === "r5");
+  const wavefront = statement.counterparts.find((c) => c.rung === "r6c");
+  if (
+    !landing ||
+    !path ||
+    !geometric ||
+    !wave ||
+    fft?.worstBanded?.value == null ||
+    wavefront?.worstBanded?.value == null
+  )
+    return "The baseline records do not support the complete comparison sentence.";
+  return (
+    `On ${statement.agreementConfigurations} configurations across ${countWord(statement.suites.length)} suites, ` +
+    "LensVisualizer, optiland and the reference tracer, given identical indices and apertures, trace the same rays " +
+    "within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs: " +
+    `worst landing ${landing.value} mm (gate ${landing.gate} mm), optical path ${path.value} waves (${path.gate}), ` +
+    `geometric MTF ${geometric.value} (${geometric.gate}), wave MTF ${wave.value} (${wave.gate}); ` +
+    `the benchmark covers ${countWord(statement.wavelengthsNm.length)} wavelengths. ` +
+    `LensVisualizer's diffraction MTF is recorded beside ${countWord(statement.counterparts.length)} external counterparts, ` +
+    "with no preference between them: optiland's FFT MTF, " +
+    `of ${countWord(fft.counterpartLinesNm.length)} wavelength${fft.counterpartLinesNm.length === 1 ? "" : "s"}, ` +
+    `differs by up to ${supportNumber(fft.worstBanded.value)}, a difference classed as one of ${fft.worstBanded.class}; ` +
+    "the comparator's OTF of optiland's own wavefront, per wavelength and photopic, " +
+    `differs by up to ${supportNumber(wavefront.worstBanded.value)}. ` +
+    "Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and " +
+    "the catalog beyond these suites are not covered."
   );
 }

@@ -258,13 +258,26 @@ coverage; the Z 50/1.2 row carries a class and an evidence note; validation-stat
 | 4.1 optiland wavefront op, R6c (delivered) | `Wavefront.get_data` on an even grid inside the pupil edge → comparator OTF; three-way table | `unittest`; recorded rows with classes |
 | 4.2 Z 50/1.2 investigation (delivered) | Four-method off-axis tables at both apertures/planes; tangential pitch and grid-halving checks. **Class: method**, established on the settled best-focus half field: optiland's stop-grid FFT/full-rim affine cosine calibration retains an approximately 0.10 T offset at 100 cycles/mm. Design-plane sampling flags and full-field FFT unavailability remain explicit. | [Evidence note](z50f12-investigation.md), reproducible temporary-directory CLI runs, synthetic calibration pin and fixed-grid LV test; [upstream question draft](upstream/optiland-vignetted-pupil-frequency-calibration.md), not filed. Policy 12 unchanged. |
 | 4.3 Polychromatic diffraction (delivered) | Per line: complex OTF from 4.1, evaluated directly at common requested frequencies, phase-shifted by that line's chief landing relative to the reference line, weighted, summed before the modulus; image plane at LV's photopic best-axial shift | Synthetic two-line case with known lateral colour reproduces the analytic sum, and the un-re-referenced sum is shown to differ; benchmark rows recorded |
-| 4.4 States (implementation delivered; owner baseline recording pending) | Focused matrix: `states.json`, 128 runs (slider f/5.6 and f/11, both spectra and planes; benchmark zoom at ends plus LV-published middle stations at all four apertures), and `focus-stations.json`, LV-certified finite stations selected at runtime (55 declared stations across 35 lenses at `ab0fd4cf`; two fisheye stations record `finite-conjugate-unavailable`, rather than the scope note's older 24). Ordinary case-source expansions (`lens.stations`, contract minor 3, stated `1.3` by the two suites; policy 14 also states `1.3` for `attentionSeveralLines`); separate rays and gated MTF baseline paths. | Fake-tree expansion/baseline round trips, including coded refusals; Tier 2 station parity. Typecheck/lint/format/Python pass; test:lv 99 pass, test:optiland 42 pass; npm test 1,591 pass with only the four committed policy-13 baseline hashes failing verify. States: 18,304 jobs, 16,896 PASS pairs; finite suite: 2,749 jobs, 3,736 PASS pairs. Zero FAIL/ERROR on R0-R4/R4f/R6a; [per-rung counts and coverage](REFERENCE.md#stage-44-focused-state-matrix). Existing gates and coverage exclusions retained; owner writes/checks baselines before closing the stage. |
-| 4.5 Validation statement | `reports/benchmark/validation-statement.{json,md}`: per rung, tolerance, worst residual, configuration count, "Not covered" block; `docs/mtf-comparison.md` | Golden file; lint |
+| 4.4 States (delivered; baseline recording closed before 4.5) | Focused matrix: `states.json`, 128 runs (slider f/5.6 and f/11, both spectra and planes; benchmark zoom at ends plus LV-published middle stations at all four apertures), and `focus-stations.json`, LV-certified finite stations selected at runtime (55 declared stations across 35 lenses at `ab0fd4cf`; two fisheye stations record `finite-conjugate-unavailable`, rather than the scope note's older 24). Ordinary case-source expansions (`lens.stations`, contract minor 3, stated `1.3` by the two suites; policy 14 also states `1.3` for `attentionSeveralLines`); separate rays and gated MTF baseline paths. | Fake-tree expansion/baseline round trips, including coded refusals; Tier 2 station parity. Typecheck/lint/format/Python pass; test:lv 99 pass, test:optiland 42 pass; npm test 1,591 pass with only the four committed policy-13 baseline hashes failing verify. States: 18,304 jobs, 16,896 PASS pairs; finite suite: 2,749 jobs, 3,736 PASS pairs. Zero FAIL/ERROR on R0-R4/R4f/R6a; [per-rung counts and coverage](REFERENCE.md#stage-44-focused-state-matrix). Existing gates and coverage exclusions retained; owner writes/checks baselines before closing the stage. Closure at Stage 4.5 entry: eight baselines committed at policy 14 in `8ba0779`, all OK per owner handoff. |
+| 4.5 Validation statement (delivered; wording signed off by the owner 2026-10-23) | `reports/validation-statement.{json,md}` from the eight baselines alone via `lvrtc statement`: gated rungs across benchmark, features, states and focus-stations; recorded MTF rungs from benchmark; per-rung limits, metric maxima, worst residual location, configuration/pair/verdict counts; named states and refusals; both external diffraction counterparts with separate maxima, coverage and row classes; fixed "Not covered" block; `docs/mtf-comparison.md`. Location changed from `reports/benchmark/` by owner decision 2026-10-23 because the statement covers all four suites. | Synthetic baseline goldens written by `node test/report/writeGolden.ts`; wording lint at render time; command tests; verify holds JSON and Markdown byte for byte with engines absent; `npm run test:lv`. |
 
-The supportable sentence: *identical rays, optical path and the geometric MTF computed from them agree with
-optiland within 1e-8 mm, 2e-5 waves and 1e-7 on N configurations at six wavelengths, given identical indices and
-apertures; optiland's FFT diffraction MTF differs by up to X; dispersion, white-light weighting, focus choice and
-stop sizing are not covered.*
+The supportable sentence is now a figure-driven template in `src/report/wording.ts`, rendered in
+[`reports/validation-statement.md`](../reports/validation-statement.md#supportable-sentence); the owner signed off
+its wording on 2026-10-23. It covers identical rays, optical path, geometric MTF and wave MTF of identical rays against
+optiland and the reference tracer within the current R2/R3/R4/R6a gates, given identical indices and apertures.
+Its configuration count requires a measured gated metric for both LV/external pairs on each of those rungs;
+R6a fields set aside for phase step or convergence are excluded from that claim. The wavelength count is the
+union explicitly retained in the benchmark's recorded diffraction answers, not reconstructed per-line data for
+the other suites. Both external counterparts of LV's diffraction MTF are reported without preference: R5's
+one-line optiland FFT, and R6c's comparator OTF of optiland wavefronts per line and photopic. Each has its own
+worst banded difference, worst shown set aside, coverage and classes.
+
+Stage 4.5 wording amendment, 2026-10-23: `NOT_COVERED` replaces “Zoom positions between the two ends, and finite
+conjugates other than the states a run names.” with “Zoom and focus positions other than the states a run names,
+and the catalog beyond these suites.” Stage 4.4 measured named middle zoom stations, so the old blanket zoom
+exclusion no longer describes the coverage. The catalog exclusion remains explicit until Phase 5. No other
+`NOT_COVERED` sentence, gate, band or baseline measurement changes; existing MTF reports and goldens are
+regenerated for this fixed-block amendment.
 
 ### Phase 5 — Catalog scale and regression
 
@@ -472,6 +485,16 @@ are written to `1.0` as it stands with them, so no committed document needs a `1
 one; the next addition raises the minor. `lvrtc verify` fails a baseline that was judged by another policy than
 the one at hand, so a change to the policy is committed together with rewritten baselines.
 
+### Stage 4.5 statement amendment (2026-10-23)
+
+The owner selected all four suites and both external diffraction counterparts, without preference. The
+statement moved from `reports/benchmark/validation-statement.{json,md}` to
+`reports/validation-statement.{json,md}`. Baselines remain untouched. It reports named states and their case
+identities, rather than inventing numeric positions absent from a baseline. Configuration counts distinguish
+refused source runs and configurations with no measured R6a field. The fixed exclusion amendment and the
+figure-driven supportable sentence of Phase 4 replace the draft's pre-Stage-3/4 numerical claim; the owner signed
+off the sentence's wording on 2026-10-23.
+
 ## LensVisualizer changes
 
 None is required. Optional, each a user decision on evidence the comparator produces:
@@ -535,3 +558,4 @@ optiland (called, never modified): `Optic.surfaces.add`, `IdealMaterial`, `Radia
 - Phases 6–8: each stage's golden report section, conformance kit, or snapshot test as listed.
 - Regression: with LV and optiland unconfigured, `lvrtc verify` validates baselines and regenerates every report
   byte-for-byte.
+

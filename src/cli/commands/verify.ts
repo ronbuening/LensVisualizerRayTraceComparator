@@ -17,6 +17,13 @@ import { writeFileAtomic } from "../../core/atomicFile.ts";
 import { REPO_ROOT } from "../../core/config.ts";
 import { hashCanonical } from "../../core/numeric/hash.ts";
 import { UsageError } from "../../core/usageError.ts";
+import {
+  readStatementInputs,
+  renderStatement,
+  STATEMENT_FILES,
+  STATEMENT_JSON,
+  STATEMENT_MARKDOWN,
+} from "../../report/statement.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -40,6 +47,8 @@ const HELP = [
   "hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no",
   "such report may be without its baseline. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
   "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
+  "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
+  "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too.",
   "",
   "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
   "engines, and is what lvrtc baseline check says.",
@@ -190,6 +199,29 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
               );
             }
           }
+        }
+      }
+      // Older partial roots need only their per-suite reports. A complete four-suite root, or either statement file,
+      // requires the complete four-suite statement, so deleting both outputs cannot bypass verification.
+      if (
+        STATEMENT_FILES.every((file) => files.includes(file)) ||
+        readText(join(rootDir, STATEMENT_JSON)) !== undefined ||
+        readText(join(rootDir, STATEMENT_MARKDOWN)) !== undefined
+      ) {
+        try {
+          const rendered = renderStatement(readStatementInputs(rootDir));
+          for (const [file, text] of [
+            [STATEMENT_JSON, rendered.json],
+            [STATEMENT_MARKDOWN, rendered.markdown],
+          ]) {
+            if (rewrite) writeFileAtomic(join(rootDir, file), text);
+            else if (readText(join(rootDir, file)) !== text)
+              problems.push(
+                `${file}: it is missing or is not what the eight baselines render; lvrtc statement writes it anew`,
+              );
+          }
+        } catch (error) {
+          problems.push(`validation-statement: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       for (const problem of problems) io.stderr(`lvrtc verify: ${problem}\n`);

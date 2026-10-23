@@ -177,7 +177,7 @@ What this comparison does not show, whatever its verdicts:
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
 - The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
 - Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
-- Zoom positions between the two ends, and finite conjugates other than the states a run names.
+- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
 - Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.
 
 ### The engines' own MTF

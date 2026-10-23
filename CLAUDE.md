@@ -45,6 +45,7 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
+node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
@@ -495,6 +496,16 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `wordingProblems` lints every golden report (`test/report/wording.test.ts`): a new sentence goes into that file,
   a new banned claim needs its rejected and its accepted examples in the test. `NOT_COVERED` is rendered in every
   report and says only what the measurement supports; change it only with the plan.
+- **Stage 4.5's statement is baseline-only** (`src/report/statement.ts`, `lvrtc statement [--root <dir>]`): all
+  eight baseline files of benchmark, features, states and focus-stations are required; no engine, clock or
+  machine is read. It writes `reports/validation-statement.{json,md}`. `lvrtc verify` holds both files byte for
+  byte (also requires them on a root with all eight suite baselines); `verify --write` regenerates them. R4 is
+  deduplicated across rays/MTF, with differing duplicate measurements refused. Named suite/run configurations,
+  configuration pairs and request pairs are separate counts. The supportable sentence, all prose about
+  recorded comparisons and the rung descriptions are templates in `src/report/wording.ts`, linted at render
+  time. Its hermetic synthetic goldens are written only by `node test/report/writeGolden.ts`. The owner signed
+  off the supportable sentence word for word (2026-10-23): change its words only with the owner. The plan records
+  the amended unnamed-state/catalog exclusion. Every committed `reports/**/*.md` passes `wordingProblems`.
 - **MTF baselines are files of their own** (`baselines/<suite>.mtf.json`, `reports/<suite>/mtf.{md,json}`;
   `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
   rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
