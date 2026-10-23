@@ -10,6 +10,8 @@ import {
   FIELD_REASON_TEXT,
   GEOMETRIC_SAMPLING,
   GEOMETRIC_SEVERAL_LINES,
+  severalLinesChiefLanding,
+  WAVEFRONT_SEVERAL_LINES,
   MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
@@ -86,7 +88,7 @@ export const OWN_MTF_HEADING = {
  * difference, then a row for every field, cut and shown frequency. Every sentence is a template of
  * `src/report/wording.ts`.
  */
-export function mtfComparisonLines(mtf: MtfComparison): string[] {
+export function mtfComparisonLines(mtf: MtfComparison, intro = MTF_COMPARISON_INTROS[mtf.kind]): string[] {
   const { pair, columns, bands } = mtf;
   const names = columns.map((column) => (column.step === null ? column.engine : `${column.engine} ${column.step}`));
   const judged = columns.flatMap((column, index) => (column.judged ? [names[index]] : []));
@@ -97,7 +99,7 @@ export function mtfComparisonLines(mtf: MtfComparison): string[] {
   const lines = [
     "",
     `${OWN_MTF_HEADING[mtf.kind]} The difference of a row is ${difference}.`,
-    ...MTF_COMPARISON_INTROS[mtf.kind],
+    ...intro,
     "",
     `Attention bands: ${bandText(bands.onAxis)} on the axis, ${bandText(bands.offAxis)} off it. Two chief rays that land`,
     `more than ${bandText(bands.chiefLandingMm)} mm apart are of two fields.`,
@@ -157,6 +159,9 @@ export function mtfComparisonLines(mtf: MtfComparison): string[] {
     ),
     "",
   );
+  if (mtf.kind === "wavefront" && mtf.lineCounts.some((count) => (count ?? 0) > 1)) {
+    lines.push(...WAVEFRONT_SEVERAL_LINES, "", ...severalLinesChiefLanding(bandText(bands.chiefLandingMm)), "");
+  }
   if (mtf.kind === "geometric") {
     lines.push(...GEOMETRIC_SAMPLING, "");
     // The second engine of the pair is the one whose curve of several lines is a sum of the worker's.

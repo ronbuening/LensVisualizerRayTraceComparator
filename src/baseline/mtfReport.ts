@@ -197,7 +197,10 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
                 field: null,
                 a: pair.a,
                 b: pair.b,
-                figures: aboveBand(pair.metrics, bands),
+                figures: aboveBand(pair.metrics, {
+                  ...bands,
+                  ...(table?.bands.chiefLandingMm == null ? {} : { "chiefLanding.maxAbs": table.bands.chiefLandingMm }),
+                }),
               });
             }
         }

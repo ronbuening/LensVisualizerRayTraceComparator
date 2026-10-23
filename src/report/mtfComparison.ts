@@ -196,10 +196,13 @@ export function buildMtfComparison(input: MtfComparisonInput): MtfComparison | n
       (candidate.a === first && candidate.b === second) || (candidate.a === second && candidate.b === first),
   );
   const band = (name: string): number | null => policy?.metrics[name]?.attention ?? null;
+  const landingLimits = [a, b].flatMap((column) =>
+    column?.values === undefined ? [] : (factsOfRecorded(column.values, 0).chiefLandingLimitMm ?? []),
+  );
   const bands = {
     onAxis: band(ON_AXIS_METRIC),
     offAxis: band(OFF_AXIS_METRIC),
-    chiefLandingMm: band(CHIEF_LANDING_METRIC),
+    chiefLandingMm: landingLimits.length === 0 ? band(CHIEF_LANDING_METRIC) : Math.max(...landingLimits),
   };
   const compared = pair !== undefined && pair.verdict !== "UNSUPPORTED" && pair.verdict !== "ERROR";
   const sorted =

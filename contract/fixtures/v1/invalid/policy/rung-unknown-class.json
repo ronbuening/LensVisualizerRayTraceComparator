@@ -40,6 +40,7 @@
       "metrics": {
         "mtf.maxAbs": {
           "attention": 0.005,
+          "attentionSeveralLines": 0.01,
           "unit": "1"
         },
         "mtf.rms": {

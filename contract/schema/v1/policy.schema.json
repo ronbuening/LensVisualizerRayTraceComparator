@@ -61,6 +61,10 @@
           "description": "The largest value a recorded metric may have without being marked for attention.",
           "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
         },
+        "attentionSeveralLines": {
+          "description": "Alternate attention limit when either answer records several spectral lines. Requires a recorded metric with attention as its one-line limit.",
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative"
+        },
         "unit": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
         "floor": {
           "description": "The floor limits of the metric: the largest value between the rung's floored engine and its arbiter, and the largest between any other engine (a witness) and the arbiter for the witness to corroborate the arbiter. A witness beyond its agreement withholds no floor unless it is nearer to the floored engine than to the arbiter.",

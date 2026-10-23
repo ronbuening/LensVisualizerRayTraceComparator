@@ -616,7 +616,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.match(usage.err, /the profile benchmark is of the lens wide open and at the tab's comparison/);
 });
 
-test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c only on the reference line", async (t) => {
+test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on reference and photopic lines", async (t) => {
   const { rootDir, runsDir } = sampledRoot(t);
   // Stand-ins offer no optical quantities: exercise selection without Python or a real optiland checkout.
   const module = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
@@ -640,7 +640,15 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c only o
     "r6c",
   ]);
   const jobs = manifest.jobs.filter((job) => job.rung === "r6c");
-  assert.deepEqual([...new Set(jobs.map((job) => job.run))], ["acme-singlet-50-f8-ref", "acme-singlet-50-f8-best-ref"]);
+  assert.deepEqual(
+    [...new Set(jobs.map((job) => job.run))],
+    [
+      "acme-singlet-50-f8-ref",
+      "acme-singlet-50-f8-photopic",
+      "acme-singlet-50-f8-best-ref",
+      "acme-singlet-50-f8-best-photopic",
+    ],
+  );
   for (const name of new Set(jobs.map((job) => job.run))) {
     assert.deepEqual(
       jobs

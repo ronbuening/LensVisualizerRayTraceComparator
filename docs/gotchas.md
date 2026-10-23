@@ -615,8 +615,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   measured from when one point serves every line, so the landing of a chief ray is no input of either curve of
   rung R5g, only a check that the two answers are of one field. That rung's limit on it is 1e-3 mm
   (`chiefLanding.maxAbs` of `r5g` in the policy), and every field's distance is in its table. Rung R5 keeps
-  1e-7 mm: it has no optiland row on several lines. A comparison of a polychromatic diffraction MTF (Stage 4.3)
-  has to state which ray its reference is.
+  1e-7 mm: it has no optiland row on several lines. R6c's polychromatic diffraction comparison uses 1e-3 mm
+  when either answer records several lines, by the owner's 2026-10-22 decision, and keeps 1e-7 mm for two
+  one-line answers. It states which ray its reference is; a common origin also preserves that spectral modulus.
 - **Class.** convention.
 
 ### The MTF of a field is decided grid by grid, and the footprint of one grid is the next grid's
@@ -2149,3 +2150,52 @@ shares no code with any engine.
   `test/integration/lv/z50f12.test.ts` holds the bound fixed-grid sheared call to LV's product at its chosen grid.
 - **Class.** method, for the settled best-focus half-field offset. Unsupported full-field FFT and numerical
   design-plane / undersampled wave fields keep those earlier classes; the attribution does not erase them.
+
+### A raw chief-centred wavefront needs its chief phase restored before a spectral sum
+
+- **Where.** `wavefront.native` returns one optiland `Wavefront.get_data` line at a time, each about that line's
+  own chief landing on the case plane. Its OPD retains tilt but does not carry the displacement of that origin
+  from another line's chief. The worker remains one line per call.
+- **Effect.** Adding those chief-centred OTFs directly loses lateral colour. For the synthetic two-line tilted
+  square-pupil example the un-re-referenced sum differs from the declared analytic modulus by more than 0.1.
+  Removing the line weights or transmitted flux also changes the modulus by more than 0.05 in that example.
+  No combination of optiland's FFT moduli supplies the missing phase.
+- **Handled.** `polychromaticWavefrontOtf` evaluates every raw line at the same requested frequencies, restores
+  exp(-2 pi i nu (chief_l-chief_0)), weights by case weight times transmitted cell flux, and adds compensated
+  complex numbers before the modulus. Line 0 is the case's reference line, and its chief landing is the common
+  origin. Both pupil and chief coordinates retain optiland's declared mirrored-y frame; no extra reflection is
+  applied. Every raw request is checked against that line's image index and the unchanged case plane. A missing
+  line makes the field unavailable and names the line. The existing single-line operation stays unchanged.
+  Pins: `test/estimators/polychromaticWavefrontOtf.test.ts` derives square and circular-pupil sums with rounding
+  and rim bounds and negative controls; `test/engines/optiland/wavefrontEngine.test.ts` checks one call per line,
+  mismatched line/index/plane replies and unavailable-line propagation; `test/integration/optiland/wavefront.test.ts`
+  exercises the real worker and retains the FFT's several-line unsupported answer.
+- **Class.** convention. The synthetic proof checks the declared sum; it does not identify historical spectral
+  weights or remove differences between a reference-sphere pupil and traced exit directions. Policy 13 expands
+  R6c to these rows and adds the owner's several-line chief-landing limit below; classes and 0.005/0.01 MTF bands
+  do not change.
+
+### Photopic chief heights identify a field, not one shared ray
+
+- **Where.** The two Stage 4.3 best-photopic configurations at LV `ab0fd4cf`, optiland `4e893f53`.
+  LV reuses one chief launch across lines, solved at the d line without a wavelength. At 555 nm (line 0 of the
+  photopic spectrum) it misses the stop centre by the chromatic pupil shift; optiland-wave states optiland's
+  line-0 chief aimed through the stop centre at 555 nm. The two `imageHeightMm` describe different rays:
+  [the R5g measurement](#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line) reaches 3.0e-4 mm on the
+  benchmark. `lv` and `wave` state the landing of the same LV launch.
+- **Effect.** Canon half/full-field LV versus raw chief heights differ by 1.142272e-6 / 5.719029e-6 mm;
+  Nikon by 1.067035e-6 / 2.493505e-6 mm. These exceed the one-line limit of 1e-7 mm, although the answers
+  describe the same field. A common reference point multiplies the complete spectral sum by one phase and
+  leaves its modulus unchanged; these chief offsets are only a sorting check, not an input of the curves.
+- **Handled.** The owner's 2026-10-22 decision gives R6c two policy limits: `chiefLanding.maxAbs.attention`
+  remains 1e-7 mm for two one-line answers; `attentionSeveralLines: 1e-3` mm applies when either answer records
+  several lines. The case alone never selects it. R5 stays at 1e-7 mm and R5g keeps its single 1e-3 mm limit.
+  Each answer records the chosen `chiefLandingLimitMm` with its wavelengths; comparator and report facts
+  reproduce the same sorting, including baseline reports and peers. A linted wording template names the
+  several-line limit in the report. Canon's off-axis LV/raw fields now enter the method band; Nikon half field
+  enters it and full field is numerical / unconverged, shown apart in no band. Detailed re-measurements,
+  differences, flags and reproduction commands are in
+  [REFERENCE.md](REFERENCE.md#stage-43-photopic-complex-wavefront-sum-two-configurations).
+  Hermetic synthetic cases in `test/report/r6c.test.ts` cover 5e-6 mm on one/several lines and beyond 1e-3 mm,
+  including report sorting from recorded values.
+- **Class.** convention. Never read two engines' several-line chief heights as the landing of one ray.

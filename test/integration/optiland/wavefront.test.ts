@@ -71,3 +71,51 @@ test(
     assert.notEqual(data.fields[2].status, "unavailable");
   },
 );
+
+test("real optiland-wave sums several lines while the FFT stays unsupported", { skip }, async (t) => {
+  const registry = createEngineRegistry(optilandRoot(t));
+  const wave = await registry.create("optiland-wave"),
+    fft = await registry.create("optiland");
+  t.after(async () => {
+    await wave.close();
+    await fft.close();
+  });
+  const base = JSON.parse(readFileSync(caseFixture("double-gauss"), "utf8")) as OpticalCase;
+  const { finalizeCase } = await import("../../../src/contract/case.ts");
+  const { decodeNdArray, encodeNdArray } = await import("../../../src/core/numeric/ndarray.ts");
+  const row = Array.from(decodeNdArray(base.conditions.indexAfterSurface).values);
+  const c = finalizeCase({
+    ...base,
+    conditions: {
+      ...base.conditions,
+      lines: [base.conditions.lines[0], { ...base.conditions.lines[0], wavelengthNm: 486.1327, weight: 1 / 2 }],
+      indexAfterSurface: encodeNdArray(Float64Array.from([...row, ...row]), [2, row.length]),
+    },
+  });
+  const request = makeRequest({
+    caseId: c.id,
+    quantity: "mtf.native",
+    engineOptions: { wavefrontGrids: [16, 32] },
+    spec: {
+      fields: { kind: "angles-deg", values: [0, 40, 14] },
+      frequenciesPerMm: [0, 10, 30],
+      method: "diffraction",
+      focus: "design",
+    },
+  });
+  const result = await wave.run(request, c);
+  assert.equal(result.status, "ok", JSON.stringify(result.error));
+  assert.deepEqual(mtfNativeQuantity.validateData(result.data), []);
+  const data = result.data as MtfNativeData;
+  assert.equal(data.lines.length, 2);
+  assert.equal(data.method.params.reference, "line-0-chief-landing");
+  assert.equal(data.fields[1].status, "unavailable");
+  assert.match(data.fields[1].reason ?? "", /line 0/);
+  for (const field of [data.fields[0], data.fields[2]]) {
+    assert.notEqual(field.status, "unavailable");
+    assert.ok(Math.abs(decodeNdArray(field.sagittal).values[0] - 1) < 1e-12);
+  }
+  const unsupported = await fft.run(request, c);
+  assert.equal(unsupported.status, "unsupported");
+  assert.equal(unsupported.unsupported?.[0].item, "lines.polychromatic");
+});

@@ -20,7 +20,7 @@ import { adapterRevision } from "../adapterRevision.ts";
 import { createProtocolHandler } from "../protocolHandler.ts";
 import { RemoteEngineAdapter } from "../remote.ts";
 import { OPTILAND_TIMEOUTS, optilandDefinition } from "./definition.ts";
-import { wavefrontMtf } from "./wavefrontMtf.ts";
+import { polychromaticWavefrontMtf, wavefrontMtf } from "./wavefrontMtf.ts";
 
 export const OPTILAND_WAVE_ENGINE_ID = "optiland-wave";
 
@@ -78,73 +78,83 @@ export function wavefrontTransport(transport: Transport): Transport {
                 message: JSON.stringify(specIssues),
               },
             });
-          if (opticalCase.conditions.lines.length !== 1) {
-            return makeResult(request, stamp, {
-              status: "unsupported",
-              unsupported: [
-                { code: "feature", item: "lines.polychromatic", message: "R6c is of one line; photopic is Stage 4.3" },
-              ],
-            });
-          }
           const grids = request.engineOptions?.wavefrontGrids ?? [128, 256];
-          const rawSpec: WavefrontNativeSpec = { fields: spec.fields, line: 0, grids: grids as number[] };
-          const problems = wavefrontNativeQuantity.validateSpec(rawSpec);
-          if (problems.length > 0)
-            return makeResult(request, stamp, {
-              status: "error",
-              error: { code: "bad-spec", message: JSON.stringify(problems) },
+          const lines: WavefrontNativeData[] = [];
+          for (const [line, expected] of opticalCase.conditions.lines.entries()) {
+            const rawSpec: WavefrontNativeSpec = { fields: spec.fields, line, grids: grids as number[] };
+            const problems = wavefrontNativeQuantity.validateSpec(rawSpec);
+            if (problems.length > 0)
+              return makeResult(request, stamp, {
+                status: "error",
+                error: { code: "bad-spec", message: JSON.stringify(problems) },
+              });
+            const raw = makeRequest({
+              caseId: request.caseId,
+              quantity: WAVEFRONT_NATIVE,
+              spec: rawSpec,
+              ...(request.engineOptions === undefined ? {} : { engineOptions: request.engineOptions }),
             });
-          const raw = makeRequest({
-            caseId: request.caseId,
-            quantity: WAVEFRONT_NATIVE,
-            spec: rawSpec,
-            ...(request.engineOptions === undefined ? {} : { engineOptions: request.engineOptions }),
-          });
-          const negotiation = negotiate(opticalCase, raw, native, wavefrontNativeQuantity.version);
-          if (negotiation.length > 0)
-            return makeResult(request, stamp, { status: "unsupported", unsupported: negotiation });
-          const result = await source.run(raw, opticalCase);
-          if (result.status !== "ok") return makeResult(request, stamp, result);
-          const issues = wavefrontNativeQuantity.validateData(result.data);
-          if (issues.length > 0)
-            return makeResult(request, stamp, {
-              status: "error",
-              error: { code: "invalid-wavefront", message: JSON.stringify(issues) },
-            });
-          const data = result.data as WavefrontNativeData;
-          const indices = decodeNdArray(opticalCase.conditions.indexAfterSurface).values;
-          const angleValues =
-            spec.fields.kind === "angles-deg" ? spec.fields.values : request.engineOptions?.fieldAnglesDeg;
-          if (
-            data.fields.length !== spec.fields.values.length ||
-            data.fields.some((field, i) => field.field !== spec.fields.values[i]) ||
-            data.line.index !== 0 ||
-            data.line.wavelengthNm !== opticalCase.conditions.lines[0].wavelengthNm ||
-            data.line.weight !== opticalCase.conditions.lines[0].weight ||
-            data.line.imageIndex !== indices[opticalCase.system.surfaces.length - 1] ||
-            !Array.isArray(angleValues) ||
-            data.fields.some((field, i) => field.fieldAngleDeg !== angleValues[i]) ||
-            data.fields.some((field) =>
-              field.samples.some(
-                // The worker's own tolerance on the chief landing's plane (`IMAGE_PLANE_TOLERANCE_MM`): optiland
-                // lands a ray on a plane by z + (-z / N) N, which need not be the plane's z to the last bit.
-                (sample) =>
-                  !(Math.abs(sample.reference.sphereCenterMm[2] - opticalCase.conditions.imageZ) <= IMAGE_PLANE_MM),
-              ),
-            ) ||
-            data.fields.some(
-              (field) => field.status === "ok" && String(field.samples.map((s) => s.gridSize)) !== String(grids),
-            )
-          ) {
-            return makeResult(request, stamp, {
-              status: "error",
-              error: {
-                code: "wavefront-request-mismatch",
-                message: "the wavefront answers other fields, grids or line",
-              },
-            });
+            const negotiation = negotiate(opticalCase, raw, native, wavefrontNativeQuantity.version);
+            if (negotiation.length > 0)
+              return makeResult(request, stamp, { status: "unsupported", unsupported: negotiation });
+            const result = await source.run(raw, opticalCase);
+            if (result.status !== "ok")
+              return makeResult(request, stamp, {
+                ...result,
+                ...(result.error === undefined
+                  ? {}
+                  : { error: { ...result.error, message: `line ${line}: ${result.error.message}` } }),
+                ...(result.unsupported === undefined
+                  ? {}
+                  : {
+                      unsupported: result.unsupported.map((item) => ({
+                        ...item,
+                        message: `line ${line}: ${item.message}`,
+                      })),
+                    }),
+              });
+            const issues = wavefrontNativeQuantity.validateData(result.data);
+            if (issues.length > 0)
+              return makeResult(request, stamp, {
+                status: "error",
+                error: { code: "invalid-wavefront", message: JSON.stringify(issues) },
+              });
+            const data = result.data as WavefrontNativeData;
+            const indices = decodeNdArray(opticalCase.conditions.indexAfterSurface).values;
+            const angleValues =
+              spec.fields.kind === "angles-deg" ? spec.fields.values : request.engineOptions?.fieldAnglesDeg;
+            if (
+              data.fields.length !== spec.fields.values.length ||
+              data.fields.some((field, i) => field.field !== spec.fields.values[i]) ||
+              data.line.index !== line ||
+              data.line.wavelengthNm !== expected.wavelengthNm ||
+              data.line.weight !== expected.weight ||
+              data.line.imageIndex !== indices[(line + 1) * opticalCase.system.surfaces.length - 1] ||
+              !Array.isArray(angleValues) ||
+              data.fields.some((field, i) => field.fieldAngleDeg !== angleValues[i]) ||
+              data.fields.some((field) =>
+                field.samples.some(
+                  // The worker's own tolerance on the chief landing's plane (`IMAGE_PLANE_TOLERANCE_MM`): optiland
+                  // lands a ray on a plane by z + (-z / N) N, which need not be the plane's z to the last bit.
+                  (sample) =>
+                    !(Math.abs(sample.reference.sphereCenterMm[2] - opticalCase.conditions.imageZ) <= IMAGE_PLANE_MM),
+                ),
+              ) ||
+              data.fields.some(
+                (field) => field.status === "ok" && String(field.samples.map((s) => s.gridSize)) !== String(grids),
+              )
+            ) {
+              return makeResult(request, stamp, {
+                status: "error",
+                error: {
+                  code: "wavefront-request-mismatch",
+                  message: `line ${line}: the wavefront answers other fields, grids or line`,
+                },
+              });
+            }
+            lines.push(data);
           }
-          const mtf = wavefrontMtf(data, spec);
+          const mtf = lines.length === 1 ? wavefrontMtf(lines[0], spec) : polychromaticWavefrontMtf(lines, spec);
           return makeResult(request, stamp, { status: "ok", data: mtf, method: mtf.method });
         },
       });

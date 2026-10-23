@@ -948,7 +948,7 @@ export const POLICY_EVERY_MODE = {
       quantity: "mtf.native",
       mode: "independent-method",
       class: "recorded",
-      metrics: { "mtf.maxAbs": { attention: 0.005, unit: "1" }, "mtf.rms": { unit: "1" } },
+      metrics: { "mtf.maxAbs": { attention: 0.005, attentionSeveralLines: 0.01, unit: "1" }, "mtf.rms": { unit: "1" } },
     },
     notes: { quantity: "system.describe", mode: "direct", class: "recorded", metrics: {} },
   },
@@ -2005,6 +2005,18 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "metric-empty-unit": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/unit", "", "minLength"),
     "metric-negative-tolerance": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/tolerance", -1e-12, "minimum"),
     "metric-attention-as-string": fault(POLICY_EVERY_MODE, "/rungs/r5/metrics/mtf.maxAbs/attention", "0.005", "type"),
+    "metric-several-lines-as-string": fault(
+      POLICY_EVERY_MODE,
+      "/rungs/r5/metrics/mtf.maxAbs/attentionSeveralLines",
+      "0.01",
+      "type",
+    ),
+    "metric-several-lines-negative": fault(
+      POLICY_EVERY_MODE,
+      "/rungs/r5/metrics/mtf.maxAbs/attentionSeveralLines",
+      -0.01,
+      "minimum",
+    ),
     "metric-as-number": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs", 1e-12, "type"),
     "rung-blocks-as-string": fault(POLICY_LADDER, "/rungs/r0/blocksLaterRungs", "later", "type"),
     "rung-floor-without-arbiter": fault(

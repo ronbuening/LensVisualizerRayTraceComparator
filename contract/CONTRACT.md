@@ -1211,7 +1211,7 @@ A rung:
 | `quantity` | string | the quantity whose results the rung compares |
 | `mode` | string | `direct`: closed-form numbers set against each other; `identical-rays`: one estimator applied to every engine's trace of the same rays; `independent-method`: each engine's own sampling and algorithm |
 | `class` | string | `gated`: a difference passes or fails against a tolerance; `recorded`: it is written down and never fails |
-| `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit, floor? }` |
+| `metrics` | object | a map from metric name to `{ tolerance?, attention?, attentionSeveralLines?, unit, floor? }` |
 | `blocksLaterRungs?` | boolean | true: two engines whose pair in this rung is `FAIL` or `ERROR` are not judged against each other in any later rung of the ladder, for the same case |
 | `floor?` | object | `{ engine, arbiter }`: the engine whose known numerical floor may exceed a tolerance of this rung without failing, and the engine the others are held to |
 
@@ -1221,7 +1221,17 @@ is `1` for a number without one. A metric the comparison reports and the policy 
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
 `rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 12:
+`attentionSeveralLines` is an optional nonnegative alternate band of a recorded metric that also has
+`attention`. R6c's `chiefLanding.maxAbs` keeps `attention: 1e-7` mm for two one-line answers and uses
+`attentionSeveralLines: 1e-3` mm if either answer records more than one line. The case alone never selects it.
+R5 stays at 1e-7 mm; R5g keeps its single 1e-3 mm band. The comparator records each answer's selected
+`chiefLandingLimitMm` beside each field whenever the policy supplies the alternate, along with its
+`lineWavelengthNm` list. Field facts and report sorting read those same values, including later steps;
+MTF baselines retain these recorded limits so their reports need no current policy to repeat the sorting.
+On several lines LV's shared launch and optiland's line-0 chief are different rays; a common reference point
+preserves the modulus, so this limit identifies the field rather than asserting one ray's landing.
+
+The comparator's policy, version 13:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1236,7 +1246,7 @@ The comparator's policy, version 12:
 | `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
 | `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
 | `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
-| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm; one line, only where named; `lv`, `wave`, `optiland`, `optiland-wave` |
+| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave`, `optiland`, `optiland-wave` |
 
 **The floor.** Policy versions 11 and 12 give no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
 (closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
@@ -2024,7 +2034,7 @@ checks REQUEST_BUDGET_S between fields, returns `time-budget`, and the result st
 ### Rung R6c and the adapter `optiland-wave`
 
 `r6c` uses the one `mtf.native` request of R5, at the recipe's resolved fractions and thinned frequencies, on the
-case plane, and skips cases with several lines. Its four columns are LV's own sheared estimate (`lv`), the wave
+case plane, on reference or several-line cases. Its four columns are LV's own sheared estimate (`lv`), the wave
 estimator on LV's rays (`wave`), optiland's own FFT MTF (`optiland`), and the comparator's OTF of optiland's raw
 wavefront (`optiland-wave`). It runs only where named. No existing TypeScript optical engine gained a quantity or a new estimator.
 The last adapter owns an ordinary optiland worker connection, negotiates `wavefront.native` version 1 before a
@@ -2042,16 +2052,27 @@ wave estimator moved, and the closures of `lv`, `ref`, `replay` and `wave` remai
 
 A fine estimate is numerical when neighboring lit cells exceed a quarter wave, when its modulus moved on doubling
 by more than 0.005 on axis or 0.01 off axis, or when convergence is unknown. Failed fine estimates become unavailable;
-no line or field is dropped. Complex OTFs are formed before moduli; polychromatic combination is Stage 4.3.
+no line or field is dropped. On several lines the adapter makes one raw request per case line and requires every
+line. At each grid `polychromaticWavefrontOtf` evaluates each line's complex `wavefrontOtf` directly at the
+requested frequencies, without frequency interpolation. It multiplies by exp(-2 pi i nu (chief_l-chief_0)),
+x sagittal and y tangential in the declared mirrored frame, and by case weight times transmitted cell flux.
+Compensated complex sums are divided by total weighted flux before the modulus. Line 0's chief landing is the
+common origin; the other adapters retain their own single common origins, which cannot change a sum's modulus.
+Each line retains its chief-relative phase-step check; doubling compares the complete spectral sums. An
+unavailable line makes its field unavailable with that line named. FFT remains unsupported on several lines.
+The case plane already includes LV's photopic best-axial shift for a best-photopic run; no line searches for
+focus. This expands R6c under policy 13 and changes no quantity version, spec or contract identity.
 
 The comparator reuses R5's `classifyNativeField`, `factsOfField` and recording. The report reuses `factsOfRecorded`,
 sorting each difference before subtraction: unsupported, data, numerical, method. The table records all four
 columns and three separately classified differences against `optiland-wave` (LV, wave, FFT). Only method fields
-standing by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting retains
-R5's 1e-7 mm, with no new gate, limit or floor. R6c asks no automatic follow-up: the two raw grids already state
+standing by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting uses
+R6c's 1e-7 mm for two one-line answers and its policy `attentionSeveralLines` of 1e-3 mm when either answer
+records several lines. A common reference point preserves the modulus; the several-line chief landings
+identify the field, not one shared ray. No gate or floor is added. R6c asks no automatic follow-up: the two raw grids already state
 its convergence; optiland's FFT remains its default ladder. No span is needed because one request has all fields
 and each answer all sampling steps. MTF baselines can add R6c records and render these tables from the records alone;
-Stage 4.1 does not rewrite any baseline or committed report.
+Stages 4.1 and 4.3 do not rewrite any baseline or committed report.
 
 ### `mtf.native`
 

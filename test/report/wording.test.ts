@@ -8,6 +8,8 @@ import { test } from "node:test";
 import { renderReport } from "../../src/report/index.ts";
 import {
   BANNED_CLAIMS,
+  WAVEFRONT_SEVERAL_LINES,
+  MTF_COMPARISON_INTROS,
   DIFFERENCE_CLASS_TEXT,
   FIELD_REASON_TEXT,
   MTF_COMPARISON_INTRO,
@@ -15,6 +17,7 @@ import {
   MTF_ROW_STATUSES,
   MTF_ROW_STATUS_TEXT,
   NOT_COVERED,
+  severalLinesChiefLanding,
   sentencesOf,
   wordingProblems,
 } from "../../src/report/wording.ts";
@@ -81,6 +84,9 @@ test("what a report may say is accepted: every template, and sentences that only
   const templates = [
     ...NOT_COVERED,
     MTF_COMPARISON_INTRO.join("\n"),
+    MTF_COMPARISON_INTROS.wavefront.join("\n"),
+    WAVEFRONT_SEVERAL_LINES.join("\n"),
+    severalLinesChiefLanding("1.00e-3").join("\n"),
     MTF_COMPARISON_OUTRO.join("\n"),
     ...Object.values(FIELD_REASON_TEXT),
     ...Object.values(DIFFERENCE_CLASS_TEXT),

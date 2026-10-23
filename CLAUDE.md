@@ -425,7 +425,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **`r5` is recorded, of three engines, and run only where it is named** (`r5Rung`, `onlyWhereNamed`): it asks
   R6b's one request of `lv`, `optiland` and `wave`, and optiland is handed the recipe's angles as its option
   `fieldAnglesDeg` (`recipeAngles`, matched by fraction, never by place); never a second request by angles. A
-  photopic run has no optiland row (`lines.polychromatic`): never ask optiland line by line before Stage 4.3.
+  photopic run has no optiland FFT row (`lines.polychromatic`). R6c supplies the separate raw-wavefront sum.
 - **A field of R5 is sorted before any difference is taken** (`classifyNativeField`, `src/compare/mtfNative.ts`):
   unsupported, data, numerical, method, in that order, and only `two-methods` enters a band. The report repeats
   the sorting from the recorded values (`factsOfRecorded`), so a fact the sorting reads must be recorded: change
@@ -450,10 +450,18 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   a fast lens wide open takes minutes at full field (`docs/gotchas.md`), and a worker silent for ten minutes is
   ended and not restarted within a run. A rung is asked for the options of each of its requests
   (`RungDefinition.engineOptions`, fourth argument); optiland is handed that request's angle as `fieldAnglesDeg`.
-- **The chief-landing limit is a limit of sorting, per rung, and is no gate**: 1e-7 mm for `r5`, 1e-3 mm for `r5g`
-  (awaiting the owner), because the modulus of a geometric MTF does not depend on its reference point and on
-  several lines LV's chief ray is one launch, solved without a wavelength, traced at every line. Never read
-  `imageHeightMm` of two engines on several lines as the landing of one ray.
+- **The chief-landing limit is a limit of sorting, per rung, and is no gate**: `r5` keeps 1e-7 mm (its optiland
+  answer is one line only), `r5g` keeps its single 1e-3 mm limit. For `r6c` the owner's 2026-10-22 decision keeps
+  `chiefLanding.maxAbs.attention` at 1e-7 mm when both answers record one line and uses
+  `attentionSeveralLines: 1e-3` mm when either records several. Select from the answers, never the case alone;
+  record each answer's selected `chiefLandingLimitMm` with its line wavelengths so `factsOfField`,
+  `factsOfRecorded` and the report repeat the same sorting, including peers and baseline reports.
+  On several lines LV's chief ray is one launch, solved at the d line without a wavelength and traced at every
+  line; optiland-wave states optiland's line-0 chief aimed through the stop centre at 555 nm. They are different
+  rays (1.1e-6 to 5.7e-6 mm apart in the two Stage 4.3 configurations, up to 3.0e-4 mm on the R5g benchmark).
+  A common reference point does not change the modulus, so the several-line landing only checks that the
+  answers are of the same field. Never read `imageHeightMm` of two engines on several lines as the landing of
+  one ray. The several-line report names its selected sorting limit through a linted wording template.
 - **On several lines optiland's column in R5g is the worker's sum of optiland's own landings**; the report says so
   under such a table (`GEOMETRIC_SEVERAL_LINES`), decided from the number of lines the answer records, and a test
   holds that only such a table carries the sentence.
@@ -484,7 +492,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   and wave. Check, then write, each kind.
 - **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in
   `src/cli/commands/mtf.ts`, `loadSuiteValue`): the conditions and cases are the benchmark suite's, so the store
-  answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c only on the reference line. It exits
+  answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c on reference and photopic lines. It exits
   1 on a FAIL or ERROR pair. Without `--profile benchmark` the command is the single request of `lv-tab-default`.
   A test of it sets `LVRTC_RUNS_DIR` and closes the binding.
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
@@ -657,9 +665,27 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Analytic disc, tilt, defocus and annulus proofs with rim bounds, whole-number sums of an apodized pupil at
   an image index, and a translated sphere are in `wavefrontOtf.test.ts`. Keep the new
   estimator out of `lv`, `ref`, `replay` and the existing `wave` adapter's closure.
-- **R6c is recorded, only where named, one line only** (policy version 12): R5's native request and angles,
+- **R6c is recorded, only where named, reference or photopic** (policy version 13): R5's native request and angles,
   asked of its own four engines whatever `--engines` names, four columns `lv`, `wave`, `optiland`, `optiland-wave`. Reuse R5 sorting before every subtraction, including
-  report peers. Bands stay 0.005 / 0.01, chief landing 1e-7 mm; no gate or floor. Raw grids 128/256, quarter-wave
-  and doubling flags; no automatic follow-up. Photopic is Stage 4.3. Report sentences are wording templates,
+  report peers. Bands stay 0.005 / 0.01; chief landing is 1e-7 mm for two one-line answers and 1e-3 mm
+  when either records several lines; no gate or floor. Raw grids 128/256, quarter-wave
+  and doubling flags; no automatic follow-up. Report sentences are wording templates,
   goldens come from writeGolden, MTF baselines may add its records; baseline rewrites remain the owner's.
 - Formatting follows LV: double quotes, 120 columns.
+
+- **Several-line `optiland-wave` is the comparator's complex sum, never a mean of moduli** (Stage 4.3):
+  one `wavefront.native` request per case line, still one line per worker call. Validate each line's index,
+  wavelength, weight, image-space index, fields, grids and case plane. Evaluate `wavefrontOtf` directly at every
+  requested frequency, without frequency interpolation. `polychromaticWavefrontOtf` multiplies each normalized
+  complex OTF by `exp(-2 pi i nu (chief_l-chief_0))` and case weight times transmitted cell flux, then adds
+  compensated complex sums and normalizes by total weighted flux before the modulus. Chief coordinates stay in
+  the declared y-mirrored frame, x sagittal / y tangential. Line 0's chief landing is the common origin, as the
+  plan and case contract prescribe. LV uses one chief launch for all lines and `wave` uses the reference-line
+  flux centroid: those are common origins too; changing a common origin rotates the whole sum and preserves
+  its modulus. Do not recenter each line separately or change either existing engine. Each line retains its
+  own chief-relative phase-step check; the complete spectral estimates supply grid-doubling convergence.
+  A failed line makes its field unavailable and names the line; none is dropped. The case plane, including
+  LV's photopic best-axial shift, is used unchanged. FFT stays unsupported on several lines.
+  Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
+  Policy 13 expands R6c's definition and adds its several-line chief-landing sorting limit; the MTF attention
+  bands, classes, gates and existing quantity versions do not move.

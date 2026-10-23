@@ -136,18 +136,21 @@ export function comparePair(
   const gated = policy.class === "gated";
   const beyond: string[] = [];
   for (const name of names) {
-    const limit = gated ? policy.metrics[name].tolerance : policy.metrics[name].attention;
+    const limits = policy.metrics[name];
+    const limit = gated ? limits.tolerance : limits.attention;
     if (limit === undefined) {
       if (gated) throw new Error(`policy: metric ${name} is gated and has no tolerance`);
       continue;
     }
     // Every metric of that name is judged, should a comparator report one more than once.
     for (const metric of outcome.metrics.filter((candidate) => candidate.name === name)) {
-      if (metric.value <= limit) continue;
+      const selectedLimit =
+        !gated && metric.attentionKey !== undefined ? (limits[metric.attentionKey] ?? limit) : limit;
+      if (metric.value <= selectedLimit) continue;
       const what = gated ? "exceeds its tolerance" : "is outside its attention band";
       const said = Number.isNaN(metric.value)
         ? `${name} is NaN`
-        : `${name} ${numberText(metric.value)} ${what} ${numberText(limit)}`;
+        : `${name} ${numberText(metric.value)} ${what} ${numberText(selectedLimit)}`;
       beyond.push(`${said}${whereText(metric.where)}`);
     }
   }

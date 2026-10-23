@@ -8,7 +8,7 @@
 | Suite hash | 42859dd104196db2704aaaf6d38ad4e21e94bab0a2b28e1147aa7888ff5fa5d4 |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | d616c0d3bc013b4c372702003d659f687f4b5a0684ca6f1fb39aaad39d8ac404 |
+| Policy hash | 6712023ebdae26142c51ef2fec56a763f4f2a951c91fc6eea04a4ec5a1fcffa7 |
 
 ### Engines
 
@@ -37,8 +37,8 @@ No pair is FAIL or ERROR, of 27 compared.
 | FLOOR | 0 | 0 |
 | FAIL | 0 | 0 |
 | RECORDED | 4 | 5 |
-| ATTENTION | 3 | 8 |
-| UNSUPPORTED | 2 | 5 |
+| ATTENTION | 4 | 10 |
+| UNSUPPORTED | 1 | 3 |
 | BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
 
@@ -48,7 +48,7 @@ No pair is FAIL or ERROR, of 27 compared.
 |---|---|---|---|---|---|
 | edge | r6c | ok | ok | ok | ok |
 | beyond | r6c | ok | ok | ok | ok |
-| polychromatic | r6c | ok | unsupported: feature lines.polychromatic | unsupported: feature lines.polychromatic | ok |
+| polychromatic | r6c | ok | unsupported: feature lines.polychromatic | ok | ok |
 
 ## Results
 
@@ -79,7 +79,7 @@ The three-way diffraction comparison, with FFT and raw wavefront columns. The di
 The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on
 LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw
 Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
-Only one line is shown. The last column uses the radial optical cosines of optiland's chief-ray reference
+The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band
 sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.
 
@@ -125,6 +125,9 @@ The MTF values at every frequency of the request are in `report.json`.
 
 | Value | lv | optiland | optiland-wave | wave |
 |---|---|---|---|---|
+| chiefLandingLimitMm[0] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
+| chiefLandingLimitMm[1] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
+| chiefLandingLimitMm[2] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
 | field[0] | 0 | 0 | 0 | 0 |
 | field[1] | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 |
 | field[2] | 1 | 1 | 1 | 1 |
@@ -181,7 +184,7 @@ The three-way diffraction comparison, with FFT and raw wavefront columns. The di
 The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on
 LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw
 Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
-Only one line is shown. The last column uses the radial optical cosines of optiland's chief-ray reference
+The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band
 sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.
 
@@ -227,6 +230,9 @@ The MTF values at every frequency of the request are in `report.json`.
 
 | Value | lv | optiland | optiland-wave | wave |
 |---|---|---|---|---|
+| chiefLandingLimitMm[0] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
+| chiefLandingLimitMm[1] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
+| chiefLandingLimitMm[2] | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 | 9.76562500e-4 |
 | field[0] | 0 | 0 | 0 | 0 |
 | field[1] | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 | 5.00000000e-1 |
 | field[2] | 1 | 1 | 1 | 1 |
@@ -261,60 +267,70 @@ Quantity `mtf.native`, compared independent-method, recorded. Request `4b1a7a073
 
 Reference vs each, against `lv`:
 
-| Engine | chiefLanding.maxAbs (band 9.77e-4 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | mtfFlagged.maxAbs | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-3 mm) | mtfOffAxis.maxAbs (band 7.81e-3) | mtfOnAxis.maxAbs (band 3.91e-3) | fields.compared [elements] | fields.flagged [elements] | fields.rimLost [elements] | fields.data [elements] | fields.unavailable [elements] | mtfFlagged.maxAbs | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | optiland | — | — | — | — | — | — | — | — | — | UNSUPPORTED | optiland is unsupported (feature lines.polychromatic) |
-| optiland-wave | — | — | — | — | — | — | — | — | — | UNSUPPORTED | optiland-wave is unsupported (feature lines.polychromatic) |
-| wave | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 0 at cut sagittal, field 1, frequencyPerMm 10 | 2 | 1 | 0 | 0 | 0 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
+| optiland-wave | 4 at field 1 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 7.81e-3 at cut sagittal, field 0, frequencyPerMm 10 | 2 | 0 | 0 | 1 | 0 | — | ATTENTION | chiefLanding.maxAbs 4 is outside its attention band 1.00e-3 at field 1; mtfOnAxis.maxAbs 7.81e-3 is outside its attention band 3.91e-3 at cut sagittal, field 0, frequencyPerMm 10; field 1: data, chief-landing-apart (the chief rays land 4 mm apart) |
+| wave | 0 at field 0 | 0 at cut sagittal, field 5.00e-1, frequencyPerMm 10 | 0 at cut sagittal, field 0, frequencyPerMm 10 | 2 | 1 | 0 | 0 | 0 | 0 at cut sagittal, field 1, frequencyPerMm 10 | RECORDED | field 1: numerical, unconverged (hopkins-autocorrelation: unconverged (undersampled)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
 | Engine | lv | optiland | optiland-wave | wave |
 |---|---|---|---|---|
-| lv | — | UNSUPPORTED | UNSUPPORTED | RECORDED (chiefLanding.maxAbs 0 at field 0) |
+| lv | — | UNSUPPORTED | ATTENTION (chiefLanding.maxAbs 4 at field 1) | RECORDED (chiefLanding.maxAbs 0 at field 0) |
 | optiland | UNSUPPORTED | — | UNSUPPORTED | UNSUPPORTED |
-| optiland-wave | UNSUPPORTED | UNSUPPORTED | — | UNSUPPORTED |
-| wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | UNSUPPORTED | UNSUPPORTED | — |
+| optiland-wave | ATTENTION (chiefLanding.maxAbs 4 at field 1) | UNSUPPORTED | — | ATTENTION (chiefLanding.maxAbs 4 at field 1) |
+| wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | UNSUPPORTED | ATTENTION (chiefLanding.maxAbs 4 at field 1) | — |
 
 The three-way diffraction comparison, with FFT and raw wavefront columns. The difference of a row is lv − optiland-wave.
 The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on
 LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw
 Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.
-Only one line is shown. The last column uses the radial optical cosines of optiland's chief-ray reference
+The last column uses the radial optical cosines of optiland's chief-ray reference
 sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band
 sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.
 
 Attention bands: 3.91e-3 on the axis, 7.81e-3 off it. Two chief rays that land
-more than 9.77e-4 mm apart are of two fields.
+more than 1.00e-3 mm apart are of two fields.
 
-`lv` against `optiland-wave` is UNSUPPORTED: optiland-wave is unsupported (feature lines.polychromatic).
+Over every frequency of the request `lv` against `optiland-wave` is ATTENTION; a row below has the
+status of its own frequency.
 
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | 0.000 | ok | ok | — | — | — | — | — | unsupported | optiland-wave is unsupported (feature lines.polychromatic) | unsupported | optiland is unsupported (feature lines.polychromatic); optiland-wave is unsupported (feature lines.polychromatic) |
-| 0.5 | 4.000 | ok | ok | — | — | — | — | — | unsupported | optiland-wave is unsupported (feature lines.polychromatic) | unsupported | optiland is unsupported (feature lines.polychromatic); optiland-wave is unsupported (feature lines.polychromatic) |
-| 1 | 8.000 | ok | unconverged | — | — | — | — | — | unsupported | optiland-wave is unsupported (feature lines.polychromatic) | unsupported | optiland is unsupported (feature lines.polychromatic); optiland-wave is unsupported (feature lines.polychromatic) |
+| 0 | 0.000 | ok | ok | — | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 0.5 | 4.000 | ok | ok | — | ok | 5.00e-6 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 1 | 8.000 | ok | unconverged | — | ok | 4 | data | chief-landing-apart: the chief rays land further apart than the limit: two image points; no difference is shown | data | chief-landing-apart | unsupported | optiland is unsupported (feature lines.polychromatic) |
+
+On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,
+one wavefront.native call per line, evaluated at the requested frequencies. Each line is phase-shifted by
+-2 pi nu times its chief landing's offset from line 0's chief landing, weighted by its case weight times
+transmitted flux, and added before the modulus. The optiland FFT column remains unsupported on several lines.
+
+Several-line fields use the chief-landing sorting limit 1.00e-3 mm from the policy.
+The landings identify the field: LV's shared chief launch and optiland's line-0 chief are different rays;
+a common reference point does not change the modulus.
 
 | Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 0 | sagittal | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0 | sagittal | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0 | sagittal | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0 | tangential | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0 | tangential | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0 | tangential | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.8750 | 0.8750 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.7500 | 0.7500 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.5000 | 0.5000 | — | — | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported | — | UNSUPPORTED | unsupported |
+| 0 | sagittal | 10 | 0.8750 | 0.8750 | — | 0.8672 | 7.81e-3 | ATTENTION | method | 7.81e-3 | ATTENTION | method | — | UNSUPPORTED | unsupported |
+| 0 | sagittal | 30 | 0.7500 | 0.7500 | — | 0.7500 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0 | sagittal | 50 | 0.5000 | 0.5000 | — | 0.5000 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0 | tangential | 10 | 0.8750 | 0.8750 | — | 0.8750 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0 | tangential | 30 | 0.7500 | 0.7500 | — | 0.7500 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0 | tangential | 50 | 0.5000 | 0.5000 | — | 0.5000 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 10 | 0.8750 | 0.8750 | — | 0.8750 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 30 | 0.7500 | 0.7500 | — | 0.7500 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 50 | 0.5000 | 0.5000 | — | 0.5000 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 10 | 0.8750 | 0.8750 | — | 0.8750 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 30 | 0.7500 | 0.7500 | — | 0.7500 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 50 | 0.5000 | 0.5000 | — | 0.5000 | 0 | RECORDED | method | 0 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.8750 | 0.8750 | — | 0.8750 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.7500 | 0.7500 | — | 0.7500 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.5000 | 0.5000 | — | 0.5000 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.8750 | 0.8750 | — | 0.8750 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.7500 | 0.7500 | — | 0.7500 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.5000 | 0.5000 | — | 0.5000 | — | SET ASIDE | data | — | SET ASIDE | data | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -325,26 +341,36 @@ The MTF values at every frequency of the request are in `report.json`.
 
 | Value | lv | optiland | optiland-wave | wave |
 |---|---|---|---|---|
-| field[0] | 0 | — | — | 0 |
-| field[1] | 5.00000000e-1 | — | — | 5.00000000e-1 |
-| field[2] | 1 | — | — | 1 |
-| fieldAngleDeg[0] | 0 | — | — | 0 |
-| fieldAngleDeg[1] | 4 | — | — | 4 |
-| fieldAngleDeg[2] | 8 | — | — | 8 |
-| imageHeightMm[0] | 0 | — | — | 0 |
-| imageHeightMm[1] | 8 | — | — | 8 |
-| imageHeightMm[2] | 16 | — | — | 16 |
-| lineWavelengthNm[0] | 5.87561800e2 | — | — | 5.87561800e2 |
-| settled[0] | 1 | — | — | 1 |
-| settled[1] | 1 | — | — | 1 |
-| settled[2] | 1 | — | — | 0 |
+| chiefLandingLimitMm[0] | 1.00000000e-3 | — | 1.00000000e-3 | 1.00000000e-3 |
+| chiefLandingLimitMm[1] | 1.00000000e-3 | — | 1.00000000e-3 | 1.00000000e-3 |
+| chiefLandingLimitMm[2] | 1.00000000e-3 | — | 1.00000000e-3 | 1.00000000e-3 |
+| field[0] | 0 | — | 0 | 0 |
+| field[1] | 5.00000000e-1 | — | 5.00000000e-1 | 5.00000000e-1 |
+| field[2] | 1 | — | 1 | 1 |
+| fieldAngleDeg[0] | 0 | — | 0 | 0 |
+| fieldAngleDeg[1] | 4 | — | 4 | 4 |
+| fieldAngleDeg[2] | 8 | — | 8 | 8 |
+| gridSize[0] | — | — | 256 | — |
+| gridSize[1] | — | — | not finite | — |
+| gridSize[2] | — | — | not finite | — |
+| imageHeightMm[0] | 0 | — | 0 | 0 |
+| imageHeightMm[1] | 8 | — | 8.00000500e0 | 8 |
+| imageHeightMm[2] | 16 | — | 20 | 16 |
+| lineWavelengthNm[0] | 5.87561800e2 | — | 5.87561800e2 | 5.87561800e2 |
+| lineWavelengthNm[1] | 4.86132700e2 | — | 4.86132700e2 | 4.86132700e2 |
+| maxDelta[0] | — | — | 9.76562500e-4 | — |
+| maxDelta[1] | — | — | not finite | — |
+| maxDelta[2] | — | — | not finite | — |
+| settled[0] | 1 | — | 1 | 1 |
+| settled[1] | 1 | — | 1 | 1 |
+| settled[2] | 1 | — | 1 | 0 |
 
 ## Not covered
 
 What this comparison does not show, whatever its verdicts:
 
 - optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
-- The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on optiland's wavefront, which is a later stage.
+- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
 - optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.

@@ -63,7 +63,7 @@ test(
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...GATED, ...RECORDED].sort());
     for (const job of manifest.jobs) {
       // optiland's FFT MTF is of one line: on the photopic lines it says so, and that is an answer.
-      const allowed = job.rung === "r5" && job.engine === "optiland" ? ["ok", "unsupported"] : ["ok"];
+      const allowed = ["r5", "r6c"].includes(job.rung) && job.engine === "optiland" ? ["ok", "unsupported"] : ["ok"];
       assert.ok(allowed.includes(job.status), `${job.run} ${job.rung} ${job.engine}: ${job.status}`);
     }
 
@@ -97,8 +97,12 @@ test(
       RUNS,
     );
     const records = checkBaseline(committed, fresh, policy);
-    assert.equal(records.filter((record) => record.outcome === "NEW" || record.outcome === "GONE").length, 0);
-    const current = records.filter((record) => record.stale.filter((reason) => reason !== "policy").length === 0);
+    const added = records.filter((record) => record.outcome === "NEW");
+    assert.equal(records.filter((record) => record.outcome === "GONE").length, 0);
+    for (const record of added) assert.ok(record.rung === "r6c" && record.run.endsWith("photopic"));
+    const current = records.filter(
+      (record) => record.outcome !== "NEW" && record.stale.filter((reason) => reason !== "policy").length === 0,
+    );
     t.diagnostic(`${current.length} of ${records.length} records are of the cases and engines of the baseline`);
     for (const record of current) {
       const at = `${record.run} ${record.rung} ${record.a} ${record.b}`;

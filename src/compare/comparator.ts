@@ -20,6 +20,8 @@ export interface ComputedMetric {
   readonly value: number;
   /** Where the value occurs, when it occurs somewhere. */
   readonly where?: ComparisonMetric["where"];
+  /** A policy band selected from the answers; absent means the ordinary `attention` band. */
+  readonly attentionKey?: "attentionSeveralLines";
 }
 
 /** A metric a comparator declares and could not measure on two answers, and why. */

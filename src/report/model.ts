@@ -15,7 +15,7 @@ import { CONTRACT_VERSION } from "../contract/version.ts";
 import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
-import { GEOMETRIC_MTF_RUNG, isNativeMtfRung } from "../compare/mtfNative.ts";
+import { CHIEF_LANDING_METRIC, GEOMETRIC_MTF_RUNG, isNativeMtfRung } from "../compare/mtfNative.ts";
 import { buildMtfComparison, buildWavefrontComparison } from "./mtfComparison.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
 import { NOT_COVERED } from "./wording.ts";
@@ -306,9 +306,21 @@ function sectionOf(
 ): ReportSection {
   const [{ run, rung, quantity, requestId }] = sets;
   const rungPolicy = Object.hasOwn(policy.rungs, rung) ? policy.rungs[rung] : null;
+  const mtf = !isNativeMtfRung(rung)
+    ? null
+    : (rung === "r6c" ? buildWavefrontComparison : buildMtfComparison)({
+        participants: sets[0].participants,
+        pairs: sets.flatMap((set) => set.pairs),
+        policy: rungPolicy,
+        kind: rung === GEOMETRIC_MTF_RUNG ? "geometric" : "diffraction",
+      });
   const columns = columnsOf(
     rungPolicy,
     sets.flatMap((set) => set.pairs),
+  ).map((column) =>
+    column.name === CHIEF_LANDING_METRIC && mtf?.bands.chiefLandingMm != null
+      ? { ...column, limit: mtf.bands.chiefLandingMm }
+      : column,
   );
   const against = sets.find((set) => set.mode === "reference-vs-each");
   const each = sets.find((set) => set.mode === "pairwise");
@@ -337,14 +349,7 @@ function sectionOf(
             }),
           ),
         };
-  const mtf = !isNativeMtfRung(rung)
-    ? null
-    : (rung === "r6c" ? buildWavefrontComparison : buildMtfComparison)({
-        participants: sets[0].participants,
-        pairs: sets.flatMap((set) => set.pairs),
-        policy: rungPolicy,
-        kind: rung === GEOMETRIC_MTF_RUNG ? "geometric" : "diffraction",
-      });
+
   return {
     run,
     rung,

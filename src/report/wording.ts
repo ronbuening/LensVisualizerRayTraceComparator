@@ -48,7 +48,7 @@ export const MTF_COMPARISON_INTROS: { readonly [kind in MtfComparisonKind]: read
     "The three-way comparison shows LensVisualizer's sheared estimate (lv), the comparator's wave OTF on",
     "LensVisualizer's rays (wave), optiland's FFT MTF (optiland), and the comparator's OTF of optiland's raw",
     "Wavefront.get_data samples (optiland-wave). Each uses its own sampling; no column is an arbiter of another.",
-    "Only one line is shown. The last column uses the radial optical cosines of optiland's chief-ray reference",
+    "The last column uses the radial optical cosines of optiland's chief-ray reference",
     "sphere and intensity as cell flux. A quarter-wave step or a move on grid doubling outside the field's band",
     "sets its differences aside as numerical. The reference-sphere model and the FFT axes remain method choices.",
   ],
@@ -76,6 +76,23 @@ export const GEOMETRIC_SEVERAL_LINES: readonly string[] = [
   "their weights before the modulus is taken, is the worker's.",
 ];
 
+/** How the several-line R6c column is formed; optiland's FFT remains one-line only. */
+export const WAVEFRONT_SEVERAL_LINES: readonly string[] = [
+  "On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,",
+  "one wavefront.native call per line, evaluated at the requested frequencies. Each line is phase-shifted by",
+  "-2 pi nu times its chief landing's offset from line 0's chief landing, weighted by its case weight times",
+  "transmitted flux, and added before the modulus. The optiland FFT column remains unsupported on several lines.",
+];
+
+/** Say which policy limit sorted a several-line R6c table, including fields later set aside as numerical. */
+export function severalLinesChiefLanding(limitMm: string): string[] {
+  return [
+    `Several-line fields use the chief-landing sorting limit ${limitMm} mm from the policy.`,
+    "The landings identify the field: LV's shared chief launch and optiland's line-0 chief are different rays;",
+    "a common reference point does not change the modulus.",
+  ];
+}
+
 /** The sentences under the fields of a geometric comparison: what the two samplings are. */
 export const GEOMETRIC_SAMPLING: readonly string[] = [
   "optiland's rays are an even grid on the stop surface, out to its clip radius; LensVisualizer's are a lattice",
@@ -98,9 +115,9 @@ export const MTF_COMPARISON_OUTRO: readonly string[] = [
 export const NOT_COVERED: readonly string[] = [
   "optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, " +
     "reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.",
-  "The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on " +
-    "several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on " +
-    "optiland's wavefront, which is a later stage.",
+  "A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT " +
+    "row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; " +
+    "its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.",
   "optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to " +
     "the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction " +
     "cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not " +
