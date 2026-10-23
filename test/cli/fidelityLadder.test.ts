@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { EXIT_FAILURE, EXIT_OK } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
-import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_3 } from "../../src/contract/version.ts";
 import { CONFIG_FILE, REPO_ROOT } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
@@ -328,4 +328,116 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   assert.equal(readFileSync(at("baselines", "held.json"), "utf8"), rays);
   assert.equal(lvrtc(rootDir, "baseline", "write", "held", "--replace").code, EXIT_OK);
   assert.notEqual(readFileSync(at("baselines", "held.json"), "utf8"), rays);
+});
+
+test("station-selected suites round trip separate rays and gated MTF baselines with expanded run identities", (t) => {
+  const rootDir = sampledRoot(t);
+  const zoomFile = join(rootDir, "lv", "src/lens-data/acme/AcmeZoom2448.data.ts");
+  const zoom = readFileSync(zoomFile, "utf8");
+  writeFileSync(
+    zoomFile,
+    zoom
+      .replace('"zoom": { "stations": [{}, {}] }', '"zoom": { "stations": [{}, {}, {}] }')
+      .replace('  "fopen": 4,', '  "fopen": 4,\n  mtf: { sampled: true },'),
+  );
+  mkdirSync(join(rootDir, "suites"));
+  for (const [name, key, stations, count] of [
+    ["states", "acme-zoom-24-48", "published-zoom", 3],
+    ["focus-stations", "*", "certified-focus", 1],
+  ] as const) {
+    const suite = join(rootDir, "suites", `${name}.json`);
+    writeFileSync(
+      suite,
+      JSON.stringify({
+        contract: CONTRACT_VERSION_1_3,
+        kind: "suite",
+        name,
+        defaults: { engines: ["lv", "ref"], lines: { kind: "reference" } },
+        runs: [{ name: "selected", lens: { kind: "lv", key, stations } }],
+      }),
+    );
+    for (const mtf of [false, true]) {
+      const flags = mtf ? ["--mtf"] : [];
+      const rungs = mtf ? "r4f" : "r0,r1";
+      for (const args of [
+        ["run", suite, "--rungs", rungs],
+        ["compare", name],
+        ["baseline", "write", name, ...flags],
+        ["baseline", "check", name, ...flags, "--json"],
+      ]) {
+        const ended = lvrtc(rootDir, ...args);
+        assert.equal(ended.code, EXIT_OK, `${args.join(" ")}: ${ended.err}${ended.out}`);
+        if (args[0] === "baseline" && args[1] === "check") {
+          const checked = JSON.parse(ended.out);
+          assert.deepEqual(checked.errors, []);
+          assert.ok(checked.records.every((record: { outcome: string }) => record.outcome === "OK"));
+        }
+      }
+      const baseline = JSON.parse(readFileSync(join(rootDir, "baselines", `${name}${mtf ? ".mtf" : ""}.json`), "utf8"));
+      assert.equal(baseline.runs.length, count);
+      for (const run of baseline.runs) {
+        assert.ok(run.caseId);
+        assert.deepEqual(
+          run.rungs.map((r: { rung: string }) => r.rung),
+          rungs.split(","),
+        );
+      }
+    }
+  }
+  const verified = lvrtc(rootDir, "verify");
+  assert.equal(verified.code, EXIT_OK, verified.err + verified.out);
+});
+
+test("baseline write records a declared station refused by the fake gate without an ERROR", (t) => {
+  const rootDir = sampledRoot(t);
+  const gateFile = join(rootDir, "lv/src/optics/analysis/mtf/mtfSupport.ts");
+  const gate = readFileSync(gateFile, "utf8");
+  const before = "  if (state.focusT !== 0) {";
+  assert.ok(gate.includes(before));
+  writeFileSync(
+    gateFile,
+    gate.replace(
+      before,
+      '  if (state.focusT !== 0) return reject("unverified-scale", "Synthetic refused station.");\n' + before,
+    ),
+  );
+  mkdirSync(join(rootDir, "suites"));
+  const suite = join(rootDir, "suites/refused.json");
+  writeFileSync(
+    suite,
+    JSON.stringify({
+      contract: CONTRACT_VERSION_1_3,
+      kind: "suite",
+      name: "refused",
+      defaults: { engines: ["lv", "ref"], lines: { kind: "reference" } },
+      runs: [
+        { name: "infinity", lens: { kind: "lv", key: "acme-singlet-50" } },
+        { name: "selected", lens: { kind: "lv", key: "acme-singlet-50", stations: "certified-focus" } },
+      ],
+    }),
+  );
+  for (const mtf of [false, true]) {
+    const flags = mtf ? ["--mtf"] : [];
+    for (const args of [
+      ["run", suite, "--rungs", mtf ? "r4f" : "r0,r1"],
+      ["compare", "refused"],
+      ["baseline", "write", "refused", ...flags],
+      ["baseline", "check", "refused", ...flags, "--json"],
+    ]) {
+      const ended = lvrtc(rootDir, ...args);
+      assert.equal(ended.code, EXIT_OK, `${args.join(" ")}: ${ended.err}${ended.out}`);
+    }
+    const baseline = JSON.parse(readFileSync(join(rootDir, "baselines", `refused${mtf ? ".mtf" : ""}.json`), "utf8"));
+    assert.equal(baseline.contract, CONTRACT_VERSION_1_3);
+    assert.equal(baseline.runs.length, 2);
+    const refused = baseline.runs[1];
+    assert.equal(refused.name, "selected-acme-singlet-50-zoom0-focus1");
+    assert.equal(refused.caseId, null);
+    assert.match(refused.problems[0], /^finite-conjugate-unavailable:/);
+    assert.deepEqual(refused.rungs, []);
+    const report = readFileSync(join(rootDir, "reports", "refused", mtf ? "mtf.md" : "rays.md"), "utf8");
+    assert.match(report, /finite-conjugate-unavailable:/);
+  }
+  const verified = lvrtc(rootDir, "verify");
+  assert.equal(verified.code, EXIT_OK, verified.err + verified.out);
 });

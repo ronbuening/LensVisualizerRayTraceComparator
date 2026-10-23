@@ -1,4 +1,5 @@
 // The comparison policy: mirrors contract/schema/v1/policy.schema.json, plus the rules a schema cannot state.
+import { contractMinor } from "./version.ts";
 
 /**
  * How the engines of a rung are compared: `direct`, closed-form numbers set against each other; `identical-rays`,
@@ -35,6 +36,8 @@ export interface MetricPolicy {
   readonly tolerance?: number;
   /** The largest value the metric may have without being marked for attention, when the rung is recorded. */
   readonly attention?: number;
+  /** Alternate attention limit when either answer records several spectral lines; otherwise `attention`. */
+  readonly attentionSeveralLines?: number;
   /** The unit, such as `mm` or `waves`; `1` for a number without one. */
   readonly unit: string;
   /** The floor limits of the metric, in a rung that has a floor. A metric without them is never a floor. */
@@ -92,6 +95,7 @@ export interface Policy {
  * - a gated rung judges at least one metric, or it would pass whatever the engines answered;
  * - every metric of a gated rung has a tolerance;
  * - a rung that blocks later rungs is gated: a recorded rung never fails, so it has nothing to block with;
+ * - a several-line attention band belongs to a recorded metric with an ordinary attention band;
  * - a floor belongs to a gated rung, names two different engines and has a metric with floor limits to apply to;
  * - floor limits belong to a metric of a rung with a floor, and enclose its tolerance: `agreement` is at most the
  *   tolerance and `limit` at least, or the floor would be a second, looser or tighter, gate.
@@ -103,6 +107,19 @@ export function policyProblems(policy: Policy): string[] {
   for (const rung of Object.keys(policy.rungs).sort()) {
     const { mode, class: rungClass, metrics, blocksLaterRungs, floor } = policy.rungs[rung];
     const names = Object.keys(metrics).sort();
+    for (const name of names) {
+      if (metrics[name].attentionSeveralLines !== undefined && (contractMinor(policy.contract) ?? 0) < 3) {
+        problems.push(
+          `rung ${rung}: metric ${name} uses attentionSeveralLines, which minor 3 added; it states ${policy.contract}`,
+        );
+      }
+      if (
+        metrics[name].attentionSeveralLines !== undefined &&
+        (rungClass !== "recorded" || metrics[name].attention === undefined)
+      ) {
+        problems.push(`rung ${rung}: metric ${name} needs a recorded attention band for attentionSeveralLines`);
+      }
+    }
     const floored = names.filter((name) => metrics[name].floor !== undefined);
     if (rungClass !== "gated") {
       if (blocksLaterRungs === true) problems.push(`rung ${rung}: a recorded rung cannot block later rungs`);

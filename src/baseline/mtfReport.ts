@@ -11,9 +11,9 @@ import type { ComparisonMetric, Verdict } from "../contract/comparison.ts";
 import type { RungPolicy } from "../contract/policy.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { formatFixed } from "../core/numeric/format.ts";
-import { HOW_TO_READ_MTF, OWN_MTF_HEADING } from "../report/markdown.ts";
-import { MTF_COMPARISON_PAIR, buildMtfComparison } from "../report/mtfComparison.ts";
-import type { MtfFieldFlag } from "../report/mtfComparison.ts";
+import { HOW_TO_READ_MTF, OWN_MTF_HEADING, mtfComparisonLines } from "../report/markdown.ts";
+import { MTF_COMPARISON_PAIR, buildMtfComparison, buildWavefrontComparison } from "../report/mtfComparison.ts";
+import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
 import {
   FIELD_REASON_TEXT,
   GEOMETRIC_SAMPLING,
@@ -110,6 +110,8 @@ export interface MtfBaselineReport extends Omit<BaselineReport, "kind"> {
   readonly attention: readonly MtfAttentionRow[];
   /** One per rung of the engines' own MTF. */
   readonly tables: readonly MtfReportTable[];
+  /** Added only for a baseline that holds R6c; older baseline reports retain their bytes. */
+  readonly wavefrontTables?: readonly { readonly run: string; readonly table: MtfComparison }[];
   /** What the comparison does not show, whatever its verdicts: the fixed sentences of `NOT_COVERED`. */
   readonly notCovered: readonly string[];
 }
@@ -145,6 +147,7 @@ function aboveBand(
  * frequencies, a row per run, field and cut. A pure function of the baseline.
  */
 export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
+  const wavefrontTables: { run: string; table: MtfComparison }[] = [];
   const steps: (BaselineStep & { rung: string; run: string })[] = [];
   const attention: MtfAttentionRow[] = [];
   type Growing = Omit<MtfReportTable, "estimator" | "severalLines" | "rows" | "without"> & {
@@ -181,6 +184,28 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
         class: "recorded",
         metrics: Object.fromEntries(Object.keys(bands).map((name) => [name, { attention: bands[name], unit: "1" }])),
       };
+      if (rung.rung === "r6c") {
+        for (const [request, set] of rung.sets.entries()) {
+          const table = buildWavefrontComparison({ participants: set.participants, pairs: set.pairs, policy });
+          if (table !== null) wavefrontTables.push({ run: run.name, table });
+          for (const pair of set.pairs)
+            if (pair.verdict === "ATTENTION") {
+              attention.push({
+                rung: rung.rung,
+                run: run.name,
+                request,
+                field: null,
+                a: pair.a,
+                b: pair.b,
+                figures: aboveBand(pair.metrics, {
+                  ...bands,
+                  ...(table?.bands.chiefLandingMm == null ? {} : { "chiefLanding.maxAbs": table.bands.chiefLandingMm }),
+                }),
+              });
+            }
+        }
+        continue;
+      }
       const band = (name: string): number | null => (Object.hasOwn(bands, name) ? bands[name] : null);
       const known: Growing = tables.get(rung.rung) ?? {
         rung: rung.rung,
@@ -281,6 +306,7 @@ export function buildMtfBaselineReport(baseline: Baseline): MtfBaselineReport {
         return rows === 0 ? [] : [{ status, rows }];
       }),
     })),
+    ...(wavefrontTables.length === 0 ? {} : { wavefrontTables }),
     notCovered: [...NOT_COVERED],
   };
 }
@@ -493,6 +519,12 @@ export function renderMtfBaselineMarkdown(report: MtfBaselineReport, head?: read
       measured: true,
       byRun: (rung) => tabled(rung) === undefined,
       afterRung: (rung) => {
+        if (rung.rung === "r6c")
+          return (report.wavefrontTables ?? []).flatMap(({ run, table }) => [
+            "",
+            `#### ${run}`,
+            ...mtfComparisonLines(table),
+          ]);
         const each = tabled(rung);
         return each === undefined ? [] : tableLines(each);
       },

@@ -37,7 +37,7 @@ test("mtf.native is registered at the version the contract states, and the rungs
   assert.deepEqual([mtfNativeQuantity.id, mtfNativeQuantity.version], [MTF_NATIVE, 1]);
   assert.deepEqual(
     RUNGS.filter((rung) => rung.quantity === MTF_NATIVE).map((rung) => rung.id),
-    ["r4f", "r5", "r5g", "r6b"],
+    ["r4f", "r5", "r5g", "r6b", "r6c"],
   );
   assert.equal(MTF_DESIGN_PLANE, "design");
 });

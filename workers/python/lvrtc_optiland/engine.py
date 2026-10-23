@@ -46,6 +46,8 @@ from .mtf import MTF_NATIVE, TIME_BUDGET, MtfMeasure, OptilandMtf, TimeBudgetExc
 from .mtf import read_request as read_mtf_request
 from .trace import METHOD_NAME as TRACE_METHOD_NAME
 from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
+from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
+from lvrtc_worker_kit.validate import validate_wavefront_native
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
@@ -79,6 +81,7 @@ QUANTITIES: dict[str, dict[str, int]] = {
     PARAXIAL_FIRST_ORDER: {"version": 1},
     RAYS_TRACE: {"version": 1},
     MTF_NATIVE: {"version": 1},
+    WAVEFRONT_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -147,6 +150,8 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
     (``src/quantities/mtfNative.ts``) are here: the fractions ascend, and so do the frequencies. Those of
     ``rays.trace`` need its arrays decoded, and are ``trace.read_spec``'s, which hands the rays on.
     """
+    if quantity == WAVEFRONT_NATIVE:
+        return validate_wavefront_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -249,6 +254,19 @@ class OptilandEngine:
         read = time.perf_counter()
         if quantity == MTF_NATIVE:
             return self._run_mtf(request, case, engine)
+        if quantity == WAVEFRONT_NATIVE:
+            try:
+                data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
+            except BuildMismatch as error:
+                return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+            except TimeBudgetExceeded as error:
+                return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+            if isinstance(data, list):
+                return make_result(request, engine, "unsupported", unsupported=data)
+            issues = validate_wavefront_native("data", data, self._schemas)
+            if issues:
+                raise RuntimeError(f"the answer is not {WAVEFRONT_NATIVE} data: {format_issues(issues)}")
+            return make_result(request, engine, "ok", method=data["method"], data=data)
 
         try:
             # A trace is of one line, and needs that line's optic alone.

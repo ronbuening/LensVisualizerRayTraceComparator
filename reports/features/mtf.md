@@ -17,17 +17,17 @@ still those, and what moved.
 |---|---|
 | Suite | features |
 | Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | 53d2bad1f532047c26221c5fb765e7cbb783b5784ed0b126818e4026d809cf44 |
+| Baseline hash | 295f29e5936a7e8da341ac4e80a89fb0adbd96f67704cbf20d34da1ca3537bb6 |
 | Contract version | 1.1 |
-| Policy | rungs v11 |
-| Policy hash | 1354b9223d85414a98727cd58e674f68fae5c72f125b5aaf93072e414e452188 |
+| Policy | rungs v14 |
+| Policy hash | 693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | 945d209ac066e7a29eac584b2bb12580006ca830538f646c4254dbb407b1e6dd | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | d6f6f12e77b180c5405c05a0bb0c7b77a7e09efcb1b7512fafb90932ad9466f6 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 2ed2afe63bbcf29a4a1b8fd09c72c015a5aef1ead3e75c97dd4bb9ef6965dc14 | sourceFiles 11 |
-| replay | 1 | 94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b | 78048cc01a4a8e7e96539a192d1e0e440c627a6314e7cd7b9300859d1558b781 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 175 |
+| lv | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 842d3acb45d7d0bb2ac1adec106bd771ec5f68a5b92662bf76dc5cf887e04725 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 905727914f01561fe28be507b27f41e38792efa4cbb3d10e3d0c148b2f147015 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 15a954ff46c3b6c4b9f05371470b3b4f35f5edaea95d1a960e8ff021f1f38c07 | sourceFiles 11 |
+| replay | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 48a9f01030b9996d1a413adf23b5723f7ecd9ed538dcc2e2d4e5f187366751fc | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
 
 | Run | Case |
 |---|---|
@@ -219,12 +219,12 @@ No request is marked.
 What this comparison does not show, whatever its verdicts:
 
 - optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so rung R5 is recorded and never gated: it sets two methods side by side.
-- The formation of a polychromatic MTF. optiland's FFT MTF is of one line and gives a modulus, so a run on several lines has no optiland row in rung R5; its external counterpart is the comparator's estimator on optiland's wavefront, which is a later stage.
+- A polychromatic curve of optiland's FFT class. It gives a one-line modulus, so several lines have no FFT row in R5 or R6c. R6c's external counterpart is the comparator's complex sum of optiland's raw wavefronts; its synthetic sum proof checks the declared weighting and phase convention, not physical spectral fidelity.
 - optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Rung R5g is recorded and never gated: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. On one line optiland's curve is of landings counted into bins, and a field whose bins move a value by more than a band has no optiland curve. On several lines the sum over optiland's landings is the worker's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the indices and the line weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
 - The sizing of the stop. The stop radius, wide open and stopped down, is LensVisualizer's, by its own rule.
 - Models of vignetting. Each engine clips rays at the apertures it is handed; how an engine's own MTF fills, samples and calibrates a clipped pupil is its method, and a difference that comes of it is written down, not explained.
-- Zoom positions between the two ends, and finite conjugates other than the states a run names.
+- Zoom and focus positions other than the states a run names, and the catalog beyond these suites.
 - Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.

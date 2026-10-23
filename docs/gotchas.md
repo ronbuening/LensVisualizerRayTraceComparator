@@ -615,8 +615,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   measured from when one point serves every line, so the landing of a chief ray is no input of either curve of
   rung R5g, only a check that the two answers are of one field. That rung's limit on it is 1e-3 mm
   (`chiefLanding.maxAbs` of `r5g` in the policy), and every field's distance is in its table. Rung R5 keeps
-  1e-7 mm: it has no optiland row on several lines. A comparison of a polychromatic diffraction MTF (Stage 4.3)
-  has to state which ray its reference is.
+  1e-7 mm: it has no optiland row on several lines. R6c's polychromatic diffraction comparison uses 1e-3 mm
+  when either answer records several lines, by the owner's 2026-10-22 decision, and keeps 1e-7 mm for two
+  one-line answers. It states which ray its reference is; a common origin also preserves that spectral modulus.
 - **Class.** convention.
 
 ### The MTF of a field is decided grid by grid, and the footprint of one grid is the next grid's
@@ -1867,8 +1868,10 @@ shares no code with any engine.
   that has no direction leaves a NaN in its lag.
 - **Handled.** Nothing is corrected: the curves are optiland's. Each field states `rimRaysLit`, `rimRaysLost`
   and `rimLandingSpreadMm` under `sampling`, and an axis with a NaN is the status `no-frequency-axis`. The
-  check of the tangential lag on a vignetted pupil is Stage 4.2. Measured at optiland `4e893f53` on cases of
-  LensVisualizer `33ebdb30`.
+  check of the tangential lag on this vignetted pupil is delivered in [Stage 4.2](z50f12-investigation.md):
+  the settled best-focus half-field offset is class method, from the stop-grid/full-rim affine calibration;
+  the design-plane sampling flag and full-field unavailability remain. Original measurement at optiland
+  `4e893f53` on cases of LensVisualizer `33ebdb30`; Stage 4.2 remeasures at `ab0fd4cf`.
 - **Class.** engine behaviour: recorded.
 
 ### A rim ray that was stopped and left the lens is counted by optiland's worker as neither lit nor lost
@@ -1886,8 +1889,9 @@ shares no code with any engine.
 - **Handled.** Rung R5 keeps a field with `rimRaysLost` above 0 out of its bands (`rim-rays-lost`), which on the
   benchmark sets nothing aside, and shows `rimLandingSpreadMm` in the table of the fields beside every row. The
   fields above stand as `ATTENTION`, class `method`. A limit on the distance of a rim ray from the chief ray
-  would tell them; none is pinned, and the check of the tangential step on a vignetted pupil is Stage 4.2.
-  Measured at optiland `4e893f53` on cases of LensVisualizer `33ebdb30`.
+  would tell them; none is pinned. [Stage 4.2](z50f12-investigation.md) measures the Z 50/1.2's pitches
+  and attributes its settled best-focus half-field difference to method, without introducing such a limit.
+  Original measurement at optiland `4e893f53` on cases of LensVisualizer `33ebdb30`.
 - **Class.** method.
 
 ### A fraction of an image height is no field of optiland
@@ -2057,3 +2061,141 @@ shares no code with any engine.
   `optiland-raised-ValueError`, for one line and for several, and the note has optiland's message. A test pins it.
   No such field is known in the suites, which this half did not run.
 - **Class.** method: recorded.
+
+### Wavefront.get_data returns a compact reference-sphere wavefront, with the opposite sign to a path
+
+- **Where.** `optiland/wavefront/wavefront.py` resolves fields and wavelengths to objects and `get_data` indexes
+  `data[(field.coord, wavelength.value)]`. `ChiefRayStrategy` returns intersections with its chief-ray reference
+  sphere, not positions on an even exit-pupil plane. OPD is `(opd_ref - opd) / (wavelength_um * 1e-3)`, in vacuum
+  waves; intensity is the image row of its trace. The reference radius is the chief landing's distance to
+  `exit_pupil_point_gcs()`, and its image index is read from the image surface at the primary line.
+- **Effect.** OPD must be negated to use the comparator's path convention. The normalized stop grid is not a grid
+  of these sphere coordinates or image-side optical cosines. A non-air image medium affects the sphere path as
+  well as the optical cosines. An exit pupil's axial zero can be rounded by its paraxial computation.
+- **Handled.** `wavefront.native` v1 preserves the raw sign, units, sphere points, center, radius and exit pupil.
+  Its consumer `wavefrontOtf` states the reference-sphere model it uses: radial directions, n times transverse
+  components, W=-lambda OPD, intensity as midpoint-cell flux. It claims no aberrated exit direction. The pure
+  estimator calls the unchanged Hopkins kernel; all such differences remain recorded. `test_wavefront.py`,
+  `test_opd_sign_units_and_sphere_coordinates_from_an_exact_refracting_surface`, derives a one-surface case in
+  60-digit arithmetic: n=3/2, R=30 mm, paraxial focus 90 mm, stop/exit pupil z=0, ray-sphere intersections and
+  signed OPD. Read-back fault tests change the image index, pupil, strategy, radius, chief plane and data keys.
+- **Class.** convention (raw sign and units); method (the consumer's reference-sphere pupil model).
+
+### Wavefront respects a supplied distribution; uniform includes the rim
+
+- **Where.** `Wavefront._resolve_distribution` generates points only for a string distribution; a supplied
+  `BaseDistribution` is returned as given. `UniformDistribution` uses linspace endpoints -1 and 1 and removes
+  points outside the circle. `Wavefront.get_data` retains the compact order, with no square-grid indices.
+- **Effect.** Asking for uniform points would put rays on the stop edge, where a rounding can clip them, and
+  reshaping the compact result would put rays in the wrong cells. Changing num_rays cannot regenerate a supplied
+  distribution. The FFT's own `_generate_pupils` has its own grid bookkeeping, which this operation does not use.
+- **Handled.** The new worker supplies midpoint coordinates `(2 column + 1)/n - 1`, `(2 row + 1)/n - 1`, for even n,
+  tracing only centers with radius strictly below one. Every returned row is scattered to its original square
+  cell. The analysis's num_rays, both distribution coordinate arrays, their order and every result length are
+  read back. `test_midpoints_strictly_inside_edge_and_row_major` proves the coordinates; real fresh-optic and
+  deliberate-distribution-fault tests pin their use by Wavefront. The chief launch is checked on a separate
+  fresh optic, without any rim trace, so a lost calibration ray cannot withhold a raw wavefront.
+- **Class.** convention.
+
+### Chief-ray wavefront zero-fills a nonfinite sample, including its intensity
+
+- **Where.** `ChiefRayStrategy.compute_wavefront_data` forms a finite mask of OPD, all three pupil coordinates and
+  intensity and writes zero to all five arrays outside it. It raises ValueError when no finite sample exists.
+  A finite sample with intensity zero is not removed from the compact result.
+- **Effect.** A zero OPD or a finite point does not say that a sample carries light. One bad field raises before
+  a multi-field Wavefront construction returns any field.
+- **Handled.** The worker calls one line/field/grid on each fresh optic, retains intensity and derives validity
+  only from finite positive-intensity samples. Outside-circle square cells are zero and dark. A failed field
+  has no samples and a reason; later fields continue. BuildMismatch, MemoryError and ImportError stay FATAL;
+  REQUEST_BUDGET_S is checked between fields. A nonfinite reference sphere is likewise unavailable, not a build
+  mismatch (`test_nonfinite_reference_is_an_unavailable_field_not_a_build_failure`).
+  `test_get_data_zero_fills_a_nonfinite_sample_including_its_intensity`
+  deliberately makes one traced coordinate nonfinite and pins the raw zeros. The real 0/14/40-degree fixture
+  test pins one field's failure and the other's stable values. Stand-ins pin FATAL dispatch and the time budget.
+- **Class.** unsupported where the field has no samples; numerical where a derived lattice is flagged.
+
+### Chief-ray wavefront restores the phase at oblique infinite-conjugate launch planes
+
+- **Where.** `ReferenceStrategy._restore_launch_phase` adds the object index times `d dot (origin - chief_origin)`
+  to each ray's path for an AngleField at infinity, from retained launch states, before OPD is formed. It does
+  not apply that correction to a finite object.
+- **Effect.** Off-axis OPD is not obtained by subtracting the raw accumulated paths alone. Restoring this phase
+  is part of optiland's own wavefront; the new operation must not add the correction again or fit tilt away.
+- **Handled.** No phase is reconstructed by the worker. It reads get_data and retains `remove_tilt=False`.
+  `test_raw_wavefront_restores_oblique_infinite_launch_phase` supplies synthetic retained states to the real
+  strategy and derives the 0.3 mm phase addition from 0.6 times 0.5 mm. The OPD sign/unit test separately pins
+  what get_data returns. Finite objects remain unsupported by this operation, as by the worker's native FFT.
+- **Class.** convention.
+
+### A finer vignetted FFT pupil keeps the full-rim affine calibration
+
+- **Where.** optiland `ScalarFFTMTF._get_mtf_frequency_steps`, beside the endpoint stop grid
+  of `ScalarFFTPSF._generate_pupils`; Stage 4.2 at optiland `4e893f53`, LV `ab0fd4cf`, closure `94778d3d`.
+- **Effect.** On `nikkor-z50f12` at half field the tangential steps at 128/256/512 rays are
+  12.270777 / 6.111328 / 3.049684 cycles/mm: the same 1558.3886945 cycles/mm full-rim bandwidth.
+  All four rim rays carry no light, and one lands 4.990835 mm from the chief ray. At best focus
+  T at 100 cycles/mm stays 0.301839 → 0.301717 (FFT 256→512), beside 0.203097 from LV's product,
+  0.202370 from LV's own sheared estimate at 256 cells, 0.202284 from wave at 256, and 0.204518
+  from the comparator's OTF of optiland's raw wavefront at 512. The four methods' last T moves are
+  much smaller than that difference. A clipped mask alone is not a reason to shrink a frequency
+  step: on an affine map the coordinate pitch stays the full grid's pitch, regardless of the mask.
+  Here the transmitted pupil-to-cosine map is not affine; doubling the grid does not change that assumption.
+- **Handled.** The [evidence note](z50f12-investigation.md) retains all frequencies, both cuts, all four
+  conditions, flags, actual pupil extents and fixed-grid LV checks. No frequency scale is corrected and
+  policy 12 is unchanged. The [upstream draft](upstream/optiland-vignetted-pupil-frequency-calibration.md)
+  is a question about the method's supported domain. Pin: `CalibrationTest` in
+  `workers/python/tests/optiland/test_pupil_diagnostic.py` calls the real calibrator on synthetic nonlinear
+  cosine states with a clipped mask; its full-rim bandwidth is unchanged on doubling even though its
+  central pitch differs. The fixture test also reads the real FFT's clipped mask and halved stop step.
+  `test/integration/lv/z50f12.test.ts` holds the bound fixed-grid sheared call to LV's product at its chosen grid.
+- **Class.** method, for the settled best-focus half-field offset. Unsupported full-field FFT and numerical
+  design-plane / undersampled wave fields keep those earlier classes; the attribution does not erase them.
+
+### A raw chief-centred wavefront needs its chief phase restored before a spectral sum
+
+- **Where.** `wavefront.native` returns one optiland `Wavefront.get_data` line at a time, each about that line's
+  own chief landing on the case plane. Its OPD retains tilt but does not carry the displacement of that origin
+  from another line's chief. The worker remains one line per call.
+- **Effect.** Adding those chief-centred OTFs directly loses lateral colour. For the synthetic two-line tilted
+  square-pupil example the un-re-referenced sum differs from the declared analytic modulus by more than 0.1.
+  Removing the line weights or transmitted flux also changes the modulus by more than 0.05 in that example.
+  No combination of optiland's FFT moduli supplies the missing phase.
+- **Handled.** `polychromaticWavefrontOtf` evaluates every raw line at the same requested frequencies, restores
+  exp(-2 pi i nu (chief_l-chief_0)), weights by case weight times transmitted cell flux, and adds compensated
+  complex numbers before the modulus. Line 0 is the case's reference line, and its chief landing is the common
+  origin. Both pupil and chief coordinates retain optiland's declared mirrored-y frame; no extra reflection is
+  applied. Every raw request is checked against that line's image index and the unchanged case plane. A missing
+  line makes the field unavailable and names the line. The existing single-line operation stays unchanged.
+  Pins: `test/estimators/polychromaticWavefrontOtf.test.ts` derives square and circular-pupil sums with rounding
+  and rim bounds and negative controls; `test/engines/optiland/wavefrontEngine.test.ts` checks one call per line,
+  mismatched line/index/plane replies and unavailable-line propagation; `test/integration/optiland/wavefront.test.ts`
+  exercises the real worker and retains the FFT's several-line unsupported answer.
+- **Class.** convention. The synthetic proof checks the declared sum; it does not identify historical spectral
+  weights or remove differences between a reference-sphere pupil and traced exit directions. Policy 13 expands
+  R6c to these rows and adds the owner's several-line chief-landing limit below; classes and 0.005/0.01 MTF bands
+  do not change.
+
+### Photopic chief heights identify a field, not one shared ray
+
+- **Where.** The two Stage 4.3 best-photopic configurations at LV `ab0fd4cf`, optiland `4e893f53`.
+  LV reuses one chief launch across lines, solved at the d line without a wavelength. At 555 nm (line 0 of the
+  photopic spectrum) it misses the stop centre by the chromatic pupil shift; optiland-wave states optiland's
+  line-0 chief aimed through the stop centre at 555 nm. The two `imageHeightMm` describe different rays:
+  [the R5g measurement](#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line) reaches 3.0e-4 mm on the
+  benchmark. `lv` and `wave` state the landing of the same LV launch.
+- **Effect.** Canon half/full-field LV versus raw chief heights differ by 1.142272e-6 / 5.719029e-6 mm;
+  Nikon by 1.067035e-6 / 2.493505e-6 mm. These exceed the one-line limit of 1e-7 mm, although the answers
+  describe the same field. A common reference point multiplies the complete spectral sum by one phase and
+  leaves its modulus unchanged; these chief offsets are only a sorting check, not an input of the curves.
+- **Handled.** The owner's 2026-10-22 decision gives R6c two policy limits: `chiefLanding.maxAbs.attention`
+  remains 1e-7 mm for two one-line answers; `attentionSeveralLines: 1e-3` mm applies when either answer records
+  several lines. The case alone never selects it. R5 stays at 1e-7 mm and R5g keeps its single 1e-3 mm limit.
+  Each answer records the chosen `chiefLandingLimitMm` with its wavelengths; comparator and report facts
+  reproduce the same sorting, including baseline reports and peers. A linted wording template names the
+  several-line limit in the report. Canon's off-axis LV/raw fields now enter the method band; Nikon half field
+  enters it and full field is numerical / unconverged, shown apart in no band. Detailed re-measurements,
+  differences, flags and reproduction commands are in
+  [REFERENCE.md](REFERENCE.md#stage-43-photopic-complex-wavefront-sum-two-configurations).
+  Hermetic synthetic cases in `test/report/r6c.test.ts` cover 5e-6 mm on one/several lines and beyond 1e-3 mm,
+  including report sorting from recorded values.
+- **Class.** convention. Never read two engines' several-line chief heights as the landing of one ray.

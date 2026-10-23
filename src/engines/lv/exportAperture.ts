@@ -41,7 +41,7 @@ export function wideOpenStopRadius(api: LvStopApi, runtime: LvRuntimeLens, zoomT
  *   exists only in its React hook (src/components/hooks/useLensComputation.ts, `currentPhysStopSD`), so it is
  *   mirrored here, in the hook's order of operations, and an integration test fails when the hook's expression
  *   changes. The widest f-number asked for by number, f/fopen, is therefore the hook's `(w × fopen) / fopen`, which
- *   can differ from `wide-open` in the last bit. An N below the widest is a problem: the hook would clamp it.
+ *   can differ from `wide-open` in the last bit. An N below the widest or above maxFstop is a coded problem: it is outside the slider range.
  * - `lv-f8-comparison`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which is not the hook's f/8:
  *   the radius the hook hands the tab wide open, `(wide-open radius × fopen) / fNumber` with the f-number of the
  *   aperture slider at wide open, times `fNumber / 8` (`lvHookStop`, `lvTabComparison`, both restated from
@@ -73,6 +73,15 @@ export function stopRadius(
       problem: {
         code: "aperture-faster-than-wide-open",
         message: `f/${aperture.value} is faster than the lens's widest aperture at zoom ${zoomT}, f/${widest}`,
+      },
+    };
+  }
+  if (aperture.value > runtime.maxFstop) {
+    return {
+      ok: false,
+      problem: {
+        code: "aperture-beyond-slider-range",
+        message: `f/${aperture.value} is beyond the lens's aperture slider maximum, f/${runtime.maxFstop}`,
       },
     };
   }

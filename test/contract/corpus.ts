@@ -20,6 +20,8 @@ import { FEATURE_FLAGS } from "../../src/contract/features.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
+import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.ts";
+import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
 import type {
@@ -36,7 +38,7 @@ import { makeRequest } from "../../src/contract/request.ts";
 import type { ResultEnvelope } from "../../src/contract/result.ts";
 import type { RunSpec, Suite } from "../../src/contract/runSpec.ts";
 import type { ContractKind } from "../../src/contract/schemas.ts";
-import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_3 } from "../../src/contract/version.ts";
 
 /**
  * The corpus directory: `valid/<schema>/<name>.json`, `invalid/<schema>/<name>.json` and `<name>.expect.json`,
@@ -383,6 +385,21 @@ export const SUITE_MINIMAL = {
   ],
 } satisfies Suite;
 
+/**
+ * A suite of the two station selectors of minor 3: the published zoom stations of one lens, and every station of
+ * the catalog whose finite conjugate LensVisualizer certifies. The one valid suite that states contract 1.3.
+ */
+export const SUITE_STATIONS = {
+  contract: CONTRACT_VERSION_1_3,
+  kind: "suite",
+  name: "stations",
+  defaults: { lines: { kind: "reference" } },
+  runs: [
+    { name: "zoom", lens: { kind: "lv", key: "nikon-z-24-70f4s", stations: "published-zoom" } },
+    { name: "certified", lens: { kind: "lv", key: "*", stations: "certified-focus" } },
+  ],
+} satisfies Suite;
+
 // ── rays.trace ───────────────────────────────────────────────────────────────────────────────────────────────────
 //
 // `valid/quantities/rays.trace.data/singlet-axis-and-rim.json` is the answer to the spec of the same name about
@@ -450,6 +467,57 @@ export const RAYS_DATA_STATUSES = {
   opticalPath: encodeNdArray(Float64Array.of(16.5, NaN, NaN, 16.75)),
   opticalPathToImage: encodeNdArray(Float64Array.of(21.5, NaN, NaN, NaN)),
 } satisfies RaysTraceData;
+
+/** Synthetic raw sphere wavefront: zero OPD, no engine or lens values. */
+export const WAVEFRONT_SPEC: WavefrontNativeSpec = {
+  fields: { kind: "angles-deg", values: [0, 10] },
+  line: 0,
+  grids: [4],
+};
+const WF_X = Array.from({ length: 16 }, (_, i) => (2 * (i % 4) + 1) / 4 - 1);
+const WF_Y = Array.from({ length: 16 }, (_, i) => (2 * Math.floor(i / 4) + 1) / 4 - 1);
+const WF_LIT = WF_X.map((x, i) => Number(x * x + WF_Y[i] * WF_Y[i] < 1));
+export const WAVEFRONT_DATA: WavefrontNativeData = {
+  line: { index: 0, wavelengthNm: 500, weight: 1, imageIndex: 1 },
+  fields: [
+    {
+      field: 0,
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      samples: [
+        {
+          gridSize: 4,
+          normalizedPupil: encodeNdArray(Float64Array.from(WF_X.flatMap((x, i) => [x, WF_Y[i]])), [16, 2]),
+          pupilMm: encodeNdArray(
+            Float64Array.from(WF_X.flatMap((x, i) => [x, WF_Y[i], 10 - Math.sqrt(100 - x * x - WF_Y[i] * WF_Y[i])])),
+            [16, 3],
+          ),
+          opdWaves: encodeNdArray(new Float64Array(16)),
+          intensity: encodeNdArray(Float64Array.from(WF_LIT)),
+          valid: encodeNdArray(Uint8Array.from(WF_LIT)),
+          reference: {
+            strategy: "chief_ray",
+            removeTilt: false,
+            sphereCenterMm: [0, 0, 10],
+            radiusMm: 10,
+            exitPupilMm: [0, 0, 0],
+          },
+        },
+      ],
+    },
+    {
+      field: 10,
+      fieldAngleDeg: 10,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "optiland-raised-ValueError",
+      samples: [],
+    },
+  ],
+  method: { name: "synthetic-wavefront", params: {} },
+  notes: [],
+};
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -872,7 +940,7 @@ export const POLICY_LADDER = {
  * comparator's, though two of them bear the id of one.
  */
 export const POLICY_EVERY_MODE = {
-  contract: CONTRACT_VERSION,
+  contract: CONTRACT_VERSION_1_3,
   kind: "policy",
   version: 7,
   rungs: {
@@ -895,7 +963,7 @@ export const POLICY_EVERY_MODE = {
       quantity: "mtf.native",
       mode: "independent-method",
       class: "recorded",
-      metrics: { "mtf.maxAbs": { attention: 0.005, unit: "1" }, "mtf.rms": { unit: "1" } },
+      metrics: { "mtf.maxAbs": { attention: 0.005, attentionSeveralLines: 0.01, unit: "1" }, "mtf.rms": { unit: "1" } },
     },
     notes: { quantity: "system.describe", mode: "direct", class: "recorded", metrics: {} },
   },
@@ -1081,6 +1149,18 @@ export const COMPARISON_FLOOR: ComparisonSet = {
         "1.00e-7, lv against ref landing.maxDistance 1.25e-8 within 1.00e-7",
     },
   ],
+};
+
+/** A recorded several-line sorting band, added by contract minor 3. */
+export const POLICY_SEVERAL_LINES: Policy = {
+  ...POLICY_EVERY_MODE,
+  contract: CONTRACT_VERSION_1_3,
+  rungs: {
+    r5: {
+      ...POLICY_EVERY_MODE.rungs.r5,
+      metrics: { "mtf.maxAbs": { attention: 0.005, attentionSeveralLines: 0.01, unit: "1" } },
+    },
+  },
 };
 
 // ── system.describe and paraxial.first-order ─────────────────────────────────────────────────────────────────────
@@ -1381,6 +1461,21 @@ export const BASELINE_SELFTEST: Baseline = {
   ],
 };
 
+/** A source refusal remains a run in the baseline, with no case or judged rung. */
+export const BASELINE_REFUSED: Baseline = {
+  ...BASELINE_SELFTEST,
+  contract: CONTRACT_VERSION_1_3,
+  runs: [
+    ...BASELINE_SELFTEST.runs,
+    {
+      name: "refused-station",
+      caseId: null,
+      problems: ["finite-conjugate-unavailable: the gate supplies no finite conjugate"],
+      rungs: [],
+    },
+  ],
+};
+
 /**
  * An MTF baseline, with the members minor 1 added: one run of the rung `r5` on three engines, one request of two
  * fields at one frequency, kept as it was compared; optiland asked once more (`fft512`); each metric with the
@@ -1656,7 +1751,7 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     "lv-lens-all-options": RUN_SPEC_LV,
     "lv-lens-mtf-options": RUN_SPEC_LV_MTF,
   },
-  suite: { minimal: SUITE_MINIMAL, "worked-example": SUITE_WORKED },
+  suite: { minimal: SUITE_MINIMAL, "worked-example": SUITE_WORKED, "lv-station-selectors": SUITE_STATIONS },
   request: { minimal: REQUEST_MINIMAL, "with-engine-options": REQUEST_WITH_OPTIONS },
   result: {
     ok: RESULT_OK,
@@ -1674,14 +1769,24 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     shutdown: RESPONSE_SHUTDOWN,
     failure: RESPONSE_FAILURE,
   },
-  policy: { selftest: POLICY_SELFTEST, ladder: POLICY_LADDER, "every-mode": POLICY_EVERY_MODE },
+  policy: {
+    selftest: POLICY_SELFTEST,
+    ladder: POLICY_LADDER,
+    "every-mode": POLICY_EVERY_MODE,
+    "several-lines": POLICY_SEVERAL_LINES,
+  },
   comparison: {
     "reference-vs-each": COMPARISON_REFERENCE,
     pairwise: COMPARISON_PAIRWISE,
     blocked: COMPARISON_BLOCKED,
     floor: COMPARISON_FLOOR,
   },
-  baseline: { selftest: BASELINE_SELFTEST, rays: BASELINE_RAYS, mtf: BASELINE_MTF },
+  baseline: {
+    "source-refusal": BASELINE_REFUSED,
+    selftest: BASELINE_SELFTEST,
+    rays: BASELINE_RAYS,
+    mtf: BASELINE_MTF,
+  },
 };
 
 /** Where the validator must report an invalid fixture: its one issue has this instance path and this keyword. */
@@ -1844,6 +1949,13 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "run-missing-name": fault(SUITE_WORKED, "/runs/0/name", REMOVE, "required", "/runs/0"),
     "run-kind-of-another-document": fault(SUITE_MINIMAL, "/runs/0/kind", "suite", "const"),
     "run-unknown-option": fault(SUITE_WORKED, "/runs/1/zoom", 1, "additionalProperties"),
+    "run-unknown-station-selector": fault(
+      SUITE_STATIONS,
+      "/runs/0/lens/stations",
+      "every-zoom",
+      "oneOf",
+      "/runs/0/lens",
+    ),
   },
   request: {
     "missing-spec": fault(REQUEST_WITH_OPTIONS, "/spec", REMOVE, "required", ""),
@@ -1932,6 +2044,7 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "failure-with-result": fault(RESPONSE_FAILURE, "/result", {}, "oneOf", ""),
   },
   policy: {
+    "several-lines-earlier-minor": fault(POLICY_SEVERAL_LINES, "/contract", "1.2", "anyOf", ""),
     "missing-rungs": fault(POLICY_SELFTEST, "/rungs", REMOVE, "required", ""),
     "kind-of-another-document": fault(POLICY_SELFTEST, "/kind", "suite", "const"),
     "version-zero": fault(POLICY_SELFTEST, "/version", 0, "minimum"),
@@ -1952,6 +2065,18 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     "metric-empty-unit": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/unit", "", "minLength"),
     "metric-negative-tolerance": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs/tolerance", -1e-12, "minimum"),
     "metric-attention-as-string": fault(POLICY_EVERY_MODE, "/rungs/r5/metrics/mtf.maxAbs/attention", "0.005", "type"),
+    "metric-several-lines-as-string": fault(
+      POLICY_EVERY_MODE,
+      "/rungs/r5/metrics/mtf.maxAbs/attentionSeveralLines",
+      "0.01",
+      "type",
+    ),
+    "metric-several-lines-negative": fault(
+      POLICY_EVERY_MODE,
+      "/rungs/r5/metrics/mtf.maxAbs/attentionSeveralLines",
+      -0.01,
+      "minimum",
+    ),
     "metric-as-number": fault(POLICY_SELFTEST, "/rungs/selftest/metrics/sum.abs", 1e-12, "type"),
     "rung-blocks-as-string": fault(POLICY_LADDER, "/rungs/r0/blocksLaterRungs", "later", "type"),
     "rung-floor-without-arbiter": fault(
@@ -2016,6 +2141,7 @@ export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, Inva
     ),
   },
   baseline: {
+    "source-problems-not-list": fault(BASELINE_REFUSED, "/runs/1/problems", "finite-conjugate-unavailable", "type"),
     "missing-runs": fault(BASELINE_SELFTEST, "/runs", REMOVE, "required", ""),
     "kind-of-another-document": fault(BASELINE_SELFTEST, "/kind", "comparison", "const"),
     "suite-hash-not-a-hash": fault(BASELINE_SELFTEST, "/suite/hash", "example", "pattern"),
@@ -2090,6 +2216,44 @@ const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
  * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
  */
 export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${WAVEFRONT_NATIVE}.spec`]: {
+    valid: {
+      "one-line": WAVEFRONT_SPEC,
+      "fractions-and-two-grids": {
+        ...WAVEFRONT_SPEC,
+        fields: { kind: "image-height-fractions", values: [0, 1] },
+        grids: [4, 8],
+      } satisfies WavefrontNativeSpec,
+    },
+    invalid: {
+      "missing-line": fault(WAVEFRONT_SPEC, "/line", REMOVE, "required", ""),
+      "missing-fields": fault(WAVEFRONT_SPEC, "/fields", REMOVE, "required", ""),
+      "missing-grids": fault(WAVEFRONT_SPEC, "/grids", REMOVE, "required", ""),
+      "empty-grids": fault(WAVEFRONT_SPEC, "/grids", [], "minItems"),
+      "grid-too-small": fault(WAVEFRONT_SPEC, "/grids/0", 2, "minimum"),
+      "unknown-property": fault(WAVEFRONT_SPEC, "/otf", [], "additionalProperties"),
+    },
+  },
+  [`${WAVEFRONT_NATIVE}.data`]: {
+    valid: {
+      "sphere-and-unavailable": WAVEFRONT_DATA,
+      "sphere-alone": { ...WAVEFRONT_DATA, fields: [WAVEFRONT_DATA.fields[0]] } satisfies WavefrontNativeData,
+    },
+    invalid: {
+      "missing-reference": fault(
+        WAVEFRONT_DATA,
+        "/fields/0/samples/0/reference",
+        REMOVE,
+        "required",
+        "/fields/0/samples/0",
+      ),
+      "wrong-strategy": fault(WAVEFRONT_DATA, "/fields/0/samples/0/reference/strategy", "centroid", "const"),
+      "tilt-removed": fault(WAVEFRONT_DATA, "/fields/0/samples/0/reference/removeTilt", true, "const"),
+      "valid-not-bytes": fault(WAVEFRONT_DATA, "/fields/0/samples/0/valid/$nd/dtype", "f8", "const"),
+      "pupil-not-matrix": fault(WAVEFRONT_DATA, "/fields/0/samples/0/pupilMm/$nd/shape", [48], "minItems"),
+      "otf-not-raw-data": fault(WAVEFRONT_DATA, "/otf", [], "additionalProperties"),
+    },
+  },
   [`${SYSTEM_DESCRIBE}.spec`]: {
     valid: {
       default: {} satisfies SystemDescribeSpec,

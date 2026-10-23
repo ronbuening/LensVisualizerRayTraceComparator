@@ -10,6 +10,7 @@ import { lensesCommand } from "./commands/lenses.ts";
 import { mtfCommand } from "./commands/mtf.ts";
 import { reportCommand } from "./commands/report.ts";
 import { runCommand } from "./commands/run.ts";
+import { statementCommand } from "./commands/statement.ts";
 import { verifyCommand } from "./commands/verify.ts";
 
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
@@ -23,6 +24,7 @@ export const COMMANDS: readonly CliCommand[] = [
   reportCommand,
   baselineCommand,
   verifyCommand,
+  statementCommand,
   engineCommand,
   lensesCommand,
   exportCommand,

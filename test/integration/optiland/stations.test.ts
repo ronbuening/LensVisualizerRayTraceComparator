@@ -11,14 +11,13 @@
 // 78215d72, 151 files). These are historical measurements, not current baseline provenance. Every gate is
 // the policy's; policy version 11 has no floors and every compared pair must PASS.
 import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
 
-import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
-import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
-import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
-import { LV_PATH, LV_UNAVAILABLE, focusStations } from "../lv/support.ts";
+import { REPO_ROOT } from "../../../src/core/config.ts";
+import { loadSuite } from "../../../src/core/suite.ts";
+import { suitePath } from "../../suites/support.ts";
+import { createLvCaseSource } from "../../../src/engines/lv/caseSource.ts";
+import { LV_PATH, LV_UNAVAILABLE } from "../lv/support.ts";
 import { OPTILAND_UNAVAILABLE, optilandRoot, runAndCompare } from "./support.ts";
 import { assertR2, assertR3 } from "./traced.ts";
 
@@ -31,12 +30,18 @@ test(
     // plane 18 mm to 75 mm in front of it. So what a far object would cost optiland, which solves a conic from
     // where the ray is and adds a path up plainly (docs/gotchas.md), does not arise at a station: that is measured
     // on rays that do start at an object point, in workers/python/tests/optiland/test_path.py.
-    const binding = await loadLvBinding(LV_PATH);
-    const stations = (await focusStations(binding, createLvExporter(binding))).flatMap((station) =>
-      station.refused === null && station.exported.ok
-        ? [{ ...station, opticalCase: station.exported.opticalCase }]
-        : [],
-    );
+    const suite = await loadSuite(suitePath("focus-stations"), {
+      rootDir: REPO_ROOT,
+      sources: { lv: createLvCaseSource(LV_PATH) },
+    });
+    const stations = suite.runs.flatMap(({ spec, opticalCase, problems }) => {
+      if (!opticalCase) {
+        assert.match(problems[0], /^finite-conjugate-unavailable:/, spec.name);
+        return [];
+      }
+      assert.ok(opticalCase, `${spec.name}: ${problems.join("; ")}`);
+      return [{ at: spec.name, key: opticalCase.label.lensKey, opticalCase }];
+    });
     assert.ok(stations.length >= 10, String(stations.length));
     const distances = stations.map(({ opticalCase, at }) => {
       const placed = opticalCase.conditions.object;
@@ -45,34 +50,28 @@ test(
     });
 
     const { rootDir } = optilandRoot(t);
-    const suite = {
-      contract: CONTRACT_VERSION,
-      kind: "suite",
-      name: "focus-stations",
-      defaults: { aperture: { kind: "wide-open" }, lines: { kind: "reference" }, imagePlane: { kind: "design" } },
-      runs: stations.map(({ key, focusT, zoomT }, at) => ({
-        name: `${key}-station-${at}`,
-        lens: { kind: "lv", key },
-        state: { zoomT, focus: { kind: "focusT", value: focusT } },
-      })),
-    };
-    writeFileSync(join(rootDir, "suite.json"), JSON.stringify(suite));
     // Both rungs ask the same requests: each engine traces a set once, and its answer is judged twice.
     const cycle = runAndCompare(t, {
-      suite: "suite.json",
+      suite: suitePath("focus-stations"),
       name: "focus-stations",
       engines: "lv,ref,optiland",
       rungs: "r2,r3",
       root: rootDir,
     });
     const { manifest } = cycle;
-    assert.equal(manifest.runs.length, stations.length);
+    assert.deepEqual(
+      manifest.runs.map((run) => [run.name, run.caseId]),
+      suite.runs.map((run) => [run.spec.name, run.opticalCase?.id ?? null]),
+    );
     assert.deepEqual(
       manifest.jobs.filter((job) => job.status !== "ok").map((job) => [job.run, job.engine, job.status, job.error]),
       [],
     );
     // Every station has rays, of the three fields of a run, and every set was asked of all three on both rungs.
-    for (const run of manifest.runs) assert.ok((run.raySets?.sets.length ?? 0) > 0, run.name);
+    for (const run of manifest.runs) {
+      if (run.caseId === null) assert.match(run.problems[0], /^finite-conjugate-unavailable:/, run.name);
+      else assert.ok((run.raySets?.sets.length ?? 0) > 0, run.name);
+    }
     const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
     assert.equal(manifest.jobs.length, 2 * 3 * sets);
     const computed = manifest.jobs.filter((job) => job.rung === "r2").map((job) => job.storeKey);

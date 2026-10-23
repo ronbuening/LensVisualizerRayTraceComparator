@@ -1,13 +1,15 @@
 // RunSpec and Suite: types mirroring contract/schema/v1/run-spec.schema.json and suite.schema.json, and the
 // expansion of a suite into its runs.
 import type { JsonObject } from "./json.ts";
+import { contractMinor } from "./version.ts";
 
 /**
  * The lens of a run: a LensVisualizer lens by catalog key, or an optical-case file by path. A relative path is
  * resolved against the configuration root: the repository root, unless `lvrtc run --root` names another.
  */
 export type RunLens =
-  { readonly kind: "lv"; readonly key: string } | { readonly kind: "fixture"; readonly path: string };
+  | { readonly kind: "lv"; readonly key: string; readonly stations?: "published-zoom" | "certified-focus" }
+  | { readonly kind: "fixture"; readonly path: string };
 
 /** The lens's state: zoom position and focus, each 0..1 on LensVisualizer's own sliders. */
 export interface RunState {
@@ -102,6 +104,18 @@ export function runInvariantProblems(options: RunOptions): string[] {
   if (lines?.kind !== "explicit" || lines.weights === undefined) return [];
   if (lines.weights.length === lines.wavelengthsNm.length) return [];
   return [`lines states ${lines.weights.length} weights for ${lines.wavelengthsNm.length} wavelengths`];
+}
+
+/**
+ * What a run states of the contract against what it uses, as a list of what is broken (empty when nothing is): a
+ * LensVisualizer lens that selects stations (`lens.stations`) uses what minor 3 added, and a run that states an
+ * earlier version is not what it says it is. A run of a suite states the suite's version unless it states its own
+ * (`expandSuite`).
+ */
+export function runContractProblems(run: RunSpec): string[] {
+  if (run.lens.kind !== "lv" || run.lens.stations === undefined) return [];
+  if ((contractMinor(run.contract) ?? 0) >= 3) return [];
+  return [`it states the contract ${run.contract} and selects stations (lens.stations), which minor 3 added`];
 }
 
 // A record, so that the compiler refuses this file when an option is added to RunOptions and not listed here.

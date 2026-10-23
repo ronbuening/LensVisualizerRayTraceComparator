@@ -39,8 +39,12 @@ import { BENCHMARK_CONDITIONS, LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 
-/** The engine closure the pinned figures were measured with, at LV 643ef5d0 (same engine closure at ab0fd4cf). */
-const PINNED_CLOSURE = "94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b";
+/**
+ * The engine closure the pinned figures are compared at. They were measured at LV 643ef5d0 (closure 94778d3d, 175
+ * files; the same at ab0fd4cf); at Stage 4.4 the binding's import of src/optics/publishedStations.ts made it
+ * 7b756ee6 (177 files) at ab0fd4cf, and every figure was measured again there and found unchanged.
+ */
+const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended

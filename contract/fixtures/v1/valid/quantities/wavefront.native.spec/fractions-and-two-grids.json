@@ -1,0 +1,14 @@
+{
+  "fields": {
+    "kind": "image-height-fractions",
+    "values": [
+      0,
+      1
+    ]
+  },
+  "line": 0,
+  "grids": [
+    4,
+    8
+  ]
+}

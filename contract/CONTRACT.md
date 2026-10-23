@@ -114,7 +114,7 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.2`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.3`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
@@ -138,6 +138,19 @@ engines of this repository state `contract.max` `1.2` and list the flag; an engi
 about such a case and is asked about every other as before (`negotiate`). No quantity's version changes:
 `system.describe` answers `clipRadius` with an infinity for such a surface, which is the number its definition
 asks for, the largest height at which a ray passes.
+
+**Minor 3** (Stages 4.3/4.4) adds policy metric `attentionSeveralLines`, the alternate recorded attention
+band when either answer records several lines, and to the kinds `run-spec` and `suite` the member `stations`
+of a LensVisualizer lens
+([stations selected by LensVisualizer](#stations-selected-by-lensvisualizer)). A run that has one states `1.3`, in
+itself or through its suite, and code refuses one that states an earlier version (`runContractProblems`). The
+selector is consumed when the suite is loaded: the runs it gives, and every case, request, result, manifest,
+comparison and baselines without source problems are written as before, and no engine's `contract.max` moves, since no engine reads a run
+spec. The suites `states` and `focus-stations` state `1.3`; every other suite is still `1.0`, with its hash.
+A policy using `attentionSeveralLines` states `1.3` or later; the schema and loader refuse earlier minors.
+`policy/rungs.v1.json` states `1.3`, version 14: its text changed from version 13, without changing any limit.
+Baselines that record coded source problems state `1.3`, with `runs[].problems` and nullable `caseId`; a run
+without a case has problems and no rungs. Other baselines retain their versions. Refusals fail no comparison.
 
 - **A major mismatch is incompatible.** The major is in the schema directory (`schema/v1`), in the fixture
   directory (`fixtures/v1`) and in every schema `$id` (`urn:lvrtc:contract:v1:...`).
@@ -358,6 +371,7 @@ its g and C lines, which its anchored indices are fitted between.
 | `tilted-image-plane`, `off-axis-image-plane` | has an image plane that is not perpendicular to the axis, or not on it |
 | `surface-profile-unsupported`, `asphere-coefficient-unknown`, `synthetic-surface-unknown` | has a surface LensVisualizer describes in a way the exporter does not know: a guard against a change in LensVisualizer |
 | `aperture-faster-than-wide-open` | asks for an f-number below the lens's widest |
+| `aperture-beyond-slider-range` | asks for an f-number above the lens's aperture slider maximum |
 | `f8-comparison-unavailable` | asks for the aperture `lv-f8-comparison` of a lens LensVisualizer's MTF tab offers no f/8 comparison for |
 | `lv-best-axial-needs-lv-spectrum`, `lv-best-axial-unavailable` | asks for the image plane `lv-best-axial` on lines that are none of LensVisualizer's spectra, or in a state its focus search finds no focus for |
 | `wavelength-outside-fitted-range` | lists a wavelength outside LensVisualizer's g to C lines |
@@ -664,7 +678,7 @@ takes the comparator's default.
 | `contract` | string | contract version |
 | `kind` | `"run-spec"` | |
 | `name` | string | letters, digits, `.`, `_` and `-`; safe as a file name |
-| `lens` | object | `{ kind: "lv", key }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another |
+| `lens` | object | `{ kind: "lv", key, stations? }`, or `{ kind: "fixture", path }` naming an `optical-case` file; a relative path is resolved against the configuration root: the repository root, unless `lvrtc run --root` names another. `stations` (minor 3) selects states of a LensVisualizer lens ([below](#stations-selected-by-lensvisualizer)) |
 | `state?` | object | `zoomT?` 0..1 and `focus?`: `{ kind: "infinity" }` or `{ kind: "focusT", value }` 0..1. Without `zoomT`, a zoom is run at both ends ([below](#a-zoom-without-a-position)) |
 | `aperture?` | object | `{ kind: "wide-open" }`, `{ kind: "f-number", value }`, `{ kind: "stop-radius", mm }`, or `{ kind: "lv-f8-comparison" }`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which only a LensVisualizer lens has |
 | `lines?` | object | `{ kind: "reference" \| "cdf" \| "photopic" }` or `{ kind: "explicit", wavelengthsNm, weights? }` |
@@ -742,11 +756,32 @@ it is taken as 0, so its case and its provenance are those of a run that states 
 - A suite's hash is that of the suite as written (`expandSuite`), with or without a LensVisualizer at hand.
   Without one nothing says which lens is a zoom: the run is one run, which cannot be started.
 - The ends are the only states the rule adds. The authored zoom stations between them are not run unless a run
-  states one (Stage 4.4 of the plan).
+  states one, or selects the stations LensVisualizer publishes ([below](#stations-selected-by-lensvisualizer)).
 
 `lvrtc export --all` follows the same rule (every zoom at both ends), and so does `lvrtc mtf <lensKey>` without
 `--zoom`. `lvrtc export <lensKey>` and `lvrtc lenses show <lensKey>` are tools of one state, zoom 0 unless `--zoom`
 names another, and say so on the error stream for a zoom.
+
+#### Stations selected by LensVisualizer
+
+**A run of a LensVisualizer lens may select its states from LensVisualizer** (minor 3, Stage 4.4) with
+`lens.stations`; a run spec or suite that has one states `1.3` or later, and code refuses one that states an earlier
+version (`runContractProblems`, applied when a suite is loaded). Like the ends of a zoom, the selection is the
+LensVisualizer case source's (`CaseSource.expand`, `src/engines/lv/stations.ts`): the runs it gives state their
+coordinates and no selector, and are runs like any other. A suite's hash is that of the file as written, selectors
+and all; a baseline names the runs as run.
+
+- `"published-zoom"`: a zoom at both ends and at every zoom position LensVisualizer publishes
+  (`publishedZoomStations`), in ascending order and each once, named `<name>-wide`, `<name>-zoom<zoomT>` and
+  `<name>-tele`. An authored station LensVisualizer does not publish is not run. A prime is one run, with no state.
+- `"certified-focus"`: every finite-conjugate station the lens declares certified (`focus.conjugates`), each once,
+  named `<name>-<key>-zoom<station>-focus<keyframe>`. All declared stations are expanded, including a station
+  LV's MTF gate refuses: without the gate's conjugate it records `finite-conjugate-unavailable` as a run problem,
+  with no comparison pairs and no failure. At `ab0fd4cf`, 55 stations on 35 lenses include two such fisheye
+  stations (gate reason `unsupported-path`). `key: "*"` selects over the whole catalog, and only for this selector.
+- A run that selects stations and also states `state.zoomT` or `state.focus` is one run that cannot be started
+  (`station-selection-conflict`), and so is a selection of nothing (`no-certified-stations`): neither is a suite of
+  no runs. Without a LensVisualizer the run is one run, which cannot be started.
 
 **Invariant checked in code** (`runInvariantProblems` in `src/contract/runSpec.ts`), because a schema cannot count
 one list against another: explicit lines that give `weights` give exactly one for each wavelength. It holds for a
@@ -1102,7 +1137,7 @@ answer:
 | the field | optiland's field type `angle`, the only field of the optic, at the angle of the spec, without a vignetting factor. optiland's positive angle is an object toward −y: the optic is the mirror image in y of the contract's system, which changes no MTF of a system of revolution. `fieldAngleDeg` is the angle optiland holds, and the direction it launches the chief ray in is held to (0, sin, cos) of it |
 | the pupil | optiland's own grid of `num_rays` by `num_rays` normalised pupil coordinates, laid on the stop surface by its ray aiming (`robust`, 50 iterations, 1e-10 mm), out to the clip radius of that surface (`aperture.aimedStopRadiusMm`), and clipped by the aperture of every surface. `conditions.stopSemiDiameter` takes no part: it is the paraxial pupils' |
 | the reference | optiland's `chief_ray` strategy, tilt not removed: a sphere centred where the chief ray, through the centre of the stop, meets the image plane, with the distance to the paraxial exit pupil for its radius. `imageHeightMm` is how far from the axis that ray lands, by the call optiland's strategy makes |
-| the sampling | `num_rays` 128 and then 256, each with `grid_size` twice that, stated to optiland (a call without a grid size takes `num_rays` for OpticStudio's sampling number: 64 rays across the pupil for 128). The curves are the finer step's. The engine option `fftRays` 512 asks for 256 and 512 instead |
+| the sampling | `num_rays` 128 and then 256, each with `grid_size` twice that, stated to optiland (a call without a grid size takes `num_rays` for OpticStudio's sampling number: 64 rays across the pupil for 128). The curves are the finer step's. The engine option `fftRays` 512 asks for 256 and 512 instead; 128 selects the diagnostic 64/128 pair (default remains 128/256) |
 | the frequencies | optiland gives each cut at the lags of its grid, on an axis of its own (`freq_tang`, `freq_sag`: cycles/mm on the image surface, calibrated with the four rays through the rim of its pupil). A frequency of the spec is interpolated linearly between the two samples that enclose it, on the axis of its cut; `tangential` is optiland's `mtf[0][0]` and `sagittal` its `mtf[0][1]` |
 | a field's `status` | `ok` where no value moved by more than 0.005 on the axis, 0.01 off it, from the coarser step to the finer; `unconverged` with the reason `not-converged` where one did, or `convergence-unknown` where the coarser step has no curve; `unavailable` where the finer step has none: `optiland-raised-<class>` (an exception of optiland, which ends the field's ladder), `no-frequency-axis` (an axis that does not start at 0 and ascend: a rim ray that did not arrive leaves a NaN in its step), `frequency-beyond-axis` (a frequency above the last sample of an axis, the cut-off: nothing is extrapolated) or `mtf-not-a-modulus` (a sample that is a NaN or outside 0 to 1). `notes` says of each such field what optiland said, and both steps' figures where it moved |
 
@@ -1119,8 +1154,8 @@ setting above.
 The refusals of either method: of code `option`, `profile` (it is asked by a spec), `focus.engine-best` (optiland
 has no focus search for an MTF), `fields.image-height-fractions` (a case states no image height, and the option `fieldAnglesDeg` was not given),
 `option.fieldAnglesDeg` (not one finite angle for each field of the spec), `option.fftRays`
-or `option.geometricRays` (not 256 or 512; only the option of the method asked is read) and `option.line` (no index
-of a line of the case); of code `feature`, `lines.polychromatic` (a case of several lines asked for the method
+(not 128, 256 or 512), `option.geometricRays` (not 256 or 512; only the option of the method asked is read)
+and `option.line` (no index of a line of the case); of code `feature`, `lines.polychromatic` (a case of several lines asked for the method
 `diffraction` without the option `line`) and `object.finite` (optiland measures a field angle at its paraxial
 entrance pupil then, and no spec says where the contract's is measured). An optic or an analysis that is not what
 was asked is the error `build-mismatch`, as for every quantity. A request that has taken five minutes when its next
@@ -1211,7 +1246,7 @@ A rung:
 | `quantity` | string | the quantity whose results the rung compares |
 | `mode` | string | `direct`: closed-form numbers set against each other; `identical-rays`: one estimator applied to every engine's trace of the same rays; `independent-method`: each engine's own sampling and algorithm |
 | `class` | string | `gated`: a difference passes or fails against a tolerance; `recorded`: it is written down and never fails |
-| `metrics` | object | a map from metric name to `{ tolerance?, attention?, unit, floor? }` |
+| `metrics` | object | a map from metric name to `{ tolerance?, attention?, attentionSeveralLines?, unit, floor? }` |
 | `blocksLaterRungs?` | boolean | true: two engines whose pair in this rung is `FAIL` or `ERROR` are not judged against each other in any later rung of the ladder, for the same case |
 | `floor?` | object | `{ engine, arbiter }`: the engine whose known numerical floor may exceed a tolerance of this rung without failing, and the engine the others are held to |
 
@@ -1221,7 +1256,17 @@ is `1` for a number without one. A metric the comparison reports and the policy 
 judged. Several rungs may compare one quantity, each by metrics of its own: `r2`, `r3` and `r4` all compare
 `rays.trace`, and so does `r6a`.
 
-The comparator's policy, version 11:
+`attentionSeveralLines` is an optional nonnegative alternate band of a recorded metric that also has
+`attention`. R6c's `chiefLanding.maxAbs` keeps `attention: 1e-7` mm for two one-line answers and uses
+`attentionSeveralLines: 1e-3` mm if either answer records more than one line. The case alone never selects it.
+R5 stays at 1e-7 mm; R5g keeps its single 1e-3 mm band. The comparator records each answer's selected
+`chiefLandingLimitMm` beside each field whenever the policy supplies the alternate, along with its
+`lineWavelengthNm` list. Field facts and report sorting read those same values, including later steps;
+MTF baselines retain these recorded limits so their reports need no current policy to repeat the sorting.
+On several lines LV's shared launch and optiland's line-0 chief are different rays; a common reference point
+preserves the modulus, so this limit identifies the field rather than asserting one ray's landing.
+
+The comparator's policy, version 13:
 
 | Rung | Quantity | Mode | Judged |
 |---|---|---|---|
@@ -1236,8 +1281,9 @@ The comparator's policy, version 11:
 | `r5g` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01, `chiefLanding.maxAbs` of 1e-3 mm. Of the engines `lv`, `optiland` and `replay` only, and run only where it is named |
 | `r6a` | `rays.trace` | identical-rays | `waveMtf.maxAbs` ≤ 2e-8, of a field at every line of the case on a lattice that is an arbiter; no floor ([`rays.trace`](#raystrace)) |
 | `r6b` | `mtf.native` | independent-method | recorded: `mtfOnAxis.maxAbs` in a band of 0.005, `mtfOffAxis.maxAbs` of 0.01. Of the engines `lv` and `wave` only ([`mtf.native`](#mtfnative)) |
+| `r6c` | `mtf.native` | independent-method | recorded: R5 sorting and its 0.005 / 0.01 bands, chief landing 1e-7 mm for two one-line answers, 1e-3 mm when either records several lines; reference or photopic, only where named; `lv`, `wave`, `optiland`, `optiland-wave` |
 
-**The floor.** Policy version 11 gives no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
+**The floor.** Policy versions 11 and 12 give no rung or metric a floor. At Stage 3.12, LensVisualizer `ab0fd4cf`
 (closure `94778d3d`, 175 files) uses an intersection tolerance of 1e-12 mm; its worst R2/R3 distances from `ref`
 over the benchmark and features suites are four to seven orders of magnitude inside the gates. The larger of a
 gate and ten times its measured residual is the gate itself, where a floor cannot be granted. A pair above a gate
@@ -1464,6 +1510,7 @@ and `validateData`.
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
+| `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -1988,6 +2035,79 @@ and the assembly of the field axis.
 Tests hold both to LensVisualizer, the rays to those of its own bundle bit for bit and the source lines to their
 text. The seed is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays of a
 set are the tab's own launch rays at that grid, to the bit.
+
+### `wavefront.native`
+
+Version 1 adds an engine's raw wavefront without changing any existing quantity or contract version. The spec is
+`{ line, fields, grids }`: a zero-based line index, fields as for `mtf.native`, and ascending even grid sizes of at
+least four. Each grid is the square of midpoint coordinates `(2 column + 1)/n - 1`, `(2 row + 1)/n - 1`, in row-major
+order; only centers strictly within the unit circle are traced. With optiland's aiming they are stop coordinates,
+not an even grid in image-side direction cosines. Fractions need the recipe angles in `fieldAnglesDeg`.
+
+| Answer member | Meaning |
+|---|---|
+| `line` | `index`, vacuum `wavelengthNm`, `weight`, image-space `imageIndex` actually used |
+| `fields[]` | `field` as asked, `fieldAngleDeg`, `imageHeightMm`, `status`, optional `reason`, `samples[]` |
+| `status` | `ok` for raw samples, never a convergence claim about an OTF; `unavailable` needs a reason and no samples |
+| `samples[].gridSize` | even grid size, ascending; N is its square |
+| `normalizedPupil` | float64 `[N,2]`, the full midpoint square, including untraced cells outside the circle |
+| `pupilMm` | float64 `[N,3]`, optiland's intersections with its reference sphere, in its stated frame |
+| `opdWaves` | float64 `[N]`, optiland's `(reference path - sample path) / vacuum wavelength`, including its launch phase; no tilt removal |
+| `intensity`, `valid` | float64 `[N]` nonnegative intensity; uint8 `[N]`, 1 iff intensity is positive, 0 otherwise |
+| `reference` | `strategy: chief_ray`, `removeTilt: false`, `sphereCenterMm[3]`, positive `radiusMm`, `exitPupilMm[3]` |
+| `method`, `notes` | algorithm with parameters and human notes; no transfer function |
+
+All arrays are finite. Cells with validity 0 contribute nothing. The worker fills untraced square cells with
+zero pupil, OPD and intensity and validity 0; optiland also zero-fills nonfinite samples. A zero OPD alone is never evidence of light. No positive-intensity cell lies outside the circle.
+The reference sphere is centered on the chief ray's landing on the case image plane; its radius is the distance
+to optiland's paraxial exit pupil. Coordinates and OPD are returned as optiland gave them; the optic is mirrored in
+y as for its FFT. The schemas, corpus, quantity invariants and the stdlib Python port enforce these definitions.
+An absent line, unresolved fractions or a finite object is unsupported; a field optiland raises on has its own
+unavailable row, and the other fields remain. BuildMismatch, MemoryError and ImportError are FATAL. The worker
+checks REQUEST_BUDGET_S between fields, returns `time-budget`, and the result store keeps no such error.
+
+### Rung R6c and the adapter `optiland-wave`
+
+`r6c` uses the one `mtf.native` request of R5, at the recipe's resolved fractions and thinned frequencies, on the
+case plane, on reference or several-line cases. Its four columns are LV's own sheared estimate (`lv`), the wave
+estimator on LV's rays (`wave`), optiland's own FFT MTF (`optiland`), and the comparator's OTF of optiland's raw
+wavefront (`optiland-wave`). It runs only where named. No existing TypeScript optical engine gained a quantity or a new estimator.
+The last adapter owns an ordinary optiland worker connection, negotiates `wavefront.native` version 1 before a
+request, validates its response and its field/line/grid correspondence, and applies the pure TypeScript estimator.
+Its fingerprint is optiland's; its adapter revision combines the worker revision with its own import closure.
+Its lifetime closes the underlying worker. The derived native-shaped answer is the comparator's, never optiland's
+own MTF. Raw requests remain directly available through `optiland`.
+
+The raw grids are 128 and 256 by default (`wavefrontGrids` may name other ascending even grids). The estimator
+uses each sphere point Q about center C as the radial reference direction `(C-Q)/|C-Q|`, coordinates n times its
+transverse components, optical path W = -lambda OPD, and intensity as cell flux. It calls the unchanged Hopkins
+kernel of `waveOtf.ts` through a synthetic lattice about C; it claims no traced exit direction. This reference-
+sphere model, its flux convention and the FFT's different mapping remain method choices. No operation of the old
+wave estimator moved, and the closures of `lv`, `ref`, `replay` and `wave` remain byte-identical.
+
+A fine estimate is numerical when neighboring lit cells exceed a quarter wave, when its modulus moved on doubling
+by more than 0.005 on axis or 0.01 off axis, or when convergence is unknown. Failed fine estimates become unavailable;
+no line or field is dropped. On several lines the adapter makes one raw request per case line and requires every
+line. At each grid `polychromaticWavefrontOtf` evaluates each line's complex `wavefrontOtf` directly at the
+requested frequencies, without frequency interpolation. It multiplies by exp(-2 pi i nu (chief_l-chief_0)),
+x sagittal and y tangential in the declared mirrored frame, and by case weight times transmitted cell flux.
+Compensated complex sums are divided by total weighted flux before the modulus. Line 0's chief landing is the
+common origin; the other adapters retain their own single common origins, which cannot change a sum's modulus.
+Each line retains its chief-relative phase-step check; doubling compares the complete spectral sums. An
+unavailable line makes its field unavailable with that line named. FFT remains unsupported on several lines.
+The case plane already includes LV's photopic best-axial shift for a best-photopic run; no line searches for
+focus. This expands R6c under policy 13 and changes no quantity version, spec or contract identity.
+
+The comparator reuses R5's `classifyNativeField`, `factsOfField` and recording. The report reuses `factsOfRecorded`,
+sorting each difference before subtraction: unsupported, data, numerical, method. The table records all four
+columns and three separately classified differences against `optiland-wave` (LV, wave, FFT). Only method fields
+standing by their curves enter R5's bands; numerical differences are shown apart. Chief-landing sorting uses
+R6c's 1e-7 mm for two one-line answers and its policy `attentionSeveralLines` of 1e-3 mm when either answer
+records several lines. A common reference point preserves the modulus; the several-line chief landings
+identify the field, not one shared ray. No gate or floor is added. R6c asks no automatic follow-up: the two raw grids already state
+its convergence; optiland's FFT remains its default ladder. No span is needed because one request has all fields
+and each answer all sampling steps. MTF baselines can add R6c records and render these tables from the records alone;
+Stages 4.1 and 4.3 do not rewrite any baseline or committed report.
 
 ### `mtf.native`
 

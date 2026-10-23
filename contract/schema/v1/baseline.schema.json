@@ -61,10 +61,17 @@
       "properties": {
         "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/name" },
         "caseId": {
-          "description": "The content hash of the run's case: with the name, what the record is keyed on.",
-          "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+          "description": "The case hash, or null for a source refusal recorded since minor 3.",
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
         },
-        "rungs": { "type": "array", "items": { "$ref": "#/$defs/rung" } }
+        "rungs": { "type": "array", "items": { "$ref": "#/$defs/rung" } },
+        "problems": {
+          "description": "Since minor 3: coded source problems, reported without a failing pair.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+        }
       },
       "required": ["name", "caseId", "rungs"],
       "additionalProperties": false

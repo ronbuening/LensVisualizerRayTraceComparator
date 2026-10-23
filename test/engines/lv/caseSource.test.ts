@@ -509,3 +509,14 @@ test("a lens file edited between loading the suite and the end of its run marks 
   assert.equal(result.manifest.sources?.lv.status, SOURCE_CHANGED);
   assert.deepEqual(result.warnings, [`case source lv changed during the run: ${SINGLET_FILE}`]);
 });
+
+test("an aperture beyond the LV slider maximum is a coded problem; its endpoint remains reachable", async (t) => {
+  const source = createLvCaseSource(freshLv(t));
+  assert.ok((await source.resolve(run("acme-singlet-50", { aperture: { kind: "f-number", value: 16 } }))).ok);
+  assert.deepEqual(
+    problemsOf(await source.resolve(run("acme-singlet-50", { aperture: { kind: "f-number", value: 16.01 } }))).map(
+      problemCode,
+    ),
+    ["aperture-beyond-slider-range"],
+  );
+});

@@ -1,0 +1,1593 @@
+{
+  "contract": "1.3",
+  "kind": "suite",
+  "name": "states",
+  "defaults": {
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "imagePlane": {
+      "kind": "design"
+    },
+    "engines": ["lv", "ref", "optiland"],
+    "rungs": ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"]
+  },
+  "runs": [
+    {
+      "name": "canon-ef-135-f2l-usm-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "canon-ef-135-f2l-usm-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-135-f2l-usm",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "fujifilm-fujinon-gf-63mm-f28-r-wr",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-35mm-f14-dg-hsm-a-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-35mm-f14-dg-hsm-a",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikkor-z50f12-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikkor-z50f12",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-20mm-f18-g-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-20mm-f18-g",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sony-fe-400mm-f28-gm-oss-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sony-fe-400mm-f28-gm-oss",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-105mm-f28-dg-dn-macro-art",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-mc-105f28-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-mc-105f28",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-135f18-plena-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-135f18-plena",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f5.6-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 5.6
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f11-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f11-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f11-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "sigma-45mm-f28-dg-dn-contemporary",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "f-number",
+        "value": 11
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-open-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "wide-open"
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-open-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "wide-open"
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-open-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "wide-open"
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-open-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "wide-open"
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f8-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "lv-f8-comparison"
+      },
+      "lines": {
+        "kind": "reference"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f8-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "lv-f8-comparison"
+      },
+      "lines": {
+        "kind": "photopic"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f8-best-ref",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "lv-f8-comparison"
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    },
+    {
+      "name": "nikon-z-24-70f4s-f8-best-photopic",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-z-24-70f4s",
+        "stations": "published-zoom"
+      },
+      "aperture": {
+        "kind": "lv-f8-comparison"
+      },
+      "lines": {
+        "kind": "photopic"
+      },
+      "imagePlane": {
+        "kind": "lv-best-axial"
+      }
+    }
+  ]
+}

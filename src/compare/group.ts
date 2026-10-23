@@ -132,7 +132,7 @@ export function compareGroup(group: ComparisonGroup, mode: ComparisonMode, refer
     rung,
     quantity,
     requestId,
-    participants: participants.map((participant) => statedParticipant(participant, comparator, context)),
+    participants: participants.map((participant) => statedParticipant(participant, comparator, { ...context, policy })),
     mode,
     ...(mode === "reference-vs-each" ? { reference } : {}),
     pairs,

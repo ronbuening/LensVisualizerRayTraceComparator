@@ -34,6 +34,7 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/geometry.ts",
   "src/optics/mtf.ts",
   "src/optics/optics.ts",
+  "src/optics/publishedStations.ts",
   "src/optics/state/aperture.ts",
   "src/optics/state/fNumber.ts",
   "src/optics/state/pupils.ts",

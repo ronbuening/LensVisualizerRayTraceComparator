@@ -9,6 +9,8 @@ import { LV_WAVE_ENGINE_ID, createLvWaveEngine } from "./lv/waveEngine.ts";
 import { OPTILAND_ENGINE_ID, OPTILAND_TIMEOUTS, optilandDefinition } from "./optiland/definition.ts";
 import { REF_ENGINE_ID, createRefEngine } from "./ref/engine.ts";
 import type { EngineTimeouts } from "./remote.ts";
+import type { Transport } from "../transports/transport.ts";
+import { OPTILAND_WAVE_ENGINE_ID, optilandWaveTransport } from "./optiland/wavefrontEngine.ts";
 
 /**
  * What makes a built-in engine: the protocol handler of an engine whose descriptor names the id it is listed
@@ -31,8 +33,16 @@ export interface BuiltinWorkerEngine {
   readonly timeouts?: Partial<EngineTimeouts>;
 }
 
+/** A composite adapter that owns and closes its underlying transport. */
+export interface BuiltinTransportEngine {
+  readonly transport: (loaded: Pick<LoadedConfig, "rootDir" | "config">) => Transport;
+  readonly timeouts?: Partial<EngineTimeouts>;
+}
+
 /** Built-in engines by engine id: each a factory of a handler in this process, or a worker. */
-export type BuiltinEngines = { readonly [id: string]: BuiltinEngineFactory | BuiltinWorkerEngine };
+export type BuiltinEngines = {
+  readonly [id: string]: BuiltinEngineFactory | BuiltinWorkerEngine | BuiltinTransportEngine;
+};
 
 /**
  * The built-in engines. `ref` is the comparator's own reference engine (`src/engines/ref`). `lv` is LensVisualizer
@@ -56,4 +66,5 @@ export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [REF_ENGINE_ID]: () => createRefEngine(),
   [LV_REPLAY_ENGINE_ID]: ({ config }) => createLvReplayEngine(config.lvPath),
   [LV_WAVE_ENGINE_ID]: ({ config }) => createLvWaveEngine(config.lvPath),
+  [OPTILAND_WAVE_ENGINE_ID]: { transport: optilandWaveTransport, timeouts: OPTILAND_TIMEOUTS },
 });

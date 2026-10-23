@@ -53,6 +53,8 @@ const HELP = [
   "                   of lv, optiland and wave, and asks optiland once more, at 512 rays, for a run whose",
   "                   figures are outside their band. r5g is run only where it is named: the geometric MTF of",
   "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
+  "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
+  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking",
   "  --json           print one JSON object in place of the lines",
   "",
   "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
@@ -269,7 +271,12 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
 
       const failed = result.outcomes.some((outcome) => outcome.job.status === "error");
       const changed = Object.values(result.manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED);
-      return failed || changed || notStarted.length > 0 ? EXIT_FAILURE : EXIT_OK;
+      const refusedOnly = notStarted.every(
+        (run) =>
+          run.problems.length > 0 &&
+          run.problems.every((problem) => problem.startsWith("finite-conjugate-unavailable: ")),
+      );
+      return failed || changed || !refusedOnly ? EXIT_FAILURE : EXIT_OK;
     },
   };
 }

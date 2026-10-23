@@ -10,6 +10,7 @@
 // with frequency axes of the beam, enters a band. The sorting reads a few numbers of each answer and nothing
 // else, so that a report can repeat it from the values a comparison records.
 import type { RecordedValues } from "../contract/comparison.ts";
+import type { MetricPolicy } from "../contract/policy.ts";
 import type { JsonObject } from "../contract/json.ts";
 import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import type { MtfNativeData, MtfNativeField, MtfNativeSpec } from "../contract/quantities/mtfNative.ts";
@@ -28,7 +29,7 @@ export const NATIVE_MTF_RUNG = "r5";
 /** The rung of the engines' own geometric MTF. */
 export const GEOMETRIC_MTF_RUNG = "r5g";
 /** The rungs this comparator is of, in ladder order. */
-export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG] as const;
+export const NATIVE_MTF_RUNGS = [NATIVE_MTF_RUNG, GEOMETRIC_MTF_RUNG, "r6c"] as const;
 /** One of them. */
 export type NativeMtfRung = (typeof NATIVE_MTF_RUNGS)[number];
 
@@ -124,6 +125,8 @@ export interface NativeFieldFacts {
   readonly imageHeightMm: number | null;
   /** How many of its rim rays were lost; null for an engine that has none. */
   readonly rimRaysLost: number | null;
+  /** The policy limit selected from this answer's line count, when that policy has a several-line limit. */
+  readonly chiefLandingLimitMm?: number;
 }
 
 /** How one field was sorted. */
@@ -161,7 +164,7 @@ export function classifyNativeField(
   if (!sameLines) return sorted("data", "lines-differ", false);
   if (landingMm === null) return sorted("data", "chief-landing-unknown", false);
   // A landing that is no number is not within any limit.
-  if (!(landingMm <= chiefLandingLimitMm)) return sorted("data", "chief-landing-apart", false);
+  if (!(landingMm <= chiefLandingLimit(a, b, chiefLandingLimitMm))) return sorted("data", "chief-landing-apart", false);
   if (a.settled !== 1 || b.settled !== 1) return sorted("numerical", "unconverged", true);
   if ((a.rimRaysLost ?? 0) > 0 || (b.rimRaysLost ?? 0) > 0) return sorted("method", "rim-rays-lost", true);
   return sorted("method", "two-methods", true, true);
@@ -177,19 +180,36 @@ function settledOf(field: MtfNativeField): number | null {
 }
 
 /** What the sorting reads of one field of an answer. */
-export function factsOfField(field: MtfNativeField): NativeFieldFacts {
+export function factsOfField(field: MtfNativeField, chiefLandingLimitMm?: number): NativeFieldFacts {
   const lost = sampled(field, "rimRaysLost");
   return {
     settled: settledOf(field),
     imageHeightMm: field.imageHeightMm,
     rimRaysLost: Number.isNaN(lost) ? null : lost,
+    ...(chiefLandingLimitMm === undefined ? {} : { chiefLandingLimitMm }),
   };
 }
 
 /** What the sorting reads of field `index` of the values a comparison records of an answer (`recorded`). */
 export function factsOfRecorded(recorded: RecordedValues, index: number): NativeFieldFacts {
   const at = (name: string): number | null => (Object.hasOwn(recorded, name) ? (recorded[name][index] ?? null) : null);
-  return { settled: at("settled"), imageHeightMm: at("imageHeightMm"), rimRaysLost: at("rimRaysLost") };
+  const limit = at("chiefLandingLimitMm");
+  return {
+    settled: at("settled"),
+    imageHeightMm: at("imageHeightMm"),
+    rimRaysLost: at("rimRaysLost"),
+    ...(limit === null ? {} : { chiefLandingLimitMm: limit }),
+  };
+}
+
+/** The pair uses the several-line limit if either answer selected it; old records use the rung's band. */
+export function chiefLandingLimit(a: NativeFieldFacts, b: NativeFieldFacts, fallback: number): number {
+  return Math.max(a.chiefLandingLimitMm ?? fallback, b.chiefLandingLimitMm ?? fallback);
+}
+
+/** Select only from the answer, never the case: a one-line answer can be of a several-line case. */
+function landingLimitOf(data: MtfNativeData, policy: MetricPolicy): number | undefined {
+  return data.lines.length > 1 ? (policy.attentionSeveralLines ?? policy.attention) : policy.attention;
 }
 
 /** Whether two lists of wavelengths, as answers or their recorded values state them, are the same lines. */
@@ -274,7 +294,7 @@ function figuresOf(
   a: MtfNativeData,
   b: MtfNativeData,
   frequencies: readonly number[],
-  chiefLandingLimitMm: number,
+  policy: MetricPolicy,
 ): Figures | string {
   const sameLines = sameWavelengths(
     a.lines.map((line) => line.wavelengthNm),
@@ -293,7 +313,12 @@ function figuresOf(
   for (const [index, fieldA] of a.fields.entries()) {
     const fieldB = b.fields[index];
     const band = fieldA.field === 0 ? "onAxis" : "offAxis";
-    const sorting = classifyNativeField(factsOfField(fieldA), factsOfField(fieldB), sameLines, chiefLandingLimitMm);
+    const sorting = classifyNativeField(
+      factsOfField(fieldA, landingLimitOf(a, policy)),
+      factsOfField(fieldB, landingLimitOf(b, policy)),
+      sameLines,
+      policy.attention as number,
+    );
     if (sorting.landingMm !== null && sorting.class !== "unsupported") {
       // The first of equal values is kept; a NaN is kept, since it is within no limit.
       if (landing === null || sorting.landingMm > landing.value || Number.isNaN(sorting.landingMm)) {
@@ -344,8 +369,8 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
       reason: "the spec of the request is not at hand: nothing says which frequency a value is of",
     };
   }
-  const limit = context?.policy?.metrics[CHIEF_LANDING_METRIC]?.attention;
-  if (limit === undefined) {
+  const landingPolicy = context?.policy?.metrics[CHIEF_LANDING_METRIC];
+  if (landingPolicy?.attention === undefined) {
     const reason = `the policy of the rung gives ${CHIEF_LANDING_METRIC} no band: nothing says when two answers are of one field`;
     return { comparable: false, reason };
   }
@@ -360,12 +385,18 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     const reason = mismatch(first, second);
     if (reason !== null) return { comparable: false, reason };
   }
-  const judged = figuresOf(finalA, finalB, frequencies, limit);
+  const judged = figuresOf(finalA, finalB, frequencies, landingPolicy);
   if (typeof judged === "string") return { comparable: false, reason: judged };
 
   const metrics: ComputedMetric[] = [];
   const unmeasured: UnmeasuredMetric[] = [];
-  if (judged.landing !== null) metrics.push(judged.landing);
+  if (judged.landing !== null)
+    metrics.push({
+      ...judged.landing,
+      ...(landingPolicy.attentionSeveralLines !== undefined && (finalA.lines.length > 1 || finalB.lines.length > 1)
+        ? { attentionKey: "attentionSeveralLines" as const }
+        : {}),
+    });
   else {
     const reason = "no field has curves and a chief-ray landing in both answers";
     unmeasured.push({ name: CHIEF_LANDING_METRIC, reason });
@@ -382,7 +413,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   }
   const notes = [...judged.notes];
   if (lastA !== undefined || lastB !== undefined) {
-    const first = figuresOf(a, b, frequencies, limit);
+    const first = figuresOf(a, b, frequencies, landingPolicy);
     if (typeof first === "string") return { comparable: false, reason: first };
     for (const band of ["onAxis", "offAxis"] as const) {
       const figure = first.worst[band];
@@ -424,6 +455,8 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
 function recorded(data: JsonObject, context?: ComparisonContext): { readonly [name: string]: readonly number[] } {
   const { fields, lines } = data as MtfNativeData;
   const frequencies = (context?.spec as MtfNativeSpec | undefined)?.frequenciesPerMm ?? [];
+  const policy = context?.policy?.metrics[CHIEF_LANDING_METRIC];
+  const limit = policy?.attentionSeveralLines === undefined ? undefined : landingLimitOf(data as MtfNativeData, policy);
   const curves: [string, number[]][] = [];
   for (const cut of MTF_CUTS) {
     const decoded = fields.map((field) => decodeNdArray(field[cut]).values);
@@ -443,6 +476,7 @@ function recorded(data: JsonObject, context?: ComparisonContext): { readonly [na
         values.some((value) => !Number.isNaN(value)),
       ),
     ),
+    ...(limit === undefined ? {} : { chiefLandingLimitMm: fields.map(() => limit) }),
     lineWavelengthNm: lines.map((line) => line.wavelengthNm),
     ...Object.fromEntries(curves),
   };

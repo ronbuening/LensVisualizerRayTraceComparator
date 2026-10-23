@@ -119,7 +119,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   assert.deepEqual(presented, []);
   assert.equal(COMPARATORS.get("mtf.native"), undefined);
   assert.equal(COMPARATORS.get("mtf.native", "r5"), mtfNativeComparator);
-  assert.equal(COMPARATORS.get("mtf.native", "r6c"), undefined);
+  assert.equal(COMPARATORS.get("mtf.native", "r6d"), undefined);
   for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
   assert.equal(COMPARATORS.get("selftest.echo"), selftestEchoComparator);
   assert.equal(COMPARATORS.get("constructor"), undefined);
@@ -151,6 +151,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["mtf.native", "r5"],
       ["mtf.native", "r5g"],
       ["mtf.native", "r6b"],
+      ["mtf.native", "r6c"],
       ["paraxial.first-order", undefined],
       ["rays.trace", "r2"],
       ["rays.trace", "r3"],
@@ -158,6 +159,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["rays.trace", "r6a"],
       ["selftest.echo", undefined],
       ["system.describe", undefined],
+      ["wavefront.native", undefined],
     ],
   );
 });

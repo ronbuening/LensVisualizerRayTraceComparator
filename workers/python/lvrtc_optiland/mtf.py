@@ -36,7 +36,8 @@ request needs around the class, and each of these is stated in the answer:
 - **The ladder.** ``num_rays`` 128 and then 256, each with ``grid_size`` twice that, stated to optiland: a call
   without a grid size takes ``num_rays`` for OpticStudio's sampling number and puts 64 rays across the pupil for
   128. The curves are those of the finer step, and a field whose values moved by more than the band between the
-  two is "unconverged". The engine option ``fftRays`` 512 asks for 256 and 512 instead.
+  two is "unconverged". The engine option ``fftRays`` 512 asks for 256 and 512 instead; 128 asks for 64 and 128
+  for diagnostics.
 - **The frequencies.** optiland gives a curve at the lags of its grid, on an axis of its own for each cut
   (``freq_tang``, ``freq_sag``, cycles/mm on the image surface, the lag of one ray on the pupil), which it
   calibrates with the four rays through the edge of its pupil. A requested frequency is interpolated linearly
@@ -84,6 +85,10 @@ MTF_CLASS = "ScalarFFTMTF"
 
 LADDER: tuple[int, ...] = (128, 256, 512)
 """The values of ``num_rays`` the worker asks optiland with: the rays across the pupil."""
+
+FFT_LADDER: tuple[int, ...] = (64, *LADDER)
+"""The ladder of the method "diffraction": 64 is only ever the coarser step of the diagnostic ``fftRays`` 128
+(Stage 4.2); the geometric method keeps ``LADDER``."""
 
 DEFAULT_RAYS = 256
 """The finer step of a request that states none: the ladder is 128 and then 256."""
@@ -238,9 +243,10 @@ def read_request(
             refused.append(_item(BAD_OPTION, "angles", message))
 
     option = GEOMETRIC_RAYS_OPTION if geometric else RAYS_OPTION
+    ladder = LADDER if geometric else FFT_LADDER
     rays = options.get(option, DEFAULT_RAYS)
-    if not _whole(rays) or rays not in LADDER[1:]:
-        allowed = " or ".join(str(step) for step in LADDER[1:])
+    if not _whole(rays) or rays not in ladder[1:]:
+        allowed = " or ".join(str(step) for step in ladder[1:])
         message = f"the option {option} is {allowed}, the finer step; got {rays!r}"
         refused.append(_item(BAD_OPTION, "geometric_rays" if geometric else "rays", message))
 
@@ -270,7 +276,7 @@ def read_request(
         angles=tuple(float(angle) for angle in angles),
         fractions=tuple(float(field) for field in stated) if fractions else (),
         line=0 if line is None else int(line),
-        ladder=(LADDER[LADDER.index(rays) - 1], int(rays)),
+        ladder=(ladder[ladder.index(rays) - 1], int(rays)),
         method="geometric" if geometric else "diffraction",
         lines=of if geometric else (),
     )

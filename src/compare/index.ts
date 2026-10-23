@@ -11,12 +11,15 @@ import { raysPathComparator } from "./raysPath.ts";
 import { raysWaveMtfComparator } from "./raysWaveMtf.ts";
 import { selftestEchoComparator } from "./selftestEcho.ts";
 import { systemDescribeComparator } from "./systemDescribe.ts";
+import { mtfWavefrontComparator } from "./mtfWavefront.ts";
+import { wavefrontNativeComparator } from "./wavefrontNative.ts";
 
 /**
  * The comparators of the comparator's quantities; nothing can be added to them while the program runs. `rays.trace`
  * has four, one for each rung that compares it: its geometry for `r2`, its optical path for `r3`, the geometric
- * MTF of its landings for `r4` and the wave MTF of its optical paths for `r6a`. `mtf.native` has four, for the rungs
- * `r4f`, `r5`, `r5g` and `r6b`; those of `r5` and `r5g` are one comparator of the engines' own MTF, made for each.
+ * MTF of its landings for `r4` and the wave MTF of its optical paths for `r6a`. `mtf.native` has five, for the rungs
+ * `r4f`, `r5`, `r5g`, `r6b` and `r6c`; R6c reuses the native comparator and its sorting. `wavefront.native`
+ * also has a comparator of raw OPD, restricted to matching grids, points and reference spheres.
  */
 export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   selftestEchoComparator,
@@ -30,4 +33,6 @@ export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   mtfNativeComparator,
   mtfGeometricComparator,
   mtfWaveComparator,
+  mtfWavefrontComparator,
+  wavefrontNativeComparator,
 ]);

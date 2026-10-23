@@ -127,13 +127,14 @@ class ReadRequestTest(unittest.TestCase):
             read_request(mtf_spec([0]), {"lvGridCap": 64, "bundleGrid": 32}, DOUBLE_GAUSS).ladder, (128, 256)
         )
 
-    def test_the_option_fftRays_moves_the_ladder_up_one_step_and_takes_no_other_value(self) -> None:
+    def test_the_option_fftRays_selects_a_halving_pair_including_the_diagnostic_128(self) -> None:
         self.assertEqual(read_request(mtf_spec([0]), {"fftRays": 512}, DOUBLE_GAUSS).ladder, (256, 512))
         self.assertEqual(read_request(mtf_spec([0]), {"fftRays": 256}, DOUBLE_GAUSS).ladder, (128, 256))
-        for value in (128, 1024, 300, "512", 512.0, True, None, [512]):
+        self.assertEqual(read_request(mtf_spec([0]), {"fftRays": 128}, DOUBLE_GAUSS).ladder, (64, 128))
+        for value in (64, 1024, 300, "512", 512.0, True, None, [512]):
             refused = read_request(mtf_spec([0]), {"fftRays": value}, DOUBLE_GAUSS)
             self.assertEqual([(item["code"], item["item"]) for item in refused], [("option", "option.fftRays")], value)
-            self.assertIn("256 or 512", refused[0]["message"])
+            self.assertIn("128 or 256 or 512", refused[0]["message"])
 
     def test_what_the_engine_has_no_answer_to_is_refused_item_by_item(self) -> None:
         spec = mtf_spec([0], focus="engine-best", profile="lv-tab-default")

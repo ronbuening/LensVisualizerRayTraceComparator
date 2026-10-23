@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test, type TestContext } from "node:test";
 
 import { createMtfCommand } from "../../src/cli/commands/mtf.ts";
@@ -493,7 +494,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],
-    'unknown engine "zemax": the configuration defines no engine; built in: lv, optiland, ref, replay, wave',
+    'unknown engine "zemax": the configuration defines no engine; built in: lv, optiland, optiland-wave, ref, replay, wave',
   );
   await usage(["acme-singlet-50", "--root", "no-such-root"], "--root no-such-root: not a directory");
   // The tab reaches any other aperture only through its slider: the profile has no request for one.
@@ -563,6 +564,8 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.ok(manifest.runs.every((each) => each.caseId !== null));
   // The rungs that need optiland are run only where it is named.
   assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))], ["r4", "r4f", "r6a", "r6b"]);
+  assert.ok(manifest.engines.every((engine) => !["optiland", "optiland-wave"].includes(engine.id)));
+  assert.doesNotMatch(markdown, /^## r6c$/m);
   assert.ok(manifest.jobs.every((job) => job.status === "ok"));
   assert.deepEqual([...new Set(comparisons.comparisons.map((set) => set.run))], names);
 
@@ -577,7 +580,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.deepEqual(wordingProblems(markdown), []);
   assert.match(
     run.err,
-    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, rungs r4, r4f, r6a, r6b \(r5 and r5g need optiland\)/,
+    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, rungs r4, r4f, r6a, r6b \(r5 and r5g and r6c need optiland\)/,
   );
   assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic r6b$/m);
   assert.ok(run.err.endsWith(`lvrtc mtf: run: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
@@ -611,6 +614,53 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   const usage = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/5.6"], rootDir);
   assert.equal(usage.code, EXIT_USAGE);
   assert.match(usage.err, /the profile benchmark is of the lens wide open and at the tab's comparison/);
+});
+
+test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on reference and photopic lines", async (t) => {
+  const { rootDir, runsDir } = sampledRoot(t);
+  // Stand-ins offer no optical quantities: exercise selection without Python or a real optiland checkout.
+  const module = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
+  const engines = Object.fromEntries(
+    ["optiland", "optiland-wave"].map((id) => [id, { transport: "in-process", module, options: { id } }]),
+  );
+  writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ lvPath: "lv", engines }));
+  const run = await mtf(
+    ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref,optiland", "--aperture", "f/8"],
+    rootDir,
+  );
+  assert.equal(run.code, EXIT_OK, run.err);
+  const { manifest, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
+  assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [
+    "r4",
+    "r4f",
+    "r5",
+    "r5g",
+    "r6a",
+    "r6b",
+    "r6c",
+  ]);
+  const jobs = manifest.jobs.filter((job) => job.rung === "r6c");
+  assert.deepEqual(
+    [...new Set(jobs.map((job) => job.run))],
+    [
+      "acme-singlet-50-f8-ref",
+      "acme-singlet-50-f8-photopic",
+      "acme-singlet-50-f8-best-ref",
+      "acme-singlet-50-f8-best-photopic",
+    ],
+  );
+  for (const name of new Set(jobs.map((job) => job.run))) {
+    assert.deepEqual(
+      jobs
+        .filter((job) => job.run === name)
+        .map((job) => job.engine)
+        .sort(),
+      ["lv", "optiland", "optiland-wave", "wave"],
+    );
+  }
+  assert.equal(run.out, markdown);
+  assert.match(markdown, /^## r6c$/m);
+  assert.deepEqual(wordingProblems(markdown), []);
 });
 
 test("--profile benchmark: a zoom is run at both ends, or at the position --zoom names", async (t) => {

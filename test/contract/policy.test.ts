@@ -18,7 +18,7 @@ import {
 } from "./corpus.ts";
 
 function policyOf(rungs: Record<string, RungPolicy>): Policy {
-  const policy: Policy = { contract: "1.0", kind: "policy", version: 1, rungs };
+  const policy: Policy = { contract: "1.3", kind: "policy", version: 1, rungs };
   assert.deepEqual(validateKind("policy", policy), []);
   return policy;
 }
@@ -166,4 +166,29 @@ test("a pair names two different participants, the reference first", () => {
     participants: [...COMPARISON_PAIRWISE.participants, { engine: "lv", fingerprint: null, status: "ok" as const }],
   };
   assert.deepEqual(comparisonInvariantProblems(twice), ["engine lv is a participant more than once"]);
+});
+
+test("a several-line band needs a recorded metric with a one-line attention band", () => {
+  const metric = { attention: 1e-7, attentionSeveralLines: 1e-3, unit: "mm" };
+  const rung: RungPolicy = {
+    quantity: "mtf.native",
+    mode: "independent-method",
+    class: "recorded",
+    metrics: { "chiefLanding.maxAbs": metric },
+  };
+  assert.deepEqual(validateKind("policy", policyOf({ r6c: rung })), []);
+  assert.deepEqual(policyProblems(policyOf({ r6c: rung })), []);
+  const { attention: _attention, ...without } = metric;
+  assert.deepEqual(policyProblems(policyOf({ r6c: { ...rung, metrics: { m: without } } })), [
+    "rung r6c: metric m needs a recorded attention band for attentionSeveralLines",
+  ]);
+  const gated = {
+    ...rung,
+    mode: "direct" as const,
+    class: "gated" as const,
+    metrics: { m: { ...metric, tolerance: 1e-7 } },
+  };
+  assert.deepEqual(policyProblems(policyOf({ r6c: gated })), [
+    "rung r6c: metric m needs a recorded attention band for attentionSeveralLines",
+  ]);
 });

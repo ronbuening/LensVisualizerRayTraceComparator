@@ -127,7 +127,9 @@ export interface BaselineRung {
 export interface BaselineRun {
   readonly name: string;
   /** The content hash of the run's case. */
-  readonly caseId: string;
+  readonly caseId: string | null;
+  /** Since 1.3: coded source problems of a run, including a refused run with no case. */
+  readonly problems?: readonly string[];
   /** The rungs in ladder order. */
   readonly rungs: readonly BaselineRung[];
 }
@@ -207,6 +209,12 @@ export function baselineProblems(baseline: Baseline): string[] {
   for (const run of baseline.runs) {
     if (runNames.has(run.name)) problems.push(`run ${run.name} is listed twice`);
     runNames.add(run.name);
+    if (run.problems !== undefined || run.caseId === null) {
+      if ((contractMinor(baseline.contract) ?? 0) < 3)
+        problems.push(`run ${run.name}: source problems require contract minor 3`);
+      if (run.caseId === null && (!run.problems?.length || run.rungs.length > 0))
+        problems.push(`run ${run.name}: a run without a case needs problems and no rungs`);
+    }
     const rungIds = new Set<string>();
     for (const rung of run.rungs) {
       const at = `run ${run.name}, rung ${rung.rung}`;

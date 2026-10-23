@@ -26,6 +26,8 @@ node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key,
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
+node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4   # the stop-down and zoom-station matrix on its own engines (lv, ref, optiland); then compare states, baseline write states
+node bin/lvrtc.mjs run suites/states.json --rungs r4,r4f,r6a        # its gated MTF rungs; then compare states, baseline write states --mtf (the same for focus-stations)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay; r6a traces a lattice twice as fine and r6b adds lv and wave: a long run, so name --rungs r0,r1,r2,r3,r4 for the baselined rays rungs
@@ -43,12 +45,14 @@ node bin/lvrtc.mjs compare benchmark           # judge that run: exit 1 on FAIL 
 node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-in engine
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
+node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tmpdir>   # Stage 4.2's evidence: docs/z50f12-investigation.md
 ```
 
 ## Rules
@@ -92,8 +96,23 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   manifest lists them, never on the suite file as written. The expansion is the LV case source's
   (`CaseSource.expand`), never `expandSuite`'s, and the runs it gives are ordinary runs; a suite's hash is that of
   the file as written. An explicit position is one state. A prime has no zoom position: one stated for it is taken
-  as 0 (`exportCase`). Middle stations are Stage 4.4. `lvrtc export <key>` and `lenses show` stay single-state and
-  hint at `--zoom 1` on stderr.
+  as 0 (`exportCase`). Middle stations are run only where a run states one or selects them. `lvrtc export <key>`
+  and `lenses show` stay single-state and hint at `--zoom 1` on stderr.
+- **States LensVisualizer selects are `lens.stations`, expanded by the LV case source** (`src/engines/lv/stations.ts`,
+  through `CaseSource.expand` like the ends): `"published-zoom"` is the ends plus LV's `publishedZoomStations`,
+  sorted, each once (`-wide`, `-zoom<T>`, `-tele`; a prime one run); `"certified-focus"` is every conjugate
+  LV declares certified, including a station its MTF gate refuses
+  (`-<key>-zoom<station>-focus<keyframe>`; `key: "*"` is the catalog, for this selector only). A declared station
+  the gate refuses (two fisheyes at `ab0fd4cf`) remains an ordinary run with the coded problem
+  `finite-conjugate-unavailable` (the gate's `unsupported-path` supplies no finite conjugate). A selector with
+  stated coordinates
+  (`station-selection-conflict`) and an empty selection (`no-certified-stations`) are coded problems of one run,
+  never a suite of no runs. The address-to-slider mapping is LV's `mtfFiniteConjugate`, restated with a canary.
+- **Contract minor 3 covers station selectors and policy `attentionSeveralLines`** (`CONTRACT_VERSION_1_3`):
+  `runContractProblems` / `loadSuiteValue` refuse earlier-minor station selectors; policy schema and
+  `policyProblems` refuse earlier-minor several-line bands. `suites/states.json`, `focus-stations.json` and
+  policy version 14 state 1.3. A baseline recording source problems also states 1.3, with nullable `caseId`
+  and `problems`; other baselines, cases, requests, results and manifests are written as before.
 - **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
   `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
   (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the
@@ -173,7 +192,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   interpolated linearly on optiland's own axis of that cut, and nothing beyond its last sample.
 - **No polychromatic MTF is formed of optiland's moduli.** For the method "diffraction" a case of several lines
   is `unsupported` (`lines.polychromatic`) unless the engine option `line` names one; never average moduli. The 512 step is the
-  engine option `fftRays` (256 or 512: the ladder is that and half of it): an option is in the result store's key
+  engine option `fftRays` (128, 256 or 512: the ladder is that and half of it; 128 is the Stage 4.2 diagnostic step):
+  an option is in the result store's key
   and not in a request's id, so never add a sampling member to the `mtf.native` spec for it.
 - **`mtf.native` of `optiland` by the method "geometric" is optiland's `GeometricMTF`, a line and a field a call**
   (`workers/python/lvrtc_optiland/geometric.py`): `distribution="uniform"`, `num_points=2048`, `max_freq` the
@@ -259,9 +279,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
-- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`) live in `src/engines/builtin.ts`** and run only where
+- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
-  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, and `r6b` of `lv` and `wave`, whatever
+  (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
   `--engines` or a run names; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
@@ -276,8 +296,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   (`src/core/numeric/exact.ts`), so equal input gives equal bits. It imports nothing of an engine.
   `imageProjection.ts` is in the closures of `lv` and `ref`, and `geometricOtf.ts` in that of `replay` (an edit
   there moves an adapter revision: keep every operation bit for bit, or refresh the baselines); `waveOtf.ts`,
-  `waveValidity.ts` and `src/rays/wavefront.ts` are in the closure of `wave` and of no other engine: keep them out
-  of `lv`, `ref` and `replay`, whose adapter revisions the rays baselines hold. Its proof is analytic (`test/estimators`): closed forms with a derived quadrature
+  `waveValidity.ts` are shared by `wave` and `optiland-wave`; `src/rays/wavefront.ts` stays in `wave` alone.
+  Keep all of them out of `lv`, `ref` and `replay`, whose adapter revisions the rays baselines hold. Its proof is
+  analytic (`test/estimators`): closed forms with a derived quadrature
   bound, and whole-number arithmetic (`test/estimators/support.ts`: `exactTransfer`, `exactLength`), never an
   engine's output. The wave estimator's tests (`waveOtf.test.ts`) build spherical waves from their geometry: the
   staircase from whole-number pair counts, discs and the annulus in closed form, Hopkins' integral by a
@@ -313,6 +334,15 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   is the hook's slider and not the same double on every lens. A test that means "the 12 configurations" filters
   with `asItOpens` (`test/suites/support.ts`); the optiland rung tests run those 24 (`rungSuite`), and
   `baseline.test.ts` all 96.
+- **Stage 4.4's suites are `states` and `focus-stations`** (`docs/REFERENCE.md`, "Stage 4.4"): `states` is every
+  benchmark lens at the slider's f/5.6 and f/11 (`f-number`) on both spectra and both planes, and its zoom also wide
+  open and at `lv-f8-comparison`, every run `published-zoom` (128 runs at `ab0fd4cf`); `focus-stations` is
+  `certified-focus` of the catalog, wide open, reference line, design plane (55 runs, 35 lenses; 53 export,
+  two fisheye stations record `finite-conjugate-unavailable`). Both name
+  `lv,ref,optiland` and the gated rungs `r0,r1,r2,r3,r4,r4f,r6a`: run them as features is run, `--rungs
+  r0,r1,r2,r3,r4` for the rays baseline and `--rungs r4,r4f,r6a` for the MTF one, never all seven into one write.
+  An f-number outside the slider (below the widest, above `maxFstop`) is a coded problem
+  (`aperture-faster-than-wide-open`, `aperture-beyond-slider-range`), never clamped.
 - **`lv-best-axial` is asked of LensVisualizer, never computed** (`lvBestAxialFocus`, `src/engines/lv/focus.ts`):
   the first step of `computeMtfSteps` for the stop, the lines and the grid cap of the run. The case is exported at
   `state.imgZ` plus that shift and is then a case like any other. The plane is of one stop, one spectrum and one
@@ -422,7 +452,7 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **`r5` is recorded, of three engines, and run only where it is named** (`r5Rung`, `onlyWhereNamed`): it asks
   R6b's one request of `lv`, `optiland` and `wave`, and optiland is handed the recipe's angles as its option
   `fieldAnglesDeg` (`recipeAngles`, matched by fraction, never by place); never a second request by angles. A
-  photopic run has no optiland row (`lines.polychromatic`): never ask optiland line by line before Stage 4.3.
+  photopic run has no optiland FFT row (`lines.polychromatic`). R6c supplies the separate raw-wavefront sum.
 - **A field of R5 is sorted before any difference is taken** (`classifyNativeField`, `src/compare/mtfNative.ts`):
   unsupported, data, numerical, method, in that order, and only `two-methods` enters a band. The report repeats
   the sorting from the recorded values (`factsOfRecorded`), so a fact the sorting reads must be recorded: change
@@ -447,10 +477,18 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   a fast lens wide open takes minutes at full field (`docs/gotchas.md`), and a worker silent for ten minutes is
   ended and not restarted within a run. A rung is asked for the options of each of its requests
   (`RungDefinition.engineOptions`, fourth argument); optiland is handed that request's angle as `fieldAnglesDeg`.
-- **The chief-landing limit is a limit of sorting, per rung, and is no gate**: 1e-7 mm for `r5`, 1e-3 mm for `r5g`
-  (awaiting the owner), because the modulus of a geometric MTF does not depend on its reference point and on
-  several lines LV's chief ray is one launch, solved without a wavelength, traced at every line. Never read
-  `imageHeightMm` of two engines on several lines as the landing of one ray.
+- **The chief-landing limit is a limit of sorting, per rung, and is no gate**: `r5` keeps 1e-7 mm (its optiland
+  answer is one line only), `r5g` keeps its single 1e-3 mm limit. For `r6c` the owner's 2026-10-22 decision keeps
+  `chiefLanding.maxAbs.attention` at 1e-7 mm when both answers record one line and uses
+  `attentionSeveralLines: 1e-3` mm when either records several. Select from the answers, never the case alone;
+  record each answer's selected `chiefLandingLimitMm` with its line wavelengths so `factsOfField`,
+  `factsOfRecorded` and the report repeat the same sorting, including peers and baseline reports.
+  On several lines LV's chief ray is one launch, solved at the d line without a wavelength and traced at every
+  line; optiland-wave states optiland's line-0 chief aimed through the stop centre at 555 nm. They are different
+  rays (1.1e-6 to 5.7e-6 mm apart in the two Stage 4.3 configurations, up to 3.0e-4 mm on the R5g benchmark).
+  A common reference point does not change the modulus, so the several-line landing only checks that the
+  answers are of the same field. Never read `imageHeightMm` of two engines on several lines as the landing of
+  one ray. The several-line report names its selected sorting limit through a linted wording template.
 - **On several lines optiland's column in R5g is the worker's sum of optiland's own landings**; the report says so
   under such a table (`GEOMETRIC_SEVERAL_LINES`), decided from the number of lines the answer records, and a test
   holds that only such a table carries the sentence.
@@ -458,6 +496,16 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   `wordingProblems` lints every golden report (`test/report/wording.test.ts`): a new sentence goes into that file,
   a new banned claim needs its rejected and its accepted examples in the test. `NOT_COVERED` is rendered in every
   report and says only what the measurement supports; change it only with the plan.
+- **Stage 4.5's statement is baseline-only** (`src/report/statement.ts`, `lvrtc statement [--root <dir>]`): all
+  eight baseline files of benchmark, features, states and focus-stations are required; no engine, clock or
+  machine is read. It writes `reports/validation-statement.{json,md}`. `lvrtc verify` holds both files byte for
+  byte (also requires them on a root with all eight suite baselines); `verify --write` regenerates them. R4 is
+  deduplicated across rays/MTF, with differing duplicate measurements refused. Named suite/run configurations,
+  configuration pairs and request pairs are separate counts. The supportable sentence, all prose about
+  recorded comparisons and the rung descriptions are templates in `src/report/wording.ts`, linted at render
+  time. Its hermetic synthetic goldens are written only by `node test/report/writeGolden.ts`. The owner signed
+  off the supportable sentence word for word (2026-10-23): change its words only with the owner. The plan records
+  the amended unnamed-state/catalog exclusion. Every committed `reports/**/*.md` passes `wordingProblems`.
 - **MTF baselines are files of their own** (`baselines/<suite>.mtf.json`, `reports/<suite>/mtf.{md,json}`;
   `--mtf` on `baseline write` and `check`; `verify` holds both kinds). `buildBaseline` with `MTF_BASELINE`: the
   rungs r4, r4f, r5, r5g, r6a, r6b of the run, each metric with `measured`, a rung's `steps`, `bands` and, for r5
@@ -481,9 +529,9 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   and wave. Check, then write, each kind.
 - **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in
   `src/cli/commands/mtf.ts`, `loadSuiteValue`): the conditions and cases are the benchmark suite's, so the store
-  answers a benchmark lens; r5 and r5g only where optiland is named; it exits 1 on a FAIL or ERROR pair. Without
-  `--profile benchmark` the command is the single request of `lv-tab-default`. A test of it sets `LVRTC_RUNS_DIR`
-  and closes the binding.
+  answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c on reference and photopic lines. It exits
+  1 on a FAIL or ERROR pair. Without `--profile benchmark` the command is the single request of `lv-tab-default`.
+  A test of it sets `LVRTC_RUNS_DIR` and closes the binding.
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
   that follows it, and what was written is read back before a commit says it was.
 - **A surface that does not clip is `aperture.semiDiameter` null (contract minor 2).** A rear plate whose rim
@@ -526,6 +574,11 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
   optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
   standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
+- **Investigations are result-only and outside every engine** (`src/diagnostics`, `workers/python/diagnostics`,
+  `bin/z50f12-investigation.mjs`; Stage 4.2): no engine imports them, they write only into the temporary
+  directory they are given, LV is reached through the binding and optiland through `lvrtc_optiland` under
+  `optilandWorkerEnvironment`, with `prepare` and `protect_stdout` first. A name they need of LV still goes into
+  the import manifest (`shearedOtf`), which moves the adapter revisions of `lv`, `replay` and `wave`.
 - **`validate.py` is a port of `src/contract/validate.ts`, and `ndarray.py` of the array codec.** Change both
   sides together; the fixture corpus in `contract/fixtures` holds them to the same answers. Workers echo ids and
   never recompute a hash.
@@ -538,8 +591,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   `test/fixtures/fault-root` holds the engines that fail.
 - **Every rung has an entry in `policy/rungs.v1.json` and a comparator of its quantity in `src/compare`**; a
   test holds the three together. `mtf.native` has a comparator for each of `r4f` (`src/compare/mtfFidelity.ts`),
-  `r5` and `r5g` (`mtfNative.ts`) and `r6b` (`mtfWave.ts`); `r5` and `r6b` ask one request, so an answer is
-  computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
+  `r5` and `r5g` (`mtfNative.ts`), `r6b` (`mtfWave.ts`) and `r6c` (`mtfWavefront.ts`); `r5` and `r6b` ask one
+  request, so an answer is computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
   or a limit changes. Four rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
   (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
   `rayTraceRequests`, so an engine traces a set once.
@@ -618,7 +671,8 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
   baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
-  ERROR pair. `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
+  ERROR pair. Source refusals are recorded as coded run problems with no ERROR pair.
+  `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
   The rays baselines hold R0 to R4: a policy change therefore needs them rewritten with
@@ -633,4 +687,43 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 - **Reports and baselines are deterministic**: no timestamps, no machine information.
 - **Recorded differences are not errors.** Only direct and identical-ray rungs are gated; see the ladder in the
   plan before adding a tolerance.
+- **`wavefront.native` v1 is raw data, never an OTF** (`lvrtc_optiland/wavefront.py`). One line,
+  field and even midpoint grid per fresh verified optic; `Wavefront.get_data` supplies sphere points, OPD in
+  vacuum waves (reference minus path), intensity and validity. Keep the compact disc in its original order and
+  scatter it into the full square. Read back every analysis setting, distribution coordinate and row count,
+  strategy, image index, reference sphere and exit pupil. Every check has a deliberate fault in
+  `test_wavefront.py`. Probe only the chief launch on a separate optic; no rim ray calibrates this operation.
+  FATAL and REQUEST_BUDGET_S are the MTF worker's, including its noncached time-budget error. Failed fields are
+  unavailable rows with reasons. The schema, corpus and stdlib Python validation port change together.
+- **`optiland-wave` is the comparator's OTF of those raw samples**, never an optiland OTF. Its transport owns and
+  closes the worker and negotiates raw quantity version 1. Its fingerprint is optiland's; its revision combines
+  worker and comparator closures. The pure estimator `wavefrontOtf.ts` takes only decoded arrays, uses radial
+  reference-sphere optical cosines, W=-lambda OPD and intensity as flux, and reuses `waveOtf` without moving any
+  operation. The reference-sphere directions are not traced exit directions: say which model was measured.
+  Analytic disc, tilt, defocus and annulus proofs with rim bounds, whole-number sums of an apodized pupil at
+  an image index, and a translated sphere are in `wavefrontOtf.test.ts`. Keep the new
+  estimator out of `lv`, `ref`, `replay` and the existing `wave` adapter's closure.
+- **R6c is recorded, only where named, reference or photopic** (policy version 14, contract 1.3): R5's native request and angles,
+  asked of its own four engines whatever `--engines` names, four columns `lv`, `wave`, `optiland`, `optiland-wave`. Reuse R5 sorting before every subtraction, including
+  report peers. Bands stay 0.005 / 0.01; chief landing is 1e-7 mm for two one-line answers and 1e-3 mm
+  when either records several lines; no gate or floor. Raw grids 128/256, quarter-wave
+  and doubling flags; no automatic follow-up. Report sentences are wording templates,
+  goldens come from writeGolden, MTF baselines may add its records; baseline rewrites remain the owner's.
 - Formatting follows LV: double quotes, 120 columns.
+
+- **Several-line `optiland-wave` is the comparator's complex sum, never a mean of moduli** (Stage 4.3):
+  one `wavefront.native` request per case line, still one line per worker call. Validate each line's index,
+  wavelength, weight, image-space index, fields, grids and case plane. Evaluate `wavefrontOtf` directly at every
+  requested frequency, without frequency interpolation. `polychromaticWavefrontOtf` multiplies each normalized
+  complex OTF by `exp(-2 pi i nu (chief_l-chief_0))` and case weight times transmitted cell flux, then adds
+  compensated complex sums and normalizes by total weighted flux before the modulus. Chief coordinates stay in
+  the declared y-mirrored frame, x sagittal / y tangential. Line 0's chief landing is the common origin, as the
+  plan and case contract prescribe. LV uses one chief launch for all lines and `wave` uses the reference-line
+  flux centroid: those are common origins too; changing a common origin rotates the whole sum and preserves
+  its modulus. Do not recenter each line separately or change either existing engine. Each line retains its
+  own chief-relative phase-step check; the complete spectral estimates supply grid-doubling convergence.
+  A failed line makes its field unavailable and names the line; none is dropped. The case plane, including
+  LV's photopic best-axial shift, is used unchanged. FFT stays unsupported on several lines.
+  Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
+  Policy 14 states contract 1.3 for the several-line chief-landing member introduced in Stage 4.3;
+  its limits retain policy 13's values. The MTF attention bands, classes, gates and quantity versions do not move.

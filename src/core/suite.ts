@@ -6,7 +6,7 @@ import { caseInvariantProblems, verifyCaseIdentity } from "../contract/case.ts";
 import type { OpticalCase } from "../contract/case.ts";
 import { deepFreeze } from "../contract/json.ts";
 import type { EngineDetails } from "../contract/result.ts";
-import { expandSuite, runInvariantProblems } from "../contract/runSpec.ts";
+import { expandSuite, runContractProblems, runInvariantProblems } from "../contract/runSpec.ts";
 import type { RunLens, RunSpec, Suite } from "../contract/runSpec.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
 import { probeRaySets } from "../rays/probe.ts";
@@ -233,6 +233,10 @@ export async function loadSuiteValue(parsed: unknown, file: string, options: Loa
   } catch (error) {
     throw new UsageError(`${file}: ${reason(error)}`, { cause: error });
   }
+  const misstated = specs.flatMap((spec) =>
+    runContractProblems(spec).map((problem) => `run "${spec.name}": ${problem}`),
+  );
+  if (misstated.length > 0) throw new UsageError(`${file}: not a valid suite: ${misstated.join("; ")}`);
 
   const sources: CaseSources = options.sources ?? { fixture: createFixtureCaseSource(options.rootDir) };
   // Each name, with the written run it came from: itself, or the run that stands for it.

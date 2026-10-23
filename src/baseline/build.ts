@@ -17,7 +17,12 @@ import type { ComparisonSet, PairComparison } from "../contract/comparison.ts";
 import { gravestVerdict } from "../contract/baseline.ts";
 import type { Policy } from "../contract/policy.ts";
 import { formatIssues, validateKind } from "../contract/schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_1, isCompatibleContract } from "../contract/version.ts";
+import {
+  CONTRACT_VERSION,
+  CONTRACT_VERSION_1_1,
+  CONTRACT_VERSION_1_3,
+  isCompatibleContract,
+} from "../contract/version.ts";
 import { isNativeMtfRung } from "../compare/mtfNative.ts";
 import { SOURCE_CHANGED, jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
@@ -37,7 +42,7 @@ export function baselineWriteProblems(manifest: RunManifest): string[] {
     if (engine.status !== "available") problems.push(`engine ${engine.id} could not be used (${engine.code})`);
   }
   for (const run of manifest.runs) {
-    if (run.caseId === null) problems.push(`run ${run.name} was not started`);
+    if (run.caseId === null && run.problems.length === 0) problems.push(`run ${run.name} was not started`);
   }
   for (const kind of Object.keys(manifest.sources ?? {}).sort()) {
     if (manifest.sources?.[kind].status === SOURCE_CHANGED)
@@ -102,7 +107,7 @@ function keptSet(set: ComparisonSet): BaselineSet {
 }
 
 /** The rungs of an MTF baseline, in ladder order: every rung that judges or records an MTF. */
-export const MTF_BASELINE_RUNGS: readonly string[] = Object.freeze(["r4", "r4f", "r5", "r5g", "r6a", "r6b"]);
+export const MTF_BASELINE_RUNGS: readonly string[] = Object.freeze(["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c"]);
 
 /** What a baseline is to hold of a run. */
 export interface BaselineOptions {
@@ -170,7 +175,7 @@ export function buildBaseline(
 
   const runs = manifest.runs.flatMap((run): BaselineRun[] => {
     const { caseId } = run;
-    if (caseId === null) return [];
+    if (caseId === null) return [{ name: run.name, caseId, problems: [...run.problems], rungs: [] }];
     // One set per request: the pairwise one where there is one. A Map keeps the order of first appearance.
     const byRung = new Map<string, Map<string, ComparisonSet>>();
     for (const set of comparisons.comparisons) {
@@ -242,11 +247,15 @@ export function buildBaseline(
         ...(kept ? { sets: sets.map(keptSet) } : {}),
       };
     });
-    return [{ name: run.name, caseId, rungs }];
+    return [{ name: run.name, caseId, ...(run.problems.length ? { problems: [...run.problems] } : {}), rungs }];
   });
 
   return {
-    contract: detailed ? CONTRACT_VERSION_1_1 : CONTRACT_VERSION,
+    contract: runs.some((run) => run.problems !== undefined)
+      ? CONTRACT_VERSION_1_3
+      : detailed
+        ? CONTRACT_VERSION_1_1
+        : CONTRACT_VERSION,
     kind: "baseline",
     suite: { name: manifest.suite.name, hash: manifest.suite.hash },
     policy: { version: policy.version, hash: hashCanonical(policy) },

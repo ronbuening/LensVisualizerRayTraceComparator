@@ -1,4 +1,6 @@
-// Source canaries reread at LV ab0fd4cf (closure 94778d3d, 175 files; same closure as 643ef5d0).
+// Source canaries reread at LV ab0fd4cf (closure 94778d3d, 175 files; same closure as 643ef5d0). The canaries of
+// the slider's range and of the finite-conjugate addresses were added at Stage 4.4 (ab0fd4cf, closure 7b756ee6,
+// 177 files: the binding now imports src/optics/publishedStations.ts).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -47,6 +49,28 @@ test("the hook still stops down linearly: wide-open radius times the widest f-nu
     "stopRadius reports an f-number below the widest as a problem, where the hook clamps it",
   );
 });
+
+test("the aperture slider still ends at maxFstop, which the exporter takes for the largest f-number", { skip }, () => {
+  assertSource(
+    "src/optics/state/aperture.ts",
+    "const requested = L.FOPEN * Math.pow(L.maxFstop / L.FOPEN, stopdownT);",
+    "stopRadius in src/engines/lv/exportAperture.ts reports an f-number above maxFstop as aperture-beyond-slider-range",
+  );
+});
+
+test(
+  "a finite conjugate is still addressed by keyframe and zoom station as the station selector resolves it",
+  { skip },
+  () => {
+    const file = "src/optics/analysis/mtf/mtfConjugates.ts";
+    const mirror =
+      "expandLvStations in src/engines/lv/stations.ts (and documentedConjugates in test/integration/lv/support.ts) " +
+      "turn each declared conjugate into the focus and zoom positions LensVisualizer's gate matches";
+    assertSource(file, "const count = source.zoom?.stations.length ?? 1;", mirror);
+    assertSource(file, "focusT: source.focus.keyframes[conjugate.keyframe],", mirror);
+    assertSource(file, "zoomT: count > 1 ? conjugate.zoomStation / (count - 1) : 0,", mirror);
+  },
+);
 
 test("the support gate still rejects a path for the causes the exporter names, and for no other", { skip }, () => {
   const gate = "src/optics/analysis/mtf/mtfSupport.ts";

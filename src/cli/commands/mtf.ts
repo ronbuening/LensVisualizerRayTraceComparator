@@ -73,7 +73,7 @@ export const BENCHMARK_PROFILE = "benchmark";
 const OWN_MTF_ENGINE = "optiland";
 /** The rungs the profile `benchmark` runs with any engines, and those it adds where `OWN_MTF_ENGINE` is named. */
 const BENCHMARK_RUNGS: readonly string[] = ["r4", "r4f", "r6a", "r6b"];
-const OWN_MTF_RUNGS: readonly string[] = ["r5", "r5g"];
+const OWN_MTF_RUNGS: readonly string[] = ["r5", "r5g", "r6c"];
 
 /** The engine a run of `lvrtc mtf` asks when none is named. */
 const DEFAULT_ENGINES: readonly string[] = ["lv"];
@@ -102,7 +102,7 @@ const HELP = [
   "                    plane and at LensVisualizer's best axial focus, on the reference line and on the photopic",
   "                    lines (eight runs; --aperture names one aperture, four runs), run and compared on the named",
   "                    engines as a suite is: rungs r4, r4f and r6a judged, r6b recorded and, where optiland is",
-  "                    named, r5 and r5g recorded. It prints the MTF report of that run (lvrtc mtf <lensKey>",
+  "                    named, r5, r5g and r6c recorded. It prints the MTF report of that run (lvrtc mtf <lensKey>",
   `                    --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to`,
   "                    <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it",
   "                    as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines'",

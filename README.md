@@ -317,10 +317,11 @@ node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optila
 Does for one lens what the MTF benchmark does for twelve: the lens wide open and at the tab's f/8, at its design
 plane and at LensVisualizer's best focus, on the reference line and on the photopic lines (eight runs; a zoom at
 both ends, sixteen), run on the named engines and compared. It prints the MTF report of that run: the gated rungs
-R4, R4f and R6a with their worst figures, the recorded rungs R6b, R5 and R5g, and the engines' own MTF side by
+R4, R4f and R6a with their worst figures, the recorded rungs R6b, R5, R5g and R6c, and the engines' own MTF side by
 side at fields 0, 0.5 and 1 and 10, 30 and 50 cycles/mm. Progress is on the error stream; a fast lens wide open
 takes minutes, and what the result store already holds is not computed again. `--aperture f/8` or `wide-open`
-keeps one aperture; without `optiland` among the engines R5 and R5g are left out.
+keeps one aperture; without `optiland` among the engines R5, R5g and R6c are left out. R6c runs only on the
+reference line.
 
 ## Suites
 
@@ -332,6 +333,11 @@ both ends.
 | `suites/smoke.json` | two small primes and one small zoom |
 | `suites/benchmark.json` | the 12 benchmark configurations, each on its reference line and on the photopic lines |
 | `suites/features.json` | one lens for each kind of surface or aperture the benchmark lacks |
+| `suites/states.json` | slider f/5.6 and f/11, and the benchmark zoom at its published stations; gated rungs |
+| `suites/focus-stations.json` | LV-certified finite focus stations selected at runtime; gated rungs |
+
+The focused suites use `lv,ref,optiland`. See [Stage 4.4](docs/REFERENCE.md#stage-44-focused-state-matrix)
+for their states, measurements and the owner's separate rays/MTF baseline commands.
 
 ## The rungs
 
