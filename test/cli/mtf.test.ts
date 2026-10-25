@@ -89,7 +89,7 @@ function recordOf(runsDir: string, name: string): { record: MtfRun; text: string
 
 const USAGE = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--json]",
+  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]",
   "",
 ].join("\n");
 

@@ -19,7 +19,7 @@ import { UsageError } from "../../core/usageError.ts";
 import { createLvCaseSource } from "../../engines/lv/caseSource.ts";
 import { createEngineRegistry } from "../../engines/registry.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
-import { jobsOption } from "../jobs.ts";
+import { assertJobs, jobsOption, memoryBudgetOption, suiteJobEstimate } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -36,7 +36,7 @@ export interface RunCommandInputs {
 }
 
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "Runs every run of the suite on each selected engine, asking an engine only for what the result store does not",
@@ -59,6 +59,8 @@ const HELP = [
   "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
   "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking",
   "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
+  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --json           print one JSON object in place of the lines",
   "",
   "Exit code: 0 when no job ended as an error (unsupported is an answer, not a failure), every run could be",
@@ -69,7 +71,7 @@ const HELP = [
 
 const STATUSES: readonly ResultStatus[] = ["ok", "unsupported", "error", "pending"];
 const SOURCES: readonly JobSource[] = ["computed", "cached", "negotiated", "unavailable"];
-const VALUE_OPTIONS = ["--root", "--engines", "--rungs", "--jobs"] as const;
+const VALUE_OPTIONS = ["--root", "--engines", "--rungs", "--jobs", "--memory-budget"] as const;
 type ValueOption = (typeof VALUE_OPTIONS)[number];
 
 /** The command line of `lvrtc run`, read. */
@@ -79,6 +81,7 @@ interface RunArguments {
   readonly engines: readonly string[] | undefined;
   readonly rungs: readonly string[] | undefined;
   readonly jobs: number;
+  readonly memoryBudgetGiB: number;
   readonly json: boolean;
 }
 
@@ -93,12 +96,14 @@ function readArguments(args: readonly string[]): RunArguments {
     if (ids?.includes("")) throw new UsageError(`${option} needs ids separated by commas, got "${values.get(option)}"`);
     return ids;
   };
+  const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
   return {
     suite: files[0],
     root: values.get("--root"),
     engines: list("--engines"),
     rungs: list("--rungs"),
-    jobs: jobsOption(values.get("--jobs")),
+    jobs: jobsOption(values.get("--jobs"), memoryBudgetGiB),
+    memoryBudgetGiB,
     json: flags.has("--json"),
   };
 }
@@ -122,13 +127,16 @@ export async function prepareSuiteRun(
   suiteFile: string,
   root: string | undefined,
   jobs = 1,
+  memoryBudgetGiB = memoryBudgetOption(undefined),
+  rungs?: readonly string[],
 ): Promise<PreparedSuiteRun> {
   const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd, root);
   if (root !== undefined && !statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
     throw new UsageError(`--root ${root}: not a directory`);
   }
   const loaded = loadConfig({ rootDir, env: inputs.env });
-  const pool = jobs > 1 ? createProcessRegistry(loaded, jobs) : undefined;
+  assertJobs(jobs, memoryBudgetGiB, suiteJobEstimate(resolve(inputs.cwd, suiteFile), rungs));
+  const pool = jobs > 1 ? createProcessRegistry(loaded, jobs, { memoryBudgetGiB }) : undefined;
   const registry = pool ?? createEngineRegistry(loaded);
   const sources: CaseSources = pool?.sources ?? {
     fixture: createFixtureCaseSource(loaded.rootDir),
@@ -200,7 +208,7 @@ function jsonText(result: SuiteRunResult): string {
 }
 
 /**
- * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]`.
+ * Builds `lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]`.
  *
  * It loads the configuration of the root, loads the suite and runs it (`runSuite`), with every engine the
  * configuration defines unless a run or `--engines` names others; a built-in engine, `lv` or `ref`, is run only
@@ -240,7 +248,14 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
       let suite: LoadedSuite;
       let result: SuiteRunResult;
       try {
-        const prepared = await prepareSuiteRun(inputs, asked.suite, asked.root, asked.jobs);
+        const prepared = await prepareSuiteRun(
+          inputs,
+          asked.suite,
+          asked.root,
+          asked.jobs,
+          asked.memoryBudgetGiB,
+          asked.rungs,
+        );
         suite = prepared.suite;
         const { registry } = prepared;
 

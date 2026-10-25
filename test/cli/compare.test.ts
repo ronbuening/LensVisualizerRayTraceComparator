@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
+import { defaultMemoryBudgetGiB } from "../../src/core/memoryBudget.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
 import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE } from "../../src/report/index.ts";
 import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "../core/support.ts";
@@ -24,7 +26,7 @@ import { FAULT_ROOT, goldenFile, suiteFile } from "../report/support.ts";
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const COMPARE_SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
-  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--json]\n";
+  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]\n";
 
 interface Ended {
@@ -199,8 +201,9 @@ test("the command lines that are not the synopsis are usage errors", async (t) =
     [["compare", "fake-pair", "--jobs", "1.5"], 'lvrtc compare: --jobs must be a positive integer, got "1.5"\n'],
     [
       ["compare", "fake-pair", "--jobs", String(maxJobs() + 1)],
-      `lvrtc compare: --jobs ${maxJobs() + 1}: at most ${maxJobs()} on this machine (its available parallelism); ` +
-        "each job is a process with its own engine workers, about 2 GiB with optiland\n",
+      `lvrtc compare: --jobs ${maxJobs() + 1}: at most ${maxJobs()} ` +
+        `(available parallelism ${availableParallelism()}, memory budget ${defaultMemoryBudgetGiB()} GiB / ` +
+        "estimate 2.5 GiB per job); lower --jobs or set --memory-budget <GiB> to an appropriate budget\n",
     ],
     [["compare", "fake-pair", "--frob"], 'lvrtc compare: unknown option "--frob"\n'],
     [["compare", "fake-pair", "--mode"], "lvrtc compare: --mode needs a value\n"],

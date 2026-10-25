@@ -1,6 +1,6 @@
 // Suite-only process isolation, outside every optical engine's adapter-revision closure.
 import { randomBytes } from "node:crypto";
-import { renameSync, rmSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { fork } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
@@ -31,6 +31,10 @@ import { createInputReader } from "./poolInputs.ts";
 import type { PreparedInput } from "./poolInputs.ts";
 import { profileAsync, profileSync } from "./profile.ts";
 import type { PoolReply, PoolRequest } from "./poolProtocol.ts";
+import type { PoolMemoryReport } from "./poolProtocol.ts";
+import { defaultMemoryBudgetGiB, GIB } from "./memoryBudget.ts";
+import { createMemoryGuard, heartbeatMemoryReader } from "./poolMemory.ts";
+import type { MemoryReader } from "./poolMemory.ts";
 
 type Message = PoolRequest extends infer R ? (R extends PoolRequest ? Omit<R, "id"> : never) : never;
 
@@ -45,19 +49,26 @@ const SLOT_MARGIN_MS = 60_000;
 
 class Slot {
   readonly child: ChildProcess;
+  rssBytes = 0;
   #next = 0;
   #calls: Promise<void> = Promise.resolve();
   #gone: Error | undefined;
   #pending: { resolve(reply: PoolReply): void; reject(error: Error): void } | undefined;
   readonly ended: Promise<void>;
-  constructor() {
+  constructor(memoryDirectory: string) {
     this.child = fork(fileURLToPath(new URL("./poolWorker.ts", import.meta.url)), [], {
       execArgv: [],
       serialization: "advanced",
       stdio: ["ignore", "ignore", "ignore", "ipc"],
+      env: { ...process.env, LVRTC_POOL_MEMORY_DIR: memoryDirectory },
     });
     this.child.on("error", (error) => this.#fail(error));
-    this.child.on("message", (reply: PoolReply) => {
+    this.child.on("message", (reply: PoolReply | PoolMemoryReport) => {
+      if ("type" in reply && reply.type === "memory") {
+        this.rssBytes = reply.rssBytes;
+        return;
+      }
+      if (!("id" in reply)) return;
       if (reply.id !== this.#next || this.#pending === undefined) {
         this.#fail(new Error("pool worker sent an unexpected reply"));
         this.child.kill("SIGKILL");
@@ -154,10 +165,30 @@ export interface ProcessRegistry extends EngineRegistry {
   ): Promise<WirePlan>;
   close(): Promise<void>;
 }
-export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "config">, jobs: number): ProcessRegistry {
+export function createProcessRegistry(
+  loaded: Pick<LoadedConfig, "rootDir" | "config">,
+  jobs: number,
+  options: {
+    readonly memoryBudgetGiB?: number;
+    readonly memoryReader?: MemoryReader;
+    readonly memorySampleMs?: number;
+  } = {},
+): ProcessRegistry {
   if (!Number.isSafeInteger(jobs) || jobs < 1) throw new UsageError("--jobs must be a positive integer");
   const serial = createEngineRegistry(loaded);
+  const prefix = `.pool-${process.pid}-${randomBytes(8).toString("hex")}`;
+  const memoryDirectory = join(loaded.config.runsDir, `${prefix}-memory`);
+  mkdirSync(memoryDirectory, { recursive: true });
   const slots: Slot[] = [];
+  const memory = createMemoryGuard({
+    budgetBytes: (options.memoryBudgetGiB ?? defaultMemoryBudgetGiB()) * GIB,
+    children: () =>
+      slots
+        .filter((slot) => slot.child.pid !== undefined)
+        .map((slot) => ({ pid: slot.child.pid!, rssBytes: slot.alive() ? slot.rssBytes : 0 })),
+    reader: options.memoryReader ?? heartbeatMemoryReader(memoryDirectory),
+    sampleMs: options.memorySampleMs,
+  });
   const idle: Slot[] = [];
   const waiting: ((slot: Slot) => void)[] = [];
   let owners = 0;
@@ -167,7 +198,7 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
     while (free !== undefined && !free.alive()) free = idle.shift();
     if (free !== undefined) return free;
     if (slots.length < jobs) {
-      const slot = new Slot();
+      const slot = new Slot(memoryDirectory);
       slots.push(slot);
       try {
         await profileAsync("startup.worker", () => slot.call({ method: "init", loaded }, 180_000));
@@ -180,8 +211,10 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
     return new Promise((resolve) => waiting.push(resolve));
   };
   const use = async <T>(act: (slot: Slot) => Promise<T>): Promise<T> => {
+    await memory.wait();
     const slot = await acquire();
     try {
+      await memory.wait();
       return await act(slot);
     } finally {
       if (slot.alive()) {
@@ -234,7 +267,6 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
       },
     };
   };
-  const prefix = `.pool-${process.pid}-${randomBytes(8).toString("hex")}`;
   let nextTemporary = 0;
   const temporaries = new Set<string>();
   const inputDirectory = join(loaded.config.runsDir, `${prefix}-inputs`);
@@ -270,6 +302,7 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
   const removeTransient = (): void => {
     for (const file of temporaries) rmSync(file, { force: true });
     rmSync(inputDirectory, { force: true, recursive: true });
+    rmSync(memoryDirectory, { force: true, recursive: true });
   };
   // An interrupted suite runs no finally block: end the children (their engine workers see their input close) and
   // remove the staged entries and prepared inputs, which can be gigabytes, then die of the signal as before.
@@ -309,6 +342,7 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
       } finally {
         process.off("SIGINT", onSignal);
         process.off("SIGTERM", onSignal);
+        await memory.close();
         removeTransient();
       }
     })());
@@ -321,7 +355,10 @@ export function createProcessRegistry(loaded: Pick<LoadedConfig, "rootDir" | "co
       await Promise.all(
         slots
           .filter((slot) => slot.alive())
-          .map((slot) => slot.call({ method: "warm", engines }, 30_000).catch(() => undefined)),
+          .map(async (slot) => {
+            await memory.wait();
+            await slot.call({ method: "warm", engines }, 30_000).catch(() => undefined);
+          }),
       );
     },
     planRun: async (run, engines, rungs, retainSpecsFor) => {

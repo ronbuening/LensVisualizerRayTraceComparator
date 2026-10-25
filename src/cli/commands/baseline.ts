@@ -36,10 +36,11 @@ import { runSuite } from "../../core/orchestrator.ts";
 import type { ProcessRegistry } from "../../core/processRegistry.ts";
 import { RUNGS } from "../../core/rungs.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { jobEstimateGiB } from "../../core/memoryBudget.ts";
 import { reportInputProblems } from "../../report/model.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
-import { jobsOption } from "../jobs.ts";
+import { assertJobs, jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { compareRunDirectoryWithJobs } from "./compare.ts";
@@ -53,7 +54,7 @@ export interface BaselineCommandInputs extends RunTargetInputs {
 
 const SYNOPSIS =
   "Usage: lvrtc baseline write <suite name | run directory> [--root <dir>] [--mtf] [--replace]\n" +
-  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--jobs <n>] [--json]\n";
+  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "write   Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report that",
@@ -82,6 +83,8 @@ const HELP = [
   "                requests it was measured in, and the requests of the engines' own MTF as they were compared.",
   "                Without it, the rays baseline: <suite>.json, rays.md and rays.json, every rung of the run",
   "  --jobs <n>    check: concurrent jobs in isolated processes (default: 1, serial)",
+  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --replace     write: write the baseline although the one that is there has a rung this run lacks. Without",
   "                it such a run is refused: a run directory is of the last run of its suite, which may be the",
   "                run of other rungs (of the other kind of baseline, or of lvrtc run --rungs)",
@@ -219,8 +222,9 @@ async function check(
   inputs: BaselineCommandInputs,
   io: Parameters<CliCommand["run"]>[1],
 ): Promise<number> {
-  const asked = parseTargetArguments(args, ["--root", "--jobs"], ["--json", "--mtf"]);
-  const jobs = jobsOption(asked.values.get("--jobs"));
+  const asked = parseTargetArguments(args, ["--root", "--jobs", "--memory-budget"], ["--json", "--mtf"]);
+  const memoryBudgetGiB = memoryBudgetOption(asked.values.get("--memory-budget"));
+  const jobs = jobsOption(asked.values.get("--jobs"), memoryBudgetGiB);
   const mtf = asked.flags.has("--mtf");
   const root = asked.values.get("--root");
   const rootDir = rootOf(root, inputs);
@@ -228,7 +232,7 @@ async function check(
   const isFile = isAbsolute(target) || /[\\/]/.test(target) || target.endsWith(".json");
   const suiteFile = isFile ? resolve(inputs.cwd, target) : join(rootDir, "suites", `${target}.json`);
   if (!existsSync(suiteFile)) throw new UsageError(`${suiteFile}: no suite file is there`);
-  const prepared = await prepareSuiteRun(inputs, suiteFile, root, jobs);
+  const prepared = await prepareSuiteRun(inputs, suiteFile, root, jobs, memoryBudgetGiB, []);
   try {
     const { suite, loaded } = prepared;
 
@@ -248,6 +252,7 @@ async function check(
 
     const rungs: string[] = [];
     for (const run of committed.runs) for (const { rung } of run.rungs) if (!rungs.includes(rung)) rungs.push(rung);
+    assertJobs(jobs, memoryBudgetGiB, jobEstimateGiB(rungs));
     const result = await runSuite({
       suite,
       registry: prepared.registry,

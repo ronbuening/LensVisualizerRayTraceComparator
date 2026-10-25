@@ -66,13 +66,27 @@ for (const dies of [false, true]) {
     );
     const policy = loadPolicy();
     const snapshots = [];
+    let memoryReads = 0;
     for (const jobs of [1, 2, 4]) {
       const runsDir = join(root, `runs-${jobs}`);
       const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: runsDir } });
       const seen: unknown[] = [];
       const result = await runSuite({
         suite: pairSuite({ engines: ["fake-a", "fake-b", "fake-stdio"], rungs: ["selftest"] }),
-        registry: jobs === 1 ? createEngineRegistry(loaded) : createProcessRegistry(loaded, jobs),
+        registry:
+          jobs === 1
+            ? createEngineRegistry(loaded)
+            : createProcessRegistry(loaded, jobs, {
+                memoryBudgetGiB: 10,
+                memorySampleMs: 1,
+                // Periodic synthetic pressure must change scheduling only, including all persisted bytes below.
+                memoryReader: async (children) =>
+                  children.map((child, index) => ({
+                    pid: child.pid,
+                    nodeRssBytes: ++memoryReads % 7 === 0 && index === 0 ? 11 * 2 ** 30 : 1,
+                    workers: [],
+                  })),
+              }),
         jobs,
         runsDir,
         rungDefinitions: [rung],
@@ -113,6 +127,7 @@ for (const dies of [false, true]) {
     }
     assert.deepEqual(snapshots[1], snapshots[0]);
     assert.deepEqual(snapshots[2], snapshots[0]);
+    assert.ok(memoryReads > 7, "determinism exercised repeated admission pressure");
     const events = readFileSync(log, "utf8")
       .trim()
       .split("\n")

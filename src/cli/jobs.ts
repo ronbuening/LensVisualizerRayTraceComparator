@@ -1,29 +1,63 @@
+import { readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 
+import { expandSuite } from "../contract/runSpec.ts";
+import { defaultMemoryBudgetGiB, GIB, jobEstimateGiB, JOB_GIB } from "../core/memoryBudget.ts";
 import { UsageError } from "../core/usageError.ts";
 
-/**
- * The most jobs a command takes on this machine: its available parallelism, and never fewer than 4. Each job is a
- * Node process with its own engine replicas (about 2 GiB with optiland, `docs/REFERENCE.md`), so jobs beyond the
- * CPUs add memory and no speed.
- */
-export function maxJobs(): number {
-  return Math.max(4, availableParallelism());
+export function memoryBudgetOption(value: string | undefined): number {
+  if (value === undefined) return defaultMemoryBudgetGiB();
+  const budget = Number(value);
+  if (!/^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(value) || !Number.isFinite(budget * GIB) || budget <= 0) {
+    throw new UsageError(`--memory-budget must be a positive finite number of GiB, got ${JSON.stringify(value)}`);
+  }
+  return budget;
 }
 
-/** Shared strict CLI rule; explicit concurrency never becomes part of a stored identity. */
-export function jobsOption(value: string | undefined): number {
-  if (value === undefined) return 1;
-  const jobs = Number(value);
-  if (!/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(jobs)) {
-    throw new UsageError(`--jobs must be a positive integer, got ${JSON.stringify(value)}`);
-  }
-  const most = maxJobs();
+/**
+ * Both CPUs and the declared replica memory must fit. A serial run (one job) starts no pool and is always allowed,
+ * so the ceiling is never below 1, whatever the budget.
+ */
+export function maxJobs(
+  budgetGiB = defaultMemoryBudgetGiB(),
+  perJobGiB = JOB_GIB,
+  cpus = availableParallelism(),
+): number {
+  return Math.max(1, Math.min(cpus, Math.floor(budgetGiB / perJobGiB)));
+}
+
+export function assertJobs(jobs: number, budgetGiB = defaultMemoryBudgetGiB(), perJobGiB = JOB_GIB): void {
+  if (jobs === 1) return;
+  const most = maxJobs(budgetGiB, perJobGiB);
   if (jobs > most) {
     throw new UsageError(
-      `--jobs ${jobs}: at most ${most} on this machine (its available parallelism); each job is a process with ` +
-        "its own engine workers, about 2 GiB with optiland",
+      `--jobs ${jobs}: at most ${most} (available parallelism ${availableParallelism()}, ` +
+        `memory budget ${budgetGiB} GiB / estimate ${perJobGiB} GiB per job); ` +
+        "lower --jobs or set --memory-budget <GiB> to an appropriate budget",
     );
   }
+}
+
+/** Shared strict CLI rule; scheduling options never become part of a stored identity. */
+export function jobsOption(
+  value: string | undefined,
+  budgetGiB = defaultMemoryBudgetGiB(),
+  perJobGiB = JOB_GIB,
+): number {
+  const jobs = value === undefined ? 1 : Number(value);
+  if (value !== undefined && (!/^[1-9][0-9]*$/.test(value) || !Number.isSafeInteger(jobs))) {
+    throw new UsageError(`--jobs must be a positive integer, got ${JSON.stringify(value)}`);
+  }
+  assertJobs(jobs, budgetGiB, perJobGiB);
   return jobs;
+}
+
+/** Inspect written selections before starting workers; the normal suite loader diagnoses invalid files. */
+export function suiteJobEstimate(file: string, rungs?: readonly string[]): number {
+  if (rungs !== undefined) return jobEstimateGiB(rungs);
+  try {
+    return jobEstimateGiB(expandSuite(JSON.parse(readFileSync(file, "utf8"))).flatMap((run) => run.rungs ?? []));
+  } catch {
+    return JOB_GIB;
+  }
 }

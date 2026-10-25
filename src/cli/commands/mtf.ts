@@ -37,6 +37,7 @@ import type { LoadedConfig } from "../../core/config.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
 import { STORE_DIRECTORY, createResultStore, isStorable } from "../../core/resultStore.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { jobEstimateGiB } from "../../core/memoryBudget.ts";
 import { createProcessRegistry } from "../../core/processRegistry.ts";
 import { EngineUnavailableError, enginesText } from "../../engines/adapter.ts";
 import type { EngineAdapter, EngineUnavailableCode } from "../../engines/adapter.ts";
@@ -52,7 +53,7 @@ import { createEngineRegistry } from "../../engines/registry.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { mtfTableRows, mtfTableText } from "../../report/mtfTable.ts";
 import type { MtfTableRow } from "../../report/mtfTable.ts";
-import { jobsOption } from "../jobs.ts";
+import { jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -82,7 +83,7 @@ const DEFAULT_ENGINES: readonly string[] = ["lv"];
 
 const SYNOPSIS = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--json]`,
+  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]`,
   "",
 ].join("\n");
 const HELP = [
@@ -114,6 +115,8 @@ const HELP = [
   `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
   "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
   "  --jobs <n>        benchmark: concurrent jobs in isolated processes (default: 1, serial)",
+  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
   "                    a zoom, an object with the record of each end under wide and tele",
   "",
@@ -127,7 +130,7 @@ const HELP = [
   "",
 ].join("\n");
 
-const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root", "--jobs"];
+const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root", "--jobs", "--memory-budget"];
 
 /** What a profile makes of a lens: the case and the request of its MTF, or every reason the lens has no case. */
 type ProfileRequest =
@@ -199,6 +202,7 @@ interface MtfArguments {
   readonly apertureGiven: boolean;
   readonly root: string | undefined;
   readonly jobs: number;
+  readonly memoryBudgetGiB: number;
   readonly json: boolean;
 }
 
@@ -216,7 +220,12 @@ function readArguments(args: readonly string[]): MtfArguments {
     const known = [...Object.keys(PROFILES), BENCHMARK_PROFILE].sort().join(", ");
     throw new UsageError(`unknown profile "${profile}": the profiles are ${known}`);
   }
-  const jobs = jobsOption(values.get("--jobs"));
+  const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
+  const rungs =
+    profile === BENCHMARK_PROFILE
+      ? [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])]
+      : [];
+  const jobs = jobsOption(values.get("--jobs"), memoryBudgetGiB, jobEstimateGiB(rungs));
   if (values.has("--jobs") && profile !== BENCHMARK_PROFILE)
     throw new UsageError("--jobs requires --profile benchmark");
   const zoom = values.get("--zoom");
@@ -230,6 +239,7 @@ function readArguments(args: readonly string[]): MtfArguments {
     apertureGiven: aperture !== undefined,
     root: values.get("--root"),
     jobs,
+    memoryBudgetGiB,
     json: flags.has("--json"),
   };
 }
@@ -353,7 +363,8 @@ async function runBenchmark(
     defaults: { aperture: { kind: "wide-open" }, imagePlane: { kind: "design" }, engines },
     runs,
   };
-  const pool = asked.jobs > 1 ? createProcessRegistry(loaded, asked.jobs) : undefined;
+  const pool =
+    asked.jobs > 1 ? createProcessRegistry(loaded, asked.jobs, { memoryBudgetGiB: asked.memoryBudgetGiB }) : undefined;
   const sources: CaseSources = pool?.sources ?? {
     fixture: createFixtureCaseSource(loaded.rootDir),
     lv: createLvCaseSource(loaded.config.lvPath),

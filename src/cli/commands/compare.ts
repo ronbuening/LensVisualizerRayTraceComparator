@@ -16,7 +16,7 @@ import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { STORE_DIRECTORY, createResultStore } from "../../core/resultStore.ts";
 import { profileAsync } from "../../core/profile.ts";
 import { UsageError } from "../../core/usageError.ts";
-import { jobsOption } from "../jobs.ts";
+import { jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
@@ -30,7 +30,7 @@ export interface CompareCommandInputs extends RunTargetInputs {
 
 const SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
-  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--json]\n";
+  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "Compares the answers of a run's engines, request by request, and judges each pair by the policy of its rung.",
@@ -43,6 +43,8 @@ const HELP = [
   '                        the first engine, by id, that has an "ok" result)',
   "  --mode <mode>         reference-vs-each, pairwise or both (default: both)",
   "  --jobs <n>            parallel comparison workers over runs (default: 1, serial)",
+  "  --memory-budget <GiB>  comparison memory allowance (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each (comparison starts no engine workers)",
   "  --json                print the comparisons as one JSON object in place of the lines",
   "",
   "Exit code: 0 when no pair is FAIL or ERROR (FLOOR is a pass; UNSUPPORTED, RECORDED and ATTENTION are not",
@@ -146,7 +148,11 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
       let path: string;
       let json: boolean;
       try {
-        const asked = parseTargetArguments(args, ["--root", "--reference", "--mode", "--jobs"], ["--json"]);
+        const asked = parseTargetArguments(
+          args,
+          ["--root", "--reference", "--mode", "--jobs", "--memory-budget"],
+          ["--json"],
+        );
         const mode = asked.values.get("--mode") ?? "both";
         if (!Object.hasOwn(MODE_CHOICES, mode)) {
           throw new UsageError(`--mode ${mode}: the modes are ${Object.keys(MODE_CHOICES).join(", ")}`);
@@ -157,7 +163,7 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
           compareRunDirectoryWithJobs(
             directory,
             inputs.policy ?? loadPolicy(),
-            jobsOption(asked.values.get("--jobs")),
+            jobsOption(asked.values.get("--jobs"), memoryBudgetOption(asked.values.get("--memory-budget"))),
             {
               reference: asked.values.get("--reference"),
               modes: MODE_CHOICES[mode],

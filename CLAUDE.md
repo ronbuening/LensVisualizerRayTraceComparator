@@ -16,10 +16,10 @@ npm run test:lv        # tests against the real LensVisualizer (test/integration
 npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
-node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 8   # process pool; default --jobs 1 is serial
-node bin/lvrtc.mjs compare features --jobs 8   # parallel comparisons, collected in manifest order
-node bin/lvrtc.mjs baseline check features --jobs 8   # the same pool for baseline suites
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 8   # the same pool for MTF benchmark suites
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2   # process pool; default --jobs 1 is serial
+node bin/lvrtc.mjs compare features --jobs 2   # parallel comparisons, collected in manifest order
+node bin/lvrtc.mjs baseline check features --jobs 2   # the same pool for baseline suites
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 2   # the same pool for MTF benchmark suites
 node bin/lvrtc.mjs store compress        # OWNER ONLY: dry run; counts and bytes before/after
 node bin/lvrtc.mjs store compress --yes  # OWNER ONLY: atomically gzip legacy plain entries
 node bin/lvrtc.mjs store prune           # OWNER ONLY: dry run; unused engine versions, protected by HEAD baselines
@@ -69,8 +69,14 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   TypeScript is allowed (`erasableSyntaxOnly`): no enums, namespaces or constructor parameter properties.
 - **Import TypeScript with `.ts` specifiers** and use `import type` for types (`verbatimModuleSyntax`).
 - **Suite concurrency is explicit** (`--jobs <n>` on `run`, `baseline check`, and `mtf --profile benchmark`): a positive
-  integer, default **1 (serial)**, at most the machine's available parallelism and never less than 4 (`maxJobs`,
-  `src/cli/jobs.ts`); a larger value is a usage error. Higher values use at most n Node child processes, each bound to
+  integer, default **1 (serial)**, capped by available parallelism and by the memory budget (`maxJobs`,
+  `src/cli/jobs.ts`). `--memory-budget <GiB>` defaults to **25% of installed RAM minus 2 GiB** for the controller
+  and reserve, leaving room for the owner's other applications. Divide it by **2.5 GiB/job**, or **4 GiB/job**
+  when the selected suite/baseline rungs include `r6c` (optiland plus optiland-wave). A serial run (jobs 1) starts no
+  pool and is always allowed, whatever the budget (a 16 GB machine's budget is 2 GiB); an overlarge value is a usage error naming both
+  budget and estimate. On this 48 GiB machine the default budget is **10 GiB**, allowing **4 jobs**, or **2
+  for R6c**. These are conservative planning estimates, not an allocation or a physical memory guarantee.
+  Higher values use at most n Node child processes, each bound to
   the configuration's one LV tree and owning its engine replicas for the whole suite. Every replica has its own
   validated hello; optiland is still started only through its definition, `optilandWorkerEnvironment` and its existing
   timeouts. A slot waits an engine's `runMs` plus `SLOT_MARGIN_MS` (60 s, for the child's store work) before it kills
@@ -94,8 +100,13 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   and blocking ledger together and collecting in manifest order. Baseline checks and benchmark MTF share both paths. Opt
   into parallelism for workloads that amortize startup and replica memory. A custom `runSuite` registry supplies its own
   isolation. `LVRTC_PROFILE_DIR=<temporary directory>` records per-process phase timings and peak RSS outside run
-  artifacts. For Stage 5.3 on the owner's 14-core / 48 GB machine, recommend `--jobs 10` on run and compare: measured
-  combined speed-up is 7.17x versus serial, at roughly 2 GiB per Node/Python pair. See `docs/REFERENCE.md`.
+  artifacts. The controller samples child RSS and interpreter-owned worker RSS heartbeats every 250 ms;
+  Python's own current RSS comes from Mach task_info on macOS or /proc/self/statm on Linux, with lifetime peaks
+  also reported. Unknown custom launchers require `ps` descendant accounting. Above the budget, new dispatches
+  wait until the sum falls; running work and ordered result publication continue. No job is killed for memory.
+  Sampling failures also pause dispatch until readable. Never use `os.freemem()` to estimate macOS pressure.
+  Profiles include `pool-memory-*.json` with peak simultaneous RSS, per-slot/worker peaks and pauses. These
+  scheduling diagnostics stay outside engine source hashes and persisted results. See `docs/REFERENCE.md`.
 - **New result-store entries are `<key>.json.gz`**, gzip of exactly the canonical JSON plus newline the plain
   entry held. Legacy `<key>.json` remains readable; gzip takes precedence when both exist, and corruption is
   reported rather than hidden by the other copy. No key or identity changes. Writes publish atomically.
@@ -163,6 +174,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `policyProblems` refuse earlier-minor several-line bands. `suites/states.json`, `focus-stations.json` and
   policy version 14 state 1.3. A baseline recording source problems also states 1.3, with nullable `caseId`
   and `problems`; other baselines, cases, requests, results and manifests are written as before.
+- **One heavy command at a time, across the main session and all agents.** A tier, suite or pool test is a
+  heavy command. Never run `test:lv` alongside `test:optiland`, or overlap either with another heavy command.
+  Agents must coordinate with the main session before starting one. Real-engine runs use **at most --jobs 4**,
+  subject to the lower memory ceiling (R6c defaults to 2 here). Both integration tiers run only as
+  `node --test --test-concurrency=1 ...` (the npm scripts enforce this); `npm test` caps hermetic file
+  concurrency at **4**, because hermetic tests also start children/pools. Never run prettier on `docs/`.
 - **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
   `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
   (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the

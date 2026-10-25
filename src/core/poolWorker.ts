@@ -3,7 +3,6 @@ import { engineStamp } from "../contract/engine.ts";
 import { makeResult } from "../contract/result.ts";
 import type { EngineAdapter } from "../engines/adapter.ts";
 import { EngineUnavailableError } from "../engines/adapter.ts";
-import { createEngineRegistry } from "../engines/registry.ts";
 import type { EngineRegistry } from "../engines/registry.ts";
 import { join, dirname } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -19,6 +18,12 @@ import { createInputReader, writePreparedInputs } from "./poolInputs.ts";
 import type { PoolReply, PoolRequest } from "./poolProtocol.ts";
 
 import { profileAsync, profileStart } from "./profile.ts";
+import { memoryRegistry } from "./memoryRegistry.ts";
+
+const reportMemory = (): void => {
+  if (process.connected) process.send?.({ type: "memory", rssBytes: process.memoryUsage().rss }, () => {});
+};
+setInterval(reportMemory, 250).unref();
 
 const inputsOf = createInputReader();
 let endLifetime = () => {};
@@ -48,7 +53,7 @@ async function answer(message: PoolRequest): Promise<PoolReply> {
     switch (message.method) {
       case "init":
         endLifetime = profileStart("worker.lifetime");
-        registry = createEngineRegistry(message.loaded);
+        registry = memoryRegistry(message.loaded, process.env.LVRTC_POOL_MEMORY_DIR!);
         sources = {
           lv: createLvCaseSource(message.loaded.config.lvPath),
           fixture: createFixtureCaseSource(message.loaded.rootDir),
@@ -182,6 +187,7 @@ async function answer(message: PoolRequest): Promise<PoolReply> {
 }
 process.on("message", (message: PoolRequest) => {
   void answer(message).then((reply) => {
+    reportMemory();
     process.send?.(reply, () => {
       if (message.method === "close") process.disconnect();
     });

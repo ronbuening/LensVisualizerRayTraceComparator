@@ -21,7 +21,7 @@ const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 /** The environment variable that tells the engine of the SIGKILL test after how many runs to kill its process. */
 const KILL_AFTER_RUNS = "LVRTC_TEST_KILL_AFTER_RUNS";
 

@@ -27,8 +27,31 @@ wording on 2026-10-23.
 `lvrtc mtf <lensKey> --profile benchmark --jobs <n>` share a bounded process pool.
 `lvrtc compare <suite> --jobs <n>` uses bounded comparison threads. The value must be a positive
 integer; the default stays **1, serial**, to retain modest memory use and avoid replica startup on small suites.
-It is at most the machine's available parallelism, and never less than 4 (`maxJobs`); a larger value is a usage
-error, since each job is a process with its own engine replicas.
+Its ceiling is the smaller of available parallelism and `floor(memoryBudgetGiB / estimateGiB)` (`maxJobs`).
+`--memory-budget <GiB>` defaults to **25% of installed RAM minus 2 GiB** for controller/reserve, with no minimum
+that overrides the cap. The estimate is **2.5 GiB/job**, or **4 GiB/job** when the selected suite/baseline rungs
+include **R6c**, whose replicas retain both optiland and optiland-wave Python workers. A larger `--jobs` is a
+usage error naming the budget and estimate. On this **48 GiB / 14-core** machine the default budget is **10 GiB**:
+**4 ordinary jobs**, or **2 R6c jobs**. The owner can choose an explicit budget according to other applications;
+these estimates are a planning allowance, not a hard limit on memory already allocated by running work.
+Comparison threads use the ordinary 2.5 GiB estimate; they start no engine workers.
+
+The controller samples child RSS (`process.memoryUsage().rss`) and worker-owned heartbeats every **250 ms**.
+The Python launcher reads its own current RSS with Mach `task_info` on macOS or `/proc/self/statm` on Linux;
+it also reports its lifetime RSS peak. This pool-only launcher preserves the original worker environment and
+module, stdout protocol, source hashes and identities. Node stdio stand-ins use a diagnostic preload. Unknown
+custom launchers fall back to `ps` RSS of descendants, counting each once, including both R6c workers. No
+`os.freemem()` heuristic is used: macOS free memory excludes reclaimable memory.
+Above the budget, new work waits until the sum falls; already running jobs and ordered result publication
+continue. Memory pressure never kills a job, changes an answer or adjusts an optical setting. A temporarily
+unreadable sample pauses admission until the reader recovers. If persistent replicas keep RSS above a chosen
+budget, admission continues waiting; interrupt and rerun with fewer jobs or a suitable budget. A sampling guard
+cannot prevent an already running job's memory spike.
+
+Run **one heavy command at a time**, across the main session and agents: a tier, suite or pool test. Real-engine
+runs use **at most --jobs 4**, subject to the lower memory ceiling. Integration tiers run only with
+`node --test --test-concurrency=1 ...`; their npm scripts enforce this. Hermetic `npm test` uses concurrency **4**
+because its fake-engine tests also start processes and pools. Never overlap `test:lv` and `test:optiland`.
 At most n Node children execute jobs, each with one LV tree and long-lived adapters. Every engine replica makes
 its own hello and must state the same descriptor; optiland uses the existing worker environment and timeout
 policy unchanged. No slot or killed engine worker is restarted during a suite. A terminal failure is admitted
@@ -71,9 +94,43 @@ baselines or reports. Pool/controller and profiling code remain outside optical 
 fingerprints, adapter revisions and keys do not move.
 
 Set `LVRTC_PROFILE_DIR` to a temporary directory to collect phase intervals and peak Node RSS in per-process JSON
-files (comparison threads have a thread suffix). Timings and paths never enter run artifacts. Intervals overlap:
+files (comparison threads have a thread suffix). `pool-memory-<pid>-<n>.json` adds the peak simultaneous child-plus-worker
+RSS (`peakSumBytes`), per-slot combined peaks, each worker's peak, budget, sample count, pauses and read failures.
+Transient heartbeat files are removed with the pool. Per-process lifetime peaks need not occur simultaneously. Timings and paths never enter run artifacts. Intervals overlap:
 aggregate worker/gzip seconds must not be added to wall time. Worker idle time includes waits for IPC and ordered
 admission; store and preparation work count as useful worker activity.
+
+### Memory safeguard measurement (2026-10-25)
+
+A two-run cold subset of `suites/benchmark.json` (Canon EF 135mm f/2L USM, reference and photopic lines),
+run sequentially at **--jobs 2**, through the real LV and optiland under the existing cache environment.
+Each command used its own temporary `LVRTC_RUNS_DIR` and `LVRTC_PROFILE_DIR`; neither read nor wrote the
+repository's `runs/store`. Ordinary rungs were `r4,r4f,r6a` (166 jobs, zero errors); the second command selected
+`r6c` (8 jobs, seven ok and one expected unsupported polychromatic optiland FFT answer, zero errors).
+
+| Per-slot figure | Ordinary MTF | R6c (two Python workers) |
+|---|---:|---:|
+| Node lifetime peak | 508.0–747.8 MiB | 608.7–633.8 MiB |
+| Python lifetime peak(s), slot 1 | 725.8 MiB | 1056.7 + 566.1 MiB |
+| Python lifetime peak(s), slot 2 | 739.6 MiB | 1693.3 + 1078.4 MiB |
+| Sum of Node and Python lifetime peaks, per slot | **1.20–1.45 GiB** | **2.18–3.33 GiB** |
+| Largest sampled simultaneous slot RSS | 1.42 GiB | 3.32 GiB |
+| Peak sampled sum across both slots | **2.60 GiB** | **5.50 GiB** |
+| Planning estimate retained | **2.5 GiB/job** | **4 GiB/job** |
+
+Node lifetime peaks are `maxRssKiB` from the process profiles; Python peaks are the worker's own `getrusage`
+high-water figures, also recorded with its RSS heartbeat. The sum of individual lifetime peaks is a conservative
+component sum; those peaks need not coincide. The pool's simultaneous figure samples current RSS and can miss
+spikes between 250 ms heartbeats. Both profiles report zero pauses and zero read failures. This small subset
+supports retaining headroom; it does not establish a full-catalog worst case. On this machine the default
+**10 GiB** budget therefore admits **4 ordinary jobs / 2 R6c jobs**.
+
+Replay with a temporary two-run suite derived from the benchmark and separate empty run/profile directories:
+
+```bash
+LVRTC_RUNS_DIR="$lvrtc_measure_root/ordinary-runs" LVRTC_PROFILE_DIR="$lvrtc_measure_root/ordinary-profile" node bin/lvrtc.mjs run "$lvrtc_measure_root/suite.json" --engines lv,ref,optiland --rungs r4,r4f,r6a --jobs 2
+LVRTC_RUNS_DIR="$lvrtc_measure_root/r6c-runs" LVRTC_PROFILE_DIR="$lvrtc_measure_root/r6c-profile" node bin/lvrtc.mjs run "$lvrtc_measure_root/suite.json" --engines lv,ref,optiland --rungs r6c --jobs 2
+```
 
 New entries are `<key>.json.gz`, gzip of the previous exact canonical JSON and newline. The reader accepts legacy
 `<key>.json` entries too, preferring gzip when both exist. A broken gzip is a corrupt entry rather than a reason
@@ -132,16 +189,17 @@ Together the two workflows fall from 1335.46 to 186.36 s, **7.17x**. The earlier
 187.73 / 128.05 s states rays observation is historical; the matched cold controls above are the follow-up’s
 measurements. Features was not remeasured in this follow-up.
 
-**Recommended catalog setting: `--jobs 10` for both run and compare on this machine.** The MTF workflow is
-10.6% faster than jobs 8, and it is the larger part of this workload. Rays execution gains little
-beyond 8; comparison still benefits. The CLI default remains **1** for small suites and modest memory use.
+**Historical throughput measurements, superseded as operating guidance by the memory safeguards above.**
+These jobs-8/10 timings describe the earlier throughput experiment, before the 2026-10-23 memory incident;
+they are not a recommendation to run that many replicas alongside the owner's other applications. The CLI
+default remains **1**, with the memory ceiling enforced even when concurrency is explicit.
 
 On the MTF jobs-10 run, Node replicas peaked at **807.4–1005.0 MiB each**, with a
 259.5 MiB controller. A separate fresh optiland worker, run through its definition and the
 unchanged worker environment on the largest surfaces × lines state (Sony 400 mm, 39 surfaces, five lines,
 45 coarse/fine jobs, zero errors), reported **974.2 MiB** peak RSS using its own `getrusage` at exit.
 Thus roughly **2 GiB per Node/Python pair**, about 20 GiB for ten pairs, is supported by these measurements,
-within 48 GB. Compare’s separate process peaked at 5.79 GiB with ten threads, after
+before accounting for other applications on the 48 GB host. Compare’s separate process peaked at 5.79 GiB with ten threads, after
 the engine pool had closed. These are measured components, not a full-catalog memory ceiling.
 
 ### Where the serial time was
@@ -272,14 +330,15 @@ Every measurement/test used temporary run directories. No engine source/import c
 committed baseline/report, real-store entry or optical checkout changed. No commit, push, stash, checkout or
 reset was performed. Store maintenance and review/commit remain the owner’s actions.
 
-Reproduce each selection/job pair in a fresh directory; keep the same directory for its compare:
+Exercise the workflow at the current bounded settings in a fresh directory; keep that directory for its compare.
+These commands use jobs 2 rather than reproducing the historical jobs-8/10 timing points above:
 
 ```bash
 lvrtc_measure_root=$(mktemp -d /tmp/lvrtc-throughput.XXXXXX)
 export LVRTC_RUNS_DIR="$lvrtc_measure_root/runs"
-LVRTC_PROFILE_DIR="$lvrtc_measure_root/profile-run" node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4 --jobs 10
-LVRTC_PROFILE_DIR="$lvrtc_measure_root/profile-compare" node bin/lvrtc.mjs compare states --jobs 10
-# Repeat with jobs 1 and 8; repeat each with --rungs r4,r4f,r6a.
+LVRTC_PROFILE_DIR="$lvrtc_measure_root/profile-run" node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4 --jobs 2
+LVRTC_PROFILE_DIR="$lvrtc_measure_root/profile-compare" node bin/lvrtc.mjs compare states --jobs 2
+# Repeat with jobs 1 and 4, subject to the memory ceiling; repeat each with --rungs r4,r4f,r6a.
 ```
 
 ## LensVisualizer
@@ -415,7 +474,7 @@ integration test exports those lenses and fails on the day one of them has a cas
 
 ## Running a suite
 
-`lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--json]` runs a suite: for every
+`lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--rungs <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]` runs a suite: for every
 run, every selected rung and every selected engine, it asks the rung's requests of the engine and records how each
 job ended. The fixture suite of the README's quick start needs neither LensVisualizer nor optiland: its root,
 `test/fixtures/fake-root`, defines six fake engines, four in this process and two, `fake-py` and `fake-pyn`, Python
@@ -1600,7 +1659,7 @@ over 24 of 54 fields, all `PASS`).
 
 ## Comparing and reporting
 
-`lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--json]`
+`lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>] [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]`
 compares what the engines of a run answered. It asks no engine anything: it reads the run's manifest and the
 answers in the result store, and writes `comparisons.json` into the run directory.
 

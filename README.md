@@ -106,15 +106,21 @@ file, byte for byte.
 ## Commands
 
 Suite commands accept `--jobs <n>`: `run`, `compare`, `baseline check`, and `mtf --profile benchmark`. The default is
-`--jobs 1` (serial), the most the machine's available parallelism (at least 4); higher values move case/ray preparation and engine/store work into at most n persistent children.
+`--jobs 1` (serial). The ceiling is the smaller of available parallelism and the memory allowance:
+`--memory-budget <GiB>` (default: 25% of installed RAM minus 2 GiB) divided by 2.5 GiB/job, or 4 GiB/job
+when the suite's selected rungs include R6c and its two Python workers. An overlarge value is a usage error.
+On a 48 GiB machine the default is 10 GiB: at most 4 jobs, or 2 with R6c. Choose a smaller budget if other
+applications need more memory. Higher values move case/ray preparation and engine/store work into at most n persistent children.
+The pool pauses new dispatches while child-plus-worker RSS exceeds the budget and resumes when it falls;
+running jobs finish normally. `LVRTC_PROFILE_DIR` records per-process and combined RSS peaks outside results.
 Comparisons use at most n threads, each processing an independent run and preserving its blocking ladder. Persisted results and
 job order are identical to serial execution. New store entries use gzip; existing plain entries remain readable.
 
 ```bash
-node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 8
-node bin/lvrtc.mjs compare features --jobs 8
-node bin/lvrtc.mjs baseline check features --jobs 8
-node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 8
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2
+node bin/lvrtc.mjs compare features --jobs 2
+node bin/lvrtc.mjs baseline check features --jobs 2
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 2
 node bin/lvrtc.mjs store compress          # owner only: dry run, file counts and bytes before/after
 node bin/lvrtc.mjs store compress --yes    # owner only: atomically compress legacy entries
 node bin/lvrtc.mjs store prune             # owner only: dry run, unused engine-version files and bytes
@@ -132,7 +138,10 @@ npm run check
 ```
 
 Runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker kit. It needs
-neither LensVisualizer nor optiland. Run it before every commit.
+neither LensVisualizer nor optiland. Run it before every commit. Hermetic test files use concurrency 4;
+`npm run test:lv` and `npm run test:optiland` use `--test-concurrency=1`. Run one heavy command at a time,
+including across agents: never overlap tiers, suites or pool tests. Real-engine runs use at most `--jobs 4`,
+subject to the lower memory ceiling.
 
 ```bash
 npm run test:lv

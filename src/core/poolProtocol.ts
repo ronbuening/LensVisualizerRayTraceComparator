@@ -68,3 +68,8 @@ export type PoolReply = { readonly id: number } & (
     }
   | { readonly ok: false; readonly message: string; readonly code?: EngineUnavailableCode }
 );
+
+export interface PoolMemoryReport {
+  readonly type: "memory";
+  readonly rssBytes: number;
+}
