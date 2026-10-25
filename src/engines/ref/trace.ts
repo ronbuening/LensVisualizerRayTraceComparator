@@ -1,6 +1,7 @@
 // The reference engine's sequential ray tracer: one ray, carried surface by surface through the model of a case,
 // as the contract defines a trace (contract/CONTRACT.md, `rays.trace`). It is written from the optics alone:
 // analytic geometry and Snell's law, and nothing of any other tracer.
+import type { OpticalPathStep } from "../../contract/case.ts";
 import type { RayStatusName } from "../../contract/quantities/raysTrace.ts";
 import { createExactSum } from "../../core/numeric/exact.ts";
 import type { Vec3 } from "../../estimators/imageProjection.ts";
@@ -28,6 +29,7 @@ export interface SurfaceTrace {
    * that runs backwards, to a surface behind the one before it, counts with its sign.
    */
   readonly opticalPath: number;
+  readonly finalMedium?: number;
 }
 
 /**
@@ -73,25 +75,66 @@ export function traceSurfaces(
     hits,
     direction: heading,
     opticalPath: path.value(),
+    ...(system.opticalPath === undefined ? {} : { finalMedium: index }),
   });
-  for (let at = 0; at < system.surfaces.length; at++) {
-    const surface = system.surfaces[at];
+  const visits: readonly OpticalPathStep[] =
+    system.opticalPath ??
+    system.surfaces.map((_surface, surfaceIndex) => ({
+      surfaceIndex,
+      interaction: "refract" as const,
+      mediumAfter: surfaceIndex,
+    }));
+  for (let at = 0; at < visits.length; at++) {
+    const visit = visits[at];
+    const surface = system.surfaces[visit.surfaceIndex];
     const [dx, dy, dz] = heading;
-    if (!(dz > 0)) return ended("blocked", at);
-    const met = intersectSurface(surface, px, py, pz, dx, dy, dz);
+    if (system.opticalPath === undefined && !(dz > 0)) return ended("blocked", at);
+    const geometry =
+      system.opticalPath === undefined ? surface : { ...surface, innerClipRadius: 0, clipRadius: Infinity };
+    const met = intersectSurface(geometry, px, py, pz, dx, dy, dz);
     if (met.kind !== "hit") return ended(met.kind === "miss" ? "blocked" : "failed", at);
+    if (system.opticalPath !== undefined && met.t < -1e-9) return ended("blocked", at);
+    const radius = Math.sqrt(met.x * met.x + met.y * met.y);
+    const inside = radius >= surface.innerClipRadius && radius <= surface.clipRadius;
     const normal = unitNormalAt(surface.profile, met.x, met.y, met.root);
     if (!Number.isFinite(normal[0]) || !Number.isFinite(normal[1]) || !Number.isFinite(normal[2])) {
       return ended("failed", at);
     }
-    const bent = refract(heading, normal, index, indexAfter[at]);
+    const sideDot = createExactSum();
+    sideDot.add(dx, normal[0]);
+    sideDot.add(dy, normal[1]);
+    sideDot.add(dz, normal[2]);
+    const side = sideDot.value() >= 0 ? "front" : "rear";
+    const active = visit.incidentSide === undefined || visit.incidentSide === "both" || visit.incidentSide === side;
+    const interaction = active ? visit.interaction : visit.inactiveSide === "block" ? "block" : "pass";
+    if (interaction === "block" && inside) return ended("blocked", at);
+    if (interaction !== "block" && interaction !== "pass" && radius > surface.clipRadius) return ended("blocked", at);
+    let nextIndex = index;
+    let bent: Vec3 | null = heading;
+    if (interaction === "reflect" && inside) {
+      const dot = createExactSum();
+      dot.add(dx, normal[0]);
+      dot.add(dy, normal[1]);
+      dot.add(dz, normal[2]);
+      const along = 2 * dot.value();
+      const x = dx - along * normal[0],
+        y = dy - along * normal[1],
+        z = dz - along * normal[2];
+      const norm = Math.sqrt(x * x + y * y + z * z);
+      bent = [x / norm, y / norm, z / norm];
+    } else if (interaction === "refract" && inside) {
+      const reference =
+        side === "rear" && visit.reverseMediumAfter !== undefined ? visit.reverseMediumAfter : visit.mediumAfter;
+      nextIndex = reference === null ? 1 : indexAfter[reference ?? visit.surfaceIndex];
+      bent = refract(heading, normal, index, nextIndex);
+    }
     if (bent === null) return ended("blocked", at);
 
     path.add(index, met.t * Math.sqrt(dx * dx + dy * dy + dz * dz));
     hits.push([met.x, met.y, met.z]);
     [px, py, pz] = [met.x, met.y, met.z];
     heading = bent;
-    index = indexAfter[at];
+    index = nextIndex;
   }
-  return ended("ok", system.surfaces.length);
+  return ended("ok", visits.length);
 }

@@ -7,11 +7,16 @@ import type { AsphereTerm } from "../../contract/case.ts";
 import type { SystemDescribeData } from "../../contract/quantities/systemDescribe.ts";
 import { encodeF8 } from "../../core/numeric/ndarray.ts";
 import type { LvCaseModel } from "./caseModel.ts";
+import { exportPath } from "./exportPath.ts";
+import { decodeNdArray } from "../../core/numeric/ndarray.ts";
 import { surfaceAperture } from "./exportAperture.ts";
 import type { LvApi, LvSurface } from "./types.ts";
 
 /** The LensVisualizer exports the echo reads beside the state. */
-export type LvDescribeApi = Pick<LvApi, "evaluateAperture" | "flatRadiusThreshold" | "asphericPolynomialTerms">;
+export type LvDescribeApi = Pick<
+  LvApi,
+  "rearMediumSurfaceIndex" | "evaluateAperture" | "flatRadiusThreshold" | "asphericPolynomialTerms"
+>;
 
 /**
  * The polynomial terms LensVisualizer's sag adds on a surface: of the coefficients of its own aspheric schema, and
@@ -78,8 +83,35 @@ export function describeLvSystem(
       sags: radii.map((radius) => sagOf(surface, radius)),
     };
   });
+  const path = exportPath(api, state).path;
+  const table = decodeNdArray(exported.conditions.indexAfterSurface).values;
   const sagShape = [rows.length, sagFractions.length];
   return {
+    ...(path === undefined
+      ? {}
+      : {
+          opticalPath: path,
+          pathSurfaceIndices: path.map((step) => step.surfaceIndex),
+          pathInteractions: path.map((step) => step.interaction),
+          pathIndexAfterSurface: encodeF8(
+            exported.conditions.lines.flatMap((_line, line) => {
+              let medium = 1,
+                heading = 1;
+              return path.map((step) => {
+                const side = heading > 0 ? "front" : "rear";
+                const active =
+                  step.incidentSide === undefined || step.incidentSide === "both" || step.incidentSide === side;
+                const reference =
+                  side === "rear" && step.reverseMediumAfter !== undefined ? step.reverseMediumAfter : step.mediumAfter;
+                if (active && step.interaction === "refract")
+                  medium = reference === null ? 1 : table[line * rows.length + (reference ?? step.surfaceIndex)];
+                if (active && step.interaction === "reflect") heading = -heading;
+                return medium;
+              });
+            }),
+            [exported.conditions.lines.length, path.length],
+          ),
+        }),
     surfaceCount: rows.length,
     stopIndex,
     imageZ: exported.conditions.imageZ,

@@ -367,6 +367,7 @@ test(
     const hold = async (at: string, opticalCase: OpticalCase): Promise<void> => {
       const { source } = opticalCase.provenance;
       assert.ok(source.kind === "lv-lens" && source.zoomT !== undefined && source.focusT !== undefined, at);
+      if (opticalCase.system.opticalPath !== undefined) return; // Folded refusal/parity pins are in folded.test.ts.
       const result = await ask(lv, opticalCase, PARAXIAL_FIRST_ORDER);
       assert.equal(result.status, "ok", `${at}: ${JSON.stringify(result.error ?? result.unsupported)}`);
       const data = result.data as ParaxialFirstOrderData;
@@ -631,105 +632,109 @@ function judged(rung: "r1", opticalCase: OpticalCase, lvData: JsonObject, refDat
   );
 }
 
-test("on every exported lens, at the reference and photopic lines, lv and ref pass R0 and R1", { skip }, async (t) => {
-  const { binding, lv, ref } = await engines(t);
-  const exporter = createLvExporter(binding);
-  const limits = {
-    sag: POLICY.rungs.r0.metrics["sag.maxScaled"].tolerance as number,
-    firstOrder: POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance as number,
-    pupilZ: POLICY.rungs.r1.metrics["pupilZ.maxScaled"].tolerance as number,
-    pupilRadius: POLICY.rungs.r1.metrics["pupilRadius.maxScaled"].tolerance as number,
-  };
-  assert.deepEqual(limits, { sag: 1e-12, firstOrder: 1e-9, pupilZ: 1e-9, pupilRadius: 1e-9 });
+test(
+  "on every exported sequential lens, at the reference and photopic lines, lv and ref pass R0 and R1",
+  { skip },
+  async (t) => {
+    const { binding, lv, ref } = await engines(t);
+    const exporter = createLvExporter(binding);
+    const limits = {
+      sag: POLICY.rungs.r0.metrics["sag.maxScaled"].tolerance as number,
+      firstOrder: POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance as number,
+      pupilZ: POLICY.rungs.r1.metrics["pupilZ.maxScaled"].tolerance as number,
+      pupilRadius: POLICY.rungs.r1.metrics["pupilRadius.maxScaled"].tolerance as number,
+    };
+    assert.deepEqual(limits, { sag: 1e-12, firstOrder: 1e-9, pupilZ: 1e-9, pupilRadius: 1e-9 });
 
-  const worst = { scaled: 0, scaledAt: "", abs: 0, absAt: "", firstOrder: 0, firstOrderAt: "" };
-  /**
-   * Of a pupil's position and of its radius: the largest difference, on the scale of the pupil's distance and
-   * plain; the largest plain one of every lens but the nearly telecentric one; and the lenses on which the two
-   * engines are more than a plain 1e-9 mm apart, with the largest such difference of each.
-   */
-  const tally = () => ({ scaled: 0, scaledAt: "", abs: 0, absAt: "", others: 0, othersAt: "", far: new Map() });
-  const pupils = { pupilZ: tally(), pupilRadius: tally() };
-  let cases = 0;
-  for (const { key } of (await binding.catalog()).entries) {
-    for (const lines of [{ kind: "reference" }, { kind: "photopic" }] as const) {
-      const exported = await exporter.exportLens(key, { lines });
-      if (!exported.ok) continue;
-      cases++;
-      const at = `${key} ${lines.kind}`;
+    const worst = { scaled: 0, scaledAt: "", abs: 0, absAt: "", firstOrder: 0, firstOrderAt: "" };
+    /**
+     * Of a pupil's position and of its radius: the largest difference, on the scale of the pupil's distance and
+     * plain; the largest plain one of every lens but the nearly telecentric one; and the lenses on which the two
+     * engines are more than a plain 1e-9 mm apart, with the largest such difference of each.
+     */
+    const tally = () => ({ scaled: 0, scaledAt: "", abs: 0, absAt: "", others: 0, othersAt: "", far: new Map() });
+    const pupils = { pupilZ: tally(), pupilRadius: tally() };
+    let cases = 0;
+    for (const { key } of (await binding.catalog()).entries) {
+      for (const lines of [{ kind: "reference" }, { kind: "photopic" }] as const) {
+        const exported = await exporter.exportLens(key, { lines });
+        if (!exported.ok || exported.opticalCase.system.opticalPath !== undefined) continue;
+        cases++;
+        const at = `${key} ${lines.kind}`;
 
-      const echo = (await compared(lv, ref, exported.opticalCase, SYSTEM_DESCRIBE, at)).metrics;
-      for (const count of ["layout", "shape", "aperture", "index"]) {
-        const mismatches = echo[`${count}.mismatches`];
-        assert.equal(mismatches.value, 0, `${at}: ${count} ${JSON.stringify(mismatches.where)}`);
-      }
-      const [scaled, abs] = [echo["sag.maxScaled"], echo["sag.maxAbs"]];
-      assert.ok(scaled.value <= limits.sag, `${at}: sag.maxScaled ${scaled.value} ${JSON.stringify(scaled.where)}`);
-      if (scaled.value > worst.scaled) Object.assign(worst, { scaled: scaled.value, scaledAt: at });
-      if (abs.value > worst.abs) Object.assign(worst, { abs: abs.value, absAt: at });
+        const echo = (await compared(lv, ref, exported.opticalCase, SYSTEM_DESCRIBE, at)).metrics;
+        for (const count of ["layout", "shape", "aperture", "index"]) {
+          const mismatches = echo[`${count}.mismatches`];
+          assert.equal(mismatches.value, 0, `${at}: ${count} ${JSON.stringify(mismatches.where)}`);
+        }
+        const [scaled, abs] = [echo["sag.maxScaled"], echo["sag.maxAbs"]];
+        assert.ok(scaled.value <= limits.sag, `${at}: sag.maxScaled ${scaled.value} ${JSON.stringify(scaled.where)}`);
+        if (scaled.value > worst.scaled) Object.assign(worst, { scaled: scaled.value, scaledAt: at });
+        if (abs.value > worst.abs) Object.assign(worst, { abs: abs.value, absAt: at });
 
-      // R1, by its three gates: the position of a pupil and its radius within 1e-9 mm on the scale of the
-      // pupil's distance from the image plane, and every other value within a plain 1e-9 mm. Every case of the
-      // catalog keeps all three.
-      const first = (await compared(lv, ref, exported.opticalCase, PARAXIAL_FIRST_ORDER, at)).metrics;
-      for (const name of ["pupilZ", "pupilRadius"] as const) {
-        const [onScale, plainly, seen] = [first[`${name}.maxScaled`], first[`${name}.maxAbs`], pupils[name]];
-        const where = `${at} ${JSON.stringify(plainly.where)}`;
-        assert.ok(onScale.value <= limits[name], `${at}: ${name}.maxScaled ${onScale.value}, at ${where}`);
-        if (onScale.value > seen.scaled) Object.assign(seen, { scaled: onScale.value, scaledAt: where });
-        if (plainly.value > seen.abs) Object.assign(seen, { abs: plainly.value, absAt: where });
-        if (plainly.value > limits[name]) seen.far.set(key, Math.max(plainly.value, seen.far.get(key) ?? 0));
-        if (key !== NEAR_TELECENTRIC && plainly.value > seen.others) {
-          Object.assign(seen, { others: plainly.value, othersAt: where });
+        // R1, by its three gates: the position of a pupil and its radius within 1e-9 mm on the scale of the
+        // pupil's distance from the image plane, and every other value within a plain 1e-9 mm. Every case of the
+        // catalog keeps all three.
+        const first = (await compared(lv, ref, exported.opticalCase, PARAXIAL_FIRST_ORDER, at)).metrics;
+        for (const name of ["pupilZ", "pupilRadius"] as const) {
+          const [onScale, plainly, seen] = [first[`${name}.maxScaled`], first[`${name}.maxAbs`], pupils[name]];
+          const where = `${at} ${JSON.stringify(plainly.where)}`;
+          assert.ok(onScale.value <= limits[name], `${at}: ${name}.maxScaled ${onScale.value}, at ${where}`);
+          if (onScale.value > seen.scaled) Object.assign(seen, { scaled: onScale.value, scaledAt: where });
+          if (plainly.value > seen.abs) Object.assign(seen, { abs: plainly.value, absAt: where });
+          if (plainly.value > limits[name]) seen.far.set(key, Math.max(plainly.value, seen.far.get(key) ?? 0));
+          if (key !== NEAR_TELECENTRIC && plainly.value > seen.others) {
+            Object.assign(seen, { others: plainly.value, othersAt: where });
+          }
+        }
+        const plain = first["firstOrder.maxAbs"];
+        assert.ok(plain.value <= limits.firstOrder, `${at}: ${plain.value} mm ${JSON.stringify(plain.where)}`);
+        if (plain.value > worst.firstOrder) {
+          Object.assign(worst, { firstOrder: plain.value, firstOrderAt: `${at} ${JSON.stringify(plain.where)}` });
         }
       }
-      const plain = first["firstOrder.maxAbs"];
-      assert.ok(plain.value <= limits.firstOrder, `${at}: ${plain.value} mm ${JSON.stringify(plain.where)}`);
-      if (plain.value > worst.firstOrder) {
-        Object.assign(worst, { firstOrder: plain.value, firstOrderAt: `${at} ${JSON.stringify(plain.where)}` });
-      }
     }
-  }
-  const said = (name: "pupilZ" | "pupilRadius"): string => {
-    const seen = pupils[name];
-    const far = [...seen.far].map(([key, mm]) => `${key} (${mm} mm)`).join(", ") || "none";
-    return (
-      `${seen.abs} mm (${seen.absAt}), on the scale of its distance ${seen.scaled} (${seen.scaledAt}), on every ` +
-      `lens but ${NEAR_TELECENTRIC} ${seen.others} mm (${seen.othersAt}); more than 1e-9 mm apart: ${far}`
+    const said = (name: "pupilZ" | "pupilRadius"): string => {
+      const seen = pupils[name];
+      const far = [...seen.far].map(([key, mm]) => `${key} (${mm} mm)`).join(", ") || "none";
+      return (
+        `${seen.abs} mm (${seen.absAt}), on the scale of its distance ${seen.scaled} (${seen.scaledAt}), on every ` +
+        `lens but ${NEAR_TELECENTRIC} ${seen.others} mm (${seen.othersAt}); more than 1e-9 mm apart: ${far}`
+      );
+    };
+    t.diagnostic(
+      `${cases} cases: worst R0 sag difference ${worst.abs} mm (${worst.absAt}), scaled ${worst.scaled} ` +
+        `(${worst.scaledAt}); worst R1 difference of a value that is no pupil's ${worst.firstOrder} mm ` +
+        `(${worst.firstOrderAt}); of a pupil's position ${said("pupilZ")}; of a pupil's radius ${said("pupilRadius")}`,
     );
-  };
-  t.diagnostic(
-    `${cases} cases: worst R0 sag difference ${worst.abs} mm (${worst.absAt}), scaled ${worst.scaled} ` +
-      `(${worst.scaledAt}); worst R1 difference of a value that is no pupil's ${worst.firstOrder} mm ` +
-      `(${worst.firstOrderAt}); of a pupil's position ${said("pupilZ")}; of a pupil's radius ${said("pupilRadius")}`,
-  );
-  assert.ok(cases > 1500, `about 1680 cases export, found ${cases}`);
-  // At d36f44b3, over 1676 cases of 868 lenses: the echo is equal throughout, and the sag differs by at most
-  // 4.3e-16 on the scale of its rounding (panasonic-lumix-s-pro-70-200-f4-ois) and 1.3e-10 mm in plain terms, on
-  // russar-22-70f8, whose second surface ends just short of a hemisphere.
-  assert.ok(worst.scaled < 1e-14, `${worst.scaled} on ${worst.scaledAt}`);
-  assert.ok(worst.abs < 1e-9, `${worst.abs} mm on ${worst.absAt}`);
-  // One lens has pupils more than 1e-9 mm apart: the nearly telecentric one, whose exit pupil lies 7.7 m away at
-  // the d line and up to 20 m away at a photopic one. There lv and ref differ by 1.1e-9 mm and 3.0e-9 mm: 2e-13
-  // of the distance, which on the scale of the distance is 2e-10, and passes. Every other pupil is within
-  // 1.9e-11 mm.
-  const { pupilZ, pupilRadius } = pupils;
-  assert.deepEqual([...pupilZ.far.keys()], [NEAR_TELECENTRIC]);
-  assert.ok(pupilZ.abs > 1e-9 && pupilZ.abs < 1e-8, `${pupilZ.abs} mm on ${pupilZ.absAt}`);
-  assert.ok(pupilZ.scaled < 5e-10, `${pupilZ.scaled} on ${pupilZ.scaledAt}`);
-  assert.ok(pupilZ.others < 1e-10, `${pupilZ.others} mm on ${pupilZ.othersAt}`);
-  // The radius of that pupil is as large as it is far, by the same quotient: 6.3 m at 650 nm, where the pupil
-  // lies 14 m from the image plane, and there the two radii differ by 1.35e-9 mm, 2e-13 of themselves. On the
-  // scale of the pupil's distance that is 9.4e-11, and passes, since policy version 4 judges the radius of a
-  // pupil as its position (the plan, "Amendments since approval"). It is the one radius of the catalog more than
-  // 1e-9 mm apart: at 1ed8cc3d every other one is within 4.2e-12 mm. See docs/gotchas.md.
-  assert.deepEqual([...pupilRadius.far.keys()], [NEAR_TELECENTRIC]);
-  assert.ok(pupilRadius.abs > 1e-9 && pupilRadius.abs < 1e-8, `${pupilRadius.abs} mm on ${pupilRadius.absAt}`);
-  assert.ok(pupilRadius.scaled < 5e-10, `${pupilRadius.scaled} on ${pupilRadius.scaledAt}`);
-  assert.ok(pupilRadius.others < 1e-10, `${pupilRadius.others} mm on ${pupilRadius.othersAt}`);
-  // Every value of every lens that is neither the position nor the radius of a pupil is within 1.1e-11 mm.
-  assert.ok(worst.firstOrder < 1e-10, `${worst.firstOrder} mm on ${worst.firstOrderAt}`);
-});
+    assert.ok(cases > 1500, `about 1680 cases export, found ${cases}`);
+    // At d36f44b3, over 1676 cases of 868 lenses: the echo is equal throughout, and the sag differs by at most
+    // 4.3e-16 on the scale of its rounding (panasonic-lumix-s-pro-70-200-f4-ois) and 1.3e-10 mm in plain terms, on
+    // russar-22-70f8, whose second surface ends just short of a hemisphere.
+    assert.ok(worst.scaled < 1e-14, `${worst.scaled} on ${worst.scaledAt}`);
+    assert.ok(worst.abs < 1e-9, `${worst.abs} mm on ${worst.absAt}`);
+    // One lens has pupils more than 1e-9 mm apart: the nearly telecentric one, whose exit pupil lies 7.7 m away at
+    // the d line and up to 20 m away at a photopic one. There lv and ref differ by 1.1e-9 mm and 3.0e-9 mm: 2e-13
+    // of the distance, which on the scale of the distance is 2e-10, and passes. Every other pupil is within
+    // 1.9e-11 mm.
+    const { pupilZ, pupilRadius } = pupils;
+    assert.deepEqual([...pupilZ.far.keys()], [NEAR_TELECENTRIC]);
+    assert.ok(pupilZ.abs > 1e-9 && pupilZ.abs < 1e-8, `${pupilZ.abs} mm on ${pupilZ.absAt}`);
+    assert.ok(pupilZ.scaled < 5e-10, `${pupilZ.scaled} on ${pupilZ.scaledAt}`);
+    assert.ok(pupilZ.others < 1e-10, `${pupilZ.others} mm on ${pupilZ.othersAt}`);
+    // The radius of that pupil is as large as it is far, by the same quotient: 6.3 m at 650 nm, where the pupil
+    // lies 14 m from the image plane, and there the two radii differ by 1.35e-9 mm, 2e-13 of themselves. On the
+    // scale of the pupil's distance that is 9.4e-11, and passes, since policy version 4 judges the radius of a
+    // pupil as its position (the plan, "Amendments since approval"). It is the one radius of the catalog more than
+    // 1e-9 mm apart: at 1ed8cc3d every other one is within 4.2e-12 mm. See docs/gotchas.md.
+    assert.deepEqual([...pupilRadius.far.keys()], [NEAR_TELECENTRIC]);
+    assert.ok(pupilRadius.abs > 1e-9 && pupilRadius.abs < 1e-8, `${pupilRadius.abs} mm on ${pupilRadius.absAt}`);
+    assert.ok(pupilRadius.scaled < 5e-10, `${pupilRadius.scaled} on ${pupilRadius.scaledAt}`);
+    assert.ok(pupilRadius.others < 1e-10, `${pupilRadius.others} mm on ${pupilRadius.othersAt}`);
+    // Every value of every lens that is neither the position nor the radius of a pupil is within 1.1e-11 mm.
+    assert.ok(worst.firstOrder < 1e-10, `${worst.firstOrder} mm on ${worst.firstOrderAt}`);
+  },
+);
 
 test(
   "the nearly telecentric lens passes R1 entirely: its far pupil is placed and sized within the amended gates, and 1e-8 mm off still fails anywhere",

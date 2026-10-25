@@ -288,7 +288,8 @@ every FAIL has a class and a reproducer command.
 | Stage | Deliver | Verify |
 |---|---|---|
 | 5.1 Throughput (delivered) | Explicit persistent process pool (CLI default 1; recommend 10 for this machine’s catalog): child export/recipe/ray/request preparation, background engine hello, transient input references, guarded duplicate reuse, gzip staging and planned-order admission; parallel comparison threads. Owner-only compress/prune retained. | Jobs 1/2/4 exact case/store/manifest/comparison/baseline/report parity; death/retry/corruption/filesystem regressions. Check 1,616 TS pass; LV 101; optiland 44. Cold states jobs 1/8/10 rays run 187.94/23.43/23.02 s, compare 70.86/10.52/9.81 s; MTF run 639.85/99.43/89.76 s, compare 436.81/72.28/63.77 s. Combined 7.17x serial-to-10 gain with identical bytes; [profile, worker utilization and memory](REFERENCE.md#stage-51-measurements). |
-| 5.2 Long-tail features | Translator gaps surfaced by the census | Each passes R0–R3 or is declared unsupported with a reason |
+| 5.2a Mirror and catadioptric systems | Owner decision 2026-10-23: the 16 folded/non-refractive census lenses; contract 1.4 fixed visits and rays.trace v2; conditional policies and analytic ref proofs. Export the declared path, then check LV's own traces of exactly the run's coarse/fine sets before planning any engine requests. A post-path interaction refuses the whole run with `folded-post-path-reflection`; successful cases record exact ray-set confirmation in provenance. No static check or extra sampling. | R0–R3 three ways where available; at LV `2e046d71`, eight confirmed runs, eight source refusals; four unsuppressed LV R1 FAILs, fixed separately by the owner. No gate/floor changes or baselines. |
+| 5.2b Remaining long-tail features | Diffractive surfaces and other remaining translator gaps; the folded diffractive plate retains its coded exclusions in 5.2a. | Each passes R0–R3 or is declared unsupported with a reason. |
 | 5.3 Catalog sweep | Sweep suite and statistics report: every prime, and every zoom at both ends | Sweep completes; report deterministic |
 | 5.4 Real-engine check | `npm run verify:real` (benchmark suite against live LV and optiland) | Runs clean on the development machine |
 
@@ -566,3 +567,22 @@ optiland (called, never modified): `Optic.surfaces.add`, `IdealMaterial`, `Radia
 - Regression: with LV and optiland unconfigured, `lvrtc verify` validates baselines and regenerates every report
   byte-for-byte.
 
+
+
+### Stage 5.2a amendment (owner, 2026-10-23)
+
+Mirror/catadioptric coverage is separated from diffraction. The owner authorized `rays.trace` v2 for folded
+traversal after identifying the v1 surface-index/+z semantics. Every sequential case still requests v1 with no
+new request member. Engines offer both definitions; only a folded request states `quantityVersion: 2`. Fixed
+paths are translated literally, including repeated visits and LV side/active-zone policies. Auto-discovered
+paths, tilted/off-axis geometry, and LV data limitations retain explicit codes. The optiland adapter installs
+conditional policies around its native geometry and interaction kernels; every parameter is read back, with a
+deliberate fault test. Native values that disagree with an analytic proof are reported rather than corrected.
+The folded suite uses temporary run storage. No baseline is written, no gate is widened, and no floor is added.
+Source fingerprints and adapter revisions continue to identify source bytes; unchanged sequential requests do
+not justify freezing an edited engine's store identity. The owner's follow-up decision checks only LV's trace
+of the run's actual coarse/fine sets, with no static check or additional probes. A post-path interaction is a
+whole-run source refusal before any engine requests; successful runs record exact set hashes in provenance.
+LV's front-principal-plane defect remains an unsuppressed R1 FAIL for the owner's separate LV fix, with an
+unfiled brief in `docs/upstream/lensvisualizer-mirror-principal-plane.md`. Results are in REFERENCE.md under
+Stage 5.2a; the census remains raw declared-path geometry, without run confirmation.

@@ -105,6 +105,7 @@ test("the census counts what became of every state, and lists lens keys by reaso
       "aperture.unclipped": 0,
       "lines.multiple": 0,
       "object.finite": 0,
+      "path.folded": 0,
       "surface.asphere.even": 3,
       "surface.asphere.flat-base": 3,
       "surface.asphere.odd": 3,

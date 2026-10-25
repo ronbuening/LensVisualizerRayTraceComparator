@@ -17,13 +17,17 @@ with a surface that does not clip (``aperture.semiDiameter`` null, the feature f
 message and result is still written to ``CONTRACT_VERSION``."""
 
 
-def speaks(version: str) -> bool:
+CONTRACT_VERSION_1_4 = "1.4"
+"""Fixed folded paths and per-request quantity definitions."""
+
+
+def speaks(version: str, maximum: str = CONTRACT_VERSION_1_2) -> bool:
     """Whether a document written to ``version`` lies in the range ``CONTRACT_VERSION`` to ``CONTRACT_VERSION_1_2``.
 
     Versions are ordered by major and then by minor, as numbers (``isContractInRange``, src/contract/version.ts); a
     text that is not ``<major>.<minor>`` in plain decimal is in no range.
     """
-    at, low, high = _parse(version), _parse(CONTRACT_VERSION), _parse(CONTRACT_VERSION_1_2)
+    at, low, high = _parse(version), _parse(CONTRACT_VERSION), _parse(maximum)
     return at is not None and low is not None and high is not None and low <= at <= high
 
 

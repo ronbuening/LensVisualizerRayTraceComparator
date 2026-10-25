@@ -1198,3 +1198,61 @@ test("the request snapshots both aperture radii, and MTF resolves them with the 
     mirror,
   );
 });
+
+test("folded visits still use side filters, transparent holes and a sequential-only OPL capture", { skip }, () => {
+  assertSource(
+    "src/optics/trace/interactions.ts",
+    'return dot(direction, normal) >= 0 ? "front" : "rear";',
+    "contract 1.4's incident-side convention",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'return surface.interaction.inactiveSide === "block" && withinAperture ? "inactive-side-block" : null;',
+    "inactive-side policy exported verbatim",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'if (surface.interaction.type === "block") return withinAperture ? "block-surface" : null;',
+    "closed opaque bands and transparent complements",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "origin = advanceOrigin(point, direction); continue;",
+    "LV omits passive/hole hits from its history; the adapter marks those visits unrecorded",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "nextSurfaceIndex = explicitOrder[explicitCursor++];",
+    "one declared visit per step of LV's loop: alignFolded's order",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "heights!.push(projectCoordinateToZ(point[1], point[2], direction[1], direction[2], surface.z)); } const side = incidentSideFor(direction, normal);",
+    "a height for every visit LV found, before it decides whether the visit is passive: alignFolded places hits by it",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.pathPlan.mode === "auto" ? undefined : reflectiveSurfaceIndexes,',
+    "run confirmation and the request-time backstop: after declared visits LV searches reflective surfaces",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.surfaces.flatMap((surface, index) => (surface.interaction.type === "reflect" ? [index] : [])),',
+    "the candidate set of LV's post-path search, checked on the run's own coarse/fine sets",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.pathPlan.mode === "auto" || (explicitOrder !== null && explicitCursor >= explicitOrder.length)',
+    "an explicit path continues with the reflective search after its last declared visit",
+  );
+  assertSource(
+    "src/optics/trace/types.ts",
+    "Opt-in sequential OPL capture; unavailable for generalized paths until phase-aware validation.",
+    "v2 pathUnavailable is LV's own stated limitation",
+  );
+  assertSource(
+    "src/optics/trace/aperture.ts",
+    'apertureState = radius >= innerSemiDiameter - tolerance ? "inside" : "inside-hole";',
+    "inner active limit is queried exactly rather than rounded",
+  );
+});

@@ -5,24 +5,27 @@ design image plane, on its reference line: a prime in its one state, a zoom at b
 tele (zoom 1). A census is a snapshot of one LensVisualizer checkout. It is informational: nothing asserts it,
 and it holds counts, hashes and lens keys only.
 
+This census records declared geometry. Folded-path confirmation on a run's coarse/fine ray sets is recorded
+when that run is prepared.
+
 Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `ab0fd4cf94836492b28470953812ed4afc98c0c6` (clean) |
-| Engine closure | `94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b` (175 files) |
+| LensVisualizer commit | `2e046d712fa5f6631ace3b8963d18827b909a37f` (clean) |
+| Engine closure | `45a0b6c967b4fedafa92410f94bbbf77db5cfde20e2da87b331dfd6ed9258d12` (177 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-989 lenses, 319 of them zooms, in 1308 states; 0 lens files not indexed.
+995 lenses, 325 of them zooms, in 1320 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 670 | 647 | 23 | 0 |
-| Zooms, wide end | 319 | 318 | 1 | 0 |
-| Zooms, tele end | 319 | 318 | 1 | 0 |
-| All | 1308 | 1283 | 25 | 0 |
+| Primes | 670 | 656 | 14 | 0 |
+| Zooms, wide end | 325 | 324 | 1 | 0 |
+| Zooms, tele end | 325 | 324 | 1 | 0 |
+| All | 1320 | 1304 | 16 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -35,12 +38,12 @@ applies to one end only.
 | Reason | States | Lenses |
 | --- | --- | --- |
 | `diffractive-surface` | 9 | 8 |
-| `folded-path` | 16 | 16 |
+| `folded-auto-path` | 6 | 6 |
 | `mixed-reference` | 1 | 1 |
-| `non-refract-interaction` | 16 | 16 |
 | `off-axis-image-plane` | 2 | 2 |
 | `surface-profile-unsupported` | 2 | 2 |
 | `tilted-image-plane` | 2 | 2 |
+| `tilted-surface` | 1 | 1 |
 
 ### `diffractive-surface` (9 states, 8 lenses)
 
@@ -53,47 +56,20 @@ applies to one end only.
 - `nikon-nikkor-z-800mm-f63-vr-s`
 - `reference-folded-diffractive-plate`
 
-### `folded-path` (16 states, 16 lenses)
+### `folded-auto-path` (6 states, 6 lenses)
 
 - `carl-zeiss-mirotar-500f45`
 - `minolta-250mm-f56-rf`
-- `minolta-af-reflex-500mm-f8`
-- `nikon-reflex-nikkor-1000mm-f11`
-- `nikon-reflex-nikkor-500mm-f8-new`
-- `nikon-reflex-nikkor-c-500mm-f8`
-- `reference-annular-obscured-mirror`
 - `reference-annular-ring-blocker`
 - `reference-cassegrain-back-focus`
-- `reference-folded-diffractive-plate`
-- `reference-gregorian-secondary`
-- `reference-maksutov-cassegrain-meniscus`
-- `reference-mangin-second-surface-mirror`
 - `reference-newtonian-side-focus`
-- `reference-spherical-primary-mirror`
 - `vivitar-s1-450-f45`
 
 ### `mixed-reference` (1 state, 1 lens)
 
+LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for a common reference line.
+
 - `samyang-af-35mm-f2p8-fe`
-
-### `non-refract-interaction` (16 states, 16 lenses)
-
-- `carl-zeiss-mirotar-500f45`
-- `minolta-250mm-f56-rf`
-- `minolta-af-reflex-500mm-f8`
-- `nikon-reflex-nikkor-1000mm-f11`
-- `nikon-reflex-nikkor-500mm-f8-new`
-- `nikon-reflex-nikkor-c-500mm-f8`
-- `reference-annular-obscured-mirror`
-- `reference-annular-ring-blocker`
-- `reference-cassegrain-back-focus`
-- `reference-folded-diffractive-plate`
-- `reference-gregorian-secondary`
-- `reference-maksutov-cassegrain-meniscus`
-- `reference-mangin-second-surface-mirror`
-- `reference-newtonian-side-focus`
-- `reference-spherical-primary-mirror`
-- `vivitar-s1-450-f45`
 
 ### `off-axis-image-plane` (2 states, 2 lenses)
 
@@ -110,15 +86,20 @@ applies to one end only.
 - `reference-folded-diffractive-plate`
 - `reference-newtonian-side-focus`
 
+### `tilted-surface` (1 state, 1 lens)
+
+- `reference-folded-diffractive-plate`
+
 ## Feature flags of the exported cases
 
 | Flag | Cases |
 | --- | --- |
-| `aperture.annular` | 0 |
+| `aperture.annular` | 7 |
 | `aperture.unclipped` | 253 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
-| `surface.asphere.even` | 632 |
+| `path.folded` | 9 |
+| `surface.asphere.even` | 634 |
 | `surface.asphere.flat-base` | 2 |
 | `surface.asphere.odd` | 81 |
 | `surface.conic` | 295 |

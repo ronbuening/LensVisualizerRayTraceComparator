@@ -66,7 +66,7 @@ test(
     assert.deepEqual(descriptor.capabilities.quantities, {
       [systemDescribeQuantity.id]: { version: systemDescribeQuantity.version },
       [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
-      [RAYS_TRACE]: { version: raysTraceQuantity.version },
+      [RAYS_TRACE]: { version: raysTraceQuantity.version, versions: [1, 2] },
       [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
     });

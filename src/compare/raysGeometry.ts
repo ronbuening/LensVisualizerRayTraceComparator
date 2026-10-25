@@ -39,7 +39,8 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   const [a, b] = [decodeTrace(dataA), decodeTrace(dataB)];
   const different = differentRays(a, b);
   if (different !== null) return { comparable: false, reason: different };
-  const surfaces = context?.opticalCase?.system.surfaces;
+  const system = context?.opticalCase?.system;
+  const surfaces = system?.opticalPath?.map((step) => system.surfaces[step.surfaceIndex]) ?? system?.surfaces;
   if (surfaces === undefined) {
     return { comparable: false, reason: "the case is not at hand: its clip radii say which rays lie in the rim band" };
   }
@@ -87,6 +88,9 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   const hits = noWorst();
   for (let surface = 0; surface < a.surfaces; surface++) {
     for (const ray of both) {
+      // A visit one answer crossed unchanged and records no point for has nothing to compare; the ray's other
+      // visits, its exit direction and its landing are compared as for any ray.
+      if (a.unrecordedHits?.[surface * rays + ray] === 1 || b.unrecordedHits?.[surface * rays + ray] === 1) continue;
       const at = (surface * rays + ray) * 3;
       const [dx, dy, dz] = [a.hits[at] - b.hits[at], a.hits[at + 1] - b.hits[at + 1], a.hits[at + 2] - b.hits[at + 2]];
       takeWorst(hits, Math.sqrt(dx * dx + dy * dy + dz * dz), ray, surface);
@@ -118,12 +122,15 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
 
 /** How many rays of an answer ended in each way: what a comparison lists beside its metrics, for each engine. */
 function recorded(data: JsonObject): { readonly [name: string]: readonly number[] } {
-  const { status } = decodeTrace(data);
+  const { status, unrecordedHits } = decodeTrace(data);
   const count = (value: number): number => status.reduce((total, each) => total + (each === value ? 1 : 0), 0);
   return {
     "rays.ok": [count(RAY_STATUS.ok)],
     "rays.blocked": [count(RAY_STATUS.blocked)],
     "rays.failed": [count(RAY_STATUS.failed)],
+    ...(unrecordedHits === null
+      ? {}
+      : { "hits.unrecorded": [unrecordedHits.reduce((total, each) => total + each, 0)] }),
   };
 }
 

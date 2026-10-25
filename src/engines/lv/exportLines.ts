@@ -40,7 +40,9 @@ const PATH_REASONS: readonly string[] = ["unsupported-path", "unverified-scale"]
  */
 function pathIsExpressible(state: LvPreparedState): boolean {
   const fisheye = state.lens.projection.kind.startsWith("fisheye");
-  return fisheye || state.surfaces.some((surface) => (surface.innerSd ?? 0) > 0);
+  return (
+    state.lens.flags.isFoldedOptics === true || fisheye || state.surfaces.some((surface) => (surface.innerSd ?? 0) > 0)
+  );
 }
 
 /** The object of a state: at infinity at infinity focus, else at the point of the conjugate LV certifies. */

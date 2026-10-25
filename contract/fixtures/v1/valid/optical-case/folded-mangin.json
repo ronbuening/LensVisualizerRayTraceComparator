@@ -1,0 +1,100 @@
+{
+  "contract": "1.4",
+  "kind": "optical-case",
+  "id": "5db890cfbd27d702295416c177693dc44fad8c500dbaca434277aaf4fc638365",
+  "systemId": "5a782aeef299891678990f66be37807fbc3a1be48dba4656b040b0831ec3b614",
+  "label": {
+    "name": "synthetic folded system"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "S0",
+        "z": 0,
+        "thickness": 10,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 25,
+          "nominalSemiDiameter": 25,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "S1",
+        "z": 10,
+        "thickness": -36.66666666666667,
+        "shape": {
+          "kind": "conic",
+          "radius": -100,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 25,
+          "nominalSemiDiameter": 25,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      }
+    ],
+    "opticalPath": [
+      {
+        "surfaceIndex": 0,
+        "interaction": "refract",
+        "mediumAfter": 0
+      },
+      {
+        "surfaceIndex": 1,
+        "interaction": "reflect"
+      },
+      {
+        "surfaceIndex": 0,
+        "interaction": "refract",
+        "mediumAfter": null
+      }
+    ],
+    "stopIndex": 0,
+    "lastLensSurfaceIndex": 1,
+    "designImageZ": -26.666666666666668
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 25,
+    "imageZ": -26.666666666666668,
+    "lines": [
+      {
+        "wavelengthNm": 550,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          2
+        ],
+        "data": "AAAAAAAA+D8AAAAAAAD4Pw==",
+        "sha256": "18440d7629b7f2ae0688b38143a2081cfcc8db2d5b05f79d48174fe845689a31"
+      }
+    }
+  },
+  "features": [
+    "path.folded"
+  ],
+  "provenance": {
+    "source": {
+      "kind": "fixture",
+      "name": "analytic folded proof"
+    },
+    "producer": {
+      "tool": "lvrtc",
+      "version": "test"
+    }
+  }
+}

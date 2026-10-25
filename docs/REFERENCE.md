@@ -2906,3 +2906,170 @@ Owner amendment verified on 2026-10-23 under policy **14**, contract **1.3**, po
   checks and report verification under a temporary root. Goldens were regenerated with `writeGolden.ts` and
   inspected: only the three reports' policy line and hash changed. The states suite retains f/5.6 and f/11.
   No baselines/ or reports/ file was edited; the owner's recording step remains pending.
+
+## Stage 5.2a — folded systems
+
+The owner selected the 16 keys in `suites/folded.json`: seven production lenses and nine reference systems in
+the census list. The suite names lv, ref and optiland, R0–R3, reference line, design plane, wide open, explicit
+0 and 0.25 degree fields, and a 16-cell probe lattice. It has no baseline. Its runs, comparisons and the HEAD
+compatibility runs are under temporary `/tmp/lvrtc-52-*` directories; `runs/store` is untouched.
+
+Contract 1.4 carries physical surfaces plus fixed visits, both incidence-side policies and both medium references,
+annular/opaque windows, and the actual axial image plane. Folded ray requests select definition 2; sequential
+requests omit the version member and retain definition 1. R0 compares the physical geometry and the independently
+read-back path policy; R2/R3 index hits by visit. Ref's closed proofs cover R/2 and spherical aberration,
+paraboloid focus and equal path, Cassegrain EFL, Mangin double pass and annular blocked sets. Exact rational
+singularity checks supplement compensated sums, without a threshold.
+
+LV supplies its own recorded folded geometry and whatever its first-order kernel supplies. Missing OPL is
+explicitly unsupported at R3. LV records no hit for a passive visit but keeps a height for every visit under
+`recordHeights`; each recorded hit is placed on the one declared step whose kept height is its own, bit for bit,
+and the other steps are answered as v2 `unrecordedHits`, which R2 skips (no point is computed). Under the owner's
+2026-10-23 decision, run preparation traces exactly the run's generated coarse/fine sets with LV before planning
+any engine requests. A recorded interaction past the declared visits refuses the whole run with
+`folded-post-path-reflection`, including ref and optiland. Accepted cases record
+`folded-declared-path-confirmed:run:<utf8hex>:coarse:<sets>:fine:<sets>` in provenance: the reversible run name
+and ordered ray-set hashes, `empty` if requested generation gave no sets, or `unrequested` for an unrequested
+resolution. Confirmation covers only these finite sets. No static geometric check or additional sampling is used.
+The request-time `lv-folded-post-path-interaction` remains a backstop for direct or unconfirmed requests.
+optiland receives native geometry and
+reflection models, with read-back conditional policies for active bands and media. Every new read-back has a
+purposeful fault test. The remaining LV cardinal defect is returned unchanged and measured by R1.
+
+Sequential compatibility is checked against manifests made from an unchanged `git archive HEAD` extract,
+using the same live LV. Case IDs and request IDs are compared job for job. Store keys also cover engine source
+fingerprints and adapter revisions: those must change with edited code. Recomputing a HEAD key with the new
+engine identity separates that necessary retirement from a changed request. Existing baselines and reports
+remain untouched for the owner's Stage 5.3 refresh.
+
+Measured at LV `2e046d71` (clean), optiland `4e893f53` (pre-existing dirty flag), with `--jobs 10`:
+16 source runs, **eight confirmed cases and eight source refusals** (seven raw-export refusals and the Maksutov
+run's traced-path refusal); **144 jobs, 135 ok, nine unsupported, zero errors**.
+Comparison counts include both reference-vs-each and pairwise modes: **149 PASS, 4 FAIL, 87 UNSUPPORTED**;
+zero FLOOR, RECORDED, ATTENTION, BLOCKED or ERROR. By rung: R0 40 PASS; R1 13 PASS / 4 FAIL / 23 UNSUPPORTED;
+R2 80 PASS; R3 16 PASS / 64 UNSUPPORTED. All four FAIL pairs are
+the same LV spherical-primary R1 front-principal error, repeated by the two modes. No R2 or R3 pair fails. LV's
+R2 against ref and optiland on its eight measured lenses is within 9.5e-14 mm (hits), 1.9e-13 mm (landings) and
+4.0e-15 (directions), with no mask mismatch; LV left 1,474 visits across the 16 requests unrecorded. A serial run
+(`--jobs 1`) and `--jobs 10`, each from an empty store, give byte-identical manifests, comparisons and store
+entries. Ref–optiland passes every available
+R0–R3 pair; first order is unavailable when the declared stop is absent from the path. PASS does not claim an
+OPD measurement where no chief ray passes: the off-axis probes have no invented chief, and an obscured axial
+chief can be blocked. The ordinary absolute-path gates still apply to the common transmitted rays.
+
+In the following table, P means PASS for every pair of the named engines. F is
+`lv-folded-first-order-unavailable` (LV's cardinal function returns null); O is
+`lv-folded-optical-path-unavailable`; S is `folded-stop-not-visited`. Each letter means UNSUPPORTED,
+not a skipped passing test. A source refusal applies to all four rungs and all three engines.
+
+| Lens key | R0 | R1 | R2 | R3 |
+|---|---|---|---|---|
+| `carl-zeiss-mirotar-500f45` | `folded-auto-path` | same | same | same |
+| `minolta-250mm-f56-rf` | `folded-auto-path` | same | same | same |
+| `minolta-af-reflex-500mm-f8` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `nikon-reflex-nikkor-1000mm-f11` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `nikon-reflex-nikkor-500mm-f8-new` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `nikon-reflex-nikkor-c-500mm-f8` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `reference-annular-obscured-mirror` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `reference-annular-ring-blocker` | `folded-auto-path` | same | same | same |
+| `reference-cassegrain-back-focus` | `folded-auto-path` | same | same | same |
+| `reference-folded-diffractive-plate` | source refusal below | same | same | same |
+| `reference-gregorian-secondary` | P, all three | S, all three | P, all three | P ref/optiland; LV O |
+| `reference-maksutov-cassegrain-meniscus` | `folded-post-path-reflection` (whole run) | same | same | same |
+| `reference-mangin-second-surface-mirror` | P, all three | P ref/optiland; LV F | P, all three | P ref/optiland; LV O |
+| `reference-newtonian-side-focus` | source refusal below | same | same | same |
+| `reference-spherical-primary-mirror` | P, all three | P ref/optiland; LV FAIL | P, all three | P ref/optiland; LV O |
+| `vivitar-s1-450-f45` | `folded-auto-path` | same | same | same |
+
+The diffractive plate is refused with `diffractive-surface`, `tilted-surface`, `surface-profile-unsupported`,
+`tilted-image-plane` and `off-axis-image-plane`. Newtonian is refused with `folded-auto-path`,
+`surface-profile-unsupported`, `tilted-image-plane` and `off-axis-image-plane`. Diffraction stays Stage 5.2b.
+Automatic paths cannot be replaced by one sampled visit list without changing the system.
+
+The remaining FAIL is an **LV implementation defect**, not an unsettled ref result: a single spherical mirror's principal
+planes coincide with its vertex. An independent 80-digit Decimal ray at height 1e-30 mm on the actual exported
+spherical-primary case gives a focus within 1.25e-63 mm of zero and EFL -100 mm, hence principal z +100 mm.
+LV returns front-principal z -100 mm, one signed radius away. The source pin identifies its determinant-parity
+mistake; ref and optiland independently return +100 mm. The temporary proof is
+`/tmp/lvrtc-52-sphere-decimal80.txt`; the fifteen repository ref analytic proofs and native LV pin remain reproducible.
+LV stays read-only; the owner will fix it separately. The [owner brief](upstream/lensvisualizer-mirror-principal-plane.md)
+is marked "for the owner; not filed". No gate or floor was widened, and the FAIL is not suppressed. The source lines: the folded
+matrix is built in physical slope with an unsigned index (`src/optics/first-order/cardinals.ts:213-218`, mirror
+step `u' = -u - 2y/R` at `src/optics/math/paraxial.ts:91`), determinant -1 after one reflection, and
+`frontPrincipalZ = frontVertexZ + n (D - 1) / C` (`cardinals.ts:126`) assumes determinant +1; for determinant d
+the term is `(D - d) / C`. In the exported case the review's own closed form agrees: f = R/2 = -100, F = F' = 0,
+H = H' = 100 (the vertex), EFL = F' - H' = -100; LV's A, B, C, D are 1, 100, 0.01, 0, so `(D - 1)/C` = -100.
+Ref (signed index, determinant +1) and optiland (`P1()`) both give +100, and the contract's convention (global z,
+EFL = F' - H') is applied to every engine's values alike; `test/engines/ref/folded.test.ts` now holds every
+first-order value of a single mirror, of a Cassegrain whose stop is its primary, of an inactive-side pass, of a
+reverse-medium Mangin and of an entrance pupil at infinity to closed forms.
+
+**Translation gap contained by the owner's traced-ray decision.** LV's explicit traversal is its declared visits
+followed by a search of its reflective surfaces with the image plane competing (`gotchas.md`). Contract 1.4 states
+fixed visits only. For the raw Maksutov case, 272 of 513 coarse probe rays meet M1 again and stop at SEC's back:
+140 of 257 axial rays and 132 of 256 at 0.25 degrees. The whole run is now refused, so ref and optiland have no
+jobs or comparisons on that fixed-path substitute. The other eight runs have no recorded post-path interaction
+on their coarse sets, whose exact hashes are in each case's provenance. R0–R3 request no fine sets, recorded as
+`fine:unrequested`; a rung requesting fine sets has those checked too, before any jobs. Hermetic tests cover a
+post-path mirror hit, a hit only on fine sets, exact coarse/fine notes, shared-case notes and serial/pool bytes.
+This is finite ray-set confirmation, not a geometric guarantee about other rays. Raw export and census remain
+declared-path geometry and carry no run confirmation.
+
+Census comparison, rewritten after implementation with `node bin/lvrtc.mjs export --all --census reports/census`:
+
+| Snapshot | Lenses | Zooms | States | Exported | Refused | Threw |
+|---|---:|---:|---:|---:|---:|---:|
+| Committed Stage 5.1 census, LV `ab0fd4cf` | 989 | 319 | 1308 | 1283 | 25 | 0 |
+| HEAD exporter, same current LV `2e046d71` | 995 | 325 | 1320 | 1295 | 25 | 0 |
+| Stage 5.2a exporter, current LV `2e046d71` | 995 | 325 | 1320 | 1304 | 16 | 0 |
+
+This stage adds nine raw exported folded states and seven annular states; eight folded runs pass the run-specific
+confirmation and one is refused. The census is unchanged by that run-only check. The other twelve additional exports
+relative to the committed census come from LV catalog growth. `mixed-reference` still names the one Samyang
+AF 35/2.8 state as an LV data issue: mixed d/e index references without wavelength data are not approximated.
+
+The HEAD comparison used R0–R3, lv/ref, the same live LV and `--jobs 10`. Benchmark has 96 runs / 3,840 jobs;
+features has 18 runs / 720 jobs. Every job has an identical case ID, request ID **and full request body**, including
+engine options, and all jobs answer ok. **Zero of the 4,560 raw store keys is unchanged.** Recomputing every HEAD
+key with only the current engine fingerprint/adapter revision yields exactly its current key (4,560 of 4,560).
+The proof output is `/tmp/lvrtc-52-compatibility.json`, beside the two pairs of temporary manifests.
+
+Store keys cover the engine source fingerprints and adapter revisions, so editing an engine's code retires its
+keys whatever its requests are; the owner confirmed (2026-10-23) that this is normal and that only request ids
+and result bodies of sequential requests must stay as they were. Request compatibility is proven above. No hash
+is frozen or masked, and no existing baseline record was edited.
+
+A second read of the temporary stores compares every unique sequential result, excluding only its engine
+identity: all **2,112 benchmark** and **396 features** result bodies are byte-equivalent as parsed canonical data,
+including every encoded numerical array, diagnostic and method. No result moved. Evidence:
+`/tmp/lvrtc-52-result-compatibility.json`. The request/version changes therefore do not alter sequential answers;
+the raw-key conflict is entirely source identity retirement.
+
+For the eight confirmed folded runs' R2 requests, ref and optiland each trace **4,104 rays: 1,976 ok, 2,128
+blocked, zero failed**.
+Their mask mismatches and rim-band disagreements are both zero. The worst passing hit difference is
+1.191e-13 mm, landing 2.275e-13 mm, absolute path 5.805e-10 waves. LV's same sets have **1,976 ok, 2,041 blocked
+and 87 failed** rays, all LV `noBracket`. The 87 ended rays are not arriving-mask disagreements: ref/optiland block them too;
+no R2/R3 pair fails. The eight source-refused runs produce no engine batches.
+The suite's LV source audit is unchanged. LV remains clean; optiland retains only its pre-existing
+`pyproject.toml` / `uv.lock` changes.
+
+Required verification passes after the final fixture updates:
+
+- `LVRTC_LV_PATH=/nonexistent LVRTC_OPTILAND_PYTHON=/nonexistent npm run check`: typecheck, lint,
+  format:check, **1,627 TypeScript tests**, **96 Python kit tests**, **299 Python worker tests** with the expected
+  160 hermetic real-library skips, and all four committed baseline/report pairs verified unchanged.
+- `npm run test:lv`: **103 pass**, no skipped tests.
+- `npm run test:optiland`: **44 pass**, no skipped tests, including all Python worker tests on real optiland.
+
+Serial and `--jobs 10` confirmation runs at the same LV revision have **106 byte-identical files**: eight cases,
+the manifest and comparisons, and 96 compressed store entries. Evidence is under
+`/tmp/lvrtc-52-owner-j20F8N/{serial-verified,parallel-verified}` and
+`/tmp/lvrtc-52-owner-j20F8N/serial-parallel-verified-proof.json`. The first comparison saw different recorded LV
+commit metadata between its two executions; this repeat holds the revision fixed and changes no identities or
+stored bytes to hide a difference.
+
+Among reports, only reports/census was rewritten. No baseline was written, no catalog ray sweep was added, no engine checkout
+was edited, and no commit, push, stash, checkout or reset was performed. The owner commits after review and owns
+the Stage 5.3 baseline refresh. The owner's traced-ray decision and separate upstream-fix brief complete this
+follow-up; the four LV R1 FAILs remain visible.

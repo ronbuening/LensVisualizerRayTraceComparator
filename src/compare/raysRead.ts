@@ -3,7 +3,7 @@
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../contract/quantities/raysTrace.ts";
-import type { RaysTraceData, RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
+import type { RaysTraceData, RaysTraceDataV2, RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { decodeNdArray } from "../core/numeric/ndarray.ts";
 import type { NdArrayWire, NdDtype, NdValuesByDtype } from "../core/numeric/ndarray.ts";
 
@@ -22,6 +22,8 @@ export interface DecodedTrace {
   readonly imagePoint: Float64Array;
   readonly opticalPath: Float64Array;
   readonly opticalPathToImage: Float64Array;
+  /** `[S, n]`, flat, or null: 1 where the answer records no point for a visit the ray crossed unchanged. */
+  readonly unrecordedHits: Uint8Array | null;
 }
 
 function elements<D extends NdDtype>(wire: NdArrayWire, dtype: D, name: string): NdValuesByDtype[D] {
@@ -32,7 +34,7 @@ function elements<D extends NdDtype>(wire: NdArrayWire, dtype: D, name: string):
 
 /** Decodes the arrays of an answer that two metrics or more read. The data is valid by the quantity's rules. */
 export function decodeTrace(data: JsonObject): DecodedTrace {
-  const trace = data as RaysTraceData;
+  const trace = data as RaysTraceDataV2;
   return {
     rays: trace.status.$nd.shape[0],
     surfaces: trace.hits.$nd.shape[0],
@@ -43,6 +45,7 @@ export function decodeTrace(data: JsonObject): DecodedTrace {
     imagePoint: elements(trace.imagePoint, "f8", "imagePoint"),
     opticalPath: elements(trace.opticalPath, "f8", "opticalPath"),
     opticalPathToImage: elements(trace.opticalPathToImage, "f8", "opticalPathToImage"),
+    unrecordedHits: trace.unrecordedHits === undefined ? null : elements(trace.unrecordedHits, "u1", "unrecordedHits"),
   };
 }
 

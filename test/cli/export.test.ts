@@ -188,10 +188,10 @@ test("--out writes the case to a file relative to the working directory, and pri
 
 // ── Every lens ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** The summary of the fake tree: four lenses, one of them a zoom. */
+/** The summary of the fake tree: five lenses, one of them a zoom. */
 const SUMMARY = [
-  "4 lenses (1 of them zooms, each at both ends), 5 states: 5 exported, 0 not exportable, 0 threw",
-  "  primes       3: 3 exported, 0 not exportable, 0 threw",
+  "5 lenses (1 of them zooms, each at both ends), 6 states: 6 exported, 0 not exportable, 0 threw",
+  "  primes       4: 4 exported, 0 not exportable, 0 threw",
   "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
   "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
   "",
@@ -212,17 +212,18 @@ test("--all --json prints the census: counts, hashes and lens keys, and nothing 
   assert.equal(run.out, `${JSON.stringify(census, null, 2)}\n`);
   assert.deepEqual(census, {
     byState: {
-      prime: { exported: 3, notExportable: 0, states: 3, threw: 0 },
+      prime: { exported: 4, notExportable: 0, states: 4, threw: 0 },
       tele: { exported: 1, notExportable: 0, states: 1, threw: 0 },
       wide: { exported: 1, notExportable: 0, states: 1, threw: 0 },
     },
     contract: CONTRACT_VERSION,
     // Four lenses in five states: the zoom is exported at both ends.
-    exported: 5,
+    exported: 6,
     features: {
       ...Object.fromEntries(FEATURE_FLAGS.map((flag) => [flag, 0])),
       // The one lens whose rear plate publishes no rim; the zoom's plate has one, and clips.
       "aperture.unclipped": 1,
+      "path.folded": 1,
       "surface.asphere.even": 2,
       "surface.conic": 2,
     },
@@ -233,7 +234,7 @@ test("--all --json prints the census: counts, hashes and lens keys, and nothing 
       engineClosureHash: closureOf(lv, FAKE_ENGINE_FILES),
       engineFileCount: FAKE_ENGINE_FILES.length,
     },
-    lenses: 4,
+    lenses: 5,
     limits: {
       "asphere.maxPower": { end: "wide", lens: "acme-zoom-24-48", max: 4 },
       "lines.count": { lens: "acme-singlet-50", max: 1 },
@@ -243,7 +244,7 @@ test("--all --json prints the census: counts, hashes and lens keys, and nothing 
     notes: {},
     reasons: {},
     request: { aperture: "wide-open", focus: "infinity", imagePlane: "design", lines: "reference", zoom: "both-ends" },
-    states: 5,
+    states: 6,
     threw: [],
     unindexedFiles: 0,
     zooms: 1,
@@ -267,9 +268,9 @@ test("--census writes the census as JSON and Markdown, the same bytes every time
   assert.equal(json, (await exportCli(["--all", "--json"], { rootDir })).out);
   assert.equal(markdown, renderCensusMarkdown(JSON.parse(json)));
   assert.match(markdown, /^# LensVisualizer export census\n/);
-  assert.match(markdown, /^4 lenses, 1 of them zooms, in 5 states; 0 lens files not indexed\.$/m);
+  assert.match(markdown, /^5 lenses, 1 of them zooms, in 6 states; 0 lens files not indexed\.$/m);
   assert.match(markdown, /^\| Zooms, tele end \| 1 \| 1 \| 0 \| 0 \|$/m);
-  assert.match(markdown, /^\| All \| 5 \| 5 \| 0 \| 0 \|$/m);
+  assert.match(markdown, /^\| All \| 6 \| 6 \| 0 \| 0 \|$/m);
 
   const second = await exportCli(["--all", "--census", join(rootDir, "census", "b"), "--json"], { rootDir });
   assert.equal(second.out, json, "with --json the census is printed, and no line beside it");
@@ -294,7 +295,7 @@ test("--all counts a lens that cannot be exported under each of its reasons, and
   const run = await exportCli(["--all", "--json"], { rootDir });
   assert.equal(run.code, EXIT_OK, run.err);
   const census: ExportCensus = JSON.parse(run.out);
-  assert.deepEqual([census.lenses, census.states, census.exported, census.notExportable], [5, 6, 5, 1]);
+  assert.deepEqual([census.lenses, census.states, census.exported, census.notExportable], [6, 7, 6, 1]);
   assert.deepEqual(census.threw, []);
   assert.deepEqual(census.reasons, {
     "lens-build-failed": { states: 1, lenses: ["no-stop"], wideOnly: [], teleOnly: [] },
@@ -303,8 +304,8 @@ test("--all counts a lens that cannot be exported under each of its reasons, and
   assert.equal(
     text.out,
     [
-      "5 lenses (1 of them zooms, each at both ends), 6 states: 5 exported, 1 not exportable, 0 threw",
-      "  primes       4: 3 exported, 1 not exportable, 0 threw",
+      "6 lenses (1 of them zooms, each at both ends), 7 states: 6 exported, 1 not exportable, 0 threw",
+      "  primes       5: 4 exported, 1 not exportable, 0 threw",
       "  zooms, wide  1: 1 exported, 0 not exportable, 0 threw",
       "  zooms, tele  1: 1 exported, 0 not exportable, 0 threw",
       "not exportable, by reason (states, lenses):",
@@ -321,7 +322,7 @@ test("--all names a lens file it cannot index and exits 1, with the census of th
   assert.equal(run.code, EXIT_FAILURE);
   assert.equal(run.err, "lvrtc export: src/lens-data/acme/Keyless.data.ts: no string key\n");
   const census: ExportCensus = JSON.parse(run.out);
-  assert.deepEqual([census.lenses, census.states, census.exported, census.unindexedFiles], [4, 5, 5, 1]);
+  assert.deepEqual([census.lenses, census.states, census.exported, census.unindexedFiles], [5, 6, 6, 1]);
 });
 
 // ── The command line ─────────────────────────────────────────────────────────────────────────────────────────────

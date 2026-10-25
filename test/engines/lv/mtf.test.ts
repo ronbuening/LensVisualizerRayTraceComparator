@@ -859,7 +859,8 @@ test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's
 
 test("a lens that has no case has the exporter's problems, and the tab is not asked", async (t) => {
   const lv = variantOf(freshLv(t), "folded", {
-    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
+    "src/optics/state/runtime.ts": (text) =>
+      text.replace("isFoldedOptics: !!L.source.opticalPath", "isFoldedOptics: true"),
   });
   const binding = await bind(t, lv);
   const resolve = createLvTabProfileResolver(binding);
@@ -867,7 +868,7 @@ test("a lens that has no case has the exporter's problems, and the tab is not as
   assert.ok(!folded.ok);
   assert.deepEqual(
     folded.problems.map((problem) => problem.code),
-    ["folded-path"],
+    ["folded-auto-path"],
   );
   const unknown = await resolve({ lensKey: "acme-singlet-51", zoomT: 0, view: "wide-open" });
   assert.ok(!unknown.ok);

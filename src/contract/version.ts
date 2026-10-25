@@ -27,6 +27,9 @@ export const CONTRACT_VERSION_1_2 = "1.2";
  */
 export const CONTRACT_VERSION_1_3 = "1.3";
 
+/** Folded paths and per-request quantity versions; stated only where used. */
+export const CONTRACT_VERSION_1_4 = "1.4";
+
 /** The minor of a version; null when the text is not `<major>.<minor>` in plain decimal. */
 export function contractMinor(version: string): number | null {
   return parseVersion(version)?.[1] ?? null;

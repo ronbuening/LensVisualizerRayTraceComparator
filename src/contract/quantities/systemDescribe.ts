@@ -4,7 +4,7 @@
 // These are type aliases, not interfaces, so that a value of one is also a `JsonObject` and can be a request's
 // `spec` or a result's `data` as it is.
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
-import type { AsphereTerm } from "../case.ts";
+import type { AsphereTerm, OpticalPathStep } from "../case.ts";
 
 /** The id of the quantity that echoes the system an engine built: what rung R0 compares. */
 export const SYSTEM_DESCRIBE = "system.describe";
@@ -35,6 +35,10 @@ export type SystemDescribeSpec = {
  * L lines and K sag radii per surface.
  */
 export type SystemDescribeData = {
+  readonly opticalPath?: readonly OpticalPathStep[];
+  readonly pathSurfaceIndices?: readonly number[];
+  readonly pathInteractions?: readonly string[];
+  readonly pathIndexAfterSurface?: NdArrayWire;
   /** S. */
   readonly surfaceCount: number;
   readonly stopIndex: number;

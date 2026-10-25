@@ -46,9 +46,13 @@ export function negotiate(
     items.push({ code: "contract", item: version, message: `the engine speaks contract ${min} to ${max}; ${written}` });
   }
 
+  definitionVersion = request.quantityVersion ?? definitionVersion;
   if (!Object.hasOwn(quantities, request.quantity)) {
     items.push({ code: "quantity", item: request.quantity, message: `the engine does not offer ${request.quantity}` });
-  } else if (definitionVersion !== undefined && quantities[request.quantity].version !== definitionVersion) {
+  } else if (
+    definitionVersion !== undefined &&
+    !(quantities[request.quantity].versions ?? [quantities[request.quantity].version]).includes(definitionVersion)
+  ) {
     const implemented = quantities[request.quantity].version;
     const message = `the engine implements version ${implemented} of ${request.quantity}; the comparator asks for version ${definitionVersion}`;
     items.push({ code: "quantity", item: request.quantity, message });
@@ -57,6 +61,14 @@ export function negotiate(
   for (const flag of opticalCase.features) {
     if (features.supported.includes(flag)) continue;
     items.push({ code: "feature", item: flag, message: `the engine does not support ${flag}` });
+  }
+
+  if (
+    request.quantity === "rays.trace" &&
+    opticalCase.system.opticalPath !== undefined &&
+    request.quantityVersion !== 2
+  ) {
+    items.push({ code: "quantity", item: "rays.trace", message: "a folded case requires rays.trace version 2" });
   }
 
   const needed = deriveFeatures(opticalCase.system, opticalCase.conditions).limits;

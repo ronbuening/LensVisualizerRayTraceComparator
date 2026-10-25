@@ -167,11 +167,23 @@ def surface_power_scale(api: OptilandApi, optic: Any) -> tuple[float, float]:
     radii = [float(value) for value in api.np.asarray(optic.surfaces.radii, dtype=api.np.float64).ravel()]
     wavelength = optic.primary_wavelength
     indices = [float(value) for value in api.np.asarray(optic.surfaces.n(wavelength), dtype=api.np.float64).ravel()]
-    scale = math.fsum(abs((indices[at] - indices[at - 1]) / radii[at]) for at in range(1, len(radii)))
+    scale = math.fsum(
+        abs(
+            (
+                2 * indices[at - 1]
+                if optic.surfaces[at].interaction_model.is_reflective
+                else indices[at] - indices[at - 1]
+            )
+            / radii[at]
+        )
+        for at in range(1, len(radii))
+    )
     return scale, indices[-1]
 
 
-def line_data(optic: Any, last_lens_surface: int, api: OptilandApi | None = None) -> LineData:
+def line_data(
+    optic: Any, last_lens_surface: int, api: OptilandApi | None = None, *, last_lens_vertex: float | None = None
+) -> LineData:
     """The first-order data of one optic, in the contract's frame, or the item that says why it has none.
 
     ``last_lens_surface`` is the case's index of the rear lens vertex, which the back focus is measured from: a
@@ -184,7 +196,7 @@ def line_data(optic: Any, last_lens_surface: int, api: OptilandApi | None = None
     positions = [float(value) for value in api.np.asarray(optic.surfaces.positions, dtype=api.np.float64).ravel()]
     # optiland's index 0 is the object surface and its last one the image surface: a case's surface k is k + 1.
     first_vertex, image_plane = positions[1], positions[-1]
-    last_lens_vertex = positions[last_lens_surface + 1]
+    last_lens_vertex = positions[last_lens_surface + 1] if last_lens_vertex is None else last_lens_vertex
 
     # The focal length first: without one there is no focal point to refer anything to. An infinite one is that of
     # an afocal system; one that is no number says nothing of the system, and is no "unsupported".
@@ -241,7 +253,13 @@ class FirstOrderAnswer:
     unsupported: tuple[dict[str, str], ...] = ()
 
 
-def first_order_of(optics: Sequence[Any], last_lens_surface: int, api: OptilandApi | None = None) -> FirstOrderAnswer:
+def first_order_of(
+    optics: Sequence[Any],
+    last_lens_surface: int,
+    api: OptilandApi | None = None,
+    *,
+    last_lens_vertex: float | None = None,
+) -> FirstOrderAnswer:
     """``paraxial.first-order`` of built optics, one for each line, in the order of the lines.
 
     Every array has one value per line. ``recorded`` holds optiland's paraxial f-number at each line and, for a
@@ -251,7 +269,7 @@ def first_order_of(optics: Sequence[Any], last_lens_surface: int, api: OptilandA
     ``feature`` for each kind of reason, naming every such line: ``system.afocal`` first.
     """
     api = api if api is not None else optiland_api()
-    lines = [line_data(optic, last_lens_surface, api) for optic in optics]
+    lines = [line_data(optic, last_lens_surface, api, last_lens_vertex=last_lens_vertex) for optic in optics]
 
     unsupported: list[dict[str, str]] = []
     reasons = (

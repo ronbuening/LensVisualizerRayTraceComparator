@@ -6,6 +6,7 @@ import type { ComparisonMetric } from "../contract/comparison.ts";
 import type { JsonObject } from "../contract/json.ts";
 import { SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeData } from "../contract/quantities/systemDescribe.ts";
+import { hashCanonical } from "../core/numeric/hash.ts";
 import { decodeNdArray } from "../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../core/numeric/ndarray.ts";
 import type { ComparatorOutcome, ComputedMetric, QuantityComparator } from "./comparator.ts";
@@ -124,6 +125,16 @@ function compare(a: SystemDescribeData, b: SystemDescribeData): ComparatorOutcom
     }
   };
 
+  for (const field of ["pathSurfaceIndices", "pathInteractions", "opticalPath"] as const) {
+    if (hashCanonical(a[field] ?? null) !== hashCanonical(b[field] ?? null)) miss(layout, { field });
+  }
+  if (a.pathIndexAfterSurface !== undefined && b.pathIndexAfterSurface !== undefined) {
+    const one = elements(a.pathIndexAfterSurface),
+      other = elements(b.pathIndexAfterSurface);
+    if (one.length !== other.length) miss(index, { field: "pathIndexAfterSurface" });
+    for (let at = 0; at < Math.min(one.length, other.length); at++)
+      if (one[at] !== other[at]) miss(index, { field: "pathIndexAfterSurface", surface: at });
+  } else if (a.pathIndexAfterSurface !== b.pathIndexAfterSurface) miss(index, { field: "pathIndexAfterSurface" });
   if (a.surfaceCount !== b.surfaceCount) miss(layout, { field: "surfaceCount" });
   perSurface(layout, "vertexZ");
   if (!sameNumber(a.imageZ, b.imageZ)) miss(layout, { field: "imageZ" });

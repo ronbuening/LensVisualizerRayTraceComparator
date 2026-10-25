@@ -83,6 +83,8 @@ export const LV_IMPORT_MANIFEST = [
     exports: [{ name: "FLAT_R_THRESHOLD", as: "flatRadiusThreshold", kind: "number" }],
   },
   { module: "src/optics/chromatic.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
+  { module: "src/optics/trace/interactions.ts", exports: functions("rearMediumSurfaceIndex") },
+  { module: "src/optics/trace/utils.ts", exports: functions("projectCoordinateToZ") },
   { module: "src/optics/trace/aperture.ts", exports: functions("evaluateAperture") },
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix") },
   {

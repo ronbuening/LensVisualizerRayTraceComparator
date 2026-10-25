@@ -15,7 +15,7 @@ export interface QuantityModule {
   /** Every way `spec` is not a spec of this quantity; empty exactly when a request may carry it. */
   validateSpec(spec: unknown): ValidationIssue[];
   /** Every way `data` is not data of this quantity; empty exactly when an `ok` result may carry it. */
-  validateData(data: unknown): ValidationIssue[];
+  validateData(data: unknown, version?: number): ValidationIssue[];
 }
 
 /**

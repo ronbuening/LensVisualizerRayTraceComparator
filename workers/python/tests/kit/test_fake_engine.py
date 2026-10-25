@@ -266,7 +266,7 @@ class DescriptorAndOptionsTest(unittest.TestCase):
             },
         )
         self.assertEqual(list(FEATURE_FLAGS), sorted(FEATURE_FLAGS))
-        self.assertEqual(len(FEATURE_FLAGS), 8)
+        self.assertEqual(len(FEATURE_FLAGS), 9)
 
     def test_only_id_is_needed_and_the_other_options_default_to_a_well_behaved_engine(self) -> None:
         options = parse_fake_options({"id": "fake"})

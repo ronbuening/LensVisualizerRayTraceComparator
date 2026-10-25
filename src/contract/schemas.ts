@@ -80,7 +80,19 @@ export function contractSchemas(): SchemaSet {
  * status rules) are checked by the module that owns the kind.
  */
 export function validateKind(kind: ContractKind, value: unknown): ValidationIssue[] {
-  return validate(contractSchemas(), kindSchemaId(kind), value);
+  const issues = validate(contractSchemas(), kindSchemaId(kind), value);
+  if (
+    issues.length === 0 &&
+    kind === "request" &&
+    typeof value === "object" &&
+    value !== null &&
+    "quantityVersion" in value
+  ) {
+    const version = (value as unknown as { contract: string }).contract.split(".").map(Number);
+    if (version[1] < 4)
+      issues.push({ path: "/quantityVersion", keyword: "invariant", message: "quantityVersion requires contract 1.4" });
+  }
+  return issues;
 }
 
 /** Issues as one line of text: `/system/stopIndex [type] expected integer, got string; ...`. */

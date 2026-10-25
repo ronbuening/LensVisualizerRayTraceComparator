@@ -21,7 +21,7 @@ import type { SystemDescribeData } from "../../../src/contract/quantities/system
 import { makeRequest } from "../../../src/contract/request.ts";
 import type { ResultEnvelope } from "../../../src/contract/result.ts";
 import { validateKind } from "../../../src/contract/schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
 import { canonicalJson } from "../../../src/core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../../../src/core/numeric/hash.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
@@ -91,7 +91,7 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
   const descriptor = await refEngine(t).describe();
   assert.deepEqual(validateKind("engine-descriptor", descriptor), []);
   assert.deepEqual(descriptor, refDescriptor());
-  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 });
+  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: "1.4" });
   assert.equal(descriptor.identity.id, "ref");
   assert.equal(REF_ENGINE_ID, "ref");
   assert.equal(descriptor.identity.version, REF_ENGINE_VERSION);
@@ -99,7 +99,7 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
   assert.deepEqual(descriptor.capabilities.quantities, {
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
     "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
-    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version },
+    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version, versions: [1, 2] },
   });
   assert.equal(descriptor.capabilities.deterministic, true);
   // Every feature of a case, in the order of the flags, and no limit of any kind.

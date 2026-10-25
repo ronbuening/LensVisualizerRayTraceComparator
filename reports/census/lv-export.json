@@ -1,44 +1,45 @@
 {
   "byState": {
     "prime": {
-      "exported": 647,
-      "notExportable": 23,
+      "exported": 656,
+      "notExportable": 14,
       "states": 670,
       "threw": 0
     },
     "tele": {
-      "exported": 318,
+      "exported": 324,
       "notExportable": 1,
-      "states": 319,
+      "states": 325,
       "threw": 0
     },
     "wide": {
-      "exported": 318,
+      "exported": 324,
       "notExportable": 1,
-      "states": 319,
+      "states": 325,
       "threw": 0
     }
   },
   "contract": "1.0",
-  "exported": 1283,
+  "exported": 1304,
   "features": {
-    "aperture.annular": 0,
+    "aperture.annular": 7,
     "aperture.unclipped": 253,
     "lines.multiple": 0,
     "object.finite": 0,
-    "surface.asphere.even": 632,
+    "path.folded": 9,
+    "surface.asphere.even": 634,
     "surface.asphere.flat-base": 2,
     "surface.asphere.odd": 81,
     "surface.conic": 295
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "ab0fd4cf94836492b28470953812ed4afc98c0c6",
+    "commit": "2e046d712fa5f6631ace3b8963d18827b909a37f",
     "dirty": false,
-    "engineClosureHash": "94778d3d4f0bc86fb092cbc7391f13f1b76780816257d30b074ea41a8c7a119b",
-    "engineFileCount": 175
+    "engineClosureHash": "45a0b6c967b4fedafa92410f94bbbf77db5cfde20e2da87b331dfd6ed9258d12",
+    "engineFileCount": 177
   },
-  "lenses": 989,
+  "lenses": 995,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -54,7 +55,7 @@
       "max": 63
     }
   },
-  "notExportable": 25,
+  "notExportable": 16,
   "notes": {
     "bulk-absorption": 2,
     "projection:fisheye-equidistant": 4,
@@ -76,26 +77,16 @@
       "teleOnly": [],
       "wideOnly": []
     },
-    "folded-path": {
+    "folded-auto-path": {
       "lenses": [
         "carl-zeiss-mirotar-500f45",
         "minolta-250mm-f56-rf",
-        "minolta-af-reflex-500mm-f8",
-        "nikon-reflex-nikkor-1000mm-f11",
-        "nikon-reflex-nikkor-500mm-f8-new",
-        "nikon-reflex-nikkor-c-500mm-f8",
-        "reference-annular-obscured-mirror",
         "reference-annular-ring-blocker",
         "reference-cassegrain-back-focus",
-        "reference-folded-diffractive-plate",
-        "reference-gregorian-secondary",
-        "reference-maksutov-cassegrain-meniscus",
-        "reference-mangin-second-surface-mirror",
         "reference-newtonian-side-focus",
-        "reference-spherical-primary-mirror",
         "vivitar-s1-450-f45"
       ],
-      "states": 16,
+      "states": 6,
       "teleOnly": [],
       "wideOnly": []
     },
@@ -104,29 +95,6 @@
         "samyang-af-35mm-f2p8-fe"
       ],
       "states": 1,
-      "teleOnly": [],
-      "wideOnly": []
-    },
-    "non-refract-interaction": {
-      "lenses": [
-        "carl-zeiss-mirotar-500f45",
-        "minolta-250mm-f56-rf",
-        "minolta-af-reflex-500mm-f8",
-        "nikon-reflex-nikkor-1000mm-f11",
-        "nikon-reflex-nikkor-500mm-f8-new",
-        "nikon-reflex-nikkor-c-500mm-f8",
-        "reference-annular-obscured-mirror",
-        "reference-annular-ring-blocker",
-        "reference-cassegrain-back-focus",
-        "reference-folded-diffractive-plate",
-        "reference-gregorian-secondary",
-        "reference-maksutov-cassegrain-meniscus",
-        "reference-mangin-second-surface-mirror",
-        "reference-newtonian-side-focus",
-        "reference-spherical-primary-mirror",
-        "vivitar-s1-450-f45"
-      ],
-      "states": 16,
       "teleOnly": [],
       "wideOnly": []
     },
@@ -156,6 +124,14 @@
       "states": 2,
       "teleOnly": [],
       "wideOnly": []
+    },
+    "tilted-surface": {
+      "lenses": [
+        "reference-folded-diffractive-plate"
+      ],
+      "states": 1,
+      "teleOnly": [],
+      "wideOnly": []
     }
   },
   "request": {
@@ -165,8 +141,8 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1308,
+  "states": 1320,
   "threw": [],
   "unindexedFiles": 0,
-  "zooms": 319
+  "zooms": 325
 }

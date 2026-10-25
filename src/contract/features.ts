@@ -20,6 +20,7 @@ export const FEATURE_FLAGS = [
   "aperture.unclipped",
   "lines.multiple",
   "object.finite",
+  "path.folded",
   "surface.asphere.even",
   "surface.asphere.flat-base",
   "surface.asphere.odd",
@@ -48,6 +49,7 @@ export interface CaseFeatures {
  */
 export function deriveFeatures(system: OpticalSystem, conditions: CaseConditions): CaseFeatures {
   const present = new Set<FeatureFlag>();
+  if (system.opticalPath !== undefined) present.add("path.folded");
   let maxPower = 0;
   for (const { shape, aperture } of system.surfaces) {
     if (aperture.innerSemiDiameter > 0) present.add("aperture.annular");

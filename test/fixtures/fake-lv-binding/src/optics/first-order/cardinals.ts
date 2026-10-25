@@ -41,6 +41,7 @@ export function buildCardinalElementsFromMatrix(input: CardinalInput): unknown {
 }
 
 export function computeCardinalElementsFromState(state: FakeState): unknown {
+  if (state.lens.flags.isFoldedOptics) return null;
   const last = state.surfaces.length - 1;
   return buildCardinalElementsFromMatrix({
     ...computeSystemMatrix(state),

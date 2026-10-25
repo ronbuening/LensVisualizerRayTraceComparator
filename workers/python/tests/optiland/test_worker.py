@@ -91,7 +91,7 @@ class WorkerTest(TempDirTest):
                 "quantities": {
                     "system.describe": {"version": 2},
                     "paraxial.first-order": {"version": 1},
-                    "rays.trace": {"version": 1},
+                    "rays.trace": {"version": 1, "versions": [1, 2]},
                     "mtf.native": {"version": 1},
                     "wavefront.native": {"version": 1},
                 },

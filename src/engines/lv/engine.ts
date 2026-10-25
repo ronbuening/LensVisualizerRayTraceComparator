@@ -16,7 +16,7 @@ import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { ErrorInfo, ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_4 } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
@@ -137,7 +137,7 @@ export function lvBackedDescriptor(
 ): EngineDescriptor {
   const { engineClosureHash, engineFileCount, commit, dirty } = fingerprint;
   return {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_4 },
     identity: {
       id: identity.id,
       version: identity.version,
@@ -147,7 +147,12 @@ export function lvBackedDescriptor(
     },
     capabilities: {
       features: { supported: [...FEATURE_FLAGS], limits: {} },
-      quantities: Object.fromEntries(answered.map(({ quantity }) => [quantity.id, { version: quantity.version }])),
+      quantities: Object.fromEntries(
+        answered.map(({ quantity }) => [
+          quantity.id,
+          { version: quantity.version, ...(quantity.id === "rays.trace" ? { versions: [1, 2] } : {}) },
+        ]),
+      ),
       deterministic: true,
       maxConcurrency: 1,
     },

@@ -120,7 +120,7 @@ test("an engine that implements another version of the quantity's definition is 
 });
 
 test("each feature flag of the case that the engine does not support is listed, in the case's order", () => {
-  for (const flag of FEATURE_FLAGS) {
+  for (const flag of FEATURE_FLAGS.filter((flag) => flag !== "path.folded")) {
     const supported = FEATURE_FLAGS.filter((other) => other !== flag);
     const descriptor = engineWith("/capabilities/features/supported", supported);
     // The flag minor 2 added is that of the case with a plate that does not clip.

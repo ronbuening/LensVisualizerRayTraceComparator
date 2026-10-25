@@ -23,6 +23,17 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   if (spec.line >= lines.length) {
     return { comparable: false, reason: `the request is for line ${spec.line}, and the case has ${lines.length}` };
   }
+  const unavailable = [dataA.pathUnavailable, dataB.pathUnavailable].filter((value) => typeof value === "string");
+  if (unavailable.length > 0)
+    return {
+      comparable: true,
+      unsupportedReason: unavailable.join("; "),
+      metrics: [],
+      unmeasured: ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxAbs"].map((name) => ({
+        name,
+        reason: unavailable.join("; "),
+      })),
+    };
   const wave = lines[spec.line].wavelengthNm * MM_PER_NM;
   const place = placeOf(context?.spec);
 

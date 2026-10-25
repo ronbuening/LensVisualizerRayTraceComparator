@@ -9,7 +9,8 @@
 import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import type { RayGroups, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { RunFields, RunSampling } from "../../contract/runSpec.ts";
-import { encodeNdArray } from "../../core/numeric/ndarray.ts";
+import { decodeNdArray, encodeNdArray } from "../../core/numeric/ndarray.ts";
+import { probeRaySets } from "../../rays/probe.ts";
 import { launchBehindProblem, startsInFront } from "../../rays/probe.ts";
 import { DEFAULT_BUNDLE_GRID, DEFAULT_RAY_FIELDS, rayProblem, raySetSpec } from "../../rays/raySets.ts";
 import type { RaySetResolution } from "../../rays/raySets.ts";
@@ -307,6 +308,34 @@ export function lvRaySets(
   model: LvCaseModel,
   options: { readonly fields?: RunFields; readonly sampling?: Pick<RunSampling, "bundleGrid"> } = {},
 ): RaySetResolution {
+  if (model.exported.system.opticalPath !== undefined) {
+    const made = probeRaySets(model.exported, options);
+    return {
+      ...made,
+      sets: made.sets.map((set) => {
+        if (set.groups?.field?.angleDeg !== 0 || model.exported.conditions.object.kind !== "infinity") return set;
+        const origins = decodeNdArray(set.origins).values;
+        const directions = decodeNdArray(set.directions).values;
+        const weights = decodeNdArray(set.weights).values;
+        const count = weights.length;
+        const withOrigins = new Float64Array(origins.length + 3);
+        withOrigins.set(origins);
+        withOrigins.set([0, 0, origins[2]], origins.length);
+        const withDirections = new Float64Array(directions.length + 3);
+        withDirections.set(directions);
+        withDirections.set([0, 0, 1], directions.length);
+        const withWeights = new Float64Array(weights.length + 1);
+        withWeights.set(weights);
+        return {
+          ...set,
+          origins: encodeNdArray(withOrigins, [count + 1, 3]),
+          directions: encodeNdArray(withDirections, [count + 1, 3]),
+          weights: encodeNdArray(withWeights),
+          groups: { ...set.groups, chiefIndex: count },
+        };
+      }),
+    };
+  }
   const setup = lvLaunchSetup(api, model);
   if ("problem" in setup) return { sets: [], problems: [setup.problem] };
   const cells = options.sampling?.bundleGrid ?? DEFAULT_BUNDLE_GRID;

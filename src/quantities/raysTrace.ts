@@ -6,7 +6,7 @@ import {
   RAYS_TRACE_VERSION,
   RAY_STATUS,
 } from "../contract/quantities/raysTrace.ts";
-import type { RaysTraceData, RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
+import type { RaysTraceData, RaysTraceDataV2, RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import type { ValidationIssue } from "../contract/validate.ts";
 import { decodeNdArray } from "../core/numeric/ndarray.ts";
 import type { NdArrayWire, NdValues } from "../core/numeric/ndarray.ts";
@@ -104,6 +104,8 @@ function specInvariants(value: unknown): ValidationIssue[] {
  *
  * - `status` is one of `RAY_STATUS`; `endSurface` is -1 exactly for a ray that is ok, and else from 0 to S;
  * - a ray that is ok has a number everywhere;
+ * - in version 2, `unrecordedHits` may mark visits before a ray's end (never the last visit of a ray that passed
+ *   every visit) that the engine records no point for: NaN there, and the rules below otherwise;
  * - any other ray has a hit on every surface before its end surface and NaN from there on; its exit point, exit
  *   direction and optical path are numbers when it passed every surface (its end surface is S) and NaN otherwise;
  *   its image point and its optical path to the image are NaN.
@@ -111,7 +113,8 @@ function specInvariants(value: unknown): ValidationIssue[] {
  * Each rule reports the first ray that breaks it.
  */
 function dataInvariants(value: unknown): ValidationIssue[] {
-  const data = value as RaysTraceData;
+  const data = value as RaysTraceDataV2;
+  const { pathUnavailable } = data;
   const issues: ValidationIssue[] = [];
   const [rays] = data.status.$nd.shape;
   const [surfaces] = data.hits.$nd.shape;
@@ -129,6 +132,12 @@ function dataInvariants(value: unknown): ValidationIssue[] {
     expect(name, [rays, 3], `[${rays}, 3] (rays, xyz)`);
   }
   for (const name of ["opticalPath", "opticalPathToImage"] as const) expect(name, [rays], `[${rays}] (rays)`);
+  const flagShape = data.unrecordedHits?.$nd.shape;
+  if (flagShape !== undefined && (flagShape.length !== 2 || flagShape[0] !== surfaces || flagShape[1] !== rays)) {
+    issues.push(
+      invariantIssue("/unrecordedHits", `its shape is ${shapeText(flagShape)}, expected [${surfaces}, ${rays}]`),
+    );
+  }
   if (issues.length > 0) return issues;
 
   const status = decoded("/status", data.status, issues);
@@ -139,6 +148,8 @@ function dataInvariants(value: unknown): ValidationIssue[] {
   const imagePoint = decoded("/imagePoint", data.imagePoint, issues);
   const opticalPath = decoded("/opticalPath", data.opticalPath, issues);
   const toImage = decoded("/opticalPathToImage", data.opticalPathToImage, issues);
+  const unrecorded = data.unrecordedHits === undefined ? null : decoded("/unrecordedHits", data.unrecordedHits, issues);
+  if (data.unrecordedHits !== undefined && unrecorded === null) return issues;
   if (
     status === null ||
     endSurface === null ||
@@ -173,8 +184,21 @@ function dataInvariants(value: unknown): ValidationIssue[] {
     const reached = ok ? surfaces : end;
     for (let surface = 0; surface < surfaces; surface++) {
       const row = surface * rays + ray;
-      if (surface < reached ? !finiteRow(hits, row) : !nanRow(hits, row)) {
-        const expected = surface < reached ? "a point" : "NaN: the ray ended before it";
+      // An unrecorded visit is one the ray crossed before its end, unchanged: NaN, and flagged as such. The last
+      // visit of a ray that passed them all is its exit point, and so is always recorded.
+      const flag = unrecorded === null ? 0 : unrecorded[row];
+      if (flag !== 0 && (flag !== 1 || surface >= reached || (reached === surfaces && surface === surfaces - 1))) {
+        const said = `visit ${surface} of ray ${ray} is flagged ${flag}`;
+        report("/unrecordedHits", `${said}; 1 is for a visit before its end that is not the exit point`);
+        break;
+      }
+      const point = surface < reached && flag === 0;
+      if (point ? !finiteRow(hits, row) : !nanRow(hits, row)) {
+        const expected = point
+          ? "a point"
+          : flag === 1
+            ? "NaN: the engine records no point there"
+            : "NaN: the ray ended before it";
         report("/hits", `the hit of ray ${ray} on surface ${surface} is not ${expected}`);
         break;
       }
@@ -187,14 +211,14 @@ function dataInvariants(value: unknown): ValidationIssue[] {
     if (left ? !finiteRow(exitDirection, ray) : !nanRow(exitDirection, ray)) {
       report("/exitDirection", `the exit direction of ray ${ray} is not ${said}`);
     }
-    if (left ? !Number.isFinite(opticalPath[ray]) : !Number.isNaN(opticalPath[ray])) {
+    if (left && pathUnavailable === undefined ? !Number.isFinite(opticalPath[ray]) : !Number.isNaN(opticalPath[ray])) {
       report("/opticalPath", `the optical path of ray ${ray} is not ${said}`);
     }
     const landed = ok ? "a number" : "NaN: the ray did not reach the image plane";
     if (ok ? !finiteRow(imagePoint, ray) : !nanRow(imagePoint, ray)) {
       report("/imagePoint", `the image point of ray ${ray} is not ${landed}`);
     }
-    if (ok ? !Number.isFinite(toImage[ray]) : !Number.isNaN(toImage[ray])) {
+    if (ok && pathUnavailable === undefined ? !Number.isFinite(toImage[ray]) : !Number.isNaN(toImage[ray])) {
       report("/opticalPathToImage", `the optical path to the image of ray ${ray} is not ${landed}`);
     }
   }
@@ -206,7 +230,23 @@ function dataInvariants(value: unknown): ValidationIssue[] {
  * are one set of rays with unit directions and usable weights, and an answer's arrays are one trace in which every
  * ray has numbers up to where it ended and NaN from there on.
  */
-export const raysTraceQuantity: QuantityModule = schemaQuantity(RAYS_TRACE, RAYS_TRACE_VERSION, {
+const baseQuantity = schemaQuantity(RAYS_TRACE, RAYS_TRACE_VERSION, {
   spec: specInvariants,
   data: dataInvariants,
 });
+
+export const raysTraceQuantity: QuantityModule = {
+  ...baseQuantity,
+  validateData: (data, version = 1) => {
+    const issues = baseQuantity.validateData(data);
+    // The members of version 2 are refused in version 1 once the data is otherwise valid: one issue per fault.
+    if (issues.length > 0 || version === 2 || typeof data !== "object" || data === null) return issues;
+    if ("pathUnavailable" in data) {
+      issues.push(invariantIssue("/pathUnavailable", "partial optical paths require rays.trace version 2"));
+    }
+    if ("unrecordedHits" in data) {
+      issues.push(invariantIssue("/unrecordedHits", "unrecorded visits require rays.trace version 2"));
+    }
+    return issues;
+  },
+};

@@ -160,7 +160,7 @@ class SpecTest(unittest.TestCase):
         self.assertIn("export const IMAGE_PLANE_TOLERANCE_MM = 1e-9;", projection)
         self.assertEqual((DIRECTION_NORM_TOLERANCE, IMAGE_PLANE_TOLERANCE_MM), (1e-12, 1e-9))
         self.assertEqual((STATUS_OK, STATUS_BLOCKED, STATUS_FAILED, trace.NO_END_SURFACE), (0, 1, 2, -1))
-        self.assertEqual(QUANTITIES[RAYS_TRACE], {"version": 1})
+        self.assertEqual(QUANTITIES[RAYS_TRACE], {"version": 1, "versions": [1, 2]})
 
 
 class RunTest(unittest.TestCase):

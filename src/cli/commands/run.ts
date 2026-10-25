@@ -268,9 +268,9 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         return EXIT_USAGE;
       }
 
-      const notStarted = suite.runs.filter((run) => run.opticalCase === null);
+      const notStarted = result.manifest.runs.filter((run) => run.caseId === null);
       for (const run of notStarted) {
-        for (const problem of run.problems) io.stderr(`lvrtc run: run ${run.spec.name} was not started: ${problem}\n`);
+        for (const problem of run.problems) io.stderr(`lvrtc run: run ${run.name} was not started: ${problem}\n`);
       }
       for (const run of result.manifest.runs) {
         for (const problem of run.raySets?.problems ?? []) {

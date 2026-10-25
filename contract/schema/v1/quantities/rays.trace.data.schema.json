@@ -12,15 +12,23 @@
         "$nd": {
           "type": "object",
           "properties": {
-            "dtype": { "const": "u1" },
+            "dtype": {
+              "const": "u1"
+            },
             "shape": {
               "type": "array",
-              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "items": {
+                "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+              },
               "minItems": 1,
               "maxItems": 1
             },
-            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
-            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+            "data": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+            },
+            "sha256": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+            }
           },
           "required": ["dtype", "shape", "data", "sha256"],
           "additionalProperties": false
@@ -36,15 +44,23 @@
         "$nd": {
           "type": "object",
           "properties": {
-            "dtype": { "const": "i4" },
+            "dtype": {
+              "const": "i4"
+            },
             "shape": {
               "type": "array",
-              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "items": {
+                "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+              },
               "minItems": 1,
               "maxItems": 1
             },
-            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
-            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+            "data": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+            },
+            "sha256": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+            }
           },
           "required": ["dtype", "shape", "data", "sha256"],
           "additionalProperties": false
@@ -60,15 +76,23 @@
         "$nd": {
           "type": "object",
           "properties": {
-            "dtype": { "const": "f8" },
+            "dtype": {
+              "const": "f8"
+            },
             "shape": {
               "type": "array",
-              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+              "items": {
+                "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+              },
               "minItems": 3,
               "maxItems": 3
             },
-            "data": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64" },
-            "sha256": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+            "data": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+            },
+            "sha256": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+            }
           },
           "required": ["dtype", "shape", "data", "sha256"],
           "additionalProperties": false
@@ -96,6 +120,43 @@
     "opticalPathToImage": {
       "description": "The same sum continued to the image plane in the index of the image space; shape [n].",
       "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+    },
+    "pathUnavailable": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version 2 only: the coded reason the engine states no optical path; both path arrays are then NaN."
+    },
+    "unrecordedHits": {
+      "description": "Version 2 only: 1 where an engine records no point for a visit that the ray crossed without any interaction (no change of direction or medium), with NaN at that visit in hits; 0 elsewhere; shape [P, n].",
+      "type": "object",
+      "properties": {
+        "$nd": {
+          "type": "object",
+          "properties": {
+            "dtype": {
+              "const": "u1"
+            },
+            "shape": {
+              "type": "array",
+              "items": {
+                "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "data": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+            },
+            "sha256": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+            }
+          },
+          "required": ["dtype", "shape", "data", "sha256"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["$nd"],
+      "additionalProperties": false
     }
   },
   "required": [

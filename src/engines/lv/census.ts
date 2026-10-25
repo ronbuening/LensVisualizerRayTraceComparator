@@ -212,6 +212,9 @@ export function renderCensusMarkdown(census: ExportCensus): string {
     "tele (zoom 1). A census is a snapshot of one LensVisualizer checkout. It is informational: nothing asserts it,",
     "and it holds counts, hashes and lens keys only.",
     "",
+    "This census records declared geometry. Folded-path confirmation on a run's coarse/fine ray sets is recorded",
+    "when that run is prepared.",
+    "",
     "Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.",
     "",
     ...table(
@@ -261,6 +264,12 @@ export function renderCensusMarkdown(census: ExportCensus): string {
       `### ${code(reason)} (${states} ${states === 1 ? "state" : "states"}, ${lenses.length} ` +
         `${lenses.length === 1 ? "lens" : "lenses"})`,
       "",
+      ...(reason === "mixed-reference"
+        ? [
+            "LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for a common reference line.",
+            "",
+          ]
+        : []),
       ...lenses.map((key) => {
         const only = wideOnly.includes(key) ? " (wide end only)" : teleOnly.includes(key) ? " (tele end only)" : "";
         return `- ${code(key)}${only}`;

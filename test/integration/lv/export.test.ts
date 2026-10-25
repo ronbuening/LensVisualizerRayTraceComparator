@@ -191,6 +191,7 @@ test(
         const { features, provenance } = result.opticalCase;
         const expressed =
           features.includes("aperture.annular") ||
+          features.includes("path.folded") ||
           (provenance.notes ?? []).some((note) => note.startsWith("projection:fisheye"));
         if (!support.available && !expressed) unaccounted.push(`${key} (${support.reason})`);
         if (!support.available && result.opticalCase.conditions.lines[0].indexSource !== "authored")

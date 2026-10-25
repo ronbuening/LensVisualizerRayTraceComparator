@@ -141,7 +141,25 @@ def case_array_problems(case: dict[str, Any]) -> list[str]:
             f"conditions.indexAfterSurface is {table.dtype} of shape [{shape}], "
             f"expected f8 of shape [{lines}, {surfaces}] (lines, surfaces)"
         ]
-    return []
+    problems = []
+    path = case["system"].get("opticalPath")
+    if path is not None:
+        if int(case["contract"].split(".")[1]) < 4:
+            problems.append("opticalPath requires contract 1.4")
+        for at, step in enumerate(path):
+            if step["surfaceIndex"] >= surfaces:
+                problems.append(f"opticalPath[{at}] references no surface")
+            medium = step.get("mediumAfter")
+            if medium is not None and medium >= surfaces:
+                problems.append(f"opticalPath[{at}] references no medium")
+            reverse = step.get("reverseMediumAfter")
+            if reverse is not None and reverse >= surfaces:
+                problems.append(f"opticalPath[{at}] references no reverse medium")
+            if "reverseMediumAfter" in step and step["interaction"] != "refract":
+                problems.append(f"opticalPath[{at}] has a reverse medium without refraction")
+            if (step["interaction"] == "refract") != ("mediumAfter" in step):
+                problems.append(f"opticalPath[{at}] needs mediumAfter exactly for refraction")
+    return problems
 
 
 def _reject_constant(token: str) -> Any:

@@ -41,8 +41,15 @@ export function answerRays(system: RefSystem, spec: RaysTraceSpec): RefRaysAnswe
   const origins = f8Of(spec.origins, "origins");
   const directions = f8Of(spec.directions, "directions");
   const rays = origins.length / 3;
-  const surfaces = system.surfaces.length;
-  const recorder = createTraceRecorder(rays, surfaces, system.imageZ);
+  const surfaces = system.opticalPath?.length ?? system.surfaces.length;
+  let imageIndex = indexAfter[indexAfter.length - 1];
+  if (system.opticalPath) {
+    imageIndex = 1;
+    for (const step of system.opticalPath)
+      if (step.interaction === "refract")
+        imageIndex = step.mediumAfter === null ? 1 : indexAfter[step.mediumAfter ?? step.surfaceIndex];
+  }
+  const recorder = createTraceRecorder(rays, surfaces, system.imageZ, system.opticalPath !== undefined);
 
   for (let ray = 0; ray < rays; ray++) {
     const trace = traceSurfaces(
@@ -56,7 +63,7 @@ export function answerRays(system: RefSystem, spec: RaysTraceSpec): RefRaysAnswe
       recorder.stop(ray, trace.status, trace.endSurface);
       continue;
     }
-    recorder.exit(ray, trace.hits[surfaces - 1], trace.direction, trace.opticalPath, indexAfter[surfaces - 1]);
+    recorder.exit(ray, trace.hits[surfaces - 1], trace.direction, trace.opticalPath, trace.finalMedium ?? imageIndex);
   }
   return recorder.finish();
 }

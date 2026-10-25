@@ -32,7 +32,7 @@ import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
-import type { CaseSources, LoadedSuite } from "./suite.ts";
+import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
 import { orderedMap } from "./orderedMap.ts";
 import type { PoolJobTicket, ProcessRegistry, StoredAdapter } from "./processRegistry.ts";
 import { profileAsync, profileStart, profileSync } from "./profile.ts";
@@ -254,6 +254,8 @@ async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optica
 
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
+  /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
+  readonly runs: readonly LoadedRun[];
   readonly jobs: readonly PlannedJob[];
   /** The ray sets of each run that a rung needed them for, by run name. */
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
@@ -310,10 +312,11 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       ),
     );
     return {
+      runs: plans.flatMap((plan) => plan.runs),
       jobs: plans.flatMap((plan, index) =>
         plan.jobs.map((job) => ({
           ...job,
-          opticalCase: suite.runs[index].opticalCase!,
+          opticalCase: plans[index].runs[0].opticalCase!,
           rung: RUNGS.find((rung) => rung.id === job.rung)!,
           quantity: QUANTITIES.get(job.quantity)!,
         })),
@@ -327,20 +330,38 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const raySets = new Map<string, ManifestRaySets>();
   const fineRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
-  for (const [index, { spec, opticalCase }] of suite.runs.entries()) {
+  const runs = [...suite.runs];
+  for (const [index, run] of suite.runs.entries()) {
+    const { spec } = run;
+    let { opticalCase } = run;
     const { rungs, engineIds } = selected[index];
     if (opticalCase === null) continue;
+    const unconfirmed = opticalCase;
     let inputs = NO_RUNG_INPUTS;
+    let generated: RunRaySets = { coarse: null, fine: null };
     if (rungs.some((rung) => rung.needsRaySets === true)) {
-      const { sets, problems } = await profileAsync("rays.generate", () => raySetsOf(input, spec, opticalCase));
+      const { sets, problems } = await profileAsync("rays.generate", () => raySetsOf(input, spec, unconfirmed));
       inputs = { ...inputs, raySets: sets };
+      generated = { ...generated, coarse: { sets, problems } };
       raySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
     if (rungs.some((rung) => rung.needsFineRaySets === true)) {
       const finer = { ...spec, sampling: fineSampling(spec.sampling) };
-      const { sets, problems } = await profileAsync("rays.fine-generate", () => raySetsOf(input, finer, opticalCase));
+      const { sets, problems } = await profileAsync("rays.fine-generate", () => raySetsOf(input, finer, unconfirmed));
       inputs = { ...inputs, fineRaySets: sets };
+      generated = { ...generated, fine: { sets, problems } };
       fineRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    const confirmed = await input.sources?.[spec.lens.kind]?.confirmRaySets?.(spec, opticalCase, generated);
+    if (confirmed !== undefined) {
+      if (!confirmed.ok) {
+        runs[index] = { ...run, opticalCase: null, problems: [...run.problems, ...confirmed.problems] };
+        continue;
+      }
+      if (confirmed.opticalCase.id !== opticalCase.id || confirmed.opticalCase.systemId !== opticalCase.systemId)
+        throw new Error(`run ${spec.name}: source confirmation changed optical identity`);
+      opticalCase = confirmed.opticalCase;
+      runs[index] = { ...run, opticalCase };
     }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
@@ -373,7 +394,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { jobs, raySets, fineRaySets, recipes };
+  return { runs, jobs, raySets, fineRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -414,8 +435,8 @@ function outcomeOf(
 }
 
 /** What is wrong with the data of a result; nothing, for a result that is not "ok" and so carries none to check. */
-function dataProblems(quantity: QuantityModule, result: ResultEnvelope): string[] {
-  return result.status === "ok" ? resultDataProblems(quantity, result.data) : [];
+function dataProblems(quantity: QuantityModule, result: ResultEnvelope, version?: number): string[] {
+  return result.status === "ok" ? resultDataProblems(quantity, result.data, version) : [];
 }
 
 /** One request to ask of an engine that has been reached and described. */
@@ -470,13 +491,15 @@ export async function askEngine(question: EngineQuestion): Promise<EngineAnswer>
   const found = profileSync("store.read", () => store.get(key));
   if (found.kind === "corrupt") warnings.push(`${found.problem}; the job is computed again`);
   if (found.kind === "hit") {
-    const problems = profileSync("result.validate.cached", () => dataProblems(quantity, found.entry.result));
+    const problems = profileSync("result.validate.cached", () =>
+      dataProblems(quantity, found.entry.result, request.quantityVersion),
+    );
     if (problems.length === 0) return { result: found.entry.result, storeKey: key, source: "cached" };
     warnings.push(`store entry ${key}: its data cannot be used: ${problems.join("; ")}; the job is computed again`);
   }
 
   let result = await profileAsync(`engine.${adapter.id}`, () => adapter.run(request, opticalCase));
-  const problems = profileSync("result.validate", () => dataProblems(quantity, result));
+  const problems = profileSync("result.validate", () => dataProblems(quantity, result, request.quantityVersion));
   if (problems.length > 0) {
     const message = `the engine's data cannot be used: ${problems.join("; ")}`;
     result = makeResult(request, stamp, { status: "error", error: { code: INVALID_DATA, message } });
@@ -631,7 +654,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
   const concurrency = input.jobs ?? 1;
   if (!Number.isSafeInteger(concurrency) || concurrency < 1) throw new UsageError("--jobs must be a positive integer");
-  const { jobs: planned, raySets, fineRaySets, recipes } = await profileAsync("plan", () => planJobs(input));
+  const { runs, jobs: planned, raySets, fineRaySets, recipes } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -792,7 +815,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     suite: { name: suite.name, hash: suite.hash },
     ...(sources === undefined ? {} : { sources }),
     engines,
-    runs: suite.runs.map(({ spec, opticalCase, problems }) => {
+    runs: runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
       const finer = fineRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
@@ -808,7 +831,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     }),
     jobs: outcomes.map((outcome) => outcome.job),
   };
-  const cases = suite.runs.flatMap(({ opticalCase }) => (opticalCase === null ? [] : [opticalCase]));
+  const cases = runs.flatMap(({ opticalCase }) => (opticalCase === null ? [] : [opticalCase]));
   const manifestPath = profileSync("manifest.write", () => writeRunOutput(join(runsDir, suite.name), manifest, cases));
   return { manifest, manifestPath, outcomes, warnings };
 }

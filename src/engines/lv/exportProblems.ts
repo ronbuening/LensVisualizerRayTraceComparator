@@ -32,7 +32,10 @@
  * (`LvBindingErrorCode`): `lv-not-configured`, `lv-path-missing` and so on.
  */
 export const EXPORT_PROBLEM_CODES = [
-  "folded-path",
+  "folded-post-path-reflection",
+  "folded-auto-path",
+  "folded-interaction-budget",
+  "tilted-surface",
   "non-refract-interaction",
   "diffractive-surface",
   "tilted-image-plane",

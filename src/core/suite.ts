@@ -66,6 +66,12 @@ export interface CaseSource {
    */
   raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
   /**
+   * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
+   * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.
+   * Null means that no selected rung requested sets at that resolution; no extra rays are generated here.
+   */
+  confirmRaySets?(run: RunSpec, opticalCase: OpticalCase, sets: RunRaySets): CaseResolution | Promise<CaseResolution>;
+  /**
    * The MTF recipe of a run of a case this source resolved (`src/core/mtfRecipe.ts`): the plane, the fields, the
    * lines and the frequencies every MTF request about the case is made from; or no recipe, and each reason why, as
    * a coded problem. Like the ray sets it is a pure function of the run and the case. A source without this method
@@ -78,6 +84,12 @@ export interface CaseSource {
    * files, read once, has no such method: a case file's identity is its content.
    */
   audit?(): SourceAudit | null;
+}
+
+/** The actual generated sets of a run, including field problems, without inventing an unrequested resolution. */
+export interface RunRaySets {
+  readonly coarse: RaySetResolution | null;
+  readonly fine: RaySetResolution | null;
 }
 
 /** A case source for each kind of lens a run can name. A kind without one cannot be run. */

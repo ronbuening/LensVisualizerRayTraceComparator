@@ -777,3 +777,51 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
   Policy 14 states contract 1.3 for the several-line chief-landing member introduced in Stage 4.3;
   its limits retain policy 13's values. The MTF attention bands, classes, gates and quantity versions do not move.
+
+
+## Stage 5.2a folded systems
+
+- Contract 1.4 is content-selected: fixed `system.opticalPath` cases and requests using `quantityVersion`.
+  Sequential cases and requests keep their earlier versions and identity expressions. `rays.trace` v1 remains
+  sequential; v2 uses visit indices, repeats physical surfaces and permits reverse propagation after reflection.
+  LV, ref and optiland offer both definitions. The request chooses; never globally replace v1 with v2.
+- Export fixed prepared path metadata and side filters verbatim. Reverse-medium lookup is LV's bound
+  `rearMediumSurfaceIndex`; no sample ray discovers a path and no axial-side guess selects an exact interaction.
+  Auto paths, unexpressible planes and diffraction retain source codes. `mixed-reference` is an LV data issue.
+- Folded active bands are conditional interactions: mirror holes transmit; blockers stop their closed band and
+  transmit its complements. Ref determines incident side from its exact normal, keeps compensated paths and
+  reflection dots, and proves singular pupils with exact rational arithmetic on the original inputs, never an
+  epsilon. Its mirror proofs are in `test/engines/ref/folded.test.ts`.
+- The optiland folded policy wraps native geometry, `RefractiveReflectiveModel` reflection and native
+  `RealRays.refract`. Its window, side filters, native models and both side indices are read back. Its optical
+  path charges native parameters to the actual per-ray medium; normalization correction remains in `trace.py`.
+  An image policy charges the final stretch too. Every new read-back has a deliberate fault in `test_folded.py`.
+  `material="mirror"` is the factory's mirror switch; `is_reflective=` is silently ignored and pinned as a fault.
+- LV generalized OPL is explicitly absent: v2 may supply geometry with `pathUnavailable`; R3 then says
+  UNSUPPORTED, never PASS with an invented zero. LV records no hit for a passive visit (a hole, an ignored
+  inactive side, a blocker outside its band) but keeps a height for every visit under `recordHeights`:
+  `alignFolded` (`src/engines/lv/rays.ts`) places each recorded hit on the one declared step whose height is
+  that hit's own by LV's `projectCoordinateToZ`, to the bit, and the direction must not change across the
+  steps between. Such a step is v2 `unrecordedHits` (NaN, flagged; never the exit visit) and R2 skips only
+  that point; no point is computed for it. LV going on past the declared visits (its explicit traversal then
+  searches its reflective surfaces) is `lv-folded-post-path-interaction`; a record that fits no single way is
+  `lv-folded-unaligned-visits`; an unrecorded exit visit is `lv-folded-unrecorded-visit`. Canaries hold the
+  LV lines. First-order values that LV supplies remain its own, even when an analytic proof identifies a
+  defect. Keep R0 physical indices separate from R2/R3 visit indices.
+- `suites/folded.json` is the 16-lens Stage 5.2a suite. Use temporary `LVRTC_RUNS_DIR` storage, no baseline, and
+  no catalog ray sweep. Sequential compatibility is checked against temporary benchmark/features manifests
+  produced by a `git archive HEAD` extract. Never freeze code fingerprints to keep old store keys alive.
+- **Owner decision 2026-10-23: check the run's traced rays, not a static envelope.** The raw exporter keeps the
+  declared path. `CaseSource.confirmRaySets`, called by `planJobs` after generating exactly the selected rungs'
+  coarse/fine sets and before planning any engine request, uses LV's existing post-path detector on those sets.
+  `folded-post-path-reflection` refuses the whole run (null case, source problem, zero jobs for every engine).
+  Accepted folded cases carry `folded-declared-path-confirmed:run:<utf8hex>:coarse:<sets>:fine:<sets>` in existing
+  provenance notes: reversible run name, ordered ray-set hashes joined by `.`, or `empty` / `unrequested`.
+  This confirms only the listed finite sets. Never generate extra probes or infer an untraced geometric guarantee.
+  Pool preparation returns the confirmed/refused runs as well as jobs, and serial/pool artifacts must match.
+  Shared case ids preserve every run's note. Raw exports/census remain unconfirmed; request-time refusal remains
+  a backstop. The owner fixes LV's principal-plane defect separately; preserve all four R1 FAILs. The brief is
+  `docs/upstream/lensvisualizer-mirror-principal-plane.md` (for the owner; not filed).
+  At LV `2e046d71`, the folded suite has eight confirmed cases / eight source refusals, 144 jobs (135 ok,
+  nine unsupported, zero errors), and 149 PASS / four FAIL / 87 UNSUPPORTED comparisons across both modes.
+  The raw geometry census remains 995 lenses / 325 zooms / 1,320 states: 1,304 exports, 16 refusals, zero throws.

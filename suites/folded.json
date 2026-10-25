@@ -1,0 +1,139 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "folded",
+  "defaults": {
+    "engines": ["lv", "ref", "optiland"],
+    "rungs": ["r0", "r1", "r2", "r3"],
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "imagePlane": {
+      "kind": "design"
+    },
+    "lines": {
+      "kind": "reference"
+    },
+    "fields": {
+      "kind": "angles-deg",
+      "values": [0, 0.25]
+    },
+    "sampling": {
+      "bundleGrid": 16
+    }
+  },
+  "runs": [
+    {
+      "name": "carl-zeiss-mirotar-500f45",
+      "lens": {
+        "kind": "lv",
+        "key": "carl-zeiss-mirotar-500f45"
+      }
+    },
+    {
+      "name": "minolta-250mm-f56-rf",
+      "lens": {
+        "kind": "lv",
+        "key": "minolta-250mm-f56-rf"
+      }
+    },
+    {
+      "name": "minolta-af-reflex-500mm-f8",
+      "lens": {
+        "kind": "lv",
+        "key": "minolta-af-reflex-500mm-f8"
+      }
+    },
+    {
+      "name": "nikon-reflex-nikkor-1000mm-f11",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-reflex-nikkor-1000mm-f11"
+      }
+    },
+    {
+      "name": "nikon-reflex-nikkor-500mm-f8-new",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-reflex-nikkor-500mm-f8-new"
+      }
+    },
+    {
+      "name": "nikon-reflex-nikkor-c-500mm-f8",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-reflex-nikkor-c-500mm-f8"
+      }
+    },
+    {
+      "name": "reference-annular-obscured-mirror",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-annular-obscured-mirror"
+      }
+    },
+    {
+      "name": "reference-annular-ring-blocker",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-annular-ring-blocker"
+      }
+    },
+    {
+      "name": "reference-cassegrain-back-focus",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-cassegrain-back-focus"
+      }
+    },
+    {
+      "name": "reference-folded-diffractive-plate",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-folded-diffractive-plate"
+      }
+    },
+    {
+      "name": "reference-gregorian-secondary",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-gregorian-secondary"
+      }
+    },
+    {
+      "name": "reference-maksutov-cassegrain-meniscus",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-maksutov-cassegrain-meniscus"
+      }
+    },
+    {
+      "name": "reference-mangin-second-surface-mirror",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-mangin-second-surface-mirror"
+      }
+    },
+    {
+      "name": "reference-newtonian-side-focus",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-newtonian-side-focus"
+      }
+    },
+    {
+      "name": "reference-spherical-primary-mirror",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-spherical-primary-mirror"
+      }
+    },
+    {
+      "name": "vivitar-s1-450-f45",
+      "lens": {
+        "kind": "lv",
+        "key": "vivitar-s1-450-f45"
+      }
+    }
+  ]
+}

@@ -100,3 +100,74 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
   assert.deepEqual(snapshots[1], snapshots[0]);
   assert.deepEqual(snapshots[2], snapshots[0]);
 });
+
+test("folded run refusals and coarse/fine confirmation provenance are identical through the preparation pool", async (t) => {
+  const root = tempDir(t);
+  const lv = freshLv(t);
+  const mirror = readFileSync(join(lv, "src/lens-data/zz-folded/FoldedMirror.data.ts"), "utf8");
+  writeFileSync(
+    join(lv, "src/lens-data/zz-folded/Continued.data.ts"),
+    mirror
+      .replace('key: "zz-folded-mirror"', 'key: "zz-folded-continued"')
+      .replace("maxInteractions: 3 }", "maxInteractions: 4, after: [2] }")
+      .replace("R: -120, d: 20,", "R: -120, d: -40,")
+      .replace(
+        "  ],",
+        '    { label: "M2", R: 1e15, d: -20, nd: 1, sd: 12, interaction: { type: "reflect", incidentSide: "rear", inactiveSide: "block" } },\n  ],',
+      ),
+  );
+  writeFileSync(join(root, "lvrtc.config.json"), JSON.stringify({ lvPath: lv }));
+  writeFileSync(
+    join(root, "suite.json"),
+    JSON.stringify({
+      contract: "1.0",
+      kind: "suite",
+      name: "folded-pool",
+      defaults: {
+        engines: ["lv", "ref"],
+        rungs: ["r0", "r2", "r3", "r6a"],
+        fields: { kind: "angles-deg", values: [0, 0.25] },
+        sampling: { bundleGrid: 4 },
+      },
+      runs: [
+        { name: "accepted", lens: { kind: "lv", key: "zz-folded-mirror" } },
+        { name: "refused", lens: { kind: "lv", key: "zz-folded-continued" } },
+      ],
+    }),
+  );
+  const snapshots = [];
+  for (const jobs of [1, 4]) {
+    const runsDir = join(root, `runs-${jobs}`);
+    const prepared = await prepareSuiteRun(
+      { rootDir: root, cwd: root, env: { LVRTC_RUNS_DIR: runsDir } },
+      "suite.json",
+      undefined,
+      jobs,
+    );
+    const result = await runSuite({ ...prepared, runsDir, jobs });
+    assert.match(result.manifest.runs[1].problems[0], /^folded-post-path-reflection:/);
+    assert.equal(result.manifest.runs[1].caseId, null);
+    assert.ok(result.manifest.jobs.every((job) => job.run === "accepted"));
+    assert.ok(
+      result.manifest.jobs.some((job) => job.status === "ok"),
+      JSON.stringify(result.manifest),
+    );
+    const directory = dirname(result.manifestPath);
+    const cases = readdirSync(join(directory, "cases")).map((file) => readFileSync(join(directory, "cases", file)));
+    const note = JSON.parse(cases[0].toString()).provenance.notes.find((note: string) =>
+      note.startsWith("folded-declared-path-confirmed:"),
+    );
+    const parts = note.split(":");
+    assert.equal(Buffer.from(parts[2], "hex").toString("utf8"), "accepted");
+    assert.deepEqual(parts[4].split("."), result.manifest.runs[0].raySets?.sets);
+    assert.deepEqual(parts[6].split("."), result.manifest.runs[0].fineRaySets?.sets);
+    snapshots.push({
+      manifest: readFileSync(result.manifestPath),
+      cases,
+      entries: readdirSync(join(runsDir, "store"))
+        .sort()
+        .map((file) => [file, readFileSync(join(runsDir, "store", file))]),
+    });
+  }
+  assert.deepEqual(snapshots[1], snapshots[0]);
+});

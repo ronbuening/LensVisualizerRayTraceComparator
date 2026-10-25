@@ -2199,3 +2199,83 @@ shares no code with any engine.
   Hermetic synthetic cases in `test/report/r6c.test.ts` cover 5e-6 mm on one/several lines and beyond 1e-3 mm,
   including report sorting from recorded values.
 - **Class.** convention. Never read two engines' several-line chief heights as the landing of one ray.
+
+## Folded systems (Stage 5.2a)
+
+- LV **mixed-reference is a data issue**. `samyang-af-35mm-f2p8-fe` mixes d- and e-referenced glasses without
+  wavelength data for every glass. Its reference line cannot be translated as one physically coherent index
+  table. Preserve LV's `mixed-reference` refusal; do not relabel either reference or invent dispersion.
+- LV auto paths (`carl-zeiss-mirotar-500f45`, `minolta-250mm-f56-rf`, `vivitar-s1-450-f45`, the annular ring blocker
+  and Cassegrain reference) select candidate hits per ray. Contract 1.4 supports fixed lists only:
+  `folded-auto-path`. Newtonian also has an auto path plus tilted/off-axis geometry; the folded diffractive plate
+  retains diffraction and tilted/off-axis exclusions. These are source refusals, not passing traces.
+- LV 2e046d71 generalized tracing does not record OPL, even when `recordOpticalPath` is requested. The source
+  explicitly calls that option sequential-only until phase-aware validation. V2's geometry can be returned with
+  `lv-folded-optical-path-unavailable`; the R3 pair is UNSUPPORTED. The adapter does not sum LV hits to invent
+  an OPL.
+- LV 2e046d71 **omits passive visits from its hit history** (a transparent hole, an inactive side it ignores, a
+  blocker outside its band: `passiveClipReason` returns null and the loop continues), but under `recordHeights`
+  pushes a height for every visit whose intersection it found, before deciding whether it is passive. On
+  `reference-annular-obscured-mirror` an axial ray at 10 mm records hits on STO and M1 only, with three heights.
+  The adapter places each recorded hit on the one declared step whose kept height equals LV's
+  `projectCoordinateToZ` of that hit with its incident direction, bit for bit, and answers the remaining
+  steps as v2 `unrecordedHits`; R2 skips those points only. With this, LV's R2 on eight folded lenses agrees
+  with ref and optiland within 9.5e-14 mm (hits), 1.9e-13 mm (landings), 4.0e-15 (directions), no mask mismatch.
+  Pins: `test/integration/lv/folded.test.ts`; canaries in `canaries.test.ts`.
+- LV 2e046d71's **explicit path is not only its declared visits**: once they are done, `traceGeneralized` searches
+  the reflective surfaces (`findNearestGeneralizedSurfaceHit` restricted to them), the image plane competing.
+  `reference-maksutov-cassegrain-meniscus` declares MEN1, MEN2, M1, SEC; 272 of the 513 probe rays of its two
+  fields then meet M1 again outside its 8.1 mm hole, reflect, and are stopped by SEC's inactive back
+  (`[1, 2, 5, 3, 5, 3]`).
+  The raw case's fixed path sends them from SEC to the image plane. **Owner decision 2026-10-23: check the run's
+  traced rays.** After generating the selected rungs' actual coarse/fine sets, the case source runs LV's existing
+  post-path detector on those sets. A hit beyond the path is `folded-post-path-reflection`, a whole-run source
+  refusal before any engine jobs: ref and optiland no longer compare that non-LV system. The other eight explicit
+  lenses have no recorded post-path interaction on the suite's rays and receive a provenance confirmation naming
+  exactly their coarse set hashes; fine sets are `unrequested` for R0–R3. Fine sets are checked too when a rung
+  requests them. The note states finite coverage only; it is no claim about untraced rays. There is no static
+  envelope check and no extra sampling. **Class: translation gap**, contained at run preparation; raw exports and
+  the census still describe the declared geometry without this confirmation. Direct calls retain
+  `lv-folded-post-path-interaction` as a request-time backstop.
+- LV 2e046d71's **single-mirror front principal plane is wrong by one signed radius**. The spherical-primary
+  reference (STO z=0, M1 z=100, R=-200, image z=0) gives -100 mm, while the mirror vertex and analytic principal
+  plane are +100 mm: f=R/2, F=F'=0, H=H'=100, EFL (F' minus H') -100. `computeFoldedReflectiveCardinals`
+  (`src/optics/first-order/cardinals.ts:213-218`) builds A, B, C, D from rays traced in physical slope with an
+  unsigned index (`imageIndex = marginal.n`; the mirror step `u' = -u - 2y/R`, `src/optics/math/paraxial.ts:91`),
+  a matrix of determinant -1 after an odd number of reflections, and hands it to `buildCardinalElementsFromMatrix`,
+  whose `frontPrincipalZ = frontVertexZ + n (D - 1) / C` (line 126) holds for determinant +1 only; with
+  determinant d the term is `(D - d) / C`. Its focal points and rear principal point do not depend on the
+  determinant and are right. The integration pin returns LV's native value; the classification is an LV
+  implementation defect; R1 must FAIL, not be corrected, floored or relabelled unsupported. A formal stop at the mirror's focal plane has an exit pupil at infinity;
+  ref proves that singularity with exact rational arithmetic, avoiding a rounded reciprocal's spurious pupil at
+  10^18 mm. `folded.test.ts` proves both the exact singularity and a nearby finite pupil without a threshold.
+  The owner will fix LV separately; the brief is [for the owner; not filed](upstream/lensvisualizer-mirror-principal-plane.md).
+- optiland 4e893f53's factory uses **`material="mirror"`**, preserving the incident material and constructing
+  `RefractiveReflectiveModel(is_reflective=True)`. Passing `is_reflective=True` as an extra surface keyword is
+  silently ignored. The deliberate-mistake mirror test pins this behavior and the read-back rejects it.
+- A native optiland `RadialAperture` transmits its annulus and blocks its hole; an LV folded mirror's hole is
+  transparent, while an LV blocker stops its band and transmits both complements. The folded builder therefore
+  installs `FoldedInteraction` policies on a second Optic with one native surface per visit. Their side filters,
+  windows, medium references, native reflection and paraxial models, and the image policy are all read back.
+  Intersections, Snell refraction and reflection remain optiland's kernels, and its rows remain the answer.
+  Tests prove the closed blocked set, transparent mirror holes, reflection, Mangin return media and path, and
+  deliberately corrupt every new policy read-back.
+- Conditional traversal can retain a different medium from the nominal path. The folded policy charges each
+  native line parameter to the actual per-ray medium, including the image stretch. `trace.path_lengths` then
+  applies the existing native-direction-length correction. No hit or outgoing direction is replaced by ref's.
+  optiland can propagate to a target behind its ray; v2 marks that visit blocked instead. A real return leg
+  along -z has a positive parameter and adds OPL.
+- The first development run exposed opaque-hole mask differences in Gregorian and Maksutov paths. An independent
+  80-digit Decimal conic/Snell/reflection calculation confirmed transparent primary-hole passages followed by a
+  negative target parameter. Gregorian axis ray 102 crossed the primary at radius 8.949320199690553 mm inside its
+  transparent primary hole, then required a -109.0966028232654 mm step to the secondary. Maksutov axis
+  ray 87 crossed the primary at radius 7.523714438565315 mm inside its transparent hole, then required a
+  -64.90292611987391 mm step. Off-axis counterparts agreed with the same classification. The conditional native
+  policy fixes this translation gap; no ray gate or rim band was changed. The independent diagnostic is
+  `workers/python/diagnostics/folded.py`, taking temporary exported cases and stored request/answer arrays.
+
+- optiland's standard curved-surface normals point toward -z, while a plane's points toward +z. A normal's
+  orientation does not change native reflection/refraction, but it does change LV's incidence-side filter.
+  The folded policy orients only the side-test normal toward +z and leaves the native kernel's normal intact.
+  `test_native_curved_normals_are_reoriented_only_for_the_incident_side_policy` pins both the native sign and
+  a front-only reflecting visit; the final folded suite pins its actual guarded production paths.

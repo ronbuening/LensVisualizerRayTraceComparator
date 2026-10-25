@@ -15,7 +15,7 @@ import type { QuantityRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { ErrorInfo, ResultEnvelope, UnsupportedItem } from "../../contract/result.ts";
 import { formatIssues } from "../../contract/schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../contract/version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_4 } from "../../contract/version.ts";
 import { negotiate } from "../../core/negotiate.ts";
 import type { QuantityModule } from "../../quantities/module.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
@@ -49,6 +49,7 @@ export const REF_FEATURES: readonly FeatureFlag[] = Object.freeze([
   "aperture.unclipped",
   "lines.multiple",
   "object.finite",
+  "path.folded",
   "surface.asphere.even",
   "surface.asphere.flat-base",
   "surface.asphere.odd",
@@ -105,7 +106,7 @@ const ANSWERED: readonly Answered[] = [
 export function refDescriptor(): EngineDescriptor {
   const { fingerprint, fileCount } = refFingerprint();
   return {
-    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
+    contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_4 },
     identity: {
       id: REF_ENGINE_ID,
       version: REF_ENGINE_VERSION,
@@ -115,7 +116,12 @@ export function refDescriptor(): EngineDescriptor {
     },
     capabilities: {
       features: { supported: [...REF_FEATURES], limits: {} },
-      quantities: Object.fromEntries(ANSWERED.map(({ quantity }) => [quantity.id, { version: quantity.version }])),
+      quantities: Object.fromEntries(
+        ANSWERED.map(({ quantity }) => [
+          quantity.id,
+          { version: quantity.version, ...(quantity.id === "rays.trace" ? { versions: [1, 2] } : {}) },
+        ]),
+      ),
       deterministic: true,
       maxConcurrency: 1,
     },
@@ -160,7 +166,12 @@ export function createRefEngine(): ProtocolHandler {
       return makeResult(request, engine, { status: "unsupported", unsupported: answer.unsupported });
     }
     if ("error" in answer) return makeResult(request, engine, { status: "error", error: answer.error });
-    const counts = { surfaces: system.surfaces.length, lines: system.indexAfter.length, ...answer.counts };
+    const counts = {
+      surfaces: system.surfaces.length,
+      ...(system.opticalPath ? { pathSteps: system.opticalPath.length } : {}),
+      lines: system.indexAfter.length,
+      ...answer.counts,
+    };
     return makeResult(request, engine, {
       status: "ok",
       method: { name: answered.method, params: {} },

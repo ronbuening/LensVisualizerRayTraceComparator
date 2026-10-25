@@ -2,7 +2,7 @@
 // same arrays by the same rules: NaN from the surface where a ray ended, and one landing on the image plane, by
 // the comparator's own projection, for every engine whose trace ends on the last surface.
 import { NO_END_SURFACE, RAY_STATUS } from "../contract/quantities/raysTrace.ts";
-import type { RaysTraceData } from "../contract/quantities/raysTrace.ts";
+import type { RaysTraceDataV2 } from "../contract/quantities/raysTrace.ts";
 import { encodeNdArray } from "../core/numeric/ndarray.ts";
 import { continuedOpticalPath, projectToImagePlane } from "../estimators/imageProjection.ts";
 import type { Vec3 } from "../estimators/imageProjection.ts";
@@ -19,6 +19,11 @@ export type TraceCounts = {
 export interface TraceRecorder {
   /** Writes the hit of a ray on a surface it passed. */
   hit(ray: number, surface: number, point: Vec3): void;
+  /**
+   * Marks a visit a ray crossed unchanged and the engine records no point for (`rays.trace` version 2 only): its
+   * hit stays NaN. The answer carries `unrecordedHits` once any visit is marked, and never otherwise.
+   */
+  unrecorded(ray: number, surface: number): void;
   /** Ends a ray at the surface it did not pass, as "blocked" or "failed". Its hits before that surface stay. */
   stop(ray: number, status: "blocked" | "failed", endSurface: number): void;
   /**
@@ -31,14 +36,14 @@ export interface TraceRecorder {
    */
   exit(ray: number, exitPoint: Vec3, exitDirection: Vec3, opticalPath: number, imageIndex: number): "ok" | "blocked";
   /** The answer as data of the quantity, and how many rays ended in each way. */
-  finish(): { readonly data: RaysTraceData; readonly counts: TraceCounts };
+  finish(): { readonly data: RaysTraceDataV2; readonly counts: TraceCounts };
 }
 
 /**
  * A recorder for `rays` rays through `surfaces` surfaces, with the image plane at z = `imageZ`. Every value is NaN
  * until it is written, so a ray that ended has NaN from its end surface on without anything being cleared.
  */
-export function createTraceRecorder(rays: number, surfaces: number, imageZ: number): TraceRecorder {
+export function createTraceRecorder(rays: number, surfaces: number, imageZ: number, folded = false): TraceRecorder {
   const status = new Uint8Array(rays);
   const endSurface = new Int32Array(rays);
   const hits = new Float64Array(surfaces * rays * 3).fill(NaN);
@@ -48,6 +53,7 @@ export function createTraceRecorder(rays: number, surfaces: number, imageZ: numb
   const opticalPath = new Float64Array(rays).fill(NaN);
   const opticalPathToImage = new Float64Array(rays).fill(NaN);
   const counts = { rays, ok: 0, blocked: 0, failed: 0 };
+  let unrecordedHits: Uint8Array | null = null;
   const stop = (ray: number, name: "blocked" | "failed", end: number): void => {
     status[ray] = RAY_STATUS[name];
     endSurface[ray] = end;
@@ -55,12 +61,16 @@ export function createTraceRecorder(rays: number, surfaces: number, imageZ: numb
   };
   return {
     hit: (ray, surface, point) => hits.set(point, (surface * rays + ray) * 3),
+    unrecorded: (ray, surface) => {
+      unrecordedHits ??= new Uint8Array(surfaces * rays);
+      unrecordedHits[surface * rays + ray] = 1;
+    },
     stop,
     exit: (ray, point, direction, path, imageIndex) => {
       exitPoint.set(point, 3 * ray);
       exitDirection.set(direction, 3 * ray);
       opticalPath[ray] = path;
-      const landing = projectToImagePlane(point, direction, imageZ);
+      const landing = projectToImagePlane(point, direction, imageZ, folded);
       if (landing === null) {
         stop(ray, "blocked", surfaces);
         return "blocked";
@@ -82,6 +92,7 @@ export function createTraceRecorder(rays: number, surfaces: number, imageZ: numb
         imagePoint: encodeNdArray(imagePoint, [rays, 3]),
         opticalPath: encodeNdArray(opticalPath),
         opticalPathToImage: encodeNdArray(opticalPathToImage),
+        ...(unrecordedHits === null ? {} : { unrecordedHits: encodeNdArray(unrecordedHits, [surfaces, rays]) }),
       },
       counts: { ...counts },
     }),

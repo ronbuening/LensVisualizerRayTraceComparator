@@ -97,7 +97,7 @@ async function answer(message: PoolRequest): Promise<PoolReply> {
           }),
         );
         writePreparedInputs(message.inputsFile, {
-          opticalCase: message.run.opticalCase,
+          opticalCase: plan.runs[0].opticalCase,
           requests: plan.jobs.map((job) => job.request),
         });
         return {

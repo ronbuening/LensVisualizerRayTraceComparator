@@ -606,7 +606,7 @@ test(
 );
 
 test(
-  "on every exportable lens of the catalog, a zoom at both ends, optiland builds the case and passes R0 and R1 against ref",
+  "on every exportable sequential lens of the catalog, a zoom at both ends, optiland builds the case and passes R0 and R1 against ref",
   { skip: skipLv, timeout: 1_800_000 },
   async (t) => {
     const { binding, exporter, ref, optiland } = await engines(t);
@@ -638,6 +638,7 @@ test(
           continue;
         }
         const { opticalCase } = exported;
+        if (opticalCase.system.opticalPath !== undefined) continue; // Folded kernels/refusals are tested by the folded suite.
         assert.equal(opticalCase.conditions.lines.length, 1, at);
         counts.cases++;
         for (const rung of [r0Rung, r1Rung]) {

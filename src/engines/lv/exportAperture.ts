@@ -201,6 +201,22 @@ export function surfaceAperture(
   return {
     semiDiameter: inclusiveClipLimit((radius) => evaluate(radius).state === "outside", nominal),
     nominalSemiDiameter: nominal,
-    innerSemiDiameter: onAxis.innerSemiDiameter,
+    innerSemiDiameter:
+      state.lens.flags.isFoldedOptics && onAxis.innerSemiDiameter > 0
+        ? inclusiveInnerLimit((radius) => evaluate(radius).state === "inside-hole", onAxis.innerSemiDiameter)
+        : onAxis.innerSemiDiameter,
   };
+}
+
+/** Smallest double on the active side of LV's annular boundary; no tolerance is guessed. */
+function inclusiveInnerLimit(inHole: (radius: number) => boolean, nominal: number): number {
+  let low = 0,
+    high = nominal;
+  if (!inHole(low) || inHole(high)) throw new Error("LV annular aperture has no inner boundary of the stated kind");
+  for (;;) {
+    const middle = low + (high - low) / 2;
+    if (middle <= low || middle >= high) return high;
+    if (inHole(middle)) low = middle;
+    else high = middle;
+  }
 }

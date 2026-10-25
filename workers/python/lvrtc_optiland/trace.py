@@ -526,7 +526,15 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
             heading = (rows.L[row - 1], rows.M[row - 1], rows.N[row - 1])
             x, y, z = rows.x[row], rows.y[row], rows.z[row]
 
-            ahead = heading[2] > 0
+            ahead = (
+                (
+                    np.isfinite(heading[2])
+                    & (heading[2] != 0)
+                    & ((z - before[2]) / heading[2] >= -IMAGE_PLANE_TOLERANCE_MM)
+                )
+                if getattr(optic, "_lvrtc_folded", False)
+                else heading[2] > 0
+            )
             pointed = _finite(np, x, y, z)
             lit = rows.intensity[row] > 0
             bent = _finite(np, rows.L[row], rows.M[row], rows.N[row], rows.opd[row])
@@ -553,7 +561,11 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
         exit_path = path[surfaces]
         # The contract's own measure of the way to the plane: one division, as every engine's landing has it.
         along = (image_z - exit_z) / rows.N[surfaces]
-        reach = left & (rows.N[surfaces] > 0) & (along >= -IMAGE_PLANE_TOLERANCE_MM)
+        reach = (
+            left
+            & ((rows.N[surfaces] != 0) if getattr(optic, "_lvrtc_folded", False) else (rows.N[surfaces] > 0))
+            & (along >= -IMAGE_PLANE_TOLERANCE_MM)
+        )
         status[left & ~reach] = STATUS_BLOCKED
         at_exit = reach & ~(along > 0)
         beyond = reach & (along > 0)
@@ -602,9 +614,7 @@ def trace_rays(
         parts.append(settle(optic, record(optic, origins[batch], directions[batch], api), api))
     if len(parts) == 1:
         return parts[0], 1
-    joined = (
-        np.concatenate([getattr(part, name) for part in parts], axis=_RAY_AXIS.get(name, 0)) for name in _TRACED
-    )
+    joined = (np.concatenate([getattr(part, name) for part in parts], axis=_RAY_AXIS.get(name, 0)) for name in _TRACED)
     return Traced(*joined), len(parts)
 
 

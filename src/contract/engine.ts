@@ -25,7 +25,9 @@ export interface EngineCapabilities {
     readonly limits: { readonly [limit: string]: number };
   };
   /** The quantities the engine answers, keyed by quantity id, each with the version of its definition it implements. */
-  readonly quantities: { readonly [quantityId: string]: { readonly version: number } };
+  readonly quantities: {
+    readonly [quantityId: string]: { readonly version: number; readonly versions?: readonly number[] };
+  };
   /** Whether equal requests give bit-equal results. */
   readonly deterministic: boolean;
   /** How many requests the engine can work on at once; at least 1. */
