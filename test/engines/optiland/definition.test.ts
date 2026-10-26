@@ -326,7 +326,7 @@ test("with an interpreter and no other configuration the engine answers hello as
     sourceFiles: 3,
   });
   // Every feature flag of the contract, without a limit; the built-system echo, the first-order data, the trace of
-  // given rays and its own MTF, each at the version of its definition that the comparator holds an answer to.
+  // given rays, its own MTF, its raw wavefront and its own spot and fan, each at the version of its definition.
   assert.deepEqual(capabilities, {
     features: { supported: [...FEATURE_FLAGS], limits: {} },
     quantities: {
@@ -335,6 +335,7 @@ test("with an interpreter and no other configuration the engine answers hello as
       "rays.trace": { version: raysTraceQuantity.version, versions: [1, 2, 3] },
       "mtf.native": { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
+      "spot.native": { version: 1 },
     },
     deterministic: true,
     maxConcurrency: 1,

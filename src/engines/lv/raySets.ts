@@ -243,7 +243,7 @@ export function lvFieldRays(
 export function lvRayWeights(
   api: LvRaysApi & Pick<LvApi, "mtfImagePoint">,
   model: LvCaseModel,
-  rays: LvFieldRays,
+  rays: Pick<LvFieldRays, "origins" | "directions" | "launchWeights" | "chiefIndex">,
   line: number,
 ): Float64Array {
   const { state, exported } = model;

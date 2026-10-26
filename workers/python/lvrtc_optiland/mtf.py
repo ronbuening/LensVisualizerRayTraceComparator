@@ -303,6 +303,9 @@ class FieldProbe:
     """The largest distance on the image plane from the chief ray's landing to a rim ray's; None without two
     landings. optiland calibrates its frequency axes with the rim rays whatever became of them: a ray that an
     aperture stopped is traced on through the mathematical surfaces, and a path that leaves the lens shows here."""
+    landing: tuple[float, float] | None = None
+    """Where the chief ray lands on the image plane, x and y in optiland's frame (the contract's mirrored in y);
+    None where it has no landing."""
 
 
 @dataclass(frozen=True)
@@ -519,6 +522,7 @@ def probe_field(optic: Any, case: dict[str, Any], angle_deg: float, api: Optilan
         rim_rays_lit=rim_lit,
         rim_rays_lost=present.count(False),
         rim_spread_mm=max(apart) if arrived and apart else None,
+        landing=(landing[0], landing[1]) if arrived else None,
     )
 
 

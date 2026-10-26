@@ -58,13 +58,33 @@ export const LV_IMPORT_MANIFEST = [
       "xpAtZoom",
       "wideOpenStopAtZoom",
       "paraxialTrace",
+      "traceSkewRay",
+      "skewImagePlaneIntercept",
     ),
   },
   {
     module: "src/optics/fieldGeometry.ts",
     exports: functions("entrancePupilAtState", "computeAnalysisFieldGeometryAtState"),
   },
-  { module: "src/optics/analysis.ts", exports: functions("computeCardinalElementsFromState", "createAnalysisRequest") },
+  {
+    module: "src/optics/analysis.ts",
+    exports: [
+      ...functions(
+        "computeCardinalElementsFromState",
+        "createAnalysisRequest",
+        "computeOffAxisFieldGeometry",
+        "sampleCircularPupil",
+        "sampleOrthogonalPupilFan",
+        "computeComaAnalysis",
+        "computeBokehFieldFootprint",
+      ),
+      { name: "COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES", as: "comaRingSamples", kind: "object" },
+      { name: "COMA_PREVIEW_FIELD_FRACTIONS", as: "comaFieldFractions", kind: "object" },
+      { name: "MERIDIONAL_COMA_SAMPLE_COUNT", as: "comaFanSampleCount", kind: "number" },
+      { name: "BOKEH_CIRCULAR_PUPIL_RING_SAMPLES", as: "bokehRingSamples", kind: "object" },
+      { name: "BOKEH_PREVIEW_FIELD_FRACTIONS", as: "bokehFieldFractions", kind: "object" },
+    ],
+  },
   {
     module: "src/optics/mtf.ts",
     exports: [
@@ -89,6 +109,7 @@ export const LV_IMPORT_MANIFEST = [
   { module: "src/optics/chromatic.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
   { module: "src/optics/trace/interactions.ts", exports: functions("rearMediumSurfaceIndex") },
   { module: "src/optics/trace/utils.ts", exports: functions("projectCoordinateToZ") },
+  { module: "src/optics/math/vector.ts", exports: functions("directionFromSkewSlope") },
   { module: "src/optics/trace/aperture.ts", exports: functions("evaluateAperture") },
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix") },
   {

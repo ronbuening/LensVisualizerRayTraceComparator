@@ -1514,6 +1514,7 @@ and `validateData`.
 | `rays.trace` | 3 | `quantities/raysTrace.ts` | separate geometric OPL and per-visit signed phasePath; selected only for diffractive cases |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
 | `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
+| `spot.native` | 1 | `quantities/spotNative.ts` | an engine's own spot (centroid and RMS radius about it) or ray fan of a field, relative to its chief ray, by its own pupil sampling |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2039,6 +2040,38 @@ Tests hold both to LensVisualizer, the rays to those of its own bundle bit for b
 text. The seed is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays of a
 set are the tab's own launch rays at that grid, to the bit.
 
+#### Spot sets and rung R7a
+
+**Spot sets** (`CaseSource.spotRaySets`, `src/rays/spotSets.ts`) are the rays of LensVisualizer's coma and bokeh
+tabs, and no part of a run's ray sets: R2 to R4 never see them. Only a LensVisualizer lens has them
+(`src/engines/lv/spotRaySets.ts`); the manifest records them under `runs[].spotRaySets`, sets and problems as above,
+exactly when a rung that needs them (`RungDefinition.needsSpotRaySets`: `r7a`, `r7b`) was run.
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | the analysis drawer's: the prepared state, the hook's pupil radius for the case's stop radius (`lvPupilSeed`), the stop radius of the case, the hook's field geometry, the quality "settled", whose sampling is every family default |
+| patterns | the coma tab's point cloud (`COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES` at `COMA_PREVIEW_FIELD_FRACTIONS`), its tangential and sagittal fans of `MERIDIONAL_COMA_SAMPLE_COUNT` samples (made odd) at the lens's authored `offAxisFieldFrac`, and the bokeh tab's tiles (`BOKEH_CIRCULAR_PUPIL_RING_SAMPLES` at `BOKEH_PREVIEW_FIELD_FRACTIONS`), in that order. Fractions are of the half-field angle of the state |
+| field | `computeOffAxisFieldGeometry(state, fraction, fieldGeometry)`: the slope `uField` of the field and the height `yChief` at which its chief ray crosses the first vertex plane |
+| rays | every sample of the pattern (`sampleCircularPupil`, `sampleOrthogonalPupilFan`), the ones an aperture stops included, crossing the first vertex plane at `(xFraction × r, yChief + yFraction × r)` with `r` the pupil radius, collimated along `(0, uField, 1)` made a unit vector (`directionFromSkewSlope`), and started `rayLead` ahead of that plane as LensVisualizer's skew launch starts them; then the chief ray, `(0, yChief)`, as the last ray, with its index under `groups.chiefIndex`. `groups.field.angleDeg` is LensVisualizer's angle of the fraction |
+| weights | a point of the cloud its area weight (`1/N`), a fan's sample 1, a ray of a tile its area weight times LensVisualizer's bulk transmission at the line (`lvRayWeights`); the chief ray 0 |
+| lines | the same rays at every line of the case |
+
+A fisheye field LensVisualizer launches from a bounding sphere (`lv-vector-launch`), a field it has no launch for
+(`lv-no-launch`), a coma fan on the axis (`lv-no-fan-on-axis`) and rays that would not start in front of the first
+surface (`launch-behind-first-surface`) are coded problems of that field. A folded case (`folded-path`) and a case
+whose object is not at infinity (`object-not-at-infinity`) have no spot sets: LensVisualizer's tabs launch collimated
+rays at every focus, and they are compared at infinity focus. Every restated line has a source canary, and the sets,
+traced as the tabs trace them, give the tabs' point cloud, fans and tiles to the bit
+(`test/integration/lv/spotRays.test.ts`).
+
+**Rung R7a** asks one `rays.trace` request of each spot set and compares each pair of answers with the comparator's
+spot estimator (`src/estimators/spot.ts`), on the rays both answers landed, each spot relative to its own engine's
+landing of the chief ray, as the tabs draw them: `transverseError.maxAbs` (the largest difference of a ray's
+chief-relative landing, along x or y), `centroid.maxAbs` (of the flux-weighted centroids, chief-relative) and
+`rmsRadius.maxAbs` (of the RMS radii about them), each gated at 1e-8 mm, and `mask.mismatches` at 0 with
+`mask.rimBand` counted, as R2 counts them: no other rung traces these rays. Without a chief ray both answers
+landed, or without another ray, the spot's three figures are not measured, and the pair says why.
+
 ### `wavefront.native`
 
 Version 1 adds an engine's raw wavefront without changing any existing quantity or contract version. The spec is
@@ -2068,6 +2101,56 @@ y as for its FFT. The schemas, corpus, quantity invariants and the stdlib Python
 An absent line, unresolved fractions or a finite object is unsupported; a field optiland raises on has its own
 unavailable row, and the other fields remain. BuildMismatch, MemoryError and ImportError are FATAL. The worker
 checks REQUEST_BUDGET_S between fields, returns `time-budget`, and the result store keeps no such error.
+
+### `spot.native`
+
+Version 1, added at Stage 6.2, changes no existing quantity, contract version or identity. It is an engine's own
+spot of a bundle, or its own ray fan, of the case at one line and at given fields, on the image plane of the case,
+by the engine's own sampling of the pupil and its own aiming: what LensVisualizer's coma and bokeh tabs present,
+and what optiland's `SpotDiagram` and `RayFan` give. Nothing of it is the comparator's, and no two engines are
+expected to agree on it within a tolerance: rung R7b records it.
+
+The spec is `{ line, fields, pupil }`:
+
+| Member | Meaning |
+|---|---|
+| `line` | the index of the case's line the rays are traced at |
+| `fields` | `half-field-fractions`: fractions of the half-field angle of the state as the engine that models the lens defines it (LensVisualizer's tabs); another engine is handed the angles with its option `fieldAnglesDeg`. Or `angles-deg`, an object toward +y positive |
+| `pupil` | `{ kind: "rings", rings, weighting }`: a spot, a centre and rings of the given numbers of rays as the requesting tab samples it, each ray counted for its `area` or for its area times the bulk transmission of its path (`area-transmission`). Or `{ kind: "fan", axis, samples }`: an odd number of samples evenly from -1 to 1 along the `tangential` (y) or `sagittal` (x) axis of the pupil |
+
+An engine samples by its own pattern, states it under `method.params`, and need not use the request's rings.
+
+| Answer member | Meaning |
+|---|---|
+| `pattern` | `rings` or `fan`: the kind of the spec's pupil |
+| `fields[]` | `field` as asked, `fieldAngleDeg`, `imageHeightMm` (the distance of the engine's chief ray landing from the axis), `status` `ok` or `unavailable`, `reason` (always for `unavailable`), `spot`, `fan`, `sampling` |
+| `spot` | of a rings pattern: `centroidMm` `[x, y]` relative to the chief ray's landing and `rmsRadiusMm`, the RMS distance from that centroid, by the engine's own weights |
+| `fan` | of a fan: float64 `pupil` coordinates from -1 to 1 and `errorMm`, the transverse error along the fan's axis relative to the chief ray's landing, NaN where a sample did not land |
+| `lines` | the one line traced |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+Lengths are mm, x sagittal and y tangential in the contract frame. An `ok` field has exactly the member of its
+pattern and a null for the other; an `unavailable` field has neither. The schemas, corpus, quantity invariants and
+the stdlib Python port (`validate_spot_native`) enforce these definitions. The engines `lv` and `optiland` answer
+it; `ref` does not.
+
+#### Rung R7b: LensVisualizer's coma and bokeh tabs beside optiland's spot and fan
+
+`r7b` asks one `spot.native` request for each pattern of the tabs (`SpotNativeAsk`), at the case's reference line
+and the tabs' own fractions of the half field, of `lv` and `optiland` only, and only where it is named. optiland is
+handed LensVisualizer's angle of each fraction as its option `fieldAnglesDeg`. `lv` answers from its coma tab's
+`computeComaAnalysis` (a cloud, a fan) on the design plane, and from its bokeh tab's `computeBokehFieldFootprint` at
+the plane of the case; it answers only a case whose line 0 holds the authored indices it traces at. optiland answers
+with `SpotDiagram` (hexapolar, the number of rings nearest the pattern's rays, global coordinates, centroid
+reference) and `RayFan` (`line_y` or `line_x`, mirrored to the contract's frame), each setting read back.
+
+A field is sorted by R5's `classifyNativeField` before any difference: unsupported (no spot or fan), data (other
+lines; chief rays that land apart beyond the rung's limit; no landing), method. The figures are
+`chiefLanding.maxAbs`, `spotCentroid.maxAbs`, `spotRmsRadius.maxAbs` (a spot) or `fanError.maxAbs` with
+`fanSamples.unpaired` (a fan), and counts of fields of each kind. The rung is recorded. Policy 16 gives
+`chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting: a field whose two chief rays land further apart
+is data, and its pair ATTENTION. The spot and fan figures have no band. A policy without the limit sets no field
+aside by its landing, and every pair then says so.
 
 ### Rung R6c and the adapter `optiland-wave`
 

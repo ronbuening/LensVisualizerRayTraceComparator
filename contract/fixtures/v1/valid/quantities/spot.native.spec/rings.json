@@ -1,0 +1,19 @@
+{
+  "line": 0,
+  "fields": {
+    "kind": "half-field-fractions",
+    "values": [
+      0,
+      0.5
+    ]
+  },
+  "pupil": {
+    "kind": "rings",
+    "rings": [
+      1,
+      6,
+      12
+    ],
+    "weighting": "area"
+  }
+}

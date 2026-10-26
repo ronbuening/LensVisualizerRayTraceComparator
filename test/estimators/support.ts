@@ -169,3 +169,88 @@ export function exactLength(factor: number, direction: readonly number[]): numbe
   }
   throw new RangeError(`exactLength: the direction ${direction} is too far from a unit vector to step to its length`);
 }
+
+// ── Quotients and roots of exact fractions ───────────────────────────────────────────────────────────────────────
+
+/** The difference of two fractions, exactly. */
+export function minus(a: Dyadic, b: Dyadic): Dyadic {
+  return plus(a, { numerator: -b.numerator, shift: b.shift });
+}
+
+/** Half the sum of two doubles, exactly: the point half-way between them. */
+function halfwayOf(a: number, b: number): Dyadic {
+  const sum = plus(dyadicOf(a), dyadicOf(b));
+  return { numerator: sum.numerator, shift: sum.shift + 1 };
+}
+
+/** The double next to `value` toward +infinity, for any finite double (0 and the negatives included). */
+function nextUp(value: number): number {
+  if (value === 0) return Number.MIN_VALUE;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, value);
+  view.setBigUint64(0, view.getBigUint64(0) + (value > 0 ? 1n : -1n));
+  return view.getFloat64(0);
+}
+
+/** The double next to `value` toward -infinity. */
+function nextDown(value: number): number {
+  return -nextUp(-value);
+}
+
+/** The number of binary digits of a whole number's magnitude. */
+function bitLength(value: bigint): number {
+  return value === 0n ? 0 : (value < 0n ? -value : value).toString(2).length;
+}
+
+/**
+ * The quotient of two fractions to some 60 bits, as a double: the whole-number quotient of the numerators, scaled to
+ * 64 bits, times the power of two the shifts and the scaling leave. A start for the steps to the nearest double.
+ */
+function approximateQuotient(numerator: Dyadic, denominator: Dyadic): number {
+  if (numerator.numerator === 0n) return 0;
+  const scaling = 64 - (bitLength(numerator.numerator) - bitLength(denominator.numerator));
+  const whole =
+    scaling >= 0
+      ? (numerator.numerator << BigInt(scaling)) / denominator.numerator
+      : numerator.numerator / (denominator.numerator << BigInt(-scaling));
+  // The power of two in two halves, so that neither overflows or underflows on its own where the product does not.
+  const exponent = denominator.shift - numerator.shift - scaling;
+  const half = Math.trunc(exponent / 2);
+  return Number(whole) * 2 ** half * 2 ** (exponent - half);
+}
+
+/**
+ * The double nearest to the fraction `numerator / denominator` (a denominator above 0), found in whole numbers: the
+ * double whose half-way points to its two neighbours hold the quotient between them. Ties are not decided: either
+ * double of a tie is returned.
+ */
+export function nearestQuotient(numerator: Dyadic, denominator: Dyadic): number {
+  if (compare(denominator, { numerator: 0n, shift: 0 }) <= 0)
+    throw new RangeError("nearestQuotient: a denominator above 0");
+  let quotient = approximateQuotient(numerator, denominator);
+  for (let step = 0; step < 1e6; step++) {
+    const low = times(halfwayOf(nextDown(quotient), quotient), denominator);
+    const high = times(halfwayOf(quotient, nextUp(quotient)), denominator);
+    if (compare(numerator, high) > 0) quotient = nextUp(quotient);
+    else if (compare(numerator, low) < 0) quotient = nextDown(quotient);
+    else return quotient;
+  }
+  throw new RangeError("nearestQuotient: too far from the start to step to");
+}
+
+/**
+ * The double nearest to the square root of `numerator / denominator` (a fraction of at least 0 and a denominator
+ * above 0), found in whole numbers: the double whose half-way points have squares that hold the fraction.
+ */
+export function nearestRoot(numerator: Dyadic, denominator: Dyadic): number {
+  if (compare(numerator, { numerator: 0n, shift: 0 }) === 0) return 0;
+  let root = Math.sqrt(nearestQuotient(numerator, denominator));
+  for (let step = 0; step < 1e6; step++) {
+    const low = halfwayOf(nextDown(root), root);
+    const high = halfwayOf(root, nextUp(root));
+    if (compare(numerator, times(times(high, high), denominator)) > 0) root = nextUp(root);
+    else if (compare(numerator, times(times(low, low), denominator)) < 0) root = nextDown(root);
+    else return root;
+  }
+  throw new RangeError("nearestRoot: too far from the start to step to");
+}

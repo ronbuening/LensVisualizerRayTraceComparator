@@ -203,7 +203,7 @@ test("R6c is named-only, uses R6b's native request and R5's angles, and has no f
   );
   assert.deepEqual(r6cRung.engineOptions?.(run, inputs, "optiland-wave"), { fieldAnglesDeg: [0, 5, 10] });
   const policy = loadPolicy();
-  assert.equal(policy.version, 15);
+  assert.equal(policy.version, 16);
   assert.deepEqual(policy.rungs.r6c, {
     ...policy.rungs.r5,
     metrics: {

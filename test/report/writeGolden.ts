@@ -21,6 +21,7 @@ import { COMPARISONS, MANIFEST, POLICY } from "./handBuilt.ts";
 import { R5_GOLDEN, R5_POLICY, r5Cycle } from "./r5Fixture.ts";
 import { R5G_GOLDEN, R5G_POLICY, r5gCycle } from "./r5gFixture.ts";
 import { R6C_GOLDEN, R6C_POLICY, r6cCycle } from "./r6cFixture.ts";
+import { R7A_GOLDEN, R7B_GOLDEN, r7aCycle, r7bCycle } from "./r7Fixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile, mtfGoldenFile } from "./support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
@@ -44,6 +45,19 @@ for (const [golden, standIns, policy] of [
     // The MTF report of the same run's MTF baseline: what is committed beside a suite's as reports/<suite>/mtf.md.
     const baseline = buildBaseline(manifest, comparisons, policy, MTF_BASELINE);
     writeFileSync(mtfGoldenFile(golden), renderMtfBaselineReport(baseline).markdown);
+    console.log(`${golden}: written`);
+  } finally {
+    rmSync(runsDir, { recursive: true, force: true });
+  }
+}
+// Rungs R7a and R7b: the reference engine and its altered copies on a set with a chief ray, and spot stand-ins.
+for (const [golden, standIns] of [
+  [R7A_GOLDEN, r7aCycle],
+  [R7B_GOLDEN, r7bCycle],
+] as const) {
+  const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-golden-"));
+  try {
+    writeFileSync(goldenFile(golden), (await standIns(runsDir)).report.markdown);
     console.log(`${golden}: written`);
   } finally {
     rmSync(runsDir, { recursive: true, force: true });

@@ -1,0 +1,14 @@
+{
+  "line": 0,
+  "fields": {
+    "kind": "angles-deg",
+    "values": [
+      12.5
+    ]
+  },
+  "pupil": {
+    "kind": "fan",
+    "axis": "tangential",
+    "samples": 1
+  }
+}

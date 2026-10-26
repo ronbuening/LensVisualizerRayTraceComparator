@@ -65,6 +65,8 @@ export interface FakeLensData {
   };
   /** Absorption of every glass of the lens, per mm. */
   absorptionPerMm?: number;
+  /** The fraction of the half field the coma fans are drawn at; 0.7 without it. */
+  offAxisFieldFrac?: number;
   /** An annulus of one surface in which the fake's tracer "does not converge". */
   unresolvedZone?: { surface: number; inner: number; outer: number };
 }
@@ -178,6 +180,7 @@ export interface FakeState {
     stop: { surfaceIndex: number };
     flags: { isZoom: boolean; isFoldedOptics: boolean };
     projection: { kind: "rectilinear" };
+    constants: { rayLead?: number };
   };
   focusT: number;
   zoomT: number;

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:spot.native.spec",
+  "title": "spot.native spec",
+  "description": "What a spot.native request asks for: the engine's own spot of a bundle, or its own ray fan, at one line of the case and at the given fields, on the image plane of the case, by the engine's own sampling of the pupil and its own aiming. Code checks that a fan has an odd number of samples.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The index, in the case's conditions.lines, of the line the rays are traced at.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+    },
+    "fields": {
+      "oneOf": [
+        {
+          "description": "Fractions of the half-field angle of the state, as the engine that models the lens defines it (LensVisualizer's coma and bokeh tabs). Another engine is handed the angle of each with its option fieldAnglesDeg.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "half-field-fractions" },
+            "values": {
+              "type": "array",
+              "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/unitInterval" },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Field angles in degrees. A positive angle is an object toward +y.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "angles-deg" },
+            "values": {
+              "type": "array",
+              "items": { "type": "number", "exclusiveMinimum": -90, "exclusiveMaximum": 90 },
+              "minItems": 1
+            }
+          },
+          "required": ["kind", "values"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "pupil": {
+      "oneOf": [
+        {
+          "description": "A spot: the pupil filled by rings, a centre and then rings of the given numbers of rays, as the requesting tab samples it. An engine samples by its own pattern and says which. weighting says what a ray counts for: area alone, or area times the bulk transmission of its path.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "rings" },
+            "rings": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 1 },
+              "minItems": 1
+            },
+            "weighting": { "enum": ["area", "area-transmission"] }
+          },
+          "required": ["kind", "rings", "weighting"],
+          "additionalProperties": false
+        },
+        {
+          "description": "A ray fan: samples evenly spaced across the pupil from -1 to 1 along one axis, tangential (y, in the plane of the field) or sagittal (x), the middle one the chief ray's place.",
+          "type": "object",
+          "properties": {
+            "kind": { "const": "fan" },
+            "axis": { "enum": ["tangential", "sagittal"] },
+            "samples": { "type": "integer", "minimum": 3 }
+          },
+          "required": ["kind", "axis", "samples"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": ["line", "fields", "pupil"],
+  "additionalProperties": false
+}

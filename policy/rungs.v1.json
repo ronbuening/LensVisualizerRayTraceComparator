@@ -1,7 +1,7 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 15,
+  "version": 16,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -123,6 +123,28 @@
         "chiefLanding.maxAbs": { "attention": 1e-7, "attentionSeveralLines": 1e-3, "unit": "mm" },
         "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
+      }
+    },
+    "r7a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "centroid.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "rmsRadius.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "transverseError.maxAbs": { "tolerance": 1e-8, "unit": "mm" }
+      }
+    },
+    "r7b": {
+      "quantity": "spot.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "fanError.maxAbs": { "unit": "mm" },
+        "spotCentroid.maxAbs": { "unit": "mm" },
+        "spotRmsRadius.maxAbs": { "unit": "mm" }
       }
     }
   }

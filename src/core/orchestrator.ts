@@ -30,6 +30,7 @@ import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
 import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
+import type { SpotSetResolution } from "../rays/spotSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
@@ -252,6 +253,23 @@ async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optica
   return source.recipe(spec, opticalCase);
 }
 
+/** Why a run has no spot sets when the source of its case generates none, or no source was given. */
+const NO_SPOT_SOURCE = "spot-sets-unavailable: no case source generates spot sets for this lens";
+
+/**
+ * The spot sets of one run, from the source of its lens (`CaseSource.spotRaySets`); none, and the problem that
+ * says so, when no source was given for the lens or the source generates none.
+ */
+async function spotRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<SpotSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.spotRaySets === undefined) return { sets: [], problems: [NO_SPOT_SOURCE], asks: [] };
+  return source.spotRaySets(spec, opticalCase);
+}
+
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
   /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
@@ -261,6 +279,8 @@ export interface Plan {
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
   /** The ray sets on the finer lattice of each run that a rung needed them for, by run name. */
   readonly fineRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The spot sets of each run that a rung needed them for, by run name. */
+  readonly spotRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -323,12 +343,14 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       ),
       raySets: new Map(plans.flatMap((plan) => [...plan.raySets])),
       fineRaySets: new Map(plans.flatMap((plan) => [...plan.fineRaySets])),
+      spotRaySets: new Map(plans.flatMap((plan) => [...plan.spotRaySets])),
       recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
     };
   }
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
   const fineRaySets = new Map<string, ManifestRaySets>();
+  const spotRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   const runs = [...suite.runs];
   for (const [index, run] of suite.runs.entries()) {
@@ -363,6 +385,13 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       opticalCase = confirmed.opticalCase;
       runs[index] = { ...run, opticalCase };
     }
+    if (rungs.some((rung) => rung.needsSpotRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.spot-generate", () =>
+        spotRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, spotRaySets: sets, spotAsks: asks };
+      spotRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
@@ -374,6 +403,9 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       const rungInputs: RungInputs = {
         raySets: rung.needsRaySets === true ? inputs.raySets : NO_RUNG_INPUTS.raySets,
         ...(rung.needsFineRaySets === true ? { fineRaySets: inputs.fineRaySets ?? [] } : {}),
+        ...(rung.needsSpotRaySets === true
+          ? { spotRaySets: inputs.spotRaySets ?? [], spotAsks: inputs.spotAsks ?? [] }
+          : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       };
       const requests = requestsOf(rung, quantity, opticalCase, spec, rungInputs);
@@ -394,7 +426,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { runs, jobs, raySets, fineRaySets, recipes };
+  return { runs, jobs, raySets, fineRaySets, spotRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -654,7 +686,14 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
   const concurrency = input.jobs ?? 1;
   if (!Number.isSafeInteger(concurrency) || concurrency < 1) throw new UsageError("--jobs must be a positive integer");
-  const { runs, jobs: planned, raySets, fineRaySets, recipes } = await profileAsync("plan", () => planJobs(input));
+  const {
+    runs,
+    jobs: planned,
+    raySets,
+    fineRaySets,
+    spotRaySets,
+    recipes,
+  } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -818,6 +857,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     runs: runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
       const finer = fineRaySets.get(spec.name);
+      const spots = spotRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -826,6 +866,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
         ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
         ...(rays === undefined ? {} : { raySets: rays }),
         ...(finer === undefined ? {} : { fineRaySets: finer }),
+        ...(spots === undefined ? {} : { spotRaySets: spots }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

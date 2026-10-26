@@ -588,6 +588,47 @@ def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None =
     return issues
 
 
+def validate_spot_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/spotNative.ts: schema, an odd fan, and what an ok or an unavailable field holds."""
+    from .ndarray import decode_ndarray  # stdlib only; avoids a module cycle
+
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("spot.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        pupil = value["pupil"]
+        if pupil["kind"] == "fan" and pupil["samples"] % 2 == 0:
+            issue("/pupil/samples", "a fan has an odd number of samples")
+        return issues
+    pattern = value["pattern"]
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["spot"] is not None or field["fan"] is not None:
+                issue(path, "an unavailable field has a reason and neither spot nor fan")
+            continue
+        wanted, unwanted = ("spot", "fan") if pattern == "rings" else ("fan", "spot")
+        if field[wanted] is None or field[unwanted] is not None:
+            issue(path, f"an ok field of a {pattern} answer has its {wanted} and no {unwanted}")
+            continue
+        if field["fan"] is None:
+            continue
+        try:
+            pupil = decode_ndarray(field["fan"]["pupil"]).values()
+            error = decode_ndarray(field["fan"]["errorMm"]).values()
+            if len(pupil) != len(error) or len(pupil) == 0:
+                issue(path + "/fan", "the pupil and the errors of a fan have one length, above 0")
+            elif not all(math.isfinite(p) and -1 <= p <= 1 for p in pupil):
+                issue(path + "/fan/pupil", "a pupil coordinate is a finite number from -1 to 1")
+        except (ValueError, TypeError) as error:
+            issue(path + "/fan", str(error))
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

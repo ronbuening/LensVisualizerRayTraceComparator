@@ -1302,3 +1302,156 @@ test("LV radial phase powers include odd exponents through 32", { skip }, () => 
     "contract radial phase term count",
   );
 });
+
+// Stage 6.2, at LV 879c06102: the spot sets of the coma and bokeh tabs (src/engines/lv/spotRaySets.ts) and the
+// engine's answer of the tabs (src/engines/lv/spot.ts) restate these lines.
+test("the coma and bokeh tabs still draw the patterns and fields the spot sets restate", { skip }, () => {
+  const coma = "src/optics/analysis/aberration/coma.ts";
+  const bokeh = "src/optics/analysis/bokeh/bokeh.ts";
+  const mirror = "lvSpotPatterns and lvSpotSetup in src/engines/lv/spotRaySets.ts restate the tabs' patterns";
+  assertSource(
+    coma,
+    "const meridionalSampleCount = Math.max(3, Math.round(sampling.comaFanSampleCount ?? MERIDIONAL_COMA_SAMPLE_COUNT));",
+    mirror,
+  );
+  assertSource(
+    coma,
+    "const circularPupilSamples = sampleCircularPupil( sampling.comaRingSamples ?? COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES, );",
+    mirror,
+  );
+  assertSource(coma, 'tangentialPupilSamples: sampleOrthogonalPupilFan(meridionalSampleCount, "tangential"),', mirror);
+  assertSource(coma, 'sagittalPupilSamples: sampleOrthogonalPupilFan(meridionalSampleCount, "sagittal"),', mirror);
+  assertSource(coma, "fieldFractions: sampling.comaFieldFractions ?? COMA_PREVIEW_FIELD_FRACTIONS,", mirror);
+  assertSource(
+    coma,
+    "fieldGeometryState: fieldGeometry ?? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT),",
+    mirror,
+  );
+  // The detail field of the fans, and the fans the tab draws no field of.
+  assertSource(coma, "const candidate = sampling.comaDetailFieldFraction ?? L.offAxisFieldFrac;", mirror);
+  assertSource(
+    coma,
+    "return isFinite(candidate) && candidate >= 0 && candidate <= 1 ? candidate : L.offAxisFieldFrac;",
+    mirror,
+  );
+  assertSource(coma, "if (tracedField === null || tracedField.geometry.fieldAngleDeg <= 0) return null;", mirror);
+  assertSource(coma, "meridionalFootprint === null || meridionalFootprint.fieldAngleDeg <= 0", mirror);
+  // What a ray of the point cloud and of a bokeh tile weighs.
+  assertSource(coma, "weight: sample.weight ?? 0,", "the area weights of the coma cloud's sets");
+  assertSource(
+    bokeh,
+    "weight: (sample.weight ?? 1) * (sample.trace.transmission ?? 1),",
+    "the bokeh sets weigh area times LensVisualizer's bulk transmission (lvRayWeights)",
+  );
+  assertSource(
+    bokeh,
+    "circularPupilSamples: sampleCircularPupil(sampling.bokehRingSamples ?? BOKEH_CIRCULAR_PUPIL_RING_SAMPLES),",
+    mirror,
+  );
+  assertSource(bokeh, "const fieldFractions = sampling.bokehFieldFractions ?? BOKEH_PREVIEW_FIELD_FRACTIONS;", mirror);
+  // A tile asked of one field samples LensVisualizer's own rings whatever the request's sampling says.
+  assertSource(
+    bokeh,
+    "const context = buildBokehTraceContext(request, request.preparedGeometry.focusT, {});",
+    "answerLvSpot refuses a bokeh tile of other rings (pupil.rings)",
+  );
+  // The tile's own request: the coma tab's dynamicEFL is never read, and the bokeh tab makes its own.
+  assertSource(bokeh, "dynamicEFL: L.EFL,", "tabRequest in src/engines/lv/spot.ts hands the tabs dynamicEFL 0");
+  // Both tabs trace with no chromatic channel, on the authored indices: answerLvSpot refuses a case whose line 0 is
+  // not those indices (lines.not-authored-reference), as docs/gotchas.md says.
+  const authored = "answerLvSpot answers only a case whose line 0 is the authored indices";
+  assertSource(coma, "const bundle = traceOffAxisBundleFromSamples(request, samples, geometry, undefined);", authored);
+  assertSource(
+    bokeh,
+    "const bundle = traceOffAxisBundleFromSamples(context.request, context.circularPupilSamples, geometry, undefined);",
+    authored,
+  );
+  // The tab draws its infinity grid at its own best focus, not on the design plane: R7b asks the tile on the case's
+  // plane, and docs/gotchas.md says the tab's own plane is not compared.
+  assertSource(
+    bokeh,
+    "const infSensorZ = infContext.bestFocusZ + (viewContext.layout.imgZ - infContext.layout.imgZ) + (infContext.bestFocusZ - viewContext.bestFocusZ);",
+    "computeBokehFieldFootprint is asked at the case's imageZ, never at the tab's sensorZ",
+  );
+});
+
+test("a sample of the tabs' pupil still crosses the first vertex plane where the spot sets launch it", { skip }, () => {
+  const offAxis = "src/optics/analysis/aberration/offAxis.ts";
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  const mirror = "lvSpotFieldRays and lvSkewLaunch in src/engines/lv/spotRaySets.ts restate the launch";
+  assertSource(
+    offAxis,
+    "const trace = adapter.skew( sample.xFraction * entrancePupilSemiDiameter, geometry.yChief + sample.yFraction * entrancePupilSemiDiameter, 0, geometry.uField, );",
+    mirror,
+  );
+  assertSource(
+    offAxis,
+    "const trace = adapter.skew( 0 * entrancePupilSemiDiameter, geometry.yChief + 0 * entrancePupilSemiDiameter, 0, geometry.uField, );",
+    mirror,
+  );
+  assertSource(offAxis, "const fieldAngleDeg = geometry.halfFieldDeg * fieldFraction;", "lvSpotFieldAngle");
+  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", mirror);
+  assertSource(adapters, "const skewFirstZ = scalarSkewState.z[0] ?? 0;", mirror);
+  assertSource(adapters, "const direction = skewDirectionForSlopes(ux0, uy0);", mirror);
+  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, skewFirstZ - lead];", mirror);
+  assertSource(adapters, "const direction = directionFromSkewSlope(ux, uy) ?? ([0, 0, 1] as Vec3);", mirror);
+  // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts.
+  assertSource(
+    "src/optics/analysis/bokeh/bokeh.ts",
+    "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, );",
+    "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so",
+  );
+});
+
+test("traceSkewRay is still the tabs' skew adapter: one launch, one direction, one set of options", { skip }, () => {
+  // lvBokehChiefLanding in src/engines/lv/spot.ts traces a tile's chief ray with `traceSkewRay`, where the tab traces
+  // it with the adapter that `prepareOffAxisTrace` binds (`ghost: true`, no channel). The two are one trace while
+  // these lines hold; test/integration/lv/spotRays.test.ts holds every ray of every benchmark tile to it.
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  const mirror = "lvBokehChiefLanding's traceSkewRay is the adapter's skew launch";
+  assertSource(
+    adapters,
+    "return traceSkewRayExactCore(x0, y0, ux0, uy0, focusT, zoomT, stopSD, ghost, L, undefined, aberrationT);",
+    mirror,
+  );
+  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, (state.z[0] ?? 0) - lead];", mirror);
+  assertSource(
+    adapters,
+    "traceOptions(stopSD, ghost, channel, state, true, transmissionTraceCapture(state.lens)),",
+    mirror,
+  );
+  assertSource(
+    adapters,
+    "const skewOptions = traceOptions( stopSD, ghost, channel, scalarSkewState, true, transmissionTraceCapture(scalarSkewState.lens), );",
+    mirror,
+  );
+  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, skewFirstZ - lead];", mirror);
+  assertSource(
+    "src/optics/analysis/aberration/offAxis.ts",
+    "channel, aberrationT, ghost: true, zPos: vector?.zPos,",
+    "lvBokehChiefLanding asks traceSkewRay with ghost true, no channel and no aberration",
+  );
+});
+
+test(
+  "the analysis drawer still hands the tabs the hook's radii and field geometry, and its quality's sampling",
+  { skip },
+  () => {
+    const drawer = "src/components/layout/lensDiagram/AnalysisDrawerContent.tsx";
+    const mirror = "tabRequest in src/engines/lv/spot.ts restates the drawer's request";
+    assertSource(drawer, "currentEPSD: analysisInputs.currentEPSD,", mirror);
+    assertSource(drawer, "currentPhysStopSD: analysisInputs.currentPhysStopSD,", mirror);
+    assertSource(drawer, "fieldGeometry: analysisInputs.fieldGeometry,", mirror);
+    assertSource(drawer, "sampling: analysisSampling,", mirror);
+    assertSource(
+      "src/optics/analysis/analysisQuality.ts",
+      'return quality === "interactive" ? INTERACTIVE_ANALYSIS_SAMPLING : undefined;',
+      "the settled tabs, whose sampling is every family default, are the ones restated",
+    );
+    assertSource(
+      "src/components/hooks/useLensComputation.ts",
+      "() => (L ? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT) : null),",
+      "lvSpotSetup hands the tabs the hook's field geometry, computed alike",
+    );
+  },
+);

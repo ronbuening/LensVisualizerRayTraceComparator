@@ -63,6 +63,8 @@ node bin/lvrtc.mjs statement                   # write reports/validation-statem
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; the catalog held to its frozen policy; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4   # with R7a, the spot of the coma and bokeh tabs' rays: the rays baselines from the Phase 6 end refresh (about 2 min)
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan, recorded; asked of lv and optiland; only where named; in no baseline
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -308,7 +310,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
   `system.describe` is version 2 (`innerClipRadius`; its `clipRadius` is +Infinity for a surface the engine does not
   clip at, which raised no version); `paraxial.first-order` is version 1. `mtf.native` is version
-  1 and is answered by `lv`, `replay`, `wave` and `optiland`.
+  1 and is answered by `lv`, `replay`, `wave` and `optiland`. `spot.native` is version 1 and is answered by `lv`
+  and `optiland`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
   from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
@@ -356,7 +359,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
   (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
-  `--engines` or a run names; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  `--engines` or a run names, and `r7b` (run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -688,9 +691,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   test holds the three together. `mtf.native` has a comparator for each of `r4f` (`src/compare/mtfFidelity.ts`),
   `r5` and `r5g` (`mtfNative.ts`), `r6b` (`mtfWave.ts`) and `r6c` (`mtfWavefront.ts`); `r5` and `r6b` ask one
   request, so an answer is computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
-  or a limit changes. Four rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
+  or a limit changes. Five rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
   (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
-  `rayTraceRequests`, so an engine traces a set once.
+  `rayTraceRequests`, so an engine traces a set once; `r7a` (spot, `raysSpot.ts`) asks those of the spot sets.
+  `spot.native` has the one comparator of `r7b` (`spotNative.ts`).
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -714,7 +718,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Rays come from the case source, never from a rung or an engine.** `CaseSource.raySets` makes the ray sets of a
   run (`src/engines/lv/raySets.ts` for an LV lens, `src/rays/probe.ts` for a case file); a rung's request builder
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
-  hash is in the request id. A field without rays is a coded problem of that field and fails nothing.
+  hash is in the request id. A field without rays is a coded problem of that field and fails nothing. The spot
+  sets of a run come from `CaseSource.spotRaySets` alike (Stage 6.2).
 - **One seed for LV's footprint scan, the MTF tab's** (`lvPupilSeed`): the ray sets and the product MTF both ask
   with it, so the rays of a set are the tab's own launch rays for a case that is the tab's.
 - **LV's launch rays are kept verbatim**: every lattice cell as its own ray, no mirroring, no normalising (a `-0`
@@ -969,3 +974,70 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   The class says where a difference comes from, not that an engine is right: whether LensVisualizer's or optiland's
   behaviour behind these FAILs is fixed or reported upstream is the owner's; never edit a known-failure entry's class
   or gotcha, or a gotcha heading it links, without rewriting the catalog baseline (both are copied into it).
+
+## Stage 6.2 spots and ray fans
+
+- **Stage 6.1 is moot** (owner decision 2026-10-26): LV's optics rewrite left one trace stack, so there is no
+  `lv-legacy` engine. Each Phase 6 stage's identical-ray rung covers the rays its own tab launches; never add a
+  second LV tracer.
+- **The spot sets are the rays LV's coma and bokeh tabs launch** (`CaseSource.spotRaySets`,
+  `src/engines/lv/spotRaySets.ts`, setup in `spotSetup.ts`), generated by `planJobs` after `confirmRaySets`, only
+  for a rung that says `needsSpotRaySets`, and recorded under `runs[].spotRaySets`. Per line: the coma cloud's rings
+  at its preview fields, its tangential and sagittal fans at the detail field (`L.offAxisFieldFrac`), the bokeh
+  tile's rings at its preview fields; each set has the chief ray last. Every sample is LV's own
+  (`sampleCircularPupil`, `sampleOrthogonalPupilFan`, `computeOffAxisFieldGeometry`, `directionFromSkewSlope`), crossing
+  the first vertex plane at `(x EPSD, yChief + y EPSD)` and launched `rayLead` before it, with the hook's EPSD
+  (`lvPupilSeed`) and field geometry. Weights: area for the cloud, 1 for a fan, area times `lvRayWeights` for a tile.
+  Every restated line has a canary (four Stage 6.2 tests in `canaries.test.ts`, one holding `traceSkewRay` to the
+  tabs' skew adapter). `test/integration/lv/spotRays.test.ts` traces the sets with LV's exact tracer
+  (`traceEngineRay`, the tabs' options) and, summed in LV's order, gets the clouds, fans and every tile's centroid
+  and radius to the bit, and `lv`'s answers of all four asks are the tabs' output; it holds every tile ray by ray to
+  LV's `traceSkewRay` (offsets from `lvBokehChiefLanding`, weights), on a shifted plane too and on
+  `laowa-105mm-f2-stf`, whose absorbing glass tests the `lvRayWeights` stand-in for `sample.trace.transmission`.
+  A finite object, a folded path, a fan on the axis, no launch or a vector launch are coded problems, never
+  approximated.
+- **R7a is gated, identical rays** (policy version 16): `rays.trace` of the spot sets, `raysSpotComparator`, on the
+  rays valid in both answers of a pair (as R4); `transverseError.maxAbs`, `centroid.maxAbs`, `rmsRadius.maxAbs` at
+  1e-8 mm and `mask.mismatches` at 0, no floor. Everything is relative to the chief ray (`groups.chiefIndex`,
+  required). `no-rays`, `no-flux` and `no-reference` are unmeasured, never a FAIL. It is in the default rung
+  selection and joins the rays baselines of benchmark, features, states and diffractive at the Phase 6 end refresh;
+  focus-stations and folded have no spot sets.
+- **`estimateSpot` (`src/estimators/spot.ts`) is a pure estimator** under the estimator rules: compensated sums, the
+  rest of each landing difference kept, and the centroid carried in two doubles (a first value and a compensated
+  remainder), so a spot far smaller than its distance from the chief ray keeps its radius. Analytic proofs in
+  `test/estimators/spot.test.ts` (perfect focus, defocus disc, coma comet, tilted plane, exact dyadic definition,
+  and a spot 2^-50 mm across 1024 mm from its chief ray, where removing any carried term turns it red). It is in no
+  engine's closure.
+- **`spot.native` v1 (contract 1.0) is a tab's own figures, never an OTF**: per field a spot (`centroidMm` relative
+  to the chief ray, `rmsRadiusMm` about the centroid) or a fan (`pupil`, `errorMm`, odd sample count, NaN where a
+  sample did not land), `imageHeightMm` the chief ray's landing, one line. Schema, corpus, `validate.py` port and
+  invariants change together.
+- **`lv` answers `spot.native` from LV's tabs as they present them** (`src/engines/lv/spot.ts`): the cloud of
+  `computeComaAnalysis`, its two fans, `computeBokehFieldFootprint` on the case's plane, with the drawer's request
+  restated (`tabRequest`, canaried). What the case and the spec decide is refused before LV is asked anything
+  (a test makes every LV call throw): a line 0 that is not the authored indices (`lines.not-authored-reference`,
+  every photopic run: the tabs trace no chromatic channel), angles, a finite object, a folded path, a bokeh tile of
+  other rings (`pupil.rings`). Only `focus.off-design` (a coma pattern off the design plane) needs LV.
+- **optiland answers `spot.native` with its own `SpotDiagram` and `RayFan`** (`lvrtc_optiland/spot.py`): one field per
+  fresh verified optic, robust aiming, the hexapolar ring count nearest the asked rays, `reference="centroid"`
+  (its default is the chief ray: pinned), global coordinates, the centroid relative to the chief ray's landing
+  from `probe_field`, the contract's frame (y mirrored, a tangential fan reversed and negated). A fan whose middle
+  ray is dark is `fan-centre-lost` (optiland silently refers it to the mean: pinned). Every setting is read back;
+  each check has a deliberate fault in `test_spot.py`, and an off-axis spot is held to exact traces (`exact.py`), so
+  the mirror and the chief-ray subtraction are tested. Budget and FATAL are the MTF worker's.
+- **R7b is recorded, of `lv` and `optiland`, only where named** (`spotNativeComparator`): R5's `classifyNativeField`
+  sorts each field before any difference. Owner decisions 2026-10-26: the chief-landing sorting limit is 1e-5 mm in
+  the policy (a field further apart is data, its pair ATTENTION); the spot and fan figures have **no attention
+  band** until the pupil-model difference is resolved: LV's collimated disc of the paraxial entrance pupil on
+  equal-area rings against optiland's real stop to its rim, an LV assumption to look at, not settled
+  (`docs/gotchas.md`, "Spots and ray fans"). R7b stays out of every baseline (run it with `--rungs r7b`, never
+  beside the rays rungs before a `baseline write`). The bokeh tile at the tab's own plane (`infSensorZ`) is
+  deferred and not covered.
+- **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
+  stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
+  this repository hold together") fail only on policy identity (v15 recorded, v16 at hand): never weaken either.
+  Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
+  LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
+  (which hashes the worker's revision, so R6c records go STALE(engine)); `ref`'s did not. The recipe is in
+  `docs/REFERENCE.md`, "The Phase 6 end refresh". The validation statement (`STATEMENT_RUNGS` and the
+  owner-signed sentence) stays unchanged and does not describe R7a.

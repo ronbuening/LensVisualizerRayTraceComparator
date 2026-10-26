@@ -36,6 +36,8 @@ export function buildLens(data: FakeLensData): FakeRuntimeLens {
     maxFstop: data.maxFstop ?? 16,
     // Stored pupil constants, as LV keeps them on the lens: none of them is a paraxial image of the stop.
     EP: { epSD: 2 * stopPhysSD },
+    // The fraction of the half field the fake's coma fans are drawn at, as LV's lens authors it.
+    offAxisFieldFrac: data.offAxisFieldFrac ?? 0.7,
     epZRelStop: -1.5,
     xpZRelLastSurf: -12.5,
     xpSD: 3 * stopPhysSD,
@@ -108,6 +110,8 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       flags: { isZoom: L.isZoom, isFoldedOptics: !!L.source.opticalPath },
       opticalPath: L.source.opticalPath,
       projection: { kind: "rectilinear" },
+      // How far ahead of the first vertex the fake's skew rays start, as LV's lens constants say.
+      constants: { rayLead: 10 },
     },
     focusT,
     zoomT,

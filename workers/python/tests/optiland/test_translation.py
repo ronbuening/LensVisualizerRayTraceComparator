@@ -212,7 +212,7 @@ class ContractSagTest(unittest.TestCase):
 
 
 class DeclarationTest(unittest.TestCase):
-    def test_the_engine_declares_every_feature_flag_no_limit_and_the_four_quantities_it_answers(self) -> None:
+    def test_the_engine_declares_every_feature_flag_no_limit_and_the_quantities_it_answers(self) -> None:
         descriptor = OptilandEngine(IDENTITY).describe()
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         capabilities = descriptor["capabilities"]
@@ -229,6 +229,7 @@ class DeclarationTest(unittest.TestCase):
                 "rays.trace": {"version": 1, "versions": [1, 2, 3]},
                 "mtf.native": {"version": 1},
                 "wavefront.native": {"version": 1},
+                "spot.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])

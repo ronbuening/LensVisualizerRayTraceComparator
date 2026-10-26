@@ -7,6 +7,7 @@ import type { MtfRecipeResolution } from "../../core/mtfRecipe.ts";
 import type { CaseResolution, CaseSource, RunRaySets, SourceAudit } from "../../core/suite.ts";
 import { rayProblem } from "../../rays/raySets.ts";
 import type { RaySetResolution } from "../../rays/raySets.ts";
+import type { SpotSetResolution } from "../../rays/spotSets.ts";
 import { loadLvBinding } from "./binding.ts";
 import type { LvBinding } from "./binding.ts";
 import { STALE_CASE, rebuildCase } from "./caseModel.ts";
@@ -18,6 +19,7 @@ import { problemText } from "./exportProblems.ts";
 import type { ExportProblem } from "./exportProblems.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
 import { lvRaySets } from "./raySets.ts";
+import { lvSpotRaySets } from "./spotRaySets.ts";
 import { lvMtfRecipe } from "./recipe.ts";
 import { expandLvStations, stationSelectionProblem } from "./stations.ts";
 import { ZOOM_ENDS } from "./zoomEnds.ts";
@@ -51,6 +53,12 @@ export interface LvExporter {
    * `stale-case`. Rejects for a case that did not come from a LensVisualizer lens.
    */
   raySets(opticalCase: OpticalCase, options: Pick<RunOptions, "fields" | "sampling">): Promise<RaySetResolution>;
+  /**
+   * The spot sets of a case this checkout exported: the rays LensVisualizer's coma and bokeh tabs launch and the
+   * engines' own spot requests of the same tabs (`lvSpotRaySets`), from the state the case was exported from,
+   * rebuilt and held to the case first. A stale case has none, and the one problem `stale-case`.
+   */
+  spotRaySets(opticalCase: OpticalCase): Promise<SpotSetResolution>;
   /**
    * The MTF recipe of a case this checkout exported, under a run's fields, frequencies and grid cap
    * (`lvMtfRecipe`), from the state the case was exported from, rebuilt and held to the case first. A case that is
@@ -113,6 +121,11 @@ export function createLvExporter(binding: LvBinding): LvExporter {
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)] };
       return lvRaySets(binding.api, rebuilt.model, options);
     },
+    spotRaySets: async (opticalCase) => {
+      const rebuilt = await rebuildCase(binding, build, opticalCase);
+      if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)], asks: [] };
+      return lvSpotRaySets(binding.api, rebuilt.model);
+    },
     recipe: async (opticalCase, options) => {
       const rebuilt = await rebuildCase(binding, build, opticalCase);
       if (!rebuilt.ok) return { recipe: null, problems: [recipeProblem(STALE_CASE, rebuilt.reason)] };
@@ -158,6 +171,9 @@ function unavailable(error: LvBindingError): ExportProblem {
  *
  * `raySets` gives the rays of a case it resolved: LensVisualizer's own launch lattice for each field of the run, at
  * each line of the case (`lvRaySets`).
+ *
+ * `spotRaySets` gives the spot sets of a case it resolved: the rays of LensVisualizer's coma and bokeh tabs, and
+ * the engines' own spot requests of the same tabs (`lvSpotRaySets`).
  *
  * `recipe` gives the MTF recipe of a case it resolved: the plane, the fields and the frequencies as LensVisualizer
  * resolves them (`lvMtfRecipe`).
@@ -222,6 +238,11 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       const loaded = await load();
       if ("code" in loaded) return { ok: false, problems: [problemText(loaded)] };
       return loaded.confirmRaySets(run, opticalCase, sets);
+    },
+    spotRaySets: async (_run, opticalCase) => {
+      const loaded = await load();
+      if ("code" in loaded) return { sets: [], problems: [problemText(loaded)], asks: [] };
+      return loaded.spotRaySets(opticalCase);
     },
     recipe: async (run, opticalCase) => {
       const loaded = await load();

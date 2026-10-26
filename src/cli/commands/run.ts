@@ -57,7 +57,9 @@ const HELP = [
   "                   figures are outside their band. r5g is run only where it is named: the geometric MTF of",
   "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
   "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
-  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking",
+  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking. r7a traces",
+  "                   the rays LensVisualizer's coma and bokeh tabs launch and compares their spots and fans;",
+  "                   r7b is named-only: lv's coma and bokeh tabs beside optiland's own spot and ray fan",
   "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
   "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
   "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
@@ -293,6 +295,9 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         }
         for (const problem of run.fineRaySets?.problems ?? []) {
           io.stderr(`lvrtc run: run ${run.name}: a field has no rays on the finer lattice: ${problem}\n`);
+        }
+        for (const problem of run.spotRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: a spot or fan has no rays: ${problem}\n`);
         }
       }
       for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);

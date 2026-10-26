@@ -69,6 +69,7 @@ test(
       [RAYS_TRACE]: { version: raysTraceQuantity.version, versions: [1, 2, 3] },
       [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
+      "spot.native": { version: 1 },
     });
 
     const request = makeRequest({ caseId: CASE.id, quantity: RAYS_TRACE, spec: RAYS_SPEC_SINGLET });

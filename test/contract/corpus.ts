@@ -23,6 +23,8 @@ import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
 import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.ts";
+import { SPOT_NATIVE } from "../../src/contract/quantities/spotNative.ts";
+import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
@@ -549,6 +551,75 @@ export const WAVEFRONT_DATA: WavefrontNativeData = {
   ],
   method: { name: "synthetic-wavefront", params: {} },
   notes: [],
+};
+
+// ── spot.native ──────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own spot and ray fan. The numbers describe no lens: every value is a dyadic fraction.
+
+/** A spot at two fractions of the half field, filled by a centre and two rings, each ray counted for its area. */
+export const SPOT_SPEC_RINGS: SpotNativeSpec = {
+  line: 0,
+  fields: { kind: "half-field-fractions", values: [0, 0.5] },
+  pupil: { kind: "rings", rings: [1, 6, 12], weighting: "area" },
+};
+
+/** A tangential fan of five samples at one field angle. */
+export const SPOT_SPEC_FAN: SpotNativeSpec = {
+  line: 0,
+  fields: { kind: "angles-deg", values: [12.5] },
+  pupil: { kind: "fan", axis: "tangential", samples: 5 },
+};
+
+/** An answer to `SPOT_SPEC_RINGS`: the axis has a spot, the half field none, and says why. */
+export const SPOT_DATA_RINGS: SpotNativeData = {
+  pattern: "rings",
+  fields: [
+    {
+      field: 0,
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      spot: { centroidMm: [0, -0.0009765625], rmsRadiusMm: 0.015625 },
+      fan: null,
+      sampling: { raysLaunched: 19, raysLanded: 19 },
+    },
+    {
+      field: 0.5,
+      fieldAngleDeg: 10.5,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "chief-ray-clipped",
+      spot: null,
+      fan: null,
+      sampling: { raysLaunched: 19, raysLanded: 0 },
+    },
+  ],
+  method: { name: "synthetic-spot", params: {} },
+  lines: [{ wavelengthNm: 587.5, weight: 1 }],
+  notes: [],
+};
+
+/** An answer to `SPOT_SPEC_FAN`: one sample of the five did not land. */
+export const SPOT_DATA_FAN: SpotNativeData = {
+  pattern: "fan",
+  fields: [
+    {
+      field: 12.5,
+      fieldAngleDeg: 12.5,
+      imageHeightMm: 8.75,
+      status: "ok",
+      spot: null,
+      fan: {
+        pupil: encodeNdArray(Float64Array.of(-1, -0.5, 0, 0.5, 1)),
+        errorMm: encodeNdArray(Float64Array.of(NaN, -0.0078125, 0, 0.001953125, 0.0234375)),
+      },
+      sampling: { raysLaunched: 5, raysLanded: 4 },
+    },
+  ],
+  method: { name: "synthetic-fan", params: { samples: 5 } },
+  lines: [{ wavelengthNm: 546.07, weight: 1 }],
+  notes: ["one sample is stopped by an aperture"],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2326,6 +2397,40 @@ const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
  * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
  */
 export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${SPOT_NATIVE}.spec`]: {
+    valid: { rings: SPOT_SPEC_RINGS, fan: SPOT_SPEC_FAN },
+    invalid: {
+      "missing-line": fault(SPOT_SPEC_RINGS, "/line", REMOVE, "required", ""),
+      "missing-pupil": fault(SPOT_SPEC_RINGS, "/pupil", REMOVE, "required", ""),
+      "fields-of-image-height": fault(SPOT_SPEC_RINGS, "/fields/kind", "image-height-fractions", "oneOf", "/fields"),
+      "ring-of-no-ray": fault(SPOT_SPEC_RINGS, "/pupil/rings/0", 0, "oneOf", "/pupil"),
+      "ring-weighting-unknown": fault(SPOT_SPEC_RINGS, "/pupil/weighting", "flux", "oneOf", "/pupil"),
+      "fan-axis-unknown": fault(SPOT_SPEC_FAN, "/pupil/axis", "radial", "oneOf", "/pupil"),
+      "fan-of-one-sample": fault(SPOT_SPEC_FAN, "/pupil/samples", 1, "oneOf", "/pupil"),
+      "unknown-property": fault(SPOT_SPEC_RINGS, "/frequenciesPerMm", [10], "additionalProperties"),
+    },
+  },
+  [`${SPOT_NATIVE}.data`]: {
+    valid: { "rings-and-unavailable": SPOT_DATA_RINGS, "fan-with-a-lost-sample": SPOT_DATA_FAN },
+    invalid: {
+      "missing-pattern": fault(SPOT_DATA_RINGS, "/pattern", REMOVE, "required", ""),
+      "missing-spot": fault(SPOT_DATA_RINGS, "/fields/0/spot", REMOVE, "required", "/fields/0"),
+      "centroid-of-three": fault(SPOT_DATA_RINGS, "/fields/0/spot/centroidMm", [0, 0, 0], "oneOf", "/fields/0/spot"),
+      "negative-radius": fault(SPOT_DATA_RINGS, "/fields/0/spot/rmsRadiusMm", -0.5, "oneOf", "/fields/0/spot"),
+      "fan-error-as-numbers": fault(SPOT_DATA_FAN, "/fields/0/fan/errorMm", [0, 0], "oneOf", "/fields/0/fan"),
+      "two-lines": fault(
+        SPOT_DATA_FAN,
+        "/lines",
+        [
+          { wavelengthNm: 546.07, weight: 1 },
+          { wavelengthNm: 486.13, weight: 1 },
+        ],
+        "maxItems",
+      ),
+      "status-unconverged": fault(SPOT_DATA_RINGS, "/fields/0/status", "unconverged", "enum"),
+      "mtf-curve": fault(SPOT_DATA_RINGS, "/fields/0/sagittal", [], "additionalProperties"),
+    },
+  },
   [`${WAVEFRONT_NATIVE}.spec`]: {
     valid: {
       "one-line": WAVEFRONT_SPEC,

@@ -44,7 +44,7 @@ function traceOptions(
 }
 
 // The fake's glasses absorb where a lens says so: exp(-coefficient x path) over every stretch inside an element.
-function transmission(state: FakeState, trace: FakeTraceResult): number {
+export function transmission(state: FakeState, trace: FakeTraceResult): number {
   const coefficient = state.lens.runtime.source.absorptionPerMm ?? 0;
   if (coefficient === 0) return 1;
   let inGlass = 0;

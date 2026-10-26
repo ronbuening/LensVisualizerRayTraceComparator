@@ -329,10 +329,11 @@ test(
     // ray sets are traced once by each engine, for R2, and R3 and R4 find them in the store. R4f is asked of lv and
     // of the replay of its sampling, one request each for a run. R6a finds the 162 sets in the store and has each
     // engine trace the same fields on the finer lattice, 162 sets more; R6b is asked of lv and of the wave
-    // estimator on its rays, one request each for a run.
+    // estimator on its rays, one request each for a run. R7a has each engine trace the 540 spot sets of the coma and
+    // bokeh tabs, ten a line.
     assert.match(
       ran.out,
-      /^features: 1800 jobs: 1764 ok, 36 unsupported, 0 error, 0 pending \(792 computed, 972 cached\)$/m,
+      /^features: 2880 jobs: 2844 ok, 36 unsupported, 0 error, 0 pending \(1872 computed, 972 cached\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -375,9 +376,10 @@ test(
 
     const compared = lvrtc(runsDir, "compare", "features");
     assert.equal(compared.code, 0, compared.out);
-    // R6a adds a pair for each of the 54 fields, and R6b one for each run, recorded: each counted in both modes.
+    // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, and R7a one for each of the 540
+    // spot sets: each counted in both modes.
     const summary =
-      /^features: 1044 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^features: 2124 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
         compared.out,
       );
     assert.ok(

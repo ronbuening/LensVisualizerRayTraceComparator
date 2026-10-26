@@ -1,0 +1,42 @@
+// What LensVisualizer's coma and bokeh tabs are asked with for a case: the pupil radius they sample, the field
+// geometry of the state and the detail field of the coma fans. Shared by the spot sets (spotRaySets.ts) and the
+// engine's answer of the tabs (spot.ts), which keeps the engine's closure to what it answers with.
+import type { LvCaseModel } from "./caseModel.ts";
+import { lvHookAperture, lvPupilSeed } from "./tabRequest.ts";
+import type { LvHookApi } from "./tabRequest.ts";
+import type { LvFieldGeometry } from "./types.ts";
+
+/** What the tabs are asked with for a case. */
+export interface LvSpotSetup {
+  /** The radius of the pupil the tabs sample, mm: the hook's entrance pupil for the case's stop radius. */
+  readonly pupilSemiDiameterMm: number;
+  /** The field geometry of the state, as the analysis drawer hands it to the tabs. */
+  readonly fieldGeometry: LvFieldGeometry;
+  /** The field of the coma tab's two fans, a fraction of the half field: the lens's authored off-axis field. */
+  readonly detailFieldFraction: number;
+}
+
+/**
+ * What the tabs are asked with for a case.
+ *
+ * - The pupil radius is the one the hook hands the analysis drawer for the case's stop radius (`lvPupilSeed`), as
+ *   for the MTF launch: for a case that is the drawer's, the tabs' own.
+ * - The field geometry is the hook's (`computeAnalysisFieldGeometryAtState` of the state, the aberration control
+ *   neutral), which the drawer hands every tab; the coma tab reads it, and computes the same itself without it.
+ * - The detail field of the coma fans is the tab's default, `comaDetailFieldFraction` with no sampling of its own,
+ *   restated from coma.ts:
+ *
+ * ```
+ * const candidate = sampling.comaDetailFieldFraction ?? L.offAxisFieldFrac;
+ * return isFinite(candidate) && candidate >= 0 && candidate <= 1 ? candidate : L.offAxisFieldFrac;
+ * ```
+ */
+export function lvSpotSetup(api: LvHookApi, model: LvCaseModel): LvSpotSetup {
+  const { state, runtime, exported } = model;
+  const pupilSemiDiameterMm = lvPupilSeed(lvHookAperture(api, runtime, state), exported.conditions.stopSemiDiameter);
+  const fieldGeometry = api.computeAnalysisFieldGeometryAtState(state.focusT, state.zoomT, runtime, 0);
+  const authored = runtime.offAxisFieldFrac as number;
+  const candidate = authored;
+  const detailFieldFraction = isFinite(candidate) && candidate >= 0 && candidate <= 1 ? candidate : authored;
+  return { pupilSemiDiameterMm, fieldGeometry, detailFieldFraction };
+}

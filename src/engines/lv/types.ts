@@ -138,6 +138,8 @@ export interface LvPreparedState {
     readonly flags: Readonly<Record<string, boolean>>;
     /** How field angles map to image heights: "rectilinear", or a "fisheye-..." kind. */
     readonly projection: { readonly kind: string };
+    /** The lens's constants; `rayLead` is how far ahead of the first vertex its skew rays are launched, mm. */
+    readonly constants?: { readonly rayLead?: number };
   };
   readonly focusT: number;
   readonly zoomT: number;
@@ -300,6 +302,8 @@ export interface LvApertureEvaluation {
  */
 export interface LvFieldGeometry {
   readonly yRatio: number;
+  /** The half-field angle of the state, degrees: what the coma and bokeh tabs take their field fractions of. */
+  readonly halfFieldDeg?: number;
   readonly [member: string]: unknown;
 }
 
@@ -337,6 +341,132 @@ export interface LvAnalysisRequestParams {
   readonly dynamicEFL: number;
   readonly currentEPSD: number;
   readonly currentPhysStopSD: number;
+  /** The field geometry of the state, as LV's analysis drawer hands it on; LV computes its own without it. */
+  readonly fieldGeometry?: LvFieldGeometry | null;
+  /** Overrides of the sampling of LV's analyses, by LV's own names; the family defaults without them. */
+  readonly sampling?: LvAnalysisSampling;
+}
+
+/** LV's AnalysisSamplingOptions, the members the comparator sets: those of its coma and bokeh tabs. */
+export interface LvAnalysisSampling {
+  readonly comaDetailFieldFraction?: number;
+  readonly comaFieldFractions?: readonly number[];
+  readonly comaRingSamples?: readonly number[];
+  readonly comaFanSampleCount?: number;
+  readonly bokehFieldFractions?: readonly number[];
+  readonly bokehRingSamples?: readonly number[];
+}
+
+/**
+ * LV's off-axis field geometry of one field of its coma and bokeh tabs (`computeOffAxisFieldGeometry`): scalar, a
+ * collimated launch of slope `uField` whose chief ray crosses the first vertex plane at height `yChief`; or, for a
+ * fisheye field beyond its trace-safe cone, a vector launch from a bounding sphere.
+ */
+export type LvOffAxisFieldGeometry =
+  | {
+      readonly kind?: undefined;
+      readonly fieldFraction: number;
+      readonly fieldAngleDeg: number;
+      readonly uField: number;
+      readonly yChief: number;
+      readonly lastSurfZ: number;
+      readonly imagePlaneZ: number;
+    }
+  | {
+      readonly kind: "vector";
+      readonly fieldFraction: number;
+      readonly fieldAngleDeg: number;
+      readonly lastSurfZ: number;
+      readonly imagePlaneZ: number;
+    };
+
+/** One sample of LV's circular pupil pattern: a fraction of the pupil radius in x and y, and its area weight. */
+export interface LvCircularPupilSample {
+  readonly index: number;
+  readonly xFraction: number;
+  readonly yFraction: number;
+  readonly radiusFraction: number;
+  readonly azimuthRad: number;
+  readonly weight: number;
+}
+
+/** One sample of LV's orthogonal pupil fan. */
+export interface LvOrthogonalPupilSample {
+  readonly index: number;
+  readonly pupilFraction: number;
+  readonly xFraction: number;
+  readonly yFraction: number;
+}
+
+/** One sample of LV's meridional or sagittal coma fan, the members the comparator reads. */
+export interface LvComaFanSample {
+  readonly index: number;
+  readonly pupilFraction: number;
+  /** The image height (meridional) or x (sagittal) less the chief ray's; null for a sample that did not land. */
+  readonly relativeImageHeight?: number | null;
+  readonly relativeImageX?: number | null;
+  readonly clipped: boolean;
+}
+
+/** LV's MeridionalComaResult or SagittalComaResult, the members the comparator reads. */
+export interface LvComaFanResult {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly sampleCount: number;
+  readonly validSampleCount: number;
+  readonly clippedSampleCount: number;
+  /** Where the chief ray lands: its y for the meridional fan, its x for the sagittal one. */
+  readonly centerIntercept: number;
+  readonly samples: readonly LvComaFanSample[];
+}
+
+/** One field of LV's coma point-cloud preview, the members the comparator reads. */
+export interface LvComaPointCloudField {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly sampleCount: number;
+  readonly validSampleCount: number;
+  readonly clippedSampleCount: number;
+  /** Where the chief ray lands along y. */
+  readonly chiefIntercept: number;
+  readonly centroidTangentialImageHeight: number;
+  readonly centroidSagittalImageHeight: number;
+  readonly rmsRadiusMm: number;
+  readonly usable: boolean;
+}
+
+/** LV's ComaAnalysisResult: its two fans at the detail field and its point-cloud preview, each null when unusable. */
+export interface LvComaAnalysis {
+  readonly meridionalComa: LvComaFanResult | null;
+  readonly sagittalComa: LvComaFanResult | null;
+  readonly pointCloudPreview: {
+    readonly fieldFractions: readonly number[];
+    readonly fields: readonly LvComaPointCloudField[];
+  } | null;
+}
+
+/** LV's BokehFieldResult, the members the comparator reads: offsets relative to the chief ray's landing. */
+export interface LvBokehField {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly totalRays: number;
+  readonly passedRays: number;
+  readonly centroidSagittal: number;
+  readonly centroidTangential: number;
+  readonly rmsRadiusMm: number;
+  readonly maxRadiusMm: number;
+  readonly transmission: number;
+  readonly usable: boolean;
+}
+
+/** LV's skew trace result: where the ray crosses the last vertex plane and its slopes there. */
+export interface LvSkewTrace {
+  readonly x: number;
+  readonly y: number;
+  readonly ux: number;
+  readonly uy: number;
+  readonly clipped: boolean;
+  readonly transmission: number;
 }
 
 /** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
@@ -803,4 +933,55 @@ export interface LvApi {
   readonly flatRadiusThreshold: number;
   /** LV's `ASPHERIC_POLYNOMIAL_TERMS`: every polynomial coefficient its sag evaluates, and no other. */
   readonly asphericPolynomialTerms: readonly LvAsphericTerm[];
+  /**
+   * The off-axis field geometry of LV's coma and bokeh tabs at a fraction of the state's half field, with the field
+   * geometry of the state; null where LV has no launch for it.
+   */
+  computeOffAxisFieldGeometry(
+    state: LvPreparedState,
+    fieldFraction: number,
+    stateGeometry?: LvFieldGeometry,
+  ): LvOffAxisFieldGeometry | null;
+  /** LV's area-weighted circular pupil pattern: a centre and rings of the given numbers of samples. */
+  sampleCircularPupil(ringSamples: readonly number[]): LvCircularPupilSample[];
+  /** LV's odd tangential or sagittal pupil fan. */
+  sampleOrthogonalPupilFan(sampleCount: number, orientation: "tangential" | "sagittal"): LvOrthogonalPupilSample[];
+  /** The unit direction of slopes dx/dz and dy/dz, normalised as LV's skew launch normalises it; null if invalid. */
+  directionFromSkewSlope(ux: number, uy: number): LvVec3 | null;
+  /** Everything LV's coma tab presents for a request: its two fans at the detail field and its point cloud. */
+  computeComaAnalysis(request: LvAnalysisRequest): LvComaAnalysis;
+  /** One tile of LV's bokeh tab: the field traced at the request's focus and intercepted at `sensorZ`. */
+  computeBokehFieldFootprint(request: LvAnalysisRequest, fieldFraction: number, sensorZ: number): LvBokehField | null;
+  /** LV's skew trace of a ray given by its crossing of the first vertex plane and its slopes. */
+  traceSkewRay(
+    x0: number,
+    y0: number,
+    ux0: number,
+    uy0: number,
+    focusT: number,
+    zoomT: number,
+    stopSD: number | undefined,
+    ghost: boolean,
+    L: LvRuntimeLens,
+    aberrationT?: number,
+  ): LvSkewTrace;
+  /** LV's projection of a skew trace from the last vertex plane to an image plane. */
+  skewImagePlaneIntercept(
+    x: number,
+    y: number,
+    ux: number,
+    uy: number,
+    lastSurfZ: number,
+    imagePlaneZ: number,
+  ): { readonly x: number; readonly y: number } | null;
+  /** LV's `COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES`: the rings of its coma point cloud. */
+  readonly comaRingSamples: readonly number[];
+  /** LV's `COMA_PREVIEW_FIELD_FRACTIONS`: the fractions of the half field its coma point cloud is drawn at. */
+  readonly comaFieldFractions: readonly number[];
+  /** LV's `MERIDIONAL_COMA_SAMPLE_COUNT`: the samples of its coma fans. */
+  readonly comaFanSampleCount: number;
+  /** LV's `BOKEH_CIRCULAR_PUPIL_RING_SAMPLES`: the rings of a bokeh tile. */
+  readonly bokehRingSamples: readonly number[];
+  /** LV's `BOKEH_PREVIEW_FIELD_FRACTIONS`: the fractions of the half field its bokeh tiles are drawn at. */
+  readonly bokehFieldFractions: readonly number[];
 }

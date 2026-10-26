@@ -11,7 +11,8 @@ the surface and the field, and nothing is said about it.
 
 It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``), the method "diffraction", and with its own geometric
 MTF (``geometric``), the method "geometric": a line and a field at a time, each on an optic of its own that is built,
-read back and given its field there. A field optiland cannot compute is a row of the answer.
+read back and given its field there. A field optiland cannot compute is a row of the answer. It answers
+``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way.
 """
 
 from __future__ import annotations
@@ -47,8 +48,10 @@ from .mtf import MTF_NATIVE, TIME_BUDGET, MtfMeasure, OptilandMtf, TimeBudgetExc
 from .mtf import read_request as read_mtf_request
 from .trace import METHOD_NAME as TRACE_METHOD_NAME
 from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
+from .spot import SPOT_NATIVE, answer_spot
+from .spot import field_counts as spot_field_counts
 from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
-from lvrtc_worker_kit.validate import validate_wavefront_native
+from lvrtc_worker_kit.validate import validate_spot_native, validate_wavefront_native
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
@@ -85,6 +88,7 @@ QUANTITIES: dict[str, dict[str, Any]] = {
     RAYS_TRACE: {"version": 1, "versions": [1, 2, 3]},
     MTF_NATIVE: {"version": 1},
     WAVEFRONT_NATIVE: {"version": 1},
+    SPOT_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -168,7 +172,7 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             items.append(
                 {"code": "quantity", "item": "rays.trace", "message": "a folded path requires rays.trace version 2"}
             )
-        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE):
+        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE, SPOT_NATIVE):
             items.append(
                 {
                     "code": "feature",
@@ -200,6 +204,8 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
     """
     if quantity == WAVEFRONT_NATIVE:
         return validate_wavefront_native("spec", spec, schemas)
+    if quantity == SPOT_NATIVE:
+        return validate_spot_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -302,6 +308,8 @@ class OptilandEngine:
         read = time.perf_counter()
         if quantity == MTF_NATIVE:
             return self._run_mtf(request, case, engine)
+        if quantity == SPOT_NATIVE:
+            return self._run_spot(request, case, engine)
         if quantity == WAVEFRONT_NATIVE:
             try:
                 data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
@@ -399,6 +407,24 @@ class OptilandEngine:
         counts = {"surfaces": len(case["system"]["surfaces"]), "lines": len(data["lines"]), **field_counts(data)}
         if self._log is not None:
             self._log(mtf_log_line(counts, asked.ladder, seconds, time.perf_counter() - started))
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_spot(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``spot.native`` request whose spec is one: optiland's SpotDiagram or RayFan (``spot``)."""
+        try:
+            data = answer_spot(request["spec"], request.get("engineOptions") or {}, case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_spot_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {SPOT_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **spot_field_counts(data)}
         diagnostics = {"warnings": [], "counts": counts}
         return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
 

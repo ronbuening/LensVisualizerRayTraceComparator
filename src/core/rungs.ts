@@ -9,6 +9,7 @@ import { PARAXIAL_FIRST_ORDER } from "../contract/quantities/paraxialFirstOrder.
 import { RAYS_TRACE } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
+import { SPOT_NATIVE } from "../contract/quantities/spotNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -16,8 +17,10 @@ import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunFields, RunSpec } from "../contract/runSpec.ts";
 import { DEFAULT_RAY_FIELDS } from "../rays/raySets.ts";
+import type { SpotNativeAsk } from "../rays/spotSets.ts";
 import { waveFrequencies } from "./mtfRecipe.ts";
 import type { MtfRecipe } from "./mtfRecipe.ts";
+import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -42,6 +45,13 @@ export interface RungInputs {
    * `needsRecipe`; null, or left out, for any other rung, and where the source has no recipe for the run.
    */
   readonly recipe?: MtfRecipe | null;
+  /**
+   * The spot sets of the run, from the source of its case (`CaseSource.spotRaySets`), for a rung that says it
+   * `needsSpotRaySets`: the rays of the tabs that show a spot or a ray fan. Empty, or left out, for any other rung.
+   */
+  readonly spotRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own spot requests of the same tabs, from the same source, for such a rung (`SpotNativeAsk`). */
+  readonly spotAsks?: readonly SpotNativeAsk[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -69,6 +79,11 @@ export interface RungDefinition {
    * when such a rung is run.
    */
   readonly needsRecipe?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's spot sets (`RungInputs.spotRaySets` and `spotAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsSpotRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -472,6 +487,57 @@ export const r5gRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r7a`, the spot and the ray fan of LensVisualizer's coma and bokeh tabs on identical rays: one
+ * `rays.trace` request for each of the run's spot sets (`RungInputs.spotRaySets`), the rays each tab launches, every
+ * sample of its pupil pattern and its chief ray, which every engine traces as given. The comparator's spot estimator
+ * is applied to where each engine lands them on the plane of the case, and the centroids, the RMS radii and the
+ * transverse error of every ray are compared, beside which rays got through (`src/compare/raysSpot.ts`). It is
+ * asked of the engines of the run, and only of a run whose source has spot sets: a LensVisualizer lens at infinity
+ * focus that is not folded.
+ */
+export const r7aRung: RungDefinition = Object.freeze({
+  id: "r7a",
+  quantity: RAYS_TRACE,
+  needsSpotRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.spotRaySets ?? []),
+});
+
+/** The engines of the rung `r7b`: LensVisualizer, whose tabs are asked, and optiland's own spot and ray fan. */
+export const R7B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r7b`, LensVisualizer's coma and bokeh tabs beside an engine's own spot and ray fan: one `spot.native`
+ * request for each pattern the tabs draw (`RungInputs.spotAsks`), at the case's reference line and the tabs' own
+ * fractions of the half field, asked of LensVisualizer, whose answer is its tab's, and of optiland, whose answer is
+ * its `SpotDiagram` or its `RayFan`. optiland is handed the angle LensVisualizer draws each fraction at as its option
+ * `fieldAnglesDeg`, matched to the request by its spec. Recorded, of those two engines and of no other, and run only
+ * where it is named: optiland is not on every machine.
+ */
+export const r7bRung: RungDefinition = Object.freeze({
+  id: "r7b",
+  quantity: SPOT_NATIVE,
+  needsSpotRaySets: true,
+  engines: R7B_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (
+    _runSpec: RunSpec,
+    inputs?: RungInputs,
+    engineId?: string,
+    request?: QuantityRequest,
+  ): JsonObject | undefined => {
+    if (engineId !== R5_ANGLES_ENGINE || request === undefined) return undefined;
+    const asked = canonicalJson(request.spec);
+    const ask = inputs?.spotAsks?.find((each) => canonicalJson(each.spec) === asked);
+    return ask === undefined ? undefined : { [R5_ANGLES_OPTION]: [...ask.fieldAnglesDeg] };
+  },
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.spotAsks ?? []).map((ask) =>
+      makeRequest({ caseId: opticalCase.id, quantity: SPOT_NATIVE, spec: ask.spec as JsonObject }),
+    ),
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -489,6 +555,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r6aRung,
   r6bRung,
   r6cRung,
+  r7aRung,
+  r7bRung,
 ]);
 
 /**

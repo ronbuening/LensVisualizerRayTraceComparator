@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:spot.native.data",
+  "title": "spot.native data",
+  "description": "An engine's own spot, or ray fan, of a case: per requested field, where its chief ray lands and, relative to that landing, the centroid and the RMS radius of the spot (a rings pattern) or the transverse error of each fan sample (a fan), with how the engine came by them. Lengths in mm, x sagittal and y tangential in the contract frame. Code checks that an unavailable field says why and has neither spot nor fan, that an ok field has exactly the member of the pattern, and that a fan's arrays have one length.",
+  "type": "object",
+  "properties": {
+    "pattern": {
+      "description": "The kind of the spec's pupil the answer is of: rings (a spot) or fan.",
+      "enum": ["rings", "fan"]
+    },
+    "fields": {
+      "description": "One entry per requested field, in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "description": "The field as it was requested: a fraction of the half-field angle, or an angle in degrees.",
+            "type": "number"
+          },
+          "fieldAngleDeg": {
+            "description": "The chief-ray field angle the engine used, in degrees; null where it found none.",
+            "type": ["number", "null"],
+            "exclusiveMinimum": -90,
+            "exclusiveMaximum": 90
+          },
+          "imageHeightMm": {
+            "description": "The distance from the axis at which the engine's chief ray of the field lands on the image plane of the case; null where it states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "status": {
+            "description": "ok: the engine stands by its spot or fan. unavailable: it has none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the field is unavailable; always there for an unavailable field.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "spot": {
+            "description": "Of a rings pattern: the centroid of the spot relative to the chief ray's landing, [x, y], and its RMS distance from that centroid. Null for a fan and for an unavailable field.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "properties": {
+                  "centroidMm": {
+                    "type": "array",
+                    "items": { "type": "number" },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  "rmsRadiusMm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonNegative" }
+                },
+                "required": ["centroidMm", "rmsRadiusMm"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "fan": {
+            "description": "Of a fan: the pupil coordinate of each sample from -1 to 1, and its transverse error along the fan's axis relative to the chief ray's landing (y for a tangential fan, x for a sagittal one), NaN for a sample that did not land; shapes [m]. Null for a rings pattern and for an unavailable field.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "properties": {
+                  "pupil": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" },
+                  "errorMm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector" }
+                },
+                "required": ["pupil", "errorMm"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "sampling": {
+            "description": "How the engine sampled the field, by names of its own: counts of rays launched and landed.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": ["field", "fieldAngleDeg", "imageHeightMm", "status", "spot", "fan", "sampling"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "params": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "lines": {
+      "description": "The line the engine actually traced at: one, the request's.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "wavelengthNm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" },
+          "weight": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+        },
+        "required": ["wavelengthNm", "weight"],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+    }
+  },
+  "required": ["pattern", "fields", "method", "lines", "notes"],
+  "additionalProperties": false
+}

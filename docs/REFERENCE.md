@@ -3576,3 +3576,257 @@ The cold benchmark MTF check at `--jobs 2` had written about 6,800 store entries
 6.5 hours. The owner accepted the cold features run, rays and MTF, as the stage's evidence. Against the warm owner
 store, where the committed engines' answers are already held, the benchmark check takes minutes. None of these
 runs touched `runs/store`, `baselines/` or `reports/`.
+
+## Stage 6.2: spots and ray fans
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4   # the rays rungs with R7a
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+**Stage 6.1 is moot** (owner decision, 2026-10-26). LensVisualizer's optics rewrite left one trace stack, so there
+is no `lv-legacy` tracer behind its coma, field-curvature, bokeh or lateral-colour tabs. Each Phase 6 stage's
+identical-ray rung covers the rays its own tab launches instead. For coma and bokeh that rung is R7a.
+
+### The spot sets
+
+`CaseSource.spotRaySets` makes the rays the coma and bokeh tabs launch (`src/engines/lv/spotRaySets.ts`). The
+orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says `needsSpotRaySets`. The
+manifest records them under `runs[].spotRaySets`, and a rung gets them as `RungInputs.spotRaySets` and
+`RungInputs.spotAsks`. At LensVisualizer `879c06102` the patterns are:
+
+| Pattern | Pupil | Fields (fraction of the half field) | Rays a field | Weight of a ray |
+|---|---|---|---:|---|
+| coma point cloud | rings `[1, 8, 16, 24, 32, 40]` (`sampleCircularPupil`) | `[0, 0.25, 0.5, 0.75]` | 121 + chief | area (`sample.weight`) |
+| coma tangential fan | 51 samples (`sampleOrthogonalPupilFan`) | the detail field, `L.offAxisFieldFrac` | 51 + chief | 1 |
+| coma sagittal fan | 51 samples | the detail field | 51 + chief | 1 |
+| bokeh tile | rings `[1, 12, 24, 36, 48, 60, 72, 84]` | `[0, 0.25, 0.5, 0.75]` | 337 + chief | area × LensVisualizer's bulk transmission at the line (`lvRayWeights`) |
+
+That makes ten sets per line, each with its chief ray last (`groups.chiefIndex`) and its field angle under
+`groups.field`. A sample crosses the first vertex plane at `(x · EPSD, yChief + y · EPSD)` with the slopes
+`(0, uField)` of `computeOffAxisFieldGeometry`. It is launched `rayLead` before that plane, in the direction
+`directionFromSkewSlope`, as the tabs' skew adapter launches it. EPSD is the hook's paraxial entrance-pupil radius
+(`lvPupilSeed`), and the field geometry is the hook's (`lvSpotSetup`, `src/engines/lv/spotSetup.ts`).
+
+Each restated line has a canary in `test/integration/lv/canaries.test.ts`. There are four Stage 6.2 tests there:
+the patterns and fields, the launch, `traceSkewRay` as the tabs' skew adapter, and the drawer's request, with the
+tabs' channel and the bokeh tab's sensor plane.
+
+`test/integration/lv/spotRays.test.ts` checks the sets against LensVisualizer's own output. It traces each ray of
+a set with LensVisualizer's exact tracer (`traceEngineRay`, with the tabs' trace options), carries it to the plane
+as the tabs carry a skew ray, and sums in LensVisualizer's order. On every benchmark lens that gives the tabs' own
+figures to the bit:
+- the point cloud's centroid and RMS radius;
+- every sample of both fans;
+- every bokeh tile's centroid, both components, and its RMS radius.
+
+`lv`'s answers of all four asks are checked against the tabs' output on the same lenses. A second test holds every
+bokeh tile ray by ray to LensVisualizer's `traceSkewRay` of its samples, which is the adapter's launch. It checks
+each ray's offsets from the chief ray of `lvBokehChiefLanding` and its weight, on three kinds of case:
+- the benchmark lenses;
+- a lens on a plane 0.05 mm behind its design plane;
+- `laowa-105mm-f2-stf`, whose apodizing glass absorbs. There a weight is not the area alone, so the case tests
+  `lvRayWeights` as the stand-in for the tab's `sample.trace.transmission`.
+
+What is not tested is that the tabs' React code hands these functions exactly this request: that rests on the
+canaries of the drawer's lines.
+
+The source makes no sets in these cases, each a coded problem of the run:
+- a finite object (`object-not-at-infinity`): the tabs launch collimated rays at every focus;
+- a folded path (`folded-path`);
+- a fan whose field angle is not above 0 (`lv-no-fan-on-axis`);
+- a field LensVisualizer gives no launch (`lv-no-launch`), or only a vector launch (`lv-vector-launch`).
+
+focus-stations (61 runs, finite objects) and folded therefore have no R7a jobs.
+
+### R7a: the spot of identical rays (gated)
+
+R7a asks `rays.trace` of the spot sets (`r7aRung`) and compares them with `raysSpotComparator`
+(`src/compare/raysSpot.ts`). The rays used are those valid in both answers of a pair, as in R4. On them, the
+pure estimator `estimateSpot` (`src/estimators/spot.ts`) gives:
+- each ray's transverse error from the chief ray's landing;
+- the flux-weighted centroid relative to the chief ray;
+- the RMS radius about that centroid.
+
+The estimator uses compensated sums and IEEE basic operations only. It keeps what the rounding of each landing
+difference left out, and carries the centroid in two doubles. Its proofs are analytic
+(`test/estimators/spot.test.ts`):
+- perfect focus;
+- a defocus disc (RMS `D/√2`);
+- a pure coma comet (centroid `(0, C)`, RMS `C√(2/3)`);
+- a tilted plane.
+
+Each proof is a cubature with derived bounds. Exact dyadic sums check the definition, including a spot 2^-50 mm
+across at 1024 mm from its chief ray, where no difference is exact.
+
+The Stage 6.2 review found that the first version kept the rests but not the centroid's own rounding. On that spot
+its radius was 7.5e-14 mm against an exact 4.3e-15 mm. Removing any of the carried terms turns that test red.
+
+Under policy version 16 the gates are:
+
+| Metric | Gate |
+|---|---|
+| `transverseError.maxAbs` | 1e-8 mm |
+| `centroid.maxAbs` | 1e-8 mm |
+| `rmsRadius.maxAbs` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+`mask.rimBand`, `rays.compared` and `rays.dropped` are reported. There is no floor. A bundle with nothing to
+measure (`no-rays`, `no-flux`, `no-reference`) is unmeasured, not failed.
+
+### R7b: the tabs beside optiland (recorded)
+
+`spot.native` v1 (contract 1.0; `contract/CONTRACT.md`) is a spot or a fan per field.
+- **`lv`** answers with the tabs' numbers as they present them (`answerLvSpot`, `src/engines/lv/spot.ts`, method
+  `lv-coma-tab` or `lv-bokeh-tab`). The point cloud comes from `computeComaAnalysis`, the fans from its meridional
+  and sagittal coma, and a tile from `computeBokehFieldFootprint` on the case's plane.
+- **`optiland`** answers with its own `SpotDiagram` (hexapolar rings nearest the asked count, about the centroid)
+  and `RayFan`, one field per fresh optic (`workers/python/lvrtc_optiland/spot.py`). Every setting is read back
+  (`test_spot.py`, with a deliberate mistake for each check). Results are converted to the contract's frame: y is
+  mirrored, and a tangential fan is reversed and negated.
+
+`lv` refuses, as unsupported, what its tabs do not draw. The case and the spec decide every item except
+`focus.off-design` before LensVisualizer is asked anything; only the design plane needs LensVisualizer:
+
+| Item | When |
+|---|---|
+| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 555 nm. |
+| `focus.off-design` | A coma pattern off the design plane. Every best-focus run. |
+| `pupil.rings` | A bokeh tile of other rings than LensVisualizer's own. |
+| `fields.angles-deg` | Fields as angles. |
+| `object.finite` | A finite object. |
+| `path.folded` | A folded path. |
+
+`spotNativeComparator` (`src/compare/spotNative.ts`) sorts each field with R5's `classifyNativeField` before any
+difference is taken. It then records:
+- `chiefLanding.maxAbs`, `spotCentroid.maxAbs`, `spotRmsRadius.maxAbs` and `fanError.maxAbs`;
+- `fields.compared`, `fields.data` and `fields.unavailable`;
+- `fanSamples.unpaired`.
+
+The chief-landing limit of the sorting is 1e-5 mm (policy 16, owner decision 2026-10-26). If two answers' chief
+rays land further apart than that, the field is data, set aside, and the pair is ATTENTION. The spot and fan
+figures have no attention band (see the owner's decisions below). A policy without the limit sets no field aside,
+and the pair's notes then say so.
+
+`test/integration/optiland/r7.test.ts` (tier 3) runs both rungs on three benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines, and at its best axial focus. R7a must pass with every
+figure measured. `lv` must answer and refuse exactly as listed above, and optiland must answer every ask.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `a94c0ecd7` (the tree of `879c06102`, closure `c46cbf11`) and optiland
+`4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of
+`r0,r1,r2,r3,r4,r7a,r7b` has 17,760 jobs: 17,496 ok, 264 unsupported (all `lv` in R7b), no error, 1 min 37 s.
+Compare took 20 s: 26,208 pairs, 25,440 PASS, 240 RECORDED, 528 UNSUPPORTED, and no FAIL, ERROR or BLOCKED.
+
+**R7a.** 2,880 requests. All 8,640 pairwise pairs pass, each over 526,118 rays per pair.
+
+| Pair | transverse error | centroid | RMS radius |
+|---|---:|---:|---:|
+| `lv` / `ref` | 6.50e-13 (sigma-45 photopic) | 1.39e-13 | 7.72e-14 |
+| `optiland` / `ref` | 6.48e-13 | 1.42e-13 | 1.15e-13 |
+| `lv` / `optiland` | 5.17e-13 | 1.02e-13 | 1.59e-13 |
+
+No mask mismatch, no rim-band ray and no dropped ray. The worst figure is 15,000 times inside the gate. The other
+suites, run the same way into temporary directories, all pass:
+
+| Suite | R7a pairs | Worst transverse error |
+|---|---:|---:|
+| features | 2,700 | 7.39e-13 |
+| states | 19,200 | 6.73e-13 |
+| diffractive | 400 | 5.93e-13 |
+
+**R7b.** There are 120 recorded pairs: the 24 reference runs at the design plane with all four patterns, and the
+bokeh tiles of the 24 reference best-focus runs. The other 264 pairs are unsupported by `lv` as listed above. All
+336 fields are of two methods: none is data and none is unavailable. The largest chief-landing distance is
+1.40e-6 mm, inside the 1e-5 mm limit that came later, so the limit sets no field aside and marks no pair.
+
+The R7a figures above were measured before the review's estimator fix, which R7b does not use. That fix moves
+an RMS radius by at most the rounding of its first centroid: a few 1e-15 mm at the benchmark's image heights. The
+R7a maxima can therefore change in their last digit only.
+
+| Figure | Pairs | Median | Largest |
+|---|---:|---:|---:|
+| `chiefLanding.maxAbs` | 120 | 9.8e-14 | 1.40e-6 mm (sony-fe-400 f/8, field 0.25) |
+| `spotCentroid.maxAbs` | 72 | 3.4e-4 | 3.34e-3 mm (GF 63, field 0.5) |
+| `spotRmsRadius.maxAbs` | 72 | 4.3e-4 | 8.65e-3 mm (sigma-45, on the axis) |
+| `fanError.maxAbs` | 48 | 2.8e-4 | 5.29e-2 mm (sony-fe-20 tangential fan, near the rim) |
+
+Field by field, the coma clouds' RMS radii differ by a median of 8 % of LensVisualizer's and up to 72 %
+(Z 24-70 tele, on the axis). The bokeh tiles differ by a median of 6 % and up to 71 %. Across a fan's span, the
+tangential fans differ by a median of 5 % and up to 61 %.
+
+**Where the difference comes from: a LensVisualizer assumption to look at, not settled.** R7a shows that the rays
+LensVisualizer launches land alike in three engines to 1e-12 mm, so R7b's difference comes from which rays each
+side launches, not from tracing. LensVisualizer assumes the beam that reaches the image is a collimated disc of the
+paraxial entrance-pupil radius, about the paraxial chief ray on the first vertex plane. It samples that disc on
+equal-area rings, so its outermost ring is at 0.914 of the radius and never reaches the rim. optiland aims each
+field through the real stop, with a hexapolar pupil whose outer ring lies on the stop's rim. Whether
+LensVisualizer's pupil model is right for these tabs is open. Two things follow:
+- **The pupil size differs.** The real axial marginal ray that clears every aperture is 0.946 (sigma-35 f/1.4) to
+  1.0048 (GF 63) of LensVisualizer's radius.
+- **optiland loses rim rays.** Its rim ring is often clipped on the axis of fast lenses: 91 to 127 of 127 land in
+  a cloud, and 271 to 331 of 331 in a tile. LensVisualizer lands all of its own.
+
+Wide-angle fields add pupil aberration, which moves a fan's abscissae; this gives sony-fe-20's 5.3e-2 mm. The chief
+rays differ by up to 1.40e-6 mm because LensVisualizer's goes through the paraxial pupil's centre and optiland's
+through the stop's.
+
+### Owner decisions, 2026-10-26
+
+1. **The baselines are refreshed once, at the end of Phase 6**, as in Phase 4, and not in the Stage 6.2 commit.
+   Until then two checks fail, and only on policy identity (v15 recorded, v16 at hand): `lvrtc verify`, and
+   `test/cli/baseline.test.ts`'s "the committed baselines and reports of this repository hold together". Neither is
+   weakened. Before its commit, each Phase 6 stage instead checks the rays baselines for no DRIFT
+   (`node bin/lvrtc.mjs baseline check <suite> --jobs 4`).
+2. **R7b's chief-landing sorting limit is 1e-5 mm** (still policy 16, since nothing has been written at 16). The
+   spot and fan figures get **no attention band** until the pupil-model difference above is resolved: either
+   LensVisualizer's collimated disc of the paraxial entrance pupil or optiland's real stop to its rim.
+3. **R7b stays out of every baseline for now.** It can be run with `--rungs r7b`. A rays baseline holds every rung
+   its run was compared on, so the refresh below never names R7b beside the rays rungs.
+4. **The validation statement and its signed sentence are unchanged.** `STATEMENT_RUNGS` does not describe R7a.
+5. **The bokeh tile at the tab's own plane is deferred, and not covered.** The tab draws its infinity grid at its
+   own best focus (`infSensorZ`, canary). R7b intercepts the tile on the case's plane: the design plane and the
+   benchmark's best axial focus, never the tab's plane. Comparing there would need a new image-plane kind.
+
+### The Phase 6 end refresh
+
+This refresh is not run at Stage 6.2. Policy version 16 changes the policy hash, and the stage adds names to the
+LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's are STALE:
+- by policy;
+- by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
+- by engine for `optiland-wave`, whose revision hashes the worker's (`src/engines/optiland/wavefrontEngine.ts`), so
+  the R6c records of the benchmark's MTF baseline are STALE(engine) too.
+
+`ref`'s revision did not move. The store therefore recomputes the other five engines, and a cold MTF run of the
+benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
+
+R7a joins the rays baselines of the suites whose runs have spot sets: benchmark, features, states and diffractive.
+focus-stations (finite objects) and folded (folded paths) have none, so they are rewritten with their own rungs.
+At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
+another:
+
+```bash
+for suite in benchmark features states; do
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4
+  node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite
+done
+node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a --jobs 4
+node bin/lvrtc.mjs compare diffractive --jobs 4 && node bin/lvrtc.mjs baseline write diffractive
+node bin/lvrtc.mjs run suites/folded.json --engines lv,ref,optiland --rungs r0,r1,r2,r3 --jobs 4
+node bin/lvrtc.mjs compare folded --jobs 4 && node bin/lvrtc.mjs baseline write folded
+node bin/lvrtc.mjs run suites/focus-stations.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4 --jobs 4
+node bin/lvrtc.mjs compare focus-stations --jobs 4 && node bin/lvrtc.mjs baseline write focus-stations
+# the MTF baselines, each after its rays baseline: the rungs it holds
+for suite in features states focus-stations; do
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r4,r4f,r6a --jobs 4
+  node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite --mtf
+done
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b,r6c --jobs 2
+node bin/lvrtc.mjs compare benchmark --jobs 4 && node bin/lvrtc.mjs baseline write benchmark --mtf
+node bin/lvrtc.mjs statement && node bin/lvrtc.mjs verify
+```
+
+Before each write, `baseline check <suite> [--mtf] --jobs 4` says whether a record changed beyond going STALE. Read
+`git diff reports/` after the writes.

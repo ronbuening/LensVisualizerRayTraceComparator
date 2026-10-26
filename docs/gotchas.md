@@ -2390,3 +2390,102 @@ angle/stop-envelope probes rather than treating an MTF-gate refusal as a request
 
 LV permits radial exponents 2 through 32, including odd ones. Native RadialPhaseProfile is even only; such an
 odd profile is `optiland-odd-radial-phase`, before building, rather than a coefficient shifted into an even slot.
+
+## Spots and ray fans (Stage 6.2)
+
+Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4e893f53`, on the benchmark.
+
+### LensVisualizer's coma and bokeh pupil is a disc of the paraxial entrance pupil, on equal-area rings
+
+- **Where.** `traceOffAxisBundleFromSamples` (`src/optics/analysis/aberration/offAxis.ts`) launches each pupil
+  sample collimated, with the slopes `(0, uField)` of `computeOffAxisFieldGeometry`. It crosses the first vertex
+  plane at `(x · EPSD, yChief + y · EPSD)`, where EPSD is the hook's paraxial entrance-pupil radius. The rings of
+  `sampleCircularPupil` are equal-area, so the outer ring of the coma cloud lies at 0.914 of the radius, and no
+  sample is on the rim. LensVisualizer assumes the beam that reaches the image is that disc about the paraxial
+  chief ray. It aims no ray at the real stop.
+- **Effect.** The real axial marginal ray that clears every aperture is 0.946 (Sigma 35 mm f/1.4) to 1.0048
+  (GF 63 mm) of LensVisualizer's radius. Off the axis, pupil aberration moves where a sample really crosses the
+  stop. optiland's `SpotDiagram` and `RayFan` aim through the real stop instead, with a hexapolar pupil and fan
+  ends on the stop's rim. The same field therefore has a different spot in each:
+  - RMS radii of the coma cloud differ by a median of 8 % and up to 72 % of LensVisualizer's;
+  - bokeh tiles differ by a median of 6 % and up to 71 %;
+  - the tangential fans differ by a median of 5 % of the fan's span and up to 61 % (5.3e-2 mm, Sony FE 20 mm
+    near the rim).
+- **Handled.** R7a traces exactly LensVisualizer's rays in every engine. They land alike to 6.5e-13 mm, so the
+  tracing is judged and passes. R7b records the tabs beside optiland's classes. Its chief-landing sorting limit is
+  1e-5 mm, and the spot and fan figures have no attention band (owner decision 2026-10-26). Whether
+  LensVisualizer's pupil model is right for these tabs is a LensVisualizer assumption to look at, not settled; the
+  band waits for that. Pinned by `test/integration/lv/spotRays.test.ts`, which gives the tabs' numbers to the bit
+  from the restated rays traced by LensVisualizer's exact tracer, and by the canary "a sample of the tabs' pupil
+  still crosses the first vertex plane where the spot sets launch it".
+- **Class.** method: recorded.
+
+### The tabs trace the authored indices, and the coma tab only at the design plane
+
+- **Where.** Both tabs call `traceOffAxisBundleFromSamples(..., undefined)`, with no chromatic channel, so a ray
+  sees each surface's authored `nd`. The coma tab lands on the image plane of `computeOffAxisFieldGeometry`, which
+  is the design plane.
+- **Effect.** A photopic case's line 0 is 555 nm, which is not the tabs' line. A best-focus case's plane is not
+  the coma tab's plane.
+- **Handled.** `lv` answers `spot.native` only for a case whose line 0 has the authored indices; otherwise it
+  answers `lines.not-authored-reference`. It answers a coma pattern only on the design plane; otherwise it
+  answers `focus.off-design`. On the benchmark these are 264 unsupported pairs of R7b and no error. R7a still
+  traces the spot sets at every line of every case. Pinned by the canaries of the tabs' bundles and by
+  `test/engines/lv/spot.test.ts` ("what the tabs do not draw is unsupported").
+- **Class.** data: unsupported.
+
+### The bokeh tab draws its infinity grid at its own best focus
+
+- **Where.** `bokeh.ts` sets
+  `infSensorZ = bf(0) + [imgZ(view) - imgZ(0)] + [bf(0) - bf(view)]`, the tab's own least-RMS plane, and lands
+  every tile there.
+- **Effect.** The tile the tab shows is not on the case's plane, neither the design plane nor the benchmark's
+  `lv-best-axial` plane.
+- **Handled.** R7b asks `computeBokehFieldFootprint` for the tile on the case's plane, whatever that plane is.
+  It compares the tile at the design plane and at the best axial focus, never at the tab's own plane. Comparing
+  there would need a new image-plane kind; the owner deferred it (2026-10-26), so the tab's own plane is not
+  covered. Pinned by the canary on `infSensorZ` and by `test/engines/lv/spot.test.ts` ("a bokeh tile is
+  intercepted at the plane of the case").
+- **Class.** method: not covered.
+
+### optiland's spot radius is about the chief ray unless it is asked about the centroid
+
+- **Where.** `SpotDiagram` takes `reference="chief_ray"` by default, and `rms_spot_radius()` is then the RMS
+  distance from where the chief ray lands, not from the spot's centroid.
+- **Effect.** The default radius is the root of the squares of the radius about the centroid and the centroid's
+  offset from the chief ray. It is no RMS radius in LensVisualizer's or the contract's sense.
+- **Handled.** The worker asks `reference="centroid"`, in global coordinates, and reads both back (`spot_step`).
+  It takes the centroid relative to the chief ray's own landing (`probe_field`). Pinned by
+  `test_optilands_spot_radius_is_about_the_chief_ray_unless_it_is_asked_about_the_centroid` (`test_spot.py`),
+  which holds the default to that root on a real lens.
+- **Class.** convention: handled.
+
+### optiland's ray fan refers to its middle ray, and to the mean of the lit rays when that is dark
+
+- **Where.** `RayFan` gives each sample's error relative to the middle sample of the fan. When the middle ray is
+  stopped, for example by a central obstruction, it silently refers to the mean of the lit rays instead.
+- **Effect.** Such a fan is relative to another point than the chief ray's landing, and nothing in the answer
+  says so.
+- **Handled.** The worker checks the middle sample (`PUPIL_CENTRE_TOLERANCE`), and a fan whose middle ray is dark
+  is the unavailable field `fan-centre-lost`. Pinned by
+  `test_a_fan_whose_middle_ray_is_dark_is_referred_to_the_mean_and_the_worker_says_so` on an annular stop.
+- **Class.** method: unavailable.
+
+### optiland's outer ring and fan ends lie on the stop's rim, and are often stopped
+
+- **Where.** The hexapolar distribution's outer ring and a fan's two end samples are aimed at the rim of the
+  stop, a double whose height may be a rounding beyond the clip radius.
+- **Effect.** On the axis of the fast benchmark lenses the whole outer ring is often lost:
+  - 91 to 127 of a coma cloud's 127 rays land;
+  - 271 to 331 of a bokeh tile's 331 land;
+  - fan ends are NaN where LensVisualizer's land.
+
+  LensVisualizer lands all of its own, since its outer ring is inside the disc. Why each ray is stopped was not
+  separated lens by lens: it may be the rounding at the stop's rim, or a clear aperture that the stop's marginal
+  ray does not clear.
+- **Handled.** Nothing is removed from or added to optiland's spot. The rays launched and landed are recorded
+  under `sampling`, and a fan's sample that landed in one answer only is counted (`fanSamples.unpaired`). The
+  worker's tests accept the spot of all the rays or of those inside the rim, and nothing else. Pinned by
+  `test_the_spot_on_the_axis_is_the_exact_rays_of_its_pupil_points_about_their_centroid` and
+  `test_an_oblique_fan_is_the_contracts_frame_point_by_point`.
+- **Class.** method: recorded.

@@ -13,6 +13,7 @@ import { probeRaySets } from "../rays/probe.ts";
 import { fixtureRecipe } from "./mtfRecipe.ts";
 import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
+import type { SpotSetResolution } from "../rays/spotSets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
@@ -65,6 +66,13 @@ export interface CaseSource {
    * bit, so the requests made from them have the same ids. A source without this method has no rays to give.
    */
   raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
+  /**
+   * The spot sets of a run of a case this source resolved (`src/rays/spotSets.ts`): the rays the tabs that show a
+   * spot or a ray fan launch, one `rays.trace` spec for each of their patterns, fields and lines, a coded problem
+   * for each field that has none, and the engines' own spot requests of the same patterns. A pure function of the
+   * run and the case, like the ray sets. A source without this method has no spot sets to give.
+   */
+  spotRaySets?(run: RunSpec, opticalCase: OpticalCase): SpotSetResolution | Promise<SpotSetResolution>;
   /**
    * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
    * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.

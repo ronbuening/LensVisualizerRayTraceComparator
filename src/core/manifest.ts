@@ -82,6 +82,11 @@ export interface ManifestRun {
    */
   readonly fineRaySets?: ManifestRaySets;
   /**
+   * The spot sets of the run (`CaseSource.spotRaySets`): the rays of the tabs that show a spot or a ray fan; stated
+   * exactly when a rung that compares spots was run on it.
+   */
+  readonly spotRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */
