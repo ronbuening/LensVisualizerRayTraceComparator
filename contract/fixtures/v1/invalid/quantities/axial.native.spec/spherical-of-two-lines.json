@@ -1,0 +1,17 @@
+{
+  "kind": "spherical",
+  "lines": [
+    0,
+    1
+  ],
+  "nearAxis": 0.125,
+  "marginal": [
+    0.875,
+    0.75
+  ],
+  "profile": [
+    0.125,
+    0.5,
+    0.875
+  ]
+}

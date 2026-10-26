@@ -12,3 +12,11 @@ export {
   sampleCircularPupil,
   sampleOrthogonalPupilFan,
 } from "./analysis/spots.ts";
+export {
+  DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS,
+  MARGINAL_PUPIL_FRACTIONS,
+  NEAR_AXIS_REAL_FRAC,
+  computeLongitudinalChromaticFocus,
+  computeSAProfile,
+  computeSphericalAberration,
+} from "./analysis/axial.ts";

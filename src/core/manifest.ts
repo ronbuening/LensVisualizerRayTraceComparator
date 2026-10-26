@@ -87,6 +87,11 @@ export interface ManifestRun {
    */
   readonly spotRaySets?: ManifestRaySets;
   /**
+   * The axial sets of the run (`CaseSource.axialRaySets`): the rays of the tabs that present the beam along the
+   * axis; stated exactly when a rung that compares axial intercepts was run on it.
+   */
+  readonly axialRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

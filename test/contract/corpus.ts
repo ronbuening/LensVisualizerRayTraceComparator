@@ -24,6 +24,8 @@ import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/proto
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
 import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.ts";
 import { SPOT_NATIVE } from "../../src/contract/quantities/spotNative.ts";
+import { AXIAL_NATIVE } from "../../src/contract/quantities/axialNative.ts";
+import type { AxialNativeData, AxialNativeField, AxialNativeSpec } from "../../src/contract/quantities/axialNative.ts";
 import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
@@ -620,6 +622,85 @@ export const SPOT_DATA_FAN: SpotNativeData = {
   method: { name: "synthetic-fan", params: { samples: 5 } },
   lines: [{ wavelengthNm: 546.07, weight: 1 }],
   notes: ["one sample is stopped by an aperture"],
+};
+
+// ── axial.native ─────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own axial figures, and of the rays an engine states instead. The numbers describe no
+// lens: every value is a dyadic fraction.
+
+/** Spherical aberration at the reference line: a near-axis zone, two marginal candidates, a profile of three. */
+export const AXIAL_SPEC_SPHERICAL: AxialNativeSpec = {
+  kind: "spherical",
+  lines: [0],
+  nearAxis: 0.125,
+  marginal: [0.875, 0.75],
+  profile: [0.125, 0.5, 0.875],
+};
+
+/** Axial colour at three lines, the first the reference, with two candidates of the marginal ray. */
+export const AXIAL_SPEC_COLOUR: AxialNativeSpec = { kind: "colour", lines: [0, 1, 2], marginal: [0.875, 0.75] };
+
+/** An answer to `AXIAL_SPEC_SPHERICAL` by an engine that presents its figures: the profile's middle zone is lost. */
+export const AXIAL_DATA_SPHERICAL: AxialNativeData = {
+  kind: "spherical",
+  pupilRadiusMm: 12.5,
+  fields: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      paraxialFocusZ: null,
+      figures: {
+        landingMm: 0,
+        marginalFraction: 0.75,
+        marginalInterceptZ: 99.875,
+        nearAxisInterceptZ: 100.0625,
+        bestFocusZ: 99.9375,
+        bestFocusRmsMm: 0.0078125,
+        profileMm: encodeNdArray(Float64Array.of(0, NaN, -0.015625)),
+      },
+      rays: null,
+      sampling: { raysLaunched: 10, raysArrived: 8 },
+    },
+  ],
+  method: { name: "synthetic-spherical", params: {} },
+  notes: [],
+};
+
+/** An answer to `AXIAL_SPEC_COLOUR` by an engine that states its rays: two lines traced, the last unavailable. */
+export const AXIAL_DATA_COLOUR: AxialNativeData = {
+  kind: "colour",
+  pupilRadiusMm: 12.5,
+  fields: [0, 1]
+    .map((line): AxialNativeField => ({
+      line,
+      wavelengthNm: [587.5, 656.25][line],
+      status: "ok",
+      paraxialFocusZ: [100, 100.25][line],
+      figures: null,
+      rays: {
+        fractions: encodeNdArray(Float64Array.of(0.875, 0.75)),
+        arrived: encodeNdArray(Uint8Array.of(0, 1)),
+        exitPoint: encodeNdArray(Float64Array.of(NaN, NaN, NaN, 0, 8.25, 40), [2, 3]),
+        exitDirection: encodeNdArray(Float64Array.of(NaN, NaN, NaN, 0, -0.1875, 0.96875), [2, 3]),
+      },
+      sampling: { raysLaunched: 2, raysArrived: 1 },
+    }))
+    .concat([
+      {
+        line: 2,
+        wavelengthNm: 486.125,
+        status: "unavailable",
+        reason: "build-failed",
+        paraxialFocusZ: null,
+        figures: null,
+        rays: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-rays", params: { aiming: "paraxial" } },
+  notes: ["the outer candidate is stopped by an aperture"],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2429,6 +2510,48 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       ),
       "status-unconverged": fault(SPOT_DATA_RINGS, "/fields/0/status", "unconverged", "enum"),
       "mtf-curve": fault(SPOT_DATA_RINGS, "/fields/0/sagittal", [], "additionalProperties"),
+    },
+  },
+  [`${AXIAL_NATIVE}.spec`]: {
+    valid: { spherical: AXIAL_SPEC_SPHERICAL, colour: AXIAL_SPEC_COLOUR },
+    invalid: {
+      "spherical-of-two-lines": fault(AXIAL_SPEC_SPHERICAL, "/lines", [0, 1], "oneOf", ""),
+      "missing-profile": fault(AXIAL_SPEC_SPHERICAL, "/profile", REMOVE, "oneOf", ""),
+      "fraction-of-zero": fault(AXIAL_SPEC_COLOUR, "/marginal/0", 0, "oneOf", ""),
+      "fraction-above-one": fault(AXIAL_SPEC_SPHERICAL, "/nearAxis", 1.5, "oneOf", ""),
+      "colour-with-profile": fault(AXIAL_SPEC_COLOUR, "/profile", [0.5, 0.75], "oneOf", ""),
+      "kind-unknown": fault(AXIAL_SPEC_COLOUR, "/kind", "lateral", "oneOf", ""),
+    },
+  },
+  [`${AXIAL_NATIVE}.data`]: {
+    valid: { "spherical-figures": AXIAL_DATA_SPHERICAL, "colour-rays-and-unavailable": AXIAL_DATA_COLOUR },
+    invalid: {
+      "missing-kind": fault(AXIAL_DATA_SPHERICAL, "/kind", REMOVE, "required", ""),
+      "pupil-of-zero": fault(AXIAL_DATA_SPHERICAL, "/pupilRadiusMm", 0, "exclusiveMinimum"),
+      "missing-rays": fault(AXIAL_DATA_SPHERICAL, "/fields/0/rays", REMOVE, "required", "/fields/0"),
+      "negative-rms": fault(
+        AXIAL_DATA_SPHERICAL,
+        "/fields/0/figures/bestFocusRmsMm",
+        -0.5,
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "profile-as-numbers": fault(
+        AXIAL_DATA_SPHERICAL,
+        "/fields/0/figures/profileMm",
+        [0, 0],
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "arrivals-as-floats": fault(
+        AXIAL_DATA_COLOUR,
+        "/fields/0/rays/arrived",
+        encodeNdArray(Float64Array.of(0, 1)),
+        "oneOf",
+        "/fields/0/rays",
+      ),
+      "status-unconverged": fault(AXIAL_DATA_SPHERICAL, "/fields/0/status", "unconverged", "enum"),
+      "no-fields": fault(AXIAL_DATA_SPHERICAL, "/fields", [], "minItems"),
     },
   },
   [`${WAVEFRONT_NATIVE}.spec`]: {

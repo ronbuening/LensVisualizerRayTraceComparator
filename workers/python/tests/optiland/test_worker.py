@@ -95,6 +95,7 @@ class WorkerTest(TempDirTest):
                     "mtf.native": {"version": 1},
                     "wavefront.native": {"version": 1},
                     "spot.native": {"version": 1},
+                    "axial.native": {"version": 1},
                 },
                 "deterministic": True,
                 "maxConcurrency": 1,

@@ -1515,6 +1515,7 @@ and `validateData`.
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
 | `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 | `spot.native` | 1 | `quantities/spotNative.ts` | an engine's own spot (centroid and RMS radius about it) or ray fan of a field, relative to its chief ray, by its own pupil sampling |
+| `axial.native` | 1 | `quantities/axialNative.ts` | an engine's own figures of the beam along the axis (spherical aberration at a line, axial colour over lines) by its own pupil, or the real rays it traced for them, and its paraxial focus at each line |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2071,6 +2072,101 @@ chief-relative landing, along x or y), `centroid.maxAbs` (of the flux-weighted c
 `rmsRadius.maxAbs` (of the RMS radii about them), each gated at 1e-8 mm, and `mask.mismatches` at 0 with
 `mask.rimBand` counted, as R2 counts them: no other rung traces these rays. Without a chief ray both answers
 landed, or without another ray, the spot's three figures are not measured, and the pair says why.
+
+#### Axial sets and rung R8a
+
+**Axial sets** (`CaseSource.axialRaySets`, `src/rays/axialSets.ts`) are the rays of LensVisualizer's
+spherical-aberration section (its aberrations tab) and its axial-colour section (its chromatic tab), and no part of a
+run's ray sets. Only a LensVisualizer lens has them (`src/engines/lv/axialRaySets.ts`, zones in `axialZones.ts`); the
+manifest records them under `runs[].axialRaySets`, sets and problems as above, exactly when a rung that needs them
+(`RungDefinition.needsAxialRaySets`: `r8a`, `r8b`) was run.
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | the analysis drawer's, as for the spot sets: the hook's pupil radius `r` for the case's stop radius |
+| zones | of spherical aberration the near-axis zone (`NEAR_AXIS_REAL_FRAC`), the marginal candidates in the order tried (`MARGINAL_PUPIL_FRACTIONS`) and the profile (`PROFILE_FRACS`); of axial colour its candidates (`DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS`, each once, clamped, above 0) |
+| rays | two sets: the profile's zones, and the near-axis zone, the marginal candidates and the colour candidates not among them, each zone once; each zone `f` the ray launched at the height `f × r` and its mirror image at `-f × r`, in that order, on the meridian, parallel to the axis (`(0, 0, 1)`), started `rayLead` ahead of the first vertex plane as LensVisualizer's meridional launch starts it. Weight 1; `groups.field.angleDeg` 0; no chief ray |
+| lines | the same rays at every line of the case, as the axial-colour section traces the same heights at each channel |
+
+A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a pupil radius not
+above 0 (`no-pupil`) and rays that would not start in front of the first surface (`launch-behind-first-surface`) have
+no axial sets. Every restated line has a source canary, and the sets, traced as the sections trace them (the authored
+indices, or a channel's), give the sections' intercepts, best focus, RMS, profile and channel foci to the bit
+(`test/integration/lv/axialRays.test.ts`).
+
+**Rung R8a** asks one `rays.trace` request of each axial set and compares each pair of answers with the comparator's
+axial estimator (`src/estimators/axialIntercept.ts`), on the rays both answers brought to the image: where each ray's
+exit (`exitPoint`, `exitDirection`) crosses the axis, `z - y n / m`, and the least-squares focus of the set's mirror
+pairs whose two rays both cross it, `sum u^2 z / sum u^2` with `u = m / n`, and the RMS of their heights there. An
+intercept is judged on the transverse scale: `intercept.maxScaled`, the largest difference of a ray's two intercepts
+times the larger of its two slopes (the height at which each engine's ray passes the other's crossing), gated at
+1e-8 mm, with `intercept.maxAbs` along the axis shown beside it; `focus.maxScaled`, the difference of the two foci
+times the larger RMS slope, gated at 1e-8 mm, with `focus.maxAbs` beside it; `focusRms.maxAbs` gated at 1e-8 mm; and
+`mask.mismatches` at 0 with `mask.rimBand` counted. Each figure takes the larger slope of the two answers, so that
+an engine whose slope is wrong and small cannot scale its own difference away; the focus figures are the rung's only
+sign of exit slopes that differ where the intercepts agree. A ray whose intercept or slope is no finite double
+(`out-of-range`) has none. A ray that crosses the axis in one answer and not in the other, and a set off the
+meridional plane, are not comparable; a set of no mirror pairs has no focus.
+
+### `axial.native`
+
+Version 1, added at Stage 6.3, changes no existing quantity, contract version or identity. It is an engine's own
+figures of the beam along the axis of a system whose object is at infinity, from rays launched parallel to the axis
+at fractions of the engine's own pupil radius at the first line asked, the same heights at every line: what
+LensVisualizer's spherical-aberration and axial-colour sections present, and what optiland traces with its own pupil
+and paraxial focus at each line. Nothing of an answer is gated: rung R8b records it.
+
+The spec is one of two kinds:
+
+| Kind | Members | Meaning |
+|---|---|---|
+| `spherical` | `lines` (one index), `nearAxis`, `marginal`, `profile` | spherical aberration at one line: each zone a ray and its mirror image; the near-axis pair the reference, the first marginal candidate whose two rays cross the axis the marginal pair, the profile's pairs the bundle whose least-squares focus is the best focus |
+| `colour` | `lines` (each once; the first the reference), `marginal` | axial colour: one ray at each line, the first candidate whose ray crosses the axis at two lines or more (at the one line of a request of one) |
+
+Every fraction lies in (0, 1].
+
+| Answer member | Meaning |
+|---|---|
+| `kind` | the kind of the spec |
+| `pupilRadiusMm` | the radius the fractions are of, above 0 |
+| `fields[]` | one per asked line, in order: `line`, `wavelengthNm` traced, `status` `ok` or `unavailable`, `reason` (always for `unavailable`), `paraxialFocusZ` (the paraxial rear focal point, or null), `figures`, `rays`, `sampling` |
+| `figures` | an engine's own: `landingMm` (the height on the image plane of the case of the ray the line is identified by: the near-axis pair's mean, or the marginal ray of colour), `marginalFraction`, `marginalInterceptZ`; of spherical aberration also `nearAxisInterceptZ`, `bestFocusZ`, `bestFocusRmsMm` and `profileMm` (float64, one value a profile zone: its plus ray at the best focus relative to the near-axis plus ray, NaN where its pair did not arrive), null for colour |
+| `rays` | the real rays an engine traced, for figures the comparator forms: float64 `fractions` (signed), uint8 `arrived`, float64 `exitPoint` and `exitDirection` `[m, 3]`, NaN where a ray did not arrive |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+Every z is of the contract frame, mm. An `ok` line has exactly one of `figures` and `rays`; an `unavailable` line
+neither. The schemas, corpus, quantity invariants and the stdlib Python port (`validate_axial_native`) enforce these
+definitions. The engines `lv` (figures) and `optiland` (rays) answer it; `ref` does not.
+
+#### Rung R8b: LensVisualizer's axial sections beside optiland's own rays and focus
+
+`r8b` asks one `axial.native` request of each section (the case source's asks): spherical aberration at the case's
+reference line and axial colour at every line, at the sections' own zones, of `lv` and `optiland` only, and only
+where it is named. `lv` answers from `computeSphericalAberration` and `computeSAProfile` at the authored indices, and
+from `computeLongitudinalChromaticFocus` at each line whose wavelength is one of its channels' (C, d, F, g, or C′, e,
+F′, g for a lens of native e-line indices), stating under `sampling.indexMaxDelta` how far the channel's indices are
+from the case's; both on the design plane only. optiland answers with the rays its own ray generator launches at
+`(0, f)` of the axial field with its default aiming (paraxial), at the first line's optic, traced at every line, each
+setting read back, and `F2()` plus the image plane. optiland refuses, before anything is built, the cases whose
+first-order data its paraxial model does not see, as for `paraxial.first-order`: a phase profile
+(`optiland-phase-paraxial-unseen`) and a term of power 1 or 2 (`surface.asphere.linear-term`,
+`surface.asphere.quadratic-term`); its pupil and its focus would be those of another lens.
+
+The comparator forms the figures of rays with its estimator, at the marginal fraction the other answer took where it
+states one. A line is sorted before any difference (`classifyAxialLine`): R5's `classifyNativeField` first,
+unsupported (no figures) and data of other wavelengths; then the rung's own data, an answer that traced the line at
+indices other than the case's (`sampling.indexMaxDelta` above 0: `indices-differ`) and pupils whose radii differ by
+more than the relative limit (`pupils-apart`; the near-axis pair's mean lands on the axis by symmetry and so cannot
+tell pupils apart); then R5's landing of the identifying rays; then method. The figures are `pupilRadius.relative`
+(how far apart the pupils' radii are, of the larger) and `landing.maxAbs`; of spherical aberration
+`marginalIntercept.maxAbs`, `nearAxisIntercept.maxAbs`, `longitudinalSa.maxAbs`, `bestFocus.maxAbs`,
+`bestFocusRms.maxAbs`, `profile.maxAbs`; of colour `lineFocus.maxAbs` (each line's real focus),
+`relativeFocus.maxAbs` (each line's real focus relative to the first) and `paraxialFocalShift.maxAbs` (one engine's
+real relative focus beside the other's paraxial chromatic focal shift, a different quantity); and counts of lines of
+each kind. Policy 17 gives `landing.maxAbs` a limit of 1e-5 mm and `pupilRadius.relative` one of 2e-10, the limits of
+the sorting, and each spherical figure an attention band of 1e-10 mm; the colour figures have none, and
+`paraxialFocalShift.maxAbs` never has one. `axialFactsOfRecorded` repeats the sorting from the values a comparison
+records.
 
 ### `wavefront.native`
 

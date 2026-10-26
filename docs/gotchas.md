@@ -2489,3 +2489,139 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
   `test_the_spot_on_the_axis_is_the_exact_rays_of_its_pupil_points_about_their_centroid` and
   `test_an_oblique_fan_is_the_contracts_frame_point_by_point`.
 - **Class.** method: recorded.
+
+## Axial rays (Stage 6.3)
+
+Measured at LensVisualizer `45e6f852d` (engine closure `afef1f81`) and optiland `4e893f53`, on the benchmark.
+
+### LensVisualizer's chromatic tab traces a d-line catalog glass at the catalog's own index, at every channel
+
+- **Where.** `makeSurfaceDispersion` (`src/optics/chromatic/materialResolver.ts`) gives a glass whose d-line `nd` and
+  `vd` it matched to a catalog entry the catalog's own Sellmeier index at each channel. That includes LensVisualizer's
+  G channel, its reference channel: the d line, 587.56 nm, for a lens of d-line indices (the e line for a lens of
+  e-line indices), and not the Fraunhofer g line, which is its channel V
+  (`const nG = evaluateSellmeier(entry, CHANNEL_NM.G);`). A native e-line element is anchored to its
+  authored index instead (`const anchor = ne - evaluateSellmeier(entry, E_LINE_CHANNEL_NM.G);`), and so is the MTF
+  path (`anchoredIndexAtWavelength`, whose comment names the defocus anchoring prevents). The chromatic tab traces its
+  channels with `state.lens.dispersion[i]?.indexAt(channel)`; the aberrations tab, the MTF and every case trace the
+  authored indices.
+- **Effect.** LensVisualizer's axial-colour section and its spherical-aberration section disagree on the d-line
+  focus of one lens. A catalog match is accepted within `GLASS_ND_TOLERANCE` (3e-3) of the authored index: the Z 50 mm
+  f/1.2 has three glasses 4.3e-4 to 7.0e-4 off, and its G-channel marginal focus moves 4.3e-3 mm wide open; the Z
+  24-70 mm f/4 has one 2.3e-4 off, and moves 3.0e-2 mm at the tele end. Even a glass that matches is off by the
+  catalog fit's own residual (6.8e-6 for one glass of three benchmark lenses, 7.7e-9 in the Sony FE 20 mm), and moves
+  its lens's focus by 1e-6 to 2e-3 mm. The relative focus the chart plots moves by 1e-4 mm at most (all lines move
+  nearly alike); the absolute `focusShiftMm` and the image-plane fan span are of the catalog's lens. Across the
+  catalog 881 of 1,014 lenses have a medium whose G-channel index is not its authored one (328 by 1e-4 or more;
+  LensVisualizer `36b5768bf`, nothing under `src/optics` or `src/lens-data` changed since `45e6f852d`): the owner's
+  brief is `docs/upstream/lensvisualizer-loca-unanchored-index.md`.
+- **Handled.** `lv` states, per line, how far the channel's indices are from the case's (`sampling.indexMaxDelta`),
+  and R8b sorts a line whose answer states it above 0 as data, `indices-differ`, before its landing is looked at: two
+  traces of one source of indices are the same bits, so any other value is other indices. On the benchmark that is
+  all 24 colour lines (the three that landed within 1e-5 mm and were once counted as two methods are among them),
+  and no colour figure is taken. R8a traces the case's own indices in every engine and is not touched. Whether
+  LensVisualizer anchors these channels is the owner's. Pinned by the canary "the aberrations and chromatic tabs
+  still present the sections the engine answers axial.native from" (the two lines of `materialResolver.ts`), by
+  `test/engines/lv/axial.test.ts` ("axial colour is each line's channel of the section, with how far its indices are
+  from the case's"), by `test/compare/axialNative.test.ts` ("a line traced at indices other than the case's is data,
+  however near its landing"), and by `test/integration/optiland/r8.test.ts`, which holds the colour line of the Z 50
+  mm to `indices-differ`.
+- **Class.** data: recorded.
+
+### An axial intercept is ill-conditioned for a ray near the axis
+
+- **Where.** A ray behind the lens of slope `u = dy/dz` that two engines place a height `δ` apart crosses the axis
+  `δ / |u|` apart. The spherical-aberration section's zones reach in to 0.05 of the pupil.
+- **Effect.** On the benchmark the slopes run from 0.0031 (the GF 63 mm at f/8, zone 0.05) to 0.448 (the Z 50 mm
+  f/1.2 at its marginal zone). A plain intercept difference of the shallowest ray is 320 times its height
+  difference, 144 times what the same difference makes of the steepest ray. The largest plain difference on the
+  benchmark is 4.3e-12 mm (the Z 24-70 mm tele stopped to f/8, where every slope is small), while no height
+  difference exceeds 4.7e-13 mm.
+- **Handled.** R8a judges the intercept on the transverse scale, its difference times the larger of the two slopes
+  (`intercept.maxScaled`, 1e-8 mm, the gate R2 and R7a set on a height), and shows the plain difference beside it
+  (`intercept.maxAbs`), never judged. The larger slope, never one engine's own: an engine whose slope is wrong and
+  small would otherwise scale its own difference away. A crossing that overflows the doubles is `out-of-range`, not a
+  NaN. Pinned by `test/compare/raysAxial.test.ts` ("an exit moved along y moves the ray's intercept by the step over
+  its slope, judged as the step itself", "an engine's wrong, shallow slope cannot hide its intercept") and
+  `test/estimators/axialIntercept.test.ts` (the `out-of-range` rays).
+- **Class.** numerical: handled.
+
+### Intercepts that agree do not bound the focus when the slopes differ
+
+- **Where.** The least-squares focus of a set weights each pair's intercept by its squared slope. Two answers whose
+  intercepts agree and whose exit slopes differ weight the zones differently.
+- **Effect.** Their foci part although no intercept does: with one pair's slopes 1 + 2^-11 times the other's, every
+  intercept figure is a rounding and `focus.maxScaled` is above the gate. A bound of the focus figure by the
+  intercepts' (Cauchy–Schwarz) holds only where the two answers' slopes are the same.
+- **Handled.** The focus figures (`focus.maxScaled`, `focusRms.maxAbs`) are R8a's only sign of a difference of the
+  exit slopes on these rays, and are gated for it. Pinned by `test/compare/raysAxial.test.ts` ("slopes that differ
+  with intercepts that agree show only in the focus figures, beyond the intercepts' bound").
+- **Class.** numerical: handled.
+
+### The paraxial chromatic focal shift is not the axial colour of the marginal rays
+
+- **Where.** LensVisualizer's axial-colour section is of one real ray near the rim of the pupil at each channel;
+  optiland's `F2()` at each line is of the paraxial ray.
+- **Effect.** The two differ by the spherochromatism of the marginal zone. On the 12 benchmark configurations at the
+  C, d and F lines the paraxial shift is up to 8.8e-2 mm from the real one (Nikon Z MC 105 mm, F − d: real −0.0426,
+  paraxial +0.0453), of the other sign on four lenses.
+- **Handled.** R8b records the real relative focus beside the other engine's paraxial shift
+  (`paraxialFocalShift.maxAbs`) as the plan's "different quantity", and never bands it as an error; real is set
+  against real in `relativeFocus.maxAbs`. Pinned by `test/compare/axialNative.test.ts` ("axial colour: each line's
+  focus relative to the first, real beside real and beside the paraxial shift").
+- **Class.** method: recorded.
+
+### LensVisualizer's sections present only the authored line, its channels and the design plane
+
+- **Where.** The spherical-aberration section traces with no channel (the authored indices); the axial-colour
+  section traces its four channels, the lines C, d, F and g (C′, e, F′, g for a lens of native e-line indices); both
+  present their figures on the design image plane.
+- **Effect.** A photopic case has neither the authored line nor a channel; a best-focus case is off the plane.
+- **Handled.** `lv` answers `axial.native` only where its sections present the figure, and otherwise answers
+  `lines.not-authored-reference`, `lines.not-chromatic-channels`, `lines.mixed-reference` or `focus.off-design`:
+  144 unsupported pairs of R8b on the benchmark, no error. R8a still traces the axial sets at every line of every
+  case. Pinned by `test/engines/lv/axial.test.ts` ("what the sections do not present is unsupported" and "a case
+  off the design plane is unsupported once the section says where its plane is").
+- **Class.** data: unsupported.
+
+### optiland's own axial launch is exactly parallel, at its paraxial entrance pupil
+
+- **Where.** With its default `paraxial` aiming and an angle field on the axis, optiland's ray generator launches the
+  pupil point `(0, f)` at `y0 = f · EPD / 2 · vy + y` toward `y1 = f · EPD · vy / 2` (`AngleField.get_ray_origins`,
+  `ParaxialRayAimer`). With no vignetting factor (`vy` 1) the two are the same double, so `M` is 0 and `N` 1 exactly.
+- **Effect.** R8b's optiland pupil is the paraxial entrance pupil, as LensVisualizer's tabs': the two radii agree to
+  1.37e-11 of themselves on the benchmark (Sony FE 20 mm), and the spherical figures to 8.5e-12 mm. R7b's worker aims
+  at the real stop instead (`robust`), whose pupil is LensVisualizer's to 0.946 to 1.0048. The pupil is of the first
+  line asked, whose optic launches the rays for every line.
+- **Handled.** The worker reads back the aiming, the one field on the axis without vignetting and of the type
+  `AngleField`, no apodization, a finite `EPD()` other than 0, the length of every launched column, and each
+  launched ray's x, height and direction, and refuses anything else as `build-mismatch`. Pinned by
+  `test_each_setting_of_the_launch_is_read_back_with_the_mistake_made_on_purpose` and
+  `test_the_rays_of_every_line_are_launched_in_the_pupil_of_the_first_line_asked` (`test_axial.py`).
+- **Class.** convention: handled.
+
+### The spherical aberration's identifying ray cannot tell pupils apart
+
+- **Where.** R8b identifies a spherical-aberration line by the landing of its near-axis pair, the mean of the ray and
+  its mirror image, which lands on the axis by symmetry whatever the pupil.
+- **Effect.** Two answers of other pupil radii trace other rays at the same fractions, and their landing figure is 0:
+  the landing alone never set a spherical line aside.
+- **Handled.** R8b sorts a line as data, `pupils-apart`, where the two answers' pupil radii differ by more than
+  `pupilRadius.relative`'s limit of 2e-10 of the larger, ten times the measured 1.37e-11 rounded up. Pinned by
+  `test/compare/axialNative.test.ts` ("pupils whose radii differ beyond the limit set every line aside as data").
+- **Class.** data: handled.
+
+### optiland's axial pupil and focus are its first-order data, which do not see a phase or a vertex term
+
+- **Where.** The pupil the worker launches in (`EPD()`) and the paraxial focus (`F2()`) are optiland's paraxial
+  model, which reads radii and indices: it bypasses a radial phase profile and a term of power 1 or 2 of a polynomial
+  sag.
+- **Effect.** Asked directly, the worker would state of such a case the pupil and the focus of another lens: of a
+  lens whose first surface has a term of power 2, the focus of the lens without it, 2.4 mm from the contract's; of a
+  phase on a plane, no focus, where its rays cross at 100 mm.
+- **Handled.** The engine refuses `axial.native` of such a case before anything is built, as it refuses
+  `paraxial.first-order` (`first_order.term_refusals`: `optiland-phase-paraxial-unseen`,
+  `surface.asphere.linear-term`, `surface.asphere.quadratic-term`). Pinned by
+  `test_a_case_whose_first_order_data_optiland_does_not_see_is_refused_before_anything_is_built` and
+  `test_without_the_refusal_optiland_would_state_the_focus_of_another_lens` (`test_axial.py`).
+- **Class.** method: unsupported.

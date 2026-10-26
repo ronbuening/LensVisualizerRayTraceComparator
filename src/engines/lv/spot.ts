@@ -39,7 +39,7 @@ export const LV_BOKEH_TAB = "lv-bokeh-tab";
  * Whether the case's line `line` is the one the tabs trace: they trace every surface at its authored index `nd`
  * (no chromatic channel), so it is the reference line 0 whose index after every surface is that `nd`, to the bit.
  */
-function tracesAuthored(model: LvCaseModel, line: number): boolean {
+export function tracesAuthored(model: LvCaseModel, line: number): boolean {
   if (line !== 0) return false;
   const table = decodeNdArray(model.exported.conditions.indexAfterSurface);
   const indices = ndRow(table, 0);

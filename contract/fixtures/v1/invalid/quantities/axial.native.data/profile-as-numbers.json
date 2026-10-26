@@ -1,0 +1,34 @@
+{
+  "kind": "spherical",
+  "pupilRadiusMm": 12.5,
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "status": "ok",
+      "paraxialFocusZ": null,
+      "figures": {
+        "landingMm": 0,
+        "marginalFraction": 0.75,
+        "marginalInterceptZ": 99.875,
+        "nearAxisInterceptZ": 100.0625,
+        "bestFocusZ": 99.9375,
+        "bestFocusRmsMm": 0.0078125,
+        "profileMm": [
+          0,
+          0
+        ]
+      },
+      "rays": null,
+      "sampling": {
+        "raysLaunched": 10,
+        "raysArrived": 8
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-spherical",
+    "params": {}
+  },
+  "notes": []
+}

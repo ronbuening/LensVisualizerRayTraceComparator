@@ -147,6 +147,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   assert.deepEqual(
     COMPARATORS.list().map((comparator) => [comparator.quantity, comparator.rung]),
     [
+      ["axial.native", "r8b"],
       ["mtf.native", "r4f"],
       ["mtf.native", "r5"],
       ["mtf.native", "r5g"],
@@ -158,6 +159,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["rays.trace", "r4"],
       ["rays.trace", "r6a"],
       ["rays.trace", "r7a"],
+      ["rays.trace", "r8a"],
       ["selftest.echo", undefined],
       ["spot.native", "r7b"],
       ["system.describe", undefined],

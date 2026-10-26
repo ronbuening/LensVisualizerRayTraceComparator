@@ -11,6 +11,7 @@ import type { ProtocolHandler } from "../../contract/protocol.ts";
 import type { MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { SpotNativeSpec } from "../../contract/quantities/spotNative.ts";
+import type { AxialNativeSpec } from "../../contract/quantities/axialNative.ts";
 import { DEFAULT_SAG_FRACTIONS } from "../../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../../contract/quantities/systemDescribe.ts";
 import type { QuantityRequest } from "../../contract/request.ts";
@@ -24,6 +25,7 @@ import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../quantities/raysTrace.ts";
 import { spotNativeQuantity } from "../../quantities/spotNative.ts";
+import { axialNativeQuantity } from "../../quantities/axialNative.ts";
 import { systemDescribeQuantity } from "../../quantities/systemDescribe.ts";
 import { EngineUnavailableError } from "../adapter.ts";
 import { adapterRevision } from "../adapterRevision.ts";
@@ -40,6 +42,7 @@ import { createLensBuilder } from "./lensBuilder.ts";
 import { answerLvMtf } from "./mtf.ts";
 import { answerLvRays } from "./rays.ts";
 import { answerLvSpot } from "./spot.ts";
+import { answerLvAxial } from "./axial.ts";
 import type { LvApi } from "./types.ts";
 
 /** The id of the engine that is LensVisualizer. */
@@ -116,6 +119,11 @@ const ANSWERED: readonly LvAnswered[] = [
     method: "analysis-tabs",
     answer: (api, model, spec) => answerLvSpot(api, model, spec as SpotNativeSpec),
   },
+  {
+    quantity: axialNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvAxial(api, model, spec as AxialNativeSpec),
+  },
 ];
 
 /**
@@ -181,8 +189,9 @@ export function lvBackedDescriptor(
  * - `run`, for a case that came from a LensVisualizer lens: the state is rebuilt and held to the case
  *   (`rebuildCase`), and the quantity answered from it: `system.describe` by `describeLvSystem`,
  *   `paraxial.first-order` by `answerLvFirstOrder`, `rays.trace` by `answerLvRays`, and `mtf.native`, LensVisualizer's
- *   product MTF, by `answerLvMtf`, which alone reads an option of the request, and `spot.native`, its coma and
- *   bokeh tabs, by `answerLvSpot`. A case that is no longer what
+ *   product MTF, by `answerLvMtf`, which alone reads an option of the request, `spot.native`, its coma and
+ *   bokeh tabs, by `answerLvSpot`, and `axial.native`, its spherical-aberration and axial-colour sections, by
+ *   `answerLvAxial`. A case that is no longer what
  *   LensVisualizer gives is a result of status "error" with the code `stale-case`, whose message names what
  *   changed.
  * - `run`, for a case from any other source: a result of status "unsupported" with one item of code `case-source`

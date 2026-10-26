@@ -1,0 +1,10 @@
+{
+  "kind": "spherical",
+  "pupilRadiusMm": 12.5,
+  "fields": [],
+  "method": {
+    "name": "synthetic-spherical",
+    "params": {}
+  },
+  "notes": []
+}

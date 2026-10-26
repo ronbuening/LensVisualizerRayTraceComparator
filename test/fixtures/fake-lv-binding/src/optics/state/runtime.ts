@@ -3,6 +3,7 @@ import { DEFAULT_FOPEN, FLAT_RADIUS } from "../../lens-data/defaults.js";
 import { ASPHERIC_POLYNOMIAL_TERMS } from "../../types/asphericSchema.js";
 import { wideOpenStopAtZoom } from "./aperture.js";
 import { FLAT_R_THRESHOLD } from "../geometry.js";
+import { fakeChannelIndex } from "../analysis/axial.js";
 import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "../types.js";
 
 
@@ -41,8 +42,13 @@ export function buildLens(data: FakeLensData): FakeRuntimeLens {
     epZRelStop: -1.5,
     xpZRelLastSurf: -12.5,
     xpSD: 3 * stopPhysSD,
-    // One element per glass that follows an authored surface, as the state numbers them.
-    elements: data.surfaces.flatMap((surface, index) => (surface.nd === 1 ? [] : [{ id: index + 1 }])),
+    // One element per glass that follows an authored surface, as the state numbers them, with the line of its indices
+    // where the lens states one. Rear plates are none of them, as LV's runtime lens leaves them out.
+    elements: data.surfaces.flatMap((surface, index) =>
+      surface.nd === 1
+        ? []
+        : [{ id: index + 1, ...(data.indexReference === undefined ? {} : { indexReference: data.indexReference }) }],
+    ),
   });
 }
 
@@ -112,6 +118,11 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       projection: { kind: "rectilinear" },
       // How far ahead of the first vertex the fake's skew rays start, as LV's lens constants say.
       constants: { rayLead: 10 },
+      // Each medium at the chromatic tab's channels.
+      dispersion: surfaces.map((surface) => ({
+        quality: surface.nd === 1 ? "air" : "abbe",
+        indexAt: (channel: string) => fakeChannelIndex(surface.nd, channel),
+      })),
     },
     focusT,
     zoomT,

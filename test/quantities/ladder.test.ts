@@ -61,6 +61,7 @@ test("system.describe and paraxial.first-order are registered, at the versions t
   assert.deepEqual(
     QUANTITIES.list().map(({ id }) => id),
     [
+      "axial.native",
       "mtf.native",
       "paraxial.first-order",
       "rays.trace",

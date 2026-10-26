@@ -490,3 +490,60 @@ test("lvrtc run --rungs r7a: lv and ref trace the rays of LensVisualizer's coma 
   assert.match(report, /\| centroid\.maxAbs \(≤ 1\.00e-8 mm\) \|/);
   assert.match(report, /\| rmsRadius\.maxAbs \(≤ 1\.00e-8 mm\) \|/);
 });
+
+test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial sections, and every pair passes", (t) => {
+  const rootDir = lvRoot(t);
+  const suite = raySuite(rootDir);
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r8a");
+  assert.equal(ran.code, EXIT_OK, ran.err);
+  // The sections' zones do not depend on the run's fields: two sets of the singlet on its one line, and two of the
+  // zoom at each of its lines. Each engine traces each set once.
+  const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
+  const lines = (manifest.runs[1].axialRaySets?.sets.length ?? 0) / 2;
+  assert.ok(lines > 1);
+  assert.deepEqual(
+    manifest.runs.map((run) => [run.name, run.axialRaySets?.sets.length, run.axialRaySets?.problems, run.raySets]),
+    [
+      ["singlet", 2, [], undefined],
+      ["zoom-photopic", 2 * lines, [], undefined],
+    ],
+  );
+  assert.equal(manifest.jobs.length, 2 * 2 * (1 + lines));
+  assert.ok(manifest.jobs.every((job) => job.rung === "r8a" && job.quantity === "rays.trace" && job.status === "ok"));
+
+  // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, every
+  // figure measured.
+  const compared = lvrtc(rootDir, "compare", "lv-ladder");
+  assert.equal(compared.code, EXIT_OK, compared.err + compared.out);
+  const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
+  let taken = 0;
+  for (const set of file.comparisons) {
+    const [pair] = set.pairs;
+    assert.deepEqual([set.rung, pair.a, pair.b, pair.verdict], ["r8a", "lv", "ref", "PASS"], pair.reason);
+    // A metric that was not measured would be named in the pair's reason.
+    assert.equal(pair.reason, undefined);
+    for (const metric of pair.metrics) {
+      if (metric.name === "rays.compared") taken += metric.value ?? 0;
+      else if (/\.max(Abs|Scaled)$/.test(metric.name))
+        assert.ok((metric.value ?? NaN) <= 1e-9, `${metric.name} ${metric.value}`);
+      else assert.equal(metric.value, 0, metric.name);
+    }
+    // Each engine's own focus of the set's pairs is written down beside the pair, with how its rays ended.
+    for (const participant of set.participants) {
+      assert.deepEqual(Object.keys(participant.recorded ?? {}).sort(), [
+        "axial.focusRmsMm",
+        "axial.focusZ",
+        "rays.blocked",
+        "rays.failed",
+        "rays.ok",
+      ]);
+    }
+  }
+  assert.ok(taken > 40, `rays that are ok in both engines: ${taken}`);
+  const reported = lvrtc(rootDir, "report", "lv-ladder");
+  assert.equal(reported.code, EXIT_OK, reported.err);
+  const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
+  assert.match(report, /\| intercept\.maxScaled \(≤ 1\.00e-8 mm\) \|/);
+  assert.match(report, /\| focus\.maxScaled \(≤ 1\.00e-8 mm\) \|/);
+  assert.match(report, /\| focusRms\.maxAbs \(≤ 1\.00e-8 mm\) \|/);
+});

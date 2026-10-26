@@ -629,6 +629,57 @@ def validate_spot_native(part: str, value: Any, schemas: SchemaSet | None = None
     return issues
 
 
+def validate_axial_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/axialNative.ts: schema, distinct lines, and what an ok or an unavailable line holds."""
+    from .ndarray import decode_ndarray  # stdlib only; avoids a module cycle
+
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("axial.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        if len(set(value["lines"])) != len(value["lines"]):
+            issue("/lines", "a line is asked once")
+        return issues
+    spherical_only = ("nearAxisInterceptZ", "bestFocusZ", "bestFocusRmsMm", "profileMm")
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["figures"] is not None or field["rays"] is not None:
+                issue(path, "an unavailable line has a reason and neither figures nor rays")
+            continue
+        if (field["figures"] is None) == (field["rays"] is None):
+            issue(path, "an ok line has its figures or its rays, and not both")
+            continue
+        figures = field["figures"]
+        if figures is not None:
+            stated = [name for name in spherical_only if figures[name] is not None]
+            named = ", ".join(spherical_only)
+            if value["kind"] == "spherical" and len(stated) != len(spherical_only):
+                issue(path + "/figures", f"the figures of spherical aberration have every one of {named}")
+            elif value["kind"] == "colour" and stated:
+                issue(path + "/figures", f"the figures of colour have none of {named}")
+            continue
+        rays = field["rays"]
+        try:
+            fractions = decode_ndarray(rays["fractions"]).values()
+            arrived = decode_ndarray(rays["arrived"]).values()
+            count = len(fractions)
+            shapes = [rays["exitPoint"]["$nd"]["shape"], rays["exitDirection"]["$nd"]["shape"]]
+            if count == 0 or len(arrived) != count or any(shape != [count, 3] for shape in shapes):
+                issue(path + "/rays", "the rays are m fractions, m arrivals and exits of shape [m, 3]")
+            elif not all(math.isfinite(f) and f != 0 and -1 <= f <= 1 for f in fractions):
+                issue(path + "/rays/fractions", "a fraction is a finite number from -1 to 1, not 0")
+            elif not all(a in (0, 1) for a in arrived):
+                issue(path + "/rays/arrived", "an arrival is 0 or 1")
+        except (ValueError, TypeError) as error:
+            issue(path + "/rays", str(error))
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

@@ -9,18 +9,21 @@ import { raysGeometryComparator } from "./raysGeometry.ts";
 import { raysMtfComparator } from "./raysMtf.ts";
 import { raysPathComparator } from "./raysPath.ts";
 import { raysSpotComparator } from "./raysSpot.ts";
+import { raysAxialComparator } from "./raysAxial.ts";
 import { raysWaveMtfComparator } from "./raysWaveMtf.ts";
 import { selftestEchoComparator } from "./selftestEcho.ts";
 import { spotNativeComparator } from "./spotNative.ts";
+import { axialNativeComparator } from "./axialNative.ts";
 import { systemDescribeComparator } from "./systemDescribe.ts";
 import { mtfWavefrontComparator } from "./mtfWavefront.ts";
 import { wavefrontNativeComparator } from "./wavefrontNative.ts";
 
 /**
  * The comparators of the comparator's quantities; nothing can be added to them while the program runs. `rays.trace`
- * has five, one for each rung that compares it: its geometry for `r2`, its optical path for `r3`, the geometric
- * MTF of its landings for `r4`, the wave MTF of its optical paths for `r6a` and the spot and fan of the coma and
- * bokeh tabs' rays for `r7a`. `spot.native` has one, for `r7b`. `mtf.native` has five, for the rungs
+ * has six, one for each rung that compares it: its geometry for `r2`, its optical path for `r3`, the geometric
+ * MTF of its landings for `r4`, the wave MTF of its optical paths for `r6a`, the spot and fan of the coma and
+ * bokeh tabs' rays for `r7a` and the axial intercepts of the spherical-aberration and axial-colour sections' rays for
+ * `r8a`. `spot.native` has one, for `r7b`, and `axial.native` one, for `r8b`. `mtf.native` has five, for the rungs
  * `r4f`, `r5`, `r5g`, `r6b` and `r6c`; R6c reuses the native comparator and its sorting. `wavefront.native`
  * also has a comparator of raw OPD, restricted to matching grids, points and reference spheres.
  */
@@ -33,6 +36,7 @@ export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   raysMtfComparator,
   raysWaveMtfComparator,
   raysSpotComparator,
+  raysAxialComparator,
   mtfFidelityComparator,
   mtfNativeComparator,
   mtfGeometricComparator,
@@ -40,4 +44,5 @@ export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   mtfWavefrontComparator,
   wavefrontNativeComparator,
   spotNativeComparator,
+  axialNativeComparator,
 ]);

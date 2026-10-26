@@ -1455,3 +1455,198 @@ test(
     );
   },
 );
+
+// Stage 6.3, at LV 45e6f852d (closure afef1f81): the axial sets of the spherical-aberration and axial-colour sections
+// (src/engines/lv/axialRaySets.ts) restate these lines; test/integration/lv/axialRays.test.ts holds their figures.
+test(
+  "the spherical-aberration and axial-colour sections still trace the zones the axial sets restate",
+  { skip },
+  () => {
+    const spherical = "src/optics/analysis/aberration/spherical.ts";
+    const shared = "src/optics/analysis/aberration/shared.ts";
+    const chromatic = "src/optics/analysis/chromatic/analysis.ts";
+    const mirror =
+      "lvAxialZones in src/engines/lv/axialZones.ts and lvAxialPairs in src/engines/lv/axialRaySets.ts restate the sections' zones";
+    assertSource(
+      spherical,
+      "const nearAxisSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, NEAR_AXIS_REAL_FRAC, prepared);",
+      mirror,
+    );
+    assertSource(spherical, "for (const fraction of MARGINAL_FRACS) {", mirror);
+    assertSource(
+      spherical,
+      "marginalSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, fraction, prepared);",
+      mirror,
+    );
+    // Both the figures and the profile trace the profile's zones, each with its mirror image, and drop a zone whole.
+    assert.equal(occurrences(spherical, "const hits = PROFILE_FRACS.flatMap((fraction) => {"), 2, mirror);
+    assert.equal(
+      occurrences(spherical, "const plusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, fraction, prepared);"),
+      2,
+      mirror,
+    );
+    assert.equal(
+      occurrences(
+        spherical,
+        "const minusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, -fraction, prepared);",
+      ),
+      2,
+      mirror,
+    );
+    assertSource(spherical, "if (plusHit === null || minusHit === null) return [];", mirror);
+    assertSource(
+      spherical,
+      "const zPos = state.z as number[];",
+      "lvAxialLaunch launches from the state's first vertex",
+    );
+    assertSource(shared, "export const MARGINAL_FRACS = MARGINAL_PUPIL_FRACTIONS;", mirror);
+    assertSource(shared, "const h = signedFraction * currentEPSD;", mirror);
+    assertSource(shared, "const ray = adapter.ray(h, 0);", mirror);
+    // The axial-colour section: its candidates and the one ray of each, at the same height at every channel.
+    assertSource(
+      chromatic,
+      "const fractions = normalizeFractions(options.longitudinalFractions, DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS, { allowZero: false, });",
+      mirror,
+    );
+    assertSource(
+      chromatic,
+      ".filter((value) => isFinite(value) && (allowZero ? value >= 0 : value > 0)) .map((value) => Math.max(0, Math.min(1, value)));",
+      "normalizedFractions in src/engines/lv/axialZones.ts",
+    );
+    assertSource(chromatic, "return Array.from(new Set(values));", "normalizedFractions keeps each fraction once");
+    assertSource(chromatic, "longitudinalFractions: request.sampling.chromaticLongitudinalFractions,", mirror);
+    assertSource(chromatic, "const ray = adapters.get(channel)!.ray(marginalFraction * currentEPSD, 0);", mirror);
+  },
+);
+
+test("the sections' meridional launch and reading of a ray are still the ones the axial sets restate", { skip }, () => {
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  const mirror = "lvAxialLaunch in src/engines/lv/axialRaySets.ts restates the launch";
+  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", mirror);
+  assertSource(adapters, "const firstZ = request.zPos?.[0] ?? state.z[0] ?? 0;", mirror);
+  assertSource(adapters, "const direction = meridionalDirectionForSlope(u0);", mirror);
+  assertSource(adapters, "const origin: Vec3 = [0, y0 - u0 * lead, firstZ - lead];", mirror);
+  assertSource(adapters, "const MERIDIONAL_DIRECTION_BY_SLOPE = new Map<number, Vec3>([[0, [0, 0, 1]]]);", mirror);
+  assertSource(adapters, "const cached = MERIDIONAL_DIRECTION_BY_SLOPE.get(u); if (cached) return cached;", mirror);
+  // A channel's trace takes the channel's index of each medium: test/integration/lv/axialRays.test.ts restates it.
+  assertSource(
+    adapters,
+    "indexAtSurface: channel ? (i, nd) => state.lens.dispersion[i]?.indexAt(channel) ?? nd : undefined,",
+    "sectionRay in test/integration/lv/axialRays.test.ts traces a channel with these indices",
+  );
+  // Where a ray crosses the axis, and its height on a plane: the definition of src/estimators/axialIntercept.ts.
+  const definition = "axialIntercept in src/estimators/axialIntercept.ts is this crossing, rounded once";
+  assertSource(
+    "src/optics/analysis/aberration/shared.ts",
+    "if (Math.abs(u) < MIN_SLOPE) return null; return lastSurfZ - y / u;",
+    definition,
+  );
+  assertSource("src/optics/chromatic/chromaticTrace.ts", "axialIntercepts[ch] = rayZ - ray.y / ray.u;", definition);
+  assertSource("src/optics/chromatic/chromaticTrace.ts", "imagePlaneHeights[ch] = ray.y + dz * ray.u;", definition);
+  // The least-squares focus of the profile's pairs: sum u^2 z / sum u^2 (leastSquaresFocus), and the RMS about the axis.
+  const focus = "leastSquaresFocus in src/estimators/axialIntercept.ts is this focus and RMS";
+  assertSource(
+    "src/optics/analysis/aberration/shared.ts",
+    "const denom = hits.reduce((sum, hit) => sum + hit.slope * hit.slope, 0);",
+    focus,
+  );
+  assertSource(
+    "src/optics/analysis/aberration/shared.ts",
+    "return sum + hit.slope * hit.slope * referenceZ - hit.coordinate * hit.slope;",
+    focus,
+  );
+  assertSource(
+    "src/optics/analysis/aberration/spherical.ts",
+    "const bestFocusRmsMm = rmsAtPlane(hits, lastSurfZ, bestFocusZ);",
+    focus,
+  );
+  assertSource(
+    "src/optics/analysis/aberration/spherical.ts",
+    "transverseSaMm: transverseCoordinateAtPlane(plusHit, lastSurfZ, bestFocusZ) - nearAxisHeightAtBestFocus,",
+    "sphericalFigures' profile is each zone's plus ray at the focus less the near-axis plus ray's",
+  );
+});
+
+test(
+  "the aberrations and chromatic tabs still present the sections the engine answers axial.native from",
+  { skip },
+  () => {
+    const mirror = "answerLvAxial in src/engines/lv/axial.ts asks these functions as the tabs do";
+    const data = "src/components/display/analysis/aberrations/useSphericalAberrationData.ts";
+    assertSource(
+      data,
+      'const saResult = probe("computeSphericalAberration", () => context.computeSphericalAberration());',
+      mirror,
+    );
+    assertSource(data, "const saProfile = context.computeSAProfile();", mirror);
+    const chromatic = "src/components/display/analysis/ChromaticTab.tsx";
+    assertSource(chromatic, "const longitudinal = analysis.longitudinalFocus;", mirror);
+    assertSource(
+      "src/optics/analysis/chromatic/analysis.ts",
+      "longitudinalFocus: computeLongitudinalChromaticFocus(request, options),",
+      mirror,
+    );
+    // The chart plots each channel's focus relative to the reference channel, LensVisualizer's G channel (the d line,
+    // 587.56 nm, or e, 546.07 nm, in a lens of e-line indices; not Fraunhofer's g); the section's spherical aberration
+    // is shown as a label of its sign, its number behind a flag.
+    assertSource(
+      "src/components/display/analysis/LongitudinalChromaticFocusChart.tsx",
+      "const samples = result?.samples.filter((sample) => sample.usable && sample.relativeFocusShiftMm !== null) ?? [];",
+      "R8b compares each line's focus relative to the first (relativeFocus.maxAbs), the chart's quantity",
+    );
+    assertSource(
+      "src/optics/analysis/chromatic/analysis.ts",
+      'return channels.includes("G") ? "G" : (channels[0] ?? "G");',
+      "the reference channel is G, the d (or e) line: a case's reference line",
+    );
+    assertSource(
+      "src/utils/featureFlags.ts",
+      "export const ENABLE_REAL_RAY_LSA_DIAGNOSTIC = false;",
+      "docs/REFERENCE.md says the LSA is shown as a label",
+    );
+    // The line of each channel, by the lens's index reference (lvChannelLines).
+    const channels = "src/optics/chromatic/channels.ts";
+    const lines = "lvChannelLines in src/engines/lv/axial.ts restates which line a channel is";
+    assertSource(
+      channels,
+      'export const CHROMATIC_CHANNEL_ORDER = Object.freeze(["R", "G", "B", "V"] as const);',
+      lines,
+    );
+    assertSource(channels, 'export const CHROMATIC_CHANNEL_WAVELENGTH_NM = channelWavelengths("d");', lines);
+    assertSource(channels, 'export const E_LINE_CHANNEL_WAVELENGTH_NM = channelWavelengths("e");', lines);
+    assertSource(
+      channels,
+      'return elements.length > 0 && elements.every((element) => element.indexReference === "e") ? "e" : "d";',
+      lines,
+    );
+    // The elements the chromatic tab asks it of, the path lvChannelLines reads: the runtime lens's elements, which are
+    // the compiled elements' sources without the synthetic rear plates.
+    assertSource(
+      "src/components/display/analysis/ChromaticTab.tsx",
+      "const channelReference = lensChromaticReference(L.elements);",
+      "lvChannelLines asks lensChromaticReference of model.runtime.elements, the tab's L.elements",
+    );
+    assertSource(
+      "src/optics/prescription/runtimeView.ts",
+      "elements: lens.elements.map((element) => element.source).filter((element) => !element.synthetic),",
+      "model.runtime.elements are the elements the chromatic tab's L holds",
+    );
+    // A channel of an e-line element is of the C', e, F' and g lines: an element's own reference decides its media.
+    assertSource(
+      "src/optics/chromatic/materialResolver.ts",
+      'if (entry && element.indexReference === "e") {',
+      "lvChannelLines refuses a lens whose elements mix references (lines.mixed-reference)",
+    );
+    // A d-line glass LensVisualizer matched to a catalog is traced at the catalog's own index at every channel, the d
+    // line included; an e-line one is anchored to its authored index (docs/gotchas.md, "Axial rays").
+    const resolver = "src/optics/chromatic/materialResolver.ts";
+    const anchoring = "sampling.indexMaxDelta of answerLvAxial and docs/gotchas.md rest on this";
+    assertSource(resolver, "const nG = evaluateSellmeier(entry, CHANNEL_NM.G);", anchoring);
+    assertSource(resolver, "const anchor = ne - evaluateSellmeier(entry, E_LINE_CHANNEL_NM.G);", anchoring);
+    assertSource(
+      "src/optics/trace/rayAdapters.ts",
+      "indexAtSurface: channel ? (i, nd) => state.lens.dispersion[i]?.indexAt(channel) ?? nd : undefined,",
+      anchoring,
+    );
+  },
+);

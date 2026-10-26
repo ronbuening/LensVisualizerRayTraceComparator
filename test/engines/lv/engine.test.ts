@@ -158,6 +158,7 @@ test("lv describes itself: LensVisualizer's engine closure, its commit, its adap
     "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version, versions: [1, 2] },
     "rays.trace": { version: QUANTITIES.get("rays.trace")?.version, versions: [1, 2, 3] },
     "spot.native": { version: QUANTITIES.get("spot.native")?.version },
+    "axial.native": { version: QUANTITIES.get("axial.native")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
   });
   // Whatever LensVisualizer's exporter writes, LensVisualizer answers for.

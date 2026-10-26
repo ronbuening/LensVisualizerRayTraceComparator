@@ -29,6 +29,11 @@ export interface LvElement {
   readonly id: number;
   /** Beer-Lambert absorption of the glass per mm; above 0 it weights rays and bends none. */
   readonly absorptionCoefficientPerMm?: number;
+  /**
+   * The line the element's authored indices are of, `"e"`, or `"d"` where it states none. The comparator reads it
+   * only through LV's own `lensChromaticReference`, as LV's chromatic tab does.
+   */
+  readonly indexReference?: string;
 }
 
 /**
@@ -140,6 +145,11 @@ export interface LvPreparedState {
     readonly projection: { readonly kind: string };
     /** The lens's constants; `rayLead` is how far ahead of the first vertex its skew rays are launched, mm. */
     readonly constants?: { readonly rayLead?: number };
+    /**
+     * Each surface's medium as LV's chromatic tab traces it: the index at one of its channels ("R", "G", "B", "V";
+     * `indexAtPreparedSurface`), and how LV resolved the glass (`quality`: "air", "sellmeier", "abbe", ...).
+     */
+    readonly dispersion?: readonly (LvSurfaceDispersion | undefined)[];
   };
   readonly focusT: number;
   readonly zoomT: number;
@@ -150,6 +160,12 @@ export interface LvPreparedState {
   /** Image plane position: `z[last] + d[last]`, except in a folded system that authors its image plane. */
   readonly imgZ: number;
   readonly totalTrack: number;
+}
+
+/** LV's compiled dispersion of one surface's medium: its index at a channel of the chromatic tab. */
+export interface LvSurfaceDispersion {
+  readonly quality: string;
+  indexAt(channel: string): number;
 }
 
 /** A ray for `traceEngineRay`. */
@@ -165,6 +181,8 @@ export interface LvTraceOptions {
   readonly checkSemiDiameter?: boolean;
   readonly stopSemiDiameter?: number;
   readonly stopOnClip?: boolean;
+  /** Trace on past a surface that clips, keeping the ray's status clipped, as LV's analysis adapters do. */
+  readonly ghost?: boolean;
   readonly indexAtSurface?: LvIndexResolver;
   readonly wavelengthNm?: number;
   readonly directionNormalized?: boolean;
@@ -457,6 +475,61 @@ export interface LvBokehField {
   readonly maxRadiusMm: number;
   readonly transmission: number;
   readonly usable: boolean;
+}
+
+/**
+ * LV's SphericalAberrationResult (`computeSphericalAberration`), the members the comparator reads: intercepts are z
+ * of the contract frame, mm, each the mean of a symmetric pair of real rays launched parallel to the axis.
+ */
+export interface LvSphericalAberration {
+  readonly nearAxisFraction: number;
+  readonly marginalFraction: number;
+  readonly longitudinalSaMm: number;
+  readonly nearAxisRealIntercept: number;
+  readonly marginalRealIntercept: number;
+  /** The mean height of the near-axis pair on the design image plane. */
+  readonly nearAxisImageHeight: number;
+  readonly imagePlaneZ: number;
+  readonly bestFocusZ: number;
+  readonly bestFocusShiftMm: number;
+  readonly bestFocusRmsMm: number;
+  readonly bestFocusPeakMm: number;
+  readonly currentPlaneRmsMm: number;
+  readonly currentPlanePeakMm: number;
+  /** How many profile rays the figures at a plane are of: both rays of every pair that arrived. */
+  readonly validSampleCount: number;
+}
+
+/** One point of LV's spherical-aberration profile (`computeSAProfile`): transverse SA at best focus, mm. */
+export interface LvSaProfilePoint {
+  readonly fraction: number;
+  readonly transverseSaMm: number;
+}
+
+/** One channel of LV's axial-colour section (`LongitudinalChromaticFocusSample`). */
+export interface LvLongitudinalChromaticSample {
+  /** "R", "G", "B" or "V". */
+  readonly channel: string;
+  readonly focusZ: number | null;
+  readonly focusShiftMm: number | null;
+  readonly relativeFocusShiftMm: number | null;
+  readonly imageHeightMm: number | null;
+  readonly relativeImageHeightMm: number | null;
+  readonly usable: boolean;
+  readonly clipped: boolean;
+}
+
+/** LV's LongitudinalChromaticFocusResult (`computeLongitudinalChromaticFocus`), the members the comparator reads. */
+export interface LvLongitudinalChromaticFocus {
+  readonly channels: readonly string[];
+  readonly referenceChannel: string;
+  readonly marginalFraction: number;
+  readonly imagePlaneZ: number;
+  readonly lastSurfaceZ: number;
+  readonly longitudinalSpreadMm: number;
+  readonly transverseSpreadMm: number;
+  readonly samples: readonly LvLongitudinalChromaticSample[];
+  readonly validChannelCount: number;
 }
 
 /** LV's skew trace result: where the ray crosses the last vertex plane and its slopes there. */
@@ -984,4 +1057,27 @@ export interface LvApi {
   readonly bokehRingSamples: readonly number[];
   /** LV's `BOKEH_PREVIEW_FIELD_FRACTIONS`: the fractions of the half field its bokeh tiles are drawn at. */
   readonly bokehFieldFractions: readonly number[];
+  /** LV's `NEAR_AXIS_REAL_FRAC`: the pupil fraction of the ray pair its spherical aberration is relative to. */
+  readonly saNearAxisFraction: number;
+  /** LV's `MARGINAL_PUPIL_FRACTIONS`: the candidates of its spherical aberration's marginal pair, outermost first. */
+  readonly marginalPupilFractions: readonly number[];
+  /** LV's `PROFILE_FRACS`: the zones of its spherical-aberration profile and best focus. */
+  readonly saProfileFractions: readonly number[];
+  /** LV's `DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS`: the candidates of its axial-colour marginal ray. */
+  readonly locaMarginalFractions: readonly number[];
+  /** LV's `CHROMATIC_CHANNEL_WAVELENGTH_NM`: the line of each chromatic channel of a lens of d-line indices, nm. */
+  readonly chromaticChannelWavelengthsNm: Readonly<Record<string, number>>;
+  /** LV's `E_LINE_CHANNEL_WAVELENGTH_NM`: the line of each channel of a lens of native e-line indices, nm. */
+  readonly eLineChannelWavelengthsNm: Readonly<Record<string, number>>;
+  /** What the spherical-aberration section of LV's aberrations tab presents for a request; null when its rays fail. */
+  computeSphericalAberration(request: LvAnalysisRequest): LvSphericalAberration | null;
+  /** The transverse profile that section plots, at its best focus; empty when its rays fail. */
+  computeSAProfile(request: LvAnalysisRequest): readonly LvSaProfilePoint[];
+  /** What the axial-colour section of LV's chromatic tab presents for a request; null when no fraction is usable. */
+  computeLongitudinalChromaticFocus(request: LvAnalysisRequest): LvLongitudinalChromaticFocus | null;
+  /**
+   * The line LV's chromatic channels of a lens are labelled at: `"e"` only when every element is e-referenced, `"d"`
+   * otherwise. The chromatic tab asks it of the runtime lens's elements (`L.elements`, synthetic rear plates left out).
+   */
+  lensChromaticReference(elements: readonly LvElement[]): string;
 }

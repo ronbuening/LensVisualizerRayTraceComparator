@@ -17,7 +17,7 @@ import { tempDir } from "../core/support.ts";
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 16);
+  assert.equal(policy.version, 17);
   assert.equal(policy.contract, "1.3");
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
@@ -231,6 +231,8 @@ test("each way a policy and the code can disagree is reported", () => {
     "rung r6c has no policy entry",
     "rung r7a has no policy entry",
     "rung r7b has no policy entry",
+    "rung r8a has no policy entry",
+    "rung r8b has no policy entry",
     "policy entry notes is of no registered rung",
     "policy entry r1: the comparator reports no metric efl.abs",
     "policy entry r1: the comparator reports no metric pupil.z.abs",

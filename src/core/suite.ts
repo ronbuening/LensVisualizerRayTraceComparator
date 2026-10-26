@@ -14,6 +14,7 @@ import { fixtureRecipe } from "./mtfRecipe.ts";
 import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import type { SpotSetResolution } from "../rays/spotSets.ts";
+import type { AxialSetResolution } from "../rays/axialSets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
@@ -73,6 +74,13 @@ export interface CaseSource {
    * run and the case, like the ray sets. A source without this method has no spot sets to give.
    */
   spotRaySets?(run: RunSpec, opticalCase: OpticalCase): SpotSetResolution | Promise<SpotSetResolution>;
+  /**
+   * The axial sets of a run of a case this source resolved (`src/rays/axialSets.ts`): the rays the tabs that present
+   * the beam along the axis launch, one `rays.trace` spec for each of their patterns and lines, a coded problem for
+   * a case that has none, and the engines' own axial requests of the same tabs. A pure function of the run and the
+   * case, like the ray sets. A source without this method has no axial sets to give.
+   */
+  axialRaySets?(run: RunSpec, opticalCase: OpticalCase): AxialSetResolution | Promise<AxialSetResolution>;
   /**
    * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
    * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.

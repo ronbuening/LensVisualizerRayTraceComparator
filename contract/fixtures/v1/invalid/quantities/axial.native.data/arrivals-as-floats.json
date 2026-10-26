@@ -1,0 +1,135 @@
+{
+  "kind": "colour",
+  "pupilRadiusMm": 12.5,
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "status": "ok",
+      "paraxialFocusZ": 100,
+      "figures": null,
+      "rays": {
+        "fractions": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2
+            ],
+            "data": "AAAAAAAA7D8AAAAAAADoPw==",
+            "sha256": "824922fbe47e899e6e35e6c463e4d3ff8d862eb7dbee806ac877be207483b3c5"
+          }
+        },
+        "arrived": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2
+            ],
+            "data": "AAAAAAAAAAAAAAAAAADwPw==",
+            "sha256": "fc62429c3e69001d65972cdeb94fb9aa18a7d9c16bc449e1e474e7e41bb95a7d"
+          }
+        },
+        "exitPoint": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2,
+              3
+            ],
+            "data": "AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAAAAAAAIAgQAAAAAAAAERA",
+            "sha256": "b52f56c952916a3a955d4ab2ab85187a2b565d9432c5321a690216b13f4b5b6f"
+          }
+        },
+        "exitDirection": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2,
+              3
+            ],
+            "data": "AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAAAAAAAADIvwAAAAAAAO8/",
+            "sha256": "876b57d5651e3231b9838547ea85f5376ac5393142ca938e96dc6261791455ae"
+          }
+        }
+      },
+      "sampling": {
+        "raysLaunched": 2,
+        "raysArrived": 1
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "status": "ok",
+      "paraxialFocusZ": 100.25,
+      "figures": null,
+      "rays": {
+        "fractions": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2
+            ],
+            "data": "AAAAAAAA7D8AAAAAAADoPw==",
+            "sha256": "824922fbe47e899e6e35e6c463e4d3ff8d862eb7dbee806ac877be207483b3c5"
+          }
+        },
+        "arrived": {
+          "$nd": {
+            "dtype": "u1",
+            "shape": [
+              2
+            ],
+            "data": "AAE=",
+            "sha256": "b413f47d13ee2fe6c845b2ee141af81de858df4ec549a58b7970bb96645bc8d2"
+          }
+        },
+        "exitPoint": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2,
+              3
+            ],
+            "data": "AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAAAAAAAIAgQAAAAAAAAERA",
+            "sha256": "b52f56c952916a3a955d4ab2ab85187a2b565d9432c5321a690216b13f4b5b6f"
+          }
+        },
+        "exitDirection": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              2,
+              3
+            ],
+            "data": "AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAAAAAAAAAAAADIvwAAAAAAAO8/",
+            "sha256": "876b57d5651e3231b9838547ea85f5376ac5393142ca938e96dc6261791455ae"
+          }
+        }
+      },
+      "sampling": {
+        "raysLaunched": 2,
+        "raysArrived": 1
+      }
+    },
+    {
+      "line": 2,
+      "wavelengthNm": 486.125,
+      "status": "unavailable",
+      "reason": "build-failed",
+      "paraxialFocusZ": null,
+      "figures": null,
+      "rays": null,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-rays",
+    "params": {
+      "aiming": "paraxial"
+    }
+  },
+  "notes": [
+    "the outer candidate is stopped by an aperture"
+  ]
+}

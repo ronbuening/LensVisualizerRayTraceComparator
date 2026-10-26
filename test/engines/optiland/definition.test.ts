@@ -336,6 +336,7 @@ test("with an interpreter and no other configuration the engine answers hello as
       "mtf.native": { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
       "spot.native": { version: 1 },
+      "axial.native": { version: 1 },
     },
     deterministic: true,
     maxConcurrency: 1,

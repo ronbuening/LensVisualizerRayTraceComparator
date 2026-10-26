@@ -26,6 +26,8 @@ export interface FakeFiniteConjugate {
 export interface FakeLensData {
   key: string;
   name: string;
+  // The line every element's authored indices are of, where the lens states one: LV states it per element.
+  indexReference?: string;
   surfaces: FakeSurfaceData[];
   /** A plate behind the lens. Without a published `sd` the fake generates a rim, which does not clip. */
   rearPlate?: { d: number; nd: number; gap: number; sd?: number };
@@ -146,7 +148,7 @@ export interface FakeRuntimeLens {
   epZRelStop: number;
   xpZRelLastSurf: number;
   xpSD: number;
-  elements: readonly { id: number; absorptionCoefficientPerMm?: number }[];
+  elements: readonly { id: number; absorptionCoefficientPerMm?: number; indexReference?: string }[];
 }
 
 export interface FakeStateSurface {

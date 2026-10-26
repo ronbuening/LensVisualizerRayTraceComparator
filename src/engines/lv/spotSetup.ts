@@ -17,6 +17,15 @@ export interface LvSpotSetup {
 }
 
 /**
+ * The pupil radius the analysis drawer hands every tab for a case, mm: the hook's entrance pupil for the case's stop
+ * radius (`lvPupilSeed`), as for the MTF launch. For a case that is the drawer's, it is the tabs' own `currentEPSD`.
+ */
+export function lvTabPupilSemiDiameter(api: LvHookApi, model: LvCaseModel): number {
+  const { state, runtime, exported } = model;
+  return lvPupilSeed(lvHookAperture(api, runtime, state), exported.conditions.stopSemiDiameter);
+}
+
+/**
  * What the tabs are asked with for a case.
  *
  * - The pupil radius is the one the hook hands the analysis drawer for the case's stop radius (`lvPupilSeed`), as
@@ -32,8 +41,8 @@ export interface LvSpotSetup {
  * ```
  */
 export function lvSpotSetup(api: LvHookApi, model: LvCaseModel): LvSpotSetup {
-  const { state, runtime, exported } = model;
-  const pupilSemiDiameterMm = lvPupilSeed(lvHookAperture(api, runtime, state), exported.conditions.stopSemiDiameter);
+  const { state, runtime } = model;
+  const pupilSemiDiameterMm = lvTabPupilSemiDiameter(api, model);
   const fieldGeometry = api.computeAnalysisFieldGeometryAtState(state.focusT, state.zoomT, runtime, 0);
   const authored = runtime.offAxisFieldFrac as number;
   const candidate = authored;

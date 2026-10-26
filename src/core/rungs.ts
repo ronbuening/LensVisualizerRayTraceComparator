@@ -10,6 +10,8 @@ import { RAYS_TRACE } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
 import { SPOT_NATIVE } from "../contract/quantities/spotNative.ts";
+import { AXIAL_NATIVE } from "../contract/quantities/axialNative.ts";
+import type { AxialNativeSpec } from "../contract/quantities/axialNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -52,6 +54,14 @@ export interface RungInputs {
   readonly spotRaySets?: readonly RaysTraceSpec[];
   /** The engines' own spot requests of the same tabs, from the same source, for such a rung (`SpotNativeAsk`). */
   readonly spotAsks?: readonly SpotNativeAsk[];
+  /**
+   * The axial sets of the run, from the source of its case (`CaseSource.axialRaySets`), for a rung that says it
+   * `needsAxialRaySets`: the rays of the tabs that present the beam along the axis. Empty, or left out, for any other
+   * rung.
+   */
+  readonly axialRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own axial requests of the same tabs, from the same source, for such a rung. */
+  readonly axialAsks?: readonly AxialNativeSpec[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -84,6 +94,11 @@ export interface RungDefinition {
    * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
    */
   readonly needsSpotRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's axial sets (`RungInputs.axialRaySets` and `axialAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsAxialRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -538,6 +553,46 @@ export const r7bRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r8a`, LensVisualizer's spherical-aberration and axial-colour sections on identical rays: one `rays.trace`
+ * request for each of the run's axial sets (`RungInputs.axialRaySets`), the rays the two sections launch parallel to
+ * the axis, each beside its mirror image, which every engine traces as given. The comparator's estimator of where a
+ * ray crosses the axis is applied to each engine's trace of them, and the two engines' intercepts, the
+ * least-squares focus of each set's pairs and the RMS of their heights there are compared, beside which rays got
+ * through (`src/compare/raysAxial.ts`). It is asked of the engines of the run, and only of a run whose source has
+ * axial sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r8aRung: RungDefinition = Object.freeze({
+  id: "r8a",
+  quantity: RAYS_TRACE,
+  needsAxialRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.axialRaySets ?? []),
+});
+
+/** The engines of the rung `r8b`: LensVisualizer, whose sections are asked, and optiland's own rays and focus. */
+export const R8B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r8b`, LensVisualizer's spherical-aberration and axial-colour sections beside an engine's own: one
+ * `axial.native` request for each section (`RungInputs.axialAsks`), the spherical aberration at the case's reference
+ * line and the axial colour at every line, at the sections' own pupil zones, asked of LensVisualizer, whose answer
+ * is its sections' figures, and of optiland, whose answer is the real rays it traces at its own pupil and its
+ * paraxial focus at each line. Recorded, of those two engines and of no other, and run only where it is named:
+ * optiland is not on every machine.
+ */
+export const r8bRung: RungDefinition = Object.freeze({
+  id: "r8b",
+  quantity: AXIAL_NATIVE,
+  needsAxialRaySets: true,
+  engines: R8B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.axialAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: AXIAL_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -557,6 +612,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r6cRung,
   r7aRung,
   r7bRung,
+  r8aRung,
+  r8bRung,
 ]);
 
 /**
