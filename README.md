@@ -36,6 +36,11 @@ at f/8 is outside the bands (at most 0.0087); wide open 69 of 144 fields are mar
 and its wording is linted. These figures are measured at Stage 3.12: LensVisualizer `ab0fd4cf` (engine closure
 `94778d3d`, 175 files), optiland `4e893f53`, policy version 11. All four baselines and the census are rewritten;
 baseline check reports every record `OK` ([measured](docs/REFERENCE.md#measured-at-stage-312)).
+Phase 4 (LensVisualizer's default view, attribution and the [validation statement](reports/validation-statement.md))
+is delivered. Phase 5 is delivered through Stage 5.3: at LensVisualizer `879c06102` and policy version 15, mirror
+and diffractive lenses have suites of their own, and the whole catalog, 1,341 states, is baselined on three engines, with
+every FAIL classified and given a one-run reproducer ([catalog statistics](reports/catalog.md),
+[attribution](docs/REFERENCE.md#stage-53-catalog-fail-attribution)).
 
 ## Requirements
 
@@ -105,6 +110,32 @@ file, byte for byte.
 
 ## Commands
 
+Suite commands accept `--jobs <n>`: `run`, `compare`, `baseline check`, and `mtf --profile benchmark`. The default is
+`--jobs 1` (serial). The ceiling is the smaller of available parallelism and the memory allowance:
+`--memory-budget <GiB>` (default: 25% of installed RAM minus 2 GiB) divided by 2.5 GiB/job, or 4 GiB/job
+when the suite's selected rungs include R6c and its two Python workers. An overlarge value is a usage error.
+On a 48 GiB machine the default is 10 GiB: at most 4 jobs, or 2 with R6c. Choose a smaller budget if other
+applications need more memory. Higher values move case/ray preparation and engine/store work into at most n persistent children.
+The pool pauses new dispatches while child-plus-worker RSS exceeds the budget and resumes when it falls;
+running jobs finish normally. `LVRTC_PROFILE_DIR` records per-process and combined RSS peaks outside results.
+Comparisons use at most n threads, each processing an independent run and preserving its blocking ladder. Persisted results and
+job order are identical to serial execution. New store entries use gzip; existing plain entries remain readable.
+
+```bash
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2
+node bin/lvrtc.mjs compare features --jobs 2
+node bin/lvrtc.mjs baseline check features --jobs 2
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 2
+node bin/lvrtc.mjs store compress          # owner only: dry run, file counts and bytes before/after
+node bin/lvrtc.mjs store compress --yes    # owner only: atomically compress legacy entries
+node bin/lvrtc.mjs store prune             # owner only: dry run, unused engine-version files and bytes
+node bin/lvrtc.mjs store prune --yes       # owner only: remove entries unused by any committed baseline engine
+```
+
+Maintenance uses the configured runs directory. Pruning protects exact engine/fingerprint/adapter tuples from
+Git HEAD's committed baselines, so the answers of engines whose baselines are not yet rewritten and committed
+are removable: prune after a baseline refresh is committed. Run maintenance with no other store writer. See [the reference](docs/REFERENCE.md#stage-51-throughput-and-store-maintenance).
+
 ### Check the code
 
 ```bash
@@ -112,7 +143,10 @@ npm run check
 ```
 
 Runs the type check, lint, format check, the TypeScript tests and the Python tests of the worker kit. It needs
-neither LensVisualizer nor optiland. Run it before every commit.
+neither LensVisualizer nor optiland. Run it before every commit. Hermetic test files use concurrency 4;
+`npm run test:lv` and `npm run test:optiland` use `--test-concurrency=1`. Run one heavy command at a time,
+including across agents: never overlap tiers, suites or pool tests. Real-engine runs use at most `--jobs 4`,
+subject to the lower memory ceiling.
 
 ```bash
 npm run test:lv
@@ -128,6 +162,23 @@ npm run test:optiland
 Runs the tests that need the real optiland, with the interpreter of `engines.optiland.python`. They are not part
 of `npm run check` either, skip the same way, and prove that nothing was written into the optiland checkout. The
 tests that set optiland against LensVisualizer need both.
+
+```bash
+npm run verify:real                 # the benchmark, rays then MTF
+npm run verify:real -- --suite features   # one suite, rays then MTF
+npm run verify:real -- --all        # every routine committed suite, one after the other (not the catalog)
+```
+
+The real-engine check: holds the committed baselines to the live LensVisualizer and optiland. It runs
+`lvrtc doctor` first and refuses (exit 2) when either engine cannot be used or LensVisualizer's checkout is dirty
+or not under git; then `lvrtc baseline check` of each baseline in turn, each in a process of its own, never two at
+once, with at most `--jobs 4` (default), fewer where the memory budget says so (two for the benchmark's MTF, which
+has R6c). It exits 0 only when every record is `OK`, `REFRESHABLE` or `MOVED`, prints a line per suite and kind,
+and writes nothing into `baselines/` or `reports/`. On the warm store the benchmark takes minutes; from an empty
+one its MTF check takes many hours, so a cold check is better run on `--suite features`. Set `LVRTC_RUNS_DIR` to
+keep a trial off the repository's store ([measured](docs/REFERENCE.md#stage-54-the-real-engine-check)). The
+catalog's baselines are a dated snapshot, not refreshed until the project's end: `--all` leaves them out, and
+`--suite catalog` checks them only when asked.
 
 ### Look at LensVisualizer's lenses
 
@@ -335,6 +386,9 @@ both ends.
 | `suites/features.json` | one lens for each kind of surface or aperture the benchmark lacks |
 | `suites/states.json` | slider f/5.6 and f/11, and the benchmark zoom at its published stations; gated rungs |
 | `suites/focus-stations.json` | LV-certified finite focus stations selected at runtime; gated rungs |
+| `suites/folded.json` | the mirror and catadioptric lenses; R0–R3 |
+| `suites/diffractive.json` | the lenses with a diffractive surface; R0–R3 |
+| `suites/catalog.json` | every catalog lens, a zoom at both ends, wide open; gated rungs (owner only) |
 
 The focused suites use `lv,ref,optiland`. See [Stage 4.4](docs/REFERENCE.md#stage-44-focused-state-matrix)
 for their states, measurements and the owner's separate rays/MTF baseline commands.

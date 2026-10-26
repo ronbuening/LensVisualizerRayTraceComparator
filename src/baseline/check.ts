@@ -1,3 +1,5 @@
+import { canonicalJson } from "../core/numeric/canonicalJson.ts";
+import { failureEvidence } from "./catalog.ts";
 // What `lvrtc baseline check` decides: a committed baseline set against the baseline of the same suite as it runs
 // today. Both are baselines, so this reads no engine and no file, and is a pure function.
 import { FAILING_VERDICTS } from "../contract/comparison.ts";
@@ -49,6 +51,7 @@ export interface CheckRecord {
    * and, where both baselines state it, the number of requests it was measured in. Left out when there is none.
    */
   readonly changes?: readonly CheckChange[];
+  readonly knownFailure?: boolean;
 }
 
 /** One figure of a record that is not what the baseline has: null for a value that is not finite or not there. */
@@ -155,6 +158,16 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
         if ([a, b].some((id) => !sameEngine(engineOf(committed, id), engineOf(fresh, id)))) stale.push("engine");
         if (policyStale) stale.push("policy");
         const moved = movedBetween(pair, now, rung.requests === rungToday.requests, policy, rung.rung);
+        const catalogFailure = fresh.suite.name === "catalog" && now.verdict === "FAIL";
+        const knownFailure =
+          catalogFailure &&
+          pair.verdict === "FAIL" &&
+          !!pair.failures?.length &&
+          !!now.failures?.length &&
+          failureEvidence(rung.requests, pair) === failureEvidence(rungToday.requests, now) &&
+          canonicalJson(pair.failures) === canonicalJson(now.failures) &&
+          changesBetween(pair, now).length === 0;
+        if (catalogFailure && !knownFailure) moved.push("new, changed or unclassified catalog FAIL");
         const recorded = Object.hasOwn(policy.rungs, rung.rung) && policy.rungs[rung.rung].class === "recorded";
         const outcome = moved.length > 0 ? (recorded ? "MOVED" : "DRIFT") : stale.length > 0 ? "REFRESHABLE" : "OK";
         const changes = changesBetween(pair, now);
@@ -163,6 +176,7 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
           stale,
           outcome,
           verdict: now.verdict,
+          ...(knownFailure ? { knownFailure: true } : {}),
           moved,
           ...(changes.length === 0 ? {} : { changes }),
         });
@@ -181,7 +195,7 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
           a: pair.a,
           b: pair.b,
           stale: [],
-          outcome: "NEW",
+          outcome: fresh.suite.name === "catalog" && pair.verdict === "FAIL" ? "DRIFT" : "NEW",
           verdict: pair.verdict,
           moved: [],
         });
@@ -195,7 +209,8 @@ export function checkBaseline(committed: Baseline, fresh: Baseline, policy: Poli
 export function checkFails(records: readonly CheckRecord[]): boolean {
   return records.some(
     (record) =>
-      record.outcome === "DRIFT" || (record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict)),
+      record.outcome === "DRIFT" ||
+      (record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict) && !record.knownFailure),
   );
 }
 

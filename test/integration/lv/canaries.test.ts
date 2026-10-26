@@ -1198,3 +1198,107 @@ test("the request snapshots both aperture radii, and MTF resolves them with the 
     mirror,
   );
 });
+
+test("folded visits still use side filters, transparent holes and a sequential-only OPL capture", { skip }, () => {
+  assertSource(
+    "src/optics/trace/interactions.ts",
+    'return dot(direction, normal) >= 0 ? "front" : "rear";',
+    "contract 1.4's incident-side convention",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'return surface.interaction.inactiveSide === "block" && withinAperture ? "inactive-side-block" : null;',
+    "inactive-side policy exported verbatim",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'if (surface.interaction.type === "block") return withinAperture ? "block-surface" : null;',
+    "closed opaque bands and transparent complements",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "origin = advanceOrigin(point, direction); continue;",
+    "LV omits passive/hole hits from its history; the adapter marks those visits unrecorded",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "nextSurfaceIndex = explicitOrder[explicitCursor++];",
+    "one declared visit per step of LV's loop: alignFolded's order",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    "heights!.push(projectCoordinateToZ(point[1], point[2], direction[1], direction[2], surface.z)); } const side = incidentSideFor(direction, normal);",
+    "a height for every visit LV found, before it decides whether the visit is passive: alignFolded places hits by it",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.pathPlan.mode === "auto" ? undefined : reflectiveSurfaceIndexes,',
+    "run confirmation and the request-time backstop: after declared visits LV searches reflective surfaces",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.surfaces.flatMap((surface, index) => (surface.interaction.type === "reflect" ? [index] : [])),',
+    "the candidate set of LV's post-path search, checked on the run's own coarse/fine sets",
+  );
+  assertSource(
+    "src/optics/trace/generalizedTrace.ts",
+    'geometry.pathPlan.mode === "auto" || (explicitOrder !== null && explicitCursor >= explicitOrder.length)',
+    "an explicit path continues with the reflective search after its last declared visit",
+  );
+  assertSource(
+    "src/optics/trace/types.ts",
+    "Opt-in sequential OPL capture; unavailable for generalized paths until phase-aware validation.",
+    "v2 pathUnavailable is LV's own stated limitation",
+  );
+  assertSource(
+    "src/optics/trace/aperture.ts",
+    'apertureState = radius >= innerSemiDiameter - tolerance ? "inside" : "inside-hole";',
+    "inner active limit is queried exactly rather than rounded",
+  );
+});
+
+test(
+  "diffractive trace records geometric segments only and paraxial phase uses its default wavelength",
+  { skip },
+  () => {
+    assertSource(
+      "src/optics/trace/sequentialTrace.ts",
+      "if (options.recordOpticalPath) opticalPathLengthMm += hit.opticalPathLength ?? n * hit.segmentLength;",
+      "rays.trace v3 keeps LV geometric OPL and declares phasePath unavailable",
+    );
+    assert.equal(occurrences("src/optics/trace/sequentialTrace.ts", "opticalPathLengthMm +="), 1);
+    assertSource(
+      "src/optics/math/paraxial.ts",
+      "const phasePower = diffractiveParaxialPower(surface.diffractive);",
+      "LV first order uses default phase wavelength, not the requested spectral line",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "export const DEFAULT_PHASE_WAVELENGTH_NM = LINE_NM.d;",
+      "manifest binding of the phase paraxial wavelength",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "return -2 * quadraticCoefficient * diffractiveWavelengthScale(phase, wavelengthNm);",
+      "first-order v2 convention",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "radialPower: term.radialPower, coefficient: term.coefficient, derivativeCoefficient: term.radialPower * term.coefficient,",
+      "exportPhase validates prepared caches, reads literal physical coefficients, and invents no normalization",
+    );
+  },
+);
+
+test("LV radial phase powers include odd exponents through 32", { skip }, () => {
+  assertSource(
+    "src/optics/prescription/validate/diffractive.ts",
+    "term.radialPower < 2 || term.radialPower > 32",
+    "contract phase exponents preserve LV's full range, including odd powers",
+  );
+  assertSource(
+    "src/optics/prescription/validate/diffractive.ts",
+    "phase.terms.length < 1 || phase.terms.length > 16",
+    "contract radial phase term count",
+  );
+});

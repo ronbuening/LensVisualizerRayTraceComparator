@@ -84,8 +84,8 @@ export function lengthOf(vector: Vec3): VectorLength {
  * further behind the point than the tolerance, or a component, the landing or the distance is not a finite number
  * (a direction outside the range of `lengthOf`, or a parameter of 2^996 or more, has no distance here).
  */
-export function projectToImagePlane(point: Vec3, direction: Vec3, imageZ: number): ImageLanding | null {
-  if (!(direction[2] > 0)) return null;
+export function projectToImagePlane(point: Vec3, direction: Vec3, imageZ: number, folded = false): ImageLanding | null {
+  if (folded ? direction[2] === 0 : !(direction[2] > 0)) return null;
   const along = (imageZ - point[2]) / direction[2];
   if (!(along >= -IMAGE_PLANE_TOLERANCE_MM)) return null;
   const parameter = along > 0 ? along : 0;

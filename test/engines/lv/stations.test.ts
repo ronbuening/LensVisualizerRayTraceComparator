@@ -156,3 +156,20 @@ test("a station selector is what minor 3 added: a suite that uses one and states
     2,
   );
 });
+
+test("catalog selector expands every key and both zoom ends without dropping source refusals", async (t) => {
+  const lv = freshLv(t),
+    source = createLvCaseSource(lv);
+  const runs = await source.expand(run("*"));
+  assert.ok(runs.length > 3);
+  const zoom = runs.filter((r) => r.lens.kind === "lv" && r.lens.key === "acme-zoom-24-48");
+  assert.deepEqual(
+    zoom.map((r) => r.state?.zoomT),
+    [0, 1],
+  );
+  assert.ok(runs.some((r) => r.name === "selected-acme-singlet-50"));
+  for (const selected of runs) {
+    assert.notEqual(selected.lens.kind === "lv" ? selected.lens.key : "", "*");
+    assert.deepEqual(await source.expand(selected), [selected]);
+  }
+});

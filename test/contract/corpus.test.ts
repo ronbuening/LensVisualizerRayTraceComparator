@@ -205,7 +205,13 @@ test("a quantity module validates as the schema files do", () => {
     const module = QUANTITIES.get(schema.slice(0, -(part.length + 1)));
     assert.ok(module !== undefined, schema);
     const check = part === "spec" ? module.validateSpec : module.validateData;
-    for (const value of Object.values(QUANTITY_FIXTURES[schema].valid)) assert.deepEqual(check(value), []);
+    for (const [name, value] of Object.entries(QUANTITY_FIXTURES[schema].valid)) {
+      assert.deepEqual(
+        check(value, name.startsWith("diffractive-v3-") ? 3 : name.startsWith("folded-v2-") ? 2 : 1),
+        [],
+        `${schema}/${name}`,
+      );
+    }
     for (const [name, { value, expect }] of Object.entries(QUANTITY_FIXTURES[schema].invalid)) {
       assert.deepEqual(
         check(value).map(({ path, keyword }) => ({ path, keyword })),
@@ -286,7 +292,11 @@ test("every valid optical case keeps its invariants and its identity, and finali
     validOnDisk("optical-case").map(([file, value]) => [file, (value as OpticalCase).contract]),
     [
       ["all-features.json", "1.0"],
+      ["diffractive-kinoform.json", "1.5"],
+      ["diffractive-odd-polynomial.json", "1.5"],
       ["double-gauss.json", "1.0"],
+      ["folded-mangin.json", "1.4"],
+      ["folded-spherical-mirror.json", "1.4"],
       ["singlet.json", "1.0"],
       ["unclipped-plate.json", "1.2"],
     ],
@@ -295,8 +305,12 @@ test("every valid optical case keeps its invariants and its identity, and finali
 
 test("every valid request has the id its content gives", () => {
   for (const [file, value] of validOnDisk("request")) {
-    const { id, caseId, quantity, spec } = value as QuantityRequest;
-    assert.equal(id, hashCanonical({ caseId, quantity, spec }), file);
+    const { id, caseId, quantity, quantityVersion, spec } = value as QuantityRequest;
+    assert.equal(
+      id,
+      hashCanonical({ caseId, quantity, spec, ...(quantityVersion === undefined ? {} : { quantityVersion }) }),
+      file,
+    );
   }
 });
 

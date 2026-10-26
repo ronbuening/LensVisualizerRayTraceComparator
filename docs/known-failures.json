@@ -1,0 +1,314 @@
+[
+  {
+    "run": "catalog-bertele-sonnar-50f2-scaled",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-bertele-sonnar-50f2-scaled.json --rungs r2 --jobs 4",
+    "evidenceHash": "6059be683acc136ed77200a25c44d7b4e67ef1d851b47c52069abe1376ccd0ea"
+  },
+  {
+    "run": "catalog-bertele-sonnar-50f2-scaled",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-bertele-sonnar-50f2-scaled.json --rungs r2 --jobs 4",
+    "evidenceHash": "76f1326378c5875169ab83e1a847265e83c1255d8ad7b164b8f829da4f264f0e"
+  },
+  {
+    "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-27mm-f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "e71fcb8ea3d8199675a6deb386604a387ef438adf68c35ed6d0474b2b7aa8a2a"
+  },
+  {
+    "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+    "rung": "r2",
+    "engines": [
+      "optiland",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-27mm-f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "44fd8e20c8610b0f7e5efc2f37229e15a8a1289bc671c32ad78eed01cf834557"
+  },
+  {
+    "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "6312cc7e66ac6d1e889b2b28624c2f61ef8b9402bc302667fe7199dac91d1848"
+  },
+  {
+    "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+    "rung": "r2",
+    "engines": [
+      "optiland",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "81341356d95cc39bf01199cb882dc3cbdbb264555345d24eba1b988b8dfb0ee2"
+  },
+  {
+    "run": "catalog-leica-elmarit-90f28",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-leica-elmarit-90f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9"
+  },
+  {
+    "run": "catalog-leica-elmarit-90f28",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-leica-elmarit-90f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596"
+  },
+  {
+    "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele.json --rungs r2 --jobs 4",
+    "evidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac"
+  },
+  {
+    "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele.json --rungs r2 --jobs 4",
+    "evidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790"
+  },
+  {
+    "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele.json --rungs r2 --jobs 4",
+    "evidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe"
+  },
+  {
+    "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele.json --rungs r2 --jobs 4",
+    "evidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601"
+  },
+  {
+    "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-z-dx-16-50-f3563-vr-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "03fc5b0810a4b96fedd53d28a2d7faea42324e047992bfad43dc631e3cddcc35"
+  },
+  {
+    "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+    "rung": "r2",
+    "engines": [
+      "optiland",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-z-dx-16-50-f3563-vr-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "154aa801d43f974326e3a2068f8625dae0628f450e05b2e6f4ba0c179c3fc3d0"
+  },
+  {
+    "run": "catalog-nokton-50f1",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nokton-50f1.json --rungs r2 --jobs 4",
+    "evidenceHash": "3ad6be5fe712158eb44e46f022af1e20f42e15c8cbff9d62cb74fc84698e7ab3"
+  },
+  {
+    "run": "catalog-nokton-50f1",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nokton-50f1.json --rungs r2 --jobs 4",
+    "evidenceHash": "5104fd8856a9eca76c142adb1ba63004336f0cad24352451c4feda031ceddceb"
+  },
+  {
+    "run": "catalog-olympus-zuiko-auto-s-50f14",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-olympus-zuiko-auto-s-50f14.json --rungs r2 --jobs 4",
+    "evidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82"
+  },
+  {
+    "run": "catalog-olympus-zuiko-auto-s-50f14",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-olympus-zuiko-auto-s-50f14.json --rungs r2 --jobs 4",
+    "evidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c"
+  },
+  {
+    "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-pentax-da-18-55mm-f35-56-al-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "e5bed43170fde81ba8b0f04b9bbaef7d9edad6d249443c041d77baad127827b5"
+  },
+  {
+    "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-pentax-da-18-55mm-f35-56-al-wide.json --rungs r2 --jobs 4",
+    "evidenceHash": "8a30fabf36cf4579337bd6ee89d8cd3e3dff0986531b64c5bc4d92f25ec94f14"
+  },
+  {
+    "run": "catalog-ricoh-gr1-28f28",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-ricoh-gr1-28f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "02fb59b40bd885d736185656c1d07b45cd70897a088be3591fc0611d92d1e40c"
+  },
+  {
+    "run": "catalog-ricoh-gr1-28f28",
+    "rung": "r2",
+    "engines": [
+      "optiland",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-ricoh-gr1-28f28.json --rungs r2 --jobs 4",
+    "evidenceHash": "23f691e43e9cc5056a1505258fa0b722c7ed2ba2d9ff932319460a010051fad7"
+  },
+  {
+    "run": "catalog-russar-22-70f8",
+    "rung": "r2",
+    "engines": [
+      "lv",
+      "optiland"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-russar-22-70f8.json --rungs r2 --jobs 4",
+    "evidenceHash": "7b6caeed23e34f0842e5f252ad5148ab41493c16b0f9f9f7d8d5e41d6473b672"
+  },
+  {
+    "run": "catalog-russar-22-70f8",
+    "rung": "r2",
+    "engines": [
+      "optiland",
+      "ref"
+    ],
+    "metric": "mask.mismatches",
+    "class": "method",
+    "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+    "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-russar-22-70f8.json --rungs r2 --jobs 4",
+    "evidenceHash": "1d755a395280c5d0046c30659ddbcf45404e3ea379a665419ba8de371b0b544e"
+  }
+]

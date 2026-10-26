@@ -1,3 +1,4 @@
+import { gunzipSync } from "node:zlib";
 // The Python fake engine, as the comparator reaches it: a stdio worker behind a RemoteEngineAdapter. It must be
 // interchangeable with the TypeScript fake, byte for byte. These tests need Python 3.10 or later and are skipped,
 // with the reason, where there is none; everything else about the stdio path is tested without it.
@@ -277,7 +278,8 @@ test(
     );
     // The stored answers of the two unbiased fakes hold the same data, byte for byte.
     const stored = readdirSync(join(runsDir, STORE_DIRECTORY)).map(
-      (file): ResultEnvelope => JSON.parse(readFileSync(join(runsDir, STORE_DIRECTORY, file), "utf8")).result,
+      (file): ResultEnvelope =>
+        JSON.parse(gunzipSync(readFileSync(join(runsDir, STORE_DIRECTORY, file))).toString("utf8")).result,
     );
     assert.equal(stored.length, 10);
     const dataOf = (engine: string): string[] =>

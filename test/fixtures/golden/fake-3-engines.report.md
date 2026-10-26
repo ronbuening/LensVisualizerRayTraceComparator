@@ -7,8 +7,8 @@
 | Suite | fake-3-engines |
 | Suite hash | 4bd7cc1cd623fd9fc7a808d67bc494bdf269c445a77e7e9663ffcbde75b1b7a3 |
 | Contract version | 1.0 |
-| Policy | rungs v14 |
-| Policy hash | 693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120 |
+| Policy | rungs v15 |
+| Policy hash | 1db393cc152dc19e71ca79b07f474d3a837fa402f51632312a6fc5cbeb671524 |
 
 ### Engines
 

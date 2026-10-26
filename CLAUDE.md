@@ -14,8 +14,18 @@ npm test               # node --test on test/**/*.test.ts, except test/integrati
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
 npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
+npm run verify:real    # Stage 5.4: lvrtc doctor, then baseline check benchmark and benchmark --mtf on live LV and optiland, one at a time; NOT part of check
+npm run verify:real -- --all   # the same for every routine committed suite in a fixed order (not the catalog, a dated snapshot: --suite catalog); --suites a,b and --jobs <n> (default 4, a ceiling)
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
+node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2   # process pool; default --jobs 1 is serial
+node bin/lvrtc.mjs compare features --jobs 2   # parallel comparisons, collected in manifest order
+node bin/lvrtc.mjs baseline check features --jobs 2   # the same pool for baseline suites
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --jobs 2   # the same pool for MTF benchmark suites
+node bin/lvrtc.mjs store compress        # OWNER ONLY: dry run; counts and bytes before/after
+node bin/lvrtc.mjs store compress --yes  # OWNER ONLY: atomically gzip legacy plain entries
+node bin/lvrtc.mjs store prune           # OWNER ONLY: dry run; unused engine versions, protected by HEAD baselines
+node bin/lvrtc.mjs store prune --yes     # OWNER ONLY: delete only entries no committed baseline engine can hit
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
 node bin/lvrtc.mjs compare fake-pair --root test/fixtures/fake-root   # compare a run: writes comparisons.json
 node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a compared run: report.json, report.md
@@ -28,6 +38,10 @@ node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral c
 node bin/lvrtc.mjs export --all --census reports/census   # every lens, a zoom at both ends; rewrites the census
 node bin/lvrtc.mjs run suites/states.json --rungs r0,r1,r2,r3,r4   # the stop-down and zoom-station matrix on its own engines (lv, ref, optiland); then compare states, baseline write states
 node bin/lvrtc.mjs run suites/states.json --rungs r4,r4f,r6a        # its gated MTF rungs; then compare states, baseline write states --mtf (the same for focus-stations)
+node bin/lvrtc.mjs run suites/catalog.json --rungs r0,r1,r2,r3,r4 --jobs 4   # OWNER ONLY: every catalog state (1,341); MTF with --rungs r4,r4f,r6a; recipe in docs/REFERENCE.md, Stage 5.3
+node bin/lvrtc.mjs report catalog --catalog    # reports/catalog.{md,json} from the two catalog baselines alone
+node bin/catalog-case.mjs <run> suites/catalog-repro/<run>.json   # a one-run reproducer of one catalog state (suite catalog-repro)
+node bin/catalog-attribution.mjs <temporary LVRTC_RUNS_DIR>       # after a reproducer: 60-digit LV/ref check, native optiland rows
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1   # real lenses on the built-in engines
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref --rungs r0,r1,r2,r3,r4   # with LV's own launch rays traced, and the geometric MTF of them
 node bin/lvrtc.mjs run suites/benchmark.json   # the suite's own engines (lv, ref) on every rung; selftest is unsupported by both; r4f adds lv and replay; r6a traces a lattice twice as fine and r6b adds lv and wave: a long run, so name --rungs r0,r1,r2,r3,r4 for the baselined rays rungs
@@ -46,7 +60,7 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
 node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
-node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
+node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; the catalog held to its frozen policy; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
@@ -60,6 +74,59 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Node `>=24.15.0 <25`, ESM, no build step.** Sources run under Node's native type stripping, so only erasable
   TypeScript is allowed (`erasableSyntaxOnly`): no enums, namespaces or constructor parameter properties.
 - **Import TypeScript with `.ts` specifiers** and use `import type` for types (`verbatimModuleSyntax`).
+- **Suite concurrency is explicit** (`--jobs <n>` on `run`, `baseline check`, and `mtf --profile benchmark`): a positive
+  integer, default **1 (serial)**, capped by available parallelism and by the memory budget (`maxJobs`,
+  `src/cli/jobs.ts`). `--memory-budget <GiB>` defaults to **25% of installed RAM minus 2 GiB** for the controller
+  and reserve, leaving room for the owner's other applications. Divide it by **2.5 GiB/job**, or **4 GiB/job**
+  when the selected suite/baseline rungs include `r6c` (optiland plus optiland-wave). A serial run (jobs 1) starts no
+  pool and is always allowed, whatever the budget (a 16 GB machine's budget is 2 GiB); an overlarge value is a usage error naming both
+  budget and estimate. On this 48 GiB machine the default budget is **10 GiB**, allowing **4 jobs**, or **2
+  for R6c**. These are conservative planning estimates, not an allocation or a physical memory guarantee.
+  Higher values use at most n Node child processes, each bound to
+  the configuration's one LV tree and owning its engine replicas for the whole suite. Every replica has its own
+  validated hello; optiland is still started only through its definition, `optilandWorkerEnvironment` and its existing
+  timeouts. A slot waits an engine's `runMs` plus `SLOT_MARGIN_MS` (60 s, for the child's store work) before it kills
+  its child, so an in-process engine job, unbounded in a serial run, is bounded there. On SIGINT or SIGTERM the
+  controller ends its children and removes staged entries and prepared inputs before it dies of the signal. No killed
+  worker is restarted. Terminal failures are admitted in request order per engine; later speculative answers of that
+  engine are discarded, so its subsequent jobs fail as in serial execution. Other engines continue. Jobs, callbacks and
+  manifests retain planned order; follow-ups wait for their run's rung and precede its next rung. Duplicate store
+  requests wait for their first answer. Pool code is outside engine import closures: concurrency changes no fingerprint,
+  adapter revision, store key or persisted byte. Parallel suite expansion/export, recipe/ray/request preparation and the
+  store's lookup, validation, canonical JSON, gzip and temporary writes execute in the same persistent children. Large
+  result arrays stay there; the controller receives outcome summaries and atomically renames admitted entries. At most
+  32n jobs compute or await admission; a completed staging file releases its CPU slot and survives later child death.
+  Duplicate waits do not occupy workers; validated outcomes are reused only while the store file's inode, size, mtime
+  and ctime remain unchanged (nanosecond timestamps). Changed files are read and validated again. Speculation after
+  engine death is deleted, and remaining temporary files are cleaned after all workers exit. Prepared request bodies use
+  transient V8 binary files (numeric bits preserved) and a four-run LRU per child. Dispatch sends small references. Full
+  specs remain available to follow-up decisions. Planned-order tickets are assigned before duplicate waits, and
+  requested backend hellos start alongside recipe/ray preparation. Inputs are deleted after every worker exits and never
+  enter store identities. `compare --jobs <n>` uses a separate bounded thread pool across runs, keeping each run's spans
+  and blocking ledger together and collecting in manifest order. Baseline checks and benchmark MTF share both paths. Opt
+  into parallelism for workloads that amortize startup and replica memory. A custom `runSuite` registry supplies its own
+  isolation. `LVRTC_PROFILE_DIR=<temporary directory>` records per-process phase timings and peak RSS outside run
+  artifacts. The controller samples child RSS and interpreter-owned worker RSS heartbeats every 250 ms;
+  Python's own current RSS comes from Mach task_info on macOS or /proc/self/statm on Linux, with lifetime peaks
+  also reported. Unknown custom launchers require `ps` descendant accounting. Above the budget, new dispatches
+  wait until the sum falls; running work and ordered result publication continue. No job is killed for memory.
+  Sampling failures also pause dispatch until readable. Never use `os.freemem()` to estimate macOS pressure.
+  Profiles include `pool-memory-*.json` with peak simultaneous RSS, per-slot/worker peaks and pauses. These
+  scheduling diagnostics stay outside engine source hashes and persisted results. See `docs/REFERENCE.md`.
+- **New result-store entries are `<key>.json.gz`**, gzip of exactly the canonical JSON plus newline the plain
+  entry held. Legacy `<key>.json` remains readable; gzip takes precedence when both exist, and corruption is
+  reported rather than hidden by the other copy. No key or identity changes. Writes publish atomically.
+- **Store maintenance is run only by the owner**, never by an implementer against `runs/store`. `lvrtc store
+  compress` and `store prune` are dry runs unless `--yes` is explicit. Compression reports file counts and bytes
+  before/after, writes a temporary gzip, renames it, then removes its plain source; conflicting duplicates are
+  refused. Pruning reads only Git HEAD's committed `baselines/*.json` blobs, protects every exact
+  `(engine id, fingerprint, adapter revision)` tuple they name, and reports retained/removable files and bytes
+  per engine and per removable engine version (with its newest entry), and always states `PRUNE_NOTICE`: the
+  engines as the checkout runs them are protected only once baselines written with them are committed, so prune
+  after a refresh is committed, never before. Missing/invalid committed baselines abort pruning; unreadable/corrupt
+  entries are retained.
+  Run maintenance without concurrent suite/store writers. Tests and measurements use temporary `LVRTC_RUNS_DIR`
+  directories; the real store, LensVisualizer and optiland remain untouched.
 - **Zero runtime npm dependencies.** Validators, hashing and codecs are written here. Dev dependencies are tooling
   only.
 - **Tests are `node:test`** in `test/**/*.test.ts`. Unit tests are hermetic: they need neither LV nor optiland.
@@ -102,7 +169,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   through `CaseSource.expand` like the ends): `"published-zoom"` is the ends plus LV's `publishedZoomStations`,
   sorted, each once (`-wide`, `-zoom<T>`, `-tele`; a prime one run); `"certified-focus"` is every conjugate
   LV declares certified, including a station its MTF gate refuses
-  (`-<key>-zoom<station>-focus<keyframe>`; `key: "*"` is the catalog, for this selector only). A declared station
+  (`-<key>-zoom<station>-focus<keyframe>`; `key: "*"` selects its catalog declarations). Without `stations`,
+  `key: "*"` selects every catalog lens, then ordinary zoom-end expansion; source refusals stay ordinary runs. A declared station
   the gate refuses (two fisheyes at `ab0fd4cf`) remains an ordinary run with the coded problem
   `finite-conjugate-unavailable` (the gate's `unsupported-path` supplies no finite conjugate). A selector with
   stated coordinates
@@ -113,6 +181,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `policyProblems` refuse earlier-minor several-line bands. `suites/states.json`, `focus-stations.json` and
   policy version 14 state 1.3. A baseline recording source problems also states 1.3, with nullable `caseId`
   and `problems`; other baselines, cases, requests, results and manifests are written as before.
+- **One heavy command at a time, across the main session and all agents.** A tier, suite or pool test is a
+  heavy command. Never run `test:lv` alongside `test:optiland`, or overlap either with another heavy command.
+  Agents must coordinate with the main session before starting one. Real-engine runs use **at most --jobs 4**,
+  subject to the lower memory ceiling (R6c defaults to 2 here). Both integration tiers run only as
+  `node --test --test-concurrency=1 ...` (the npm scripts enforce this); `npm test` caps hermetic file
+  concurrency at **4**, because hermetic tests also start children/pools. Never run prettier on `docs/`.
 - **Three test tiers.** `npm run check` is hermetic: no LV, no optiland (it must pass with `LVRTC_LV_PATH` and
   `LVRTC_OPTILAND_PYTHON` pointing nowhere). `npm run test:lv` needs LV. `npm run test:optiland`
   (`test/integration/optiland`) needs the interpreter of `engines.optiland.python`, runs the Python tests of the
@@ -524,7 +598,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   than its attention band); `baseline check` also lists every figure that is not what the baseline has
   (`summarizeChanges`), and does not compare the per-field values kept in `sets`: read `git diff reports/` after a
   rewrite. A recorded pair that is ERROR today fails the check.
-- **An edit to a file in a built-in engine's import closure (`src/contract/version.ts`, `src/core/suite.ts`, ...)
+- **An edit to a file in a built-in engine's import closure (`src/contract/version.ts`, `src/core/negotiate.ts`, ...)
   changes its adapter revision**: all four baselines become STALE(engine) and the store recomputes lv, ref, replay
   and wave. Check, then write, each kind.
 - **`lvrtc mtf --profile benchmark` is a suite of its own** (`mtf-<lensKey>`, `runBenchmark` in
@@ -532,6 +606,27 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c on reference and photopic lines. It exits
   1 on a FAIL or ERROR pair. Without `--profile benchmark` the command is the single request of `lv-tab-default`.
   A test of it sets `LVRTC_RUNS_DIR` and closes the binding.
+- **`npm run verify:real` is the real-engine check** (`src/cli/verifyReal.ts`, `bin/verify-real.mjs`; Stage 5.4). It
+  plans every check first (suite files and baselines must exist; exit 2), runs `lvrtc doctor --root <root> --json`
+  in a child and refuses (exit 2, no check run) unless Node is in range, LV is present, loadable, a git checkout and
+  clean, and optiland's engine answers (optiland's own dirty flag only moves its fingerprint, so it is not refused).
+  Then each `lvrtc baseline check <suite> [--mtf] --json` is a child `bin/lvrtc.mjs` of its own, strictly one after
+  the other: benchmark rays then MTF, `--suite <name>` or `--suites a,b` (the kinds of baseline each has), or with
+  `--all` `VERIFY_REAL_SUITES` (benchmark, features, states,
+  focus-stations, folded, diffractive; rays before MTF; folded and diffractive have no MTF baseline). The catalog's
+  baselines are a dated snapshot (policy 15, LV `879c06102`) not refreshed until the project's end
+  (`SNAPSHOT_SUITES`): never in `--all`, checked only when named, and the plan says it is a snapshot.
+  `--jobs` is a ceiling (default 4): a check gets `min(jobs, maxJobs(default budget, jobEstimateGiB(its baseline's
+  rungs)))`, two for the benchmark's MTF with R6c on the owner's machine. A check is clean only when it exited 0,
+  says `failed: false`, has records and every record is OK, REFRESHABLE or MOVED (`CLEAN_OUTCOMES`); DRIFT, an
+  unlisted FAIL or ERROR, an engine error, NEW and GONE are not. A not-clean check fails the whole and the next
+  still runs; a check ended by a signal (the memory watchdog) stops the sequence: rerun with fewer `--jobs`.
+  SIGINT and SIGTERM to the script are both handed on at once to the running check (`forwardStopSignals`), so an
+  interrupt ends it promptly; a pool controller ignores a second signal while it cleans up. It
+  writes nothing itself; set `LVRTC_RUNS_DIR` to keep a measurement off `runs/store`. Tests are hermetic
+  (`test/cli/verifyReal.test.ts`: scripted runner, and fake engines under a temporary root). A cold benchmark MTF
+  check at `--jobs 2` is many hours (stopped by the owner after 6.5 h); on the warm owner store it is minutes. The
+  stage's evidence is a cold features run (`docs/REFERENCE.md`, "Stage 5.4").
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
   that follows it, and what was written is read back before a commit says it was.
 - **A surface that does not clip is `aperture.semiDiameter` null (contract minor 2).** A rear plate whose rim
@@ -602,7 +697,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Policy version 11 has no floor on any rung or metric.** A pair above a gate is FAIL. LensVisualizer's
   1e-12 mm tolerance puts its worst R2/R3 distances from `ref` four to seven orders of magnitude inside the gates;
   the larger of each gate and ten times its measured residual is the gate, where a floor can never be granted.
-  Phase 5's catalog sweep will show whether a steep lens still needs one. The machinery (`src/compare/floor.ts`)
+  The Stage 5.3 catalog sweep needed none (its FAILs are classified mask mismatches, never floored). The machinery (`src/compare/floor.ts`)
   stays for a future engine and is tested with synthetic policies: `FLOOR` is a pass, counted apart, with limits
   on the rung and its metrics. The floored engine must be within `limit` of the arbiter; every other engine is a
   witness. A witness within `agreement` corroborates; otherwise its distance is named. A floor is refused when
@@ -671,7 +766,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   run (name and case hash), rung and pair of engines, the verdict, metrics, counts, policy, fingerprints and
   adapter revisions; no ray arrays, no prescriptions. `reports/<suite>/rays.{md,json}` are rendered from the
   baseline alone. `lvrtc baseline write <suite>` writes both from a compared run and refuses a run with a FAIL or
-  ERROR pair. Source refusals are recorded as coded run problems with no ERROR pair.
+  ERROR pair (the catalog alone admits a FAIL listed exactly in `docs/known-failures.json`). Source refusals are recorded as coded run problems with no ERROR pair.
   `lvrtc baseline check <suite>` needs the engines: per record OK, STALE(case|engine|policy) with
   REFRESHABLE or DRIFT, NEW or GONE; it exits 1 only on DRIFT, FAIL or ERROR. `lvrtc verify` is hermetic and the
   last step of `npm run check`: schema, invariants, policy hash, and reports byte for byte; it cannot see STALE.
@@ -727,3 +822,150 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
   Policy 14 states contract 1.3 for the several-line chief-landing member introduced in Stage 4.3;
   its limits retain policy 13's values. The MTF attention bands, classes, gates and quantity versions do not move.
+
+
+## Stage 5.2a folded systems
+
+- Contract 1.4 is content-selected: fixed `system.opticalPath` cases and requests using `quantityVersion`.
+  Sequential cases and requests keep their earlier versions and identity expressions. `rays.trace` v1 remains
+  sequential; v2 uses visit indices, repeats physical surfaces and permits reverse propagation after reflection.
+  LV, ref and optiland offer both definitions. The request chooses; never globally replace v1 with v2.
+- Export fixed prepared path metadata and side filters verbatim. Reverse-medium lookup is LV's bound
+  `rearMediumSurfaceIndex`; no sample ray discovers a path and no axial-side guess selects an exact interaction.
+  Auto paths, unexpressible planes and diffraction retain source codes. `mixed-reference` is an LV data issue.
+- Folded active bands are conditional interactions: mirror holes transmit; blockers stop their closed band and
+  transmit its complements. Ref determines incident side from its exact normal, keeps compensated paths and
+  reflection dots, and proves singular pupils with exact rational arithmetic on the original inputs, never an
+  epsilon. Its mirror proofs are in `test/engines/ref/folded.test.ts`.
+- The optiland folded policy wraps native geometry, `RefractiveReflectiveModel` reflection and native
+  `RealRays.refract`. Its window, side filters, native models and both side indices are read back. Its optical
+  path charges native parameters to the actual per-ray medium; normalization correction remains in `trace.py`.
+  An image policy charges the final stretch too. Every new read-back has a deliberate fault in `test_folded.py`.
+  `material="mirror"` is the factory's mirror switch; `is_reflective=` is silently ignored and pinned as a fault.
+- LV generalized OPL is explicitly absent: v2 may supply geometry with `pathUnavailable`; R3 then says
+  UNSUPPORTED, never PASS with an invented zero. LV records no hit for a passive visit (a hole, an ignored
+  inactive side, a blocker outside its band) but keeps a height for every visit under `recordHeights`:
+  `alignFolded` (`src/engines/lv/rays.ts`) places each recorded hit on the one declared step whose height is
+  that hit's own by LV's `projectCoordinateToZ`, to the bit, and the direction must not change across the
+  steps between. Such a step is v2 `unrecordedHits` (NaN, flagged; never the exit visit) and R2 skips only
+  that point; no point is computed for it. LV going on past the declared visits (its explicit traversal then
+  searches its reflective surfaces) is `lv-folded-post-path-interaction`; a record that fits no single way is
+  `lv-folded-unaligned-visits`; an unrecorded exit visit is `lv-folded-unrecorded-visit`. Canaries hold the
+  LV lines. First-order values that LV supplies remain its own, even when an analytic proof identifies a
+  defect. Keep R0 physical indices separate from R2/R3 visit indices.
+- `suites/folded.json` is the 16-lens Stage 5.2a suite. Use temporary `LVRTC_RUNS_DIR` storage, no baseline, and
+  no catalog ray sweep in Stage 5.2a; its rays baseline was first written at Stage 5.3 (policy 15, LV `879c06102`). Sequential compatibility is checked against temporary benchmark/features manifests
+  produced by a `git archive HEAD` extract. Never freeze code fingerprints to keep old store keys alive.
+- **Owner decision 2026-10-23: check the run's traced rays, not a static envelope.** The raw exporter keeps the
+  declared path. `CaseSource.confirmRaySets`, called by `planJobs` after generating exactly the selected rungs'
+  coarse/fine sets and before planning any engine request, uses LV's existing post-path detector on those sets.
+  `folded-post-path-reflection` refuses the whole run (null case, source problem, zero jobs for every engine).
+  Accepted folded cases carry `folded-declared-path-confirmed:run:<utf8hex>:coarse:<sets>:fine:<sets>` in existing
+  provenance notes: reversible run name, ordered ray-set hashes joined by `.`, or `empty` / `unrequested`.
+  This confirms only the listed finite sets. Never generate extra probes or infer an untraced geometric guarantee.
+  Pool preparation returns the confirmed/refused runs as well as jobs, and serial/pool artifacts must match.
+  Shared case ids preserve every run's note. Raw exports/census remain unconfirmed; request-time refusal remains
+  a backstop. The owner fixed LV's principal-plane defect in `f9fb75c86` (included in clean `879c06102`); all four historical R1 FAILs now pass. The brief is
+  `docs/upstream/lensvisualizer-mirror-principal-plane.md` (for the owner; not filed).
+  At LV `2e046d71`, the folded suite has eight confirmed cases / eight source refusals, 144 jobs (135 ok,
+  nine unsupported, zero errors), and historically 149 PASS / four FAIL / 87 UNSUPPORTED comparisons across both modes.
+  The raw geometry census remains 995 lenses / 325 zooms / 1,320 states: 1,304 exports, 16 refusals, zero throws.
+
+## Stage 5.2b diffractive surfaces
+
+- Owner decision 2026-10-25: contract 1.5 is content-selected. Prepared radial optical-path polynomials remain on
+  their substrate, with literal powers, coefficients, order and design wavelength. LV has no normalization radius;
+  unknown members and inconsistent derivative/quadratic caches are `diffractive-phase-unsupported`, never fitted.
+- Only diffractive cases ask `rays.trace` v3 and `paraxial.first-order` v2. Every earlier definition is still offered.
+  Non-diffractive cases/requests keep their versions and identity expressions; source fingerprints are never frozen.
+- `opticalPath` and `opticalPathToImage` still mean geometric index times distance. V3 adds signed **per-visit**
+  `phasePath[S,n]`; the wave path adds its compensated sum to the geometric path. Never insert phase into the
+  geometric arrays. LV records only geometric segments: supply all-NaN phase rows with `phasePathUnavailable`,
+  `lv-phase-path-unavailable`, and keep comparing geometric OPL. R3 records the unavailable phase metric explicitly.
+- Ref derives the surface-gradient momentum kick independently, with compensated polynomial/dot/path/matrix sums.
+  `test/engines/ref/diffractive.test.ts` derives power, focal length, exact quadratic-phase focus, local grating
+  deflection, signed phase path and a hybrid achromat. A quadratic phase has a height-dependent exact focus;
+  never claim it is an aberration-free hyperbolic focusing phase. Check any LV/ref disagreement in extended precision.
+- LV's paraxial kernel takes its own compiled phase, at its bound default d wavelength. Other phase wavelengths
+  are `lv-phase-paraxial-wavelength`, never synthesized first-order data. Its MTF gate still refuses diffraction;
+  this stage verifies R0–R3, with ordinary probe rays where the MTF launch gate supplies none.
+- Optiland receives a native `RadialPhaseProfile` in radians and `PhaseInteractionModel` on the actual substrate.
+  Its constant-period `DiffractiveInteractionModel` is not a radial polynomial. Design-coordinate metadata,
+  native radian coefficients, class, both parent links, efficiency and reflection state are read back and checked;
+  every check has a deliberate fault in `test_phase.py`. Describe reads only built objects. The worker separates
+  native OPD into geometric segments and phase rows before its existing direction-length correction.
+- Optiland's first-order accessor bypasses phase; answer `optiland-phase-paraxial-unseen`, never the substrate-only
+  focal length. The direct native paraxial model also has the opposite transmitted phase sign; both behaviors are
+  pinned analytically. Folded phase policies remain `optiland-folded-phase-unsupported` if asked directly.
+- Policy 15 adds only `phasePath.maxAbs`, in waves, at 2e-5, the same absolute path accuracy required per phase
+  interaction as per geometric path. Basis: separate signed eikonal delay on the identical ray, not a change in
+  an existing gate. R0 counts a phase-profile difference under its existing zero `shape.mismatches` gate.
+- `suites/diffractive.json`: eight lenses / nine states, lv/ref/optiland, R0–R3. Run into temporary storage with
+  at most four jobs. Its rays baseline was written in Stage 5.3 (policy 15, LV `879c06102`); no gate widening or floor.
+- Verification requires exact policy identity for every baseline except the catalog's: each states the version and
+  hash of `policy/rungs.v1.json` at hand. The policy-14 transition is closed (Stage 5.3 applied the cleanup;
+  `policy/rungs.v14.json` is gone). Phase-inapplicable metrics leave ordinary pair/report bytes unchanged.
+- **The catalog baselines are a dated snapshot** (owner decision 2026-10-26: policy 15, LV `879c06102`; not
+  refreshed until the project is done, so a later policy needs no re-sweep). `lvrtc verify` exempts
+  `baselines/catalog.json` and `catalog.mtf.json` (`SNAPSHOT_BASELINE_SUITES`) from current-policy identity only:
+  each must record a known frozen policy, `policy/snapshots/rungs.v<version>.json`, whose version and canonical hash
+  are the recorded ones (`loadPolicySnapshot`; a recorded hash with no such file fails, so a forged one does); every
+  recorded gate (tolerance and unit), band and rung quantity must be that policy's and no PASS may exceed its
+  recorded tolerance (`baselineGateProblems`); both files must record one policy, no later than the policy at hand.
+  Schema, invariants, canonical text, the known-failure classifications and their evidence, `reports/catalog/*` and
+  `reports/catalog.{md,json}` are held byte for byte as before. Verify's output says the catalog is a dated snapshot
+  of policy v15 at LV `879c06102`. Never edit or delete `policy/snapshots/rungs.v15.json` (it is not formatted:
+  `policy/` is outside prettier). `baseline check catalog` still judges by the policy at hand (a later policy is
+  STALE(policy), REFRESHABLE or DRIFT) and `baseline write catalog` still writes at the policy at hand. **The
+  end-of-project refresh**: write both catalog baselines at the then-current policy N, `cp policy/rungs.v1.json
+  policy/snapshots/rungs.vN.json` (write prints this line until the file exists, and verify refuses the snapshot
+  until it does), render `lvrtc report catalog --catalog`, run `lvrtc verify`, and commit the baselines, reports
+  and frozen policy together; vN is then the snapshot policy. Keep older frozen files only while a baseline records
+  them.
+
+- LV phase powers are integers 2 through 32, including odd powers (at most 16 terms). Preserve all of them.
+  Optiland explicitly refuses `optiland-odd-radial-phase`; never assign an odd coefficient to an even slot.
+
+## Stage 5.3 catalog implementation
+
+- `suites/catalog.json`: `lens.key: "*"` with no station selector expands every catalog key through the case source,
+  then ordinary zoom ends; wide open, reference line, design plane, lv/ref/optiland, gated R0–R4/R4f/R6a only.
+  Source refusals remain coded runs. At clean LV `879c06102` this expands 1,341 states. Never run a full sweep
+  as an implementer; the bounded sample is at most 25 lenses, using temporary storage and at most four jobs.
+- Catalog-only baseline annotations state contract **1.6**: `runs[].features`, `censusReasons` and pair `failures`.
+  The baseline writer copies flags from validated cases, and codes from source/field/recipe problems. No engine
+  wire document or global `CONTRACT_VERSION` changes. All other suite baseline formats/FAIL refusals stay as before.
+- `docs/known-failures.json` admits exact catalog FAIL evidence only. Each exceeding metric needs run/rung/ordered
+  engines/metric, class in unsupported/data/convention/numerical/method order, gotcha link, one-run command and
+  evidence hash. `failureEvidence` excludes annotations and optional MTF `measured` counts only. The baseline
+  retains FAIL. Unchanged listed FAIL checks OK; any changed pair figure/count/location/classification or new FAIL
+  is DRIFT. ERROR is never admitted; comparison always fails on FAIL. Empty after the zero-FAIL sample; the subsequent owner rays sweep has 83 FAIL rows on 12 lenses, attributed
+  as method with 24 exact three-request aggregate entries and one-run reproducers. See docs/REFERENCE.md's Stage 5.3
+  attribution table and docs/catalog-attribution.json.
+  `lvrtc verify` reports a FAIL or ERROR in any baseline other than the catalog's, and a list entry that no
+  classification of the catalog baselines uses (`unusedKnownFailures`): remove an entry once its FAIL is gone.
+- `node bin/catalog-case.mjs <expanded-name> suites/catalog-repro/<name>.json` makes an ordinary one-run suite
+  from the source expansion, without prescriptions. Its suite is named `catalog-repro`, so a reproduction never
+  replaces `runs/catalog`; never name a reproducer suite `catalog`.
+- `lvrtc report catalog --catalog` renders `reports/catalog.{md,json}` from its two baselines alone; verify holds
+  the bytes. Missing inputs produce an explicitly incomplete report, never invented results. The filled stand-in
+  golden comes from `node test/report/writeGolden.ts`. Counts by feature/reason, finite interpolated quantiles,
+  worst ten, coded refusals and classified FAIL commands distinguish state/pair/request units. R4 duplicates
+  must agree, excluding only MTF's optional measured counts. The validation statement still reads exactly eight
+  baselines of benchmark/features/states/focus-stations, ignoring folded/diffractive/catalog additions.
+- Rechecked folded at LV `879c06102` with jobs 4: eight accepted/eight refused states; 144 jobs (135 ok,
+  nine unsupported, zero errors); R0 40 PASS; R1 17 PASS / 23 UNSUPPORTED; R2 80 PASS; R3 16 PASS /
+  64 UNSUPPORTED. Total both modes **153 PASS / 87 UNSUPPORTED / zero FAIL or ERROR** after LV `f9fb75c86`.
+- The 25-lens/28-state catalog sample has rays 1,248 PASS / 27 UNSUPPORTED and MTF 672 PASS, no FAIL/ERROR.
+  Default-budget jobs 4 worker peaks: rays 4.25 GiB, MTF 5.70 GiB, no pauses. Linear full-sweep estimate:
+  20.2 minutes run+compare, 11.6 GiB compressed store; raising only the budget to 20 GiB changes no worker count.
+  Details, the known-failure workflow and the **sequential owner refresh**: docs/REFERENCE.md, Stage 5.3 (the one-off
+  handoff is folded in there and deleted).
+- The Stage 5.3 refresh is done at LV `879c06102` (policy 15): the eight existing baselines (no DRIFT), folded and
+  diffractive (first baselines), and the catalog: rays 71,005 pairs, 70,843 PASS / 79 UNSUPPORTED / 83 FAIL, every
+  FAIL classified in `docs/known-failures.json` (24 entries, 12 lenses: LensVisualizer's crossing-surface loss on 7,
+  optiland's asphere iteration on 5, all class method, each with a `suites/catalog-repro` reproducer); MTF 40,944
+  PASS. Baselines `catalog.json` 19,761 and `catalog.mtf.json` 9,079 records. The policy-14 cleanup is applied.
+  The class says where a difference comes from, not that an engine is right: whether LensVisualizer's or optiland's
+  behaviour behind these FAILs is fixed or reported upstream is the owner's; never edit a known-failure entry's class
+  or gotcha, or a gotcha heading it links, without rewriting the catalog baseline (both are copied into it).

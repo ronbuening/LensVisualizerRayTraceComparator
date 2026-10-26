@@ -45,7 +45,10 @@ test("the all-features example carries every flag of contract 1.0, in the list's
   });
   // Together with the case of minor 2 the examples carry every flag the contract has.
   const carried = new Set([...CONTRACT_1_0_FLAGS, ...UNCLIPPED_PLATE_CASE.features]);
-  assert.deepEqual([...carried].sort(), [...FEATURE_FLAGS]);
+  assert.deepEqual(
+    [...carried].sort(),
+    [...FEATURE_FLAGS].filter((flag) => flag !== "path.folded" && flag !== "surface.diffractive"),
+  );
 });
 
 test("aperture.unclipped: a surface has no clip radius, whatever its extent", () => {

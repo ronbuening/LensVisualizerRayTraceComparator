@@ -371,3 +371,16 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
     "the catalog beyond these suites are not covered."
   );
 }
+
+/** Catalog statistics describe recorded pair aggregates, never a production-lens validation claim. */
+export const CATALOG_TEXT = {
+  complete: "Both catalog baselines are present; duplicate R4 pairs are counted once.",
+  pending: "The catalog statistics are incomplete until both catalog baselines are written.",
+  units:
+    "State statuses use the gravest pair verdict; pair counts use one aggregate per run, rung and engine pair, with feature groups overlapping.",
+  census: "Source codes count distinct states; engine codes count distinct run, rung and engine refusals.",
+  quantiles:
+    "Quantiles interpolate linearly at (n - 1)p over finite gated pair figures; nonfinite figures are counted separately and ranked first in each worst-ten list.",
+  failures:
+    "Listed failures remain FAIL; each failing metric retains its class, evidence hash, gotcha and one-run reproducer.",
+} as const;

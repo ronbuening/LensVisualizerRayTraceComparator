@@ -291,6 +291,7 @@ export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> =
       pose: null,
     }),
     prepareRuntimeState: () => state,
+    rearMediumSurfaceIndex: (index) => (index === 0 ? null : index - 1),
     wideOpenStopAtZoom: () => state.surfaces[state.lens.stop.surfaceIndex].sd,
     fopenAtZoomClamped: () => 2,
     fNumberAtStopdown: () => 2,

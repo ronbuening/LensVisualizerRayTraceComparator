@@ -39,8 +39,8 @@ export interface Provenance {
   readonly source: ProvenanceSource;
   readonly lv?: LvProvenance;
   /**
-   * What the source knows about the lens that the case does not carry, as codes, sorted and each once; left out
-   * when there is nothing to note. The codes a source writes are listed in contract/CONTRACT.md.
+   * What the source knows about the lens or a run's confirmation of its path, as codes, sorted and each once;
+   * left out when there is nothing to note. The codes a source writes are listed in contract/CONTRACT.md.
    */
   readonly notes?: readonly string[];
   readonly producer: { readonly tool: "lvrtc"; readonly version: string };

@@ -17,17 +17,17 @@ still those, and what moved.
 |---|---|
 | Suite | focus-stations |
 | Suite hash | 1e790649ed6c0737eceb4acd810e5bd33ba4f9b9373f8b27eb1f045fa0222092 |
-| Baseline hash | 11cf154d7885ddd097d3da410af3723370e9eb69a6784bd19698ccabcb01aa1d |
+| Baseline hash | 20685ca451b62b5e2b54aa0cbbf8f94576b5dd4d625250317f263b410842c303 |
 | Contract version | 1.3 |
-| Policy | rungs v14 |
-| Policy hash | 693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120 |
+| Policy | rungs v15 |
+| Policy hash | 1db393cc152dc19e71ca79b07f474d3a837fa402f51632312a6fc5cbeb671524 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 842d3acb45d7d0bb2ac1adec106bd771ec5f68a5b92662bf76dc5cf887e04725 | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 905727914f01561fe28be507b27f41e38792efa4cbb3d10e3d0c148b2f147015 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| ref | 1 | d25c837015c1eddebcb47c6b1c8884452a07829480d52ab0fd1b2bd5b0bafcb6 | 15a954ff46c3b6c4b9f05371470b3b4f35f5edaea95d1a960e8ff021f1f38c07 | sourceFiles 11 |
-| replay | 1 | 7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56 | 48a9f01030b9996d1a413adf23b5723f7ecd9ed538dcc2e2d4e5f187366751fc | commit ab0fd4cf94836492b28470953812ed4afc98c0c6, dirty false, engineFileCount 177 |
+| lv | 1 | c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b | 49b68a617dc135ebdd70d5ff57dc2bce7f09ea74668dd1848e7d973bbcfac0b3 | commit 879c061024519be2b1acaf3cc082947235ea9760, dirty false, engineFileCount 177 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 965e1b3ac30f08fd7d583547cbdc43ccbfd9cf74f6e6bc7cd6af2a98927ca7e7 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
+| replay | 1 | c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b | f5389fa986ffe5ef5e2109535a761cd4106f3bab97c366e2cf4b322b8c5e2374 | commit 879c061024519be2b1acaf3cc082947235ea9760, dirty false, engineFileCount 177 |
 
 | Run | Case |
 |---|---|
@@ -42,10 +42,14 @@ still those, and what moved.
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | bf047195927f492dbe4747fb624b130c606b392e3f16ff70286deb608dfc2341 |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | 302349c7dd8c39bf7c9bab45e376a3645ef723aafa50f3d4b15c3b8502fab4ea |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 5ee5d6fc109ea15cef91551aff548035327ae5028efaec01df78fcc2b6608bbc |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom0-focus16 | 61b10ec1e9b1f97c48595bb029e1dd87e711967e557ec890debf2d1b78be23bd |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom32-focus16 | 4796c91049d6d85a7a7ead5ad24ce0f0559f0cd29463bbd93c08d2526d84522b |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom64-focus16 | bebc9392adca28c39136e0b93ef7dab17fc07529a3bf2d2329cb33d87370b203 |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom0-focus1 | 10bbcde40490c2a5b6cb4fcdb237f2ce8a89a226b6b5c1c1074cc87df438b98f |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom1-focus1 | 3960852d628118b47a9025ca29343cac422df54bcc12632ea5e9b231455d10e0 |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | eb7807b4cfcfd26953355cd6d2dc67b1e74c587de9d15e7e36dde33cd66d3c76 |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 26022f540fbb0f394a84fe1bf7ba0b7e2c0483ac80c4d239346b603aae238b22 |
+| certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | 5f620f64d9e311902a46343054f2ad6864724f805cad14c855f707d8614d7c6a |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 558d181f7fe332e3f23e8fdfad4450baebad65a414c4ccc62804034611b56743 |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | d444984ee236770b2f9ba0d4e1d135c698f24dc9c636595cbc35310d6a2bca6d |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 09377d60ff786893e1adbe31707a39fe50cde373b16ee745d20b4a98cbc63314 |
@@ -72,6 +76,9 @@ still those, and what moved.
 | certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 42d45f93538e8180fad99717955a3b213beb7e8f041199719684fe202799fa7d |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | e30f376ef3f6eb25645b36ba5d2ab1ced553a01076092487ebd631db3ad217da |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | c722c7755ca07f86f1eb5ec78d0147a3efa415ac37bb1ab9c2ee06c98dab7c87 |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 6c56c2c2c0d95b395b854cfaf466ccb5af0b6c17219d973cfb59e103c6812b24 |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | ef02f7b2a5e99dbf32ab1bd453404e8ebe5457cad2c9ed81ee62022023eb2086 |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 344ffcebce2fd7e171947a10bf1678c99337548f1b863f0bc642925b37958288 |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | 5cf10d8c8b6422ed2e37591a15107cc7364b74bc8d8c9565670743267f111297 |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 094c8ed68417c334bf55145670ea50e80da7c4d891f3c9928ad34c528dba5f5b |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | 81be87b898b8d464108529510c67cb301efc5ba64aa33e87df9a55c8c44afea8 |
@@ -98,13 +105,13 @@ still those, and what moved.
 
 | Rung | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| r4 | rays.trace | 53 | 155 | lv – optiland | 53 PASS | 155 PASS |
-| r4 | rays.trace | 53 | 155 | lv – ref | 53 PASS | 155 PASS |
-| r4 | rays.trace | 53 | 155 | optiland – ref | 53 PASS | 155 PASS |
-| r4f | mtf.native | 53 | 53 | lv – replay | 53 PASS | 53 PASS |
-| r6a | rays.trace | 53 | 155 | lv – optiland | 53 PASS | 155 PASS |
-| r6a | rays.trace | 53 | 155 | lv – ref | 53 PASS | 155 PASS |
-| r6a | rays.trace | 53 | 155 | optiland – ref | 53 PASS | 155 PASS |
+| r4 | rays.trace | 60 | 176 | lv – optiland | 60 PASS | 176 PASS |
+| r4 | rays.trace | 60 | 176 | lv – ref | 60 PASS | 176 PASS |
+| r4 | rays.trace | 60 | 176 | optiland – ref | 60 PASS | 176 PASS |
+| r4f | mtf.native | 60 | 60 | lv – replay | 60 PASS | 60 PASS |
+| r6a | rays.trace | 60 | 176 | lv – optiland | 60 PASS | 176 PASS |
+| r6a | rays.trace | 60 | 176 | lv – ref | 60 PASS | 176 PASS |
+| r6a | rays.trace | 60 | 176 | optiland – ref | 60 PASS | 176 PASS |
 
 ## Support
 
@@ -113,14 +120,14 @@ with the code and the item it names; that is an answer and not a failure.
 
 | Rung | Engine | Runs by status |
 |---|---|---|
-| r4 | lv | 53 ok |
-| r4 | optiland | 53 ok |
-| r4 | ref | 53 ok |
-| r4f | lv | 53 ok |
-| r4f | replay | 53 ok |
-| r6a | lv | 53 ok |
-| r6a | optiland | 53 ok |
-| r6a | ref | 53 ok |
+| r4 | lv | 60 ok |
+| r4 | optiland | 60 ok |
+| r4 | ref | 60 ok |
+| r4f | lv | 60 ok |
+| r4f | replay | 60 ok |
+| r6a | lv | 60 ok |
+| r6a | optiland | 60 ok |
+| r6a | ref | 60 ok |
 
 ## r4
 
@@ -128,18 +135,18 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 3.95e-11 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 100 |
-| lv – optiland | rays.compared [rays] | 107776 | 155 of 155 | — | — |
-| lv – optiland | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| lv – optiland | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
-| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.96e-11 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 84 |
-| lv – ref | rays.compared [rays] | 107776 | 155 of 155 | — | — |
-| lv – ref | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| lv – ref | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
-| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 5.04e-11 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 100 |
-| optiland – ref | rays.compared [rays] | 107776 | 155 of 155 | — | — |
-| optiland – ref | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| optiland – ref | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 3.95e-11 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 100 |
+| lv – optiland | rays.compared [rays] | 122945 | 176 of 176 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| lv – optiland | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.96e-11 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 84 |
+| lv – ref | rays.compared [rays] | 122945 | 176 of 176 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| lv – ref | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 5.04e-11 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1.83e1, frequencyPerMm 100 |
+| optiland – ref | rays.compared [rays] | 122945 | 176 of 176 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| optiland – ref | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
 
@@ -155,10 +162,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | 3 | PASS: mtf.maxAbs 5.96e-13 (3 of 3) | PASS: mtf.maxAbs 4.19e-13 (3 of 3) | PASS: mtf.maxAbs 1.01e-12 (3 of 3) |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | 3 | PASS: mtf.maxAbs 8.38e-13 (3 of 3) | PASS: mtf.maxAbs 2.04e-12 (3 of 3) | PASS: mtf.maxAbs 1.49e-12 (3 of 3) |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 3 | PASS: mtf.maxAbs 1.48e-12 (3 of 3) | PASS: mtf.maxAbs 2.19e-12 (3 of 3) | PASS: mtf.maxAbs 1.59e-12 (3 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom0-focus16 | 3 | PASS: mtf.maxAbs 1.80e-12 (3 of 3) | PASS: mtf.maxAbs 1.43e-12 (3 of 3) | PASS: mtf.maxAbs 2.13e-12 (3 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom32-focus16 | 3 | PASS: mtf.maxAbs 4.91e-12 (3 of 3) | PASS: mtf.maxAbs 2.81e-12 (3 of 3) | PASS: mtf.maxAbs 7.72e-12 (3 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom64-focus16 | 3 | PASS: mtf.maxAbs 2.83e-12 (3 of 3) | PASS: mtf.maxAbs 9.55e-13 (3 of 3) | PASS: mtf.maxAbs 2.44e-12 (3 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom0-focus1 | 3 | PASS: mtf.maxAbs 5.27e-13 (3 of 3) | PASS: mtf.maxAbs 1.74e-12 (3 of 3) | PASS: mtf.maxAbs 1.52e-12 (3 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom1-focus1 | 3 | PASS: mtf.maxAbs 7.02e-13 (3 of 3) | PASS: mtf.maxAbs 8.47e-13 (3 of 3) | PASS: mtf.maxAbs 1.15e-12 (3 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | 2 | PASS: mtf.maxAbs 5.58e-13 (2 of 2) | PASS: mtf.maxAbs 1.63e-12 (2 of 2) | PASS: mtf.maxAbs 1.58e-12 (2 of 2) |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 3 | PASS: mtf.maxAbs 3.32e-13 (3 of 3) | PASS: mtf.maxAbs 2.97e-13 (3 of 3) | PASS: mtf.maxAbs 3.28e-13 (3 of 3) |
+| certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | 3 | PASS: mtf.maxAbs 1.97e-12 (3 of 3) | PASS: mtf.maxAbs 1.90e-12 (3 of 3) | PASS: mtf.maxAbs 1.90e-12 (3 of 3) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 3 | PASS: mtf.maxAbs 1.81e-12 (3 of 3) | PASS: mtf.maxAbs 4.50e-12 (3 of 3) | PASS: mtf.maxAbs 5.50e-12 (3 of 3) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | 1 | PASS: mtf.maxAbs 7.42e-13 (1 of 1) | PASS: mtf.maxAbs 4.15e-12 (1 of 1) | PASS: mtf.maxAbs 3.41e-12 (1 of 1) |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 3 | PASS: mtf.maxAbs 2.78e-12 (3 of 3) | PASS: mtf.maxAbs 2.38e-12 (3 of 3) | PASS: mtf.maxAbs 4.72e-12 (3 of 3) |
@@ -184,6 +195,9 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 3 | PASS: mtf.maxAbs 2.99e-12 (3 of 3) | PASS: mtf.maxAbs 2.25e-12 (3 of 3) | PASS: mtf.maxAbs 1.57e-12 (3 of 3) |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | 3 | PASS: mtf.maxAbs 1.62e-12 (3 of 3) | PASS: mtf.maxAbs 5.45e-12 (3 of 3) | PASS: mtf.maxAbs 6.05e-12 (3 of 3) |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | 3 | PASS: mtf.maxAbs 9.32e-13 (3 of 3) | PASS: mtf.maxAbs 1.54e-12 (3 of 3) | PASS: mtf.maxAbs 1.73e-12 (3 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 3 | PASS: mtf.maxAbs 2.34e-12 (3 of 3) | PASS: mtf.maxAbs 1.75e-12 (3 of 3) | PASS: mtf.maxAbs 2.16e-12 (3 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | 3 | PASS: mtf.maxAbs 2.55e-12 (3 of 3) | PASS: mtf.maxAbs 1.43e-12 (3 of 3) | PASS: mtf.maxAbs 2.59e-12 (3 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 3 | PASS: mtf.maxAbs 5.70e-12 (3 of 3) | PASS: mtf.maxAbs 1.31e-12 (3 of 3) | PASS: mtf.maxAbs 6.89e-12 (3 of 3) |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | 3 | PASS: mtf.maxAbs 1.20e-12 (3 of 3) | PASS: mtf.maxAbs 1.91e-12 (3 of 3) | PASS: mtf.maxAbs 2.99e-12 (3 of 3) |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 3 | PASS: mtf.maxAbs 3.33e-12 (3 of 3) | PASS: mtf.maxAbs 2.34e-12 (3 of 3) | PASS: mtf.maxAbs 3.32e-12 (3 of 3) |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | 3 | PASS: mtf.maxAbs 1.74e-12 (3 of 3) | PASS: mtf.maxAbs 1.49e-12 (3 of 3) | PASS: mtf.maxAbs 1.74e-12 (3 of 3) |
@@ -205,9 +219,9 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – replay | mtf.maxAbs (≤ 1.00e-9) | 2.10e-14 | 53 of 53 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1, frequencyPerMm 98 |
-| lv – replay | sampling.mismatches (≤ 0 elements) | 0 | 53 of 53 | — | — |
-| lv – replay | fields.mismatches (≤ 0 elements) | 0 | 53 of 53 | — | — |
+| lv – replay | mtf.maxAbs (≤ 1.00e-9) | 2.10e-14 | 60 of 60 | certified-fujifilm-gf80-f17-zoom0-focus1 | cut tangential, field 1, frequencyPerMm 98 |
+| lv – replay | sampling.mismatches (≤ 0 elements) | 0 | 60 of 60 | — | — |
+| lv – replay | fields.mismatches (≤ 0 elements) | 0 | 60 of 60 | — | — |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
 
@@ -223,10 +237,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.04e-14 (1 of 1) |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | 1 | PASS: mtf.maxAbs 1.45e-14 (1 of 1) |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 1 | PASS: mtf.maxAbs 5.33e-15 (1 of 1) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom0-focus16 | 1 | PASS: mtf.maxAbs 6.55e-15 (1 of 1) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom32-focus16 | 1 | PASS: mtf.maxAbs 8.66e-15 (1 of 1) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom64-focus16 | 1 | PASS: mtf.maxAbs 7.55e-15 (1 of 1) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.02e-14 (1 of 1) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom1-focus1 | 1 | PASS: mtf.maxAbs 1.50e-14 (1 of 1) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | 1 | PASS: mtf.maxAbs 1.12e-14 (1 of 1) |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 1 | PASS: mtf.maxAbs 7.44e-15 (1 of 1) |
+| certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | 1 | PASS: mtf.maxAbs 1.05e-14 (1 of 1) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.30e-14 (1 of 1) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | 1 | PASS: mtf.maxAbs 1.81e-14 (1 of 1) |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 1 | PASS: mtf.maxAbs 6.00e-15 (1 of 1) |
@@ -252,6 +270,9 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 1 | PASS: mtf.maxAbs 7.66e-15 (1 of 1) |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | 1 | PASS: mtf.maxAbs 7.77e-15 (1 of 1) |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.22e-14 (1 of 1) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 1 | PASS: mtf.maxAbs 6.66e-15 (1 of 1) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | 1 | PASS: mtf.maxAbs 1.44e-14 (1 of 1) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 1 | PASS: mtf.maxAbs 1.11e-14 (1 of 1) |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.31e-14 (1 of 1) |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 1 | PASS: mtf.maxAbs 1.67e-14 (1 of 1) |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | 1 | PASS: mtf.maxAbs 1.20e-14 (1 of 1) |
@@ -273,30 +294,30 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – optiland | waveMtf.flagged | 8.49e-10 | 109 of 155 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom1-focus1 | cut sagittal, field 0, frequencyPerMm 100 |
-| lv – optiland | phaseStep.waves [waves] | 3.89e2 | 153 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
-| lv – optiland | convergence.maxAbs | 1.03e-1 | 153 of 155 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
-| lv – optiland | lattice.columns [cells] | 96 | 155 of 155 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
-| lv – optiland | rays.compared [rays] | 430262 | 155 of 155 | — | — |
-| lv – optiland | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| lv – optiland | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
-| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 5.03e-10 | 44 of 155 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | cut tangential, field 0, frequencyPerMm 100 |
-| lv – ref | waveMtf.flagged | 1.11e-9 | 109 of 155 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1, frequencyPerMm 70 |
-| lv – ref | phaseStep.waves [waves] | 3.89e2 | 153 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
-| lv – ref | convergence.maxAbs | 1.03e-1 | 153 of 155 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
-| lv – ref | lattice.columns [cells] | 96 | 155 of 155 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
-| lv – ref | rays.compared [rays] | 430262 | 155 of 155 | — | — |
-| lv – ref | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| lv – ref | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
-| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 4.54e-10 | 44 of 155 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | cut tangential, field 3.94e1, frequencyPerMm 80 |
-| optiland – ref | waveMtf.flagged | 1.06e-9 | 109 of 155 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1, frequencyPerMm 70 |
-| optiland – ref | phaseStep.waves [waves] | 3.89e2 | 153 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
-| optiland – ref | convergence.maxAbs | 1.03e-1 | 153 of 155 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
-| optiland – ref | lattice.columns [cells] | 96 | 155 of 155 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
-| optiland – ref | rays.compared [rays] | 430262 | 155 of 155 | — | — |
-| optiland – ref | rays.dropped [rays] | 0 | 155 of 155 | — | — |
-| optiland – ref | lines.compared [lines] | 1 | 155 of 155 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
-| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 4.33e-10 | 44 of 155 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | cut tangential, field 3.94e1, frequencyPerMm 80 |
+| lv – optiland | waveMtf.flagged | 8.49e-10 | 118 of 176 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom1-focus1 | cut sagittal, field 0, frequencyPerMm 100 |
+| lv – optiland | phaseStep.waves [waves] | 3.89e2 | 174 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
+| lv – optiland | convergence.maxAbs | 1.03e-1 | 174 of 176 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
+| lv – optiland | lattice.columns [cells] | 96 | 176 of 176 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
+| lv – optiland | rays.compared [rays] | 490817 | 176 of 176 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| lv – optiland | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 5.03e-10 | 56 of 176 | certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | cut tangential, field 0, frequencyPerMm 100 |
+| lv – ref | waveMtf.flagged | 1.11e-9 | 118 of 176 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1, frequencyPerMm 70 |
+| lv – ref | phaseStep.waves [waves] | 3.89e2 | 174 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
+| lv – ref | convergence.maxAbs | 1.03e-1 | 174 of 176 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
+| lv – ref | lattice.columns [cells] | 96 | 176 of 176 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
+| lv – ref | rays.compared [rays] | 490817 | 176 of 176 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| lv – ref | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 4.54e-10 | 56 of 176 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | cut tangential, field 3.94e1, frequencyPerMm 80 |
+| optiland – ref | waveMtf.flagged | 1.06e-9 | 118 of 176 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | cut tangential, field 3.26e1, frequencyPerMm 70 |
+| optiland – ref | phaseStep.waves [waves] | 3.89e2 | 174 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | field 0, line 0, ray 474 |
+| optiland – ref | convergence.maxAbs | 1.03e-1 | 174 of 176 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | cut sagittal, field 1.05e1, frequencyPerMm 90 |
+| optiland – ref | lattice.columns [cells] | 96 | 176 of 176 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | — |
+| optiland – ref | rays.compared [rays] | 490817 | 176 of 176 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | 176 of 176 | — | — |
+| optiland – ref | lines.compared [lines] | 1 | 176 of 176 | certified-fujifilm-gf80-f17-zoom0-focus1 | — |
+| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 4.33e-10 | 56 of 176 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | cut tangential, field 3.94e1, frequencyPerMm 80 |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
 
@@ -312,10 +333,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 7.33e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.03e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.35e-11 (3 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom0-focus16 | 3 | PASS: waveMtf.maxAbs 1.51e-10 (2 of 3) | PASS: waveMtf.maxAbs 6.21e-11 (2 of 3) | PASS: waveMtf.maxAbs 8.13e-11 (2 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom32-focus16 | 3 | PASS: waveMtf.maxAbs 2.34e-11 (1 of 3) | PASS: waveMtf.maxAbs 3.75e-11 (1 of 3) | PASS: waveMtf.maxAbs 2.90e-11 (1 of 3) |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom64-focus16 | 3 | PASS: waveMtf.maxAbs 8.99e-11 (2 of 3) | PASS: waveMtf.maxAbs 7.79e-11 (2 of 3) | PASS: waveMtf.maxAbs 5.69e-11 (2 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 2.34e-11 (2 of 3) | PASS: waveMtf.maxAbs 2.43e-10 (2 of 3) | PASS: waveMtf.maxAbs 2.46e-10 (2 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom1-focus1 | 3 | PASS: waveMtf.maxAbs 1.60e-11 (2 of 3) | PASS: waveMtf.maxAbs 2.20e-10 (2 of 3) | PASS: waveMtf.maxAbs 2.25e-10 (2 of 3) |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | 2 | PASS: waveMtf.maxAbs 1.08e-11 (1 of 2) | PASS: waveMtf.maxAbs 1.80e-10 (1 of 2) | PASS: waveMtf.maxAbs 1.87e-10 (1 of 2) |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 5.34e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.08e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.97e-12 (2 of 3) |
+| certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | 3 | PASS: waveMtf.maxAbs 4.24e-11 (1 of 3) | PASS: waveMtf.maxAbs 7.55e-11 (1 of 3) | PASS: waveMtf.maxAbs 6.48e-11 (1 of 3) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 1.39e-10 (2 of 3) | PASS: waveMtf.maxAbs 4.54e-10 (2 of 3) | PASS: waveMtf.maxAbs 4.33e-10 (2 of 3) |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | 1 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 3.12e-11 (2 of 3) | PASS: waveMtf.maxAbs 3.00e-11 (2 of 3) | PASS: waveMtf.maxAbs 1.44e-11 (2 of 3) |
@@ -341,6 +366,9 @@ By run, each pair with its verdict and the judged metric that is largest against
 | certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 3 | PASS: waveMtf.maxAbs 1.26e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.03e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.11e-10 (3 of 3) |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 3.76e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.28e-10 (3 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 3 | PASS: waveMtf.maxAbs 4.96e-11 (2 of 3) | PASS: waveMtf.maxAbs 1.27e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.34e-10 (2 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | 3 | PASS: waveMtf.maxAbs 2.00e-10 (1 of 3) | PASS: waveMtf.maxAbs 2.23e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.08e-10 (1 of 3) |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 3 | PASS: waveMtf.maxAbs 2.85e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.03e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.92e-10 (3 of 3) |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 2.35e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.79e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.80e-11 (3 of 3) |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 3 | PASS: waveMtf.maxAbs 1.89e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.20e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.65e-10 (1 of 3) |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |

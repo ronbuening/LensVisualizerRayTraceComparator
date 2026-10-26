@@ -36,6 +36,10 @@ function functions<const Name extends string>(
  * signature to `LvApi`; the type check fails until the two agree.
  */
 export const LV_IMPORT_MANIFEST = [
+  {
+    module: "src/optics/math/diffractivePhase.ts",
+    exports: [{ name: "DEFAULT_PHASE_WAVELENGTH_NM", as: "defaultPhaseWavelengthNm", kind: "number" }],
+  },
   { module: "src/optics/publishedStations.ts", exports: functions("publishedZoomStations") },
   {
     module: "src/optics/buildLens.ts",
@@ -83,6 +87,8 @@ export const LV_IMPORT_MANIFEST = [
     exports: [{ name: "FLAT_R_THRESHOLD", as: "flatRadiusThreshold", kind: "number" }],
   },
   { module: "src/optics/chromatic.ts", exports: [{ name: "LINE_NM", as: "spectralLinesNm", kind: "object" }] },
+  { module: "src/optics/trace/interactions.ts", exports: functions("rearMediumSurfaceIndex") },
+  { module: "src/optics/trace/utils.ts", exports: functions("projectCoordinateToZ") },
   { module: "src/optics/trace/aperture.ts", exports: functions("evaluateAperture") },
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix") },
   {

@@ -1,3 +1,4 @@
+import { gzipSync, gunzipSync } from "node:zlib";
 // The comparison of a whole run: groups from the manifest, answers from the store, references and ordering.
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -194,8 +195,8 @@ test("a reference that has no job in a run is a missing participant, and its pai
 test("an answer the store no longer holds, or holds spoiled, is a missing participant", async (t) => {
   const { manifest, store, runsDir } = await ran(t, { "fake-a": ENGINES["fake-a"], "fake-near": ENGINES["fake-near"] });
   const [first, second] = manifest.jobs.filter((job) => job.engine === "fake-near");
-  rmSync(join(runsDir, STORE_DIRECTORY, `${first.storeKey}.json`));
-  writeFileSync(join(runsDir, STORE_DIRECTORY, `${second.storeKey}.json`), "{ cut short");
+  rmSync(join(runsDir, STORE_DIRECTORY, `${first.storeKey}.json.gz`));
+  writeFileSync(join(runsDir, STORE_DIRECTORY, `${second.storeKey}.json.gz`), gzipSync("{ cut short"));
   const before = readdirSync(join(runsDir, STORE_DIRECTORY)).sort();
 
   const file = compareManifest({ manifest, store, policy: POLICY });
@@ -223,10 +224,10 @@ test("an answer whose stored data is not the quantity's, or that the store holds
   assert.ok(first.storeKey !== null && second.storeKey !== null);
 
   // Still a valid result under its own key, so the store has it; its data is no longer `selftest.echo` data.
-  const file = join(runsDir, STORE_DIRECTORY, `${first.storeKey}.json`);
-  const entry = JSON.parse(readFileSync(file, "utf8"));
+  const file = join(runsDir, STORE_DIRECTORY, `${first.storeKey}.json.gz`);
+  const entry = JSON.parse(gunzipSync(readFileSync(file)).toString("utf8"));
   entry.result.data.sum = "about seven";
-  writeFileSync(file, JSON.stringify(entry));
+  writeFileSync(file, gzipSync(JSON.stringify(entry)));
   assert.equal(store.get(first.storeKey).kind, "hit");
 
   // The same request to the same engine, answered "unsupported" since: the key of the manifest's "ok" job.

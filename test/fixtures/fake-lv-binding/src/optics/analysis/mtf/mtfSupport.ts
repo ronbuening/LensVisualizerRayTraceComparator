@@ -50,6 +50,7 @@ export function assessMtfSupport(request: FakeAnalysisRequest, settings: Omit<Fa
   if (fields.length > 8 || frequencies.length > 12 || frequencies.some((frequency) => frequency > 400)) {
     return reject("invalid-input", "MTF requires fields and image-space frequencies within its limits.");
   }
+  if (state.lens.flags.isFoldedOptics || state.surfaces.some(surface => surface.diffractive)) return reject("unsupported-path", "Fake MTF accepts sequential paths only.");
   if (state.lens.runtime.source.unverifiedScale) {
     return reject("unverified-scale", "Prescription scale needs verification before reporting lp/mm.");
   }

@@ -160,7 +160,7 @@ class SpecTest(unittest.TestCase):
         self.assertIn("export const IMAGE_PLANE_TOLERANCE_MM = 1e-9;", projection)
         self.assertEqual((DIRECTION_NORM_TOLERANCE, IMAGE_PLANE_TOLERANCE_MM), (1e-12, 1e-9))
         self.assertEqual((STATUS_OK, STATUS_BLOCKED, STATUS_FAILED, trace.NO_END_SURFACE), (0, 1, 2, -1))
-        self.assertEqual(QUANTITIES[RAYS_TRACE], {"version": 1})
+        self.assertEqual(QUANTITIES[RAYS_TRACE], {"version": 1, "versions": [1, 2, 3]})
 
 
 class RunTest(unittest.TestCase):
@@ -781,6 +781,51 @@ class TraceTest(TracedRays):
         self.assertAlmostEqual(hit[2], crossings[1], delta=1e-12)
         self.assertTrue(9.9 < math.hypot(hit[0], hit[1]) < 10.0, hit)
         self.assertGreater(answer.image[0][1], 200.0)
+
+    def test_an_unconverged_asphere_iterate_is_kept_and_can_transmit_a_ray_where_no_surface_is_met(self) -> None:
+        # z = r^3 and the meridional line z = 2y - 2. Newton on f(y)=y^3-2y+2 cycles 1 -> 0 -> 1.
+        # On |y| <= 1.1, f is strictly positive: its minimum is 2 - (4/3)*sqrt(2/3) > 0.9.
+        # Thus there is no crossing inside the aperture. This pins the native iteration-cap behavior behind
+        # the catalog XF 27 and Ricoh GR1 mask mismatches without copying either prescription.
+        self.assertGreater(2 - (4 / 3) * math.sqrt(2 / 3), 0.9)
+        case = make_case([surface(0.0, asphere(None, 0.0, (3, 1.0)), 1.1)], image_z=10.0)
+        origin, direction = (0.0, 0.0, -2.0), unit(0.0, 1.0, 2.0)
+        api = optiland_api()
+        np = api.np
+        optic = build_case(case).optics[0]
+        rows = trace.record(optic, np.array([origin]), np.array([direction]))
+        residual = float(rows.y[1, 0]) ** 3 - float(rows.z[1, 0])
+        self.assertGreater(abs(residual), 0.9)
+        self.assertGreater(float(rows.intensity[1, 0]), 0.0)
+        self.assertLess(abs(float(rows.y[1, 0])), 1.1)
+        settled = trace.settle(optic, rows)
+        self.assertEqual((settled.status.tolist(), settled.end_surface.tolist()), ([STATUS_OK], [-1]))
+        # Read the native solve itself: reaching the configured cap did not produce a root.
+        geometry = optic.surfaces[1].geometry
+        rays = api.RealRays(*(np.array([v]) for v in (*origin, *direction)), np.ones(1),
+                            np.full(1, float(optic.primary_wavelength)))
+        result = geometry._solve_distance_primal(rays, aperture=optic.surfaces[1].aperture)
+        self.assertEqual(result.iterations, 100)
+        self.assertEqual(result.converged.tolist(), [False])
+        self.assertGreater(abs(float(result.residual[0])), 0.9)
+
+    def test_an_asphere_seed_can_converge_beyond_the_rim_despite_an_in_aperture_crossing(self) -> None:
+        # For y >= 0, z = y^3 + 7y^2 - 26y and a ray on z = 2y - 20 meet at y=1 and y=2:
+        # sag-line = (y-1)(y-2)(y+10). The aperture of 1.5 admits the first. Newton from the base plane,
+        # y=10, converges to y=2 and the native aperture stops it. This pins the extra crossing mechanism
+        # seen on XF 8-16 wide and newly on Nikon Z DX 16-50 wide, using synthetic coefficients only.
+        case = make_case([surface(0.0, asphere(None, 0.0, (1, -26.0), (2, 7.0), (3, 1.0)), 1.5)])
+        origin, direction = (0.0, 0.0, -20.0), unit(0.0, 1.0, 2.0)
+        self.assertEqual(1.0**3 + 7 * 1.0**2 - 26 * 1.0, 2 * 1.0 - 20)
+        api = optiland_api()
+        np = api.np
+        optic = build_case(case).optics[0]
+        rows = trace.record(optic, np.array([origin]), np.array([direction]))
+        self.assertAlmostEqual(float(rows.y[1, 0]), 2.0, delta=1e-12)
+        self.assertAlmostEqual(float(rows.z[1, 0]), -16.0, delta=1e-12)
+        self.assertEqual(float(rows.intensity[1, 0]), 0.0)
+        settled = trace.settle(optic, rows)
+        self.assertEqual((settled.status.tolist(), settled.end_surface.tolist()), ([STATUS_BLOCKED], [0]))
 
     def test_a_conic_met_from_far_away_is_off_its_own_surface_by_the_square_of_the_distance(self) -> None:
         # optiland solves the quadratic of a line with a conic from where the ray is, and its terms grow with the

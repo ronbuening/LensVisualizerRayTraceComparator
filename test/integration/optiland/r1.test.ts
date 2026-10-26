@@ -606,7 +606,7 @@ test(
 );
 
 test(
-  "on every exportable lens of the catalog, a zoom at both ends, optiland builds the case and passes R0 and R1 against ref",
+  "on every exportable sequential catalog state optiland passes R0 and R1 against ref, or names its phase first-order refusal",
   { skip: skipLv, timeout: 1_800_000 },
   async (t) => {
     const { binding, exporter, ref, optiland } = await engines(t);
@@ -615,6 +615,7 @@ test(
     const notExported = new Map<string, number>();
     const notBuilt: string[] = [];
     const noFirstOrder: string[] = [];
+    const phaseRefusals: string[] = [];
     const failed: string[] = [];
     const counts = { lenses: 0, zooms: 0, cases: 0, r0: 0, r1: 0 };
     const worst = new Worst();
@@ -638,6 +639,7 @@ test(
           continue;
         }
         const { opticalCase } = exported;
+        if (opticalCase.system.opticalPath !== undefined) continue; // Folded kernels/refusals are tested by the folded suite.
         assert.equal(opticalCase.conditions.lines.length, 1, at);
         counts.cases++;
         for (const rung of [r0Rung, r1Rung]) {
@@ -646,6 +648,17 @@ test(
           const [mine, theirs] = [await optiland.run(request, opticalCase), await ref.run(request, opticalCase)];
           assert.equal(theirs.status, "ok", `${at} ${id} ref: ${refusal(theirs)}`);
           if (mine.status !== "ok") {
+            if (
+              id === "r1" &&
+              opticalCase.features.includes("surface.diffractive") &&
+              mine.status === "unsupported" &&
+              mine.unsupported?.length === 1 &&
+              mine.unsupported[0].code === "feature" &&
+              mine.unsupported[0].item === "optiland-phase-paraxial-unseen"
+            ) {
+              phaseRefusals.push(`${at}: ${refusal(mine)}`);
+              continue;
+            }
             // A case optiland did not build, or built as another system, is an error of R0; what it has no
             // first-order data of is an "unsupported" of R1. Either is named with the lens and the reason.
             (id === "r0" ? notBuilt : noFirstOrder).push(`${at}: ${refusal(mine)}`);
@@ -675,16 +688,16 @@ test(
     t.diagnostic(`optiland against ref, R1: ${worst.said(R1_FIGURES)}`);
     t.diagnostic(`cases optiland cannot build: ${notBuilt.join("; ") || "none"}`);
     t.diagnostic(`cases optiland has no first-order data of: ${noFirstOrder.join("; ") || "none"}`);
+    t.diagnostic(`native phase first-order refusals: ${phaseRefusals.join("; ") || "none"}`);
     t.diagnostic(`not PASS: ${failed.join("; ") || "none"}`);
 
     assert.deepEqual(threw, [], "exporting a lens threw");
     // At 5278694b: 900 lenses, 297 of them zooms, 1173 cases.
     assert.ok(counts.cases > 1000, `about 1170 cases export, found ${counts.cases}`);
-    // optiland refuses no case of the catalog: every one is built as the case states it, and none has a term of
-    // power 1 or 2, is afocal or has its entrance pupil at infinity.
+    // Every state is built as stated. Native first-order accessors bypass phase, a separately pinned refusal.
     assert.deepEqual(notBuilt, []);
     assert.deepEqual(noFirstOrder, []);
-    assert.deepEqual([counts.r0, counts.r1], [counts.cases, counts.cases]);
+    assert.deepEqual([counts.r0, counts.r1], [counts.cases, counts.cases - phaseRefusals.length]);
     assert.deepEqual(failed, []);
     // Everything R0 holds to equality is equal in every case, and the sag is within rounding.
     for (const count of ["layout", "shape", "aperture", "index"]) {

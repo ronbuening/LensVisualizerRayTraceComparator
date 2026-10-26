@@ -26,7 +26,7 @@ import { FEATURE_FLAGS } from "../../../src/contract/features.ts";
 import { SELFTEST_ECHO } from "../../../src/contract/quantities/selftestEcho.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
 import { makeRequest } from "../../../src/contract/request.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_2 } from "../../../src/contract/version.ts";
+import { CONTRACT_VERSION } from "../../../src/contract/version.ts";
 import { MANIFEST_FILE } from "../../../src/core/manifest.ts";
 import type { RunManifest } from "../../../src/core/manifest.ts";
 import { RUNGS } from "../../../src/core/rungs.ts";
@@ -189,7 +189,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   const adapter = await createEngineRegistry(loaded).create("optiland");
   t.after(() => adapter.close());
   const { identity, capabilities, contract } = await adapter.describe();
-  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 });
+  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: "1.5" });
   assert.equal(identity.id, "optiland");
   assert.match(identity.fingerprint, SHA256);
   assert.match(identity.adapterRevision ?? "", SHA256);
@@ -218,7 +218,19 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   ];
   assert.deepEqual(
     capabilities.quantities,
-    Object.fromEntries(offered.map((quantity) => [quantity.id, { version: quantity.version }])),
+    Object.fromEntries(
+      offered.map((quantity) => [
+        quantity.id,
+        {
+          version: quantity.version,
+          ...(quantity.id === "rays.trace"
+            ? { versions: [1, 2, 3] }
+            : quantity.id === "paraxial.first-order"
+              ? { versions: [1, 2] }
+              : {}),
+        },
+      ]),
+    ),
   );
   assert.deepEqual(capabilities.features, { supported: [...FEATURE_FLAGS], limits: {} });
   assert.equal(capabilities.deterministic, true);

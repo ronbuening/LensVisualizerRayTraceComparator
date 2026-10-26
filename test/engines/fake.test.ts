@@ -169,7 +169,7 @@ test("hello describes an engine of this contract that supports every feature and
       details: { bias: 0.5, offersQuantities: true, failMode: "none" },
     },
     capabilities: {
-      features: { supported: [...FEATURE_FLAGS], limits: {} },
+      features: { supported: FEATURE_FLAGS.filter((flag) => flag !== "surface.diffractive"), limits: {} },
       quantities: { "selftest.echo": { version: selftestEchoQuantity.version } },
       deterministic: true,
       maxConcurrency: 1,

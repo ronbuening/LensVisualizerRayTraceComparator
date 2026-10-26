@@ -2,6 +2,7 @@
 // intersection and a real refraction, and the result says where it ended and why. It is far simpler than LV's and
 // shares nothing with it but the names of what it returns.
 import type { FakeState, FakeStateSurface, FakeTraceHit, FakeTraceOptions, FakeTraceResult, Vec3 } from "../types.js";
+import { projectCoordinateToZ } from "./utils.js";
 
 const TOLERANCE = 1e-13;
 
@@ -21,8 +22,8 @@ export function outside(
 }
 
 /** Where a ray meets a surface of revolution, by Newton's iteration on the sag; null when it does not. */
-function intersect(origin: Vec3, direction: Vec3, surface: FakeStateSurface): { t: number; point: Vec3 } | null {
-  if (!(direction[2] > 1e-12)) return null;
+function intersect(origin: Vec3, direction: Vec3, surface: FakeStateSurface, folded = false): { t: number; point: Vec3 } | null {
+  if (folded ? Math.abs(direction[2]) <= 1e-12 : !(direction[2] > 1e-12)) return null;
   const limit = surface.profile.finiteRadiusLimit();
   let t = (surface.z - origin[2]) / direction[2];
   for (let iteration = 0; iteration < 60; iteration++) {
@@ -86,17 +87,30 @@ export function traceSequential(
   let failureReason: string | null = null;
   let terminalPoint: Vec3 = origin;
   let terminalSurfaceIndex = -1;
+  const clipEvents: { surfaceIdx: number | null }[] = [];
 
-  const count = Math.min(stopAt ?? state.surfaces.length, state.surfaces.length);
-  for (let i = 0; i < count; i++) {
+  // A folded path is its declared visits, then the fake's stand-in for LV's search after them (`after`).
+  const plan = state.lens.runtime.source.opticalPath;
+  const path = plan?.surfaceOrder === undefined ? undefined : [...plan.surfaceOrder, ...(plan.after ?? [])];
+  const heights: number[] | null = options.recordHeights ? [] : null;
+  const count = path?.length ?? Math.min(stopAt ?? state.surfaces.length, state.surfaces.length);
+  for (let at = 0; at < count; at++) {
+    const i = path?.[at] ?? at;
     const surface = state.surfaces[i];
-    const hit = intersect(origin, direction, surface);
+    const hit = intersect(origin, direction, surface, path !== undefined);
     if (hit === null) {
       clipped = true;
       failureReason = "noBracket";
+      clipEvents.push({ surfaceIdx: i });
       break;
     }
+    heights?.push(projectCoordinateToZ(hit.point[1], hit.point[2], direction[1], direction[2], surface.z));
     const radius = Math.hypot(hit.point[0], hit.point[1]);
+    // LV passes a folded visit's hole without recording it: the ray goes on unchanged.
+    if (path !== undefined && surface.innerSd !== null && radius < surface.innerSd) {
+      origin = hit.point;
+      continue;
+    }
     // A zone the fake's solver "does not resolve": a stand-in for a numerical failure inside a clear aperture.
     if (fault && fault.surface === i && radius >= fault.inner && radius <= fault.outer) {
       clipped = true;
@@ -122,7 +136,10 @@ export function traceSequential(
       break;
     }
     const next = indexAtSurface ? indexAtSurface(i, surface.nd) : surface.nd;
-    if (next !== index) {
+    if (surface.interaction.type === "reflect") {
+      const dot = direction.reduce((sum, value, axis) => sum + value * traceHit.normal[axis], 0);
+      direction = direction.map((value, axis) => value - 2 * dot * traceHit.normal[axis]) as Vec3;
+    } else if (next !== index) {
       const refracted = refract(direction, traceHit.normal, index, next);
       if (refracted === null) {
         clipped = true;
@@ -135,6 +152,14 @@ export function traceSequential(
       direction = refracted;
     }
     index = next;
+    if (surface.diffractive) {
+      const phase = surface.diffractive;
+      const r = Math.hypot(hit.point[0], hit.point[1]);
+      const kick = phase.terms.reduce((sum, term) => sum + term.derivativeCoefficient * r ** (term.radialPower - 1), 0) * phase.diffractionOrder * (options.wavelengthNm ?? 587.5618) / phase.referenceWavelengthNm;
+      const x = direction[0] + (r === 0 ? 0 : kick * hit.point[0] / r);
+      const y = direction[1] + (r === 0 ? 0 : kick * hit.point[1] / r);
+      direction = [x, y, Math.sqrt(1 - x*x - y*y)];
+    }
     traceHit.outgoingDirection = direction;
     hits.push(traceHit);
     origin = hit.point;
@@ -150,6 +175,8 @@ export function traceSequential(
     status: failureReason !== null ? "failed" : clipped ? "clipped" : "ok",
     failureReason,
     reachedImagePlane: false,
+    ...(heights === null ? {} : { heights }),
+    ...(path === undefined ? {} : { diagnostics: { clipEvents } }),
   };
-  return options.recordOpticalPath ? { ...result, opticalPathLengthMm } : result;
+  return options.recordOpticalPath && path === undefined ? { ...result, opticalPathLengthMm } : result;
 }

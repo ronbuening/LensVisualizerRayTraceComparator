@@ -23,6 +23,8 @@ import type { LvApi, LvParaxialSurface } from "./types.ts";
 /** The LensVisualizer exports the first-order data is made from. */
 export type LvFirstOrderApi = Pick<
   LvApi,
+  | "defaultPhaseWavelengthNm"
+  | "computeCardinalElementsFromState"
   | "paraxialTrace"
   | "buildCardinalElementsFromMatrix"
   | "fopenAtZoomClamped"
@@ -188,6 +190,21 @@ function indexRows(opticalCase: OpticalCase): Float64Array[] {
 export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): LvFirstOrderAnswer {
   const { state, exported } = model;
   const { lines, object } = exported.conditions;
+  if (
+    exported.features.includes("surface.diffractive") &&
+    lines.some((line) => line.wavelengthNm !== api.defaultPhaseWavelengthNm)
+  )
+    return {
+      supported: false,
+      items: [
+        {
+          code: "feature",
+          item: "lv-phase-paraxial-wavelength",
+          message: "LV paraxial kernel evaluates phase at its default helium d wavelength only",
+        },
+      ],
+    };
+  if (exported.system.opticalPath !== undefined) return foldedValues(api, model);
   const unseen = termItems(exported);
   if (unseen.length > 0) return { supported: false, items: unseen };
   const columns = Object.fromEntries(FIRST_ORDER_VALUES.map((name) => [name, []])) as unknown as Record<
@@ -197,7 +214,12 @@ export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): Lv
   const magnifications: number[] = [];
   const afocal: number[] = [];
   indexRows(exported).forEach((indices, line) => {
-    const rows = state.surfaces.map(({ R, d }, index) => ({ R, d, nd: indices[index] }));
+    const rows = state.surfaces.map(({ R, d, diffractive }, index) => ({
+      R,
+      d,
+      nd: indices[index],
+      ...(diffractive == null ? {} : { diffractive }),
+    }));
     const values = lineValues(api, model, rows);
     if (values === null) return void afocal.push(line);
     for (const name of FIRST_ORDER_VALUES) columns[name].push(values[name]);
@@ -227,4 +249,67 @@ export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): Lv
     }
   }
   return { supported: true, data: { ...values, recorded } };
+}
+
+/** LV's own folded cardinals and its reflection-enabled kernel for the images of the stop. */
+function foldedValues(api: LvFirstOrderApi, model: LvCaseModel): LvFirstOrderAnswer {
+  const { state, exported } = model;
+  const path = exported.system.opticalPath!;
+  const cardinals = api.computeCardinalElementsFromState(state);
+  if (cardinals === null)
+    return {
+      supported: false,
+      items: [
+        {
+          code: "feature",
+          item: "lv-folded-first-order-unavailable",
+          message:
+            "LV computeCardinalElementsFromState returned null: the folded approximation accepts only mirrors and same-index refractive passes, no blockers or tilted normals",
+        },
+      ],
+    };
+  const stop = path.findIndex((step) => step.surfaceIndex === state.lens.stop.surfaceIndex);
+  if (stop < 0)
+    return {
+      supported: false,
+      items: [
+        {
+          code: "feature",
+          item: "folded-stop-not-visited",
+          message: "LV's declared path does not visit the stop; its paraxial pupils are undefined",
+        },
+      ],
+    };
+  const rows = path.map((step, at) => ({
+    ...state.surfaces[step.surfaceIndex],
+    d: (state.z[path[at + 1]?.surfaceIndex] ?? state.imgZ) - state.z[step.surfaceIndex],
+  }));
+  const trace = (
+    surfaces: readonly LvParaxialSurface[],
+    y: number,
+    u: number,
+    options: { stopAt?: number; skipLastTransfer?: boolean } = {},
+  ) => api.paraxialTrace(surfaces, y, u, { ...options, allowReflect: true });
+  const height = trace(rows, 1, 0, { stopAt: stop }).y;
+  const angle = trace(rows, 0, 1, { stopAt: stop }).y;
+  const behind = [{ R: Infinity, d: rows[stop].d, nd: 1 }, ...rows.slice(stop + 1)];
+  const exit = trace(behind, 0, 1, { skipLastTransfer: true });
+  const lastZ = state.z[path[path.length - 1].surfaceIndex];
+  const values: Record<FirstOrderValue, number> = {
+    efl: cardinals.distances.efl.valueMm,
+    frontFocalZ: cardinals.points.frontFocal.z,
+    rearFocalZ: cardinals.points.rearFocal.z,
+    frontPrincipalZ: cardinals.points.frontPrincipal.z,
+    rearPrincipalZ: cardinals.points.rearPrincipal.z,
+    backFocus: cardinals.points.rearFocal.z - state.z[model.runtime.lastLensSurfaceIdx],
+    entrancePupilZ: state.z[path[0].surfaceIndex] + angle / height,
+    exitPupilZ: lastZ - exit.y / exit.u,
+    entrancePupilSemiDiameter: exported.conditions.stopSemiDiameter / Math.abs(height),
+    exitPupilSemiDiameter: exported.conditions.stopSemiDiameter / Math.abs(exit.n * exit.u),
+  };
+  const data = Object.fromEntries(FIRST_ORDER_VALUES.map((name) => [name, encodeF8([values[name]])])) as Record<
+    FirstOrderValue,
+    NdArrayWire
+  >;
+  return { supported: true, data: { ...data, recorded: {} } };
 }

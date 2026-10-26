@@ -14,6 +14,8 @@ import { fixtureRecipe } from "./mtfRecipe.ts";
 import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
+import { orderedMap } from "./orderedMap.ts";
+import { profileAsync, profileStart } from "./profile.ts";
 import { UsageError } from "./usageError.ts";
 
 /** What a case source makes of one run: the case of its lens, or every reason why there is none. */
@@ -64,6 +66,12 @@ export interface CaseSource {
    */
   raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
   /**
+   * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
+   * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.
+   * Null means that no selected rung requested sets at that resolution; no extra rays are generated here.
+   */
+  confirmRaySets?(run: RunSpec, opticalCase: OpticalCase, sets: RunRaySets): CaseResolution | Promise<CaseResolution>;
+  /**
    * The MTF recipe of a run of a case this source resolved (`src/core/mtfRecipe.ts`): the plane, the fields, the
    * lines and the frequencies every MTF request about the case is made from; or no recipe, and each reason why, as
    * a coded problem. Like the ray sets it is a pure function of the run and the case. A source without this method
@@ -76,6 +84,12 @@ export interface CaseSource {
    * files, read once, has no such method: a case file's identity is its content.
    */
   audit?(): SourceAudit | null;
+}
+
+/** The actual generated sets of a run, including field problems, without inventing an unrequested resolution. */
+export interface RunRaySets {
+  readonly coarse: RaySetResolution | null;
+  readonly fine: RaySetResolution | null;
 }
 
 /** A case source for each kind of lens a run can name. A kind without one cannot be run. */
@@ -180,6 +194,7 @@ export interface LoadedSuite {
 
 /** What `loadSuite` reads a suite with. */
 export interface LoadSuiteOptions {
+  readonly jobs?: number;
   /** The configuration root, which a fixture lens's relative path is resolved against. */
   readonly rootDir: string;
   /** The case source of each lens kind. Without it, fixtures are read from `rootDir` and no other kind has one. */
@@ -224,6 +239,7 @@ export async function loadSuite(file: string, options: LoadSuiteOptions): Promis
  */
 export async function loadSuiteValue(parsed: unknown, file: string, options: LoadSuiteOptions): Promise<LoadedSuite> {
   const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+  const endLoad = profileStart("suite.load-expand");
   const issues = validateKind("suite", parsed);
   if (issues.length > 0) throw new UsageError(`${file}: not a valid suite: ${formatIssues(issues)}`);
   const suite = parsed as Suite;
@@ -242,8 +258,13 @@ export async function loadSuiteValue(parsed: unknown, file: string, options: Loa
   // Each name, with the written run it came from: itself, or the run that stands for it.
   const names = new Map<string, string>();
   const stated: RunSpec[] = [];
-  for (const written of specs) {
-    for (const spec of (await sources[written.lens.kind]?.expand?.(written)) ?? [written]) {
+  const expanded = await orderedMap(
+    specs,
+    options.jobs ?? 1,
+    async (written) => (await sources[written.lens.kind]?.expand?.(written)) ?? [written],
+  );
+  for (const [index, written] of specs.entries()) {
+    for (const spec of expanded[index]) {
       const other = names.get(spec.name);
       if (other !== undefined) {
         const from = [other, written.name].filter((name) => name !== spec.name).map((name) => `"${name}"`);
@@ -254,14 +275,16 @@ export async function loadSuiteValue(parsed: unknown, file: string, options: Loa
       stated.push(spec);
     }
   }
-  const runs: LoadedRun[] = [];
-  for (const spec of stated) {
+  endLoad();
+  const runs = await orderedMap(stated, options.jobs ?? 1, async (spec): Promise<LoadedRun> => {
     const problems = runInvariantProblems(spec);
     const source = sources[spec.lens.kind];
     const resolution: CaseResolution =
-      source === undefined ? { ok: false, problems: [NO_SOURCE[spec.lens.kind]] } : await source.resolve(spec);
+      source === undefined
+        ? { ok: false, problems: [NO_SOURCE[spec.lens.kind]] }
+        : await profileAsync("case.export", () => source.resolve(spec));
     if (!resolution.ok) problems.push(...resolution.problems);
-    runs.push({ spec, opticalCase: resolution.ok && problems.length === 0 ? resolution.opticalCase : null, problems });
-  }
+    return { spec, opticalCase: resolution.ok && problems.length === 0 ? resolution.opticalCase : null, problems };
+  });
   return deepFreeze({ name: suite.name, hash: hashCanonical({ name: suite.name, runs: specs }), runs });
 }

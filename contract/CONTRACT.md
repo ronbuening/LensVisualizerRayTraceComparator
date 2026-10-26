@@ -114,7 +114,7 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.3`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.5`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
@@ -241,7 +241,7 @@ the LensVisualizer engine files, of which no lens file is one), `notes?` and `pr
 (`{ tool: "lvrtc", version }`). `zoomT` and `focusT`, each 0..1, are the zoom and focus position the lens was in on
 LensVisualizer's own sliders, a focus position of 0 being infinity focus: with the lens file they say which state
 the case was read from, so that LensVisualizer can be asked about the same one again. `notes` lists, as codes and
-each once, what the source knows about the lens that the case does not carry; the codes LensVisualizer's exporter
+each once, what the source knows about the lens or a run's path confirmation that the case does not carry; the codes LensVisualizer's exporter
 writes are under [Cases from LensVisualizer](#cases-from-lensvisualizer).
 
 **Invariants checked in code** (`caseInvariantProblems`), because a schema cannot state them:
@@ -1508,7 +1508,10 @@ and `validateData`.
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
 | `system.describe` | 2 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
+| `paraxial.first-order` | 2 | `quantities/paraxialFirstOrder.ts` | includes diffractive phase power; selected only for diffractive cases |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
+| `rays.trace` | 2 | `quantities/raysTrace.ts` | fixed folded visits, reverse propagation, explicit unavailable OPL and unrecorded passive visits |
+| `rays.trace` | 3 | `quantities/raysTrace.ts` | separate geometric OPL and per-visit signed phasePath; selected only for diffractive cases |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
 | `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 
@@ -2364,11 +2367,14 @@ files and the source differ. Two files are not generated: the Double-Gauss case,
 `valid/engine-descriptor/integers-as-floats.json`, written by hand because its point is the spelling of its
 numbers.
 
-Three cases are generated: `singlet`, the case the example requests and results are about; `all-features`, which
+Five cases are generated: `singlet`, the case the example requests and results are about; `all-features`, which
 carries every feature flag of contract `1.0` and every optional member; and `unclipped-plate`, the singlet behind
 a rear plate whose two surfaces do not clip, the one valid case that states `1.2` and carries the flag minor 2
 added. The every-feature case was not given such a plate: it is the case half the tests are written on, and a
-minor does not change a document that uses nothing of it.
+minor does not change a document that uses nothing of it. The synthetic `folded-spherical-mirror` and
+`folded-mangin` cases state 1.4; the latter visits its entrance surface twice. The corpus also carries a v2
+request, its analytically derived Mangin trace, a v2 geometry answer with explicitly unavailable path arrays, and
+a v2 answer with an unrecorded visit (a ray through a mirror's hole).
 
 Some fixtures exist for what one language gets wrong by default, and an implementation in any language must pass
 them:
@@ -2406,3 +2412,244 @@ The paraxial data came from optiland's own paraxial module on an in-memory copy 
 wavelength was the d line. Nothing was written to the optiland checkout. `test/contract/case.test.ts` rederives the
 focal length (100.00372050801042 mm, optiland's `paraxial.f2()`), the f-number and every clear aperture from the
 fixture alone.
+
+## Folded traversal (minor 4, Stage 5.2a)
+
+Only a case with `system.opticalPath` states **1.4**. The surfaces remain the physical surface table, including
+surfaces not visited by the path. Their `z` values and signed `thickness` values are LV's prepared physical-list
+coordinates and gaps. The image plane is independent of the last gap: `designImageZ` and `conditions.imageZ`
+state its actual global z. The first physical vertex is still 0. Tilted or off-axis surfaces and image planes
+remain coded source problems (`tilted-surface`, `surface-profile-unsupported`, `tilted-image-plane`,
+`off-axis-image-plane`). A normal parallel to either +z or -z describes the same supported axial plane.
+
+`opticalPath` is a nonempty array of visits. A physical `surfaceIndex` may occur repeatedly. Each visit carries
+`interaction` (`refract`, `reflect`, `block`, `pass`), optional `incidentSide` (`front`, `rear`, `both`, default
+`both`) and `inactiveSide` (`ignore`, `block`, default `ignore`). The surface normal is the sag normal oriented
+toward +z. A nonnegative incoming-direction dot normal is front incidence. On an inactive side, a ray is stopped
+only within the active band when `inactiveSide` is `block`; otherwise it passes unchanged. `pass` bends and
+clips nothing. `block` stops the closed active band and transmits both complements. Active refractive/reflective
+visits clip above the outer band boundary; below the inner boundary they transmit unchanged. Thus an active
+mirror's hole is transparent space, and an opaque ring is the complement of a transmitting annulus.
+
+A refractive visit requires `mediumAfter`: a physical index-table column, or null for air. It may also carry
+`reverseMediumAfter` for rear incidence; omitted, `mediumAfter` applies on either side. No other interaction
+carries medium references. Reflection and pass retain the actual incident medium. Exported LV visits carry both
+references, using LV's `rearMediumSurfaceIndex`, including its overlapping-zone lookup for a Mangin return pass.
+The exporter copies side filters, interactions and visit order; it does not choose an interaction by tracing a
+sample ray. Both outer and inner active limits are queried from `evaluateAperture` for folded cases. Ordinary
+sequential exports retain their original numbers and identities.
+
+Only fixed visit lists are represented. `folded-auto-path` declares LV's ray-dependent next-hit search unsupported;
+no central-ray order is substituted. `folded-interaction-budget` declares an LV budget that cannot finish the
+listed visits and reach the image. `diffractive-surface` remains outside this stage. `mixed-reference`, including
+Samyang AF 35/2.8's d/e glasses without wavelength data, is an **LV data issue**, not a translator approximation.
+
+Owner decision 2026-10-23: raw export keeps the declared path. During run preparation, after the selected rungs'
+coarse and fine ray sets have been generated and before any engine request is planned, the LV case source traces
+exactly those sets with LV's own tracer and existing post-path detector. A recorded interaction after the declared
+visits refuses the **whole run** with `folded-post-path-reflection`: its case is null, its source problem is
+recorded in the manifest, and no engine, including ref and optiland, is compared for that run. Passive post-path
+crossings without a recorded interaction remain allowed. There is no static geometric check or additional sampling.
+
+An accepted folded run adds an existing `provenance.notes` code (no schema member or identity change):
+`folded-declared-path-confirmed:run:<utf8hex>:coarse:<sets>:fine:<sets>`. `<utf8hex>` reversibly encodes the run
+name in lowercase hexadecimal UTF-8 bytes. `<sets>` is the ordered SHA-256 `raySetId` list joined by `.`, `empty`
+when generation was requested but supplied no sets, or `unrequested` when no selected rung requested that
+resolution. These are exactly the manifest's `raySets.sets` and `fineRaySets.sets`; the hashes include every
+spec member, field, line and encoded ray array. Confirmation covers only these finite sets, never other rays,
+field angles or states. Coarse/fine field problems retain their own manifest entries. Runs sharing an optical
+case id retain all their distinct confirmation notes in the saved case. A raw export or the geometry census has
+no run's ray sets to confirm and carries no such note. The request-time `lv-folded-post-path-interaction` remains
+a backstop for direct engine calls or other, unconfirmed ray sets.
+
+### Quantity selection and compatibility
+
+A request may state `quantityVersion` (minor 4); omitted, the original module version applies. It enters the
+request hash **only when present**, and a request using it states 1.4. Engine quantity capabilities may add
+`versions`, the explicit supported definitions, alongside the original `version` default. LV, ref and optiland
+state `rays.trace: { version: 1, versions: [1, 2] }`. Negotiation selects the definition per request. A folded
+ray request requires version 2; sequential generators omit the member and keep v1, the original hash expression,
+and their existing case/request identities. Store keys additionally include source fingerprints and adapter
+revisions: changing engine/adapter code legitimately retires those keys even with identical requests.
+
+`system.describe` remains v2: physical rows keep physical indices, and the optional `opticalPath`,
+`pathSurfaceIndices`, `pathInteractions` and `pathIndexAfterSurface` read back the traversal and its nominal
+per-visit media. The physical aperture rows describe active surface bands; the visit policy states what those
+bands do in a folded path. R0 compares the complete conditional policy as well as order and indices using its
+existing zero-mismatch gates. No sequential output acquires these members.
+
+`paraxial.first-order` remains v1: positions are global z, EFL is rear focal z minus rear principal z, and back
+focus is measured from the physical `lastLensSurfaceIndex`, even when that surface is not the last visit.
+An odd reflection can therefore give a negative EFL. The formal centered first-order path ignores masks, uses
+signed global gaps, and flips the signed reduced index at reflection: with parity p, w=p*n*dy/dz, a reflection
+changes p to -p; its power is `(n_signed_after - n_signed_before)/R`. These matrices have determinant +1. Ref
+compensates its matrix sums; an exact rational matrix test on the original radii, indices and coordinates
+recognizes singular pupils without a threshold. Pupils at infinity retain the physical-slope sign convention.
+The first visit to the physical stop defines its formal pupil conjugates; later visits to the same physical
+stop remain ordinary path masks. A path not visiting its stop is `folded-stop-not-visited`. LV's higher-level folded cardinal function can return
+null (`lv-folded-first-order-unavailable`); no sequential substitute is returned. Values LV does supply are
+returned as supplied, including a measured odd-reflection front-principal defect described in gotchas.md.
+
+### `rays.trace` version 2
+
+Version 1's text above remains the sequential definition. In version 2, P is the path length and `hits` has shape
+`[P, n, 3]`; `endSurface` is a **path-step index**, P after all visits when the image cannot be reached, and -1 on
+arrival. A repeated physical surface has an independent hit at every visit. A pass or a transmitted band
+complement also has a geometric sheet crossing. An ended ray has NaN from its end step onward, including that
+step's hit, exactly as v1 does by surface. Points and directions stay in the fixed Cartesian frame; reflection
+never mirrors an axis or resets the path. Reverse z propagation is allowed. A visit requiring a negative line
+parameter beyond 1e-9 mm is blocked; a real return stretch along -z has a positive parameter and adds positive
+optical path. The image plane is reached in either z direction when its forward parameter is nonnegative, with
+the existing 1e-9 mm landing tolerance. Reflection is `d - 2(d dot N)N`, normalized, and retains the medium.
+
+Optical path is the sum of actual incident index times the signed geometric stretch; a real reflection adds no
+phase or length at the hit. `opticalPathToImage` continues in the actual final medium. No diffraction or coating
+phase is introduced. A v2 answer may state `pathUnavailable`, a coded reason, with **both path arrays all NaN**
+while still supplying valid geometry. R2 compares that geometry; R3 is explicitly UNSUPPORTED for that pair,
+with the code, never a measured zero or a passing optical-path test. V1 refuses this partial-answer member.
+A v2 answer may also state `unrecordedHits`, uint8 `[P, n]`: 1 at a visit before a ray's end that the ray
+crossed without any interaction (a hole, an ignored inactive side, a blocker outside its band) and for which
+the engine records no point; `hits` is NaN there. The last visit of a ray that passed every visit is its exit
+point and is never unrecorded. R2 compares every other point, the exit direction, the landing and the mask,
+and lists the count per engine (`hits.unrecorded`); no point is computed for an unrecorded visit. V1 refuses
+this member too.
+LV's generalized tracer explicitly makes OPL unavailable until phase-aware validation
+(`lv-folded-optical-path-unavailable`). It records no hit for a passive visit, but under `recordHeights` keeps a
+height for every visit whose intersection it found. The adapter places each recorded hit on the one declared step
+whose kept height is that hit's own (LV's `projectCoordinateToZ`, to the bit), requires the direction to be
+unchanged across the steps between, and answers the rest as unrecorded. After the declared visits LV's explicit
+traversal goes on with a search of its reflective surfaces; a ray that meets one there is
+`lv-folded-post-path-interaction` (the fixed path does not state that search). A record that fits the path in no
+single way is `lv-folded-unaligned-visits`, and an unrecorded exit visit `lv-folded-unrecorded-visit`. Each makes
+the request unsupported, with no invented points or termination indices.
+
+Folded LV cases use the case source's deterministic probe lattice at explicitly stated field angles. LV's MTF
+launch gate refuses folded systems, so these rays are not presented as LV MTF launch rays. The same probes go to
+all engines. R2 maps each visit to its physical aperture for mask/rim tests; R3 retains the existing path gates.
+No gate, policy version, floor or baseline is changed by this stage.
+
+## Stage 5.2b: diffractive surfaces (minor 5)
+
+Owner decision 2026-10-25 adds contract **1.5**, stated only by a document that uses these additions. A case with
+`surfaces[].diffractive` states 1.5 and derives `surface.diffractive`. R0's answer with the added `diffractive`
+list, and requests/results using the definitions below, state 1.5. Ordinary cases, requests and answers retain
+all previous version/identity rules. Engine maximums become 1.5. The request's explicit `quantityVersion` enters
+its hash only when present, as in minor 4. A suite merely naming the lenses needs no new member or minor.
+
+The optional `SurfaceIR.diffractive` is the phase **on that substrate surface**, not another geometric sheet:
+
+| Member | Meaning |
+|---|---|
+| `kind` | `radial-polynomial` |
+| `referenceWavelengthNm` | positive design wavelength lambda0, nm |
+| `diffractionOrder` | signed integer m, including zero |
+| `terms` | 1 to 16 terms, ascending distinct integer powers 2 <= p <= 32, each `{ radialPower: p, coefficient: Cp }` |
+
+With r = sqrt(x²+y²) in mm, W(r) = sum Cp r^p in mm; Cp has units mm^(1-p). W is **unwrapped**, with W(0)=0:
+there is no modulo, zone rounding, piston or hidden normalization. LV's compiled representation has no radius
+normalization. A future prepared normalized profile must be refused until expressed exactly by a contract addition.
+Its cached derivatives/quadratic coefficient are checked against the literal terms and are not extra optical data.
+The phase does not change substrate sag, aperture, incident medium or outgoing medium. Its transmission has unit
+flux here; diffraction efficiency, other orders and polarization are outside this model.
+
+### Ray interaction and signed phase delay
+
+Let N be the unit substrate normal oriented into the outgoing hemisphere, P=I-NNᵀ the tangent projection, and
+D the incoming unit direction. The physical Cartesian gradient is g=grad W=(W'(r)x/r,W'(r)y/r,0), with g=0 on
+axis. With s=m lambda/lambda0, tangential outgoing optical momentum is
+
+```
+t = n_in P D + s P g
+D_out = (t + N sqrt(n_out² - t dot t)) / n_out
+```
+
+A negative radicand is an evanescent order, blocked at that surface. This is the local grating equation on the
+actual substrate, with its gradient projected onto the sheet, not a separate refraction followed by an axial kick.
+The global gradient retains its sign for reverse incidence; orienting N chooses the transmitted hemisphere.
+For a locally linear W with gradient G, n_out sin(theta_out)-n_in sin(theta_in)=m lambda G/lambda0.
+
+The radian phase is phi=2 pi m W/lambda0_mm. The signed phase path at a successful refracting interaction is **+phi/k0**,
+where k0=2 pi/lambda_mm: **m lambda/lambda0 W**, in mm. The plus sign agrees with the plus gradient in t. A
+negative converging quadratic W therefore adds negative phase path. No geometric propagation distance is added
+at a zero-thickness phase interaction. Phase paths can cancel and must be summed with compensated arithmetic.
+The wave path to the final sheet/image is geometric OPL plus the sum of these per-visit delays; geometric OPL
+alone is not the wave eikonal through a phase-bearing system.
+
+### `rays.trace` version 3
+
+Only a diffractive case requests v3. It retains the geometric arrays and their definitions unchanged. Sequential
+systems retain sequential stepping (including signed backwards sequential stretches); fixed folded systems use
+v2's visit order and reverse propagation. S below means physical sequential rows, or path visits when a path is
+stated. Versions 1 and 2 retain every earlier meaning and remain offered.
+
+| Additional data member | Definition |
+|---|---|
+| `phasePath` | required float64 NdArray `[S,n]`, mm: signed delay at each successfully passed surface/visit; zero for a passed visit without a phase interaction, NaN at the ray's end and thereafter |
+| `phasePathUnavailable?` | nonempty coded reason: the engine does not expose phase delay; every phasePath entry is NaN, geometry and geometric OPL remain answerable |
+
+`phasePathUnavailable` does not imply `pathUnavailable`. LV's sequential `recordOpticalPath` exposes geometric
+segments only and returns `lv-phase-path-unavailable`; the adapter never computes a replacement phase from its
+hits. V3 can also retain v2's explicitly unavailable geometric paths for generalized traversal. Earlier versions
+refuse phase members. Validators check rank, shape, valid/ended values, unavailability and version selection.
+
+R3 keeps its three existing geometric metrics unchanged. Policy **15** adds `phasePath.maxAbs`: maximum absolute
+per-visit/per-ray phase-delay difference in waves of the request line, over rays ok in both answers. Its sole
+gate is **2e-5 waves**, in `policy/rungs.v1.json` only. Basis: the identical-ray signed phase delay is held to the
+same absolute path accuracy as a geometric segment; this is a new figure, not an empirical floor or a widened
+geometric gate. `where` gives visit/surface, ray, field and line. Unavailable phase is an explicit unmeasured
+`UNSUPPORTED: <code>` metric while geometric metrics are still judged; no unavailable phase becomes a measured
+zero. No phase surface makes the metric not applicable. A geometry PASS with unsupported phase is not a phase
+validation claim. The pair's verdict still fails if any measured geometric or phase metric exceeds its gate.
+
+### `paraxial.first-order` version 2
+
+Only a diffractive case requests v2. Add **phiD=-2 C2 m lambda/lambda0** to each refracting surface's ordinary
+power `(n_after-n_before)*vertexCurvature`. On (height, reduced angle), the surface matrix is
+`[[1,0],[-(phiR+phiD),1]]`. Higher radial powers have zero first-order power. Cardinal/pupil definitions and all
+existing R1 gates stay unchanged; pupils exclude the stop's own power as before. A model that cannot see phase
+answers `unsupported`, never the system without it. LV's kernel uses its default d wavelength for phase power;
+a different requested phase wavelength is `lv-phase-paraxial-wavelength`. Optiland's first-order accessor bypasses
+native phase profiles: `optiland-phase-paraxial-unseen`. Ref evaluates the requested line analytically.
+
+### `system.describe` addition and translation
+
+`system.describe` stays v2, as in minor 4's optional folded-path description. On a phase-bearing system its answer
+adds `diffractive`: S physical-surface entries, null without phase and otherwise the phase profile above, read
+from the built model. Answers without phase omit the member. R0 counts each different profile/order/wavelength
+under `shape.mismatches`, whose gate remains zero. The phase profile is separate from geometric `terms`.
+
+Optiland receives `RadialPhaseProfile.coefficients[p/2-1] = 2 pi m Cp / lambda0_mm`, padding absent powers with
+zero, attached via `PhaseInteractionModel` on the actual geometry. Built design-coordinate metadata permits
+lossless R0 description; verification holds every native radian coefficient to its scaled design coefficient,
+plus both parents, model/profile classes, efficiency and reflection state. Describe takes no case. Native OPD
+contains +phi/k0: the worker reads each native profile's phase at its recorded hit, preserves that signed delay
+in phasePath, subtracts accumulated phase from native OPD, and applies its existing geometric direction-length
+correction only to the geometric stretches. No phase is counted twice. Native first-order behavior is not repaired.
+
+The exporter reports `diffractive-phase-unsupported` for an unknown prepared phase kind/member, a normalized
+profile it cannot express, invalid powers/order/wavelength, or inconsistent cached derivative/quadratic values.
+The old `diffractive-surface` reason remains readable in historical census documents.
+
+`verify` accepts an existing policy-14 baseline only for the exact additive transition to policy 15: removing
+phasePath.maxAbs and resetting the version must reproduce the pinned policy-14 hash, and the added gate must
+be exactly 2e-5 waves. The retained `policy/rungs.v14.json` records those previous bytes. Policy 14 predates any
+exportable diffractive case. Any change to another gate, class, unit or policy member is still stale and refused;
+no baseline or report is rewritten. Live comparisons use policy 15.
+
+LV permits odd radial powers as well as even ones. Ref and LV retain those terms literally; optiland refuses
+`optiland-odd-radial-phase`, because its native RadialPhaseProfile has only even powers. No power is rounded
+or assigned to another coefficient slot. Every sequential state of the diffractive suite has even powers.
+
+A passed non-refracting visit (a passive crossing or an ordinary reflection) has zero phasePath in this model.
+No coating/reflection phase is introduced; the diffractive polynomial is the transmitted phase of its substrate.
+An ended visit has NaN, rather than a physical phase assigned to a ray that did not pass it.
+
+### Catalog baseline annotations (minor 6)
+
+Only catalog baselines state contract `1.6` for the additive baseline metadata `runs[].features` (the validated
+case's source flags), `censusReasons` (distinct source/field/recipe codes) and pair `failures` (classified FAIL
+metrics). No engine request, result, case or descriptor changes for this addition. Other baseline versions remain
+content-selected as before. The schema accepts these optional fields; invariants require minor 6, restrict them
+to suite `catalog`, require its feature inventory, and restrict failure annotations to a FAIL pair. Each annotation
+records metric/class/gotcha/reproducer/evidenceHash. CLI admission and hermetic verify require exact agreement with
+`docs/known-failures.json`; the actual verdict, metrics and policy tolerances are preserved.

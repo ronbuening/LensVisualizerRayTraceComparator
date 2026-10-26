@@ -1,0 +1,95 @@
+{
+  "contract": "1.4",
+  "kind": "optical-case",
+  "id": "944d2a387b36651700d05c804b8526a267e9acd47c86e61e07092761c20e452f",
+  "systemId": "d7de584b7727e60a96629dd0c6b853920589487186c695b20cef7f5609970703",
+  "label": {
+    "name": "synthetic folded system"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "S0",
+        "z": 0,
+        "thickness": 100,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 25,
+          "nominalSemiDiameter": 25,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      },
+      {
+        "label": "S1",
+        "z": 100,
+        "thickness": -50,
+        "shape": {
+          "kind": "conic",
+          "radius": -100,
+          "conic": 0
+        },
+        "aperture": {
+          "semiDiameter": 25,
+          "nominalSemiDiameter": 25,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0
+      }
+    ],
+    "opticalPath": [
+      {
+        "surfaceIndex": 0,
+        "interaction": "refract",
+        "mediumAfter": 0
+      },
+      {
+        "surfaceIndex": 1,
+        "interaction": "reflect"
+      }
+    ],
+    "stopIndex": 0,
+    "lastLensSurfaceIndex": 1,
+    "designImageZ": 50
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 25,
+    "imageZ": 50,
+    "lines": [
+      {
+        "wavelengthNm": 550,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          2
+        ],
+        "data": "AAAAAAAA8D8AAAAAAADwPw==",
+        "sha256": "5f07eef034c5a21fedede8ef2f970fefbcc8ea44c02fd970117dacbee5483005"
+      }
+    }
+  },
+  "features": [
+    "path.folded"
+  ],
+  "provenance": {
+    "source": {
+      "kind": "fixture",
+      "name": "analytic folded proof"
+    },
+    "producer": {
+      "tool": "lvrtc",
+      "version": "test"
+    }
+  }
+}

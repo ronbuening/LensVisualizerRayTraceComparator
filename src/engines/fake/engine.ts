@@ -64,7 +64,7 @@ export function createEngine(options: unknown): ProtocolHandler {
     contract: { min: CONTRACT_VERSION, max: CONTRACT_VERSION_1_2 },
     identity: { id, version: FAKE_ENGINE_VERSION, fingerprint, details: { bias, offersQuantities, failMode } },
     capabilities: {
-      features: { supported: [...FEATURE_FLAGS], limits: {} },
+      features: { supported: FEATURE_FLAGS.filter((flag) => flag !== "surface.diffractive"), limits: {} },
       quantities: offersQuantities ? { [SELFTEST_ECHO]: { version: SELFTEST_ECHO_VERSION } } : {},
       deterministic: true,
       maxConcurrency: 1,

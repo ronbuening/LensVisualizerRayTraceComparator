@@ -39,6 +39,10 @@ export interface UnmeasuredMetric {
 export type ComparatorOutcome =
   | {
       readonly comparable: true;
+      /** A coded partial-quantity refusal, supported by data but unavailable on this rung. */
+      readonly unsupportedReason?: string;
+      /** Metrics whose feature is absent from the case, omitted without changing existing comparisons. */
+      readonly inapplicable?: readonly string[];
       readonly metrics: readonly ComputedMetric[];
       readonly unmeasured?: readonly UnmeasuredMetric[];
       /**

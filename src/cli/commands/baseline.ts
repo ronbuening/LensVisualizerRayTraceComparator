@@ -1,3 +1,4 @@
+import { catalogFeatures, classifyCatalog, readKnownFailures, unclassifiedFailures } from "../../baseline/catalog.ts";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -24,7 +25,13 @@ import { renderBaselineReport } from "../../baseline/report.ts";
 import { numberText } from "../../compare/metricText.ts";
 import { COMPARISONS_FILE, comparisonFileText, readComparisonFile } from "../../compare/comparisonFile.ts";
 import { followUpsOf } from "../../compare/followUp.ts";
-import { loadPolicy } from "../../compare/policyFile.ts";
+import {
+  POLICY_SNAPSHOTS,
+  SNAPSHOT_BASELINE_SUITES,
+  loadPolicy,
+  loadPolicySnapshot,
+  policySnapshotName,
+} from "../../compare/policyFile.ts";
 import type { Baseline } from "../../contract/baseline.ts";
 import { FAILING_VERDICTS } from "../../contract/comparison.ts";
 import type { Policy } from "../../contract/policy.ts";
@@ -33,25 +40,30 @@ import { REPO_ROOT } from "../../core/config.ts";
 import { MANIFEST_FILE, SOURCE_CHANGED, readRunManifest } from "../../core/manifest.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { runSuite } from "../../core/orchestrator.ts";
+import type { ProcessRegistry } from "../../core/processRegistry.ts";
 import { RUNGS } from "../../core/rungs.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { jobEstimateGiB } from "../../core/memoryBudget.ts";
 import { reportInputProblems } from "../../report/model.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import { assertJobs, jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
-import { compareRunDirectory } from "./compare.ts";
+import { compareRunDirectoryWithJobs } from "./compare.ts";
 import { prepareSuiteRun } from "./run.ts";
 
 /** What `lvrtc baseline` is wired to, injected so that tests choose it. */
 export interface BaselineCommandInputs extends RunTargetInputs {
   /** The policy to judge by; the comparator's own (`policy/rungs.v1.json`) unless given. */
   readonly policy?: Policy;
+  /** Where the frozen policies of the snapshot baselines are; this repository's `policy/snapshots/` unless given. */
+  readonly policySnapshots?: string;
 }
 
 const SYNOPSIS =
   "Usage: lvrtc baseline write <suite name | run directory> [--root <dir>] [--mtf] [--replace]\n" +
-  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--json]\n";
+  "       lvrtc baseline check <suite name | suite.json> [--root <dir>] [--mtf] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
 const HELP = [
   SYNOPSIS,
   "write   Writes the baseline of a run that has been compared: <root>/baselines/<suite>.json, and the report that",
@@ -60,6 +72,7 @@ const HELP = [
   "        hash of the run's case, each engine's fingerprint and adapter revision, and the policy. Nothing is",
   "        asked of any engine. It is refused for a run with an engine that could not be used, a run that was not",
   "        started, a case source that changed during the run, and a pair that is FAIL or ERROR.",
+  "        Catalog alone admits exact FAIL evidence from docs/known-failures.json, retaining FAIL and its class.",
   "check   Needs the engines. Runs the suite of the baseline again on the baseline's engines and rungs, asking an",
   "        engine only for what the result store does not hold, compares it (comparisons.json is written as lvrtc",
   "        compare writes it), and sets every record of the baseline against it:",
@@ -79,13 +92,16 @@ const HELP = [
   `                mtf.json: the rungs ${MTF_BASELINE_RUNGS.join(", ")} of the run, each metric with the number of`,
   "                requests it was measured in, and the requests of the engines' own MTF as they were compared.",
   "                Without it, the rays baseline: <suite>.json, rays.md and rays.json, every rung of the run",
+  "  --jobs <n>    check: concurrent jobs in isolated processes (default: 1, serial)",
+  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --replace     write: write the baseline although the one that is there has a rung this run lacks. Without",
   "                it such a run is refused: a run directory is of the last run of its suite, which may be the",
   "                run of other rungs (of the other kind of baseline, or of lvrtc run --rungs)",
   "  --json        check: print the records as one JSON object in place of the lines",
   "",
   "Exit code: write: 0 when the baseline was written; 1 when a pair is FAIL or ERROR; 2 when the run cannot be a",
-  "baseline. check: 0 when no record is DRIFT and no pair is FAIL or ERROR today, STALE or not; 1 otherwise; 2",
+  "baseline. check: 0 when no record is DRIFT and no unlisted pair is FAIL or ERROR today, STALE or not; 1 otherwise; 2",
   "when nothing was checked.",
   "",
 ].join("\n");
@@ -133,23 +149,21 @@ async function write(
   const problems = baselineWriteProblems(manifest);
   if (problems.length > 0)
     throw new UsageError(`${directory}: no baseline is written of this run: ${problems.join("; ")}`);
-  const baseline = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
+  const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
+  const baseline = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
   if (mtf && baseline.runs.every((run) => run.rungs.length === 0)) {
     throw new UsageError(
       `${directory}: no MTF baseline is written of this run: it has none of the rungs ${MTF_BASELINE_RUNGS.join(", ")}`,
     );
   }
-  const failing = baseline.runs.flatMap((run) =>
-    run.rungs.flatMap((rung) =>
-      rung.pairs
-        .filter((pair) => FAILING_VERDICTS.includes(pair.verdict))
-        .map((pair) => `${run.name} ${rung.rung} ${pair.a} ${pair.b} ${pair.verdict}`),
-    ),
-  );
+  const failing = unclassifiedFailures(baseline);
   if (failing.length > 0) {
     for (const line of failing) io.stderr(`lvrtc baseline: ${line}\n`);
     io.stderr(
-      "lvrtc baseline: no baseline is written of a run with a pair that is FAIL or ERROR: a baseline records what " +
+      (baseline.suite.name === "catalog"
+        ? "lvrtc baseline: no baseline is written with an unclassified/changed FAIL or any ERROR: "
+        : "lvrtc baseline: no baseline is written of a run with a pair that is FAIL or ERROR: ") +
+        "a baseline records what " +
         "the engines agreed on; lvrtc compare names each pair and its reason\n",
     );
     return EXIT_FAILURE;
@@ -178,6 +192,17 @@ async function write(
     `${baseline.suite.name}: ${baseline.runs.length} runs, ${records} records, engines ${baseline.engines.map((engine) => engine.id).join(", ")}, policy v${baseline.policy.version}\n` +
       `baseline: ${file}\nreport: ${markdown}\nreport: ${json}\n`,
   );
+  if (SNAPSHOT_BASELINE_SUITES.includes(baseline.suite.name)) {
+    // A snapshot is held by lvrtc verify to the frozen copy of the policy it records, never to a later policy.
+    const frozen = loadPolicySnapshot(baseline.policy, inputs.policySnapshots ?? POLICY_SNAPSHOTS);
+    const name = policySnapshotName(baseline.policy.version);
+    io.stdout(
+      `snapshot: ${baseline.suite.name} is a dated snapshot of policy v${baseline.policy.version}; lvrtc verify holds it ` +
+        ("policy" in frozen
+          ? `to ${name}\n`
+          : `to ${name}, which is not yet frozen: cp policy/rungs.v1.json ${name}, and commit it with the baseline\n`),
+    );
+  }
   return EXIT_OK;
 }
 
@@ -216,7 +241,9 @@ async function check(
   inputs: BaselineCommandInputs,
   io: Parameters<CliCommand["run"]>[1],
 ): Promise<number> {
-  const asked = parseTargetArguments(args, ["--root"], ["--json", "--mtf"]);
+  const asked = parseTargetArguments(args, ["--root", "--jobs", "--memory-budget"], ["--json", "--mtf"]);
+  const memoryBudgetGiB = memoryBudgetOption(asked.values.get("--memory-budget"));
+  const jobs = jobsOption(asked.values.get("--jobs"), memoryBudgetGiB);
   const mtf = asked.flags.has("--mtf");
   const root = asked.values.get("--root");
   const rootDir = rootOf(root, inputs);
@@ -224,112 +251,120 @@ async function check(
   const isFile = isAbsolute(target) || /[\\/]/.test(target) || target.endsWith(".json");
   const suiteFile = isFile ? resolve(inputs.cwd, target) : join(rootDir, "suites", `${target}.json`);
   if (!existsSync(suiteFile)) throw new UsageError(`${suiteFile}: no suite file is there`);
-  const prepared = await prepareSuiteRun(inputs, suiteFile, root);
-  const { suite, loaded } = prepared;
-
-  const file = mtf ? mtfBaselineFile(rootDir, suite.name) : baselineFile(rootDir, suite.name);
-  let text: string;
+  const prepared = await prepareSuiteRun(inputs, suiteFile, root, jobs, memoryBudgetGiB, []);
   try {
-    text = readFileSync(file, "utf8");
-  } catch {
-    throw new UsageError(
-      `${file}: the suite ${suite.name} has no ${mtf ? "MTF " : ""}baseline; lvrtc baseline write ${suite.name}${mtf ? " --mtf" : ""} writes one`,
-    );
-  }
-  const read = parseBaseline(text);
-  if ("problems" in read) throw new UsageError(`${file}: not a baseline: ${read.problems.join("; ")}`);
-  const committed = read.baseline;
-  const policy = inputs.policy ?? loadPolicy();
+    const { suite, loaded } = prepared;
 
-  const rungs: string[] = [];
-  for (const run of committed.runs) for (const { rung } of run.rungs) if (!rungs.includes(rung)) rungs.push(rung);
-  const result = await runSuite({
-    suite,
-    registry: prepared.registry,
-    runsDir: loaded.config.runsDir,
-    sources: prepared.sources,
-    engines: runEngines(committed),
-    rungs,
-    followUps: followUpsOf(policy),
-  });
-  const directory = dirname(result.manifestPath);
-  const comparisons = compareRunDirectory(directory, policy);
-  writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
-  const { manifest } = result;
-  const fresh = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
-  const records = checkBaseline(committed, fresh, policy);
-  const changes = summarizeChanges(records);
-
-  // What kept the suite from running as the baseline's did: each is an error of the check, whatever the records say.
-  const errors: string[] = [];
-  for (const engine of manifest.engines) {
-    if (engine.status !== "available") errors.push(`engine ${engine.id} could not be used (${engine.code})`);
-  }
-  for (const run of manifest.runs)
-    if (run.caseId === null && run.problems.length === 0) errors.push(`run ${run.name} was not started`);
-  if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) {
-    errors.push("LensVisualizer's files changed while the suite ran: run the check again");
-  }
-  const failingToday = records.some(
-    (record) => record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict),
-  );
-  const failed = checkFails(records) || errors.length > 0;
-
-  const counts = Object.fromEntries(
-    CHECK_OUTCOMES.map((outcome) => [outcome, records.filter((record) => record.outcome === outcome).length]),
-  );
-  const staleCounts = Object.fromEntries(
-    STALE_REASONS.map((reason) => [reason, records.filter((record) => record.stale.includes(reason)).length]),
-  );
-  const suiteChanged = committed.suite.hash !== manifest.suite.hash;
-  if (asked.flags.has("--json")) {
-    const said = { suite: suite.name, records, counts, stale: staleCounts, changes, suiteChanged, errors, failed };
-    io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(said)), null, 2)}\n`);
-    return failed ? EXIT_FAILURE : EXIT_OK;
-  }
-  const shown = records.filter(
-    (record) => record.outcome !== "OK" || (record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict)),
-  );
-  const rows = shown.map((record) => [
-    record.run,
-    record.rung,
-    record.a,
-    record.b,
-    stateText(record),
-    record.verdict ?? "",
-    record.moved.join("; "),
-  ]);
-  const widths = rows.reduce<number[]>(
-    (most, row) => row.map((cell, column) => Math.max(most[column] ?? 0, cell.length)),
-    [],
-  );
-  for (const row of rows) {
-    io.stdout(
-      `${row
-        .map((cell, column) => cell.padEnd(widths[column]))
-        .join("  ")
-        .trimEnd()}\n`,
-    );
-  }
-  for (const error of errors) io.stderr(`lvrtc baseline: ERROR: ${error}\n`);
-  if (suiteChanged)
-    io.stdout(`${suite.name}: the suite file is not the one the baseline names (its hash is another)\n`);
-  io.stdout(
-    `${suite.name}: ${records.length} records: ${CHECK_OUTCOMES.map((outcome) => `${counts[outcome]} ${outcome}`).join(", ")}; ` +
-      `stale by ${STALE_REASONS.map((reason) => `${reason} ${staleCounts[reason]}`).join(", by ")}\n`,
-  );
-  if (changes.length > 0) {
-    io.stdout("What is not what the baseline has, by rung, pair and figure (records, largest change, its run):\n");
-    for (const change of changes) {
-      const size = change.largest === null ? "a value that is no number" : numberText(change.largest);
-      io.stdout(
-        `  ${change.rung}  ${change.a} ${change.b}  ${change.name}: ${change.records} of ${change.of} records, at most ${size} (${change.run})\n`,
+    const file = mtf ? mtfBaselineFile(rootDir, suite.name) : baselineFile(rootDir, suite.name);
+    let text: string;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      throw new UsageError(
+        `${file}: the suite ${suite.name} has no ${mtf ? "MTF " : ""}baseline; lvrtc baseline write ${suite.name}${mtf ? " --mtf" : ""} writes one`,
       );
     }
+    const read = parseBaseline(text);
+    if ("problems" in read) throw new UsageError(`${file}: not a baseline: ${read.problems.join("; ")}`);
+    const committed = read.baseline;
+    const policy = inputs.policy ?? loadPolicy();
+
+    const rungs: string[] = [];
+    for (const run of committed.runs) for (const { rung } of run.rungs) if (!rungs.includes(rung)) rungs.push(rung);
+    assertJobs(jobs, memoryBudgetGiB, jobEstimateGiB(rungs));
+    const result = await runSuite({
+      suite,
+      registry: prepared.registry,
+      jobs,
+      runsDir: loaded.config.runsDir,
+      sources: prepared.sources,
+      engines: runEngines(committed),
+      rungs,
+      followUps: followUpsOf(policy),
+    });
+    const directory = dirname(result.manifestPath);
+    const comparisons = await compareRunDirectoryWithJobs(directory, policy, jobs);
+    writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
+    const { manifest } = result;
+    const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
+    const fresh = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
+    const records = checkBaseline(committed, fresh, policy);
+    const changes = summarizeChanges(records);
+
+    // What kept the suite from running as the baseline's did: each is an error of the check, whatever the records say.
+    const errors: string[] = [];
+    for (const engine of manifest.engines) {
+      if (engine.status !== "available") errors.push(`engine ${engine.id} could not be used (${engine.code})`);
+    }
+    for (const run of manifest.runs)
+      if (run.caseId === null && run.problems.length === 0) errors.push(`run ${run.name} was not started`);
+    if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) {
+      errors.push("LensVisualizer's files changed while the suite ran: run the check again");
+    }
+    const failingToday = records.some(
+      (record) => record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict),
+    );
+    const failed = checkFails(records) || errors.length > 0;
+
+    const counts = Object.fromEntries(
+      CHECK_OUTCOMES.map((outcome) => [outcome, records.filter((record) => record.outcome === outcome).length]),
+    );
+    const staleCounts = Object.fromEntries(
+      STALE_REASONS.map((reason) => [reason, records.filter((record) => record.stale.includes(reason)).length]),
+    );
+    const suiteChanged = committed.suite.hash !== manifest.suite.hash;
+    if (asked.flags.has("--json")) {
+      const said = { suite: suite.name, records, counts, stale: staleCounts, changes, suiteChanged, errors, failed };
+      io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(said)), null, 2)}\n`);
+      return failed ? EXIT_FAILURE : EXIT_OK;
+    }
+    const shown = records.filter(
+      (record) =>
+        record.outcome !== "OK" || (record.verdict !== undefined && FAILING_VERDICTS.includes(record.verdict)),
+    );
+    const rows = shown.map((record) => [
+      record.run,
+      record.rung,
+      record.a,
+      record.b,
+      stateText(record),
+      record.verdict ?? "",
+      record.moved.join("; "),
+    ]);
+    const widths = rows.reduce<number[]>(
+      (most, row) => row.map((cell, column) => Math.max(most[column] ?? 0, cell.length)),
+      [],
+    );
+    for (const row of rows) {
+      io.stdout(
+        `${row
+          .map((cell, column) => cell.padEnd(widths[column]))
+          .join("  ")
+          .trimEnd()}\n`,
+      );
+    }
+    for (const error of errors) io.stderr(`lvrtc baseline: ERROR: ${error}\n`);
+    if (suiteChanged)
+      io.stdout(`${suite.name}: the suite file is not the one the baseline names (its hash is another)\n`);
+    io.stdout(
+      `${suite.name}: ${records.length} records: ${CHECK_OUTCOMES.map((outcome) => `${counts[outcome]} ${outcome}`).join(", ")}; ` +
+        `stale by ${STALE_REASONS.map((reason) => `${reason} ${staleCounts[reason]}`).join(", by ")}\n`,
+    );
+    if (changes.length > 0) {
+      io.stdout("What is not what the baseline has, by rung, pair and figure (records, largest change, its run):\n");
+      for (const change of changes) {
+        const size = change.largest === null ? "a value that is no number" : numberText(change.largest);
+        io.stdout(
+          `  ${change.rung}  ${change.a} ${change.b}  ${change.name}: ${change.records} of ${change.of} records, at most ${size} (${change.run})\n`,
+        );
+      }
+    }
+    for (const step of nextSteps(suite.name, records, failingToday, mtf)) io.stdout(`${step}\n`);
+    io.stdout(`run: ${join(directory, MANIFEST_FILE)}\n`);
+    return failed ? EXIT_FAILURE : EXIT_OK;
+  } finally {
+    await (prepared.registry as Partial<ProcessRegistry>).close?.();
   }
-  for (const step of nextSteps(suite.name, records, failingToday, mtf)) io.stdout(`${step}\n`);
-  io.stdout(`run: ${join(directory, MANIFEST_FILE)}\n`);
-  return failed ? EXIT_FAILURE : EXIT_OK;
 }
 
 /**

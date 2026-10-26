@@ -904,7 +904,9 @@ test(
       assert.match(ran.out, /^smoke: 27 jobs: 27 ok, 0 unsupported, 0 error, 0 pending \(27 computed, 0 cached\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
       const manifest: RunManifest = JSON.parse(manifestText);
-      const entries = manifest.jobs.map((job) => readFileSync(join(runsDir, STORE_DIRECTORY, `${job.storeKey}.json`)));
+      const entries = manifest.jobs.map((job) =>
+        readFileSync(join(runsDir, STORE_DIRECTORY, `${job.storeKey}.json.gz`)),
+      );
       return { manifestText, manifest, entries };
     });
     const [first, second] = outputs;

@@ -67,7 +67,7 @@ function participantOf(job: ManifestJob, fingerprint: string | null, store: Resu
     return missing("the store holds another result under its key");
   }
   const quantity = QUANTITIES.get(job.quantity);
-  if (quantity === undefined || resultDataProblems(quantity, result.data).length > 0) {
+  if (quantity === undefined || resultDataProblems(quantity, result.data, request.quantityVersion).length > 0) {
     return missing("its stored data cannot be used");
   }
   return { participant: { engine, fingerprint, status: "ok", data: result.data }, spec: request.spec };

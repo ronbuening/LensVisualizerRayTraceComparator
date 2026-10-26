@@ -216,16 +216,19 @@ class DeclarationTest(unittest.TestCase):
         descriptor = OptilandEngine(IDENTITY).describe()
         self.assertEqual(validate_kind("engine-descriptor", descriptor), [])
         capabilities = descriptor["capabilities"]
-        self.assertEqual(capabilities["features"], {"supported": list(FEATURE_FLAGS), "limits": {}})
+        self.assertEqual(
+            capabilities["features"],
+            {"supported": sorted(set(FEATURE_FLAGS) | {"path.folded", "surface.diffractive"}), "limits": {}},
+        )
         self.assertEqual(tuple(capabilities["features"]["supported"]), SUPPORTED_FEATURES)
         self.assertEqual(
             capabilities["quantities"],
             {
                 "system.describe": {"version": 2},
-                "paraxial.first-order": {"version": 1},
-                "rays.trace": {"version": 1},
+                "paraxial.first-order": {"version": 1, "versions": [1, 2]},
+                "rays.trace": {"version": 1, "versions": [1, 2, 3]},
                 "mtf.native": {"version": 1},
-                    "wavefront.native": {"version": 1},
+                "wavefront.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])
@@ -244,24 +247,29 @@ class DeclarationTest(unittest.TestCase):
         # The case of every flag of contract 1.0, and the case of the flag minor 2 added, which states 1.2.
         self.assertEqual(UNCLIPPED_PLATE["contract"], "1.2")
         self.assertEqual(UNCLIPPED_PLATE["features"], ["aperture.unclipped"])
-        carried = set(ALL_FEATURES["features"]) | set(UNCLIPPED_PLATE["features"])
+        carried = (
+            set(ALL_FEATURES["features"])
+            | set(UNCLIPPED_PLATE["features"])
+            | set(read_fixture("valid", "optical-case", "folded-mangin.json")["features"])
+            | {"surface.diffractive"}
+        )
         self.assertEqual(carried, set(SUPPORTED_FEATURES), "the two cases that have every feature between them")
 
     def test_what_its_descriptor_rules_out_is_refused_in_the_order_of_the_comparators_negotiation(self) -> None:
         request = {**describe_request(SINGLET), "quantity": UNOFFERED_QUANTITY, "contract": "2.0"}
-        case = {**SINGLET, "contract": "1.3", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
+        case = {**SINGLET, "contract": "1.6", "features": ["lines.multiple", "surface.grating", "object.finite", "x.y"]}
         self.assertEqual(
             refusals(request, case),
             [
                 {
                     "code": "contract",
-                    "item": "1.3",
-                    "message": "the engine speaks contract 1.0 to 1.2; the case is written to 1.3",
+                    "item": "1.6",
+                    "message": "the engine speaks contract 1.0 to 1.5; the case is written to 1.6",
                 },
                 {
                     "code": "contract",
                     "item": "2.0",
-                    "message": "the engine speaks contract 1.0 to 1.2; the request is written to 2.0",
+                    "message": "the engine speaks contract 1.0 to 1.5; the request is written to 2.0",
                 },
                 {"code": "quantity", "item": "selftest.echo", "message": "the engine does not offer selftest.echo"},
                 {
@@ -275,7 +283,7 @@ class DeclarationTest(unittest.TestCase):
         both = refusals({**describe_request(SINGLET), "contract": "0.9"}, {**SINGLET, "contract": "0.9"})
         self.assertEqual(
             [item["message"] for item in both],
-            ["the engine speaks contract 1.0 to 1.2; the case and the request are written to 0.9"],
+            ["the engine speaks contract 1.0 to 1.5; the case and the request are written to 0.9"],
         )
         # Every minor up to the worker's newest is spoken; a text that is no version is in no range.
         for spoken in ("1.0", "1.1", "1.2"):

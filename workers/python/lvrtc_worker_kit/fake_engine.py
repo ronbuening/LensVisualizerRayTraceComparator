@@ -45,6 +45,7 @@ FEATURE_FLAGS: tuple[str, ...] = (
     "aperture.unclipped",
     "lines.multiple",
     "object.finite",
+    "path.folded",
     "surface.asphere.even",
     "surface.asphere.flat-base",
     "surface.asphere.odd",

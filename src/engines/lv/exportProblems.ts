@@ -4,9 +4,10 @@
  * The codes the exporter itself gives. A lens may have several problems, and every one is reported.
  *
  * What the contract cannot express (reported, never approximated):
- * - `folded-path`: the optical path turns at a mirror;
- * - `non-refract-interaction`: a surface reflects or blocks;
- * - `diffractive-surface`: a surface carries a diffractive phase;
+ * - `folded-auto-path`: an automatic mirror search is not a fixed declared visit list;
+ * - `non-refract-interaction`: an interaction has no exact declared path representation;
+ * - `diffractive-phase-unsupported`: a prepared phase cannot be represented verbatim;
+ *   `diffractive-surface` remains a historical census code only;
  * - `tilted-image-plane` / `off-axis-image-plane`: the image plane is not perpendicular to the axis, or not on it;
  * - `surface-profile-unsupported`: LensVisualizer gives a surface a profile that its radius and asphere do not
  *   explain (a tilted plane, or a kind added since);
@@ -32,9 +33,13 @@
  * (`LvBindingErrorCode`): `lv-not-configured`, `lv-path-missing` and so on.
  */
 export const EXPORT_PROBLEM_CODES = [
-  "folded-path",
+  "folded-post-path-reflection",
+  "folded-auto-path",
+  "folded-interaction-budget",
+  "tilted-surface",
   "non-refract-interaction",
-  "diffractive-surface",
+  "diffractive-surface", // Retained for historical census documents; new exports use the specific code below.
+  "diffractive-phase-unsupported",
   "tilted-image-plane",
   "off-axis-image-plane",
   "surface-profile-unsupported",
@@ -61,7 +66,7 @@ export const EXPORT_PROBLEM_CODES = [
  * - `spectral-data-unavailable`: a glass without the dispersion data that several lines need;
  * - `unsupported-path`, `unverified-scale`: LensVisualizer's MTF path does not cover the lens, so it supplies no
  *   per-wavelength indices; the reference line of such a lens is still exported when the contract can express the
- *   lens (a fisheye projection, an annular aperture).
+ *   lens (a fisheye projection, an annular aperture, or a diffractive phase).
  */
 export const LV_GATE_PROBLEM_CODES = [
   "finite-conjugate-unavailable",

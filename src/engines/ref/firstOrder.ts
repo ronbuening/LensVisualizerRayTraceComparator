@@ -5,6 +5,8 @@ import type { UnsupportedItem } from "../../contract/result.ts";
 import { encodeF8 } from "../../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
 import type { RefSystem } from "./model.ts";
+import { foldedSingularities } from "./foldedSingularities.ts";
+import { phasePower } from "./phase.ts";
 import { firstOrder, vertexCurvature } from "./paraxial.ts";
 
 /** The first-order data of a model, or why it has none. */
@@ -21,6 +23,19 @@ export type FirstOrderAnswer =
  * such surface), and one that is afocal at a line (`system.afocal`, once, naming every such line).
  */
 export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
+  const path = system.opticalPath;
+  const stopVisit = path?.findIndex((step) => step.surfaceIndex === system.stopIndex);
+  if (stopVisit === -1)
+    return {
+      supported: false,
+      items: [
+        {
+          code: "feature",
+          item: "folded-stop-not-visited",
+          message: "the declared folded path does not visit the stop; no paraxial pupil of it is defined",
+        },
+      ],
+    };
   const curvatures = system.surfaces.map((surface) => vertexCurvature(surface.profile));
   const cone = curvatures.indexOf(null);
   if (cone >= 0) {
@@ -35,19 +50,67 @@ export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
   const magnifications: number[] = [];
   const afocal: number[] = [];
   system.indexAfter.forEach((indices, line) => {
+    let sign = 1;
+    let medium = 1;
+    const rows =
+      path === undefined
+        ? system.surfaces.map((surface, index) => ({
+            z: surface.z,
+            curvature: curvatures[index] as number,
+            indexAfter: indices[index],
+            ...(surface.diffractive === undefined
+              ? {}
+              : { phasePower: phasePower(surface.diffractive, system.wavelengthsNm?.[line] ?? 587.5618) }),
+          }))
+        : path.map((step) => {
+            const side = sign > 0 ? "front" : "rear";
+            const active =
+              step.incidentSide === undefined || step.incidentSide === "both" || step.incidentSide === side;
+            const interaction = active ? step.interaction : "pass";
+            const reference =
+              side === "rear" && step.reverseMediumAfter !== undefined ? step.reverseMediumAfter : step.mediumAfter;
+            if (interaction === "reflect") sign = -sign;
+            if (interaction === "refract") medium = reference === null ? 1 : indices[reference ?? step.surfaceIndex];
+            return {
+              z: system.surfaces[step.surfaceIndex].z,
+              curvature:
+                interaction === "block" || interaction === "pass" ? 0 : (curvatures[step.surfaceIndex] as number),
+              indexAfter: sign * medium,
+              ...(interaction === "refract" && system.surfaces[step.surfaceIndex].diffractive !== undefined
+                ? {
+                    phasePower: phasePower(
+                      system.surfaces[step.surfaceIndex].diffractive,
+                      system.wavelengthsNm?.[line] ?? 587.5618,
+                    ),
+                  }
+                : {}),
+            };
+          });
     const output = firstOrder({
-      surfaces: system.surfaces.map((surface, index) => ({
-        z: surface.z,
-        curvature: curvatures[index] as number,
-        indexAfter: indices[index],
-      })),
-      stopIndex: system.stopIndex,
+      compensated: path !== undefined || system.surfaces.some((surface) => surface.diffractive !== undefined),
+      surfaces: rows,
+      stopIndex: stopVisit ?? system.stopIndex,
       stopSemiDiameter: system.stopSemiDiameter,
-      lastLensSurfaceIndex: system.lastLensSurfaceIndex,
+      lastLensSurfaceIndex: path === undefined ? system.lastLensSurfaceIndex : rows.length - 1,
       objectZ: system.objectZ,
     });
     if (output === null) return void afocal.push(line);
-    for (const name of FIRST_ORDER_VALUES) columns[name].push(output.values[name]);
+    const values = {
+      ...output.values,
+      backFocus: output.values.rearFocalZ - system.surfaces[system.lastLensSurfaceIndex].z,
+    };
+    if (path) {
+      const singular = foldedSingularities(system, indices, system.wavelengthsNm?.[line]);
+      if (singular.entrance !== null) {
+        values.entrancePupilZ = singular.entrance;
+        values.entrancePupilSemiDiameter = Infinity;
+      }
+      if (singular.exit !== null) {
+        values.exitPupilZ = singular.exit;
+        values.exitPupilSemiDiameter = Infinity;
+      }
+    }
+    for (const name of FIRST_ORDER_VALUES) columns[name].push(values[name]);
     if (output.magnification !== null) magnifications.push(output.magnification);
   });
   if (afocal.length > 0) {

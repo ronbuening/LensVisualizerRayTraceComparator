@@ -7,7 +7,16 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 export const SUITES_DIR: string = join(REPO_ROOT, "suites");
 
 /** The committed suites, by name. */
-export const SUITE_NAMES = ["benchmark", "features", "focus-stations", "smoke", "states"] as const;
+export const SUITE_NAMES = [
+  "benchmark",
+  "catalog",
+  "diffractive",
+  "features",
+  "focus-stations",
+  "folded",
+  "smoke",
+  "states",
+] as const;
 
 /** The path of a committed suite. */
 export function suitePath(name: (typeof SUITE_NAMES)[number]): string {

@@ -17,7 +17,7 @@ import { tempDir } from "../core/support.ts";
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 14);
+  assert.equal(policy.version, 15);
   assert.equal(policy.contract, "1.3");
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
@@ -83,6 +83,7 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, without
     "opd.maxAbs": waves,
     "opticalPath.maxAbs": waves,
     "opticalPathToImage.maxAbs": waves,
+    "phasePath.maxAbs": waves,
   });
   // What R2 reports and does not judge: the rays in the rim band, and how many rays were compared.
   const reported = COMPARATORS.get("rays.trace", "r2")?.metrics.map((metric) => metric.name) ?? [];
@@ -288,4 +289,61 @@ test("a policy using attentionSeveralLines refuses earlier contract minors", (t)
     if (["1.0", "1.1", "1.2"].includes(contract)) assert.throws(() => loadPolicy(file), /not a valid policy/);
     else assert.deepEqual(loadPolicy(file), policy);
   }
+});
+
+test("baseline verification requires the exact policy version and hash", async () => {
+  const { baselinePolicyMatches } = await import("../../src/compare/policyFile.ts");
+  const { hashCanonical } = await import("../../src/core/numeric/hash.ts");
+  const policy = loadPolicy();
+  const stated = { version: policy.version, hash: hashCanonical(policy) };
+  assert.ok(baselinePolicyMatches(stated, policy));
+  assert.ok(!baselinePolicyMatches({ ...stated, version: 14 }, policy));
+  assert.ok(!baselinePolicyMatches({ ...stated, hash: "0".repeat(64) }, policy));
+});
+
+test("a snapshot baseline's gates are held to the policy it records", async () => {
+  const { baselineGateProblems } = await import("../../src/compare/policyFile.ts");
+  const policy: Policy = {
+    contract: "1.3",
+    kind: "policy",
+    version: 2,
+    rungs: {
+      r4: {
+        quantity: "rays.trace",
+        mode: "identical-rays",
+        class: "gated",
+        metrics: { "mtf.maxAbs": { tolerance: 1 / 8, unit: "1" } },
+      },
+    },
+  } as unknown as Policy;
+  const baseline = (verdict: string, value: number, tolerance = 1 / 8, rung = "r4", bands?: object) =>
+    ({
+      runs: [
+        {
+          name: "run",
+          rungs: [
+            {
+              rung,
+              quantity: "rays.trace",
+              ...(bands === undefined ? {} : { bands }),
+              pairs: [{ a: "a", b: "b", verdict, metrics: [{ name: "mtf.maxAbs", unit: "1", value, tolerance }] }],
+            },
+          ],
+        },
+      ],
+    }) as never;
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16), policy), []);
+  assert.deepEqual(baselineGateProblems(baseline("FAIL", 1 / 4), policy), []);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 4), policy), [
+    "run r4 a b mtf.maxAbs: PASS with 0.25 above the recorded policy's 0.125",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 4), policy), [
+    "run r4 a b mtf.maxAbs: the gate is not the recorded policy's",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 8, "r9"), policy), [
+    "run r9: the recorded policy has no rung r9",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 8, "r4", { "mtf.maxAbs": 1 / 2 }), policy), [
+    "run r4: the band of mtf.maxAbs is not the recorded policy's",
+  ]);
 });

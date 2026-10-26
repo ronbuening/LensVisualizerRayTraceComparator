@@ -32,6 +32,7 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/first-order/lensConstants.ts",
   "src/optics/first-order/systemMatrix.ts",
   "src/optics/geometry.ts",
+  "src/optics/math/diffractivePhase.ts",
   "src/optics/mtf.ts",
   "src/optics/optics.ts",
   "src/optics/publishedStations.ts",
@@ -40,8 +41,10 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/state/pupils.ts",
   "src/optics/state/runtime.ts",
   "src/optics/trace/aperture.ts",
+  "src/optics/trace/interactions.ts",
   "src/optics/trace/rayAdapters.ts",
   "src/optics/trace/sequentialTrace.ts",
+  "src/optics/trace/utils.ts",
   "src/types/asphericSchema.ts",
   "src/utils/state/mtfPreferences.ts",
 ];
@@ -52,6 +55,7 @@ export const FAKE_LENS_FILES: readonly (readonly [file: string, key: string])[] 
   ["src/lens-data/acme/AcmeZoom2448.data.ts", "acme-zoom-24-48"],
   ["src/lens-data/zenith/ZenithDoublet100.data.ts", "zenith-doublet-100"],
   ["src/lens-data/zenith/ZenithPlate35.data.ts", "zenith-plate-35"],
+  ["src/lens-data/zz-folded/FoldedMirror.data.ts", "zz-folded-mirror"],
 ];
 
 /**

@@ -9,6 +9,7 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 import { renderReport } from "../../src/report/index.ts";
 import {
   BANNED_CLAIMS,
+  CATALOG_TEXT,
   WAVEFRONT_SEVERAL_LINES,
   MTF_COMPARISON_INTROS,
   DIFFERENCE_CLASS_TEXT,
@@ -114,6 +115,7 @@ test("what a report may say is accepted: every template, and sentences that only
   const templates = [
     ...NOT_COVERED,
     ...Object.values(STATEMENT_TEXT),
+    ...Object.values(CATALOG_TEXT),
     MTF_COMPARISON_INTRO.join("\n"),
     MTF_COMPARISON_INTROS.wavefront.join("\n"),
     WAVEFRONT_SEVERAL_LINES.join("\n"),

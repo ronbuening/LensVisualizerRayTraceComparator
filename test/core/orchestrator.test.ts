@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -220,7 +221,7 @@ test("every stored job is in the store, as the request that was sent and a valid
 
   const stored = manifest.jobs.filter((job) => job.storeKey !== null);
   assert.equal(stored.length, 4);
-  assert.deepEqual(storeFiles(runsDir), stored.map((job) => `${job.storeKey}.json`).sort());
+  assert.deepEqual(storeFiles(runsDir), stored.map((job) => `${job.storeKey}.json.gz`).sort());
   for (const job of stored) {
     const found = store.get(job.storeKey ?? "");
     assert.equal(found.kind, "hit");
@@ -525,7 +526,7 @@ test("an engine that answers unsupported when asked is an answer, and is stored"
   ]);
   assert.deepEqual(result.manifest.jobs[0].unsupported, [{ code: "option", item: "rays" }]);
   assert.equal(result.outcomes[0].detail, "the ray count is fixed");
-  assert.deepEqual(storeFiles(runsDir), result.manifest.jobs.map((job) => `${job.storeKey}.json`).sort());
+  assert.deepEqual(storeFiles(runsDir), result.manifest.jobs.map((job) => `${job.storeKey}.json.gz`).sort());
 
   const second = engines();
   const again = await runSuite({ suite: pairSuite(), registry: second.registry, runsDir });
@@ -649,7 +650,7 @@ test("an ok result whose data is not the quantity's becomes an error, invalid-da
     result.outcomes[1].detail ?? "",
     /^the engine's data cannot be used: it is not selftest\.echo data: \/values \[type\]/,
   );
-  assert.deepEqual(storeFiles(runsDir), [`${result.manifest.jobs[2].storeKey}.json`]);
+  assert.deepEqual(storeFiles(runsDir), [`${result.manifest.jobs[2].storeKey}.json.gz`]);
 });
 
 test("a pending job is recorded as pending and is not stored", async (t) => {
@@ -840,7 +841,7 @@ test("a store entry that cannot be trusted is a miss: a warning, and the job is 
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
 
   // One entry cut short, as by a full disk; one valid in every way a schema sees, with an array that was altered.
-  writeFileSync(join(store.directory, `${cutShort}.json`), '{"request":{"caseId"');
+  writeFileSync(join(store.directory, `${cutShort}.json.gz`), gzipSync('{"request":{"caseId"'));
   const found = store.get(forged);
   assert.ok(found.kind === "hit");
   const data = found.entry.result.data as SelftestEchoData;
@@ -849,8 +850,8 @@ test("a store entry that cannot be trusted is a miss: a warning, and the job is 
     data: { ...data, values: { $nd: { ...data.values.$nd, sha256: "0".repeat(64) } } },
   };
   writeFileSync(
-    join(store.directory, `${forged}.json`),
-    `${canonicalJson({ request: found.entry.request, result: altered })}\n`,
+    join(store.directory, `${forged}.json.gz`),
+    gzipSync(`${canonicalJson({ request: found.entry.request, result: altered })}\n`),
   );
   assert.equal(store.get(forged).kind, "hit", "the envelope is valid; only the data is not");
 

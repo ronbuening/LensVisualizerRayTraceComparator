@@ -142,7 +142,12 @@ export const r1Rung: RungDefinition = Object.freeze({
   id: "r1",
   quantity: PARAXIAL_FIRST_ORDER,
   buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => [
-    makeRequest({ caseId: opticalCase.id, quantity: PARAXIAL_FIRST_ORDER, spec: {} }),
+    makeRequest({
+      caseId: opticalCase.id,
+      quantity: PARAXIAL_FIRST_ORDER,
+      spec: {},
+      ...(opticalCase.features.includes("surface.diffractive") ? { quantityVersion: 2 } : {}),
+    }),
   ],
 });
 
@@ -158,7 +163,16 @@ export function rayTraceRequests(opticalCase: OpticalCase, inputs: RungInputs = 
 function requestsOfSets(opticalCase: OpticalCase, sets: readonly RaysTraceSpec[]): QuantityRequest[] {
   const requests = new Map<string, QuantityRequest>();
   for (const spec of sets) {
-    const request = makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec });
+    const request = makeRequest({
+      caseId: opticalCase.id,
+      quantity: RAYS_TRACE,
+      spec,
+      ...(opticalCase.features.includes("surface.diffractive")
+        ? { quantityVersion: 3 }
+        : opticalCase.system.opticalPath === undefined
+          ? {}
+          : { quantityVersion: 2 }),
+    });
     // A Map keeps the first of two equal sets, in its place.
     if (!requests.has(request.id)) requests.set(request.id, request);
   }

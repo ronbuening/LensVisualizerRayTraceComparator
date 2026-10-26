@@ -1,0 +1,13 @@
+{
+  "contract": "1.3",
+  "kind": "suite",
+  "name": "catalog",
+  "defaults": {
+    "engines": ["lv", "ref", "optiland"],
+    "rungs": ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
+    "aperture": { "kind": "wide-open" },
+    "lines": { "kind": "reference" },
+    "imagePlane": { "kind": "design" }
+  },
+  "runs": [{ "name": "catalog", "lens": { "kind": "lv", "key": "*" } }]
+}

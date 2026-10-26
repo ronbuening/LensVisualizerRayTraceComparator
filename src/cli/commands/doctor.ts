@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import packageJson from "../../../package.json" with { type: "json" };
 import { CONFIG_KEYS, REPO_ROOT, configValue, loadConfig } from "../../core/config.ts";
@@ -60,6 +60,8 @@ export interface DoctorProbe {
 /** What `lvrtc doctor` is wired to: where the configuration lives, the environment, and the machine. */
 export interface DoctorInputs {
   readonly rootDir: string;
+  /** What a relative `--root` is resolved against; the process's own directory unless given. */
+  readonly cwd?: string;
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly probe: DoctorProbe;
 }
@@ -97,7 +99,7 @@ export interface DoctorReport {
 const NODE_RANGE: string = packageJson.engines.node;
 /** optiland has no `__version__`; its distribution metadata is the only version it carries. */
 const OPTILAND_VERSION_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
-const USAGE = "Usage: lvrtc doctor [--json]\n";
+const USAGE = "Usage: lvrtc doctor [--root <dir>] [--json]\n";
 
 type Version = readonly [number, number, number];
 
@@ -261,9 +263,10 @@ export function renderDoctorJson(report: DoctorReport): string {
 }
 
 /**
- * Builds `lvrtc doctor [--json]`. It exits 1 only when the Node version is out of range; a missing LensVisualizer,
- * one that is present and cannot be loaded, a missing Python or optiland and an engine `optiland` that cannot be used
- * are reported and exit 0. A configuration file that cannot be read is an error.
+ * Builds `lvrtc doctor [--root <dir>] [--json]`, of the configuration under `--root` (default: this repository). It
+ * exits 1 only when the Node version is out of range; a missing LensVisualizer, one that is present and cannot be
+ * loaded, a missing Python or optiland and an engine `optiland` that cannot be used are reported and exit 0. A
+ * configuration file that cannot be read is an error.
  */
 export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
   return {
@@ -274,14 +277,25 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
         io.stdout(USAGE);
         return EXIT_OK;
       }
-      const unknown = args.find((arg) => arg !== "--json");
-      if (unknown !== undefined) {
-        io.stderr(`lvrtc doctor: unknown argument "${unknown}"\n${USAGE}`);
+      let json = false;
+      let root: string | undefined;
+      for (let index = 0; index < args.length; index += 1) {
+        const arg = args[index];
+        if (arg === "--json") json = true;
+        else if (arg === "--root" && root === undefined && args[index + 1] !== undefined) root = args[++index];
+        else {
+          io.stderr(`lvrtc doctor: unknown argument "${arg}"\n${USAGE}`);
+          return EXIT_USAGE;
+        }
+      }
+      const rootDir = root === undefined ? inputs.rootDir : resolve(inputs.cwd ?? process.cwd(), root);
+      if (root !== undefined && !statSync(rootDir, { throwIfNoEntry: false })?.isDirectory()) {
+        io.stderr(`lvrtc doctor: --root ${root}: not a directory\n${USAGE}`);
         return EXIT_USAGE;
       }
-      const loaded = loadConfig({ rootDir: inputs.rootDir, env: inputs.env });
+      const loaded = loadConfig({ rootDir, env: inputs.env });
       const report = await collectDoctorReport(loaded, inputs.probe);
-      io.stdout(args.includes("--json") ? renderDoctorJson(report) : renderDoctorText(report));
+      io.stdout(json ? renderDoctorJson(report) : renderDoctorText(report));
       if (report.node.ok) return EXIT_OK;
       io.stderr(`lvrtc doctor: Node ${report.node.version} is outside the supported range ${report.node.required}\n`);
       return EXIT_FAILURE;

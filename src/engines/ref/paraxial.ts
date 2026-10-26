@@ -5,6 +5,7 @@
 // A surface of power P = (n' - n) c takes (y, w) to (y, w - P y); a gap t in a medium of index n takes it to
 // (y + (t / n) w, w). Both have determinant 1, and so has every product of them. The medium in front of the first
 // surface is air, as the contract has it.
+import { createExactSum } from "../../core/numeric/exact.ts";
 import type { FirstOrderValue } from "../../contract/quantities/paraxialFirstOrder.ts";
 import type { SurfaceProfile } from "./surface.ts";
 
@@ -29,17 +30,38 @@ export interface RayMatrix {
 const IDENTITY: RayMatrix = { a: 1, b: 0, c: 0, d: 1 };
 
 /** `matrix` followed by a surface of the given power. */
-function refracted(matrix: RayMatrix, power: number): RayMatrix {
+function sumProduct(a: number, b: number, c: number): number {
+  const sum = createExactSum();
+  sum.add(a, 1);
+  sum.add(b, c);
+  return sum.value();
+}
+function refracted(matrix: RayMatrix, power: number, accurate = false): RayMatrix {
+  if (accurate)
+    return {
+      a: matrix.a,
+      b: matrix.b,
+      c: sumProduct(matrix.c, -power, matrix.a),
+      d: sumProduct(matrix.d, -power, matrix.b),
+    };
   return { a: matrix.a, b: matrix.b, c: matrix.c - power * matrix.a, d: matrix.d - power * matrix.b };
 }
 
 /** `matrix` followed by a gap of the given reduced length, t / n. */
-function transferred(matrix: RayMatrix, reducedGap: number): RayMatrix {
+function transferred(matrix: RayMatrix, reducedGap: number, accurate = false): RayMatrix {
+  if (accurate)
+    return {
+      a: sumProduct(matrix.a, reducedGap, matrix.c),
+      b: sumProduct(matrix.b, reducedGap, matrix.d),
+      c: matrix.c,
+      d: matrix.d,
+    };
   return { a: matrix.a + reducedGap * matrix.c, b: matrix.b + reducedGap * matrix.d, c: matrix.c, d: matrix.d };
 }
 
 /** One surface as the kernel reads it. */
 export interface ParaxialSurface {
+  readonly phasePower?: number;
   /** Vertex position, mm. */
   readonly z: number;
   /** The curvature of the surface at its vertex, 1/mm. */
@@ -80,7 +102,11 @@ export interface SystemMatrices {
  * front matrix is the identity, and with the stop on the last surface the rear one is. The stop surface's own
  * refraction is in neither: it bends a ray without moving it, so it changes no image of the stop.
  */
-export function systemMatrices(surfaces: readonly ParaxialSurface[], stopIndex: number): SystemMatrices {
+export function systemMatrices(
+  surfaces: readonly ParaxialSurface[],
+  stopIndex: number,
+  accurate = false,
+): SystemMatrices {
   let total = IDENTITY;
   let front = IDENTITY;
   let rear = IDENTITY;
@@ -88,14 +114,20 @@ export function systemMatrices(surfaces: readonly ParaxialSurface[], stopIndex: 
   let indexBefore = OBJECT_SPACE_INDEX;
   surfaces.forEach((surface, index) => {
     if (index === stopIndex) front = total;
-    const power = (surface.indexAfter - indexBefore) * surface.curvature;
+    let power = (surface.indexAfter - indexBefore) * surface.curvature;
+    if (surface.phasePower !== undefined) {
+      const sum = createExactSum();
+      sum.add(surface.indexAfter - indexBefore, surface.curvature);
+      sum.add(surface.phasePower, 1);
+      power = sum.value();
+    }
     powerScale += Math.abs(power);
-    total = refracted(total, power);
-    if (index > stopIndex) rear = refracted(rear, power);
+    total = refracted(total, power, accurate);
+    if (index > stopIndex) rear = refracted(rear, power, accurate);
     if (index + 1 < surfaces.length) {
       const reducedGap = (surfaces[index + 1].z - surface.z) / surface.indexAfter;
-      total = transferred(total, reducedGap);
-      if (index >= stopIndex) rear = transferred(rear, reducedGap);
+      total = transferred(total, reducedGap, accurate);
+      if (index >= stopIndex) rear = transferred(rear, reducedGap, accurate);
     }
     indexBefore = surface.indexAfter;
   });
@@ -104,6 +136,7 @@ export function systemMatrices(surfaces: readonly ParaxialSurface[], stopIndex: 
 
 /** What the kernel is asked about: a system at one line. */
 export interface FirstOrderInput {
+  readonly compensated?: boolean;
   /** The surfaces in the order light meets them, with the indices of the line; never empty. */
   readonly surfaces: readonly ParaxialSurface[];
   readonly stopIndex: number;
@@ -146,7 +179,7 @@ export interface FirstOrderOutput {
  */
 export function firstOrder(input: FirstOrderInput): FirstOrderOutput | null {
   const { surfaces, stopSemiDiameter } = input;
-  const { total, front, rear, powerScale } = systemMatrices(surfaces, input.stopIndex);
+  const { total, front, rear, powerScale } = systemMatrices(surfaces, input.stopIndex, input.compensated);
   if (Math.abs(total.c) <= AFOCAL_RELATIVE_POWER * powerScale) return null;
 
   const first = surfaces[0].z;

@@ -17,6 +17,34 @@ export function describeSystem(system: RefSystem, sagFractions: readonly number[
   );
   const sagShape = [surfaces.length, sagFractions.length];
   return {
+    ...(system.opticalPath === undefined
+      ? {}
+      : {
+          opticalPath: system.opticalPath,
+          pathSurfaceIndices: system.opticalPath.map((step) => step.surfaceIndex),
+          pathInteractions: system.opticalPath.map((step) => step.interaction),
+          pathIndexAfterSurface: encodeF8(
+            indexAfter.flatMap((row) => {
+              let medium = 1,
+                heading = 1;
+              return system.opticalPath!.map((step) => {
+                const side = heading > 0 ? "front" : "rear";
+                const active =
+                  step.incidentSide === undefined || step.incidentSide === "both" || step.incidentSide === side;
+                const reference =
+                  side === "rear" && step.reverseMediumAfter !== undefined ? step.reverseMediumAfter : step.mediumAfter;
+                if (active && step.interaction === "refract")
+                  medium = reference === null ? 1 : row[reference ?? step.surfaceIndex];
+                if (active && step.interaction === "reflect") heading = -heading;
+                return medium;
+              });
+            }),
+            [indexAfter.length, system.opticalPath.length],
+          ),
+        }),
+    ...(surfaces.some((surface) => surface.diffractive !== undefined)
+      ? { diffractive: surfaces.map((surface) => surface.diffractive ?? null) }
+      : {}),
     surfaceCount: surfaces.length,
     stopIndex: system.stopIndex,
     imageZ: system.imageZ,

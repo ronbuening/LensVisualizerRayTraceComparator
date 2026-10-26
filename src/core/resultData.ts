@@ -33,8 +33,8 @@ function arrayProblems(value: unknown, pointer: string, problems: string[]): str
  * are not canonical base64, are not as many as the shape needs or do not hash to the digest they travel with.
  * Deterministic: equal data gives equal problems.
  */
-export function resultDataProblems(quantity: QuantityModule, data: unknown): string[] {
-  const issues = quantity.validateData(data);
+export function resultDataProblems(quantity: QuantityModule, data: unknown, version?: number): string[] {
+  const issues = quantity.validateData(data, version);
   if (issues.length > 0) return [`it is not ${quantity.id} data: ${formatIssues(issues)}`];
   return arrayProblems(data, "", []);
 }

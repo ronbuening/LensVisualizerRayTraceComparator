@@ -109,7 +109,7 @@ test("a tree missing one module fails with that module named, and leaves no load
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
   assert.match(error.details[0], /^src\/optics\/fieldGeometry\.ts: /);
-  assert.match(error.message, /1 of 18 modules cannot be imported/);
+  assert.match(error.message, /1 of 21 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -139,7 +139,7 @@ test("a module that cannot be imported and an export missing elsewhere are named
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 18 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 21 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 
@@ -271,7 +271,7 @@ test("the catalog indexes every lens file by key, with the hash of the file", as
   const binding = await bind(t, lv);
   const catalog = await binding.catalog();
   assert.deepEqual(catalog, {
-    fileCount: 4,
+    fileCount: 5,
     entries: [
       {
         key: "acme-singlet-50",
@@ -297,6 +297,12 @@ test("the catalog indexes every lens file by key, with the hash of the file", as
         file: FAKE_LENS_FILES[3][0],
         fileSha256: fileHash(lv, FAKE_LENS_FILES[3][0]),
         name: "ZENITH Plate 35mm f/2.8",
+      },
+      {
+        key: "zz-folded-mirror",
+        file: FAKE_LENS_FILES[4][0],
+        fileSha256: fileHash(lv, FAKE_LENS_FILES[4][0]),
+        name: "Fake folded mirror",
       },
     ],
     problems: [],
@@ -335,10 +341,10 @@ test("duplicate keys and bad lens files are reported together and left out of th
 
   const binding = await bind(t, lv);
   const catalog = await binding.catalog();
-  assert.equal(catalog.fileCount, 11);
+  assert.equal(catalog.fileCount, 12);
   assert.deepEqual(
     catalog.entries.map((entry) => entry.key),
-    ["acme-zoom-24-48", "deep", "zenith-doublet-100", "zenith-plate-35"],
+    ["acme-zoom-24-48", "deep", "zenith-doublet-100", "zenith-plate-35", "zz-folded-mirror"],
   );
   assert.equal(catalog.entries[1].file, "src/lens-data/zenith/deep/er/Deep.data.ts");
   assert.deepEqual(catalog.problems, [

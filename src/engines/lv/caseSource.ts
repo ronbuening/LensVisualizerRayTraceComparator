@@ -4,7 +4,7 @@ import type { OpticalCase } from "../../contract/case.ts";
 import type { RunSpec, RunOptions } from "../../contract/runSpec.ts";
 import { recipeProblem } from "../../core/mtfRecipe.ts";
 import type { MtfRecipeResolution } from "../../core/mtfRecipe.ts";
-import type { CaseSource, SourceAudit } from "../../core/suite.ts";
+import type { CaseResolution, CaseSource, RunRaySets, SourceAudit } from "../../core/suite.ts";
 import { rayProblem } from "../../rays/raySets.ts";
 import type { RaySetResolution } from "../../rays/raySets.ts";
 import { loadLvBinding } from "./binding.ts";
@@ -21,9 +21,13 @@ import { lvRaySets } from "./raySets.ts";
 import { lvMtfRecipe } from "./recipe.ts";
 import { expandLvStations, stationSelectionProblem } from "./stations.ts";
 import { ZOOM_ENDS } from "./zoomEnds.ts";
+import { confirmFoldedPath } from "./confirmPath.ts";
 
 /** Exports lenses of one LensVisualizer checkout, and remembers what it read for them. */
 export interface LvExporter {
+  /** Run-only confirmation after the actual requested coarse/fine sets have been generated. */
+  confirmRaySets(run: RunSpec, opticalCase: OpticalCase, sets: RunRaySets): Promise<CaseResolution>;
+  catalogKeys(): Promise<readonly string[]>;
   /** Source-owned opt-in station expansion; ordinary runs remain ordinary. */
   expandStations(run: RunSpec): Promise<readonly RunSpec[]>;
   /**
@@ -71,6 +75,13 @@ export function createLvExporter(binding: LvBinding): LvExporter {
   const stampedClosures = new Set<string>();
 
   return {
+    confirmRaySets: async (run, opticalCase, sets) => {
+      if (opticalCase.system.opticalPath === undefined) return { ok: true, opticalCase };
+      const rebuilt = await rebuildCase(binding, build, opticalCase);
+      if (!rebuilt.ok) return { ok: false, problems: [rayProblem(STALE_CASE, rebuilt.reason)] };
+      return confirmFoldedPath(binding.api, { ...rebuilt.model, exported: opticalCase }, run, sets);
+    },
+    catalogKeys: async () => (await binding.catalog()).entries.map((entry) => entry.key),
     expandStations: (run) => expandLvStations(run, binding, build),
     exportLens: async (key, options) => {
       const lens = await build(key);
@@ -166,21 +177,29 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       },
     ));
 
+  const expand: Required<CaseSource>["expand"] = async (run) => {
+    if (run.lens.kind !== "lv") return [run];
+    if (run.lens.stations && stationSelectionProblem(run)) return [run];
+    if (!run.lens.stations && run.lens.key !== "*" && run.state?.zoomT !== undefined) return [run];
+    const loaded = await load();
+    if ("code" in loaded) return [run];
+    if (run.lens.stations) return loaded.expandStations(run);
+    if (run.lens.key === "*") {
+      const selected: RunSpec[] = [];
+      for (const key of await loaded.catalogKeys()) {
+        selected.push(...(await expand({ ...run, name: `${run.name}-${key}`, lens: { kind: "lv", key } })));
+      }
+      return selected.length ? selected : [run];
+    }
+    if (!(await loaded.isZoom(run.lens.key))) return [run];
+    return ZOOM_ENDS.map(({ end, zoomT }) => ({
+      ...run,
+      name: `${run.name}-${end}`,
+      state: { ...run.state, zoomT },
+    }));
+  };
   return {
-    expand: async (run) => {
-      if (run.lens.kind !== "lv") return [run];
-      if (run.lens.stations && stationSelectionProblem(run)) return [run];
-      if (!run.lens.stations && run.state?.zoomT !== undefined) return [run];
-      const loaded = await load();
-      if ("code" in loaded) return [run];
-      if (run.lens.stations) return loaded.expandStations(run);
-      if (!(await loaded.isZoom(run.lens.key))) return [run];
-      return ZOOM_ENDS.map(({ end, zoomT }) => ({
-        ...run,
-        name: `${run.name}-${end}`,
-        state: { ...run.state, zoomT },
-      }));
-    },
+    expand,
     resolve: async (run) => {
       if (run.lens.kind !== "lv") {
         return { ok: false, problems: [`a lens of kind "${run.lens.kind}" is not a LensVisualizer lens`] };
@@ -198,6 +217,11 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       const loaded = await load();
       if ("code" in loaded) return { sets: [], problems: [problemText(loaded)] };
       return loaded.raySets(opticalCase, run);
+    },
+    confirmRaySets: async (run, opticalCase, sets) => {
+      const loaded = await load();
+      if ("code" in loaded) return { ok: false, problems: [problemText(loaded)] };
+      return loaded.confirmRaySets(run, opticalCase, sets);
     },
     recipe: async (run, opticalCase) => {
       const loaded = await load();

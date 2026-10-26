@@ -3,7 +3,7 @@ import { deepFreeze } from "./json.ts";
 import type { JsonObject } from "./json.ts";
 import type { QuantityRequest } from "./request.ts";
 import { assertKind } from "./schemas.ts";
-import { CONTRACT_VERSION } from "./version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_5 } from "./version.ts";
 
 /** A machine-readable code with a message for people. */
 export interface ErrorInfo {
@@ -84,13 +84,18 @@ export type ResultBody = Pick<ResultEnvelope, "status" | "unsupported" | "error"
  * JSON data, when the result is not schema-valid and when it breaks a status rule.
  */
 export function makeResult(
-  request: Pick<QuantityRequest, "id" | "caseId">,
+  request: Pick<QuantityRequest, "id" | "caseId"> & Partial<Pick<QuantityRequest, "quantity" | "quantityVersion">>,
   engine: ResultEnvelope["engine"],
   body: ResultBody,
 ): ResultEnvelope {
   const { status, unsupported, error, method, data, diagnostics } = structuredClone(body);
   const result: ResultEnvelope = {
-    contract: CONTRACT_VERSION,
+    contract:
+      (request.quantity === "rays.trace" && request.quantityVersion === 3) ||
+      (request.quantity === "paraxial.first-order" && request.quantityVersion === 2) ||
+      (data !== undefined && "diffractive" in data)
+        ? CONTRACT_VERSION_1_5
+        : CONTRACT_VERSION,
     kind: "result",
     requestId: request.id,
     caseId: request.caseId,

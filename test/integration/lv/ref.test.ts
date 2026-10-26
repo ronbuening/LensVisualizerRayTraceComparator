@@ -102,7 +102,7 @@ test(
 );
 
 test(
-  "on every exported lens and on the suites, ref's cardinal points are those of LensVisualizer's first-order module",
+  "on every exported sequential lens and on the suites, ref's cardinal points are those of LensVisualizer's first-order module",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -113,6 +113,8 @@ test(
     let compared = 0;
     /** Holds ref's answer about a case to LensVisualizer's own, for the state the case was exported at. */
     const hold = async (at: string, opticalCase: OpticalCase): Promise<void> => {
+      // Folded kernels and the known cardinal parity defect are checked in folded.test.ts.
+      if (opticalCase.system.opticalPath !== undefined) return;
       // LensVisualizer's module reads each surface's authored index: the reference line of a case that has one.
       if (opticalCase.conditions.lines[0].indexSource !== "authored") return;
       const theirs = binding.api.computeCardinalElementsFromState(await preparedFor(binding, opticalCase));
@@ -168,7 +170,7 @@ test(
 );
 
 test(
-  "on every exported lens and at every line, ref's pupils are those of LensVisualizer's paraxial kernel",
+  "on every exported sequential lens and at every line, ref's pupils are those of LensVisualizer's paraxial kernel",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -186,6 +188,7 @@ test(
         const result = await exporter.exportLens(key, { lines });
         if (!result.ok) continue;
         const { opticalCase } = result;
+        if (opticalCase.system.opticalPath !== undefined) continue;
         const state = await preparedFor(binding, opticalCase);
         const answer = answerFirstOrder(buildRefSystem(opticalCase));
         assert.ok(answer.supported, `${key}: ${JSON.stringify(answer)}`);
@@ -197,7 +200,12 @@ test(
         opticalCase.conditions.lines.forEach((_line, line) => {
           const at = `${key} ${lines.kind} line ${line}`;
           // LensVisualizer's kernel on its own radii and gaps, with the indices of this line.
-          const rows = state.surfaces.map(({ R, d }, index) => ({ R, d, nd: table[line * count + index] }));
+          const rows = state.surfaces.map(({ R, d, diffractive }, index) => ({
+            R,
+            d,
+            diffractive,
+            nd: table[line * count + index],
+          }));
 
           // The entrance pupil, by two rays from the first vertex plane to the stop's plane: one that enters at
           // height 1 along the axis and one that enters on the axis with the angle 1. The plane of the object

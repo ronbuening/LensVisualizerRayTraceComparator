@@ -15,7 +15,7 @@ import { runSuite } from "../../core/orchestrator.ts";
 import { createFixtureCaseSource, loadSuiteValue } from "../../core/suite.ts";
 import type { CaseSources } from "../../core/suite.ts";
 import { createLvCaseSource } from "../../engines/lv/caseSource.ts";
-import { compareRunDirectory } from "./compare.ts";
+import { compareRunDirectoryWithJobs } from "./compare.ts";
 
 import type { OpticalCase } from "../../contract/case.ts";
 import type { EngineDescriptor } from "../../contract/engine.ts";
@@ -37,6 +37,8 @@ import type { LoadedConfig } from "../../core/config.ts";
 import type { EngineRegistry } from "../../engines/registry.ts";
 import { STORE_DIRECTORY, createResultStore, isStorable } from "../../core/resultStore.ts";
 import { UsageError } from "../../core/usageError.ts";
+import { jobEstimateGiB } from "../../core/memoryBudget.ts";
+import { createProcessRegistry } from "../../core/processRegistry.ts";
 import { EngineUnavailableError, enginesText } from "../../engines/adapter.ts";
 import type { EngineAdapter, EngineUnavailableCode } from "../../engines/adapter.ts";
 import { loadLvBinding } from "../../engines/lv/binding.ts";
@@ -51,6 +53,7 @@ import { createEngineRegistry } from "../../engines/registry.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { mtfTableRows, mtfTableText } from "../../report/mtfTable.ts";
 import type { MtfTableRow } from "../../report/mtfTable.ts";
+import { jobsOption, memoryBudgetOption } from "../jobs.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -80,7 +83,7 @@ const DEFAULT_ENGINES: readonly string[] = ["lv"];
 
 const SYNOPSIS = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--json]`,
+  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]`,
   "",
 ].join("\n");
 const HELP = [
@@ -111,6 +114,9 @@ const HELP = [
   "                    no zoom position",
   `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
   "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
+  "  --jobs <n>        benchmark: concurrent jobs in isolated processes (default: 1, serial)",
+  "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
+  "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
   "                    a zoom, an object with the record of each end under wide and tele",
   "",
@@ -124,7 +130,7 @@ const HELP = [
   "",
 ].join("\n");
 
-const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root"];
+const VALUE_OPTIONS = ["--engines", "--profile", "--zoom", "--aperture", "--root", "--jobs", "--memory-budget"];
 
 /** What a profile makes of a lens: the case and the request of its MTF, or every reason the lens has no case. */
 type ProfileRequest =
@@ -195,6 +201,8 @@ interface MtfArguments {
   /** True when `--aperture` was given. */
   readonly apertureGiven: boolean;
   readonly root: string | undefined;
+  readonly jobs: number;
+  readonly memoryBudgetGiB: number;
   readonly json: boolean;
 }
 
@@ -212,6 +220,14 @@ function readArguments(args: readonly string[]): MtfArguments {
     const known = [...Object.keys(PROFILES), BENCHMARK_PROFILE].sort().join(", ");
     throw new UsageError(`unknown profile "${profile}": the profiles are ${known}`);
   }
+  const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
+  const rungs =
+    profile === BENCHMARK_PROFILE
+      ? [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])]
+      : [];
+  const jobs = jobsOption(values.get("--jobs"), memoryBudgetGiB, jobEstimateGiB(rungs));
+  if (values.has("--jobs") && profile !== BENCHMARK_PROFILE)
+    throw new UsageError("--jobs requires --profile benchmark");
   const zoom = values.get("--zoom");
   const aperture = values.get("--aperture");
   return {
@@ -222,6 +238,8 @@ function readArguments(args: readonly string[]): MtfArguments {
     aperture: aperture === undefined ? { kind: "wide-open" } : apertureOption(aperture),
     apertureGiven: aperture !== undefined,
     root: values.get("--root"),
+    jobs,
+    memoryBudgetGiB,
     json: flags.has("--json"),
   };
 }
@@ -345,75 +363,86 @@ async function runBenchmark(
     defaults: { aperture: { kind: "wide-open" }, imagePlane: { kind: "design" }, engines },
     runs,
   };
-  const sources: CaseSources = {
+  const pool =
+    asked.jobs > 1 ? createProcessRegistry(loaded, asked.jobs, { memoryBudgetGiB: asked.memoryBudgetGiB }) : undefined;
+  const sources: CaseSources = pool?.sources ?? {
     fixture: createFixtureCaseSource(loaded.rootDir),
     lv: createLvCaseSource(loaded.config.lvPath),
   };
-  const suite = await loadSuiteValue(written, `lvrtc mtf ${lensKey}`, { rootDir: loaded.rootDir, sources });
-  const rungs = [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])];
-  io.stderr(
-    `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}` +
-      `${engines.includes(OWN_MTF_ENGINE) ? "" : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`}; ` +
-      "what the result store holds is not computed again\n",
-  );
-  let stage = "";
-  const result = await runSuite({
-    suite,
-    registry,
-    runsDir: loaded.config.runsDir,
-    sources,
-    engines,
-    rungs,
-    followUps: followUpsOf(policy),
-    // One line a rung of a run, when its first job has ended (`onJob` is called with a job as it finishes): with
-    // the engines in the order lv, ref, optiland that is before optiland's own MTF, the slow part, is asked.
-    onJob: ({ job, source }) => {
-      const now = `${job.run} ${job.rung}`;
-      if (now !== stage) io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${source})`}\n`);
-      stage = now;
-    },
-  });
-  const directory = dirname(result.manifestPath);
-  const comparisons = compareRunDirectory(directory, policy);
-  writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
-  const { manifest } = result;
-  const baseline = buildBaseline(manifest, comparisons, policy, MTF_BASELINE);
-  const rendered = renderMtfBaselineReport(baseline, benchmarkHead(lensKey, name));
-  writeFileAtomic(join(directory, MTF_REPORT_MARKDOWN), rendered.markdown);
-  writeFileAtomic(join(directory, MTF_REPORT_JSON), rendered.json);
+  try {
+    const suite = await loadSuiteValue(written, `lvrtc mtf ${lensKey}`, {
+      rootDir: loaded.rootDir,
+      sources,
+      jobs: asked.jobs,
+    });
+    const rungs = [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])];
+    io.stderr(
+      `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}` +
+        `${engines.includes(OWN_MTF_ENGINE) ? "" : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`}; ` +
+        "what the result store holds is not computed again\n",
+    );
+    let stage = "";
+    const result = await runSuite({
+      suite,
+      registry: pool ?? registry,
+      jobs: asked.jobs,
+      runsDir: loaded.config.runsDir,
+      sources,
+      engines,
+      rungs,
+      followUps: followUpsOf(policy),
+      // One line a rung of a run, when its first job has ended (`onJob` is called with a job as it finishes): with
+      // the engines in the order lv, ref, optiland that is before optiland's own MTF, the slow part, is asked.
+      onJob: ({ job, source }) => {
+        const now = `${job.run} ${job.rung}`;
+        if (now !== stage) io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${source})`}\n`);
+        stage = now;
+      },
+    });
+    const directory = dirname(result.manifestPath);
+    const comparisons = await compareRunDirectoryWithJobs(directory, policy, asked.jobs);
+    writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
+    const { manifest } = result;
+    const baseline = buildBaseline(manifest, comparisons, policy, MTF_BASELINE);
+    const rendered = renderMtfBaselineReport(baseline, benchmarkHead(lensKey, name));
+    writeFileAtomic(join(directory, MTF_REPORT_MARKDOWN), rendered.markdown);
+    writeFileAtomic(join(directory, MTF_REPORT_JSON), rendered.json);
 
-  let failed = false;
-  for (const run of suite.runs) {
-    if (run.opticalCase !== null) continue;
-    for (const problem of run.problems) io.stderr(`lvrtc mtf: run ${run.spec.name} was not started: ${problem}\n`);
-    failed = true;
-  }
-  for (const engine of manifest.engines) {
-    if (engine.status === "available") continue;
-    io.stderr(`lvrtc mtf: engine ${engine.id} could not be used (${engine.code})\n`);
-    failed = true;
-  }
-  for (const { job, detail } of result.outcomes) {
-    if (job.status !== "error") continue;
-    io.stderr(`lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: ${job.error?.code ?? "error"}: ${detail ?? ""}\n`);
-    failed = true;
-  }
-  for (const warning of result.warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
-  if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) failed = true;
-  // A pair is in a set of each mode: it is named once.
-  const failing = new Set<string>();
-  for (const set of comparisons.comparisons) {
-    for (const pair of set.pairs) {
-      if (!FAILING_VERDICTS.includes(pair.verdict)) continue;
-      const [a, b] = [pair.a, pair.b].sort();
-      failing.add(`${set.run} ${set.rung} ${a} ${b}: ${pair.verdict}: ${pair.reason ?? ""}`);
+    let failed = false;
+    for (const run of suite.runs) {
+      if (run.opticalCase !== null) continue;
+      for (const problem of run.problems) io.stderr(`lvrtc mtf: run ${run.spec.name} was not started: ${problem}\n`);
+      failed = true;
     }
+    for (const engine of manifest.engines) {
+      if (engine.status === "available") continue;
+      io.stderr(`lvrtc mtf: engine ${engine.id} could not be used (${engine.code})\n`);
+      failed = true;
+    }
+    for (const { job, detail } of result.outcomes) {
+      if (job.status !== "error") continue;
+      io.stderr(`lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: ${job.error?.code ?? "error"}: ${detail ?? ""}\n`);
+      failed = true;
+    }
+    for (const warning of result.warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
+    if (Object.values(manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED)) failed = true;
+    // A pair is in a set of each mode: it is named once.
+    const failing = new Set<string>();
+    for (const set of comparisons.comparisons) {
+      for (const pair of set.pairs) {
+        if (!FAILING_VERDICTS.includes(pair.verdict)) continue;
+        const [a, b] = [pair.a, pair.b].sort();
+        failing.add(`${set.run} ${set.rung} ${a} ${b}: ${pair.verdict}: ${pair.reason ?? ""}`);
+      }
+    }
+    for (const line of failing) io.stderr(`lvrtc mtf: ${line}\n`);
+    if (failing.size > 0) failed = true;
+    io.stdout(asked.json ? `${JSON.stringify(JSON.parse(rendered.json), null, 2)}\n` : rendered.markdown);
+    io.stderr(`lvrtc mtf: run: ${directory}\n`);
+    return failed ? EXIT_FAILURE : EXIT_OK;
+  } finally {
+    await pool?.close();
   }
-  for (const line of failing) io.stderr(`lvrtc mtf: ${line}\n`);
-  if (failing.size > 0) failed = true;
-  io.stdout(asked.json ? `${JSON.stringify(JSON.parse(rendered.json), null, 2)}\n` : rendered.markdown);
-  io.stderr(`lvrtc mtf: run: ${directory}\n`);
-  return failed ? EXIT_FAILURE : EXIT_OK;
 }
 
 /**

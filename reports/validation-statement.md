@@ -4,7 +4,7 @@ This statement is rendered from the eight baselines alone, with no engine, clock
 
 ## Supportable sentence
 
-On 251 configurations across four suites, LensVisualizer, optiland and the reference tracer, given identical indices and apertures, trace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs: worst landing 9.7e-13 mm (gate 1e-8 mm), optical path 3.9e-9 waves (2e-5), geometric MTF 1.5e-11 (1e-7), wave MTF 1.2e-9 (2e-8); the benchmark covers six wavelengths. LensVisualizer's diffraction MTF is recorded beside two external counterparts, with no preference between them: optiland's FFT MTF, of one wavelength, differs by up to 0.31, a difference classed as one of method; the comparator's OTF of optiland's own wavefront, per wavelength and photopic, differs by up to 0.026. Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and the catalog beyond these suites are not covered.
+On 258 configurations across four suites, LensVisualizer, optiland and the reference tracer, given identical indices and apertures, trace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs: worst landing 9.7e-13 mm (gate 1e-8 mm), optical path 3.9e-9 waves (2e-5), geometric MTF 1.5e-11 (1e-7), wave MTF 1.2e-9 (2e-8); the benchmark covers six wavelengths. LensVisualizer's diffraction MTF is recorded beside two external counterparts, with no preference between them: optiland's FFT MTF, of one wavelength, differs by up to 0.31, a difference classed as one of method; the comparator's OTF of optiland's own wavefront, per wavelength and photopic, differs by up to 0.026. Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and the catalog beyond these suites are not covered.
 
 ## Rungs
 
@@ -16,15 +16,15 @@ The supportable sentence's figures are over the configurations it counts, while 
 
 | Rung | Compares | Mode | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |
 |---|---|---|---:|---:|---:|---|---|
-| r0 | Built layout, shape, aperture, index and sampled sag | gated | 295 | 885 | 885 | 885 PASS | sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
-| r1 | First-order quantities and pupils | gated | 295 | 885 | 885 | 885 PASS | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
-| r2 | Hits, directions, image landings and masks of identical rays | gated | 295 | 885 | 6999 | 6999 PASS | landing.maxDistance 4.45e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164 |
-| r3 | Optical path, path to image and chief-relative OPD of identical rays | gated | 295 | 885 | 6999 | 6999 PASS | opticalPath.maxAbs 3.92e-9 waves; focus-stations / certified-sigma-18-35-f18-dc-hsm-art-zoom2-focus1; optiland / ref at field 0, line 0, ray 1209 |
-| r4 | Comparator geometric MTF on identical rays | gated | 295 | 885 | 2643 | 2643 PASS | mtf.maxAbs 5.04e-11 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; optiland / ref at cut tangential, field 1.83e1, frequencyPerMm 100 |
-| r4f | LV geometric MTF beside replay with LV's own sampling | gated | 295 | 295 | 295 | 295 PASS | mtf.maxAbs 2.10e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / replay at cut tangential, field 1, frequencyPerMm 98 |
+| r0 | Built layout, shape, aperture, index and sampled sag | gated | 302 | 906 | 906 | 906 PASS | sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
+| r1 | First-order quantities and pupils | gated | 302 | 906 | 906 | 906 PASS | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
+| r2 | Hits, directions, image landings and masks of identical rays | gated | 302 | 906 | 7062 | 7062 PASS | landing.maxDistance 4.45e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164 |
+| r3 | Optical path, path to image and chief-relative OPD of identical rays | gated | 302 | 906 | 7062 | 7062 PASS | opticalPath.maxAbs 3.92e-9 waves; focus-stations / certified-sigma-18-35-f18-dc-hsm-art-zoom2-focus1; optiland / ref at field 0, line 0, ray 1209 |
+| r4 | Comparator geometric MTF on identical rays | gated | 302 | 906 | 2706 | 2706 PASS | mtf.maxAbs 5.04e-11 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; optiland / ref at cut tangential, field 1.83e1, frequencyPerMm 100 |
+| r4f | LV geometric MTF beside replay with LV's own sampling | gated | 302 | 302 | 302 | 302 PASS | mtf.maxAbs 2.10e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / replay at cut tangential, field 1, frequencyPerMm 98 |
 | r5 | LV diffraction MTF beside optiland FFT and the LV-ray wave estimate | recorded | 96 | 288 | 288 | 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED | mtfOffAxis.maxAbs 3.14e-1 1; benchmark / nikon-z-24-70f4s-tele-ref; lv / optiland at cut tangential, field 1, frequencyPerMm 50 |
 | r5g | Geometric MTF on each method's own pupil sampling | recorded | 96 | 288 | 864 | 712 RECORDED, 152 ATTENTION | mtfOffAxis.maxAbs 2.82e-2 1; benchmark / nikon-z-135f18-plena-ref; lv / optiland at cut sagittal, field 1, frequencyPerMm 40 |
-| r6a | Comparator wave MTF on identical rays, in fields whose sampling settled | gated | 295 | 885 | 2643 | 2643 PASS | waveMtf.maxAbs 1.18e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50 |
+| r6a | Comparator wave MTF on identical rays, in fields whose sampling settled | gated | 302 | 906 | 2706 | 2706 PASS | waveMtf.maxAbs 1.18e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50 |
 | r6b | LV sheared diffraction MTF beside comparator wave OTF on LV rays | recorded | 96 | 96 | 96 | 91 RECORDED, 5 ATTENTION | mtfOffAxis.maxAbs 7.88e-3 1; benchmark / canon-ef-135-f2l-usm-ref; lv / wave at cut tangential, field 5.00e-1, frequencyPerMm 100 |
 | r6c | LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts | recorded | 96 | 576 | 576 | 334 RECORDED, 98 ATTENTION, 144 UNSUPPORTED | mtfOffAxis.maxAbs 3.17e-1 1; benchmark / nikon-z-24-70f4s-tele-ref; optiland / optiland-wave at cut tangential, field 1, frequencyPerMm 50 |
 
@@ -37,20 +37,20 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: layout.mismatches 0 elements
 - tolerance: sag.maxScaled 1.00e-12 1
 - tolerance: shape.mismatches 0 elements
-- aperture.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 885
-- index.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 885
-- layout.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 885
-- sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28; measured request pairs 885
-- shape.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 885
+- aperture.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 906
+- index.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 906
+- layout.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 906
+- sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28; measured request pairs 906
+- shape.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 906
 
 #### r1
 
 - tolerance: firstOrder.maxAbs 1.00e-9 mm
 - tolerance: pupilRadius.maxScaled 1.00e-9 mm
 - tolerance: pupilZ.maxScaled 1.00e-9 mm
-- firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ; measured request pairs 885
-- pupilRadius.maxScaled 1.01e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilSemiDiameter; measured request pairs 885
-- pupilZ.maxScaled 2.61e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilZ; measured request pairs 885
+- firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ; measured request pairs 906
+- pupilRadius.maxScaled 1.01e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilSemiDiameter; measured request pairs 906
+- pupilZ.maxScaled 2.61e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilZ; measured request pairs 906
 
 #### r2
 
@@ -58,27 +58,27 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: hits.maxDistance 1.00e-8 mm
 - tolerance: landing.maxDistance 1.00e-8 mm
 - tolerance: mask.mismatches 0 rays
-- direction.maxAbs 6.63e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 6999
-- hits.maxDistance 4.37e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164, surface 23; measured request pairs 6999
-- landing.maxDistance 4.45e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 6999
-- mask.mismatches 0 rays; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 6999
+- direction.maxAbs 6.63e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 7062
+- hits.maxDistance 4.37e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164, surface 23; measured request pairs 7062
+- landing.maxDistance 4.45e-12 mm; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 7062
+- mask.mismatches 0 rays; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 7062
 - mask.rimBand: 0
-- rays.compared: 5135778
+- rays.compared: 5181285
 
 #### r3
 
 - tolerance: opd.maxAbs 2.00e-5 waves
 - tolerance: opticalPath.maxAbs 2.00e-5 waves
 - tolerance: opticalPathToImage.maxAbs 2.00e-5 waves
-- opd.maxAbs 3.39e-9 waves; features / rear-plate-rim-photopic; lv / ref at field 1.77e1, line 1, ray 399; measured request pairs 6999
-- opticalPath.maxAbs 3.92e-9 waves; focus-stations / certified-sigma-18-35-f18-dc-hsm-art-zoom2-focus1; optiland / ref at field 0, line 0, ray 1209; measured request pairs 6999
-- opticalPathToImage.maxAbs 3.19e-9 waves; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 6999
+- opd.maxAbs 3.39e-9 waves; features / rear-plate-rim-photopic; lv / ref at field 1.77e1, line 1, ray 399; measured request pairs 7062
+- opticalPath.maxAbs 3.92e-9 waves; focus-stations / certified-sigma-18-35-f18-dc-hsm-art-zoom2-focus1; optiland / ref at field 0, line 0, ray 1209; measured request pairs 7062
+- opticalPathToImage.maxAbs 3.19e-9 waves; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 1.83e1, line 0, ray 164; measured request pairs 7062
 
 #### r4
 
 - tolerance: mtf.maxAbs 1.00e-7 1
-- mtf.maxAbs 5.04e-11 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; optiland / ref at cut tangential, field 1.83e1, frequencyPerMm 100; measured request pairs 2643
-- rays.compared: 5135778
+- mtf.maxAbs 5.04e-11 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; optiland / ref at cut tangential, field 1.83e1, frequencyPerMm 100; measured request pairs 2706
+- rays.compared: 5181285
 - rays.dropped: 0
 
 #### r4f
@@ -86,9 +86,9 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: fields.mismatches 0 elements
 - tolerance: mtf.maxAbs 1.00e-9 1
 - tolerance: sampling.mismatches 0 elements
-- fields.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 295
-- mtf.maxAbs 2.10e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / replay at cut tangential, field 1, frequencyPerMm 98; measured request pairs 295
-- sampling.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 295
+- fields.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 302
+- mtf.maxAbs 2.10e-14 1; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / replay at cut tangential, field 1, frequencyPerMm 98; measured request pairs 302
+- sampling.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 302
 
 #### r5
 
@@ -119,11 +119,11 @@ The supportable sentence's figures are over the configurations it counts, while 
 #### r6a
 
 - tolerance: waveMtf.maxAbs 2.00e-8 1
-- convergence.maxAbs 1.03e-1 1; focus-stations / certified-thypoch-simera-50mm-f14-zoom0-focus1; lv / ref at cut sagittal, field 1.05e1, frequencyPerMm 90; measured request pairs 2637
-- phaseStep.waves 3.89e2 waves; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 0, line 0, ray 474; measured request pairs 2637
-- waveMtf.flagged 1.11e-9 1; focus-stations / certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1; lv / ref at cut tangential, field 3.26e1, frequencyPerMm 70; measured request pairs 699
-- waveMtf.maxAbs 1.18e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 1938
-- rays.compared: 20480568
+- convergence.maxAbs 1.03e-1 1; focus-stations / certified-thypoch-simera-50mm-f14-zoom0-focus1; lv / ref at cut sagittal, field 1.05e1, frequencyPerMm 90; measured request pairs 2700
+- phaseStep.waves 3.89e2 waves; focus-stations / certified-fujifilm-gf80-f17-zoom0-focus1; lv / optiland at field 0, line 0, ray 474; measured request pairs 2700
+- waveMtf.flagged 1.11e-9 1; focus-stations / certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1; lv / ref at cut tangential, field 3.26e1, frequencyPerMm 70; measured request pairs 726
+- waveMtf.maxAbs 1.18e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 1974
+- rays.compared: 20662233
 - rays.dropped: 0
 
 #### r6b
@@ -647,7 +647,7 @@ These are the states as the baselines name them, with their case hashes or coded
 
 ### focus-stations
 
-- Declared: 55; configurations: 53; refused: 2
+- Declared: 62; configurations: 60; refused: 2
 
 | Named state | Case SHA-256 / refusal | Measured on R2/R3/R4/R6a for both LV/external pairs |
 |---|---|---|
@@ -662,10 +662,14 @@ These are the states as the baselines name them, with their case hashes or coded
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | bf047195927f492dbe4747fb624b130c606b392e3f16ff70286deb608dfc2341 | no |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | 302349c7dd8c39bf7c9bab45e376a3645ef723aafa50f3d4b15c3b8502fab4ea | no |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 5ee5d6fc109ea15cef91551aff548035327ae5028efaec01df78fcc2b6608bbc | yes |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom0-focus16 | 61b10ec1e9b1f97c48595bb029e1dd87e711967e557ec890debf2d1b78be23bd | yes |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom32-focus16 | 4796c91049d6d85a7a7ead5ad24ce0f0559f0cd29463bbd93c08d2526d84522b | yes |
+| certified-olympus-zuiko-digital-ed-90-250mm-f28-zoom64-focus16 | bebc9392adca28c39136e0b93ef7dab17fc07529a3bf2d2329cb33d87370b203 | yes |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom0-focus1 | 10bbcde40490c2a5b6cb4fcdb237f2ce8a89a226b6b5c1c1074cc87df438b98f | yes |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom1-focus1 | 3960852d628118b47a9025ca29343cac422df54bcc12632ea5e9b231455d10e0 | yes |
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | eb7807b4cfcfd26953355cd6d2dc67b1e74c587de9d15e7e36dde33cd66d3c76 | yes |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 26022f540fbb0f394a84fe1bf7ba0b7e2c0483ac80c4d239346b603aae238b22 | yes |
+| certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | 5f620f64d9e311902a46343054f2ad6864724f805cad14c855f707d8614d7c6a | yes |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 558d181f7fe332e3f23e8fdfad4450baebad65a414c4ccc62804034611b56743 | yes |
 | certified-samyang-af-14mm-f28-ef-zoom0-focus2 | d444984ee236770b2f9ba0d4e1d135c698f24dc9c636595cbc35310d6a2bca6d | no |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 09377d60ff786893e1adbe31707a39fe50cde373b16ee745d20b4a98cbc63314 | yes |
@@ -692,6 +696,9 @@ These are the states as the baselines name them, with their case hashes or coded
 | certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 42d45f93538e8180fad99717955a3b213beb7e8f041199719684fe202799fa7d | yes |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | e30f376ef3f6eb25645b36ba5d2ab1ced553a01076092487ebd631db3ad217da | no |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | c722c7755ca07f86f1eb5ec78d0147a3efa415ac37bb1ab9c2ee06c98dab7c87 | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 6c56c2c2c0d95b395b854cfaf466ccb5af0b6c17219d973cfb59e103c6812b24 | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | ef02f7b2a5e99dbf32ab1bd453404e8ebe5457cad2c9ed81ee62022023eb2086 | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 344ffcebce2fd7e171947a10bf1678c99337548f1b863f0bc642925b37958288 | yes |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | 5cf10d8c8b6422ed2e37591a15107cc7364b74bc8d8c9565670743267f111297 | yes |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 094c8ed68417c334bf55145670ea50e80da7c4d891f3c9928ad34c528dba5f5b | yes |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | 81be87b898b8d464108529510c67cb301efc5ba64aa33e87df9a55c8c44afea8 | no |
@@ -731,11 +738,11 @@ These are the states as the baselines name them, with their case hashes or coded
 
 ## Sources
 
-- baselines/benchmark.json: e346360c627c10cc91141d5d3367e7126151107af1c26bbc2e633bfbf779b1fe
-- baselines/benchmark.mtf.json: cfb8a5dbbcc9f4cd00cce2b0b96829f3b7937fe948b183d3feed304230b99b3c
-- baselines/features.json: 8df91086e1ee651e4240f6aee760cbbc2d3ebffc8fcc29dfc53d464957e361d2
-- baselines/features.mtf.json: 295f29e5936a7e8da341ac4e80a89fb0adbd96f67704cbf20d34da1ca3537bb6
-- baselines/states.json: 9ebc2724e7247b34a703f711eba88872a72a944f96d979a65e10161a7cef2b5e
-- baselines/states.mtf.json: cb416ba26650ea1206bbf6d21f32dbd9abcc896c9459dcb9489d57662c93f55f
-- baselines/focus-stations.json: 94ba8df4d4542a790a0ab924d0968d4f5f51d46db79dd321b2a249883ff62a6b
-- baselines/focus-stations.mtf.json: 11cf154d7885ddd097d3da410af3723370e9eb69a6784bd19698ccabcb01aa1d
+- baselines/benchmark.json: bc70b1162a11c50c547b1e5b8cb1278823901ec440270d983592f3f22b6227ee
+- baselines/benchmark.mtf.json: 3f508020fd827743c02f8db1944cc824dccfaa2411d836c7c4bfb7ec24e2914f
+- baselines/features.json: 7c12ba32f791d63dd5ba44f4924c5224eee21ec5b9ed303a3e623c734d075328
+- baselines/features.mtf.json: dc3331e66472b21a8348006c6113c29c0470923f91c2e7ed23bf3e0fbb1378fd
+- baselines/states.json: e8b17c4289ca09270358fbd6e52b4a887451a19616b2ee654f37f9bb0c8c9f6c
+- baselines/states.mtf.json: 35b7e6a8c9c8b28842688857082937c20b11c5dc89b13d75defd603aa44c72bc
+- baselines/focus-stations.json: a095b3d19ba5e826593c023438c6547755d0facb980ebb0e7abe92d257563cb2
+- baselines/focus-stations.mtf.json: 20685ca451b62b5e2b54aa0cbbf8f94576b5dd4d625250317f263b410842c303

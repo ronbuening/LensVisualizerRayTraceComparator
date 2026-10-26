@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -9,12 +10,14 @@ import { fileURLToPath } from "node:url";
 import { createCompareCommand } from "../../src/cli/commands/compare.ts";
 import { createReportCommand } from "../../src/cli/commands/report.ts";
 import { createRunCommand } from "../../src/cli/commands/run.ts";
+import { maxJobs } from "../../src/cli/jobs.ts";
 import { COMMANDS, EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import { COMPARISONS_FILE } from "../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import { REPO_ROOT } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
+import { defaultMemoryBudgetGiB } from "../../src/core/memoryBudget.ts";
 import { STORE_DIRECTORY } from "../../src/core/resultStore.ts";
 import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE } from "../../src/report/index.ts";
 import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "../core/support.ts";
@@ -23,8 +26,8 @@ import { FAULT_ROOT, goldenFile, suiteFile } from "../report/support.ts";
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const COMPARE_SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
-  "                     [--mode reference-vs-each|pairwise|both] [--json]\n";
-const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]\n";
+  "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>] [--catalog]\n";
 
 interface Ended {
   readonly code: number | null;
@@ -112,6 +115,15 @@ test("run, compare, report through the binary: the all-TypeScript trio exits 0 t
     ].join("\n"),
   );
 
+  const serialBytes = readFileSync(join(directory, COMPARISONS_FILE));
+  // Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM.
+  for (const jobs of [2, 4]) {
+    const budget = ["--memory-budget", "16"];
+    const parallel = lvrtc(runsDir, ["compare", "fake-3-engines-ts", "--jobs", String(jobs), ...budget, ...root]);
+    assert.equal(parallel.code, EXIT_OK, parallel.err);
+    assert.equal(parallel.out, compared.out);
+    assert.deepEqual(readFileSync(join(directory, COMPARISONS_FILE)), serialBytes);
+  }
   const reported = lvrtc(runsDir, ["report", "fake-3-engines-ts", ...root]);
   assert.equal(reported.code, EXIT_OK, reported.err);
   assert.equal(
@@ -187,6 +199,14 @@ test("the command lines that are not the synopsis are usage errors", async (t) =
   const cases: [string[], string][] = [
     [["compare"], "lvrtc compare: no suite name or run directory was given\n"],
     [["compare", "a", "b"], "lvrtc compare: more than one suite or run directory was given: a, b\n"],
+    [["compare", "fake-pair", "--jobs", "0"], 'lvrtc compare: --jobs must be a positive integer, got "0"\n'],
+    [["compare", "fake-pair", "--jobs", "1.5"], 'lvrtc compare: --jobs must be a positive integer, got "1.5"\n'],
+    [
+      ["compare", "fake-pair", "--jobs", String(maxJobs() + 1)],
+      `lvrtc compare: --jobs ${maxJobs() + 1}: at most ${maxJobs()} ` +
+        `(available parallelism ${availableParallelism()}, memory budget ${defaultMemoryBudgetGiB()} GiB / ` +
+        "estimate 2.5 GiB per job); lower --jobs or set --memory-budget <GiB> to an appropriate budget\n",
+    ],
     [["compare", "fake-pair", "--frob"], 'lvrtc compare: unknown option "--frob"\n'],
     [["compare", "fake-pair", "--mode"], "lvrtc compare: --mode needs a value\n"],
     [

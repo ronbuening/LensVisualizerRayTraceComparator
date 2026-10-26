@@ -26,7 +26,30 @@ function shapeText(shape: readonly number[]): string {
 function dataInvariants(value: unknown): ValidationIssue[] {
   const data = value as SystemDescribeData;
   const issues: ValidationIssue[] = [];
+  if (data.diffractive !== undefined && data.diffractive.length !== data.surfaceCount)
+    issues.push(invariantIssue("/diffractive", "expected one phase entry per surface"));
   const surfaces = data.surfaceCount;
+  const pathParts = [data.pathSurfaceIndices, data.pathInteractions, data.pathIndexAfterSurface];
+  if (pathParts.some((part) => part !== undefined)) {
+    if (pathParts.some((part) => part === undefined))
+      issues.push(
+        invariantIssue(
+          "/pathSurfaceIndices",
+          "a path echo needs surface indices, interactions and indices after visits together",
+        ),
+      );
+    else {
+      const count = data.pathSurfaceIndices!.length;
+      if (
+        data.pathInteractions!.length !== count ||
+        data.pathIndexAfterSurface!.$nd.shape[0] !== data.indexAfterSurface.$nd.shape[0] ||
+        data.pathIndexAfterSurface!.$nd.shape[1] !== count
+      )
+        issues.push(invariantIssue("/pathIndexAfterSurface", "path echo dimensions disagree"));
+      if (data.pathSurfaceIndices!.some((surface) => surface >= surfaces))
+        issues.push(invariantIssue("/pathSurfaceIndices", "path echo references a surface outside the physical table"));
+    }
+  }
   if (data.stopIndex >= surfaces) {
     issues.push(invariantIssue("/stopIndex", `${data.stopIndex} is not the index of one of the ${surfaces} surfaces`));
   }

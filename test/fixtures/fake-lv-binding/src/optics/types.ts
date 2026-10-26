@@ -1,10 +1,14 @@
 // Imported with `import type` only, so this file is never loaded and is not part of the engine closure.
 export interface FakeSurfaceData {
+  diffractive?: { kind: "radial-polynomial"; referenceWavelengthNm: number; diffractionOrder: number; quadraticCoefficient: number; terms: { radialPower: number; coefficient: number; derivativeCoefficient: number }[] };
   label: string;
   R: number;
   d: number;
   nd: number;
   sd: number;
+  /** A folded visit's transparent hole, as LV's `innerSd`. */
+  innerSd?: number;
+  interaction?: { type: "reflect" | "refract"; incidentSide?: string; inactiveSide?: string };
   asphere?: Record<string, number>;
   synthetic?: "rearPlate";
   /** False only on a rear plate whose rim the fake generated: it clips no ray, and its `sd` is an envelope. */
@@ -27,6 +31,8 @@ export interface FakeLensData {
   rearPlate?: { d: number; nd: number; gap: number; sd?: number };
   focusTravel?: number;
   schema: 2;
+  opticalPath?: { mode: "sequential" | "auto"; surfaceOrder: number[]; maxInteractions: number; after?: number[] };
+  imageZ?: number;
   zoom?: { stations: unknown[] };
   zoomStopSDs?: number[];
   zoomGaps?: number[];
@@ -74,6 +80,7 @@ export interface FakeTraceOptions {
   indexAtSurface?: (surfaceIndex: number, nd: number) => number;
   wavelengthNm?: number;
   directionNormalized?: boolean;
+  recordHeights?: boolean;
 }
 
 export interface FakeTraceHit {
@@ -99,6 +106,10 @@ export interface FakeTraceResult {
   status: "ok" | "clipped" | "failed";
   failureReason: string | null;
   reachedImagePlane: boolean;
+  /** One height per visit with a found intersection, recorded or passive: LV's recordHeights. */
+  heights?: number[] | null;
+  /** The surface of each clip or failure, as LV's diagnostics list them. */
+  diagnostics?: { clipEvents: { surfaceIdx: number | null }[] };
 }
 
 export interface FakeFieldLaunch {
@@ -147,8 +158,8 @@ export interface FakeStateSurface {
   clips: boolean;
   elemId: number;
   asphere: Record<string, number> | null;
-  diffractive: null;
-  interaction: { type: "refract" };
+  diffractive: FakeSurfaceData["diffractive"] | null;
+  interaction: { type: "refract" | "reflect"; incidentSide?: string; inactiveSide?: string };
   profile: {
     kind: string;
     sag(radius: number): number;

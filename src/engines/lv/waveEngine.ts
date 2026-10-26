@@ -118,6 +118,7 @@ function estimateOn(
   const traces = sets.map((set) => {
     const answer = answerLvRays(api, model, set);
     if ("error" in answer) throw new Error(`a set of the engine's own was not traced: ${answer.error.message}`);
+    if ("unsupported" in answer) throw new Error(answer.unsupported.map((item) => item.message).join("; "));
     return decodeWavefront(answer.data);
   });
   const lines = sets.map((set, index): WaveLine => {

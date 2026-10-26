@@ -1,3 +1,4 @@
+import { exportPhase } from "./exportPhase.ts";
 // The case exporter: one LensVisualizer lens in one state, as the optical case every engine is asked about.
 //
 // Everything is read from LV's PREPARED state and from the functions its own tracers use, never from authored
@@ -16,13 +17,17 @@ import type { LvStopApi } from "./exportAperture.ts";
 import { exportLight } from "./exportLines.ts";
 import type { LvLightApi } from "./exportLines.ts";
 import type { ExportProblem } from "./exportProblems.ts";
+import { exportPath } from "./exportPath.ts";
 import { surfaceShape } from "./exportShape.ts";
 import { lvBestAxialFocus } from "./focus.ts";
 import type { LvFocusApi } from "./focus.ts";
 import type { LvApi, LvPreparedState, LvRuntimeLens } from "./types.ts";
 
 /** The LensVisualizer exports the exporter uses. A test hands it stand-ins; the binding hands it LV's own. */
-export type LvExportApi = Pick<LvApi, "prepareRuntimeState" | "evaluateAperture"> & LvStopApi & LvLightApi & LvFocusApi;
+export type LvExportApi = Pick<LvApi, "prepareRuntimeState" | "evaluateAperture" | "rearMediumSurfaceIndex"> &
+  LvStopApi &
+  LvLightApi &
+  LvFocusApi;
 
 /** The lens file a case is exported from, as the catalog knows it. */
 export interface ExportedLens {
@@ -65,9 +70,11 @@ const IMAGE_NORMAL_TOLERANCE = 1e-10;
 
 /** The codes that say the contract cannot express the lens; with one of them, LV's gate is not asked about lines. */
 const STRUCTURAL: ReadonlySet<string> = new Set([
-  "folded-path",
+  "folded-auto-path",
+  "folded-interaction-budget",
+  "tilted-surface",
   "non-refract-interaction",
-  "diffractive-surface",
+  "diffractive-phase-unsupported",
   "tilted-image-plane",
   "off-axis-image-plane",
   "synthetic-surface-unknown",
@@ -88,20 +95,21 @@ function structuralProblems(state: LvPreparedState): ExportProblem[] {
       .map((surface) => surface.label)
       .join(", ");
 
-  if (state.lens.flags.isFoldedOptics === true) {
-    problems.push({ code: "folded-path", message: "the optical path is folded; a case is one pass along +z" });
-  }
   const notRefracting = labels((surface) => surface.interaction.type !== "refract");
-  if (notRefracting !== "") {
+  if (!state.lens.flags.isFoldedOptics && notRefracting !== "") {
     const message = `surfaces that reflect or block instead of refracting: ${notRefracting}`;
     problems.push({ code: "non-refract-interaction", message });
   }
-  const diffractive = labels((surface) => surface.diffractive !== null && surface.diffractive !== undefined);
-  if (diffractive !== "") {
-    problems.push({ code: "diffractive-surface", message: `surfaces with a diffractive phase: ${diffractive}` });
+  for (const surface of state.surfaces) {
+    const { problem } = exportPhase(surface.diffractive);
+    if (problem) problems.push({ ...problem, message: `${surface.label}: ${problem.message}` });
   }
   const [normalX, normalY, normalZ] = state.imagePlane.normal;
-  if (Math.abs(normalX) > IMAGE_NORMAL_TOLERANCE || Math.abs(normalY) > IMAGE_NORMAL_TOLERANCE || !(normalZ > 0)) {
+  if (
+    Math.abs(normalX) > IMAGE_NORMAL_TOLERANCE ||
+    Math.abs(normalY) > IMAGE_NORMAL_TOLERANCE ||
+    !(state.lens.flags.isFoldedOptics ? Math.abs(normalZ) > 0 : normalZ > 0)
+  ) {
     problems.push({ code: "tilted-image-plane", message: "the image plane is not perpendicular to the optical axis" });
   }
   if (state.imagePlane.point[0] !== 0 || state.imagePlane.point[1] !== 0) {
@@ -201,7 +209,8 @@ function exportChecked(
     return { ok: false, problems: [{ code: "state-prepare-failed", message }] };
   }
 
-  const problems = structuralProblems(state);
+  const folded = exportPath(api, state);
+  const problems = [...structuralProblems(state), ...folded.problems];
   const shapes = state.surfaces.map(surfaceShape);
   for (const shape of shapes) if (!shape.ok) problems.push(...shape.problems);
 
@@ -249,8 +258,9 @@ function exportChecked(
     return {
       label: surface.label,
       z,
-      thickness: index === last ? toImage(z, surface.d) : surface.d,
+      thickness: folded.path === undefined && index === last ? toImage(z, surface.d) : surface.d,
       shape: shape.shape,
+      ...(surface.diffractive == null ? {} : { diffractive: exportPhase(surface.diffractive).phase! }),
       aperture: surfaceAperture(api, state, surface, index === stopIndex ? stop.radius : undefined),
       elementId: surface.elemId,
       ...(syntheticKind(surface) === "rearPlate" ? { synthetic: "rearPlate" as const } : {}),
@@ -268,6 +278,7 @@ function exportChecked(
     },
     system: {
       surfaces,
+      ...(folded.path === undefined ? {} : { opticalPath: folded.path }),
       stopIndex,
       lastLensSurfaceIndex: runtime.lastLensSurfaceIdx,
       designImageZ: state.imgZ,

@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import phase_definition
+
 TYPE_NAMES: tuple[str, ...] = ("null", "boolean", "integer", "number", "string", "array", "object")
 """Every name the ``type`` keyword accepts."""
 
@@ -517,17 +519,30 @@ def quantity_schema_id(quantity: str, part: str) -> str:
 
 def validate_kind(kind: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Validates a document against the schema of its kind; an empty list exactly when it is valid."""
-    return validate(schemas if schemas is not None else contract_schemas(), kind_schema_id(kind), value)
+    issues = validate(schemas if schemas is not None else contract_schemas(), kind_schema_id(kind), value)
+    if not issues and kind == "request" and "quantityVersion" in value and int(value["contract"].split(".")[1]) < 4:
+        issues.append(ValidationIssue("/quantityVersion", "invariant", "quantityVersion requires contract 1.4"))
+    if (
+        not issues
+        and kind == "request"
+        and phase_definition(value["quantity"], value.get("quantityVersion"))
+        and int(value["contract"].split(".")[1]) < 5
+    ):
+        issues.append(ValidationIssue("/quantityVersion", "invariant", "diffractive quantities require contract 1.5"))
+    return issues
 
 
 def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Port of quantities/wavefrontNative.ts: schema, even grids, square shapes and lit-cell semantics."""
     from .ndarray import decode_ndarray  # stdlib only; avoids a module cycle
+
     issues = validate(schemas or contract_schemas(), quantity_schema_id("wavefront.native", part), value)
     if issues:
         return issues
+
     def issue(path: str, message: str) -> None:
         issues.append(ValidationIssue(path, "invariant", message))
+
     if part == "spec":
         for at, grid in enumerate(value["grids"]):
             if grid % 2 or (at > 0 and grid <= value["grids"][at - 1]):
@@ -545,14 +560,14 @@ def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None =
         for at, sample in enumerate(field["samples"]):
             path = f"{base}/samples/{at}"
             n = int(sample["gridSize"])
-            if n % 2 or (at > 0 and n <= field["samples"][at-1]["gridSize"]):
+            if n % 2 or (at > 0 and n <= field["samples"][at - 1]["gridSize"]):
                 issue(path + "/gridSize", "grids are even and ascend")
             arrays = {}
             for name in ("normalizedPupil", "pupilMm", "opdWaves", "intensity", "valid"):
                 try:
                     decoded = decode_ndarray(sample[name])
                     width = 2 if name == "normalizedPupil" else 3 if name == "pupilMm" else 1
-                    shape = (n*n,) if width == 1 else (n*n, width)
+                    shape = (n * n,) if width == 1 else (n * n, width)
                     arrays[name] = decoded.values()
                     if decoded.shape != shape or not all(math.isfinite(v) for v in arrays[name]):
                         issue(path + "/" + name, "samples are finite and have the grid's shape")
@@ -562,12 +577,52 @@ def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None =
                 continue
             valid, intensity, norm = (arrays[k] for k in ("valid", "intensity", "normalizedPupil"))
             bad = False
-            for cell in range(n*n):
-                x, y = (2*(cell % n)+1)/n-1, (2*(cell//n)+1)/n-1
-                bad |= norm[2*cell] != x or norm[2*cell+1] != y
+            for cell in range(n * n):
+                x, y = (2 * (cell % n) + 1) / n - 1, (2 * (cell // n) + 1) / n - 1
+                bad |= norm[2 * cell] != x or norm[2 * cell + 1] != y
                 bad |= valid[cell] not in (0, 1)
                 bad |= intensity[cell] < 0 or (valid[cell] == 1) != (intensity[cell] > 0)
-                bad |= valid[cell] == 1 and not (x*x+y*y < 1)
+                bad |= valid[cell] == 1 and not (x * x + y * y < 1)
             if bad:
                 issue(path, "midpoint coordinates, circle, intensity and validity disagree")
+    return issues
+
+
+def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
+    from .ndarray import decode_ndarray
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("rays.trace", "data"), value)
+    if issues:
+        return issues
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+    if version < 3 and ("phasePath" in value or "phasePathUnavailable" in value):
+        issue("/phasePath", "phase paths require rays.trace version 3")
+    if version < 2:
+        for key in ("pathUnavailable", "unrecordedHits"):
+            if key in value:
+                issue("/" + key, "partial paths and unrecorded visits require rays.trace version 2")
+    if version == 3 and "phasePath" not in value:
+        issue("/phasePath", "rays.trace version 3 requires phasePath")
+    if "phasePath" not in value:
+        return issues
+    try:
+        phase = decode_ndarray(value["phasePath"])
+        status = decode_ndarray(value["status"]).values()
+        ends = decode_ndarray(value["endSurface"]).values()
+        surfaces, rays = value["hits"]["$nd"]["shape"][:2]
+        if phase.shape != (surfaces, rays):
+            issue("/phasePath", "expected [surfaces, rays]")
+        else:
+            delays = phase.values()
+            for surface in range(surfaces):
+                for ray in range(rays):
+                    reached = surfaces if status[ray] == 0 else ends[ray]
+                    finite = "phasePathUnavailable" not in value and surface < reached
+                    number = delays[surface * rays + ray]
+                    if (finite and not math.isfinite(number)) or (not finite and not math.isnan(number)):
+                        issue("/phasePath", f"invalid phase delay at surface {surface}, ray {ray}")
+                        return issues
+    except ValueError as error:
+        issue("/phasePath", str(error))
     return issues

@@ -5,9 +5,18 @@
   "description": "The system an engine built for a case, re-read from the engine's own model: S surfaces, L lines and K sag radii per surface. Lengths in mm, in the contract frame. Code checks that the shapes agree with one another.",
   "type": "object",
   "properties": {
-    "surfaceCount": { "description": "S: the number of surfaces.", "type": "integer", "minimum": 1 },
-    "stopIndex": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
-    "imageZ": { "description": "The image plane.", "type": "number" },
+    "surfaceCount": {
+      "description": "S: the number of surfaces.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "stopIndex": {
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+    },
+    "imageZ": {
+      "description": "The image plane.",
+      "type": "number"
+    },
     "stopSemiDiameter": {
       "description": "The stop's radius, from which the engine derives the pupils.",
       "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
@@ -52,14 +61,57 @@
         "items": {
           "type": "object",
           "properties": {
-            "power": { "type": "integer", "minimum": 1 },
-            "coeff": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonZero" }
+            "power": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "coeff": {
+              "$ref": "urn:lvrtc:contract:v1:common#/$defs/nonZero"
+            }
           },
           "required": ["power", "coeff"],
           "additionalProperties": false
         }
       },
       "minItems": 1
+    },
+    "pathSurfaceIndices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "pathInteractions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": ["refract", "reflect", "block", "pass"]
+      }
+    },
+    "pathIndexAfterSurface": {
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "opticalPath": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:optical-case#/$defs/pathStep"
+      }
+    },
+    "diffractive": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "$ref": "urn:lvrtc:contract:v1:optical-case#/$defs/diffractive"
+          }
+        ]
+      }
     }
   },
   "required": [

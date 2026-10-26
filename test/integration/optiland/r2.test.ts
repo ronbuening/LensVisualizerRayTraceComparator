@@ -65,8 +65,8 @@ test(
     const descriptor = await adapter.describe();
     assert.deepEqual(descriptor.capabilities.quantities, {
       [systemDescribeQuantity.id]: { version: systemDescribeQuantity.version },
-      [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version },
-      [RAYS_TRACE]: { version: raysTraceQuantity.version },
+      [paraxialFirstOrderQuantity.id]: { version: paraxialFirstOrderQuantity.version, versions: [1, 2] },
+      [RAYS_TRACE]: { version: raysTraceQuantity.version, versions: [1, 2, 3] },
       [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
     });

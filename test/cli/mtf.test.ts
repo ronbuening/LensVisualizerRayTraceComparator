@@ -89,7 +89,7 @@ function recordOf(runsDir: string, name: string): { record: MtfRun; text: string
 
 const USAGE = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  "                 [--aperture wide-open|f/8] [--root <dir>] [--json]",
+  "                 [--aperture wide-open|f/8] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]",
   "",
 ].join("\n");
 
@@ -167,7 +167,7 @@ test("the tab's request for a lens: a table per engine, and the request, the cas
   assert.deepEqual([record.answers.length, answer.engine, answer.status], [1, "lv", "ok"]);
   assert.deepEqual(validateKind("result", answer.result), []);
   assert.deepEqual(resultDataProblems(mtfNativeQuantity, answer.result?.data), []);
-  assert.ok(existsSync(join(runsDir, "store", `${answer.storeKey}.json`)));
+  assert.ok(existsSync(join(runsDir, "store", `${answer.storeKey}.json.gz`)));
   const data = answer.result?.data as MtfNativeData;
   assert.deepEqual(data.method.params.displayedFrequenciesPerMm, [20, 40]);
 
@@ -326,7 +326,8 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
   });
 
   variantOf(lv, "folded", {
-    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: true"),
+    "src/optics/state/runtime.ts": (text) =>
+      text.replace("isFoldedOptics: !!L.source.opticalPath", "isFoldedOptics: true"),
   });
   await onTree(rootDir, "folded", async () => {
     const folded = await mtf(["acme-zoom-24-48"], rootDir);
@@ -335,13 +336,13 @@ test("a lens LensVisualizer shows no MTF for is answered as its gate does; a len
     // Both ends of the zoom were asked about, and neither has a case: each says so, by its end.
     assert.match(
       folded.err,
-      /^lvrtc mtf: acme-zoom-24-48 \(wide end\): folded-path: .*\n.* \(tele end\): folded-path: /,
+      /^lvrtc mtf: acme-zoom-24-48 \(wide end\): folded-auto-path: .*\n.* \(tele end\): folded-auto-path: /,
     );
     assert.ok(!existsSync(join(runsDir, "mtf", "lv-tab-default", "acme-zoom-24-48")));
     // One position is one state, named without an end.
     const one = await mtf(["acme-zoom-24-48", "--zoom", "0.5"], rootDir);
     assert.equal(one.code, EXIT_FAILURE);
-    assert.match(one.err, /^lvrtc mtf: acme-zoom-24-48: folded-path: [^\n]*\n$/);
+    assert.match(one.err, /^lvrtc mtf: acme-zoom-24-48: folded-auto-path: [^\n]*\n$/);
   });
 });
 
@@ -445,12 +446,13 @@ test("a prime has one state: no end is named, and a zoom position given to it is
 test("an end the zoom has no case at fails the command, and the other end is asked all the same", async (t) => {
   const { rootDir, lv, runsDir } = freshRoot(t);
   variantOf(lv, "folded-tele", {
-    "src/optics/state/runtime.ts": (text) => text.replace("isFoldedOptics: false", "isFoldedOptics: zoomT === 1"),
+    "src/optics/state/runtime.ts": (text) =>
+      text.replace("isFoldedOptics: !!L.source.opticalPath", "isFoldedOptics: zoomT === 1"),
   });
   await onTree(rootDir, "folded-tele", async () => {
     const run = await mtf(["acme-zoom-24-48"], rootDir);
     assert.equal(run.code, EXIT_FAILURE);
-    assert.match(run.err, /^lvrtc mtf: acme-zoom-24-48 \(tele end\): folded-path: [^\n]*\n$/);
+    assert.match(run.err, /^lvrtc mtf: acme-zoom-24-48 \(tele end\): folded-auto-path: [^\n]*\n$/);
     assert.equal(run.out.split("\n")[2], "state    zoom 0 (wide), infinity focus");
     assert.equal(run.out.match(/^state {4}/gm)?.length, 1);
     assert.deepEqual(readdirSync(join(runsDir, "mtf", "lv-tab-default")), ["acme-zoom-24-48"]);
@@ -693,4 +695,27 @@ test("--profile benchmark: a gated pair that fails is named on the error stream,
   assert.equal(failing.length, 4, "each failing pair is named once");
   assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref r4f lv replay: FAIL: /);
   assert.match(run.out, /^\| r4f \| mtf\.native \| 4 \| 4 \| lv – replay \| 4 FAIL \| 4 FAIL \|$/m);
+});
+
+test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and report bytes", async (t) => {
+  const { rootDir, runsDir } = sampledRoot(t);
+  const args = ["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"];
+  const serial = await mtf(args, rootDir);
+  assert.equal(serial.code, EXIT_OK, serial.err);
+  const before = benchmarkOf(runsDir, "acme-singlet-50");
+  const parallelRuns = join(rootDir, "parallel");
+  const command = createMtfCommand({ rootDir, cwd: rootDir, env: { LVRTC_RUNS_DIR: parallelRuns } });
+  let err = "";
+  // Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM.
+  const code = await command.run([...args, "--jobs", "4", "--memory-budget", "16"], {
+    stdout: () => undefined,
+    stderr: (value) => {
+      err += value;
+    },
+  });
+  assert.equal(code, EXIT_OK, err);
+  assert.deepEqual(benchmarkOf(parallelRuns, "acme-singlet-50"), before);
+  const invalid = await mtf(["acme-singlet-50", "--jobs", "2", "--memory-budget", "16"], rootDir);
+  assert.equal(invalid.code, EXIT_USAGE);
+  assert.match(invalid.err, /--jobs requires --profile benchmark/);
 });

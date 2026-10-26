@@ -100,7 +100,12 @@ export interface LvSurface {
   /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */
   readonly diffractive: object | null;
   /** What the surface does to a ray: "refract" on an ordinary surface, "reflect" or "block" in a folded system. */
-  readonly interaction: { readonly type: string };
+  readonly interaction: {
+    readonly type: string;
+    readonly incidentSide?: "front" | "rear" | "both";
+    readonly inactiveSide?: "ignore" | "block";
+    readonly normal?: LvVec3 | null;
+  };
   readonly profile: LvSurfaceProfile;
   /** Vertex position in mm; the first surface is at 0. */
   readonly z: number;
@@ -123,6 +128,11 @@ export interface LvPreparedState {
   readonly traceGeometry?: LvTraceGeometry;
   readonly lens: {
     readonly key: string;
+    readonly opticalPath?: {
+      readonly mode: "sequential" | "auto";
+      readonly surfaceOrder: readonly number[] | null;
+      readonly maxInteractions: number;
+    };
     readonly stop: { readonly surfaceIndex: number };
     /** `isFoldedOptics` is true for a system whose path turns at a mirror. */
     readonly flags: Readonly<Record<string, boolean>>;
@@ -156,6 +166,8 @@ export interface LvTraceOptions {
   readonly indexAtSurface?: LvIndexResolver;
   readonly wavelengthNm?: number;
   readonly directionNormalized?: boolean;
+  /** One height per visit LV found an intersection for, recorded or passed without a record. */
+  readonly recordHeights?: boolean;
 }
 
 /** The index after a surface at one wavelength, given the surface's index and its authored `nd`. */
@@ -173,6 +185,11 @@ export interface LvTraceHit {
   readonly surfaceIndex: number;
   readonly point: LvVec3;
   readonly clipped: boolean;
+  /** The direction the ray met the surface along, and the one it left along when it was not stopped there. */
+  readonly incidentDirection?: LvVec3;
+  readonly outgoingDirection?: LvVec3;
+  /** Set on the hit a failure ended the ray on (a total internal reflection, a reflection without a direction). */
+  readonly failureReason?: string | null;
 }
 
 /**
@@ -196,6 +213,9 @@ export interface LvTraceResult {
   readonly status: "ok" | "clipped" | "failed";
   readonly failureReason: string | null;
   readonly reachedImagePlane: boolean;
+  readonly diagnostics?: { readonly clipEvents: readonly { readonly surfaceIdx: number | null }[] };
+  /** Under `recordHeights`: one entry per visit with a found intersection, passive visits included. */
+  readonly heights?: readonly number[] | null;
 }
 
 /** The result of LV's meridional `traceRay`. */
@@ -209,6 +229,8 @@ export interface LvMeridionalTraceResult {
 
 /** A row of the paraxial kernel: any object with a radius, the index after the surface and the gap after it. */
 export interface LvParaxialSurface {
+  readonly diffractive?: object | null;
+  readonly interaction?: { readonly type: string };
   readonly R: number;
   readonly nd: number;
   readonly d: number;
@@ -216,6 +238,7 @@ export interface LvParaxialSurface {
 
 /** Options of `paraxialTrace`. */
 export interface LvParaxialOptions {
+  readonly allowReflect?: boolean;
   readonly stopAt?: number;
   readonly skipLastTransfer?: boolean;
   readonly recordHeights?: boolean;
@@ -568,6 +591,16 @@ export interface LvLineNm {
  * module exports each.
  */
 export interface LvApi {
+  readonly defaultPhaseWavelengthNm: number;
+  rearMediumSurfaceIndex(surfaceIndex: number, surfaces: readonly Pick<LvSurface, "sd" | "innerSd">[]): number | null;
+  /** The height LV's `recordHeights` keeps for a visit: a coordinate of a point carried along a direction to z. */
+  projectCoordinateToZ(
+    coordinate: number,
+    pointZ: number,
+    directionCoordinate: number,
+    directionZ: number,
+    z: number,
+  ): number;
   /** Source-published zoom coordinates, through LV's public station seam. */
   publishedZoomStations(L: LvRuntimeLens): readonly { readonly index: number; readonly zoomT: number }[];
   buildLens(

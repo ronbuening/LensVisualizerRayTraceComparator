@@ -26,6 +26,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from .folded import install as install_folded, read_policy
 from lvrtc_worker_kit.ndarray import decode_ndarray, encode_ndarray
 
 ASPHERE_TOLERANCE_MM = 1e-12
@@ -236,12 +237,19 @@ def surface_keywords(api: OptilandApi, surface: dict[str, Any], index_after: flo
       still stops a ray whose point is no number, and it is an aperture where the case has none.
     """
     aperture = surface["aperture"]
+    from .phase import phase_profile
     return {
+        **({"phase_profile": phase_profile(surface["diffractive"])} if "diffractive" in surface else {}),
         **shape_keywords(surface["shape"]),
         "z": float(surface["z"]),
-        "material": api.IdealMaterial(n=float(index_after)),
+        "material": "mirror" if surface.get("_interaction") == "reflect" else api.IdealMaterial(n=float(index_after)),
         "is_stop": is_stop,
-        "aperture": physical_aperture(api, aperture),
+        **(
+            {"comment": f"{surface['_physical_index']}:{surface['_interaction']}"}
+            if "_physical_index" in surface
+            else {}
+        ),
+        "aperture": None if "_step" in surface else physical_aperture(api, aperture),
     }
 
 
@@ -342,6 +350,7 @@ class SurfaceReadback:
     """The name of the class of its coating, or None without one."""
     index_after: float
     """The index of the medium after it at the wavelength it was read at."""
+    folded_policy: dict[str, Any] | None
     index_before: float
     """The index of the medium optiland has in front of it (``material_pre``) at that wavelength: what optiland
     refracts a ray out of there, and what it charges the ray's stretch to the surface to in the optical path. It is
@@ -367,6 +376,7 @@ def read_optic(optic: Any, wavelength: float, api: OptilandApi | None = None) ->
         semi = surface.semi_aperture
         model = surface.interaction_model
         coating = getattr(model, "coating", None)
+        policy = read_policy(model)
         row = SurfaceReadback(
             geometry=type(geometry).__name__,
             z=_float(frame.z),
@@ -378,16 +388,25 @@ def read_optic(optic: Any, wavelength: float, api: OptilandApi | None = None) ->
             coefficients=None if coefficients is None else tuple(_float(value) for value in coefficients),
             tolerance=None if getattr(geometry, "tol", None) is None else _float(geometry.tol),
             max_iterations=getattr(geometry, "max_iter", None),
-            aperture=None if aperture is None else type(aperture).__name__,
+            aperture="FoldedBand" if policy is not None else None if aperture is None else type(aperture).__name__,
             # An aperture of another class than the builder's may have neither radius: its class is what is reported.
-            clip_radius=None if getattr(aperture, "r_max", None) is None else _float(aperture.r_max),
-            inner_clip_radius=None if getattr(aperture, "r_min", None) is None else _float(aperture.r_min),
+            clip_radius=policy["outer"]
+            if policy is not None
+            else None
+            if getattr(aperture, "r_max", None) is None
+            else _float(aperture.r_max),
+            inner_clip_radius=policy["inner"]
+            if policy is not None
+            else None
+            if getattr(aperture, "r_min", None) is None
+            else _float(aperture.r_min),
             semi_aperture=None if semi is None else _float(semi),
             is_stop=bool(surface.is_stop),
             reflective=bool(model.is_reflective),
             interaction=type(model).__name__,
             coating=None if coating is None else type(coating).__name__,
             index_after=_float(surface.material_post.n(wavelength)),
+            folded_policy=policy,
             index_before=_float(surface.material_pre.n(wavelength)),
         )
         read.append(row)
@@ -465,6 +484,9 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
 
     hold("the system", "the number of surfaces", int(optic.surfaces.num_surfaces) - 2, len(surfaces))
 
+    from .phase import verify_phase
+    for number, surface in enumerate(surfaces):
+        verify_phase(optic.surfaces[number + 1], surface.get("diffractive"), hold, f"surface {number}")
     read = read_optic(optic, wavelength, api)
     placed = conditions["object"]
     front = read[0]
@@ -475,9 +497,40 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     for number, surface in enumerate(surfaces):
         where = f"surface {number} ({surface['label']})"
         built = read[number + 1]
+        if "_physical_index" in surface:
+            hold(
+                where,
+                "physical surface identity",
+                optic.surfaces[number + 1].comment,
+                f"{surface['_physical_index']}:{surface['_interaction']}",
+            )
         geometry, radius, conic, terms = _expected_geometry(surface["shape"])
         aperture = surface["aperture"]
         aperture_class, clip_radius, inner_clip_radius = expected_aperture(aperture)
+        folded = "_step" in surface
+        if folded:
+            aperture_class, clip_radius, inner_clip_radius = (
+                "FoldedBand",
+                aperture["semiDiameter"],
+                float(aperture["innerSemiDiameter"]),
+            )
+            physical = case["_physical_indices"][line]
+            step = surface["_step"]
+            front = step.get("mediumAfter")
+            rear = step.get("reverseMediumAfter", front)
+            expected_policy = {
+                "step": step,
+                "outer": aperture["semiDiameter"],
+                "inner": float(aperture["innerSemiDiameter"]),
+                "front_index": 1.0 if front is None else float(physical[front]),
+                "rear_index": 1.0 if rear is None else float(physical[rear]),
+                "reflection_model": "RefractiveReflectiveModel",
+                "reflection_enabled": True,
+                "paraxial_model": "RefractiveReflectiveModel",
+                "paraxial_reflective": surface.get("_interaction") == "reflect",
+            }
+            hold(where, "folded interaction policy", built.folded_policy, expected_policy)
+            hold(where, "native aperture under folded policy", optic.surfaces[number + 1].aperture, None)
         asphere = geometry in ("EvenAsphere", "OddAsphere")
         checks: list[tuple[str, Any, Any]] = [
             ("z", built.z, float(surface["z"])),
@@ -494,8 +547,16 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
             ("aperture.r_min", built.inner_clip_radius, inner_clip_radius),
             ("semi_aperture", built.semi_aperture, float(aperture["nominalSemiDiameter"])),
             ("is_stop", built.is_stop, number == system["stopIndex"]),
-            ("is_reflective", built.reflective, False),
-            ("the model of its interaction", built.interaction, "RefractiveReflectiveModel"),
+            ("is_reflective", built.reflective, surface.get("_interaction") == "reflect"),
+            (
+                "the model of its interaction",
+                built.interaction,
+                (
+                    "FoldedInteraction"
+                    if folded
+                    else "PhaseInteractionModel" if "diffractive" in surface else "RefractiveReflectiveModel"
+                ),
+            ),
             ("its coating", built.coating, None),
             ("the index after it", built.index_after, float(indices[number])),
             # The medium a ray reaches the surface in: air in front of the first, as the contract has it, and the
@@ -521,7 +582,24 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     hold("the image surface", "z", image.z, float(conditions["imageZ"]))
     hold("the image surface", "its position on the paraxial axis", image.axial, float(conditions["imageZ"]))
     hold("the image surface", "the class of its geometry", image.geometry, "Plane")
-    hold("the image surface", "aperture", image.aperture, None)
+    hold("the image surface", "aperture", image.aperture, "FoldedBand" if "_physical_indices" in case else None)
+    if "_physical_indices" in case:
+        hold(
+            "the image surface",
+            "folded image path policy",
+            image.folded_policy,
+            {
+                "step": {"surfaceIndex": 0, "interaction": "pass"},
+                "outer": None,
+                "inner": 0.0,
+                "front_index": 1.0,
+                "rear_index": 1.0,
+                "reflection_model": "RefractiveReflectiveModel",
+                "reflection_enabled": True,
+                "paraxial_model": "RefractiveReflectiveModel",
+                "paraxial_reflective": False,
+            },
+        )
     hold("the image surface", "the index of the image space", image.index_after, float(indices[-1]))
     # What a ray's last stretch, to the image plane, is charged to in optiland's optical path.
     hold("the image surface", "the index in front of it", image.index_before, float(indices[-1]))
@@ -531,6 +609,52 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
     hold("the system", "the stop diameter", _float(optic.aperture.value), 2.0 * float(conditions["stopSemiDiameter"]))
     hold("the system", "the number of wavelengths", int(optic.wavelengths.num_wavelengths), 1)
     hold("the system", "the primary wavelength in µm", _float(optic.primary_wavelength), wavelength)
+
+
+def path_case(case: dict[str, Any]) -> dict[str, Any]:
+    """Place a surface instance per visit. Reflection keeps the physical medium; return refraction uses its reference."""
+    system, conditions = case["system"], case["conditions"]
+    path = system["opticalPath"]
+    heading = 1
+    surfaces = []
+    for step in path:
+        side = "front" if heading > 0 else "rear"
+        active = step.get("incidentSide", "both") in ("both", side)
+        interaction = step["interaction"] if active else "pass"
+        surfaces.append(
+            {
+                **system["surfaces"][step["surfaceIndex"]],
+                "_interaction": interaction,
+                "_physical_index": step["surfaceIndex"],
+                "_step": step,
+            }
+        )
+        if interaction == "reflect":
+            heading = -heading
+    table = []
+    for physical in index_rows(case):
+        medium, heading = 1.0, 1
+        for step in path:
+            side = "front" if heading > 0 else "rear"
+            active = step.get("incidentSide", "both") in ("both", side)
+            reference = (
+                step.get("reverseMediumAfter", step.get("mediumAfter")) if side == "rear" else step.get("mediumAfter")
+            )
+            if active and step["interaction"] == "refract":
+                medium = 1.0 if reference is None else physical[reference]
+            if active and step["interaction"] == "reflect":
+                heading = -heading
+            table.append(medium)
+    stop = next((at for at, step in enumerate(path) if step["surfaceIndex"] == system["stopIndex"]), 0)
+    return {
+        **case,
+        "_physical_indices": index_rows(case),
+        "system": {**system, "surfaces": surfaces, "stopIndex": stop},
+        "conditions": {
+            **conditions,
+            "indexAfterSurface": encode_ndarray("f8", table, [len(conditions["lines"]), len(path)]),
+        },
+    }
 
 
 @dataclass(frozen=True)
@@ -553,6 +677,13 @@ def build_case(
     for line in range(len(case["conditions"]["lines"])) if lines is None else lines:
         optic = build_optic(case, line, api)
         verify_optic(optic, case, line, api)
+        if "opticalPath" in case["system"]:
+            expanded = path_case(case)
+            path_optic = build_optic(expanded, line, api)
+            install_folded(path_optic, case, line, index_rows(case)[line], api.np)
+            verify_optic(path_optic, expanded, line, api)
+            path_optic._lvrtc_folded = True
+            optic._lvrtc_path_optic = path_optic
         optics.append(optic)
     return BuiltCase(optics=tuple(optics))
 
@@ -601,7 +732,28 @@ def describe_optics(
         for row in read_optic(optic, wavelength, api)[1 : count + 1]
     ]
     sag_shape = [count, len(fractions)]
+    path_optics = [getattr(optic, "_lvrtc_path_optic", None) for optic in optics]
+    extra = {}
+    if path_optics[0] is not None:
+        visits = list(path_optics[0].surfaces)[1:-1]
+        extra = {
+            "pathSurfaceIndices": [int(surface.comment.split(":")[0]) for surface in visits],
+            "pathInteractions": [surface.interaction_model.step["interaction"] for surface in visits],
+            "opticalPath": [read_policy(surface.interaction_model)["step"] for surface in visits],
+            "pathIndexAfterSurface": _f8(
+                [
+                    row.index_after
+                    for optic in path_optics
+                    for row in read_optic(optic, float(optic.primary_wavelength), api)[1:-1]
+                ],
+                [len(optics), len(visits)],
+            ),
+        }
+    from .phase import read_phase
+    phases = [read_phase(surface.interaction_model) for surface in list(first.surfaces)[1:-1]]
     return {
+        **({"diffractive": phases} if any(phase is not None for phase in phases) else {}),
+        **extra,
         "surfaceCount": count,
         "stopIndex": int(first.surfaces.stop_index) - 1,
         "imageZ": _plain(_float(first.surfaces[count + 1].geometry.cs.z)),

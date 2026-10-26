@@ -557,10 +557,14 @@ test("each thing the contract cannot express is a problem with its code, and no 
       TRIPLET.map((surface, at) => (at === index ? { ...surface, ...change } : surface)),
     );
   const cases: [TestModel, string, RegExp][] = [
-    [tripletModel({ folded: true }), "folded-path", /optical path is folded/],
+    [tripletModel({ folded: true }), "folded-auto-path", /fixed visit order/],
     [withSurface(4, { interaction: "reflect" }), "non-refract-interaction", /reflect or block.*: 5$/],
     [withSurface(0, { interaction: "block" }), "non-refract-interaction", /: 1$/],
-    [withSurface(1, { diffractive: { kind: "radial-polynomial" } }), "diffractive-surface", /diffractive phase: 2A$/],
+    [
+      withSurface(1, { diffractive: { kind: "radial-polynomial" } }),
+      "diffractive-phase-unsupported",
+      /prepared diffractive phase/,
+    ],
     [tripletModel({ normal: [0, 0.6, 0.8] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ normal: [1e-9, 0, 1] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ normal: [0, 0, -1] }), "tilted-image-plane", /not perpendicular/],
@@ -591,10 +595,9 @@ test("every problem of a lens is reported together, and LensVisualizer's gate is
   // Nor is its focus asked for: a lens without a case has no plane to find.
   const options = { aperture: { kind: "f-number", value: 1 }, imagePlane: { kind: "lv-best-axial" } } as const;
   assert.deepEqual(codesOf(exportCase(inputFor(model, options, never))), [
-    "folded-path",
-    "non-refract-interaction",
     "tilted-image-plane",
     "off-axis-image-plane",
+    "folded-auto-path",
     "surface-profile-unsupported",
     "aperture-faster-than-wide-open",
   ]);

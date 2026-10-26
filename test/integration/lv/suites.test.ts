@@ -38,7 +38,6 @@ const NO_LENS_FOR: Readonly<Record<string, { readonly key: string; readonly code
   // The one lens that mixes d- and e-referenced glasses lacks wavelength data for some of them.
   "mixed d and e references": { key: "samyang-af-35mm-f2p8-fe", codes: ["mixed-reference"] },
   // Every lens with an annular aperture is a mirror lens.
-  "an annular aperture": { key: "nikon-reflex-nikkor-c-500mm-f8", codes: ["folded-path", "non-refract-interaction"] },
 };
 
 const loaded = new Map<string, Promise<LoadedSuite>>();
@@ -58,12 +57,17 @@ async function featureCase(run: string): Promise<OpticalCase> {
 
 test("every committed suite loads, and every run exports or records a finite-station refusal", { skip }, async () => {
   for (const name of SUITE_NAMES) {
+    // Catalog expansion/export is covered by the bounded Stage 5.3 sample, never a new full sweep in this tier.
+    if (name === "catalog") continue;
     const suite = await suiteOf(name);
     for (const run of suite.runs) {
-      const at = `${name}/${run.spec.name}`;
-      if (name === "focus-stations" && run.opticalCase === null) {
+      const at: string = `${name}/${run.spec.name}`;
+      if ((name === "focus-stations" || name === "folded" || name === "diffractive") && run.opticalCase === null) {
         assert.ok(run.problems.length > 0, at);
-        for (const problem of run.problems) assert.match(problem, /^finite-conjugate-unavailable:/, at);
+        for (const problem of run.problems) {
+          if (name === "focus-stations") assert.match(problem, /^finite-conjugate-unavailable:/, at);
+          else assert.ok(KNOWN_CODES.includes(problem.split(":")[0]), at);
+        }
         continue;
       }
       assert.ok(run.opticalCase !== null, `${at}: ${run.problems.join("; ")}`);
@@ -74,7 +78,7 @@ test("every committed suite loads, and every run exports or records a finite-sta
 });
 
 test(
-  "the two translation paths the feature suite has no run for still have no lens with a case",
+  "mixed-reference remains an LV data refusal, while exportable folded annuli have their own suite",
   { skip },
   async () => {
     const binding = await loadLvBinding(LV_PATH);
@@ -89,6 +93,8 @@ test(
     // No other lens serves either path: every lens of the catalog that mixes references, or has an annular
     // aperture, is refused the same way.
     const others: string[] = [];
+    const folded = await suiteOf("folded");
+    const foldedKeys = new Set(folded.runs.map((run) => (run.spec.lens.kind === "lv" ? run.spec.lens.key : "")));
     for (const { key } of (await binding.catalog()).entries) {
       const runtime = binding.api.buildLens((await binding.lens(key)).data);
       const state = binding.api.prepareRuntimeState(runtime, 0, 0);
@@ -105,7 +111,10 @@ test(
       // A lens of mixed references is traced with resolved indices at its reference line, or refused for that.
       const mixed = gate.useResolvedReference || gate.reason === "mixed-reference";
       if (!annular && !mixed) continue;
-      if ((await exporter.exportLens(key, {})).ok) others.push(key);
+      const result = await exporter.exportLens(key, {});
+      if (result.ok && result.opticalCase.system.opticalPath !== undefined)
+        assert.ok(foldedKeys.has(key), `${key}: missing folded suite coverage`);
+      else if (result.ok) others.push(key);
     }
     assert.deepEqual(
       others,

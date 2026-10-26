@@ -40,7 +40,7 @@ function waves(metric: ComputedMetric, expected: number): void {
   assert.ok(Math.abs(metric.value - expected) <= 1e-10, `${metric.name}: ${metric.value} against ${expected}`);
 }
 
-test("the comparator is of rays.trace for rung r3, and reports three metrics in waves", () => {
+test("the comparator is of rays.trace for rung r3, and reports separate geometric and phase metrics in waves", () => {
   assert.equal(raysPathComparator.quantity, "rays.trace");
   assert.equal(raysPathComparator.rung, "r3");
   assert.equal(COMPARATORS.get("rays.trace", "r3"), raysPathComparator);
@@ -48,6 +48,7 @@ test("the comparator is of rays.trace for rung r3, and reports three metrics in 
     { name: "opticalPath.maxAbs", unit: "waves" },
     { name: "opticalPathToImage.maxAbs", unit: "waves" },
     { name: "opd.maxAbs", unit: "waves" },
+    { name: "phasePath.maxAbs", unit: "waves" },
   ]);
   // It lists nothing beside the comparison: the rays of each engine are counted once, with rung r2.
   assert.equal(raysPathComparator.recorded, undefined);

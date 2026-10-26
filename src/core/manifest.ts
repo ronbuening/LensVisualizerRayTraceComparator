@@ -163,7 +163,17 @@ export function manifestText(manifest: RunManifest): string {
 export function writeRunOutput(directory: string, manifest: RunManifest, cases: readonly OpticalCase[]): string {
   const casesDirectory = join(directory, CASES_DIRECTORY);
   const wanted = new Set<string>();
+  // Optical identity excludes provenance. Preserve every run-scoped confirmation when runs share a case id.
+  const byId = new Map<string, OpticalCase>();
   for (const opticalCase of cases) {
+    const prior = byId.get(opticalCase.id);
+    if (prior === undefined) byId.set(opticalCase.id, opticalCase);
+    else {
+      const notes = [...new Set([...(prior.provenance.notes ?? []), ...(opticalCase.provenance.notes ?? [])])].sort();
+      if (notes.length > 0) byId.set(opticalCase.id, { ...prior, provenance: { ...prior.provenance, notes } });
+    }
+  }
+  for (const opticalCase of byId.values()) {
     const name = `${opticalCase.id}.json`;
     if (wanted.has(name)) continue;
     wanted.add(name);
