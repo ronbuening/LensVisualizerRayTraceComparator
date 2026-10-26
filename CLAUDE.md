@@ -60,7 +60,7 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
 node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
-node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; part of check
+node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; the catalog held to its frozen policy; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
@@ -620,7 +620,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   rungs)))`, two for the benchmark's MTF with R6c on the owner's machine. A check is clean only when it exited 0,
   says `failed: false`, has records and every record is OK, REFRESHABLE or MOVED (`CLEAN_OUTCOMES`); DRIFT, an
   unlisted FAIL or ERROR, an engine error, NEW and GONE are not. A not-clean check fails the whole and the next
-  still runs; a check ended by a signal (the memory watchdog) stops the sequence: rerun with fewer `--jobs`. It
+  still runs; a check ended by a signal (the memory watchdog) stops the sequence: rerun with fewer `--jobs`.
+  SIGINT and SIGTERM to the script are both handed on at once to the running check (`forwardStopSignals`), so an
+  interrupt ends it promptly; a pool controller ignores a second signal while it cleans up. It
   writes nothing itself; set `LVRTC_RUNS_DIR` to keep a measurement off `runs/store`. Tests are hermetic
   (`test/cli/verifyReal.test.ts`: scripted runner, and fake engines under a temporary root). A cold benchmark MTF
   check at `--jobs 2` is many hours (stopped by the owner after 6.5 h); on the warm owner store it is minutes. The
@@ -900,9 +902,26 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   an existing gate. R0 counts a phase-profile difference under its existing zero `shape.mismatches` gate.
 - `suites/diffractive.json`: eight lenses / nine states, lv/ref/optiland, R0–R3. Run into temporary storage with
   at most four jobs. Its rays baseline was written in Stage 5.3 (policy 15, LV `879c06102`); no gate widening or floor.
-- Verification requires exact policy identity: every baseline states policy version 15 and its hash. The policy-14
-  transition is closed (Stage 5.3 applied the cleanup; `policy/rungs.v14.json` is gone). Phase-inapplicable metrics
-  leave ordinary pair/report bytes unchanged.
+- Verification requires exact policy identity for every baseline except the catalog's: each states the version and
+  hash of `policy/rungs.v1.json` at hand. The policy-14 transition is closed (Stage 5.3 applied the cleanup;
+  `policy/rungs.v14.json` is gone). Phase-inapplicable metrics leave ordinary pair/report bytes unchanged.
+- **The catalog baselines are a dated snapshot** (owner decision 2026-10-26: policy 15, LV `879c06102`; not
+  refreshed until the project is done, so a later policy needs no re-sweep). `lvrtc verify` exempts
+  `baselines/catalog.json` and `catalog.mtf.json` (`SNAPSHOT_BASELINE_SUITES`) from current-policy identity only:
+  each must record a known frozen policy, `policy/snapshots/rungs.v<version>.json`, whose version and canonical hash
+  are the recorded ones (`loadPolicySnapshot`; a recorded hash with no such file fails, so a forged one does); every
+  recorded gate (tolerance and unit), band and rung quantity must be that policy's and no PASS may exceed its
+  recorded tolerance (`baselineGateProblems`); both files must record one policy, no later than the policy at hand.
+  Schema, invariants, canonical text, the known-failure classifications and their evidence, `reports/catalog/*` and
+  `reports/catalog.{md,json}` are held byte for byte as before. Verify's output says the catalog is a dated snapshot
+  of policy v15 at LV `879c06102`. Never edit or delete `policy/snapshots/rungs.v15.json` (it is not formatted:
+  `policy/` is outside prettier). `baseline check catalog` still judges by the policy at hand (a later policy is
+  STALE(policy), REFRESHABLE or DRIFT) and `baseline write catalog` still writes at the policy at hand. **The
+  end-of-project refresh**: write both catalog baselines at the then-current policy N, `cp policy/rungs.v1.json
+  policy/snapshots/rungs.vN.json` (write prints this line until the file exists, and verify refuses the snapshot
+  until it does), render `lvrtc report catalog --catalog`, run `lvrtc verify`, and commit the baselines, reports
+  and frozen policy together; vN is then the snapshot policy. Keep older frozen files only while a baseline records
+  them.
 
 - LV phase powers are integers 2 through 32, including odd powers (at most 16 terms). Preserve all of them.
   Optiland explicitly refuses `optiland-odd-radial-phase`; never assign an odd coefficient to an even slot.

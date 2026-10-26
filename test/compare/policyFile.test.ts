@@ -300,3 +300,50 @@ test("baseline verification requires the exact policy version and hash", async (
   assert.ok(!baselinePolicyMatches({ ...stated, version: 14 }, policy));
   assert.ok(!baselinePolicyMatches({ ...stated, hash: "0".repeat(64) }, policy));
 });
+
+test("a snapshot baseline's gates are held to the policy it records", async () => {
+  const { baselineGateProblems } = await import("../../src/compare/policyFile.ts");
+  const policy: Policy = {
+    contract: "1.3",
+    kind: "policy",
+    version: 2,
+    rungs: {
+      r4: {
+        quantity: "rays.trace",
+        mode: "identical-rays",
+        class: "gated",
+        metrics: { "mtf.maxAbs": { tolerance: 1 / 8, unit: "1" } },
+      },
+    },
+  } as unknown as Policy;
+  const baseline = (verdict: string, value: number, tolerance = 1 / 8, rung = "r4", bands?: object) =>
+    ({
+      runs: [
+        {
+          name: "run",
+          rungs: [
+            {
+              rung,
+              quantity: "rays.trace",
+              ...(bands === undefined ? {} : { bands }),
+              pairs: [{ a: "a", b: "b", verdict, metrics: [{ name: "mtf.maxAbs", unit: "1", value, tolerance }] }],
+            },
+          ],
+        },
+      ],
+    }) as never;
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16), policy), []);
+  assert.deepEqual(baselineGateProblems(baseline("FAIL", 1 / 4), policy), []);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 4), policy), [
+    "run r4 a b mtf.maxAbs: PASS with 0.25 above the recorded policy's 0.125",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 4), policy), [
+    "run r4 a b mtf.maxAbs: the gate is not the recorded policy's",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 8, "r9"), policy), [
+    "run r9: the recorded policy has no rung r9",
+  ]);
+  assert.deepEqual(baselineGateProblems(baseline("PASS", 1 / 16, 1 / 8, "r4", { "mtf.maxAbs": 1 / 2 }), policy), [
+    "run r4: the band of mtf.maxAbs is not the recorded policy's",
+  ]);
+});

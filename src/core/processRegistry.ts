@@ -305,12 +305,19 @@ export function createProcessRegistry(
     rmSync(memoryDirectory, { force: true, recursive: true });
   };
   // An interrupted suite runs no finally block: end the children (their engine workers see their input close) and
-  // remove the staged entries and prepared inputs, which can be gigabytes, then die of the signal as before.
+  // remove the staged entries and prepared inputs, which can be gigabytes, then die of the signal as before. A
+  // second signal while it cleans up (the terminal's SIGINT and the same one handed on by verify:real) is ignored,
+  // so it cannot cut the cleanup short.
+  const ignore = (): void => {};
   const onSignal = (signal: NodeJS.Signals): void => {
     process.off("SIGINT", onSignal);
     process.off("SIGTERM", onSignal);
+    process.on("SIGINT", ignore);
+    process.on("SIGTERM", ignore);
     for (const slot of slots) slot.child.kill("SIGTERM");
     removeTransient();
+    process.off("SIGINT", ignore);
+    process.off("SIGTERM", ignore);
     process.kill(process.pid, signal);
   };
   process.on("SIGINT", onSignal);

@@ -25,7 +25,13 @@ import { renderBaselineReport } from "../../baseline/report.ts";
 import { numberText } from "../../compare/metricText.ts";
 import { COMPARISONS_FILE, comparisonFileText, readComparisonFile } from "../../compare/comparisonFile.ts";
 import { followUpsOf } from "../../compare/followUp.ts";
-import { loadPolicy } from "../../compare/policyFile.ts";
+import {
+  POLICY_SNAPSHOTS,
+  SNAPSHOT_BASELINE_SUITES,
+  loadPolicy,
+  loadPolicySnapshot,
+  policySnapshotName,
+} from "../../compare/policyFile.ts";
 import type { Baseline } from "../../contract/baseline.ts";
 import { FAILING_VERDICTS } from "../../contract/comparison.ts";
 import type { Policy } from "../../contract/policy.ts";
@@ -51,6 +57,8 @@ import { prepareSuiteRun } from "./run.ts";
 export interface BaselineCommandInputs extends RunTargetInputs {
   /** The policy to judge by; the comparator's own (`policy/rungs.v1.json`) unless given. */
   readonly policy?: Policy;
+  /** Where the frozen policies of the snapshot baselines are; this repository's `policy/snapshots/` unless given. */
+  readonly policySnapshots?: string;
 }
 
 const SYNOPSIS =
@@ -184,6 +192,17 @@ async function write(
     `${baseline.suite.name}: ${baseline.runs.length} runs, ${records} records, engines ${baseline.engines.map((engine) => engine.id).join(", ")}, policy v${baseline.policy.version}\n` +
       `baseline: ${file}\nreport: ${markdown}\nreport: ${json}\n`,
   );
+  if (SNAPSHOT_BASELINE_SUITES.includes(baseline.suite.name)) {
+    // A snapshot is held by lvrtc verify to the frozen copy of the policy it records, never to a later policy.
+    const frozen = loadPolicySnapshot(baseline.policy, inputs.policySnapshots ?? POLICY_SNAPSHOTS);
+    const name = policySnapshotName(baseline.policy.version);
+    io.stdout(
+      `snapshot: ${baseline.suite.name} is a dated snapshot of policy v${baseline.policy.version}; lvrtc verify holds it ` +
+        ("policy" in frozen
+          ? `to ${name}\n`
+          : `to ${name}, which is not yet frozen: cp policy/rungs.v1.json ${name}, and commit it with the baseline\n`),
+    );
+  }
   return EXIT_OK;
 }
 

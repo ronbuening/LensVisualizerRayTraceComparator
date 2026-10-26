@@ -3269,8 +3269,9 @@ R4/R4f/R6a. Folded and diffractive cases select their quantity versions automati
 selector gives **1,341 states**.
 
 **Current state (owner refresh at frozen LV `879c06102`, optiland `4e893f53`, policy 15).** Every baseline states
-policy 15 and its hash; `lvrtc verify` requires exact policy identity (the policy-14 transition and
-`policy/rungs.v14.json` are gone) and holds 12 baselines with zero problems.
+policy 15 and its hash; `lvrtc verify` requires exact policy identity of every baseline but the catalog's (the
+policy-14 transition and `policy/rungs.v14.json` are gone) and holds 12 baselines with zero problems. The catalog's
+two baselines are a dated snapshot, held to the frozen policy they record ([below](#the-catalog-is-a-dated-snapshot)).
 
 | Baseline | Runs | Records | Verdicts |
 |---|---|---|---|
@@ -3368,6 +3369,45 @@ node bin/lvrtc.mjs report catalog --catalog && node bin/lvrtc.mjs statement && n
 
 A catalog comparison exits 1 on a FAIL; its write still refuses every unclassified FAIL and every ERROR, so attribute
 the rows and list them before resuming that one invocation. This is the recipe handed over for the Stage 5.3 refresh.
+
+### The catalog is a dated snapshot
+
+Owner decision, 2026-10-26: `baselines/catalog.json`, `baselines/catalog.mtf.json`, `reports/catalog/*` and
+`reports/catalog.{md,json}` are a snapshot of policy 15 at LV `879c06102`, not refreshed until the project is
+done. Phase 6 raises the policy version at each stage; the catalog must not need a sweep for that.
+
+`lvrtc verify` therefore holds the catalog (`SNAPSHOT_BASELINE_SUITES` in `src/compare/policyFile.ts`) to the
+policy it records instead of the policy at hand:
+
+| Held | How |
+|---|---|
+| The recorded policy is a known one | `policy/snapshots/rungs.v<version>.json` must exist, state that version and hash canonically to the recorded hash (`loadPolicySnapshot`). A recorded hash with no such frozen file fails. |
+| Judged by that policy | Every rung of the baseline is a rung of the frozen policy, of its quantity; every recorded tolerance and unit, and every band, is the frozen policy's; no PASS pair has a value above its tolerance (`baselineGateProblems`). |
+| One snapshot | `catalog.json` and `catalog.mtf.json` record the same policy, no later than the policy at hand. |
+| Everything else, as before | Schema, invariants, canonical text, the known-failure classifications and their evidence hashes, unused list entries, `reports/catalog/{rays,mtf}.{md,json}` and `reports/catalog.{md,json}` byte for byte. |
+
+Every other baseline keeps exact current-policy identity, and a FAIL in any of them is still a problem. Verify's
+output names the snapshot: `verify: the catalog is a dated snapshot of policy v15 at LensVisualizer 879c06102: it is
+held to the policy it records, not to the policy at hand (v15), and is not refreshed with it`.
+
+`baseline check catalog` and `baseline write catalog` are unchanged: both judge by the policy at hand, so after a
+policy change a check of the catalog says STALE(policy) with REFRESHABLE or DRIFT. **The end-of-project refresh**
+writes both catalog baselines at the then-current policy N as in the recipe above, then freezes that policy and
+commits it with them:
+
+```bash
+cp policy/rungs.v1.json policy/snapshots/rungs.vN.json   # baseline write catalog prints this until the file exists
+node bin/lvrtc.mjs report catalog --catalog && node bin/lvrtc.mjs verify
+```
+
+Until the frozen file exists verify refuses the snapshot and prints the same command. Never edit a frozen file;
+remove one only when no baseline records it. `policy/` is outside prettier, so the copy stays byte-identical.
+
+Tests: `test/report/catalog.test.ts` (a catalog under an older policy passes, also once the policy at hand moves on;
+an unknown, forged, misversioned, regated, split or future policy fails; a non-catalog baseline under an older,
+even frozen, policy fails; the committed catalog's frozen policy is genuine), `test/compare/policyFile.test.ts`
+(`baselineGateProblems`), `test/cli/baseline.test.ts` (write, freeze, verify under a later policy, check
+REFRESHABLE by policy).
 
 ### Stage 5.3 catalog FAIL attribution
 
@@ -3501,7 +3541,10 @@ npm run verify:real -- --jobs 2 --root <dir> # --jobs is a ceiling (default 4); 
    - A check that is not clean fails the whole run, and the next check still runs.
    - A check ended by a signal is INTERRUPTED. It stops the sequence, and the remaining checks are printed as
      NOT RUN. If the memory watchdog ended it, run again with fewer `--jobs`.
-   - SIGTERM to the script is passed on to the running check. No check starts after SIGINT or SIGTERM.
+   - SIGINT and SIGTERM to the script are both passed on at once to the running check (`forwardStopSignals`), so
+     an interrupt ends that check promptly even when it was sent to the script alone. No check starts after
+     either. A check that also had the terminal's SIGINT receives it twice; the pool controller ignores a second
+     signal while it removes its staged entries (`src/core/processRegistry.ts`).
 4. **Summary.** One line per suite and kind: the outcome counts, the stale counts, any listed FAILs, the jobs and
    the seconds taken. The run then exits 0 when every check is clean and 1 otherwise. The script writes nothing
    itself: the run directories and store entries are what `baseline check` writes, under `LVRTC_RUNS_DIR` or the
@@ -3511,6 +3554,8 @@ The hermetic tests are in `test/cli/verifyReal.test.ts`. They cover:
 - the command line, the plan of this repository and of synthetic roots, the memory and core limits;
 - every doctor refusal and the rule of a clean check;
 - order and one-at-a-time execution on a scripted runner, interruption and stop;
+- SIGINT and SIGTERM handed on to a running check, which ends INTERRUPTED with nothing run after it, and
+  `mainVerifyReal` releasing its signal listeners;
 - a fake-engine root that comes out clean, then DRIFT, with `baselines/` and `reports/` byte-identical;
 - `bin/verify-real.mjs` refusing when LV and optiland point nowhere.
 

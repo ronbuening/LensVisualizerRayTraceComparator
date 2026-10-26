@@ -2,6 +2,7 @@
 // doctor's report, the rule of a clean check, and the whole of it on fake engines under a temporary root.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { cpSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -17,7 +18,9 @@ import {
   VERIFY_REAL_SUITES,
   checkArgs,
   doctorRefusals,
+  forwardStopSignals,
   judgeCheck,
+  mainVerifyReal,
   parseVerifyRealArgs,
   planChecks,
   spawnLvrtcRunner,
@@ -618,6 +621,56 @@ test("a stop asked of verify:real starts no further check", async () => {
   assert.equal(run.asked.length, 2);
   assert.match(said.out, /^verify:real: stopped by SIGINT; the remaining checks were not run$/m);
   assert.match(said.out, /^benchmark mtf {3}NOT RUN$/m);
+});
+
+test("SIGINT, like SIGTERM, is handed on at once to the check that is running, which ends it; nothing runs after", async () => {
+  for (const name of ["SIGINT", "SIGTERM"] as const) {
+    const source = new EventEmitter();
+    let pending: ((ended: LvrtcEnded) => void) | null = null;
+    const handed: string[] = [];
+    const signals = forwardStopSignals((signal) => {
+      handed.push(signal);
+      pending?.(ended("", null, signal));
+    }, source);
+    assert.equal(source.listenerCount("SIGINT"), 1);
+    assert.equal(source.listenerCount("SIGTERM"), 1);
+    const asked: string[][] = [];
+    const runner: VerifyRealRunner = {
+      lvrtc: (args) => {
+        asked.push([...args]);
+        if (args[0] === "doctor") return Promise.resolve(ended(JSON.stringify(healthy())));
+        // The check runs until a signal ends it; the signal arrives once it has started.
+        return new Promise((resolveEnded) => {
+          pending = resolveEnded;
+          setImmediate(() => source.emit(name, name));
+        });
+      },
+    };
+    const said = await verified([], runner, { stopped: signals.stopped });
+    signals.dispose();
+    assert.deepEqual(handed, [name]);
+    assert.equal(asked.length, 2, "the doctor and the first check; nothing after the signal");
+    assert.equal(said.code, EXIT_FAILURE);
+    assert.match(
+      said.out,
+      new RegExp(`^benchmark rays {2}INTERRUPTED .*\\n {4}baseline check was ended by ${name}$`, "m"),
+    );
+    assert.match(said.out, /^benchmark mtf {3}NOT RUN$/m);
+    assert.equal(signals.stopped(), name);
+    assert.equal(source.listenerCount("SIGINT") + source.listenerCount("SIGTERM"), 0);
+  }
+});
+
+test("mainVerifyReal listens on the signal source it is given and stops listening when it ends", async () => {
+  const source = new EventEmitter();
+  const write = process.stdout.write;
+  process.stdout.write = (() => true) as typeof process.stdout.write;
+  try {
+    assert.equal(await mainVerifyReal(["--help"], source), EXIT_OK);
+  } finally {
+    process.stdout.write = write;
+  }
+  assert.equal(source.listenerCount("SIGINT") + source.listenerCount("SIGTERM"), 0);
 });
 
 // ── The whole, on fake engines under a temporary root ────────────────────────────────────────────────────────────

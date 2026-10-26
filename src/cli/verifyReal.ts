@@ -579,29 +579,56 @@ export function spawnLvrtcRunner(options: {
   };
 }
 
+/** What signals are taken from: `process`, or a stand-in in a test. */
+export interface SignalSource {
+  on(event: NodeJS.Signals, listener: (signal: NodeJS.Signals) => void): unknown;
+  off(event: NodeJS.Signals, listener: (signal: NodeJS.Signals) => void): unknown;
+}
+
+/** The signals verify:real is stopped by, and hands on to the check that is running. */
+export const STOP_SIGNALS: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
+
 /**
- * `npm run verify:real` on this repository and this machine. SIGTERM is handed on to the check that is running; a
- * SIGINT from the terminal reaches it already. No check is started after either.
+ * Listens for SIGINT and SIGTERM on `source`: each is remembered (`stopped`, the last one received) and handed on at
+ * once to the check that is running (`stop`), so an interrupt ends that check promptly rather than after it, also
+ * when the signal was sent to verify:real alone. A check that also had the terminal's SIGINT gets it twice; the
+ * suite's controller ignores a second signal while it cleans up (`src/core/processRegistry.ts`). `dispose` stops
+ * listening.
  */
-export async function mainVerifyReal(args: readonly string[]): Promise<number> {
-  const runner = spawnLvrtcRunner({ cwd: process.cwd() });
+export function forwardStopSignals(
+  stop: (signal: NodeJS.Signals) => void,
+  source: SignalSource = process,
+): { stopped(): string | null; dispose(): void } {
   let signal: string | null = null;
   const onSignal = (received: NodeJS.Signals): void => {
     signal = received;
-    if (received === "SIGTERM") runner.stop(received);
+    stop(received);
   };
-  process.on("SIGINT", onSignal);
-  process.on("SIGTERM", onSignal);
+  for (const name of STOP_SIGNALS) source.on(name, onSignal);
+  return {
+    stopped: () => signal,
+    dispose: () => {
+      for (const name of STOP_SIGNALS) source.off(name, onSignal);
+    },
+  };
+}
+
+/**
+ * `npm run verify:real` on this repository and this machine. SIGINT and SIGTERM are handed on to the check that is
+ * running (`forwardStopSignals`); no check is started after either.
+ */
+export async function mainVerifyReal(args: readonly string[], source: SignalSource = process): Promise<number> {
+  const runner = spawnLvrtcRunner({ cwd: process.cwd() });
+  const signals = forwardStopSignals((signal) => runner.stop(signal), source);
   try {
     return await verifyReal(args, {
       rootDir: REPO_ROOT,
       cwd: process.cwd(),
       io: { stdout: (text) => void process.stdout.write(text), stderr: (text) => void process.stderr.write(text) },
       runner,
-      stopped: () => signal,
+      stopped: signals.stopped,
     });
   } finally {
-    process.off("SIGINT", onSignal);
-    process.off("SIGTERM", onSignal);
+    signals.dispose();
   }
 }

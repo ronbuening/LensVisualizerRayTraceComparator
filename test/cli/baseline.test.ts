@@ -700,3 +700,76 @@ test("catalog CLI refuses unknown FAILs, writes listed FAILs, and checks unchang
   assert.equal(drift.code, EXIT_FAILURE, drift.err + drift.out);
   assert.equal(JSON.parse(drift.out).records[0].outcome, "DRIFT");
 });
+
+test("a catalog refresh: written at the policy at hand, frozen, then verified under a later policy; check works", async (t) => {
+  const rootDir = pairRoot(t, "catalog-root");
+  const snapshots = join(tempDir(t), "snapshots");
+  mkdirSync(snapshots);
+  const suite = JSON.parse(readFileSync(join(rootDir, "suites", "pair.json"), "utf8"));
+  writeFileSync(join(rootDir, "suites", "catalog.json"), JSON.stringify({ ...suite, name: "catalog" }));
+  mkdirSync(join(rootDir, "docs"));
+  writeFileSync(join(rootDir, "docs", "known-failures.json"), "[]");
+  const at = async (args: readonly string[], policy: Policy = loadPolicy()): Promise<Ended> => {
+    const inputs = {
+      rootDir,
+      cwd: rootDir,
+      env: { LVRTC_RUNS_DIR: join(rootDir, "runs") },
+      policy,
+      policySnapshots: snapshots,
+    };
+    const commands = [
+      createRunCommand(inputs),
+      createCompareCommand(inputs),
+      createBaselineCommand(inputs),
+      createVerifyCommand(inputs),
+    ];
+    const out: string[] = [];
+    const err: string[] = [];
+    const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
+    return { code: await runCli(args, io, commands), out: out.join(""), err: err.join("") };
+  };
+  const policy = loadPolicy();
+  for (const args of [
+    ["run", "suites/catalog.json"],
+    ["compare", "catalog"],
+  ]) {
+    const ended = await at(args);
+    assert.equal(ended.code, EXIT_OK, `${args.join(" ")}: ${ended.err}${ended.out}`);
+  }
+  const frozenName = `policy/snapshots/rungs.v${policy.version}.json`;
+  const wrote = await at(["baseline", "write", "catalog"]);
+  assert.equal(wrote.code, EXIT_OK, wrote.err);
+  assert.ok(
+    wrote.out.includes(
+      `snapshot: catalog is a dated snapshot of policy v${policy.version}; lvrtc verify holds it to ${frozenName}, ` +
+        `which is not yet frozen: cp policy/rungs.v1.json ${frozenName}, and commit it with the baseline\n`,
+    ),
+    wrote.out,
+  );
+  // Until the policy is frozen, verify refuses the snapshot and says how to freeze it.
+  const unfrozen = await at(["verify"]);
+  assert.equal(unfrozen.code, EXIT_FAILURE);
+  assert.match(unfrozen.err, /baselines\/catalog\.json: a dated snapshot must record a known policy/);
+  cpSync(join(REPO_ROOT, "policy", "rungs.v1.json"), join(snapshots, `rungs.v${policy.version}.json`));
+  assert.match(
+    (await at(["baseline", "write", "catalog"])).out,
+    new RegExp(`holds it to policy/snapshots/rungs\\.v${policy.version}\\.json\\n`),
+  );
+  // The catalog report is written from the two baselines (lvrtc report catalog --catalog, or verify --write).
+  assert.equal((await at(["verify", "--write"])).code, EXIT_OK);
+  const frozenVerify = await at(["verify"]);
+  assert.equal(frozenVerify.code, EXIT_OK, frozenVerify.err);
+  // A later policy: the snapshot still holds, a check at the later policy says STALE(policy), never DRIFT.
+  const later = { ...policy, version: policy.version + 1 };
+  const verified = await at(["verify"], later);
+  assert.equal(verified.code, EXIT_OK, verified.err);
+  assert.match(
+    verified.out,
+    /^verify: the catalog is a dated snapshot of policy v\d+: it is held to the policy it records/m,
+  );
+  const checked = await at(["baseline", "check", "catalog", "--json"], later);
+  assert.equal(checked.code, EXIT_OK, checked.err);
+  const said = JSON.parse(checked.out) as CheckJson;
+  assert.ok(said.records.length > 0 && said.records.every((record) => record.outcome === "REFRESHABLE"), checked.out);
+  assert.ok(said.records.every((record) => record.stale.includes("policy")));
+});

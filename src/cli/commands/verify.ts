@@ -20,7 +20,16 @@ import {
 } from "../../baseline/files.ts";
 import { MTF_REPORT_JSON, MTF_REPORT_MARKDOWN, renderMtfBaselineReport } from "../../baseline/mtfReport.ts";
 import { BASELINE_REPORT_JSON, BASELINE_REPORT_MARKDOWN, renderBaselineReport } from "../../baseline/report.ts";
-import { baselinePolicyMatches, loadPolicy } from "../../compare/policyFile.ts";
+import {
+  POLICY_SNAPSHOTS,
+  SNAPSHOT_BASELINE_SUITES,
+  baselineGateProblems,
+  baselinePolicyMatches,
+  loadPolicy,
+  loadPolicySnapshot,
+  policySnapshotName,
+} from "../../compare/policyFile.ts";
+import type { Baseline } from "../../contract/baseline.ts";
 import type { Policy } from "../../contract/policy.ts";
 import { writeFileAtomic } from "../../core/atomicFile.ts";
 import { REPO_ROOT } from "../../core/config.ts";
@@ -44,6 +53,8 @@ export interface VerifyCommandInputs {
   readonly cwd: string;
   /** The policy the baselines are held to; the comparator's own (`policy/rungs.v1.json`) unless given. */
   readonly policy?: Policy;
+  /** Where the frozen policies of the snapshot baselines are; this repository's `policy/snapshots/` unless given. */
+  readonly policySnapshots?: string;
 }
 
 const SYNOPSIS = "Usage: lvrtc verify [--root <dir>] [--write]\n";
@@ -53,7 +64,11 @@ const HELP = [
   "LensVisualizer nor optiland is read. Every <root>/baselines/<suite>.json must be a baseline by its schema and",
   "its rules, be the canonical text of what it holds, be named after its suite and be judged by the policy at",
   "hand; <root>/reports/<suite>/rays.md and rays.json must be, byte for byte, what the baseline renders; and no",
-  "such report may be without its baseline. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
+  "such report may be without its baseline. The catalog's two baselines are a dated snapshot: each is held to the",
+  "policy it records, which must be a frozen policy of this repository (policy/snapshots/rungs.v<version>.json, of",
+  "that version and canonical hash), with the gates and bands it records that policy's; never to the policy at",
+  "hand. Everything else about them is held as for any baseline, with their classified failures and the catalog",
+  "report. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
   "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
   "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
   "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too.",
@@ -77,12 +92,22 @@ function readText(file: string): string | undefined {
   }
 }
 
+/** "the catalog is a dated snapshot of policy v15 at LensVisualizer 879c06102", from the baseline alone. */
+function snapshotSaid(suite: string, baseline: Baseline): string {
+  const commit = baseline.engines.find((engine) => engine.id === "lv")?.details.commit;
+  const at = typeof commit === "string" ? ` at LensVisualizer ${commit.slice(0, 9)}` : "";
+  return `the ${suite} is a dated snapshot of policy v${baseline.policy.version}${at}`;
+}
+
 /**
  * Builds `lvrtc verify [--root <dir>] [--write]`: hermetic, a function of the files under the root and the policy.
  *
  * For each `baselines/*.json`, in the order of the names: the file is read as a baseline (`parseBaseline`: schema,
  * contract version, the rules of a baseline, canonical text), its name must be its suite's, and its policy hash
- * that of the policy at hand, since a baseline judged by other limits is no record of these. The two report files
+ * that of the policy at hand, since a baseline judged by other limits is no record of these. A baseline of a suite of
+ * `SNAPSHOT_BASELINE_SUITES` (the catalog) is a dated snapshot instead: it is held to the frozen policy it records
+ * (`loadPolicySnapshot`: a file of `policySnapshots` of that version and canonical hash), its gates and bands to
+ * that policy's (`baselineGateProblems`), and the two baselines of one snapshot to one policy. The two report files
  * under `reports/<suite>/` must be what `renderBaselineReport` gives, byte for byte; with `--write` they are
  * written instead. A `reports/<name>/rays.md` or `rays.json` whose suite has no baseline is a problem too. A file
  * `baselines/<suite>.mtf.json` is the MTF baseline of the suite (unless a suite is itself named `<suite>.mtf`): it
@@ -119,6 +144,13 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
       }
 
       const policy = inputs.policy ?? loadPolicy();
+      const snapshots = inputs.policySnapshots ?? POLICY_SNAPSHOTS;
+      // The snapshot baselines that hold, with the policy each records: their note, and their agreement.
+      const snapshotNotes: { readonly suite: string; readonly baseline: Baseline }[] = [];
+      const snapshotPolicies = new Map<
+        string,
+        { readonly at: string; readonly version: number; readonly hash: string }
+      >();
       const list = (directory: string): string[] => {
         try {
           return readdirSync(directory).sort();
@@ -155,7 +187,31 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         const before = problems.length;
         if (baseline.suite.name !== suite)
           problems.push(`${at}: it is the baseline of the suite ${baseline.suite.name}`);
-        if (!baselinePolicyMatches(baseline.policy, policy)) {
+        const snapshot = SNAPSHOT_BASELINE_SUITES.includes(suite) && baseline.suite.name === suite;
+        if (snapshot) {
+          // A dated snapshot: held to the frozen policy it records, never to the policy at hand.
+          const { version, hash } = baseline.policy;
+          const frozen = loadPolicySnapshot(baseline.policy, snapshots);
+          if ("problem" in frozen) {
+            problems.push(
+              `${at}: a dated snapshot must record a known policy, and policy v${version} (${hash}) is not one: ` +
+                `${frozen.problem}; when the snapshot was written at the policy at hand, cp policy/rungs.v1.json ` +
+                `${policySnapshotName(version)} freezes it`,
+            );
+          } else {
+            for (const line of baselineGateProblems(baseline, frozen.policy)) problems.push(`${at}: ${line}`);
+          }
+          if (version > policy.version)
+            problems.push(`${at}: it records policy v${version}, later than the policy at hand, v${policy.version}`);
+          const other = snapshotPolicies.get(suite);
+          if (other === undefined) snapshotPolicies.set(suite, { at, version, hash });
+          else if (other.version !== version || other.hash !== hash) {
+            problems.push(
+              `${at}: it records policy v${version} (${hash}) and ${other.at} policy v${other.version} ` +
+                `(${other.hash}): the baselines of one snapshot are of one policy`,
+            );
+          }
+        } else if (!baselinePolicyMatches(baseline.policy, policy)) {
           problems.push(
             `${at}: it was judged by policy v${baseline.policy.version} (${baseline.policy.hash}), not by the policy ` +
               `at hand, v${policy.version}: ${check} says whether it still holds, and ${check.replace(" check ", " write ")} ` +
@@ -201,8 +257,13 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           );
           io.stdout(
             `${at}: a baseline of ${baseline.runs.length} runs and ${records} records, policy v${baseline.policy.version}; ` +
-              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} are ${rewrite ? "written from it" : "what it renders"}\n`,
+              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} are ${rewrite ? "written from it" : "what it renders"}` +
+              (snapshot
+                ? `; ${snapshotSaid(suite, baseline)}, held to ${policySnapshotName(baseline.policy.version)}`
+                : "") +
+              "\n",
           );
+          if (snapshot && !snapshotNotes.some((note) => note.suite === suite)) snapshotNotes.push({ suite, baseline });
         }
       }
       for (const suite of list(join(rootDir, REPORTS_DIRECTORY))) {
@@ -280,6 +341,12 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         `verify: ${count}, ${problems.length} ${problems.length === 1 ? "problem" : "problems"}. No engine was read: a case ` +
           `or an engine that has changed since (STALE) is seen by lvrtc baseline check, not here.\n`,
       );
+      for (const { suite, baseline } of snapshotNotes) {
+        io.stdout(
+          `verify: ${snapshotSaid(suite, baseline)}: it is held to the policy it records, not to the policy at hand ` +
+            `(v${policy.version}), and is not refreshed with it\n`,
+        );
+      }
       return problems.length > 0 ? EXIT_FAILURE : EXIT_OK;
     },
   };
