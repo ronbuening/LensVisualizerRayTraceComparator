@@ -648,3 +648,55 @@ test("run --jobs and baseline check --jobs retain comparisons and baseline/repor
     assert.equal((await lvrtc(root, ["baseline", "check", "pair", "--jobs", jobs])).code, EXIT_USAGE);
   }
 });
+
+test("catalog CLI refuses unknown FAILs, writes listed FAILs, and checks unchanged ones without hiding comparison failure", async (t) => {
+  const root = pairRoot(t);
+  const suitePath = join(root, "suites", "pair.json");
+  const suite = JSON.parse(readFileSync(suitePath, "utf8"));
+  suite.name = "catalog";
+  writeFileSync(join(root, "suites/catalog.json"), JSON.stringify(suite));
+  writeConfig(root, { "fake-a": {}, "fake-near": { bias: 1 / 4 } });
+  mkdirSync(join(root, "docs"));
+  writeFileSync(join(root, "docs/known-failures.json"), "[]");
+  assert.equal((await lvrtc(root, ["run", "suites/catalog.json"])).code, EXIT_OK);
+  assert.equal((await lvrtc(root, ["compare", "catalog"])).code, EXIT_FAILURE);
+  assert.equal((await lvrtc(root, ["baseline", "write", "catalog"])).code, EXIT_FAILURE);
+  assert.equal(existsSync(join(root, "baselines/catalog.json")), false);
+  const { buildBaseline } = await import("../../src/baseline/build.ts");
+  const { readRunManifest } = await import("../../src/core/manifest.ts");
+  const { readComparisonFile } = await import("../../src/compare/comparisonFile.ts");
+  const { failureEvidence } = await import("../../src/baseline/catalog.ts");
+  const directory = join(root, "runs/catalog");
+  const raw = buildBaseline(readRunManifest(directory), readComparisonFile(directory), loadPolicy());
+  const known = raw.runs.flatMap((run) =>
+    run.rungs.flatMap((rung) =>
+      rung.pairs.flatMap((pair) =>
+        pair.metrics
+          .filter((m) => m.tolerance !== undefined && (m.value === null || m.value > m.tolerance))
+          .map((m) => ({
+            run: run.name,
+            rung: rung.rung,
+            engines: [pair.a, pair.b],
+            metric: m.name,
+            class: "numerical",
+            gotcha: "docs/gotchas.md#artificial-example",
+            reproducer: "node bin/lvrtc.mjs run suites/catalog-repro/artificial.json --rungs selftest --jobs 1",
+            evidenceHash: failureEvidence(rung.requests, pair),
+          })),
+      ),
+    ),
+  );
+  assert.ok(known.length > 0);
+  writeFileSync(join(root, "docs/known-failures.json"), JSON.stringify(known));
+  const written = await lvrtc(root, ["baseline", "write", "catalog"]);
+  assert.equal(written.code, EXIT_OK, written.err + written.out);
+  const checked = await lvrtc(root, ["baseline", "check", "catalog", "--json"]);
+  assert.equal(checked.code, EXIT_OK, checked.err + checked.out);
+  assert.equal(JSON.parse(checked.out).records[0].verdict, "FAIL");
+  assert.equal(JSON.parse(checked.out).records[0].outcome, "OK");
+  assert.equal((await lvrtc(root, ["compare", "catalog"])).code, EXIT_FAILURE);
+  writeFileSync(join(root, "docs/known-failures.json"), "[]");
+  const drift = await lvrtc(root, ["baseline", "check", "catalog", "--json"]);
+  assert.equal(drift.code, EXIT_FAILURE, drift.err + drift.out);
+  assert.equal(JSON.parse(drift.out).records[0].outcome, "DRIFT");
+});

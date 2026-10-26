@@ -29,9 +29,12 @@ function configuration(run: RunSpec): string {
   return `${run.lens.kind === "lv" ? run.lens.key : ""}@${run.state?.zoomT ?? 0} ${run.lines?.kind}`;
 }
 
-test("the suites directory holds the seven suites and nothing else", () => {
+test("the suites directory holds the eight main suites and optional one-run catalog reproducers", () => {
   assert.deepEqual(
-    readdirSync(SUITES_DIR).sort(),
+    readdirSync(SUITES_DIR, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .sort(),
     SUITE_NAMES.map((name) => `${name}.json`),
   );
 });
@@ -43,7 +46,7 @@ for (const name of SUITE_NAMES) {
     assert.equal(suite.name, name);
     // The two suites of Stage 4.4 select stations, which minor 3 added; every other suite is of 1.0 as before.
     const stationSuite = name === "states" || name === "focus-stations";
-    assert.equal(suite.contract, stationSuite ? CONTRACT_VERSION_1_3 : CONTRACT_VERSION);
+    assert.equal(suite.contract, stationSuite || name === "catalog" ? CONTRACT_VERSION_1_3 : CONTRACT_VERSION);
     // A run uses every judged rung, and the built-in engines unless it is run on others: so the suite runs at the
     // root of this repository, whose configuration defines no engine.
     // optiland is built in too, and joins a suite's own engines with the rungs it answers.
@@ -55,6 +58,17 @@ for (const name of SUITE_NAMES) {
       assert.equal(suite.runs.length, name === "folded" ? 16 : 8);
       assert.equal(new Set(suite.runs.map((run) => run.name)).size, name === "folded" ? 16 : 8);
       for (const run of expandSuite(suite)) assert.ok(run.lens.kind === "lv");
+      return;
+    }
+    if (name === "catalog") {
+      assert.deepEqual(suite.defaults, {
+        engines: ["lv", "ref", "optiland"],
+        rungs: ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
+        aperture: { kind: "wide-open" },
+        lines: { kind: "reference" },
+        imagePlane: { kind: "design" },
+      });
+      assert.deepEqual(suite.runs, [{ name: "catalog", lens: { kind: "lv", key: "*" } }]);
       return;
     }
     const builtin = ["lv", "ref"];

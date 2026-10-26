@@ -3045,14 +3045,14 @@ The diffractive plate is refused with `diffractive-surface`, `tilted-surface`, `
 `surface-profile-unsupported`, `tilted-image-plane` and `off-axis-image-plane`. Diffraction stays Stage 5.2b.
 Automatic paths cannot be replaced by one sampled visit list without changing the system.
 
-The remaining FAIL is an **LV implementation defect**, not an unsettled ref result: a single spherical mirror's principal
+The historical R1 FAIL was an **LV implementation defect, fixed in LV `f9fb75c86`**, not an unsettled ref result: a single spherical mirror's principal
 planes coincide with its vertex. An independent 80-digit Decimal ray at height 1e-30 mm on the actual exported
 spherical-primary case gives a focus within 1.25e-63 mm of zero and EFL -100 mm, hence principal z +100 mm.
-LV returns front-principal z -100 mm, one signed radius away. The source pin identifies its determinant-parity
+Before the fix LV returned front-principal z -100 mm, one signed radius away. The source pin identifies its determinant-parity
 mistake; ref and optiland independently return +100 mm. The temporary proof is
 `/tmp/lvrtc-52-sphere-decimal80.txt`; the fifteen repository ref analytic proofs and native LV pin remain reproducible.
-LV stays read-only; the owner will fix it separately. The [owner brief](upstream/lensvisualizer-mirror-principal-plane.md)
-is marked "for the owner; not filed". No gate or floor was widened, and the FAIL is not suppressed. The source lines: the folded
+LV stays read-only; the owner fixed it separately in `f9fb75c86`. The [owner brief](upstream/lensvisualizer-mirror-principal-plane.md)
+is marked "for the owner; not filed". No gate or floor was widened, and the historical FAIL was not suppressed. The source lines: the folded
 matrix is built in physical slope with an unsigned index (`src/optics/first-order/cardinals.ts:213-218`, mirror
 step `u' = -u - 2y/R` at `src/optics/math/paraxial.ts:91`), determinant -1 after one reflection, and
 `frontPrincipalZ = frontVertexZ + n (D - 1) / C` (`cardinals.ts:126`) assumes determinant +1; for determinant d
@@ -3131,7 +3131,7 @@ stored bytes to hide a difference.
 Among reports, only reports/census was rewritten. No baseline was written, no catalog ray sweep was added, no engine checkout
 was edited, and no commit, push, stash, checkout or reset was performed. The owner commits after review and owns
 the Stage 5.3 baseline refresh. The owner's traced-ray decision and separate upstream-fix brief complete this
-follow-up; the four LV R1 FAILs remain visible.
+follow-up. The four historical LV R1 FAILs pass after the owner's `f9fb75c86` fix; see the Stage 5.3 remeasurement below.
 
 ## Stage 5.2b diffractive surfaces
 
@@ -3259,3 +3259,205 @@ independent rational y-nu trace of `nikon-af-s-nikkor-300mm-f4e-pf-ed-vr` (phase
 -2 C2 m lambda/lambda0 = 8.11547e-5 /mm at the d line, lambda0 = 587.6 nm) gives an EFL of 293.9152039077488 mm;
 LV answers 293.915203907749 and ref 293.91520390775 (302.797 mm without the phase). The policy file keeps its
 compact formatting. `npm run check` then passes with 1,672 TypeScript, 100 kit and 305 worker tests.
+
+## Stage 5.3 catalog suite, classified failures and statistics
+
+`suites/catalog.json` expands every source catalog key through the LV case source, then both zoom ends, without
+removing coded refusals: one wide-open / reference-line / design-plane state per prime, two per zoom, and no
+photopic, best-focus, stopped-down or middle-zoom state. Engines are lv/ref/optiland; rays use R0–R4 and MTF uses
+R4/R4f/R6a. Folded and diffractive cases select their quantity versions automatically. At LV `879c06102` the
+selector gives **1,341 states**.
+
+**Current state (owner refresh at frozen LV `879c06102`, optiland `4e893f53`, policy 15).** Every baseline states
+policy 15 and its hash; `lvrtc verify` requires exact policy identity (the policy-14 transition and
+`policy/rungs.v14.json` are gone) and holds 12 baselines with zero problems.
+
+| Baseline | Runs | Records | Verdicts |
+|---|---|---|---|
+| the eight of benchmark, features, states, focus-stations | as before | as before | checked first: no DRIFT, then rewritten |
+| `folded.json` (first baseline) | 16 (8 refused at the source) | 96 | 65 PASS / 31 UNSUPPORTED |
+| `diffractive.json` (first baseline) | 9 (1 refused at the source) | 96 | 80 PASS / 16 UNSUPPORTED |
+| `catalog.json` | 1,341 | 19,761 | 19,690 PASS / 47 UNSUPPORTED / **24 FAIL**, each classified |
+| `catalog.mtf.json` | 1,341 (1,297 with an MTF recipe) | 9,079 | 9,079 PASS |
+
+In comparison pairs, both modes, the catalog rays sweep is **71,005: 70,843 PASS / 79 UNSUPPORTED / 83 FAIL /
+zero ERROR**, and the catalog MTF sweep **40,944 PASS**. Every FAIL is R2 `mask.mismatches` on one of 12 lenses
+(below). No gate or floor moved; the sweep needed no floor, so policy 15 still grants none.
+`reports/catalog.{md,json}` are rendered from the two catalog baselines alone.
+
+Catalog baseline annotations use contract minor 6, selected only for these baseline files. `features` comes from
+validated cases, `censusReasons` from run/field/recipe codes, and pair `failures` from the exact known-failure list.
+The report reads no source census or engine. It distinguishes aggregate pairs and state statuses, deduplicates R4,
+counts unsupported codes, interpolates quantiles at `(n - 1)p` over finite gated pair figures (nonfinite ones are
+counted apart and rank first) and shows worst-ten runs/engines. FAIL never becomes PASS, and comparison exits 1
+even for listed failures. Changed evidence is DRIFT; ERROR is never admitted. Synthetic goldens and CLI tests
+cover listing, rejection, round trips, changed figures and report bytes.
+
+`lvrtc statement` remains exactly the eight benchmark/features/states/focus-stations baselines. Folded,
+diffractive and catalog baselines do not enter its inventory; the statement's suite scope is a later owner decision.
+
+**Before the sweep: the bounded sample.** A 25-lens / 28-state sample (eleven benchmark lenses, eight feature
+lenses, spherical primary, annular mirror, Minolta reflex, a Mirotar source refusal and both Canon DO lenses; three
+zooms at both ends) gave **1,248 PASS / 27 UNSUPPORTED** rays pairs and **672 PASS** MTF pairs, zero FAIL/ERROR.
+At `--jobs 4` and the default 10 GiB budget, worker peaks were 4.25 GiB rays and 5.70 GiB MTF, with no pauses;
+run+compare took 7.25 s rays and 18.07 s incremental MTF, and the compressed store grew by 260,873,483 bytes.
+Scaled linearly it estimated 20.2 minutes and 11.6 GiB for the full sweep: an estimate, superseded by the
+sweep's counts above, whose wall time and store size this section does not record.
+
+**Folded remeasurement after the owner's fix:** clean LV `879c06102` includes `f9fb75c86`.
+`suites/folded.json --rungs r0,r1,r2,r3 --jobs 4`, temporary storage, retains eight accepted / eight refused runs,
+144 jobs (135 ok / nine unsupported / zero error). Both-mode counts are R0 40 PASS; R1 17 PASS / 23 UNSUPPORTED;
+R2 80 PASS; R3 16 PASS / 64 UNSUPPORTED: **153 PASS / 87 UNSUPPORTED / zero FAIL or ERROR**. The four historical
+R1 failures now pass without a gate change. The [principal-plane brief](upstream/lensvisualizer-mirror-principal-plane.md)
+is marked fixed; its derivation describes the old defect.
+
+### Stage 5.3 known failures and the refresh
+
+`docs/known-failures.json` is a catalog-only list. Each entry names `run`, `rung`, ordered `engines`, `metric`,
+`class`, `gotcha`, `reproducer` and `evidenceHash`; each metric above its gate needs one. Investigate classes in
+plan order (unsupported, data, convention, numerical, method), establish the cause in `docs/gotchas.md`, and check
+a disagreeing LV/ref ray in extended precision before attributing it. Never alter a gate to admit a FAIL.
+`evidenceHash` is `failureEvidence(rung.requests, pair)` (`src/baseline/catalog.ts`): a canonical hash of the
+request count and the complete pair, excluding annotations and the optional MTF-only `measured` counts, so an R4
+failure can be classified in both files while every value, tolerance, location and verdict count must stay the
+same. The class and gotcha are copied into the baseline: changing either, or the gotcha's heading, is a change of
+the committed baseline. `baseline write catalog` refuses any unlisted or changed FAIL; `baseline check` admits an
+unchanged classified FAIL as OK (or REFRESHABLE), and a new, changed or unclassified one is DRIFT. Verify reports a
+list entry no catalog classification uses: remove an entry once its FAIL is gone.
+
+A new failure gets a one-run suite first (no prescription is copied; the suite is named `catalog-repro`, so it
+never replaces `runs/catalog`):
+
+```bash
+# A prime's run is catalog-<lens-key>; a zoom's are catalog-<lens-key>-wide and catalog-<lens-key>-tele.
+node bin/catalog-case.mjs catalog-<lens-key>-wide suites/catalog-repro/catalog-<lens-key>-wide.json
+node bin/lvrtc.mjs run suites/catalog-repro/catalog-<lens-key>-wide.json --rungs r2 --jobs 4   # the list's command
+```
+
+The owner's refresh, run sequentially in Bash from the repository on the real store (implementers use temporary
+roots). A suite with no baseline is run, compared and written, then checked against that seed; an existing suite is
+only checked (the check runs and compares it) and written. A failed check stops the sequence: investigate DRIFT,
+never force a rewrite. Rays are checked and written before MTF, since a suite's directory holds its last run.
+
+```bash
+export LVRTC_RUNS_DIR="$PWD/runs"
+refresh() {   # suite, kind (rays|mtf), jobs, rungs of a suite that has no baseline of that kind
+  local suite="$1" kind="$2" jobs="$3" rungs="$4" rc suffix=""
+  local -a mark=()
+  if [[ "$kind" == mtf ]]; then mark=(--mtf); suffix=".mtf"; fi
+  if [[ ! -f "baselines/$suite$suffix.json" ]]; then
+    [[ -n "$rungs" ]] || { echo "refresh $suite $kind: no baseline, and no rungs named" >&2; return 2; }
+    node bin/lvrtc.mjs run "suites/$suite.json" --engines lv,ref,optiland --rungs "$rungs" --jobs "$jobs"
+    rc=$?; if (( rc > 1 )); then return "$rc"; fi
+    node bin/lvrtc.mjs compare "$suite" --jobs "$jobs"
+    rc=$?; if (( rc > 1 )); then return "$rc"; fi
+    if (( rc == 1 )) && [[ "$suite" != catalog ]]; then return 1; fi
+    node bin/lvrtc.mjs baseline write "$suite" "${mark[@]}" || return $?
+  fi
+  node bin/lvrtc.mjs baseline check "$suite" "${mark[@]}" --jobs "$jobs" || return $?
+  node bin/lvrtc.mjs baseline write "$suite" "${mark[@]}" || return $?
+}
+refresh benchmark rays 4 && refresh benchmark mtf 2 &&   # R6c holds benchmark MTF to two jobs
+refresh features rays 4 && refresh features mtf 4 &&
+refresh states rays 4 && refresh states mtf 4 &&
+refresh focus-stations rays 4 && refresh focus-stations mtf 4 &&
+refresh folded rays 4 r0,r1,r2,r3 && refresh diffractive rays 4 r0,r1,r2,r3 &&
+refresh catalog rays 4 r0,r1,r2,r3,r4 && refresh catalog mtf 4 r4,r4f,r6a &&
+node bin/lvrtc.mjs report catalog --catalog && node bin/lvrtc.mjs statement && node bin/lvrtc.mjs verify
+```
+
+A catalog comparison exits 1 on a FAIL; its write still refuses every unclassified FAIL and every ERROR, so attribute
+the rows and list them before resuming that one invocation. This is the recipe handed over for the Stage 5.3 refresh.
+
+### Stage 5.3 catalog FAIL attribution
+
+The owner's completed **rays** sweep at frozen LV `879c06102` contains **71,005 comparison pairs:
+70,843 PASS / 79 UNSUPPORTED / 83 FAIL / zero ERROR**, across 1,341 states and R0–R4. These counts include
+reference-vs-each and pairwise modes; they are not aggregate baseline records. All 83 FAIL rows exceed only
+R2 `mask.mismatches`. No gate, floor, engine answer or original comparison was changed.
+
+Every one of the twelve one-run suites under `suites/catalog-repro/` was generated with
+`node bin/catalog-case.mjs <run> suites/catalog-repro/<run>.json`, then run **once** with
+`node bin/lvrtc.mjs run suites/catalog-repro/<run>.json --rungs r2 --jobs 4`, using a separate temporary
+`LVRTC_RUNS_DIR` for each lens. `compare catalog-repro --jobs 4` returned 1, as expected, and **every R2 comparison
+matched the owner's original**, including request ids, complete metrics, locations, participants and verdicts,
+excluding only the suite name. Reproduction covers PASS rows as well as the 83 FAIL rows.
+
+| Lens / catalog state | Disputed surface(s), zero-based | Engine at fault | Class | Disputed rays at fields 0 / 0.5 / 1 | Original FAIL rows, both modes | Gotcha |
+|---|---|---|---|---|---|---|
+| Bertele Sonnar 50/2 scaled | 6 | lv | method | 0 / 30 / 4 | 8 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Leica Elmarit 90/2.8 | 5 | lv | method | 216 / 156 / 126 | 12 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Nikon AI-S Zoom-Nikkor 35–70/3.5 tele | 15 | lv | method | 50 / 48 / 48 | 12 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Nikon AI Zoom-Nikkor 25–50/4 tele | 8 | lv | method | 380 / 356 / 342 | 12 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Nokton 50/1 | 7 | lv | method | 0 / 8 / 0 | 4 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Olympus Zuiko Auto-S 50/1.4 | 6 | lv | method | 212 / 138 / 6 | 12 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Pentax DA 18–55/3.5–5.6 AL wide | 15 | lv | method | 16 / 14 / 0 | 8 | [Crossing surfaces](gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost) |
+| Fujifilm Fujinon XF 27/2.8 | 7 | optiland | method | 0 / 0 / 4 | 3 | [Asphere final iterate, no convergence](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads) |
+| Fujifilm Fujinon XF 8–16/2.8 wide | 2 | optiland | method | 0 / 0 / 28 | 3 | [Asphere alternate crossing beyond rim](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads) |
+| Nikon Z DX 16–50/3.5–6.3 VR wide | 2 | optiland | method | 0 / 0 / 57 | 3 | [Asphere alternate crossing beyond rim](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads) |
+| Ricoh GR1 28/2.8 | 0 | optiland | method | 0 / 0 / 2 | 3 | [Asphere final iterate, no convergence](gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads) |
+| Russar 22 70/8 | 1 and 9 | optiland | method | 0 / 0 / 120 | 3 | [Conic far-sheet fallback](gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side) |
+
+Class order was checked for every row: **unsupported** does not apply to these representable, answered requests;
+**data** is excluded by the unchanged prepared case and native build/read-back/R0 agreement; **convention** is
+excluded by the contract's explicit sag sheet, aperture and sequential backward-step rules. The disagreements
+remain different root/search/final-iterate decisions, rather than rounding of an agreed quantity, so **numerical**
+does not describe the established cause. They are **method** differences against the contracted trace. This is
+an attribution against that contract, not a claim that a crossing prescription is physically manufacturable.
+
+For the seven LV lenses, **all 2,150 disputed rays** were independently traced by `tests/optiland/exact.py` at
+60 digits. Every one passes the disputed surface, steps backwards there, and agrees with ref's final status and
+end surface. Ref's disputed hits agree within 1.78e-14 mm per coordinate. Direct native LV calls on all 2,150 give
+`failed / noBracket`, classified by LV as `blocked`. The optiland/ref witness pairs pass with no mask disagreement.
+The existing tier-2 crossing test pins all seven lens states and skips with the stated `LV_UNAVAILABLE` reason.
+
+For the five optiland lenses, full request batches were retraced through `build_case`/`trace.record`; native
+settlement reproduced every original status/end surface. Native iteration results, intensity, coordinates and sag
+were read at every disputed ray, not inferred from the comparison's first location. XF 27 and GR1 retain positive
+intensity at off-surface, unconverged final iterates; XF 8–16 and Nikon reach genuine outer crossings and their
+apertures stop the rays there; both roots of the Russar quadrics are on the wrong sag sheet. Russar's first metric
+location is surface 9, but **88 of its 120 disagreements are at 1**, and 32 at 9. The gotchas give native numerical
+examples and the analytic pins. Two new synthetic real-optiland tests pin alternate-root clipping and transmission
+of an unconverged iterate; the existing hemisphere pin covers Russar. All skip with `real_optiland_missing()`'s
+reason when optiland is absent. The two new pins were also run on the real engine and passed.
+
+The [evidence ledger](catalog-attribution.json) identifies **all 83 original rows** by comparison index, mode,
+request id and ordered pair, with complete-pair hashes, per-lens request counts, native samples and their corresponding
+aggregate evidence hashes. There are **24 known-failure entries**, two engine pairs per lens, with **three requests
+per aggregate**, not 83 duplicate list entries. Their `evidenceHash` is computed with `failureEvidence(rung.requests,
+pair)` on `buildBaseline`'s aggregation of the actual `runs/catalog/comparisons.json` rows. All figures, locations,
+verdict counts and request counts remain part of that evidence; every list entry has its exact one-run command.
+No FAIL remains unattributed. Changing any evidence still prevents admission; FAIL remains FAIL.
+
+The investigation's artifacts (a temporary store, manifest and comparison per lens, `run.log`, `compare.log`,
+`diagnostic.json`, and `lv-native.json` for each LV case) were kept in a temporary directory and are not committed;
+the [evidence ledger](catalog-attribution.json) is their committed summary. No owner's store was opened. The
+direct reading of LensVisualizer's `noBracket` on all 2,150 rays was a one-off script of the attribution; what is
+committed to repeat it is the tier-2 crossing pin (`test/integration/lv/rungs.test.ts`), which reads it on the
+first disputed ray of each of the seven lens states. To repeat the numerical diagnostic after running one
+reproducer into a fresh temporary directory:
+
+```bash
+lvrtc_repro_dir=$(mktemp -d /tmp/lvrtc-catalog-repro.XXXXXX)
+LVRTC_RUNS_DIR="$lvrtc_repro_dir" node bin/lvrtc.mjs run suites/catalog-repro/catalog-ricoh-gr1-28f28.json --rungs r2 --jobs 4
+LVRTC_RUNS_DIR="$lvrtc_repro_dir" node bin/lvrtc.mjs compare catalog-repro --jobs 4
+node bin/catalog-attribution.mjs "$lvrtc_repro_dir" > "$lvrtc_repro_dir/diagnostic.json"
+```
+
+The diagnostic uses the worker's environment and stdout protection before importing optiland; it reads only the
+supplied temporary result store. On LV/ref disagreements it requires a settled 60-digit full trace and aborts if
+that check fails. On optiland-only disagreements it records native rows and solves, with independent 60-digit sag
+or conic-sheet checks where applicable. A vertex-plane Newton attempt that leaves a sag domain or fails to settle
+is not evidence; specifically those attempts on XF 8–16/XF 27 were discarded. Neither attempt is needed for the
+native alternate-root/final-iterate attribution.
+
+**Admission and verification.** Before the owner's write, the baseline write logic was run on the original
+`runs/catalog` against a temporary copy of the baselines directory: it accepted **1,341 runs / 19,761 aggregate
+records**, retaining **24 FAIL records and 24 exact classifications**, with no unclassified FAIL or ERROR, and the
+hermetic check passed there (1,683 TypeScript tests, Python, 11-baseline verify). The two new native pins also
+passed on real optiland without skips. Additional independent full 60-digit checks confirmed all 57 Nikon Z DX and
+both GR1 disputed rays. One process-pool worker-death count assertion failed once in that copy (13 errors against
+12) and passed on rerun; no pool code or expectation was changed. The owner's catalog write then recorded the same
+19,761 records and 24 classified FAILs; in the checkout, `npm run check` passes with LV and optiland pointing
+nowhere (1,683 TypeScript tests; verify 12 baselines, zero problems). The attribution wrote nothing to `runs/store`,
+the committed baselines or reports, LensVisualizer or optiland.

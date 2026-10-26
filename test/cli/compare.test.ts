@@ -27,7 +27,7 @@ const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const COMPARE_SYNOPSIS =
   "Usage: lvrtc compare <suite name | run directory> [--root <dir>] [--reference <engine>]\n" +
   "                     [--mode reference-vs-each|pairwise|both] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
-const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]\n";
+const REPORT_SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>] [--catalog]\n";
 
 interface Ended {
   readonly code: number | null;

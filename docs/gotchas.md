@@ -479,9 +479,33 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   clear aperture, so it is a mask mismatch and the pair fails R2 (14 pairs on the reference line, 63 on the
   photopic lines, 2394 and 6998 rays; at the tele end 9 and 35 pairs, with every other pair of that sweep passing
   R2 but six of `fujifilm-fujinon-xc-16-50mm-f35-56-ois-ii` that are `FLOOR`, and every pair passing R3). None
-  of the eight is in a suite. An integration test (`test/integration/lv/rungs.test.ts`) holds each to this, at
+  of the eight was in a suite at that measurement. An integration test (`test/integration/lv/rungs.test.ts`) holds each to this, at
   the end of the zoom where it happens: the surface, LensVisualizer's `noBracket`, and the step backwards in
   `ref`'s trace; it fails on the day LensVisualizer traces through.
+  **Stage 5.3, LV `879c06102`:** the seven affected catalog runs reproduce 34 / 498 / 146 / 1,078 / 8 / 356 / 30
+  disagreements respectively for Bertele, Leica, the two Nikon tele ends, Nokton, Olympus and Pentax wide.
+  All **2,150** disputed rays were checked, not just each metric's first ray: native LV says
+  `failed / noBracket`, its native MTF classification is `blocked`, and the independent `exact.py` trace in
+  60-digit Decimal arithmetic passes the disputed surface and agrees with ref's final status/end surface.
+  Every exact disputed hit is behind the previous one; z steps span -1.480296 to -0.000191788 mm, well beyond
+  LV's backward allowance. Optiland/ref has no mask disagreement on these requests. The original FAILs and
+  their three-request aggregates remain unchanged. See the [catalog table](REFERENCE.md#stage-53-catalog-fail-attribution)
+  and [all 83 row addresses](catalog-attribution.json). The existing crossing integration pin covers all seven
+  current lenses, including both explicit tele states, and skips with `LV_UNAVAILABLE` when LV is absent.
+  The seven are the lenses listed above but the Vivitar, whose lens file put its stop 1.2 mm behind surface 21 at
+  `31c34396` and which loses no ray since. What a reader can repeat: each lens's one-run reproducer and
+  `bin/catalog-attribution.mjs`, which requires the settled 60-digit trace on every disputed LV/ref ray (REFERENCE,
+  "Stage 5.3 catalog FAIL attribution"); LensVisualizer's own `noBracket` and `blocked` are re-read by the tier-2
+  pin on the first disputed ray of each lens, while the reading of all 2,150 was a one-off of the attribution,
+  counted in the [evidence ledger](catalog-attribution.json) (`nativeLvNoBracketChecked`).
+  **For the owner.** The class says where the difference comes from, not that LensVisualizer's answer is
+  acceptable: LensVisualizer itself says it could not trace the ray (`failed`, `noBracket`), and its MTF
+  classification then counts that failure as light a rim stopped, so its product MTF and working f-number change
+  (f/4.92 for f/4 at the tele end of the 25–50). The prescriptions are also not physical at those heights: a stop
+  or a face inside the glass of its neighbour. Whether LensVisualizer should step backwards as other sequential
+  tracers and the contract do, count a failed trace apart from vignetting, or have these lens files corrected as
+  the Vivitar's was, is the owner's to decide in LensVisualizer; nothing is filed, and the comparator keeps the
+  FAIL until LensVisualizer changes.
 - **Class.** method.
 
 ### A ray bent past the perpendicular to the axis
@@ -1585,7 +1609,8 @@ shares no code with any engine.
   admissible optiland falls back to the root nearer the vertex, whatever sheet it is on and wherever on the line.
 - **Effect.** The fallback is what makes optiland step backwards where two neighbouring surfaces cross: the hit
   behind the ray is the root nearer the vertex, a plane is met at `-z / N` whatever its sign, and an asphere's
-  iteration starts there. On the eight lenses of the catalog where LensVisualizer loses rays at such a crossing,
+  iteration starts there. On the eight lenses of the catalog where LensVisualizer loses rays at such a crossing
+  (seven since the Vivitar's lens file was corrected),
   optiland passes them where `ref` does. It is a fallback, though, and no rule: optiland steps backwards only
   where no root is admissible. A ray behind the surface is inside its ball, and its line leaves the ball in front
   of it: through the far half for a ray near the axis of a sphere, which is no admissible root, but through the
@@ -1608,6 +1633,16 @@ shares no code with any engine.
   into the curve before it and finds it stopped 40 mm from the axis. optiland's own MTF of such a lens counts, or
   loses, those rays. No lens of a suite has such a surface, and at the 24 focus stations LensVisualizer certifies
   the three engines stop the same rays.
+  **Stage 5.3, LV `879c06102`, optiland `4e893f53`:** Russar full field has **120** mask disagreements,
+  **88 at surface 1 and 32 at surface 9** (the metric's first ray names 9, not every ray's surface).
+  Native optiland retains positive intensity on both spheres' wrong sheets: on ray 2 at surface 9 its local z is
+  -22.3467147482 mm while its own sag is -22.1932012518 mm, a -0.1535134964 mm residual. The two roots of the
+  quadric, recomputed in 60 digits from optiland's own incident points/directions, have negative sag-sheet factors
+  `1 - (1 + K) z/R` on **every** disputed ray (largest factor -0.0003665271). Neither root is on the contracted
+  sheet. LV and ref block these rays; optiland transmits 112 to the image and stops the other eight later at 5.
+  The existing synthetic hemisphere test, `TraceTest.test_beyond_the_equator_of_a_hemisphere_optiland_passes_a_ray_on_the_far_side_of_the_sphere`,
+  pins native fallback and transmission; it skips with `real_optiland_missing()`'s reason in the hermetic tier.
+  Nothing is corrected or suppressed; both optiland pairs retain FAIL. See the [catalog evidence](catalog-attribution.json).
 - **Class.** method.
 
 ### On an asphere optiland's iteration starts at the base conic, and goes where that leads
@@ -1624,7 +1659,7 @@ shares no code with any engine.
   `apple-iphone-7-wide-camera-lens`: 3576 and 2426 of them rays that `ref` and LensVisualizer land, 29 % and 20 %
   of the light of those sets.
   **Another crossing.** The polynomial of a surface, fitted to its clear aperture, turns back beyond the rim and
-  may cross the line again there. From a flat base the iteration can reach that crossing first: on surface 2 of
+  may cross the line again there. From the base conic the iteration can reach that crossing first: on surface 2 of
   `fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr` at its wide end, at the full field, optiland meets 162 rays 24.9 mm
   from the axis, 3 mm beyond the rim, and stops them, where the line meets the surface 20.8 mm from the axis and
   the contract passes it. `ref` and LensVisualizer stop the same rays one surface later, so no light is at stake
@@ -1653,6 +1688,37 @@ shares no code with any engine.
   `ref` at zero failures; an optiland failure is allowed only on an asphere where both block that very ray at
   that same surface, with every such ray named in a diagnostic. The exception changes no pair verdict, mask
   check or gate; policy version 11 grants no floors.
+  **Stage 5.3, LV `879c06102`, optiland `4e893f53`:** the current XF 8–16 wide and Nikon Z DX 16–50 wide
+  each disagree only at full field, **28 and 57 rays at surface 2**, on curved-base aspheres. Native optiland's
+  own converged iterates are genuine crossings beyond its aperture, with intensity zero. XF ray 1140 reaches
+  radius 24.8911964379 mm against 21.800000001 mm clear radius; LV/ref's crossing is at 20.8095226892 mm.
+  Nikon ray 108 reaches 23.0360049723 mm against 9.500000001 mm; LV/ref's is at 9.3724453987 mm.
+  All 85 native points/iterations were read, with the batch kept intact. Their alternative LV/ref hits have
+  60-digit sag residuals below 1e-8 mm; additionally, the full independent trace settled with ref on all 57 Nikon
+  rays. The synthetic pin `TraceTest.test_an_asphere_seed_can_converge_beyond_the_rim_despite_an_in_aperture_crossing`
+  derives two crossings analytically and checks optiland's actual outer hit and aperture stop. Its base is a plane,
+  not a curved conic: it pins the mechanism (a seed from the base that converges on the crossing beyond the rim),
+  not the catalog surfaces' seeds, which only the native reading above shows.
+  The current XF 27 full field has **four** disagreements at surface 7, rays 51/55/60/84: all four native
+  primal solves exhaust 100 iterations, `converged=false`, yet retain intensity 1 at radii 4.7762–4.9674 mm
+  inside the 5.060000001 mm aperture. Absolute residuals against optiland's own sag are 0.396400–1.318095 mm.
+  Native optiland lands three and stops one later at 8; LV/ref block all four at 7.
+  **Newly measured Ricoh GR1:** full-field rays 830/869 exhaust 100 iterations at surface 0 with residuals
+  5.1217701445 / 7.9907958728 mm, retaining intensity 1 inside its 6.500000001 mm aperture. It lands 830 and
+  blocks 869 at 11; LV/ref block both at 0. The independent 60-digit trace also blocks both at 0.
+  This is the same unverified final-iterate mechanism, not a rim rounding or an unsupported asphere. The new
+  synthetic pin `TraceTest.test_an_unconverged_asphere_iterate_is_kept_and_can_transmit_a_ray_where_no_surface_is_met`
+  uses Newton's 1 ↔ 0 cycle for `y^3 - 2y + 2`, proves no crossing within the aperture, and checks native
+  100-step nonconvergence, positive intensity and the worker's retained landing. Both new pins skip with
+  `real_optiland_missing()`'s reason without the real engine. The existing fabricated-row settle test
+  also holds the policy that a live native ray is kept, even off the sag; no adapter filters these rays out.
+  Full vertex-plane Decimal Newton does not settle on XF 27 and starts outside the valid sag domain on XF 8–16;
+  those attempts are not used as confirmations. Attribution there rests on the native residual/root evidence,
+  the common LV/ref mask and the analytic synthetic pins. Commands and all original row addresses are in
+  [REFERENCE](REFERENCE.md#stage-53-catalog-fail-attribution) and [the evidence ledger](catalog-attribution.json).
+  **For the owner.** As for LensVisualizer's crossing loss, the class names the origin, not an acceptable answer:
+  a ray carried on from an iterate 0.4 to 8 mm off optiland's own surface, with `converged=false`, is optiland's
+  behaviour to report upstream if the owner chooses; nothing is filed.
 - **Class.** method.
 
 ### On an asphere optiland is as exact as a plain sum of its terms
@@ -2237,7 +2303,7 @@ shares no code with any engine.
   envelope check and no extra sampling. **Class: translation gap**, contained at run preparation; raw exports and
   the census still describe the declared geometry without this confirmation. Direct calls retain
   `lv-folded-post-path-interaction` as a request-time backstop.
-- LV 2e046d71's **single-mirror front principal plane is wrong by one signed radius**. The spherical-primary
+- Historical LV `2e046d71` defect, **fixed in LV `f9fb75c86`**: the single-mirror front principal plane was wrong by one signed radius. The spherical-primary
   reference (STO z=0, M1 z=100, R=-200, image z=0) gives -100 mm, while the mirror vertex and analytic principal
   plane are +100 mm: f=R/2, F=F'=0, H=H'=100, EFL (F' minus H') -100. `computeFoldedReflectiveCardinals`
   (`src/optics/first-order/cardinals.ts:213-218`) builds A, B, C, D from rays traced in physical slope with an
@@ -2246,10 +2312,12 @@ shares no code with any engine.
   whose `frontPrincipalZ = frontVertexZ + n (D - 1) / C` (line 126) holds for determinant +1 only; with
   determinant d the term is `(D - d) / C`. Its focal points and rear principal point do not depend on the
   determinant and are right. The integration pin returns LV's native value; the classification is an LV
-  implementation defect; R1 must FAIL, not be corrected, floored or relabelled unsupported. A formal stop at the mirror's focal plane has an exit pupil at infinity;
+  implementation defect; before the fix R1 had to FAIL without correction, floor or unsupported relabelling. A formal stop at the mirror's focal plane has an exit pupil at infinity;
   ref proves that singularity with exact rational arithmetic, avoiding a rounded reciprocal's spurious pupil at
   10^18 mm. `folded.test.ts` proves both the exact singularity and a nearby finite pupil without a threshold.
-  The owner will fix LV separately; the brief is [for the owner; not filed](upstream/lensvisualizer-mirror-principal-plane.md).
+  The owner fixed LV in `f9fb75c86`. At clean `879c06102`, the folded R0–R3 suite with `--jobs 4` gives
+  153 PASS / 87 UNSUPPORTED / zero FAIL or ERROR across both modes (R1: 17 PASS / 23 UNSUPPORTED).
+  The [historical brief](upstream/lensvisualizer-mirror-principal-plane.md) remains for the owner; not filed.
 - optiland 4e893f53's factory uses **`material="mirror"`**, preserving the incident material and constructing
   `RefractiveReflectiveModel(is_reflective=True)`. Passing `is_reflective=True` as an extra surface keyword is
   silently ignored. The deliberate-mistake mirror test pins this behavior and the read-back rejects it.

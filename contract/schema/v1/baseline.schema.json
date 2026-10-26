@@ -66,6 +66,18 @@
           "pattern": "^[a-f0-9]{64}$"
         },
         "rungs": { "type": "array", "items": { "$ref": "#/$defs/rung" } },
+        "features": {
+          "description": "Catalog-only source feature inventory.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "censusReasons": {
+          "description": "Catalog-only source, field and recipe refusal codes.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "problems": {
           "description": "Since minor 3: coded source problems, reported without a failing pair.",
           "type": "array",
@@ -168,9 +180,27 @@
             "additionalProperties": false
           }
         },
-        "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } }
+        "metrics": { "type": "array", "items": { "$ref": "#/$defs/metric" } },
+        "failures": {
+          "description": "Catalog-only classifications; the verdict stays FAIL.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/failure" }
+        }
       },
       "required": ["a", "b", "verdict", "verdicts", "metrics"],
+      "additionalProperties": false
+    },
+    "failure": {
+      "type": "object",
+      "properties": {
+        "metric": { "type": "string", "minLength": 1 },
+        "class": { "enum": ["unsupported", "data", "convention", "numerical", "method"] },
+        "gotcha": { "type": "string", "minLength": 1 },
+        "reproducer": { "type": "string", "minLength": 1 },
+        "evidenceHash": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256" }
+      },
+      "required": ["metric", "class", "gotcha", "reproducer", "evidenceHash"],
       "additionalProperties": false
     },
     "verdict": { "enum": ["PASS", "FLOOR", "FAIL", "RECORDED", "ATTENTION", "UNSUPPORTED", "BLOCKED", "ERROR"] },

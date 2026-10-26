@@ -1,3 +1,5 @@
+import { renderCatalog } from "../../src/report/catalog.ts";
+import { catalogInputs } from "./catalogFixture.ts";
 // Rewrites the golden reports of test/fixtures/golden. Run it after a change that is meant to change a report:
 //
 //   node test/report/writeGolden.ts
@@ -22,6 +24,9 @@ import { R6C_GOLDEN, R6C_POLICY, r6cCycle } from "./r6cFixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile, mtfGoldenFile } from "./support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
+const catalog = renderCatalog(catalogInputs());
+writeFileSync(join(GOLDEN_DIR, "catalog.md"), catalog.markdown);
+writeFileSync(join(GOLDEN_DIR, "catalog.json"), catalog.json);
 const statement = renderStatement(statementInputs());
 writeFileSync(join(GOLDEN_DIR, "validation-statement.md"), statement.markdown);
 writeFileSync(join(GOLDEN_DIR, "validation-statement.json"), statement.json);

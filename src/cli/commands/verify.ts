@@ -1,3 +1,12 @@
+import {
+  KNOWN_FAILURES,
+  classifyCatalog,
+  readKnownFailures,
+  unclassifiedFailures,
+  unusedKnownFailures,
+} from "../../baseline/catalog.ts";
+import { CATALOG_JSON, CATALOG_MARKDOWN, readCatalogInputs, renderCatalog } from "../../report/catalog.ts";
+import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -153,6 +162,18 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
               `records it`,
           );
         }
+        if (baseline.suite.name !== "catalog") {
+          // Only the catalog admits a classified FAIL; a FAIL or ERROR in any other baseline is never committed.
+          for (const line of unclassifiedFailures(baseline)) problems.push(`${at}: ${line}: no baseline records it`);
+        } else {
+          try {
+            const classified = classifyCatalog(baseline, readKnownFailures(rootDir));
+            if (canonicalJson(classified) !== canonicalJson(baseline) || unclassifiedFailures(classified).length)
+              problems.push(`${at}: unknown or changed catalog failure classification`);
+          } catch (error) {
+            problems.push(`${at}: ${String(error)}`);
+          }
+        }
         const rendered = mtf ? renderMtfBaselineReport(baseline) : renderBaselineReport(baseline);
         const reports = mtf ? mtfBaselineReportFiles(rootDir, suite) : baselineReportFiles(rootDir, suite);
         for (const [file, text, said] of [
@@ -197,6 +218,37 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
               );
             }
           }
+        }
+      }
+      if (
+        suites.has("catalog") ||
+        mtfSuites.has("catalog") ||
+        readText(join(rootDir, CATALOG_JSON)) !== undefined ||
+        readText(join(rootDir, CATALOG_MARKDOWN)) !== undefined
+      ) {
+        try {
+          const catalogInputs = readCatalogInputs(rootDir);
+          const rendered = renderCatalog(catalogInputs);
+          if (readText(join(rootDir, KNOWN_FAILURES)) !== undefined) {
+            const unused = unusedKnownFailures(
+              catalogInputs.map((input) => input.baseline),
+              readKnownFailures(rootDir),
+            );
+            if (unused.length > 0)
+              problems.push(`${KNOWN_FAILURES}: no catalog baseline classifies ${unused.join("; ")}`);
+          }
+          for (const [file, text] of [
+            [CATALOG_JSON, rendered.json],
+            [CATALOG_MARKDOWN, rendered.markdown],
+          ]) {
+            if (rewrite) writeFileAtomic(join(rootDir, file), text);
+            else if (readText(join(rootDir, file)) !== text)
+              problems.push(
+                `${file}: missing or differs from catalog baselines; lvrtc report catalog --catalog writes it anew`,
+              );
+          }
+        } catch (error) {
+          problems.push(`catalog: ${String(error)}`);
         }
       }
       // Older partial roots need only their per-suite reports. A complete four-suite root, or either statement file,

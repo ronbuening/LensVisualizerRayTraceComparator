@@ -1,10 +1,12 @@
 # LensVisualizer: front principal plane uses determinant +1 for an odd-reflection matrix
 
-For the owner; not filed.
+Status: **fixed in LV `f9fb75c86`**, included in the owner's clean `879c06102` checkout. For the owner; not filed.
 
-Observed at LV commit `2e046d71`. The comparator preserves LV's native first-order result and keeps all four
-folded-suite R1 FAIL pairs unsuppressed. The owner will fix LV in a separate session; this brief changes no LV
-source or prescription.
+Originally observed at LV `2e046d71`; the four unsuppressed R1 FAIL pairs below are historical.
+Remeasured at `879c06102` with `--jobs 4`, R0–R3: 153 PASS, 87 UNSUPPORTED, zero FAIL/ERROR across both modes.
+R0: 40 PASS; R1: 17 PASS / 23 UNSUPPORTED; R2: 80 PASS; R3: 16 PASS / 64 UNSUPPORTED.
+The comparator still returns LV's native first-order values and changes no gate or floor. The defect description
+and proof below document the pre-fix behavior; this brief changes no LV source or prescription.
 
 `src/optics/first-order/cardinals.ts:126` computes the front principal position as
 `frontVertexZ + objectIndex * (D - 1) / C`. The term `n (D - 1) / C` assumes a matrix determinant of +1.

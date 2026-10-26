@@ -1,3 +1,4 @@
+import { CATALOG_JSON, CATALOG_MARKDOWN, readCatalogInputs, renderCatalog } from "../../report/catalog.ts";
 import { join, resolve } from "node:path";
 
 import { readComparisonFile } from "../../compare/comparisonFile.ts";
@@ -21,7 +22,7 @@ export interface ReportCommandInputs extends RunTargetInputs {
   readonly policy?: Policy;
 }
 
-const SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>]\n";
+const SYNOPSIS = "Usage: lvrtc report <suite name | run directory> [--root <dir>] [--floor <dir>] [--catalog]\n";
 const HELP = [
   SYNOPSIS,
   "Writes the report of a run that has been compared: report.json and report.md in the run directory, from the",
@@ -34,6 +35,8 @@ const HELP = [
   "                 <engine>-floor.md, for the engine the policy gives a floor (lv) against its arbiter (ref):",
   "                 per run and rung the worst of every metric, the verdicts and how the rays ended. It holds",
   "                 results, counts, run names and hashes only, and is what is committed of a benchmark",
+  "",
+  "  --catalog      catalog only: statistics from baselines/catalog{,.mtf}.json alone, in reports/catalog.{md,json}",
   "",
   "Exit code: 0 when the report was written, whatever its verdicts are (lvrtc compare is what fails on them); 2",
   "when it was not, because the run has no manifest or no comparisons, or they do not belong together.",
@@ -71,7 +74,17 @@ export function createReportCommand(inputs: ReportCommandInputs): CliCommand {
       let texts: { json: string; markdown: string };
       const written: [path: string, text: string][] = [];
       try {
-        const asked = parseTargetArguments(args, ["--root", "--floor"], []);
+        const asked = parseTargetArguments(args, ["--root", "--floor"], ["--catalog"]);
+        if (asked.flags.has("--catalog")) {
+          if (asked.target !== "catalog" || asked.values.has("--floor"))
+            throw new UsageError("--catalog requires target catalog and no --floor");
+          const root = asked.values.has("--root") ? resolve(inputs.cwd, asked.values.get("--root")!) : inputs.rootDir;
+          const rendered = renderCatalog(readCatalogInputs(root));
+          writeFileAtomic(join(root, CATALOG_JSON), rendered.json);
+          writeFileAtomic(join(root, CATALOG_MARKDOWN), rendered.markdown);
+          io.stdout(`${CATALOG_JSON} and ${CATALOG_MARKDOWN}: written from catalog baselines alone\n`);
+          return EXIT_OK;
+        }
         directory = resolveRunDirectory(asked.target, asked.values.get("--root"), inputs);
         const manifest = readRunManifest(directory);
         const comparisons = readComparisonFile(directory);

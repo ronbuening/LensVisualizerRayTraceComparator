@@ -84,28 +84,10 @@ export function policyRegistryProblems(
   return problems;
 }
 
-/** Policy 15 adds only a metric impossible for the pre-1.5 exported cases. Preserve exact v14 baseline verification. */
+/** Baselines must state the policy version and content hash at hand. */
 export function baselinePolicyMatches(
   stated: { readonly hash: string; readonly version: number },
   policy: Policy,
 ): boolean {
-  if (stated.hash === hashCanonical(policy)) return true;
-  if (
-    policy.version !== 15 ||
-    stated.version !== 14 ||
-    stated.hash !== "693c4a981e4c624693b3759c7b7d5d363a09bc00b2c4eeecfc77c3134437e120"
-  )
-    return false;
-  if (
-    hashCanonical(policy.rungs.r3.metrics["phasePath.maxAbs"] ?? null) !==
-    hashCanonical({ tolerance: 2e-5, unit: "waves" })
-  )
-    return false;
-  const prior = structuredClone(policy) as unknown as {
-    version: number;
-    rungs: { r3: { metrics: Record<string, unknown> } };
-  };
-  prior.version = 14;
-  delete prior.rungs.r3.metrics["phasePath.maxAbs"];
-  return hashCanonical(prior) === stated.hash;
+  return stated.version === policy.version && stated.hash === hashCanonical(policy);
 }

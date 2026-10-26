@@ -1,3 +1,4 @@
+import type { FailureClass } from "../baseline/catalog.ts";
 // The baseline: mirrors contract/schema/v1/baseline.schema.json, plus the rules a schema cannot state.
 import { VERDICTS } from "./comparison.ts";
 import type { ComparisonMetric, ParticipantStatus, RecordedValues, Verdict } from "./comparison.ts";
@@ -72,6 +73,8 @@ export interface BaselineVerdictCount {
 
 /** Two engines over the requests of one rung of one run. */
 export interface BaselinePair {
+  /** Catalog-only classifications; the verdict remains FAIL. */
+  readonly failures?: readonly FailureClass[];
   /** The first engine: the one whose id sorts first. */
   readonly a: string;
   readonly b: string;
@@ -125,6 +128,10 @@ export interface BaselineRung {
 
 /** One run as it was run: with its case hash, what the records below it are keyed on. */
 export interface BaselineRun {
+  /** Catalog-only source feature flags, copied from the validated case. */
+  readonly features?: readonly string[];
+  /** Catalog-only source, field and recipe refusal codes, each once. */
+  readonly censusReasons?: readonly string[];
   readonly name: string;
   /** The content hash of the run's case. */
   readonly caseId: string | null;
@@ -207,6 +214,17 @@ export function baselineProblems(baseline: Baseline): string[] {
     problems.push(`it states the contract ${baseline.contract} and has a member that minor 1 added`);
   }
   for (const run of baseline.runs) {
+    if (
+      (run.features !== undefined ||
+        run.censusReasons !== undefined ||
+        run.rungs.some((r) => r.pairs.some((p) => p.failures !== undefined))) &&
+      (contractMinor(baseline.contract) ?? 0) < 6
+    )
+      problems.push(`run ${run.name}: catalog annotations require contract minor 6`);
+    if (baseline.suite.name === "catalog" && run.features === undefined)
+      problems.push(`run ${run.name}: catalog feature inventory is required`);
+    if (baseline.suite.name !== "catalog" && (run.features !== undefined || run.censusReasons !== undefined))
+      problems.push(`run ${run.name}: features are catalog-only`);
     if (runNames.has(run.name)) problems.push(`run ${run.name} is listed twice`);
     runNames.add(run.name);
     if (run.problems !== undefined || run.caseId === null) {
@@ -259,6 +277,11 @@ export function baselineProblems(baseline: Baseline): string[] {
       });
       for (const pair of rung.pairs) {
         const of = `${at}, ${pair.a} and ${pair.b}`;
+        if (pair.failures !== undefined && (baseline.suite.name !== "catalog" || pair.verdict !== "FAIL"))
+          problems.push(`${of}: classifications require a catalog FAIL`);
+        if (pair.failures !== undefined && new Set(pair.failures.map((f) => f.metric)).size !== pair.failures.length)
+          problems.push(`${of}: duplicate classified metric`);
+
         for (const metric of pair.metrics) {
           if (metric.measured !== undefined && metric.measured > rung.requests) {
             problems.push(

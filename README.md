@@ -36,6 +36,11 @@ at f/8 is outside the bands (at most 0.0087); wide open 69 of 144 fields are mar
 and its wording is linted. These figures are measured at Stage 3.12: LensVisualizer `ab0fd4cf` (engine closure
 `94778d3d`, 175 files), optiland `4e893f53`, policy version 11. All four baselines and the census are rewritten;
 baseline check reports every record `OK` ([measured](docs/REFERENCE.md#measured-at-stage-312)).
+Phase 4 (LensVisualizer's default view, attribution and the [validation statement](reports/validation-statement.md))
+is delivered. Phase 5 is delivered through Stage 5.3: at LensVisualizer `879c06102` and policy version 15, mirror
+and diffractive lenses have suites of their own, and the whole catalog, 1,341 states, is baselined on three engines, with
+every FAIL classified and given a one-run reproducer ([catalog statistics](reports/catalog.md),
+[attribution](docs/REFERENCE.md#stage-53-catalog-fail-attribution)).
 
 ## Requirements
 
@@ -364,6 +369,9 @@ both ends.
 | `suites/features.json` | one lens for each kind of surface or aperture the benchmark lacks |
 | `suites/states.json` | slider f/5.6 and f/11, and the benchmark zoom at its published stations; gated rungs |
 | `suites/focus-stations.json` | LV-certified finite focus stations selected at runtime; gated rungs |
+| `suites/folded.json` | the mirror and catadioptric lenses; R0–R3 |
+| `suites/diffractive.json` | the lenses with a diffractive surface; R0–R3 |
+| `suites/catalog.json` | every catalog lens, a zoom at both ends, wide open; gated rungs (owner only) |
 
 The focused suites use `lv,ref,optiland`. See [Stage 4.4](docs/REFERENCE.md#stage-44-focused-state-matrix)
 for their states, measurements and the owner's separate rays/MTF baseline commands.

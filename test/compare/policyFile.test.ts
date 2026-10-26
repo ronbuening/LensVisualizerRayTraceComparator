@@ -291,17 +291,12 @@ test("a policy using attentionSeveralLines refuses earlier contract minors", (t)
   }
 });
 
-test("only the exact additive phase policy preserves policy-14 baseline verification", async () => {
+test("baseline verification requires the exact policy version and hash", async () => {
   const { baselinePolicyMatches } = await import("../../src/compare/policyFile.ts");
-  const prior = loadPolicy(join(REPO_ROOT, "policy/rungs.v14.json"));
   const { hashCanonical } = await import("../../src/core/numeric/hash.ts");
-  const stated = { version: 14, hash: hashCanonical(prior) };
-  const current = loadPolicy();
-  assert.ok(baselinePolicyMatches(stated, current));
-  assert.ok(!baselinePolicyMatches({ ...stated, hash: "0".repeat(64) }, current));
-  for (const metric of ["phasePath.maxAbs", "opticalPath.maxAbs"]) {
-    const changed = structuredClone(current);
-    (changed.rungs.r3.metrics[metric] as { tolerance: number }).tolerance *= 2;
-    assert.ok(!baselinePolicyMatches(stated, changed));
-  }
+  const policy = loadPolicy();
+  const stated = { version: policy.version, hash: hashCanonical(policy) };
+  assert.ok(baselinePolicyMatches(stated, policy));
+  assert.ok(!baselinePolicyMatches({ ...stated, version: 14 }, policy));
+  assert.ok(!baselinePolicyMatches({ ...stated, hash: "0".repeat(64) }, policy));
 });

@@ -39,6 +39,8 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
           imagePlane: { kind: "lv-best-axial" },
         },
         { name: "missing", lens: { kind: "lv", key: "absent" } },
+        // The catalog selector: every key of the fake catalog, zooms at both ends, expanded in a child.
+        { name: "catalog", lens: { kind: "lv", key: "*" } },
       ],
     }),
   );
@@ -73,6 +75,11 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
     assert.deepEqual(readdirSync(runsDir).sort(), ["preparation", "store"]);
     assert.ok(result.manifest.jobs.some((job) => job.step === "again"));
     assert.ok(result.manifest.runs.some((run) => run.recipe && run.fineRaySets));
+    const catalogRuns = result.manifest.runs.map((run) => run.name).filter((name) => name.startsWith("catalog-"));
+    assert.ok(
+      catalogRuns.includes("catalog-acme-zoom-24-48-wide") && catalogRuns.includes("catalog-acme-zoom-24-48-tele"),
+    );
+    assert.ok(catalogRuns.includes("catalog-acme-singlet-50"));
     const directory = dirname(result.manifestPath);
     const comparisons = compareRunDirectory(directory, policy);
     assert.equal(

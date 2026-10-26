@@ -9,6 +9,7 @@ export const SUITES_DIR: string = join(REPO_ROOT, "suites");
 /** The committed suites, by name. */
 export const SUITE_NAMES = [
   "benchmark",
+  "catalog",
   "diffractive",
   "features",
   "focus-stations",

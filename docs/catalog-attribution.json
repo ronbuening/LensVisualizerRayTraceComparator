@@ -1,0 +1,2083 @@
+{
+  "lv": "879c06102",
+  "comparisonFileHash": "f29dea6e247ff9b6107751f1ee6b20fee45ff6a41f64bb712926592cfed3d22c",
+  "manifestHash": "cb13548a8a0e28ddff7c471c797191f0814ca39e07d7aace7fefc80ca98659a4",
+  "failRows": 83,
+  "knownFailureEntries": 24,
+  "unattributed": 0,
+  "lenses": [
+    {
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-bertele-sonnar-50f2-scaled.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 34,
+      "decimal60Required": 34,
+      "nativeLvNoBracketChecked": 34,
+      "requests": [
+        {
+          "id": "5d0253fd3979d2421c3d2a5e5a3fb9c97c121ee1540a465c18aa7ac0d1d74329",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "ee4c7562c3337245297b4e1dba62eddfb4b2c5b45b32a210ff9e31f15983a037",
+          "field": 0.5,
+          "disputed": 30,
+          "decimal60Checked": 30
+        },
+        {
+          "id": "ab4d93868abd019ccbb888331557558f069adaa9ac73cdba9f6a5b08b28b1a47",
+          "field": 1,
+          "disputed": 4,
+          "decimal60Checked": 4
+        }
+      ]
+    },
+    {
+      "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+      "engineAtFault": "optiland",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-27mm-f28.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 4,
+      "decimal60Required": 0,
+      "nativeLvNoBracketChecked": 0,
+      "requests": [
+        {
+          "id": "ef1d12dc83992320e98b26172d49cb404009210b53ca116542b7c78f305efd30",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "3a7a38340a7414d350a307c25b03f033c00c3640895469a3a281621e0f90d81b",
+          "field": 0.5,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "eda48479370ed54a7b8729eab8de0c79d86eb86cbfdc3d12fc6c83fd84334a4d",
+          "field": 1,
+          "disputed": 4,
+          "decimal60Checked": 0
+        }
+      ],
+      "nativeSamples": [
+        {
+          "request": "eda48479370ed54a7b8729eab8de0c79d86eb86cbfdc3d12fc6c83fd84334a4d",
+          "ray": 51,
+          "surface": 7,
+          "geometry": "OddAsphere",
+          "point": [
+            -0.5411591769434934,
+            -4.74548653279681,
+            10.039373088295083
+          ],
+          "before": [
+            -0.5066733205137092,
+            -4.9827025477638855,
+            10.818741604697589
+          ],
+          "heading": [
+            0.04229321389057361,
+            -0.29092006688884875,
+            0.9558121147695258
+          ],
+          "localZ": -2.5406269117049156,
+          "sag": -1.2225322696046987,
+          "sagResidualMm": -1.3180946421002169,
+          "radiusMm": 4.776242842208303,
+          "stepMm": -0.8153992864909804,
+          "intensity": 1,
+          "clipRadiusMm": 5.060000001,
+          "iterations": 100,
+          "converged": false,
+          "finalResidualMm": 1.3180946421002169
+        }
+      ]
+    },
+    {
+      "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+      "engineAtFault": "optiland",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 28,
+      "decimal60Required": 0,
+      "nativeLvNoBracketChecked": 0,
+      "requests": [
+        {
+          "id": "f0edf21158e6a9ef9e47c21579a12fe110e94fd3b66027417d210355e029c219",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "5ec55c989c0421741f6f1413b382c6d2b29d97771f4fd6d8386d126fe0755451",
+          "field": 0.5,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "bb48c09ae771727d07e9ff5ab77ec74b5d412f16809bdae594fe6aa0a9b29922",
+          "field": 1,
+          "disputed": 28,
+          "decimal60Checked": 0
+        }
+      ],
+      "nativeSamples": [
+        {
+          "request": "bb48c09ae771727d07e9ff5ab77ec74b5d412f16809bdae594fe6aa0a9b29922",
+          "ray": 1140,
+          "surface": 2,
+          "geometry": "OddAsphere",
+          "point": [
+            -2.4956604374475795,
+            24.765769503319202,
+            10.815176142469104
+          ],
+          "before": [
+            -2.676952362861815,
+            21.044213888502064,
+            14.567610903793286
+          ],
+          "heading": [
+            -0.03428323899989108,
+            -0.7037653789744795,
+            0.7096047849899141
+          ],
+          "localZ": 2.5371761424691037,
+          "sag": 2.537176142469889,
+          "sagResidualMm": -7.851497230149107e-13,
+          "radiusMm": 24.891196437909056,
+          "stepMm": -5.288062934042245,
+          "intensity": 0,
+          "clipRadiusMm": 21.800000001,
+          "iterations": 100,
+          "converged": true,
+          "finalResidualMm": 7.851497230149107e-13,
+          "refHitRadiusMm": 20.80952268917753,
+          "refSagResidual60Mm": "1.969355155838714713439534793651297430590421E-16"
+        }
+      ]
+    },
+    {
+      "run": "catalog-leica-elmarit-90f28",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-leica-elmarit-90f28.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 498,
+      "decimal60Required": 498,
+      "nativeLvNoBracketChecked": 498,
+      "requests": [
+        {
+          "id": "ef9ea4fa3b018b6a74d0edd3409b72da8965607660d38a5a7d95e01dc459664f",
+          "field": 0,
+          "disputed": 216,
+          "decimal60Checked": 216
+        },
+        {
+          "id": "956bfd6d97f3b5dfd216a310d2b1dd175edeea2a8754b8f2cff759b61e700320",
+          "field": 0.5,
+          "disputed": 156,
+          "decimal60Checked": 156
+        },
+        {
+          "id": "6db43f19773ff9fe6e790297b733ba65ef4d9c631910ea4193ed05c92c5b8da6",
+          "field": 1,
+          "disputed": 126,
+          "decimal60Checked": 126
+        }
+      ]
+    },
+    {
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 146,
+      "decimal60Required": 146,
+      "nativeLvNoBracketChecked": 146,
+      "requests": [
+        {
+          "id": "37fdbd37039788f3460a0fd2ea804a0421ce246a8c7c4f737acd407ed310d50f",
+          "field": 0,
+          "disputed": 50,
+          "decimal60Checked": 50
+        },
+        {
+          "id": "c57db590bcbc4939d4d7fbc371050eb832c883dd410a24a9dc457727c7a85206",
+          "field": 0.5,
+          "disputed": 48,
+          "decimal60Checked": 48
+        },
+        {
+          "id": "2da836267ce6580624b6d742bbd84243ff3d10640d5a117b4b008b9959bd261d",
+          "field": 1,
+          "disputed": 48,
+          "decimal60Checked": 48
+        }
+      ]
+    },
+    {
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 1078,
+      "decimal60Required": 1078,
+      "nativeLvNoBracketChecked": 1078,
+      "requests": [
+        {
+          "id": "815bb84d7d828cd480c1ae756530d5e1d6ad2f974a86752e2bbb03eaed67e5e9",
+          "field": 0,
+          "disputed": 380,
+          "decimal60Checked": 380
+        },
+        {
+          "id": "61f5c0141191ba8c9e588169f38f8462fc0fb50a8ecac17dad6e2cd0e9f5db22",
+          "field": 0.5,
+          "disputed": 356,
+          "decimal60Checked": 356
+        },
+        {
+          "id": "86c4fb140d5a7fa113c434088acbb4c89aa3980db9bfdb3bd1e9103013c79507",
+          "field": 1,
+          "disputed": 342,
+          "decimal60Checked": 342
+        }
+      ]
+    },
+    {
+      "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+      "engineAtFault": "optiland",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nikon-z-dx-16-50-f3563-vr-wide.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 57,
+      "decimal60Required": 0,
+      "nativeLvNoBracketChecked": 0,
+      "requests": [
+        {
+          "id": "6727aed006e347474156eeebe423993a46d0e111715f51ff40be29f038a98364",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "bf512d8a0da58c53a22c41b942427cf5b1169e749f734159ea55c3f53515acf6",
+          "field": 0.5,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "9b47e3844f55cd838c7a3609ae55618205cd8b6598b9925fbfdf99a82a34f146",
+          "field": 1,
+          "disputed": 57,
+          "decimal60Checked": 0
+        }
+      ],
+      "nativeSamples": [
+        {
+          "request": "9b47e3844f55cd838c7a3609ae55618205cd8b6598b9925fbfdf99a82a34f146",
+          "ray": 108,
+          "surface": 2,
+          "geometry": "EvenAsphere",
+          "point": [
+            -1.46211989914488,
+            22.989556987544148,
+            -32.76487594627615
+          ],
+          "before": [
+            -2.6242547460247425,
+            9.080404799069631,
+            5.185386571278703
+          ],
+          "heading": [
+            -0.02874039054196348,
+            -0.3439828579941798,
+            0.9385359787230595
+          ],
+          "localZ": -34.08487594627615,
+          "sag": -34.08487594627607,
+          "sagResidualMm": -7.815970093361102e-14,
+          "radiusMm": 23.036004972282313,
+          "stepMm": -40.43559690613961,
+          "intensity": 0,
+          "clipRadiusMm": 9.500000001,
+          "iterations": 40,
+          "converged": true,
+          "finalResidualMm": 7.815970093361102e-14,
+          "refHitRadiusMm": 9.372445398660277,
+          "refSagResidual60Mm": "1.7635639627833112244233583252003673700275709E-16"
+        }
+      ],
+      "decimal60Additional": 57
+    },
+    {
+      "run": "catalog-nokton-50f1",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-nokton-50f1.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 8,
+      "decimal60Required": 8,
+      "nativeLvNoBracketChecked": 8,
+      "requests": [
+        {
+          "id": "410d215c687ff5b034fdc24b9f7a13086e093c934f4540a474edc93bb7672475",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "e58e1e9c2db4e3a26d92d56e18099d35f663caafe29208997e168f48be50b3c6",
+          "field": 0.5,
+          "disputed": 8,
+          "decimal60Checked": 8
+        },
+        {
+          "id": "02a4508c0b74dc070c91bb9e8b823e3532b502271a94935fbb97b55f2098acc1",
+          "field": 1,
+          "disputed": 0,
+          "decimal60Checked": 0
+        }
+      ]
+    },
+    {
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-olympus-zuiko-auto-s-50f14.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 356,
+      "decimal60Required": 356,
+      "nativeLvNoBracketChecked": 356,
+      "requests": [
+        {
+          "id": "8499334d90580ab5d402b7a0b3665bfbbf08a3726f70cebddb0dfd012ab26764",
+          "field": 0,
+          "disputed": 212,
+          "decimal60Checked": 212
+        },
+        {
+          "id": "91e4bf9b88425707104afed5d7dc0c91fbe51fb56323a998dbd1ae27eaa5e088",
+          "field": 0.5,
+          "disputed": 138,
+          "decimal60Checked": 138
+        },
+        {
+          "id": "14b9f37b4f9dd980cfa6131bf524ff85ff4f8fdf17568c22c949d51dd761cca0",
+          "field": 1,
+          "disputed": 6,
+          "decimal60Checked": 6
+        }
+      ]
+    },
+    {
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "engineAtFault": "lv",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-pentax-da-18-55mm-f35-56-al-wide.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 30,
+      "decimal60Required": 30,
+      "nativeLvNoBracketChecked": 30,
+      "requests": [
+        {
+          "id": "74bf7435d7e2fc2a8c51e0aec73fd6f9ae1b352da424181f2826a324da4b524b",
+          "field": 0,
+          "disputed": 16,
+          "decimal60Checked": 16
+        },
+        {
+          "id": "659664da9441073ac2f2d673162e1d7fcea3f12491b7d189ca8f050ad43ed163",
+          "field": 0.5,
+          "disputed": 14,
+          "decimal60Checked": 14
+        },
+        {
+          "id": "7ce3539132202def8d0ae920f446501c85a4d28430fba031afb1865ca9e7213e",
+          "field": 1,
+          "disputed": 0,
+          "decimal60Checked": 0
+        }
+      ]
+    },
+    {
+      "run": "catalog-ricoh-gr1-28f28",
+      "engineAtFault": "optiland",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-ricoh-gr1-28f28.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 2,
+      "decimal60Required": 0,
+      "nativeLvNoBracketChecked": 0,
+      "requests": [
+        {
+          "id": "3f7889791418debf3362f6803cc90ea0513a4eb3ab9679851f39a5708f34031a",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "5c858fdd4b0d06087d5442dc4984f5222dc654b9eaac0425eeb6029d75069061",
+          "field": 0.5,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "cde48ad5999d7281d2a22d877d92b741ab1403333eecbe580961293eb9df7d09",
+          "field": 1,
+          "disputed": 2,
+          "decimal60Checked": 0
+        }
+      ],
+      "nativeSamples": [
+        {
+          "request": "cde48ad5999d7281d2a22d877d92b741ab1403333eecbe580961293eb9df7d09",
+          "ray": 830,
+          "surface": 0,
+          "geometry": "EvenAsphere",
+          "point": [
+            -4.917847739981526,
+            2.298793558724544,
+            4.471634888261189
+          ],
+          "before": [
+            -4.917847739981526,
+            15.838488021072658,
+            -13.38552994487722
+          ],
+          "heading": [
+            0,
+            -0.6041847946594239,
+            0.7968442344036567
+          ],
+          "localZ": 4.471634888261189,
+          "sag": -0.6501352562523148,
+          "sagResidualMm": 5.121770144513504,
+          "radiusMm": 5.42859818178458,
+          "stepMm": 22.409856358567215,
+          "intensity": 1,
+          "clipRadiusMm": 6.500000001,
+          "iterations": 100,
+          "converged": false,
+          "finalResidualMm": -5.121770144513504
+        }
+      ],
+      "decimal60Additional": 2
+    },
+    {
+      "run": "catalog-russar-22-70f8",
+      "engineAtFault": "optiland",
+      "class": "method",
+      "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+      "reproducer": "node bin/lvrtc.mjs run suites/catalog-repro/catalog-russar-22-70f8.json --rungs r2 --jobs 4",
+      "reproduction": "all R2 comparisons identical to owner catalog except suite name",
+      "disputedRays": 120,
+      "decimal60Required": 0,
+      "nativeLvNoBracketChecked": 0,
+      "requests": [
+        {
+          "id": "341971f34e09825fd5e98a12f52435f9a8b338650da8c88b74fb898607ccc129",
+          "field": 0,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "575472fc5d2312e72361de184ceeefac2f10a8fc1942b5bc4475f61004dde8a8",
+          "field": 0.5,
+          "disputed": 0,
+          "decimal60Checked": 0
+        },
+        {
+          "id": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+          "field": 1,
+          "disputed": 120,
+          "decimal60Checked": 0
+        }
+      ],
+      "nativeSamples": [
+        {
+          "request": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+          "ray": 2,
+          "surface": 9,
+          "geometry": "StandardGeometry",
+          "point": [
+            -3.5881396877263807,
+            -21.97886237512604,
+            75.14610525179002
+          ],
+          "before": [
+            -5.178955733811195,
+            -8.053463406940146,
+            61.560710889345415
+          ],
+          "heading": [
+            0.08149886559160437,
+            -0.7134100901300192,
+            0.69599136360156
+          ],
+          "localZ": -22.346714748209976,
+          "sag": -22.193201251791223,
+          "sagResidualMm": -0.15351349641875345,
+          "radiusMm": 22.26982572278841,
+          "stepMm": 19.51948698349359,
+          "intensity": 1,
+          "clipRadiusMm": 22.269957001,
+          "sheetFactors60": [
+            "-0.96190331094761700997568889182524278270770266691147608515159",
+            "-0.00344664988636179178338245972055654239701844208686860801720"
+          ]
+        },
+        {
+          "request": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+          "ray": 252,
+          "surface": 1,
+          "geometry": "StandardGeometry",
+          "point": [
+            -4.788525392195613,
+            22.17902627006336,
+            24.856809450767795
+          ],
+          "before": [
+            -5.415808460532631,
+            31.60904815444735,
+            20.45142327873038
+          ],
+          "heading": [
+            0.06015841872457685,
+            -0.9043687511072857,
+            0.42249038649087306
+          ],
+          "localZ": 22.706699450767793,
+          "sag": 22.673448549234493,
+          "sagResidualMm": 0.03325090153330024,
+          "radiusMm": 22.69006790910646,
+          "stepMm": 10.427186778444204,
+          "intensity": 1,
+          "clipRadiusMm": 22.690074,
+          "sheetFactors60": [
+            "-0.00073271910738579860745431852824395538693853284983332545074",
+            "-0.75816164081753725777418400844172071979067357998164235223352"
+          ]
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "comparisonIndex": 204,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ee4c7562c3337245297b4e1dba62eddfb4b2c5b45b32a210ff9e31f15983a037",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 30,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6059be683acc136ed77200a25c44d7b4e67ef1d851b47c52069abe1376ccd0ea",
+      "rowHash": "35a9d84068e86d31a421a51141398a90db2c977ba78b9019ce937c4b774ca389"
+    },
+    {
+      "comparisonIndex": 204,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ee4c7562c3337245297b4e1dba62eddfb4b2c5b45b32a210ff9e31f15983a037",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 30,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "76f1326378c5875169ab83e1a847265e83c1255d8ad7b164b8f829da4f264f0e",
+      "rowHash": "ce257e189c1846f1bdc0564ec847d21d230ecf521e806fc03d092fb9f5148f2b"
+    },
+    {
+      "comparisonIndex": 205,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ee4c7562c3337245297b4e1dba62eddfb4b2c5b45b32a210ff9e31f15983a037",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 30,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6059be683acc136ed77200a25c44d7b4e67ef1d851b47c52069abe1376ccd0ea",
+      "rowHash": "35a9d84068e86d31a421a51141398a90db2c977ba78b9019ce937c4b774ca389"
+    },
+    {
+      "comparisonIndex": 205,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ee4c7562c3337245297b4e1dba62eddfb4b2c5b45b32a210ff9e31f15983a037",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 30,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "76f1326378c5875169ab83e1a847265e83c1255d8ad7b164b8f829da4f264f0e",
+      "rowHash": "ce257e189c1846f1bdc0564ec847d21d230ecf521e806fc03d092fb9f5148f2b"
+    },
+    {
+      "comparisonIndex": 206,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ab4d93868abd019ccbb888331557558f069adaa9ac73cdba9f6a5b08b28b1a47",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6059be683acc136ed77200a25c44d7b4e67ef1d851b47c52069abe1376ccd0ea",
+      "rowHash": "59654775fd5da92750fe20c0c95d4de61cd4aa5d71621d8d032405cd530e154e"
+    },
+    {
+      "comparisonIndex": 206,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ab4d93868abd019ccbb888331557558f069adaa9ac73cdba9f6a5b08b28b1a47",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "76f1326378c5875169ab83e1a847265e83c1255d8ad7b164b8f829da4f264f0e",
+      "rowHash": "377c5b43da00c89401ce150987f27617babe0e83ed3b62baebfc0b4ac09f8d9b"
+    },
+    {
+      "comparisonIndex": 207,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ab4d93868abd019ccbb888331557558f069adaa9ac73cdba9f6a5b08b28b1a47",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6059be683acc136ed77200a25c44d7b4e67ef1d851b47c52069abe1376ccd0ea",
+      "rowHash": "59654775fd5da92750fe20c0c95d4de61cd4aa5d71621d8d032405cd530e154e"
+    },
+    {
+      "comparisonIndex": 207,
+      "run": "catalog-bertele-sonnar-50f2-scaled",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ab4d93868abd019ccbb888331557558f069adaa9ac73cdba9f6a5b08b28b1a47",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "76f1326378c5875169ab83e1a847265e83c1255d8ad7b164b8f829da4f264f0e",
+      "rowHash": "377c5b43da00c89401ce150987f27617babe0e83ed3b62baebfc0b4ac09f8d9b"
+    },
+    {
+      "comparisonIndex": 5834,
+      "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "eda48479370ed54a7b8729eab8de0c79d86eb86cbfdc3d12fc6c83fd84334a4d",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e71fcb8ea3d8199675a6deb386604a387ef438adf68c35ed6d0474b2b7aa8a2a",
+      "rowHash": "0256c16ccdddf2c5eae6605b54f2423eea20ee9638e3ebc7b85b19a9a7291fb6"
+    },
+    {
+      "comparisonIndex": 5835,
+      "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "eda48479370ed54a7b8729eab8de0c79d86eb86cbfdc3d12fc6c83fd84334a4d",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e71fcb8ea3d8199675a6deb386604a387ef438adf68c35ed6d0474b2b7aa8a2a",
+      "rowHash": "0256c16ccdddf2c5eae6605b54f2423eea20ee9638e3ebc7b85b19a9a7291fb6"
+    },
+    {
+      "comparisonIndex": 5835,
+      "run": "catalog-fujifilm-fujinon-xf-27mm-f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "eda48479370ed54a7b8729eab8de0c79d86eb86cbfdc3d12fc6c83fd84334a4d",
+      "engines": [
+        "optiland",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 4,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "44fd8e20c8610b0f7e5efc2f37229e15a8a1289bc671c32ad78eed01cf834557",
+      "rowHash": "1d97fe09a18ddfbf42d1250a45887344d1e3d3e1964d0a8fdfea941c6c7caece"
+    },
+    {
+      "comparisonIndex": 5966,
+      "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "bb48c09ae771727d07e9ff5ab77ec74b5d412f16809bdae594fe6aa0a9b29922",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 28,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6312cc7e66ac6d1e889b2b28624c2f61ef8b9402bc302667fe7199dac91d1848",
+      "rowHash": "4963aedb5f01ba8314348724ff050b39adc88de919ebc71e84e5d5ece0cba388"
+    },
+    {
+      "comparisonIndex": 5967,
+      "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "bb48c09ae771727d07e9ff5ab77ec74b5d412f16809bdae594fe6aa0a9b29922",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 28,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6312cc7e66ac6d1e889b2b28624c2f61ef8b9402bc302667fe7199dac91d1848",
+      "rowHash": "4963aedb5f01ba8314348724ff050b39adc88de919ebc71e84e5d5ece0cba388"
+    },
+    {
+      "comparisonIndex": 5967,
+      "run": "catalog-fujifilm-fujinon-xf-8-16mm-f28-r-lm-wr-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "bb48c09ae771727d07e9ff5ab77ec74b5d412f16809bdae594fe6aa0a9b29922",
+      "engines": [
+        "optiland",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 28,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "81341356d95cc39bf01199cb882dc3cbdbb264555345d24eba1b988b8dfb0ee2",
+      "rowHash": "cbdd64949d64892058491ffb2f3aa56c5e5b517bc326cb35dedba9861095fc52"
+    },
+    {
+      "comparisonIndex": 9030,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ef9ea4fa3b018b6a74d0edd3409b72da8965607660d38a5a7d95e01dc459664f",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 216,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "02ef4fc7b0c334572a4b429cc5711e0032d37fd82c878890a8fd5da504b039fb"
+    },
+    {
+      "comparisonIndex": 9030,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "ef9ea4fa3b018b6a74d0edd3409b72da8965607660d38a5a7d95e01dc459664f",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 216,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "bcd6eed322dc6c70ddaf0a99333f5570cbc267a187468afbdacf5c0b8eb80118"
+    },
+    {
+      "comparisonIndex": 9031,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ef9ea4fa3b018b6a74d0edd3409b72da8965607660d38a5a7d95e01dc459664f",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 216,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "02ef4fc7b0c334572a4b429cc5711e0032d37fd82c878890a8fd5da504b039fb"
+    },
+    {
+      "comparisonIndex": 9031,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "ef9ea4fa3b018b6a74d0edd3409b72da8965607660d38a5a7d95e01dc459664f",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 216,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "bcd6eed322dc6c70ddaf0a99333f5570cbc267a187468afbdacf5c0b8eb80118"
+    },
+    {
+      "comparisonIndex": 9032,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "956bfd6d97f3b5dfd216a310d2b1dd175edeea2a8754b8f2cff759b61e700320",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 156,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "fb4791b82fe8a4e7d4ad5b78aa6a69caba223b230da683797a58870eccc0015b"
+    },
+    {
+      "comparisonIndex": 9032,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "956bfd6d97f3b5dfd216a310d2b1dd175edeea2a8754b8f2cff759b61e700320",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 156,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "bd2a560088d271cefe6e7037aac3d257170cdac906ac717c1193c5bf03037844"
+    },
+    {
+      "comparisonIndex": 9033,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "956bfd6d97f3b5dfd216a310d2b1dd175edeea2a8754b8f2cff759b61e700320",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 156,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "fb4791b82fe8a4e7d4ad5b78aa6a69caba223b230da683797a58870eccc0015b"
+    },
+    {
+      "comparisonIndex": 9033,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "956bfd6d97f3b5dfd216a310d2b1dd175edeea2a8754b8f2cff759b61e700320",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 156,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "bd2a560088d271cefe6e7037aac3d257170cdac906ac717c1193c5bf03037844"
+    },
+    {
+      "comparisonIndex": 9034,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "6db43f19773ff9fe6e790297b733ba65ef4d9c631910ea4193ed05c92c5b8da6",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 126,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "2ed7d367f8ab9672a5a81391a1209e2ed19756932befb14b0fd551e66e00507b"
+    },
+    {
+      "comparisonIndex": 9034,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "6db43f19773ff9fe6e790297b733ba65ef4d9c631910ea4193ed05c92c5b8da6",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 126,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "f08aedb247c83a0ea8d74a12d93340be9f599ee6dfbd8f99be964423eb7fc1a1"
+    },
+    {
+      "comparisonIndex": 9035,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "6db43f19773ff9fe6e790297b733ba65ef4d9c631910ea4193ed05c92c5b8da6",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 126,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "cc9c5b1c256e2197d6278c26e8b9831e69d4928c71a83cc0f7d993c3d8ca81e9",
+      "rowHash": "2ed7d367f8ab9672a5a81391a1209e2ed19756932befb14b0fd551e66e00507b"
+    },
+    {
+      "comparisonIndex": 9035,
+      "run": "catalog-leica-elmarit-90f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "6db43f19773ff9fe6e790297b733ba65ef4d9c631910ea4193ed05c92c5b8da6",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 126,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "596d53a22f3289779114675769364c745184ab9566b69c734f35878a0ee72596",
+      "rowHash": "f08aedb247c83a0ea8d74a12d93340be9f599ee6dfbd8f99be964423eb7fc1a1"
+    },
+    {
+      "comparisonIndex": 15128,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "37fdbd37039788f3460a0fd2ea804a0421ce246a8c7c4f737acd407ed310d50f",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 50,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "cd3bce696026fb1eeb814140580721a18e027fcd3c4b566df0ea2a0452e9559f"
+    },
+    {
+      "comparisonIndex": 15128,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "37fdbd37039788f3460a0fd2ea804a0421ce246a8c7c4f737acd407ed310d50f",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 50,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "7415edd6597cdb9b7288f73c059e1cba9b6f3a9f325014259bc7d5c41122d5a1"
+    },
+    {
+      "comparisonIndex": 15129,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "37fdbd37039788f3460a0fd2ea804a0421ce246a8c7c4f737acd407ed310d50f",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 50,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "cd3bce696026fb1eeb814140580721a18e027fcd3c4b566df0ea2a0452e9559f"
+    },
+    {
+      "comparisonIndex": 15129,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "37fdbd37039788f3460a0fd2ea804a0421ce246a8c7c4f737acd407ed310d50f",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 50,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "7415edd6597cdb9b7288f73c059e1cba9b6f3a9f325014259bc7d5c41122d5a1"
+    },
+    {
+      "comparisonIndex": 15130,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "c57db590bcbc4939d4d7fbc371050eb832c883dd410a24a9dc457727c7a85206",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "644e75cef98955988f2099c87e18179a04d68c98f44b5ddf91de390c12492a74"
+    },
+    {
+      "comparisonIndex": 15130,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "c57db590bcbc4939d4d7fbc371050eb832c883dd410a24a9dc457727c7a85206",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "c208b5f2dd8a18722af225d7215bf68c2766d9471f7aee8d6fc4f30472c24169"
+    },
+    {
+      "comparisonIndex": 15131,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "c57db590bcbc4939d4d7fbc371050eb832c883dd410a24a9dc457727c7a85206",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "644e75cef98955988f2099c87e18179a04d68c98f44b5ddf91de390c12492a74"
+    },
+    {
+      "comparisonIndex": 15131,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "c57db590bcbc4939d4d7fbc371050eb832c883dd410a24a9dc457727c7a85206",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "c208b5f2dd8a18722af225d7215bf68c2766d9471f7aee8d6fc4f30472c24169"
+    },
+    {
+      "comparisonIndex": 15132,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "2da836267ce6580624b6d742bbd84243ff3d10640d5a117b4b008b9959bd261d",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "bd13b41d8ffdce24e7f2bc32c48be8d542ca69c60580088240cfd674d57e016d"
+    },
+    {
+      "comparisonIndex": 15132,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "2da836267ce6580624b6d742bbd84243ff3d10640d5a117b4b008b9959bd261d",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "615d39b23eba8e1012b9163f700fd6eaaf370e05c07149f17ec25b5406ec201f"
+    },
+    {
+      "comparisonIndex": 15133,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "2da836267ce6580624b6d742bbd84243ff3d10640d5a117b4b008b9959bd261d",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "09baa8435294dca30f55205686d50fdf596c6eb23a88332851d5e341a62669ac",
+      "rowHash": "bd13b41d8ffdce24e7f2bc32c48be8d542ca69c60580088240cfd674d57e016d"
+    },
+    {
+      "comparisonIndex": 15133,
+      "run": "catalog-nikon-ai-s-zoom-nikkor-35-70mm-f35-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "2da836267ce6580624b6d742bbd84243ff3d10640d5a117b4b008b9959bd261d",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 48,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "6b0b26861ba514aa29950dd13d3b308e4e8b7730f3f089785efa9148d4487790",
+      "rowHash": "615d39b23eba8e1012b9163f700fd6eaaf370e05c07149f17ec25b5406ec201f"
+    },
+    {
+      "comparisonIndex": 15172,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "815bb84d7d828cd480c1ae756530d5e1d6ad2f974a86752e2bbb03eaed67e5e9",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 380,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "088c3ea841e7fa940d68d53dbc12b15908366734150f029769f8a5911f9f0c67"
+    },
+    {
+      "comparisonIndex": 15172,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "815bb84d7d828cd480c1ae756530d5e1d6ad2f974a86752e2bbb03eaed67e5e9",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 380,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "e38b7d95113ba905283d88f20fb20e74477aed2d93a2056303afdb431d674690"
+    },
+    {
+      "comparisonIndex": 15173,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "815bb84d7d828cd480c1ae756530d5e1d6ad2f974a86752e2bbb03eaed67e5e9",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 380,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "088c3ea841e7fa940d68d53dbc12b15908366734150f029769f8a5911f9f0c67"
+    },
+    {
+      "comparisonIndex": 15173,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "815bb84d7d828cd480c1ae756530d5e1d6ad2f974a86752e2bbb03eaed67e5e9",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 380,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "e38b7d95113ba905283d88f20fb20e74477aed2d93a2056303afdb431d674690"
+    },
+    {
+      "comparisonIndex": 15174,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "61f5c0141191ba8c9e588169f38f8462fc0fb50a8ecac17dad6e2cd0e9f5db22",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 356,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "e178ff008d1b59c866176f9cfb7b5a64f661bf969de1b275e05715a120c69e2a"
+    },
+    {
+      "comparisonIndex": 15174,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "61f5c0141191ba8c9e588169f38f8462fc0fb50a8ecac17dad6e2cd0e9f5db22",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 356,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "8bf39333be645c4835390911311d18221c110739f27707eff025b666ffe18695"
+    },
+    {
+      "comparisonIndex": 15175,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "61f5c0141191ba8c9e588169f38f8462fc0fb50a8ecac17dad6e2cd0e9f5db22",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 356,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "e178ff008d1b59c866176f9cfb7b5a64f661bf969de1b275e05715a120c69e2a"
+    },
+    {
+      "comparisonIndex": 15175,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "61f5c0141191ba8c9e588169f38f8462fc0fb50a8ecac17dad6e2cd0e9f5db22",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 356,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "8bf39333be645c4835390911311d18221c110739f27707eff025b666ffe18695"
+    },
+    {
+      "comparisonIndex": 15176,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "86c4fb140d5a7fa113c434088acbb4c89aa3980db9bfdb3bd1e9103013c79507",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 342,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "16d8e4bfc71c294eae09ed89c1c61e2961fd521199108c60d027c5ae97f716e2"
+    },
+    {
+      "comparisonIndex": 15176,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "86c4fb140d5a7fa113c434088acbb4c89aa3980db9bfdb3bd1e9103013c79507",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 342,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "5108104ed3c7ef0b215413fef3b0aa01e764d19999ae63ce80efda388928bc1b"
+    },
+    {
+      "comparisonIndex": 15177,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "86c4fb140d5a7fa113c434088acbb4c89aa3980db9bfdb3bd1e9103013c79507",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 342,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "b87210d1a8b62be65a04e22fde87b7d3802a91920091203bbcb55211a7cf56fe",
+      "rowHash": "16d8e4bfc71c294eae09ed89c1c61e2961fd521199108c60d027c5ae97f716e2"
+    },
+    {
+      "comparisonIndex": 15177,
+      "run": "catalog-nikon-ai-zoom-nikkor-25-50mm-f4-tele",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "86c4fb140d5a7fa113c434088acbb4c89aa3980db9bfdb3bd1e9103013c79507",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 342,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3b41ea14d013437e6a1c04d6632ce00fb05c8277b98257e448c4fb14a35c3601",
+      "rowHash": "5108104ed3c7ef0b215413fef3b0aa01e764d19999ae63ce80efda388928bc1b"
+    },
+    {
+      "comparisonIndex": 17048,
+      "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "9b47e3844f55cd838c7a3609ae55618205cd8b6598b9925fbfdf99a82a34f146",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 57,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "03fc5b0810a4b96fedd53d28a2d7faea42324e047992bfad43dc631e3cddcc35",
+      "rowHash": "4367daab9ff199edd6f7374c0050da3f629fdcc66348428efd145edd97012a78"
+    },
+    {
+      "comparisonIndex": 17049,
+      "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "9b47e3844f55cd838c7a3609ae55618205cd8b6598b9925fbfdf99a82a34f146",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 57,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "03fc5b0810a4b96fedd53d28a2d7faea42324e047992bfad43dc631e3cddcc35",
+      "rowHash": "4367daab9ff199edd6f7374c0050da3f629fdcc66348428efd145edd97012a78"
+    },
+    {
+      "comparisonIndex": 17049,
+      "run": "catalog-nikon-z-dx-16-50-f3563-vr-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "9b47e3844f55cd838c7a3609ae55618205cd8b6598b9925fbfdf99a82a34f146",
+      "engines": [
+        "optiland",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 57,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "154aa801d43f974326e3a2068f8625dae0628f450e05b2e6f4ba0c179c3fc3d0",
+      "rowHash": "5d221e20910e8d30c09f0a95a2b9f236483fd1d517bd4dda2c90ef634a0a178b"
+    },
+    {
+      "comparisonIndex": 17408,
+      "run": "catalog-nokton-50f1",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "e58e1e9c2db4e3a26d92d56e18099d35f663caafe29208997e168f48be50b3c6",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 8,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3ad6be5fe712158eb44e46f022af1e20f42e15c8cbff9d62cb74fc84698e7ab3",
+      "rowHash": "b3c4bff6d95e7e502a583106b5893a0fd431a7ede03f665da55ce1b385bc9b76"
+    },
+    {
+      "comparisonIndex": 17408,
+      "run": "catalog-nokton-50f1",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "e58e1e9c2db4e3a26d92d56e18099d35f663caafe29208997e168f48be50b3c6",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 8,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "5104fd8856a9eca76c142adb1ba63004336f0cad24352451c4feda031ceddceb",
+      "rowHash": "778e6a5b5cf952ed8ef5055ddb9d4ebb56be7c2087523277466476756d0e3846"
+    },
+    {
+      "comparisonIndex": 17409,
+      "run": "catalog-nokton-50f1",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "e58e1e9c2db4e3a26d92d56e18099d35f663caafe29208997e168f48be50b3c6",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 8,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "3ad6be5fe712158eb44e46f022af1e20f42e15c8cbff9d62cb74fc84698e7ab3",
+      "rowHash": "b3c4bff6d95e7e502a583106b5893a0fd431a7ede03f665da55ce1b385bc9b76"
+    },
+    {
+      "comparisonIndex": 17409,
+      "run": "catalog-nokton-50f1",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "e58e1e9c2db4e3a26d92d56e18099d35f663caafe29208997e168f48be50b3c6",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 8,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "5104fd8856a9eca76c142adb1ba63004336f0cad24352451c4feda031ceddceb",
+      "rowHash": "778e6a5b5cf952ed8ef5055ddb9d4ebb56be7c2087523277466476756d0e3846"
+    },
+    {
+      "comparisonIndex": 18232,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "8499334d90580ab5d402b7a0b3665bfbbf08a3726f70cebddb0dfd012ab26764",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 212,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "696736592822cf0893fc7d8bce033f26ed657ed9fa2cd1423d21db13ea258f5e"
+    },
+    {
+      "comparisonIndex": 18232,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "8499334d90580ab5d402b7a0b3665bfbbf08a3726f70cebddb0dfd012ab26764",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 212,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "44df17f31a42c9d6ef54377410550d6ca69bb3dc3540ddbf639dc52adff003ae"
+    },
+    {
+      "comparisonIndex": 18233,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "8499334d90580ab5d402b7a0b3665bfbbf08a3726f70cebddb0dfd012ab26764",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 212,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "696736592822cf0893fc7d8bce033f26ed657ed9fa2cd1423d21db13ea258f5e"
+    },
+    {
+      "comparisonIndex": 18233,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "8499334d90580ab5d402b7a0b3665bfbbf08a3726f70cebddb0dfd012ab26764",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 212,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "44df17f31a42c9d6ef54377410550d6ca69bb3dc3540ddbf639dc52adff003ae"
+    },
+    {
+      "comparisonIndex": 18234,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "91e4bf9b88425707104afed5d7dc0c91fbe51fb56323a998dbd1ae27eaa5e088",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 138,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "bf88363c404b1d3bf7caa623aaa60bd30c420b314411a6d213f21247ffcb05f2"
+    },
+    {
+      "comparisonIndex": 18234,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "91e4bf9b88425707104afed5d7dc0c91fbe51fb56323a998dbd1ae27eaa5e088",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 138,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "7869c3399b8a1c02a0367b54def54029a6f0447136122635d074a80a7e3e1beb"
+    },
+    {
+      "comparisonIndex": 18235,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "91e4bf9b88425707104afed5d7dc0c91fbe51fb56323a998dbd1ae27eaa5e088",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 138,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "bf88363c404b1d3bf7caa623aaa60bd30c420b314411a6d213f21247ffcb05f2"
+    },
+    {
+      "comparisonIndex": 18235,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "91e4bf9b88425707104afed5d7dc0c91fbe51fb56323a998dbd1ae27eaa5e088",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 138,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "7869c3399b8a1c02a0367b54def54029a6f0447136122635d074a80a7e3e1beb"
+    },
+    {
+      "comparisonIndex": 18236,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "14b9f37b4f9dd980cfa6131bf524ff85ff4f8fdf17568c22c949d51dd761cca0",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 6,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "8f84bc07242aa609e787e29abe239eca94f880a1ebcdf10f82c075b58acacff1"
+    },
+    {
+      "comparisonIndex": 18236,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "14b9f37b4f9dd980cfa6131bf524ff85ff4f8fdf17568c22c949d51dd761cca0",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 6,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "21a632926d365184c734a35225971fd23b0486a710b32af205cd1044908befc6"
+    },
+    {
+      "comparisonIndex": 18237,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "14b9f37b4f9dd980cfa6131bf524ff85ff4f8fdf17568c22c949d51dd761cca0",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 6,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8dbcce1d339ac9723fbb5b5027c15de3a5e7394bf1561b1d20530732e5da4b82",
+      "rowHash": "8f84bc07242aa609e787e29abe239eca94f880a1ebcdf10f82c075b58acacff1"
+    },
+    {
+      "comparisonIndex": 18237,
+      "run": "catalog-olympus-zuiko-auto-s-50f14",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "14b9f37b4f9dd980cfa6131bf524ff85ff4f8fdf17568c22c949d51dd761cca0",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 6,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "d44526b239ee549bc12379b04845de58c1ddb4d1b37deff2581d33e384a5071c",
+      "rowHash": "21a632926d365184c734a35225971fd23b0486a710b32af205cd1044908befc6"
+    },
+    {
+      "comparisonIndex": 19830,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "74bf7435d7e2fc2a8c51e0aec73fd6f9ae1b352da424181f2826a324da4b524b",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 16,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e5bed43170fde81ba8b0f04b9bbaef7d9edad6d249443c041d77baad127827b5",
+      "rowHash": "c5ace221c35826923c1d42e5c8825a776a742a1ae08cc725049528b1dc0a5284"
+    },
+    {
+      "comparisonIndex": 19830,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "74bf7435d7e2fc2a8c51e0aec73fd6f9ae1b352da424181f2826a324da4b524b",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 16,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8a30fabf36cf4579337bd6ee89d8cd3e3dff0986531b64c5bc4d92f25ec94f14",
+      "rowHash": "28381068d057b9e6c8cc31228d436f29072f8c5342bd2985f569bc2f19d4059e"
+    },
+    {
+      "comparisonIndex": 19831,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "74bf7435d7e2fc2a8c51e0aec73fd6f9ae1b352da424181f2826a324da4b524b",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 16,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e5bed43170fde81ba8b0f04b9bbaef7d9edad6d249443c041d77baad127827b5",
+      "rowHash": "c5ace221c35826923c1d42e5c8825a776a742a1ae08cc725049528b1dc0a5284"
+    },
+    {
+      "comparisonIndex": 19831,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "74bf7435d7e2fc2a8c51e0aec73fd6f9ae1b352da424181f2826a324da4b524b",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 16,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8a30fabf36cf4579337bd6ee89d8cd3e3dff0986531b64c5bc4d92f25ec94f14",
+      "rowHash": "28381068d057b9e6c8cc31228d436f29072f8c5342bd2985f569bc2f19d4059e"
+    },
+    {
+      "comparisonIndex": 19832,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "659664da9441073ac2f2d673162e1d7fcea3f12491b7d189ca8f050ad43ed163",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 14,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e5bed43170fde81ba8b0f04b9bbaef7d9edad6d249443c041d77baad127827b5",
+      "rowHash": "0af606df91ca9762b68c4eb9880c679ece4e3757e541e55813a814c8337faa2c"
+    },
+    {
+      "comparisonIndex": 19832,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "659664da9441073ac2f2d673162e1d7fcea3f12491b7d189ca8f050ad43ed163",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 14,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8a30fabf36cf4579337bd6ee89d8cd3e3dff0986531b64c5bc4d92f25ec94f14",
+      "rowHash": "45d7422a9836b72b80e89577dddc78098bf1c361c2251cd6e7fa7229c822204d"
+    },
+    {
+      "comparisonIndex": 19833,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "659664da9441073ac2f2d673162e1d7fcea3f12491b7d189ca8f050ad43ed163",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 14,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "e5bed43170fde81ba8b0f04b9bbaef7d9edad6d249443c041d77baad127827b5",
+      "rowHash": "0af606df91ca9762b68c4eb9880c679ece4e3757e541e55813a814c8337faa2c"
+    },
+    {
+      "comparisonIndex": 19833,
+      "run": "catalog-pentax-da-18-55mm-f35-56-al-wide",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "659664da9441073ac2f2d673162e1d7fcea3f12491b7d189ca8f050ad43ed163",
+      "engines": [
+        "lv",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 14,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#where-two-neighbouring-surfaces-cross-the-ray-is-lost",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "8a30fabf36cf4579337bd6ee89d8cd3e3dff0986531b64c5bc4d92f25ec94f14",
+      "rowHash": "45d7422a9836b72b80e89577dddc78098bf1c361c2251cd6e7fa7229c822204d"
+    },
+    {
+      "comparisonIndex": 20740,
+      "run": "catalog-ricoh-gr1-28f28",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "cde48ad5999d7281d2a22d877d92b741ab1403333eecbe580961293eb9df7d09",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 2,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "02fb59b40bd885d736185656c1d07b45cd70897a088be3591fc0611d92d1e40c",
+      "rowHash": "6733d358e5f8de6ff7fe05a386aae754509c041a6b442c66cc4993d74cc4967d"
+    },
+    {
+      "comparisonIndex": 20741,
+      "run": "catalog-ricoh-gr1-28f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "cde48ad5999d7281d2a22d877d92b741ab1403333eecbe580961293eb9df7d09",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 2,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "02fb59b40bd885d736185656c1d07b45cd70897a088be3591fc0611d92d1e40c",
+      "rowHash": "6733d358e5f8de6ff7fe05a386aae754509c041a6b442c66cc4993d74cc4967d"
+    },
+    {
+      "comparisonIndex": 20741,
+      "run": "catalog-ricoh-gr1-28f28",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "cde48ad5999d7281d2a22d877d92b741ab1403333eecbe580961293eb9df7d09",
+      "engines": [
+        "optiland",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 2,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#on-an-asphere-optilands-iteration-starts-at-the-base-conic-and-goes-where-that-leads",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "23f691e43e9cc5056a1505258fa0b722c7ed2ba2d9ff932319460a010051fad7",
+      "rowHash": "04ece4b587f2a1e26b0f2b027bd2ddda611e5c455f912760b158d4a5422400ed"
+    },
+    {
+      "comparisonIndex": 21156,
+      "run": "catalog-russar-22-70f8",
+      "rung": "r2",
+      "mode": "reference-vs-each",
+      "requestId": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 120,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "7b6caeed23e34f0842e5f252ad5148ab41493c16b0f9f9f7d8d5e41d6473b672",
+      "rowHash": "80917fff46f9f22347d98cf51c2f3533d84f9b3e703059774848809a52560c99"
+    },
+    {
+      "comparisonIndex": 21157,
+      "run": "catalog-russar-22-70f8",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+      "engines": [
+        "lv",
+        "optiland"
+      ],
+      "metric": "mask.mismatches",
+      "value": 120,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "7b6caeed23e34f0842e5f252ad5148ab41493c16b0f9f9f7d8d5e41d6473b672",
+      "rowHash": "80917fff46f9f22347d98cf51c2f3533d84f9b3e703059774848809a52560c99"
+    },
+    {
+      "comparisonIndex": 21157,
+      "run": "catalog-russar-22-70f8",
+      "rung": "r2",
+      "mode": "pairwise",
+      "requestId": "b277ef747a3973971f433b860788b473fe2c9fbbef971acd3284e59e5db96af0",
+      "engines": [
+        "optiland",
+        "ref"
+      ],
+      "metric": "mask.mismatches",
+      "value": 120,
+      "class": "method",
+      "gotcha": "docs/gotchas.md#a-conic-is-met-in-front-of-the-ray-inside-the-aperture-or-else-on-its-far-side",
+      "aggregateRequests": 3,
+      "aggregateEvidenceHash": "1d755a395280c5d0046c30659ddbcf45404e3ea379a665419ba8de371b0b544e",
+      "rowHash": "edd2f0b57f4dbba11a92e5be6070ed2def4af8eca8a7ddcf0c5f8029d02d433d"
+    }
+  ],
+  "rowHashAlgorithm": "hashCanonical({requests: 1, pair: originalPair})"
+}

@@ -46,7 +46,7 @@ test(
   },
 );
 
-// LV 2e046d71: record the native cardinal parity defect; no gate or reference value is adjusted to match it.
+// LV f9fb75c86 fixes the native parity defect; the adapter must still return LV's own cardinal value.
 test(
   "LV's folded cardinal result preserves its native odd-reflection front-principal value",
   { skip: LV_UNAVAILABLE },
@@ -64,10 +64,14 @@ test(
     assert.equal(decodeNdArray(answer.data.frontPrincipalZ).values[0], native.points.frontPrincipal.z);
     const mirror = rebuilt.model.state.surfaces.find((surface) => surface.interaction.type === "reflect");
     assert.ok(mirror);
-    // Both principal planes of a single mirror are its vertex plane. LV uses a determinant +1 cardinal formula
-    // on a physical-slope reflection matrix of determinant -1, displacing the front principal point by one R.
+    // Both principal planes of a single mirror are its vertex plane. The old determinant +1 formula
+    // displaced the front principal point by one R; the owner fixed it in f9fb75c86.
     if (binding.fingerprint().commit === "2e046d712fa5f6631ace3b8963d18827b909a37f") {
       assert.equal(native.points.frontPrincipal.z - mirror.z, mirror.R);
+    }
+    if (binding.fingerprint().commit === "879c061024519be2b1acaf3cc082947235ea9760") {
+      assert.equal(native.points.frontPrincipal.z, mirror.z);
+      assert.equal(native.points.rearPrincipal.z, mirror.z);
     }
   },
 );

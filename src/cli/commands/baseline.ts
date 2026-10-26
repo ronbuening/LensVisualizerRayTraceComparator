@@ -1,3 +1,4 @@
+import { catalogFeatures, classifyCatalog, readKnownFailures, unclassifiedFailures } from "../../baseline/catalog.ts";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
@@ -63,6 +64,7 @@ const HELP = [
   "        hash of the run's case, each engine's fingerprint and adapter revision, and the policy. Nothing is",
   "        asked of any engine. It is refused for a run with an engine that could not be used, a run that was not",
   "        started, a case source that changed during the run, and a pair that is FAIL or ERROR.",
+  "        Catalog alone admits exact FAIL evidence from docs/known-failures.json, retaining FAIL and its class.",
   "check   Needs the engines. Runs the suite of the baseline again on the baseline's engines and rungs, asking an",
   "        engine only for what the result store does not hold, compares it (comparisons.json is written as lvrtc",
   "        compare writes it), and sets every record of the baseline against it:",
@@ -91,7 +93,7 @@ const HELP = [
   "  --json        check: print the records as one JSON object in place of the lines",
   "",
   "Exit code: write: 0 when the baseline was written; 1 when a pair is FAIL or ERROR; 2 when the run cannot be a",
-  "baseline. check: 0 when no record is DRIFT and no pair is FAIL or ERROR today, STALE or not; 1 otherwise; 2",
+  "baseline. check: 0 when no record is DRIFT and no unlisted pair is FAIL or ERROR today, STALE or not; 1 otherwise; 2",
   "when nothing was checked.",
   "",
 ].join("\n");
@@ -139,23 +141,21 @@ async function write(
   const problems = baselineWriteProblems(manifest);
   if (problems.length > 0)
     throw new UsageError(`${directory}: no baseline is written of this run: ${problems.join("; ")}`);
-  const baseline = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
+  const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
+  const baseline = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
   if (mtf && baseline.runs.every((run) => run.rungs.length === 0)) {
     throw new UsageError(
       `${directory}: no MTF baseline is written of this run: it has none of the rungs ${MTF_BASELINE_RUNGS.join(", ")}`,
     );
   }
-  const failing = baseline.runs.flatMap((run) =>
-    run.rungs.flatMap((rung) =>
-      rung.pairs
-        .filter((pair) => FAILING_VERDICTS.includes(pair.verdict))
-        .map((pair) => `${run.name} ${rung.rung} ${pair.a} ${pair.b} ${pair.verdict}`),
-    ),
-  );
+  const failing = unclassifiedFailures(baseline);
   if (failing.length > 0) {
     for (const line of failing) io.stderr(`lvrtc baseline: ${line}\n`);
     io.stderr(
-      "lvrtc baseline: no baseline is written of a run with a pair that is FAIL or ERROR: a baseline records what " +
+      (baseline.suite.name === "catalog"
+        ? "lvrtc baseline: no baseline is written with an unclassified/changed FAIL or any ERROR: "
+        : "lvrtc baseline: no baseline is written of a run with a pair that is FAIL or ERROR: ") +
+        "a baseline records what " +
         "the engines agreed on; lvrtc compare names each pair and its reason\n",
     );
     return EXIT_FAILURE;
@@ -267,7 +267,8 @@ async function check(
     const comparisons = await compareRunDirectoryWithJobs(directory, policy, jobs);
     writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
     const { manifest } = result;
-    const fresh = buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {});
+    const raw = catalogFeatures(buildBaseline(manifest, comparisons, policy, mtf ? MTF_BASELINE : {}), directory);
+    const fresh = classifyCatalog(raw, raw.suite.name === "catalog" ? readKnownFailures(rootDir) : []);
     const records = checkBaseline(committed, fresh, policy);
     const changes = summarizeChanges(records);
 

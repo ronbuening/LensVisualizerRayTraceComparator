@@ -57,9 +57,11 @@ async function featureCase(run: string): Promise<OpticalCase> {
 
 test("every committed suite loads, and every run exports or records a finite-station refusal", { skip }, async () => {
   for (const name of SUITE_NAMES) {
+    // Catalog expansion/export is covered by the bounded Stage 5.3 sample, never a new full sweep in this tier.
+    if (name === "catalog") continue;
     const suite = await suiteOf(name);
     for (const run of suite.runs) {
-      const at = `${name}/${run.spec.name}`;
+      const at: string = `${name}/${run.spec.name}`;
       if ((name === "focus-stations" || name === "folded" || name === "diffractive") && run.opticalCase === null) {
         assert.ok(run.problems.length > 0, at);
         for (const problem of run.problems) {

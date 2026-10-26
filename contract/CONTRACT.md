@@ -2643,3 +2643,13 @@ or assigned to another coefficient slot. Every sequential state of the diffracti
 A passed non-refracting visit (a passive crossing or an ordinary reflection) has zero phasePath in this model.
 No coating/reflection phase is introduced; the diffractive polynomial is the transmitted phase of its substrate.
 An ended visit has NaN, rather than a physical phase assigned to a ray that did not pass it.
+
+### Catalog baseline annotations (minor 6)
+
+Only catalog baselines state contract `1.6` for the additive baseline metadata `runs[].features` (the validated
+case's source flags), `censusReasons` (distinct source/field/recipe codes) and pair `failures` (classified FAIL
+metrics). No engine request, result, case or descriptor changes for this addition. Other baseline versions remain
+content-selected as before. The schema accepts these optional fields; invariants require minor 6, restrict them
+to suite `catalog`, require its feature inventory, and restrict failure annotations to a FAIL pair. Each annotation
+records metric/class/gotcha/reproducer/evidenceHash. CLI admission and hermetic verify require exact agreement with
+`docs/known-failures.json`; the actual verdict, metrics and policy tolerances are preserved.

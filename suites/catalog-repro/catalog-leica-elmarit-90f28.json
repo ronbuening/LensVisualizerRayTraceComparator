@@ -1,0 +1,64 @@
+{
+  "contract": "1.3",
+  "kind": "suite",
+  "name": "catalog-repro",
+  "defaults": {
+    "engines": [
+      "lv",
+      "ref",
+      "optiland"
+    ],
+    "rungs": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r4f",
+      "r6a"
+    ],
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "lines": {
+      "kind": "reference"
+    },
+    "imagePlane": {
+      "kind": "design"
+    }
+  },
+  "runs": [
+    {
+      "contract": "1.3",
+      "kind": "run-spec",
+      "name": "catalog-leica-elmarit-90f28",
+      "lens": {
+        "kind": "lv",
+        "key": "leica-elmarit-90f28"
+      },
+      "aperture": {
+        "kind": "wide-open"
+      },
+      "lines": {
+        "kind": "reference"
+      },
+      "imagePlane": {
+        "kind": "design"
+      },
+      "rungs": [
+        "r0",
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r4f",
+        "r6a"
+      ],
+      "engines": [
+        "lv",
+        "ref",
+        "optiland"
+      ]
+    }
+  ]
+}
