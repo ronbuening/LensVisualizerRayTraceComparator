@@ -411,14 +411,31 @@ test("an unknown argument is a usage error and probes nothing", async (t) => {
   const run = await runDoctor(t, healthyMachine(), { args: ["--jsno"] });
   assert.equal(run.code, EXIT_USAGE);
   assert.equal(run.out, "");
-  assert.equal(run.err, 'lvrtc doctor: unknown argument "--jsno"\nUsage: lvrtc doctor [--json]\n');
+  assert.equal(run.err, 'lvrtc doctor: unknown argument "--jsno"\nUsage: lvrtc doctor [--root <dir>] [--json]\n');
   assert.deepEqual(run.ran, []);
+});
+
+test("--root reads the configuration of that root, and one that is no directory is a usage error", async (t) => {
+  const other = realpathSync(mkdtempSync(join(tmpdir(), "lvrtc-doctor-root-")));
+  t.after(() => rmSync(other, { recursive: true, force: true }));
+  writeFileSync(join(other, CONFIG_FILE), JSON.stringify({ lvPath: "/elsewhere/lv" }));
+  const run = await runDoctor(t, healthyMachine(), { args: ["--json", "--root", other] });
+  assert.equal(run.code, EXIT_OK, run.err);
+  const json = JSON.parse(run.out);
+  assert.deepEqual(json.lensVisualizer, { binding: null, git: null, path: "/elsewhere/lv", status: "missing" });
+  assert.equal(json.optiland.interpreter, "not configured");
+
+  const absent = await runDoctor(t, healthyMachine(), { args: ["--root", join(other, "absent")] });
+  assert.equal(absent.code, EXIT_USAGE);
+  assert.match(absent.err, /^lvrtc doctor: --root .*absent: not a directory$/m);
+  assert.deepEqual(absent.ran, []);
+  assert.equal((await runDoctor(t, healthyMachine(), { args: ["--root"] })).code, EXIT_USAGE);
 });
 
 test("--help prints the usage", async (t) => {
   const run = await runDoctor(t, healthyMachine(), { args: ["--help"] });
   assert.equal(run.code, EXIT_OK);
-  assert.equal(run.out, "Usage: lvrtc doctor [--json]\n");
+  assert.equal(run.out, "Usage: lvrtc doctor [--root <dir>] [--json]\n");
 });
 
 test("a configuration file that cannot be read is an error naming the file", async (t) => {

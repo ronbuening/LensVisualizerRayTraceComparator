@@ -14,6 +14,8 @@ npm test               # node --test on test/**/*.test.ts, except test/integrati
 npm run test:python    # unittest for the Python worker kit and the optiland worker on a fake optiland; part of check
 npm run test:lv        # tests against the real LensVisualizer (test/integration/lv); NOT part of check
 npm run test:optiland  # tests against the real optiland (test/integration/optiland); NOT part of check; the suites, focus stations and catalog sweep need LV too; r2 needs a POSIX shell
+npm run verify:real    # Stage 5.4: lvrtc doctor, then baseline check benchmark and benchmark --mtf on live LV and optiland, one at a time; NOT part of check
+npm run verify:real -- --all   # the same for every routine committed suite in a fixed order (not the catalog, a dated snapshot: --suite catalog); --suites a,b and --jobs <n> (default 4, a ceiling)
 node bin/lvrtc.mjs     # the CLI
 node bin/lvrtc.mjs doctor   # Node, config layers, LV, Python and optiland as this machine sees them
 node bin/lvrtc.mjs run suites/features.json --rungs r0,r1,r2,r3,r4 --jobs 2   # process pool; default --jobs 1 is serial
@@ -604,6 +606,25 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   answers a benchmark lens; r5, r5g and r6c only where optiland is named; r6c on reference and photopic lines. It exits
   1 on a FAIL or ERROR pair. Without `--profile benchmark` the command is the single request of `lv-tab-default`.
   A test of it sets `LVRTC_RUNS_DIR` and closes the binding.
+- **`npm run verify:real` is the real-engine check** (`src/cli/verifyReal.ts`, `bin/verify-real.mjs`; Stage 5.4). It
+  plans every check first (suite files and baselines must exist; exit 2), runs `lvrtc doctor --root <root> --json`
+  in a child and refuses (exit 2, no check run) unless Node is in range, LV is present, loadable, a git checkout and
+  clean, and optiland's engine answers (optiland's own dirty flag only moves its fingerprint, so it is not refused).
+  Then each `lvrtc baseline check <suite> [--mtf] --json` is a child `bin/lvrtc.mjs` of its own, strictly one after
+  the other: benchmark rays then MTF, `--suite <name>` or `--suites a,b` (the kinds of baseline each has), or with
+  `--all` `VERIFY_REAL_SUITES` (benchmark, features, states,
+  focus-stations, folded, diffractive; rays before MTF; folded and diffractive have no MTF baseline). The catalog's
+  baselines are a dated snapshot (policy 15, LV `879c06102`) not refreshed until the project's end
+  (`SNAPSHOT_SUITES`): never in `--all`, checked only when named, and the plan says it is a snapshot.
+  `--jobs` is a ceiling (default 4): a check gets `min(jobs, maxJobs(default budget, jobEstimateGiB(its baseline's
+  rungs)))`, two for the benchmark's MTF with R6c on the owner's machine. A check is clean only when it exited 0,
+  says `failed: false`, has records and every record is OK, REFRESHABLE or MOVED (`CLEAN_OUTCOMES`); DRIFT, an
+  unlisted FAIL or ERROR, an engine error, NEW and GONE are not. A not-clean check fails the whole and the next
+  still runs; a check ended by a signal (the memory watchdog) stops the sequence: rerun with fewer `--jobs`. It
+  writes nothing itself; set `LVRTC_RUNS_DIR` to keep a measurement off `runs/store`. Tests are hermetic
+  (`test/cli/verifyReal.test.ts`: scripted runner, and fake engines under a temporary root). A cold benchmark MTF
+  check at `--jobs 2` is many hours (stopped by the owner after 6.5 h); on the warm owner store it is minutes. The
+  stage's evidence is a cold features run (`docs/REFERENCE.md`, "Stage 5.4").
 - **An edit of CLAUDE.md by a script is checked**: a replacement whose text is not found must stop the command
   that follows it, and what was written is read back before a commit says it was.
 - **A surface that does not clip is `aperture.semiDiameter` null (contract minor 2).** A rear plate whose rim

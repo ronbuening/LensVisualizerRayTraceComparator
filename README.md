@@ -163,6 +163,23 @@ Runs the tests that need the real optiland, with the interpreter of `engines.opt
 of `npm run check` either, skip the same way, and prove that nothing was written into the optiland checkout. The
 tests that set optiland against LensVisualizer need both.
 
+```bash
+npm run verify:real                 # the benchmark, rays then MTF
+npm run verify:real -- --suite features   # one suite, rays then MTF
+npm run verify:real -- --all        # every routine committed suite, one after the other (not the catalog)
+```
+
+The real-engine check: holds the committed baselines to the live LensVisualizer and optiland. It runs
+`lvrtc doctor` first and refuses (exit 2) when either engine cannot be used or LensVisualizer's checkout is dirty
+or not under git; then `lvrtc baseline check` of each baseline in turn, each in a process of its own, never two at
+once, with at most `--jobs 4` (default), fewer where the memory budget says so (two for the benchmark's MTF, which
+has R6c). It exits 0 only when every record is `OK`, `REFRESHABLE` or `MOVED`, prints a line per suite and kind,
+and writes nothing into `baselines/` or `reports/`. On the warm store the benchmark takes minutes; from an empty
+one its MTF check takes many hours, so a cold check is better run on `--suite features`. Set `LVRTC_RUNS_DIR` to
+keep a trial off the repository's store ([measured](docs/REFERENCE.md#stage-54-the-real-engine-check)). The
+catalog's baselines are a dated snapshot, not refreshed until the project's end: `--all` leaves them out, and
+`--suite catalog` checks them only when asked.
+
 ### Look at LensVisualizer's lenses
 
 ```bash

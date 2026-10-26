@@ -3461,3 +3461,73 @@ both GR1 disputed rays. One process-pool worker-death count assertion failed onc
 19,761 records and 24 classified FAILs; in the checkout, `npm run check` passes with LV and optiland pointing
 nowhere (1,683 TypeScript tests; verify 12 baselines, zero problems). The attribution wrote nothing to `runs/store`,
 the committed baselines or reports, LensVisualizer or optiland.
+
+## Stage 5.4: the real-engine check
+
+```bash
+npm run verify:real                          # the benchmark: baseline check, rays then --mtf
+npm run verify:real -- --suite features      # one suite, with the kinds of baseline it has
+npm run verify:real -- --suites folded,states
+npm run verify:real -- --all                 # benchmark, features, states, focus-stations, folded, diffractive
+npm run verify:real -- --suite catalog       # the dated snapshot, only when named
+npm run verify:real -- --jobs 2 --root <dir> # --jobs is a ceiling (default 4); --root as for lvrtc
+```
+
+`bin/verify-real.mjs` calls `mainVerifyReal` (`src/cli/verifyReal.ts`). It does four things in order:
+
+1. **Plan.** Every selected suite file and baseline must exist before anything runs. A missing file, an unreadable
+   baseline or a bad command line exits 2. A committed suite has fixed kinds (`VERIFY_REAL_SUITES`: folded and
+   diffractive have no MTF baseline). The catalog's baselines are a dated snapshot (policy 15, LV `879c06102`), not
+   refreshed until the project's end (`SNAPSHOT_SUITES`): `--all` leaves them out, they are checked only when
+   `--suite` or `--suites` names the catalog, and the plan then says they are a snapshot. Any other suite named by `--suite` or `--suites` is checked for whichever
+   kinds of baseline it has. A check gets `min(--jobs, maxJobs(default budget, jobEstimateGiB(rungs)))`, the rungs
+   being those of the baseline file. On the owner's 48 GB machine that is 4, and 2 for the benchmark's MTF, which
+   has R6c.
+2. **Doctor.** The script runs `lvrtc doctor --root <root> --json` in a child process. It refuses (exit 2, no check
+   run) when any of these holds: Node is out of range; LV is unconfigured, missing, not a git checkout, dirty or
+   not loadable through the binding; optiland's interpreter is unconfigured or missing; the engine `optiland` cannot
+   be used. Every refusal is printed. A dirty optiland checkout is not refused, because it only moves optiland's
+   fingerprint, which the check reports as STALE(engine). On a clean machine the script prints LV's commit and
+   closure, and optiland's fingerprint and checkout.
+3. **Checks.** Each check is `lvrtc baseline check <suite> --root <root> [--mtf] --jobs <n> --json`, run as a child
+   `bin/lvrtc.mjs` of its own. Checks run strictly one after the other: per suite, rays before MTF. The JSON goes to
+   the script, and the check's stderr is passed through. A check is **clean** when all of these hold: it exited 0;
+   it says `failed: false`; it has records; and every record is OK, REFRESHABLE or MOVED. Against that:
+   - DRIFT, an unlisted FAIL or ERROR, an engine that could not be used, and LV files that changed during the run
+     are not clean.
+   - NEW and GONE are also not clean, because the suite is not the baseline's. `baseline check` alone exits 0 on
+     them; this script does not.
+   - MOVED and a catalog FAIL listed in `docs/known-failures.json` are reported and fail nothing.
+   - A check that is not clean fails the whole run, and the next check still runs.
+   - A check ended by a signal is INTERRUPTED. It stops the sequence, and the remaining checks are printed as
+     NOT RUN. If the memory watchdog ended it, run again with fewer `--jobs`.
+   - SIGTERM to the script is passed on to the running check. No check starts after SIGINT or SIGTERM.
+4. **Summary.** One line per suite and kind: the outcome counts, the stale counts, any listed FAILs, the jobs and
+   the seconds taken. The run then exits 0 when every check is clean and 1 otherwise. The script writes nothing
+   itself: the run directories and store entries are what `baseline check` writes, under `LVRTC_RUNS_DIR` or the
+   configured `runsDir`.
+
+The hermetic tests are in `test/cli/verifyReal.test.ts`. They cover:
+- the command line, the plan of this repository and of synthetic roots, the memory and core limits;
+- every doctor refusal and the rule of a clean check;
+- order and one-at-a-time execution on a scripted runner, interruption and stop;
+- a fake-engine root that comes out clean, then DRIFT, with `baselines/` and `reports/` byte-identical;
+- `bin/verify-real.mjs` refusing when LV and optiland point nowhere.
+
+`lvrtc doctor` gained `--root <dir>` so that the doctor reads the same configuration as the checks.
+
+**Measured, 2026-10-26.** LV `879c061024519be2b1acaf3cc082947235ea9760` (clean; closure `c46cbf11…`, 177 files),
+optiland `4e893f53` (dirty checkout, fingerprint `bcfbf391…`), each run into a fresh temporary `LVRTC_RUNS_DIR`:
+
+| Run | Check | Jobs | Records | Time |
+|---|---|---:|---|---:|
+| `--suite features` (the stage's evidence) | rays | 4 | 270 OK | 10 s |
+| | MTF (r4, r4f, r6a) | 4 | 126 OK | 37 s |
+| | whole, exit 0 | | clean | 51 s |
+| benchmark (default) | rays | 4 | 1,440 OK | 43 s |
+| | MTF (r4, r4f, r5, r5g, r6a, r6b, r6c) | 2 | stopped by the owner (SIGINT), reported INTERRUPTED, exit 1 | 6.5 h |
+
+The cold benchmark MTF check at `--jobs 2` had written about 6,800 store entries when the owner stopped it after
+6.5 hours. The owner accepted the cold features run, rays and MTF, as the stage's evidence. Against the warm owner
+store, where the committed engines' answers are already held, the benchmark check takes minutes. None of these
+runs touched `runs/store`, `baselines/` or `reports/`.

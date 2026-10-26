@@ -22,6 +22,7 @@
     "test:optiland": "node --test --test-concurrency=1 \"test/integration/optiland/**/*.test.ts\"",
     "test:python": "python3 -B -m unittest discover -s workers/python/tests/kit -t workers/python && python3 -B -m unittest discover -s workers/python/tests/optiland -t workers/python",
     "verify": "node bin/lvrtc.mjs verify",
+    "verify:real": "node bin/verify-real.mjs",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run test:python && npm run verify"
   },
   "devDependencies": {
