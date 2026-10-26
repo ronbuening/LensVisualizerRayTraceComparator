@@ -114,7 +114,7 @@ mismatch. `makeRequest` (`src/contract/request.ts`) does the same for a request.
 
 ## Versioning
 
-Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.4`.
+Every document carries the contract version it was written to, as `<major>.<minor>`. This is version `1.5`.
 Everything the stages of Phases 0 to 2 added was added to `1.0`: until a baseline was committed, nothing had been
 written down that a later reader must still read. The first baselines (`baselines/`) are written to `1.0` as it
 stands with them, the kind `baseline` included, so no document needs a `1.1` to tell it from an earlier one. From
@@ -1508,8 +1508,10 @@ and `validateData`.
 | `selftest.echo` | 1 | `quantities/selftestEcho.ts` | an array sent back scaled: a conformance check that needs no optics |
 | `system.describe` | 2 | `quantities/systemDescribe.ts` | the system an engine built for the case, re-read from the engine's own model |
 | `paraxial.first-order` | 1 | `quantities/paraxialFirstOrder.ts` | focal length, cardinal points, back focus and pupils, per line |
+| `paraxial.first-order` | 2 | `quantities/paraxialFirstOrder.ts` | includes diffractive phase power; selected only for diffractive cases |
 | `rays.trace` | 1 | `quantities/raysTrace.ts` | given rays, traced through every surface and on to the image plane, at one line |
 | `rays.trace` | 2 | `quantities/raysTrace.ts` | fixed folded visits, reverse propagation, explicit unavailable OPL and unrecorded passive visits |
+| `rays.trace` | 3 | `quantities/raysTrace.ts` | separate geometric OPL and per-visit signed phasePath; selected only for diffractive cases |
 | `mtf.native` | 1 | `quantities/mtfNative.ts` | an engine's own MTF of the case, by its own method and sampling |
 | `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 
@@ -2525,3 +2527,119 @@ Folded LV cases use the case source's deterministic probe lattice at explicitly 
 launch gate refuses folded systems, so these rays are not presented as LV MTF launch rays. The same probes go to
 all engines. R2 maps each visit to its physical aperture for mask/rim tests; R3 retains the existing path gates.
 No gate, policy version, floor or baseline is changed by this stage.
+
+## Stage 5.2b: diffractive surfaces (minor 5)
+
+Owner decision 2026-10-25 adds contract **1.5**, stated only by a document that uses these additions. A case with
+`surfaces[].diffractive` states 1.5 and derives `surface.diffractive`. R0's answer with the added `diffractive`
+list, and requests/results using the definitions below, state 1.5. Ordinary cases, requests and answers retain
+all previous version/identity rules. Engine maximums become 1.5. The request's explicit `quantityVersion` enters
+its hash only when present, as in minor 4. A suite merely naming the lenses needs no new member or minor.
+
+The optional `SurfaceIR.diffractive` is the phase **on that substrate surface**, not another geometric sheet:
+
+| Member | Meaning |
+|---|---|
+| `kind` | `radial-polynomial` |
+| `referenceWavelengthNm` | positive design wavelength lambda0, nm |
+| `diffractionOrder` | signed integer m, including zero |
+| `terms` | 1 to 16 terms, ascending distinct integer powers 2 <= p <= 32, each `{ radialPower: p, coefficient: Cp }` |
+
+With r = sqrt(x²+y²) in mm, W(r) = sum Cp r^p in mm; Cp has units mm^(1-p). W is **unwrapped**, with W(0)=0:
+there is no modulo, zone rounding, piston or hidden normalization. LV's compiled representation has no radius
+normalization. A future prepared normalized profile must be refused until expressed exactly by a contract addition.
+Its cached derivatives/quadratic coefficient are checked against the literal terms and are not extra optical data.
+The phase does not change substrate sag, aperture, incident medium or outgoing medium. Its transmission has unit
+flux here; diffraction efficiency, other orders and polarization are outside this model.
+
+### Ray interaction and signed phase delay
+
+Let N be the unit substrate normal oriented into the outgoing hemisphere, P=I-NNᵀ the tangent projection, and
+D the incoming unit direction. The physical Cartesian gradient is g=grad W=(W'(r)x/r,W'(r)y/r,0), with g=0 on
+axis. With s=m lambda/lambda0, tangential outgoing optical momentum is
+
+```
+t = n_in P D + s P g
+D_out = (t + N sqrt(n_out² - t dot t)) / n_out
+```
+
+A negative radicand is an evanescent order, blocked at that surface. This is the local grating equation on the
+actual substrate, with its gradient projected onto the sheet, not a separate refraction followed by an axial kick.
+The global gradient retains its sign for reverse incidence; orienting N chooses the transmitted hemisphere.
+For a locally linear W with gradient G, n_out sin(theta_out)-n_in sin(theta_in)=m lambda G/lambda0.
+
+The radian phase is phi=2 pi m W/lambda0_mm. The signed phase path at a successful refracting interaction is **+phi/k0**,
+where k0=2 pi/lambda_mm: **m lambda/lambda0 W**, in mm. The plus sign agrees with the plus gradient in t. A
+negative converging quadratic W therefore adds negative phase path. No geometric propagation distance is added
+at a zero-thickness phase interaction. Phase paths can cancel and must be summed with compensated arithmetic.
+The wave path to the final sheet/image is geometric OPL plus the sum of these per-visit delays; geometric OPL
+alone is not the wave eikonal through a phase-bearing system.
+
+### `rays.trace` version 3
+
+Only a diffractive case requests v3. It retains the geometric arrays and their definitions unchanged. Sequential
+systems retain sequential stepping (including signed backwards sequential stretches); fixed folded systems use
+v2's visit order and reverse propagation. S below means physical sequential rows, or path visits when a path is
+stated. Versions 1 and 2 retain every earlier meaning and remain offered.
+
+| Additional data member | Definition |
+|---|---|
+| `phasePath` | required float64 NdArray `[S,n]`, mm: signed delay at each successfully passed surface/visit; zero for a passed visit without a phase interaction, NaN at the ray's end and thereafter |
+| `phasePathUnavailable?` | nonempty coded reason: the engine does not expose phase delay; every phasePath entry is NaN, geometry and geometric OPL remain answerable |
+
+`phasePathUnavailable` does not imply `pathUnavailable`. LV's sequential `recordOpticalPath` exposes geometric
+segments only and returns `lv-phase-path-unavailable`; the adapter never computes a replacement phase from its
+hits. V3 can also retain v2's explicitly unavailable geometric paths for generalized traversal. Earlier versions
+refuse phase members. Validators check rank, shape, valid/ended values, unavailability and version selection.
+
+R3 keeps its three existing geometric metrics unchanged. Policy **15** adds `phasePath.maxAbs`: maximum absolute
+per-visit/per-ray phase-delay difference in waves of the request line, over rays ok in both answers. Its sole
+gate is **2e-5 waves**, in `policy/rungs.v1.json` only. Basis: the identical-ray signed phase delay is held to the
+same absolute path accuracy as a geometric segment; this is a new figure, not an empirical floor or a widened
+geometric gate. `where` gives visit/surface, ray, field and line. Unavailable phase is an explicit unmeasured
+`UNSUPPORTED: <code>` metric while geometric metrics are still judged; no unavailable phase becomes a measured
+zero. No phase surface makes the metric not applicable. A geometry PASS with unsupported phase is not a phase
+validation claim. The pair's verdict still fails if any measured geometric or phase metric exceeds its gate.
+
+### `paraxial.first-order` version 2
+
+Only a diffractive case requests v2. Add **phiD=-2 C2 m lambda/lambda0** to each refracting surface's ordinary
+power `(n_after-n_before)*vertexCurvature`. On (height, reduced angle), the surface matrix is
+`[[1,0],[-(phiR+phiD),1]]`. Higher radial powers have zero first-order power. Cardinal/pupil definitions and all
+existing R1 gates stay unchanged; pupils exclude the stop's own power as before. A model that cannot see phase
+answers `unsupported`, never the system without it. LV's kernel uses its default d wavelength for phase power;
+a different requested phase wavelength is `lv-phase-paraxial-wavelength`. Optiland's first-order accessor bypasses
+native phase profiles: `optiland-phase-paraxial-unseen`. Ref evaluates the requested line analytically.
+
+### `system.describe` addition and translation
+
+`system.describe` stays v2, as in minor 4's optional folded-path description. On a phase-bearing system its answer
+adds `diffractive`: S physical-surface entries, null without phase and otherwise the phase profile above, read
+from the built model. Answers without phase omit the member. R0 counts each different profile/order/wavelength
+under `shape.mismatches`, whose gate remains zero. The phase profile is separate from geometric `terms`.
+
+Optiland receives `RadialPhaseProfile.coefficients[p/2-1] = 2 pi m Cp / lambda0_mm`, padding absent powers with
+zero, attached via `PhaseInteractionModel` on the actual geometry. Built design-coordinate metadata permits
+lossless R0 description; verification holds every native radian coefficient to its scaled design coefficient,
+plus both parents, model/profile classes, efficiency and reflection state. Describe takes no case. Native OPD
+contains +phi/k0: the worker reads each native profile's phase at its recorded hit, preserves that signed delay
+in phasePath, subtracts accumulated phase from native OPD, and applies its existing geometric direction-length
+correction only to the geometric stretches. No phase is counted twice. Native first-order behavior is not repaired.
+
+The exporter reports `diffractive-phase-unsupported` for an unknown prepared phase kind/member, a normalized
+profile it cannot express, invalid powers/order/wavelength, or inconsistent cached derivative/quadratic values.
+The old `diffractive-surface` reason remains readable in historical census documents.
+
+`verify` accepts an existing policy-14 baseline only for the exact additive transition to policy 15: removing
+phasePath.maxAbs and resetting the version must reproduce the pinned policy-14 hash, and the added gate must
+be exactly 2e-5 waves. The retained `policy/rungs.v14.json` records those previous bytes. Policy 14 predates any
+exportable diffractive case. Any change to another gate, class, unit or policy member is still stale and refused;
+no baseline or report is rewritten. Live comparisons use policy 15.
+
+LV permits odd radial powers as well as even ones. Ref and LV retain those terms literally; optiland refuses
+`optiland-odd-radial-phase`, because its native RadialPhaseProfile has only even powers. No power is rounded
+or assigned to another coefficient slot. Every sequential state of the diffractive suite has even powers.
+
+A passed non-refracting visit (a passive crossing or an ordinary reflection) has zero phasePath in this model.
+No coating/reflection phase is introduced; the diffractive polynomial is the transmitted phase of its substrate.
+An ended visit has NaN, rather than a physical phase assigned to a ray that did not pass it.

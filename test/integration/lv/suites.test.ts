@@ -60,7 +60,7 @@ test("every committed suite loads, and every run exports or records a finite-sta
     const suite = await suiteOf(name);
     for (const run of suite.runs) {
       const at = `${name}/${run.spec.name}`;
-      if ((name === "focus-stations" || name === "folded") && run.opticalCase === null) {
+      if ((name === "focus-stations" || name === "folded" || name === "diffractive") && run.opticalCase === null) {
         assert.ok(run.problems.length > 0, at);
         for (const problem of run.problems) {
           if (name === "focus-stations") assert.match(problem, /^finite-conjugate-unavailable:/, at);

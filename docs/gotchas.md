@@ -2279,3 +2279,46 @@ shares no code with any engine.
   The folded policy orients only the side-test normal toward +z and leaves the native kernel's normal intact.
   `test_native_curved_normals_are_reoriented_only_for_the_incident_side_policy` pins both the native sign and
   a front-only reflecting visit; the final folded suite pins its actual guarded production paths.
+
+## Optiland radial phase surfaces (Stage 5.2b)
+
+The radial phase model and the constant-period diffraction model are different native interfaces. LV's
+W(r)=sum Cp r^p is an optical path in mm. `RadialPhaseProfile` expects radians, so its coefficient at r^p is
+2 pi m Cp/lambda0_mm. `PhaseInteractionModel` projects the Cartesian gradient onto the real substrate normal;
+its real-ray code operates on curved substrates despite its docstring calling it a plane-only thin sheet.
+The builder keeps the actual substrate geometry and uses that native code. It verifies native radian coefficients
+and lossless design-coordinate metadata, both parent pointers, classes, reflection and efficiency. R0 describes
+the built metadata only after verifying its correspondence to the native coefficients. Tests: `test_phase.py`.
+`DiffractiveInteractionModel` instead reads a grating vector, period and order from a grating geometry; it cannot
+represent the required sparse radial polynomial by assigning one constant period.
+
+Native phase interaction adds **+phase/k0** to `rays.opd`, with k0=2 pi/lambda_mm. Thus its recorded OPD is a wave
+path, whereas the comparator's opticalPath remains the geometric sum of n times distance. The worker reads the
+native phase at each recorded hit as phasePath and removes its accumulated sum before the existing geometric
+length correction. Phase receives no geometric normalization correction. The plane test derives both paths and
+the curved-sheet test derives the projected local grating equation; the batch-split test holds the row order.
+
+Two native first-order routes disagree with the real-ray model. `raytrace/paraxial_ray_tracer.py::trace_generic`,
+used by `optic.paraxial` accessors, reads radii/indices and explicit thin-lens powers and never dispatches a radial
+phase profile. An isolated phase plane therefore has infinite accessor focal length despite finite real-ray
+power. The worker refuses phase-bearing R1 with `optiland-phase-paraxial-unseen`, before any substrate-only value
+can be returned. Separately, `PhaseInteractionModel.interact_paraxial_rays` subtracts the transmitted phase kick,
+where the real-ray model adds it: a converging quadratic phase sends its direct paraxial ray outward. Both are
+pinned in `PhaseTest.test_native_accessor_bypasses_phase_and_direct_model_has_opposite_paraxial_sign`; neither is
+repaired by adapter arithmetic. Conditional folded policies have no phase dispatch and explicitly refuse
+`optiland-folded-phase-unsupported` if a representable folded-phase case is supplied directly.
+
+## LensVisualizer phase paths and first order (Stage 5.2b)
+
+At LV 879c0610 (its phase, paraxial and sequential-trace sources unchanged since 2e046d71), sequential
+`recordOpticalPath` adds intersection geometric segment OPL and no surface phase. Geometry and that geometric path
+are comparable. The phase array is unavailable with `lv-phase-path-unavailable`;
+R3's explicit unmeasured phase metric retains the code while its measured geometric metrics are judged normally.
+The phase paraxial kernel uses `DEFAULT_PHASE_WAVELENGTH_NM` (helium d), independent of the phase design wavelength.
+The binding reads that constant, passes LV's own compiled phase into its kernel, and refuses other requested
+phase wavelengths with `lv-phase-paraxial-wavelength`. No computed replacement is inserted. Source canaries pin
+these rules. LV's MTF support still excludes any surface with a phase, so the diffractive R0–R3 suite uses ordinary
+angle/stop-envelope probes rather than treating an MTF-gate refusal as a request to approximate its launch.
+
+LV permits radial exponents 2 through 32, including odd ones. Native RadialPhaseProfile is even only; such an
+odd profile is `optiland-odd-radial-phase`, before building, rather than a coefficient shifted into an even slot.

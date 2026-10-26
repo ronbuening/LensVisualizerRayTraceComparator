@@ -124,7 +124,9 @@ export function comparePair(
   });
   if (!outcome.comparable) return ended("ERROR", outcome.reason);
   if (outcome.unsupportedReason !== undefined) return ended("UNSUPPORTED", outcome.unsupportedReason);
-  const names = Object.keys(policy.metrics).sort();
+  const names = Object.keys(policy.metrics)
+    .filter((name) => !outcome.inapplicable?.includes(name))
+    .sort();
   const unmeasured = (outcome.unmeasured ?? []).filter(({ name }) => names.includes(name));
   const unreported = names.filter(
     (name) =>

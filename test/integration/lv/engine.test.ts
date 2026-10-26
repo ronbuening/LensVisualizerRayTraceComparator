@@ -122,7 +122,17 @@ async function engines(
 }
 
 function ask(engine: RemoteEngineAdapter, opticalCase: OpticalCase, quantity: string): Promise<ResultEnvelope> {
-  return engine.run(makeRequest({ caseId: opticalCase.id, quantity, spec: {} }), opticalCase);
+  return engine.run(
+    makeRequest({
+      caseId: opticalCase.id,
+      quantity,
+      spec: {},
+      ...(quantity === PARAXIAL_FIRST_ORDER && opticalCase.features.includes("surface.diffractive")
+        ? { quantityVersion: 2 }
+        : {}),
+    }),
+    opticalCase,
+  );
 }
 
 /** The metrics of a quantity's comparator on what `lv` and `ref` answer about a case, by name, and lv's answer. */

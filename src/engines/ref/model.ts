@@ -1,12 +1,13 @@
 // The reference engine's own model of a case: what it builds from the contract's surfaces and conditions, and the
 // only thing its quantities read. `system.describe` re-reads this model, so a fault in building it shows in rung R0.
-import type { OpticalCase, OpticalPathStep } from "../../contract/case.ts";
+import type { DiffractivePhase, OpticalCase, OpticalPathStep } from "../../contract/case.ts";
 import { decodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
 import { profileOf } from "./surface.ts";
 import type { SurfaceProfile } from "./surface.ts";
 
 /** One surface of the model. */
 export interface RefSurface {
+  readonly diffractive?: DiffractivePhase;
   readonly vertexRadius?: number | null;
   /** Vertex position, mm. */
   readonly z: number;
@@ -27,6 +28,7 @@ export interface RefSurface {
 
 /** A case as the reference engine holds it. Every length is in mm, in the contract frame. */
 export interface RefSystem {
+  readonly wavelengthsNm?: readonly number[];
   readonly opticalPath?: readonly OpticalPathStep[];
   /** The surfaces in the order light meets them; never empty. */
   readonly surfaces: readonly RefSurface[];
@@ -57,7 +59,9 @@ export function buildRefSystem(opticalCase: OpticalCase): RefSystem {
   if (table.dtype !== "f8") throw new Error(`the index table is ${table.dtype}, not f8`);
   return {
     ...(system.opticalPath === undefined ? {} : { opticalPath: system.opticalPath }),
+    wavelengthsNm: conditions.lines.map((line) => line.wavelengthNm),
     surfaces: system.surfaces.map((surface) => ({
+      ...(surface.diffractive === undefined ? {} : { diffractive: structuredClone(surface.diffractive) }),
       z: surface.z,
       vertexRadius: surface.shape.kind === "plane" ? null : surface.shape.radius,
       profile: profileOf(surface.shape),

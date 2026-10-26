@@ -26,7 +26,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from lvrtc_worker_kit import CONTRACT_VERSION, CONTRACT_VERSION_1_4, speaks
+from lvrtc_worker_kit import CONTRACT_VERSION, CONTRACT_VERSION_1_5, PHASE_DEFINITIONS, phase_definition, speaks
 from lvrtc_worker_kit.protocol import engine_stamp, make_result
 from lvrtc_worker_kit.validate import (
     SchemaSet,
@@ -35,6 +35,7 @@ from lvrtc_worker_kit.validate import (
     format_issues,
     quantity_schema_id,
     validate,
+    validate_rays_trace_data,
 )
 
 from . import ENGINE_ID
@@ -59,6 +60,7 @@ SUPPORTED_FEATURES: tuple[str, ...] = (
     "surface.asphere.flat-base",
     "surface.asphere.odd",
     "surface.conic",
+    "surface.diffractive",
 )
 """The feature flags of a case the builder honours, sorted, which is every flag the contract has. Each is built,
 read back and held to the case by ``build.verify_optic``, and has a test on the real optiland:
@@ -79,8 +81,8 @@ SYSTEM_DESCRIBE = "system.describe"
 
 QUANTITIES: dict[str, dict[str, Any]] = {
     SYSTEM_DESCRIBE: {"version": 2},
-    PARAXIAL_FIRST_ORDER: {"version": 1},
-    RAYS_TRACE: {"version": 1, "versions": [1, 2]},
+    PARAXIAL_FIRST_ORDER: {"version": 1, "versions": [1, 2]},
+    RAYS_TRACE: {"version": 1, "versions": [1, 2, 3]},
     MTF_NATIVE: {"version": 1},
     WAVEFRONT_NATIVE: {"version": 1},
 }
@@ -127,11 +129,11 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     items: list[dict[str, str]] = []
     written = (("the case", case["contract"]), ("the request", request["contract"]))
     for version in dict.fromkeys(stated for _, stated in written):
-        if speaks(version, CONTRACT_VERSION_1_4):
+        if speaks(version, CONTRACT_VERSION_1_5):
             continue
         names = [name for name, stated in written if stated == version]
         said = f"{' and '.join(names)} {'are' if len(names) > 1 else 'is'} written to {version}"
-        message = f"the engine speaks contract {CONTRACT_VERSION} to {CONTRACT_VERSION_1_4}; {said}"
+        message = f"the engine speaks contract {CONTRACT_VERSION} to {CONTRACT_VERSION_1_5}; {said}"
         items.append({"code": "contract", "item": version, "message": message})
     quantity = request["quantity"]
     if quantity not in QUANTITIES:
@@ -145,9 +147,24 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
         items.append(
             {"code": "quantity", "item": quantity, "message": "the requested quantity definition is not implemented"}
         )
+    diffractive = "surface.diffractive" in case["features"]
+    required = PHASE_DEFINITIONS.get(quantity)
+    if diffractive and required is not None and request.get("quantityVersion") != required:
+        message = f"a diffractive case requires {quantity} version {required}"
+        items.append({"code": "quantity", "item": quantity, "message": message})
+    if not diffractive and phase_definition(quantity, request.get("quantityVersion")):
+        message = "the diffractive definition requires a phase-bearing case"
+        items.append({"code": "quantity", "item": quantity, "message": message})
+    surfaces = case["system"]["surfaces"]
+    if any(term["radialPower"] % 2 for surface in surfaces for term in surface.get("diffractive", {}).get("terms", [])):
+        message = "native RadialPhaseProfile supports even radial powers only; odd phase terms cannot be built exactly"
+        items.append({"code": "feature", "item": "optiland-odd-radial-phase", "message": message})
     path = case["system"].get("opticalPath")
+    if path is not None and diffractive:
+        message = "the conditional folded interaction policy does not dispatch native phase profiles"
+        items.append({"code": "feature", "item": "optiland-folded-phase-unsupported", "message": message})
     if path is not None:
-        if quantity == RAYS_TRACE and request.get("quantityVersion", 1) != 2:
+        if quantity == RAYS_TRACE and request.get("quantityVersion", 1) not in (2, 3):
             items.append(
                 {"code": "quantity", "item": "rays.trace", "message": "a folded path requires rays.trace version 2"}
             )
@@ -236,7 +253,7 @@ class OptilandEngine:
         self._mtf = mtf
         self._clock = clock
         self._descriptor: dict[str, Any] = {
-            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION_1_4},
+            "contract": {"min": CONTRACT_VERSION, "max": CONTRACT_VERSION_1_5},
             "identity": identity,
             "capabilities": {
                 "features": {"supported": list(SUPPORTED_FEATURES), "limits": {}},
@@ -351,7 +368,11 @@ class OptilandEngine:
                 return make_result(request, engine, "unsupported", unsupported=list(answer.unsupported))
             data = answer.data
             method = {"name": "paraxial-accessors", "params": {"afocalRelativePower": AFOCAL_RELATIVE_POWER}}
-        issues = validate(self._schemas, quantity_schema_id(quantity, "data"), data)
+        issues = (
+            validate_rays_trace_data(data, request.get("quantityVersion", 1), self._schemas)
+            if quantity == RAYS_TRACE
+            else validate(self._schemas, quantity_schema_id(quantity, "data"), data)
+        )
         if issues:
             raise RuntimeError(f"the answer is not {quantity} data: {format_issues(issues)}")
         diagnostics = {"warnings": [], "counts": counts}

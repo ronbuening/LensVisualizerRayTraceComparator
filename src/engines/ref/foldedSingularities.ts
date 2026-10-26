@@ -34,7 +34,7 @@ const identity = (): Matrix => [ONE, ZERO, ZERO, ONE];
 const bend = ([a, b, c, d]: Matrix, power: Q): Matrix => [a, b, add(c, neg(mul(power, a))), add(d, neg(mul(power, b)))];
 const transfer = ([a, b, c, d]: Matrix, gap: Q): Matrix => [add(a, mul(gap, c)), add(b, mul(gap, d)), c, d];
 
-export function foldedSingularities(system: RefSystem, indices: ArrayLike<number>) {
+export function foldedSingularities(system: RefSystem, indices: ArrayLike<number>, wavelengthNm = 587.5618) {
   const path = system.opticalPath!;
   const stop = path.findIndex((step) => step.surfaceIndex === system.stopIndex);
   let total = identity(),
@@ -66,7 +66,14 @@ export function foldedSingularities(system: RefSystem, indices: ArrayLike<number
         : div(ONE, number(surface.vertexRadius));
     for (const term of surface.profile.terms)
       if (term.power === 2) curvature = add(curvature, mul(number(2), number(term.coeff)));
-    const power = interaction === "pass" || interaction === "block" ? ZERO : mul(add(after, neg(before)), curvature);
+    let power = interaction === "pass" || interaction === "block" ? ZERO : mul(add(after, neg(before)), curvature);
+    const phase = surface.diffractive;
+    const c2 = phase?.terms.find((term) => term.radialPower === 2)?.coefficient;
+    if (interaction === "refract" && phase !== undefined && c2 !== undefined) {
+      // The exact phase power belongs in the singularity proof as well as the floating matrix.
+      const scale = div(mul(number(phase.diffractionOrder), number(wavelengthNm)), number(phase.referenceWavelengthNm));
+      power = add(power, mul(mul(number(-2), number(c2)), scale));
+    }
     total = bend(total, power);
     if (at > stop) rear = bend(rear, power);
     if (at + 1 < path.length) {

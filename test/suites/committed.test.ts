@@ -29,7 +29,7 @@ function configuration(run: RunSpec): string {
   return `${run.lens.kind === "lv" ? run.lens.key : ""}@${run.state?.zoomT ?? 0} ${run.lines?.kind}`;
 }
 
-test("the suites directory holds the six suites and nothing else", () => {
+test("the suites directory holds the seven suites and nothing else", () => {
   assert.deepEqual(
     readdirSync(SUITES_DIR).sort(),
     SUITE_NAMES.map((name) => `${name}.json`),
@@ -48,12 +48,12 @@ for (const name of SUITE_NAMES) {
     // root of this repository, whose configuration defines no engine.
     // optiland is built in too, and joins a suite's own engines with the rungs it answers.
     assert.deepEqual(Object.keys(BUILTIN_ENGINES).sort(), ["lv", "optiland", "optiland-wave", "ref", "replay", "wave"]);
-    if (name === "folded") {
+    if (name === "folded" || name === "diffractive") {
       assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3"]);
       assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
       assert.deepEqual(suite.defaults?.fields, { kind: "angles-deg", values: [0, 0.25] });
-      assert.equal(suite.runs.length, 16);
-      assert.equal(new Set(suite.runs.map((run) => run.name)).size, 16);
+      assert.equal(suite.runs.length, name === "folded" ? 16 : 8);
+      assert.equal(new Set(suite.runs.map((run) => run.name)).size, name === "folded" ? 16 : 8);
       for (const run of expandSuite(suite)) assert.ok(run.lens.kind === "lv");
       return;
     }

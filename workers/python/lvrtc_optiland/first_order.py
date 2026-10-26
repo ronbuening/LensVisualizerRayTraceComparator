@@ -112,6 +112,15 @@ def term_refusals(case: dict[str, Any]) -> list[dict[str, str]]:
         (2, QUADRATIC_SAG_TERM, "optiland's paraxial power of a surface is (n2 - n1) / radius, which does not see it"),
     )
     items: list[dict[str, str]] = []
+    if any("diffractive" in surface for surface in case["system"]["surfaces"]):
+        items.append(
+            {
+                "code": "feature",
+                "item": "optiland-phase-paraxial-unseen",
+                "message": "native paraxial.trace_generic reads radii and indices, bypassing radial phase profiles; "
+                "no first-order data of the phase-bearing system",
+            }
+        )
     for power, item, why in reasons:
         for number, surface in enumerate(case["system"]["surfaces"]):
             if any(stated == power for stated, _ in nonzero_terms(surface["shape"])):

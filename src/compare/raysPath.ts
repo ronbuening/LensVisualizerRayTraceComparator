@@ -1,5 +1,7 @@
 // The comparator of `rays.trace` for rung R3: the optical path of the same rays in two engines, in waves of the
 // line they were traced at. It reads the rays that are ok in both answers; which rays those are is rung R2's matter.
+import { decodeNdArray } from "../core/numeric/ndarray.ts";
+import type { NdArrayWire } from "../core/numeric/ndarray.ts";
 import type { JsonObject } from "../contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
@@ -29,21 +31,41 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
       comparable: true,
       unsupportedReason: unavailable.join("; "),
       metrics: [],
-      unmeasured: ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxAbs"].map((name) => ({
+      unmeasured: [
+        "opticalPath.maxAbs",
+        "opticalPathToImage.maxAbs",
+        "opd.maxAbs",
+        ...(context?.opticalCase?.features.includes("surface.diffractive") ? ["phasePath.maxAbs"] : []),
+      ].map((name) => ({
         name,
         reason: unavailable.join("; "),
       })),
+      ...(!context?.opticalCase?.features.includes("surface.diffractive")
+        ? { inapplicable: ["phasePath.maxAbs"] }
+        : {}),
     };
   const wave = lines[spec.line].wavelengthNm * MM_PER_NM;
   const place = placeOf(context?.spec);
 
   const both = okInBoth(a, b);
   if (both.length === 0) {
-    const unmeasured = ["opticalPath.maxAbs", "opticalPathToImage.maxAbs", "opd.maxAbs"].map((name) => ({
+    const unmeasured = [
+      "opticalPath.maxAbs",
+      "opticalPathToImage.maxAbs",
+      "opd.maxAbs",
+      ...(context?.opticalCase?.features.includes("surface.diffractive") ? ["phasePath.maxAbs"] : []),
+    ].map((name) => ({
       name,
       reason: NO_COMMON_RAY,
     }));
-    return { comparable: true, metrics: [], unmeasured };
+    return {
+      comparable: true,
+      metrics: [],
+      unmeasured,
+      ...(!context?.opticalCase?.features.includes("surface.diffractive")
+        ? { inapplicable: ["phasePath.maxAbs"] }
+        : {}),
+    };
   }
   const toSurface = noWorst();
   const toImage = noWorst();
@@ -72,6 +94,38 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     }
     metrics.push({ name: "opd.maxAbs", value: relative.value, where: whereOf(place, relative) });
   }
+  if (!context?.opticalCase?.features.includes("surface.diffractive")) {
+    return { comparable: true, metrics, unmeasured, inapplicable: ["phasePath.maxAbs"] };
+  } else if (typeof dataA.phasePathUnavailable === "string" || typeof dataB.phasePathUnavailable === "string") {
+    unmeasured.push({
+      name: "phasePath.maxAbs",
+      reason:
+        "UNSUPPORTED: " +
+        [dataA.phasePathUnavailable, dataB.phasePathUnavailable]
+          .filter((value) => typeof value === "string")
+          .join("; "),
+    });
+  } else if (dataA.phasePath === undefined || dataB.phasePath === undefined) {
+    return { comparable: false, reason: "diffractive trace is missing phasePath" };
+  } else {
+    const pa = decodeNdArray(dataA.phasePath as NdArrayWire),
+      pb = decodeNdArray(dataB.phasePath as NdArrayWire);
+    if (JSON.stringify(pa.shape) !== JSON.stringify(pb.shape))
+      return { comparable: false, reason: "phasePath shapes differ" };
+    let worst = 0,
+      worstRay = both[0],
+      worstSurface = 0;
+    for (let surface = 0; surface < pa.shape[0]; surface++)
+      for (const ray of both) {
+        const delta = Math.abs(pa.values[surface * a.rays + ray] - pb.values[surface * a.rays + ray]) / wave;
+        if (!Number.isFinite(delta) || delta > worst) {
+          worst = delta;
+          worstRay = ray;
+          worstSurface = surface;
+        }
+      }
+    metrics.push({ name: "phasePath.maxAbs", value: worst, where: { ...place, ray: worstRay, surface: worstSurface } });
+  }
   return { comparable: true, metrics, unmeasured };
 }
 
@@ -86,6 +140,8 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
  *   estimator of the wavefront reads, in which whatever the two engines differ by on every ray alike has cancelled.
  *   It is measured where the set states a chief ray that is ok in both answers; elsewhere it is not measured, and
  *   the two metrics above stand alone.
+ * - `phasePath.maxAbs` (diffractive cases only): the largest signed phase-delay difference at any passed visit,
+ *   judged separately from geometry. A native engine with no phase record states why it cannot be measured.
  *
  * Where no ray is ok in both, none of the three is measured. A ray that is not ok in both has no path in one
  * answer: that is a matter of which rays got through, which rung R2 judges.
@@ -100,6 +156,7 @@ export const raysPathComparator: QuantityComparator = Object.freeze({
     { name: "opticalPath.maxAbs", unit: "waves" },
     { name: "opticalPathToImage.maxAbs", unit: "waves" },
     { name: "opd.maxAbs", unit: "waves" },
+    { name: "phasePath.maxAbs", unit: "waves" },
   ]),
   compare,
 });

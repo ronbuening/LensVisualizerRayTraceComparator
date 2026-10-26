@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from . import phase_definition
+
 TYPE_NAMES: tuple[str, ...] = ("null", "boolean", "integer", "number", "string", "array", "object")
 """Every name the ``type`` keyword accepts."""
 
@@ -520,6 +522,13 @@ def validate_kind(kind: str, value: Any, schemas: SchemaSet | None = None) -> li
     issues = validate(schemas if schemas is not None else contract_schemas(), kind_schema_id(kind), value)
     if not issues and kind == "request" and "quantityVersion" in value and int(value["contract"].split(".")[1]) < 4:
         issues.append(ValidationIssue("/quantityVersion", "invariant", "quantityVersion requires contract 1.4"))
+    if (
+        not issues
+        and kind == "request"
+        and phase_definition(value["quantity"], value.get("quantityVersion"))
+        and int(value["contract"].split(".")[1]) < 5
+    ):
+        issues.append(ValidationIssue("/quantityVersion", "invariant", "diffractive quantities require contract 1.5"))
     return issues
 
 
@@ -576,4 +585,44 @@ def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None =
                 bad |= valid[cell] == 1 and not (x * x + y * y < 1)
             if bad:
                 issue(path, "midpoint coordinates, circle, intensity and validity disagree")
+    return issues
+
+
+def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
+    from .ndarray import decode_ndarray
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("rays.trace", "data"), value)
+    if issues:
+        return issues
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+    if version < 3 and ("phasePath" in value or "phasePathUnavailable" in value):
+        issue("/phasePath", "phase paths require rays.trace version 3")
+    if version < 2:
+        for key in ("pathUnavailable", "unrecordedHits"):
+            if key in value:
+                issue("/" + key, "partial paths and unrecorded visits require rays.trace version 2")
+    if version == 3 and "phasePath" not in value:
+        issue("/phasePath", "rays.trace version 3 requires phasePath")
+    if "phasePath" not in value:
+        return issues
+    try:
+        phase = decode_ndarray(value["phasePath"])
+        status = decode_ndarray(value["status"]).values()
+        ends = decode_ndarray(value["endSurface"]).values()
+        surfaces, rays = value["hits"]["$nd"]["shape"][:2]
+        if phase.shape != (surfaces, rays):
+            issue("/phasePath", "expected [surfaces, rays]")
+        else:
+            delays = phase.values()
+            for surface in range(surfaces):
+                for ray in range(rays):
+                    reached = surfaces if status[ray] == 0 else ends[ray]
+                    finite = "phasePathUnavailable" not in value and surface < reached
+                    number = delays[surface * rays + ray]
+                    if (finite and not math.isfinite(number)) or (not finite and not math.isnan(number)):
+                        issue("/phasePath", f"invalid phase delay at surface {surface}, ray {ray}")
+                        return issues
+    except ValueError as error:
+        issue("/phasePath", str(error))
     return issues

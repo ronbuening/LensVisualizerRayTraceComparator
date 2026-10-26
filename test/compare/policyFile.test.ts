@@ -17,7 +17,7 @@ import { tempDir } from "../core/support.ts";
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 14);
+  assert.equal(policy.version, 15);
   assert.equal(policy.contract, "1.3");
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",
@@ -83,6 +83,7 @@ test("r2 and r3 are gated on identical rays, at the gates of the ladder, without
     "opd.maxAbs": waves,
     "opticalPath.maxAbs": waves,
     "opticalPathToImage.maxAbs": waves,
+    "phasePath.maxAbs": waves,
   });
   // What R2 reports and does not judge: the rays in the rim band, and how many rays were compared.
   const reported = COMPARATORS.get("rays.trace", "r2")?.metrics.map((metric) => metric.name) ?? [];
@@ -287,5 +288,20 @@ test("a policy using attentionSeveralLines refuses earlier contract minors", (t)
     writeFileSync(file, JSON.stringify(policy));
     if (["1.0", "1.1", "1.2"].includes(contract)) assert.throws(() => loadPolicy(file), /not a valid policy/);
     else assert.deepEqual(loadPolicy(file), policy);
+  }
+});
+
+test("only the exact additive phase policy preserves policy-14 baseline verification", async () => {
+  const { baselinePolicyMatches } = await import("../../src/compare/policyFile.ts");
+  const prior = loadPolicy(join(REPO_ROOT, "policy/rungs.v14.json"));
+  const { hashCanonical } = await import("../../src/core/numeric/hash.ts");
+  const stated = { version: 14, hash: hashCanonical(prior) };
+  const current = loadPolicy();
+  assert.ok(baselinePolicyMatches(stated, current));
+  assert.ok(!baselinePolicyMatches({ ...stated, hash: "0".repeat(64) }, current));
+  for (const metric of ["phasePath.maxAbs", "opticalPath.maxAbs"]) {
+    const changed = structuredClone(current);
+    (changed.rungs.r3.metrics[metric] as { tolerance: number }).tolerance *= 2;
+    assert.ok(!baselinePolicyMatches(stated, changed));
   }
 });

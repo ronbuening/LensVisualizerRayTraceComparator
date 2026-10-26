@@ -36,6 +36,10 @@ function functions<const Name extends string>(
  * signature to `LvApi`; the type check fails until the two agree.
  */
 export const LV_IMPORT_MANIFEST = [
+  {
+    module: "src/optics/math/diffractivePhase.ts",
+    exports: [{ name: "DEFAULT_PHASE_WAVELENGTH_NM", as: "defaultPhaseWavelengthNm", kind: "number" }],
+  },
   { module: "src/optics/publishedStations.ts", exports: functions("publishedZoomStations") },
   {
     module: "src/optics/buildLens.ts",

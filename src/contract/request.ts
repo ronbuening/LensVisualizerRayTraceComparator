@@ -3,7 +3,7 @@ import { hashCanonical } from "../core/numeric/hash.ts";
 import { deepFreeze } from "./json.ts";
 import type { JsonObject } from "./json.ts";
 import { assertKind } from "./schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_4 } from "./version.ts";
+import { CONTRACT_VERSION, CONTRACT_VERSION_1_4, CONTRACT_VERSION_1_5 } from "./version.ts";
 
 /** One quantity asked of an engine for one optical case. */
 export interface QuantityRequest {
@@ -48,7 +48,13 @@ export function requestIdentity(
 export function makeRequest(parts: QuantityRequestParts): QuantityRequest {
   const { caseId, quantity, quantityVersion, spec, engineOptions } = structuredClone(parts);
   const request: QuantityRequest = {
-    contract: quantityVersion === undefined ? CONTRACT_VERSION : CONTRACT_VERSION_1_4,
+    contract:
+      quantityVersion === undefined
+        ? CONTRACT_VERSION
+        : (quantity === "rays.trace" && quantityVersion === 3) ||
+            (quantity === "paraxial.first-order" && quantityVersion === 2)
+          ? CONTRACT_VERSION_1_5
+          : CONTRACT_VERSION_1_4,
     kind: "request",
     id: requestIdentity({ caseId, quantity, quantityVersion, spec }),
     caseId,

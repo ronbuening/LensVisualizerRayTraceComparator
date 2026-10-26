@@ -4,6 +4,7 @@
 // and every engine's reading of the case, to what LensVisualizer traces. The clear aperture is asked of
 // LensVisualizer's `evaluateAperture`, by the probe the exporter asks it with.
 import type { AsphereTerm } from "../../contract/case.ts";
+import { exportPhase } from "./exportPhase.ts";
 import type { SystemDescribeData } from "../../contract/quantities/systemDescribe.ts";
 import { encodeF8 } from "../../core/numeric/ndarray.ts";
 import type { LvCaseModel } from "./caseModel.ts";
@@ -112,6 +113,9 @@ export function describeLvSystem(
             [exported.conditions.lines.length, path.length],
           ),
         }),
+    ...(state.surfaces.some((surface) => surface.diffractive != null)
+      ? { diffractive: state.surfaces.map((surface) => exportPhase(surface.diffractive).phase ?? null) }
+      : {}),
     surfaceCount: rows.length,
     stopIndex,
     imageZ: exported.conditions.imageZ,

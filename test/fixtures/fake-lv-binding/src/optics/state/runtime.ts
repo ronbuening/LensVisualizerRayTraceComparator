@@ -88,7 +88,7 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       clips: source.clips !== false,
       elemId: source.nd === 1 ? 0 : index + 1,
       asphere: source.asphere ?? null,
-      diffractive: null,
+      diffractive: source.diffractive ?? null,
       interaction: source.interaction ?? { type: "refract", incidentSide: "both", inactiveSide: "ignore" },
       // A folded visit's hole, as LV's innerSd (the edit a test makes to innerSd above keeps working).
       ...(source.innerSd === undefined ? {} : { innerSd: source.innerSd }),

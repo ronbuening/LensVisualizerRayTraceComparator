@@ -1,5 +1,6 @@
 // Imported with `import type` only, so this file is never loaded and is not part of the engine closure.
 export interface FakeSurfaceData {
+  diffractive?: { kind: "radial-polynomial"; referenceWavelengthNm: number; diffractionOrder: number; quadraticCoefficient: number; terms: { radialPower: number; coefficient: number; derivativeCoefficient: number }[] };
   label: string;
   R: number;
   d: number;
@@ -157,7 +158,7 @@ export interface FakeStateSurface {
   clips: boolean;
   elemId: number;
   asphere: Record<string, number> | null;
-  diffractive: null;
+  diffractive: FakeSurfaceData["diffractive"] | null;
   interaction: { type: "refract" | "reflect"; incidentSide?: string; inactiveSide?: string };
   profile: {
     kind: string;

@@ -8,6 +8,7 @@ import type { Vec3 } from "../../estimators/imageProjection.ts";
 import { intersectSurface } from "./intersect.ts";
 import type { RefSystem } from "./model.ts";
 import { OBJECT_SPACE_INDEX } from "./paraxial.ts";
+import { diffract, phasePolynomial, phaseScale } from "./phase.ts";
 import { refract } from "./refract.ts";
 import { unitNormalAt } from "./surface.ts";
 
@@ -17,6 +18,7 @@ export interface SurfaceTrace {
    * How the ray ended at the surfaces: "ok" when it passed every one of them. Whether it then reaches the image
    * plane is not decided here.
    */
+  readonly phasePath: readonly number[];
   readonly status: RayStatusName;
   /** The index of the surface the ray did not pass; the number of surfaces for a ray that passed them all. */
   readonly endSurface: number;
@@ -63,8 +65,11 @@ export function traceSurfaces(
   indexAfter: ArrayLike<number>,
   origin: Vec3,
   direction: Vec3,
+  wavelengthNm = system.wavelengthsNm?.[0] ?? 587.5618,
 ): SurfaceTrace {
   const hits: Vec3[] = [];
+  const phasePath: number[] = [];
+  const hasPhase = system.surfaces.some((surface) => surface.diffractive !== undefined);
   const path = createExactSum();
   let [px, py, pz] = origin;
   let heading = direction;
@@ -73,6 +78,7 @@ export function traceSurfaces(
     status,
     endSurface,
     hits,
+    phasePath,
     direction: heading,
     opticalPath: path.value(),
     ...(system.opticalPath === undefined ? {} : { finalMedium: index }),
@@ -126,11 +132,20 @@ export function traceSurfaces(
       const reference =
         side === "rear" && visit.reverseMediumAfter !== undefined ? visit.reverseMediumAfter : visit.mediumAfter;
       nextIndex = reference === null ? 1 : indexAfter[reference ?? visit.surfaceIndex];
-      bent = refract(heading, normal, index, nextIndex);
+      bent =
+        surface.diffractive === undefined
+          ? refract(heading, normal, index, nextIndex)
+          : diffract(heading, normal, [met.x, met.y, met.z], index, nextIndex, surface.diffractive, wavelengthNm);
     }
     if (bent === null) return ended("blocked", at);
 
     path.add(index, met.t * Math.sqrt(dx * dx + dy * dy + dz * dz));
+    if (hasPhase)
+      phasePath.push(
+        interaction === "refract" && inside && surface.diffractive !== undefined
+          ? phaseScale(surface.diffractive, wavelengthNm) * phasePolynomial(surface.diffractive, radius)
+          : 0,
+      );
     hits.push([met.x, met.y, met.z]);
     [px, py, pz] = [met.x, met.y, met.z];
     heading = bent;

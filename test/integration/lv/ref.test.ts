@@ -200,7 +200,12 @@ test(
         opticalCase.conditions.lines.forEach((_line, line) => {
           const at = `${key} ${lines.kind} line ${line}`;
           // LensVisualizer's kernel on its own radii and gaps, with the indices of this line.
-          const rows = state.surfaces.map(({ R, d }, index) => ({ R, d, nd: table[line * count + index] }));
+          const rows = state.surfaces.map(({ R, d, diffractive }, index) => ({
+            R,
+            d,
+            diffractive,
+            nd: table[line * count + index],
+          }));
 
           // The entrance pupil, by two rays from the first vertex plane to the stop's plane: one that enters at
           // height 1 along the axis and one that enters on the axis with the angle 1. The plane of the object

@@ -11,11 +11,10 @@ import {
 } from "../../baseline/files.ts";
 import { MTF_REPORT_JSON, MTF_REPORT_MARKDOWN, renderMtfBaselineReport } from "../../baseline/mtfReport.ts";
 import { BASELINE_REPORT_JSON, BASELINE_REPORT_MARKDOWN, renderBaselineReport } from "../../baseline/report.ts";
-import { loadPolicy } from "../../compare/policyFile.ts";
+import { baselinePolicyMatches, loadPolicy } from "../../compare/policyFile.ts";
 import type { Policy } from "../../contract/policy.ts";
 import { writeFileAtomic } from "../../core/atomicFile.ts";
 import { REPO_ROOT } from "../../core/config.ts";
-import { hashCanonical } from "../../core/numeric/hash.ts";
 import { UsageError } from "../../core/usageError.ts";
 import {
   readStatementInputs,
@@ -111,7 +110,6 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
       }
 
       const policy = inputs.policy ?? loadPolicy();
-      const policyHash = hashCanonical(policy);
       const list = (directory: string): string[] => {
         try {
           return readdirSync(directory).sort();
@@ -148,7 +146,7 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         const before = problems.length;
         if (baseline.suite.name !== suite)
           problems.push(`${at}: it is the baseline of the suite ${baseline.suite.name}`);
-        if (baseline.policy.hash !== policyHash) {
+        if (!baselinePolicyMatches(baseline.policy, policy)) {
           problems.push(
             `${at}: it was judged by policy v${baseline.policy.version} (${baseline.policy.hash}), not by the policy ` +
               `at hand, v${policy.version}: ${check} says whether it still holds, and ${check.replace(" check ", " write ")} ` +

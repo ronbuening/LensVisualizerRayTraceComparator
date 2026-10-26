@@ -7,6 +7,7 @@
 // value with one fault, together with where the validator must report it.
 //
 // After changing anything here, rewrite the files with `node test/contract/writeCorpus.ts`.
+import { KINOFORM } from "../engines/ref/diffractiveFixture.ts";
 import { SPHERICAL_MIRROR, MANGIN } from "../engines/ref/foldedFixture.ts";
 import { fileURLToPath } from "node:url";
 
@@ -222,7 +223,7 @@ export const ALL_FEATURES_DRAFT = {
 
 /** The feature flags contract 1.0 has: every flag but the one minor 2 added. */
 export const CONTRACT_1_0_FLAGS = FEATURE_FLAGS.filter(
-  (flag) => flag !== "aperture.unclipped" && flag !== "path.folded",
+  (flag) => flag !== "aperture.unclipped" && flag !== "path.folded" && flag !== "surface.diffractive",
 );
 
 /** The aperture of a surface that does not clip, 15 mm in extent: an object of its own for each surface. */
@@ -759,7 +760,10 @@ export const DESCRIPTOR_FULL = {
     details: { python: "3.14.0", numpy: "2.3.0", jit: true, gpu: null },
   },
   capabilities: {
-    features: { supported: [...FEATURE_FLAGS], limits: { "asphere.maxPower": 20, "surfaces.count": 200 } },
+    features: {
+      supported: FEATURE_FLAGS.filter((flag) => flag !== "surface.diffractive"),
+      limits: { "asphere.maxPower": 20, "surfaces.count": 200 },
+    },
     quantities: { "system.describe": { version: 1 }, "rays.trace": { version: 2 } },
     deterministic: false,
     maxConcurrency: 4,
@@ -1769,6 +1773,31 @@ export const BASELINE_RAYS: Baseline = {
   ],
 };
 
+const ODD_PHASE_CASE = finalizeCase({
+  ...KINOFORM,
+  system: {
+    ...KINOFORM.system,
+    surfaces: KINOFORM.system.surfaces.map((surface) => ({
+      ...surface,
+      diffractive: {
+        ...surface.diffractive!,
+        terms: [...surface.diffractive!.terms, { radialPower: 3, coefficient: -0.0001 }],
+      },
+    })),
+  },
+});
+const PHASE_TRACE_DATA = {
+  status: encodeNdArray(new Uint8Array([0])),
+  endSurface: encodeNdArray(new Int32Array([-1])),
+  hits: encodeNdArray(new Float64Array([0, 2, 0]), [1, 1, 3]),
+  exitPoint: encodeNdArray(new Float64Array([0, 2, 0]), [1, 3]),
+  exitDirection: encodeNdArray(new Float64Array([0, -0.02, Math.sqrt(1 - 0.02 ** 2)]), [1, 3]),
+  imagePoint: encodeNdArray(new Float64Array([0, 2 - 2 / Math.sqrt(1 - 0.02 ** 2), 100]), [1, 3]),
+  opticalPath: encodeNdArray(new Float64Array([3])),
+  opticalPathToImage: encodeNdArray(new Float64Array([3 + 100 / Math.sqrt(1 - 0.02 ** 2)])),
+  phasePath: encodeNdArray(new Float64Array([-0.02]), [1, 1]),
+};
+
 /** Every valid fixture written here: `valid/<kind>/<name>.json` holds exactly this value. */
 export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknown>>>> = {
   "optical-case": {
@@ -1777,6 +1806,8 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
     "unclipped-plate": UNCLIPPED_PLATE_CASE,
     "folded-spherical-mirror": SPHERICAL_MIRROR,
     "folded-mangin": MANGIN,
+    "diffractive-kinoform": KINOFORM,
+    "diffractive-odd-polynomial": ODD_PHASE_CASE,
   },
   "run-spec": {
     minimal: RUN_SPEC_MINIMAL,
@@ -1788,6 +1819,18 @@ export const VALID: Readonly<Record<ContractKind, Readonly<Record<string, unknow
   request: {
     minimal: REQUEST_MINIMAL,
     "with-engine-options": REQUEST_WITH_OPTIONS,
+    "diffractive-trace-v3": makeRequest({
+      caseId: KINOFORM.id,
+      quantity: "rays.trace",
+      quantityVersion: 3,
+      spec: RAYS_SPEC_SINGLET,
+    }),
+    "diffractive-first-order-v2": makeRequest({
+      caseId: KINOFORM.id,
+      quantity: "paraxial.first-order",
+      quantityVersion: 2,
+      spec: {},
+    }),
     "folded-trace-v2": makeRequest({
       caseId: MANGIN.id,
       quantity: "rays.trace",
@@ -1882,6 +1925,31 @@ const INDEX_TABLE = "/conditions/indexAfterSurface/$nd";
 /** Every invalid fixture. Each is invalid for exactly one reason. */
 export const INVALID: Readonly<Record<ContractKind, Readonly<Record<string, InvalidFixture>>>> = {
   "optical-case": {
+    "phase-power-above-32": fault(KINOFORM, "/system/surfaces/0/diffractive/terms/0/radialPower", 33, "maximum"),
+
+    "phase-missing-wavelength": fault(
+      KINOFORM,
+      "/system/surfaces/0/diffractive/referenceWavelengthNm",
+      REMOVE,
+      "required",
+      "/system/surfaces/0/diffractive",
+    ),
+    "phase-wavelength-zero": fault(
+      KINOFORM,
+      "/system/surfaces/0/diffractive/referenceWavelengthNm",
+      0,
+      "exclusiveMinimum",
+    ),
+    "phase-order-fraction": fault(KINOFORM, "/system/surfaces/0/diffractive/diffractionOrder", 0.5, "type"),
+    "phase-unknown-kind": fault(KINOFORM, "/system/surfaces/0/diffractive/kind", "sag", "const"),
+    "phase-linear-power": fault(KINOFORM, "/system/surfaces/0/diffractive/terms/0/radialPower", 1, "minimum"),
+    "phase-normalization-unknown": fault(
+      KINOFORM,
+      "/system/surfaces/0/diffractive/normalizationRadius",
+      10,
+      "additionalProperties",
+    ),
+
     "not-an-object": fault(SINGLET_CASE, "", "optical-case", "type"),
     "missing-system-id": fault(SINGLET_CASE, "/systemId", REMOVE, "required", ""),
     "kind-of-another-document": fault(SINGLET_CASE, "/kind", "run-spec", "const"),
@@ -2390,6 +2458,12 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
   },
   [`${RAYS_TRACE}.data`]: {
     valid: {
+      "diffractive-v3-quadratic": PHASE_TRACE_DATA,
+      "diffractive-v3-phase-unavailable": {
+        ...PHASE_TRACE_DATA,
+        phasePath: encodeNdArray(new Float64Array([NaN]), [1, 1]),
+        phasePathUnavailable: "lv-phase-path-unavailable: geometric segments only",
+      },
       "singlet-axis-and-rim": RAYS_DATA_SINGLET,
       "every-status": RAYS_DATA_STATUSES,
       "folded-v2-mangin": RAYS_DATA_FOLDED_MANGIN,

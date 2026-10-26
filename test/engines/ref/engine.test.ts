@@ -91,15 +91,15 @@ test("ref describes itself: its id, a fingerprint of its sources, its features a
   const descriptor = await refEngine(t).describe();
   assert.deepEqual(validateKind("engine-descriptor", descriptor), []);
   assert.deepEqual(descriptor, refDescriptor());
-  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: "1.4" });
+  assert.deepEqual(descriptor.contract, { min: CONTRACT_VERSION, max: "1.5" });
   assert.equal(descriptor.identity.id, "ref");
   assert.equal(REF_ENGINE_ID, "ref");
   assert.equal(descriptor.identity.version, REF_ENGINE_VERSION);
   assert.match(descriptor.identity.fingerprint, /^[0-9a-f]{64}$/);
   assert.deepEqual(descriptor.capabilities.quantities, {
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
-    "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version },
-    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version, versions: [1, 2] },
+    "paraxial.first-order": { version: QUANTITIES.get("paraxial.first-order")?.version, versions: [1, 2] },
+    "rays.trace": { version: QUANTITIES.get("rays.trace")?.version, versions: [1, 2, 3] },
   });
   assert.equal(descriptor.capabilities.deterministic, true);
   // Every feature of a case, in the order of the flags, and no limit of any kind.

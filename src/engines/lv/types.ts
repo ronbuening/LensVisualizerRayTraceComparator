@@ -229,6 +229,7 @@ export interface LvMeridionalTraceResult {
 
 /** A row of the paraxial kernel: any object with a radius, the index after the surface and the gap after it. */
 export interface LvParaxialSurface {
+  readonly diffractive?: object | null;
   readonly interaction?: { readonly type: string };
   readonly R: number;
   readonly nd: number;
@@ -590,6 +591,7 @@ export interface LvLineNm {
  * module exports each.
  */
 export interface LvApi {
+  readonly defaultPhaseWavelengthNm: number;
   rearMediumSurfaceIndex(surfaceIndex: number, surfaces: readonly Pick<LvSurface, "sd" | "innerSd">[]): number | null;
   /** The height LV's `recordHeights` keeps for a visit: a coordinate of a point carried along a direction to z. */
   projectCoordinateToZ(

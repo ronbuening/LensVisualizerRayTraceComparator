@@ -1256,3 +1256,49 @@ test("folded visits still use side filters, transparent holes and a sequential-o
     "inner active limit is queried exactly rather than rounded",
   );
 });
+
+test(
+  "diffractive trace records geometric segments only and paraxial phase uses its default wavelength",
+  { skip },
+  () => {
+    assertSource(
+      "src/optics/trace/sequentialTrace.ts",
+      "if (options.recordOpticalPath) opticalPathLengthMm += hit.opticalPathLength ?? n * hit.segmentLength;",
+      "rays.trace v3 keeps LV geometric OPL and declares phasePath unavailable",
+    );
+    assert.equal(occurrences("src/optics/trace/sequentialTrace.ts", "opticalPathLengthMm +="), 1);
+    assertSource(
+      "src/optics/math/paraxial.ts",
+      "const phasePower = diffractiveParaxialPower(surface.diffractive);",
+      "LV first order uses default phase wavelength, not the requested spectral line",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "export const DEFAULT_PHASE_WAVELENGTH_NM = LINE_NM.d;",
+      "manifest binding of the phase paraxial wavelength",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "return -2 * quadraticCoefficient * diffractiveWavelengthScale(phase, wavelengthNm);",
+      "first-order v2 convention",
+    );
+    assertSource(
+      "src/optics/math/diffractivePhase.ts",
+      "radialPower: term.radialPower, coefficient: term.coefficient, derivativeCoefficient: term.radialPower * term.coefficient,",
+      "exportPhase validates prepared caches, reads literal physical coefficients, and invents no normalization",
+    );
+  },
+);
+
+test("LV radial phase powers include odd exponents through 32", { skip }, () => {
+  assertSource(
+    "src/optics/prescription/validate/diffractive.ts",
+    "term.radialPower < 2 || term.radialPower > 32",
+    "contract phase exponents preserve LV's full range, including odd powers",
+  );
+  assertSource(
+    "src/optics/prescription/validate/diffractive.ts",
+    "phase.terms.length < 1 || phase.terms.length > 16",
+    "contract radial phase term count",
+  );
+});

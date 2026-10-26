@@ -189,7 +189,7 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   const adapter = await createEngineRegistry(loaded).create("optiland");
   t.after(() => adapter.close());
   const { identity, capabilities, contract } = await adapter.describe();
-  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: "1.4" });
+  assert.deepEqual(contract, { min: CONTRACT_VERSION, max: "1.5" });
   assert.equal(identity.id, "optiland");
   assert.match(identity.fingerprint, SHA256);
   assert.match(identity.adapterRevision ?? "", SHA256);
@@ -221,7 +221,14 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
     Object.fromEntries(
       offered.map((quantity) => [
         quantity.id,
-        { version: quantity.version, ...(quantity.id === "rays.trace" ? { versions: [1, 2] } : {}) },
+        {
+          version: quantity.version,
+          ...(quantity.id === "rays.trace"
+            ? { versions: [1, 2, 3] }
+            : quantity.id === "paraxial.first-order"
+              ? { versions: [1, 2] }
+              : {}),
+        },
       ]),
     ),
   );

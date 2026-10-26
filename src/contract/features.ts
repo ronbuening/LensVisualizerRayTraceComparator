@@ -25,6 +25,7 @@ export const FEATURE_FLAGS = [
   "surface.asphere.flat-base",
   "surface.asphere.odd",
   "surface.conic",
+  "surface.diffractive",
 ] as const;
 /** One feature flag. */
 export type FeatureFlag = (typeof FEATURE_FLAGS)[number];
@@ -51,7 +52,8 @@ export function deriveFeatures(system: OpticalSystem, conditions: CaseConditions
   const present = new Set<FeatureFlag>();
   if (system.opticalPath !== undefined) present.add("path.folded");
   let maxPower = 0;
-  for (const { shape, aperture } of system.surfaces) {
+  for (const { shape, aperture, diffractive } of system.surfaces) {
+    if (diffractive !== undefined) present.add("surface.diffractive");
     if (aperture.innerSemiDiameter > 0) present.add("aperture.annular");
     if (aperture.semiDiameter === null) present.add("aperture.unclipped");
     if (shape.kind === "plane") continue;

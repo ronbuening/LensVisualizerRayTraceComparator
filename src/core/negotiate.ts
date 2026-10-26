@@ -66,11 +66,30 @@ export function negotiate(
   if (
     request.quantity === "rays.trace" &&
     opticalCase.system.opticalPath !== undefined &&
-    request.quantityVersion !== 2
+    ![2, 3].includes(request.quantityVersion ?? 1)
   ) {
     items.push({ code: "quantity", item: "rays.trace", message: "a folded case requires rays.trace version 2" });
   }
 
+  if (opticalCase.features.includes("surface.diffractive")) {
+    const required = request.quantity === "rays.trace" ? 3 : request.quantity === "paraxial.first-order" ? 2 : null;
+    if (required !== null && request.quantityVersion !== required)
+      items.push({
+        code: "quantity",
+        item: request.quantity,
+        message: `a diffractive case requires ${request.quantity} version ${required}`,
+      });
+  }
+  if (
+    !opticalCase.features.includes("surface.diffractive") &&
+    ((request.quantity === "rays.trace" && request.quantityVersion === 3) ||
+      (request.quantity === "paraxial.first-order" && request.quantityVersion === 2))
+  )
+    items.push({
+      code: "quantity",
+      item: request.quantity,
+      message: "the diffractive definition requires a phase-bearing case",
+    });
   const needed = deriveFeatures(opticalCase.system, opticalCase.conditions).limits;
   for (const limit of FEATURE_LIMITS) {
     if (!Object.hasOwn(features.limits, limit) || needed[limit] <= features.limits[limit]) continue;

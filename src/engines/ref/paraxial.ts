@@ -61,6 +61,7 @@ function transferred(matrix: RayMatrix, reducedGap: number, accurate = false): R
 
 /** One surface as the kernel reads it. */
 export interface ParaxialSurface {
+  readonly phasePower?: number;
   /** Vertex position, mm. */
   readonly z: number;
   /** The curvature of the surface at its vertex, 1/mm. */
@@ -113,7 +114,13 @@ export function systemMatrices(
   let indexBefore = OBJECT_SPACE_INDEX;
   surfaces.forEach((surface, index) => {
     if (index === stopIndex) front = total;
-    const power = (surface.indexAfter - indexBefore) * surface.curvature;
+    let power = (surface.indexAfter - indexBefore) * surface.curvature;
+    if (surface.phasePower !== undefined) {
+      const sum = createExactSum();
+      sum.add(surface.indexAfter - indexBefore, surface.curvature);
+      sum.add(surface.phasePower, 1);
+      power = sum.value();
+    }
     powerScale += Math.abs(power);
     total = refracted(total, power, accurate);
     if (index > stopIndex) rear = refracted(rear, power, accurate);

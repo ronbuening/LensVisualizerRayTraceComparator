@@ -1,0 +1,83 @@
+{
+  "contract": "1.0",
+  "kind": "suite",
+  "name": "diffractive",
+  "defaults": {
+    "engines": ["lv", "ref", "optiland"],
+    "rungs": ["r0", "r1", "r2", "r3"],
+    "aperture": {
+      "kind": "wide-open"
+    },
+    "imagePlane": {
+      "kind": "design"
+    },
+    "lines": {
+      "kind": "reference"
+    },
+    "fields": {
+      "kind": "angles-deg",
+      "values": [0, 0.25]
+    },
+    "sampling": {
+      "bundleGrid": 16
+    }
+  },
+  "runs": [
+    {
+      "name": "canon-ef-400mm-f4-do-is-usm",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-400mm-f4-do-is-usm"
+      }
+    },
+    {
+      "name": "canon-ef-70-300mm-f45-56-do-is-usm",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-ef-70-300mm-f45-56-do-is-usm"
+      }
+    },
+    {
+      "name": "canon-rf-800mm-f11-is-stm",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-rf-800mm-f11-is-stm"
+      }
+    },
+    {
+      "name": "canon-rf600mmf11-is-stm",
+      "lens": {
+        "kind": "lv",
+        "key": "canon-rf600mmf11-is-stm"
+      }
+    },
+    {
+      "name": "nikon-af-s-nikkor-300mm-f4e-pf-ed-vr",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-af-s-nikkor-300mm-f4e-pf-ed-vr"
+      }
+    },
+    {
+      "name": "nikon-af-s-nikkor-500mm-f56e-pf-ed-vr",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-af-s-nikkor-500mm-f56e-pf-ed-vr"
+      }
+    },
+    {
+      "name": "nikon-nikkor-z-800mm-f63-vr-s",
+      "lens": {
+        "kind": "lv",
+        "key": "nikon-nikkor-z-800mm-f63-vr-s"
+      }
+    },
+    {
+      "name": "reference-folded-diffractive-plate",
+      "lens": {
+        "kind": "lv",
+        "key": "reference-folded-diffractive-plate"
+      }
+    }
+  ]
+}

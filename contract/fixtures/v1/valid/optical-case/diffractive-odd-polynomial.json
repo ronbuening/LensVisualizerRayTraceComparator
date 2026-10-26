@@ -1,0 +1,83 @@
+{
+  "contract": "1.5",
+  "kind": "optical-case",
+  "id": "ac3324aa20df881c2bda4490801b910eb2e04cdd1eec16fc7824820fdf66bdd7",
+  "systemId": "30709c232f6231ddb1a41319daede411415f11db77c0a16e59962e8c0af84a6a",
+  "label": {
+    "name": "Synthetic quadratic kinoform"
+  },
+  "system": {
+    "surfaces": [
+      {
+        "label": "DOE",
+        "z": 0,
+        "thickness": 100,
+        "shape": {
+          "kind": "plane"
+        },
+        "aperture": {
+          "semiDiameter": 10,
+          "nominalSemiDiameter": 10,
+          "innerSemiDiameter": 0
+        },
+        "elementId": 0,
+        "diffractive": {
+          "kind": "radial-polynomial",
+          "referenceWavelengthNm": 500,
+          "diffractionOrder": 1,
+          "terms": [
+            {
+              "radialPower": 2,
+              "coefficient": -0.005
+            },
+            {
+              "radialPower": 3,
+              "coefficient": -0.0001
+            }
+          ]
+        }
+      }
+    ],
+    "stopIndex": 0,
+    "lastLensSurfaceIndex": 0,
+    "designImageZ": 100
+  },
+  "conditions": {
+    "object": {
+      "kind": "infinity"
+    },
+    "stopSemiDiameter": 10,
+    "imageZ": 100,
+    "lines": [
+      {
+        "wavelengthNm": 500,
+        "weight": 1,
+        "indexSource": "authored"
+      }
+    ],
+    "indexAfterSurface": {
+      "$nd": {
+        "dtype": "f8",
+        "shape": [
+          1,
+          1
+        ],
+        "data": "AAAAAAAA8D8=",
+        "sha256": "6c3c396ed6b5c36dcae172271f462051b1266b851e92df3deea8ac65478fd712"
+      }
+    }
+  },
+  "features": [
+    "surface.diffractive"
+  ],
+  "provenance": {
+    "producer": {
+      "tool": "lvrtc",
+      "version": "0.1.0"
+    },
+    "source": {
+      "kind": "fixture",
+      "name": "synthetic-kinoform"
+    }
+  }
+}

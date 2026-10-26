@@ -560,7 +560,11 @@ test("each thing the contract cannot express is a problem with its code, and no 
     [tripletModel({ folded: true }), "folded-auto-path", /fixed visit order/],
     [withSurface(4, { interaction: "reflect" }), "non-refract-interaction", /reflect or block.*: 5$/],
     [withSurface(0, { interaction: "block" }), "non-refract-interaction", /: 1$/],
-    [withSurface(1, { diffractive: { kind: "radial-polynomial" } }), "diffractive-surface", /diffractive phase: 2A$/],
+    [
+      withSurface(1, { diffractive: { kind: "radial-polynomial" } }),
+      "diffractive-phase-unsupported",
+      /prepared diffractive phase/,
+    ],
     [tripletModel({ normal: [0, 0.6, 0.8] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ normal: [1e-9, 0, 1] }), "tilted-image-plane", /not perpendicular/],
     [tripletModel({ normal: [0, 0, -1] }), "tilted-image-plane", /not perpendicular/],

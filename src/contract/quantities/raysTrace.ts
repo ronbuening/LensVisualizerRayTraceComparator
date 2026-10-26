@@ -15,6 +15,9 @@ export const RAYS_TRACE_VERSION = 1;
 /** Folded traversal; selected by quantityVersion only on a folded request. */
 export const RAYS_TRACE_FOLDED_VERSION = 2;
 
+/** Separate per-visit phase delay; requested only for diffractive cases. */
+export const RAYS_TRACE_PHASE_VERSION = 3;
+
 /**
  * How a ray ended, as `status` holds it.
  *
@@ -108,8 +111,10 @@ export type RaysTraceData = {
   readonly opticalPathToImage: NdArrayWire;
 };
 
-/** The data of a `rays.trace` answer with the members only version 2 (a folded case) may carry. */
+/** Trace extensions: v2 traversal members and optional v3 phase members; validate against the selected version. */
 export type RaysTraceDataV2 = RaysTraceData & {
+  readonly phasePath?: NdArrayWire;
+  readonly phasePathUnavailable?: string;
   /** Version 2 only: the coded reason the engine states no optical path; both path arrays are then all NaN. */
   readonly pathUnavailable?: string;
   /**
@@ -119,3 +124,6 @@ export type RaysTraceDataV2 = RaysTraceData & {
    */
   readonly unrecordedHits?: NdArrayWire;
 };
+
+/** V3 requires the per-visit phase-delay array, including when explicitly unavailable. */
+export type RaysTraceDataV3 = RaysTraceDataV2 & { readonly phasePath: NdArrayWire };

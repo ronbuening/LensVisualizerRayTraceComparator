@@ -3,7 +3,7 @@
 // last surface; the landing on the image plane is the comparator's own projection of that end.
 import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import type { RaysTraceDataV2, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
-import { decodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
+import { decodeNdArray, encodeF8, ndRow } from "../../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
 import { createTraceRecorder } from "../../rays/traceRecorder.ts";
 import type { LvCaseModel } from "./caseModel.ts";
@@ -101,7 +101,21 @@ export function answerLvRays(api: LvRaysApi, model: LvCaseModel, spec: RaysTrace
   const origins = f8Of(spec.origins, "origins");
   const directions = f8Of(spec.directions, "directions");
   const rays = origins.length / 3;
-  if (exported.system.opticalPath !== undefined) return answerLvFoldedRays(api, model, spec.line, origins, directions);
+  if (exported.system.opticalPath !== undefined) {
+    const answer = answerLvFoldedRays(api, model, spec.line, origins, directions);
+    if (!("data" in answer) || !exported.features.includes("surface.diffractive")) return answer;
+    return {
+      ...answer,
+      data: {
+        ...answer.data,
+        phasePath: encodeF8(Array<number>(exported.system.opticalPath.length * rays).fill(NaN), [
+          exported.system.opticalPath.length,
+          rays,
+        ]),
+        phasePathUnavailable: "lv-phase-path-unavailable: generalized trace exposes no phase delay",
+      },
+    };
+  }
   const surfaces = state.surfaces.length;
   const options = lvTraceOptions(model, spec.line);
 
@@ -129,7 +143,18 @@ export function answerLvRays(api: LvRaysApi, model: LvCaseModel, spec: RaysTrace
     }
     recorder.exit(ray, trace.terminalPoint, trace.terminalDirection, trace.opticalPathLengthMm, trace.finalMedium);
   }
-  return recorder.finish();
+  const answer = recorder.finish();
+  return exported.features.includes("surface.diffractive")
+    ? {
+        ...answer,
+        data: {
+          ...answer.data,
+          phasePath: encodeF8(Array<number>(surfaces * rays).fill(NaN), [surfaces, rays]),
+          phasePathUnavailable:
+            "lv-phase-path-unavailable: recordOpticalPath records geometric segments only; phase delay is not exposed",
+        },
+      }
+    : answer;
 }
 
 /** LV 2e046d71's generalized tracer keeps no optical path (`recordOpticalPath` is sequential only). */

@@ -251,6 +251,7 @@ class Rows:
     N: Any
     intensity: Any
     opd: Any
+    phase: Any = None
 
 
 def _bits_differ(np: Any, a: Any, b: Any) -> bool:
@@ -295,6 +296,14 @@ def record(optic: Any, origins: Any, directions: Any, api: OptilandApi | None = 
             raise RuntimeError(f"optiland does not hold the rays it was given: {name} at its object surface differs")
     if np.any(rows.opd[0] != 0.0):
         raise RuntimeError("optiland's optical path does not start at 0 at the launch point")
+    if any(hasattr(surface.interaction_model, "phase_profile") for surface in optic.surfaces):
+        from dataclasses import replace
+        phase = np.zeros_like(rows.opd)
+        for at, surface in enumerate(optic.surfaces):
+            profile = getattr(surface.interaction_model, "phase_profile", None)
+            if profile is not None:
+                phase[at] = profile.get_phase(rows.x[at], rows.y[at], wavelength) * (wavelength * 1e-3) / (2 * math.pi)
+        rows = replace(rows, phase=phase)
     return rows
 
 
@@ -373,9 +382,10 @@ def path_lengths(rows: Rows, api: OptilandApi | None = None) -> Any:
     api = api if api is not None else optiland_api()
     np = api.np
     with np.errstate(all="ignore"):
-        stretches = np.diff(rows.opd, axis=0)
+        geometric = rows.opd if rows.phase is None else rows.opd - np.cumsum(rows.phase, axis=0)
+        stretches = np.diff(geometric, axis=0)
         excess = length_excess(np, rows.L[:-1], rows.M[:-1], rows.N[:-1])
-        path = np.array(rows.opd, dtype=np.float64)
+        path = np.array(geometric, dtype=np.float64)
         path[1:] += np.cumsum(stretches * excess, axis=0)
     return path
 
@@ -399,6 +409,7 @@ class Traced:
     image_point: Any
     optical_path: Any
     optical_path_to_image: Any
+    phase_path: Any = None
 
 
 _TRACED = (
@@ -410,9 +421,10 @@ _TRACED = (
     "image_point",
     "optical_path",
     "optical_path_to_image",
+    "phase_path",
 )
 
-_RAY_AXIS = {"hits": 1}
+_RAY_AXIS = {"hits": 1, "phase_path": 1}
 """The axis of an answer's array along which its rays lie, where that is not the first."""
 
 
@@ -584,7 +596,10 @@ def settle(optic: Any, rows: Rows, api: OptilandApi | None = None) -> Traced:
     heading = np.stack((rows.L[surfaces], rows.M[surfaces], rows.N[surfaces]), axis=1)
     plane = np.full(count, image_z, dtype=np.float64)
     landing = np.stack((np.where(at_exit, exit_x, image_x), np.where(at_exit, exit_y, image_y), plane), axis=1)
+    passed = np.arange(surfaces)[:, None] < np.where(arrived, surfaces, end)[None, :]
+    phase_path = None if rows.phase is None else np.where(passed, rows.phase[1:-1], nan)
     return Traced(
+        phase_path=phase_path,
         status=status,
         end_surface=np.where(arrived, NO_END_SURFACE, end).astype(np.int32),
         hits=hits,
@@ -614,7 +629,12 @@ def trace_rays(
         parts.append(settle(optic, record(optic, origins[batch], directions[batch], api), api))
     if len(parts) == 1:
         return parts[0], 1
-    joined = (np.concatenate([getattr(part, name) for part in parts], axis=_RAY_AXIS.get(name, 0)) for name in _TRACED)
+    joined = (
+        None
+        if getattr(parts[0], name) is None
+        else np.concatenate([getattr(part, name) for part in parts], axis=_RAY_AXIS.get(name, 0))
+        for name in _TRACED
+    )
     return Traced(*joined), len(parts)
 
 
@@ -641,6 +661,7 @@ def encode_trace(traced: Traced, api: OptilandApi | None = None) -> dict[str, An
         return encode_ndarray_bytes(dtype, np.ascontiguousarray(array, dtype=code).tobytes(), list(array.shape))
 
     return {
+        **({"phasePath": wire("f8", "<f8", traced.phase_path)} if traced.phase_path is not None else {}),
         "status": wire("u1", "u1", traced.status),
         "endSurface": wire("i4", "<i4", traced.end_surface),
         "hits": wire("f8", "<f8", traced.hits),

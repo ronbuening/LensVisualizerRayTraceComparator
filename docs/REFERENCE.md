@@ -3132,3 +3132,130 @@ Among reports, only reports/census was rewritten. No baseline was written, no ca
 was edited, and no commit, push, stash, checkout or reset was performed. The owner commits after review and owns
 the Stage 5.3 baseline refresh. The owner's traced-ray decision and separate upstream-fix brief complete this
 follow-up; the four LV R1 FAILs remain visible.
+
+## Stage 5.2b diffractive surfaces
+
+Contract 1.5, rays.trace v3 and first-order v2 implement the owner's 2026-10-25 decision. Only a diffractive case
+selects the new definitions. Geometric OPL retains its earlier meaning; signed phase delay is a separate
+per-visit array. R0 uses its existing zero shape-mismatch gate for literal phase/order/wavelength metadata. R3
+uses unchanged geometric gates plus policy 15's 2e-5-wave phasePath.maxAbs gate. Its basis is the signed local
+phase delay on the identical ray, with the existing absolute path accuracy as its scale. No gate is widened and
+no floor is added. Policy-14 baselines remain verifiable only across this exact additive change; their bytes and
+reports remain untouched. An inapplicable phase figure leaves ordinary comparisons unchanged.
+
+`test/engines/ref/diffractive.test.ts` derives quadratic-phase power/focal length, its height-dependent exact
+focus, the local grating equation, signed optical-path contribution, cancellation and a two-line thin hybrid
+achromat from closed forms. The exact rational folded-pupil proof includes the requested wavelength's phase
+power, so a substrate-only singularity cannot override a finite phase-bearing pupil. Native optiland behavior
+is pinned by `workers/python/tests/optiland/test_phase.py`,
+including a curved substrate, order/wavelength scaling and each deliberate build fault. LV source canaries hold
+geometric OPL capture, its default paraxial wavelength and compiled-coefficient conventions. The binding imports
+that wavelength through its manifest and local structural API; the fake tree has a dedicated diffractive plate.
+The real LV tier compares exact benchmark/features case identities and R0–R3 request JSON with a read-only HEAD
+archive, without tracing another suite or touching any result store.
+
+Reproduce the targeted run with temporary storage only:
+
+```
+LVRTC_RUNS_DIR=<temporary-directory> node bin/lvrtc.mjs run suites/diffractive.json --jobs 4
+LVRTC_RUNS_DIR=<temporary-directory> node bin/lvrtc.mjs compare diffractive
+```
+
+This stage does not certify diffractive MTF. LV's MTF gate still rejects a phase surface. The folded diffractive
+plate keeps its tilt/off-axis/profile refusals; no coordinate transform or replacement phase surface is fitted.
+
+The suite was run **once**, with `--jobs 4`, in `/private/tmp/lvrtc52b-diffractive-fhev9C`, at clean LV
+`879c061024519be2b1acaf3cc082947235ea9760` on the owner's lens branch `ronbuening/AddLens261026a`
+(engine closure `c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b`, 177 files).
+Optiland was `4e893f53aee1312f2d091680b93dd2279711e197`, with only its pre-existing `pyproject.toml`/`uv.lock`
+changes. Neither checkout was edited. There were **144 jobs: 136 ok, 8 unsupported, zero error/pending**,
+96 computed and 48 R2/R3 cache reuses, all inside that temporary directory. The run exits 1 because the folded
+plate is source-refused; the subsequent comparison exits 0. No baseline was written.
+
+Both comparison modes give **240 pairs: 216 PASS, 24 UNSUPPORTED, zero FAIL/FLOOR/ERROR**. R0 has 40 PASS,
+R1 16 PASS/24 UNSUPPORTED, R2 80 PASS, and R3 80 geometric PASS. All 24 unsupported pairs name
+`optiland-phase-paraxial-unseen`: native first-order accessors do not see the phase. The 16 ref/optiland phase
+figures are measured and pass; 64 pairs involving LV explicitly record `lv-phase-path-unavailable` in their
+reason. Those geometry PASS verdicts do not certify LV phase paths. At 0.25 degrees there is no chief ray, so
+40 R3 pairs also explicitly leave chief-relative geometric OPD unmeasured; their absolute geometric paths and
+the available phase paths are still judged.
+
+In the table, **P3** means all three engines' applicable pairs PASS, **P2/U** means LV/ref PASS with optiland
+`optiland-phase-paraxial-unseen`, and **G3/P2/U** means geometric paths PASS three ways, phase paths PASS
+ref/optiland, LV `lv-phase-path-unavailable`.
+
+| Lens/state | R0 | R1 | R2 | R3 |
+|---|---|---|---|---|
+| `canon-ef-400mm-f4-do-is-usm` | P3 | P2/U | P3 | G3/P2/U |
+| `canon-ef-70-300mm-f45-56-do-is-usm`, wide | P3 | P2/U | P3 | G3/P2/U |
+| `canon-ef-70-300mm-f45-56-do-is-usm`, tele | P3 | P2/U | P3 | G3/P2/U |
+| `canon-rf-800mm-f11-is-stm` | P3 | P2/U | P3 | G3/P2/U |
+| `canon-rf600mmf11-is-stm` | P3 | P2/U | P3 | G3/P2/U |
+| `nikon-af-s-nikkor-300mm-f4e-pf-ed-vr` | P3 | P2/U | P3 | G3/P2/U |
+| `nikon-af-s-nikkor-500mm-f56e-pf-ed-vr` | P3 | P2/U | P3 | G3/P2/U |
+| `nikon-nikkor-z-800mm-f63-vr-s` | P3 | P2/U | P3 | G3/P2/U |
+| `reference-folded-diffractive-plate` | source U | source U | source U | source U |
+
+The folded plate's codes are `tilted-surface`, `tilted-image-plane`, `off-axis-image-plane` and
+`surface-profile-unsupported` (its FOLD/FOLDB tilted planes). **Class: representation gap**, explicitly retained
+as the owner requested. Optiland R1 and LV phase-path omissions are **native engine/API limitations**, pinned
+by tests, rather than substitute computations. No numerical FAIL needed attribution or a disputed ray requiring
+extended-precision adjudication.
+
+Each engine traced **4,104 rays: 1,760 ok, 2,344 blocked, zero failed**. Mask mismatches and rim-band disagreements
+are zero. Worst measured differences across the suite:
+
+| Figure | Maximum |
+|---|---:|
+| R0 shape/layout/aperture/index mismatches | 0 |
+| R0 scaled sag | 3.54014e-16 |
+| R1 cardinal value | 2.27374e-11 mm |
+| R1 pupil position | 2.38742e-12 mm |
+| R2 hit | 4.97512e-13 mm |
+| R2 direction component | 6.99441e-15 |
+| R2 image landing | 3.92598e-13 mm |
+| R3 geometric path, to last sheet or image | 6.77212e-10 waves |
+| R3 chief-relative geometric OPD | 7.73957e-10 waves |
+| R3 signed phase path | 1.53525e-13 waves |
+
+The largest phase difference is optiland/ref, Nikon Z 800/6.3 at 0.25 degrees, surface 6, ray 230. The temporary
+manifest, store, comparisons and rendered report retain the exact requests and all provenance. The summary is
+`/tmp/lvrtc52b-suite-summary.json`. No gate was widened or floor introduced.
+
+Census rewritten at the end, with a read-only archive of exporter `3506a2c` measured on the **same** current LV:
+
+| Snapshot | Lenses | Zooms | States | Exported | Refused | Threw |
+|---|---:|---:|---:|---:|---:|---:|
+| Previously committed census, LV `2e046d71` | 995 | 325 | 1320 | 1304 | 16 | 0 |
+| Stage 5.2a exporter `3506a2c`, LV `879c0610` | 1007 | 334 | 1341 | 1325 | 16 | 0 |
+| Stage 5.2b exporter, LV `879c0610` | 1007 | 334 | 1341 | 1333 | 8 | 0 |
+
+This stage adds **eight exported states of seven lenses**. The ninth phase-bearing state, the folded plate,
+remains geometrically unrepresentable. `diffractive-surface` falls from nine refused states to zero; every other
+reason's count is unchanged. The additional **21 states** since the committed snapshot are LV catalog growth,
+not a benefit attributed to diffraction support. Before-census evidence is `/tmp/lvrtc52b-census-before.json`;
+the new JSON/Markdown are in `reports/census`. Both same-checkout measurements record clean LV `879c0610`.
+
+Final verification, run one command at a time:
+
+- `LVRTC_LV_PATH=/nonexistent LVRTC_OPTILAND_PYTHON=/nonexistent npm run check`: **1,670 TypeScript tests**,
+  **99 Python kit tests**, **304 worker tests** with 165 expected hermetic real-library skips; typecheck, lint,
+  formatting and all eight unchanged baseline/report pairs pass.
+- `npm run test:lv`: **110 pass**, none skipped (498.4 seconds).
+- `npm run test:optiland`: **44 pass**, none skipped (1001.5 seconds), including all **304 real Python worker
+  tests**, none skipped. The native phase deliberate-mistake checks pass. Existing benchmark/features baseline
+  checks show zero drift across 1,710 records, refreshable for the new engine identities and policy only.
+
+Logs are `/tmp/lvrtc52b-{check,lv,optiland}-final.log`. Only the census was rewritten among reports; no baseline,
+real `runs/store`, LensVisualizer or optiland source was written. No commit, push, stash, checkout or reset was
+performed. The owner's main session commits after review. **No owner decision remains for Stage 5.2b.**
+
+Review (2026-10-25). Mutating ref's phase lines one at a time showed four that no test held: the projection of
+the gradient onto a curved sheet, the order/wavelength factor of `phasePath`, the surface-by-ray layout of its
+rows and the request line's wavelength in the trace. `diffractive.test.ts` now derives a curved-sheet
+interaction and a two-surface, two-ray, m = -2 phase-path table at a second line; each of the eleven mutations
+turns it red. `test_phase.py` adds a lone r^4 term, which a coefficient in the wrong native slot fails. An
+independent rational y-nu trace of `nikon-af-s-nikkor-300mm-f4e-pf-ed-vr` (phase power
+-2 C2 m lambda/lambda0 = 8.11547e-5 /mm at the d line, lambda0 = 587.6 nm) gives an EFL of 293.9152039077488 mm;
+LV answers 293.915203907749 and ref 293.91520390775 (302.797 mm without the phase). The policy file keeps its
+compact formatting. `npm run check` then passes with 1,672 TypeScript, 100 kit and 305 worker tests.

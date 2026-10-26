@@ -237,7 +237,9 @@ def surface_keywords(api: OptilandApi, surface: dict[str, Any], index_after: flo
       still stops a ray whose point is no number, and it is an aperture where the case has none.
     """
     aperture = surface["aperture"]
+    from .phase import phase_profile
     return {
+        **({"phase_profile": phase_profile(surface["diffractive"])} if "diffractive" in surface else {}),
         **shape_keywords(surface["shape"]),
         "z": float(surface["z"]),
         "material": "mirror" if surface.get("_interaction") == "reflect" else api.IdealMaterial(n=float(index_after)),
@@ -482,6 +484,9 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
 
     hold("the system", "the number of surfaces", int(optic.surfaces.num_surfaces) - 2, len(surfaces))
 
+    from .phase import verify_phase
+    for number, surface in enumerate(surfaces):
+        verify_phase(optic.surfaces[number + 1], surface.get("diffractive"), hold, f"surface {number}")
     read = read_optic(optic, wavelength, api)
     placed = conditions["object"]
     front = read[0]
@@ -546,7 +551,11 @@ def verify_optic(optic: Any, case: dict[str, Any], line: int, api: OptilandApi |
             (
                 "the model of its interaction",
                 built.interaction,
-                "FoldedInteraction" if folded else "RefractiveReflectiveModel",
+                (
+                    "FoldedInteraction"
+                    if folded
+                    else "PhaseInteractionModel" if "diffractive" in surface else "RefractiveReflectiveModel"
+                ),
             ),
             ("its coating", built.coating, None),
             ("the index after it", built.index_after, float(indices[number])),
@@ -740,7 +749,10 @@ def describe_optics(
                 [len(optics), len(visits)],
             ),
         }
+    from .phase import read_phase
+    phases = [read_phase(surface.interaction_model) for surface in list(first.surfaces)[1:-1]]
     return {
+        **({"diffractive": phases} if any(phase is not None for phase in phases) else {}),
         **extra,
         "surfaceCount": count,
         "stopIndex": int(first.surfaces.stop_index) - 1,

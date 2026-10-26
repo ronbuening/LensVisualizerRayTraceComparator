@@ -152,6 +152,14 @@ export function traceSequential(
       direction = refracted;
     }
     index = next;
+    if (surface.diffractive) {
+      const phase = surface.diffractive;
+      const r = Math.hypot(hit.point[0], hit.point[1]);
+      const kick = phase.terms.reduce((sum, term) => sum + term.derivativeCoefficient * r ** (term.radialPower - 1), 0) * phase.diffractionOrder * (options.wavelengthNm ?? 587.5618) / phase.referenceWavelengthNm;
+      const x = direction[0] + (r === 0 ? 0 : kick * hit.point[0] / r);
+      const y = direction[1] + (r === 0 ? 0 : kick * hit.point[1] / r);
+      direction = [x, y, Math.sqrt(1 - x*x - y*y)];
+    }
     traceHit.outgoingDirection = direction;
     hits.push(traceHit);
     origin = hit.point;

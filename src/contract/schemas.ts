@@ -89,6 +89,17 @@ export function validateKind(kind: ContractKind, value: unknown): ValidationIssu
     "quantityVersion" in value
   ) {
     const version = (value as unknown as { contract: string }).contract.split(".").map(Number);
+    const request = value as unknown as { quantity: string; quantityVersion: number };
+    if (
+      ((request.quantity === "rays.trace" && request.quantityVersion === 3) ||
+        (request.quantity === "paraxial.first-order" && request.quantityVersion === 2)) &&
+      version[1] < 5
+    )
+      issues.push({
+        path: "/quantityVersion",
+        keyword: "invariant",
+        message: "diffractive quantities require contract 1.5",
+      });
     if (version[1] < 4)
       issues.push({ path: "/quantityVersion", keyword: "invariant", message: "quantityVersion requires contract 1.4" });
   }

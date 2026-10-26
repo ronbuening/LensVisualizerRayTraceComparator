@@ -23,6 +23,7 @@ import type { LvApi, LvParaxialSurface } from "./types.ts";
 /** The LensVisualizer exports the first-order data is made from. */
 export type LvFirstOrderApi = Pick<
   LvApi,
+  | "defaultPhaseWavelengthNm"
   | "computeCardinalElementsFromState"
   | "paraxialTrace"
   | "buildCardinalElementsFromMatrix"
@@ -189,6 +190,20 @@ function indexRows(opticalCase: OpticalCase): Float64Array[] {
 export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): LvFirstOrderAnswer {
   const { state, exported } = model;
   const { lines, object } = exported.conditions;
+  if (
+    exported.features.includes("surface.diffractive") &&
+    lines.some((line) => line.wavelengthNm !== api.defaultPhaseWavelengthNm)
+  )
+    return {
+      supported: false,
+      items: [
+        {
+          code: "feature",
+          item: "lv-phase-paraxial-wavelength",
+          message: "LV paraxial kernel evaluates phase at its default helium d wavelength only",
+        },
+      ],
+    };
   if (exported.system.opticalPath !== undefined) return foldedValues(api, model);
   const unseen = termItems(exported);
   if (unseen.length > 0) return { supported: false, items: unseen };
@@ -199,7 +214,12 @@ export function answerLvFirstOrder(api: LvFirstOrderApi, model: LvCaseModel): Lv
   const magnifications: number[] = [];
   const afocal: number[] = [];
   indexRows(exported).forEach((indices, line) => {
-    const rows = state.surfaces.map(({ R, d }, index) => ({ R, d, nd: indices[index] }));
+    const rows = state.surfaces.map(({ R, d, diffractive }, index) => ({
+      R,
+      d,
+      nd: indices[index],
+      ...(diffractive == null ? {} : { diffractive }),
+    }));
     const values = lineValues(api, model, rows);
     if (values === null) return void afocal.push(line);
     for (const name of FIRST_ORDER_VALUES) columns[name].push(values[name]);

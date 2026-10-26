@@ -138,6 +138,11 @@ function dataInvariants(value: unknown): ValidationIssue[] {
       invariantIssue("/unrecordedHits", `its shape is ${shapeText(flagShape)}, expected [${surfaces}, ${rays}]`),
     );
   }
+  if (data.phasePath !== undefined) {
+    const shape = data.phasePath.$nd.shape;
+    if (shape.length !== 2 || shape[0] !== surfaces || shape[1] !== rays)
+      issues.push(invariantIssue("/phasePath", "expected [surfaces, rays]"));
+  }
   if (issues.length > 0) return issues;
 
   const status = decoded("/status", data.status, issues);
@@ -148,6 +153,7 @@ function dataInvariants(value: unknown): ValidationIssue[] {
   const imagePoint = decoded("/imagePoint", data.imagePoint, issues);
   const opticalPath = decoded("/opticalPath", data.opticalPath, issues);
   const toImage = decoded("/opticalPathToImage", data.opticalPathToImage, issues);
+  const phase = data.phasePath === undefined ? null : decoded("/phasePath", data.phasePath, issues);
   const unrecorded = data.unrecordedHits === undefined ? null : decoded("/unrecordedHits", data.unrecordedHits, issues);
   if (data.unrecordedHits !== undefined && unrecorded === null) return issues;
   if (
@@ -192,6 +198,13 @@ function dataInvariants(value: unknown): ValidationIssue[] {
         report("/unrecordedHits", `${said}; 1 is for a visit before its end that is not the exit point`);
         break;
       }
+      if (
+        phase !== null &&
+        (data.phasePathUnavailable === undefined && surface < reached
+          ? !Number.isFinite(phase[row])
+          : !Number.isNaN(phase[row]))
+      )
+        report("/phasePath", `invalid phase delay at surface ${surface}, ray ${ray}`);
       const point = surface < reached && flag === 0;
       if (point ? !finiteRow(hits, row) : !nanRow(hits, row)) {
         const expected = point
@@ -239,8 +252,14 @@ export const raysTraceQuantity: QuantityModule = {
   ...baseQuantity,
   validateData: (data, version = 1) => {
     const issues = baseQuantity.validateData(data);
+    if (issues.length === 0 && typeof data === "object" && data !== null) {
+      if (version === 3 && !("phasePath" in data))
+        issues.push(invariantIssue("/phasePath", "rays.trace version 3 requires phasePath"));
+      if (version < 3 && ("phasePath" in data || "phasePathUnavailable" in data))
+        issues.push(invariantIssue("/phasePath", "phase paths require rays.trace version 3"));
+    }
     // The members of version 2 are refused in version 1 once the data is otherwise valid: one issue per fault.
-    if (issues.length > 0 || version === 2 || typeof data !== "object" || data === null) return issues;
+    if (issues.length > 0 || version >= 2 || typeof data !== "object" || data === null) return issues;
     if ("pathUnavailable" in data) {
       issues.push(invariantIssue("/pathUnavailable", "partial optical paths require rays.trace version 2"));
     }

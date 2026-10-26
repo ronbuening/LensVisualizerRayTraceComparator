@@ -1,45 +1,46 @@
 {
   "byState": {
     "prime": {
-      "exported": 656,
-      "notExportable": 14,
-      "states": 670,
+      "exported": 665,
+      "notExportable": 8,
+      "states": 673,
       "threw": 0
     },
     "tele": {
-      "exported": 324,
-      "notExportable": 1,
-      "states": 325,
+      "exported": 334,
+      "notExportable": 0,
+      "states": 334,
       "threw": 0
     },
     "wide": {
-      "exported": 324,
-      "notExportable": 1,
-      "states": 325,
+      "exported": 334,
+      "notExportable": 0,
+      "states": 334,
       "threw": 0
     }
   },
   "contract": "1.0",
-  "exported": 1304,
+  "exported": 1333,
   "features": {
     "aperture.annular": 7,
-    "aperture.unclipped": 253,
+    "aperture.unclipped": 263,
     "lines.multiple": 0,
     "object.finite": 0,
     "path.folded": 9,
-    "surface.asphere.even": 634,
+    "surface.asphere.even": 648,
     "surface.asphere.flat-base": 2,
-    "surface.asphere.odd": 81,
-    "surface.conic": 295
+    "surface.asphere.odd": 83,
+    "surface.conic": 305,
+    "surface.diffractive": 8
   },
   "kind": "lv-export-census",
   "lensVisualizer": {
-    "commit": "2e046d712fa5f6631ace3b8963d18827b909a37f",
+    "commit": "879c061024519be2b1acaf3cc082947235ea9760",
     "dirty": false,
-    "engineClosureHash": "45a0b6c967b4fedafa92410f94bbbf77db5cfde20e2da87b331dfd6ed9258d12",
+    "engineClosureHash": "c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b",
     "engineFileCount": 177
   },
-  "lenses": 995,
+  "lenses": 1007,
   "limits": {
     "asphere.maxPower": {
       "lens": "fujifilm-fujinon-gf-30mm-f35-r-wr",
@@ -55,28 +56,13 @@
       "max": 63
     }
   },
-  "notExportable": 16,
+  "notExportable": 8,
   "notes": {
     "bulk-absorption": 2,
     "projection:fisheye-equidistant": 4,
     "projection:fisheye-equisolid": 15
   },
   "reasons": {
-    "diffractive-surface": {
-      "lenses": [
-        "canon-ef-400mm-f4-do-is-usm",
-        "canon-ef-70-300mm-f45-56-do-is-usm",
-        "canon-rf-800mm-f11-is-stm",
-        "canon-rf600mmf11-is-stm",
-        "nikon-af-s-nikkor-300mm-f4e-pf-ed-vr",
-        "nikon-af-s-nikkor-500mm-f56e-pf-ed-vr",
-        "nikon-nikkor-z-800mm-f63-vr-s",
-        "reference-folded-diffractive-plate"
-      ],
-      "states": 9,
-      "teleOnly": [],
-      "wideOnly": []
-    },
     "folded-auto-path": {
       "lenses": [
         "carl-zeiss-mirotar-500f45",
@@ -141,8 +127,8 @@
     "lines": "reference",
     "zoom": "both-ends"
   },
-  "states": 1320,
+  "states": 1341,
   "threw": [],
   "unindexedFiles": 0,
-  "zooms": 325
+  "zooms": 334
 }

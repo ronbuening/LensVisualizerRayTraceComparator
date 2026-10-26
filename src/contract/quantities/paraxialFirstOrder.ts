@@ -11,6 +11,9 @@ export const PARAXIAL_FIRST_ORDER = "paraxial.first-order";
 /** The version of `paraxial.first-order`'s definition, which an engine that answers it states in its descriptor. */
 export const PARAXIAL_FIRST_ORDER_VERSION = 1;
 
+/** Includes diffractive phase power; requested only for diffractive cases. */
+export const PARAXIAL_FIRST_ORDER_PHASE_VERSION = 2;
+
 /**
  * The values of `paraxial.first-order` that are compared, in the order a comparison reads them. Each is one number
  * per line of the case, in mm; the positions are z in the contract frame.

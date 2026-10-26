@@ -1,0 +1,99 @@
+{
+  "status": {
+    "$nd": {
+      "dtype": "u1",
+      "shape": [
+        1
+      ],
+      "data": "AA==",
+      "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    }
+  },
+  "endSurface": {
+    "$nd": {
+      "dtype": "i4",
+      "shape": [
+        1
+      ],
+      "data": "/////w==",
+      "sha256": "ad95131bc0b799c0b1af477fb14fcf26a6a9f76079e48bf090acb7e8367bfd0e"
+    }
+  },
+  "hits": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        1,
+        3
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAA",
+      "sha256": "21db8363e8ffdb6d973959d6adb6adf64d493b67c2031a404dc27407bd67e29d"
+    }
+  },
+  "exitPoint": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        3
+      ],
+      "data": "AAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAA",
+      "sha256": "21db8363e8ffdb6d973959d6adb6adf64d493b67c2031a404dc27407bd67e29d"
+    }
+  },
+  "exitDirection": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        3
+      ],
+      "data": "AAAAAAAAAAB7FK5H4XqUvwX6E4dc/u8/",
+      "sha256": "b6427589563d2ddff9d9fe39de4c955423354eab305c9d27c3600f01f9c4f841"
+    }
+  },
+  "imagePoint": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        3
+      ],
+      "data": "AAAAAAAAAAAAYIB85jg6vwAAAAAAAFlA",
+      "sha256": "56c9ab409c70c176b492ac71385093ca482a8743cf7944ba90e27a8aa4bb264d"
+    }
+  },
+  "opticalPath": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "AAAAAAAACEA=",
+      "sha256": "161f4c0b1a18a0501127332c387e782b5acc10c6c7a9f7e494c1e3394c49bad5"
+    }
+  },
+  "opticalPathToImage": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1
+      ],
+      "data": "RRRBx0fBWUA=",
+      "sha256": "5906bc3987486207a9811f741dee29eea3c4cf34185a55953f972290aefc973c"
+    }
+  },
+  "phasePath": {
+    "$nd": {
+      "dtype": "f8",
+      "shape": [
+        1,
+        1
+      ],
+      "data": "AAAAAAAA+H8=",
+      "sha256": "74999fd28ab18ccca2bee199f260d19764603a3c78353d773d16d215eebe8e19"
+    }
+  },
+  "phasePathUnavailable": "lv-phase-path-unavailable: geometric segments only"
+}

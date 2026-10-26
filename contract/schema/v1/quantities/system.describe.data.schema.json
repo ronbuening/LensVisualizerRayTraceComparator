@@ -99,6 +99,19 @@
       "items": {
         "$ref": "urn:lvrtc:contract:v1:optical-case#/$defs/pathStep"
       }
+    },
+    "diffractive": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "$ref": "urn:lvrtc:contract:v1:optical-case#/$defs/diffractive"
+          }
+        ]
+      }
     }
   },
   "required": [

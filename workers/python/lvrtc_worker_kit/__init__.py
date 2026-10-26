@@ -20,6 +20,17 @@ message and result is still written to ``CONTRACT_VERSION``."""
 CONTRACT_VERSION_1_4 = "1.4"
 """Fixed folded paths and per-request quantity definitions."""
 
+CONTRACT_VERSION_1_5 = "1.5"
+"""Diffractive surfaces and their phase-aware quantity definitions, stated only by a document that uses them."""
+
+PHASE_DEFINITIONS: dict[str, int] = {"rays.trace": 3, "paraxial.first-order": 2}
+"""The quantity version that only a diffractive case asks, by quantity."""
+
+
+def phase_definition(quantity: object, version: object) -> bool:
+    """Whether ``quantity`` at ``version`` is a definition only a diffractive case asks (contract 1.5)."""
+    return isinstance(quantity, str) and quantity in PHASE_DEFINITIONS and PHASE_DEFINITIONS[quantity] == version
+
 
 def speaks(version: str, maximum: str = CONTRACT_VERSION_1_2) -> bool:
     """Whether a document written to ``version`` lies in the range ``CONTRACT_VERSION`` to ``CONTRACT_VERSION_1_2``.

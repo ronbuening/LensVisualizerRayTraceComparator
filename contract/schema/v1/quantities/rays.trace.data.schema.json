@@ -157,6 +157,13 @@
       },
       "required": ["$nd"],
       "additionalProperties": false
+    },
+    "phasePath": {
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+    },
+    "phasePathUnavailable": {
+      "type": "string",
+      "minLength": 1
     }
   },
   "required": [

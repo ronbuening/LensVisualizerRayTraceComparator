@@ -12,20 +12,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `2e046d712fa5f6631ace3b8963d18827b909a37f` (clean) |
-| Engine closure | `45a0b6c967b4fedafa92410f94bbbf77db5cfde20e2da87b331dfd6ed9258d12` (177 files) |
+| LensVisualizer commit | `879c061024519be2b1acaf3cc082947235ea9760` (clean) |
+| Engine closure | `c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b` (177 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-995 lenses, 325 of them zooms, in 1320 states; 0 lens files not indexed.
+1007 lenses, 334 of them zooms, in 1341 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 670 | 656 | 14 | 0 |
-| Zooms, wide end | 325 | 324 | 1 | 0 |
-| Zooms, tele end | 325 | 324 | 1 | 0 |
-| All | 1320 | 1304 | 16 | 0 |
+| Primes | 673 | 665 | 8 | 0 |
+| Zooms, wide end | 334 | 334 | 0 | 0 |
+| Zooms, tele end | 334 | 334 | 0 | 0 |
+| All | 1341 | 1333 | 8 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -37,24 +37,12 @@ applies to one end only.
 
 | Reason | States | Lenses |
 | --- | --- | --- |
-| `diffractive-surface` | 9 | 8 |
 | `folded-auto-path` | 6 | 6 |
 | `mixed-reference` | 1 | 1 |
 | `off-axis-image-plane` | 2 | 2 |
 | `surface-profile-unsupported` | 2 | 2 |
 | `tilted-image-plane` | 2 | 2 |
 | `tilted-surface` | 1 | 1 |
-
-### `diffractive-surface` (9 states, 8 lenses)
-
-- `canon-ef-400mm-f4-do-is-usm`
-- `canon-ef-70-300mm-f45-56-do-is-usm`
-- `canon-rf-800mm-f11-is-stm`
-- `canon-rf600mmf11-is-stm`
-- `nikon-af-s-nikkor-300mm-f4e-pf-ed-vr`
-- `nikon-af-s-nikkor-500mm-f56e-pf-ed-vr`
-- `nikon-nikkor-z-800mm-f63-vr-s`
-- `reference-folded-diffractive-plate`
 
 ### `folded-auto-path` (6 states, 6 lenses)
 
@@ -95,14 +83,15 @@ LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for 
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 7 |
-| `aperture.unclipped` | 253 |
+| `aperture.unclipped` | 263 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
 | `path.folded` | 9 |
-| `surface.asphere.even` | 634 |
+| `surface.asphere.even` | 648 |
 | `surface.asphere.flat-base` | 2 |
-| `surface.asphere.odd` | 81 |
-| `surface.conic` | 295 |
+| `surface.asphere.odd` | 83 |
+| `surface.conic` | 305 |
+| `surface.diffractive` | 8 |
 
 ## Provenance notes of the exported cases
 

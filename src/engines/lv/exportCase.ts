@@ -1,3 +1,4 @@
+import { exportPhase } from "./exportPhase.ts";
 // The case exporter: one LensVisualizer lens in one state, as the optical case every engine is asked about.
 //
 // Everything is read from LV's PREPARED state and from the functions its own tracers use, never from authored
@@ -73,7 +74,7 @@ const STRUCTURAL: ReadonlySet<string> = new Set([
   "folded-interaction-budget",
   "tilted-surface",
   "non-refract-interaction",
-  "diffractive-surface",
+  "diffractive-phase-unsupported",
   "tilted-image-plane",
   "off-axis-image-plane",
   "synthetic-surface-unknown",
@@ -99,9 +100,9 @@ function structuralProblems(state: LvPreparedState): ExportProblem[] {
     const message = `surfaces that reflect or block instead of refracting: ${notRefracting}`;
     problems.push({ code: "non-refract-interaction", message });
   }
-  const diffractive = labels((surface) => surface.diffractive !== null && surface.diffractive !== undefined);
-  if (diffractive !== "") {
-    problems.push({ code: "diffractive-surface", message: `surfaces with a diffractive phase: ${diffractive}` });
+  for (const surface of state.surfaces) {
+    const { problem } = exportPhase(surface.diffractive);
+    if (problem) problems.push({ ...problem, message: `${surface.label}: ${problem.message}` });
   }
   const [normalX, normalY, normalZ] = state.imagePlane.normal;
   if (
@@ -259,6 +260,7 @@ function exportChecked(
       z,
       thickness: folded.path === undefined && index === last ? toImage(z, surface.d) : surface.d,
       shape: shape.shape,
+      ...(surface.diffractive == null ? {} : { diffractive: exportPhase(surface.diffractive).phase! }),
       aperture: surfaceAperture(api, state, surface, index === stopIndex ? stop.radius : undefined),
       elementId: surface.elemId,
       ...(syntheticKind(surface) === "rearPlate" ? { synthetic: "rearPlate" as const } : {}),

@@ -110,6 +110,7 @@ test("the census counts what became of every state, and lists lens keys by reaso
       "surface.asphere.flat-base": 3,
       "surface.asphere.odd": 3,
       "surface.conic": 3,
+      "surface.diffractive": 0,
     },
     notes: { "bulk-absorption": 2, "projection:fisheye-equisolid": 2 },
     limits: {

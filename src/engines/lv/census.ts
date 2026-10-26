@@ -281,7 +281,10 @@ export function renderCensusMarkdown(census: ExportCensus): string {
     "",
     ...table(
       ["Flag", "Cases"],
-      FEATURE_FLAGS.map((flag) => [code(flag), String(census.features[flag])]),
+      FEATURE_FLAGS.filter((flag) => census.features[flag] !== undefined).map((flag) => [
+        code(flag),
+        String(census.features[flag]),
+      ]),
     ),
     "",
     "## Provenance notes of the exported cases",

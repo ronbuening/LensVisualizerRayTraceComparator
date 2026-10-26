@@ -8,7 +8,13 @@ import type { FeatureFlag } from "./features.ts";
 import { deepFreeze } from "./json.ts";
 import type { Provenance } from "./provenance.ts";
 import { assertKind } from "./schemas.ts";
-import { CONTRACT_VERSION, CONTRACT_VERSION_1_2, CONTRACT_VERSION_1_4, contractMinor } from "./version.ts";
+import {
+  CONTRACT_VERSION,
+  CONTRACT_VERSION_1_2,
+  CONTRACT_VERSION_1_4,
+  CONTRACT_VERSION_1_5,
+  contractMinor,
+} from "./version.ts";
 
 /** One polynomial term of an asphere: it adds `coeff * r^power` to the sag. `power` is an integer of at least 1. */
 export interface AsphereTerm {
@@ -54,8 +60,17 @@ export function clips(aperture: SurfaceAperture): aperture is SurfaceAperture & 
   return aperture.semiDiameter !== null;
 }
 
+/** An unwrapped radial optical-path polynomial W(r), mm, at its design wavelength. */
+export interface DiffractivePhase {
+  readonly kind: "radial-polynomial";
+  readonly referenceWavelengthNm: number;
+  readonly diffractionOrder: number;
+  readonly terms: readonly { readonly radialPower: number; readonly coefficient: number }[];
+}
+
 /** One surface of the system, in the order light meets it. */
 export interface SurfaceIR {
+  readonly diffractive?: DiffractivePhase;
   readonly label: string;
   /** Vertex position, mm. The first surface is at 0. */
   readonly z: number;
@@ -224,6 +239,13 @@ export function caseInvariantProblems(system: OpticalSystem, conditions: CaseCon
         problems.push(`${at} does not clip (semiDiameter is null), and the surface is the stop`);
       }
     }
+    if (surface.diffractive !== undefined) {
+      if (contract !== undefined && (contractMinor(contract) ?? 0) < 5)
+        problems.push("diffractive surfaces require contract 1.5");
+      const powers = surface.diffractive.terms.map((term) => term.radialPower);
+      if (powers.some((power, at) => at > 0 && power <= powers[at - 1]))
+        problems.push(`surface ${index} phase powers must be distinct and ascending`);
+    }
     if (surface.shape.kind === "asphere") {
       const powers = surface.shape.terms.map((term) => term.power);
       const repeated = powers.find((power, at) => powers.indexOf(power) !== at);
@@ -279,11 +301,13 @@ function usesMinor2(system: OpticalSystem): boolean {
  * system uses. So a case without a surface that does not clip is the document it was before minor 2.
  */
 export function caseContractVersion(system: OpticalSystem): string {
-  return system.opticalPath !== undefined
-    ? CONTRACT_VERSION_1_4
-    : usesMinor2(system)
-      ? CONTRACT_VERSION_1_2
-      : CONTRACT_VERSION;
+  return system.surfaces.some((surface) => surface.diffractive !== undefined)
+    ? CONTRACT_VERSION_1_5
+    : system.opticalPath !== undefined
+      ? CONTRACT_VERSION_1_4
+      : usesMinor2(system)
+        ? CONTRACT_VERSION_1_2
+        : CONTRACT_VERSION;
 }
 
 const UNSET_ID = "0".repeat(64);

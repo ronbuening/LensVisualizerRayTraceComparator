@@ -26,7 +26,7 @@ import sys
 import traceback
 from typing import Any, BinaryIO, Protocol, TextIO
 
-from . import CONTRACT_VERSION
+from . import CONTRACT_VERSION, CONTRACT_VERSION_1_5, phase_definition
 from .ndarray import NdArrayError, decode_ndarray
 from .validate import SchemaSet, contract_schemas, format_issues, validate_kind
 
@@ -95,7 +95,12 @@ def make_result(request: dict[str, Any], engine: dict[str, Any], status: str, **
     ``diagnostics`` defaults to no warnings and no counts.
     """
     result: dict[str, Any] = {
-        "contract": CONTRACT_VERSION,
+        "contract": (
+            CONTRACT_VERSION_1_5
+            if phase_definition(request.get("quantity"), request.get("quantityVersion"))
+            or "diffractive" in (parts.get("data") or {})
+            else CONTRACT_VERSION
+        ),
         "kind": "result",
         "requestId": request["id"],
         "caseId": request["caseId"],
@@ -142,6 +147,13 @@ def case_array_problems(case: dict[str, Any]) -> list[str]:
             f"expected f8 of shape [{lines}, {surfaces}] (lines, surfaces)"
         ]
     problems = []
+    for surface in case["system"]["surfaces"]:
+        if "diffractive" in surface:
+            if int(case["contract"].split(".")[1]) < 5:
+                problems.append("diffractive surfaces require contract 1.5")
+            powers = [term["radialPower"] for term in surface["diffractive"]["terms"]]
+            if any(at > 0 and p <= powers[at - 1] for at, p in enumerate(powers)):
+                problems.append("phase powers must be distinct and ascending")
     path = case["system"].get("opticalPath")
     if path is not None:
         if int(case["contract"].split(".")[1]) < 4:

@@ -42,7 +42,8 @@
           "surface.asphere.even",
           "surface.asphere.flat-base",
           "surface.asphere.odd",
-          "surface.conic"
+          "surface.conic",
+          "surface.diffractive"
         ]
       },
       "uniqueItems": true
@@ -130,6 +131,9 @@
         },
         "synthetic": {
           "enum": ["rearPlate"]
+        },
+        "diffractive": {
+          "$ref": "#/$defs/diffractive"
         }
       },
       "required": ["label", "z", "thickness", "shape", "aperture", "elementId"],
@@ -326,6 +330,43 @@
         }
       },
       "required": ["surfaceIndex", "interaction"],
+      "additionalProperties": false
+    },
+    "diffractive": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "radial-polynomial"
+        },
+        "referenceWavelengthNm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "diffractionOrder": {
+          "type": "integer"
+        },
+        "terms": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "radialPower": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 32
+              },
+              "coefficient": {
+                "type": "number"
+              }
+            },
+            "required": ["radialPower", "coefficient"],
+            "additionalProperties": false
+          },
+          "maxItems": 16
+        }
+      },
+      "required": ["kind", "referenceWavelengthNm", "diffractionOrder", "terms"],
       "additionalProperties": false
     }
   },

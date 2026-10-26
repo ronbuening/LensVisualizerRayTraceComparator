@@ -1,0 +1,1 @@
+export const DEFAULT_PHASE_WAVELENGTH_NM = 587.5618;

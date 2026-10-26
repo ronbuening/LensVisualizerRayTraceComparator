@@ -6,6 +6,7 @@ import { encodeF8 } from "../../core/numeric/ndarray.ts";
 import type { NdArrayWire } from "../../core/numeric/ndarray.ts";
 import type { RefSystem } from "./model.ts";
 import { foldedSingularities } from "./foldedSingularities.ts";
+import { phasePower } from "./phase.ts";
 import { firstOrder, vertexCurvature } from "./paraxial.ts";
 
 /** The first-order data of a model, or why it has none. */
@@ -57,6 +58,9 @@ export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
             z: surface.z,
             curvature: curvatures[index] as number,
             indexAfter: indices[index],
+            ...(surface.diffractive === undefined
+              ? {}
+              : { phasePower: phasePower(surface.diffractive, system.wavelengthsNm?.[line] ?? 587.5618) }),
           }))
         : path.map((step) => {
             const side = sign > 0 ? "front" : "rear";
@@ -72,10 +76,18 @@ export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
               curvature:
                 interaction === "block" || interaction === "pass" ? 0 : (curvatures[step.surfaceIndex] as number),
               indexAfter: sign * medium,
+              ...(interaction === "refract" && system.surfaces[step.surfaceIndex].diffractive !== undefined
+                ? {
+                    phasePower: phasePower(
+                      system.surfaces[step.surfaceIndex].diffractive,
+                      system.wavelengthsNm?.[line] ?? 587.5618,
+                    ),
+                  }
+                : {}),
             };
           });
     const output = firstOrder({
-      compensated: path !== undefined,
+      compensated: path !== undefined || system.surfaces.some((surface) => surface.diffractive !== undefined),
       surfaces: rows,
       stopIndex: stopVisit ?? system.stopIndex,
       stopSemiDiameter: system.stopSemiDiameter,
@@ -88,7 +100,7 @@ export function answerFirstOrder(system: RefSystem): FirstOrderAnswer {
       backFocus: output.values.rearFocalZ - system.surfaces[system.lastLensSurfaceIndex].z,
     };
     if (path) {
-      const singular = foldedSingularities(system, indices);
+      const singular = foldedSingularities(system, indices, system.wavelengthsNm?.[line]);
       if (singular.entrance !== null) {
         values.entrancePupilZ = singular.entrance;
         values.entrancePupilSemiDiameter = Infinity;

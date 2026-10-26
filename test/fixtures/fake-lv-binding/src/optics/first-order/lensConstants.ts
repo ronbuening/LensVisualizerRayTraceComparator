@@ -1,6 +1,7 @@
 import { FLAT_R_THRESHOLD } from "../geometry.js";
 
 export interface ParaxialRow {
+  diffractive?: { quadraticCoefficient: number; diffractionOrder: number; referenceWavelengthNm: number } | null;
   R: number;
   nd: number;
   d: number;
@@ -22,7 +23,9 @@ export function paraxialTrace(
   for (let index = 0; index < traced; index++) {
     const surface = surfaces[index];
     const power = Math.abs(surface.R) < FLAT_R_THRESHOLD ? (surface.nd - n) / surface.R : 0;
-    u = (n * u - y * power) / surface.nd;
+    const phase = surface.diffractive;
+    const phasePower = phase ? -2 * phase.quadraticCoefficient * phase.diffractionOrder * 587.5618 / phase.referenceWavelengthNm : 0;
+    u = (n * u - y * (power + phasePower)) / surface.nd;
     n = surface.nd;
     if (index === traced - 1 && skipLastTransfer) continue;
     if (index < surfaces.length - 1) y += surface.d * u;

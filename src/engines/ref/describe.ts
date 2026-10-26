@@ -42,6 +42,9 @@ export function describeSystem(system: RefSystem, sagFractions: readonly number[
             [indexAfter.length, system.opticalPath.length],
           ),
         }),
+    ...(surfaces.some((surface) => surface.diffractive !== undefined)
+      ? { diffractive: surfaces.map((surface) => surface.diffractive ?? null) }
+      : {}),
     surfaceCount: surfaces.length,
     stopIndex: system.stopIndex,
     imageZ: system.imageZ,

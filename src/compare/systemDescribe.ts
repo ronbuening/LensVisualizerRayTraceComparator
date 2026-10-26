@@ -142,6 +142,8 @@ function compare(a: SystemDescribeData, b: SystemDescribeData): ComparatorOutcom
   perSurface(shape, "curvature");
   perSurface(shape, "conic");
   for (let surface = 0; surface < surfaces; surface++) {
+    if (hashCanonical(a.diffractive?.[surface] ?? null) !== hashCanonical(b.diffractive?.[surface] ?? null))
+      miss(shape, { field: "diffractive", surface });
     const different = firstDifferentTerm(a.terms[surface], b.terms[surface]);
     if (different !== undefined) miss(shape, { field: "terms", surface, power: different.power });
   }

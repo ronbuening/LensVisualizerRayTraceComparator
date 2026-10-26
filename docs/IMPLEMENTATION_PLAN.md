@@ -289,7 +289,7 @@ every FAIL has a class and a reproducer command.
 |---|---|---|
 | 5.1 Throughput (delivered) | Explicit persistent process pool (CLI default 1; recommend 10 for this machine’s catalog): child export/recipe/ray/request preparation, background engine hello, transient input references, guarded duplicate reuse, gzip staging and planned-order admission; parallel comparison threads. Owner-only compress/prune retained. | Jobs 1/2/4 exact case/store/manifest/comparison/baseline/report parity; death/retry/corruption/filesystem regressions. Check 1,616 TS pass; LV 101; optiland 44. Cold states jobs 1/8/10 rays run 187.94/23.43/23.02 s, compare 70.86/10.52/9.81 s; MTF run 639.85/99.43/89.76 s, compare 436.81/72.28/63.77 s. Combined 7.17x serial-to-10 gain with identical bytes; [profile, worker utilization and memory](REFERENCE.md#stage-51-measurements). |
 | 5.2a Mirror and catadioptric systems | Owner decision 2026-10-23: the 16 folded/non-refractive census lenses; contract 1.4 fixed visits and rays.trace v2; conditional policies and analytic ref proofs. Export the declared path, then check LV's own traces of exactly the run's coarse/fine sets before planning any engine requests. A post-path interaction refuses the whole run with `folded-post-path-reflection`; successful cases record exact ray-set confirmation in provenance. No static check or extra sampling. | R0–R3 three ways where available; at LV `2e046d71`, eight confirmed runs, eight source refusals; four unsuppressed LV R1 FAILs, fixed separately by the owner. No gate/floor changes or baselines. |
-| 5.2b Remaining long-tail features | Diffractive surfaces and other remaining translator gaps; the folded diffractive plate retains its coded exclusions in 5.2a. | Each passes R0–R3 or is declared unsupported with a reason. |
+| 5.2b Diffractive surfaces | Implemented per owner decision 2026-10-25: contract 1.5 radial phase on its substrate; selective rays.trace v3 with separate geometric OPL and phasePath, selective first-order v2 with phase power. Literal LV export, analytic ref proofs, native optiland profile and verified read-back. | Eight lenses / nine states: 216 PASS, 24 UNSUPPORTED R0–R3 pairs; optiland phase first-order and LV phase paths retain native codes. Folded plate keeps its geometric exclusions. Census gains eight exports on the same LV. Required checks pass; temporary store, no baseline or gate widening. Results and amendments in REFERENCE.md. |
 | 5.3 Catalog sweep | Sweep suite and statistics report: every prime, and every zoom at both ends | Sweep completes; report deterministic |
 | 5.4 Real-engine check | `npm run verify:real` (benchmark suite against live LV and optiland) | Runs clean on the development machine |
 
@@ -586,3 +586,15 @@ whole-run source refusal before any engine requests; successful runs record exac
 LV's front-principal-plane defect remains an unsuppressed R1 FAIL for the owner's separate LV fix, with an
 unfiled brief in `docs/upstream/lensvisualizer-mirror-principal-plane.md`. Results are in REFERENCE.md under
 Stage 5.2a; the census remains raw declared-path geometry, without run confirmation.
+
+
+### Stage 5.2b amendment (owner, 2026-10-25)
+
+The scope is the nine states/eight lenses in the diffractive census gap. The owner explicitly keeps geometric
+`opticalPath` unchanged and approves a separate per-visit `phasePath` in rays.trace v3; the wave eikonal is their
+sum. Only diffractive cases select v3, and first-order v2 with phase power. Minor 1.5 is stated only by documents
+using its additions. R3 judges geometric and phase paths separately: policy 15 adds phasePath.maxAbs at 2e-5 waves,
+with the identical-ray signed phase delay as its basis and the existing absolute optical-path accuracy as its
+scale. No existing gate or floor changes. Native limitations are coded rather than synthesized. LV's MTF gate
+continues to refuse these lenses, so R4/R4f/R6a are outside this stage's verification. The suite uses temporary
+storage; the census is the raw export snapshot and records the owner's LV lens branch commit.

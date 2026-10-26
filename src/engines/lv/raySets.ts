@@ -308,7 +308,7 @@ export function lvRaySets(
   model: LvCaseModel,
   options: { readonly fields?: RunFields; readonly sampling?: Pick<RunSampling, "bundleGrid"> } = {},
 ): RaySetResolution {
-  if (model.exported.system.opticalPath !== undefined) {
+  if (model.exported.system.opticalPath !== undefined || model.exported.features.includes("surface.diffractive")) {
     const made = probeRaySets(model.exported, options);
     return {
       ...made,

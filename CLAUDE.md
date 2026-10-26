@@ -842,3 +842,42 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   At LV `2e046d71`, the folded suite has eight confirmed cases / eight source refusals, 144 jobs (135 ok,
   nine unsupported, zero errors), and 149 PASS / four FAIL / 87 UNSUPPORTED comparisons across both modes.
   The raw geometry census remains 995 lenses / 325 zooms / 1,320 states: 1,304 exports, 16 refusals, zero throws.
+
+## Stage 5.2b diffractive surfaces
+
+- Owner decision 2026-10-25: contract 1.5 is content-selected. Prepared radial optical-path polynomials remain on
+  their substrate, with literal powers, coefficients, order and design wavelength. LV has no normalization radius;
+  unknown members and inconsistent derivative/quadratic caches are `diffractive-phase-unsupported`, never fitted.
+- Only diffractive cases ask `rays.trace` v3 and `paraxial.first-order` v2. Every earlier definition is still offered.
+  Non-diffractive cases/requests keep their versions and identity expressions; source fingerprints are never frozen.
+- `opticalPath` and `opticalPathToImage` still mean geometric index times distance. V3 adds signed **per-visit**
+  `phasePath[S,n]`; the wave path adds its compensated sum to the geometric path. Never insert phase into the
+  geometric arrays. LV records only geometric segments: supply all-NaN phase rows with `phasePathUnavailable`,
+  `lv-phase-path-unavailable`, and keep comparing geometric OPL. R3 records the unavailable phase metric explicitly.
+- Ref derives the surface-gradient momentum kick independently, with compensated polynomial/dot/path/matrix sums.
+  `test/engines/ref/diffractive.test.ts` derives power, focal length, exact quadratic-phase focus, local grating
+  deflection, signed phase path and a hybrid achromat. A quadratic phase has a height-dependent exact focus;
+  never claim it is an aberration-free hyperbolic focusing phase. Check any LV/ref disagreement in extended precision.
+- LV's paraxial kernel takes its own compiled phase, at its bound default d wavelength. Other phase wavelengths
+  are `lv-phase-paraxial-wavelength`, never synthesized first-order data. Its MTF gate still refuses diffraction;
+  this stage verifies R0–R3, with ordinary probe rays where the MTF launch gate supplies none.
+- Optiland receives a native `RadialPhaseProfile` in radians and `PhaseInteractionModel` on the actual substrate.
+  Its constant-period `DiffractiveInteractionModel` is not a radial polynomial. Design-coordinate metadata,
+  native radian coefficients, class, both parent links, efficiency and reflection state are read back and checked;
+  every check has a deliberate fault in `test_phase.py`. Describe reads only built objects. The worker separates
+  native OPD into geometric segments and phase rows before its existing direction-length correction.
+- Optiland's first-order accessor bypasses phase; answer `optiland-phase-paraxial-unseen`, never the substrate-only
+  focal length. The direct native paraxial model also has the opposite transmitted phase sign; both behaviors are
+  pinned analytically. Folded phase policies remain `optiland-folded-phase-unsupported` if asked directly.
+- Policy 15 adds only `phasePath.maxAbs`, in waves, at 2e-5, the same absolute path accuracy required per phase
+  interaction as per geometric path. Basis: separate signed eikonal delay on the identical ray, not a change in
+  an existing gate. R0 counts a phase-profile difference under its existing zero `shape.mismatches` gate.
+- `suites/diffractive.json`: eight lenses / nine states, lv/ref/optiland, R0–R3. Run into temporary storage with
+  at most four jobs; no baseline, no catalog ray sweep, no gate widening or floor. Rewrite only reports/census.
+- Hermetic verification preserves policy-14 baselines only across the exact additive phase-only transition:
+  the added metric must be exactly 2e-5 waves, and removing it/resetting version must reproduce the pinned v14
+  hash. Any other difference still fails. `policy/rungs.v14.json` preserves the previous policy; no old baseline
+  claims validation of a phase surface. Phase-inapplicable metrics leave ordinary pair/report bytes unchanged.
+
+- LV phase powers are integers 2 through 32, including odd powers (at most 16 terms). Preserve all of them.
+  Optiland explicitly refuses `optiland-odd-radial-phase`; never assign an odd coefficient to an even slot.

@@ -235,7 +235,7 @@ class RefusalTest(unittest.TestCase):
 
     def test_the_engine_offers_the_quantity_at_the_version_of_the_contract(self) -> None:
         self.assertEqual(PARAXIAL_FIRST_ORDER, "paraxial.first-order")
-        self.assertEqual(QUANTITIES[PARAXIAL_FIRST_ORDER], {"version": 1})
+        self.assertEqual(QUANTITIES[PARAXIAL_FIRST_ORDER], {"version": 1, "versions": [1, 2]})
         # The values, in the order of the contract: every member the schema of the data requires but `recorded`.
         schema = REPO_ROOT / "contract" / "schema" / "v1" / "quantities" / "paraxial.first-order.data.schema.json"
         required = json.loads(schema.read_text(encoding="utf-8"))["required"]

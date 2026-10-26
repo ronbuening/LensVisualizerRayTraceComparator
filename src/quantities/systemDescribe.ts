@@ -26,6 +26,8 @@ function shapeText(shape: readonly number[]): string {
 function dataInvariants(value: unknown): ValidationIssue[] {
   const data = value as SystemDescribeData;
   const issues: ValidationIssue[] = [];
+  if (data.diffractive !== undefined && data.diffractive.length !== data.surfaceCount)
+    issues.push(invariantIssue("/diffractive", "expected one phase entry per surface"));
   const surfaces = data.surfaceCount;
   const pathParts = [data.pathSurfaceIndices, data.pathInteractions, data.pathIndexAfterSurface];
   if (pathParts.some((part) => part !== undefined)) {
