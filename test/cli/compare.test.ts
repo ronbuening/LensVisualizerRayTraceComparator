@@ -116,8 +116,10 @@ test("run, compare, report through the binary: the all-TypeScript trio exits 0 t
   );
 
   const serialBytes = readFileSync(join(directory, COMPARISONS_FILE));
+  // Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM.
   for (const jobs of [2, 4]) {
-    const parallel = lvrtc(runsDir, ["compare", "fake-3-engines-ts", "--jobs", String(jobs), ...root]);
+    const budget = ["--memory-budget", "16"];
+    const parallel = lvrtc(runsDir, ["compare", "fake-3-engines-ts", "--jobs", String(jobs), ...budget, ...root]);
     assert.equal(parallel.code, EXIT_OK, parallel.err);
     assert.equal(parallel.out, compared.out);
     assert.deepEqual(readFileSync(join(directory, COMPARISONS_FILE)), serialBytes);

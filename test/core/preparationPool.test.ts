@@ -15,6 +15,9 @@ import { runSuite } from "../../src/core/orchestrator.ts";
 import { tempDir } from "./support.ts";
 import { freshLv } from "../engines/lv/support.ts";
 
+/** Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM. */
+const BUDGET_GIB = 16;
+
 test("child case export, zoom expansion, coarse/fine rays, recipes, store and comparisons retain exact serial artifacts", async (t) => {
   const root = tempDir(t);
   const lv = freshLv(t);
@@ -53,6 +56,7 @@ test("child case export, zoom expansion, coarse/fine rays, recipes, store and co
       "suite.json",
       undefined,
       jobs,
+      BUDGET_GIB,
     );
     const result = await runSuite({
       ...prepared,
@@ -150,6 +154,7 @@ test("folded run refusals and coarse/fine confirmation provenance are identical 
       "suite.json",
       undefined,
       jobs,
+      BUDGET_GIB,
     );
     const result = await runSuite({ ...prepared, runsDir, jobs });
     assert.match(result.manifest.runs[1].problems[0], /^folded-post-path-reflection:/);

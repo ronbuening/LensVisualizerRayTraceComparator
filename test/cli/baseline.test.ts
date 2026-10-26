@@ -634,11 +634,15 @@ test("run --jobs and baseline check --jobs retain comparisons and baseline/repor
   await written(root);
   const before = filesOf(root);
   const comparisons = readFileSync(join(root, "runs/pair/comparisons.json"), "utf8");
+  // Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM.
+  const budget = ["--memory-budget", "16"];
   for (const jobs of [2, 4]) {
     const runs = `parallel-${jobs}`;
-    const run = await lvrtc(root, ["run", "suites/pair.json", "--jobs", String(jobs)], { runs });
+    const run = await lvrtc(root, ["run", "suites/pair.json", "--jobs", String(jobs), ...budget], { runs });
     assert.equal(run.code, EXIT_OK, run.err);
-    const check = await lvrtc(root, ["baseline", "check", "pair", "--jobs", String(jobs), "--json"], { runs });
+    const check = await lvrtc(root, ["baseline", "check", "pair", "--jobs", String(jobs), ...budget, "--json"], {
+      runs,
+    });
     assert.equal(check.code, EXIT_OK, check.err);
     assert.equal(readFileSync(join(root, runs, "pair/comparisons.json"), "utf8"), comparisons);
     assert.deepEqual(filesOf(root), before);

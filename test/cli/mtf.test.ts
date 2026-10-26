@@ -706,7 +706,8 @@ test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and repo
   const parallelRuns = join(rootDir, "parallel");
   const command = createMtfCommand({ rootDir, cwd: rootDir, env: { LVRTC_RUNS_DIR: parallelRuns } });
   let err = "";
-  const code = await command.run([...args, "--jobs", "4"], {
+  // Fake engines are far below 2.5 GiB a job: a stated budget keeps the test independent of this machine's RAM.
+  const code = await command.run([...args, "--jobs", "4", "--memory-budget", "16"], {
     stdout: () => undefined,
     stderr: (value) => {
       err += value;
@@ -714,7 +715,7 @@ test("benchmark --jobs 4 keeps the serial fake-LV manifest, comparisons and repo
   });
   assert.equal(code, EXIT_OK, err);
   assert.deepEqual(benchmarkOf(parallelRuns, "acme-singlet-50"), before);
-  const invalid = await mtf(["acme-singlet-50", "--jobs", "2"], rootDir);
+  const invalid = await mtf(["acme-singlet-50", "--jobs", "2", "--memory-budget", "16"], rootDir);
   assert.equal(invalid.code, EXIT_USAGE);
   assert.match(invalid.err, /--jobs requires --profile benchmark/);
 });
