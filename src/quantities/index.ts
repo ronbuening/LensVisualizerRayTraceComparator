@@ -1,5 +1,6 @@
 // Every quantity the comparator knows. A stage that adds a quantity adds its module to the list below.
 import { axialNativeQuantity } from "./axialNative.ts";
+import { chiefNativeQuantity } from "./chiefNative.ts";
 import { mtfNativeQuantity } from "./mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "./paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "./raysTrace.ts";
@@ -19,6 +20,7 @@ const { has, get, list } = createQuantityRegistry([
   wavefrontNativeQuantity,
   spotNativeQuantity,
   axialNativeQuantity,
+  chiefNativeQuantity,
 ]);
 
 /**

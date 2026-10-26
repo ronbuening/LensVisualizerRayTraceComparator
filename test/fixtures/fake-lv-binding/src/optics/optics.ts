@@ -5,3 +5,4 @@ export { epZRelStopAtZoom, xpZRelLastSurfAtZoom, xpAtZoom } from "./state/pupils
 export { wideOpenStopAtZoom } from "./state/aperture.ts";
 export { paraxialTrace } from "./first-order/lensConstants.ts";
 export { skewImagePlaneIntercept, traceSkewRay } from "./analysis/spots.ts";
+export { isHeavyLensForRayWork } from "./analysis/chief.ts";

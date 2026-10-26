@@ -12,8 +12,10 @@ the surface and the field, and nothing is said about it.
 It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``), the method "diffraction", and with its own geometric
 MTF (``geometric``), the method "geometric": a line and a field at a time, each on an optic of its own that is built,
 read back and given its field there. A field optiland cannot compute is a row of the answer. It answers
-``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, and ``axial.native`` with
-its own launch along the axis and real trace at each line and its paraxial focus there (``axial``).
+``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, ``axial.native`` with
+its own launch along the axis and real trace at each line and its paraxial focus there (``axial``), and
+``chief.native`` with its own distortion model, its own chief rays across the field and its paraxial pupils
+(``chief``).
 """
 
 from __future__ import annotations
@@ -51,10 +53,17 @@ from .trace import METHOD_NAME as TRACE_METHOD_NAME
 from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
 from .spot import SPOT_NATIVE, answer_spot
 from .axial import AXIAL_NATIVE, answer_axial
+from .chief import CHIEF_NATIVE, answer_chief
+from .chief import field_counts as chief_field_counts
 from .axial import field_counts as axial_field_counts
 from .spot import field_counts as spot_field_counts
 from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
-from lvrtc_worker_kit.validate import validate_axial_native, validate_spot_native, validate_wavefront_native
+from lvrtc_worker_kit.validate import (
+    validate_axial_native,
+    validate_chief_native,
+    validate_spot_native,
+    validate_wavefront_native,
+)
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
@@ -93,6 +102,7 @@ QUANTITIES: dict[str, dict[str, Any]] = {
     WAVEFRONT_NATIVE: {"version": 1},
     SPOT_NATIVE: {"version": 1},
     AXIAL_NATIVE: {"version": 1},
+    CHIEF_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -134,7 +144,9 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     ``paraxial.first-order`` and for ``axial.native``, whose pupil (``EPD()``) and paraxial focus (``F2()``) are
     optiland's first-order data, a phase profile, a term of power 1 and a term of power 2
     (``first_order.term_refusals``): optiland's paraxial model sees none of them, and would state the pupil and the
-    focus of another lens. It is decided from the case, before anything is built.
+    focus of another lens. The same for ``chief.native`` of distortion, whose chief rays optiland's default aiming
+    aims at its paraxial entrance pupil, and of pupils, which states its paraxial pupils. It is decided from the case,
+    before anything is built.
     """
     items: list[dict[str, str]] = []
     written = (("the case", case["contract"]), ("the request", request["contract"]))
@@ -178,7 +190,7 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             items.append(
                 {"code": "quantity", "item": "rays.trace", "message": "a folded path requires rays.trace version 2"}
             )
-        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE, SPOT_NATIVE, AXIAL_NATIVE):
+        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE, SPOT_NATIVE, AXIAL_NATIVE, CHIEF_NATIVE):
             items.append(
                 {
                     "code": "feature",
@@ -198,6 +210,9 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             )
     if quantity in (PARAXIAL_FIRST_ORDER, AXIAL_NATIVE):
         items.extend(term_refusals(case))
+    spec = request.get("spec")
+    if quantity == CHIEF_NATIVE and isinstance(spec, dict) and spec.get("kind") in ("distortion", "pupils"):
+        items.extend(term_refusals(case))
     return items
 
 
@@ -214,6 +229,8 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
         return validate_spot_native("spec", spec, schemas)
     if quantity == AXIAL_NATIVE:
         return validate_axial_native("spec", spec, schemas)
+    if quantity == CHIEF_NATIVE:
+        return validate_chief_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -320,6 +337,8 @@ class OptilandEngine:
             return self._run_spot(request, case, engine)
         if quantity == AXIAL_NATIVE:
             return self._run_axial(request, case, engine)
+        if quantity == CHIEF_NATIVE:
+            return self._run_chief(request, case, engine)
         if quantity == WAVEFRONT_NATIVE:
             try:
                 data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
@@ -451,6 +470,24 @@ class OptilandEngine:
         if issues:
             raise RuntimeError(f"the answer is not {AXIAL_NATIVE} data: {format_issues(issues)}")
         counts = {"surfaces": len(case["system"]["surfaces"]), **axial_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_chief(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``chief.native`` request whose spec is one: optiland's distortion and chief rays (``chief``)."""
+        try:
+            data = answer_chief(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_chief_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {CHIEF_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **chief_field_counts(data)}
         diagnostics = {"warnings": [], "counts": counts}
         return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
 

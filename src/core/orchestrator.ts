@@ -32,6 +32,7 @@ import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import type { SpotSetResolution } from "../rays/spotSets.ts";
 import type { AxialSetResolution } from "../rays/axialSets.ts";
+import type { ChiefSetResolution } from "../rays/chiefSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
@@ -288,6 +289,23 @@ async function axialRaySetsOf(
   return source.axialRaySets(spec, opticalCase);
 }
 
+/** Why a run has no chief sets when the source of its case generates none, or no source was given. */
+const NO_CHIEF_SOURCE = "chief-sets-unavailable: no case source generates chief sets for this lens";
+
+/**
+ * The chief sets of one run, from the source of its lens (`CaseSource.chiefRaySets`); none, and the problem that
+ * says so, when no source was given for the lens or the source generates none.
+ */
+async function chiefRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<ChiefSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.chiefRaySets === undefined) return { sets: [], problems: [NO_CHIEF_SOURCE], asks: [] };
+  return source.chiefRaySets(spec, opticalCase);
+}
+
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
   /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
@@ -301,6 +319,8 @@ export interface Plan {
   readonly spotRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The axial sets of each run that a rung needed them for, by run name. */
   readonly axialRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The chief sets of each run that a rung needed them for, by run name. */
+  readonly chiefRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -365,6 +385,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       fineRaySets: new Map(plans.flatMap((plan) => [...plan.fineRaySets])),
       spotRaySets: new Map(plans.flatMap((plan) => [...plan.spotRaySets])),
       axialRaySets: new Map(plans.flatMap((plan) => [...plan.axialRaySets])),
+      chiefRaySets: new Map(plans.flatMap((plan) => [...plan.chiefRaySets])),
       recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
     };
   }
@@ -373,6 +394,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const fineRaySets = new Map<string, ManifestRaySets>();
   const spotRaySets = new Map<string, ManifestRaySets>();
   const axialRaySets = new Map<string, ManifestRaySets>();
+  const chiefRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   const runs = [...suite.runs];
   for (const [index, run] of suite.runs.entries()) {
@@ -421,6 +443,13 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       inputs = { ...inputs, axialRaySets: sets, axialAsks: asks };
       axialRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
+    if (rungs.some((rung) => rung.needsChiefRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.chief-generate", () =>
+        chiefRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, chiefRaySets: sets, chiefAsks: asks };
+      chiefRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
@@ -437,6 +466,9 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
           : {}),
         ...(rung.needsAxialRaySets === true
           ? { axialRaySets: inputs.axialRaySets ?? [], axialAsks: inputs.axialAsks ?? [] }
+          : {}),
+        ...(rung.needsChiefRaySets === true
+          ? { chiefRaySets: inputs.chiefRaySets ?? [], chiefAsks: inputs.chiefAsks ?? [] }
           : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       };
@@ -458,7 +490,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { runs, jobs, raySets, fineRaySets, spotRaySets, axialRaySets, recipes };
+  return { runs, jobs, raySets, fineRaySets, spotRaySets, axialRaySets, chiefRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -725,6 +757,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     fineRaySets,
     spotRaySets,
     axialRaySets,
+    chiefRaySets,
     recipes,
   } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
@@ -892,6 +925,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
       const finer = fineRaySets.get(spec.name);
       const spots = spotRaySets.get(spec.name);
       const axial = axialRaySets.get(spec.name);
+      const chief = chiefRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -902,6 +936,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
         ...(finer === undefined ? {} : { fineRaySets: finer }),
         ...(spots === undefined ? {} : { spotRaySets: spots }),
         ...(axial === undefined ? {} : { axialRaySets: axial }),
+        ...(chief === undefined ? {} : { chiefRaySets: chief }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

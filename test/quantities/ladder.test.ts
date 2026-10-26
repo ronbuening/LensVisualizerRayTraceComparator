@@ -62,6 +62,7 @@ test("system.describe and paraxial.first-order are registered, at the versions t
     QUANTITIES.list().map(({ id }) => id),
     [
       "axial.native",
+      "chief.native",
       "mtf.native",
       "paraxial.first-order",
       "rays.trace",

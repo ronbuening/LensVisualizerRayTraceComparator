@@ -1650,3 +1650,245 @@ test(
     );
   },
 );
+
+// Stage 6.4, at LV d6df08c7f and cfa91d0a5 (closure c866fbff with the stage's names): the chief sets of the
+// distortion, pupils and lateral-colour tabs (src/engines/lv/chiefRaySets.ts, the request and reference in
+// chiefSetup.ts) restate these lines; test/integration/lv/chiefRays.test.ts holds the tabs' figures to the bit.
+test("the distortion tab still traces the probe, the edge and its samples the chief sets restate", { skip }, () => {
+  const distortion = "src/optics/analysis/distortion/distortion.ts";
+  const image = "src/optics/field/imageHeight.ts";
+  const reference = "lvDistortionReference in src/engines/lv/chiefSetup.ts restates the rectilinear reference";
+  const curve = "curveRays in src/engines/lv/chiefRaySets.ts restates the curve's chief rays";
+  assertSource(
+    distortion,
+    "const scaleProbeAngleDeg = Math.min(Math.max(geometry.halfFieldDeg * 0.01, 0.02), 0.5);",
+    reference,
+  );
+  assertSource(
+    distortion,
+    "const probeImageHeight = chiefRayImageHeight(scaleProbeAngleDeg, zPos, focusT, zoomT, L, geometry, aberrationT);",
+    reference,
+  );
+  assertSource(distortion, "const probeLaunch = projectionLaunchSlopeForField(L, scaleProbeAngleDeg);", reference);
+  assertSource(distortion, "const probeTan = -probeLaunch.uField;", reference);
+  assertSource(distortion, "const rectilinearScale = -probeImageHeight / probeTan;", reference);
+  assertSource(
+    distortion,
+    "const projectionReference = distortionProjectionReferenceForLens(L, rectilinearScale, zoomT);",
+    reference,
+  );
+  assertSource(
+    distortion,
+    "chiefRayImageHeightForRuntimeLens as chiefRayImageHeight, chiefRayImageHeightAccurateForRuntimeLens as chiefRayImageHeightAccurate,",
+    reference,
+  );
+  assertSource(distortion, "const edgeImageHeight = chiefRayImageHeightAccurate( geometry.halfFieldDeg,", curve);
+  assertSource(distortion, "const zPos = state.z as number[];", "the curve's rays start at the state's first vertex");
+  assertSource(distortion, "if (isFisheyeProjection(L.projection)) {", "a fisheye lens has no distortion sets");
+  // The samples: the angle the inversion solved for each target, which the curve plots as its real height; the axis
+  // a sample the curve states and does not trace. The inversion accepts a ray within 1e-4 mm of its target.
+  assertSource(distortion, "const fieldAngleDeg = inversion.fieldAngleDeg;", curve);
+  assertSource(
+    distortion,
+    "const realHeight = targetImageHeights[targetIndex];",
+    "docs/gotchas.md: the curve plots its targets",
+  );
+  assertSource(
+    image,
+    "if (!Number.isFinite(height) || Math.abs(height + Math.abs(target)) >= 1e-4)",
+    "docs/gotchas.md: a sample's chief ray lands within 1e-4 mm of its target",
+  );
+  const plotted = "test/integration/lv/chiefRays.test.ts restates the plotted percent";
+  assertSource(
+    distortion,
+    "const idealHeight = -projectionImageHeightForAngle(reference.projectionReference, thetaRad);",
+    plotted,
+  );
+  assertSource(distortion, "const distortionPercent = (100 * (realHeight - idealHeight)) / idealHeight;", plotted);
+  assertSource("src/optics/field/projection.ts", "return reference.focalScaleMm * Math.tan(fieldAngleRad);", plotted);
+  // The probe is the chief ray of the paraxial pupil; the edge and the samples the solved chief ray, each a
+  // meridional launch through the state's own vertices.
+  assertSource(image, "const yChief = -geom.epRatio * uField;", "probeLaunch in src/engines/lv/chiefRaySets.ts");
+  assertSource(
+    image,
+    ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(yChief, uField);",
+    curve,
+  );
+  assertSource(image, "const solve = solveChiefRay(state, { fieldAngleDeg, geometry });", curve);
+  assertSource(
+    image,
+    ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
+    curve,
+  );
+  assertSource(image, "return trace.y + trace.u * imagePlaneTransfer;", plotted);
+  // Below one degree a chief ray is its paraxial estimate, not one through the stop's centre.
+  assertSource(
+    "src/optics/field/chiefRaySolve.ts",
+    'if (Math.abs(fieldAngleDeg) < 1) { return { yLaunch: paraxialYChief, uField, status: "converged", iterations: 0, launchSurface }; }',
+    "docs/gotchas.md: LensVisualizer's chief ray below one degree",
+  );
+  // The meridional launch of a slope: LensVisualizer's own normalisation, cached for the slope 0.
+  assertSource(
+    "src/optics/trace/rayAdapters.ts",
+    "const direction = directionFromMeridionalSlope(u) ?? ([0, 0, 1] as Vec3);",
+    "lvMeridionalLaunch in src/engines/lv/chiefRaySets.ts",
+  );
+});
+
+test("the distortion grid still corrects its launches by the table the chief sets restate", { skip }, () => {
+  const distortion = "src/optics/analysis/distortion/distortion.ts";
+  const grid = "gridRays and pupilCorrectionTable in src/engines/lv/chiefRaySets.ts restate the grid's launches";
+  assertSource(distortion, "const PUPIL_CORRECTION_SAMPLE_COUNT_FULL = 17;", grid);
+  assertSource(distortion, "const PUPIL_CORRECTION_SAMPLE_COUNT_HEAVY = 9;", grid);
+  assertSource(
+    distortion,
+    "isHeavyLensForRayWork(L) ? PUPIL_CORRECTION_SAMPLE_COUNT_HEAVY : PUPIL_CORRECTION_SAMPLE_COUNT_FULL,",
+    grid,
+  );
+  assertSource(
+    distortion,
+    "const angleDeg = uniformFieldFraction(i, sampleCount) * reference.geometry.halfFieldDeg;",
+    grid,
+  );
+  assertSource(distortion, "table.push({ angleDeg, ratio: 1 });", grid);
+  assertSource(distortion, "const paraxialYChief = -reference.geometry.epRatio * launch.uField;", grid);
+  assertSource(
+    distortion,
+    "const solvedYChief = solveChiefRay(angleDeg, focusT, zoomT, L, reference.geometry, aberrationT).yLaunch;",
+    grid,
+  );
+  assertSource(distortion, "const ratio = Math.abs(paraxialYChief) > 1e-12 ? solvedYChief / paraxialYChief : 1;", grid);
+  assertSource(distortion, "table.push({ angleDeg, ratio: isFinite(ratio) ? ratio : 1 });", grid);
+  assertSource(distortion, "if (angleDeg <= table[0].angleDeg) return table[0].ratio;", grid);
+  assertSource(
+    distortion,
+    "const t = (angleDeg - table[i].angleDeg) / (table[i + 1].angleDeg - table[i].angleDeg);",
+    grid,
+  );
+  assertSource(distortion, "return table[i].ratio + t * (table[i + 1].ratio - table[i].ratio);", grid);
+  assertSource(
+    distortion,
+    "const fieldSlopes = projectionFieldSlopesForImagePoint(reference.projectionReference, idealX, idealY);",
+    grid,
+  );
+  assertSource(
+    distortion,
+    "let correction = interpolatePupilCorrection(pupilCorrection, launch.equivalentAngleDeg);",
+    grid,
+  );
+  assertSource(distortion, "if (reference.objectVergence !== 0) {", "at infinity focus the slope is not rescaled");
+  assertSource(distortion, "const correctedEpRatio = reference.geometry.epRatio * correction;", grid);
+  assertSource(
+    distortion,
+    "return adapter.skew(-correctedEpRatio * fieldSlopeX, -correctedEpRatio * fieldSlopeY, fieldSlopeX, fieldSlopeY);",
+    grid,
+  );
+  assertSource(
+    distortion,
+    "const traceOptions = { focusT, zoomT, stopSD: currentPhysStopSD, ghost: true, aberrationT };",
+    "the grid traces with the case's stop radius",
+  );
+  assertSource(distortion, "if (!insideImageCircle) {", "a point outside the image circle is no ray of the grid");
+  assertSource(
+    "src/optics/analysis/analysisContext.ts",
+    "analysisJobs.computeDistortionFieldGrid({ ...request, sampling: {} }),",
+    "the drawer asks the grid with no sampling of its own, as lvChiefRequest does",
+  );
+});
+
+test("the pupils tab still traces the fields and chief rays the chief sets restate", { skip }, () => {
+  const pupils = "src/optics/analysis/pupils/pupilAberration.ts";
+  const mirror =
+    "lvPupilFields in src/engines/lv/chiefFields.ts restates the pupils tab's fields, for the sets and lv alike";
+  const answer = "answerLvChief in src/engines/lv/chief.ts makes the tab's pupils absolute";
+  assertSource(
+    pupils,
+    "const sampleCount = request.sampling.pupilAberrationSampleCount ?? PUPIL_ABERRATION_SAMPLE_COUNT;",
+    mirror,
+  );
+  assertSource(pupils, "const n = Math.max(sampleCount, 2);", mirror);
+  assertSource(
+    pupils,
+    "const fieldFrac = uniformFieldFraction(i, n); const fieldDeg = fieldFrac * halfFieldDeg;",
+    mirror,
+  );
+  assertSource(pupils, 'if (launch.status === "out-of-domain" && !solve.vectorLaunch) {', mirror);
+  assertSource(pupils, "if (Math.abs(fieldDeg) > 1e-9) {", mirror);
+  assertSource(pupils, ": prepared.ray(yChief, uField);", mirror);
+  assertSource(
+    pupils,
+    "const prepared = prepareRayTrace(L, { zPos, focusT, zoomT, ghost: true, aberrationT });",
+    mirror,
+  );
+  assertSource(
+    pupils,
+    "const { z: zPos } = layoutFromPrepared(prepareState(compiledLensFromRuntime(L), focusT, zoomT, aberrationT));",
+    "the pupils tab's first vertex is the layout's, the state's own",
+  );
+  assertSource(pupils, "if (focusT < FOCUS_INFINITY_CUTOFF && aberrationT === 0) {", answer);
+  assertSource(
+    pupils,
+    "paraxialEpZRelStop: epZRelStopAtZoom(zoomT, L), paraxialXpZRelLastSurf: xpZRelLastSurfAtZoom(zoomT, L),",
+    answer,
+  );
+  assertSource(
+    pupils,
+    "if (!isFinite(paraxialXpZRelLastSurf)) {",
+    "a paraxial exit pupil at infinity: no chief ray traced",
+  );
+  assertSource(pupils, "chiefRayCorrection = isFinite(yChief) ? yChief / paraxialYChief : 1;", answer);
+  assertSource(pupils, "epShiftMm = (chiefRayCorrection - 1) * epRatio;", answer);
+  assertSource(pupils, "xpZRelLastSurf = -result.y / result.u;", answer);
+  assertSource(
+    "src/components/display/analysis/PupilAberrationTab.tsx",
+    "const profiles = useMemo(() => context.computeBothPupilAberrationProfiles(), [context]);",
+    answer,
+  );
+});
+
+test("the lateral-colour section and the breathing chart still read what the comparator restates", { skip }, () => {
+  const chromatic = "src/optics/analysis/chromatic/analysis.ts";
+  const mirror = "lvLateralFractions and lvLateralChief in src/engines/lv/chiefFields.ts restate the section's fields";
+  assertSource(
+    chromatic,
+    "fieldFractions: request.sampling.chromaticLateralFieldFractions ?? request.sampling.fieldCurvatureFieldFractions,",
+    mirror,
+  );
+  assertSource(
+    chromatic,
+    "const fieldFractions = normalizeFractions(options.fieldFractions, DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS, { allowZero: true, });",
+    mirror,
+  );
+  assertSource(chromatic, "if (channels.length < 2 || currentEPSD <= 0 || L.N < 1) return null;", mirror);
+  // The section's plane is the last vertex plus its gap: chief.ts decides focus.off-design from it before asking.
+  assertSource(
+    chromatic,
+    "const imagePlaneZ = lastSurfaceZ + thick(L.N - 1, focusT, zoomT, L, aberrationT);",
+    "designPlaneZ in src/engines/lv/chief.ts decides the lateral colour's design plane before the section is asked",
+  );
+  assertSource(
+    chromatic,
+    "const geometry = computeOffAxisFieldGeometry(request.preparedGeometry, fieldFraction, stateGeometry);",
+    mirror,
+  );
+  assertSource(chromatic, "const chiefRay = traceOffAxisChiefRay(request, geometry, channel);", mirror);
+  assertSource(chromatic, "imageHeightMm: chiefRay?.imagePoint.y ?? null,", mirror);
+  assertSource(chromatic, "lateralColor: computeLateralColorCurve(request, options),", mirror);
+  // The breathing chart's focal length: the stored one at infinity focus, the prepared surfaces' elsewhere.
+  const breathing = "test/integration/lv/breathing.test.ts holds the chart's focal length to lv's R1 answer";
+  assertSource(
+    "src/optics/analysis/summary/breathing.ts",
+    "return eflAtPreparedState(request.preparedGeometry);",
+    breathing,
+  );
+  assertSource(
+    "src/optics/analysis/summary/breathing.ts",
+    "for (let i = 0; i < SAMPLE_COUNT; i++) points.add(i / (SAMPLE_COUNT - 1));",
+    breathing,
+  );
+  assertSource(
+    "src/optics/first-order/focusBreathing.ts",
+    "return L.isZoom && L.zoomEFLs ? interpolateStationTable(clampStationControl(zoomT), L.zoomEFLs) : L.EFL;",
+    breathing,
+  );
+});

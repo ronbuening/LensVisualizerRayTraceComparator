@@ -1516,6 +1516,7 @@ and `validateData`.
 | `wavefront.native` | 1 | `quantities/wavefrontNative.ts` | one line of an engine's raw reference-sphere wavefront, with pupil points, OPD, intensity and validity; no OTF |
 | `spot.native` | 1 | `quantities/spotNative.ts` | an engine's own spot (centroid and RMS radius about it) or ray fan of a field, relative to its chief ray, by its own pupil sampling |
 | `axial.native` | 1 | `quantities/axialNative.ts` | an engine's own figures of the beam along the axis (spherical aberration at a line, axial colour over lines) by its own pupil, or the real rays it traced for them, and its paraxial focus at each line |
+| `chief.native` | 1 | `quantities/chiefNative.ts` | an engine's own figures of the chief rays across the field (distortion and pupils at a line, lateral colour over lines) at given field angles, or the chief rays it traced for them, and what its figures are relative to |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2108,6 +2109,53 @@ sign of exit slopes that differ where the intercepts agree. A ray whose intercep
 (`out-of-range`) has none. A ray that crosses the axis in one answer and not in the other, and a set off the
 meridional plane, are not comparable; a set of no mirror pairs has no focus.
 
+#### Chief sets and rung R9a
+
+**Chief sets** (`CaseSource.chiefRaySets`, `src/rays/chiefSets.ts`) are the chief rays of LensVisualizer's distortion
+tab (its curve and its traced field grid), its pupils tab and the lateral-colour section of its chromatic tab, and no
+part of a run's ray sets. Only a LensVisualizer lens has them (`src/engines/lv/chiefRaySets.ts`, the request and the
+reference in `chiefSetup.ts`); the manifest records them under `runs[].chiefRaySets`, sets and problems as above,
+exactly when a rung that needs them (`RungDefinition.needsChiefRaySets`: `r9a`, `r9b`) was run.
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | the analysis drawer's, as for the spot sets: the hook's field geometry, whose half field (`halfFieldDeg`) and paraxial pupil ratio (`epRatio`) the tabs read |
+| `distortion-curve` | the probe of the rectilinear reference (`min(max(0.01 × halfField, 0.02), 0.5)` degrees, launched from the paraxial pupil, `ray(-epRatio × uField, uField)`), the edge chief ray (`halfField`), and the chief ray of every sample of `computeDistortionCurve` after the axis, at the angle its inversion solved for the sample's target height; each a meridional launch `ray(solve.yLaunch, uField)` of `solveChiefRayForRuntimeLens`. `groups.chiefIndex` 0: the probe |
+| `distortion-grid` | the probe, then every point `computeDistortionFieldGrid` traces, in its order: the slopes of its ideal point (`projectionFieldSlopesForImagePoint`), launched as the skew ray `skew(-e × sx, -e × sy, sx, sy)` with `e` the paraxial pupil ratio times the grid's interpolated pupil correction (17 entries, 9 for a heavy lens, of `solveChiefRay` over the paraxial launch). `groups.chiefIndex` 0: the probe |
+| `pupils` | the solved chief ray of every field of the pupils tab off the axis (`uniformFieldFraction(i, PUPIL_ABERRATION_SAMPLE_COUNT)` of the half field), launched `ray(solve.yLaunch, uField)` |
+| `lateral-colour` | the chief ray of every field of the lateral-colour section (`DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS` of the half field, each once, clamped, at least 0), the coma tab's chief launch `skew(0, yChief, 0, uField)` of `computeOffAxisFieldGeometry` |
+| launches | a meridional ray starts `rayLead` ahead of the first vertex plane at `(0, y0 - u0 × rayLead)` along `(0, u0, 1)` made a unit vector (`directionFromMeridionalSlope`; `(0, 0, 1)` for a slope of 0), a skew ray as for the spot sets; weight 1 |
+| lines | the same rays at every line of the case, as the lateral-colour section traces the same chief ray at each channel |
+
+A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`) and a state without a
+half field (`no-half-field`) have no chief sets. A fisheye lens has no distortion sets (`lv-fisheye-projection`), nor
+has a state without a rectilinear reference (`lv-no-distortion-reference`), an empty curve (`lv-no-distortion-curve`) or
+a grid with no line or no traced point (`lv-no-distortion-grid`); a lens whose paraxial exit pupil is at infinity has no
+pupil set (`lv-exit-pupil-at-infinity`); a field launched from a bounding sphere (`lv-vector-launch`) or without a
+launch (`lv-no-launch`) is a coded problem of that field, and no field of the `chief.native` asks either
+(`src/engines/lv/chiefFields.ts` decides the fields of the sets, the asks and `lv`'s answer alike); a pattern whose rays
+would not start in front of the first surface is `launch-behind-first-surface`. Every restated line has a source canary,
+and the sets, traced as the tabs trace them, give the curve's probe, edge, ideal heights and percent distortion, every
+grid point, every field's real exit pupil and every channel's chief landing to the bit
+(`test/integration/lv/chiefRays.test.ts`).
+
+**Rung R9a** asks one `rays.trace` request of each chief set at each line, and compares the requests of one set at
+every line as one span (`spanOf`: the rays of a set apart from its line), on the rays both answers brought to the
+image. `landing.maxAbs` is the largest difference of a landing (`imagePoint`), along x or y; `lateralColour.maxAbs`
+the largest difference of the two engines' moves of a landing from the span's first line to another, along x or y;
+`distortion.maxScaled`, of a set that states its probe, the largest difference of a ray's displacement from the ideal
+point of the rectilinear reference the engine's own probe landing scales (`src/estimators/distortion.ts`: the ideal
+point is the probe's landing height times the ray's launch slopes over the probe's; a probe off the meridian, by its x
+slope or its x landing, scales nothing), along x or y, which is what the percent distortion is a percentage of (a
+difference of the probe's landing enters it times the ray's slope over the probe's, so it is not on the transverse
+scale for the probe); and `exitPupil.maxScaled` the largest difference of where a chief ray
+crosses the axis behind the system (`axialIntercept`) times the larger of its two slopes there. Each is gated at
+1e-8 mm, with `mask.mismatches` at 0 and `mask.rimBand` counted. Shown beside them and never judged:
+`distortion.maxAbs`, the difference of the radial percent distortion, and `exitPupil.maxAbs`, the crossing's
+difference along the axis. Lateral colour is inapplicable to a case of one line, distortion to a set without a probe;
+a line whose probe gives no distortion while other lines do is named in the pair's reason. A ray that crosses the axis
+in one answer and not in the other, or has a distortion in one and not in the other, is not comparable.
+
 ### `axial.native`
 
 Version 1, added at Stage 6.3, changes no existing quantity, contract version or identity. It is an engine's own
@@ -2167,6 +2215,64 @@ each kind. Policy 17 gives `landing.maxAbs` a limit of 1e-5 mm and `pupilRadius.
 the sorting, and each spherical figure an attention band of 1e-10 mm; the colour figures have none, and
 `paraxialFocalShift.maxAbs` never has one. `axialFactsOfRecorded` repeats the sorting from the values a comparison
 records.
+
+### `chief.native`
+
+Version 1, added at Stage 6.4, changes no existing quantity, contract version or identity. It is an engine's own
+figures of the chief rays of a system whose object is at infinity, at field angles in object space, degrees, in the
+meridional plane (an object toward +y): what LensVisualizer's distortion tab (its curve), its pupils tab and the
+lateral-colour section of its chromatic tab present, and what optiland's distortion model, its own chief rays and its
+paraxial pupils give. Nothing of an answer is gated: rung R9b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `kind` | `distortion` (at one line: each field's real and ideal image heights and percent distortion against the engine's own rectilinear reference), `pupils` (at one line: where each field's real chief ray crosses the axis ahead of the system and behind it), or `lateral-colour` (at each line: where each field's chief ray lands; the first line is the reference) |
+| `lines` | indices of lines of the case, each once: one for distortion and pupils |
+| `maxFieldDeg` | the half field the angles are of, above 0 and below 90; an engine that states its fields as fractions of a half field takes it for that |
+| `fieldAnglesDeg` | each at least 0 and at most `maxFieldDeg`; above 0 for distortion and pupils |
+
+| Answer member | Meaning |
+|---|---|
+| `kind` | the kind of the spec |
+| `fields[]` | one per asked line and field: the lines in the order asked, and within a line the angles in order: `line`, `wavelengthNm` traced, `fieldAngleDeg` traced, `status` `ok` or `unavailable`, `reason` (always for `unavailable`), `chiefLandingMm`, `figures`, `chiefRay`, `sampling` |
+| `chiefLandingMm` | the y at which the field's chief ray lands on the image plane of the case, mm: what identifies the field |
+| `figures` | an engine's own: of distortion `realHeightMm` (the real height its curve plots), `idealHeightMm` and `percent` (100 (real - ideal) / ideal); of pupils `entrancePupilZ` and `exitPupilZ` (where the real chief ray's line in object space and in image space crosses the axis); every other member null; null for lateral colour |
+| `chiefRay` | of pupils, the chief ray an engine traced, for pupils the comparator forms: `entryPoint` and `entryDirection` (where it meets the first surface, its unit direction in front of it), `exitPoint` and `exitDirection` (where it leaves the last surface, its unit direction behind it), three finite numbers each |
+| `reference` | `focalScaleMm` (the scale of the rectilinear distortion reference: an ideal height is minus the scale times the tangent of the field angle), `probeAngleDeg` (the field angle the scale was measured at), `paraxialEntrancePupilZ`, `paraxialExitPupilZ`; null where the engine states none |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+Heights and z are of the contract frame, mm. An `ok` field has its landing; of distortion its figures, of lateral
+colour neither figures nor a chief ray, of pupils its figures or its chief ray and not both; an `unavailable` field
+neither. The schemas, corpus, quantity invariants and the stdlib Python port (`validate_chief_native`) enforce these
+definitions. The engines `lv` (figures) and `optiland` (figures of distortion, chief rays of pupils) answer it; `ref`
+does not.
+
+#### Rung R9b: LensVisualizer's chief-ray tabs beside optiland's own
+
+`r9b` asks one `chief.native` request of each tab (the case source's asks): the distortion curve and the pupils at the
+case's reference line and the lateral colour at every line, at the tabs' own field angles whose chief ray a set states,
+of `lv` and `optiland` only, and only where it is named. `lv` answers from `computeDistortionCurve` (each sample's
+target height as its real height, its ideal height and percent, the scale of its reference),
+`computeBothPupilAberrationProfiles` (each field's entrance pupil at `z[0] + epRatio + epShiftMm`, its exit pupil at
+`z[last] + xpZRelLastSurf`, the stored paraxial pupils) and `computeLateralColorCurve` at each line whose wavelength is
+one of its channels', stating `sampling.indexMaxDelta`; its identifying landing is its solved chief ray's
+(`chiefRayImageHeightAccurateForRuntimeLens`) or the lateral-colour section's own; all on the design plane only, decided
+before any tab is asked. optiland answers distortion with its `RotationalDistortionModel`
+(`create_distortion_model("paraxial", distortion_type="f-tan")`, what its `Distortion` computes with) under its default
+aiming on an optic whose one field is the half field, every setting read back; its identifying landing, its lateral
+colour and its pupils' chief rays are its robust-aimed chief rays through the centre of the stop (`mtf.probe_field`),
+and its paraxial pupils `EPL()` and `XPL()`. optiland refuses distortion and pupils of a case whose first-order data its
+paraxial model does not see, as for `paraxial.first-order`.
+
+A field is sorted before any difference (`classifyChiefField`): R5's `classifyNativeField` first, unsupported (no
+landing) and data of other wavelengths; then the rung's own data, an answer that traced the field at indices other
+than the case's (`indices-differ`); then R5's landing of the chief rays (`chiefLanding.maxAbs`); then method. The
+figures are `chiefLanding.maxAbs`; of distortion `distortionPercent.maxAbs` (percent points), `realHeight.maxAbs`,
+`idealHeight.maxAbs` and `focalScale.relative`; of lateral colour `lateralColour.maxAbs` (each field's landing
+relative to the first line); of pupils `entrancePupil.maxAbs`, `exitPupil.maxAbs`, `paraxialEntrancePupil.maxAbs` and
+`paraxialExitPupil.maxAbs`; and counts of fields of each kind. Policy 18 gives `chiefLanding.maxAbs` a limit of
+1e-5 mm, the limit of the sorting, and no figure an attention band. `chiefFactsOfRecorded` repeats the sorting from the
+values a comparison records.
 
 ### `wavefront.native`
 

@@ -9,6 +9,7 @@ import { rayProblem } from "../../rays/raySets.ts";
 import type { RaySetResolution } from "../../rays/raySets.ts";
 import type { SpotSetResolution } from "../../rays/spotSets.ts";
 import type { AxialSetResolution } from "../../rays/axialSets.ts";
+import type { ChiefSetResolution } from "../../rays/chiefSets.ts";
 import { loadLvBinding } from "./binding.ts";
 import type { LvBinding } from "./binding.ts";
 import { STALE_CASE, rebuildCase } from "./caseModel.ts";
@@ -22,6 +23,7 @@ import { createLensBuilder } from "./lensBuilder.ts";
 import { lvRaySets } from "./raySets.ts";
 import { lvSpotRaySets } from "./spotRaySets.ts";
 import { lvAxialRaySets } from "./axialRaySets.ts";
+import { lvChiefRaySets } from "./chiefRaySets.ts";
 import { lvMtfRecipe } from "./recipe.ts";
 import { expandLvStations, stationSelectionProblem } from "./stations.ts";
 import { ZOOM_ENDS } from "./zoomEnds.ts";
@@ -68,6 +70,13 @@ export interface LvExporter {
    * `stale-case`.
    */
   axialRaySets(opticalCase: OpticalCase): Promise<AxialSetResolution>;
+  /**
+   * The chief sets of a case this checkout exported: the chief rays LensVisualizer's distortion, pupils and
+   * lateral-colour tabs launch and the engines' own chief-ray requests of the same tabs (`lvChiefRaySets`), from the
+   * state the case was exported from, rebuilt and held to the case first. A stale case has none, and the one problem
+   * `stale-case`.
+   */
+  chiefRaySets(opticalCase: OpticalCase): Promise<ChiefSetResolution>;
   /**
    * The MTF recipe of a case this checkout exported, under a run's fields, frequencies and grid cap
    * (`lvMtfRecipe`), from the state the case was exported from, rebuilt and held to the case first. A case that is
@@ -140,6 +149,11 @@ export function createLvExporter(binding: LvBinding): LvExporter {
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)], asks: [] };
       return lvAxialRaySets(binding.api, rebuilt.model);
     },
+    chiefRaySets: async (opticalCase) => {
+      const rebuilt = await rebuildCase(binding, build, opticalCase);
+      if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)], asks: [] };
+      return lvChiefRaySets(binding.api, rebuilt.model);
+    },
     recipe: async (opticalCase, options) => {
       const rebuilt = await rebuildCase(binding, build, opticalCase);
       if (!rebuilt.ok) return { recipe: null, problems: [recipeProblem(STALE_CASE, rebuilt.reason)] };
@@ -191,6 +205,9 @@ function unavailable(error: LvBindingError): ExportProblem {
  *
  * `axialRaySets` gives the axial sets of a case it resolved: the rays of LensVisualizer's spherical-aberration and
  * axial-colour sections, and the engines' own axial requests of the same sections (`lvAxialRaySets`).
+ *
+ * `chiefRaySets` gives the chief sets of a case it resolved: the chief rays of LensVisualizer's distortion, pupils
+ * and lateral-colour tabs, and the engines' own chief-ray requests of the same tabs (`lvChiefRaySets`).
  *
  * `recipe` gives the MTF recipe of a case it resolved: the plane, the fields and the frequencies as LensVisualizer
  * resolves them (`lvMtfRecipe`).
@@ -265,6 +282,11 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       const loaded = await load();
       if ("code" in loaded) return { sets: [], problems: [problemText(loaded)], asks: [] };
       return loaded.axialRaySets(opticalCase);
+    },
+    chiefRaySets: async (_run, opticalCase) => {
+      const loaded = await load();
+      if ("code" in loaded) return { sets: [], problems: [problemText(loaded)], asks: [] };
+      return loaded.chiefRaySets(opticalCase);
     },
     recipe: async (run, opticalCase) => {
       const loaded = await load();

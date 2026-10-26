@@ -1,0 +1,79 @@
+{
+  "kind": "pupils",
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": -5,
+      "figures": null,
+      "chiefRay": {
+        "entryPoint": [
+          0,
+          3.25,
+          0.125
+        ],
+        "entryDirection": [
+          0,
+          -0.1875,
+          0.96875
+        ],
+        "exitPoint": [
+          0,
+          -4.5
+        ],
+        "exitDirection": [
+          0,
+          -0.125,
+          0.9921875
+        ]
+      },
+      "sampling": {}
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 20,
+      "status": "ok",
+      "chiefLandingMm": -10,
+      "figures": null,
+      "chiefRay": {
+        "entryPoint": [
+          0,
+          3.25,
+          0.125
+        ],
+        "entryDirection": [
+          0,
+          -0.1875,
+          0.96875
+        ],
+        "exitPoint": [
+          0,
+          -4.5,
+          60
+        ],
+        "exitDirection": [
+          0,
+          -0.125,
+          0.9921875
+        ]
+      },
+      "sampling": {}
+    }
+  ],
+  "reference": {
+    "focalScaleMm": null,
+    "probeAngleDeg": null,
+    "paraxialEntrancePupilZ": 18.5,
+    "paraxialExitPupilZ": 21.75
+  },
+  "method": {
+    "name": "synthetic-chief-rays",
+    "params": {
+      "aiming": "robust"
+    }
+  },
+  "notes": []
+}

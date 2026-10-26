@@ -1,0 +1,64 @@
+{
+  "kind": "distortion",
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 5,
+      "status": "ok",
+      "chiefLandingMm": -4.375,
+      "figures": {
+        "realHeightMm": -4.375,
+        "idealHeightMm": -4.4375,
+        "entrancePupilZ": null,
+        "exitPupilZ": null
+      },
+      "chiefRay": null,
+      "sampling": {
+        "inversionResidualMm": 0.0000152587890625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": -8.8125,
+      "figures": {
+        "realHeightMm": -8.8125,
+        "idealHeightMm": -8.875,
+        "percent": -0.703125,
+        "entrancePupilZ": null,
+        "exitPupilZ": null
+      },
+      "chiefRay": null,
+      "sampling": {
+        "inversionResidualMm": 0.0000152587890625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 20,
+      "status": "unavailable",
+      "reason": "no-chief-landing",
+      "chiefLandingMm": null,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {}
+    }
+  ],
+  "reference": {
+    "focalScaleMm": 50.25,
+    "probeAngleDeg": 0.125,
+    "paraxialEntrancePupilZ": null,
+    "paraxialExitPupilZ": null
+  },
+  "method": {
+    "name": "synthetic-distortion",
+    "params": {
+      "aiming": "paraxial"
+    }
+  },
+  "notes": []
+}

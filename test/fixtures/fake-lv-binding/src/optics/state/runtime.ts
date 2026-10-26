@@ -39,6 +39,8 @@ export function buildLens(data: FakeLensData): FakeRuntimeLens {
     EP: { epSD: 2 * stopPhysSD },
     // The fraction of the half field the fake's coma fans are drawn at, as LV's lens authors it.
     offAxisFieldFrac: data.offAxisFieldFrac ?? 0.7,
+    // The projection law, as LV's runtime lens carries it.
+    projection: data.projection ?? { kind: "rectilinear" },
     epZRelStop: -1.5,
     xpZRelLastSurf: -12.5,
     xpSD: 3 * stopPhysSD,

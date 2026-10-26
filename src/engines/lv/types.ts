@@ -542,6 +542,165 @@ export interface LvSkewTrace {
   readonly transmission: number;
 }
 
+/**
+ * LV's ChiefRaySolveResult: the launch height on the first vertex plane of the chief ray of a field, of slope
+ * `uField`, that crosses the stop's centre (below 1 degree LV's paraxial estimate, `status` "converged" all the
+ * same); a field LV launches from a bounding sphere also has `vectorLaunch`.
+ */
+export interface LvChiefRaySolve {
+  readonly yLaunch: number;
+  readonly uField: number;
+  readonly status: string;
+  readonly iterations: number;
+  readonly launchSurface: string;
+  readonly vectorLaunch?: unknown;
+}
+
+/** LV's ProjectionLaunchSlope: the object-plane slope of a field angle, `-tan` of it, or that it has none. */
+export interface LvProjectionLaunchSlope {
+  readonly uField: number;
+  readonly status: "ok" | "out-of-domain";
+}
+
+/** LV's ProjectionReference: the ideal mapping a distortion is the residual of; `focalScaleMm` its scale. */
+export interface LvProjectionReference {
+  readonly kind: string;
+  readonly label: string;
+  readonly shortLabel?: string;
+  readonly focalScaleMm: number;
+}
+
+/** LV's ProjectionFieldSlopes: the launch slopes that LV's ideal mapping takes to an ideal image point. */
+export interface LvProjectionFieldSlopes {
+  readonly fieldSlopeX: number;
+  readonly fieldSlopeY: number;
+  readonly equivalentAngleDeg: number;
+}
+
+/** One sample of LV's distortion curve (`DistortionSample`): heights in mm, signed as the contract frame signs them. */
+export interface LvDistortionSample {
+  readonly fieldAngleDeg: number;
+  readonly normalizedImageHeight: number;
+  readonly imageHeight: number;
+  readonly distortionPercent: number;
+  /** The target image height the chief ray was solved for, which the curve plots as the real height. */
+  readonly realHeight: number;
+  readonly idealHeight: number;
+  readonly idealFieldAngleDeg: number;
+  readonly referenceKind?: string;
+  readonly referenceLabel?: string;
+}
+
+/** What LV's distortion tab presents as its curve (`DistortionCurveResult`). */
+export interface LvDistortionCurve {
+  readonly samples: readonly LvDistortionSample[];
+  readonly corner: { readonly status: string; readonly reason?: string; readonly fieldAngleDeg?: number };
+  readonly cornerImageHeight: number;
+}
+
+/** One point of LV's traced distortion grid; `tracedY` is the landing's y negated, as the tab draws it. */
+export interface LvDistortionGridPoint {
+  readonly idealX: number;
+  readonly idealY: number;
+  readonly tracedX: number | null;
+  readonly tracedY: number | null;
+  readonly radiusNormalized: number;
+  readonly insideImageCircle: boolean;
+  readonly usable: boolean;
+}
+
+/** One line of LV's traced distortion grid. */
+export interface LvDistortionGridLine {
+  readonly orientation: "vertical" | "horizontal";
+  readonly idealCoordinate: number;
+  readonly points: readonly LvDistortionGridPoint[];
+}
+
+/** What LV's distortion tab presents as its traced field grid (`DistortionFieldGridResult`). */
+export interface LvDistortionFieldGrid {
+  readonly lines: readonly LvDistortionGridLine[];
+  readonly idealFieldRadius: number;
+  readonly referenceKind: string;
+  readonly referenceLabel: string;
+}
+
+/** One field of LV's entrance-pupil profile (`PupilAberrationSample`). */
+export interface LvEntrancePupilSample {
+  readonly fieldFrac: number;
+  readonly fieldDeg: number;
+  readonly chiefRayCorrection: number;
+  readonly epShiftMm: number;
+}
+
+/** One field of LV's exit-pupil profile (`ExitPupilAberrationSample`). */
+export interface LvExitPupilSample {
+  readonly fieldFrac: number;
+  readonly fieldDeg: number;
+  readonly xpZRelLastSurf: number;
+  readonly xpShiftMm: number;
+}
+
+/** What LV's pupils tab presents (`BothPupilAberrationProfiles`). */
+export interface LvPupilProfiles {
+  readonly ep: {
+    readonly samples: readonly LvEntrancePupilSample[];
+    readonly paraxialEpZRelStop: number;
+    readonly maxAbsShiftMm: number;
+    readonly halfFieldDeg: number;
+  };
+  readonly xp: {
+    readonly samples: readonly LvExitPupilSample[];
+    readonly paraxialXpZRelLastSurf: number;
+    readonly maxAbsShiftMm: number;
+    readonly halfFieldDeg: number;
+  };
+  readonly halfFieldDeg: number;
+  readonly maxAbsEpShiftMm: number;
+  readonly maxAbsXpShiftMm: number;
+}
+
+/** One channel of one field of LV's lateral-colour section (`LateralColorChannelSample`). */
+export interface LvLateralColorChannel {
+  readonly channel: string;
+  readonly imageHeightMm: number | null;
+  readonly relativeHeightMm: number | null;
+  readonly usable: boolean;
+  readonly clipped: boolean;
+}
+
+/** One field of LV's lateral-colour section (`LateralColorFieldSample`). */
+export interface LvLateralColorField {
+  readonly fieldFraction: number;
+  readonly label: string;
+  readonly fieldAngleDeg: number;
+  readonly referenceChannel: string;
+  readonly referenceImageHeightMm: number | null;
+  readonly lateralSpreadMm: number | null;
+  readonly samples: readonly LvLateralColorChannel[];
+  readonly validChannelCount: number;
+  readonly usable: boolean;
+}
+
+/** What the lateral-colour section of LV's chromatic tab presents (`LateralColorCurveResult`). */
+export interface LvLateralColorCurve {
+  readonly channels: readonly string[];
+  readonly referenceChannel: string;
+  readonly fieldFractions: readonly number[];
+  readonly fields: readonly LvLateralColorField[];
+  readonly usableFieldCount: number;
+  readonly maxLateralSpreadMm: number;
+  readonly imagePlaneZ: number;
+  readonly halfFieldDeg: number;
+}
+
+/** One sample of LV's focus-breathing chart (`BreathingSample`). */
+export interface LvBreathingSample {
+  readonly focusT: number;
+  readonly efl: number;
+  readonly breathingPercent: number;
+  readonly distanceLabel: string;
+}
+
 /** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
 export interface LvAnalysisRequest {
   readonly preparedGeometry: LvPreparedState;
@@ -1080,4 +1239,71 @@ export interface LvApi {
    * otherwise. The chromatic tab asks it of the runtime lens's elements (`L.elements`, synthetic rear plates left out).
    */
   lensChromaticReference(elements: readonly LvElement[]): string;
+  /** What LV's distortion tab plots as its curve for a request: chief rays solved at even target image heights. */
+  computeDistortionCurve(request: LvAnalysisRequest): LvDistortionCurve;
+  /** What LV's distortion tab draws as its traced field grid for a request. */
+  computeDistortionFieldGrid(request: LvAnalysisRequest): LvDistortionFieldGrid;
+  /** What LV's pupils tab presents for a request: the entrance- and exit-pupil profiles across the field. */
+  computeBothPupilAberrationProfiles(request: LvAnalysisRequest): LvPupilProfiles;
+  /** What the lateral-colour section of LV's chromatic tab presents for a request; null when no field is usable. */
+  computeLateralColorCurve(request: LvAnalysisRequest): LvLateralColorCurve | null;
+  /** The focal length LV's focus-breathing chart and readouts present for a request's state. */
+  computeFocusEFL(request: LvAnalysisRequest): number;
+  /** LV's focus-breathing chart: the focal length at even focus positions of the request's zoom position. */
+  computeFocusBreathingSeries(request: LvAnalysisRequest): readonly LvBreathingSample[];
+  /** LV's `PUPIL_ABERRATION_SAMPLE_COUNT`: the fields of its pupils tab, the axis and the half field included. */
+  readonly pupilAberrationSampleCount: number;
+  /** LV's `DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS`: the fractions of the half field of its lateral-colour section. */
+  readonly lateralColorFieldFractions: readonly number[];
+  /** LV's chief-ray solve for a field angle in degrees at a state given by its controls (`solveChiefRay`). */
+  solveChiefRayForRuntimeLens(
+    fieldAngleDeg: number,
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    geometry?: LvFieldGeometry,
+    aberrationT?: number,
+  ): LvChiefRaySolve;
+  /** The image height of LV's paraxially launched chief ray of a field angle, mm; NaN where it fails. */
+  chiefRayImageHeightForRuntimeLens(
+    fieldAngleDeg: number,
+    zPos: number[],
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    geometry?: LvFieldGeometry,
+    aberrationT?: number,
+  ): number;
+  /** The image height of LV's solved chief ray of a field angle, mm: what its distortion inversion traces. */
+  chiefRayImageHeightAccurateForRuntimeLens(
+    fieldAngleDeg: number,
+    zPos: number[],
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    geometry?: LvFieldGeometry,
+    aberrationT?: number,
+  ): number;
+  /** LV's object-plane slope of a field angle in degrees: `-tan` of it below its launch limit. */
+  projectionLaunchSlopeForField(L: LvRuntimeLens, fieldAngleDeg: number): LvProjectionLaunchSlope;
+  /** The launch slopes LV's ideal mapping takes to an ideal image point; null where the mapping has none. */
+  projectionFieldSlopesForImagePoint(
+    reference: LvProjectionReference,
+    imageX: number,
+    imageY: number,
+  ): LvProjectionFieldSlopes | null;
+  /** LV's ideal mapping of a lens for its distortion: rectilinear of a scale, or the lens's declared fisheye law. */
+  distortionProjectionReferenceForLens(
+    L: LvRuntimeLens,
+    rectilinearScale: number,
+    zoomT?: number,
+  ): LvProjectionReference;
+  /** Whether a lens's projection is one of LV's fisheye laws. */
+  isFisheyeProjection(projection: unknown): boolean;
+  /** Whether LV samples a lens's ray work more coarsely, as it does for a heavy lens. */
+  isHeavyLensForRayWork(L: LvRuntimeLens): boolean;
+  /** LV's `uniformFieldFraction`: index over count less one. */
+  uniformFieldFraction(index: number, sampleCount: number): number;
+  /** The unit direction of a meridional slope dy/dz, normalised as LV's meridional launch normalises it. */
+  directionFromMeridionalSlope(u: number): LvVec3 | null;
 }

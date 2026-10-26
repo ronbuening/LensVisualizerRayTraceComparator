@@ -58,7 +58,10 @@ function sameFractions(a: readonly number[], b: readonly number[]): boolean {
  * mixes the two, whose reference is "d" with an element whose own reference (asked of it alone) is "e", has no one
  * line a channel is of: null.
  */
-export function lvChannelLines(api: LvAxialAnswerApi, model: LvCaseModel): Readonly<Record<string, number>> | null {
+export function lvChannelLines(
+  api: Pick<LvAxialAnswerApi, "lensChromaticReference" | "eLineChannelWavelengthsNm" | "chromaticChannelWavelengthsNm">,
+  model: LvCaseModel,
+): Readonly<Record<string, number>> | null {
   const elements = model.runtime.elements;
   if (api.lensChromaticReference(elements) === "e") return api.eLineChannelWavelengthsNm;
   const mixed = elements.some((element) => api.lensChromaticReference([element]) === "e");

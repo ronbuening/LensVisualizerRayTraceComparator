@@ -12,6 +12,8 @@ import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
 import { SPOT_NATIVE } from "../contract/quantities/spotNative.ts";
 import { AXIAL_NATIVE } from "../contract/quantities/axialNative.ts";
 import type { AxialNativeSpec } from "../contract/quantities/axialNative.ts";
+import { CHIEF_NATIVE } from "../contract/quantities/chiefNative.ts";
+import type { ChiefNativeSpec } from "../contract/quantities/chiefNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -62,6 +64,13 @@ export interface RungInputs {
   readonly axialRaySets?: readonly RaysTraceSpec[];
   /** The engines' own axial requests of the same tabs, from the same source, for such a rung. */
   readonly axialAsks?: readonly AxialNativeSpec[];
+  /**
+   * The chief sets of the run, from the source of its case (`CaseSource.chiefRaySets`), for a rung that says it
+   * `needsChiefRaySets`: the chief rays of the tabs that present the field. Empty, or left out, for any other rung.
+   */
+  readonly chiefRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own chief-ray requests of the same tabs, from the same source, for such a rung. */
+  readonly chiefAsks?: readonly ChiefNativeSpec[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -99,6 +108,11 @@ export interface RungDefinition {
    * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
    */
   readonly needsAxialRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's chief sets (`RungInputs.chiefRaySets` and `chiefAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsChiefRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -593,6 +607,45 @@ export const r8bRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r9a`, LensVisualizer's distortion, pupils and lateral-colour tabs on identical rays: one `rays.trace`
+ * request for each of the run's chief sets (`RungInputs.chiefRaySets`), the chief rays the tabs launch, which every
+ * engine traces as given. Where each engine lands them is compared, with what the tabs make of the landings: the
+ * distortion of each ray against the reference its set's probe scales, where each chief ray crosses the axis behind
+ * the system, and how each landing moves from the case's first line to its others (`src/compare/raysChief.ts`). It
+ * is asked of the engines of the run, and only of a run whose source has chief sets: a LensVisualizer lens at
+ * infinity focus that is not folded.
+ */
+export const r9aRung: RungDefinition = Object.freeze({
+  id: "r9a",
+  quantity: RAYS_TRACE,
+  needsChiefRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.chiefRaySets ?? []),
+});
+
+/** The engines of the rung `r9b`: LensVisualizer, whose tabs are asked, and optiland's own chief rays and classes. */
+export const R9B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r9b`, LensVisualizer's distortion, pupils and lateral-colour tabs beside an engine's own: one
+ * `chief.native` request for each tab (`RungInputs.chiefAsks`), the distortion and the pupils at the case's reference
+ * line and the lateral colour at every line, at the tabs' own fields, asked of LensVisualizer, whose answer is its
+ * tabs' figures, and of optiland, whose answer is its own distortion model and the chief rays it traces. Recorded, of
+ * those two engines and of no other, and run only where it is named: optiland is not on every machine.
+ */
+export const r9bRung: RungDefinition = Object.freeze({
+  id: "r9b",
+  quantity: CHIEF_NATIVE,
+  needsChiefRaySets: true,
+  engines: R9B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.chiefAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: CHIEF_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -614,6 +667,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r7bRung,
   r8aRung,
   r8bRung,
+  r9aRung,
+  r9bRung,
 ]);
 
 /**

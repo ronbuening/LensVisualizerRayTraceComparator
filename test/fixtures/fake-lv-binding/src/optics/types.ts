@@ -63,12 +63,18 @@ export interface FakeLensData {
     edgeDeg?: number;
     referenceHeightMm?: number;
     chiefLimitDeg?: number;
+    /** Beyond this field angle the fake "launches from a bounding sphere". */
+    vectorBeyondDeg?: number;
     unsolvedFraction?: number;
   };
   /** Absorption of every glass of the lens, per mm. */
   absorptionPerMm?: number;
   /** The fraction of the half field the coma fans are drawn at; 0.7 without it. */
   offAxisFieldFrac?: number;
+  /** The fake's projection law; rectilinear without it. */
+  projection?: { kind: string };
+  /** True: the fake samples the lens's ray work coarsely, as LV does a heavy lens. */
+  heavy?: boolean;
   /** An annulus of one surface in which the fake's tracer "does not converge". */
   unresolvedZone?: { surface: number; inner: number; outer: number };
 }
@@ -149,6 +155,8 @@ export interface FakeRuntimeLens {
   xpZRelLastSurf: number;
   xpSD: number;
   elements: readonly { id: number; absorptionCoefficientPerMm?: number; indexReference?: string }[];
+  offAxisFieldFrac?: number;
+  projection: { kind: string };
 }
 
 export interface FakeStateSurface {

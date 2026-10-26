@@ -1,0 +1,13 @@
+{
+  "kind": "lateral-colour",
+  "lines": [
+    0,
+    1
+  ],
+  "maxFieldDeg": 20,
+  "fieldAnglesDeg": [
+    0,
+    10,
+    20
+  ]
+}

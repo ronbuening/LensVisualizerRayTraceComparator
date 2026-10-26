@@ -680,6 +680,61 @@ def validate_axial_native(part: str, value: Any, schemas: SchemaSet | None = Non
     return issues
 
 
+def validate_chief_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/chiefNative.ts: schema, the lines and angles of a spec, and what a field holds."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("chief.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    kind = value["kind"]
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        if kind != "lateral-colour" and len(lines) != 1:
+            issue("/lines", f"{kind} is of one line")
+        for at, angle in enumerate(value["fieldAnglesDeg"]):
+            if angle > value["maxFieldDeg"]:
+                issue(f"/fieldAnglesDeg/{at}", "an angle is at most the half field, maxFieldDeg")
+            elif kind != "lateral-colour" and not angle > 0:
+                issue(f"/fieldAnglesDeg/{at}", f"an angle of {kind} is above 0")
+        return issues
+    members = {
+        "distortion": ("realHeightMm", "idealHeightMm", "percent"),
+        "pupils": ("entrancePupilZ", "exitPupilZ"),
+        "lateral-colour": (),
+    }
+    own = members[kind]
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["figures"] is not None or field["chiefRay"] is not None:
+                issue(path, "an unavailable field has a reason and neither figures nor a chief ray")
+            continue
+        if field["chiefLandingMm"] is None:
+            issue(path + "/chiefLandingMm", "an ok field has its landing")
+        figures, ray = field["figures"], field["chiefRay"]
+        if kind == "lateral-colour" and (figures is not None or ray is not None):
+            issue(path, "a field of lateral colour has neither figures nor a chief ray")
+            continue
+        if kind == "distortion" and (figures is None or ray is not None):
+            issue(path, "an ok field of distortion has its figures and no chief ray")
+            continue
+        if kind == "pupils" and (figures is None) == (ray is None):
+            issue(path, "an ok field of pupils has its figures or its chief ray, and not both")
+            continue
+        if figures is not None and not all((figures[name] is not None) == (name in own) for name in figures):
+            issue(path + "/figures", f"the figures of {kind} have every one of {', '.join(own)} and no other")
+        if ray is not None:
+            parts = (ray["entryPoint"], ray["entryDirection"], ray["exitPoint"], ray["exitDirection"])
+            if not all(math.isfinite(number) for part in parts for number in part):
+                issue(path + "/chiefRay", "a chief ray's points and directions are finite numbers")
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

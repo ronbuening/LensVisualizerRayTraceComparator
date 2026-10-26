@@ -20,3 +20,13 @@ export {
   computeSAProfile,
   computeSphericalAberration,
 } from "./analysis/axial.ts";
+export {
+  DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS,
+  PUPIL_ABERRATION_SAMPLE_COUNT,
+  computeBothPupilAberrationProfiles,
+  computeDistortionCurve,
+  computeDistortionFieldGrid,
+  computeFocusBreathingSeries,
+  computeFocusEFL,
+  computeLateralColorCurve,
+} from "./analysis/chief.ts";

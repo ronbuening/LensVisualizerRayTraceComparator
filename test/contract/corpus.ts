@@ -26,6 +26,8 @@ import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.
 import { SPOT_NATIVE } from "../../src/contract/quantities/spotNative.ts";
 import { AXIAL_NATIVE } from "../../src/contract/quantities/axialNative.ts";
 import type { AxialNativeData, AxialNativeField, AxialNativeSpec } from "../../src/contract/quantities/axialNative.ts";
+import { CHIEF_NATIVE } from "../../src/contract/quantities/chiefNative.ts";
+import type { ChiefNativeData, ChiefNativeField, ChiefNativeSpec } from "../../src/contract/quantities/chiefNative.ts";
 import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
@@ -701,6 +703,141 @@ export const AXIAL_DATA_COLOUR: AxialNativeData = {
     ]),
   method: { name: "synthetic-rays", params: { aiming: "paraxial" } },
   notes: ["the outer candidate is stopped by an aperture"],
+};
+
+// ── chief.native ─────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own chief-ray figures across a field, and of the chief rays an engine states
+// instead. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Distortion at the reference line, at three fields of a half field of 20 degrees. */
+export const CHIEF_SPEC_DISTORTION: ChiefNativeSpec = {
+  kind: "distortion",
+  lines: [0],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [5, 10, 20],
+};
+
+/** Lateral colour at two lines, the first the reference, at the axis and two fields. */
+export const CHIEF_SPEC_LATERAL: ChiefNativeSpec = {
+  kind: "lateral-colour",
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/** Pupils at the reference line, at two fields. */
+export const CHIEF_SPEC_PUPILS: ChiefNativeSpec = {
+  kind: "pupils",
+  lines: [0],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [10, 20],
+};
+
+const NO_CHIEF_FIGURES = {
+  realHeightMm: null,
+  idealHeightMm: null,
+  percent: null,
+  entrancePupilZ: null,
+  exitPupilZ: null,
+};
+const NO_CHIEF_REFERENCE = {
+  focalScaleMm: null,
+  probeAngleDeg: null,
+  paraxialEntrancePupilZ: null,
+  paraxialExitPupilZ: null,
+};
+
+/** An answer to `CHIEF_SPEC_DISTORTION` by an engine that presents its figures: the edge is unavailable. */
+export const CHIEF_DATA_DISTORTION: ChiefNativeData = {
+  kind: "distortion",
+  fields: [
+    [5, -4.375, -4.4375, -1.40625],
+    [10, -8.8125, -8.875, -0.703125],
+  ]
+    .map(([fieldAngleDeg, real, ideal, percent]): ChiefNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: real,
+      figures: { ...NO_CHIEF_FIGURES, realHeightMm: real, idealHeightMm: ideal, percent },
+      chiefRay: null,
+      sampling: { inversionResidualMm: 0.0000152587890625 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 20,
+        status: "unavailable",
+        reason: "no-chief-landing",
+        chiefLandingMm: null,
+        figures: null,
+        chiefRay: null,
+        sampling: {},
+      },
+    ]),
+  reference: { ...NO_CHIEF_REFERENCE, focalScaleMm: 50.25, probeAngleDeg: 0.125 },
+  method: { name: "synthetic-distortion", params: { aiming: "paraxial" } },
+  notes: [],
+};
+
+/** An answer to `CHIEF_SPEC_PUPILS` by an engine that states its chief rays and its paraxial pupils. */
+export const CHIEF_DATA_PUPILS: ChiefNativeData = {
+  kind: "pupils",
+  fields: [10, 20].map((fieldAngleDeg) => ({
+    line: 0,
+    wavelengthNm: 587.5,
+    fieldAngleDeg,
+    status: "ok" as const,
+    chiefLandingMm: -fieldAngleDeg / 2,
+    figures: null,
+    chiefRay: {
+      entryPoint: [0, 3.25, 0.125],
+      entryDirection: [0, -0.1875, 0.96875],
+      exitPoint: [0, -4.5, 60],
+      exitDirection: [0, -0.125, 0.9921875],
+    },
+    sampling: {},
+  })),
+  reference: { ...NO_CHIEF_REFERENCE, paraxialEntrancePupilZ: 18.5, paraxialExitPupilZ: 21.75 },
+  method: { name: "synthetic-chief-rays", params: { aiming: "robust" } },
+  notes: [],
+};
+
+/** An answer to `CHIEF_SPEC_LATERAL` by an engine whose second line is no line it traces. */
+export const CHIEF_DATA_LATERAL: ChiefNativeData = {
+  kind: "lateral-colour",
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): ChiefNativeField =>
+      line === 0
+        ? {
+            line,
+            wavelengthNm: 587.5,
+            fieldAngleDeg,
+            status: "ok" as const,
+            chiefLandingMm: -fieldAngleDeg / 2,
+            figures: null,
+            chiefRay: null,
+            sampling: { indexMaxDelta: 0 },
+          }
+        : {
+            line,
+            wavelengthNm: 656.25,
+            fieldAngleDeg,
+            status: "unavailable" as const,
+            reason: "no-channel-at-line",
+            chiefLandingMm: null,
+            figures: null,
+            chiefRay: null,
+            sampling: {},
+          },
+    ),
+  ),
+  reference: NO_CHIEF_REFERENCE,
+  method: { name: "synthetic-chief-rays", params: {} },
+  notes: [],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2552,6 +2689,44 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       ),
       "status-unconverged": fault(AXIAL_DATA_SPHERICAL, "/fields/0/status", "unconverged", "enum"),
       "no-fields": fault(AXIAL_DATA_SPHERICAL, "/fields", [], "minItems"),
+    },
+  },
+  [`${CHIEF_NATIVE}.spec`]: {
+    valid: { distortion: CHIEF_SPEC_DISTORTION, "lateral-colour": CHIEF_SPEC_LATERAL, pupils: CHIEF_SPEC_PUPILS },
+    invalid: {
+      "kind-unknown": fault(CHIEF_SPEC_DISTORTION, "/kind", "breathing", "enum"),
+      "no-lines": fault(CHIEF_SPEC_LATERAL, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(CHIEF_SPEC_DISTORTION, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(CHIEF_SPEC_LATERAL, "/fieldAnglesDeg/0", -1, "minimum"),
+      "missing-angles": fault(CHIEF_SPEC_PUPILS, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "fractions-instead": fault(CHIEF_SPEC_PUPILS, "/fieldFractions", [0.5, 1], "additionalProperties"),
+    },
+  },
+  [`${CHIEF_NATIVE}.data`]: {
+    valid: {
+      "distortion-figures": CHIEF_DATA_DISTORTION,
+      "pupils-chief-rays": CHIEF_DATA_PUPILS,
+      "lateral-colour-and-unavailable": CHIEF_DATA_LATERAL,
+    },
+    invalid: {
+      "missing-reference": fault(CHIEF_DATA_DISTORTION, "/reference", REMOVE, "required", ""),
+      "status-unconverged": fault(CHIEF_DATA_DISTORTION, "/fields/0/status", "unconverged", "enum"),
+      "landing-as-text": fault(CHIEF_DATA_LATERAL, "/fields/0/chiefLandingMm", "-5", "type"),
+      "figures-without-percent": fault(
+        CHIEF_DATA_DISTORTION,
+        "/fields/0/figures/percent",
+        REMOVE,
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "chief-ray-of-two": fault(
+        CHIEF_DATA_PUPILS,
+        "/fields/0/chiefRay/exitPoint",
+        [0, -4.5],
+        "oneOf",
+        "/fields/0/chiefRay",
+      ),
+      "no-fields": fault(CHIEF_DATA_PUPILS, "/fields", [], "minItems"),
     },
   },
   [`${WAVEFRONT_NATIVE}.spec`]: {

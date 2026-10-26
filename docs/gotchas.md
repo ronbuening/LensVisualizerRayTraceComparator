@@ -2625,3 +2625,146 @@ Measured at LensVisualizer `45e6f852d` (engine closure `afef1f81`) and optiland 
   `test_a_case_whose_first_order_data_optiland_does_not_see_is_refused_before_anything_is_built` and
   `test_without_the_refusal_optiland_would_state_the_focus_of_another_lens` (`test_axial.py`).
 - **Class.** method: unsupported.
+
+## Chief rays (Stage 6.4)
+
+Measured at LensVisualizer `d6df08c7f` and `cfa91d0a5` (engine closure `c866fbff` with the stage's names, 178 files)
+and optiland `4e893f53`, on the benchmark.
+
+### LensVisualizer's chief ray below one degree is its paraxial estimate
+
+- **Where.** `computeChiefRaySolve` (`src/optics/field/chiefRaySolve.ts`) returns the chief ray of the paraxial
+  entrance pupil, `-epRatio · uField`, for every field under one degree
+  (`if (Math.abs(fieldAngleDeg) < 1) { return { yLaunch: paraxialYChief, ... } }`), not a ray through the stop's
+  centre. The pupils tab (`computeBothPupilAberrationProfiles`) makes its real entrance pupil of that launch over the
+  paraxial one (`chiefRayCorrection` 1, `epShiftMm` 0 there) and its real exit pupil of that ray; the distortion
+  curve's samples below one degree are of it too.
+- **Effect.** Below one degree the tab's real pupils are those of the paraxial pupil's chief ray. The Sony FE 400 mm
+  (half field 3.15°) has 5 of its 16 pupil fields there: its entrance pupil is 1.30 mm from that of optiland's chief
+  ray through the stop's centre, its exit pupil 5.17e-2 mm. Four more lenses have one such field (5.6e-3 to 1.5e-2
+  mm). At one degree and above every benchmark lens agrees within 5.0e-6 mm in both pupils. The two chief rays land
+  within 2.5e-6 mm of each other, inside R9b's 1e-5 mm limit: the landing does not tell them apart.
+- **Handled.** R9a traces LensVisualizer's own launch in every engine, so it is untouched. R9b records the pupils as two
+  methods, with no band. The owner decided (2026-10-26) that LensVisualizer is to solve the real chief ray there too;
+  the change is pending in LensVisualizer (brief `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed),
+  and until it lands this entry describes LensVisualizer as it is. Pinned by the canary "the distortion tab still traces
+  the probe, the edge and its samples the chief sets restate" (the one-degree line) and by
+  `test/integration/optiland/r9.test.ts`, which holds the Sony FE 400 mm's pupils below one degree to an `epShiftMm` of
+  0 and more than 1 mm from optiland's, and above it to within 1e-5 mm.
+- **Class.** method: recorded.
+
+### LensVisualizer's lateral colour is one chief ray traced at every channel
+
+- **Where.** `computeLateralColorCurve` traces the coma tab's chief ray of a field (`computeOffAxisFieldGeometry`,
+  solved once at the authored indices, with no channel) at each channel (`traceOffAxisChiefRay` with the channel),
+  and plots each channel's landing relative to G. optiland's chief ray of each line passes through the stop's centre
+  at that line, the usual definition. The channels also trace a d-line catalog glass at the catalog's own index
+  ("LensVisualizer's chromatic tab traces a d-line catalog glass at the catalog's own index, at every channel",
+  above).
+- **Effect.** On the 12 benchmark configurations at C, d and F (a temporary suite, not committed) the landings
+  relative to the d line differ from optiland's by up to 1.09e-3 mm (the Sony FE 20 mm at its edge, F − d: −5.77e-3
+  against −4.68e-3 mm); tracing LensVisualizer's own launch at the case's indices moves that by 3.8e-5 mm at most, so
+  the rest is the one launch. On the reference line alone the G channel lands up to 7.19e-3 mm from optiland's chief
+  ray at the case's index (the Z 24-70 mm wide end at its edge).
+- **Handled.** `lv` states each line's `sampling.indexMaxDelta`, and R9b sorts a field above 0 as data,
+  `indices-differ`, before any difference: on the benchmark every lateral-colour field (120 on 24 pairs) is data and no
+  lateral-colour figure is taken; 22 of the pairs are ATTENTION by their landing. R9a judges the moves of identical
+  rays between lines (`lateralColour.maxAbs`). The owner decided (2026-10-26) that LensVisualizer is to trace each
+  channel's own chief ray; the change is pending in LensVisualizer (the brief above). Pinned by
+  `test/engines/lv/chief.test.ts` ("lateral colour is each line's channel of the section, with how far its indices are
+  from the case's"), `test/compare/chiefNative.test.ts` ("a field is sorted by R5's classes first, then by indices
+  that are not the case's, then by its landing") and `test/integration/optiland/r9.test.ts`.
+- **Class.** data (the indices) and method (the launch): recorded.
+
+### LensVisualizer's distortion curve plots its targets
+
+- **Where.** `computeDistortionCurve` takes evenly spaced target heights up to the edge chief ray's landing, inverts
+  each to a field angle with solved chief rays, accepts an inversion whose ray lands within 1e-4 mm of its target, and
+  plots the target as the real height; the ideal height and the percent are of the target and the angle.
+- **Effect.** A plotted real height is not where the chief ray at the plotted angle lands: up to 9.8e-5 mm on the
+  benchmark lenses, 3.7e-3 percentage points.
+- **Handled.** `lv` states the curve as plotted (`figures`), identifies each field by the landing of its solved chief
+  ray (`chiefLandingMm`), and states the difference (`sampling.inversionResidualMm`). R9a's distortion is of the
+  landings of the same rays in every engine. Pinned by the canary named above ("a sample's chief ray lands within 1e-4
+  mm of its target"), by `test/integration/lv/chiefRays.test.ts` (each sample within 1e-4 mm, the plotted height the
+  target) and by `test/engines/lv/chief.test.ts` ("distortion is the curve as the tab plots it, the landing of each
+  sample's solved chief ray beside it").
+- **Class.** method: recorded.
+
+### LensVisualizer's distortion scale is of a probe up to half a degree off the axis
+
+- **Where.** `computeDistortionReference` scales the rectilinear reference by the paraxial pupil's chief ray at
+  `Math.min(Math.max(geometry.halfFieldDeg * 0.01, 0.02), 0.5)` degrees; optiland's `RotationalDistortionModel` probes
+  at 1e-10 of the half field.
+- **Effect.** The probe's landing holds a little of the lens's distortion: the two scales differ by up to 8.5e-6 of
+  the scale (the Z 24-70 mm wide end, a probe of 0.43°), median 1.9e-6.
+- **Handled.** Each answer states its scale and probe (`reference.focalScaleMm`, `probeAngleDeg`); R9b records
+  `focalScale.relative`, unbanded. R9a's distortion sets carry LensVisualizer's probe as a ray (`groups.chiefIndex`),
+  so every engine scales by its own trace of the same ray. Pinned by the canary (the probe's line), by
+  `test/integration/lv/chiefRays.test.ts` (the probe's height to the bit) and by `test/compare/chiefNative.test.ts`
+  ("distortion: the differences of the percent, the real and ideal heights and the scales, field by field").
+- **Class.** method: recorded.
+
+### optiland's robust aimer gives its distortion model no scale
+
+- **Where.** `RotationalDistortionModel.fit` (`optiland/analysis/distortion_strategies/model.py`) scales by the chief
+  ray at `_NEAR_AXIS` (1e-10) of the half field. Under the `robust` aiming of the worker's other analyses, optiland
+  launches a field that small along the axis.
+- **Effect.** The probe lands on the axis, `_scale` is 0, and every ideal height is 0: the percent has no value.
+- **Handled.** The worker asks the model under optiland's default `paraxial` aiming, which is what its `Distortion`
+  analysis uses (accepted by the owner, 2026-10-26), reads the aiming back before and after, and identifies a field
+  separately by the robust-aimed chief ray. A scale of 0 is the field's reason `no-scale`, never a number. Pinned by
+  `test_chief.py` (`test_optilands_robust_aimer_launches_the_near_axis_probe_along_the_axis_and_gives_no_scale`, and the
+  aiming faults of the read-back tests).
+- **Class.** convention: handled.
+
+### optiland's distortion is of the chief ray of its paraxial pupil
+
+- **Where.** Under `paraxial` aiming the model's `ChiefRayReferencePoint` traces the ray at the pupil (0, 0), aimed at
+  the centre of the paraxial entrance pupil, not of the real stop.
+- **Effect.** Off the axis that ray misses the stop's centre by the pupil's aberration. R9b's
+  `distortionPercent.maxAbs` is at most 0.0146 percentage points on the benchmark (the Z 24-70 mm tele at f/8, at
+  16.6°), median 0.0042. Of it: optiland's paraxial chief ray against its robust one, up to 0.014 points;
+  LensVisualizer's target against its landing (above), up to 3.7e-3; the two chief rays through the stop's centre,
+  each on its own scale, up to 8.5e-4; on one scale, up to 3.6e-5 (the Sony FE 400 mm at 0.96°, below
+  LensVisualizer's one degree).
+- **Handled.** Recorded, no band. The answer states its aiming (`method.params.aiming`) and, per field, the model's
+  own chief ray landing (`sampling.distortionLandingMm`) beside the robust one (`chiefLandingMm`). Pinned by
+  `test_chief.py` (`test_the_distortion_of_a_sphere_that_is_its_own_stop_is_its_closed_form`, where the two rays are
+  one).
+- **Class.** method: recorded.
+
+### A percent distortion and an exit pupil are ill-conditioned near the axis
+
+- **Where.** A percent distortion is a displacement over an ideal height, which vanishes on the axis; an exit pupil
+  is where a chief ray crosses the axis, `δ / |u|` apart for two exits a height `δ` apart at a slope `u`.
+- **Effect.** A rounding of a landing near the axis is a large difference of percent, and of a shallow chief ray a
+  long move of its crossing.
+- **Handled.** R9a judges the displacement (`distortion.maxScaled`) and the crossing times the larger of the two
+  slopes (`exitPupil.maxScaled`), each at 1e-8 mm, and shows the percent (`distortion.maxAbs`) and the plain crossing
+  (`exitPupil.maxAbs`), never judged (the owner accepted the gate, 2026-10-26). Two conditionings remain, stated and
+  not gated away. The exit-pupil figure is about `y dm / m` for exits at one height `y` whose slopes differ by `dm`:
+  a nearly image-telecentric chief ray, its exit pupil finite but far (y 20 mm, m 2e-7), shows 1.1e-8 mm for one
+  rounding of a direction (1.1e-16), and `lv-exit-pupil-at-infinity` does not catch it; the worst measured is 5.97e-13
+  mm. The distortion figure is not on the transverse scale for the probe: a probe-landing difference moves every
+  ideal point by the ray's slope over the probe's (about 100, 136 at a 50° half field, 200 to 270 for ultra-wide
+  rectilinear lenses), so the probe's landing is held to about 4e-11 mm; landings agree to 3.6e-13 mm, and the worst
+  measured figure is 3.83e-13 mm. A FAIL of either is attributed in extended precision before anything is concluded,
+  and the gate is never widened for it. Pinned by `test/compare/raysChief.test.ts` ("a probe moved by less than the
+  gate moves every ideal point by its slope ratio: the distortion fires alone", "an exit turned about its landing shows
+  only in the exit pupil: the rung's sign of a wrong exit slope", "an engine's wrong, shallow exit slope cannot hide
+  its crossing: the larger slope scales it, either way round").
+- **Class.** numerical: handled.
+
+### LensVisualizer's breathing chart is R1's focal length, and its positions between stations are no case
+
+- **Where.** `computeFocusBreathingSeries` plots 21 evenly spaced focus positions, each `computeFocusEFL` of that
+  prepared state, relative to its sample at infinity focus.
+- **Effect.** At every exported state of the benchmark lenses (14 states, two of them focus stations) the chart's
+  focal length is `lv`'s R1 focal length within 2 units in the last place. The chart's other positions have object
+  distances LensVisualizer does not certify, which the exporter refuses: no other engine is asked about them.
+- **Handled.** Breathing is judged by R1 wherever a state is a case; it has no rung of its own, and the positions
+  between the stations are not covered (owner decision, 2026-10-26). Pinned by
+  `test/integration/lv/breathing.test.ts` and the canary "the lateral-colour section and the breathing chart still
+  read what the comparator restates".
+- **Class.** method: not covered between stations.

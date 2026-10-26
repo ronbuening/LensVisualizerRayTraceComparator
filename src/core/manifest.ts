@@ -92,6 +92,11 @@ export interface ManifestRun {
    */
   readonly axialRaySets?: ManifestRaySets;
   /**
+   * The chief sets of the run (`CaseSource.chiefRaySets`): the chief rays of the tabs that present the field; stated
+   * exactly when a rung that compares chief rays was run on it.
+   */
+  readonly chiefRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

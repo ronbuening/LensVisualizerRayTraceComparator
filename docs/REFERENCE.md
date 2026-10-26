@@ -3792,8 +3792,8 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2 or 6.3. Policy versions 16 and 17 change the policy hash, and the stages add
-names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's
+This refresh is not run at Stage 6.2, 6.3 or 6.4. Policy versions 16, 17 and 18 change the policy hash, and the
+stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's
 are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
@@ -3803,18 +3803,18 @@ are STALE:
 `ref`'s revision did not move. The store therefore recomputes the other five engines, and a cold MTF run of the
 benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
 
-R7a and R8a join the rays baselines of the suites whose runs have spot and axial sets: benchmark, features, states
-and diffractive. focus-stations (finite objects) and folded (folded paths) have none, so they are rewritten with their
-own rungs. R7b and R8b stay out of every baseline.
+R7a, R8a and R9a join the rays baselines of the suites whose runs have spot, axial and chief sets: benchmark,
+features, states and diffractive. focus-stations (finite objects) and folded (folded paths) have none, so they are
+rewritten with their own rungs. R7b, R8b and R9b stay out of every baseline.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
 another:
 
 ```bash
 for suite in benchmark features states; do
-  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a --jobs 4
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a --jobs 4
   node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite
 done
-node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a --jobs 4
+node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a --jobs 4
 node bin/lvrtc.mjs compare diffractive --jobs 4 && node bin/lvrtc.mjs baseline write diffractive
 node bin/lvrtc.mjs run suites/folded.json --engines lv,ref,optiland --rungs r0,r1,r2,r3 --jobs 4
 node bin/lvrtc.mjs compare folded --jobs 4 && node bin/lvrtc.mjs baseline write folded
@@ -4099,3 +4099,313 @@ Signed off by the owner on 2026-10-26: **the pupil limit of R8b's sorting**, `pu
 times the measured 1.37e-11, rounded up), which the review's finding that the spherical landing cannot tell pupils
 apart required.
 
+
+## Stage 6.4: distortion, lateral colour, pupils and breathing
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the chief rays across the field in three places: its distortion tab (a curve of percent
+distortion against field angle, and a traced grid), its pupils tab (the real entrance and exit pupils of each field's
+chief ray beside the paraxial ones), and the lateral-colour section of its chromatic tab (each channel's chief-ray
+landing relative to its reference channel). R9a traces exactly the chief rays those tabs launch in every engine and
+judges where they land, how far apart their lines' landings move, the distortion of the landings and where the rays
+cross the axis behind the system. R9b sets the tabs, as they present them, beside optiland's own distortion model,
+its own chief rays and its paraxial pupils. The focus-breathing chart is the focal length of a prepared state, which
+R1 judges wherever the state is a case.
+
+### The chief sets
+
+`CaseSource.chiefRaySets` makes the chief rays the tabs launch (`src/engines/lv/chiefRaySets.ts`, the request and the
+distortion reference in `chiefSetup.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with
+a rung that says `needsChiefRaySets`, and the manifest records them under `runs[].chiefRaySets`; a case source
+without them (a case file) is `chief-sets-unavailable`. Four patterns, in this order, each one set at every line of
+the case, the same rays at every line (as the lateral-colour section traces one chief ray at each channel), every ray
+of weight 1:
+
+| Pattern | Rays | Per line on the benchmark |
+|---|---|---:|
+| `distortion-curve` | the near-axis probe of the reference (the paraxial pupil's chief ray at `min(max(0.01 · half field, 0.02), 0.5)` degrees), the edge chief ray (the half field, whose landing sets the curve's target heights), then the chief ray of every sample after the axis, at the angle LensVisualizer's inversion solved for it; `groups.chiefIndex` 0 names the probe | 22 |
+| `distortion-grid` | the probe, then every grid point LensVisualizer traces, launched skew at its ideal point's slopes with the pupil correction interpolated from LensVisualizer's table (17 field samples, 9 for a heavy lens); `groups.chiefIndex` 0 | 91 |
+| `pupils` | the solved chief ray of each field the pupils tab traces off the axis (`uniformFieldFraction(i, PUPIL_ABERRATION_SAMPLE_COUNT)` of the half field) | 16 |
+| `lateral-colour` | the coma tab's chief ray at each of `DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS` | 5 |
+
+A meridional ray starts as LensVisualizer's `bindRayTrace` starts `ray(y0, u0)`: at `(0, y0 − u0 · rayLead,
+z0 − rayLead)`, along `directionFromMeridionalSlope(u0)` (or `(0, 0, 1)` for a slope of 0); a skew ray as the coma
+tab's (`lvSkewLaunch`). The fields, the solved launches, the grid's points and the curve's samples are LensVisualizer's
+own exports; what the tabs do inline (the probe, the edge, the pupil-correction table and its interpolation, the
+pupils tab's fields, the section's fractions, the launches) is restated, each line with a canary: four Stage 6.4 tests
+in `test/integration/lv/canaries.test.ts`. `test/integration/lv/chiefRays.test.ts` traces each ray with
+LensVisualizer's exact tracer (`traceEngineRay`, each tab's options; a channel's indices for the lateral colour) and,
+on every benchmark configuration and the zoom's far end (1,608 rays), gets to the bit: the probe's and the edge's
+heights, every sample's ideal height and percent from its target and its angle, every traced grid point, every
+field's real exit pupil and entrance-pupil correction, and every channel's landing; it also holds that every sample's
+chief ray lands within LensVisualizer's 1e-4 mm of the target the curve plots. The case source also makes the
+`chief.native` asks of R9b (`ChiefSetResolution.asks`): the distortion curve at the reference line at the solved
+angles, the pupils at the reference line at their fields, the lateral colour at every line.
+
+Which fields have a chief ray a set can state is decided once, in `src/engines/lv/chiefFields.ts` (`lvSolvedChief` for
+a solved chief ray, `lvPupilFields` for the pupils tab's fields, `lvLateralChief` for the section's), and both sides
+use it: the sets and asks of `chiefRaySets.ts`, and `lv`'s answer in `chief.ts`, which keeps of each tab's samples
+only the fields that module admits. A field LensVisualizer launches from a bounding sphere, or has no slope for, is a
+coded problem of its set, no field of the ask and none of `lv`'s answer: no engine is asked a field `lv` cannot
+launch, and `lv` answers every ask of its own case source. `test/engines/lv/chief.test.ts` feeds the asks of the fake
+tree's vector variant (fields beyond 12° launched from a bounding sphere) to `answerLvChief` for all three kinds.
+
+Coded problems, each of the run or of the pattern it names and never approximated: `folded-path`,
+`object-not-at-infinity` and `no-half-field` (no sets, no asks); `lv-fisheye-projection` (no distortion sets or ask:
+a fisheye's reference is its declared law, which no probe scales), `lv-no-distortion-reference`,
+`lv-no-distortion-curve`, `lv-no-distortion-grid` (a grid of no line, or whose lines have no traced point: a set of
+the probe alone has no distortion); `lv-exit-pupil-at-infinity` (no pupils); `no-pupil`,
+`lv-no-launch`, `lv-vector-launch` (a field launched from a bounding sphere); `launch-behind-first-surface`.
+focus-stations (finite objects) and folded (folded paths) have no chief sets.
+
+### R9a: the chief rays of identical launches (gated)
+
+R9a asks `rays.trace` of every chief set at every line (`r9aRung`) and compares them with `raysChiefComparator`
+(`src/compare/raysChief.ts`), a comparator of spans: a set's rays without its line are its key (`spanOf`), so the
+answers to one set at all lines are one comparison. The rays of a line are those ok in both answers of a pair; which
+rays those are is judged as R2 judges it. The figures, each with the line and the ray of its largest value:
+
+- `landing.maxAbs`: a landing's difference, along x or y, the engine's own `imagePoint` on the case's plane;
+- `lateralColour.maxAbs`: the difference of the two engines' moves of a landing from the span's first line to
+  another; inapplicable to a case of one line;
+- `distortion.maxScaled`: the difference of a ray's displacement from its ideal point, along x or y. The pure
+  estimator `estimateDistortion` (`src/estimators/distortion.ts`) takes each engine's own probe landing as the scale:
+  the ideal point of a ray is the probe's landing times the ray's slope over the probe's, formed with the rest of the
+  product (`twoProductError`), and the displacement with the rest of the difference (`twoSumError`), rounded once.
+  The probe must be on the meridian (its x slope and x landing 0, as every meridional launch keeps them), or it scales
+  nothing (`no-scale`). `distortion.maxAbs`, the radial percent, is shown beside it. Inapplicable to a set without a
+  probe; a line whose probe gives no distortion while other lines do is named in the pair's reason;
+- `exitPupil.maxScaled`: where a chief ray crosses the axis behind the system (the axial estimator,
+  `axialIntercept`), its difference times the larger of the two exit slopes; `exitPupil.maxAbs`, along the axis,
+  shown;
+- `mask.mismatches`, `mask.rimBand`, `rays.compared`, `rays.dropped`, as R2's and R4's.
+
+**The gate.** A percent distortion is a displacement over an ideal height that vanishes on the axis, and an exit
+pupil is a crossing that moves `δ / |u|` for a height `δ` at a slope `u`: both are ill-conditioned near the axis. So
+the percent is judged as the displacement it is a percentage of, and the crossing times the larger slope, never one
+engine's (an engine whose slope is wrong and small would scale its own difference away;
+`test/compare/raysChief.test.ts` holds both orders). The exit-pupil figure is the rung's only sign of a difference of
+the exit slopes, which a landing does not separate from a difference of the exit heights (an exit turned about its
+landing shows in it alone). **The owner accepted the gate as proposed (2026-10-26).** Two conditionings of it are
+stated here, and neither is gated away:
+
+- **`exitPupil.maxScaled` amplifies a slope difference by the lever arm.** Two exits at one height `y` whose slopes
+  are `m` and `m + dm` cross the axis about `y dm / m²` apart, which times the slope is `y dm / m`. A slope is known
+  to about a rounding of a unit direction's component, 1.1e-16, so a nearly image-telecentric chief ray, its exit
+  pupil finite but far (a ray 20 mm off the axis at a slope of 2e-7, its pupil 1e8 mm away), shows 1.1e-8 mm for one
+  rounding: above the gate on arithmetic alone. `lv-exit-pupil-at-infinity` does not catch it, since such a pupil is
+  finite. The worst measured figure is 5.97e-13 mm (features, the fixed-iris zoom).
+- **`distortion.maxScaled` is not on the transverse scale for the probe.** A difference `δ` of the probe's landing
+  moves each ray's ideal point by `δ s_ray / s_probe`, its slope over the probe's: about 100 for a small half field
+  (the probe is a hundredth of it), 136 at a 50° half field, 200 to 270 for ultra-wide rectilinear lenses, whose probe
+  is held at 0.5°. So the figure holds the probe's landing to about 4e-11 mm, not 1e-8 mm. Today's margin: landings
+  agree to 3.6e-13 mm, and the worst measured figure, every probe's difference times its amplification included, is
+  3.83e-13 mm.
+
+A FAIL of either figure is attributed (the ray in extended precision, the slopes and the probe's landing apart) before
+anything is concluded, and the gate is never widened for it.
+
+Under policy version 18:
+
+| Metric | Gate |
+|---|---|
+| `landing.maxAbs` | 1e-8 mm |
+| `lateralColour.maxAbs` | 1e-8 mm |
+| `distortion.maxScaled` | 1e-8 mm |
+| `exitPupil.maxScaled` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+No floor. A probe that is no ray of its set, a ray that crosses the axis in one answer and not the other, and a ray
+with a distortion in one answer and not the other are not comparable; a probe not ok in both, or of no scale, leaves
+the distortion unmeasured. The estimator's proofs are in `test/estimators/distortion.test.ts`: a perfect rectilinear
+image has no distortion to the bit, a barrel image its closed form, a displacement whose landing and ideal height
+nearly cancel keeps the product's rest, and every displacement of a series of 200,000 is the nearest double of the
+exact one, which removing either rest breaks; a probe off the meridian, by its slope or its landing, scales nothing.
+
+### R9b: the tabs beside optiland (recorded)
+
+`chief.native` v1 (contract 1.0; `contract/CONTRACT.md`) is of three kinds: `distortion` and `pupils`, at one line,
+and `lateral-colour`, over lines, the first the reference; each at the field angles of the spec (above 0 but for
+lateral colour), within `maxFieldDeg`. Every field states `chiefLandingMm`, the landing of its chief ray through the
+centre of the stop, which identifies it; distortion its `figures` (real height, ideal height, percent), pupils its
+`figures` (entrance and exit pupil z) or the chief ray it traced (`chiefRay`: entry point and direction, exit point
+and direction), lateral colour neither; the answer states its `reference` (the distortion scale and its probe angle,
+the paraxial pupils).
+
+- **`lv`** answers with the tabs as they present them (`answerLvChief`, `src/engines/lv/chief.ts`):
+  `computeDistortionCurve` (method `lv-distortion-tab`; each sample's solved chief-ray landing beside it, and
+  `sampling.inversionResidualMm`), `computeBothPupilAberrationProfiles` (`lv-pupils-tab`: the real entrance pupil
+  `z0 + epRatio + epShiftMm`, the real exit pupil `zLast + xpZRelLastSurf`, the paraxial ones stored), and
+  `computeLateralColorCurve` (`lv-chromatic-tab`, at each line that is a channel's, with `sampling.indexMaxDelta`);
+  of each, only the fields `chiefFields.ts` admits.
+- **`optiland`** answers with its own classes (`workers/python/lvrtc_optiland/chief.py`). Distortion is
+  `create_distortion_model("paraxial", distortion_type="f-tan")`, the `RotationalDistortionModel` its `Distortion`
+  builds by default, on a fresh verified optic whose one field is the spec's half field, asked at the normalised
+  field `angle / maxFieldDeg` (the answer states the angle asked), under optiland's default `paraxial` aiming
+  (accepted by the owner, 2026-10-26): its robust aimer launches the model's
+  near-axis probe (1e-10 of the half field) along the axis and gives a scale of 0 (`docs/gotchas.md`). Each field is
+  identified by the robust-aimed chief ray (`spot.chief_landing`). Pupils are that chief ray traced once
+  (`trace_generic` at the pupil (0, 0)), stated as it enters and leaves, and the line's `EPL()` and `XPL()`
+  (`first_order.line_data`). Every setting is read back, each check with a deliberate fault in `test_chief.py`: the
+  model's class, distortion type, reference point, near-axis probe, half field and aiming, the number of values; the
+  optic's field count, type, angles, vignetting, weight, half field and aiming; the chief ray's aimer, launch
+  direction, rows and image plane. A test pins the robust aimer's scale of 0. The frame is mirrored in y. What
+  optiland cannot compute is a field with a reason (`no-scale`, `no-chief-landing`, `no-chief-ray`,
+  `optiland-raised-<class>`). Distortion and pupils are of optiland's paraxial model, so the engine refuses them
+  where `first_order.term_refusals` does (a phase profile, a term of power 1 or 2), before anything is built.
+  optiland's `PupilAberration` (the stop's real-against-paraxial ray error over the pupil) is another quantity and is
+  not asked.
+
+`lv` refuses, as unsupported, what its tabs do not present, decided before LensVisualizer is asked anything but
+readings of the lens (but `fields.angles`, decided once the tab has said its fields):
+
+| Item | When |
+|---|---|
+| `lines.not-authored-reference` | Distortion or pupils at a line that is not the authored indices: every photopic run. |
+| `lines.not-chromatic-channels` | Lateral colour at no line that is a channel's: every photopic run. A line that is none, beside one that is, is unavailable (`lv-no-channel-at-line`). |
+| `lines.mixed-reference` | Lateral colour of a lens that mixes d-line and e-line indices. |
+| `focus.off-design` | A case off the design plane (the last vertex plus its gap), where the tabs present their figures: every best-focus run. Decided from the prepared state for all three kinds, the lateral colour included, before any tab is asked. |
+| `projection.fisheye` | Distortion of a fisheye lens. |
+| `fields.angles` | Angles other than the tab's own. |
+| `object.finite`, `path.folded` | A finite object; a folded path. |
+
+`chiefNativeComparator` (`src/compare/chiefNative.ts`) sorts each field before any difference
+(`classifyChiefField`): R5's `classifyNativeField` first (a field without figures is `unsupported`, one of other
+wavelengths `data`); then `indices-differ`, of class `data`, where an answer states it traced the field at indices
+other than the case's (`sampling.indexMaxDelta` above 0); then the chief rays' landing against 1e-5 mm, R7b's and
+R8b's limit; then `method`, the only class that enters a figure. `chiefFactsOfRecorded` repeats the sorting from the
+recorded values. It records `chiefLanding.maxAbs`; of distortion `distortionPercent.maxAbs` (percentage points),
+`realHeight.maxAbs`, `idealHeight.maxAbs` and `focalScale.relative`; of lateral colour `lateralColour.maxAbs` (each
+landing relative to the first line, where both lines are of two methods); of pupils `entrancePupil.maxAbs` and
+`exitPupil.maxAbs` (an engine's own, or the axial crossings of the chief ray it traced, by `axialIntercept`), and
+`paraxialEntrancePupil.maxAbs`, `paraxialExitPupil.maxAbs`; and the fields of each class. Policy 18:
+
+| Metric | Policy 18 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (owner, 2026-10-26) |
+| every other figure | no band (owner, 2026-10-26) |
+
+`test/integration/optiland/r9.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 400 mm on its
+reference line, whose pupils below one degree it pins.
+
+### Breathing
+
+LensVisualizer's focus-breathing chart plots 21 evenly spaced focus positions, each the focal length of that prepared
+state (`computeFocusEFL`, through `computeFocusBreathingSeries`), relative to its sample at infinity focus.
+`test/integration/lv/breathing.test.ts` holds, on every benchmark lens at both ends of its zoom and at every focus
+station the exporter exports (14 states, two of them focus stations), the chart's focal length to `lv`'s R1 answer
+within 2 units in the last place (two arithmetics of one kernel), the chart's own sample at the state's focus to it,
+and its reference to the zoom position's infinity case. So R1 judges the chart wherever a state is a case. The
+positions between the stations have object distances LensVisualizer does not certify, which the exporter refuses: no
+other engine is asked about them, and no rung is added for breathing.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `d6df08c7f` and again at `cfa91d0a5` (clean; the commits between change the
+user interface and the summary tab; engine closure `c866fbff`, 178 files, with the stage's names) and optiland
+`4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`; the figures are the same at both. The run of `r9a,r9b`
+has 4,032 jobs: 3,816 ok, 216 unsupported (all `lv` in R9b), no error; 3 min 12 s from an empty store. Compare:
+2,496 pairs of both modes (pairwise and reference-vs-each), 1,920 PASS, 100 RECORDED, 44 ATTENTION, 432 UNSUPPORTED,
+no FAIL, ERROR or BLOCKED. Pairwise alone: R9a 1,152 PASS; R9b 72 pairs recorded or marked (50 RECORDED, 22
+ATTENTION) and 216 UNSUPPORTED. The counts below are of pairwise pairs.
+
+**R9a.** 384 spans (96 runs, four patterns; 134 rays a line). All 1,152 pairwise pairs pass, over 38,592 rays a pair
+of engines.
+
+| Pair | `landing.maxAbs` | `lateralColour.maxAbs` | `distortion.maxScaled` | `exitPupil.maxScaled` |
+|---|---:|---:|---:|---:|
+| `lv` / `ref` | 3.45e-13 | 3.73e-13 | 3.65e-13 | 4.83e-13 (Z 24-70 wide, photopic) |
+| `optiland` / `ref` | 3.62e-13 (Sony FE 20 mm, photopic) | 4.05e-13 | 3.83e-13 | 4.82e-13 |
+| `lv` / `optiland` | 1.85e-13 | 2.56e-13 | 2.87e-13 | 2.85e-13 |
+
+No mask mismatch, no rim-band ray, no dropped ray. The worst figure is 20,000 times inside the gate. The shown
+figures: `distortion.maxAbs` 2.24e-12 percentage points at most, `exitPupil.maxAbs` 1.96e-12 mm. The other suites,
+run the same way, all pass:
+
+| Suite | Runs with chief sets | R9a pairwise pairs | Worst gated figure |
+|---|---:|---:|---:|
+| features | 18 of 18 | 216 | 5.97e-13 (`exitPupil.maxScaled`, the fixed-iris zoom) |
+| states | 128 of 128 | 1,536 | 4.83e-13 |
+| diffractive | 8 of 9 (one source refusal) | 96 | 3.14e-13 |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — |
+
+**R9b, distortion.** 24 pairwise pairs, the reference runs at the design plane (wide open and f/8), every one of their 20
+fields of two methods, all RECORDED. The two chief rays of a field land within 2.36e-6 mm (median 2.3e-10).
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `distortionPercent.maxAbs` | 4.2e-3 | 1.46e-2 points (Z 24-70 tele f/8, 16.6°) |
+| `realHeight.maxAbs` | 1.0e-3 | 2.84e-3 mm (the same) |
+| `idealHeight.maxAbs` | 4.2e-5 | 1.97e-4 mm (Z 24-70 wide, 43.3°) |
+| `focalScale.relative` | 1.9e-6 | 8.46e-6 (Z 24-70 wide) |
+
+Where the percent comes from, taken apart on the largest pair: optiland's model traces the chief ray of its paraxial
+pupil (its default aiming), which against its robust chief ray through the stop's centre accounts for up to 0.014
+points; LensVisualizer plots its targets, not its rays' landings (up to 3.7e-3 points); the two chief rays through the
+stop's centre, each on its own engine's scale, differ by up to 8.5e-4 points (the scales: LensVisualizer's probe is up
+to 0.5° off the axis, 0.43° at the Z 24-70 wide end, and holds a little distortion); on one scale they differ by
+3.6e-5 at most (the Sony FE 400 mm at 0.96°, where LensVisualizer's chief ray is its paraxial estimate).
+
+**R9b, pupils.** 24 pairwise pairs, every one of their 16 fields of two methods, all RECORDED; the chief rays land within
+2.52e-6 mm. At one degree and above every lens agrees within 5.0e-6 mm in both pupils. Below one
+degree LensVisualizer's chief ray is its paraxial estimate (`docs/gotchas.md`), and its pupils there are those of the
+paraxial pupil's chief ray:
+
+| Lens | Fields below 1° | Entrance pupil apart | Exit pupil apart |
+|---|---:|---:|---:|
+| Sony FE 400 mm f/2.8 (half field 3.15°) | 5 of 16 | 1.30 mm | 5.17e-2 mm |
+| Nikon Z MC 105 mm | 1 | 1.48e-2 mm | 6.35e-3 mm |
+| Canon EF 135 mm f/2L | 1 | 9.27e-3 mm | 1.10e-2 mm |
+| Sigma 105 mm f/2.8 DG DN Macro | 1 | 5.94e-3 mm | 1.98e-3 mm |
+| Nikon Z 135 mm f/1.8 Plena | 1 | 5.58e-3 mm | 1.39e-3 mm |
+
+The paraxial pupils agree within 2.47e-5 mm (entrance) and 8.17e-6 mm (exit), both at the Sony FE 400 mm.
+
+**R9b, lateral colour.** 24 pairwise pairs of one line each, the d line, which LensVisualizer traces as its G channel at the
+catalog's index of a d-line catalog glass (Stage 6.3): every one of the 120 fields is data, `indices-differ`, and no
+lateral-colour figure is taken. 22 pairs are ATTENTION, their chief rays landing up to 7.19e-3 mm apart (the Z 24-70
+wide end at its edge), beyond the 1e-5 mm limit; two are RECORDED. The photopic runs have no line of a channel.
+
+To see the figures the section plots, the 12 configurations were also run on the C, d and F lines in a temporary suite
+(`lines: { kind: "cdf" }`, wide open; not committed): 504 jobs, 312 pairs, 240 PASS (R9a, `lateralColour.maxAbs` to
+4e-13 mm), 24 ATTENTION, 48 UNSUPPORTED. Each channel's landing relative to the d line's differs from optiland's
+per-line chief ray by up to 1.09e-3 mm (the Sony FE 20 mm at its edge, F − d: LensVisualizer −5.77e-3 mm, optiland
+−4.68e-3 mm), 2.7e-4 mm on the Z 24-70 wide end, 1.5e-5 to 8.5e-5 mm on the rest. Tracing LensVisualizer's own launch
+at the case's indices (R9a's optiland trace) moves those differences by 3.8e-5 mm at most: the rest is
+LensVisualizer's one chief ray, solved at the authored indices and traced at every channel, where optiland traces each
+line's own chief ray through the stop's centre (`docs/gotchas.md`).
+
+**LensVisualizer assumptions found, with evidence.** R9a shows the tabs' chief rays land alike in three engines to
+6e-13 mm, so R9b's differences come from which rays and which indices, not from tracing:
+- below one degree a chief ray is LensVisualizer's paraxial estimate (`computeChiefRaySolve`), so its pupils tab's
+  real pupils there are paraxial (up to 1.30 mm on the Sony FE 400 mm);
+- its lateral colour is one chief ray at every channel (up to 1.09e-3 mm, a fifth of the Sony FE 20 mm's at its
+  edge), and its channels' indices are the catalog's (Stage 6.3's brief);
+- its distortion curve plots its targets (9.8e-5 mm, 3.7e-3 points), and its scale's probe is up to half a degree off
+  the axis (8.5e-6 relative).
+
+LensVisualizer is read-only here. **The owner decided (2026-10-26) to have LensVisualizer change the first two**: a
+real chief ray below one degree for the pupils tab and the distortion curve, and each channel's own chief ray for the
+lateral colour. The change is pending in LensVisualizer; the owner holds its prompts. The brief, with the source
+lines and the per-lens figures, is `docs/upstream/lensvisualizer-chief-ray-conventions.md` (not filed). When the
+change lands, the canaries of those lines fail first, and the chief sets, the asks and these measurements are redone.
+
+### Owner decisions (2026-10-26)
+
+1. **R9a's gate is accepted as proposed**: landing and lateral colour at 1e-8 mm; distortion as its displacement at
+   1e-8 mm, the percent shown and not judged; the exit pupil's crossing times the larger slope at 1e-8 mm, the plain
+   crossing shown; the mask at 0; no floor. Its two conditionings (above) are stated, not gated away.
+2. **R9b as proposed**: the landing limit of its sorting stays 1e-5 mm, R7b's and R8b's; no R9b figure has an
+   attention band; R9b stays out of every baseline (`--rungs r9b` runs it).
+3. **optiland's distortion under its default paraxial aiming** (the chief ray of its paraxial pupil; its robust aimer
+   gives no scale) is accepted, stated in the answer; the identifying chief ray is the robust one.
+4. **Breathing between the certified stations is not covered**: a chart position whose object distance
+   LensVisualizer does not certify is no case. R1 judges every state that is a case.
+5. **LensVisualizer's chief-ray conventions are to change** (the brief above): a real chief ray below one degree, and
+   each channel's own chief ray for the lateral colour. Pending in LensVisualizer; the brief is not filed.

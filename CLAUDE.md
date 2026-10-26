@@ -66,6 +66,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4   # with R7a, the spot of the coma and bokeh tabs' rays: the rays baselines from the Phase 6 end refresh (about 2 min)
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan, recorded; asked of lv and optiland; only where named; in no baseline
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8a, the axial intercepts of the spherical-aberration and axial-colour sections' rays (gated, about 15 s), and R8b, the sections beside optiland's own rays and focus (recorded, only where named, in no baseline)
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -360,7 +361,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
   (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
-  `--engines` or a run names, and `r7b` (run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  `--engines` or a run names, and `r7b`, `r8b` and `r9b` (each run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -694,9 +695,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   request, so an answer is computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
   or a limit changes. Six rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
   (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
-  `rayTraceRequests`, so an engine traces a set once; `r7a` (spot, `raysSpot.ts`) asks those of the spot sets and
-  `r8a` (axial intercepts, `raysAxial.ts`) those of the axial sets. `spot.native` has the one comparator of `r7b`
-  (`spotNative.ts`), `axial.native` the one of `r8b` (`axialNative.ts`).
+  `rayTraceRequests`, so an engine traces a set once; `r7a` (spot, `raysSpot.ts`) asks those of the spot sets,
+  `r8a` (axial intercepts, `raysAxial.ts`) those of the axial sets and `r9a` (chief rays, `raysChief.ts`) those of the
+  chief sets. `spot.native` has the one comparator of `r7b` (`spotNative.ts`), `axial.native` the one of `r8b`
+  (`axialNative.ts`), `chief.native` the one of `r9b` (`chiefNative.ts`).
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -1038,7 +1040,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
   this repository hold together") fail only on policy identity (v15 recorded, a later version at hand: v16 at Stage
-  6.2, v17 at Stage 6.3): never weaken either.
+  6.2, v17 at Stage 6.3, v18 at Stage 6.4): never weaken either.
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
   (which hashes the worker's revision, so R6c records go STALE(engine)); `ref`'s did not. The recipe is in
@@ -1130,3 +1132,94 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved (new LV names, worker files);
   `ref`'s did not. Baselines are still refreshed once at the end of Phase 6; the recipe in `docs/REFERENCE.md` names
   `r8a` beside `r7a`.
+
+## Stage 6.4 distortion, lateral colour, pupils and breathing
+
+- **The chief sets are the chief rays LV's distortion tab, pupils tab and lateral-colour section launch**
+  (`CaseSource.chiefRaySets`, `src/engines/lv/chiefRaySets.ts`, request and distortion reference in `chiefSetup.ts`),
+  generated by `planJobs` after `confirmRaySets`, only for a rung that says `needsChiefRaySets`, and recorded under
+  `runs[].chiefRaySets`; a case source without them is `chief-sets-unavailable`. Four patterns in `CHIEF_PATTERNS`
+  order, one set at every line, the same rays at every line, weight 1: `distortion-curve` (the reference's near-axis
+  probe, the edge, the curve's samples at the angles LV solved) and `distortion-grid` (the probe, the traced grid
+  points with LV's interpolated pupil correction), each naming the probe under `groups.chiefIndex: 0`; `pupils` (the
+  solved chief ray of each field off the axis); `lateral-colour` (the coma tab's chief ray at each section field).
+  Fields, solves, grid points and samples are LV's exports; what the tabs do inline (probe, edge, correction table and
+  its interpolation, fields, `bindRayTrace`'s launch) is restated with a canary (four Stage 6.4 tests). **Which fields
+  have a chief ray a set states is decided once, in `src/engines/lv/chiefFields.ts`** (`lvSolvedChief`,
+  `lvPupilFields`, `lvLateralChief`), by the sets and asks and by `lv`'s answer alike: a field LV launches from a
+  bounding sphere or has no slope for is a coded problem of the set, no field of the ask and none of `lv`'s answer, so
+  `lv` answers every ask of its own case source (`chief.test.ts` feeds the asks of the fake's vector variant to
+  `answerLvChief`). Never enumerate a tab's fields a second time; `chiefFields.ts` keeps `rays/probe.ts` out of `lv`'s
+  closure.
+  `test/integration/lv/chiefRays.test.ts` traces the sets with `traceEngineRay` and gets the curve, grid, pupils and
+  lateral colour to the bit on every benchmark configuration and the zoom's far end. A folded path, a finite object, no
+  half field, a fisheye's distortion (`lv-fisheye-projection`), no reference, a grid with no traced point
+  (`lv-no-distortion-grid`: a probe alone is no set), an exit pupil at infinity, no pupil, no or a vector launch, and a
+  launch behind the first surface are coded problems, never approximated. The case source
+  also makes R9b's asks (`ChiefSetResolution.asks`).
+- **R9a is gated, identical rays** (policy version 18): `rays.trace` of the chief sets, `raysChiefComparator`, a
+  comparator of spans (`spanOf`: a set's rays without its line), on the rays valid in both answers of a pair.
+  `landing.maxAbs`, `lateralColour.maxAbs` (each landing's move from the span's first line; inapplicable to one line),
+  `distortion.maxScaled` (the displacement from the ideal point the engine's own probe landing scales; inapplicable
+  without a probe) and `exitPupil.maxScaled` (the axial crossing difference times the larger exit slope, never one
+  engine's: `raysChief.test.ts` holds both orders), each 1e-8 mm, and `mask.mismatches` 0; the percent
+  (`distortion.maxAbs`) and the plain crossing (`exitPupil.maxAbs`) are shown, never judged. No floor. **The owner
+  accepted this gate as proposed (2026-10-26).** Two conditionings are stated, not gated away: `exitPupil.maxScaled` is
+  about `y dm / m` for exits at one height whose slopes differ by `dm`, so a nearly image-telecentric chief ray (y 20
+  mm, m 2e-7) shows 1.1e-8 mm for one rounding of a direction; and `distortion.maxScaled` takes a probe-landing
+  difference times `s_ray / s_probe` (about 100, 136 at a 50° half field, 200 to 270 for ultra-wide rectilinears), so it
+  holds the probe's landing to about 4e-11 mm. A FAIL of either is attributed in extended precision before anything is
+  concluded; never widen the gate for it. A line whose probe gives no distortion while others do is named in the pair's
+  reason. R9a is in the default rung selection and joins the rays baselines of benchmark, features, states and
+  diffractive at the Phase 6 end refresh; focus-stations and folded have no chief sets.
+- **`estimateDistortion` (`src/estimators/distortion.ts`) is a pure estimator** under the estimator rules: the ideal
+  point is the probe's landing times the ray's slope over the probe's, its product's rest kept (`twoProductError`), the
+  displacement formed with the difference's rest (`twoSumError`) and rounded once; a ray without a distortion says
+  why (`not-taken`, `reference`, `bad-landing`, `on-axis`, `out-of-range`), a set without a scale says why (a probe
+  not taken; one of no height or slope; one off the meridian, an x slope or x landing other than 0). Analytic
+  proofs in `test/estimators/distortion.test.ts`; removing either rest turns a test red. It is in no engine's closure.
+- **`chief.native` v1 (contract 1.0)**: a spec of `kind` (`distortion`, `pupils`: one line; `lateral-colour`: lines,
+  the first the reference), `maxFieldDeg` and `fieldAnglesDeg` (above 0 but for lateral colour); per field
+  `chiefLandingMm` (the stop's chief ray: what identifies the field), `figures` or `chiefRay` (pupils: one of them;
+  distortion: figures; lateral colour: neither), `sampling`; a `reference` (scale, probe angle, paraxial pupils).
+  Schema, corpus, `validate.py` port and invariants change together.
+- **`lv` answers `chief.native` from the tabs as they present them** (`src/engines/lv/chief.ts`): the distortion
+  curve with each sample's solved chief-ray landing and `inversionResidualMm` beside it, the pupils tab's real pupils
+  (`z0 + epRatio + epShiftMm`, `zLast + xpZRelLastSurf`) and stored paraxial ones, the lateral-colour section at each
+  line that is a channel's (`lvChannelLines`) with `sampling.indexMaxDelta`, each at the fields `chiefFields.ts`
+  admits. Refused before LV is asked anything but readings of the lens: `lines.not-authored-reference`,
+  `lines.not-chromatic-channels`, `lines.mixed-reference`, `projection.fisheye`, `focus.off-design` (the last vertex
+  plus its gap, for all three kinds, the lateral colour included), a finite object, a folded path; `fields.angles` once
+  the tab is asked.
+- **optiland answers `chief.native` with its own classes** (`lvrtc_optiland/chief.py`): distortion is
+  `create_distortion_model("paraxial", distortion_type="f-tan")` on a fresh verified optic whose one field is
+  `maxFieldDeg`, at the normalised field (the field is stated at the angle asked), under optiland's default `paraxial`
+  aiming (accepted by the owner, 2026-10-26): never the robust aiming, which
+  launches the model's 1e-10 probe along the axis and gives a scale of 0 (pinned). Each field is identified by the
+  robust-aimed chief ray (`spot.chief_landing`); pupils are that chief ray traced once (`trace_generic` at (0, 0)) and
+  `first_order.line_data`'s pupils. Frame mirrored in y. Every setting is read back (model class, type, reference
+  point, near-axis probe, half field, aiming, value counts; the optic's field count, type, angles, vignetting, weight,
+  half field, aiming; the chief ray's aimer, launch direction, rows, image plane), each check with a deliberate fault in
+  `test_chief.py`. The engine refuses distortion and pupils where `first_order.term_refusals` does, before anything
+  is built; lateral colour is not refused for it. Budget and FATAL are the MTF worker's. `PupilAberration` is another
+  quantity and is never asked.
+- **R9b is recorded, of `lv` and `optiland`, only where named** (`chiefNativeComparator`): each field is sorted before
+  any difference (`classifyChiefField`): R5's `classifyNativeField`, then `indices-differ` (an `indexMaxDelta` above
+  0), then the chief rays' landing against `chiefLanding.maxAbs` (1e-5 mm), then method. `chiefFactsOfRecorded`
+  repeats it: change it, `factsOf` and `recorded` together. A pupil of a traced chief ray is the comparator's
+  `axialIntercept`. **Owner decisions (2026-10-26):** the 1e-5 mm landing limit stays; no R9b figure has an attention
+  band; R9b stays out of every baseline (`--rungs r9b`).
+- **Breathing is R1's**: LV's chart is the focal length of a prepared state, `lv`'s R1 focal length within 2 units
+  in the last place at every exported state (`test/integration/lv/breathing.test.ts`); chart positions between
+  certified stations are no case, and are not covered (owner decision, 2026-10-26). No rung of its own.
+- **LV assumptions found** (`docs/gotchas.md`, "Chief rays"; owner's brief
+  `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed): below one degree LV's chief ray is its paraxial
+  estimate (its pupils there up to 1.30 mm from the stop's chief ray's, the Sony FE 400 mm); its lateral colour is one
+  chief ray traced at every channel (up to 1.09e-3 mm on C, d, F); its distortion curve plots its targets (9.8e-5 mm)
+  and its scale's probe is up to half a degree off the axis (8.5e-6 relative). **The owner decided (2026-10-26) to have
+  LV change the first two**: a real chief ray below one degree for the pupils and the distortion, and each channel's
+  own chief ray for the lateral colour; the LV change is pending (the owner holds its prompts). Until it lands, R9b
+  records them as they are; afterwards the canaries of those lines fail first, and the sets, the asks and the
+  measurements are redone.
+- The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved (new LV names, worker files);
+  `ref`'s did not. The recipe in `docs/REFERENCE.md`, "The Phase 6 end refresh", names `r9a` beside `r7a` and `r8a`.

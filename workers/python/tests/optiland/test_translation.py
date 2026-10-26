@@ -231,6 +231,7 @@ class DeclarationTest(unittest.TestCase):
                 "wavefront.native": {"version": 1},
                 "spot.native": {"version": 1},
                 "axial.native": {"version": 1},
+                "chief.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])

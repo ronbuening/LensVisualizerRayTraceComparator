@@ -62,7 +62,9 @@ const HELP = [
   "                   r7b is named-only: lv's coma and bokeh tabs beside optiland's own spot and ray fan.",
   "                   r8a traces the rays LensVisualizer's spherical-aberration and axial-colour sections",
   "                   launch and compares where each crosses the axis; r8b is named-only: lv's two sections",
-  "                   beside optiland's own real rays and paraxial focus at each line",
+  "                   beside optiland's own real rays and paraxial focus at each line. r9a traces the chief rays",
+  "                   LensVisualizer's distortion, pupils and lateral-colour tabs launch and compares where they",
+  "                   land; r9b is named-only: lv's three tabs beside optiland's own distortion and chief rays",
   "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
   "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
   "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
@@ -304,6 +306,9 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         }
         for (const problem of run.axialRaySets?.problems ?? []) {
           io.stderr(`lvrtc run: run ${run.name}: the axial tabs have no rays: ${problem}\n`);
+        }
+        for (const problem of run.chiefRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: a chief-ray tab has no rays: ${problem}\n`);
         }
       }
       for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);

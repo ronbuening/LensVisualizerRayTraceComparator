@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:chief.native.spec",
+  "title": "chief.native spec",
+  "description": "What a chief.native request asks for: an engine's own figures of the chief rays of a system whose object is at infinity, at field angles in object space, degrees, in the meridional plane, an object toward +y. distortion: at one line, each field's real and ideal image heights and its percent distortion against the engine's own rectilinear reference. pupils: at one line, where each field's real chief ray crosses the axis ahead of the system and behind it, beside the paraxial pupils. lateral-colour: at each line, where each field's chief ray lands; the first line is the reference. maxFieldDeg is the half field the angles are of, which an engine that states its fields as fractions of a half field takes for it. Code checks that the lines are distinct, that distortion and pupils ask one line, that every angle is at most maxFieldDeg, and that an angle of distortion and of pupils is above 0.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "enum": ["distortion", "lateral-colour", "pupils"]
+    },
+    "lines": {
+      "description": "Indices of lines of the case, in conditions.lines, each once: one for distortion and pupils; for lateral colour the first is the reference the others' landings are taken relative to.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+      },
+      "minItems": 1
+    },
+    "maxFieldDeg": {
+      "description": "The half field the angles are of, degrees.",
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 90
+    },
+    "fieldAnglesDeg": {
+      "description": "The field angle of each chief ray, degrees, in the order the answer lists them.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "exclusiveMaximum": 90
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["kind", "lines", "maxFieldDeg", "fieldAnglesDeg"],
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "pupils",
+  "fields": [],
+  "reference": {
+    "focalScaleMm": null,
+    "probeAngleDeg": null,
+    "paraxialEntrancePupilZ": 18.5,
+    "paraxialExitPupilZ": 21.75
+  },
+  "method": {
+    "name": "synthetic-chief-rays",
+    "params": {
+      "aiming": "robust"
+    }
+  },
+  "notes": []
+}

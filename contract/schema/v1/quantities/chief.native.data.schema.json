@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:chief.native.data",
+  "title": "chief.native data",
+  "description": "An engine's own figures of the chief rays of a case across its field, or the chief rays it traced for them: per requested line, and within a line per requested field angle, where the field's chief ray lands; for distortion the real and ideal image heights and the percent distortion; for pupils where the real chief ray crosses the axis ahead of the system and behind it, or the chief ray itself; and what the figures are relative to. Heights and z in the contract frame, lengths in mm. Code checks that an unavailable field says why and has neither figures nor a chief ray, that an ok field has its landing, that the figures of distortion and of pupils are complete for their kind, that lateral colour has none, that a field of pupils has its figures or its chief ray and not both, and that a chief ray's points and directions are three finite numbers each.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "description": "The kind of the spec the answer is of.",
+      "enum": ["distortion", "lateral-colour", "pupils"]
+    },
+    "fields": {
+      "description": "One entry per requested line and field angle: the lines in the order of the request, and within a line the angles in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "description": "The line, as it was requested.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "wavelengthNm": {
+            "description": "The wavelength the engine traced the line at.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          },
+          "fieldAngleDeg": {
+            "description": "The field angle the engine traced, degrees.",
+            "type": "number"
+          },
+          "status": {
+            "description": "ok: the engine stands by its figures or its chief ray. unavailable: it has none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the field is unavailable; always there for an unavailable field.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "chiefLandingMm": {
+            "description": "The y at which the field's chief ray lands on the image plane of the case: what identifies the field. Null only where an unavailable field has none.",
+            "type": ["number", "null"]
+          },
+          "figures": {
+            "description": "The engine's own figures of the field; null for lateral colour, for an engine that states its chief ray instead, and for an unavailable field. A member a kind does not have is null.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "realHeightMm": {
+                    "description": "Of distortion: the real image height the engine's curve plots for the field.",
+                    "type": ["number", "null"]
+                  },
+                  "idealHeightMm": {
+                    "description": "Of distortion: the ideal image height of the engine's reference for the field.",
+                    "type": ["number", "null"]
+                  },
+                  "percent": {
+                    "description": "Of distortion: 100 (real - ideal) / ideal, as the engine presents it.",
+                    "type": ["number", "null"]
+                  },
+                  "entrancePupilZ": {
+                    "description": "Of pupils: where the field's real chief ray crosses the axis ahead of the system, its line in object space.",
+                    "type": ["number", "null"]
+                  },
+                  "exitPupilZ": {
+                    "description": "Of pupils: where the field's real chief ray crosses the axis behind the system, its line in image space.",
+                    "type": ["number", "null"]
+                  }
+                },
+                "required": ["realHeightMm", "idealHeightMm", "percent", "entrancePupilZ", "exitPupilZ"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "chiefRay": {
+            "description": "Of pupils: the chief ray the engine traced, where it meets the first surface and its unit direction in front of it, and where it leaves the last surface and its unit direction behind it, x, y, z each. Null for an engine that states its figures, for distortion and lateral colour, and for an unavailable field.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "entryPoint": { "$ref": "#/$defs/triple" },
+                  "entryDirection": { "$ref": "#/$defs/triple" },
+                  "exitPoint": { "$ref": "#/$defs/triple" },
+                  "exitDirection": { "$ref": "#/$defs/triple" }
+                },
+                "required": ["entryPoint", "entryDirection", "exitPoint", "exitDirection"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "sampling": {
+            "description": "How the engine sampled the field, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": [
+          "line",
+          "wavelengthNm",
+          "fieldAngleDeg",
+          "status",
+          "chiefLandingMm",
+          "figures",
+          "chiefRay",
+          "sampling"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "reference": {
+      "description": "What the engine's figures are relative to, null where it states none: the scale of its rectilinear distortion reference (an ideal height is minus the scale times the tangent of the field angle, in the contract frame), the field angle of the chief ray that scale was measured with, degrees, and its paraxial entrance and exit pupils, z in the contract frame.",
+      "type": "object",
+      "properties": {
+        "focalScaleMm": { "type": ["number", "null"] },
+        "probeAngleDeg": { "type": ["number", "null"] },
+        "paraxialEntrancePupilZ": { "type": ["number", "null"] },
+        "paraxialExitPupilZ": { "type": ["number", "null"] }
+      },
+      "required": ["focalScaleMm", "probeAngleDeg", "paraxialEntrancePupilZ", "paraxialExitPupilZ"],
+      "additionalProperties": false
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["kind", "fields", "reference", "method", "notes"],
+  "additionalProperties": false,
+  "$defs": {
+    "triple": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}
