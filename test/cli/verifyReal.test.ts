@@ -731,13 +731,14 @@ test("on fake engines: a clean check exits 0, a drifted engine exits 1, and base
     lvrtc: async (args) => (args[0] === "doctor" ? ended(JSON.stringify(healthy())) : children.lvrtc(args)),
   };
 
-  const clean = await verified(["--suites", "pair", "--root", rootDir], runner);
+  // The plan is the owner's machine and the children run on this one: one job a check fits both.
+  const clean = await verified(["--suites", "pair", "--root", rootDir, "--jobs", "1"], runner);
   assert.equal(clean.code, EXIT_OK, clean.out + clean.err + stderr.join(""));
   assert.match(clean.out, /^pair rays {2}CLEAN {2}2 records: 2 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; /m);
 
   // Another build of an engine, 5e-12 off: the pair fails where it passed, and the baseline says DRIFT.
   writeConfig(rootDir, { ...PAIR, "fake-near": { bias: 5e-12 } });
-  const drifted = await verified(["--suites", "pair", "--root", rootDir], runner);
+  const drifted = await verified(["--suites", "pair", "--root", rootDir, "--jobs", "1"], runner);
   assert.equal(drifted.code, EXIT_FAILURE);
   assert.match(
     drifted.out,
