@@ -160,6 +160,7 @@ test("lv describes itself: LensVisualizer's engine closure, its commit, its adap
     "spot.native": { version: QUANTITIES.get("spot.native")?.version },
     "axial.native": { version: QUANTITIES.get("axial.native")?.version },
     "chief.native": { version: QUANTITIES.get("chief.native")?.version },
+    "curvature.native": { version: QUANTITIES.get("curvature.native")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
   });
   // Whatever LensVisualizer's exporter writes, LensVisualizer answers for.

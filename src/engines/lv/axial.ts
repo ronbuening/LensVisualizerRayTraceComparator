@@ -14,7 +14,7 @@ import { decodeNdArray, encodeNdArray, ndRow } from "../../core/numeric/ndarray.
 import { lvAxialZones } from "./axialZones.ts";
 import type { LvAxialApi } from "./axialZones.ts";
 import type { LvCaseModel } from "./caseModel.ts";
-import { tracesAuthored } from "./spot.ts";
+import { linesBeyondCase, tracesAuthored } from "./spot.ts";
 import { lvSpotSetup, lvTabPupilSemiDiameter } from "./spotSetup.ts";
 import type { LvAnalysisRequest, LvApi } from "./types.ts";
 
@@ -81,6 +81,8 @@ function refusals(api: LvAxialAnswerApi, model: LvCaseModel, spec: AxialNativeSp
     const message = "LensVisualizer's axial rays of a folded path are not translated";
     refused.push({ code: FEATURE, item: "path.folded", message });
   }
+  const beyond = linesBeyondCase(model, spec.lines);
+  if (beyond !== null) return [...refused, beyond];
   const own =
     spec.kind === "spherical"
       ? spec.nearAxis === zones.nearAxis &&
@@ -200,7 +202,7 @@ function spherical(
  * at its channel's index (`indexAtPreparedSurface`: `state.lens.dispersion[i]?.indexAt(channel) ?? nd`), which for a
  * glass LensVisualizer matched to a catalog is the catalog's own and not the authored index the case is anchored to.
  */
-function indexDelta(model: LvCaseModel, line: number, channel: string): number {
+export function indexDelta(model: LvCaseModel, line: number, channel: string): number {
   const table = ndRow(decodeNdArray(model.exported.conditions.indexAfterSurface), line);
   const dispersion = model.state.lens.dispersion ?? [];
   let largest = 0;
@@ -262,9 +264,9 @@ function colour(
  * - Both sections present their figures on the design image plane, and answer only a case of that plane; the
  *   fractions are of the tabs' pupil radius (`lvTabPupilSemiDiameter`). No paraxial focus is presented.
  *
- * Unsupported: a finite object, a folded path, zones other than the section's own, spherical aberration at a line that
- * is not the authored reference line, colour of a lens that mixes d-line and e-line indices or at no line of a
- * channel, and a case off the design plane.
+ * Unsupported: a finite object, a folded path, a line the case does not have (`line`), zones other than the section's
+ * own, spherical aberration at a line that is not the authored reference line, colour of a lens that mixes d-line and
+ * e-line indices or at no line of a channel, and a case off the design plane.
  */
 export function answerLvAxial(api: LvAxialAnswerApi, model: LvCaseModel, spec: AxialNativeSpec): LvAxialAnswer {
   // What the case and the spec decide comes first, before LensVisualizer is asked anything.

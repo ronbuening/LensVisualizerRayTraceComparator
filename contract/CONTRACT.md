@@ -1517,6 +1517,7 @@ and `validateData`.
 | `spot.native` | 1 | `quantities/spotNative.ts` | an engine's own spot (centroid and RMS radius about it) or ray fan of a field, relative to its chief ray, by its own pupil sampling |
 | `axial.native` | 1 | `quantities/axialNative.ts` | an engine's own figures of the beam along the axis (spherical aberration at a line, axial colour over lines) by its own pupil, or the real rays it traced for them, and its paraxial focus at each line |
 | `chief.native` | 1 | `quantities/chiefNative.ts` | an engine's own figures of the chief rays across the field (distortion and pupils at a line, lateral colour over lines) at given field angles, or the chief rays it traced for them, and what its figures are relative to |
+| `curvature.native` | 1 | `quantities/curvatureNative.ts` | an engine's own field curves at given field angles and lines: the tangential and the sagittal focus of each field along the axis from the image plane of the case, and the landing of the chief ray they are relative to |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2156,6 +2157,49 @@ difference along the axis. Lateral colour is inapplicable to a case of one line,
 a line whose probe gives no distortion while other lines do is named in the pair's reason. A ray that crosses the axis
 in one answer and not in the other, or has a distortion in one and not in the other, is not comparable.
 
+#### Curvature sets and rung R10a
+
+**Curvature sets** (`CaseSource.curvatureRaySets`, `src/rays/curvatureSets.ts`) are the rays of LensVisualizer's
+field-curve and astigmatism sections (aberrations tab), and no part of a run's ray sets. Only a LensVisualizer lens
+has them (`src/engines/lv/curvatureRaySets.ts`, the fields in `curvatureFields.ts`); the manifest records them under
+`runs[].curvatureRaySets`, sets and problems as above, exactly when a rung that needs them
+(`RungDefinition.needsCurvatureRaySets`: `r10a`, `r10b`) was run. A curvature set is a series of fields, each a block
+of consecutive rays launched along one direction, its chief ray last; every other ray of a block starts beside the
+chief ray, offset along y alone (a ray of the field's tangential fan) or along x alone (of its sagittal fan), and one
+that starts where the chief ray starts (the centre of a fan) is in neither. A spec states no groups: the blocks are read
+from the launches.
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | the analysis drawer's, as for the chief sets |
+| fields | `FIELD_CURVATURE_FIELD_FRACTIONS` and `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS` of the half field, each fraction once, ascending (a fraction of both lists is one field, to the bit); the launch of each is `computeOffAxisFieldGeometryScalar`, the solved chief ray's height and the field's slope, never a bounding sphere's |
+| `parabasal` | of each field, the four parabasal rays of `computeStandardizedFieldFocus` (tangential at `-p`, `+p`, sagittal at `-p`, `+p` of the pupil, `p = min(0.02, max(1e-4, 0.01 / EPSD))`: 0.01 mm on the first vertex plane), then the chief ray |
+| `real-ray` | of each field, the tangential and the sagittal real-ray fan of `computeDiagnosticFieldFocus` (`sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`, each with its centre sample), then the chief ray |
+| launches | a ray beside the chief ray crosses the first vertex plane at `(x × EPSD, yChief + y × EPSD)` with the slopes `(0, uField)`, started as the skew launch of the spot sets; weight 1 |
+| lines | the same rays at every line of the case, as the chromatic field curves trace the same rays at each channel |
+
+A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
+half field (`no-half-field`) and one without a pupil (`no-pupil`) have no curvature sets and no `curvature.native`
+ask. A field without a launch (`lv-no-launch`) or whose rays would not start in front of the first surface
+(`launch-behind-first-surface`) is a coded problem of that field, and no field of the ask (`curvatureFields.ts` decides
+the fields of the sets, the ask and `lv`'s answer alike). The sets state the rays of every field with a launch:
+LensVisualizer traces a field's parabasal rays only once its chief ray passes and its fans only once its parabasal foci
+are found. Every restated line has a source canary, and the sets, traced as the sections trace them, give every field's
+chief landing, parabasal and real-ray foci, and chromatic shifts to the bit (`test/integration/lv/curvatureRays.test.ts`).
+
+**Rung R10a** asks one `rays.trace` request of each curvature set at each line, and compares each field's foci on the
+rays both answers brought to the image. The focus of a fan (`relativeFocus`, `src/estimators/fieldFocus.ts`) is the
+plane of least squares of its rays' coordinates relative to the field's chief ray, along y for the tangential fan and
+along x for the sagittal one, from the engine's own landings (`imagePoint`) and exit directions:
+`s = -sum(dc du) / sum(du^2)`, `dc` a ray's coordinate on the image plane of the case less the chief ray's, `du` its
+slope (`m / n`, `l / n`) less the chief ray's, `s` the focus along z from that plane. `tangentialFocus.maxScaled` and
+`sagittalFocus.maxScaled` are the largest difference of a field's two foci times the larger of the two answers' RMS of
+`du` over the fan, and `landing.maxAbs` the largest difference of a landing, along x or y; each is gated at 1e-8 mm,
+with `mask.mismatches` at 0 and `mask.rimBand` counted. Shown beside them and never judged: `tangentialFocus.maxAbs`,
+`sagittalFocus.maxAbs` (the differences along the axis) and `astigmatism.maxAbs` (of the sagittal less the tangential
+focus). A fan that has a focus in one answer and none, or none for another reason, in the other, and a set that is no
+curvature set, are not comparable.
+
 ### `axial.native`
 
 Version 1, added at Stage 6.3, changes no existing quantity, contract version or identity. It is an engine's own
@@ -2273,6 +2317,54 @@ relative to the first line); of pupils `entrancePupil.maxAbs`, `exitPupil.maxAbs
 `paraxialExitPupil.maxAbs`; and counts of fields of each kind. Policy 18 gives `chiefLanding.maxAbs` a limit of
 1e-5 mm, the limit of the sorting, and no figure an attention band. `chiefFactsOfRecorded` repeats the sorting from the
 values a comparison records.
+
+### `curvature.native`
+
+Version 1, added at Stage 6.5, changes no existing quantity, contract version or identity. It is an engine's own
+field curves of a system whose object is at infinity, at field angles in object space, degrees, in the meridional
+plane (an object toward +y): where the tangential and the sagittal focus of each field lie along the axis, relative to
+the image plane of the case. What LensVisualizer's field-curve and astigmatism sections present, and what optiland's
+own `FieldCurvature` computes. Nothing of an answer is gated: rung R10b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `lines` | indices of lines of the case, each once |
+| `maxFieldDeg` | the half field the angles are of, above 0 and below 180; an engine that states its fields as fractions of a half field takes it for that |
+| `fieldAnglesDeg` | each at least 0, below 90 and at most `maxFieldDeg` |
+
+| Answer member | Meaning |
+|---|---|
+| `fields[]` | one per asked line and field: the lines in the order asked, and within a line the angles in order: `line`, `wavelengthNm` traced, `fieldAngleDeg` traced, `status` `ok` or `unavailable`, `reason` (always for `unavailable`), `chiefLandingMm`, `tangentialShiftMm`, `sagittalShiftMm`, `sampling` |
+| `chiefLandingMm` | the y at which the field's chief ray lands on the image plane of the case, mm: what identifies the field; null where the engine states no landing of the chief ray its foci are relative to |
+| `tangentialShiftMm`, `sagittalShiftMm` | the z of the field's tangential (sagittal) focus less the z of the image plane of the case, mm, + toward the image; both finite for an `ok` field, both null for an `unavailable` one |
+| `sampling` | how the engine sampled the field, and what else it states of it, by names of its own |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+The schemas, corpus, quantity invariants and the stdlib Python port (`validate_curvature_native`) enforce these
+definitions. The engines `lv` and `optiland` answer it; `ref` does not.
+
+#### Rung R10b: LensVisualizer's field curves beside optiland's own
+
+`r10b` asks one `curvature.native` request (the case source's ask): at the lines of the case LensVisualizer's sections
+trace (its authored reference line and the lines of its chromatic channels; no request of a run of none), at the
+sections' own field angles, of `lv` and `optiland` only, and only where it is named. `lv` answers from `computeFieldCurvatureBundle`:
+at a line of the authored indices its field curves (each field's parabasal shifts from the design plane, its chief
+ray's `chiefImageHeight`, and in `sampling` the parabasal fraction, the rays that landed, the paraxial Petzval shift and
+the real-ray shifts), at a line of one of its chromatic channels the chromatic field curves of the same rays at the
+channel's indices (no landing; `sampling.indexMaxDelta`), on the design plane only, decided before the sections are
+asked. optiland answers with its own `FieldCurvature` (`num_points=2`, its point at the normalised field 1) on a fresh
+verified optic whose one field is the angle asked, under the worker's robust aiming: the crossing of two parabasal rays
+at `±1e-5` of the pupil, along z from the image surface, every setting read back; its identifying landing is its
+robust-aimed chief ray through the centre of the stop (`mtf.probe_field`).
+
+A field is sorted before any difference by R9b's sorting (`classifyChiefField`): R5's `classifyNativeField` first,
+unsupported (no foci) and data of other wavelengths; then data where an answer traced the field at indices other than
+the case's (`indices-differ`); then R5's landing of the chief rays (`chiefLanding.maxAbs`, or `chief-landing-unknown`
+where an answer states none); then method. The figures are `chiefLanding.maxAbs`, `tangentialShift.maxAbs`,
+`sagittalShift.maxAbs` and `astigmatism.maxAbs` (of the sagittal less the tangential shift), and counts of fields of
+each kind. Policy 19 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and each of the three
+figures an attention band of 1e-5 mm: a pair with a figure above its band is ATTENTION. `curvatureFactsOfRecorded`
+repeats the sorting from the values a comparison records.
 
 ### `wavefront.native`
 

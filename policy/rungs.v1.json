@@ -1,7 +1,7 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 18,
+  "version": 19,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -203,6 +203,28 @@
         "paraxialEntrancePupil.maxAbs": { "unit": "mm" },
         "paraxialExitPupil.maxAbs": { "unit": "mm" },
         "realHeight.maxAbs": { "unit": "mm" }
+      }
+    },
+    "r10a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "landing.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "sagittalFocus.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "tangentialFocus.maxScaled": { "tolerance": 1e-8, "unit": "mm" }
+      }
+    },
+    "r10b": {
+      "quantity": "curvature.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "astigmatism.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "sagittalShift.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "tangentialShift.maxAbs": { "attention": 1e-5, "unit": "mm" }
       }
     }
   }

@@ -222,6 +222,10 @@ test("a spec the case refuses is answered unsupported before LensVisualizer is a
     [photopic, spherical, ["lines.not-authored-reference"]],
     [photopic, { ...colour, lines: [0, 1] }, ["lines.not-chromatic-channels"]],
     [close, { ...colour, marginal: [0.5] }, ["object.finite", "pupil.fractions"]],
+    // A line the case does not have is refused before anything is read of it.
+    [model, { ...spherical, lines: [2] }, ["line"]],
+    [model, { ...colour, lines: [0, 5] }, ["line"]],
+    [close, { ...colour, lines: [0, 5] }, ["object.finite", "line"]],
   ] as const) {
     assert.deepEqual(itemsOf(answerLvAxial(api, refusedModel, spec as AxialNativeSpec)), items);
   }

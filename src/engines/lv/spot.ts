@@ -46,6 +46,18 @@ export function tracesAuthored(model: LvCaseModel, line: number): boolean {
   return model.state.surfaces.every((surface, index) => indices[index] === surface.nd);
 }
 
+/**
+ * The refusal of a spec that asks a line the case does not have (`line`), or null: decided before anything else of the
+ * spec is read about its lines, since nothing can be.
+ */
+export function linesBeyondCase(model: LvCaseModel, lines: readonly number[]): UnsupportedItem | null {
+  const count = model.exported.conditions.lines.length;
+  const beyond = lines.filter((line) => line >= count);
+  if (beyond.length === 0) return null;
+  const message = `the case has ${count} lines; the spec asks line ${beyond.join(", ")}`;
+  return { code: OPTION, item: "line", message };
+}
+
 /** Why the tabs cannot answer a spec about a case, before anything is asked of LensVisualizer. */
 function refusals(model: LvCaseModel, spec: SpotNativeSpec): UnsupportedItem[] {
   const { conditions, system } = model.exported;

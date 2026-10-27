@@ -15,7 +15,7 @@ read back and given its field there. A field optiland cannot compute is a row of
 ``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, ``axial.native`` with
 its own launch along the axis and real trace at each line and its paraxial focus there (``axial``), and
 ``chief.native`` with its own distortion model, its own chief rays across the field and its paraxial pupils
-(``chief``).
+(``chief``), and ``curvature.native`` with its own ``FieldCurvature`` (``curvature``).
 """
 
 from __future__ import annotations
@@ -55,12 +55,15 @@ from .spot import SPOT_NATIVE, answer_spot
 from .axial import AXIAL_NATIVE, answer_axial
 from .chief import CHIEF_NATIVE, answer_chief
 from .chief import field_counts as chief_field_counts
+from .curvature import CURVATURE_NATIVE, answer_curvature
+from .curvature import field_counts as curvature_field_counts
 from .axial import field_counts as axial_field_counts
 from .spot import field_counts as spot_field_counts
 from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
 from lvrtc_worker_kit.validate import (
     validate_axial_native,
     validate_chief_native,
+    validate_curvature_native,
     validate_spot_native,
     validate_wavefront_native,
 )
@@ -103,6 +106,7 @@ QUANTITIES: dict[str, dict[str, Any]] = {
     SPOT_NATIVE: {"version": 1},
     AXIAL_NATIVE: {"version": 1},
     CHIEF_NATIVE: {"version": 1},
+    CURVATURE_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -190,7 +194,7 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             items.append(
                 {"code": "quantity", "item": "rays.trace", "message": "a folded path requires rays.trace version 2"}
             )
-        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE, SPOT_NATIVE, AXIAL_NATIVE, CHIEF_NATIVE):
+        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE, SPOT_NATIVE, AXIAL_NATIVE, CHIEF_NATIVE, CURVATURE_NATIVE):
             items.append(
                 {
                     "code": "feature",
@@ -231,6 +235,8 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
         return validate_axial_native("spec", spec, schemas)
     if quantity == CHIEF_NATIVE:
         return validate_chief_native("spec", spec, schemas)
+    if quantity == CURVATURE_NATIVE:
+        return validate_curvature_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -339,6 +345,8 @@ class OptilandEngine:
             return self._run_axial(request, case, engine)
         if quantity == CHIEF_NATIVE:
             return self._run_chief(request, case, engine)
+        if quantity == CURVATURE_NATIVE:
+            return self._run_curvature(request, case, engine)
         if quantity == WAVEFRONT_NATIVE:
             try:
                 data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
@@ -488,6 +496,23 @@ class OptilandEngine:
         if issues:
             raise RuntimeError(f"the answer is not {CHIEF_NATIVE} data: {format_issues(issues)}")
         counts = {"surfaces": len(case["system"]["surfaces"]), **chief_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+    def _run_curvature(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``curvature.native`` request whose spec is one: optiland's field curves (``curvature``)."""
+        try:
+            data = answer_curvature(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_curvature_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {CURVATURE_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **curvature_field_counts(data)}
         diagnostics = {"warnings": [], "counts": counts}
         return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
 

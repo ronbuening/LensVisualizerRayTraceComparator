@@ -20,7 +20,7 @@ import { isChiefFieldRefusal, lvLateralChief, lvSolvedChief } from "./chiefField
 import type { LvChiefFieldsApi } from "./chiefFields.ts";
 import { lvChiefGeometry, lvChiefRequest, lvDistortionReference } from "./chiefSetup.ts";
 import type { LvChiefGeometry, LvChiefSetupApi } from "./chiefSetup.ts";
-import { tracesAuthored } from "./spot.ts";
+import { linesBeyondCase, tracesAuthored } from "./spot.ts";
 import type { LvApi } from "./types.ts";
 import { decodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
 
@@ -104,6 +104,8 @@ function refusals(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSp
     const message = "LensVisualizer's chief rays of a folded path are not translated";
     refused.push({ code: FEATURE, item: "path.folded", message });
   }
+  const beyond = linesBeyondCase(model, spec.lines);
+  if (beyond !== null) return [...refused, beyond];
   if (spec.kind !== "lateral-colour" && !tracesAuthored(model, spec.lines[0])) {
     const message =
       `LensVisualizer's ${spec.kind} tab traces every surface at its authored index; the case's line ` +
@@ -385,9 +387,9 @@ function lateral(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSpe
  *   wavelength is one of its channels (`lvChannelLines`), at its fields.
  * - Every figure is on the design image plane; the request is the drawer's (`lvChiefRequest`).
  *
- * Unsupported: a finite object, a folded path, distortion or pupils at a line that is not the authored reference
- * line, distortion of a fisheye lens, lateral colour of a lens that mixes d-line and e-line indices or at no line of a
- * channel, a case off the design plane, and fields other than the tab's own.
+ * Unsupported: a finite object, a folded path, a line the case does not have (`line`), distortion or pupils at a line
+ * that is not the authored reference line, distortion of a fisheye lens, lateral colour of a lens that mixes d-line and
+ * e-line indices or at no line of a channel, a case off the design plane, and fields other than the tab's own.
  */
 export function answerLvChief(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSpec): LvChiefAnswer {
   // What the case and the spec decide comes first, before LensVisualizer is asked anything but its channels.

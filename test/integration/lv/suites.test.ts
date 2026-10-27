@@ -318,10 +318,11 @@ test(
     // wave estimator on its rays, one request of each for a run. R7a has each engine trace the spot sets of the coma
     // and bokeh tabs, ten a line: 90 sets, at one line four times and at five lines once. R8a has each engine trace
     // the axial sets of the spherical-aberration and axial-colour sections, two a line: 18 sets. R9a has each engine
-    // trace the chief sets of the distortion, pupils and lateral-colour tabs, four a line: 36 sets.
+    // trace the chief sets of the distortion, pupils and lateral-colour tabs, four a line: 36 sets. R10a has each
+    // engine trace the curvature sets of the field-curve sections, two a line: 18 sets.
     assert.match(
       ran.stdout,
-      /^smoke: 608 jobs: 598 ok, 10 unsupported, 0 error, 0 pending \(436 computed, 162 cached\)$/m,
+      /^smoke: 644 jobs: 634 ok, 10 unsupported, 0 error, 0 pending \(472 computed, 162 cached\)$/m,
     );
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +ok +computed$/m);
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
@@ -338,9 +339,9 @@ test(
     // R6a is of a field on both lattices, fifteen fields like R4, and passes wherever it is judged; R6b is
     // recorded, one pair a run, and whether it is marked for attention is no matter of this test. R7a is of the 90
     // spot sets, and passes; R8a of the 18 axial sets, and passes; R9a of the chief sets of a pattern at every line,
-    // four spans a run, 20, and passes. A pair is counted in both modes.
+    // four spans a run, 20, and passes; R10a of the 18 curvature sets, and passes. A pair is counted in both modes.
     const summary =
-      /^smoke: 474 pairs: 454 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^smoke: 510 pairs: 490 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
         compared.stdout,
       );
     assert.ok(
@@ -353,10 +354,17 @@ test(
     const sets = (rung: string) => comparisons.filter((set) => set.rung === rung && set.mode === "pairwise");
     assert.deepEqual([sets("r2").length, sets("r3").length, sets("r4").length], [27, 27, 15]);
     assert.deepEqual(
-      [sets("r6a").length, sets("r6b").length, sets("r7a").length, sets("r8a").length, sets("r9a").length],
-      [15, 5, 90, 18, 20],
+      [
+        sets("r6a").length,
+        sets("r6b").length,
+        sets("r7a").length,
+        sets("r8a").length,
+        sets("r9a").length,
+        sets("r10a").length,
+      ],
+      [15, 5, 90, 18, 20, 18],
     );
-    for (const set of [...sets("r7a"), ...sets("r8a"), ...sets("r9a")])
+    for (const set of [...sets("r7a"), ...sets("r8a"), ...sets("r9a"), ...sets("r10a")])
       assert.equal(set.pairs[0].verdict, "PASS", set.run);
     for (const set of sets("r6a")) {
       const [pair] = set.pairs;

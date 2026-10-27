@@ -185,6 +185,10 @@ test("a spec the case refuses is answered unsupported before LensVisualizer is a
     [photopic, asks.pupils, ["lines.not-authored-reference"]],
     [photopic, { ...asks["lateral-colour"], lines: [0, 1] }, ["lines.not-chromatic-channels"]],
     [close, asks.pupils, ["object.finite"]],
+    // A line the case does not have is refused before anything is read of it.
+    [model, { ...asks.pupils, lines: [3] }, ["line"]],
+    [model, { ...asks["lateral-colour"], lines: [0, 7] }, ["line"]],
+    [close, { ...asks.distortion, lines: [2] }, ["object.finite", "line"]],
     [shifted, asks.distortion, ["focus.off-design"]],
     [shifted, asks.pupils, ["focus.off-design"]],
     // The lateral-colour section is not asked to find out that its plane is not the case's.

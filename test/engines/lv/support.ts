@@ -20,6 +20,7 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/analysis/aberration/shared.ts",
   "src/optics/analysis/axial.ts",
   "src/optics/analysis/chief.ts",
+  "src/optics/analysis/curvature.ts",
   "src/optics/analysis/mtf/mtf.ts",
   "src/optics/analysis/mtf/mtfConjugates.ts",
   "src/optics/analysis/mtf/mtfConstants.ts",

@@ -97,6 +97,11 @@ export interface ManifestRun {
    */
   readonly chiefRaySets?: ManifestRaySets;
   /**
+   * The curvature sets of the run (`CaseSource.curvatureRaySets`): the rays of the sections that present the field
+   * curves; stated exactly when a rung that compares field curves was run on it.
+   */
+  readonly curvatureRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

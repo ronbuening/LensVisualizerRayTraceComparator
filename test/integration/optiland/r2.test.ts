@@ -72,6 +72,7 @@ test(
       "spot.native": { version: 1 },
       "axial.native": { version: 1 },
       "chief.native": { version: 1 },
+      "curvature.native": { version: 1 },
     });
 
     const request = makeRequest({ caseId: CASE.id, quantity: RAYS_TRACE, spec: RAYS_SPEC_SINGLET });

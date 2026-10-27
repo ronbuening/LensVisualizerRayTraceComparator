@@ -331,10 +331,11 @@ test(
     // engine trace the same fields on the finer lattice, 162 sets more; R6b is asked of lv and of the wave
     // estimator on its rays, one request each for a run. R7a has each engine trace the 540 spot sets of the coma and
     // bokeh tabs, ten a line, R8a the 108 axial sets of the spherical-aberration and axial-colour sections, two a
-    // line, and R9a the 216 chief sets of the distortion, pupils and lateral-colour tabs, four a line.
+    // line, R9a the 216 chief sets of the distortion, pupils and lateral-colour tabs, four a line, and R10a the 108
+    // curvature sets of the field-curve sections, two a line.
     assert.match(
       ran.out,
-      /^features: 3528 jobs: 3492 ok, 36 unsupported, 0 error, 0 pending \(2520 computed, 972 cached\)$/m,
+      /^features: 3744 jobs: 3708 ok, 36 unsupported, 0 error, 0 pending \(2736 computed, 972 cached\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -378,10 +379,10 @@ test(
     const compared = lvrtc(runsDir, "compare", "features");
     assert.equal(compared.code, 0, compared.out);
     // R6a adds a pair for each of the 54 fields, R6b one for each run, recorded, R7a one for each of the 540 spot
-    // sets, R8a one for each of the 108 axial sets and R9a one for each of the 72 chief spans (four patterns a run):
-    // each counted in both modes.
+    // sets, R8a one for each of the 108 axial sets, R9a one for each of the 72 chief spans (four patterns a run) and
+    // R10a one for each of the 108 curvature sets: each counted in both modes.
     const summary =
-      /^features: 2484 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^features: 2700 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
         compared.out,
       );
     assert.ok(

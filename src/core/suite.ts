@@ -16,6 +16,7 @@ import type { RaySetResolution } from "../rays/raySets.ts";
 import type { SpotSetResolution } from "../rays/spotSets.ts";
 import type { AxialSetResolution } from "../rays/axialSets.ts";
 import type { ChiefSetResolution } from "../rays/chiefSets.ts";
+import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
@@ -89,6 +90,13 @@ export interface CaseSource {
    * the case, like the ray sets. A source without this method has no chief sets to give.
    */
   chiefRaySets?(run: RunSpec, opticalCase: OpticalCase): ChiefSetResolution | Promise<ChiefSetResolution>;
+  /**
+   * The curvature sets of a run of a case this source resolved (`src/rays/curvatureSets.ts`): the rays the sections
+   * that present the field curves launch, one `rays.trace` spec for each of their patterns and lines, a coded problem
+   * for a case or a field that has none, and the engines' own field-curve requests of the same sections. A pure
+   * function of the run and the case, like the ray sets. A source without this method has no curvature sets to give.
+   */
+  curvatureRaySets?(run: RunSpec, opticalCase: OpticalCase): CurvatureSetResolution | Promise<CurvatureSetResolution>;
   /**
    * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
    * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.

@@ -28,6 +28,12 @@ import { AXIAL_NATIVE } from "../../src/contract/quantities/axialNative.ts";
 import type { AxialNativeData, AxialNativeField, AxialNativeSpec } from "../../src/contract/quantities/axialNative.ts";
 import { CHIEF_NATIVE } from "../../src/contract/quantities/chiefNative.ts";
 import type { ChiefNativeData, ChiefNativeField, ChiefNativeSpec } from "../../src/contract/quantities/chiefNative.ts";
+import { CURVATURE_NATIVE } from "../../src/contract/quantities/curvatureNative.ts";
+import type {
+  CurvatureNativeData,
+  CurvatureNativeField,
+  CurvatureNativeSpec,
+} from "../../src/contract/quantities/curvatureNative.ts";
 import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
@@ -838,6 +844,76 @@ export const CHIEF_DATA_LATERAL: ChiefNativeData = {
   reference: NO_CHIEF_REFERENCE,
   method: { name: "synthetic-chief-rays", params: {} },
   notes: [],
+};
+
+// ── curvature.native ─────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own field curves. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Field curves at the reference line, at the axis and three fields of a half field of 22.5 degrees. */
+export const CURVATURE_SPEC_ONE_LINE: CurvatureNativeSpec = {
+  lines: [0],
+  maxFieldDeg: 22.5,
+  fieldAnglesDeg: [0, 5.625, 11.25, 22.5],
+};
+
+/** Field curves at two lines, at the axis and two fields. */
+export const CURVATURE_SPEC_TWO_LINES: CurvatureNativeSpec = {
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/** An answer to `CURVATURE_SPEC_ONE_LINE` of an engine that states its chief rays' landings: the edge is unavailable. */
+export const CURVATURE_DATA_ONE_LINE: CurvatureNativeData = {
+  fields: [
+    [0, 0, 0.000244140625, 0.000244140625],
+    [5.625, -4.875, 0.0029296875, 0.00390625],
+    [11.25, -9.8125, 0.0078125, -0.0234375],
+  ]
+    .map(([fieldAngleDeg, landing, tangential, sagittal]): CurvatureNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: landing,
+      tangentialShiftMm: tangential,
+      sagittalShiftMm: sagittal,
+      sampling: { validSampleCount: 4, petzvalShiftMm: -0.0625 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 22.5,
+        status: "unavailable",
+        reason: "chief-ray-clipped",
+        chiefLandingMm: null,
+        tangentialShiftMm: null,
+        sagittalShiftMm: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-field-curves", params: { parabasalFraction: 0.0009765625 } },
+  notes: [],
+};
+
+/** An answer to `CURVATURE_SPEC_TWO_LINES` whose second line states no landing of the chief rays its foci are of. */
+export const CURVATURE_DATA_TWO_LINES: CurvatureNativeData = {
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): CurvatureNativeField => ({
+      line,
+      wavelengthNm: line === 0 ? 587.5 : 656.25,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: line === 0 ? -fieldAngleDeg / 2 : null,
+      tangentialShiftMm: fieldAngleDeg / 512,
+      sagittalShiftMm: -fieldAngleDeg / 1024,
+      sampling: line === 0 ? {} : { indexMaxDelta: 0.0000152587890625 },
+    })),
+  ),
+  method: { name: "synthetic-field-curves", params: {} },
+  notes: ["the second line is a chromatic channel"],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2727,6 +2803,29 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
         "/fields/0/chiefRay",
       ),
       "no-fields": fault(CHIEF_DATA_PUPILS, "/fields", [], "minItems"),
+    },
+  },
+  [`${CURVATURE_NATIVE}.spec`]: {
+    valid: { "one-line": CURVATURE_SPEC_ONE_LINE, "two-lines": CURVATURE_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(CURVATURE_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(CURVATURE_SPEC_ONE_LINE, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(CURVATURE_SPEC_TWO_LINES, "/fieldAnglesDeg/0", -1, "minimum"),
+      "angle-of-ninety": fault(CURVATURE_SPEC_ONE_LINE, "/fieldAnglesDeg/3", 90, "exclusiveMaximum"),
+      "missing-angles": fault(CURVATURE_SPEC_ONE_LINE, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "kind-stated": fault(CURVATURE_SPEC_ONE_LINE, "/kind", "parabasal", "additionalProperties"),
+    },
+  },
+  [`${CURVATURE_NATIVE}.data`]: {
+    valid: { "one-line-and-unavailable": CURVATURE_DATA_ONE_LINE, "two-lines": CURVATURE_DATA_TWO_LINES },
+    invalid: {
+      "status-unconverged": fault(CURVATURE_DATA_ONE_LINE, "/fields/0/status", "unconverged", "enum"),
+      "shift-as-text": fault(CURVATURE_DATA_ONE_LINE, "/fields/1/tangentialShiftMm", "0.0029296875", "type"),
+      "landing-as-text": fault(CURVATURE_DATA_TWO_LINES, "/fields/0/chiefLandingMm", "-0", "type"),
+      "missing-sagittal": fault(CURVATURE_DATA_ONE_LINE, "/fields/0/sagittalShiftMm", REMOVE, "required", "/fields/0"),
+      "figures-member": fault(CURVATURE_DATA_TWO_LINES, "/fields/0/figures", null, "additionalProperties"),
+      "missing-notes": fault(CURVATURE_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-fields": fault(CURVATURE_DATA_TWO_LINES, "/fields", [], "minItems"),
     },
   },
   [`${WAVEFRONT_NATIVE}.spec`]: {

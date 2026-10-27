@@ -33,6 +33,8 @@ import {
   r8bRung,
   r9aRung,
   r9bRung,
+  r10aRung,
+  r10bRung,
   rayTraceRequests,
   selectRungs,
   selftestRung,
@@ -67,7 +69,7 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a, r8b, r9a and r9b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a and r10b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
     [
@@ -89,6 +91,8 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
       "r8b",
       "r9a",
       "r9b",
+      "r10a",
+      "r10b",
     ],
   );
   assert.deepEqual(
@@ -112,6 +116,8 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
       r8bRung,
       r9aRung,
       r9bRung,
+      r10aRung,
+      r10bRung,
     ],
   );
   // The two rungs of the coma and bokeh tabs are made from the run's spot sets, and no other is; the two of the
@@ -127,6 +133,10 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
   assert.deepEqual(
     RUNGS.filter((definition) => definition.needsChiefRaySets === true),
     [r9aRung, r9bRung],
+  );
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsCurvatureRaySets === true),
+    [r10aRung, r10bRung],
   );
   // The rungs that trace rays are the four that compare traced rays, and one of them traces a finer lattice too.
   assert.deepEqual(
@@ -145,11 +155,11 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.engines !== undefined),
-    [r4fRung, r5Rung, r5gRung, r6bRung, r6cRung, r7bRung, r8bRung, r9bRung],
+    [r4fRung, r5Rung, r5gRung, r6bRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.onlyWhereNamed === true),
-    [r5Rung, r5gRung, r6cRung, r7bRung, r8bRung, r9bRung],
+    [r5Rung, r5gRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung],
   );
   assert.equal(new Set(RUNGS.map((definition) => definition.id)).size, RUNGS.length);
   for (const definition of RUNGS) assert.ok(QUANTITIES.has(definition.quantity), definition.id);
@@ -326,6 +336,7 @@ test("a run that names no rungs gets every rung but those run only where named, 
     r7aRung,
     r8aRung,
     r9aRung,
+    r10aRung,
   ]);
   assert.deepEqual(
     selectRungs(undefined),
@@ -336,7 +347,8 @@ test("a run that names no rungs gets every rung but those run only where named, 
         definition !== r6cRung &&
         definition !== r7bRung &&
         definition !== r8bRung &&
-        definition !== r9bRung,
+        definition !== r9bRung &&
+        definition !== r10bRung,
     ),
   );
   assert.deepEqual(selectRungs(["r5", "r0"]), [r0Rung, r5Rung]);
@@ -367,11 +379,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b',
+    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -396,7 +408,7 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b",
+    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b",
   );
 });
 
@@ -527,4 +539,35 @@ test("r9b asks the engines' own chief-ray requests of the three tabs, of lv and 
   assert.deepEqual(r9bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
   assert.deepEqual(r9bRung.engines, ["lv", "optiland"]);
   assert.equal(r9bRung.onlyWhereNamed, true);
+});
+
+// ── The rungs of the field-curve sections ────────────────────────────────────────────────────────────────────────
+
+test("r10a asks one rays.trace request of each curvature set, each set once, and nothing of the run's ray sets", () => {
+  const curvature = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }, structuredClone(RAYS_SPEC_SINGLET)];
+  const requests = r10aRung.buildRequests(SINGLET, RUN, { raySets: [RAYS_SPEC_LATTICE], curvatureRaySets: curvature });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["rays.trace", RAYS_SPEC_SINGLET],
+      ["rays.trace", { ...RAYS_SPEC_LATTICE, line: 0 }],
+    ],
+  );
+  assert.deepEqual(r10aRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r10aRung.buildRequests(SINGLET, RUN, { raySets: [], chiefRaySets: curvature }), []);
+  assert.equal(r10aRung.engines, undefined);
+  assert.equal(r10aRung.onlyWhereNamed, undefined);
+});
+
+test("r10b asks the engines' own field-curve request of the sections, of lv and optiland only, where it is named", () => {
+  const ask = { lines: [0, 1], maxFieldDeg: 20, fieldAnglesDeg: [0, 5, 10, 15, 20] };
+  const requests = r10bRung.buildRequests(SINGLET, RUN, { raySets: [], curvatureAsks: [ask] });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec, request.engineOptions]),
+    [["curvature.native", ask, undefined]],
+  );
+  for (const request of requests) assert.deepEqual(QUANTITIES.get("curvature.native")?.validateSpec(request.spec), []);
+  assert.deepEqual(r10bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r10bRung.engines, ["lv", "optiland"]);
+  assert.equal(r10bRung.onlyWhereNamed, true);
 });

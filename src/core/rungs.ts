@@ -14,6 +14,8 @@ import { AXIAL_NATIVE } from "../contract/quantities/axialNative.ts";
 import type { AxialNativeSpec } from "../contract/quantities/axialNative.ts";
 import { CHIEF_NATIVE } from "../contract/quantities/chiefNative.ts";
 import type { ChiefNativeSpec } from "../contract/quantities/chiefNative.ts";
+import { CURVATURE_NATIVE } from "../contract/quantities/curvatureNative.ts";
+import type { CurvatureNativeSpec } from "../contract/quantities/curvatureNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -71,6 +73,14 @@ export interface RungInputs {
   readonly chiefRaySets?: readonly RaysTraceSpec[];
   /** The engines' own chief-ray requests of the same tabs, from the same source, for such a rung. */
   readonly chiefAsks?: readonly ChiefNativeSpec[];
+  /**
+   * The curvature sets of the run, from the source of its case (`CaseSource.curvatureRaySets`), for a rung that says
+   * it `needsCurvatureRaySets`: the rays of the sections that present the field curves. Empty, or left out, for any
+   * other rung.
+   */
+  readonly curvatureRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own field-curve requests of the same sections, from the same source, for such a rung. */
+  readonly curvatureAsks?: readonly CurvatureNativeSpec[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -113,6 +123,12 @@ export interface RungDefinition {
    * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
    */
   readonly needsChiefRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's curvature sets (`RungInputs.curvatureRaySets` and
+   * `curvatureAsks`): those are generated, once per run, only when such a rung is run, and no other rung is handed
+   * them.
+   */
+  readonly needsCurvatureRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -646,6 +662,44 @@ export const r9bRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r10a`, LensVisualizer's field-curve and astigmatism sections on identical rays: one `rays.trace` request
+ * for each of the run's curvature sets (`RungInputs.curvatureRaySets`), the rays the sections launch, field by field:
+ * the four parabasal rays of each field and its real-ray fans, beside its chief ray, which every engine traces as
+ * given. Where each engine has the tangential and the sagittal focus of each field relative to its chief ray is
+ * compared, with where the rays land (`src/compare/raysCurvature.ts`). It is asked of the engines of the run, and only
+ * of a run whose source has curvature sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r10aRung: RungDefinition = Object.freeze({
+  id: "r10a",
+  quantity: RAYS_TRACE,
+  needsCurvatureRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.curvatureRaySets ?? []),
+});
+
+/** The engines of the rung `r10b`: LensVisualizer, whose sections are asked, and optiland's own `FieldCurvature`. */
+export const R10B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r10b`, LensVisualizer's field-curve and astigmatism sections beside an engine's own field curves: one
+ * `curvature.native` request (`RungInputs.curvatureAsks`), at every line of the case and at the sections' own fields,
+ * asked of LensVisualizer, whose answer is its sections' foci, and of optiland, whose answer is its own
+ * `FieldCurvature`. Recorded, of those two engines and of no other, and run only where it is named: optiland is not on
+ * every machine.
+ */
+export const r10bRung: RungDefinition = Object.freeze({
+  id: "r10b",
+  quantity: CURVATURE_NATIVE,
+  needsCurvatureRaySets: true,
+  engines: R10B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.curvatureAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: CURVATURE_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -669,6 +723,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r8bRung,
   r9aRung,
   r9bRung,
+  r10aRung,
+  r10bRung,
 ]);
 
 /**

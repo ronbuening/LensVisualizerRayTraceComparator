@@ -30,3 +30,9 @@ export {
   computeFocusEFL,
   computeLateralColorCurve,
 } from "./analysis/chief.ts";
+export {
+  FIELD_CURVATURE_CURVE_FIELD_FRACTIONS,
+  FIELD_CURVATURE_FIELD_FRACTIONS,
+  computeFieldCurvatureBundle,
+  computeOffAxisFieldGeometryScalar,
+} from "./analysis/curvature.ts";

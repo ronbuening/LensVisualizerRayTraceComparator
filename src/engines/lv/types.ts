@@ -693,6 +693,72 @@ export interface LvLateralColorCurve {
   readonly halfFieldDeg: number;
 }
 
+/**
+ * LV's scalar off-axis field geometry of one field of its field-curvature analysis
+ * (`computeOffAxisFieldGeometryScalar`): a collimated launch of slope `uField` whose solved chief ray crosses the first
+ * vertex plane at height `yChief`, whatever LV's projection would launch the field with elsewhere.
+ */
+export interface LvScalarFieldGeometry {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly uField: number;
+  readonly yChief: number;
+  readonly lastSurfZ: number;
+  readonly imagePlaneZ: number;
+}
+
+/** One channel's focus of one field of LV's chromatic field curves (`ChromaticFieldShift`). */
+export interface LvChromaticFieldShift {
+  readonly channel: string;
+  readonly tangentialShiftMm: number;
+  readonly sagittalShiftMm: number;
+}
+
+/** One field of LV's field curves and astigmatism (`FieldCurvatureFieldResult`), the members the comparator reads. */
+export interface LvFieldCurvatureField {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly sampleCount: number;
+  readonly validSampleCount: number;
+  readonly clippedSampleCount: number;
+  /** Where the field's chief ray lands on the design image plane, y, mm. */
+  readonly chiefImageHeight: number;
+  readonly tangentialBestFocusZ: number;
+  readonly sagittalBestFocusZ: number;
+  readonly petzvalBestFocusZ: number;
+  readonly tangentialShiftMm: number;
+  readonly sagittalShiftMm: number;
+  readonly petzvalShiftMm: number;
+  readonly astigmaticDifferenceMm: number;
+  readonly diagnosticTangentialBestFocusZ?: number;
+  readonly diagnosticSagittalBestFocusZ?: number;
+  readonly diagnosticTangentialShiftMm?: number;
+  readonly diagnosticSagittalShiftMm?: number;
+  readonly diagnosticAstigmaticDifferenceMm?: number;
+  readonly chromaticFieldShifts: readonly LvChromaticFieldShift[] | null;
+  readonly usable: boolean;
+}
+
+/** What LV's field curves present for one of its two variants (`FieldCurvatureResult`). */
+export interface LvFieldCurvatureResult {
+  readonly fieldFractions: readonly number[];
+  readonly curveFieldFractions: readonly number[];
+  readonly fields: readonly LvFieldCurvatureField[];
+  readonly curveFields: readonly LvFieldCurvatureField[];
+  readonly usableFieldCount: number;
+  readonly imagePlaneZ: number;
+  readonly maxAstigmaticDifferenceMm: number;
+  readonly edgeTangentialShiftMm: number;
+  readonly edgeSagittalShiftMm: number;
+  readonly chromaticFocusSpreadMm: number | null;
+}
+
+/** LV's field curves of a request at the authored indices and at its chromatic channels (`FieldCurvatureBundleResult`). */
+export interface LvFieldCurvatureBundle {
+  readonly fieldCurvature: LvFieldCurvatureResult | null;
+  readonly chromaticFieldCurvature: LvFieldCurvatureResult | null;
+}
+
 /** One sample of LV's focus-breathing chart (`BreathingSample`). */
 export interface LvBreathingSample {
   readonly focusT: number;
@@ -1255,6 +1321,21 @@ export interface LvApi {
   readonly pupilAberrationSampleCount: number;
   /** LV's `DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS`: the fractions of the half field of its lateral-colour section. */
   readonly lateralColorFieldFractions: readonly number[];
+  /**
+   * The scalar off-axis field geometry of LV's field curves at a fraction of the state's half field, with the field
+   * geometry of the state: the solved chief ray's launch, never a bounding sphere's; null where LV has no slope for it.
+   */
+  computeOffAxisFieldGeometryScalar(
+    state: LvPreparedState,
+    fieldFraction: number,
+    stateGeometry?: LvFieldGeometry,
+  ): LvScalarFieldGeometry | null;
+  /** What the field-curves and astigmatism sections of LV's aberrations tab present for a request. */
+  computeFieldCurvatureBundle(request: LvAnalysisRequest): LvFieldCurvatureBundle;
+  /** LV's `FIELD_CURVATURE_FIELD_FRACTIONS`: the fractions of the half field its field curves mark. */
+  readonly fieldCurvatureFieldFractions: readonly number[];
+  /** LV's `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS`: the fractions of the half field its field curves are drawn through. */
+  readonly fieldCurvatureCurveFieldFractions: readonly number[];
   /** LV's chief-ray solve for a field angle in degrees at a state given by its controls (`solveChiefRay`). */
   solveChiefRayForRuntimeLens(
     fieldAngleDeg: number,

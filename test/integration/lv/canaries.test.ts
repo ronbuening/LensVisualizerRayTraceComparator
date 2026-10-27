@@ -1892,3 +1892,150 @@ test("the lateral-colour section and the breathing chart still read what the com
     breathing,
   );
 });
+
+// Stage 6.5, at LV cfa91d0a5 (closure c866fbff with the stage's names): the curvature sets of the field-curve and
+// astigmatism sections (src/engines/lv/curvatureRaySets.ts, the fields in curvatureFields.ts) restate these lines;
+// test/integration/lv/curvatureRays.test.ts holds the sections' foci to the bit.
+test(
+  "the field-curve sections still trace the fields, the parabasal rays and the fans the curvature sets restate",
+  { skip },
+  () => {
+    const curvature = "src/optics/analysis/aberration/fieldCurvature.ts";
+    const fields = "lvCurvatureFractions and lvCurvatureFields in src/engines/lv/curvatureFields.ts restate the fields";
+    const parabasal = "lvParabasalFraction and lvParabasalOffsets restate the four parabasal rays";
+    const fans = "lvRealRayOffsets in src/engines/lv/curvatureRaySets.ts restates the real-ray fans";
+    // The fields: the marked ones and the curve's, each computed on its own of its fraction alone.
+    assertSource(
+      curvature,
+      "const fieldFractions = sampling.fieldCurvatureFieldFractions ?? FIELD_CURVATURE_FIELD_FRACTIONS;",
+      fields,
+    );
+    assertSource(
+      curvature,
+      "const curveFieldFractions = sampling.fieldCurvatureCurveFieldFractions ?? FIELD_CURVATURE_CURVE_FIELD_FRACTIONS;",
+      fields,
+    );
+    assertSource(
+      curvature,
+      "const fields = fieldCurvatureFieldMeta(fieldFractions).map((meta) => computeFieldCurvatureField(request, meta, false, stateGeometry), );",
+      fields,
+    );
+    assertSource(
+      curvature,
+      "const curveFields = fieldCurvatureFieldMeta(curveFieldFractions).map((meta) => computeFieldCurvatureField(request, meta, false, stateGeometry), );",
+      fields,
+    );
+    assertSource(
+      curvature,
+      "const stateGeometry = fieldGeometry ?? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT);",
+      fields,
+    );
+    assertSource(
+      curvature,
+      "const geometry = computeOffAxisFieldGeometryScalar(request.preparedGeometry, meta.fieldFraction, stateGeometry);",
+      fields,
+    );
+    assertSource(curvature, "if (geometry === null) return emptyFieldCurvatureFieldResult(meta);", fields);
+    assertSource(
+      curvature,
+      "if (currentEPSD <= 0 || L.N < 1) return emptyFieldCurvatureFieldResult(meta);",
+      "no-pupil",
+    );
+    // The design plane the shifts are from: the last vertex plus its gap (lvCurvaturePlaneZ).
+    assertSource(
+      curvature,
+      "const imagePlaneZ = lastSurfZ + thick(L.N - 1, focusT, zoomT, L, aberrationT);",
+      "lvCurvaturePlaneZ in src/engines/lv/curvatureFields.ts decides focus.off-design before the sections are asked",
+    );
+    // The four parabasal rays: 0.01 mm over the pupil radius, held between 1e-4 and 0.02, tangential then sagittal,
+    // -1 then +1, beside the chief ray traced first.
+    assertSource(curvature, "const FIELD_CURVATURE_PARABASAL_RAY_HEIGHT_MM = 0.01;", parabasal);
+    assertSource(curvature, "const FIELD_CURVATURE_PARABASAL_FRACTION_MIN = 1e-4;", parabasal);
+    assertSource(curvature, "const FIELD_CURVATURE_PARABASAL_FRACTION_MAX = 0.02;", parabasal);
+    assertSource(
+      curvature,
+      "if (!isFinite(entrancePupilSemiDiameter) || entrancePupilSemiDiameter <= 0) { return FIELD_CURVATURE_PARABASAL_FRACTION_MIN; }",
+      parabasal,
+    );
+    assertSource(
+      curvature,
+      "const fraction = FIELD_CURVATURE_PARABASAL_RAY_HEIGHT_MM / entrancePupilSemiDiameter;",
+      parabasal,
+    );
+    assertSource(
+      curvature,
+      "return Math.min(FIELD_CURVATURE_PARABASAL_FRACTION_MAX, Math.max(FIELD_CURVATURE_PARABASAL_FRACTION_MIN, fraction));",
+      parabasal,
+    );
+    assertSource(curvature, "const parabasalFraction = parabasalPupilFraction(currentEPSD);", parabasal);
+    assertSource(curvature, 'const xFraction = direction === "sagittal" ? sign * parabasalFraction : 0;', parabasal);
+    assertSource(curvature, 'const yFraction = direction === "tangential" ? sign * parabasalFraction : 0;', parabasal);
+    assertSource(
+      curvature,
+      'const tangentialHits = ([-1, 1] as const) .map((sign) => traceRelativeRay("tangential", sign))',
+      parabasal,
+    );
+    assertSource(
+      curvature,
+      'const sagittalHits = ([-1, 1] as const) .map((sign) => traceRelativeRay("sagittal", sign))',
+      parabasal,
+    );
+    assertSource(curvature, "const chiefRay = traceOffAxisChiefRay(request, geometry, channel);", parabasal);
+    assertSource(
+      curvature,
+      "xFraction, yFraction, geometry.yChief, geometry.uField, currentEPSD, focusT, zoomT, currentPhysStopSD, true, L, aberrationT,",
+      parabasal,
+    );
+    assertSource(
+      "src/optics/trace/chiefRelative.ts",
+      "xFraction * entrancePupilSemiDiameter, chiefLaunchHeight + yFraction * entrancePupilSemiDiameter, 0, fieldSlope,",
+      parabasal,
+    );
+    // traceSkewRay, the parabasal rays' adapter, starts a ray as the skew adapter of the spot sets does (lvSkewLaunch).
+    const skew = "lvSkewLaunch in src/engines/lv/spotRaySets.ts starts each ray of a curvature set";
+    assertSource("src/optics/trace/rayAdapters.ts", "const lead = L.rayLead ?? 0;", skew);
+    assertSource(
+      "src/optics/trace/rayAdapters.ts",
+      "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, (state.z[0] ?? 0) - lead];",
+      skew,
+    );
+    // The real-ray fans: the coma tab's orthogonal fans at the sections' default count, from the scalar geometry.
+    assertSource(
+      curvature,
+      "const diagnosticFieldFocus = computeDiagnosticFieldFocus( request, geometry, sampling.fieldCurvatureDiagnosticSampleCount, );",
+      fans,
+    );
+    assertSource(curvature, "sampleCount = MERIDIONAL_COMA_SAMPLE_COUNT,", fans);
+    assertSource(curvature, 'sampleOrthogonalPupilFan(sampleCount, "tangential"),', fans);
+    assertSource(curvature, 'sampleOrthogonalPupilFan(sampleCount, "sagittal"),', fans);
+    // The chromatic field curves: the same rays at each channel, of the usable fields.
+    const chromatic = "answerLvCurvature in src/engines/lv/curvature.ts reads each channel's shifts";
+    assertSource(
+      curvature,
+      "const CHROMATIC_FIELD_CHANNELS: readonly ChromaticChannel[] = CHROMATIC_CHANNEL_ORDER;",
+      chromatic,
+    );
+    assertSource(curvature, "const fieldFocus = computeStandardizedFieldFocus(request, geometry, channel);", chromatic);
+    assertSource(curvature, "if (!field.usable) return { ...field, chromaticFieldShifts: null };", chromatic);
+  },
+);
+
+test("the aberrations tab still presents the field curves the engine answers curvature.native from", { skip }, () => {
+  const panel = "src/components/display/analysis/AberrationsPanel.tsx";
+  const hook = "src/components/display/analysis/aberrations/useFieldCurvatureData.ts";
+  const answer = "answerLvCurvature in src/engines/lv/curvature.ts asks computeFieldCurvatureBundle as the tab does";
+  assertSource(panel, "const result = chromaticFieldCurvatureResult ?? fieldCurvatureResult;", answer);
+  assertSource(hook, "analysisContext?.request ??", answer);
+  assertSource(hook, "const bundle = context.computeFieldCurvatureBundle();", answer);
+  assertSource(hook, "chromaticFieldCurvatureResult: bundle.chromaticFieldCurvature,", answer);
+  // The shifts are from the design plane, + aft; the Petzval shift is paraxial, of the chief ray's landing.
+  const curvature = "src/optics/analysis/aberration/fieldCurvature.ts";
+  assertSource(curvature, "const tangentialShiftMm = tangentialBestFocusZ - geometry.imagePlaneZ;", answer);
+  assertSource(curvature, "const sagittalShiftMm = sagittalBestFocusZ - geometry.imagePlaneZ;", answer);
+  assertSource(curvature, "chiefImageHeight: chiefRay.imagePoint.y,", answer);
+  assertSource(
+    curvature,
+    "const petzvalShiftMm = petzvalShiftAtImageHeight(chiefImageHeight, L.petzvalSum) ?? 0;",
+    "the Petzval shift lv states in sampling is paraxial: no rung compares it",
+  );
+});

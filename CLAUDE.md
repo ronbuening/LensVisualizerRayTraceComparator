@@ -67,6 +67,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan, recorded; asked of lv and optiland; only where named; in no baseline
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8a, the axial intercepts of the spherical-aberration and axial-colour sections' rays (gated, about 15 s), and R8b, the sections beside optiland's own rays and focus (recorded, only where named, in no baseline)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -312,8 +313,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   table and every engine that answers it (`lv`, `ref`, and `QUANTITIES` in `lvrtc_optiland/engine.py`).
   `system.describe` is version 2 (`innerClipRadius`; its `clipRadius` is +Infinity for a surface the engine does not
   clip at, which raised no version); `paraxial.first-order` is version 1. `mtf.native` is version
-  1 and is answered by `lv`, `replay`, `wave` and `optiland`. `spot.native` is version 1 and is answered by `lv`
-  and `optiland`.
+  1 and is answered by `lv`, `replay`, `wave` and `optiland`. `spot.native`, `axial.native`, `chief.native` and
+  `curvature.native` are version 1 and are answered by `lv` and `optiland`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
   from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
@@ -361,7 +362,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Built-in engines (`ref`, `lv`, `replay`, `wave`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
   (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
-  `--engines` or a run names, and `r7b`, `r8b` and `r9b` (each run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  `--engines` or a run names, and `r7b`, `r8b`, `r9b` and `r10b` (each run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -693,12 +694,13 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   test holds the three together. `mtf.native` has a comparator for each of `r4f` (`src/compare/mtfFidelity.ts`),
   `r5` and `r5g` (`mtfNative.ts`), `r6b` (`mtfWave.ts`) and `r6c` (`mtfWavefront.ts`); `r5` and `r6b` ask one
   request, so an answer is computed once. No quantity is without a comparator today, and the test says so. Raise the policy's `version` when a rung, a class
-  or a limit changes. Six rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
+  or a limit changes. Eight rungs compare `rays.trace`, each with a comparator that names its rung: `r2`
   (geometry and mask), `r3` (optical path), `r4` (geometric MTF) and `r6a` (wave MTF) all ask the `rays.trace` requests of
   `rayTraceRequests`, so an engine traces a set once; `r7a` (spot, `raysSpot.ts`) asks those of the spot sets,
-  `r8a` (axial intercepts, `raysAxial.ts`) those of the axial sets and `r9a` (chief rays, `raysChief.ts`) those of the
-  chief sets. `spot.native` has the one comparator of `r7b` (`spotNative.ts`), `axial.native` the one of `r8b`
-  (`axialNative.ts`), `chief.native` the one of `r9b` (`chiefNative.ts`).
+  `r8a` (axial intercepts, `raysAxial.ts`) those of the axial sets, `r9a` (chief rays, `raysChief.ts`) those of the
+  chief sets and `r10a` (field foci, `raysCurvature.ts`) those of the curvature sets. `spot.native` has the one
+  comparator of `r7b` (`spotNative.ts`), `axial.native` the one of `r8b` (`axialNative.ts`), `chief.native` the one of
+  `r9b` (`chiefNative.ts`), `curvature.native` the one of `r10b` (`curvatureNative.ts`).
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -1223,3 +1225,89 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   measurements are redone.
 - The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved (new LV names, worker files);
   `ref`'s did not. The recipe in `docs/REFERENCE.md`, "The Phase 6 end refresh", names `r9a` beside `r7a` and `r8a`.
+
+## Stage 6.5 field curvature and astigmatism
+
+- **The curvature sets are the rays LV's field-curve and astigmatism sections (aberrations tab) launch**
+  (`CaseSource.curvatureRaySets`, `src/engines/lv/curvatureRaySets.ts`, the fields and lines in `curvatureFields.ts`),
+  generated by `planJobs` after `confirmRaySets`, only for a rung that says `needsCurvatureRaySets`, and recorded under
+  `runs[].curvatureRaySets`; a case source without them is `curvature-sets-unavailable`. The fields are
+  `FIELD_CURVATURE_FIELD_FRACTIONS` and `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS`, each fraction once, ascending (17 at
+  `cfa91d0a5`), launched by LV's `computeOffAxisFieldGeometryScalar` (the solved chief ray's height, never a bounding
+  sphere's). Two patterns, one set at every line, the same rays at every line, weight 1: `parabasal` (of each field the
+  four rays `±p` of the pupil, tangential then sagittal, `p = min(0.02, max(1e-4, 0.01 / EPSD))`, then the chief ray)
+  and `real-ray` (the tangential and sagittal fans of `sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`,
+  then the chief ray), each ray started as `lvSkewLaunch`. A set states no groups: a field is a block of consecutive
+  rays of one direction, its chief ray last, a ray offset along y alone tangential, along x alone sagittal, one at the
+  chief ray's start in neither (`src/rays/curvatureSets.ts`, `curvatureFieldsOf`); keep that layout, or the comparator
+  says not comparable. Every restated line has a canary (two Stage 6.5 tests in `canaries.test.ts`).
+  `test/integration/lv/curvatureRays.test.ts` traces the sets with `traceEngineRay` and gets every field's chief
+  landing, parabasal and real-ray foci and its shifts at the four channels R, G, B, V to the bit on every benchmark
+  configuration and the zoom's far end. A finite object, a folded path, no half field, no pupil, no launch and a launch
+  behind the first surface are coded problems; focus-stations and folded have no curvature sets.
+- **One decision of fields and lines for the sets, the ask and `lv`'s answer** (`curvatureFields.ts`:
+  `lvCurvatureFields`, `lvCurvatureLines`, `lvCurvatureLine`): the R10b ask is at the lines LV's sections trace (the
+  authored reference line, a chromatic channel's line), none for a run of no such line (every photopic run).
+  `test/engines/lv/curvature.test.ts` feeds the asks of the fake's vector variant to `answerLvCurvature`, which answers
+  every field.
+- **R10a is gated, identical rays** (policy version 19): `rays.trace` of the curvature sets, `raysCurvatureComparator`,
+  on the rays valid in both answers of a pair. A focus is `relativeFocus` (`src/estimators/fieldFocus.ts`), the least
+  squares of a fan's coordinates relative to the chief ray's (`-Σ Δc Δu / Σ Δu²` from the case's plane, LV's
+  `bestRelativeFocusPlane`), judged on the transverse scale: `tangentialFocus.maxScaled` and `sagittalFocus.maxScaled` =
+  the focus difference times the larger of the two answers' RMS relative slopes, never one engine's
+  (`raysCurvature.test.ts` holds both orders), each 1e-8 mm, with `landing.maxAbs` 1e-8 mm and `mask.mismatches` 0;
+  `tangentialFocus.maxAbs`, `sagittalFocus.maxAbs` and `astigmatism.maxAbs` are shown, never judged. No floor. A fan's
+  figure that is not measured names a reason of that fan alone. **The owner accepted this gate as implemented
+  (2026-10-26).** The conditioning is stated, not gated away: a parabasal relative slope is about 0.01 mm over the
+  focal length, so the plain focus is 2,000 to 80,000 times a landing's difference (1.20e-8 mm on the diffractive Canon
+  RF 800 mm on rounding alone); the scaled figure is about `|δΔc + s δΔu|`, a slope difference amplified by the focus's
+  distance `s` from the plane (≤ 0.38 mm on the benchmark). R10a is in the default rung selection and joins the rays
+  baselines of benchmark, features, states and diffractive at the Phase 6 end refresh.
+- **`relativeFocus` is a pure estimator** under the estimator rules: every difference, quotient, product and sum carried
+  in two doubles and rounded once; ten carried rests, each mutation-checked red in `test/estimators/fieldFocus.test.ts`
+  (closed forms to the bit; 5,200 series within a unit of the exact focus in whole numbers). An unavailable focus says
+  why (`no-reference`, `no-rays`, `bad-ray`, `no-slope`, `out-of-range`). It is in no engine's closure.
+- **`curvature.native` v1 (contract 1.0)**: a spec of `lines`, `maxFieldDeg` (below 180) and `fieldAnglesDeg` (each
+  below 90); per line and field `chiefLandingMm` (null where an engine states none), `tangentialShiftMm`,
+  `sagittalShiftMm` (z of the focus less the case's `imageZ`, + toward the image; both finite for ok, both null for
+  unavailable), `sampling`. Schema, corpus, `validate.py` port and invariants change together.
+- **`lv` answers `curvature.native` from the sections as they present them** (`src/engines/lv/curvature.ts`,
+  `lv-field-curves`): `computeFieldCurvatureBundle` with the drawer's request (`lvChiefRequest`); at the authored line
+  the field curves (shifts, `chiefImageHeight`; `sampling` the parabasal fraction, the rays landed, the paraxial Petzval
+  shift, the real-ray shifts), at a channel's line the chromatic shifts with `chiefLandingMm` null and
+  `sampling.indexMaxDelta`, a line of neither unavailable (`lv-no-channel-at-line`, `lv-mixed-reference`), an unusable
+  field `lv-field-unusable`. Refused before LV is asked anything but readings of the lens: `line` (a line the case
+  does not have, `linesBeyondCase`, decided before any line is read, as in `lv`'s `axial.native` and `chief.native`),
+  `lines.not-traced`, `lines.mixed-reference`, `focus.off-design`, `object.finite`, `path.folded`; `fields.angles` once
+  the sections said their fields (a test makes every other LV call throw).
+- **optiland answers `curvature.native` with its own `FieldCurvature`** (`lvrtc_optiland/curvature.py`):
+  `FieldCurvature(optic, wavelengths="primary", num_points=2)` on a fresh `field_optic` a field and line (robust
+  aiming), read at the normalised field 1; every setting read back (class, points, wavelength, both methods' `delta`
+  1e-5, the values' shape, then `verify_field` again), each with a deliberate fault in `test_curvature.py`, which also
+  holds the foci of a sphere that is its own stop to Coddington's equations within 1e-6 mm. A focus that is no number is
+  `no-focus`; a parabasal ray of the field that optiland's own retrace does not land is `parabasal-ray-lost`, the
+  retrace being of the analysis's two batches in their own shape (`parabasal_batches`: the axis and the field, a pair
+  each), on the same optic, so the robust aimer reuses its pupil maps and the rays are the analysis's, bit for bit
+  (`test_curvature.py`); never warm the aimer first. The
+  identifying landing is `spot.chief_landing`. Budget and FATAL are the MTF worker's; no paraxial refusal (robust real
+  rays).
+- **R10b is recorded, of `lv` and `optiland`, only where named** (`curvatureNativeComparator`): R9b's
+  `classifyChiefField` sorts each field (R5's classes, `indices-differ`, then the landing, `chief-landing-unknown` where
+  an answer states none), then `tangentialShift.maxAbs`, `sagittalShift.maxAbs`, `astigmatism.maxAbs`.
+  `curvatureFactsOfRecorded` repeats the sorting: change it, `curvatureFactsOf` and `recorded` together. **Owner
+  decisions (2026-10-26):** the 1e-5 mm landing limit stays; `tangentialShift.maxAbs`, `sagittalShift.maxAbs` and
+  `astigmatism.maxAbs` have attention bands of 1e-5 mm (policy 19), so a pair with a figure above one is ATTENTION, as
+  R8b's spherical figures are (`curvatureNative.test.ts` holds a field above and within each); R10b stays out of every
+  baseline (`--rungs r10b`).
+- **LV conventions found** (`docs/gotchas.md`, "Field curves"; owner's brief
+  `docs/upstream/lensvisualizer-parabasal-pencil.md`, not filed): LV's parabasal pencil is 0.01 mm wide, so its foci
+  are of a finite pencil, up to 5.72e-6 mm from optiland's infinitesimal pair (converging as the square of the height
+  when LV's own rays are made smaller). **Owner decision (2026-10-26): no LV change; the 0.01 mm pencil is a documented
+  convention of LV's**, which R10b records within its bands. Below one degree the pencil is centred on LV's paraxial
+  chief ray (up to 2.31e-6 mm), the Stage 6.4 convention LV is to change by the owner's decision of 2026-10-26. Both
+  are fifteen times below the tab's 0.1 µm readouts. optiland's robust aimer, batched with the axis inside
+  `FieldCurvature`, loses the Sigma 35 mm's edge pair at f/8 where the field alone converges: an optiland behaviour,
+  held by the owner with the other upstream items.
+- The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved; `ref`'s did not; LV's engine
+  closure did not (`c866fbff`: the names are of modules already loaded). The recipe in `docs/REFERENCE.md`, "The Phase 6
+  end refresh", names `r10a` beside `r7a`, `r8a` and `r9a`.

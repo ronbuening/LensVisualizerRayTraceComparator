@@ -1,0 +1,77 @@
+{
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": 0,
+      "tangentialShiftMm": 0,
+      "sagittalShiftMm": 0,
+      "sampling": {}
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": -5,
+      "tangentialShiftMm": 0.01953125,
+      "sagittalShiftMm": -0.009765625,
+      "sampling": {}
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 20,
+      "status": "ok",
+      "chiefLandingMm": -10,
+      "tangentialShiftMm": 0.0390625,
+      "sagittalShiftMm": -0.01953125,
+      "sampling": {}
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": null,
+      "tangentialShiftMm": 0,
+      "sagittalShiftMm": 0,
+      "sampling": {
+        "indexMaxDelta": 0.0000152587890625
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": null,
+      "tangentialShiftMm": 0.01953125,
+      "sagittalShiftMm": -0.009765625,
+      "sampling": {
+        "indexMaxDelta": 0.0000152587890625
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 20,
+      "status": "ok",
+      "chiefLandingMm": null,
+      "tangentialShiftMm": 0.0390625,
+      "sagittalShiftMm": -0.01953125,
+      "sampling": {
+        "indexMaxDelta": 0.0000152587890625
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-field-curves",
+    "params": {}
+  },
+  "notes": [
+    "the second line is a chromatic channel"
+  ]
+}

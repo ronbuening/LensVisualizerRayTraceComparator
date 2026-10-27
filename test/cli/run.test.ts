@@ -212,7 +212,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   assert.equal(unknown.out, "");
   assert.match(
     unknown.err,
-    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b$/m,
+    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b$/m,
   );
   assert.equal(existsSync(runsDir), false);
 
@@ -660,16 +660,17 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   // case read from a file has rays on the axis only, so each rung of traced rays asks one request. The rungs that
   // are about engines of their own, r4f, r5, r5g and r6b, ask nothing about a case that no LensVisualizer sampled, and the
   // rungs that take an MTF of the traced rays, r4 and r6a, nothing of a run without a recipe to take its
-  // frequencies from. The rungs of the coma and bokeh tabs' rays, r7a, of the axial sections' rays, r8a, and of the
-  // chief-ray tabs' rays, r9a, ask nothing of a case read from a file, which has no tab of LensVisualizer's to launch
-  // them.
+  // frequencies from. The rungs of the coma and bokeh tabs' rays, r7a, of the axial sections' rays, r8a, of the
+  // chief-ray tabs' rays, r9a, and of the field-curve sections' rays, r10a, ask nothing of a case read from a file,
+  // which has no tab of LensVisualizer's to launch them.
   const shared = RUNGS.filter(
     (rung) =>
       rung.engines === undefined &&
       rung.needsRecipe !== true &&
       rung.needsSpotRaySets !== true &&
       rung.needsAxialRaySets !== true &&
-      rung.needsChiefRaySets !== true,
+      rung.needsChiefRaySets !== true &&
+      rung.needsCurvatureRaySets !== true,
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
@@ -677,7 +678,7 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
-    ["r4f", "r5", "r5g", "r6b", "r6c", "r7b", "r8b", "r9b"],
+    ["r4f", "r5", "r5g", "r6b", "r6c", "r7b", "r8b", "r9b", "r10b"],
   );
   // No case source of the root generates spot sets of a case read from a file, and the manifest says so.
   assert.deepEqual(
@@ -694,13 +695,15 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.match(plain.axialRaySets?.problems[0] ?? "", /^axial-sets-unavailable: /);
   assert.deepEqual(plain.chiefRaySets?.sets, []);
   assert.match(plain.chiefRaySets?.problems[0] ?? "", /^chief-sets-unavailable: /);
+  assert.deepEqual(plain.curvatureRaySets?.sets, []);
+  assert.match(plain.curvatureRaySets?.problems[0] ?? "", /^curvature-sets-unavailable: /);
 
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
   assert.equal(
     worked.err,
-    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b\n',
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b\n',
   );
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });

@@ -33,6 +33,7 @@ import type { RaySetResolution } from "../rays/raySets.ts";
 import type { SpotSetResolution } from "../rays/spotSets.ts";
 import type { AxialSetResolution } from "../rays/axialSets.ts";
 import type { ChiefSetResolution } from "../rays/chiefSets.ts";
+import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
@@ -306,6 +307,23 @@ async function chiefRaySetsOf(
   return source.chiefRaySets(spec, opticalCase);
 }
 
+/** Why a run has no curvature sets when the source of its case generates none, or no source was given. */
+const NO_CURVATURE_SOURCE = "curvature-sets-unavailable: no case source generates curvature sets for this lens";
+
+/**
+ * The curvature sets of one run, from the source of its lens (`CaseSource.curvatureRaySets`); none, and the problem
+ * that says so, when no source was given for the lens or the source generates none.
+ */
+async function curvatureRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<CurvatureSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.curvatureRaySets === undefined) return { sets: [], problems: [NO_CURVATURE_SOURCE], asks: [] };
+  return source.curvatureRaySets(spec, opticalCase);
+}
+
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
   /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
@@ -321,6 +339,8 @@ export interface Plan {
   readonly axialRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The chief sets of each run that a rung needed them for, by run name. */
   readonly chiefRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The curvature sets of each run that a rung needed them for, by run name. */
+  readonly curvatureRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -386,6 +406,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       spotRaySets: new Map(plans.flatMap((plan) => [...plan.spotRaySets])),
       axialRaySets: new Map(plans.flatMap((plan) => [...plan.axialRaySets])),
       chiefRaySets: new Map(plans.flatMap((plan) => [...plan.chiefRaySets])),
+      curvatureRaySets: new Map(plans.flatMap((plan) => [...plan.curvatureRaySets])),
       recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
     };
   }
@@ -395,6 +416,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const spotRaySets = new Map<string, ManifestRaySets>();
   const axialRaySets = new Map<string, ManifestRaySets>();
   const chiefRaySets = new Map<string, ManifestRaySets>();
+  const curvatureRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   const runs = [...suite.runs];
   for (const [index, run] of suite.runs.entries()) {
@@ -450,6 +472,13 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       inputs = { ...inputs, chiefRaySets: sets, chiefAsks: asks };
       chiefRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
+    if (rungs.some((rung) => rung.needsCurvatureRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.curvature-generate", () =>
+        curvatureRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, curvatureRaySets: sets, curvatureAsks: asks };
+      curvatureRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
@@ -469,6 +498,9 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
           : {}),
         ...(rung.needsChiefRaySets === true
           ? { chiefRaySets: inputs.chiefRaySets ?? [], chiefAsks: inputs.chiefAsks ?? [] }
+          : {}),
+        ...(rung.needsCurvatureRaySets === true
+          ? { curvatureRaySets: inputs.curvatureRaySets ?? [], curvatureAsks: inputs.curvatureAsks ?? [] }
           : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       };
@@ -490,7 +522,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { runs, jobs, raySets, fineRaySets, spotRaySets, axialRaySets, chiefRaySets, recipes };
+  return { runs, jobs, raySets, fineRaySets, spotRaySets, axialRaySets, chiefRaySets, curvatureRaySets, recipes };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -758,6 +790,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     spotRaySets,
     axialRaySets,
     chiefRaySets,
+    curvatureRaySets,
     recipes,
   } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
@@ -926,6 +959,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
       const spots = spotRaySets.get(spec.name);
       const axial = axialRaySets.get(spec.name);
       const chief = chiefRaySets.get(spec.name);
+      const curvature = curvatureRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -937,6 +971,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
         ...(spots === undefined ? {} : { spotRaySets: spots }),
         ...(axial === undefined ? {} : { axialRaySets: axial }),
         ...(chief === undefined ? {} : { chiefRaySets: chief }),
+        ...(curvature === undefined ? {} : { curvatureRaySets: curvature }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

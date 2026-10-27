@@ -3792,8 +3792,8 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2, 6.3 or 6.4. Policy versions 16, 17 and 18 change the policy hash, and the
-stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's
+This refresh is not run at Stage 6.2, 6.3, 6.4 or 6.5. Policy versions 16, 17, 18 and 19 change the policy hash, and
+the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's
 are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
@@ -3803,18 +3803,18 @@ are STALE:
 `ref`'s revision did not move. The store therefore recomputes the other five engines, and a cold MTF run of the
 benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
 
-R7a, R8a and R9a join the rays baselines of the suites whose runs have spot, axial and chief sets: benchmark,
-features, states and diffractive. focus-stations (finite objects) and folded (folded paths) have none, so they are
-rewritten with their own rungs. R7b, R8b and R9b stay out of every baseline.
+R7a, R8a, R9a and R10a join the rays baselines of the suites whose runs have spot, axial, chief and curvature sets:
+benchmark, features, states and diffractive. focus-stations (finite objects) and folded (folded paths) have none, so
+they are rewritten with their own rungs. R7b, R8b, R9b and R10b stay out of every baseline.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
 another:
 
 ```bash
 for suite in benchmark features states; do
-  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a --jobs 4
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a --jobs 4
   node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite
 done
-node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a --jobs 4
+node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a,r10a --jobs 4
 node bin/lvrtc.mjs compare diffractive --jobs 4 && node bin/lvrtc.mjs baseline write diffractive
 node bin/lvrtc.mjs run suites/folded.json --engines lv,ref,optiland --rungs r0,r1,r2,r3 --jobs 4
 node bin/lvrtc.mjs compare folded --jobs 4 && node bin/lvrtc.mjs baseline write folded
@@ -4409,3 +4409,256 @@ change lands, the canaries of those lines fail first, and the chief sets, the as
    LensVisualizer does not certify is no case. R1 judges every state that is a case.
 5. **LensVisualizer's chief-ray conventions are to change** (the brief above): a real chief ray below one degree, and
    each channel's own chief ray for the lateral colour. Pending in LensVisualizer; the brief is not filed.
+
+## Stage 6.5: field curvature and astigmatism
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the field curves in two sections of its aberrations tab: the field curves (the tangential and
+sagittal foci of each field, of four parabasal rays beside its chief ray, with the paraxial Petzval surface; the foci
+of its real-ray fans; and, in the chromatic variant the tab draws, the parabasal foci at each of its four chromatic
+channels) and the astigmatism (the difference of the two). R10a traces exactly the rays those sections launch in every
+engine and judges the foci of identical rays; R10b sets the sections, as they present them, beside optiland's own
+`FieldCurvature`.
+
+### The curvature sets
+
+`CaseSource.curvatureRaySets` makes the rays the sections launch (`src/engines/lv/curvatureRaySets.ts`, the fields in
+`curvatureFields.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says
+`needsCurvatureRaySets`, and the manifest records them under `runs[].curvatureRaySets`; a case source without them (a
+case file) is `curvature-sets-unavailable`. The fields are the sections' own: `FIELD_CURVATURE_FIELD_FRACTIONS` (the
+marked fields) and `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS` (the curve's, sixteenths of the half field) of the drawer's
+field geometry, each fraction once, ascending: 17 on the benchmark. The sections compute a field of each list on its own
+of its fraction alone, and the integration test holds a marked field to the curve's of the same fraction, bit for bit.
+A field's launch is LensVisualizer's `computeOffAxisFieldGeometryScalar`: the solved chief ray's height on the first
+vertex plane and the field's slope, never a bounding sphere's launch (the sections take the scalar launch whatever the
+projection). Two patterns, in this order, each one set at every line, the same rays at every line (as the chromatic
+field curves trace the same rays at each channel), every ray of weight 1:
+
+| Pattern | Rays of a field | Per line on the benchmark |
+|---|---|---:|
+| `parabasal` | the four parabasal rays of `computeStandardizedFieldFocus` (tangential at `-p` and `+p` of the pupil, sagittal at `-p` and `+p`, `p = min(0.02, max(1e-4, 0.01 / EPSD))`: 0.01 mm on the first vertex plane), then the chief ray | 85 |
+| `real-ray` | the tangential and the sagittal fan of `computeDiagnosticFieldFocus` (`sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`, 51 rays each, each with its centre sample, the chief ray's own launch), then the chief ray | 1,751 |
+
+A ray beside the chief ray crosses the first vertex plane at `(x · EPSD, yChief + y · EPSD)` at the slopes
+`(0, uField)` and starts as the skew launch of the spot sets (`lvSkewLaunch`; `traceSkewRay`, the parabasal rays'
+adapter, starts it the same way). A set states no groups: a field is a block of consecutive rays launched along one
+direction, its chief ray last, and a ray of the block offset from the chief ray's start along y alone is of the
+tangential fan, along x alone of the sagittal fan (`src/rays/curvatureSets.ts`, read by `curvatureFieldsOf`). The
+sections trace a field's parabasal rays only once its chief ray passes, and its fans only once its parabasal foci are
+found; a set states them for every field with a launch. Every restated line has a canary (two Stage 6.5 tests in
+`test/integration/lv/canaries.test.ts`). `test/integration/lv/curvatureRays.test.ts` traces each ray with
+LensVisualizer's exact tracer (`traceEngineRay`, the sections' options; a channel's indices for the chromatic curves)
+and, on every benchmark configuration and the zoom's far end (22,032 rays, 204 fields), gets to the bit every field's
+chief landing, its parabasal foci as z and as shifts from the design plane, its real-ray foci, and its parabasal shifts
+at each of the four channels R, G, B and V; and that `lv`'s `rays.trace` answer of a set brings the same rays to the
+image as the sections' traces.
+
+The case source also makes R10b's ask: one `curvature.native` request at the lines the sections present curves at
+(`lvCurvatureLines`: the authored reference line and the lines of a chromatic channel), at the angles of the fields with
+a launch; none for a run of no such line (every photopic run). Which fields, and which lines, are decided once, in
+`curvatureFields.ts`, for the sets, the ask and `lv`'s answer alike: `test/engines/lv/curvature.test.ts` feeds the ask
+of the fake tree's vector variant (fields beyond 12° launched from a bounding sphere elsewhere) to `answerLvCurvature`,
+which answers every field.
+
+Coded problems, each of the run or of the field it names and never approximated: `folded-path`,
+`object-not-at-infinity`, `no-half-field` and `no-pupil` (no sets, no ask); `lv-no-launch` (a field without a slope);
+`launch-behind-first-surface`. focus-stations (finite objects) and folded (folded paths) have no curvature sets.
+
+### R10a: the field curves of identical rays (gated)
+
+R10a asks `rays.trace` of every curvature set at every line (`r10aRung`) and compares each request with
+`raysCurvatureComparator` (`src/compare/raysCurvature.ts`), on the rays ok in both answers of a pair; which rays those
+are is judged as R2 judges it. The focus of a fan is the comparator's own pure estimator `relativeFocus`
+(`src/estimators/fieldFocus.ts`): the plane of least squares of its rays' coordinates relative to the field's chief
+ray, along y for the tangential fan and x for the sagittal one, from each engine's own landing (`imagePoint`) and exit
+direction, `s = -Σ Δc Δu / Σ Δu²` from the image plane of the case, the definition of LensVisualizer's
+`bestRelativeFocusPlane` less its design plane. Its arithmetic carries every rest (the differences of the coordinates
+and of the slopes, the quotients' remainders, the products of the two sums, the remainder of the shift), each
+mutation-checked: `test/estimators/fieldFocus.test.ts` holds closed forms to the bit (rays through one point, an
+astigmatic field, a fan with spherical aberration), and 5,200 series of parabasal pairs and aberrated fans to within a
+unit of the exact focus of the doubles given, worked out in whole numbers, which the plain formula misses by thousands
+of units. The figures, each with the line and the field's chief ray of its largest value:
+
+- `landing.maxAbs`: a landing's difference, along x or y;
+- `tangentialFocus.maxScaled`, `sagittalFocus.maxScaled`: the difference of a field's two foci times the larger of the
+  two answers' RMS relative slopes of the fan;
+- `tangentialFocus.maxAbs`, `sagittalFocus.maxAbs`: the difference along the axis, shown; `astigmatism.maxAbs`, of the
+  sagittal less the tangential focus, shown;
+- `mask.mismatches`, `mask.rimBand`, `rays.compared`, `rays.dropped`, as R2's; `fields.compared`, the fields with both
+  foci in both answers.
+
+**The gate (accepted by the owner as implemented, 2026-10-26).** A parabasal ray's slope relative to its chief ray's is about 0.01 mm over the focal length
+(5e-4 to 2.5e-5 on the benchmark, 1.25e-5 for the diffractive suite's 800 mm lenses): a relative landing that differs by
+`δ` moves its focus `δ / Δu` along the axis, 2,000 to 80,000 times further. So a focus is judged on the transverse
+scale, as R8a judges an intercept: the difference times the larger RMS relative slope, never one engine's
+(`test/compare/raysCurvature.test.ts` holds both orders; the smaller turns it red), which is the distance across the
+field at which one engine's rays pass the other's focus. The figure is about `|δΔc + s δΔu|`: a difference of relative
+landings, not amplified, and a difference of relative slopes amplified by the distance `s` of the focus from the image
+plane (up to 0.38 mm on the benchmark), where a rounding of a slope (1.1e-16) contributes 4e-17 mm. It is the rung's
+only sign of a difference of the exit slopes. Of a symmetric pair it is half a single ray's landing difference. The
+plain differences along the axis are shown and never judged: on the diffractive suite one is above 1e-8 mm on arithmetic
+alone (below).
+
+| Metric | Gate (policy 19) |
+|---|---|
+| `landing.maxAbs` | 1e-8 mm |
+| `tangentialFocus.maxScaled` | 1e-8 mm |
+| `sagittalFocus.maxScaled` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+No floor. A fan with a focus in one answer and none (or none for another reason) in the other, and a set that is no
+curvature set (a ray offset along both axes), are not comparable; a figure no field has in both answers is unmeasured,
+with the estimator's reason (`no-reference`, `no-rays`, `no-slope`), always a reason of that figure's own fan (a set
+of sagittal fans alone says of its tangential figures that no field has a tangential fan). A FAIL is attributed in extended precision before
+anything is concluded, and the gate is never widened for it.
+
+### R10b: the sections beside optiland (recorded)
+
+`curvature.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines` and each angle of
+`fieldAnglesDeg` (within `maxFieldDeg`), for the tangential and the sagittal focus of the field as its z less the z of
+the image plane of the case (`tangentialShiftMm`, `sagittalShiftMm`, + toward the image), with the landing of the chief
+ray they are relative to (`chiefLandingMm`, null where an engine states none) and the engine's `sampling`.
+
+- **`lv`** answers with the sections as they present them (`answerLvCurvature`, `src/engines/lv/curvature.ts`,
+  method `lv-field-curves`): at the authored reference line its field curves (`computeFieldCurvatureBundle`'s
+  `fieldCurvature`: each field's parabasal shifts and `chiefImageHeight`; in `sampling` the parabasal fraction, the rays
+  that landed, the paraxial Petzval shift and, where the section has them, the real-ray shifts); at a line of a
+  chromatic channel (`lvChannelLines`) the chromatic field curves' shifts of that channel, `chiefLandingMm` null and
+  `sampling.indexMaxDelta`; a line that is neither is unavailable at every field (`lv-no-channel-at-line`), a field the
+  sections cannot use `lv-field-unusable`.
+- **`optiland`** answers with its own `FieldCurvature` (`workers/python/lvrtc_optiland/curvature.py`, method
+  `optiland-field-curvature`): `FieldCurvature(optic, wavelengths="primary", num_points=2)` on a fresh verified optic
+  whose one field is the angle asked, under the worker's `robust` aiming, read at its point of the normalised field 1:
+  the crossing of a parabasal pair at `±1e-5` of the pupil, along z from the image surface. Every setting is read back,
+  each check with a deliberate fault in `test_curvature.py`: the class, its points, its one wavelength, the `delta` of
+  its two methods, the values it gave, and the optic's field, aiming and stop after it (`verify_field`); a focus that is
+  no number is `no-focus`, and a parabasal ray of the field that optiland's own trace does not bring to the image
+  `parabasal-ray-lost`. That trace is of the analysis's two batches in their own shape (`parabasal_batches`: the axis
+  and the field, a pair each, along y and then along x), on the same optic: the robust aimer reuses the pupil maps it
+  solved there, and a test holds the rays to the analysis's own, bit for bit.
+  Each field is identified by the robust-aimed chief ray (`spot.chief_landing`). The real tests hold optiland's foci of
+  a sphere that is its own stop to Coddington's equations within 1e-6 mm.
+
+`lv` refuses, as unsupported, what its sections do not present, decided before LensVisualizer is asked anything but
+readings of the lens (`fields.angles` once the sections have said their fields):
+
+| Item | When |
+|---|---|
+| `line` | A line the case does not have, decided before any line is read (`linesBeyondCase`; so too `axial.native` and `chief.native`). |
+| `lines.not-traced` | No line asked is the authored reference line or a channel's: every photopic run, were it asked. |
+| `lines.mixed-reference` | No line asked is the authored one, of a lens that mixes d-line and e-line indices. |
+| `focus.off-design` | A case off the design plane (the last vertex plus its gap): every best-focus run. |
+| `fields.angles` | Angles other than the sections' own. |
+| `object.finite`, `path.folded` | A finite object; a folded path. |
+
+`curvatureNativeComparator` (`src/compare/curvatureNative.ts`) sorts each field before any difference by R9b's sorting
+(`classifyChiefField`): R5's `classifyNativeField` first (no foci `unsupported`, other wavelengths `data`), then
+`indices-differ`, then the chief rays' landing (`chief-landing-apart`, or `chief-landing-unknown` where an answer states
+none), then `method`, the only class that enters a figure. `curvatureFactsOfRecorded` repeats the sorting from the
+recorded values. It records `chiefLanding.maxAbs`, `tangentialShift.maxAbs`, `sagittalShift.maxAbs`,
+`astigmatism.maxAbs` (the sagittal less the tangential shift) and the fields of each class. Policy 19:
+
+| Metric | Policy 19 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R9b's) |
+| `tangentialShift.maxAbs`, `sagittalShift.maxAbs`, `astigmatism.maxAbs` | attention band 1e-5 mm each: a pair with a figure above one is ATTENTION |
+
+`test/integration/optiland/r10.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 400 mm on its
+reference line, whose fields below one degree it pins.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `cfa91d0a5` (clean; engine closure `c866fbff`, 178 files: the stage's names are
+of modules already loaded) and optiland `4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of
+`r10a,r10b` has 1,824 jobs: 1,800 ok, 24 unsupported (all `lv` in R10b, `focus.off-design`), no error; 78 s from an
+empty store. Compare: 2,976 pairs of both modes, 2,880 PASS, 48 RECORDED, 48 UNSUPPORTED, no FAIL, ERROR or BLOCKED.
+
+**R10a.** 576 requests (96 runs, two patterns, at each line; 1,836 rays a line). All 1,728 pairwise pairs pass, over
+1,490,352 rays compared and 29,376 fields with both foci; no mask mismatch, no rim-band ray, no dropped ray.
+
+| Pair | `landing.maxAbs` | `tangentialFocus.maxScaled` | `sagittalFocus.maxScaled` | `tangentialFocus.maxAbs` (shown) |
+|---|---:|---:|---:|---:|
+| `lv` / `ref` | 9.41e-13 (Sony FE 20 mm, photopic) | 1.10e-13 | 1.33e-13 | 3.98e-9 |
+| `optiland` / `ref` | 9.17e-13 | 1.33e-13 (Sony FE 400 mm f/8 best, photopic) | 1.23e-13 | 4.87e-9 (the same) |
+| `lv` / `optiland` | 8.67e-13 | 1.19e-13 | 5.89e-14 | 4.43e-9 |
+
+The worst gated figure is 75,000 times inside the gate. The plain tangential focus is up to 4.87e-9 mm, 37,000 times
+the scaled one; the sagittal foci of a mirror-symmetric pair differ by 2.0e-12 mm at most. The other suites, run the
+same way, all pass:
+
+| Suite | Runs with curvature sets | R10a pairwise pairs | Worst gated figure | Worst plain focus (shown) |
+|---|---:|---:|---:|---:|
+| features | 18 of 18 | 324 | 6.64e-13 (`landing.maxAbs`) | 2.79e-10 |
+| states | 128 of 128 | 2,304 | 7.67e-13 (`landing.maxAbs`) | 4.87e-9 |
+| diffractive | 8 of 9 (one source refusal) | 48 | 5.44e-13 (`landing.maxAbs`) | 1.20e-8 (Canon RF 800 mm f/11) |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — | — |
+
+On the diffractive suite the plain tangential focus of the Canon RF 800 mm f/11 differs by 1.20e-8 mm between optiland
+and `ref`, above 1e-8 mm, where its scaled figure is 1.65e-13 mm: a gate on the plain focus would fail on rounding
+alone.
+
+**R10b.** 24 pairwise pairs RECORDED (the reference runs at the design plane, wide open and at f/8, 17 fields each) and
+24 UNSUPPORTED (the best-focus runs); a photopic run has no request. Of the 408 fields, 407 are of two methods and one
+is unavailable (optiland's `no-focus` at the Sigma 35 mm's edge at f/8, `docs/gotchas.md`); no field is data. The two
+chief rays of a field land within 2.52e-6 mm (the Sony FE 400 mm below one degree), median 2.8e-14. Rerun with the
+bands of 1e-5 mm in policy 19 and the worker's check of the parabasal rays in the analysis's own batches (`--rungs r10b
+--jobs 4`, a temporary store, 79 s): the same 24 RECORDED and 24 UNSUPPORTED, no ATTENTION, the same 407 fields of two
+methods and one `no-focus`, the same largest figures.
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `tangentialShift.maxAbs` (per field) | 6.3e-8 | 5.72e-6 mm (Sigma 45 mm, 25.6°) |
+| `sagittalShift.maxAbs` | 5.2e-8 | 1.38e-6 mm (Z 24-70 mm wide at f/8, the axis) |
+| `astigmatism.maxAbs` (per pair) | | 6.66e-6 mm (Z 24-70 mm wide at f/8) |
+
+Where they come from, taken apart with LensVisualizer's own launch and tracer: the parabasal pencil. LensVisualizer's
+pencil is 0.01 mm wide, optiland's pair `1e-5` of the pupil; a finite pencil focuses away from the infinitesimal one by
+the square of its width, and the same fields traced at a tenth and a hundredth of LensVisualizer's height converge on
+optiland's as that square:
+
+| Field | 0.01 mm (LV's) | 0.001 mm | 0.0001 mm |
+|---|---:|---:|---:|
+| Sigma 45 mm, 25.6°, tangential | 5.72e-6 | 5.1e-8 | 5.7e-9 |
+| Z 24-70 mm wide at f/8, the axis | 1.38e-6 | 1.38e-8 | 1.34e-10 |
+| Z 50 mm f/1.2, 22.9°, tangential | 5.34e-7 | 5.8e-9 | 1.3e-8 (optiland's floor) |
+
+Below one degree the Sony FE 400 mm's tangential foci are up to 2.31e-6 mm from optiland's and its sagittal 1.23e-7,
+whatever the height: LensVisualizer centres the pencil on its paraxial chief ray there (Stage 6.4). Every difference
+is fifteen times below the 0.1 µm the tab's readouts round to.
+
+**LensVisualizer assumptions found, with evidence.** R10a shows the sections' rays focus alike in three engines to
+1.3e-13 mm across the field, so R10b's differences are which rays, not tracing: LensVisualizer's parabasal pencil is
+0.01 mm wide (up to 5.72e-6 mm on the benchmark), and below one degree it is centred on the paraxial chief ray (up to
+2.31e-6 mm, the Stage 6.4 convention LensVisualizer is to change by the owner's decision). The brief, with the source
+lines and the per-lens figures, is `docs/upstream/lensvisualizer-parabasal-pencil.md` (not filed): no LensVisualizer
+change, the 0.01 mm pencil being a documented convention of its own. optiland's `FieldCurvature` traces the axis with
+the field, and its robust aimer, marching from the axis, loses the Sigma 35 mm's edge pair at f/8 where the field alone
+converges (`docs/gotchas.md`): an optiland behaviour, held by the owner with the other upstream items.
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and 15 NEW of LensVisualizer's new certified station, folded 96,
+diffractive 96). The adapter revisions of `lv`, `replay` and `wave` moved (the stage's modules in `lv`'s closure), and
+`optiland`'s and `optiland-wave`'s with the worker's files; `ref`'s did not (`2225e342`).
+
+### Owner decisions, 2026-10-26
+
+1. **R10a's gate is accepted as implemented**: landing and the tangential and sagittal foci on the transverse scale
+   (the difference times the larger RMS relative slope), each 1e-8 mm; the plain foci and the astigmatism shown and
+   never judged; mask 0; no floor.
+2. **R10b's limit and bands**: the landing limit of its sorting stays 1e-5 mm (R7b's to R9b's; the measured maximum is
+   2.52e-6 mm); `tangentialShift.maxAbs`, `sagittalShift.maxAbs` and `astigmatism.maxAbs` have attention bands of 1e-5
+   mm (in policy 19, above the parabasal pencil's measured 6.66e-6 mm, so that a band marks a change of either method
+   beyond it). A pair with a figure above its band is ATTENTION, as R8b's spherical figures are.
+3. **R10b stays out of every baseline**, as R7b to R9b; `--rungs r10b` runs it.
+4. **LensVisualizer's parabasal pencil is not changed**: the 0.01 mm pencil is a documented convention of
+   LensVisualizer's (the brief above). The Petzval surface and the real-ray curves have no counterpart in optiland's
+   `FieldCurvature` and are not covered by R10b.
+5. **optiland's batched robust aimer** (the Sigma 35 mm at f/8) is held by the owner with the other upstream items; the
+   worker reports the field unavailable and never warms the aimer.

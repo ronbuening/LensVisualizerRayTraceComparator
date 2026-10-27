@@ -2768,3 +2768,112 @@ and optiland `4e893f53`, on the benchmark.
   `test/integration/lv/breathing.test.ts` and the canary "the lateral-colour section and the breathing chart still
   read what the comparator restates".
 - **Class.** method: not covered between stations.
+
+## Field curves (Stage 6.5)
+
+Measured at LensVisualizer `cfa91d0a5` (engine closure `c866fbff` with the stage's names) and optiland `4e893f53`, on
+the benchmark.
+
+### LensVisualizer's parabasal foci are of a pencil 0.01 mm wide
+
+- **Where.** `computeStandardizedFieldFocus` (`src/optics/analysis/aberration/fieldCurvature.ts`) launches its four
+  parabasal rays `±p` of the pupil beside the chief ray, `p = 0.01 / EPSD` held between 1e-4 and 0.02
+  (`parabasalPupilFraction`): 0.01 mm on the first vertex plane. optiland's `FieldCurvature` crosses a pair at
+  `±1e-5` of the pupil (its methods' default `delta`), 2.6e-5 to 3.6e-4 mm on the benchmark.
+- **Effect.** A focus of a finite pencil moves from the infinitesimal one (Coddington's) by the square of its width:
+  traced by LensVisualizer's own launch and tracer at 0.01, 0.001 and 0.0001 mm, the Sigma 45 mm's tangential focus at
+  its edge (25.6°) is 5.72e-6, 5.1e-8 and 5.7e-9 mm from optiland's, the Z 24-70 mm's at f/8 on the axis 1.38e-6,
+  1.38e-8 and 1.34e-10 mm. So R10b's fields differ by up to 5.72e-6 mm (tangential), 1.38e-6 (sagittal) and 6.66e-6
+  (astigmatism), median 6.3e-8: fifteen times below the 0.1 µm the tab's readouts round to, and invisible on its plots.
+  The least squares about the chief ray and optiland's crossing of the pair have the same limit: both cancel the term
+  of the pupil's first power (coma), and differ in the second.
+- **Handled.** **Owner decision (2026-10-26): no LensVisualizer change; the 0.01 mm pencil is a documented convention
+  of LensVisualizer's.** R10b records the differences as two methods, within its attention bands of 1e-5 mm on the
+  tangential and sagittal shifts and the astigmatism (policy 19, above the measured 6.66e-6 mm); R10a traces
+  LensVisualizer's own pencil in every engine. Brief: `docs/upstream/lensvisualizer-parabasal-pencil.md` (not filed).
+  Pinned by the canary "the field-curve sections still trace the fields, the parabasal rays and the fans the curvature
+  sets restate" (the pupil fraction's lines) and by `test/integration/optiland/r10.test.ts` (the design run's fields
+  within 1e-5 mm).
+- **Class.** convention: recorded.
+
+### LensVisualizer's field curves below one degree are about its paraxial chief ray
+
+- **Where.** `computeOffAxisFieldGeometryScalar` takes the field's launch height from `solveChiefRayForRuntimeLens`,
+  which below one degree is the paraxial pupil's chief ray ("LensVisualizer's chief ray below one degree is its
+  paraxial estimate", above): the parabasal pencil is centred on it, not on the ray through the stop's centre that
+  optiland's robust aimer centres its pair on.
+- **Effect.** Coma moves a tangential focus with the centre of its pencil. On the Sony FE 400 mm (half field 3.15°,
+  five fields of seventeen off the axis below one degree) the tangential foci there are up to 2.31e-6 mm from
+  optiland's, the sagittal up to 1.23e-7; neither moves with the pencil's width (0.01 to 0.0001 mm), unlike the effect
+  above. The two chief rays
+  land within 2.52e-6 mm, inside R10b's 1e-5 mm limit.
+- **Handled.** Recorded as two methods. The change to LensVisualizer's chief ray the owner decided at Stage 6.4
+  (`docs/upstream/lensvisualizer-chief-ray-conventions.md`) will move these fields too. Pinned by
+  `test/integration/optiland/r10.test.ts` (the telephoto's tangential foci below one degree more than 1e-6 mm apart, its
+  sagittal foci a fifth of that).
+- **Class.** method: recorded.
+
+### optiland's FieldCurvature traces the axis with the field, and its robust aimer marches from the axis
+
+- **Where.** `FieldCurvature._intersection_parabasal_tangential` traces its pairs at the normalised fields
+  `linspace(0, 1, num_points)` in one `trace_generic`: asked at one field of an optic, the axis is in the batch.
+  `RobustRayAimer._aim_rays_scoped` solves a batch's fields in order of their size, each seeded from the nearest field
+  it has solved ("D8 field marching"), so the field is seeded from the axis.
+- **Effect.** On the Sigma 35 mm at f/8 at its edge (27.95°) the pair of the field comes back NaN from such a batch,
+  and from a batch of 0.5 and 1 it converges; alone, or with the field ahead of the axis in a batch of its own, it
+  converges too. The worker's field is `no-focus`, unavailable: one field of the 408 on the benchmark.
+- **Handled.** The worker asks the class as it is and reads its values; a focus that is no number is the field's
+  reason, never a number, and R10b sorts it as unsupported. The worker does not warm optiland's aimer with the field
+  first: a number must not depend on what was asked before it. Its check that the field's parabasal rays landed traces
+  the analysis's own two batches again, axis included and in their shape (`parabasal_batches`), on the same optic, so
+  the aimer reuses its pupil maps and the rays checked are the ones that gave the number. Held by the owner with the
+  other upstream items (not reported). Pinned by `test_curvature.py` (the no-focus fault, and the rays traced again held
+  to the analysis's own, bit for bit).
+- **Class.** method: handled.
+
+### A parabasal focus is ill-conditioned along the axis
+
+- **Where.** A focus is `s = -Σ Δc Δu / Σ Δu²`: a parabasal ray's slope relative to its chief ray's, `Δu`, is about
+  0.01 mm over the focal length (5e-4 to 2.5e-5 on the benchmark, 1.25e-5 for the diffractive suite's 800 mm
+  lenses), so a difference `δ` of a relative landing moves the focus `δ / Δu` along the axis.
+- **Effect.** Rounding alone moves the plain focus by thousands of times a landing's difference: on the benchmark the
+  tangential foci of the same rays differ along the axis by up to 4.87e-9 mm (the Sony FE 400 mm at f/8) where their
+  landings differ by 9.4e-13 mm, and on the diffractive suite by 1.20e-8 mm (the Canon RF 800 mm f/11): above 1e-8 mm
+  on arithmetic alone. The sagittal foci of a mirror-symmetric pair differ by 6e-12 mm at most.
+- **Handled.** R10a judges a focus on the transverse scale: the difference times the larger of the two answers' RMS
+  relative slopes (`tangentialFocus.maxScaled`, `sagittalFocus.maxScaled`), about `|δΔc + s δΔu|` across the field
+  at the focus, the distance a gate of R2 is of; the plain differences and the astigmatism are shown and never judged.
+  The scaled figure amplifies a difference of the relative slopes by the distance `s` of the focus from the image
+  plane (up to 0.38 mm on the benchmark, the Sony FE 20 mm at its edge): a slope known to 1.1e-16 then contributes
+  4e-17 mm. Its worst on the benchmark is 1.33e-13 mm, 75,000 times inside the gate. Pinned by
+  `test/compare/raysCurvature.test.ts` ("a landing moved along y moves the tangential focus by the step over the
+  relative slope, judged as half the step", "the focus is scaled by the larger of the two answers' relative slopes,
+  never the one engine's").
+- **Class.** numerical: handled.
+
+### LensVisualizer's chromatic field curves are its chromatic tab's channels
+
+- **Where.** `computeChromaticFieldShifts` traces each field's parabasal rays at each channel R, G, B and V
+  (`CHROMATIC_CHANNEL_ORDER`) from the launch solved at the authored indices, at the channel's catalog indices
+  ("LensVisualizer's chromatic tab traces a d-line catalog glass at the catalog's own index, at every channel", above),
+  and keeps each channel's shifts and no landing.
+- **Effect.** A channel's line is not the case's indices where a glass was matched to a catalog, and its foci are of one
+  launch at every channel.
+- **Handled.** `lv` answers a line of a channel with the chromatic shifts, `chiefLandingMm` null and
+  `sampling.indexMaxDelta`; R10b sorts such a field as data (`indices-differ`, or `chief-landing-unknown` where the
+  indices agree). The benchmark's runs have no line of a channel but the reference line, which is the authored one; a
+  photopic run has no line of LensVisualizer's field curves, and no R10b request. R10a traces the same rays at every
+  line of the case. Pinned by `test/engines/lv/curvature.test.ts` ("at a channel's line the answer is the chromatic
+  field curves, without a landing and with the indices' distance").
+- **Class.** data: recorded.
+
+### LensVisualizer's real-ray curves and Petzval surface have no counterpart in optiland's FieldCurvature
+
+- **Where.** The field-curve section also draws the least-squares foci of its real-ray fans
+  (`computeDiagnosticFieldFocus`, 51 rays a fan) and the Petzval surface of the stored Petzval sum
+  (`petzvalShiftAtImageHeight`, paraxial).
+- **Effect.** optiland's `FieldCurvature` is of parabasal pairs only.
+- **Handled.** R10a traces the real-ray fans in every engine and judges their foci with the parabasal ones; `lv` states
+  the real-ray shifts and the Petzval shift in `sampling` of R10b, recorded and never compared. The Petzval sum is a
+  first-order quantity (Stage 6.8's Seidel sums).
+- **Class.** method: not covered by R10b.

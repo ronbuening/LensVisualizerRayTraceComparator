@@ -1,0 +1,61 @@
+{
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": 0,
+      "tangentialShiftMm": 0.000244140625,
+      "sagittalShiftMm": 0.000244140625,
+      "sampling": {
+        "validSampleCount": 4,
+        "petzvalShiftMm": -0.0625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 5.625,
+      "status": "ok",
+      "chiefLandingMm": -4.875,
+      "tangentialShiftMm": 0.0029296875,
+      "sagittalShiftMm": 0.00390625,
+      "sampling": {
+        "validSampleCount": 4,
+        "petzvalShiftMm": -0.0625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 11.25,
+      "status": "ok",
+      "chiefLandingMm": -9.8125,
+      "tangentialShiftMm": 0.0078125,
+      "sagittalShiftMm": -0.0234375,
+      "sampling": {
+        "validSampleCount": 4,
+        "petzvalShiftMm": -0.0625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 22.5,
+      "status": "unavailable",
+      "reason": "chief-ray-clipped",
+      "chiefLandingMm": null,
+      "tangentialShiftMm": null,
+      "sagittalShiftMm": null,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-field-curves",
+    "params": {
+      "parabasalFraction": 0.0009765625
+    }
+  },
+  "notes": []
+}
