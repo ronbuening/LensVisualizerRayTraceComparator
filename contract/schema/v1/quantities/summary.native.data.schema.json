@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:summary.native.data",
+  "title": "summary.native data",
+  "description": "An engine's own first-order summary of a case: per requested line, the values it states under the contract's definitions, each a number or null where it states none. Code checks that an unavailable line says why and states no value, and that every value an ok line states is a finite number.",
+  "type": "object",
+  "properties": {
+    "lines": {
+      "description": "One entry per requested line, in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "description": "The line, as it was requested.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "wavelengthNm": {
+            "description": "The wavelength the engine's summary is of.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          },
+          "status": {
+            "description": "ok: the engine stands by the values it states. unavailable: it states none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the line is not ok; always there for a line that is not.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "rearFocalZ": {
+            "description": "z of the paraxial rear focal point in the contract frame, mm: what identifies the system the answer is of. Null where the engine states none.",
+            "type": ["number", "null"]
+          },
+          "focalLengthMm": {
+            "description": "The effective focal length the answer's f-numbers are formed with, mm; null where the engine states none.",
+            "type": ["number", "null"]
+          },
+          "entrancePupilDiameterMm": {
+            "description": "The diameter of the entrance pupil as the engine presents it, mm; null where it states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "stopDiameterMm": {
+            "description": "The clear diameter of the stop the answer is of, mm; null where the engine states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "imageSpaceFNumber": {
+            "description": "The magnitude of the focal length over the entrance pupil's diameter, whatever the object's distance (OpticStudio's image-space F/#); null where the engine states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "paraxialWorkingFNumber": {
+            "description": "1 / (2 n' |u'|), u' the image-space slope of the paraxial marginal ray of the case's axial object point and n' the image space's index (OpticStudio's paraxial working F/#); null where the engine states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "workingFNumber": {
+            "description": "1 / (2 n' sin t'), t' the angle of the real marginal ray of the case's axial object point to its chief ray in image space (OpticStudio's working F/#); null where the engine states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "nominalFNumber": {
+            "description": "The f-number the engine marks the aperture with, which is not computed from the system; null where it marks none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "totalTrackMm": {
+            "description": "The image plane's z less the first vertex's, mm; null where the engine states none.",
+            "type": ["number", "null"]
+          },
+          "halfFieldDeg": {
+            "description": "The half field the engine assigns the system, degrees; null where it assigns none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "sampling": {
+            "description": "What else the engine states of the line, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": [
+          "line",
+          "wavelengthNm",
+          "status",
+          "rearFocalZ",
+          "focalLengthMm",
+          "entrancePupilDiameterMm",
+          "stopDiameterMm",
+          "imageSpaceFNumber",
+          "paraxialWorkingFNumber",
+          "workingFNumber",
+          "nominalFNumber",
+          "totalTrackMm",
+          "halfFieldDeg",
+          "sampling"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["lines", "method", "notes"],
+  "additionalProperties": false
+}

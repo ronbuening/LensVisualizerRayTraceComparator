@@ -20,6 +20,7 @@ import { axialNativeComparator } from "./axialNative.ts";
 import { chiefNativeComparator } from "./chiefNative.ts";
 import { curvatureNativeComparator } from "./curvatureNative.ts";
 import { vignettingNativeComparator } from "./vignettingNative.ts";
+import { summaryNativeComparator } from "./summaryNative.ts";
 import { systemDescribeComparator } from "./systemDescribe.ts";
 import { mtfWavefrontComparator } from "./mtfWavefront.ts";
 import { wavefrontNativeComparator } from "./wavefrontNative.ts";
@@ -32,7 +33,8 @@ import { wavefrontNativeComparator } from "./wavefrontNative.ts";
  * `r8a`, the landings of the distortion, pupils and lateral-colour tabs' chief rays for `r9a`, the tangential and
  * sagittal foci of the field-curve sections' rays for `r10a` and the transmission and flux into the image of the
  * vignetting tab's rays and lattices for `r11a`. `spot.native` has one, for `r7b`, `axial.native` one, for `r8b`,
- * `chief.native` one, for `r9b`, `curvature.native` one, for `r10b`, and `vignetting.native` one, for `r11b`.
+ * `chief.native` one, for `r9b`, `curvature.native` one, for `r10b`, `vignetting.native` one, for `r11b`, and
+ * `summary.native` one, for `r12b`.
  * `mtf.native` has five, for the rungs
  * `r4f`, `r5`, `r5g`, `r6b` and `r6c`; R6c reuses the native comparator and its sorting. `wavefront.native`
  * also has a comparator of raw OPD, restricted to matching grids, points and reference spheres.
@@ -61,4 +63,5 @@ export const COMPARATORS: ComparatorLookup = createComparatorLookup([
   chiefNativeComparator,
   curvatureNativeComparator,
   vignettingNativeComparator,
+  summaryNativeComparator,
 ]);

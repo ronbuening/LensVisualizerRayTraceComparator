@@ -3792,8 +3792,8 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6 or 6.6b. Policy versions 16, 17, 18, 19, 20 and 21 change the
-policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
+This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6, 6.6b or 6.7. Policy versions 16, 17, 18, 19, 20, 21 and 22
+change the policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
 other than the catalog's are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
@@ -3809,8 +3809,9 @@ draws no curve of a state outside its MTF's beam model, a diffractive surface am
 LensVisualizer #925 (`5ba17c20c`, Stage 6.6b) also moved the rays of the MTF launch, of the chief, curvature and
 vignetting sets below one degree and of the lateral colour: where a set's rays moved its request is a new one, which a
 `baseline check` names before the write. focus-stations (finite objects)
-and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b and R11b stay out
-of every baseline.
+and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b, R11b and R12b
+stay out of every baseline. Stage 6.7 adds no gated rung: the summary tab is covered by R1, which every rays baseline
+already holds.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
 another:
 
@@ -5006,3 +5007,179 @@ vignetting sets, the ask and the measurements are redone.
 **Store.** R11a's beam sets are the bulk of the run's store: 9.6 GB compressed for the benchmark's 8,352 R11a answers
 (about 1.15 MB each: every surface's hits of a beam's rays), against 0.7 GB for R10a and 0.05 GB for R9a. The
 Phase 6 end refresh writes them for benchmark, features and states on the real store.
+
+## Stage 6.7: the summary tab and cardinal elements
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r12b --jobs 4   # R12b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark
+npm run test:lv   # test/integration/lv/summary.test.ts: the tab's readouts against R1
+```
+
+LensVisualizer's summary tab (`OpticalSummaryTab.tsx`) presents `computeOpticalSummary` of the analysis drawer's request
+(`src/optics/analysis/summary/summary.ts`); its aperture control presents the marked f-number and, at close focus, an
+effective one. Nothing of either traces a ray of its own: the readouts are of the prepared state, the hook's two radii
+and its field geometry, and LensVisualizer's paraxial kernel.
+
+| Readout (section) | Computed as, in LensVisualizer | Covered |
+|---|---|---|
+| Path, Surfaces, Rear plates | the prepared lens's flags and surfaces | the case (R0): surfaces plus two a plate, sequential |
+| Focus, Zoom, Aberration | `focusDistanceAt` (authored close focus over `focusT`), the controls | not by R1 (the state's labels; the focus readout recorded) |
+| Current EFL | the hook's `computeFocusEFL`: the stored focal length at infinity, `-1 / u'` of one paraxial ray elsewhere | R1 `efl` (a measured margin of 8 units in the last place) |
+| Infinity EFL, Breathing | `eflAtZoom` (the stored station table); the percentage of the two | R1 `efl` of the zoom position's infinity case (the same margin); the percentage derived to the bit |
+| FFD, Hiatus, Cardinal EFL, BFD | `computeCardinalElementsFromState` (the paraxial system matrix) | R1 `frontFocalZ`, principal points, `efl`, `backFocus`: to the bit |
+| Working f/# | `\|currentEFL\| / entrancePupilDiameter` | R1 `efl` over twice its `entrancePupilSemiDiameter` (a measured margin of 1e-10 relative) |
+| Entrance pupil | twice the hook's `currentEPSD`: the stop over the height at the stop of a real ray 1e-4 mm from the axis, over 1e-4 | twice R1's `entrancePupilSemiDiameter` (the same margin) |
+| Physical stop | twice the hook's `currentPhysStopSD` | twice the case's stop radius, within two units (derived) |
+| Half field, Full field | the hook's analysis field geometry (`computeAnalysisFieldGeometry`): the field whose solved real chief ray lands at the image corner (half the stated image circle, or the format's diagonal) within 1e-4 mm; the last field whose chief ray clears every aperture where one clips it short of the corner; or the projection's authored trace field, no larger than the corner's | not by R1 (recorded by R12b); R9a judges the chief ray at that angle |
+| Image plane Z, Total track, Telephoto ratio | the prepared state's image plane, `imgZ - z[0]`, track over the current focal length | the case's `imageZ` and first vertex, to the bit; the ratio derived to the bit |
+
+Beside the readouts the tab shows a "Current Perspective Pose" section where the request's pose is active (no case has
+one), and the aperture control its "eff. f/" only where it differs from the mark by more than 0.05 and
+`showEffectiveAperture` is on.
+
+### Covered by R1
+
+`test/integration/lv/summary.test.ts` (tier 2) asks the tab of every state of the benchmark, states and focus-stations
+suites on the reference line at the design plane (113 states, 61 of them finite) and holds each readout to `lv`'s R1
+answer of the same case (`answerLvFirstOrder`) or to the case. To the bit: the cardinal focal length, back focus, front
+focus (the first vertex less R1's `frontFocalZ`), hiatus (R1's principal points), image plane and track, and the
+breathing and telephoto ratio by the tab's own expressions. Derived: the physical stop within two units in the last
+place (the hook's `(w × FOPEN) / N`, a product and a quotient each rounded once). Two measured margins, held only while
+the engine closure and the case are the ones they were measured with (`PINNED_CLOSURE`, `MEASURED_CASES`, as
+`mtf.test.ts` pins its figures), so that a lens edit cannot turn the tier red, and written down elsewhere: the current
+and infinity focal lengths within 8 units in the last place (measured 7, the Leica Summilux-C 18 mm at a focus station;
+2 on the benchmark: `-1 / u'` or the stored value against the cardinal construction), and the entrance pupil and the
+"Working f/#" within 1e-10 relative (measured 3.4e-11). The pupil's margin is not derived: the real ray 1e-4 mm from
+the axis departs from the paraxial one by terms of the order of `(1e-4 / r)^2`, and dividing by its height multiplies
+an absolute rounding of that height by 1e4. R1 judges each of those values against `ref` and optiland at 1e-9 mm. What
+R1 does not cover is `NOT_COVERED_BY_R1` in the test: the half field, the focus distance, the controls, the perspective
+pose section and the aperture control's "eff. f/".
+
+### No identical-ray rung
+
+The plan's row asks whether a value of the tab needs real rays. Two do, and neither warrants a rung of identical rays
+(owner, 2026-10-27):
+
+1. **The entrance pupil** is of a real ray 1e-4 mm from the axis. It agrees with the paraxial pupil R1 judges to
+   3.4e-11 relative at every state; the test above holds it there within 1e-10. A rung of that ray would judge its
+   height at the stop, about 1e-4 mm, at R2's 1e-8 mm: 1e-4 relative, about 10^6 times looser than the coverage it
+   already has.
+2. **The half field** is the angle whose solved chief ray lands at the image corner on 103 of the 113 states; on one
+   (the GF 80 mm f/1.7 at its close station, landing 25.07 mm short of its 27.39 mm corner) the last angle whose chief
+   ray clears every aperture, bisected eight times; on four the authored trace field (the Sony FE 20 mm's 47°, landing
+   21.23 mm, short of its 21.65 mm corner); on five an authored field the corner lowered (the Samyang AF 14 mm, the
+   Hasselblad XCD 25 mm, the Lumix S 26 mm and the Sigma 24 mm at close focus). R9a already traces the solved chief ray
+   at that angle (the distortion curve's edge, `chiefRaySets.ts`) in every engine at every infinity state of the three
+   suites (52), its landing judged at 1e-8 mm; the angle itself is LensVisualizer's solve, which no engine has.
+
+So Stage 6.7 adds no `r12a`; the gated column of the plan is R1, as it says.
+
+### R12b: the tab beside optiland's accessors (recorded)
+
+`summary.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines`, for an engine's own summary
+under the contract's definitions: `rearFocalZ` (what identifies the system), `focalLengthMm`,
+`entrancePupilDiameterMm`, `stopDiameterMm`, `imageSpaceFNumber` (OpticStudio's image-space F/#),
+`paraxialWorkingFNumber` (`1 / (2 n' |u'|)` of the paraxial marginal ray at the case's conjugate), `workingFNumber`
+(OpticStudio's working F/#, `1 / (2 n' sin θ')` of the real marginal ray), `nominalFNumber`, `totalTrackMm`,
+`halfFieldDeg`, each null where the engine states none under that definition.
+
+- **`lv`** (`answerLvSummary`, `src/engines/lv/summary.ts`, method `lv-summary-tab`): the tab's readouts of the drawer's
+  request (`lvSummaryRequest`: the hook's focal length of the state, the hook's two radii for the case's stop, its field
+  geometry), the "Working f/#" as `imageSpaceFNumber`; the aperture control's marked f-number (`lvNominalFNumber`); no
+  `paraxialWorkingFNumber` and no `workingFNumber` (LensVisualizer traces neither marginal ray for an f-number).
+  `sampling`: the control's "eff. f/" as `lvThinLensEffectiveFNumber` (a thin-lens estimate of stored pupils, of no
+  definition of the contract's), the infinity focal length, the breathing, the focus distance where there is one and
+  the stored wide-open nominal pupil. Refused before LensVisualizer is asked anything: `path.folded`, `line`,
+  `focus.off-design`, `lines.not-authored-reference`. The test above holds the answer to the tab asked with a request
+  spelled out again: to the bit on the 74 wide-open states, within two units elsewhere (a case carries its stop radius,
+  not the slider's f-number, which `lvPupilSeed`'s rule takes back from it).
+- **`optiland`** (`workers/python/lvrtc_optiland/summary.py`, method `optiland-summary`): of a verified optic of the line,
+  `F2()` and `f2()` as for `paraxial.first-order`, `|EPD()|`, `|FNO()|`, `1 / (2 n' |u'|)` of `marginal_ray()`, and
+  `get_working_FNO` on the axis on a `field_optic` under robust aiming (the rim rays through the stop's clip radius).
+  Its `stopDiameterMm` (the system aperture's value) and `totalTrackMm` (`total_track`) are read-backs of the case:
+  their figures hold LensVisualizer's tab to the case, not two engines to each other. `sampling`: `|XPD()|`, the
+  magnification of a finite object, `workingRimRaysVignetted` (aimed rim rays dark first at a surface of the case other
+  than the stop; one dark at the stop, clipped there by a rounding, or at no surface of the case is not counted), and
+  the working f-number under optiland's default paraxial aiming with `unaimedRimRaysLost`. Every setting is read back,
+  each with a deliberate fault in `test_summary.py`; its expected values are an exact rational trace and 60-digit rim
+  rays (`exact.py`), the aimed one behind a lens found by bisection in 60 digits.
+
+`summaryNativeComparator` (`src/compare/summaryNative.ts`) sorts each line by R5's `classifyNativeField`, the rear focal
+point standing for the landing (as R8b's near-axis intercept): unsupported, other wavelengths, rear focal points apart
+or unstated (data), then method, the only class in a figure. The figures are the differences of the values both answers
+state under one definition; a value one answer never states is unmeasured, the engine named (`paraxialWorkingFNumber`
+and `workingFNumber`, `lv-summary-tab states none`). The marked f-number and the half field are recorded and never in a
+figure. `summaryFactsOfRecorded` repeats the sorting from recorded values.
+
+| Metric | Policy 22 (accepted by the owner, 2026-10-27) |
+|---|---|
+| `rearFocus.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R11b's; measured 2.0e-13 mm) |
+| `imageSpaceFNumber.maxAbs` | attention band 2e-9 (ten times the measured 1.45e-10, rounded up) |
+| `entrancePupilDiameter.maxAbs` | attention band 3e-9 mm (ten times the measured 3.0e-10 mm, rounded up) |
+| `focalLength.maxAbs`, `stopDiameter.maxAbs`, `totalTrack.maxAbs` (mm), `paraxialWorkingFNumber.maxAbs`, `workingFNumber.maxAbs` | unit only: no band |
+
+`test/integration/optiland/r12.test.ts` (tier 3) runs R12b on the Z 50 mm f/1.2 (reference line at the design plane,
+photopic, best axial focus and the MTF tab's f/8) and the Sigma 105 mm macro's two certified stations.
+
+### Measured, 2026-10-27
+
+At LensVisualizer `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`, `--rungs r12b --jobs 4` into a
+temporary `LVRTC_RUNS_DIR`, each suite in about 9 s:
+
+| Suite | Jobs | Pairwise pairs | `imageSpaceFNumber.maxAbs` | `entrancePupilDiameter.maxAbs` |
+|---|---|---|---:|---:|
+| benchmark | 96: 72 ok, 24 unsupported (`lv`, `focus.off-design`) | 24 RECORDED, 24 UNSUPPORTED | 1.05e-10 | 1.55e-10 mm |
+| states | 128: 96 ok, 32 unsupported | 32 RECORDED, 32 UNSUPPORTED | 1.45e-10 | 5.1e-11 mm |
+| focus-stations | 122 ok | 61 RECORDED | 9.5e-11 | 3.0e-10 mm |
+
+Over all three: rear focal points within 2.0e-13 mm, focal lengths within 6.8e-13 mm, stops within 7.1e-15 mm, tracks
+equal; no line set aside, no ATTENTION (both bands hold); `paraxialWorkingFNumber.maxAbs` and `workingFNumber.maxAbs`
+unmeasured on every pair. What the rung records of the definitions, from the values each answer records
+(`docs/gotchas.md`, "Summary"; the brief `docs/upstream/lensvisualizer-summary-conventions.md`, not filed):
+
+| Relation | Benchmark (24) | states (32) | focus-stations (61) |
+|---|---|---|---|
+| tab "Working f/#" against the real rim rays' working F/# | −4.8% (Plena) to +0.45% (GF 63 mm) | −2.3% to +0.16% | −78% (Sigma 105 mm at 1:1, 1.03 against 4.75) to +38% (GF 80 mm, rim rays vignetted) |
+| marked f-number against the working F/# | wide open within 0.34%; at f/8 up to +4.8% (Plena) | up to +4.95% (Plena at f/11) | −39% to +35% (the mark is of infinity) |
+| `lvThinLensEffectiveFNumber` against optiland's paraxial working F/# | the mark at infinity: up to +5.1% (Plena at f/8) | up to +5.1% | −8.5% (Sigma 105 mm at 1:1) to +58% (Sony FE 600 mm) |
+| optiland's aimed rim rays dark at another surface | 2 (Sigma 35 mm, surface 13 by 0.58 mm; Canon EF 135 mm, 1.3 µm) | 0 | 12 |
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and the 15 NEW of Stage 6.6's new certified station, folded 96,
+diffractive 96).
+
+### Industry alignment
+
+| Value | LensVisualizer | OpticStudio | optiland |
+|---|---|---|---|
+| EFFL | `computeFocusEFL`, `-1 / u'` (stored at infinity); the cardinal construction's | paraxial, image space, primary wavelength | `f2()` |
+| BFL | the tab's BFD: rear focal point less the last lens vertex, rear plates inside | from the last surface before the image surface (to be confirmed in its Conventions and Definitions) | `F2()` from the image surface (the worker adds the image plane) |
+| Image-space F/# | the tab's "Working f/#": `\|EFL\| / EPD`, also at finite conjugates | EFFL / ENPD at infinite conjugates, whatever the object | `FNO()` |
+| Paraxial working F/# | none; the control's "eff. f/" is a thin-lens estimate, `N (1 + \|m\| / p)` | `1 / (2 n' tan θ')` of the paraxial marginal ray at the conjugate | none (the worker forms `1 / (2 n' \|u'\|)` of `marginal_ray()`) |
+| Working F/# | none | `1 / (2 n' sin θ')` of the real marginal ray at the conjugate | `get_working_FNO` (mean of four rim rays' `n'^2 sin^2`; vignetted ones left out) |
+| Marked f-number | the slider's N; sizes the stop by a real ray wide open, linear stopped down (exceptions in `docs/gotchas.md`) | none: the system aperture is a value of the user's (EPD, image-space F/#, float by stop size, ...) | none |
+| ENPD, ENPP | EPD of a real ray 1e-4 mm from the axis; no position in the tab (the stored one is drawn) | paraxial | `EPD()`, `EPL()` |
+| EXPD, EXPP | none in the tab (stored, drawn) | paraxial | `XPD()`, `XPL()` |
+| Paraxial magnification | none in the tab (R1 records the kernel's) | paraxial, finite conjugates | `magnification()` |
+| Total track | `imgZ - z[0]` | TOTR, first surface to image surface | `total_track` |
+
+R1 holds the first-order values of all three engines to each other at 1e-9 mm; they agree in definition except the
+BFL's reference surface where a plate is modelled. The f-numbers are where the three part: LensVisualizer's label names
+OpticStudio's working F/# and presents its image-space F/#, its marked f-number is neither at a stopped-down state, and
+its effective f-number is an estimate of the paraxial working one.
+
+### Owner decisions, 2026-10-27
+
+1. **R12b is accepted as proposed**: recorded, of `lv` and `optiland`, only where named, out of every baseline;
+   `rearFocus.maxAbs` the limit of the sorting at 1e-5 mm; attention bands of 2e-9 on `imageSpaceFNumber.maxAbs` and
+   3e-9 mm on `entrancePupilDiameter.maxAbs`, none on the other figures (policy 22).
+2. **No `r12a`**, on the evidence above.
+3. **LensVisualizer is to adopt OpticStudio's three f-numbers under their names** (image-space f/# = EFL / EPD; the
+   paraxial working f/# of LensVisualizer's own paraxial trace at the current focus, in place of the thin-lens "eff.
+   f/"; the working f/# of the real marginal ray, `1 / (2 n' sin θ')`) **and one stop rule at every f-number**: the
+   paraxial entrance pupil `EFL / N` (OpticStudio's image-space F/# aperture), in place of the unaimed, unclipped real
+   sizing ray and the linear stop-down. The change is pending (the owner holds its prompt). Until it lands R12b records
+   LensVisualizer as it is; afterwards the canaries of those lines fail first, every case's stop radius moves (so every
+   case id and baseline record), and the summary's request, R12b's asks and these measurements are redone.

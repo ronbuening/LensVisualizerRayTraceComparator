@@ -98,6 +98,7 @@ class WorkerTest(TempDirTest):
                     "axial.native": {"version": 1},
                     "chief.native": {"version": 1},
                     "curvature.native": {"version": 1},
+                    "summary.native": {"version": 1},
                 },
                 "deterministic": True,
                 "maxConcurrency": 1,

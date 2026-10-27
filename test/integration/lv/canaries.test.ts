@@ -2320,3 +2320,182 @@ test("the vignetting tab still presents the curve the engine answers vignetting.
   );
   assertSource(height, "return trace.y + trace.u * imagePlaneTransfer;", landing);
 });
+
+// Stage 6.7, at LV 098c91ef6 (closure fef2e248, with the stage's names): the summary tab's request and readouts and the
+// aperture control's effective f-number (src/engines/lv/summary.ts) restate these lines; test/integration/lv/summary.test.ts
+// holds the tab's readouts to lv's R1 answer and to the case, and lv's summary.native to the tab.
+test(
+  "the summary tab still presents the drawer's request as the engine answers summary.native from it",
+  { skip },
+  () => {
+    const hook = "src/components/hooks/useLensComputation.ts";
+    const request =
+      "lvSummaryRequest in src/engines/lv/summary.ts restates the hook's focal length and the drawer's request";
+    // The hook's focal length of the state: computeFocusEFL of a request of its prepared state, which reads nothing else.
+    assertSource(
+      hook,
+      "const dynamicEFL = useMemo(() => (firstOrderRequest ? computeFocusEFL(firstOrderRequest) : 0), [firstOrderRequest]);",
+      request,
+    );
+    assertSource(
+      hook,
+      "createAnalysisRequest({ preparedState, dynamicEFL: L.EFL, currentEPSD: L.EP.epSD, currentPhysStopSD: L.stopPhysSD, })",
+      request,
+    );
+    assertSource(
+      "src/optics/analysis/summary/breathing.ts",
+      "return eflAtPreparedState(request.preparedGeometry);",
+      request,
+    );
+    // The drawer hands the tab its request, with the hook's focal length; the tab computes its summary of that request.
+    const drawer = "src/components/layout/lensDiagram/AnalysisDrawerContent.tsx";
+    assertSource(drawer, "dynamicEFL: analysisInputs.dynamicEFL,", request);
+    const renderers = "src/components/layout/lensDiagram/analysisTabRenderers.tsx";
+    assertSource(renderers, "summary: ({ L, t, preparedState, analysisContext, inputs }) => (", request);
+    const tab = "src/components/display/analysis/OpticalSummaryTab.tsx";
+    assertSource(tab, "analysisContext?.request ??", request);
+    assertSource(tab, "const summary = useMemo(() => context.computeOpticalSummary(), [context]);", request);
+    assertSource(
+      "src/optics/analysis/analysisContext.ts",
+      '(opticalSummary ??= computeSection("summary", () => analysisJobs.computeOpticalSummary(request))),',
+      request,
+    );
+    assertSource(
+      "src/optics/analysis/analysisJobs.ts",
+      "computeOpticalSummary(request: AnalysisRequest) { return computeOpticalSummary(request); },",
+      request,
+    );
+    // The readouts the answer writes down, under the labels the tab gives them.
+    const answer = "answerLvSummary in src/engines/lv/summary.ts maps each readout to a value of the contract";
+    assertSource(tab, '<AnalysisMetricRow label="Current EFL" value={formatMm(summary.currentEFLMm)} t={t} />', answer);
+    assertSource(
+      tab,
+      '<AnalysisMetricRow label="Working f/#" value={formatFNumber(summary.effectiveFNumber)} t={t} />',
+      answer,
+    );
+    assertSource(
+      tab,
+      '<AnalysisMetricRow label="Entrance pupil" value={formatMm(summary.entrancePupilDiameterMm)} t={t} />',
+      answer,
+    );
+    assertSource(
+      tab,
+      '<AnalysisMetricRow label="Physical stop" value={formatMm(summary.physicalStopDiameterMm)} t={t} />',
+      answer,
+    );
+    assertSource(tab, '<AnalysisMetricRow label="Half field" value={formatDeg(summary.halfFieldDeg)} t={t} />', answer);
+    assertSource(tab, '<AnalysisMetricRow label="Total track" value={formatMm(summary.totalTrackMm)} t={t} />', answer);
+    assertSource(tab, '<AnalysisMetricRow label="BFD" value={formatMm(summary.bfdMm)} t={t} />', answer);
+    // What the "Working f/#" is: the current focal length over the diameter of the hook's pupil, at every focus.
+    const summary = "src/optics/analysis/summary/summary.ts";
+    const working = "docs/gotchas.md (Summary) and the owner's brief read the tab's Working f/# as this quotient";
+    assertSource(
+      summary,
+      "const entrancePupilDiameterMm = currentEPSD > 0 ? finiteOrNull(currentEPSD * 2) : null;",
+      working,
+    );
+    assertSource(
+      summary,
+      "currentEFLMm !== null && entrancePupilDiameterMm !== null && entrancePupilDiameterMm > 1e-9 ? Math.abs(currentEFLMm) / entrancePupilDiameterMm : null;",
+      working,
+    );
+    assertSource(summary, "const cardinals = computeCardinalElements(request);", answer);
+    assertSource(
+      "src/optics/analysis/summary/cardinals.ts",
+      ": computeCardinalElementsFromState(request.preparedGeometry);",
+      "rearFocalZ is computeCardinalElementsFromState's rear focal point, the construction of the tab's BFD",
+    );
+    assertSource(summary, "focusDistanceM: focusDistanceAt(state.focusT, L, state.zoomT),", answer);
+    // The hook's pupil: the stop radius over the height at the stop of a real ray 1e-4 mm from the axis.
+    const pupil = "the tab's entrance pupil, held to lv's R1 radius in test/integration/lv/summary.test.ts";
+    assertSource(
+      "src/optics/field/geometry.ts",
+      "const realMarg = traceStateSurfacesReal(state, delta, 0, { stopAt: stopIndex });",
+      pupil,
+    );
+    assertSource(
+      "src/optics/field/geometry.ts",
+      "const yRatio = Number.isFinite(realMarg.y) ? realMarg.y / delta : paraxMarg.y;",
+      pupil,
+    );
+    assertSource(
+      "src/optics/field/geometry.ts",
+      "const epSD = Math.abs(geom.yRatio) > 1e-9 ? Math.abs(stopSD / geom.yRatio) : 0;",
+      pupil,
+    );
+    // The half field: the hook's analysis field geometry, the field whose solved chief ray lands at the image corner.
+    const field =
+      "NOT_COVERED_BY_R1 in test/integration/lv/summary.test.ts and docs/gotchas.md describe the half field";
+    assertSource(
+      "src/optics/state/fieldAdapters.ts",
+      "return computeAnalysisFieldGeometry(prepareState(compiledLensFromRuntime(L), focusT, zoomT, aberrationT));",
+      field,
+    );
+    const imageHeight = "src/optics/field/imageHeight.ts";
+    assertSource(
+      imageHeight,
+      "const maxImageHeight = (state.lens.source?.catalog.imageCircleMm ?? format.diagonalMm) / 2;",
+      field,
+    );
+    assertSource(imageHeight, "if (limit?.settled) return { ...geometry, halfFieldDeg: limit.fieldDeg };", field);
+    assertSource(
+      imageHeight,
+      "if (Math.abs(fMid) < ANALYSIS_FIELD_CORNER_TOLERANCE_MM) return { fieldDeg: mid, settled: true };",
+      field,
+    );
+    assertSource(imageHeight, "rectilinearProjectionMaxTraceField(state.lens.projection.config) === undefined;", field);
+  },
+);
+
+test("the aperture control still marks the slider's f-number and shows its effective one beside it", { skip }, () => {
+  const hook = "src/components/hooks/useLensComputation.ts";
+  const control = "answerLvSummary in src/engines/lv/summary.ts records the control's marked and effective f-numbers";
+  assertSource(hook, "const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;", control);
+  assertSource(hook, "() => (L ? effectiveFNumber(fNumber, focusT, zoomT, L, aberrationT) : fNumber),", control);
+  assertSource(
+    "src/components/controls/DiagramControls.tsx",
+    'displayValue={`f/${formatFNumber(fNumber)}${showEffectiveAperture && effApertureDiffers ? ` (eff. f/${formatFNumber(effectiveFNum)})` : ""}`}',
+    control,
+  );
+  assertSource(
+    "src/components/controls/DiagramControls.tsx",
+    "const effApertureDiffers = Math.abs(effectiveFNum - fNumber) > 0.05;",
+    "NOT_COVERED_BY_R1 says the control shows its eff. f/ only above that difference",
+  );
+  const nominal = "the owner's brief: LensVisualizer's marked f-number sizes its stop with a real ray";
+  const constants = "src/optics/first-order/lensConstants.ts";
+  assertSource(constants, "const nominalEPSD = apertureReferenceFocalLength / (2 * baseNomFno);", nominal);
+  assertSource(constants, "const nomRealY = realTraceStopHeight(geometry, nominalEPSD, 0, stopIdx);", nominal);
+  // The rule's exceptions: an authored stop schedule, a stop inside an element, a fixed iris, a fisheye's projection
+  // focal length, and the paraxial height where the real ray fails.
+  assertSource(
+    constants,
+    "if (data.zoomStopSemiDiameters) { S[stopIdx].sd = data.zoomStopSemiDiameters[0]; } else if (!preserveAuthoredStopSD) {",
+    nominal,
+  );
+  assertSource(
+    constants,
+    "const apertureReferenceFocalLength = fisheyeProjectionFocalLengthAtZoom(projection, 0) ?? nomEFL;",
+    nominal,
+  );
+  assertSource(
+    constants,
+    'isZoom && (data.zoomStopSemiDiameters || (data.zoomApertureModel !== "fixed-iris" && !preserveAuthoredStopSD))',
+    nominal,
+  );
+  assertSource(
+    constants,
+    "data.zoomStopSemiDiameters?.[zi] ?? Math.abs(isFinite(zRealY) && Math.abs(zRealY) > 1e-15 ? zRealY : zNomEP * epT.y);",
+    nominal,
+  );
+  assertSource(
+    constants,
+    "S[stopIdx].sd = isFinite(nomRealY) && Math.abs(nomRealY) > 1e-15 ? nomRealY : nominalEPSD * nomYRatio;",
+    nominal,
+  );
+  assertSource(
+    "src/optics/first-order/fNumber.ts",
+    "return nominalFNumber * (1 + Math.abs(m) / (p > 1e-10 ? p : 1));",
+    "the effective f-number is a thin-lens bellows estimate of the marked one",
+  );
+});

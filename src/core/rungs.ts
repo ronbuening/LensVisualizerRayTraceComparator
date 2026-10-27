@@ -18,6 +18,8 @@ import { CURVATURE_NATIVE } from "../contract/quantities/curvatureNative.ts";
 import type { CurvatureNativeSpec } from "../contract/quantities/curvatureNative.ts";
 import { VIGNETTING_NATIVE } from "../contract/quantities/vignettingNative.ts";
 import type { VignettingNativeSpec } from "../contract/quantities/vignettingNative.ts";
+import { SUMMARY_NATIVE } from "../contract/quantities/summaryNative.ts";
+import type { SummaryNativeSpec } from "../contract/quantities/summaryNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -762,6 +764,42 @@ export const r11bRung: RungDefinition = Object.freeze({
     ),
 });
 
+/** The engines of the rung `r12b`: LensVisualizer, whose summary tab is asked, and optiland's own accessors. */
+export const R12B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The `summary.native` spec of a case: its lines whose indices are the prescription's own (`indexSource`
+ * "authored"), at which LensVisualizer's summary tab is first-order; null for a case of no such line (every photopic
+ * and spectral run) and for a case LensVisualizer did not export (`provenance.source.kind` other than "lv-lens"), whose
+ * state has no summary tab, as the other rungs about engines of their own ask nothing of such a case. Decided from the
+ * case alone: an engine refuses a line it cannot answer.
+ */
+export function summaryNativeSpec(opticalCase: OpticalCase): SummaryNativeSpec | null {
+  if (opticalCase.provenance.source.kind !== "lv-lens") return null;
+  const lines = opticalCase.conditions.lines.flatMap((line, index) => (line.indexSource === "authored" ? [index] : []));
+  return lines.length === 0 ? null : { lines };
+}
+
+/**
+ * The rung `r12b`, LensVisualizer's summary tab and aperture control beside an engine's own first-order summary: one
+ * `summary.native` request (`summaryNativeSpec`), at the case's lines of the prescription's own indices, asked of
+ * LensVisualizer, whose answer is its tab's readouts and its control's f-numbers, and of optiland, whose answer is its
+ * own paraxial accessors and its working f-number of the real rim rays. Recorded, of those two engines and of no other,
+ * and run only where it is named: optiland is not on every machine.
+ */
+export const r12bRung: RungDefinition = Object.freeze({
+  id: "r12b",
+  quantity: SUMMARY_NATIVE,
+  engines: R12B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
+    const spec = summaryNativeSpec(opticalCase);
+    return spec === null
+      ? []
+      : [makeRequest({ caseId: opticalCase.id, quantity: SUMMARY_NATIVE, spec: spec as JsonObject })];
+  },
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
@@ -790,6 +828,7 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r10bRung,
   r11aRung,
   r11bRung,
+  r12bRung,
 ]);
 
 /**

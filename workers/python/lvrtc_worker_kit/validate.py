@@ -797,6 +797,51 @@ def validate_vignetting_native(part: str, value: Any, schemas: SchemaSet | None 
     return issues
 
 
+SUMMARY_VALUES: tuple[str, ...] = (
+    "rearFocalZ",
+    "focalLengthMm",
+    "entrancePupilDiameterMm",
+    "stopDiameterMm",
+    "imageSpaceFNumber",
+    "paraxialWorkingFNumber",
+    "workingFNumber",
+    "nominalFNumber",
+    "totalTrackMm",
+    "halfFieldDeg",
+)
+"""The values of a ``summary.native`` line, in the order of ``SUMMARY_VALUES`` in contract/quantities/summaryNative.ts."""
+
+
+def validate_summary_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/summaryNative.ts: schema, the lines of a spec, and what a line states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("summary.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        return issues
+    for at, line in enumerate(value["lines"]):
+        path = f"/lines/{at}"
+        stated = [line[name] for name in SUMMARY_VALUES if line[name] is not None]
+        if line["status"] == "unavailable":
+            if "reason" not in line or stated:
+                issue(path, "an unavailable line has a reason and states no value")
+            continue
+        if not stated:
+            issue(path, "an ok line states at least one value")
+        for name in SUMMARY_VALUES:
+            entry = line[name]
+            if entry is not None and not math.isfinite(entry):
+                issue(f"{path}/{name}", "a value an ok line states is a finite number")
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

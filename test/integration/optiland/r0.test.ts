@@ -142,6 +142,7 @@ test(
       "axial.native": { version: 1 },
       "chief.native": { version: 1 },
       "curvature.native": { version: 1 },
+      "summary.native": { version: 1 },
     });
     const opticalCase: OpticalCase = JSON.parse(readFileSync(caseFixture("all-features"), "utf8"));
     const request = makeRequest({ caseId: opticalCase.id, quantity: SYSTEM_DESCRIBE, spec: {} });

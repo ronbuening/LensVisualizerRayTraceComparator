@@ -162,6 +162,7 @@ test("lv describes itself: LensVisualizer's engine closure, its commit, its adap
     "chief.native": { version: QUANTITIES.get("chief.native")?.version },
     "curvature.native": { version: QUANTITIES.get("curvature.native")?.version },
     "vignetting.native": { version: QUANTITIES.get("vignetting.native")?.version },
+    "summary.native": { version: QUANTITIES.get("summary.native")?.version },
     "system.describe": { version: QUANTITIES.get("system.describe")?.version },
   });
   // Whatever LensVisualizer's exporter writes, LensVisualizer answers for.

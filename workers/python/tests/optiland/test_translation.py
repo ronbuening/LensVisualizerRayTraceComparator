@@ -233,6 +233,7 @@ class DeclarationTest(unittest.TestCase):
                 "axial.native": {"version": 1},
                 "chief.native": {"version": 1},
                 "curvature.native": {"version": 1},
+                "summary.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])

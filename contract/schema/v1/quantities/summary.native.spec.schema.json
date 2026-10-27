@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:summary.native.spec",
+  "title": "summary.native spec",
+  "description": "What a summary.native request asks for: an engine's own first-order summary of a system, as it presents it, at each requested line: the f-numbers it states and the pupil, stop, focal length and track they are of, each under the definition the contract names. Code checks that the lines are distinct.",
+  "type": "object",
+  "properties": {
+    "lines": {
+      "description": "Indices of lines of the case, in conditions.lines, each once.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["lines"],
+  "additionalProperties": false
+}

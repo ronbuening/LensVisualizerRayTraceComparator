@@ -35,6 +35,8 @@ import type {
   CurvatureNativeSpec,
 } from "../../src/contract/quantities/curvatureNative.ts";
 import { VIGNETTING_NATIVE } from "../../src/contract/quantities/vignettingNative.ts";
+import { SUMMARY_NATIVE } from "../../src/contract/quantities/summaryNative.ts";
+import type { SummaryNativeData, SummaryNativeSpec } from "../../src/contract/quantities/summaryNative.ts";
 import type {
   VignettingNativeData,
   VignettingNativeField,
@@ -996,6 +998,86 @@ export const VIGNETTING_DATA_TWO_LINES: VignettingNativeData = {
   ),
   method: { name: "synthetic-lattice", params: {} },
   notes: ["the second line states no landing"],
+};
+
+// ── summary.native ───────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own first-order summary. The numbers describe no lens: every value is a dyadic
+// fraction.
+
+/** A summary at the reference line. */
+export const SUMMARY_SPEC_ONE_LINE: SummaryNativeSpec = { lines: [0] };
+
+/** A summary at two lines. */
+export const SUMMARY_SPEC_TWO_LINES: SummaryNativeSpec = { lines: [0, 1] };
+
+/**
+ * An answer to `SUMMARY_SPEC_ONE_LINE` of an engine that marks its aperture and states its image-space f-number of a
+ * pupil it presents and a half field, but no f-number of a paraxial or a real marginal ray: an estimate of its own is
+ * stated under `sampling`.
+ */
+export const SUMMARY_DATA_ONE_LINE: SummaryNativeData = {
+  lines: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      rearFocalZ: 96.25,
+      focalLengthMm: 50.5,
+      entrancePupilDiameterMm: 25.25,
+      stopDiameterMm: 20.5,
+      imageSpaceFNumber: 2,
+      paraxialWorkingFNumber: null,
+      workingFNumber: null,
+      nominalFNumber: 2.125,
+      totalTrackMm: 90.75,
+      halfFieldDeg: 23.5,
+      sampling: { focusDistanceM: 0.5, nominalEntrancePupilDiameterMm: 23.75, thinLensEffectiveFNumber: 2.125 },
+    },
+  ],
+  method: { name: "synthetic-summary", params: {} },
+  notes: [],
+};
+
+/** An answer to `SUMMARY_SPEC_TWO_LINES` of an engine that has no summary of its second line. */
+export const SUMMARY_DATA_TWO_LINES: SummaryNativeData = {
+  lines: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      rearFocalZ: 96.25,
+      focalLengthMm: 50.5,
+      entrancePupilDiameterMm: 25.25,
+      stopDiameterMm: 20.5,
+      imageSpaceFNumber: 2,
+      paraxialWorkingFNumber: 2,
+      workingFNumber: 2.0625,
+      nominalFNumber: null,
+      totalTrackMm: 90.75,
+      halfFieldDeg: null,
+      sampling: { exitPupilDiameterMm: 30.5 },
+    },
+    {
+      line: 1,
+      wavelengthNm: 656.25,
+      status: "unavailable",
+      reason: "no-paraxial-data",
+      rearFocalZ: null,
+      focalLengthMm: null,
+      entrancePupilDiameterMm: null,
+      stopDiameterMm: null,
+      imageSpaceFNumber: null,
+      paraxialWorkingFNumber: null,
+      workingFNumber: null,
+      nominalFNumber: null,
+      totalTrackMm: null,
+      halfFieldDeg: null,
+      sampling: {},
+    },
+  ],
+  method: { name: "synthetic-accessors", params: {} },
+  notes: ["the second line has no paraxial data"],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2938,6 +3020,28 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       "shifts-member": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/tangentialShiftMm", null, "additionalProperties"),
       "missing-notes": fault(VIGNETTING_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
       "no-fields": fault(VIGNETTING_DATA_TWO_LINES, "/fields", [], "minItems"),
+    },
+  },
+  [`${SUMMARY_NATIVE}.spec`]: {
+    valid: { "one-line": SUMMARY_SPEC_ONE_LINE, "two-lines": SUMMARY_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(SUMMARY_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "negative-line": fault(SUMMARY_SPEC_ONE_LINE, "/lines/0", -1, "minimum"),
+      "missing-lines": fault(SUMMARY_SPEC_ONE_LINE, "/lines", REMOVE, "required", ""),
+      "fields-stated": fault(SUMMARY_SPEC_ONE_LINE, "/fieldAnglesDeg", [0], "additionalProperties"),
+      "lines-as-number": fault(SUMMARY_SPEC_ONE_LINE, "/lines", 0, "type"),
+    },
+  },
+  [`${SUMMARY_NATIVE}.data`]: {
+    valid: { "one-line": SUMMARY_DATA_ONE_LINE, "two-lines-and-unavailable": SUMMARY_DATA_TWO_LINES },
+    invalid: {
+      "status-unconverged": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/status", "unconverged", "enum"),
+      "f-number-as-text": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/imageSpaceFNumber", "2", "type"),
+      "negative-pupil": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/entrancePupilDiameterMm", -25.25, "minimum"),
+      "missing-working": fault(SUMMARY_DATA_TWO_LINES, "/lines/0/workingFNumber", REMOVE, "required", "/lines/0"),
+      "magnification-member": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/magnification", 0.5, "additionalProperties"),
+      "missing-notes": fault(SUMMARY_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-lines": fault(SUMMARY_DATA_TWO_LINES, "/lines", [], "minItems"),
     },
   },
   [`${WAVEFRONT_NATIVE}.spec`]: {

@@ -783,6 +783,37 @@ export interface LvVignettingSample {
   readonly relativeIllumination: number;
 }
 
+/**
+ * LV's OpticalSummaryMetrics: what its summary tab presents for a request. Lengths are in mm, the focus distance in
+ * metres; null where LV has no finite value.
+ */
+export interface LvOpticalSummary {
+  readonly currentEFLMm: number | null;
+  readonly infinityEFLMm: number | null;
+  readonly breathingPercent: number | null;
+  /** Labelled "Working f/#" by the tab: the current focal length over the entrance pupil's diameter. */
+  readonly effectiveFNumber: number | null;
+  readonly entrancePupilDiameterMm: number | null;
+  readonly physicalStopDiameterMm: number | null;
+  readonly halfFieldDeg: number | null;
+  readonly fullFieldDeg: number | null;
+  readonly focusDistanceM: number | null;
+  readonly zoomT: number;
+  readonly focusT: number;
+  readonly aberrationT: number;
+  readonly imagePlaneZMm: number | null;
+  readonly totalTrackMm: number | null;
+  readonly telephotoRatio: number | null;
+  readonly surfaceCount: number;
+  readonly rearPlateCount: number;
+  readonly rearPlateThicknessMm: number;
+  readonly opticalPath: "sequential" | "folded";
+  readonly cardinalEFLMm: number | null;
+  readonly bfdMm: number | null;
+  readonly ffdMm: number | null;
+  readonly principalHiatusMm: number | null;
+}
+
 /** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
 export interface LvAnalysisRequest {
   readonly preparedGeometry: LvPreparedState;
@@ -1435,4 +1466,18 @@ export interface LvApi {
   computeVignettingCurve(request: LvAnalysisRequest): readonly LvVignettingSample[];
   /** The unit direction of a meridional slope dy/dz, normalised as LV's meridional launch normalises it. */
   directionFromMeridionalSlope(u: number): LvVec3 | null;
+  /** What LV's summary tab presents for a request: first-order, aperture, field and geometry readouts of the state. */
+  computeOpticalSummary(request: LvAnalysisRequest): LvOpticalSummary;
+  /**
+   * The effective f-number LV's aperture control shows beside the marked one ("eff. f/"): the marked f-number at
+   * infinity, and its close-focus estimate `N (1 + |m| / p)` elsewhere, of a thin-lens magnification and LV's stored
+   * pupils.
+   */
+  effectiveFNumber(
+    nominalFNumber: number,
+    focusT: number,
+    zoomT: number,
+    L: LvRuntimeLens,
+    aberrationT?: number,
+  ): number;
 }

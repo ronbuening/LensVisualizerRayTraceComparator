@@ -1,0 +1,45 @@
+{
+  "lines": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "status": "ok",
+      "rearFocalZ": 96.25,
+      "focalLengthMm": 50.5,
+      "entrancePupilDiameterMm": 25.25,
+      "stopDiameterMm": 20.5,
+      "imageSpaceFNumber": 2,
+      "paraxialWorkingFNumber": 2,
+      "nominalFNumber": null,
+      "totalTrackMm": 90.75,
+      "halfFieldDeg": null,
+      "sampling": {
+        "exitPupilDiameterMm": 30.5
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "status": "unavailable",
+      "reason": "no-paraxial-data",
+      "rearFocalZ": null,
+      "focalLengthMm": null,
+      "entrancePupilDiameterMm": null,
+      "stopDiameterMm": null,
+      "imageSpaceFNumber": null,
+      "paraxialWorkingFNumber": null,
+      "workingFNumber": null,
+      "nominalFNumber": null,
+      "totalTrackMm": null,
+      "halfFieldDeg": null,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-accessors",
+    "params": {}
+  },
+  "notes": [
+    "the second line has no paraxial data"
+  ]
+}

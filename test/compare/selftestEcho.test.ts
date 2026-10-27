@@ -167,6 +167,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["rays.trace", "r9a"],
       ["selftest.echo", undefined],
       ["spot.native", "r7b"],
+      ["summary.native", "r12b"],
       ["system.describe", undefined],
       ["vignetting.native", "r11b"],
       ["wavefront.native", undefined],

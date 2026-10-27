@@ -339,6 +339,7 @@ test("with an interpreter and no other configuration the engine answers hello as
       "axial.native": { version: 1 },
       "chief.native": { version: 1 },
       "curvature.native": { version: 1 },
+      "summary.native": { version: 1 },
     },
     deterministic: true,
     maxConcurrency: 1,

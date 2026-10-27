@@ -7,8 +7,8 @@
 | Suite | fake-faults |
 | Suite hash | d0a97adbd49af2fa7095fb5733b69d9e1f76813ad91912feec9f99f6f432d7f9 |
 | Contract version | 1.0 |
-| Policy | rungs v21 |
-| Policy hash | f7764d5e65563ec14db9a4c3f7764e5ee5f55cdd0f542a5940b8b11b20839137 |
+| Policy | rungs v22 |
+| Policy hash | df9d74145e3804a40b9cd9a50e520451d76e1fc49a1f52328164226e98eec10d |
 
 ### Engines
 

@@ -61,6 +61,7 @@ export const LV_IMPORT_MANIFEST = [
       "traceSkewRay",
       "skewImagePlaneIntercept",
       "isHeavyLensForRayWork",
+      "effectiveFNumber",
     ),
   },
   {
@@ -106,6 +107,7 @@ export const LV_IMPORT_MANIFEST = [
         "computeOffAxisFieldGeometryScalar",
         "computeFieldCurvatureBundle",
         "computeVignettingCurve",
+        "computeOpticalSummary",
       ),
       { name: "COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES", as: "comaRingSamples", kind: "object" },
       { name: "COMA_PREVIEW_FIELD_FRACTIONS", as: "comaFieldFractions", kind: "object" },

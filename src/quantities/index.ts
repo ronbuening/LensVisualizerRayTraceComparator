@@ -9,6 +9,7 @@ import { createQuantityRegistry } from "./registry.ts";
 import type { QuantityLookup } from "./registry.ts";
 import { selftestEchoQuantity } from "./selftestEcho.ts";
 import { spotNativeQuantity } from "./spotNative.ts";
+import { summaryNativeQuantity } from "./summaryNative.ts";
 import { systemDescribeQuantity } from "./systemDescribe.ts";
 import { vignettingNativeQuantity } from "./vignettingNative.ts";
 import { wavefrontNativeQuantity } from "./wavefrontNative.ts";
@@ -25,6 +26,7 @@ const { has, get, list } = createQuantityRegistry([
   chiefNativeQuantity,
   curvatureNativeQuantity,
   vignettingNativeQuantity,
+  summaryNativeQuantity,
 ]);
 
 /**

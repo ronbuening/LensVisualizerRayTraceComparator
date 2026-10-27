@@ -69,6 +69,7 @@ test("system.describe and paraxial.first-order are registered, at the versions t
       "rays.trace",
       "selftest.echo",
       "spot.native",
+      "summary.native",
       "system.describe",
       "vignetting.native",
       "wavefront.native",

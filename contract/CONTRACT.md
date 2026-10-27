@@ -1547,6 +1547,7 @@ and `validateData`.
 | `chief.native` | 1 | `quantities/chiefNative.ts` | an engine's own figures of the chief rays across the field (distortion and pupils at a line, lateral colour over lines) at given field angles, or the chief rays it traced for them, and what its figures are relative to |
 | `curvature.native` | 1 | `quantities/curvatureNative.ts` | an engine's own field curves at given field angles and lines: the tangential and the sagittal focus of each field along the axis from the image plane of the case, and the landing of the chief ray they are relative to |
 | `vignetting.native` | 1 | `quantities/vignettingNative.ts` | an engine's own vignetting and relative illumination at given field angles and lines, each relative to the axis, and the landing of the chief ray that identifies each field |
+| `summary.native` | 1 | `quantities/summaryNative.ts` | an engine's own first-order summary of the system at given lines, as it presents it: its f-numbers under the contract's definitions (image-space, paraxial working, working of the real rim rays, marked), and the pupil, stop, focal length, track and half field they are of |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2487,6 +2488,95 @@ geometric transmission, of the fields both let light through: the falloff of no 
 over its chief rays' image mapping against the traced flux into the image per unit of transmitted area) and `relativeIllumination.maxAbs`, and counts of fields of each
 kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
 `vignettingFactsOfRecorded` repeats the sorting from the values a comparison records.
+
+### `summary.native`
+
+Version 1, added at Stage 6.7, changes no existing quantity, contract version or identity. It is an engine's own
+first-order summary of a system, at each asked line, as the engine presents it: the f-numbers it states, each under one
+of the definitions below, and the pupil, stop, focal length and track they are of. What LensVisualizer's summary tab and
+aperture control present, and what optiland's own accessors state. A value an engine states under no definition of the
+contract's is none of them: it is null, and the engine may state it under `sampling` by a name of its own. Nothing of an
+answer is gated: rung R12b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `lines` | indices of lines of the case, each once |
+
+| Answer member | Meaning |
+|---|---|
+| `lines[]` | one per asked line, in the order asked: `line`, `wavelengthNm` the summary is of, `status` `ok` or `unavailable`, `reason` (always for `unavailable`), the ten values below, `sampling` |
+| `rearFocalZ` | z of the paraxial rear focal point in the contract frame, mm: what identifies the system the answer is of |
+| `focalLengthMm` | the effective focal length the answer's f-numbers are formed with, mm |
+| `entrancePupilDiameterMm` | the entrance pupil's diameter as the engine presents it, mm, at least 0 |
+| `stopDiameterMm` | the stop's clear diameter the answer is of, mm, at least 0 |
+| `imageSpaceFNumber` | the magnitude of the focal length over the entrance pupil's diameter, whatever the object's distance: OpticStudio's image-space F/# |
+| `paraxialWorkingFNumber` | `1 / (2 n' \|u'\|)`, `u'` the image-space slope of the paraxial marginal ray of the case's axial object point, `n'` the image space's index: OpticStudio's paraxial working F/#. An estimate of another construction is none of it: null, and stated under `sampling` |
+| `workingFNumber` | `1 / (2 n' sin t')`, `t'` the angle of the real marginal ray of the case's axial object point to its chief ray in image space: OpticStudio's working F/# |
+| `nominalFNumber` | the f-number the engine marks the aperture with, which is not computed from the system |
+| `totalTrackMm` | the image plane's z less the first vertex's, mm |
+| `halfFieldDeg` | the half field the engine assigns the system, degrees |
+| `sampling` | what else the engine states of the line, by names of its own |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+Each value is a number or null where the engine states none under that definition; every value an `ok` line states is
+finite, and an `ok` line states at least one; an `unavailable` line states none and says why. The schemas, corpus,
+quantity invariants and the stdlib Python port (`validate_summary_native`) enforce these definitions. The engines `lv`
+and `optiland` answer it; `ref` does not.
+
+`lv` answers from LensVisualizer's summary tab as the analysis drawer asks it (`lvSummaryRequest`: the hook's focal
+length of the prepared state, `computeFocusEFL`, the hook's two radii for the case's stop, the hook's field geometry)
+and from its aperture control, each restated with a source canary:
+
+| Value | Is, in LensVisualizer |
+|---|---|
+| `rearFocalZ` | the rear focal point of `computeCardinalElementsFromState`, the construction whose back focus the tab presents |
+| `focalLengthMm` | the tab's "Current EFL", `computeFocusEFL` of the state: at infinity focus the stored focal length of the zoom position, elsewhere `-1 / u'` of the paraxial ray of height 1 |
+| `entrancePupilDiameterMm` | the tab's "Entrance pupil", twice the hook's `currentEPSD`: the stop radius over the height at the stop of a real ray 1e-4 mm from the axis, parallel to it |
+| `stopDiameterMm` | the tab's "Physical stop", twice the hook's `currentPhysStopSD` |
+| `imageSpaceFNumber` | the tab's "Working f/#", `\|currentEFL\| / entrancePupilDiameter` |
+| `paraxialWorkingFNumber` | null: LensVisualizer traces no paraxial marginal ray for an f-number. Its aperture control's "eff. f/", `effectiveFNumber(fNumber, focusT, zoomT, L)` (the marked f-number at infinity, `N (1 + \|m\| / p)` of a thin-lens magnification and the stored pupils elsewhere), is recorded under `sampling.lvThinLensEffectiveFNumber` |
+| `workingFNumber` | null: LensVisualizer traces no real marginal ray for an f-number |
+| `nominalFNumber` | the aperture slider's marked `fNumber` for the case's stop (`lvNominalFNumber`) |
+| `totalTrackMm`, `halfFieldDeg` | the tab's "Total track" and "Half field" (the hook's analysis field geometry: the field whose solved chief ray lands at the image corner, the last field whose chief ray clears every aperture where one clips it short of the corner, or an authored trace field) |
+
+Under `sampling` it states `infinityFocalLengthMm` and `breathingPercent` (the tab's "Infinity EFL" and "Breathing"),
+`focusDistanceM` (its "Focus", where it states one: the authored close-focus distance over the focus position),
+`lvThinLensEffectiveFNumber` (the aperture control's "eff. f/") and `wideOpenNominalEntrancePupilDiameterMm` (twice `epAtZoomClamped`, the stored pupil, focal length over twice the marked
+f-number wide open). Every asked line has the same values: they are of the authored indices. Unsupported, decided before
+LensVisualizer is asked anything: a folded path (`path.folded`), a line the case does not have (`line`), a case off the
+prepared state's image plane (`focus.off-design`) and a line whose indices are not the authored ones
+(`lines.not-authored-reference`).
+
+`optiland` answers from a verified optic of the line (`build.py`): `rearFocalZ` and `focalLengthMm` as for
+[`paraxial.first-order`](#paraxialfirst-order), `entrancePupilDiameterMm` the magnitude of `EPD()`, `stopDiameterMm` its
+system aperture's value, `imageSpaceFNumber` the magnitude of `FNO()`, `paraxialWorkingFNumber` `1 / (2 n' |u'|)` of
+`marginal_ray()`, `totalTrackMm` `total_track`, and `workingFNumber` optiland's `get_working_FNO` on the axis on an optic
+of its own under the worker's `robust` aiming, the four rays through the rim of the stop's clip radius; `nominalFNumber`
+and `halfFieldDeg` null. Under `sampling`: `exitPupilDiameterMm` (`XPD()`), `magnification` for a finite object,
+`workingRimRaysVignetted` (how many of the four aimed rim rays are dark first at a surface other than the stop: optiland
+leaves a dark rim ray out of its mean and, all four dark, takes their angles all the same), `workingFNumberUnaimed`
+(`get_working_FNO` under optiland's default `paraxial` aiming, whose rim rays leave the rim of the paraxial entrance
+pupil) and `unaimedRimRaysLost` (how many of those are dark at the image). Every setting is read back
+(`build-mismatch` otherwise). A system optiland has no first-order data of is a line `unavailable` with the item of
+`paraxial.first-order` (`system.afocal`, `system.telecentric.object-space`); a phase profile and a term of power 1 or 2
+are refused from the case, and so is a folded path.
+
+#### Rung R12b: LensVisualizer's summary beside optiland's own
+
+`r12b` asks one `summary.native` request of each case LensVisualizer exported (`provenance.source.kind` "lv-lens")
+at its lines of the prescription's own indices (`indexSource` "authored": no request of a photopic or spectral run, nor
+of a case read from a file), of `lv` and `optiland` only, and only where it is named. A line is sorted before any difference by R5's sorting (`classifyNativeField`), the rear focal point standing for
+the landing: unsupported (an answer has no values of the line), data of other wavelengths, data where the rear focal
+points lie further apart than `rearFocus.maxAbs` allows or an answer states none, then method. The figures are
+`rearFocus.maxAbs` and, of the lines of two methods, the difference of each value both answers state under one
+definition: `focalLength.maxAbs`, `entrancePupilDiameter.maxAbs`, `stopDiameter.maxAbs`, `imageSpaceFNumber.maxAbs`,
+`paraxialWorkingFNumber.maxAbs`, `workingFNumber.maxAbs`, `totalTrack.maxAbs`; one an answer never states is
+unmeasured, with that engine named. The marked f-number and the half field are recorded and never in a figure. Policy 22
+(accepted by the owner, 2026-10-27) gives `rearFocus.maxAbs` a limit of 1e-5 mm, the limit of the sorting,
+`imageSpaceFNumber.maxAbs` an attention band of 2e-9 and `entrancePupilDiameter.maxAbs` one of 3e-9 mm (a pair above
+either is ATTENTION), and the other figures none. optiland's `stopDiameterMm` and `totalTrackMm` are read-backs of the
+case: their figures hold LensVisualizer's tab to the case it exported. `summaryFactsOfRecorded`
+repeats the sorting from the values a comparison records.
 
 ### `wavefront.native`
 

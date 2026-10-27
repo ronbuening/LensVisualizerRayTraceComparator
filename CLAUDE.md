@@ -69,6 +69,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11a, which rays of the vignetting tab's beams get through, their flux into the image and the landings of its mapping's chief rays (gated), and R11b, the tab beside the flux of LV's lattices, engine flux (recorded, only where named, in no baseline); several minutes and about 10 GB of the store from empty
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r12b --jobs 4   # R12b, LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number (recorded, only where named, in no baseline; asked of lv and optiland); seconds
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -316,7 +317,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   clip at, which raised no version); `paraxial.first-order` is version 1. `mtf.native` is version
   1 and is answered by `lv`, `replay`, `wave` and `optiland`. `spot.native`, `axial.native`, `chief.native` and
   `curvature.native` are version 1 and are answered by `lv` and `optiland`; `vignetting.native` is version 1 and is
-  answered by `lv` and `flux`.
+  answered by `lv` and `flux`; `summary.native` is version 1 and is answered by `lv` and `optiland`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
   from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
@@ -365,7 +366,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
   (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
   `--engines` or a run names, `r7b`, `r8b`, `r9b` and `r10b` (each run only where named) of `lv` and `optiland`, and
-  `r11b` (run only where named) of `lv` and `flux`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  `r11b` (run only where named) of `lv` and `flux`, and `r12b` (run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -706,7 +707,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   into the image, `raysVignetting.ts`) those of the vignetting sets. `spot.native` has the one
   comparator of `r7b` (`spotNative.ts`), `axial.native` the one of `r8b` (`axialNative.ts`), `chief.native` the one of
   `r9b` (`chiefNative.ts`), `curvature.native` the one of `r10b` (`curvatureNative.ts`), `vignetting.native` the one of
-  `r11b` (`vignettingNative.ts`).
+  `r11b` (`vignettingNative.ts`), `summary.native` the one of `r12b` (`summaryNative.ts`).
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -1048,7 +1049,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
   this repository hold together") fail only on policy identity (v15 recorded, a later version at hand: v16 at Stage
-  6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6): never weaken either.
+  6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6, v21 at Stage 6.6b, v22 at Stage 6.7):
+  never weaken either.
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
   (which hashes the worker's revision, so R6c records go STALE(engine)); `ref`'s did not. The recipe is in
@@ -1463,3 +1465,98 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   worker's did not. Policy version 21 (R11a's `landing.maxAbs`); baselines are still refreshed once at the end of Phase
   6, where R11a's beam sets are 1.7 times the rays compared of the sweeps and lattices they replace and 9.6 GB of the
   store compressed on the benchmark alone (`docs/REFERENCE.md`, "Stage 6.6b").
+
+## Stage 6.7 summary and cardinal elements
+
+- **The summary tab traces no ray of its own** (`computeOpticalSummary` of the drawer's request,
+  `src/optics/analysis/summary/summary.ts`): its readouts are of the prepared state, LV's paraxial kernel and the hook.
+  **They are covered by R1** (`test/integration/lv/summary.test.ts`, every reference-line state of benchmark, states and
+  focus-stations at the design plane, 113 at `098c91ef6`, 61 finite): the cardinal focal length, the BFD (R1's
+  `backFocus`), the FFD (the first vertex less R1's `frontFocalZ`), the hiatus (R1's `frontPrincipalZ` less its
+  `rearPrincipalZ`), the image plane and the track (the case's) to the bit; breathing and telephoto ratio derived to the
+  bit; the physical stop within two units in the last place of twice the case's (derived: a product and a quotient each
+  rounded once). Two **measured margins**, held only at `PINNED_CLOSURE` and the cases of `MEASURED_CASES` (as
+  `mtf.test.ts` pins), so a lens edit cannot turn `test:lv` red, and written down elsewhere: the current and infinity
+  focal lengths within 8 units in the last place of R1's (measured 7, the Leica Summilux-C 18 mm at a focus station),
+  the entrance pupil and the "Working f/#" within 1e-10 relative (measured 3.4e-11; the hook's pupil is of a real ray
+  1e-4 mm from the axis, whose height over 1e-4 multiplies an absolute rounding by 1e4). Measure again and pin anew when
+  the closure or the cases move; never loosen a margin without a measurement. Not covered, listed in the test
+  (`NOT_COVERED_BY_R1`): the half field, the focus distance, the controls, the "Current Perspective Pose" section (shown
+  only with an active pose; no case has one) and the aperture control's "eff. f/" (shown only above a 0.05 difference
+  with `showEffectiveAperture` on).
+- **No `r12a`** (decided with evidence; the owner accepted it, 2026-10-27): the hook's pupil ray 1e-4 mm from the axis
+  matches R1's paraxial pupil to 3.4e-11 relative; a rung of its height at R2's 1e-8 mm would judge it to 1e-4 relative,
+  about 10^6 times looser. The half field is the hook's analysis field geometry (`computeAnalysisFieldGeometry`, not
+  the paraxial estimate of `computeFieldGeometry` alone): the field whose solved real chief ray lands at the image
+  corner (half the stated image circle, or the format's diagonal) within 1e-4 mm on 103 of 113 states; the last field
+  whose chief ray clears every aperture where one clips it short of the corner (one: the GF 80 mm's close station); the
+  authored trace field (four), or one the corner lowered (five). R9a traces and judges the solved chief ray at that angle
+  (the distortion curve's edge) at every infinity state; the angle is LV's solve, which no engine has.
+- **`summary.native` v1 (contract 1.0)**: a spec of `lines`; per line `rearFocalZ` (what identifies the system),
+  `focalLengthMm`, `entrancePupilDiameterMm`, `stopDiameterMm`, `imageSpaceFNumber` (|EFL| / EPD, OpticStudio's
+  image-space F/#), `paraxialWorkingFNumber` (`1 / (2 n' |u'|)` of the paraxial marginal ray at the case's conjugate),
+  `workingFNumber` (`1 / (2 n' sin θ')` of the real marginal ray), `nominalFNumber` (a mark, not computed),
+  `totalTrackMm`, `halfFieldDeg`, each null where the engine states none under that definition: an estimate of another
+  construction is null, and goes under `sampling` by a name of its own. Schema, corpus, `validate.py` port
+  (`validate_summary_native`) and invariants change together.
+- **`lv` answers from the tab and the aperture control as they present them** (`src/engines/lv/summary.ts`,
+  `lv-summary-tab`): `lvSummaryRequest` restates the hook's `dynamicEFL` (`computeFocusEFL` of a request of the state,
+  which reads nothing else) and the drawer's request (the hook's pupil for the case's stop, `lvPupilSeed`; the hook's
+  stop, `lvSummaryStopSemiDiameter`: wide open its `currentPhysStopSD`, a unit from the case's on some lenses; its field
+  geometry). The tab's "Working f/#" is `imageSpaceFNumber`; `paraxialWorkingFNumber` and `workingFNumber` are null (LV
+  traces neither marginal ray for an f-number); the slider's marked f-number is `nominalFNumber` (`lvNominalFNumber`);
+  the control's "eff. f/" (`effectiveFNumber`, bound from `optics.ts`), a thin-lens estimate of stored pupils, is
+  `sampling.lvThinLensEffectiveFNumber`; `rearFocalZ` is `computeCardinalElementsFromState`'s. Refused before LV is asked
+  anything: `path.folded`, `line`, `focus.off-design` (the case's plane is not the state's `imgZ`),
+  `lines.not-authored-reference` (a test makes every LV call throw). Two canaries (Stage 6.7 in `canaries.test.ts`) hold
+  the restated lines, the tab's labels, `analysisJobs.computeOpticalSummary`, the half field's corner rule and the stop
+  sizing with its exceptions; the integration test holds `lv`'s answer to the tab asked with a request spelled out again
+  (to the bit wide open, within two units stopped down: a case carries its stop, not the slider's N).
+- **optiland answers with its own accessors** (`lvrtc_optiland/summary.py`): of a verified optic of the line
+  `first_order.line_data`'s `F2()` and `f2()`, `|EPD()|`, the system aperture's value, `|FNO()|`, `1 / (2 n' |u'|)` of
+  `marginal_ray()` (optiland has no accessor of it), `total_track`; `get_working_FNO` on the axis on a `field_optic`
+  (robust aiming, the rim rays through the stop's clip radius); `nominalFNumber`, `halfFieldDeg` null. Its stop and
+  track are read-backs of the case: their figures hold LV's tab to the case, not two engines to each other. `sampling`:
+  `exitPupilDiameterMm`, `magnification` (finite object), `workingRimRaysVignetted` (`rim_ray_counts`: aimed rim rays
+  dark first at a surface of the case other than the stop; one dark at the stop, clipped there by a rounding, or at the
+  object or image surface is not counted, each exclusion with a test that turns red without it; optiland leaves a dark
+  rim ray out and, all four dark, takes their angles all the same; the worker counts, never corrects),
+  `workingFNumberUnaimed` under optiland's default paraxial aiming and `unaimedRimRaysLost`. Every setting read back
+  (aperture type and value, wavelength, image-space index, where the marginal ray starts, both aimings), each with a
+  deliberate fault in `test_summary.py`, whose expected values are an exact rational trace and 60-digit rim rays
+  (`exact.py`; behind a lens the aimed rim ray by a 60-digit bisection). An afocal or object-telecentric system is a line
+  `unavailable` with `first_order`'s item; a phase or a term of power 1 or 2 and a folded path are refused from the case.
+  Budget and FATAL are the MTF worker's.
+- **R12b is recorded, of `lv` and `optiland`, only where named** (`summaryNativeComparator`, policy 22): asked at the
+  case's lines of `indexSource` "authored" of a case LV exported (`summaryNativeSpec` in `rungs.ts`, from the case
+  alone; none of a photopic run or a case read from a file, as the other rungs about engines of their own). Each line
+  sorted by R5's `classifyNativeField` with the rear focal point as the landing, then the differences of the values both
+  state under one definition (`focalLength`, `entrancePupilDiameter`, `stopDiameter`, `imageSpaceFNumber`,
+  `paraxialWorkingFNumber`, `workingFNumber`, `totalTrack`, each `.maxAbs`); one an answer never states is unmeasured
+  with the engine named. The mark and the half field are recorded, never a figure. `summaryFactsOfRecorded` repeats the
+  sorting. **Owner decisions (2026-10-27): accepted as proposed**: the sorting limit `rearFocus.maxAbs` 1e-5 mm;
+  attention bands of 2e-9 on `imageSpaceFNumber.maxAbs` and 3e-9 mm on `entrancePupilDiameter.maxAbs` (ten times the
+  measured 1.45e-10 and 3.0e-10, rounded up; `summaryNative.test.ts` holds a pair above each band ATTENTION and one
+  within RECORDED), none on the others; R12b out of every baseline (`--rungs r12b`).
+- **Measured** (`docs/REFERENCE.md`, "Stage 6.7"): benchmark 24, states 32, focus-stations 61 pairs RECORDED, no
+  ATTENTION; one definition, one number: image-space f-numbers within 1.45e-10, pupils within 3.0e-10 mm, rear focal
+  points within 2.0e-13 mm, stops within 7.1e-15 mm; `paraxialWorkingFNumber.maxAbs` and `workingFNumber.maxAbs`
+  unmeasured.
+- **LV assumptions found** (`docs/gotchas.md`, "Summary"; brief `docs/upstream/lensvisualizer-summary-conventions.md`,
+  not filed): the tab's "Working f/#" is OpticStudio's image-space F/#, up to 4.8% below the real rim rays' working F/#
+  at infinity and 1.03 against 4.75 at the Sigma 105 mm's 1:1; the stop is sized wide open by an unaimed, unclipped real
+  ray at `EFL / (2 N)` (exceptions: an authored zoom stop schedule, a stop inside an element, a fixed iris, a fisheye's
+  projection focal length, the paraxial height where the real ray fails; interpolated between zoom stations), so the
+  mark is close to the working F/# there (within 0.34%), and scaled linearly stopped down, so a marked f/11 is up to
+  4.95% faster (the Plena); the "eff. f/" is a thin-lens estimate of stored pupils, −8.5% to +58% from the paraxial
+  working F/#; the stop's sizing ray is clipped by another surface on the Sigma 35 mm and the Canon EF 135 mm wide open
+  and at 12 of 61 focus stations. **Owner decision (2026-10-27): LV is to adopt OpticStudio's three f-numbers under their
+  names** (image-space f/# = EFL / EPD; the paraxial working f/# of LV's own paraxial trace at the current focus, in
+  place of the thin-lens "eff. f/"; the working f/# of the real marginal ray, `1 / (2 n' sin θ')`) **and one stop rule
+  at every N, the paraxial EPD = EFL / N** (OpticStudio's image-space F/# aperture), in place of the real sizing ray and
+  the linear stop-down. The LV change is pending (the owner holds its prompt). Until it lands R12b records LV as it is;
+  afterwards the canaries of those lines fail first, every case's stop radius moves (every case id and baseline record),
+  and the summary's request, R12b's asks and the measurements are redone.
+- The adapter revisions of `lv`, `replay`, `wave` and `flux` moved (the stage's names, of modules already loaded: LV's
+  engine closure is unchanged, `fef2e248`), and the worker's files moved `optiland`'s and `optiland-wave`'s; `ref`'s did
+  not. No gated rung joins the Phase 6 end refresh.

@@ -37,3 +37,4 @@ export {
   computeOffAxisFieldGeometryScalar,
 } from "./analysis/curvature.ts";
 export { computeVignettingCurve } from "./analysis/vignetting.ts";
+export { computeOpticalSummary } from "./analysis/summary.ts";

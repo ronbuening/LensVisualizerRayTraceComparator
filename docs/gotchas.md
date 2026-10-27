@@ -3051,3 +3051,158 @@ below, to that one, are the history as it was measured.
   LensVisualizer, and gets the two ray-tube fields of the Viltrox AF 14 mm f/4 Air to the bit. Never approximate the
   tubes by aperture-checked rays.
 - **Class.** unsupported: not covered (by an identical-ray rung).
+
+## Summary (Stage 6.7)
+
+Measured at LensVisualizer `098c91ef6` (engine closure `fef2e248`) and optiland `4e893f53`, on the reference-line runs
+of the benchmark, states and focus-stations suites at the design plane (24, 32 and 61 states R12b compares; 113 in
+`test/integration/lv/summary.test.ts`). The tab's first-order readouts are R1's (`test/integration/lv/summary.test.ts`):
+the entries below are of what R1 does not cover, and of the definitions R12b records side by side. **Owner decision
+(2026-10-27):** LensVisualizer is to adopt OpticStudio's three f-numbers under their names and one stop rule at every
+f-number (the first two entries); the change is pending. Until it lands R12b records LensVisualizer as it is;
+afterwards the canaries of the lines below fail first and every case's stop radius moves.
+
+### LensVisualizer's "Working f/#" is the image-space f-number of the focused state
+
+- **Where.** `computeOpticalSummary` (`src/optics/analysis/summary/summary.ts`) presents
+  `|currentEFL| / entrancePupilDiameter` under the label "Working f/#" (`OpticalSummaryTab.tsx`): the current focal
+  length of the prepared state (`computeFocusEFL`) over the hook's entrance pupil, the stop over the height at the stop
+  of a real ray 1e-4 mm from the axis, parallel to it, over 1e-4. That is OpticStudio's image-space F/#, defined at
+  infinite conjugates whatever the object's distance; OpticStudio's working F/# is `1 / (2 n' sin θ')` of the real
+  marginal ray at the actual conjugate.
+- **Effect.** Against optiland's `FNO()` (`f2() / EPD()`, the same definition) it agrees to 1.45e-10 on every state.
+  Against the working f-number of the real rim rays (optiland's `get_working_FNO` under robust aiming, OpticStudio's
+  definition) it is up to 4.8% low at infinity (the Z 135 mm f/1.8 Plena wide open, 1.760 against 1.849; the Sony
+  FE 20 mm 1.772 against 1.844) and up to 0.45% high (the GF 63 mm). At a focus station it is no working f-number at
+  all: the focused focal length shrinks and the pupil is of rays parallel to the axis, so the Sigma 105 mm macro at 1:1
+  reads f/1.03 where its rim rays' working f-number is 4.75 (−78%), the Tamron 90 mm macro f/0.86 against 3.38; the
+  GF 80 mm f/1.7 at its close station reads 1.79 against optiland's 1.30 (whose rim rays are vignetted there, below).
+- **Handled.** R12b records the tab's value as `imageSpaceFNumber` (band 2e-9 against optiland's) and states no
+  working f-number of LensVisualizer's; `workingFNumber.maxAbs` is unmeasured, `lv-summary-tab states none`. The owner
+  decided (2026-10-27) that LensVisualizer present OpticStudio's image-space, paraxial working and working f-numbers
+  under their names (pending). Brief: `docs/upstream/lensvisualizer-summary-conventions.md` (not filed).
+- **Class.** convention: a LensVisualizer label of another definition; recorded.
+
+### LensVisualizer's marked f-number sizes the stop wide open by a real ray, and stops down linearly
+
+- **Where.** `computeLensConstants` (`src/optics/first-order/lensConstants.ts`) takes the entrance pupil of the marked
+  f-number N as `EFL / (2 N)` (`nominalEPSD`) and sets the stop radius to the height at the stop of a real ray entering
+  parallel at that height (`realTraceStopHeight`, unaimed and traced without aperture checks); a zoom does so at each
+  station with its own N, and `wideOpenStopAtZoom` interpolates the stations' radii between them. The hook stops down
+  linearly: the stop at N is `wideOpenStop × FOPEN / N` (`useLensComputation.ts`). The rule has exceptions: a lens that
+  publishes its stop schedule (`zoomStopSemiDiameters`) takes it as authored; a stop inside an element
+  (`stopPlacement: "inside-element"`) keeps its authored radius; a zoom with one fixed iris (`zoomApertureModel:
+  "fixed-iris"`) keeps the radius of its first station at every zoom; a fisheye takes its projection's focal length for
+  `EFL`; and where the real ray fails (a total reflection) the paraxial height `nominalEPSD × yRatio` stands in.
+- **Effect.** Wide open, the marked f-number is within 0.34% of the real rim rays' working f-number on the benchmark
+  (the Canon EF 135 mm 2.0598 against 2.0598, the Z 50 mm 1.23 against 1.229): the sizing ray is the marginal ray,
+  and where the sine condition holds its working f-number is close to N. The paraxial image of that stop is up to 5.1%
+  wider than `EFL / N` (the Plena's 75.16 mm against 71.51 mm), so the tab's image-space f-number is up to 4.9% below
+  the mark. Stopped down the radius is scaled as though the wide-open stop were the paraxial one: at f/5.6 and f/11 the
+  real working f-number is up to 4.95% faster than the mark (the Plena at f/11, 10.48; the Sony FE 20 mm 10.55) and at
+  the MTF tab's f/8 comparison up to 4.8% (the Plena, 7.63 against 8), where OpticStudio's image-space F/# aperture (an
+  entrance pupil of `EFL / N`) would hold one definition at every N.
+- **Handled.** R12b records the mark as `nominalFNumber` (never in a figure) beside optiland's working and image-space
+  f-numbers; the stop is the case's, every engine's (CONTRACT.md: "The sizing of the stop" is not covered). The owner
+  decided (2026-10-27) that LensVisualizer size the stop by one rule at every N, the paraxial entrance pupil `EFL / N`
+  (pending): every case's stop radius, case id and baseline record will move with it.
+- **Class.** convention: a LensVisualizer assumption; recorded.
+
+### LensVisualizer's sizing ray of the stop is clipped by another surface on some lenses
+
+- **Where.** The stop's sizing ray is traced without aperture checks; the ray through the stop's rim, aimed by optiland
+  (`robust`, the clip radius), meets the clear apertures of the case.
+- **Effect.** On 2 of the 24 benchmark states it is clipped before the stop: the Sigma 35 mm f/1.4 wide open at surface
+  13, 0.58 mm outside its 17.5 mm, and the Canon EF 135 mm at surface 8, 1.3 µm outside its 21.16 mm (an authored
+  semi-diameter of the marginal height rounded). At 12 of the 61 focus stations the stop sized at infinity is larger than
+  the elements pass (the Sigma 105 mm at 1:1 through twelve surfaces, by up to 1.31 mm; the Sony FE 600 mm, the GF 80 mm,
+  the Leica Summilux-C 18 mm). The axial beam's aperture there is another surface, and the tab's pupil and f-numbers are
+  those of the stop it names, not of the beam LensVisualizer's MTF traces.
+- **Handled.** optiland's answer states `workingRimRaysVignetted` (4 there) and a note; no figure sets the line aside.
+  The owner's paraxial stop rule (above) removes the sizing ray; whether the beam is limited elsewhere stays a fact of
+  the lens.
+- **Class.** data: recorded.
+
+### optiland's working f-number takes the rim rays' angles even where every one is dark
+
+- **Where.** `optiland.utils.get_working_FNO` traces the chief ray and four rim rays at pupil (0, ±1) and (±1, 0),
+  leaves a rim ray of intensity 0 out of its mean of `n'^2 sin^2`, and takes all four where all four are dark
+  ("degenerate fallback"). Under `robust` aiming a rim ray is aimed at the stop's clip radius, and is often clipped there
+  by a rounding.
+- **Effect.** Where the stop's rim is clipped elsewhere (above), optiland's working f-number is of rays that do not get
+  through: the GF 80 mm's 1.30 at its close station, against its paraxial working f-number of 2.10. Where the rim rays
+  are dark at the stop alone the value is the rim's, as it should be.
+- **Handled.** The worker traces optiland's own batch again on the same optic and counts the rim rays dark first at a
+  surface of the case other than the stop (`workingRimRaysVignetted`, `rim_ray_counts`): one dark first at the stop, or
+  at the object or image surface, is not counted. `test_summary.py` holds each exclusion (removing one turns it red) and
+  pins the fallback on a lens whose second surface clips its rim rays. The worker corrects nothing.
+- **Class.** method: optiland's behaviour, recorded.
+
+### optiland's unaimed rim rays leave the paraxial pupil's rim
+
+- **Where.** Under optiland's default `paraxial` aiming a pupil coordinate of 1 is the rim of the paraxial entrance
+  pupil: from an infinite object a ray parallel at `EPD() / 2`, from a finite one the ray to that rim on the pupil's
+  plane.
+- **Effect.** It is not the ray through the stop's rim: for a stop on a curved first surface, a finite object's
+  unaimed rim ray meets the surface above its rim and is dark (`test_summary.py`); on the benchmark the unaimed working
+  f-number is within 0.5% of the image-space one, as a near-paraxial ray's is (the Z 50 mm, 1.185 against 1.186).
+- **Handled.** Recorded beside the aimed one (`sampling.workingFNumberUnaimed`, `unaimedRimRaysLost`); never in a figure.
+- **Class.** convention.
+
+### LensVisualizer's effective f-number is a thin-lens estimate of stored pupils
+
+- **Where.** The aperture control shows `effectiveFNumber(fNumber, focusT, zoomT, L)` beside the mark, only where the
+  two differ by more than 0.05 and `showEffectiveAperture` is on: `N (1 + |m| / p)`, `m` the thin-lens magnification of
+  the focused focal length at the authored focus distance and `p` the stored infinity pupils' ratio
+  (`src/optics/first-order/fNumber.ts`); the mark itself at infinity.
+- **Effect.** Against optiland's paraxial working f-number of the case (`1 / (2 n' |u'|)` of its marginal ray from the
+  axial object point) it is −8.5% (the Sigma 105 mm at 1:1, 4.32 against 4.72) to +58% (the Sony FE 600 mm at its close
+  station, 6.50 against 4.11: an internally focused telephoto whose pupils move); against the real rim rays' working
+  f-number −9.0% to +55.8%. At infinity it is the mark (above), up to 5.1% above the paraxial one.
+- **Handled.** Of no definition of the contract's: R12b records it under `sampling.lvThinLensEffectiveFNumber`, and
+  LensVisualizer's `paraxialWorkingFNumber` is null, so `paraxialWorkingFNumber.maxAbs` is unmeasured
+  (`lv-summary-tab states none`). The owner decided (2026-10-27) that LensVisualizer present the paraxial working
+  f-number of its own paraxial trace at the current focus in its place (pending).
+- **Class.** method: a LensVisualizer estimate; recorded.
+
+### LensVisualizer's half field is the angle its solved chief ray takes to the image corner
+
+- **Where.** The hook's field geometry is `computeAnalysisFieldGeometry` (`src/optics/field/imageHeight.ts`), not the
+  paraxial estimate of `computeFieldGeometry` alone: for a rectilinear lens without an authored trace field it finds the
+  field whose solved real chief ray lands at the image corner (half the catalog's image circle, or the format's
+  diagonal) within 1e-4 mm (`realChiefRayFieldLimit`, regula falsi), and where a clear aperture clips the chief ray short
+  of the corner the last field that clears it (eight bisections); a lens that states a trace field
+  (`rectilinearProjectionMaxTraceField`) keeps it unless its chief ray lands beyond the format's corner, which lowers it;
+  a fisheye takes its law's trace field. Every field is below `MAX_FIELD_LAUNCH_DEG - 1e-3`.
+- **Effect.** Of the 113 states: 103 at the image corner, one at a clip (the GF 80 mm f/1.7 at its close station,
+  landing 25.07 mm short of its 27.39 mm corner), four at the authored trace field (the Sony FE 20 mm's 47°, landing
+  21.23 mm short of its 21.65 mm corner), five at an authored field the corner lowered (focus stations of the Samyang
+  AF 14 mm, the Hasselblad XCD 25 mm, the Lumix S 26 mm and the Sigma 24 mm f/2). No engine has the quantity; R9a traces
+  the solved chief ray at that angle (the distortion curve's edge) in every engine at every infinity state and judges
+  its landing at 1e-8 mm. The focus readout, also LensVisualizer's own, is the authored close-focus distance over the
+  focus position (`focusDistanceAt`): the certified conjugate's object-to-image-plane distance to the bit on 60 of 61
+  focus stations, and 1.09 mm (0.26%) longer on the GF 110 mm T/S macro at its 1:2 station.
+- **Handled.** Recorded (`halfFieldDeg`, `sampling.focusDistanceM`); listed as not covered by R1
+  (`NOT_COVERED_BY_R1` in `test/integration/lv/summary.test.ts`, which writes the landings down).
+- **Class.** method (half field), data (focus distance): recorded.
+
+### LensVisualizer's entrance pupil is of a real ray 1e-4 mm from the axis
+
+- **Where.** The hook's `baseEPSD` is the stop over `yRatio`, the height at the stop of a real ray 1e-4 mm from the
+  axis, parallel to it, over 1e-4 (`computeFieldGeometry`), where R1's is the paraxial ray's.
+- **Effect.** The two differ by terms of the order of `(1e-4 / r)^2` of the surfaces' radii, and the division by 1e-4
+  multiplies an absolute rounding of the ray's height by 1e4: at most 3.4e-11 relative (1.6e-10 mm of a diameter on the
+  benchmark, 3.0e-10 mm at the focus stations), inside R1's 1e-9 mm gate of the radius.
+- **Handled.** `test/integration/lv/summary.test.ts` holds the tab's pupil and "Working f/#" to R1's within 1e-10
+  relative, a measured margin pinned to the closure and the cases it was measured on: covered by R1, so no identical-ray
+  rung traces this ray (one would judge its 1e-4 mm height at 1e-8 mm, 1e-4 relative).
+- **Class.** numerical: covered by R1.
+
+### optiland's stop and track in R12b are the case's
+
+- **Where.** optiland's `stopDiameterMm` is its system aperture's value and its `totalTrackMm` its `total_track`, both
+  built from and read back to the case (`build.verify_optic`).
+- **Effect.** `stopDiameter.maxAbs` (7.1e-15 mm) and `totalTrack.maxAbs` (0) hold LensVisualizer's tab to the case it
+  exported, not two engines' computations to each other.
+- **Handled.** Stated in CONTRACT.md and the REFERENCE; no band.
+- **Class.** data: recorded.
