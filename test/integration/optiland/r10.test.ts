@@ -9,8 +9,8 @@
 // LensVisualizer answers exactly the ask its sections answer and says why not of the other, that optiland answers
 // every ask, that every field of the design run is of two methods within the limit of the sorting and within its bands
 // (LensVisualizer's parabasal pencil of 0.01 mm against optiland's infinitesimal pair, docs/gotchas.md, "Field
-// curves"), so its pair is RECORDED and not ATTENTION, that the telephoto's tangential foci below one degree are those
-// of LensVisualizer's paraxial chief ray, and that the report claims nothing it may not.
+// curves"), so its pair is RECORDED and not ATTENTION, that the telephoto's foci below one degree are about a chief
+// ray through the stop's centre since LensVisualizer #925, and that the report claims nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -137,9 +137,9 @@ test(
       }
     }
 
-    // The telephoto below one degree: LensVisualizer's chief ray there is its paraxial estimate, and the parabasal
-    // pair about it has its tangential focus about two millionths of a millimetre from optiland's about the stop's
-    // centre; its sagittal focus, which no coma moves, a tenth of that.
+    // The telephoto below one degree: since LensVisualizer #925 its chief ray there is solved through the stop's centre,
+    // and the parabasal pencil about it has its foci within a millionth of a millimetre of optiland's (at 098c91ef6,
+    // 7.9e-9 mm tangential; about the paraxial chief ray it was 2.3e-6 mm).
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === of(LONG).requestId && candidate.mode === "pairwise",
     );
@@ -158,8 +158,8 @@ test(
         Math.abs(number(lv.sagittalShiftMm, at) - number(optiland.sagittalShiftMm, at)),
       );
     }
-    assert.ok(below > 1e-6, `${below}`);
-    assert.ok(sagittalBelow < below / 5, `${sagittalBelow} against ${below}`);
+    assert.ok(below < 1e-6, `${below}`);
+    assert.ok(sagittalBelow < 1e-6, `${sagittalBelow}`);
     t.diagnostic(`${LONG} below one degree: tangential ${below} mm, sagittal ${sagittalBelow} mm apart`);
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);

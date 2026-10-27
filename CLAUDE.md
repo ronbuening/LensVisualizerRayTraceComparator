@@ -68,7 +68,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: LV's 
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8a, the axial intercepts of the spherical-aberration and axial-colour sections' rays (gated, about 15 s), and R8b, the sections beside optiland's own rays and focus (recorded, only where named, in no baseline)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9a, the chief rays of the distortion, pupils and lateral-colour tabs (gated), and R9b, the tabs beside optiland's own distortion, chief rays and pupils (recorded, only where named, in no baseline); about 3 min from an empty store
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
-node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11a, which rays of the vignetting tab's sweeps and of LV's lattice over each of its fields get through and the lattices' flux into the image (gated), and R11b, the tab beside the flux of LV's lattices, engine flux (recorded, only where named, in no baseline); about 4 min
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11a, which rays of the vignetting tab's beams get through, their flux into the image and the landings of its mapping's chief rays (gated), and R11b, the tab beside the flux of LV's lattices, engine flux (recorded, only where named, in no baseline); several minutes and about 10 GB of the store from empty
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -1128,15 +1128,21 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   attention band of 1e-10 mm; colour's (`lineFocus`, `relativeFocus`) none until LV's index question is settled;
   `paraxialFocalShift.maxAbs`, a different quantity (spherochromatism), never one; R8b stays out of every baseline
   (`--rungs r8b`). The pupil limit, 2e-10 relative (ten times the measured 1.37e-11, rounded up), was signed off by the
-  owner on 2026-10-26. On the benchmark every spherical line is of two methods and every colour line is `indices-differ`.
-- **LV assumption found** (`docs/gotchas.md`, "Axial rays"; owner's brief
-  `docs/upstream/lensvisualizer-loca-unanchored-index.md`, not filed): LV's chromatic tab traces a d-line glass it
+  owner on 2026-10-26. On the benchmark every spherical line is of two methods, and since LV #925 (Stage 6.6b) every
+  colour line too (every one was `indices-differ` before).
+- **LV assumption found, resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Axial rays"; owner's brief
+  `docs/upstream/lensvisualizer-loca-unanchored-index.md`, not filed): LV's chromatic tab traced a d-line glass it
   matched to a catalog at the catalog's own Sellmeier index at every channel, its G channel included (LV's reference
-  channel: the d line, 587.56 nm, in a d-line lens; never write "G line", which reads as Fraunhofer's g, LV's V),
-  where its e-line elements and its MTF path are anchored to the authored index; its G-channel focus is then up to
-  0.03 mm from the design's (Z 24-70 tele), though the plotted relative focus moves by 1e-4 mm at most; 881 of 1,014
-  catalog lenses have such a medium. R8b sets such a line aside as data. Whether LV anchors these channels is the
-  owner's (LV is read-only here).
+  channel: the d line, 587.56 nm, in a d-line lens; never write "G line", which reads as Fraunhofer's g, LV's V); 877 of
+  1,006 exporting lenses had such a medium, up to 3.0e-3 off. Since `5ba17c20c` the tier is anchored to the authored
+  `nd` (`nd - S(G)` added to the catalog's C, F and g values, G returning `nd`): at the reference line the channel is
+  the case's index to the bit on every lens, so `indexMaxDelta` is 0 there and R8b's colour lines of the reference runs
+  enter its figures (on the benchmark all 24 colour lines are of two methods at `098c91ef6`, their foci within 8.4e-12
+  mm of optiland's; every one was `indices-differ` before). At C and F (and g without a partial dispersion) the channel
+  adds the same terms in another order than the case's anchored table, within one unit in the last place on about 800
+  lenses; at g about 120 lenses whose elements state `dPgF` reconstruct V from it, by value (median 8e-6, up to 6.2e-4).
+  **Owner decision (2026-10-27): no bit identity pursued at C, F and g now** (no committed suite asks those lines);
+  `indices-differ` stays exactly as it is.
 - The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved (new LV names, worker files);
   `ref`'s did not. Baselines are still refreshed once at the end of Phase 6; the recipe in `docs/REFERENCE.md` names
   `r8a` beside `r7a`.
@@ -1150,12 +1156,16 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   order, one set at every line, the same rays at every line, weight 1: `distortion-curve` (the reference's near-axis
   probe, the edge, the curve's samples at the angles LV solved) and `distortion-grid` (the probe, the traced grid
   points with LV's interpolated pupil correction), each naming the probe under `groups.chiefIndex: 0`; `pupils` (the
-  solved chief ray of each field off the axis); `lateral-colour` (the coma tab's chief ray at each section field).
+  solved chief ray of each field off the axis); `lateral-colour` (since LV #925, `5ba17c20c`, each channel's own chief
+  ray of each section field, solved through the stop at the channel's indices by `computeOffAxisChannelFieldGeometry`
+  and launched as the coma tab's chief ray: four a field, R, G, B, V, `LV_LATERAL_CHANNELS`; all four at every line, so
+  that R9a's spans stay a set's rays without its line and a line's own channel's ray is among them).
   Fields, solves, grid points and samples are LV's exports; what the tabs do inline (probe, edge, correction table and
   its interpolation, fields, `bindRayTrace`'s launch) is restated with a canary (four Stage 6.4 tests). **Which fields
   have a chief ray a set states is decided once, in `src/engines/lv/chiefFields.ts`** (`lvSolvedChief`,
   `lvPupilFields`, `lvLateralChief`), by the sets and asks and by `lv`'s answer alike: a field LV launches from a
-  bounding sphere or has no slope for is a coded problem of the set, no field of the ask and none of `lv`'s answer, so
+  bounding sphere or has no slope for (at any channel, for the lateral colour) is a coded problem of the set, no field
+  of the ask and none of `lv`'s answer, so
   `lv` answers every ask of its own case source (`chief.test.ts` feeds the asks of the fake's vector variant to
   `answerLvChief`). Never enumerate a tab's fields a second time; `chiefFields.ts` keeps `rays/probe.ts` out of `lv`'s
   closure.
@@ -1191,14 +1201,14 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `chiefLandingMm` (the stop's chief ray: what identifies the field), `figures` or `chiefRay` (pupils: one of them;
   distortion: figures; lateral colour: neither), `sampling`; a `reference` (scale, probe angle, paraxial pupils).
   Schema, corpus, `validate.py` port and invariants change together.
-- **`lv` answers `chief.native` from the tabs as they present them** (`src/engines/lv/chief.ts`): the distortion
-  curve with each sample's solved chief-ray landing and `inversionResidualMm` beside it, the pupils tab's real pupils
+- **`lv` answers `chief.native` from the tabs as they present them** (`src/engines/lv/chief.ts`): the distortion curve
+  with each sample's solved chief-ray landing and `inversionResidualMm` beside it, the pupils tab's real pupils
   (`z0 + epRatio + epShiftMm`, `zLast + xpZRelLastSurf`) and stored paraxial ones, the lateral-colour section at each
-  line that is a channel's (`lvChannelLines`) with `sampling.indexMaxDelta`, each at the fields `chiefFields.ts`
-  admits. Refused before LV is asked anything but readings of the lens: `lines.not-authored-reference`,
-  `lines.not-chromatic-channels`, `lines.mixed-reference`, `projection.fisheye`, `focus.off-design` (the last vertex
-  plus its gap, for all three kinds, the lateral colour included), a finite object, a folded path; `fields.angles` once
-  the tab is asked.
+  line that is a channel's (`lvChannelLines`: the landing of that channel's own chief ray) with `sampling.indexMaxDelta`, each at
+  the fields `chiefFields.ts` admits. Refused before LV is asked anything but readings of the lens:
+  `lines.not-authored-reference`, `lines.not-chromatic-channels`, `lines.mixed-reference`, `projection.fisheye`,
+  `focus.off-design` (the last vertex plus its gap, for all three kinds, the lateral colour included), a finite object,
+  a folded path; `fields.angles` once the tab is asked.
 - **optiland answers `chief.native` with its own classes** (`lvrtc_optiland/chief.py`): distortion is
   `create_distortion_model("paraxial", distortion_type="f-tan")` on a fresh verified optic whose one field is
   `maxFieldDeg`, at the normalised field (the field is stated at the angle asked), under optiland's default `paraxial`
@@ -1220,15 +1230,16 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Breathing is R1's**: LV's chart is the focal length of a prepared state, `lv`'s R1 focal length within 2 units
   in the last place at every exported state (`test/integration/lv/breathing.test.ts`); chart positions between
   certified stations are no case, and are not covered (owner decision, 2026-10-26). No rung of its own.
-- **LV assumptions found** (`docs/gotchas.md`, "Chief rays"; owner's brief
-  `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed): below one degree LV's chief ray is its paraxial
-  estimate (its pupils there up to 1.30 mm from the stop's chief ray's, the Sony FE 400 mm); its lateral colour is one
-  chief ray traced at every channel (up to 1.09e-3 mm on C, d, F); its distortion curve plots its targets (9.8e-5 mm)
-  and its scale's probe is up to half a degree off the axis (8.5e-6 relative). **The owner decided (2026-10-26) to have
-  LV change the first two**: a real chief ray below one degree for the pupils and the distortion, and each channel's
-  own chief ray for the lateral colour; the LV change is pending (the owner holds its prompts). Until it lands, R9b
-  records them as they are; afterwards the canaries of those lines fail first, and the sets, the asks and the
-  measurements are redone.
+- **LV assumptions found, the first two resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Chief rays"; owner's
+  brief `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed): below one degree LV's chief ray was its
+  paraxial estimate (its pupils there up to 1.30 mm from the stop's chief ray's, the Sony FE 400 mm); its lateral colour
+  was one chief ray traced at every channel (up to 1.09e-3 mm on C, d, F). Since `5ba17c20c` every chief ray but the
+  axis's is solved through the stop (a tolerance of `1e-7 · min(1, |θ| / 1°)` mm below one degree) and each channel
+  traces its own (on the benchmark at `098c91ef6`: the pupils below one degree within 3.8e-6 mm of optiland's, 1.30 mm
+  before; all 120 lateral-colour fields of two methods, their landings within 1.2e-10 mm, where every one was
+  `indices-differ` and 22 pairs ATTENTION before; R9b has no ATTENTION pair). Its distortion curve still plots its
+  targets (9.8e-5 mm) and its scale's probe is still up to half a degree off the axis (8.5e-6 relative): conventions R9b
+  records.
 - The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved (new LV names, worker files);
   `ref`'s did not. The recipe in `docs/REFERENCE.md`, "The Phase 6 end refresh", names `r9a` beside `r7a` and `r8a`.
 
@@ -1306,12 +1317,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   R8b's spherical figures are (`curvatureNative.test.ts` holds a field above and within each); R10b stays out of every
   baseline (`--rungs r10b`).
 - **LV conventions found** (`docs/gotchas.md`, "Field curves"; owner's brief
-  `docs/upstream/lensvisualizer-parabasal-pencil.md`, not filed): LV's parabasal pencil is 0.01 mm wide, so its foci
-  are of a finite pencil, up to 5.72e-6 mm from optiland's infinitesimal pair (converging as the square of the height
-  when LV's own rays are made smaller). **Owner decision (2026-10-26): no LV change; the 0.01 mm pencil is a documented
-  convention of LV's**, which R10b records within its bands. Below one degree the pencil is centred on LV's paraxial
-  chief ray (up to 2.31e-6 mm), the Stage 6.4 convention LV is to change by the owner's decision of 2026-10-26. Both
-  are fifteen times below the tab's 0.1 µm readouts. optiland's robust aimer, batched with the axis inside
+  `docs/upstream/lensvisualizer-parabasal-pencil.md`, not filed): LV's parabasal pencil is 0.01 mm wide, so its foci are
+  of a finite pencil, up to 5.72e-6 mm from optiland's infinitesimal pair (converging as the square of the height when
+  LV's own rays are made smaller). **Owner decision (2026-10-26): no LV change; the 0.01 mm pencil is a documented
+  convention of LV's**, which R10b records within its bands. Below one degree the pencil was centred on LV's paraxial
+  chief ray (up to 2.31e-6 mm); since LV #925 (`5ba17c20c`) it is centred on the solved chief ray (the Sony FE 400 mm's
+  foci there within 4.0e-8 mm of optiland's at `098c91ef6`). optiland's robust aimer, batched with the axis inside
   `FieldCurvature`, loses the Sigma 35 mm's edge pair at f/8 where the field alone converges: an optiland behaviour,
   held by the owner with the other upstream items.
 - The adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` moved; `ref`'s did not; LV's engine
@@ -1320,49 +1331,68 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 
 ## Stage 6.6 vignetting and relative illumination
 
-- **The vignetting sets are the rays LV's vignetting tab launches, and LV's own lattice over each of its fields' beams**
-  (`CaseSource.vignettingRaySets`, `src/engines/lv/vignettingRaySets.ts`, the fields, the sweep and the line in
-  `vignettingFields.ts`), generated by `planJobs` after `confirmRaySets`, only for a rung that says
-  `needsVignettingRaySets`, and recorded under `runs[].vignettingRaySets`; a case source without them is
-  `vignetting-sets-unavailable`. The fields are `computeVignettingCurve`'s (`max(ceil(halfFieldDeg / 3) + 1, 7)` at
-  `uniformFieldFraction`, the axis first, each launched by its solved chief ray, the drawer's geometry). Two patterns,
-  the same rays at every line: `sweep`, of each field the tab's meridional sweep (`evenlySpacedSigned(n)` of the
-  drawer's pupil radius about `yChief`, `n` 192, 96 for a lens `isHeavyLensForRayWork` calls heavy, started as
-  `bindRayTrace`'s `ray(y, u)` starts it: `lvSweepLaunch`), one set a line, a block of one direction a field, no groups,
-  each ray's weight LV's bulk transmission (`lvRayWeights`); `lattice`, of each field `lvFieldRaySets` (the run's own
-  generator, at the run's `bundleGrid`), one set a field and line with its groups. Every restated line has a canary (two
-  Stage 6.6 tests in `canaries.test.ts`). `test/integration/lv/vignettingRays.test.ts` traces the sweeps with
-  `traceEngineRay` and the tab's options, counts them in the tab's own arithmetic and gets `computeVignettingCurve` to
-  the bit on every benchmark configuration, the zoom's far end and the absorbing Laowa 105 mm STF (123 fields), and
-  holds every sweep ray (19,776) bit for bit to LV's own meridional adapter (`traceRay`, from LV's chief-ray solve and
-  slope of the field): launch point, every hit, the exit as the adapter states it and the bulk transmission against
-  `lv`'s `rays.trace`. A folded path, a finite object, no half field, no pupil and no sweep of the axis
-  (`no-axis-sweep`) are coded problems of the run; a vector launch (`lv-vector-launch`), no slope (`lv-no-launch`) and a
-  launch behind the first surface of the field; a state LV's MTF gate refuses keeps its sweeps and has no lattices (the
-  eight diffractive states: `unsupported-path`). focus-stations and folded have no vignetting sets.
+- **The vignetting sets are the rays LV's vignetting tab launches** (`CaseSource.vignettingRaySets`,
+  `src/engines/lv/vignettingRaySets.ts`, the tab's setup, fields, beams and mapping in `vignettingFields.ts`), generated
+  by `planJobs` after `confirmRaySets`, only for a rung that says `needsVignettingRaySets`, and recorded under
+  `runs[].vignettingRaySets`; a case source without them is `vignetting-sets-unavailable`. **Since LV #925
+  (`5ba17c20c`, Stage 6.6b) the tab traces each field's beam in two dimensions** with its MTF's own launch: the drawer's
+  two radii, `{ method: "geometric", spectrum: "reference", focus: "design" }` and a support record of its own (the d
+  line, no index resolver), `mtfTraceOptions` of that line (`lvVignettingSetup`); the fields are
+  `max(ceil(halfFieldDeg / 3) + 1, 7)` at `uniformFieldFraction`, the axis first; each field's launch is
+  `prepareMtfFieldLaunch` (none from a bounding sphere), its footprint `findMtfFieldFootprint`, its lattice
+  `mtfLaunchGrid(footprint, 64)` (`LV_VIGNETTING_BEAM_CELLS`, the tab's `BEAM_GRID_CELLS`). One pattern, `beam`: a set a
+  field and line, the same rays at every line: the cells the tab traces (of each row, the columns from the middle on,
+  where `mtfMirrorSymmetric` lets it mirror the other half; every column otherwise), stated as a lattice of their own
+  (`groups.lattice`, half the grid's columns), each weighing LV's bulk transmission at the line
+  (`bulkTransmissionForTrace`, the tab's `w`); right after them the chief rays of the tab's image mapping, weight 0: the
+  field's (`groups.chiefIndex` = the cells) and those `MAPPING_STEP_DEG` (0.01°) below and above it where the tab has a
+  launch (`lvMappingChiefRays`). **The set holds the half the tab traces, never the whole lattice**: the lattice's
+  columns are not mirror images to the bit (2,921 of 5,043 column pairs on the test's 14 configurations), so the other
+  half's cells are not where the tab's mirrored rays start. Where the tab maps a field with ray tubes (its chief ray or
+  both neighbours vignetted: copies of the beam's rays tilted by 1e-4 rad and traced without aperture checks, which no
+  `rays.trace` request states) the field keeps its set and is the coded note `lv-tube-mapping` (`lvVignettingMapping`);
+  9 fields of 1,308 catalog curves at `098c91ef6`, none on the benchmark. Every restated line has a canary (two Stage
+  6.6 tests in `canaries.test.ts`). `test/integration/lv/vignettingRays.test.ts` traces the sets with `traceEngineRay`
+  and the tab's options, counts them in the tab's own arithmetic (a mirrored cell twice, a running sum, the image area
+  `(dh/dθ)(h / sin θ)` of the lit chief rays) and gets `computeVignettingCurve` to the bit on every benchmark
+  configuration, the zoom's far end, the absorbing Laowa 105 mm STF and the Viltrox AF 14 mm f/4 Air (142 fields), whose
+  two ray-tube fields it gets to the bit by restating the tubes itself (`tubeImageArea`) and tracing them with LV; and
+  holds each beam's cells to the right half of LV's own MTF lattice of the field at 64 cells. A folded path, a finite
+  object, no half field and no pupil are coded problems of the run, and so is a state the tab draws no curve of
+  (`lv-outside-beam-model`: `mtfSequentialRefractivePath` or `mtfAxialImagePlane` false, the eight diffractive states
+  among them; `lv-bounding-sphere-field`) and an axis without a beam (`no-axis-beam`); a field the tab plots dark
+  (`chief-ray-failed`, `vignetted`) and a launch behind the first surface are coded problems of the field.
+  focus-stations and folded have no vignetting sets.
 - **One decision of fields and lines for the sets, the ask and `lv`'s answer** (`vignettingFields.ts`:
-  `lvVignettingFields`, `lvVignettingLines`): the R11b ask is at the lines that trace the authored indices
-  (`tracesAuthored`), none for a photopic or spectral run; `test/engines/lv/vignetting.test.ts` feeds the asks of the
-  fake's vector variant to `answerLvVignetting`, which answers every field.
-- **R11a is gated, identical rays** (policy version 20): `rays.trace` of the vignetting sets,
-  `raysVignettingComparator`, a comparator of spans (`spanOf`: the sets of one pattern at one line; every figure of a
-  field is relative to the axis). Which rays got through is judged as R2 judges it (`mask.mismatches` 0). The weights
-  are the request's, so on the rays ok in both answers every count and sum is the same bits in both: never compare
-  transmitted fractions of the common rays. `transmission.maxAbs` is aligned with R2: the flux of the rays of
+  `lvVignettingDecision`, `lvVignettingMapping`, `lvVignettingLines`): the R11b ask is of the fields with a beam, at the
+  lines that trace the authored indices (`tracesAuthored`), none for a photopic or spectral run; `lv` answers each asked
+  field from the tab's curve, a state with no curve at every field with the refusal's code (asked at the tab's own
+  angles), and states `sampling.tubeMapping` of the same decision (`test/engines/lv/vignetting.test.ts`).
+- **R11a is gated, identical rays** (policy version 20; its beam sets and `landing.maxAbs` policy version 21, Stage
+  6.6b): `rays.trace` of the vignetting sets, `raysVignettingComparator`, a comparator of spans (`spanOf`: the beam sets
+  of one line; every figure of a field is relative to the axis). A set that is no beam (no lattice, or its chief ray not
+  right after the cells) is not comparable. Which rays got through is judged as R2 judges it (`mask.mismatches` 0). The
+  weights are the request's, so on the rays ok in both answers every count and sum is the same bits in both: never
+  compare transmitted fractions of the common rays. `transmission.maxAbs` is aligned with R2: the flux of the cells of
   `mask.mismatches` that one answer lets through and the other does not (never the rim band, never a failed ray) over
-  the axis's on the common rays, on the launch plane (a count over a total: 1/192 of a sweep a ray), gate 0; the flux of
-  the rim-band and failed rays one answer passes and the other does not is shown beside it, never judged and in no
-  policy, as R2 shows `mask.rimBand` (`transmission.rimBandOrFailed`, a subject of `transmission`, so a report puts it
-  next to the gated column). `illumination.maxAbs` is, of a lattice span, each field's flux into the image over the
-  axis's on the common rays (`cosineFlux`), gate 1e-9; inapplicable to a sweep. The area of a beam in cosine space is of
-  its rim (Green's theorem): an interior cell's direction enters to second order, a rim cell's `δ` by about `2 δ / ρ`
-  (`ρ` 0.040 to 0.40 on the benchmark), so the gate is tighter than R2's direction gate, as R4's is; the conditioning is
-  stated, never gated away, and a FAIL is attributed in extended precision first. No floor. A span's members are taken
-  in an order of their own (`memberOrder`: the axis first, then by field angle, then by line) in `compare` and
+  the axis's on the common rays, on the launch plane (a count over a total: about 1/1600 a cell of a half lattice of 64
+  across), gate 0; the flux of the rim-band and failed rays one answer passes and the other does not is shown beside it,
+  never judged and in no policy, as R2 shows `mask.rimBand` (`transmission.rimBandOrFailed`, a subject of
+  `transmission`, so a report puts it next to the gated column). `illumination.maxAbs` is each field's flux into the
+  image over the axis's on the common rays (`cosineFlux` of the half lattice: the cut along the meridian is a rim of the
+  lattice's own, of second order), gate 1e-9. The area of a beam in cosine space is of its rim (Green's theorem): an
+  interior cell's direction enters to second order, a rim cell's `δ` by about `2 δ / ρ` (`ρ` 0.040 to 0.40 on the
+  benchmark), so the gate is tighter than R2's direction gate, as R4's is; the conditioning is stated, never gated away,
+  and a FAIL is attributed in extended precision first. `landing.maxAbs` is the largest landing difference, along x or
+  y, of the chief rays of the image mapping ok in both answers, gate 1e-8 mm (R2's, R9a's and R10a's): the tab's image
+  area is `(dh/dθ)(h / sin θ)` of these landings 0.01° apart, so its own figure moves by about `δ / (f · 1.75e-4)`
+  relative to it for a landing difference `δ`, and the rung judges the landings themselves. No floor. A span's members
+  are taken in an order of their own (`memberOrder`: the axis first, then by field angle, then by line) in `compare` and
   `recorded` alike, never the order handed over (a test reverses them and gets the same bytes). **The owner accepted
-  this gate (2026-10-26)**: `mask.mismatches` 0, `illumination.maxAbs` 1e-9, and `transmission.maxAbs` 0 aligned with R2
-  as above. R11a is in the default rung selection and joins the rays baselines of benchmark, features, states and
-  diffractive at the Phase 6 end refresh.
+  these gates**: `mask.mismatches` 0, `illumination.maxAbs` 1e-9 and `transmission.maxAbs` 0 aligned with R2
+  (2026-10-26), and `landing.maxAbs` 1e-8 mm (2026-10-27). R11a is in the default rung selection and joins the rays
+  baselines of benchmark, features, states and diffractive at the Phase 6 end refresh (diffractive: no sets, its states
+  being outside the tab's beam model).
 - **The flux estimator (`src/estimators/illumination.ts`) is a pure estimator**: `blockFlux` (compensated sums of the
   weights taken), `launchArea` (cells taken times the step's square, carried in two doubles, rounded once) and
   `cosineFlux` (weight times `pupilFunction`'s cell area in optical direction cosines, compensated; the area does not
@@ -1379,10 +1409,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   together.
 - **`lv` answers `vignetting.native` from the tab as it presents it** (`src/engines/lv/vignetting.ts`,
   `lv-vignetting-tab`): `computeVignettingCurve` of the drawer's request (`lvChiefRequest`), each field's figures to the
-  bit, identified by the landing on the design plane of the solved chief ray it sweeps about
-  (`chiefRayImageHeightAccurateForRuntimeLens`). Refused before LV is asked anything: `line` (`linesBeyondCase`),
-  `lines.not-authored-reference`, `focus.off-design`, `object.finite`, `path.folded`; `fields.angles` once the tab's
-  fields are known; an empty curve is `lv-no-curve` at every field (a test makes every LV call throw).
+  bit, identified by the landing on the design plane of LV's solved chief ray of the field
+  (`chiefRayImageHeightAccurateForRuntimeLens`); `sampling` `gridCells`, `fieldSamples`, `mirrored` and `tubeMapping`.
+  Refused before LV is asked anything: `line` (`linesBeyondCase`), `lines.not-authored-reference`, `focus.off-design`,
+  `object.finite`, `path.folded` (a test makes every LV call throw); `fields.angles` once the tab's fields are known. A
+  state the tab draws no curve of is every field unavailable with the code (`no-pupil`, `lv-outside-beam-model`,
+  `lv-bounding-sphere-field`); an empty curve otherwise is `lv-no-curve` at every field.
 - **`flux` is LV's lattices and the comparator's flux estimator** (`src/engines/lv/fluxEngine.ts`, `lattice-flux`), in
   the pattern of `wave`: `lvFieldRaySets` at 64 and 128 cells (`LV_FLUX_DEFAULT_GRID`, twice the run's default), or
   where a run states a `bundleGrid` at twice and four times it (R11b hands `flux` twice the stated grid as its option,
@@ -1391,26 +1423,43 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   the launch-plane area of the cells taken over the axis's, `relativeIllumination` the cosine flux over the axis's, on
   the finer lattice; `ok` only where both moved by no more than `CONVERGENCE_BANDS` on doubling and no lit cell is on
   the lattice's rim, else `unconverged` (`not-converged`, `convergence-unknown`, `lattice-edge-lit`). Its fingerprint is
-  LV's. optiland has no vignetting analysis and answers no `vignetting.native`.
+  LV's. optiland has no vignetting analysis and answers no `vignetting.native`. **Owner decision (2026-10-27): `flux`
+  keeps its cosine-space relative illumination** (Rimmer's method, OpticStudio's); R11b records LV's #925 energy route
+  against it as two methods, and the owner decided that LV is to adopt Rimmer's method, and a vignetting curve of the
+  share of stop samples transmitted, in later LV changes (pending).
 - **R11b is recorded, of `lv` and `flux`, only where named** (`vignettingNativeComparator`): R9b's `classifyChiefField`
   sorts each field (R5's classes with `numerical` for `unconverged`, `indices-differ`, the landing at 1e-5 mm); no
   reason of its own. Figures: `geometricTransmission.maxAbs`, `falloff.maxAbs` (each answer's relative illumination over
-  its geometric transmission: cos^4 against the traced falloff, of no vignetting) and `relativeIllumination.maxAbs`.
+  its geometric transmission, of no vignetting: since `5ba17c20c` the tab's energy route, its flux times cos θ over the
+  chief rays' image mapping, against the cosine-space flux) and `relativeIllumination.maxAbs`.
   `vignettingFactsOfRecorded` repeats the sorting: change it, `vignettingFactsOf` and `recorded` together. **Owner
   decisions (2026-10-26):** the engine `flux` stays R11b's independent estimate, and its cosine-space flux (the
   projected solid angle of the exit pupil) is the comparator's relative illumination; the 1e-5 mm landing limit stays
   (policy 20); the three figures have no attention band; R11b stays out of every baseline (`--rungs r11b`).
-- **LV assumptions found** (`docs/gotchas.md`, "Vignetting"; owner's brief
-  `docs/upstream/lensvisualizer-vignetting-sweep.md`, not filed): the tab's sweep is a chord of the axis's pupil, which
+- **LV assumptions found, resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Vignetting"; owner's brief
+  `docs/upstream/lensvisualizer-vignetting-sweep.md`, not filed): the tab's sweep was a chord of the axis's pupil, which
   the stop's image outgrows off the axis (the beam's area 1.79 times the axis's on the Sony FE 20 mm at f/8 and 47°,
-  where the tab's fraction is 1.02; its relative illumination low by up to 0.27, the Z 24-70 mm wide at f/8); a chord
-  overstates a vignetted beam's area (the Canon EF 135 mm's edge 0.484 against 0.387); cos^4 of the object-space angle
-  is no lens's falloff (the Z 24-70 mm at 70 mm, traced 0.641 against 0.843 at 16.6°). The traced figure agrees with a
-  second route (object-side area times cos θ over the image mapping's Jacobian) within 0.011. **The owner decided
-  (2026-10-26) to have LV change the tab**: a two-dimensional sample of each field's footprint, and a relative
-  illumination of the traced exit directions in place of cos^4; the LV change is pending (the owner holds its prompt).
-  Until it lands, R11b records the tab as it is; afterwards the canaries of the tab's lines fail first, and the sets,
-  the asks and the measurements are redone.
+  where the tab's fraction was 1.02); a chord overstates a vignetted beam's area (the Canon EF 135 mm's edge 0.484
+  against 0.387); cos^4 of the object-space angle is no lens's falloff (the Z 24-70 mm at 70 mm, traced 0.641 against
+  0.843 at 16.6°). Since `5ba17c20c` the tab traces each field's beam in two dimensions and takes its relative
+  illumination by conservation of energy over the chief rays' image mapping (Stage 6.6b: the vignetting sets above; on
+  the benchmark at `098c91ef6` R11b has all 232 fields of two methods and, per field off the axis, the geometric
+  transmission within 0.0100 of the flux's (median 0.0017; up to 0.773 before), the relative illumination within 0.0110
+  (median 0.0017; 0.273 before) and the falloff within 0.023 (median 0.00075; 0.202 before): the tab's energy route on a
+  half lattice of 64 cells against the flux's cosine-space flux on a lattice of 128, two methods recorded). **Owner
+  decision (2026-10-27)**: LV is to move the tab to Rimmer's relative illumination (the cosine-space flux, `flux`'s and
+  OpticStudio's) and to a vignetting curve of the share of stop samples transmitted, and to aim its spots, fans, bokeh,
+  zones and MTF at the real stop, in later LV changes (pending; the canaries of those lines will fail first).
 - The adapter revisions of `lv`, `replay` and `wave` moved (the stage's names and modules); the kit's `validate.py`
   moved `optiland`'s and `optiland-wave`'s; `ref`'s did not; `flux` is new; LV's engine closure did not (`c866fbff`).
   The recipe in `docs/REFERENCE.md`, "The Phase 6 end refresh", names `r11a` beside `r7a` to `r10a`.
+- **Stage 6.6b adopted LV #925** at `098c91ef6` (engine closure `fef2e248`, 178 files; the new names
+  `computeOffAxisChannelFieldGeometry`, `mtfSequentialRefractivePath`, `mtfAxialImagePlane`, `mtfMirrorSymmetric`,
+  `mtfTraceOptions`, `bulkTransmissionForTrace` and `launchSurfaceForFieldDeg` are of modules already loaded). The six
+  canaries that failed restate LV's new lines (the gate's two rules, the anchored channels, the axis-only chief-ray
+  shortcut and its tolerance, the per-channel lateral colour and its channels, the tab's beams and mapping); the MTF
+  and R4f pins (`PINNED_CLOSURE` of `mtf.test.ts` and `fidelity.test.ts`) were measured again at `fef2e248` and found
+  unchanged, case for case. The adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`'s and the optiland
+  worker's did not. Policy version 21 (R11a's `landing.maxAbs`); baselines are still refreshed once at the end of Phase
+  6, where R11a's beam sets are 1.7 times the rays compared of the sweeps and lattices they replace and 9.6 GB of the
+  store compressed on the benchmark alone (`docs/REFERENCE.md`, "Stage 6.6b").

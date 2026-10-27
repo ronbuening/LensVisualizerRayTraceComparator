@@ -14,6 +14,7 @@ import type {
   Vec3,
 } from "../../types.js";
 import { mtfFiniteObjectPoint } from "./mtfConjugates.js";
+import { bulkTransmissionForTrace } from "../../trace/bulkAbsorption.js";
 
 // A dispersion that is nothing like a glass's and easy to check: 1e-5 of index per nm from the d line, air at 1.
 export function mtfIndexResolver(
@@ -43,17 +44,14 @@ function traceOptions(
   };
 }
 
-// The fake's glasses absorb where a lens says so: exp(-coefficient x path) over every stretch inside an element.
+// The fake's glasses absorb where a lens says so (`bulkTransmissionForTrace`).
 export function transmission(state: FakeState, trace: FakeTraceResult): number {
-  const coefficient = state.lens.runtime.source.absorptionPerMm ?? 0;
-  if (coefficient === 0) return 1;
-  let inGlass = 0;
-  for (let i = 0; i + 1 < trace.hits.length; i++) {
-    if (state.surfaces[trace.hits[i].surfaceIndex].nd === 1) continue;
-    const [from, to] = [trace.hits[i].point, trace.hits[i + 1].point];
-    inGlass += Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
-  }
-  return Math.exp(-coefficient * inGlass);
+  return bulkTransmissionForTrace(state.lens, trace.hits);
+}
+
+// The fake's surfaces are all of revolution: a meridional field's beam is its own mirror image, as LV's is.
+export function mtfMirrorSymmetric(state: FakeState): boolean {
+  return state.surfaces.every((surface) => ["flat", "spherical", "aspheric"].includes(surface.profile.kind));
 }
 
 export function mtfImagePoint(
@@ -89,6 +87,16 @@ export function mtfTraceClassification(
   const t = (surface.z - origin[2]) / direction[2];
   const radius = Math.hypot(origin[0] + t * direction[0], origin[1] + t * direction[1]);
   return outside(state, surface, radius, stopRadius) ? "blocked" : "failed";
+}
+
+export function mtfTraceOptions(
+  state: FakeState,
+  options: FakeMtfOptions,
+  support: FakeMtfSupport,
+  line: { wavelengthNm: number; weight: number },
+  opticalPath = false,
+): FakeTraceOptions {
+  return traceOptions(state, options, support, line.wavelengthNm, opticalPath);
 }
 
 export function mtfLaunchRay(launch: FakeFieldLaunch, x: number, y: number): { origin: Vec3; direction: Vec3 } {

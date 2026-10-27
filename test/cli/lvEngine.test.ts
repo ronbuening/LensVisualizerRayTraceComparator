@@ -646,18 +646,18 @@ test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's fiel
   }
 });
 
-test("lvrtc run --rungs r11a,r11b: the tab's sweeps and lattices pass between lv and ref, and lv's tab is set beside flux", (t) => {
+test("lvrtc run --rungs r11a,r11b: the tab's beams pass between lv and ref, and lv's tab is set beside flux", (t) => {
   const rootDir = lvRoot(t);
   const suite = raySuite(rootDir);
   const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r11a,r11b");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  // The tab's fields do not depend on the run's: of each run a sweep set at each line and a lattice of each field at
-  // each line. R11b asks the singlet's reference line of lv and flux; the photopic run has no line of the tab's.
+  // The tab's fields do not depend on the run's: of each run a beam set of each field at each line. R11b asks the
+  // singlet's reference line of lv and flux; the photopic run has no line of the tab's.
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   const [singlet, zoom] = manifest.runs.map((run) => run.vignettingRaySets!);
   assert.deepEqual([singlet.problems, zoom.problems], [[], []]);
   const singletSets = singlet.sets.length;
-  assert.ok(singletSets > 2, "a sweep and the lattices of the singlet's fields at its one line");
+  assert.ok(singletSets > 2, "the beams of the singlet's fields at its one line");
   const r11a = manifest.jobs.filter((job) => job.rung === "r11a");
   const r11b = manifest.jobs.filter((job) => job.rung === "r11b");
   assert.equal(r11a.length, 2 * (singlet.sets.length + zoom.sets.length));
@@ -681,10 +681,11 @@ test("lvrtc run --rungs r11a,r11b: the tab's sweeps and lattices pass between lv
       if (metric.name === "fields.compared") fields += metric.value ?? 0;
       else if (metric.name === "rays.compared") assert.ok((metric.value ?? 0) > 0);
       else if (metric.name === "illumination.maxAbs") assert.ok((metric.value ?? NaN) <= 1e-9, `${metric.value}`);
+      else if (metric.name === "landing.maxAbs") assert.ok((metric.value ?? NaN) <= 1e-8, `${metric.value}`);
       else assert.equal(metric.value, 0, metric.name);
     }
   }
-  assert.ok(fields > 4, `lattice fields compared: ${fields}`);
+  assert.ok(fields > 4, `beam fields compared: ${fields}`);
   // The fake's MTF launch aims its chief ray otherwise than the fake's tab solves it: the two land farther apart than the
   // sorting's limit off the axis, so those fields are data and the landing marks the pair (ATTENTION, never a FAIL).
   const recorded = file.comparisons.filter((each) => each.rung === "r11b" && each.mode === "pairwise");

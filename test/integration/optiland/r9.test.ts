@@ -8,9 +8,10 @@
 // in one engine and not in another. R9b is recorded: nothing here is held to a figure of a distortion or a pupil. What
 // is held is that LensVisualizer answers exactly the asks its tabs answer and says why not of the others, that optiland
 // answers every ask, that the distortion and the pupils of the design run are of two methods within the limit of the
-// sorting, that the lateral colour of one line is set aside as data because LensVisualizer's G channel traces indices
-// that are not the case's, that LensVisualizer's pupils of a field below one degree are of its paraxial chief ray
-// (docs/gotchas.md, "Chief rays"), and that the report claims nothing it may not.
+// sorting, that the lateral colour of one line is of two methods since LensVisualizer #925 anchored its G channel to
+// the authored index and solves each channel's own chief ray, that LensVisualizer's pupils of a field below one degree
+// are of a chief ray through the stop's centre since #925 too (docs/gotchas.md, "Chief rays"), and that the report
+// claims nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -147,18 +148,18 @@ test(
         assert.equal(typeof value(pupils, figure), "number", `${run} ${figure}`);
       }
       // Lateral colour on the reference line alone, LensVisualizer's G channel (the d line for these d-line indices):
-      // every field is data, since LensVisualizer traces it at catalog indices that are not the case's.
-      assert.equal(value(lateral, "fields.compared"), 0, run);
-      assert.ok((value(lateral, "fields.data") ?? 0) > 0, run);
-      assert.match(
-        lateral.reason ?? "",
-        /line 0, field 0: data, indices-differ \(lv-chromatic-tab traced indices up to /,
-      );
+      // since LensVisualizer #925 its indices are the case's to the bit and its chief ray is its own through the stop,
+      // so every field is of two methods (at 098c91ef6 the landings within 1.2e-10 mm on the benchmark).
+      assert.equal(lateral.verdict, "RECORDED", `${run}: ${lateral.reason ?? ""}`);
+      assert.equal(value(lateral, "fields.data"), 0, run);
+      assert.ok((value(lateral, "fields.compared") ?? 0) > 0, run);
+      const lateralLanding = value(lateral, "chiefLanding.maxAbs");
+      assert.ok(typeof lateralLanding === "number" && lateralLanding <= SAME_FIELD_MM, `${run} ${lateralLanding}`);
     }
 
-    // LensVisualizer's pupils of a field below one degree are of its paraxial estimate of the chief ray, with no
-    // shift of the entrance pupil: far from optiland's real chief ray there, and within a hundred-thousandth of a
-    // millimetre of it above one degree, where LensVisualizer solves the real one.
+    // Since LensVisualizer #925 its pupils of a field below one degree are of a chief ray solved through the stop's
+    // centre, its entrance pupil shifted from the paraxial one: within a hundred-thousandth of a millimetre of
+    // optiland's real chief ray there as above one degree (at 098c91ef6, 3.8e-6 mm at 0.2°; it was 1.30 mm).
     const pupils = of(LONG)[1];
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === pupils.requestId && candidate.mode === "pairwise",
@@ -175,11 +176,11 @@ test(
       const apart = Math.abs(number(lv.entrancePupilZ, at) - number(optiland.entrancePupilZ, at));
       assert.ok(Number.isFinite(apart), `${angle} degrees`);
       if (angle < 1) {
-        assert.equal(lv.epShiftMm[at], 0, `${angle} degrees`);
+        assert.notEqual(lv.epShiftMm[at], 0, `${angle} degrees`);
         below = Math.max(below, apart);
       } else above = Math.max(above, apart);
     }
-    assert.ok(below > 1, `${below}`);
+    assert.ok(below > 0 && below <= 1e-5, `${below}`);
     assert.ok(above <= 1e-5, `${above}`);
     t.diagnostic(`${LONG} entrance pupils: ${below} mm apart below one degree, ${above} above`);
 

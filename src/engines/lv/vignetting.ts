@@ -1,9 +1,10 @@
 // `vignetting.native` as the engine `lv` answers it: LensVisualizer's vignetting tab asked as the analysis drawer asks
 // it, and its curve written down as the tab presents it (`computeVignettingCurve`): each field's geometric
-// transmission, the fraction of the tab's one meridional sweep across a fixed pupil that passes every aperture, and its
-// relative illumination, the sweep's transmitted intensity times cos^4 of the field angle, each over the axis's.
-// Nothing of a figure is computed here; the landing that identifies a field is LensVisualizer's own solved chief ray's,
-// the ray the tab centres its sweep on.
+// transmission, the area on the launch plane of its beam traced in two dimensions on its MTF's launch lattice, and its
+// relative illumination, the beam's flux times the cosine of the field angle over the image area a unit of object
+// solid angle covers, each over the axis's. Nothing of a figure is computed here; the landing that identifies a field
+// is LensVisualizer's own solved chief ray's, and which fields the tab samples, which of them have a beam and how it
+// maps each onto the image is decided once, with the case source's sets (vignettingFields.ts).
 import type {
   VignettingNativeData,
   VignettingNativeField,
@@ -12,21 +13,20 @@ import type {
 import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { lvChiefGeometry, lvChiefRequest } from "./chiefSetup.ts";
-import type { LvChiefSetupApi } from "./chiefSetup.ts";
 import { lvCurvaturePlaneZ } from "./curvatureFields.ts";
 import { linesBeyondCase, tracesAuthored } from "./spot.ts";
 import type { LvApi } from "./types.ts";
 import {
-  isVignettingFieldRefusal,
-  lvVignettingFieldCount,
-  lvVignettingFields,
-  lvVignettingPupilCount,
+  LV_VIGNETTING_BEAM_CELLS,
+  LV_VIGNETTING_MAPPING_STEP_DEG,
+  isVignettingRefusal,
+  lvVignettingDecision,
+  lvVignettingMapping,
 } from "./vignettingFields.ts";
 import type { LvVignettingFieldsApi } from "./vignettingFields.ts";
 
 /** The LensVisualizer exports a vignetting curve is answered with. */
-export type LvVignettingAnswerApi = LvChiefSetupApi &
-  LvVignettingFieldsApi &
+export type LvVignettingAnswerApi = LvVignettingFieldsApi &
   Pick<LvApi, "computeVignettingCurve" | "chiefRayImageHeightAccurateForRuntimeLens">;
 
 /** What the engine makes of a `vignetting.native` spec. */
@@ -93,13 +93,17 @@ function unavailableField(line: number, wavelengthNm: number, fieldAngleDeg: num
  * LensVisualizer's vignetting tab, asked for a spec about a case.
  *
  * - At a line whose indices are the authored ones (`tracesAuthored`): the tab's curve, each field's geometric
- *   transmission and relative illumination as the tab presents them, and the landing on the design plane of the solved
- *   chief ray the tab centres the field's sweep on (`chiefRayImageHeightAccurateForRuntimeLens`, with the drawer's
- *   geometry), what identifies the field.
- * - The fields are of the tab's own (`lvVignettingFields`, the case source's too), each angle one of them to the bit,
- *   the axis first; the request is the drawer's (`lvChiefRequest`).
- * - A curve the tab has none of (it draws none where no ray of the axis passes) leaves every field unavailable
- *   (`lv-no-curve`).
+ *   transmission and relative illumination as the tab presents them, and the landing on the design plane of the
+ *   field's solved chief ray (`chiefRayImageHeightAccurateForRuntimeLens`, with the drawer's geometry), what
+ *   identifies the field.
+ * - The fields are of the tab's own (`lvVignettingDecision`, the case source's too), each angle one of those with a
+ *   beam to the bit, the axis first; the request is the drawer's (`lvChiefRequest`). `sampling` states the cells
+ *   across the beam (`gridCells`), whether the tab traced one half of it and mirrored it (`mirrored`), and whether it
+ *   mapped the beam onto the image with ray tubes traced without aperture checks (`tubeMapping`, 1) rather than its lit
+ *   chief rays (0).
+ * - A state the tab draws no curve of (no pupil, outside its MTF's beam model, a field launched from a bounding sphere)
+ *   leaves every field asked of its angles unavailable with that reason; a curve the tab has none of for another reason
+ *   (no beam of the axis, a beam whose image mapping cannot be traced) every field (`lv-no-curve`).
  *
  * Unsupported: a finite object, a folded path, a line the case does not have (`line`), a case off the design plane, a
  * line whose indices are not the authored ones, and fields other than the tab's own.
@@ -117,28 +121,62 @@ export function answerLvVignetting(
     const message = "LensVisualizer's field geometry of the state has no half field";
     return { unsupported: [{ code: FEATURE, item: "field.no-half-field", message }] };
   }
-  // The fields with a sweep, of which the case source's ask is (it leaves out a field whose rays would start behind
-  // the first surface): each angle asked must be one of them, to the bit.
-  const launched = lvVignettingFields(api, model, geometry).flatMap(({ index, fieldAngleDeg, made }) =>
-    isVignettingFieldRefusal(made) ? [] : [{ index, angle: fieldAngleDeg }],
-  );
-  const fields = spec.fieldAnglesDeg.map((angle) => launched.find((field) => Object.is(field.angle, angle)));
+  const decision = lvVignettingDecision(api, model, geometry);
+  // The fields with a beam, of which the case source's ask is (it leaves out a field whose rays would start behind the
+  // first surface): each angle asked must be one of them, to the bit. A state with no curve has the tab's angles.
+  const own =
+    "refused" in decision
+      ? decision.anglesDeg.map((angle, index) => ({ index, angle, beam: null }))
+      : decision.fields.flatMap(({ index, fieldAngleDeg, made }) =>
+          isVignettingRefusal(made) ? [] : [{ index, angle: fieldAngleDeg, beam: made }],
+        );
+  const fields = spec.fieldAnglesDeg.map((angle) => own.find((field) => Object.is(field.angle, angle)));
   if (fields.some((field) => field === undefined)) {
-    const own = launched.map((field) => field.angle);
-    const message = `LensVisualizer's vignetting tab samples its own fields: ${own.join(", ")} degrees`;
+    const message = `LensVisualizer's vignetting tab samples its own fields: ${own.map((field) => field.angle).join(", ")} degrees`;
     return { unsupported: [{ code: OPTION, item: "fields.angles", message }] };
   }
-  const curve = api.computeVignettingCurve(lvChiefRequest(api, model));
+  const lines = model.exported.conditions.lines;
+  const request = lvChiefRequest(api, model);
+  const fieldSamples = "refused" in decision ? decision.anglesDeg.length : decision.fields.length;
+  const params = {
+    stopSemiDiameterMm: model.exported.conditions.stopSemiDiameter,
+    pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
+    gridCells: LV_VIGNETTING_BEAM_CELLS,
+    fieldSamples,
+    mappingStepDeg: LV_VIGNETTING_MAPPING_STEP_DEG,
+    illumination:
+      "flux of the beam's lit cells times the cosine of the field angle over the image area a unit of object solid angle covers",
+  };
+  const notes = [
+    "LensVisualizer traces each field's beam on its MTF's launch lattice over the footprint it finds, one half of it mirrored where every surface is of revolution, and counts the cells whose rays pass every aperture",
+    "the relative illumination is the beam's flux, weighted by bulk transmission, times the cosine of the field angle, over (dh/dθ)(h/sin θ) of lit chief rays 0.01 degrees apart, or of the median ray tube of the beam where they are vignetted; each figure is relative to the axis",
+  ];
+  if ("refused" in decision) {
+    const answered = spec.lines.flatMap((line) =>
+      fields.map((asked) => unavailableField(line, lines[line].wavelengthNm, asked!.angle, decision.refused.code)),
+    );
+    const data: VignettingNativeData = {
+      fields: answered,
+      method: { name: LV_VIGNETTING_TAB, params },
+      notes: [...notes, `the tab draws no curve of the state: ${decision.refused.message}`],
+    };
+    return { data, counts: { fields: answered.length } };
+  }
+  const curve = api.computeVignettingCurve(request);
   const { state, runtime } = model;
   const zPos = [...state.z];
-  const pupilSamples = lvVignettingPupilCount(api, runtime);
-  const fieldSamples = lvVignettingFieldCount(geometry.halfFieldDeg);
-  const lines = model.exported.conditions.lines;
+  const mirrored = decision.setup.mirror ? 1 : 0;
+  const tubes: number[] = [];
+  const mapping = fields.map((asked) => {
+    const tube = lvVignettingMapping(api, model, decision.setup, asked!.beam!) === "tube" ? 1 : 0;
+    if (tube === 1) tubes.push(asked!.angle);
+    return tube;
+  });
   const answered: VignettingNativeField[] = spec.lines.flatMap((line) => {
     const wavelengthNm = lines[line].wavelengthNm;
-    return fields.map((asked): VignettingNativeField => {
+    return fields.map((asked, at): VignettingNativeField => {
       const { index, angle } = asked!;
-      // computeVignettingCurve: an empty curve where the axis transmits nothing.
+      // computeVignettingCurve: an empty curve where the axis has no beam or a beam's mapping cannot be traced.
       const sample = curve[index];
       if (sample === undefined) return unavailableField(line, wavelengthNm, angle, "lv-no-curve");
       if (!Object.is(sample.fieldAngleDeg, angle)) {
@@ -161,25 +199,20 @@ export function answerLvVignetting(
         chiefLandingMm: Number.isFinite(landing) ? landing : null,
         geometricTransmission: sample.geometricTransmission,
         relativeIllumination: sample.relativeIllumination,
-        sampling: { pupilSamples, fieldSamples },
+        sampling: { gridCells: LV_VIGNETTING_BEAM_CELLS, fieldSamples, mirrored, tubeMapping: mapping[at] },
       };
     });
   });
   const data: VignettingNativeData = {
     fields: answered,
-    method: {
-      name: LV_VIGNETTING_TAB,
-      params: {
-        stopSemiDiameterMm: model.exported.conditions.stopSemiDiameter,
-        pupilSemiDiameterMm: lvChiefRequest(api, model).aperture.entrancePupilSemiDiameterMm,
-        pupilSamples,
-        fieldSamples,
-        illumination: "transmitted intensity of the meridional sweep times cos^4 of the object-space field angle",
-      },
-    },
+    method: { name: LV_VIGNETTING_TAB, params },
     notes: [
-      "LensVisualizer sweeps one meridional line of rays across the entrance pupil's diameter at the axis, centred on each field's solved chief ray on the first vertex plane, and counts the rays that pass every aperture",
-      "each figure is relative to the axis; the relative illumination applies cos^4 of the object-space field angle and the bulk transmission of the rays that pass",
+      ...notes,
+      ...(tubes.length === 0
+        ? []
+        : [
+            `the image mapping of the fields at ${tubes.join(", ")} degrees is of ray tubes traced without aperture checks (sampling.tubeMapping)`,
+          ]),
     ],
   };
   return { data, counts: { fields: answered.length } };

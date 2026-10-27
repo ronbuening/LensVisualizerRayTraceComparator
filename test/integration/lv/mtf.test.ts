@@ -3,7 +3,8 @@
 // tab asks: the answer is LensVisualizer's own `computeMtf` for a request this file spells out again from the tab's
 // source, bit for bit. Run output goes to a temporary directory.
 //
-// Pins were re-measured at LV 643ef5d0, closure 94778d3d (175 files); the same engine closure is at ab0fd4cf.
+// Pins were re-measured at LV 643ef5d0, closure 94778d3d (175 files); the same engine closure is at ab0fd4cf; and
+// again at 098c91ef6, closure fef2e248 (178 files), unchanged.
 // Only the measured closure and case activate a pin: a lens edit is another case.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -65,9 +66,11 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
 /**
  * Re-measured at LV 643ef5d0 (closure 94778d3d; the same at ab0fd4cf). At Stage 4.4 the binding's import of
  * src/optics/publishedStations.ts made the closure 7b756ee6 (177 files) at ab0fd4cf; every figure was measured
- * again there and found unchanged.
+ * again there and found unchanged. At Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files: the chief ray solved
+ * below one degree, the anchored channels, the vignetting tab's beams), every figure and case was measured again and
+ * found unchanged.
  */
-const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56";
+const PINNED_CLOSURE = "fef2e248117fc696015fe513b4b2a43f92ccde5bd7381536047ccab3ac3406bd";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

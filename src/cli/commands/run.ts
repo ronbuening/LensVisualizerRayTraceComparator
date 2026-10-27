@@ -67,9 +67,10 @@ const HELP = [
   "                   land; r9b is named-only: lv's three tabs beside optiland's own distortion and chief rays.",
   "                   r10a traces the rays LensVisualizer's field-curve sections launch and compares each field's",
   "                   tangential and sagittal focus; r10b is named-only: lv's field curves beside optiland's own",
-  "                   FieldCurvature. r11a traces LensVisualizer's vignetting sweeps and its lattice over each",
-  "                   field's beam and compares which rays get through and the flux into the image; r11b is",
-  "                   named-only: lv's vignetting tab beside the comparator's flux on the same lattices.",
+  "                   FieldCurvature. r11a traces the beams LensVisualizer's vignetting tab traces over each",
+  "                   field and the chief rays of its image mapping, and compares which rays get through, the",
+  "                   flux into the image and where the mapping rays land; r11b is named-only: lv's vignetting",
+  "                   tab beside the comparator's flux on its own lattices.",
   "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
   "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
   "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
@@ -319,7 +320,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
           io.stderr(`lvrtc run: run ${run.name}: the field curves have no rays: ${problem}\n`);
         }
         for (const problem of run.vignettingRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the vignetting has no rays: ${problem}\n`);
+          io.stderr(`lvrtc run: run ${run.name}: the vignetting sets: ${problem}\n`);
         }
       }
       for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);

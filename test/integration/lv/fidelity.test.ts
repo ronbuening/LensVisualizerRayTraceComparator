@@ -42,9 +42,11 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 /**
  * The engine closure the pinned figures are compared at. They were measured at LV 643ef5d0 (closure 94778d3d, 175
  * files; the same at ab0fd4cf); at Stage 4.4 the binding's import of src/optics/publishedStations.ts made it
- * 7b756ee6 (177 files) at ab0fd4cf, and every figure was measured again there and found unchanged.
+ * 7b756ee6 (177 files) at ab0fd4cf, and every figure was measured again there and found unchanged; at Stage 6.6b, at
+ * LV 098c91ef6 (closure fef2e248, 178 files), every grid and case was measured again and found unchanged (worst R4f
+ * mtf.maxAbs 1.69e-14).
  */
-const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56";
+const PINNED_CLOSURE = "fef2e248117fc696015fe513b4b2a43f92ccde5bd7381536047ccab3ac3406bd";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended

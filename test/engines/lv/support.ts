@@ -17,6 +17,7 @@ export const FAKE_LV: string = fileURLToPath(new URL("../../fixtures/fake-lv-bin
 export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/lens-data/defaults.ts",
   "src/optics/analysis.ts",
+  "src/optics/analysis/aberration/offAxis.ts",
   "src/optics/analysis/aberration/shared.ts",
   "src/optics/analysis/axial.ts",
   "src/optics/analysis/chief.ts",
@@ -52,6 +53,7 @@ export const FAKE_ENGINE_FILES: readonly string[] = [
   "src/optics/state/pupils.ts",
   "src/optics/state/runtime.ts",
   "src/optics/trace/aperture.ts",
+  "src/optics/trace/bulkAbsorption.ts",
   "src/optics/trace/chiefTrace.ts",
   "src/optics/trace/interactions.ts",
   "src/optics/trace/rayAdapters.ts",

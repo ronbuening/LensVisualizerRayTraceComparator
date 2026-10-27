@@ -11,13 +11,14 @@
 //   and its angle; and every sample's chief ray lands within LensVisualizer's own 1e-4 mm of its target;
 // - the distortion grid: every traced point, both coordinates;
 // - the pupils tab: every field's real exit pupil, and its entrance-pupil correction from the solved launch;
-// - the lateral-colour section: every field's chief-ray landing at every channel, and the spread.
+// - the lateral-colour section: every field's landing of each channel's own chief ray, and the spread.
 //
 // It also holds that the curve plots its target heights, not its chief rays' landings (the LensVisualizer
 // assumption docs/gotchas.md names), and that `lv`'s `rays.trace` answer of a set brings the same rays to the image as
 // the tabs' traces do. What is not tested is that the tabs' React code hands these functions exactly this request:
 // that rests on the canaries of the drawer's lines. Nothing is written. Measured at LV d6df08c7f and cfa91d0a5 (engine
-// closure c866fbff with the stage's names).
+// closure c866fbff with the stage's names), and again at 098c91ef6 (closure fef2e248), where the chief ray is solved
+// through the stop below one degree too, and each channel of the lateral colour traces its own.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -220,13 +221,15 @@ test(
       });
       rays += fields.length;
 
-      // The lateral-colour section: every field's chief ray at every channel.
+      // The lateral-colour section: every field's own chief ray of every channel, four a field in the section's order.
       const lateral = api.computeLateralColorCurve(request);
       assert.ok(lateral !== null, where);
+      assert.deepEqual(lateral.channels, ["R", "G", "B", "V"], where);
+      assert.equal(f8(lateralSet, "origins").length / 3, 4 * lateral.fields.length, where);
       lateral.fields.forEach((field, ray) => {
         const heights: number[] = [];
-        for (const sample of field.samples) {
-          const traced = tabRay(binding, model, lateralSet, ray, stopSD, sample.channel);
+        for (const [channel, sample] of field.samples.entries()) {
+          const traced = tabRay(binding, model, lateralSet, 4 * ray + channel, stopSD, sample.channel);
           const off = api.computeOffAxisFieldGeometry(state, field.fieldFraction, geometry);
           assert.ok(off !== null && off.kind !== "vector", where);
           const image = traced.clipped
@@ -238,7 +241,7 @@ test(
         const spread = heights.length < 2 ? null : Math.max(...heights) - Math.min(...heights);
         assert.ok(Object.is(field.lateralSpreadMm, spread), `${where}: field ${ray} spread`);
       });
-      rays += lateral.fields.length;
+      rays += 4 * lateral.fields.length;
 
       // The engine's own trace of a set, at the case's stop radius, is LensVisualizer's: the same chief rays arrive.
       for (const set of [curveSet, gridSet, pupilSet, lateralSet]) {

@@ -2153,9 +2153,9 @@ exactly when a rung that needs them (`RungDefinition.needsChiefRaySets`: `r9a`, 
 | `distortion-curve` | the probe of the rectilinear reference (`min(max(0.01 × halfField, 0.02), 0.5)` degrees, launched from the paraxial pupil, `ray(-epRatio × uField, uField)`), the edge chief ray (`halfField`), and the chief ray of every sample of `computeDistortionCurve` after the axis, at the angle its inversion solved for the sample's target height; each a meridional launch `ray(solve.yLaunch, uField)` of `solveChiefRayForRuntimeLens`. `groups.chiefIndex` 0: the probe |
 | `distortion-grid` | the probe, then every point `computeDistortionFieldGrid` traces, in its order: the slopes of its ideal point (`projectionFieldSlopesForImagePoint`), launched as the skew ray `skew(-e × sx, -e × sy, sx, sy)` with `e` the paraxial pupil ratio times the grid's interpolated pupil correction (17 entries, 9 for a heavy lens, of `solveChiefRay` over the paraxial launch). `groups.chiefIndex` 0: the probe |
 | `pupils` | the solved chief ray of every field of the pupils tab off the axis (`uniformFieldFraction(i, PUPIL_ABERRATION_SAMPLE_COUNT)` of the half field), launched `ray(solve.yLaunch, uField)` |
-| `lateral-colour` | the chief ray of every field of the lateral-colour section (`DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS` of the half field, each once, clamped, at least 0), the coma tab's chief launch `skew(0, yChief, 0, uField)` of `computeOffAxisFieldGeometry` |
+| `lateral-colour` | of every field of the lateral-colour section (`DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS` of the half field, each once, clamped, at least 0), each channel's own chief ray, R, G, B and V in that order (since LensVisualizer #925, `5ba17c20c`): the coma tab's chief launch `skew(0, yChief, 0, uField)` of `computeOffAxisChannelFieldGeometry`, solved through the stop at the channel's indices; four rays a field, the same at every line |
 | launches | a meridional ray starts `rayLead` ahead of the first vertex plane at `(0, y0 - u0 × rayLead)` along `(0, u0, 1)` made a unit vector (`directionFromMeridionalSlope`; `(0, 0, 1)` for a slope of 0), a skew ray as for the spot sets; weight 1 |
-| lines | the same rays at every line of the case, as the lateral-colour section traces the same chief ray at each channel |
+| lines | the same rays at every line of the case, each traced by every engine at each line |
 
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`) and a state without a
 half field (`no-half-field`) have no chief sets. A fisheye lens has no distortion sets (`lv-fisheye-projection`), nor
@@ -2232,44 +2232,45 @@ curvature set, are not comparable.
 #### Vignetting sets and rung R11a
 
 **Vignetting sets** (`CaseSource.vignettingRaySets`, `src/rays/vignettingSets.ts`) are the rays of LensVisualizer's
-vignetting tab and a lattice over each of its fields' beams, and no part of a run's ray sets. Only a LensVisualizer lens
-has them (`src/engines/lv/vignettingRaySets.ts`, the fields in `vignettingFields.ts`); the manifest records them under
+vignetting tab, and no part of a run's ray sets. Only a LensVisualizer lens has them (`src/engines/lv/vignettingRaySets.ts`,
+the tab's setup, fields, beams and mapping in `vignettingFields.ts`); the manifest records them under
 `runs[].vignettingRaySets`, sets and problems as above, exactly when a rung that needs them
-(`RungDefinition.needsVignettingRaySets`: `r11a`, `r11b`) was run. Two patterns, the same rays at every line of the
-case:
+(`RungDefinition.needsVignettingRaySets`: `r11a`, `r11b`) was run. Since LensVisualizer #925 (`5ba17c20c`, Stage 6.6b)
+the tab traces each field's beam in two dimensions; one pattern, the same rays at every line of the case:
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | the analysis drawer's, as for the chief sets |
-| fields | `computeVignettingCurve`'s: `max(ceil(halfFieldDeg / 3) + 1, 7)` fields at `uniformFieldFraction(i, n)` of the half field, the axis first; each launched by its solved chief ray's height on the first vertex plane (`solveChiefRayForRuntimeLens` with the drawer's geometry) and the field's slope (`projectionLaunchSlopeForField`) |
-| `sweep` | of each field, the tab's meridional sweep: a ray at each of `evenlySpacedSigned(n)` (n = 192, 96 for a lens `isHeavyLensForRayWork` calls heavy) of the pupil radius the drawer hands, crossing the first vertex plane at `yChief + fraction × EPSD`, started as `bindRayTrace`'s `ray(y, u)` starts it; one set a line, each field a block of consecutive rays of one direction, the axis first; weight 1 times LensVisualizer's bulk transmission (`lvRayWeights`); no groups |
-| `lattice` | of each field, LensVisualizer's launch lattice over the beam its MTF finds for the field (`lvFieldRaySets` at the run's `sampling.bundleGrid`, 32 without it), the chief ray after the cells; one set a field and line, stating its field, lattice and chief ray under `groups` |
+| request | the analysis drawer's, as for the chief sets; the tab's MTF options of its two radii and a support record of its own (the d line, the authored indices, no finite conjugate), traced with `mtfTraceOptions` of that line |
+| fields | `computeVignettingCurve`'s: `max(ceil(halfFieldDeg / 3) + 1, 7)` fields at `uniformFieldFraction(i, n)` of the drawer's half field, the axis first; each launched by the MTF's chief-ray launch (`prepareMtfFieldLaunch`), its beam found by `findMtfFieldFootprint` |
+| `beam` | of each field, a set a line: the cells of its lattice of 64 cells across the footprint (`mtfLaunchGrid`) that the tab traces, of each row the columns from the middle on where every surface is mirror-symmetric (`mtfMirrorSymmetric`; every column otherwise), stated as a lattice of their own under `groups.lattice`, each weighing LensVisualizer's bulk transmission along it at the line; right after them the chief rays of the tab's image mapping, weight 0: the field's (`groups.chiefIndex`), then those 0.01° below and above it where the tab launches them; `groups.field` states the field |
 
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
-half field (`no-half-field`) or without a pupil (`no-pupil`), and one whose axis has no sweep (`no-axis-sweep`) have no
-vignetting sets and no `vignetting.native` ask. A field LensVisualizer launches from a bounding sphere
-(`lv-vector-launch`), one without a slope (`lv-no-launch`) and one whose rays would not start in front of the first
-surface (`launch-behind-first-surface`) is a coded problem of that field, and no field of the sets or the ask
-(`vignettingFields.ts` decides the fields of the sets, the ask and `lv`'s answer alike). A state LensVisualizer's MTF
-launch does not cover keeps its sweeps and has no lattice sets, with the gate's reason as the problem's code. Every
-restated line has a source canary, and the sweeps, traced as the tab traces them, give the tab's geometric transmission
-and relative illumination to the bit, every ray being, launch, hits and exit to the bit, the ray LensVisualizer's own
-meridional adapter launches for the tab (`test/integration/lv/vignettingRays.test.ts`).
+half field (`no-half-field`) or without a pupil (`no-pupil`), a state the tab draws no curve of
+(`lv-outside-beam-model`: outside the MTF's beam model; `lv-bounding-sphere-field`: a field launched from a bounding
+sphere), and one whose axis has no beam (`no-axis-beam`) have no vignetting sets and no `vignetting.native` ask. A field
+the tab plots dark (`chief-ray-failed`, `vignetted`) and one whose rays would not start in front of the first surface
+(`launch-behind-first-surface`) is a coded problem of that field, and no field of the sets or the ask
+(`vignettingFields.ts` decides the fields of the sets, the ask and `lv`'s answer alike). A field the tab maps with ray
+tubes traced without aperture checks keeps its set and is named (`lv-tube-mapping`). Every restated line has a source
+canary, and the sets, traced as the tab traces them, give the tab's geometric transmission and relative illumination to
+the bit (`test/integration/lv/vignettingRays.test.ts`).
 
-**Rung R11a** asks one `rays.trace` request of each vignetting set and compares the sets of one pattern at one line as
-one span (`spanOf`), every figure of a field being relative to the axis. Which rays got through is judged as R2 judges
-it (`mask.mismatches` at 0, `mask.rimBand` counted). `illumination.maxAbs` is, of a lattice span, the largest
-difference of a field's flux into the image over the axis's (`cosineFlux`, src/estimators/illumination.ts) on the rays
-ok in both answers; `transmission.maxAbs`, aligned with R2, the largest flux of a field's rays of `mask.mismatches` (ok
-in one answer and not in the other, neither in the rim band nor failed by an engine), over the axis's flux on the rays
-ok in both, on the launch plane; `transmission.rimBandOrFailed`, shown beside it and never judged, the same of the rays
-ok in one answer only that R2 counts in neither count (in the rim band, or failed by an engine). Of the rays ok in both
-answers every count and sum is the same bits in both, the request's weights in the same order, so both transmissions
-are of the disagreeing rays alone and 0 where they agree; `illumination.maxAbs` is the rung's only figure of the traced
-numbers, the exit directions. A sweep has no area: `illumination.maxAbs` is inapplicable to it. A span's members are
-taken in an order of their own (the axis first, then by field angle and line), never in the order they are handed
-over. A field with a flux into the image in one answer and none, or none for another reason, in the other
-is not comparable; one without in either for the same reason is named in a note.
+**Rung R11a** asks one `rays.trace` request of each vignetting set and compares the beam sets of one line as one span
+(`spanOf`), every figure of a field being relative to the axis; a set that is no beam (no lattice, or its chief ray not
+right after the cells) is not comparable. Which rays got through is judged as R2 judges it (`mask.mismatches` at 0,
+`mask.rimBand` counted). `illumination.maxAbs` is the largest difference of a field's flux into the image over the
+axis's (`cosineFlux`, src/estimators/illumination.ts) on the rays ok in both answers; `transmission.maxAbs`, aligned
+with R2, the largest flux of a field's cells of `mask.mismatches` (ok in one answer and not in the other, neither in the
+rim band nor failed by an engine), over the axis's flux on the rays ok in both, on the launch plane;
+`transmission.rimBandOrFailed`, shown beside it and never judged, the same of the rays ok in one answer only that R2
+counts in neither count (in the rim band, or failed by an engine); `landing.maxAbs` (policy 21) the largest difference,
+along x or y, of the landing of a chief ray of the image mapping ok in both answers. Of the rays ok in both answers
+every count and sum is the same bits in both, the request's weights in the same order, so both transmissions are of the
+disagreeing rays alone and 0 where they agree; `illumination.maxAbs` and `landing.maxAbs` are the rung's figures of the
+traced numbers, the exit directions and the landings. A span's members are taken in an order of their own (the axis
+first, then by field angle and line), never in the order they are handed over. A field with a flux into the image in
+one answer and none, or none for another reason, in the other is not comparable; one without in either for the same
+reason is named in a note.
 
 ### `axial.native`
 
@@ -2468,11 +2469,13 @@ vignetting or the relative illumination).
 
 `r11b` asks one `vignetting.native` request (the case source's ask): at the lines of the case LensVisualizer's tab traces
 (its authored reference line; no request of a run of none), at the tab's own field angles, of `lv` and `flux` only, and
-only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (the fraction
-of the tab's sweep that passes every aperture, over the axis's) and `relativeIllumination` (the sweep's transmitted
-intensity times cos^4 of the object-space field angle, over the axis's) as the tab presents them, and the landing on the
-design plane of the solved chief ray the tab centres the sweep on (`chiefRayImageHeightAccurateForRuntimeLens`), on the
-design plane only and at a line of the authored indices only, decided before the tab is asked. `flux` answers as its
+only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (the area on
+the launch plane of the field's beam, traced on a lattice, over the axis's) and `relativeIllumination` (since
+LensVisualizer #925, the beam's flux times the cosine of the field angle over the image area a unit of object solid
+angle covers, over the axis's) as the tab presents them, and the landing on the design plane of LensVisualizer's solved
+chief ray of the field (`chiefRayImageHeightAccurateForRuntimeLens`), on the design plane only and at a line of the
+authored indices only, decided before the tab is asked; a state the tab draws no curve of is every field unavailable
+with the reason. `flux` answers as its
 section says.
 
 A field is sorted before any difference by R9b's sorting (`classifyChiefField`): R5's `classifyNativeField` first,
@@ -2480,8 +2483,8 @@ unsupported (no figures), data of other wavelengths, numerical (an answer that d
 `unconverged`); then data where an answer traced the field at indices other than the case's; then R5's landing of the
 chief rays (`chiefLanding.maxAbs`); then method. The rung adds no reason of its own. The figures are
 `chiefLanding.maxAbs`, `geometricTransmission.maxAbs`, `falloff.maxAbs` (of each answer's relative illumination over its
-geometric transmission, of the fields both let light through: the falloff of no vignetting, the tab's cos^4 against the
-traced flux into the image per unit of transmitted area) and `relativeIllumination.maxAbs`, and counts of fields of each
+geometric transmission, of the fields both let light through: the falloff of no vignetting, the tab's energy route
+over its chief rays' image mapping against the traced flux into the image per unit of transmitted area) and `relativeIllumination.maxAbs`, and counts of fields of each
 kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
 `vignettingFactsOfRecorded` repeats the sorting from the values a comparison records.
 

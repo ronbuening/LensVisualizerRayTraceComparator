@@ -5,7 +5,8 @@
 // Which fields a tab traces, and the launch of each chief ray, are LensVisualizer's own functions where it exports
 // them (`computeDistortionCurve` and `computeDistortionFieldGrid` for the fields their sweeps found,
 // `solveChiefRayForRuntimeLens`, `projectionLaunchSlopeForField`, `projectionFieldSlopesForImagePoint`,
-// `computeOffAxisFieldGeometry`, `uniformFieldFraction`, `directionFromMeridionalSlope`, `directionFromSkewSlope`).
+// `computeOffAxisChannelFieldGeometry`, `uniformFieldFraction`, `directionFromMeridionalSlope`,
+// `directionFromSkewSlope`).
 // What the tabs do inline is restated here, each line with a source canary (test/integration/lv/canaries.test.ts):
 // the distortion tab's near-axis probe (chiefSetup.ts), its edge chief ray and the chief ray of each sample
 // (`chiefRayImageHeightAccurateWithTransfer` in imageHeight.ts), its grid's pupil-correction table and the corrected
@@ -42,7 +43,7 @@ export type LvChiefApi = LvChiefSetupApi &
     LvApi,
     | "computeDistortionCurve"
     | "computeDistortionFieldGrid"
-    | "computeOffAxisFieldGeometry"
+    | "computeOffAxisChannelFieldGeometry"
     | "solveChiefRayForRuntimeLens"
     | "projectionFieldSlopesForImagePoint"
     | "isFisheyeProjection"
@@ -355,18 +356,21 @@ function pupilRays(
 }
 
 /**
- * The lateral-colour section's chief rays: the chief ray of every field it traces, the same at every channel,
- * restated from `computeLateralColorCurve` (its fields, with no fractions of the drawer's:
+ * The lateral-colour section's chief rays: of every field it traces, each channel's own chief ray, in the order of its
+ * channels (`lvLateralChief`, chiefFields.ts, which `lv`'s answer decides its fields with), a block of four rays a
+ * field. Restated from `computeLateralColorCurve` (its fields, with no fractions of the drawer's:
  * `normalizeFractions(options.fieldFractions, DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS, { allowZero: true })`) and from
- * `traceOffAxisChiefRay` in offAxis.ts, whose launch is the coma tab's chief ray (`lvSkewLaunch`):
+ * `traceOffAxisChiefRay` in offAxis.ts, whose launch of a channel's geometry is the coma tab's skew launch
+ * (`lvSkewLaunch`):
  *
  * ```
  * const trace = adapter.skew(0 * entrancePupilSemiDiameter, geometry.yChief + 0 * entrancePupilSemiDiameter, 0, geometry.uField);
  * ```
  *
- * The section traces nothing without a pupil (`currentEPSD <= 0`), `no-pupil`; a field without a launch is
- * `lv-no-launch`, and one launched from a bounding sphere `lv-vector-launch` (`lvLateralChief`, chiefFields.ts, which
- * `lv`'s answer decides its fields with): neither is a field of the ask.
+ * The section traces each channel's chief ray at that channel's indices; the set holds all four at every line of the
+ * case, so that an engine traces each of them at every line and a line's own channel's ray is among them. The section
+ * traces nothing without a pupil (`currentEPSD <= 0`), `no-pupil`; a field without a launch at a channel is
+ * `lv-no-launch`, and one launched from a bounding sphere `lv-vector-launch`: neither is a field of the ask.
  */
 function lateralRays(
   api: LvChiefApi,
@@ -388,16 +392,18 @@ function lateralRays(
       problems.push(refusalProblem(field));
       continue;
     }
-    launches.push(
-      lvSkewLaunch(
-        api,
-        model,
-        0 * entrancePupilSemiDiameter,
-        field.yChief + 0 * entrancePupilSemiDiameter,
-        0,
-        field.uField,
-      ),
-    );
+    for (const chief of field.chiefs) {
+      launches.push(
+        lvSkewLaunch(
+          api,
+          model,
+          0 * entrancePupilSemiDiameter,
+          chief.yChief + 0 * entrancePupilSemiDiameter,
+          0,
+          chief.uField,
+        ),
+      );
+    }
     anglesDeg.push(field.fieldAngleDeg);
   }
   return { launches, problems, anglesDeg };
@@ -448,13 +454,13 @@ function setsOf(model: LvCaseModel, made: PatternRays, pattern: ChiefPattern): R
 /**
  * The chief sets of a case that came from a LensVisualizer lens: for every pattern (`CHIEF_PATTERNS`), in that order,
  * its chief rays as one set at each line of the case, in the order of the lines; the rays are the same at every line,
- * as in LensVisualizer, whose lateral-colour section traces the same chief ray at each of its channels.
+ * every engine tracing each of them at each line.
  *
  * 1. `distortion-curve` (`curveRays`): the probe of the reference, the edge, the curve's samples; `groups.chiefIndex`
  *    names the probe, the ray whose landing scales the others' ideal heights;
  * 2. `distortion-grid` (`gridRays`): the probe, then the grid's points; `groups.chiefIndex` names the probe;
  * 3. `pupils` (`pupilRays`): the pupils tab's chief rays off the axis;
- * 4. `lateral-colour` (`lateralRays`): the lateral-colour section's chief rays.
+ * 4. `lateral-colour` (`lateralRays`): the lateral-colour section's chief rays, each channel's own, four a field.
  *
  * Every ray has the weight 1: no tab here weights a chief ray. Beside the sets, the `chief.native` requests of the
  * three tabs: the distortion curve at the case's reference line, at the angles LensVisualizer solved for its samples;

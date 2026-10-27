@@ -9,35 +9,43 @@ import { wordingProblems } from "../../src/report/wording.ts";
 import { R11A_GOLDEN, R11B_GOLDEN, r11aCycle, r11bCycle } from "./r11Fixture.ts";
 import { goldenFile } from "./support.ts";
 
-test("R11a: a turned rim direction fails as the flux into the image, a stopped ray on the mask and the transmission", async () => {
+test("R11a: a turned rim direction fails as the flux into the image, a stopped ray on the mask and the transmission, a moved chief ray as a landing", async () => {
   const root = mkdtempSync(join(tmpdir(), "lvrtc-r11a-"));
   try {
     const { comparisons, report } = await r11aCycle(root);
-    // Two spans: the sweep, and the two lattices of the line together.
+    // One span: the three beams of the line together.
     const verdicts = comparisons.comparisons.map((set) => [
       set.mode,
       set.pairs.map((pair) => `${pair.a}-${pair.b} ${pair.verdict}`),
     ]);
     assert.deepEqual(verdicts, [
-      ["reference-vs-each", ["ref-stopped FAIL", "ref-turned PASS"]],
-      ["pairwise", ["ref-stopped FAIL", "ref-turned PASS", "stopped-turned FAIL"]],
-      ["reference-vs-each", ["ref-stopped PASS", "ref-turned FAIL"]],
-      ["pairwise", ["ref-stopped PASS", "ref-turned FAIL", "stopped-turned FAIL"]],
+      ["reference-vs-each", ["ref-moved FAIL", "ref-stopped FAIL", "ref-turned FAIL"]],
+      [
+        "pairwise",
+        [
+          "moved-ref FAIL",
+          "moved-stopped FAIL",
+          "moved-turned FAIL",
+          "ref-stopped FAIL",
+          "ref-turned FAIL",
+          "stopped-turned FAIL",
+        ],
+      ],
     ]);
-    const stopped = comparisons.comparisons[0].pairs[0];
-    // One ray of the 3-degree field of the 12 the axis lets through in both answers.
+    const [moved, stopped, turned] = comparisons.comparisons[0].pairs;
+    assert.match(
+      moved.reason ?? "",
+      /^landing\.maxAbs 1\.49e-8 exceeds its tolerance 1\.00e-8 at field 4, line 0, ray 102$/,
+    );
+    // One cell of the 60 the axis lets through in both answers.
     assert.match(
       stopped.reason ?? "",
-      /^mask\.mismatches 1 exceeds its tolerance 0 at line 0, ray 20, surface 2; transmission\.maxAbs 8\.33e-2 exceeds its tolerance 0 at line 0, ray 16$/,
+      /^mask\.mismatches 1 exceeds its tolerance 0 at field 3, line 0, ray 44, surface 2; transmission\.maxAbs 1\.67e-2 exceeds its tolerance 0 at field 3, line 0$/,
     );
-    const turned = comparisons.comparisons[2].pairs[1];
     assert.match(
       turned.reason ?? "",
-      /^illumination\.maxAbs 1\.\d\de-6 exceeds its tolerance 1\.00e-9 at field 4, line 0$/,
+      /^illumination\.maxAbs \d\.\d\de-\d exceeds its tolerance 1\.00e-9 at field 4, line 0$/,
     );
-    // The sweep has no area: the flux into the image is no figure of it, neither measured nor missed.
-    assert.ok(!stopped.metrics.some((metric) => metric.name === "illumination.maxAbs"));
-    assert.ok(!(stopped.reason ?? "").includes("illumination"));
     assert.deepEqual(wordingProblems(report.markdown), []);
     assert.equal(report.markdown, readFileSync(goldenFile(R11A_GOLDEN), "utf8"));
   } finally {

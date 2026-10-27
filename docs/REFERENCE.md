@@ -3792,8 +3792,8 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5 or 6.6. Policy versions 16, 17, 18, 19 and 20 change the policy
-hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
+This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6 or 6.6b. Policy versions 16, 17, 18, 19, 20 and 21 change the
+policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
 other than the catalog's are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
@@ -3804,8 +3804,11 @@ other than the catalog's are STALE:
 benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
 
 R7a, R8a, R9a, R10a and R11a join the rays baselines of the suites whose runs have spot, axial, chief, curvature and
-vignetting sets: benchmark, features, states and diffractive (whose vignetting sets are the tab's sweeps alone:
-LensVisualizer's MTF launch, which lays the lattices, refuses a diffractive surface). focus-stations (finite objects)
+vignetting sets: benchmark, features, states and diffractive (which has no vignetting sets since Stage 6.6b: the tab
+draws no curve of a state outside its MTF's beam model, a diffractive surface among them, `lv-outside-beam-model`).
+LensVisualizer #925 (`5ba17c20c`, Stage 6.6b) also moved the rays of the MTF launch, of the chief, curvature and
+vignetting sets below one degree and of the lateral colour: where a set's rays moved its request is a new one, which a
+`baseline check` names before the write. focus-stations (finite objects)
 and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b and R11b stay out
 of every baseline.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
@@ -3836,6 +3839,10 @@ Before each write, `baseline check <suite> [--mtf] --jobs 4` says whether a reco
 `git diff reports/` after the writes.
 
 ## Stage 6.3: spherical aberration and axial colour
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) anchored its d-line channels to the authored index: the colour
+> lines of the reference runs are no longer `indices-differ`. The measurements below are as they were taken; those after
+> the change are in "Stage 6.6b: LensVisualizer #925 adopted".
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8b of lv and optiland whatever --engines names; only where named
@@ -4103,6 +4110,10 @@ apart required.
 
 
 ## Stage 6.4: distortion, lateral colour, pupils and breathing
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) solves the chief ray below one degree and traces each channel's
+> own chief ray in the lateral colour; the `lateral-colour` sets hold all four channels' chief rays of each field. The
+> measurements below are as they were taken; those after the change are in "Stage 6.6b: LensVisualizer #925 adopted".
 
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9b of lv and optiland whatever --engines names; only where named
@@ -4414,6 +4425,9 @@ change lands, the canaries of those lines fail first, and the chief sets, the as
 
 ## Stage 6.5: field curvature and astigmatism
 
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) centres the fields below one degree on a solved chief ray. The
+> measurements below are as they were taken; those after the change are in "Stage 6.6b: LensVisualizer #925 adopted".
+
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10b of lv and optiland whatever --engines names; only where named
 node bin/lvrtc.mjs compare benchmark --jobs 4
@@ -4667,6 +4681,11 @@ diffractive 96). The adapter revisions of `lv`, `replay` and `wave` moved (the s
 
 ## Stage 6.6: vignetting and relative illumination
 
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) replaced the tab's sweep and cos^4 with a beam traced in two
+> dimensions and a relative illumination by conservation of energy; the vignetting sets are now the tab's beams (one
+> pattern, `beam`) and R11a adds `landing.maxAbs` (policy 21). This section is the Stage 6.6 design and measurement as
+> they were; the current ones are in "Stage 6.6b: LensVisualizer #925 adopted".
+
 ```bash
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11b of lv and flux whatever --engines names; only where named
 node bin/lvrtc.mjs compare benchmark --jobs 4
@@ -4897,3 +4916,93 @@ estimator's notes, which change no answer's bytes).
    in two dimensions and take the relative illumination of the traced exit directions in place of cos^4, as the brief
    recommends. The change is pending; the owner holds its prompt. Until it lands, R11b records the tab as it is;
    afterwards the canaries of the tab's lines fail first, and the sets, the asks and the measurements are redone.
+
+## Stage 6.6b: LensVisualizer #925 adopted
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r10a,r11a,r8b,r9b,r10b,r11b --jobs 4
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer #925 (`5ba17c20c`, the owner's change on the comparator's briefs) is adopted at `098c91ef6` (clean; engine
+closure `fef2e248`, 178 files). #924 and #926 between them add a lens builder to the UI; under `src/optics` they change
+only `compileLabels.ts`'s label index (a null prototype, so that a label named like a member of `Object` resolves to
+its own entry), which moves no case id and no pinned figure here. #925 did four things, each of which failed the
+canaries of the lines the comparator restates:
+
+1. **Anchored channels** (`materialResolver.ts`): a d-line glass LensVisualizer matched to a catalog takes the
+   catalog's dispersion added to its authored `nd`, as an e-line one did; its G channel is the authored index.
+2. **The chief ray below one degree** (`chiefRaySolve.ts`): every field but the axis is solved through the stop's
+   centre, to a stop-height tolerance of `1e-7 · min(1, |θ| / 1°)` mm; the axis launches at 0.
+3. **Lateral colour of each channel's own chief ray** (`computeOffAxisChannelFieldGeometry`, `computeLateralColorField`).
+4. **The vignetting tab in two dimensions** (`vignetting.ts`): each field's beam on its MTF's launch lattice and an
+   image mapping of chief rays; `mtfSupport.ts` gave its gate's two rules functions of their own
+   (`mtfSequentialRefractivePath`, `mtfAxialImagePlane`), with the gate's behaviour unchanged (the expressions are
+   the old ones, negated twice; a NaN normal passes both as before).
+
+### What the comparator changed
+
+- **Canaries.** The six that failed restate the new lines: the gate's two functions and the two calls that reject by
+  them; the anchored tier (its anchor, R, B, V with and without `dPgF`, G returning `nd`) and the case's anchored
+  table beside it; the axis-only shortcut and the field-scaled tolerance (and no `< 1` shortcut left); the per-channel
+  geometries of the lateral colour, the solve with a channel and the section's channels; the tab's setup, fields,
+  beams, counting, image mapping, ray tubes and curve. 46 canaries pass at `098c91ef6`.
+- **Axial sets (6.3) and curvature sets (6.5)**: no code change. The sets are LensVisualizer's exports;
+  `axialRays.test.ts` and `curvatureRays.test.ts` hold them to the sections to the bit again, the colour sections now
+  anchored and the curvature fields below one degree centred on a solved chief ray.
+- **Chief sets (6.4)**: the distortion and pupils patterns follow LensVisualizer's solve without a change. The
+  `lateral-colour` pattern holds each channel's own chief ray of each field (four a field, R, G, B, V, in the section's
+  order), the same rays at every line: R9a's spans (a set's rays without its line) and `lateralColour.maxAbs` (each ray's
+  move from the span's first line) stand as they were, and a line's own channel's chief ray is among the rays of its
+  set. A field is of the sets, the ask and `lv`'s answer only where every channel has a scalar launch (`lvLateralChief`).
+  `chiefRays.test.ts` gets the curve, the grid, the pupils and every channel's lateral colour to the bit (1,788 rays).
+  optiland's lateral colour already traced each line's own chief ray through the stop, so R9b now compares like with
+  like.
+- **Vignetting sets (6.6)**: the `sweep` and `lattice` patterns are gone; one pattern, `beam`, is the tab's own trace
+  (CLAUDE.md, Stage 6.6). The set holds the half of the lattice the tab traces, not the whole lattice: on the 14
+  configurations of `vignettingRays.test.ts` 2,921 of 5,043 column pairs of the lattices are not mirror images of each
+  other to the bit (`x0 + (c + 0.5) step` against `-(x0 + (columns - 1 - c + 0.5) step)`), so the other half's cells
+  are not where the tab's mirrored rays start, though at the edge fields none of 22,950 cell pairs is classified apart.
+  The mapping's chief rays follow the cells (`groups.chiefIndex`). The test reproduces `computeVignettingCurve` to the
+  bit on 142 fields, two of them mapped with ray tubes, which it restates and traces with LensVisualizer
+  (`tubeImageArea`); in the catalog (1,308 curves at wide open, both zoom ends) 9 fields on 7 lenses are of ray tubes,
+  7 fields plotted dark for want of a footprint, 2 for want of a chief ray, and 33 states have no curve
+  (`lv-outside-beam-model`). The beams of a run are more rays than the sweeps and lattices they replace: 327,212 a
+  line on the test's 14 configurations, and on the benchmark 1.7 times the rays compared a pair (below).
+- **Policy 21**: R11a's `landing.maxAbs`, 1e-8 mm, of the mapping's chief rays (accepted by the owner, 2026-10-27).
+  `flux` keeps its method, the cosine-space relative illumination (Rimmer's method, OpticStudio's): owner decision,
+  2026-10-27. The owner decided too that LensVisualizer is to adopt Rimmer's method, and a vignetting curve of the share
+  of stop samples transmitted, in later changes (pending).
+- **Pins**: `PINNED_CLOSURE` of `mtf.test.ts` and `fidelity.test.ts` moved to `fef2e248`; every MTF figure, R4f grid and
+  case measured there is the pinned one (worst R4f `mtf.maxAbs` 1.69e-14).
+
+### The benchmark after the change
+
+The run above, `lv`, `ref` and `optiland` (R11b of `lv` and `flux`), `--jobs 4` into a temporary store: 14,688 jobs,
+14,280 ok, 408 unsupported, no error, in 7.5 minutes; 7,392 pairs, 6,240 PASS, 336 RECORDED, 816 UNSUPPORTED, no FAIL,
+no ATTENTION and no ERROR. No set of the 96 runs has a coded problem (no ray-tube field, no field plotted dark).
+
+| Rung | Pairs | What moved | Worst |
+|---|---|---|---|
+| R9a (gated) | 1,152 PASS | the pupils' and distortion's chief rays below one degree are solved; the lateral-colour sets hold four chief rays a field | `landing.maxAbs` 3.6e-13 mm, `exitPupil.maxScaled` 4.8e-13 mm, `distortion.maxScaled` 3.8e-13 mm, `lateralColour.maxAbs` 4.1e-13 mm |
+| R10a (gated) | 1,728 PASS | the fields below one degree are centred on a solved chief ray | `tangentialFocus.maxScaled` 1.3e-13 mm, `landing.maxAbs` 9.4e-13 mm |
+| R11a (gated) | 864 PASS (288 spans, one a line) | the beam sets: 2,784 sets, 4.09 million rays compared a pair (2.46 million before) | `illumination.maxAbs` 6.3e-14 (Sony FE 20 mm f/8 photopic, 47°), `landing.maxAbs` 2.1e-13 mm; no mask mismatch, no rim-band or dropped ray, `transmission.maxAbs` 0 |
+| R8b (recorded) | 48 RECORDED, 144 UNSUPPORTED | every colour line of the 24 reference runs is of two methods (all were `indices-differ`) | `lineFocus.maxAbs` 8.4e-12 mm (Sony FE 20 mm); the spherical figures as before (`longitudinalSa.maxAbs` 8.5e-12 mm), `pupilRadius.relative` 1.37e-11 |
+| R9b (recorded) | 72 RECORDED, 216 UNSUPPORTED | all 120 lateral-colour fields of two methods (all were `indices-differ`, 22 pairs ATTENTION); the pupils below one degree | lateral colour's landing 1.2e-10 mm (median 1.2e-14); entrance pupil below one degree 3.8e-6 mm (Sony FE 400 mm at 0.2°; 1.30 mm before), exit pupil 4.1e-7 mm (5.17e-2 before); above it 5.0e-6 and 5.0e-6 mm as before; distortion as before (`distortionPercent.maxAbs` 0.0146) |
+| R10b (recorded) | 24 RECORDED, 24 UNSUPPORTED | the Sony FE 400 mm's ten fields below one degree | tangential below one degree 4.0e-8 mm (2.31e-6 before), sagittal 4.8e-10; over all 407 fields as before: tangential 5.72e-6, sagittal 1.38e-6, astigmatism 6.66e-6 mm, one field `no-focus` |
+| R11b (recorded) | 24 RECORDED, 24 UNSUPPORTED | the tab's beam and energy route against the flux's area and cosine-space flux | per field off the axis (208): geometric transmission 0.0100 (median 0.0017; 0.773 before), relative illumination 0.0110 (Sony FE 20 mm at 47°; median 0.0017; 0.273 before), falloff 0.023 (Sigma 35 mm at 31.9°; median 0.00075; 0.202 before); chief landings within 7.1e-15 mm |
+
+R11b's remaining differences are of two routes to one quantity on two lattices: the tab's lit area on half of a lattice
+of 64 cells, mirrored, against the flux's area on a whole lattice of 128 (a staircase of each rim, of first order in
+the cell: the flux's own answers move by up to 0.01 on doubling from 64 to 128); and the tab's conservation of energy,
+its flux times cos θ over `(dh/dθ)(h / sin θ)` of its chief rays 0.01° apart, against the projected solid angle of the
+exit beam in direction cosines (Rimmer's method, OpticStudio's). Stage 6.6 measured the two routes agreeing within
+0.011 over 368 fields; the tab now takes the first, and R11b records it against `flux`'s second as two methods, the
+difference measured above. Owner decisions (2026-10-27): `flux` keeps Rimmer's method; LensVisualizer is to adopt it
+for its tab, with a vignetting curve of the share of stop samples transmitted (and its spots, fans, bokeh, zones and
+MTF aimed at the real stop), in later LensVisualizer changes, pending; when they land the canaries fail first and the
+vignetting sets, the ask and the measurements are redone.
+
+**Store.** R11a's beam sets are the bulk of the run's store: 9.6 GB compressed for the benchmark's 8,352 R11a answers
+(about 1.15 MB each: every surface's hits of a beam's rays), against 0.7 GB for R10a and 0.05 GB for R9a. The
+Phase 6 end refresh writes them for benchmark, features and states on the real store.

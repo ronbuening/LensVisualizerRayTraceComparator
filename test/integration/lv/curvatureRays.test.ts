@@ -15,7 +15,8 @@
 // so that a set traces each once, that the ask is of the fields of the sets, and that `lv`'s `rays.trace` answer of a
 // set brings the same rays to the image as the sections' traces do. What is not tested is that the sections' React
 // code hands these functions exactly this request: that rests on the canaries of the drawer's lines. Nothing is
-// written.
+// written. Measured at LV cfa91d0a5 (engine closure c866fbff), and again at 098c91ef6 (closure fef2e248), whose fields
+// below one degree are centred on a solved chief ray and whose channels are anchored.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

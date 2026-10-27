@@ -9,6 +9,21 @@ export function isFisheyeProjection(projection: { kind?: string } | undefined): 
   return projection?.kind === "fisheye-equidistant" || projection?.kind === "fisheye-equisolid";
 }
 
+/**
+ * Where the fake launches a field from, under LV's name: a fisheye or a field at LV's 89 degrees from a bounding
+ * sphere, as LV's rule says, and a field beyond the lens's `field.vectorBeyondDeg`, which the fake's state carries in
+ * its projection's config, as well.
+ */
+export function launchSurfaceForFieldDeg(
+  fieldAngleDeg: number,
+  projection?: { kind?: string; vectorBeyondDeg?: number },
+): "object-plane" | "bounding-sphere" {
+  if (isFisheyeProjection(projection)) return "bounding-sphere";
+  const beyond = projection?.vectorBeyondDeg;
+  if (beyond !== undefined && Math.abs(fieldAngleDeg) > beyond) return "bounding-sphere";
+  return Math.abs(fieldAngleDeg) >= MAX_FIELD_LAUNCH_DEG ? "bounding-sphere" : "object-plane";
+}
+
 export function projectionLaunchSlopeForField(
   _L: Pick<FakeRuntimeLens, "projection">,
   fieldAngleDeg: number,

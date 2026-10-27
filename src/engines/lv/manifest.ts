@@ -80,6 +80,7 @@ export const LV_IMPORT_MANIFEST = [
       "projectionFieldSlopesForImagePoint",
       "distortionProjectionReferenceForLens",
       "isFisheyeProjection",
+      "launchSurfaceForFieldDeg",
     ),
   },
   {
@@ -121,6 +122,10 @@ export const LV_IMPORT_MANIFEST = [
     ],
   },
   { module: "src/optics/analysis/sampling.ts", exports: functions("uniformFieldFraction", "evenlySpacedSigned") },
+  {
+    module: "src/optics/analysis/aberration/offAxis.ts",
+    exports: functions("computeOffAxisChannelFieldGeometry"),
+  },
   {
     module: "src/optics/analysis/aberration/shared.ts",
     exports: [{ name: "PROFILE_FRACS", as: "saProfileFractions", kind: "object" }],
@@ -165,8 +170,21 @@ export const LV_IMPORT_MANIFEST = [
   { module: "src/optics/first-order/cardinals.ts", exports: functions("buildCardinalElementsFromMatrix") },
   {
     module: "src/optics/analysis/mtf/mtfTracing.ts",
-    exports: functions("mtfIndexResolver", "mtfLaunchGrid", "mtfLaunchRay", "mtfImagePoint", "mtfTraceClassification"),
+    exports: functions(
+      "mtfIndexResolver",
+      "mtfLaunchGrid",
+      "mtfLaunchRay",
+      "mtfImagePoint",
+      "mtfTraceClassification",
+      "mtfMirrorSymmetric",
+      "mtfTraceOptions",
+    ),
   },
+  {
+    module: "src/optics/analysis/mtf/mtfSupport.ts",
+    exports: functions("mtfSequentialRefractivePath", "mtfAxialImagePlane"),
+  },
+  { module: "src/optics/trace/bulkAbsorption.ts", exports: functions("bulkTransmissionForTrace") },
   {
     module: "src/optics/analysis/mtf/mtfFields.ts",
     exports: functions(

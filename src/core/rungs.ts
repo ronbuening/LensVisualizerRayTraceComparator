@@ -85,8 +85,8 @@ export interface RungInputs {
   readonly curvatureAsks?: readonly CurvatureNativeSpec[];
   /**
    * The vignetting sets of the run, from the source of its case (`CaseSource.vignettingRaySets`), for a rung that says
-   * it `needsVignettingRaySets`: the rays of the vignetting tab and a lattice over each of its fields' beams. Empty, or
-   * left out, for any other rung.
+   * it `needsVignettingRaySets`: the rays of the vignetting tab, each field's beam and the chief rays of its image
+   * mapping. Empty, or left out, for any other rung.
    */
   readonly vignettingRaySets?: readonly RaysTraceSpec[];
   /** The engines' own vignetting requests of the same fields, from the same source, for such a rung. */
@@ -717,10 +717,10 @@ export const r10bRung: RungDefinition = Object.freeze({
 
 /**
  * The rung `r11a`, LensVisualizer's vignetting tab on identical rays: one `rays.trace` request for each of the run's
- * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own meridional sweep of every field, and
- * LensVisualizer's launch lattice over the whole beam of each of the same fields, which every engine traces as given.
- * Which rays get through, how much flux the two engines disagree about, and the flux each field's lattice brings into
- * the image relative to the axis's are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
+ * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own trace of each field's beam on its launch lattice and
+ * the chief rays of its image mapping, which every engine traces as given. Which rays get through, how much flux the
+ * two engines disagree about, the flux each field's beam brings into the image relative to the axis's and where the
+ * mapping's chief rays land are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
  * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
  */
 export const r11aRung: RungDefinition = Object.freeze({

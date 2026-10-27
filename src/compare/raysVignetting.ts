@@ -1,35 +1,41 @@
 // The comparator of `rays.trace` for rung R11a: how much light of each field of LensVisualizer's vignetting tab two
-// engines let through the same rays. A comparator of spans (`spanOf`): the sets of one pattern at one line of a run
-// are compared together, since every figure of a field is relative to the axis (src/rays/vignettingSets.ts).
+// engines let through the same rays. A comparator of spans (`spanOf`): the beam sets of one line of a run are compared
+// together, since every figure of a field is relative to the axis (src/rays/vignettingSets.ts).
+//
+// A beam set is the tab's own trace of one field (src/engines/lv/vignettingRaySets.ts): the cells of its launch
+// lattice the tab traces, stated as a lattice of their own (`groups.lattice`), and after them the chief rays of the
+// tab's image mapping, the field's own (`groups.chiefIndex`) and those 0.01 degrees to either side of it.
 //
 // Which rays got through is judged as R2 judges it (`mask.mismatches`, `mask.rimBand`): no other rung traces these
-// rays, and it is the rung's first figure. Two figures more, each of the comparator's own estimator
-// (src/estimators/illumination.ts):
+// rays, and it is the rung's first figure. Three figures more:
 //
-// - **The relative illumination** of each field of a lattice set, the flux its lit cells bring into the image (weight
-//   times the area each cell covers in the optical direction cosines of the image space) over the axis's, on the rays
-//   ok in both answers: the two answers' difference (`illumination.maxAbs`). The rays are the same and the weights are
-//   the request's, so what can differ is the exit directions, through the area of the cells. The area of a beam in
-//   cosine space is of its rim (the central differences of the cells telescope along a row and a column): an interior
-//   cell's direction enters it to second order, and a difference `δ` of the rim's cosines moves the figure by about
-//   `2 δ / ρ`, `ρ` the beam's radius in optical cosines (0.040 to 0.40 on the benchmark). It is the rung's only figure of
-//   the traced numbers.
+// - **The relative illumination** of each field, the flux its lit cells bring into the image (weight times the area
+//   each cell covers in the optical direction cosines of the image space, the comparator's own estimator,
+//   src/estimators/illumination.ts) over the axis's, on the rays ok in both answers: the two answers' difference
+//   (`illumination.maxAbs`). The rays are the same and the weights are the request's, so what can differ is the exit
+//   directions, through the area of the cells. The area of a beam in cosine space is of its rim (the central
+//   differences of the cells telescope along a row and a column): an interior cell's direction enters it to second
+//   order, and a difference `δ` of the rim's cosines moves the figure by about `2 δ / ρ`, `ρ` the beam's radius in
+//   optical cosines (0.040 to 0.40 on the benchmark). Where the tab traces one half of a beam, the lattice is that half,
+//   cut along the meridian, and the figure is that of the half over the axis's half.
 // - **The transmission** of each field: the flux of the rays of `mask.mismatches` that one answer lets through and the
 //   other does not (R2's mismatches: neither in the rim band nor failed by an engine) over the axis's flux on the rays
-//   ok in both, on the launch plane (a lattice cell's flux times the square of its lattice's step; a sweep's rays, of
-//   one spacing, by their weights alone): how far each answer's own transmitted fraction of the field is from the
-//   other's for want of a ray R2 would fail (`transmission.maxAbs`, gated). Of the rays ok in both every estimate is
-//   the same bits in both answers, the same weights summed in the same order; so this figure is of the disagreeing rays
-//   alone, and is 0 where they agree. It is a count over a total: one ray of a field moves it by about one over the
-//   rays the axis lets through (1/192 of the tab's sweep, about 1/800 of a lattice of 32 cells). The flux of the other
-//   rays one answer lets through and the other does not, those in the rim band and those an engine failed, which R2
-//   judges in no count, is shown beside it the same way and never judged (`transmission.rimBandOrFailed`).
+//   ok in both, on the launch plane (a cell's flux times the square of its lattice's step): how far each answer's own
+//   transmitted fraction of the field is from the other's for want of a ray R2 would fail (`transmission.maxAbs`,
+//   gated). Of the rays ok in both every estimate is the same bits in both answers, the same weights summed in the same
+//   order; so this figure is of the disagreeing rays alone, and is 0 where they agree. It is a count over a total: one
+//   cell of a field moves it by about one over the cells the axis lets through (about 1/1600 of a half lattice of 64
+//   cells across). The flux of the other rays one answer lets through and the other does not, those in the rim band
+//   and those an engine failed, which R2 judges in no count, is shown beside it the same way and never judged
+//   (`transmission.rimBandOrFailed`).
+// - **The landing** of each chief ray of the image mapping, ok in both answers: the largest difference along x or y
+//   (`landing.maxAbs`), the transverse figure R2, R9a and R10a judge. The tab's image area of a field is
+//   `(dh/dθ)(h / sin θ)` of these landings 0.01 degrees apart, so a landing's difference `δ` moves it by about
+//   `δ / (f · 1.75e-4)` relative to it, `f` the focal length: the tab's own figure is that ill-conditioned, and the rung
+//   judges the landings themselves.
 //
-// The members of a lattice span are taken in an order of their own, the axis first, then by field angle and line,
-// never in the order they are handed over: the first ray of a count and the field of a tie do not depend on it.
-//
-// LensVisualizer's tab presents its geometric transmission and relative illumination from the sweep's counts alone; a
-// sweep set has no area, and only the mask and the transmission are of it.
+// The members of a span are taken in an order of their own, the axis first, then by field angle and line, never in the
+// order they are handed over: the first ray of a count and the field of a tie do not depend on it.
 import type { JsonObject } from "../contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
@@ -50,24 +56,19 @@ export const VIGNETTING_RAYS_RUNG = "r11a";
 
 export const ILLUMINATION_METRIC = "illumination.maxAbs";
 export const TRANSMISSION_METRIC = "transmission.maxAbs";
+/** The landing of the chief rays of the tab's image mapping. */
+export const LANDING_METRIC = "landing.maxAbs";
 /** The transmission of the rays R2 judges in no count, shown beside `transmission.maxAbs` and never judged. */
 export const RIM_OR_FAILED_TRANSMISSION_METRIC = "transmission.rimBandOrFailed";
 
-/** The two patterns of a vignetting set: a sweep states no lattice, a lattice set does. */
-type Pattern = "sweep" | "lattice";
-
-function patternOf(spec: JsonObject): Pattern {
-  return (spec as RaysTraceSpec).groups?.lattice === undefined ? "sweep" : "lattice";
-}
-
-/** The span of a request: the sets of one pattern at one line of the run. */
+/** The span of a request: the beam sets of one line of the run. */
 function spanOf(spec: JsonObject): string {
-  return canonicalJson({ pattern: patternOf(spec), line: (spec as RaysTraceSpec).line });
+  return canonicalJson({ pattern: "beam", line: (spec as RaysTraceSpec).line });
 }
 
 /**
  * The order the members of a span are taken in, whatever order they are handed over: the axis first, then by field
- * angle, then by line, then by request id. A sweep set states no field and is alone in its span.
+ * angle, then by line, then by request id.
  */
 function memberOrder(one: SpanMember, two: SpanMember): number {
   const [specOne, specTwo] = [one.spec as RaysTraceSpec, two.spec as RaysTraceSpec];
@@ -78,29 +79,6 @@ function memberOrder(one: SpanMember, two: SpanMember): number {
   if (angleOne !== angleTwo) return angleOne < angleTwo ? -1 : 1;
   if (specOne.line !== specTwo.line) return specOne.line - specTwo.line;
   return one.requestId < two.requestId ? -1 : one.requestId > two.requestId ? 1 : 0;
-}
-
-/** A block of consecutive rays of a sweep: one field, launched along one direction. */
-interface Block {
-  readonly first: number;
-  readonly end: number;
-}
-
-/** The fields of a sweep set: blocks of consecutive rays of one direction, the axis first. */
-export function sweepBlocks(spec: RaysTraceSpec): Block[] {
-  const d = decodeNdArray(spec.directions).values as Float64Array;
-  const rays = d.length / 3;
-  const same = (a: number, b: number) =>
-    d[3 * a] === d[3 * b] && d[3 * a + 1] === d[3 * b + 1] && d[3 * a + 2] === d[3 * b + 2];
-  const blocks: Block[] = [];
-  let first = 0;
-  while (first < rays) {
-    let end = first + 1;
-    while (end < rays && same(end, first)) end++;
-    blocks.push({ first, end });
-    first = end;
-  }
-  return blocks;
 }
 
 /** One member of a span as two engines traced it. */
@@ -183,131 +161,122 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     traced.push({ spec, place, a, b, valid, mismatched, rimOrFailed, weights });
   }
 
-  const pattern = patternOf(traced[0].spec);
+  // Every member is a beam: a lattice of the cells the tab traces, and its chief rays right after them.
+  const unlike = traced.find(({ spec, a }) => {
+    const { lattice, chiefIndex } = spec.groups ?? {};
+    return lattice === undefined || chiefIndex !== lattice.columns * lattice.rows || !(chiefIndex < a.rays);
+  });
+  if (unlike !== undefined) {
+    return never(`the set of ${JSON.stringify(unlike.place)} is no beam: no lattice with its chief ray right after it`);
+  }
   const illumination: Largest = { value: 0, where: null };
   const transmission: Largest = { value: 0, where: null };
   const rimOrFailed: Largest = { value: 0, where: null };
+  const landing: Largest = { value: 0, where: null };
   let illuminationMissing: Missing = null;
   let transmissionMissing: Missing = null;
   let fields = 0;
   // The fields with no flux into the image in either answer, for the same reason: named when others are measured.
   const skipped: string[] = [];
 
-  if (pattern === "sweep") {
-    // One member: the fields are its blocks, the axis first, of one spacing of rays.
-    const [member] = traced;
-    const { spec, valid, weights, place } = member;
-    const blocks = sweepBlocks(spec);
-    const axis = fluxOf(weights, valid, blocks[0].first, blocks[0].end);
-    if (typeof axis !== "number") transmissionMissing = { reason: `${axis.reason}: the axis: ${axis.message}` };
-    else if (!(axis > 0)) transmissionMissing = { reason: "no-flux: no ray of the axis is ok in both answers" };
-    else {
-      for (const block of blocks) {
+  // The landings of the chief rays of the tab's image mapping, ok in both answers.
+  for (const { spec, a, b, valid, place } of traced) {
+    for (let ray = spec.groups!.chiefIndex!; ray < a.rays; ray++) {
+      if (!valid[ray]) continue;
+      const along = Math.abs(a.imagePoint[3 * ray] - b.imagePoint[3 * ray]);
+      const across = Math.abs(a.imagePoint[3 * ray + 1] - b.imagePoint[3 * ray + 1]);
+      take(landing, Math.max(along, across), { ...place, ray });
+    }
+  }
+
+  const axis = traced.find((member) => member.spec.groups?.field?.angleDeg === 0);
+  if (axis === undefined) {
+    const reason = "no-axis: the span has no lattice of the axis, which every field is relative to";
+    [illuminationMissing, transmissionMissing] = [{ reason }, { reason }];
+  } else {
+    if (context?.opticalCase === undefined) {
+      return never("the case is not at hand: the index of its image space is what the cosines are of");
+    }
+    const imageIndex = imageSpaceIndices(context.opticalCase)[axis.spec.line];
+    const cosine = (member: Traced, trace: DecodedTrace): CosineFlux | IlluminationUnavailable => {
+      const { columns, rows, step } = member.spec.groups!.lattice!;
+      return cosineFlux({
+        columns,
+        rows,
+        step,
+        weight: member.weights,
+        valid: member.valid,
+        point: trace.imagePoint,
+        direction: trace.exitDirection,
+        imageIndex,
+      });
+    };
+    // The transmission: the flux of the rays one answer lets through and the other does not, on the launch plane,
+    // over the axis's: of R2's mismatches (judged), and of the rays in the rim band or failed (shown).
+    const launchFlux = (member: Traced, mask: Uint8Array): number | IlluminationUnavailable => {
+      const { columns, rows, step } = member.spec.groups!.lattice!;
+      const flux = fluxOf(member.weights, mask, 0, columns * rows);
+      return typeof flux === "number" ? flux * (step * step) : flux;
+    };
+    const axisFlux = launchFlux(axis, axis.valid);
+    if (typeof axisFlux !== "number") {
+      transmissionMissing = { reason: `${axisFlux.reason}: the axis: ${axisFlux.message}` };
+    } else if (!(axisFlux > 0)) {
+      transmissionMissing = { reason: "no-flux: no cell of the axis is ok in both answers" };
+    } else {
+      for (const member of traced) {
         for (const [series, mask] of [
           [transmission, member.mismatched],
           [rimOrFailed, member.rimOrFailed],
         ] as const) {
-          const apart = fluxOf(weights, mask, block.first, block.end);
-          if (typeof apart !== "number") return never(`the sweep from ray ${block.first}: ${apart.message}`);
-          take(series, apart / axis, { ...place, ray: block.first });
+          const apart = launchFlux(member, mask);
+          if (typeof apart !== "number") return never(`the field at ${member.place.field} degrees: ${apart.message}`);
+          take(series, apart / axisFlux, member.place);
         }
       }
     }
-  } else {
-    const axis = traced.find((member) => member.spec.groups?.field?.angleDeg === 0);
-    if (axis === undefined) {
-      const reason = "no-axis: the span has no lattice of the axis, which every field is relative to";
-      [illuminationMissing, transmissionMissing] = [{ reason }, { reason }];
+    // The relative illumination: each answer's flux into the image of a field over its flux of the axis.
+    const [axisA, axisB] = [cosine(axis, axis.a), cosine(axis, axis.b)];
+    if (axisA.available !== axisB.available) {
+      const missing = (axisA.available ? axisB : axisA) as IlluminationUnavailable;
+      return never(`the axis has a flux into the image in one answer and none in the other: ${missing.reason}`);
+    }
+    if (!axisA.available || !axisB.available) {
+      const missing = axisA as IlluminationUnavailable;
+      illuminationMissing = { reason: `${missing.reason}: the axis: ${missing.message}` };
     } else {
-      if (context?.opticalCase === undefined) {
-        return never("the case is not at hand: the index of its image space is what the cosines are of");
-      }
-      const imageIndex = imageSpaceIndices(context.opticalCase)[axis.spec.line];
-      const cosine = (member: Traced, trace: DecodedTrace): CosineFlux | IlluminationUnavailable => {
-        const { columns, rows, step } = member.spec.groups!.lattice!;
-        return cosineFlux({
-          columns,
-          rows,
-          step,
-          weight: member.weights,
-          valid: member.valid,
-          point: trace.imagePoint,
-          direction: trace.exitDirection,
-          imageIndex,
-        });
-      };
-      // The transmission: the flux of the rays one answer lets through and the other does not, on the launch plane,
-      // over the axis's: of R2's mismatches (judged), and of the rays in the rim band or failed (shown).
-      const launchFlux = (member: Traced, mask: Uint8Array): number | IlluminationUnavailable => {
-        const { columns, rows, step } = member.spec.groups!.lattice!;
-        const flux = fluxOf(member.weights, mask, 0, columns * rows);
-        return typeof flux === "number" ? flux * (step * step) : flux;
-      };
-      const axisFlux = launchFlux(axis, axis.valid);
-      if (typeof axisFlux !== "number") {
-        transmissionMissing = { reason: `${axisFlux.reason}: the axis: ${axisFlux.message}` };
-      } else if (!(axisFlux > 0)) {
-        transmissionMissing = { reason: "no-flux: no cell of the axis is ok in both answers" };
-      } else {
-        for (const member of traced) {
-          for (const [series, mask] of [
-            [transmission, member.mismatched],
-            [rimOrFailed, member.rimOrFailed],
-          ] as const) {
-            const apart = launchFlux(member, mask);
-            if (typeof apart !== "number") return never(`the field at ${member.place.field} degrees: ${apart.message}`);
-            take(series, apart / axisFlux, member.place);
-          }
+      for (const member of traced) {
+        const [fieldA, fieldB] = [cosine(member, member.a), cosine(member, member.b)];
+        if (fieldA.available && fieldB.available) {
+          take(illumination, Math.abs(fieldA.flux / axisA.flux - fieldB.flux / axisB.flux), member.place);
+          fields++;
+          continue;
         }
-      }
-      // The relative illumination: each answer's flux into the image of a field over its flux of the axis.
-      const [axisA, axisB] = [cosine(axis, axis.a), cosine(axis, axis.b)];
-      if (axisA.available !== axisB.available) {
-        const missing = (axisA.available ? axisB : axisA) as IlluminationUnavailable;
-        return never(`the axis has a flux into the image in one answer and none in the other: ${missing.reason}`);
-      }
-      if (!axisA.available || !axisB.available) {
-        const missing = axisA as IlluminationUnavailable;
-        illuminationMissing = { reason: `${missing.reason}: the axis: ${missing.message}` };
-      } else {
-        for (const member of traced) {
-          const [fieldA, fieldB] = [cosine(member, member.a), cosine(member, member.b)];
-          if (fieldA.available && fieldB.available) {
-            take(illumination, Math.abs(fieldA.flux / axisA.flux - fieldB.flux / axisB.flux), member.place);
-            fields++;
-            continue;
-          }
-          if (!fieldA.available && !fieldB.available && fieldA.reason === fieldB.reason) {
-            const at = `the field at ${member.place.field} degrees`;
-            illuminationMissing ??= { reason: `${fieldA.reason}: ${at}: ${fieldA.message}` };
-            skipped.push(`${at}: ${fieldA.reason}`);
-            continue;
-          }
-          const said = (made: CosineFlux | IlluminationUnavailable) =>
-            made.available ? "has a flux into the image" : `has none: ${made.reason}`;
-          return never(
-            `the field at ${member.place.field} degrees in the first answer ${said(fieldA)}, in the second ${said(fieldB)}`,
-          );
+        if (!fieldA.available && !fieldB.available && fieldA.reason === fieldB.reason) {
+          const at = `the field at ${member.place.field} degrees`;
+          illuminationMissing ??= { reason: `${fieldA.reason}: ${at}: ${fieldA.message}` };
+          skipped.push(`${at}: ${fieldA.reason}`);
+          continue;
         }
+        const said = (made: CosineFlux | IlluminationUnavailable) =>
+          made.available ? "has a flux into the image" : `has none: ${made.reason}`;
+        return never(
+          `the field at ${member.place.field} degrees in the first answer ${said(fieldA)}, in the second ${said(fieldB)}`,
+        );
       }
     }
   }
 
   const metrics: ComputedMetric[] = [];
   const unmeasured: { name: string; reason: string }[] = [];
-  const inapplicable: string[] = [];
   const figure = (name: string, series: Largest, missing: Missing, none: string): void => {
     if (series.where !== null) metrics.push({ name, value: series.value, where: series.where });
     else unmeasured.push({ name, reason: missing?.reason ?? none });
   };
   const notes: string[] = [];
-  if (pattern === "sweep") inapplicable.push(ILLUMINATION_METRIC);
-  else {
-    figure(ILLUMINATION_METRIC, illumination, illuminationMissing, "no-rays: no field is ok in both answers");
-    // A field in no figure of the others' is named, never passed over.
-    if (illumination.where !== null)
-      for (const field of skipped) notes.push(`${ILLUMINATION_METRIC} is not of ${field}`);
-  }
+  figure(ILLUMINATION_METRIC, illumination, illuminationMissing, "no-rays: no field is ok in both answers");
+  // A field in no figure of the others' is named, never passed over.
+  if (illumination.where !== null) for (const field of skipped) notes.push(`${ILLUMINATION_METRIC} is not of ${field}`);
   figure(TRANSMISSION_METRIC, transmission, transmissionMissing, "no-rays: no field is ok in both answers");
   figure(
     RIM_OR_FAILED_TRANSMISSION_METRIC,
@@ -315,6 +284,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     transmissionMissing,
     "no-rays: no field is ok in both answers",
   );
+  figure(LANDING_METRIC, landing, null, "no-rays: no chief ray of the image mapping is ok in both answers");
   const count = (name: string, value: number, where: Where | null): ComputedMetric => ({
     name,
     value,
@@ -331,43 +301,21 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     comparable: true,
     metrics,
     ...(unmeasured.length === 0 ? {} : { unmeasured }),
-    ...(inapplicable.length === 0 ? {} : { inapplicable }),
     ...(notes.length === 0 ? {} : { notes }),
   };
 }
 
 /**
  * What one answer reports beside what is compared, one value a field of the span in the span's order (the axis first,
- * then by field angle: `memberOrder`), whatever order the members are handed over in: how many of its rays
- * ended in each way (as R2 records them, of a lattice field's set; of a sweep, its one set), and each field's own
- * figures of the rays it brought to the image: of a lattice, the transmitted area on the launch plane and the flux into
- * the image, each over the axis's (`geometricTransmission`, `relativeIllumination`); of a sweep, the fraction of its
- * rays and of their flux that got through, over the axis's, the tab's own figures before its cos^4
- * (`geometricTransmission`, `transmittedFlux`). NaN where the answer has none. Written down, never judged.
+ * then by field angle: `memberOrder`), whatever order the members are handed over in: how many of its rays ended in
+ * each way (as R2 records them, of the field's set), and the field's own figures of the cells it brought to the image:
+ * the transmitted area on the launch plane and the flux into the image, each over the axis's (`geometricTransmission`,
+ * `relativeIllumination`). NaN where the answer has none. Written down, never judged.
  */
 function recorded(data: JsonObject, context?: ComparisonContext): { readonly [name: string]: readonly number[] } {
   const members = [...(data as SpanAnswer).members].sort(memberOrder);
   const values: { [name: string]: number[] } = {};
   const push = (name: string, value: number) => (values[name] ??= []).push(value);
-  const first = members[0].spec as RaysTraceSpec;
-  if (patternOf(members[0].spec) === "sweep") {
-    const trace = decodeTrace(members[0].data);
-    for (const [name, [value]] of Object.entries(rayEndings(members[0].data))) push(name, value);
-    const ok = maskWhere(trace.status, RAY_STATUS.ok);
-    const weights = decodeNdArray(first.weights).values as Float64Array;
-    const blocks = sweepBlocks(first);
-    const axis = blockFlux(weights, ok, blocks[0].first, blocks[0].end);
-    const axisSize = blocks[0].end - blocks[0].first;
-    for (const block of blocks) {
-      const made = blockFlux(weights, ok, block.first, block.end);
-      const size = block.end - block.first;
-      const [rays, flux] = made.available ? [made.rays, made.flux] : [0, 0];
-      const share = (field: number, onAxis: number) => (axis.available && onAxis > 0 ? field / onAxis : Number.NaN);
-      push("geometricTransmission", share(rays / size, axis.available ? axis.rays / axisSize : 0));
-      push("transmittedFlux", share(flux / size, axis.available ? axis.flux / axisSize : 0));
-    }
-    return values;
-  }
   const indices = context?.opticalCase === undefined ? undefined : imageSpaceIndices(context.opticalCase);
   const own = members.map((member) => {
     const spec = member.spec as RaysTraceSpec;
@@ -412,28 +360,29 @@ function recorded(data: JsonObject, context?: ComparisonContext): { readonly [na
 
 /**
  * The comparator of `rays.trace` for rung R11a: how much light of each field of LensVisualizer's vignetting tab two
- * engines let through the same rays. A comparator of spans (`spanOf`: the sets of one pattern, sweep or lattice, at
- * one line), each answer a `SpanAnswer`, its members taken in an order of their own (`memberOrder`).
+ * engines let through the same rays. A comparator of spans (`spanOf`: the beam sets of one line), each answer a
+ * `SpanAnswer`, its members taken in an order of their own (`memberOrder`).
  *
- * Metrics, each with the `line` and the `field` of its largest value in `where` (of a sweep, which states no field
- * angle, the first ray of the field's block), the first on a tie:
+ * Metrics, each with the `line` and the `field` of its largest value in `where` (and the `ray` of a landing), the first
+ * on a tie:
  *
- * - `illumination.maxAbs`: of a lattice span, the largest difference of a field's flux into the image over the axis's,
- *   on the rays ok in both answers; inapplicable to a sweep, which has no area;
- * - `transmission.maxAbs`: the largest flux of a field's rays that are ok in one answer and not in the other and are
+ * - `illumination.maxAbs`: the largest difference of a field's flux into the image over the axis's, on the rays ok in
+ *   both answers;
+ * - `transmission.maxAbs`: the largest flux of a field's cells that are ok in one answer and not in the other and are
  *   R2's mask mismatches, over the axis's flux on the rays ok in both, on the launch plane;
  * - `transmission.rimBandOrFailed`: the same of the rays ok in one answer only that R2 counts as no mismatch, those in
  *   the rim band and those an engine failed; shown, never judged;
+ * - `landing.maxAbs`: the largest difference of a landing of a chief ray of the image mapping, along x or y, mm;
  * - `mask.mismatches` and `mask.rimBand`: as R2's, summed over the span;
  * - `rays.compared`: the rays ok in both answers; `rays.dropped`: those ok in one answer only, with the first in
- *   `where`; `fields.compared`: the lattice fields with a flux into the image in both answers.
+ *   `where`; `fields.compared`: the fields with a flux into the image in both answers.
  *
- * Not measured: a figure without the axis (no lattice of the axis in the span, no ray of it ok in both, a flux of 0 or
- * an axis whose lit cells have no area in cosine space in either answer), or with no field of both. A field whose lit
- * cells have no area in cosine space in either answer, for the same reason, is named in a note when others are
- * measured. Not comparable:
- * without the case; answers for different rays or surfaces, or to different requests; a field with a flux into the
- * image in one answer and none, or none for another reason, in the other.
+ * Not measured: a figure without the axis (no beam of the axis in the span, no ray of it ok in both, a flux of 0 or
+ * an axis whose lit cells have no area in cosine space in either answer), or with no field of both; a landing of no
+ * chief ray ok in both. A field whose lit cells have no area in cosine space in either answer, for the same reason, is
+ * named in a note when others are measured. Not comparable: without the case; answers for different rays or surfaces,
+ * or to different requests; a set that is no beam (no lattice with its chief ray right after it); a field with a flux
+ * into the image in one answer and none, or none for another reason, in the other.
  */
 export const raysVignettingComparator: QuantityComparator = Object.freeze({
   quantity: RAYS_TRACE,
@@ -442,6 +391,7 @@ export const raysVignettingComparator: QuantityComparator = Object.freeze({
     { name: ILLUMINATION_METRIC, unit: "1" },
     { name: TRANSMISSION_METRIC, unit: "1" },
     { name: RIM_OR_FAILED_TRANSMISSION_METRIC, unit: "1" },
+    { name: LANDING_METRIC, unit: "mm" },
     { name: "mask.mismatches", unit: "rays" },
     { name: "mask.rimBand", unit: "rays" },
     { name: "rays.compared", unit: "rays" },

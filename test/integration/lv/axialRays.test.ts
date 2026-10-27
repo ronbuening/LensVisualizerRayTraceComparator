@@ -10,7 +10,8 @@
 // sections' launch through the public adapter), and `lv`'s `rays.trace` answer of a set brings the same rays to the
 // image as the sections' traces do. What is not tested is that the sections' React code hands these functions
 // exactly this request: that rests on the canaries of the drawer's lines. Nothing is written. Measured at LV
-// e3b1f0f81 and 45e6f852d (engine closure afef1f81 at both).
+// e3b1f0f81 and 45e6f852d (engine closure afef1f81 at both), and again at 098c91ef6 (closure fef2e248), whose channels
+// of a glass matched to a catalog are anchored to the authored index.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

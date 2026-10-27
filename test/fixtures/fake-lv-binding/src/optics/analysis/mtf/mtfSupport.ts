@@ -18,6 +18,18 @@ export function resolveMtfOptions(request: FakeAnalysisRequest, options: Omit<Fa
   return { ...options, pupilSemiDiameterMm: request.aperture.entrancePupilSemiDiameterMm,
     stopSemiDiameterMm: request.aperture.stopSemiDiameterMm } as FakeMtfOptions;
 }
+// The gate's path and image-plane rules, under LV's names, which LV's vignetting tab asks on their own.
+export function mtfSequentialRefractivePath(state: FakeState): boolean {
+  return !(
+    state.lens.flags.isFoldedOptics ||
+    state.surfaces.some((surface) => surface.diffractive || (surface.innerSd ?? 0) > 0 || surface.interaction.type !== "refract")
+  );
+}
+export function mtfAxialImagePlane(state: FakeState): boolean {
+  const [x, y, z] = state.imagePlane.normal;
+  return !(Math.abs(x) > 1e-10 || Math.abs(y) > 1e-10 || z <= 0);
+}
+
 export function assessMtfSupport(request: FakeAnalysisRequest, settings: Omit<FakeMtfOptions, "pupilSemiDiameterMm" | "stopSemiDiameterMm">): FakeMtfSupport {
   const state = request.preparedGeometry;
   const options = resolveMtfOptions(request, settings);

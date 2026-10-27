@@ -3,7 +3,8 @@
 // chief rays' landings at even angles where LV's solves angles for even heights; the rays each launches (its scale
 // probe, its solved chief rays, its grid's pupil-corrected launches, its lateral-colour chief rays) follow LV's rules,
 // so that rays made by the comparator's restatement give the fake's numbers back to the bit.
-import { computeOffAxisFieldGeometry, skewImagePlaneIntercept } from "./spots.js";
+import { skewImagePlaneIntercept } from "./spots.js";
+import { computeOffAxisChannelFieldGeometry } from "./aberration/offAxis.js";
 import { uniformFieldFraction } from "./sampling.js";
 import { paraxialTrace } from "../first-order/lensConstants.js";
 import {
@@ -213,11 +214,15 @@ export function computeLateralColorCurve(request: FakeAnalysisRequest) {
   const epsd = request.aperture.entrancePupilSemiDiameterMm;
   if (!(epsd > 0)) return null;
   const fields = DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS.map((fieldFraction) => {
-    const off = computeOffAxisFieldGeometry(state, fieldFraction, geometry);
+    // Each channel traces its own chief ray, as LV's section does since 5ba17c20c; the field angle is shared.
+    const geometries = CHANNELS.map((channel) => computeOffAxisChannelFieldGeometry(state, fieldFraction, channel, geometry));
+    const off = geometries.find((each) => each !== null) ?? null;
     const empty = { fieldFraction, label: `${fieldFraction * 100}%`, fieldAngleDeg: 0, referenceChannel: "G", referenceImageHeightMm: null, lateralSpreadMm: null, samples: [], validChannelCount: 0, usable: false };
     if (off === null || "kind" in off) return empty;
-    const raw = CHANNELS.map((channel) => {
-      const trace = skewTrace(state, 0 * epsd, off.yChief + 0 * epsd, 0, off.uField, request.aperture.stopSemiDiameterMm, channel);
+    const raw = CHANNELS.map((channel, index) => {
+      const own = geometries[index];
+      if (own === null || "kind" in own) return { channel, imageHeightMm: null, clipped: true };
+      const trace = skewTrace(state, 0 * epsd, own.yChief + 0 * epsd, 0, own.uField, request.aperture.stopSemiDiameterMm, channel);
       const image = trace.clipped ? null : skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, off.lastSurfZ, off.imagePlaneZ);
       return { channel, imageHeightMm: image?.y ?? null, clipped: image === null };
     });

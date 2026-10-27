@@ -141,8 +141,11 @@ export interface LvPreparedState {
     readonly stop: { readonly surfaceIndex: number };
     /** `isFoldedOptics` is true for a system whose path turns at a mirror. */
     readonly flags: Readonly<Record<string, boolean>>;
-    /** How field angles map to image heights: "rectilinear", or a "fisheye-..." kind. */
-    readonly projection: { readonly kind: string };
+    /**
+     * How field angles map to image heights: "rectilinear", or a "fisheye-..." kind, and the lens's projection as it
+     * was authored, which `launchSurfaceForFieldDeg` reads.
+     */
+    readonly projection: { readonly kind: string; readonly config?: unknown };
     /** The lens's constants; `rayLead` is how far ahead of the first vertex its skew rays are launched, mm. */
     readonly constants?: { readonly rayLead?: number };
     /**
@@ -544,8 +547,8 @@ export interface LvSkewTrace {
 
 /**
  * LV's ChiefRaySolveResult: the launch height on the first vertex plane of the chief ray of a field, of slope
- * `uField`, that crosses the stop's centre (below 1 degree LV's paraxial estimate, `status` "converged" all the
- * same); a field LV launches from a bounding sphere also has `vectorLaunch`.
+ * `uField`, that crosses the stop's centre (on the axis 0, unsolved, `status` "converged" all the same); a field LV
+ * launches from a bounding sphere also has `vectorLaunch`.
  */
 export interface LvChiefRaySolve {
   readonly yLaunch: number;
@@ -771,9 +774,12 @@ export interface LvBreathingSample {
 export interface LvVignettingSample {
   /** The field angle, degrees: 0 on the axis. */
   readonly fieldAngleDeg: number;
-  /** The fraction of the meridional pupil sweep that LV traces through every aperture, over the axis's. */
+  /** The area on the launch plane of the field's transmitted beam, traced on a lattice, over the axis's. */
   readonly geometricTransmission: number;
-  /** The transmitted bulk intensity of the sweep times cos^4 of the field angle, over the axis's. */
+  /**
+   * The beam's transmitted flux times the cosine of the field angle, over the image area a unit of object solid angle
+   * covers, over the axis's.
+   */
   readonly relativeIllumination: number;
 }
 
@@ -1163,6 +1169,22 @@ export interface LvApi {
   mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
   /** Whether a trace is a sample, was stopped by an aperture (a proven miss included) or could not be resolved. */
   mtfTraceClassification(trace: LvTraceResult, state?: LvPreparedState, stopRadius?: number): LvMtfRayClass;
+  /** The options LV's MTF traces a pupil sample with at one line: apertures checked, stopped at the first clip. */
+  mtfTraceOptions(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    line: LvSpectralLine,
+    opticalPath?: boolean,
+  ): LvTraceOptions;
+  /** Whether every surface of a state is mirror-symmetric in x, so that LV traces one half of a meridional field's beam. */
+  mtfMirrorSymmetric(state: LvPreparedState): boolean;
+  /** Whether LV's MTF launch and footprint model a state's path: centred, sequential and refractive, no fisheye. */
+  mtfSequentialRefractivePath(state: LvPreparedState): boolean;
+  /** Whether a state's image plane is perpendicular to the axis, as LV's MTF and vignetting require. */
+  mtfAxialImagePlane(state: LvPreparedState): boolean;
+  /** LV's bulk transmission of a trace through the lens's absorbing glasses: 1 where nothing absorbs. */
+  bulkTransmissionForTrace(lens: LvPreparedState["lens"], hits: readonly LvTraceHit[] | undefined): number;
   /**
    * LV's field axis: its first estimate of the half field, the chief ray's image height at an angle (NaN where the
    * chief is stopped, unless apertures are not checked), the same while any of the beam still lands, the axis they
@@ -1248,6 +1270,16 @@ export interface LvApi {
   computeOffAxisFieldGeometry(
     state: LvPreparedState,
     fieldFraction: number,
+    stateGeometry?: LvFieldGeometry,
+  ): LvOffAxisFieldGeometry | null;
+  /**
+   * The same geometry with the chief ray solved through the stop's centre at one chromatic channel's indices
+   * ("R", "G", "B", "V"): what LV's lateral-colour section launches each channel's chief ray with.
+   */
+  computeOffAxisChannelFieldGeometry(
+    state: LvPreparedState,
+    fieldFraction: number,
+    channel: string,
     stateGeometry?: LvFieldGeometry,
   ): LvOffAxisFieldGeometry | null;
   /** LV's area-weighted circular pupil pattern: a centre and rings of the given numbers of samples. */
@@ -1391,6 +1423,8 @@ export interface LvApi {
   ): LvProjectionReference;
   /** Whether a lens's projection is one of LV's fisheye laws. */
   isFisheyeProjection(projection: unknown): boolean;
+  /** Where LV launches a field angle from: the object plane by its slope, or a bounding sphere (a fisheye, or 89°). */
+  launchSurfaceForFieldDeg(fieldAngleDeg: number, projection?: unknown): "object-plane" | "bounding-sphere";
   /** Whether LV samples a lens's ray work more coarsely, as it does for a heavy lens. */
   isHeavyLensForRayWork(L: LvRuntimeLens): boolean;
   /** LV's `uniformFieldFraction`: index over count less one. */

@@ -60,6 +60,10 @@ five fields off the axis below one degree) the tangential foci there are up to 2
 stop's centre, the sagittal up to 1.23e-7 mm, whatever the pencil's height. The change of the chief ray the owner
 decided at Stage 6.4 will move these fields with it; no separate change is needed for the field curves.
 
+**Resolved by LensVisualizer #925** (`5ba17c20c`, adopted at Stage 6.6b, LV `098c91ef6`): the chief ray is solved
+through the stop below one degree, and the Sony FE 400 mm's foci there are within 4.0e-8 mm of optiland's (tangential;
+sagittal 4.8e-10). Section 1, the pencil's width, is unchanged: a documented convention of LensVisualizer's.
+
 ## What the comparator does
 
 R10b sorts every field before any difference (R5's classes, indices that are not the case's, then the chief rays'

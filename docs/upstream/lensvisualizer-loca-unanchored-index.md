@@ -1,10 +1,23 @@
 # LensVisualizer: chromatic channels of d-line catalog glasses are not anchored to the authored index
 
-Status: **open**. For the owner; not filed. Observed at LV `45e6f852d` (clean; engine closure `afef1f81`); the
-census below was taken at `36b5768bf` (clean), which changes nothing under `src/optics` or `src/lens-data` since.
-The comparator reports LensVisualizer's sections as they are and changes no gate for this. Rung R8b sets every
-affected line aside as data (`indices-differ`) before any figure is taken. This brief changes no LV source or
-prescription. It holds results and lens keys only.
+Status: **resolved by LensVisualizer #925** (`5ba17c20c`, adopted by the comparator at Stage 6.6b, LV `098c91ef6`,
+engine closure `fef2e248`): the d-line Sellmeier tier is anchored to the authored `nd` as suggested below. The
+history follows as it was written. For the owner; not filed. Observed at LV `45e6f852d` (clean; engine closure
+`afef1f81`); the census below was taken at `36b5768bf` (clean), which changes nothing under `src/optics` or
+`src/lens-data` since. The comparator reported LensVisualizer's sections as they were and changed no gate for this.
+Rung R8b set every affected line aside as data (`indices-differ`) before any figure was taken. This brief changes no LV
+source or prescription. It holds results and lens keys only.
+
+**After the change** (census of the 1,006 exporting lenses at `098c91ef6`): at a run's reference line the chromatic
+tab's index is the case's to the bit on every lens (877 differed before, by up to 3.0e-3), so `indexMaxDelta` is 0 there
+and R8b's colour lines of the benchmark's reference runs enter its figures. The prediction below that `indexMaxDelta`
+would be 0 everywhere was wrong in two ways. At the C and F lines (and g without a partial dispersion) LensVisualizer
+adds the same terms in another order than the case's anchored table (`S(λ) + (nd − S(ref))` against
+`nd + S(λ) − S(ref)`): about 800 lenses differ by at most one unit in the last place. At g, about 120 lenses whose
+elements state `dPgF` reconstruct V from it (`nB + P(vd, dPgF) · (nB − nR)`) where the case takes the catalog curve:
+by value (median 8e-6, up to 6.2e-4). The owner decided (2026-10-27) not to pursue bit identity at C, F and g now (no
+committed suite asks those lines); `indices-differ` stays exactly as it is, since one source of indices gives the same
+bits and no looser threshold is admitted.
 
 ## What LensVisualizer does
 

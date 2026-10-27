@@ -8,12 +8,13 @@
 | Suite hash | 052302ec782cfd714c6c2622ec60602793ce842789839767af17aeaa642c43e1 |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | c0ffc8b65437706e801cf6c5941598654164ecbf4dca053946033cf407a0f755 |
+| Policy hash | 5f35bc35aedbf53588f6c365bcff58bb40a5b5a227662d00e2d89e22b32f660c |
 
 ### Engines
 
 | Engine | Status | Version | Fingerprint | Adapter revision |
 |---|---|---|---|---|
+| moved | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
 | ref | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
 | stopped | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
 | turned | available | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
@@ -26,13 +27,13 @@
 
 ## Verdict summary
 
-6 of 10 pairs are FAIL or ERROR.
+9 of 9 pairs are FAIL or ERROR.
 
 | Verdict | reference-vs-each | pairwise |
 |---|---|---|
-| PASS | 2 | 2 |
+| PASS | 0 | 0 |
 | FLOOR | 0 | 0 |
-| FAIL | 2 | 4 |
+| FAIL | 3 | 6 |
 | RECORDED | 0 | 0 |
 | ATTENTION | 0 | 0 |
 | UNSUPPORTED | 0 | 0 |
@@ -41,11 +42,11 @@
 
 ## Support matrix
 
-| Run | Rung | ref | stopped | turned |
-|---|---|---|---|---|
-| lens | r11a, request 1 of 3 | ok | ok | ok |
-| lens | r11a, request 2 of 3 | ok | ok | ok |
-| lens | r11a, request 3 of 3 | ok | ok | ok |
+| Run | Rung | moved | ref | stopped | turned |
+|---|---|---|---|---|---|
+| lens | r11a, request 1 of 3 | ok | ok | ok | ok |
+| lens | r11a, request 2 of 3 | ok | ok | ok | ok |
+| lens | r11a, request 3 of 3 | ok | ok | ok | ok |
 
 ## Results
 
@@ -53,72 +54,47 @@
 
 #### r11a, request 1 of 3
 
-Quantity `rays.trace`, compared identical-rays, gated. Request `8b5900e9c0e748cf05da46f7e36aa4198b23fe3ae8c41ccf70049a0561fdf2ff`.
+Quantity `rays.trace`, compared identical-rays, gated. Request `1885953b4ac9e4f0ca84da87e19204a6b894b4733c7cc9c18dc05fff88c167c3`.
 
 Reference vs each, against `ref`:
 
-| Engine | illumination.maxAbs (≤ 1.00e-9) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | transmission.maxAbs (≤ 0) | transmission.rimBandOrFailed | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
-|---|---|---|---|---|---|---|---|---|---|---|
-| stopped | — | 1 at line 0, ray 20, surface 2 | 0 | 8.33e-2 at line 0, ray 16 | 0 at line 0, ray 0 | 35 | 1 at line 0, ray 20 | 0 | FAIL | mask.mismatches 1 exceeds its tolerance 0 at line 0, ray 20, surface 2; transmission.maxAbs 8.33e-2 exceeds its tolerance 0 at line 0, ray 16 |
-| turned | — | 0 | 0 | 0 at line 0, ray 0 | 0 at line 0, ray 0 | 36 | 0 | 0 | PASS |  |
+| Engine | illumination.maxAbs (≤ 1.00e-9) | landing.maxAbs (≤ 1.00e-8 mm) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | transmission.maxAbs (≤ 0) | transmission.rimBandOrFailed | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| moved | 0 at field 0, line 0 | 1.49e-8 at field 4, line 0, ray 102 | 0 | 0 | 0 at field 0, line 0 | 0 at field 0, line 0 | 183 | 0 | 3 | FAIL | landing.maxAbs 1.49e-8 exceeds its tolerance 1.00e-8 at field 4, line 0, ray 102 |
+| stopped | 0 at field 0, line 0 | 0 at field 0, line 0, ray 100 | 1 at field 3, line 0, ray 44, surface 2 | 0 | 1.67e-2 at field 3, line 0 | 0 at field 0, line 0 | 182 | 1 at field 3, line 0, ray 44 | 3 | FAIL | mask.mismatches 1 exceeds its tolerance 0 at field 3, line 0, ray 44, surface 2; transmission.maxAbs 1.67e-2 exceeds its tolerance 0 at field 3, line 0 |
+| turned | 1.54e-6 at field 4, line 0 | 0 at field 0, line 0, ray 100 | 0 | 0 | 0 at field 0, line 0 | 0 at field 0, line 0 | 183 | 0 | 3 | FAIL | illumination.maxAbs 1.54e-6 exceeds its tolerance 1.00e-9 at field 4, line 0 |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
-| Engine | ref | stopped | turned |
-|---|---|---|---|
-| ref | — | FAIL (mask.mismatches 1 at line 0, ray 20, surface 2) | PASS (mask.mismatches 0) |
-| stopped | FAIL (mask.mismatches 1 at line 0, ray 20, surface 2) | — | FAIL (mask.mismatches 1 at line 0, ray 20, surface 2) |
-| turned | PASS (mask.mismatches 0) | FAIL (mask.mismatches 1 at line 0, ray 20, surface 2) | — |
+| Engine | moved | ref | stopped | turned |
+|---|---|---|---|---|
+| moved | — | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
+| ref | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
+| stopped | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) |
+| turned | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
-| Value | ref | stopped | turned |
-|---|---|---|---|
-| geometricTransmission[0] | 1 | 1 | 1 |
-| geometricTransmission[1] | 1 | 9.16666667e-1 | 1 |
-| geometricTransmission[2] | 1 | 1 | 1 |
-| rays.blocked[0] | 12 | 13 | 12 |
-| rays.failed[0] | 0 | 0 | 0 |
-| rays.ok[0] | 36 | 35 | 36 |
-| transmittedFlux[0] | 1 | 1 | 1 |
-| transmittedFlux[1] | 1 | 9.16666667e-1 | 1 |
-| transmittedFlux[2] | 1 | 1 | 1 |
-
-#### r11a, request 2 of 3
-
-Quantity `rays.trace`, compared identical-rays, gated. Request `eadbcd2840703940a1aabead1f56fe330fa6444eaa1174daacb083914b561f08`.
-
-Reference vs each, against `ref`:
-
-| Engine | illumination.maxAbs (≤ 1.00e-9) | mask.mismatches (≤ 0 rays) | mask.rimBand [rays] | transmission.maxAbs (≤ 0) | transmission.rimBandOrFailed | rays.compared [rays] | rays.dropped [rays] | fields.compared [elements] | Verdict | Note |
-|---|---|---|---|---|---|---|---|---|---|---|
-| stopped | 0 at field 0, line 0 | 0 | 0 | 0 at field 0, line 0 | 0 at field 0, line 0 | 116 | 0 | 2 | PASS |  |
-| turned | 1.54e-6 at field 4, line 0 | 0 | 0 | 0 at field 0, line 0 | 0 at field 0, line 0 | 116 | 0 | 2 | FAIL | illumination.maxAbs 1.54e-6 exceeds its tolerance 1.00e-9 at field 4, line 0 |
-
-Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
-
-| Engine | ref | stopped | turned |
-|---|---|---|---|
-| ref | — | PASS (illumination.maxAbs 0 at field 0, line 0) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
-| stopped | PASS (illumination.maxAbs 0 at field 0, line 0) | — | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
-| turned | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | — |
-
-Recorded values, as each engine reports them. They are listed and never judged:
-
-| Value | ref | stopped | turned |
-|---|---|---|---|
-| fieldAngleDeg[0] | 0 | 0 | 0 |
-| fieldAngleDeg[1] | 4 | 4 | 4 |
-| geometricTransmission[0] | 1 | 1 | 1 |
-| geometricTransmission[1] | 9.33333333e-1 | 9.33333333e-1 | 9.33333333e-1 |
-| rays.blocked[0] | 41 | 41 | 41 |
-| rays.blocked[1] | 45 | 45 | 45 |
-| rays.failed[0] | 0 | 0 | 0 |
-| rays.failed[1] | 0 | 0 | 0 |
-| rays.ok[0] | 60 | 60 | 60 |
-| rays.ok[1] | 56 | 56 | 56 |
-| relativeIllumination[0] | 1 | 1 | 1 |
-| relativeIllumination[1] | 9.35133158e-1 | 9.35133158e-1 | 9.35134701e-1 |
+| Value | moved | ref | stopped | turned |
+|---|---|---|---|---|
+| fieldAngleDeg[0] | 0 | 0 | 0 | 0 |
+| fieldAngleDeg[1] | 3 | 3 | 3 | 3 |
+| fieldAngleDeg[2] | 4 | 4 | 4 | 4 |
+| geometricTransmission[0] | 1 | 1 | 1 | 1 |
+| geometricTransmission[1] | 9.66666667e-1 | 9.66666667e-1 | 9.50000000e-1 | 9.66666667e-1 |
+| geometricTransmission[2] | 9.33333333e-1 | 9.33333333e-1 | 9.33333333e-1 | 9.33333333e-1 |
+| rays.blocked[0] | 40 | 40 | 40 | 40 |
+| rays.blocked[1] | 42 | 42 | 43 | 42 |
+| rays.blocked[2] | 44 | 44 | 44 | 44 |
+| rays.failed[0] | 0 | 0 | 0 | 0 |
+| rays.failed[1] | 0 | 0 | 0 | 0 |
+| rays.failed[2] | 0 | 0 | 0 | 0 |
+| rays.ok[0] | 63 | 63 | 63 | 63 |
+| rays.ok[1] | 61 | 61 | 60 | 61 |
+| rays.ok[2] | 59 | 59 | 59 | 59 |
+| relativeIllumination[0] | 1 | 1 | 1 | 1 |
+| relativeIllumination[1] | 9.67739781e-1 | 9.67739781e-1 | 9.51158343e-1 | 9.67739781e-1 |
+| relativeIllumination[2] | 9.35133158e-1 | 9.35133158e-1 | 9.35133158e-1 | 9.35134701e-1 |
 
 ## Not covered
 

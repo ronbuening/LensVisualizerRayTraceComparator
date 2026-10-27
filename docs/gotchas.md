@@ -2492,9 +2492,22 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
 
 ## Axial rays (Stage 6.3)
 
-Measured at LensVisualizer `45e6f852d` (engine closure `afef1f81`) and optiland `4e893f53`, on the benchmark.
+Measured at LensVisualizer `45e6f852d` (engine closure `afef1f81`) and optiland `4e893f53`, on the benchmark; the first
+entry is resolved by LensVisualizer #925 (Stage 6.6b, LV `098c91ef6`).
 
 ### LensVisualizer's chromatic tab traces a d-line catalog glass at the catalog's own index, at every channel
+
+**Resolved by LensVisualizer #925 (`5ba17c20c`), adopted at Stage 6.6b (LV `098c91ef6`, closure `fef2e248`).** The
+d-line Sellmeier tier is now anchored to the authored `nd` as the e-line tier is
+(`const nd = surface.nd; const anchor = nd - evaluateSellmeier(entry, CHANNEL_NM.G);`, R, B and V adding `anchor`, G
+returning `nd`). Over the 1,006 exporting lenses the G channel is the case's index at the reference line to the bit on
+every lens (877 differed before). At C and F (and g without a partial dispersion) the channel adds the same terms in
+another order than the case's anchored table (`S(λ) + (nd − S(ref))` against `nd + S(λ) − S(ref)`), within one unit in
+the last place on about 800 lenses; at g about 120 lenses whose elements state `dPgF` reconstruct V from it, by value
+(median 8e-6, up to 6.2e-4). The owner decided (2026-10-27) not to pursue bit identity at C, F and g now (no committed
+suite asks those lines): `indices-differ` is unchanged, one source of indices giving the same bits. On the benchmark's
+reference runs all 24 colour lines are now of two methods, their foci within 8.4e-12 mm of optiland's. The entry below
+is the history as it was measured.
 
 - **Where.** `makeSurfaceDispersion` (`src/optics/chromatic/materialResolver.ts`) gives a glass whose d-line `nd` and
   `vd` it matched to a catalog entry the catalog's own Sellmeier index at each channel. That includes LensVisualizer's
@@ -2633,6 +2646,17 @@ and optiland `4e893f53`, on the benchmark.
 
 ### LensVisualizer's chief ray below one degree is its paraxial estimate
 
+**Resolved by LensVisualizer #925 (`5ba17c20c`), adopted at Stage 6.6b (LV `098c91ef6`, closure `fef2e248`).**
+`computeChiefRaySolve`, `solveChiefRayBoundingSphere` and `solveChiefRayFromSeed` now solve every field but the axis
+through the stop's centre (`if (fieldAngleDeg === 0)`; the axis launches at 0), to a stop-height tolerance that shrinks
+with the field below one degree (`chiefRayResidualTolerance`, `1e-7 · min(1, |θ| / 1°)` mm). The pupils tab, the
+distortion curve and the grid's correction table, the field curves and the MTF launch below one degree are now of the
+real chief ray. The chief sets are LensVisualizer's own exports and followed without a restatement;
+`test/integration/lv/chiefRays.test.ts` holds them to the tabs to the bit again. On the benchmark the pupils of the 18
+fields below one degree are now within 3.8e-6 mm of optiland's (the Sony FE 400 mm at 0.2°; 1.30 mm before), as within
+5.0e-6 mm above it. The entry below is the history as it was measured; the measurement after the change is in
+`docs/REFERENCE.md`, "Stage 6.6b".
+
 - **Where.** `computeChiefRaySolve` (`src/optics/field/chiefRaySolve.ts`) returns the chief ray of the paraxial
   entrance pupil, `-epRatio · uField`, for every field under one degree
   (`if (Math.abs(fieldAngleDeg) < 1) { return { yLaunch: paraxialYChief, ... } }`), not a ray through the stop's
@@ -2646,14 +2670,24 @@ and optiland `4e893f53`, on the benchmark.
   within 2.5e-6 mm of each other, inside R9b's 1e-5 mm limit: the landing does not tell them apart.
 - **Handled.** R9a traces LensVisualizer's own launch in every engine, so it is untouched. R9b records the pupils as two
   methods, with no band. The owner decided (2026-10-26) that LensVisualizer is to solve the real chief ray there too;
-  the change is pending in LensVisualizer (brief `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed),
-  and until it lands this entry describes LensVisualizer as it is. Pinned by the canary "the distortion tab still traces
-  the probe, the edge and its samples the chief sets restate" (the one-degree line) and by
-  `test/integration/optiland/r9.test.ts`, which holds the Sony FE 400 mm's pupils below one degree to an `epShiftMm` of
+  the change landed in LensVisualizer #925 (brief `docs/upstream/lensvisualizer-chief-ray-conventions.md`, not filed),
+  and this entry describes LensVisualizer as it was before. Pinned, until then, by the canary "the distortion tab still
+  traces the probe, the edge and its samples the chief sets restate" (the one-degree line) and by
+  `test/integration/optiland/r9.test.ts`, which held the Sony FE 400 mm's pupils below one degree to an `epShiftMm` of
   0 and more than 1 mm from optiland's, and above it to within 1e-5 mm.
 - **Class.** method: recorded.
 
 ### LensVisualizer's lateral colour is one chief ray traced at every channel
+
+**Resolved by LensVisualizer #925 (`5ba17c20c`), adopted at Stage 6.6b (LV `098c91ef6`).** `computeLateralColorField`
+traces each channel's own chief ray, solved through the stop's centre at the channel's indices
+(`computeOffAxisChannelFieldGeometry`), at the field angle every channel shares. The chief sets' `lateral-colour`
+pattern holds every channel's own chief ray of each field (four a field, R, G, B, V), the same rays at every line, so
+that R9a's spans and `lateralColour.maxAbs` are unchanged and each line's own channel's ray is among them; a field any
+channel of which has no scalar launch is no field of a set, the ask or `lv`'s answer (`lvLateralChief`). optiland's
+answer already traced each line's own chief ray, so R9b compares like with like: on the benchmark's reference runs all
+120 lateral-colour fields are of two methods (the channel's indices being the case's, "Axial rays" above), their
+landings within 1.2e-10 mm, and no R9b pair is ATTENTION. The entry below is the history as it was measured.
 
 - **Where.** `computeLateralColorCurve` traces the coma tab's chief ray of a field (`computeOffAxisFieldGeometry`,
   solved once at the authored indices, with no channel) at each channel (`traceOffAxisChiefRay` with the channel),
@@ -2670,7 +2704,7 @@ and optiland `4e893f53`, on the benchmark.
   `indices-differ`, before any difference: on the benchmark every lateral-colour field (120 on 24 pairs) is data and no
   lateral-colour figure is taken; 22 of the pairs are ATTENTION by their landing. R9a judges the moves of identical
   rays between lines (`lateralColour.maxAbs`). The owner decided (2026-10-26) that LensVisualizer is to trace each
-  channel's own chief ray; the change is pending in LensVisualizer (the brief above). Pinned by
+  channel's own chief ray; the change landed in LensVisualizer #925 (the brief above). Pinned by
   `test/engines/lv/chief.test.ts` ("lateral colour is each line's channel of the section, with how far its indices are
   from the case's"), `test/compare/chiefNative.test.ts` ("a field is sorted by R5's classes first, then by indices
   that are not the case's, then by its landing") and `test/integration/optiland/r9.test.ts`.
@@ -2798,6 +2832,12 @@ the benchmark.
 
 ### LensVisualizer's field curves below one degree are about its paraxial chief ray
 
+**Resolved by LensVisualizer #925 (`5ba17c20c`), adopted at Stage 6.6b (LV `098c91ef6`).** The fields below one degree
+are centred on the solved chief ray (`computeOffAxisFieldGeometryScalar` takes it from the solve, which no longer has a
+shortcut there); the curvature sets followed without a restatement, and `test/integration/lv/curvatureRays.test.ts`
+holds them to the sections to the bit. On the Sony FE 400 mm the tangential foci below one degree are now within
+4.0e-8 mm of optiland's (2.31e-6 before), the sagittal within 4.8e-10. The entry below is the history as it was measured.
+
 - **Where.** `computeOffAxisFieldGeometryScalar` takes the field's launch height from `solveChiefRayForRuntimeLens`,
   which below one degree is the paraxial pupil's chief ray ("LensVisualizer's chief ray below one degree is its
   paraxial estimate", above): the parabasal pencil is centred on it, not on the ray through the stop's centre that
@@ -2882,9 +2922,24 @@ the benchmark.
 
 Measured at LensVisualizer `be077cbcd` (engine closure `c866fbff` with the stage's names) and optiland `4e893f53`, on
 the benchmark. R11a shows the tab's sweeps and LensVisualizer's lattices pass the same rays in three engines, and bring
-the same flux into the image to 1.07e-13; R11b's differences are of method.
+the same flux into the image to 1.07e-13; R11b's differences are of method. LensVisualizer #925 (`5ba17c20c`) replaced
+the tab's sweep and its cos^4 (Stage 6.6b, LV `098c91ef6`): the first three entries are resolved, and the entries after
+them describe the comparator's figures, of the tab's beams since.
 
 ### LensVisualizer's vignetting sweep is a chord of the axis's pupil, which the stop's image outgrows off the axis
+
+**Resolved by LensVisualizer #925 (`5ba17c20c`), adopted at Stage 6.6b (LV `098c91ef6`, closure `fef2e248`).** The tab
+traces each field's beam on its MTF's launch lattice (64 cells across the footprint `findMtfFieldFootprint` finds, one
+half traced and mirrored), and its geometric transmission is the lit cells' area over the axis's. The vignetting sets
+are now those beams (`beam`, docs/REFERENCE.md, "Stage 6.6b"); the sweep and the separate lattice pattern are gone. On
+the benchmark R11b's 208 fields off the axis now have the tab's geometric transmission within 0.0100 of the flux's area
+(median 0.0017; 0.773 before), its relative illumination within 0.0110 (median 0.0017; 0.273 before) and its falloff
+within 0.023 (median 0.00075; 0.202 before): the tab's energy route (`(dh/dθ)(h / sin θ)` of its chief rays) on a half
+lattice of 64 cells against the flux's cosine-space flux on a lattice of 128 (Rimmer's method, OpticStudio's), the two
+routes agreeing as "cos^4 of the object-space angle is no lens's falloff" below found they would (0.011); R11b records
+them as two methods. The owner decided (2026-10-27) that `flux` keeps Rimmer's method and that LensVisualizer is to
+adopt it, with a vignetting curve of the share of stop samples transmitted, in later changes (pending). The entries
+below, to that one, are the history as it was measured.
 
 - **Where.** `computeVignettingCurve` (`src/optics/analysis/vignetting/vignetting.ts`) launches each field's rays at
   `yChief + pupilFrac * currentEPSD`, `pupilFrac` of `evenlySpacedSigned(nPupil)`: a meridional chord of the axis's
@@ -2902,12 +2957,12 @@ the same flux into the image to 1.07e-13; R11b's differences are of method.
   `relativeIllumination.maxAbs`, up to 0.273); R11a traces the tab's own chords in every engine. Brief:
   `docs/upstream/lensvisualizer-vignetting-sweep.md` (not filed). The owner decided (2026-10-26) to have LensVisualizer
   change the tab: a two-dimensional sample of each field's footprint and a relative illumination of the traced exit
-  directions in place of cos^4; the change is pending (the owner holds its prompt). Until it lands R11b records the tab
-  as it is; afterwards the canaries of the tab's lines fail first, and the sets, the asks and the measurements are
-  redone. Pinned by `test/integration/optiland/r11.test.ts` (the Sony FE 20 mm's beam above 1.3 of the axis's where the
-  tab's sweep stays below 1.1) and by the canary "the vignetting tab still samples the fields and sweeps the pupils the
-  vignetting sets restate" (the sweep's lines).
-- **Class.** method: recorded; a LensVisualizer assumption, whose change the owner has decided on (pending).
+  directions in place of cos^4; the change landed in #925 (Stage 6.6b). R11b recorded the tab as it was; the canaries
+  of the tab's lines then failed first, and the sets, the asks and the measurements were redone. Pinned, until then, by
+  `test/integration/optiland/r11.test.ts` (the Sony FE 20 mm's beam above 1.3 of the axis's where the tab's sweep stayed
+  below 1.1; it now holds the tab's beam and the flux's within 0.02 at every field) and by the canary of the sweep's
+  lines.
+- **Class.** method: recorded; a LensVisualizer assumption, changed in LensVisualizer #925 (Stage 6.6b).
 
 ### A meridional chord overstates a vignetted beam's area
 
@@ -2917,7 +2972,7 @@ the same flux into the image to 1.07e-13; R11b's differences are of method.
 - **Effect.** The Canon EF 135 mm wide open at its edge (9.2°): the chord 0.484, the area 0.387; the Z 50 mm f/1.2 at
   22.9°: 0.424 against 0.357. The largest positive difference of the benchmark, 0.097, is the Canon's.
 - **Handled.** Recorded by R11b with the effect above, in `geometricTransmission.maxAbs`. Part of the brief above and of
-  the owner's pending LensVisualizer change (a two-dimensional footprint sample).
+  the owner's LensVisualizer change, landed in #925 (a two-dimensional footprint sample).
 - **Class.** method: recorded; a LensVisualizer assumption (its module's header says "1D meridional analysis only").
 
 ### cos^4 of the object-space angle is no lens's falloff
@@ -2931,8 +2986,9 @@ the same flux into the image to 1.07e-13; R11b's differences are of method.
   (0.412 against 0.337 at 40.4°). Two routes that share nothing give the traced figure: the area of the exit beam in
   direction cosines (`cosineFlux`), and the object side's transmitted area times `cos θ` over the image mapping's
   Jacobian `h h' / sin θ` from the chief rays' landings; they agree within 0.011 over 368 fields (median 0.0012).
-- **Handled.** Recorded by R11b, in `falloff.maxAbs` (up to 0.202). Part of the brief above and of the owner's pending
-  LensVisualizer change (a relative illumination of the traced exit directions).
+- **Handled.** Recorded by R11b, in `falloff.maxAbs` (up to 0.202). Part of the brief above and of the owner's
+  LensVisualizer change, landed in #925 (a relative illumination by conservation of energy over its chief rays' image
+  mapping, not the cosine-space flux the brief suggested; R11b records the two routes side by side).
 - **Class.** method: recorded; a LensVisualizer assumption (its module's header names the law and its scope).
 
 ### The area of a beam in cosine space is of its rim
@@ -2953,11 +3009,12 @@ the same flux into the image to 1.07e-13; R11b's differences are of method.
 ### Of the rays two engines both let through, a transmitted fraction is the same bits in both
 
 - **Where.** The weights of a vignetting set are the request's (LensVisualizer's bulk transmission at the line,
-  `lvRayWeights`): no engine computes a ray's flux. On the rays ok in both answers every count and sum is the same, in
+  `lvRayWeights`, and since Stage 6.6b `bulkTransmissionForTrace`, the tab's own `w`): no engine computes a ray's flux. On the rays ok in both answers every count and sum is the same, in
   the same order.
 - **Effect.** A comparison of the two answers' transmitted fractions on their common rays is 0 by construction, whatever
   the engines; only the rays one answer lets through and the other does not can move it, by about one over the axis's
-  rays each (1/192 of a sweep, about 1/800 of a lattice of 32 cells).
+  rays each (1/192 of a sweep, about 1/800 of a lattice of 32 cells; since Stage 6.6b about 1/1600 of the half of a
+  beam's lattice of 64 cells).
 - **Handled.** R11a judges which rays got through as R2 does (`mask.mismatches`, 0) and, aligned with R2 (owner decision
   2026-10-26), gates the flux of the rays of those mismatches over the axis's (`transmission.maxAbs`, 0); the flux of
   the rim-band and failed rays one answer lets through and the other does not, which R2 judges in no count, is shown
@@ -2972,5 +3029,25 @@ the same flux into the image to 1.07e-13; R11b's differences are of method.
   MTF gate (`assessMtfSupport`): a diffractive surface and a fisheye are outside its MTF path (`unsupported-path`).
 - **Effect.** The diffractive suite's eight states have the tab's sweeps and no lattices: R11a judges their masks and
   transmission, and has no flux into the image of them; the engine `flux` refuses them.
-- **Handled.** A coded problem of the run's lattices, its sweeps kept (`docs/REFERENCE.md`, "Stage 6.6").
+- **Handled.** A coded problem of the run's lattices, its sweeps kept (`docs/REFERENCE.md`, "Stage 6.6"). **Since Stage
+  6.6b** the tab itself draws no curve of a state outside its MTF's beam model (`mtfSequentialRefractivePath`,
+  `mtfAxialImagePlane`) or with a field launched from a bounding sphere: such a state has no vignetting sets at all, one
+  coded problem of the run (`lv-outside-beam-model`, `lv-bounding-sphere-field`), and `lv` answers every field of an ask
+  unavailable with that code. 33 states of the catalog's 1,341 at `098c91ef6`, the diffractive suite's eight among them.
 - **Class.** unsupported: not covered.
+
+### LensVisualizer's ray tubes are traced without aperture checks
+
+- **Where.** Where a field's own chief ray is vignetted, or both its neighbours 0.01° away are, the tab maps the beam
+  onto the image with the median ray tube of a sub-lattice of its cells: copies of their rays tilted by 1e-4 rad and
+  traced with `checkSemiDiameter: false, stopOnClip: false` (`traceBeam`'s `tubeMapping`). A `rays.trace` request traces
+  every ray with the case's apertures.
+- **Effect.** Those copies are rays no set can state: the field's relative illumination rests on rays no engine but
+  LensVisualizer traces. 9 fields of 1,308 catalog curves wide open at `098c91ef6` (7 lenses), none of the runs of the
+  benchmark or the features suite.
+- **Handled.** The field keeps its beam set, whose cells and chief rays R11a judges, and is the coded note
+  `lv-tube-mapping` of the run's vignetting sets; `lv`'s answer states `sampling.tubeMapping` 1 for it and names it in a
+  note. `test/integration/lv/vignettingRays.test.ts` restates the tubes (`tubeImageArea`) and traces them with
+  LensVisualizer, and gets the two ray-tube fields of the Viltrox AF 14 mm f/4 Air to the bit. Never approximate the
+  tubes by aperture-checked rays.
+- **Class.** unsupported: not covered (by an identical-ray rung).

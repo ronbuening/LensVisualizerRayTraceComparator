@@ -12,7 +12,7 @@
 // So R1 judges the chart's focal length wherever a state is a case. The chart's other positions (21, evenly spaced) are
 // no case: the exporter refuses a focus position whose object distance LensVisualizer does not certify, which is what
 // a finite case needs. Nothing is written. Measured at LV d6df08c7f and cfa91d0a5 (engine closure c866fbff with the
-// stage's names).
+// stage's names), and again at 098c91ef6 (closure fef2e248).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 

@@ -4,7 +4,7 @@
 // The flux of a block of rays. A ray stands for the flux of its weight in the request: what its share of the pupil
 // carries, its bulk transmission included where the case source states it. The flux of a block is the sum of the
 // weights of the rays taken, compensated (`createExactSum`), in the order of the rays; how many rays are taken beside
-// it. LensVisualizer's vignetting tab counts its sweep so: the rays of a field that pass every aperture, and their
+// it. LensVisualizer's vignetting tab counts its beam so: the cells of a field that pass every aperture, and their
 // transmitted intensity.
 //
 // The area of a lattice on its launch plane. A lattice's cells are squares of side `step` on the plane its rays are

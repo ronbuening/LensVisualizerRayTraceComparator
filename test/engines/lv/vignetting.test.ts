@@ -32,6 +32,7 @@ import { lvFieldRaySets, lvLaunchSetup } from "../../../src/engines/lv/raySets.t
 import { answerLvRays } from "../../../src/engines/lv/rays.ts";
 import { LV_VIGNETTING_TAB, answerLvVignetting } from "../../../src/engines/lv/vignetting.ts";
 import type { LvVignettingAnswer } from "../../../src/engines/lv/vignetting.ts";
+import { lvVignettingFieldAngles } from "../../../src/engines/lv/vignettingFields.ts";
 import { lvVignettingRaySets } from "../../../src/engines/lv/vignettingRaySets.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { cosineFlux, launchArea } from "../../../src/estimators/illumination.ts";
@@ -72,7 +73,7 @@ function askOf(binding: LvBinding, model: LvCaseModel): VignettingNativeSpec {
 
 // ── lv: the tab ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("lv's answer is the tab's curve as the tab presents it, each field identified by the chief ray it sweeps about", async (t) => {
+test("lv's answer is the tab's curve as the tab presents it, each field identified by its solved chief ray", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
   const model = await modelOf(binding);
@@ -98,8 +99,30 @@ test("lv's answer is the tab's curve as the tab presents it, each field identifi
       0,
     );
     assert.equal(field.chiefLandingMm, landing);
-    assert.deepEqual(field.sampling, { pupilSamples: 192, fieldSamples: 8 });
+    assert.deepEqual(field.sampling, { gridCells: 64, fieldSamples: 8, mirrored: 1, tubeMapping: 0 });
   });
+  assert.equal(data.method.params.gridCells, 64);
+  assert.equal(data.method.params.mappingStepDeg, 0.01);
+});
+
+test("a field whose chief rays the tab finds vignetted is answered with its mapping of ray tubes named", async (t) => {
+  // The fake made to stop every chief ray steeper than about 11.5 degrees, and no ray of a lattice.
+  const lv = variantOf(freshLv(t), "chief-vignetted", {
+    "src/optics/analysis/mtf/mtfTracing.ts": (text) =>
+      text.replace(
+        '  if (trace.status === "ok") return "valid";',
+        '  if (trace.input.origin[0] === 0 && trace.input.direction[1] < -0.2) return "blocked";\n  if (trace.status === "ok") return "valid";',
+      ),
+  });
+  const binding = await bind(t, lv);
+  const model = await modelOf(binding);
+  const data = dataOf(answerLvVignetting(binding.api, model, askOf(binding, model)));
+  assert.ok(data.fields.every((field) => field.status === "ok"));
+  for (const field of data.fields) {
+    const steep = Math.sin((field.fieldAngleDeg * Math.PI) / 180) > 0.2;
+    assert.equal(field.sampling.tubeMapping, steep ? 1 : 0, `${field.fieldAngleDeg}`);
+  }
+  assert.ok(data.notes.some((note) => note.includes("ray tubes traced without aperture checks")));
 });
 
 /**
@@ -158,7 +181,7 @@ test("an angle of no field of the tab's is unsupported, and a tab without a curv
   binding.close();
   // The fake's tab made to draw no curve: every field is the answer's, unavailable with the reason.
   const blank = variantOf(lv, "blank", {
-    "src/optics/analysis/vignetting.ts": (text) => text.replace("if (epsd <= 0) return [];", "return [];"),
+    "src/optics/analysis/vignetting.ts": (text) => text.replace("if (currentEPSD <= 0) return [];", "return [];"),
   });
   const bound = await bind(t, blank);
   const blankModel = await modelOf(bound);
@@ -166,21 +189,25 @@ test("an angle of no field of the tab's is unsupported, and a tab without a curv
   assert.ok(data.fields.every((field) => field.status === "unavailable" && field.reason === "lv-no-curve"));
 });
 
-test("lv answers every ask of its own case source, where LensVisualizer launches some fields from a bounding sphere", async (t) => {
+test("a state the tab draws no curve of is asked nothing, and answered unavailable at each of the tab's fields", async (t) => {
   const vector = variantOf(freshLv(t), "vector", {
     [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  field: { vectorBeyondDeg: 12 },"),
   });
   const binding = await bind(t, vector);
   const model = await modelOf(binding);
-  const ask = askOf(binding, model);
-  const curve = binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model));
-  assert.ok(ask.fieldAnglesDeg.length < curve.length, "the fields beyond 12 degrees are no field of the ask");
-  const data = dataOf(answerLvVignetting(binding.api, model, ask));
+  assert.deepEqual(lvVignettingRaySets(binding.api, model).asks, []);
+  // Asked anyway, at the tab's own angles: no curve, at every field, with the reason.
+  const angles = lvVignettingFieldAngles(binding.api, lvChiefGeometry(binding.api, model)!.halfFieldDeg);
+  const spec = { lines: [0], maxFieldDeg: 20, fieldAnglesDeg: angles };
+  const data = dataOf(answerLvVignetting(binding.api, model, spec));
   assert.deepEqual(
-    data.fields.map((field) => field.fieldAngleDeg),
-    ask.fieldAnglesDeg,
+    data.fields.map((field) => [field.status, field.reason]),
+    angles.map(() => ["unavailable", "lv-bounding-sphere-field"]),
   );
-  assert.ok(data.fields.every((field) => field.status === "ok"));
+  assert.deepEqual(binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model)), []);
+  assert.deepEqual(itemsOf(answerLvVignetting(binding.api, model, { ...spec, fieldAnglesDeg: [0, 1] })), [
+    "fields.angles",
+  ]);
 });
 
 test("the engine lv offers vignetting.native, answers it through the protocol, and states the tab it asked", async (t) => {

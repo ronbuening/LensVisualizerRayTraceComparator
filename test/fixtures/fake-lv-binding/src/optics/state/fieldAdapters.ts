@@ -1,6 +1,7 @@
 // The fake's chief-ray solve and chief-ray image heights, under LV's names. Its "solved" chief ray crosses the first
-// vertex plane a thousandth higher than LV's paraxial estimate for every degree of field beyond the first (below one
-// degree it is the estimate, as LV's is); a field beyond `field.vectorBeyondDeg` is "launched from a bounding sphere".
+// vertex plane a thousandth higher than LV's paraxial estimate for every degree of field beyond the first (a little
+// lower below one degree); only the axis is not solved, and crosses at 0, as LV's does. A field beyond
+// `field.vectorBeyondDeg` is "launched from a bounding sphere".
 import { projectionLaunchSlopeForField } from "../projection.js";
 import { meridionalTrace } from "../trace/chiefTrace.js";
 import { computeAnalysisFieldGeometryAtState, prepareRuntimeState } from "./runtime.js";
@@ -30,8 +31,8 @@ export function solveChiefRayForRuntimeLens(
     const vectorLaunch = { origin: [0, 0, -10], direction: [0, 0, 1], launchBoundT: 1 };
     return { yLaunch: paraxial, uField: launch.uField, status: "converged", iterations: 0, launchSurface: "bounding-sphere", vectorLaunch };
   }
-  if (Math.abs(fieldAngleDeg) < 1) {
-    return { yLaunch: paraxial, uField: launch.uField, status: "converged", iterations: 0, launchSurface: "object-plane" };
+  if (fieldAngleDeg === 0) {
+    return { yLaunch: 0, uField: launch.uField, status: "converged", iterations: 0, launchSurface: "object-plane" };
   }
   const yLaunch = paraxial * (1 + (Math.abs(fieldAngleDeg) - 1) / 1000);
   return { yLaunch, uField: launch.uField, status: "converged", iterations: 1, launchSurface: "object-plane" };

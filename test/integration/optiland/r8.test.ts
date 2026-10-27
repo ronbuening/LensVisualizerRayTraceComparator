@@ -8,8 +8,8 @@
 // and not in another. R8b is recorded: nothing here is held to a figure of an intercept. What is held is that
 // LensVisualizer answers exactly the asks its sections answer and says why not of the others, that optiland answers
 // every ask, that the spherical aberration of the design run is of two methods within the pupil limit, that the colour
-// line is set aside as data because LensVisualizer's G channel (the d line, 587.56 nm, for a lens of d-line indices)
-// traces indices that are not the case's, and that the report claims nothing it may not.
+// line is of two methods too since LensVisualizer #925 anchored its G channel (the d line, 587.56 nm, for a lens of
+// d-line indices) to the authored index, which is the case's to the bit, and that the report claims nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -125,18 +125,18 @@ test(
     for (const figure of ["marginalIntercept.maxAbs", "longitudinalSa.maxAbs", "bestFocus.maxAbs", "profile.maxAbs"]) {
       assert.equal(typeof value(spherical, figure), "number", figure);
     }
-    // Axial colour at the reference line, LensVisualizer's G channel (the d line for these d-line indices): the line
-    // is data, since LensVisualizer traces it at catalog indices that are not the case's (docs/gotchas.md, "Axial
-    // rays"), and no colour figure is taken of it.
-    assert.equal(value(colour, "fields.data"), 1);
-    assert.equal(value(colour, "fields.compared"), 0);
-    assert.match(colour.reason ?? "", /line 0: data, indices-differ \(lv-chromatic-tab traced indices up to /);
+    // Axial colour at the reference line, LensVisualizer's G channel (the d line for these d-line indices): since
+    // LensVisualizer #925 its indices are the authored ones, the case's to the bit (docs/gotchas.md, "Axial rays"), and
+    // the line is of two methods, its figures recorded with no band.
+    assert.equal(colour.verdict, "RECORDED", colour.reason ?? "");
+    assert.equal(value(colour, "fields.data"), 0);
+    assert.equal(value(colour, "fields.compared"), 1);
+    assert.equal(typeof value(colour, "lineFocus.maxAbs"), "number");
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === colour.requestId && candidate.mode === "pairwise",
     );
     const lv = set?.participants.find((participant) => participant.engine === "lv");
-    const delta = lv?.recorded?.indexMaxDelta?.[0];
-    assert.ok(typeof delta === "number" && delta > 0, `${delta}`);
+    assert.equal(lv?.recorded?.indexMaxDelta?.[0], 0);
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);
     assert.equal(reported.code, 0, reported.out + reported.err);

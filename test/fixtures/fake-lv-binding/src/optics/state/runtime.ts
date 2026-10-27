@@ -117,7 +117,11 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       stop: { surfaceIndex: L.stopIndex },
       flags: { isZoom: L.isZoom, isFoldedOptics: !!L.source.opticalPath },
       opticalPath: L.source.opticalPath,
-      projection: { kind: "rectilinear" },
+      // The projection, with the authored config LV's launch-surface rule reads; the fake's carries its bounding sphere.
+      projection: {
+        kind: "rectilinear",
+        config: { kind: "rectilinear", vectorBeyondDeg: L.source.field?.vectorBeyondDeg },
+      },
       // How far ahead of the first vertex the fake's skew rays start, as LV's lens constants say.
       constants: { rayLead: 10 },
       // Each medium at the chromatic tab's channels.

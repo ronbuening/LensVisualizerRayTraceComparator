@@ -4,12 +4,12 @@
 // their own (docs/REFERENCE.md, "Stage 6.6"), a few minutes. Each test skips with the reason when LensVisualizer or
 // optiland is missing. Run output goes to a temporary directory.
 //
-// R11a is gated: every pair of the three engines passes, no ray is valid in one engine and not in another, and every
-// lattice field's flux into the image is measured. R11b is recorded, of LensVisualizer and the engine `flux`. What is
-// held is that LensVisualizer answers exactly the ask its tab answers and says why not of the other, that `flux`
-// answers every ask, that every field of the design runs is of two methods within the limit of the sorting, and that
-// the wide angle's beam grows across the field in two dimensions where the tab's sweep of a fixed width does not see it
-// (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
+// R11a is gated: every pair of the three engines passes, no ray is valid in one engine and not in another, every
+// field's flux into the image is measured and so is the landing of the image mapping's chief rays. R11b is recorded, of
+// LensVisualizer and the engine `flux`. What is held is that LensVisualizer answers exactly the ask its tab answers and
+// says why not of the other, that `flux` answers every ask, that every field of the design runs is of two methods within
+// the limit of the sorting, that since LensVisualizer #925 the tab's beam grows across the wide angle's field as the
+// flux's lattice does (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -66,39 +66,39 @@ test(
       rungs: "r11a,r11b",
     });
 
-    // R11a: a sweep set and a lattice of each field at each line, traced by the three engines.
+    // R11a: the tab's beam of each field at each line, traced by the three engines.
     const traced = manifest.jobs.filter((job) => job.rung === "r11a");
     for (const run of manifest.runs) {
       const lines = run.name === PHOTOPIC ? 5 : 1;
       assert.deepEqual(run.vignettingRaySets?.problems, [], run.name);
-      assert.equal(run.vignettingRaySets?.sets.length, lines * (1 + FIELDS[run.name]), run.name);
+      assert.equal(run.vignettingRaySets?.sets.length, lines * FIELDS[run.name], run.name);
     }
     const total = manifest.runs.reduce((sum, run) => sum + (run.vignettingRaySets?.sets.length ?? 0), 0);
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
-    // The pairs are of spans: the sweep and the lattices of a line, two a line.
+    // The pairs are of spans: the beams of a line, one span a line.
     const gated = pairsOf(comparisons, "r11a", RAYS_TRACE);
-    assert.equal(gated.length, 3 * 2 * (1 + 5 + 1 + 1));
-    let lattices = 0;
+    assert.equal(gated.length, 3 * (1 + 5 + 1 + 1));
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
       assert.equal(pair.metrics["mask.mismatches"].value, 0, pair.run);
       assert.equal(pair.metrics["rays.dropped"].value, 0, pair.run);
       assert.equal(pair.metrics["transmission.maxAbs"].value, 0, pair.run);
       assert.equal(pair.metrics["transmission.rimBandOrFailed"].value, 0, pair.run);
-      if (pair.metrics["illumination.maxAbs"] === undefined) continue;
-      // Every lattice field has a flux into the image in both answers: the rung does not pass vacuously.
+      // Every field has a flux into the image in both answers and its mapping's chief rays land in both: the rung does
+      // not pass vacuously.
       assert.equal(pair.metrics["fields.compared"].value, FIELDS[pair.run], pair.run);
-      lattices++;
+      assert.equal(typeof pair.metrics["landing.maxAbs"]?.value, "number", pair.run);
     }
-    assert.equal(lattices, 3 * (1 + 5 + 1 + 1));
-    const worst = worstOf(
-      gated.filter((pair) => pair.metrics["illumination.maxAbs"] !== undefined),
-      "illumination.maxAbs",
+    for (const figure of ["illumination.maxAbs", "landing.maxAbs"]) {
+      const worst = worstOf(gated, figure);
+      assert.ok(worst.value <= (R11A.metrics[figure].tolerance as number), `${figure} ${worst.value}`);
+      t.diagnostic(`R11a ${figure}: ${worst.value} at ${worst.at}`);
+    }
+    assert.ok(
+      worstOf(gated, "illumination.maxAbs").value > 0,
+      "the exit directions of the three engines differ in their last bits somewhere",
     );
-    assert.ok(worst.value <= (R11A.metrics["illumination.maxAbs"].tolerance as number), `${worst.value}`);
-    assert.ok(worst.value > 0, "the exit directions of the three engines differ in their last bits somewhere");
-    t.diagnostic(`R11a illumination.maxAbs: ${worst.value} at ${worst.at}`);
 
     // R11b: LensVisualizer answers its tab's ask at the authored line; a photopic run has no line of the tab's and no
     // ask, and a case off the design plane is refused by lv and answered by flux.
@@ -137,9 +137,9 @@ test(
       }
     }
 
-    // The wide angle: the tab sweeps a chord of the axis's pupil across each field, which the stop's growing image
-    // overfills; the beam's area in two dimensions grows by a third and more toward the edge, where the sweep's
-    // fraction cannot pass the axis's by much.
+    // The wide angle: the stop's image grows across the field, and since LensVisualizer #925 the tab's beam in two
+    // dimensions grows with it, as the flux's lattice does: both by more than a third toward the edge, within 0.02 of
+    // each other at every field (at 098c91ef6, 1.4766 and 1.4774 at their largest, 6.4e-3 apart at worst).
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === of(WIDE).requestId && candidate.mode === "pairwise",
     );
@@ -147,9 +147,12 @@ test(
     const [lv, flux] = [side("lv"), side("flux")];
     assert.ok(lv !== undefined && flux !== undefined);
     const largest = (values: readonly (number | null)[]): number => Math.max(...values.map((v) => v ?? Number.NaN));
-    const [swept, area] = [largest(lv.geometricTransmission), largest(flux.geometricTransmission)];
-    assert.ok(swept < 1.1 && area > 1.3, `the sweep ${swept}, the beam's area ${area}`);
-    t.diagnostic(`${WIDE}: the tab's largest geometric transmission ${swept}, the beam's area ${area}`);
+    const [tab, area] = [largest(lv.geometricTransmission), largest(flux.geometricTransmission)];
+    assert.ok(tab > 1.3 && area > 1.3, `the tab's beam ${tab}, the flux's ${area}`);
+    lv.geometricTransmission.forEach((value, at) =>
+      assert.ok(Math.abs((value ?? Number.NaN) - (flux.geometricTransmission[at] ?? Number.NaN)) <= 0.02, `${at}`),
+    );
+    t.diagnostic(`${WIDE}: the tab's largest geometric transmission ${tab}, the flux's ${area}`);
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);
     assert.equal(reported.code, 0, reported.out + reported.err);

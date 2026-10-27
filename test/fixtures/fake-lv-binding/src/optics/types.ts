@@ -189,7 +189,7 @@ export interface FakeState {
     runtime: FakeRuntimeLens;
     stop: { surfaceIndex: number };
     flags: { isZoom: boolean; isFoldedOptics: boolean };
-    projection: { kind: "rectilinear" };
+    projection: { kind: "rectilinear"; config: { kind: string; vectorBeyondDeg?: number } };
     constants: { rayLead?: number };
   };
   focusT: number;

@@ -315,11 +315,12 @@ function indexDelta(model: LvCaseModel, line: number, channel: string): number {
 }
 
 /**
- * The lateral-colour section at each line of the spec that is one of its channels: each field's chief-ray landing at
- * that channel, as the section presents it (`imageHeightMm`), which is also what identifies the field; a line that is
- * no channel is unavailable at every field (`lv-no-channel-at-line`), and so is a channel whose chief ray the section
- * lost (`lv-channel-clipped`). The section traces its channels at its own indices, which `sampling.indexMaxDelta`
- * sets against the case's.
+ * The lateral-colour section at each line of the spec that is one of its channels: each field's landing of that
+ * channel's own chief ray, as the section presents it (`imageHeightMm`), which is also what identifies the field; a
+ * line that is no channel is unavailable at every field (`lv-no-channel-at-line`), and so is a channel whose chief ray
+ * the section lost (`lv-channel-clipped`). The section solves and traces each channel's chief ray at its own indices,
+ * which `sampling.indexMaxDelta` sets against the case's: since LensVisualizer 5ba17c20c they are the case's at its
+ * reference line, within a rounding at C and F, and off by a value at g where an element states its partial dispersion.
  */
 function lateral(api: LvChiefAnswerApi, model: LvCaseModel, spec: ChiefNativeSpec, geometry: LvChiefGeometry): Made {
   const request = lvChiefRequest(api, model);
@@ -422,7 +423,12 @@ export function answerLvChief(api: LvChiefAnswerApi, model: LvCaseModel, spec: C
       params: { stopSemiDiameterMm: model.exported.conditions.stopSemiDiameter },
     },
     notes: [
-      "LensVisualizer solves each chief ray through the centre of the real stop, and launches its paraxial estimate below 1 degree",
+      "LensVisualizer solves each chief ray through the centre of the real stop at every field but the axis",
+      ...(spec.kind === "lateral-colour"
+        ? [
+            "the lateral colour of each channel is its own chief ray, solved through the stop's centre at the channel's indices",
+          ]
+        : []),
       ...(spec.kind === "distortion"
         ? [
             "the curve plots each sample's target image height as its real height; its chief ray lands within 1e-4 mm of it (sampling.inversionResidualMm)",

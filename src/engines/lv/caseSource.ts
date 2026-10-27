@@ -89,12 +89,12 @@ export interface LvExporter {
    */
   curvatureRaySets(opticalCase: OpticalCase): Promise<CurvatureSetResolution>;
   /**
-   * The vignetting sets of a case this checkout exported, under a run's sampling: the rays LensVisualizer's vignetting
-   * tab launches, LensVisualizer's lattice over each of its fields' beams and the engines' own vignetting requests of
+   * The vignetting sets of a case this checkout exported: the rays LensVisualizer's vignetting tab launches, each
+   * field's beam on its lattice and the chief rays of its image mapping, and the engines' own vignetting requests of
    * the same fields (`lvVignettingRaySets`), from the state the case was exported from, rebuilt and held to the case
    * first. A stale case has none, and the one problem `stale-case`.
    */
-  vignettingRaySets(opticalCase: OpticalCase, options: Pick<RunOptions, "sampling">): Promise<VignettingSetResolution>;
+  vignettingRaySets(opticalCase: OpticalCase): Promise<VignettingSetResolution>;
   /**
    * The MTF recipe of a case this checkout exported, under a run's fields, frequencies and grid cap
    * (`lvMtfRecipe`), from the state the case was exported from, rebuilt and held to the case first. A case that is
@@ -177,10 +177,10 @@ export function createLvExporter(binding: LvBinding): LvExporter {
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)], asks: [] };
       return lvCurvatureRaySets(binding.api, rebuilt.model);
     },
-    vignettingRaySets: async (opticalCase, options) => {
+    vignettingRaySets: async (opticalCase) => {
       const rebuilt = await rebuildCase(binding, build, opticalCase);
       if (!rebuilt.ok) return { sets: [], problems: [rayProblem(STALE_CASE, rebuilt.reason)], asks: [] };
-      return lvVignettingRaySets(binding.api, rebuilt.model, options);
+      return lvVignettingRaySets(binding.api, rebuilt.model);
     },
     recipe: async (opticalCase, options) => {
       const rebuilt = await rebuildCase(binding, build, opticalCase);
@@ -241,8 +241,8 @@ function unavailable(error: LvBindingError): ExportProblem {
  * astigmatism sections, and the engines' own field-curve requests of the same sections (`lvCurvatureRaySets`).
  *
  * `vignettingRaySets` gives the vignetting sets of a case it resolved: the rays of LensVisualizer's vignetting tab,
- * its lattice over each of the tab's fields' beams, and the engines' own vignetting requests of the same fields
- * (`lvVignettingRaySets`).
+ * each field's beam on its lattice and the chief rays of its image mapping, and the engines' own vignetting requests
+ * of the same fields (`lvVignettingRaySets`).
  *
  * `recipe` gives the MTF recipe of a case it resolved: the plane, the fields and the frequencies as LensVisualizer
  * resolves them (`lvMtfRecipe`).
@@ -328,10 +328,10 @@ export function createLvCaseSource(lvPath: string | null): Required<CaseSource> 
       if ("code" in loaded) return { sets: [], problems: [problemText(loaded)], asks: [] };
       return loaded.curvatureRaySets(opticalCase);
     },
-    vignettingRaySets: async (run, opticalCase) => {
+    vignettingRaySets: async (_run, opticalCase) => {
       const loaded = await load();
       if ("code" in loaded) return { sets: [], problems: [problemText(loaded)], asks: [] };
-      return loaded.vignettingRaySets(opticalCase, run);
+      return loaded.vignettingRaySets(opticalCase);
     },
     recipe: async (run, opticalCase) => {
       const loaded = await load();

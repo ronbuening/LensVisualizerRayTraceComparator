@@ -106,8 +106,9 @@ test("the chief sets are the four patterns of the three tabs, the same rays at e
       fieldAnglesDeg: [0, 10, 20],
     },
   ]);
-  // The curve: the probe, the edge, and the four samples.
+  // The curve: the probe, the edge, and the four samples; the lateral colour four channels of each of three fields.
   assert.equal(f8(made.sets[0], "origins").length / 3, 6);
+  assert.equal(f8(made.sets[3 * lines], "origins").length / 3, 4 * 3);
   // A meridional launch: `rayLead` (10 mm) ahead of the first vertex, along (0, u, 1) made a unit vector, and the
   // direction of the slope 0 along the axis.
   const firstZ = model.state.z[0];
@@ -167,11 +168,13 @@ test("traced as the tabs trace them, the sets give the fake's curve, grid, exit 
     const traced = tabRay(api, model, pupilSet, at)!;
     assert.equal(sample.xpZRelLastSurf, -traced.y / traced.meridional, `exit pupil ${at + 1}`);
   });
-  // The lateral-colour section: each field's chief ray at every channel.
+  // The lateral-colour section: each field's own chief ray of every channel, four a field in the section's order.
   const lateral = api.computeLateralColorCurve(request)!;
+  assert.equal(f8(lateralSet, "origins").length / 3, 4 * lateral.fields.length);
   lateral.fields.forEach((field, at) => {
-    for (const sample of field.samples) {
-      const traced = tabRay(api, model, lateralSet, at, model.exported.conditions.stopSemiDiameter, sample.channel)!;
+    for (const [channel, sample] of field.samples.entries()) {
+      const ray = 4 * at + channel;
+      const traced = tabRay(api, model, lateralSet, ray, model.exported.conditions.stopSemiDiameter, sample.channel)!;
       const image = api.skewImagePlaneIntercept(
         traced.x,
         traced.y,
@@ -234,7 +237,7 @@ test("a fisheye lens has no distortion sets, and a field launched from a boundin
   );
   assert.deepEqual(
     far.sets.map((set) => f8(set, "origins").length / 3),
-    [3, 2, 2],
+    [3, 2, 4 * 2],
   );
 });
 

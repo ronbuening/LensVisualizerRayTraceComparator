@@ -1,8 +1,9 @@
 // Rungs R11a and R11b from end to end on engines that know no LensVisualizer: a suite is run, compared and reported,
-// and each report is a golden file. In R11a the reference engine traces vignetting sets through a small lens (a sweep of
-// three fields, and a lattice of each of two fields), and two stand-ins answer as it does with one exit direction turned
-// and one ray stopped; in R11b two stand-ins named `lv` and `flux` answer `vignetting.native`, the first as
-// LensVisualizer's tab presents its curve and the second as the flux estimator does. Every number is synthetic.
+// and each report is a golden file. In R11a the reference engine traces beam sets through a small lens (a lattice of
+// each of three fields, the chief rays of an image mapping after its cells), and three stand-ins answer as it does with
+// one exit direction turned, one ray stopped and one landing moved; in R11b two stand-ins named `lv` and `flux` answer
+// `vignetting.native`, the first as LensVisualizer's tab presents its curve and the second as the flux estimator does.
+// Every number is synthetic.
 import { join } from "node:path";
 
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -93,23 +94,12 @@ function startOf(angleDeg: number, x: number, y: number): [number, number, numbe
   return [x, y - (17 * m) / n, -10];
 }
 
-/** A sweep of the axis and fields of 3 and 6 degrees, 16 rays each across y at the stop, in one set. */
-const SWEEP: RaysTraceSpec = (() => {
-  const angles = [0, 3, 6];
-  const ys = Array.from({ length: 16 }, (_, at) => -3.75 + at * 0.5);
-  const origins = angles.flatMap((angle) => ys.flatMap((y) => startOf(angle, 0, y)));
-  const directions = angles.flatMap((angle) => ys.flatMap(() => directionOf(angle)));
-  const rays = origins.length / 3;
-  return {
-    line: 0,
-    origins: encodeNdArray(Float64Array.from(origins), [rays, 3]),
-    directions: encodeNdArray(Float64Array.from(directions), [rays, 3]),
-    weights: encodeNdArray(new Float64Array(rays).fill(1)),
-  };
-})();
-
-/** A lattice of 10 x 10 cells of 0.75 mm over the stop at a field, its chief ray after the cells. */
-function latticeOf(angle: number): RaysTraceSpec {
+/**
+ * A beam set at a field: a lattice of 10 x 10 cells of 0.75 mm over the stop, then the chief rays of an image mapping,
+ * the field's and those half a degree below and above it, a little off the axis so that the lens's obstruction passes
+ * them.
+ */
+function beamOf(angle: number): RaysTraceSpec {
   const [columns, rows, step] = [10, 10, 0.75];
   const origins: number[] = [];
   const directions: number[] = [];
@@ -119,26 +109,29 @@ function latticeOf(angle: number): RaysTraceSpec {
       directions.push(...directionOf(angle));
     }
   }
-  origins.push(...startOf(angle, 0.05, 0.05));
-  directions.push(...directionOf(angle));
-  const rays = columns * rows + 1;
+  for (const chief of [angle, angle - 0.5, angle + 0.5]) {
+    origins.push(...startOf(chief, 0.6, 0.6));
+    directions.push(...directionOf(chief));
+  }
+  const cells = columns * rows;
+  const rays = cells + 3;
   const weights = new Float64Array(rays).fill(1);
-  weights[rays - 1] = 0;
+  weights.fill(0, cells);
   return {
     line: 0,
     origins: encodeNdArray(Float64Array.from(origins), [rays, 3]),
     directions: encodeNdArray(Float64Array.from(directions), [rays, 3]),
     weights: encodeNdArray(weights),
-    groups: { field: { angleDeg: angle }, lattice: { columns, rows, step }, chiefIndex: rays - 1 },
+    groups: { field: { angleDeg: angle }, lattice: { columns, rows, step }, chiefIndex: cells },
   };
 }
 
-/** The rung `r11a` as a case without LensVisualizer's tab can be asked it: the sweep, and the two fields' lattices. */
+/** The rung `r11a` as a case without LensVisualizer's tab can be asked it: the beams of three fields of one line. */
 export const R11A_FIXTURE_RUNG: RungDefinition = {
   id: "r11a",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
-    [SWEEP, latticeOf(0), latticeOf(4)].map((spec) =>
+    [beamOf(0), beamOf(3), beamOf(4)].map((spec) =>
       makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec }),
     ),
 };
@@ -164,16 +157,17 @@ function refLike(change?: (data: RaysTraceData, request: QuantityRequest) => Ray
   };
 }
 
-/** The field angle of a lattice request, or null for the sweep. */
-function fieldOf(request: QuantityRequest): number | null {
-  return (request.spec as RaysTraceSpec).groups?.field?.angleDeg ?? null;
+/** The field angle of a beam request. */
+function fieldOf(request: QuantityRequest): number | undefined {
+  return (request.spec as RaysTraceSpec).groups?.field?.angleDeg;
 }
 
 /**
- * The engines of R11a: `ref`; `turned`, which turns the exit direction of cell 41 of the 4-degree lattice, a cell of
- * the beam's rim, by 2^-20 along x, beyond the gate of the flux into the image (a cell inside the rim would move it to
- * second order only: the area of a beam in cosine space is of its rim); and `stopped`, which stops ray 20 of the sweep
- * (a ray of the 3-degree field that passes) at the stop.
+ * The engines of R11a: `ref`; `turned`, which turns the exit direction of cell 41 of the 4-degree beam, a cell of the
+ * beam's rim, by 2^-20 along x, beyond the gate of the flux into the image (a cell inside the rim would move it to
+ * second order only: the area of a beam in cosine space is of its rim); `stopped`, which stops cell 44 of the 3-degree
+ * beam (one that passes) at the stop; and `moved`, which moves the landing of the 4-degree beam's upper chief ray by
+ * 2^-26 mm across the axis, beyond the gate of a landing.
  */
 function r11aEngines(): { readonly [engine: string]: EngineMaker } {
   return {
@@ -186,12 +180,19 @@ function r11aEngines(): { readonly [engine: string]: EngineMaker } {
         : data,
     ),
     stopped: refLike((data, request) =>
-      fieldOf(request) === null ? changed(data, (arrays) => stopAt(arrays, 20, 2)) : data,
+      fieldOf(request) === 3 ? changed(data, (arrays) => stopAt(arrays, 44, 2)) : data,
+    ),
+    moved: refLike((data, request) =>
+      fieldOf(request) === 4
+        ? changed(data, (arrays) => {
+            arrays.imagePoint[3 * 102 + 1] += 2 ** -26;
+          })
+        : data,
     ),
   };
 }
 
-/** Runs one run of the lens on the three engines into `runsDir`, compares it by the real gates and reports it. */
+/** Runs one run of the lens on the four engines into `runsDir`, compares it by the real gates and reports it. */
 export function r11aCycle(runsDir: string): Promise<R11Cycle> {
   return cycle(
     runsDir,

@@ -1,8 +1,10 @@
 # LensVisualizer: chief rays below one degree, and one chief ray for every lateral-colour channel
 
-Status: **decision taken, LV change pending** (owner, 2026-10-26): both conventions below are to be changed in
-LensVisualizer, a real chief ray below one degree for the pupils tab and the distortion curve, and each channel's own
-chief ray for the lateral colour. The owner holds the implementation prompts. For the owner; not filed. Observed at LV
+Status: **resolved by LensVisualizer #925** (`5ba17c20c`, adopted by the comparator at Stage 6.6b, LV `098c91ef6`,
+engine closure `fef2e248`): every chief ray but the axis's is solved through the stop's centre, below one degree too
+(to a stop-height tolerance that shrinks with the field there, `1e-7 · min(1, |θ| / 1°)` mm), and the lateral colour
+traces each channel's own chief ray (`computeOffAxisChannelFieldGeometry`). The history follows as it was written, and
+the measurements after the change are in `docs/REFERENCE.md`, "Stage 6.6b". For the owner; not filed. Observed at LV
 `d6df08c7f` and `cfa91d0a5` (clean; engine closure `c866fbff` with the comparator's Stage 6.4 names) and optiland
 `4e893f53`. The comparator reports LensVisualizer's tabs as they are and changes no gate for this: rung R9a traces
 LensVisualizer's own chief rays in `lv`, `ref` and optiland and they agree within 4.8e-13 mm; rung R9b records the tabs

@@ -1,6 +1,8 @@
 // Source canaries reread at LV ab0fd4cf (closure 94778d3d, 175 files; same closure as 643ef5d0). The canaries of
 // the slider's range and of the finite-conjugate addresses were added at Stage 4.4 (ab0fd4cf, closure 7b756ee6,
-// 177 files: the binding now imports src/optics/publishedStations.ts).
+// 177 files: the binding now imports src/optics/publishedStations.ts). Those LensVisualizer #925 (5ba17c20c) moved,
+// of the support gate, the anchored indices, the chief-ray solve, the lateral colour and the vignetting tab, were
+// reread at Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -77,18 +79,36 @@ test("the support gate still rejects a path for the causes the exporter names, a
   const mirror =
     "structuralProblems in src/engines/lv/exportCase.ts names each cause, and pathIsExpressible in exportLines.ts " +
     "takes a fisheye projection and an annular aperture for the only ones a case can still be exported with";
+  // Since 5ba17c20c the two rules are functions of their own, which the vignetting tab asks too (lvVignettingSetup in
+  // src/engines/lv/vignettingFields.ts asks them through the binding); the gate rejects a path by them, as before.
   assertSource(
     gate,
-    `lens.flags.isFoldedOptics ||
-     lens.source.projection?.kind?.startsWith("fisheye") ||
-     state.surfaces.some((s) => s.diffractive || (s.innerSd ?? 0) > 0 || s.interaction.type !== "refract")`,
+    `export function mtfSequentialRefractivePath(state: PreparedGeometry): boolean {
+       const { lens } = state;
+       return !(
+         lens.flags.isFoldedOptics ||
+         lens.source.projection?.kind?.startsWith("fisheye") ||
+         state.surfaces.some((s) => s.diffractive || (s.innerSd ?? 0) > 0 || s.interaction.type !== "refract")
+       );
+     }`,
     mirror,
   );
   assertSource(
     gate,
-    `Math.abs(state.imagePlane.normal[0]) > 1e-10 ||
-     Math.abs(state.imagePlane.normal[1]) > 1e-10 ||
-     state.imagePlane.normal[2] <= 0`,
+    `export function mtfAxialImagePlane(state: PreparedGeometry): boolean {
+       const [x, y, z] = state.imagePlane.normal;
+       return !(Math.abs(x) > 1e-10 || Math.abs(y) > 1e-10 || z <= 0);
+     }`,
+    mirror,
+  );
+  assertSource(
+    gate,
+    'if (!mtfSequentialRefractivePath(state)) return reject("unsupported-path", "MTF currently supports centered, sequential refractive prescriptions.");',
+    mirror,
+  );
+  assertSource(
+    gate,
+    'if (!mtfAxialImagePlane(state)) return reject("unsupported-path", "MTF requires an image plane perpendicular to the optical axis.");',
     mirror,
   );
   assert.equal(occurrences(gate, 'reject("unsupported-path"'), 2, `${gate} rejects a path in another number of places`);
@@ -1456,8 +1476,9 @@ test(
   },
 );
 
-// Stage 6.3, at LV 45e6f852d (closure afef1f81): the axial sets of the spherical-aberration and axial-colour sections
-// (src/engines/lv/axialRaySets.ts) restate these lines; test/integration/lv/axialRays.test.ts holds their figures.
+// Stage 6.3, at LV 45e6f852d (closure afef1f81), reread at 098c91ef6 (closure fef2e248: the channels' indices anchored):
+// the axial sets of the spherical-aberration and axial-colour sections (src/engines/lv/axialRaySets.ts) restate these
+// lines; test/integration/lv/axialRays.test.ts holds their figures.
 test(
   "the spherical-aberration and axial-colour sections still trace the zones the axial sets restate",
   { skip },
@@ -1637,12 +1658,32 @@ test(
       'if (entry && element.indexReference === "e") {',
       "lvChannelLines refuses a lens whose elements mix references (lines.mixed-reference)",
     );
-    // A d-line glass LensVisualizer matched to a catalog is traced at the catalog's own index at every channel, the d
-    // line included; an e-line one is anchored to its authored index (docs/gotchas.md, "Axial rays").
+    // Since 5ba17c20c a glass LensVisualizer matched to a catalog is anchored to its authored index on both reference
+    // lines: its G channel is the authored index, C, F and g the catalog's dispersion added to it, g reconstructed from
+    // an element's own partial dispersion where it states one (docs/gotchas.md, "Axial rays").
     const resolver = "src/optics/chromatic/materialResolver.ts";
     const anchoring = "sampling.indexMaxDelta of answerLvAxial and docs/gotchas.md rest on this";
-    assertSource(resolver, "const nG = evaluateSellmeier(entry, CHANNEL_NM.G);", anchoring);
+    assertSource(
+      resolver,
+      "const nd = surface.nd; const anchor = nd - evaluateSellmeier(entry, CHANNEL_NM.G);",
+      anchoring,
+    );
+    assertSource(resolver, "const nR = evaluateSellmeier(entry, CHANNEL_NM.R) + anchor;", anchoring);
+    assertSource(resolver, "const nB = evaluateSellmeier(entry, CHANNEL_NM.B) + anchor;", anchoring);
+    assertSource(resolver, ": evaluateSellmeier(entry, CHANNEL_NM.V) + anchor;", anchoring);
+    assertSource(resolver, "? nB + normalLinePgF(element.vd, element.dPgF) * (nB - nR)", anchoring);
+    assertSource(
+      resolver,
+      'const fn: SurfaceIndexFn = (ch) => (ch === "R" ? nR : ch === "B" ? nB : ch === "V" ? nV : nd);',
+      anchoring,
+    );
     assertSource(resolver, "const anchor = ne - evaluateSellmeier(entry, E_LINE_CHANNEL_NM.G);", anchoring);
+    // The case's anchored index adds the same terms in another order: within a unit in the last place of the channel's.
+    assertSource(
+      "src/optics/chromatic/indexResolver.ts",
+      "surface.nd + evaluateSellmeier(dispersion.glassEntry, wavelengthNm) - evaluateSellmeier(dispersion.glassEntry, referenceNm)",
+      "docs/gotchas.md: at C and F a channel's index is within a rounding of the case's, never exactly by construction",
+    );
     assertSource(
       "src/optics/trace/rayAdapters.ts",
       "indexAtSurface: channel ? (i, nd) => state.lens.dispersion[i]?.indexAt(channel) ?? nd : undefined,",
@@ -1651,7 +1692,8 @@ test(
   },
 );
 
-// Stage 6.4, at LV d6df08c7f and cfa91d0a5 (closure c866fbff with the stage's names): the chief sets of the
+// Stage 6.4, at LV d6df08c7f and cfa91d0a5 (closure c866fbff with the stage's names), reread at 098c91ef6 (closure
+// fef2e248: the chief ray solved below one degree, each channel's own lateral colour): the chief sets of the
 // distortion, pupils and lateral-colour tabs (src/engines/lv/chiefRaySets.ts, the request and reference in
 // chiefSetup.ts) restate these lines; test/integration/lv/chiefRays.test.ts holds the tabs' figures to the bit.
 test("the distortion tab still traces the probe, the edge and its samples the chief sets restate", { skip }, () => {
@@ -1721,12 +1763,21 @@ test("the distortion tab still traces the probe, the edge and its samples the ch
     curve,
   );
   assertSource(image, "return trace.y + trace.u * imagePlaneTransfer;", plotted);
-  // Below one degree a chief ray is its paraxial estimate, not one through the stop's centre.
+  // Since 5ba17c20c every chief ray but the axis's is solved through the stop's centre, below one degree too, to a
+  // tolerance that shrinks with the field there; the axis is 0, unsolved. The probe above stays a paraxial launch.
+  const solve = "src/optics/field/chiefRaySolve.ts";
+  const below = 'docs/gotchas.md, "Chief rays": LensVisualizer\'s chief ray below one degree, solved since 5ba17c20c';
   assertSource(
-    "src/optics/field/chiefRaySolve.ts",
-    'if (Math.abs(fieldAngleDeg) < 1) { return { yLaunch: paraxialYChief, uField, status: "converged", iterations: 0, launchSurface }; }',
-    "docs/gotchas.md: LensVisualizer's chief ray below one degree",
+    solve,
+    'if (fieldAngleDeg === 0) { return { yLaunch: 0, uField, status: "converged", iterations: 0, launchSurface }; }',
+    below,
   );
+  assertSource(
+    solve,
+    "return CHIEF_RAY_RESIDUAL_TOLERANCE * Math.min(1, Math.abs(fieldAngleDeg) / CHIEF_RAY_RESIDUAL_FULL_FIELD_DEG);",
+    below,
+  );
+  assert.equal(occurrences(solve, "Math.abs(fieldAngleDeg) < 1"), 0, `${solve} has a shortcut below one degree again`);
   // The meridional launch of a slope: LensVisualizer's own normalisation, cached for the slope 0.
   assertSource(
     "src/optics/trace/rayAdapters.ts",
@@ -1866,13 +1917,34 @@ test("the lateral-colour section and the breathing chart still read what the com
     "const imagePlaneZ = lastSurfaceZ + thick(L.N - 1, focusT, zoomT, L, aberrationT);",
     "designPlaneZ in src/engines/lv/chief.ts decides the lateral colour's design plane before the section is asked",
   );
+  // Since 5ba17c20c each channel traces its own chief ray, solved through the stop at the channel's indices.
   assertSource(
     chromatic,
-    "const geometry = computeOffAxisFieldGeometry(request.preparedGeometry, fieldFraction, stateGeometry);",
+    "const geometries = channels.map((channel) => computeOffAxisChannelFieldGeometry(request.preparedGeometry, fieldFraction, channel, stateGeometry), );",
     mirror,
   );
-  assertSource(chromatic, "const chiefRay = traceOffAxisChiefRay(request, geometry, channel);", mirror);
+  assertSource(chromatic, "const fieldGeometry = geometries.find((geometry) => geometry !== null);", mirror);
+  assertSource(
+    chromatic,
+    "const chiefRay = geometry ? traceOffAxisChiefRay(request, geometry, channel) : null;",
+    "lateralRays in src/engines/lv/chiefRaySets.ts launches each channel's geometry as the coma tab's chief ray",
+  );
   assertSource(chromatic, "imageHeightMm: chiefRay?.imagePoint.y ?? null,", mirror);
+  assertSource(
+    "src/optics/analysis/aberration/offAxis.ts",
+    "solvePreparedChiefRay(state, { fieldAngleDeg, geometry, channel }),",
+    "computeOffAxisChannelFieldGeometry, which the binding takes, solves the chief ray at the channel",
+  );
+  // The section's channels: every one, in LensVisualizer's order (LV_LATERAL_CHANNELS in chiefFields.ts).
+  const channels = "LV_LATERAL_CHANNELS in src/engines/lv/chiefFields.ts restates the section's channels";
+  assertSource("src/optics/analysis/request.ts", "channels: CHROMATIC_CHANNEL_ORDER,", channels);
+  assertSource(chromatic, "export const DEFAULT_CHROMATIC_ANALYSIS_CHANNELS = CHROMATIC_CHANNEL_ORDER;", channels);
+  assertSource(chromatic, "return CHROMATIC_CHANNEL_ORDER.filter((channel) => requested.has(channel));", channels);
+  assertSource(
+    "src/optics/chromatic/channels.ts",
+    'export const CHROMATIC_CHANNEL_ORDER = Object.freeze(["R", "G", "B", "V"] as const);',
+    channels,
+  );
   assertSource(chromatic, "lateralColor: computeLateralColorCurve(request, options),", mirror);
   // The breathing chart's focal length: the stored one at infinity focus, the prepared surfaces' elsewhere.
   const breathing = "test/integration/lv/breathing.test.ts holds the chart's focal length to lv's R1 answer";
@@ -2040,15 +2112,17 @@ test("the aberrations tab still presents the field curves the engine answers cur
   );
 });
 
-// Stage 6.6, at LV be077cbcd (closure c866fbff with the stage's names): the vignetting sets of the vignetting tab
-// (src/engines/lv/vignettingRaySets.ts, the fields in vignettingFields.ts) restate these lines;
+// Stage 6.6, at LV be077cbcd (closure c866fbff with the stage's names), and Stage 6.6b, at LV 098c91ef6 (closure
+// fef2e248), whose tab (5ba17c20c) traces each field's beam on its MTF's launch lattice: the vignetting sets of the tab
+// (src/engines/lv/vignettingRaySets.ts, the fields and the setup in vignettingFields.ts) restate these lines;
 // test/integration/lv/vignettingRays.test.ts holds the tab's curve to the bit.
-test("the vignetting tab still samples the fields and sweeps the pupils the vignetting sets restate", { skip }, () => {
+test("the vignetting tab still samples the fields and traces the beams the vignetting sets restate", { skip }, () => {
   const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
   const fields =
-    "lvVignettingFieldCount and lvVignettingFields in src/engines/lv/vignettingFields.ts restate the fields";
-  const sweep = "lvVignettingPupilCount, lvVignettingPupilFractions and lvSweepLaunch restate the sweep";
-  // The fields: about every 3 degrees, at least 7, from the axis to the half field, each launched by its solved chief.
+    "lvVignettingFieldCount and lvVignettingFieldAngles in src/engines/lv/vignettingFields.ts restate the fields";
+  const setup = "lvVignettingSetup in src/engines/lv/vignettingFields.ts restates the tab's setup";
+  const beams = "lvVignettingDecision and lvBeamCellRays in src/engines/lv/vignettingFields.ts restate the beams";
+  // The fields: about every 3 degrees, at least 7, from the axis to the half field of the drawer's geometry.
   assertSource(
     vignetting,
     "const fieldSamples = sampling.vignettingFieldSampleCount !== undefined ? Math.max(Math.round(sampling.vignettingFieldSampleCount), 3) : Math.max(Math.ceil(halfFieldDeg / 3) + 1, 7);",
@@ -2059,85 +2133,169 @@ test("the vignetting tab still samples the fields and sweeps the pupils the vign
     "const geom = fieldGeometry ?? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT);",
     fields,
   );
+  assertSource(
+    vignetting,
+    "const fieldAngles = Array.from( { length: fieldSamples }, (_, i) => uniformFieldFraction(i, fieldSamples) * halfFieldDeg, );",
+    fields,
+  );
   assertSource(vignetting, "if (halfFieldDeg <= 0 || !isFinite(halfFieldDeg)) return [];", "no-half-field");
+  // The setup: the drawer's two radii, the MTF's options and the tab's own support of the d line at authored indices.
   assertSource(vignetting, "if (currentEPSD <= 0 || L.N < 1) return [];", "no-pupil");
-  assertSource(vignetting, "const fieldAngleDeg = uniformFieldFraction(i, fieldSamples) * halfFieldDeg;", fields);
-  assertSource(vignetting, "const solve = solveChiefRay(fieldAngleDeg, focusT, zoomT, L, geom, aberrationT);", fields);
-  assertSource(vignetting, "const launch = projectionLaunchSlopeForField(L, fieldAngleDeg);", fields);
   assertSource(
     vignetting,
-    'if (launch.status === "out-of-domain" && !solve.vectorLaunch) { rawGT.push(0); rawIntensity.push(0); continue; }',
-    "a field without a slope is lv-no-launch",
+    "if (!mtfSequentialRefractivePath(state) || !mtfAxialImagePlane(state)) return [];",
+    "lv-outside-beam-model",
   );
-  assertSource(vignetting, "const uField = launch.uField;", fields);
   assertSource(
     vignetting,
-    "const yChief = solve.vectorLaunch ? NaN : solve.yLaunch;",
-    "a vector launch is lv-vector-launch",
+    'const options: MtfOptions = { method: "geometric", spectrum: "reference", focus: "design", pupilSemiDiameterMm: currentEPSD, stopSemiDiameterMm: currentPhysStopSD, };',
+    setup,
   );
-  // The sweep: 192 rays, 96 for a heavy lens, at evenly spaced signed fractions of the drawer's pupil radius.
-  assertSource(vignetting, "const N_PUPIL_FULL = 192;", sweep);
-  assertSource(vignetting, "const N_PUPIL_HEAVY = 96;", sweep);
   assertSource(
     vignetting,
-    "const nPupil = Math.max( sampling.vignettingPupilSampleCount !== undefined ? Math.round(sampling.vignettingPupilSampleCount) : isHeavyLensForRayWork(L) ? N_PUPIL_HEAVY : N_PUPIL_FULL, 3, );",
-    sweep,
+    'const support: MtfSupport = { available: true, reason: null, message: "", referenceWavelengthNm: LINE_NM.d, useResolvedReference: false, spectralLines: [{ wavelengthNm: LINE_NM.d, weight: 1 }], limitations: [], };',
+    setup,
   );
-  assertSource(vignetting, "const pupilFractions = evenlySpacedSigned(nPupil);", sweep);
   assertSource(
     vignetting,
-    "const prepared = prepareRayTrace(L, { zPos, focusT, zoomT, stopSD: currentPhysStopSD, ghost: true, aberrationT });",
-    sweep,
+    "const traceOptions = mtfTraceOptions(state, options, support, support.spectralLines[0]);",
+    setup,
   );
-  assertSource(vignetting, "const pupilOffset = pupilFrac * currentEPSD;", sweep);
-  assertSource(vignetting, ": prepared.ray(yChief + pupilOffset, uField);", sweep);
-  // The meridional adapter's launch: the lead before the first vertex, the direction of the slope's cache.
-  const adapters = "src/optics/trace/rayAdapters.ts";
-  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", sweep);
-  assertSource(adapters, "const firstZ = request.zPos?.[0] ?? state.z[0] ?? 0;", sweep);
-  assertSource(
-    adapters,
-    "ray(y0, u0) { const direction = meridionalDirectionForSlope(u0); const origin: Vec3 = [0, y0 - u0 * lead, firstZ - lead];",
-    sweep,
-  );
-  assertSource(adapters, "const MERIDIONAL_DIRECTION_BY_SLOPE = new Map<number, Vec3>([[0, [0, 0, 1]]]);", sweep);
-  assertSource(adapters, "const direction = directionFromMeridionalSlope(u) ?? ([0, 0, 1] as Vec3);", sweep);
-  assertSource(adapters, "const rayOptions = traceOptions(stopSD, ghost, channel, state, true);", sweep);
-  assertSource(
-    "src/optics/analysis/sampling.ts",
-    "return Array.from({ length: count }, (_, index) => -1 + (2 * index) / (count - 1));",
-    "evenlySpacedSigned is bound from LensVisualizer itself",
-  );
-  // What the tab counts: the rays the trace does not clip, and their bulk transmission (lvRayWeights).
-  const counted = "the vignetting sets weigh each ray by LensVisualizer's bulk transmission; R11a's mask is the tab's";
+  assertSource(vignetting, "const traceRay = prepareEngineTrace(state, traceOptions);", setup);
+  assertSource(vignetting, "const mirror = mtfMirrorSymmetric(state);", setup);
+  // The beams: the MTF's launch and footprint of each field, none of a bounding sphere, and the lattice's half.
   assertSource(
     vignetting,
-    "if (!trace.clipped) { surviving++; transmittedIntensity += trace.transmission ?? 1; }",
+    'const launchAt = (fieldAngleDeg: number): MtfFieldLaunch | null => launchSurfaceForFieldDeg(fieldAngleDeg, state.lens.projection.config) === "object-plane" ? prepareMtfFieldLaunch(state, options, support, fieldAngleDeg) : null;',
+    beams,
+  );
+  assertSource(
+    vignetting,
+    'if (fieldAngles.some((deg) => launchSurfaceForFieldDeg(deg, state.lens.projection.config) !== "object-plane")) return [];',
+    "lv-bounding-sphere-field",
+  );
+  assertSource(
+    vignetting,
+    "const launch = launchAt(fieldAngleDeg); const footprint = launch && findMtfFieldFootprint(state, options, support, launch);",
+    beams,
+  );
+  assertSource(vignetting, "const BEAM_GRID_CELLS = 64;", "LV_VIGNETTING_BEAM_CELLS");
+  assertSource(
+    vignetting,
+    "const gridSize = Math.max( sampling.vignettingPupilSampleCount !== undefined ? Math.round(sampling.vignettingPupilSampleCount) : BEAM_GRID_CELLS, MIN_BEAM_GRID_CELLS, );",
+    "LV_VIGNETTING_BEAM_CELLS, with no count of the drawer's",
+  );
+  assertSource(vignetting, "const grid = mtfLaunchGrid(footprint, gridSize);", beams);
+  assertSource(
+    vignetting,
+    "for (let column = mirror ? columns / 2 : 0; column < columns; column++) { const trace = traceRay( mtfLaunchRay(launch, grid.x0 + (column + 0.5) * grid.step, grid.y0 + (row + 0.5) * grid.step), );",
+    beams,
+  );
+  // What the tab counts of a cell: a valid trace, its bulk transmission, twice where it mirrors (the cells' weights).
+  const counted = "the beam sets weigh each cell by LensVisualizer's bulk transmission; R11a's mask is the tab's";
+  assertSource(
+    vignetting,
+    'if (mtfTraceClassification(trace, state, stopRadius) !== "valid") continue; const w = bulkTransmissionForTrace(state.lens, trace.hits);',
     counted,
   );
-  assertSource("src/optics/trace/runtimeRayResult.ts", 'clipped: result.status !== "ok",', counted);
+  assertSource(vignetting, "cells += mirror ? 2 : 1; transmitted += mirror ? 2 * w : w;", counted);
+  // The mapping's chief rays: the field's and those 0.01 degrees to either side, lit (lvMappingChiefRays,
+  // lvVignettingMapping); where they are vignetted, the beam's ray tubes.
+  const mapping =
+    "lvMappingChiefRays and lvVignettingMapping in src/engines/lv/vignettingFields.ts restate the mapping";
+  assertSource(vignetting, "const MAPPING_STEP_DEG = 0.01;", "LV_VIGNETTING_MAPPING_STEP_DEG");
   assertSource(
-    "src/optics/trace/runtimeRayResult.ts",
-    "transmission: bulkTransmissionForTrace(L, result.hits),",
-    counted,
+    vignetting,
+    'const trace = traceRay(mtfLaunchRay(launch, 0, 0)); return mtfTraceClassification(trace, state, currentPhysStopSD) === "valid" ? (mtfImagePoint(state, trace)?.y ?? null) : null;',
+    mapping,
   );
   assertSource(
-    "src/optics/analysis/mtf/mtfTracing.ts",
-    "weight: bulkTransmissionForTrace(state.lens, trace.hits),",
-    counted,
+    vignetting,
+    "const [low, high] = [fieldAngleDeg - MAPPING_STEP_DEG, fieldAngleDeg + MAPPING_STEP_DEG].map((deg) => litChiefHeight(launchAt(deg)), );",
+    mapping,
+  );
+  assertSource(vignetting, "const height = litChiefHeight(launch); if (height === null) return null;", mapping);
+  assertSource(
+    vignetting,
+    "const rise = low !== null && high !== null ? (high - low) / 2 : high !== null ? high - height : low !== null ? height - low : null; if (rise === null) return null;",
+    mapping,
+  );
+  assertSource(vignetting, "const imageArea = chiefMapping(fieldAngleDeg, launch) ?? beam.tubeMapping();", mapping);
+  assertSource(vignetting, "if (!launch || !beam || !(beam.flux > 0)) {", "a field without flux has no mapping");
+  // The ray tubes, which tubeImageArea in test/integration/lv/vignettingRays.test.ts restates.
+  const tubes = "tubeImageArea in test/integration/lv/vignettingRays.test.ts restates the ray tubes";
+  assertSource(vignetting, "const MAPPING_TILT_RAD = 1e-4;", tubes);
+  assertSource(vignetting, "const MAPPING_SUBLATTICE_CELLS = 16;", tubes);
+  assertSource(
+    vignetting,
+    "const mappingOptions: TraceOptions = { ...traceOptions, checkSemiDiameter: false, stopOnClip: false };",
+    tubes,
+  );
+  assertSource(
+    vignetting,
+    "const tilts: Vec3[] = [ [0, dy + MAPPING_TILT_RAD * dz, dz - MAPPING_TILT_RAD * dy], [MAPPING_TILT_RAD, dy, dz], ];",
+    tubes,
+  );
+  assertSource(
+    vignetting,
+    "const values = crossings(traceEngineRay(state, ray, mappingOptions)); return values && ([0, 1, 2, 3].map((k) => (values[k] - base[k]) / MAPPING_TILT_RAD) as Vec4);",
+    tubes,
+  );
+  assertSource(vignetting, "const stride = Math.max(1, Math.floor(gridSize / MAPPING_SUBLATTICE_CELLS));", tubes);
+  assertSource(
+    vignetting,
+    "const [pa, pb, pc, pd] = [0, 1, 2, 3].map((k) => median(tubes.map((tube) => tube[k]))); return Math.abs(pa * pd - pb * pc);",
+    tubes,
+  );
+  assertSource(
+    vignetting,
+    "const stop = trace.hits.find((hit) => hit.surfaceIndex === stopIndex)?.point; return landing && stop ? [landing.x, landing.y, stop[0], stop[1]] : null;",
+    tubes,
   );
 });
 
 test("the vignetting tab still presents the curve the engine answers vignetting.native from", { skip }, () => {
   const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
   const answer = "answerLvVignetting in src/engines/lv/vignetting.ts writes down the tab's curve";
-  // The figures: each relative to the axis, the illumination times cos^4 of the object-space field angle.
-  assertSource(vignetting, "rawGT.push(surviving / nPupil);", answer);
-  assertSource(vignetting, "rawIntensity.push(transmittedIntensity / nPupil);", answer);
-  assertSource(vignetting, "if (gtAxis === 0 || intensityAxis === 0) return [];", "an empty curve is lv-no-curve");
-  assertSource(vignetting, "const cos4 = Math.pow(Math.cos(thetaRad), 4);", answer);
-  assertSource(vignetting, "const gt = rawGT[i] / gtAxis;", answer);
-  assertSource(vignetting, "const ri = (rawIntensity[i] * cos4) / intensityAxis;", answer);
+  const restated = "test/integration/lv/vignettingRays.test.ts restates the curve's arithmetic";
+  // The figures: each relative to the axis; the illumination the beam's flux times the cosine of the field angle over
+  // the image area a unit of object solid angle covers.
+  assertSource(
+    vignetting,
+    "const slope = Math.abs(rise / ((MAPPING_STEP_DEG * Math.PI) / 180)); return slope * (fieldAngleDeg === 0 ? slope : Math.abs(height) / Math.sin((fieldAngleDeg * Math.PI) / 180));",
+    restated,
+  );
+  assertSource(
+    vignetting,
+    "const rise = low !== null && high !== null ? (high - low) / 2 : high !== null ? high - height : low !== null ? height - low : null;",
+    restated,
+  );
+  assertSource(
+    vignetting,
+    "samples.push({ fieldAngleDeg, area: beam.area, illumination: (beam.flux * launch.direction[2]) / imageArea });",
+    restated,
+  );
+  assertSource(vignetting, "samples.push({ fieldAngleDeg, area: beam?.area ?? 0, illumination: 0 });", restated);
+  assertSource(
+    vignetting,
+    "const cellArea = grid.step * grid.step; return { area: cells * cellArea, flux: transmitted * cellArea, tubeMapping: tubeMappingArea };",
+    restated,
+  );
+  assertSource(
+    vignetting,
+    "if (!(imageArea !== null && imageArea > 0)) return [];",
+    "a curve the tab has none of is lv-no-curve",
+  );
+  assertSource(
+    vignetting,
+    "if (!(axis.area > 0) || !(axis.illumination > 0)) return [];",
+    "a curve the tab has none of is lv-no-curve",
+  );
+  assertSource(
+    vignetting,
+    "geometricTransmission: area / axis.area, relativeIllumination: illumination / axis.illumination,",
+    answer,
+  );
   // The tab asks the curve of the drawer's request, or of one of its own with no sampling of the drawer's.
   const tab = "src/components/display/analysis/VignettingTab.tsx";
   assertSource(
@@ -2150,7 +2308,7 @@ test("the vignetting tab still presents the curve the engine answers vignetting.
     'const samples = useMemo(() => probe("computeVignettingCurve", () => context.computeVignettingCurve()), [context]);',
     answer,
   );
-  // The landing that identifies a field: the solved chief ray the sweep is centred on, to the design plane.
+  // The landing that identifies a field: LensVisualizer's solved chief ray of the field, to the design plane.
   const height = "src/optics/field/imageHeight.ts";
   const landing = "chiefRayImageHeightAccurateForRuntimeLens identifies each field of lv's answer";
   assertSource(height, "imagePlaneTransfer: lastThicknessAtState(state),", landing);

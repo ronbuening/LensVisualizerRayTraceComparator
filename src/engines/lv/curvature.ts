@@ -244,7 +244,7 @@ export function answerLvCurvature(
       },
     },
     notes: [
-      "LensVisualizer solves each field's chief ray through the centre of the real stop, and launches its paraxial estimate below 1 degree",
+      "LensVisualizer solves each field's chief ray through the centre of the real stop at every field but the axis",
       "the foci are of four parabasal rays 0.01 mm from the chief ray on the first vertex plane (a pupil fraction between 1e-4 and 0.02)",
       ...(channelLines
         ? [

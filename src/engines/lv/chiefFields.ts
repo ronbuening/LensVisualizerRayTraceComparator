@@ -2,10 +2,11 @@
 // `rays.trace` request can state, decided once for both sides of rungs R9a and R9b: the case source makes its chief
 // sets and its `chief.native` asks of the fields this module admits (chiefRaySets.ts), and `lv` answers an ask with the
 // tabs' samples of the same fields (chief.ts). A field LensVisualizer launches from a bounding sphere, or has no slope
-// for, is no ray of a set: it is left out of the asks and out of `lv`'s answer alike, so that no engine is asked a field
-// `lv` cannot launch and `lv` never refuses its own case source's ask. Every restated line has a source canary
-// (test/integration/lv/canaries.test.ts). This module reads LensVisualizer only through the exports it names, and
-// imports nothing of the rays generators, so that it adds nothing but itself to `lv`'s closure.
+// for (at any channel, for the lateral colour), is no ray of a set: it is left out of the asks and out of `lv`'s answer
+// alike, so that no engine is asked a field `lv` cannot launch and `lv` never refuses its own case source's ask. Every
+// restated line has a source canary (test/integration/lv/canaries.test.ts). This module reads LensVisualizer only
+// through the exports it names, and imports nothing of the rays generators, so that it adds nothing but itself to `lv`'s
+// closure.
 import type { LvCaseModel } from "./caseModel.ts";
 import type { LvChiefGeometry } from "./chiefSetup.ts";
 import type { LvAnalysisRequest, LvApi, LvOffAxisFieldGeometry } from "./types.ts";
@@ -15,7 +16,7 @@ export type LvChiefFieldsApi = Pick<
   LvApi,
   | "projectionLaunchSlopeForField"
   | "solveChiefRayForRuntimeLens"
-  | "computeOffAxisFieldGeometry"
+  | "computeOffAxisChannelFieldGeometry"
   | "uniformFieldFraction"
   | "pupilAberrationSampleCount"
   | "lateralColorFieldFractions"
@@ -129,24 +130,57 @@ export function lvLateralFractions(api: Pick<LvChiefFieldsApi, "lateralColorFiel
 export type LvScalarOffAxisField = Exclude<LvOffAxisFieldGeometry, { readonly kind: "vector" }>;
 
 /**
- * The lateral-colour section's chief ray at a fraction of the half field, the coma tab's chief ray
- * (`computeOffAxisFieldGeometry`, which `computeLateralColorField` asks for its fraction), or why a chief set has
- * none: no geometry (`lv-no-launch`), or a launch from a bounding sphere (`lv-vector-launch`).
+ * The chromatic channels the lateral-colour section traces, in its order: the drawer's request states every channel
+ * (`channels: CHROMATIC_CHANNEL_ORDER` in request.ts), which the section keeps in that order:
+ *
+ * ```
+ * export const CHROMATIC_CHANNEL_ORDER = Object.freeze(["R", "G", "B", "V"] as const);
+ * const requested = new Set(channels ?? DEFAULT_CHROMATIC_ANALYSIS_CHANNELS);
+ * return CHROMATIC_CHANNEL_ORDER.filter((channel) => requested.has(channel));
+ * ```
+ */
+export const LV_LATERAL_CHANNELS: readonly string[] = Object.freeze(["R", "G", "B", "V"]);
+
+/** The lateral-colour section's chief rays of one field: each channel's own, in `LV_LATERAL_CHANNELS`' order. */
+export interface LvLateralField {
+  readonly fieldAngleDeg: number;
+  readonly chiefs: readonly LvScalarOffAxisField[];
+}
+
+/**
+ * The lateral-colour section's chief rays at a fraction of the half field, or why a chief set has none. Since
+ * LensVisualizer 5ba17c20c the section traces each channel's own chief ray, solved through the stop's centre at the
+ * channel's indices, at the field angle every channel shares (`computeLateralColorField` in chromatic/analysis.ts):
+ *
+ * ```
+ * const geometries = channels.map((channel) =>
+ *   computeOffAxisChannelFieldGeometry(request.preparedGeometry, fieldFraction, channel, stateGeometry),
+ * );
+ * const chiefRay = geometry ? traceOffAxisChiefRay(request, geometry, channel) : null;
+ * ```
+ *
+ * A field is one of a set only where every channel has a scalar launch: one without a launch at a channel is
+ * `lv-no-launch`, one launched from a bounding sphere at a channel `lv-vector-launch` (the section still plots the
+ * other channels of such a field).
  */
 export function lvLateralChief(
-  api: Pick<LvChiefFieldsApi, "computeOffAxisFieldGeometry">,
+  api: Pick<LvChiefFieldsApi, "computeOffAxisChannelFieldGeometry">,
   request: LvAnalysisRequest,
   geometry: LvChiefGeometry,
   fraction: number,
-): LvScalarOffAxisField | LvChiefFieldRefusal {
-  const field = api.computeOffAxisFieldGeometry(request.preparedGeometry, fraction, geometry);
-  if (field === null) {
-    const message = `LensVisualizer has no launch for the lateral-colour chief ray at the fraction ${fraction} of the half field`;
-    return { code: "lv-no-launch", message };
+): LvLateralField | LvChiefFieldRefusal {
+  const chiefs: LvScalarOffAxisField[] = [];
+  for (const channel of LV_LATERAL_CHANNELS) {
+    const field = api.computeOffAxisChannelFieldGeometry(request.preparedGeometry, fraction, channel, geometry);
+    if (field === null) {
+      const message = `LensVisualizer has no launch for the lateral-colour chief ray of channel ${channel} at the fraction ${fraction} of the half field`;
+      return { code: "lv-no-launch", message };
+    }
+    if (field.kind === "vector") {
+      const message = `LensVisualizer launches the lateral-colour chief ray of channel ${channel} at the fraction ${fraction} from a bounding sphere with a launch bound, which a rays.trace request does not state`;
+      return { code: "lv-vector-launch", message };
+    }
+    chiefs.push(field);
   }
-  if (field.kind === "vector") {
-    const message = `LensVisualizer launches the lateral-colour chief ray at the fraction ${fraction} from a bounding sphere with a launch bound, which a rays.trace request does not state`;
-    return { code: "lv-vector-launch", message };
-  }
-  return field;
+  return { fieldAngleDeg: chiefs[0].fieldAngleDeg, chiefs };
 }

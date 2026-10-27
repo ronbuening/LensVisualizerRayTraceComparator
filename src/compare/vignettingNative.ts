@@ -1,7 +1,8 @@
 // The comparator of `vignetting.native` for rung R11b: two engines' own vignetting and relative illumination of one
-// case, each by its own method, set beside each other field by field. LensVisualizer's vignetting tab (one meridional
-// sweep across a fixed pupil, times cos^4 of the field angle) beside the comparator's flux in two dimensions on
-// LensVisualizer's lattice over each field's whole beam is the pair the rung is named for. Nothing here is gated, and
+// case, each by its own method, set beside each other field by field. LensVisualizer's vignetting tab (each field's beam
+// on its MTF's launch lattice, its relative illumination the beam's flux times the cosine of the field angle over the
+// image area a unit of object solid angle covers) beside the comparator's flux in two dimensions on LensVisualizer's
+// lattice over each field's whole beam is the pair the rung is named for. Nothing here is gated, and
 // no figure of it says that one method is right.
 //
 // A field is sorted before any difference is taken, by the sorting of R9b (`classifyChiefField`,
@@ -14,12 +15,12 @@
 //
 // Three figures separate what the methods differ in:
 //
-// - `geometricTransmission.maxAbs`: how much of the beam gets through, over the axis's: the tab's fraction of one
-//   meridional chord of a fixed pupil against an area in two dimensions over the whole beam. Neither applies a law of
-//   the field angle.
-// - `falloff.maxAbs`: the relative illumination over the geometric transmission, of each answer: the tab's cos^4 of the
-//   field angle (times its transmitted intensity over its count) against the flux into the image per unit of
-//   transmitted area, which the traced directions give. It is of no vignetting.
+// - `geometricTransmission.maxAbs`: how much of the beam gets through, over the axis's: two areas in two dimensions on
+//   the launch plane, each of its own lattice. Neither applies a law of the field angle.
+// - `falloff.maxAbs`: the relative illumination over the geometric transmission, of each answer: the tab's flux times
+//   the cosine of the field angle over the image area of the chief rays' mapping (energy conservation) against the flux
+//   into the image per unit of transmitted area in the optical direction cosines of the image space, which the traced
+//   exit directions give. It is of no vignetting.
 // - `relativeIllumination.maxAbs`: the two together.
 import type { JsonObject } from "../contract/json.ts";
 import type { RecordedValues } from "../contract/comparison.ts";

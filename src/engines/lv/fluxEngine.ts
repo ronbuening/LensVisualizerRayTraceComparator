@@ -1,7 +1,7 @@
 // The engine `flux`: the comparator's flux estimator on LensVisualizer's own rays. It answers `vignetting.native`, and
-// where the engine `lv` hands such a request to LensVisualizer's vignetting tab, whose figures are one meridional sweep
-// across a fixed pupil times cos^4 of the field angle, this engine launches LensVisualizer's lattice over the whole
-// beam of each field, has LensVisualizer trace it, and sums what gets through in two dimensions
+// where the engine `lv` hands such a request to LensVisualizer's vignetting tab, whose relative illumination is a
+// conservation of energy over the image mapping of its chief rays, this engine launches LensVisualizer's lattice over
+// the whole beam of each field, has LensVisualizer trace it, and sums what gets through in two dimensions
 // (src/estimators/illumination.ts): the area of the beam on the launch plane, and its flux into the image in the
 // optical direction cosines of the image space, the relative illumination of the projected solid angle of the exit
 // pupil, with no law of the field angle assumed. Rung R11b sets the two answers beside each other.

@@ -1,54 +1,40 @@
-// Vignetting sets from LensVisualizer: the rays its vignetting tab launches, every field of them, and LensVisualizer's
-// own lattice over the whole beam of each of the same fields, as `rays.trace` specs. "Identical rays" for the rung
-// R11a are these: the tab's own sweeps and LensVisualizer's own launch lattices, traced as given by every engine.
+// Vignetting sets from LensVisualizer: the rays its vignetting tab launches, every field of them, as `rays.trace`
+// specs. "Identical rays" for the rung R11a are these: the tab's own beams and the chief rays of its image mapping,
+// traced as given by every engine.
 //
-// Which fields the tab samples, how many rays it sweeps across a pupil and where the sweep's fractions lie are
-// LensVisualizer's own exports or restated from `computeVignettingCurve` (vignettingFields.ts), each restated line with
-// a source canary (test/integration/lv/canaries.test.ts). The lattice of a field is the one LensVisualizer's MTF lays
-// over the beam it finds (`lvFieldRaySets`, the generator of the run's own ray sets), so that a field's whole beam is
-// sampled in two dimensions, wherever the stop's image lies: what the tab's one meridional line across a fixed pupil
-// does not see. An integration test holds the sweeps to LensVisualizer's own: traced by LensVisualizer they give the
-// tab's curve to the bit (test/integration/lv/vignettingRays.test.ts).
+// Since LensVisualizer 5ba17c20c the tab traces each field's whole beam in two dimensions on its MTF's launch lattice,
+// and finds the image area a unit of object solid angle covers from the landings of chief rays (vignettingFields.ts,
+// which decides the fields and restates what the tab does inline, each line with a source canary in
+// test/integration/lv/canaries.test.ts). An integration test holds the sets to LensVisualizer's own: traced by
+// LensVisualizer they give the tab's curve to the bit (test/integration/lv/vignettingRays.test.ts).
 import type { VignettingNativeSpec } from "../../contract/quantities/vignettingNative.ts";
 import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
-import type { RunSampling } from "../../contract/runSpec.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
 import { launchBehindProblem, startsInFront } from "../../rays/probe.ts";
-import { DEFAULT_BUNDLE_GRID, rayProblem } from "../../rays/raySets.ts";
+import { rayProblem } from "../../rays/raySets.ts";
 import type { VignettingSetResolution } from "../../rays/vignettingSets.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { lvChiefGeometry } from "./chiefSetup.ts";
-import type { LvChiefSetupApi } from "./chiefSetup.ts";
-import { lvFieldRaySets, lvLaunchSetup, lvRayWeights } from "./raySets.ts";
-import type { LvRaySetApi } from "./raySets.ts";
-import { lvTabPupilSemiDiameter } from "./spotSetup.ts";
-import type { LvApi } from "./types.ts";
+import { lvTraceOptions } from "./rays.ts";
+import type { LvRay } from "./types.ts";
 import {
-  isVignettingFieldRefusal,
-  lvSweepLaunch,
-  lvVignettingFields,
+  isVignettingRefusal,
+  lvBeamCellRays,
+  lvBeamLattice,
+  lvMappingChiefRays,
+  lvVignettingDecision,
   lvVignettingLines,
-  lvVignettingPupilFractions,
+  lvVignettingMapping,
 } from "./vignettingFields.ts";
-import type { LvVignettingFieldsApi, LvVignettingLaunch } from "./vignettingFields.ts";
+import type { LvVignettingBeam, LvVignettingFieldsApi, LvVignettingSetup } from "./vignettingFields.ts";
 
 /** The LensVisualizer exports the vignetting sets are made with. */
-export type LvVignettingApi = LvChiefSetupApi &
-  LvVignettingFieldsApi &
-  LvRaySetApi &
-  Pick<LvApi, "directionFromMeridionalSlope">;
+export type LvVignettingApi = LvVignettingFieldsApi;
 
-/** The two patterns of rays, in the order a run's sets are made. */
-export const VIGNETTING_PATTERNS = ["sweep", "lattice"] as const;
+/** The patterns of rays, in the order a run's sets are made: one, a beam set of each field and line. */
+export const VIGNETTING_PATTERNS = ["beam"] as const;
 /** One pattern of the vignetting rays. */
 export type VignettingPattern = (typeof VIGNETTING_PATTERNS)[number];
-
-/** The rays of one field's sweep: x, y, z of each origin and each direction, the tab's order. */
-interface SweepField {
-  readonly fieldAngleDeg: number;
-  readonly origins: Float64Array;
-  readonly directions: Float64Array;
-}
 
 /** What a case keeps the tab from launching vignetting sets for, or null. */
 function caseProblem(model: LvCaseModel): string | null {
@@ -68,80 +54,85 @@ function caseProblem(model: LvCaseModel): string | null {
   return null;
 }
 
-/** The sweep of one field: a ray for each of the tab's pupil fractions, in the tab's order. */
-function sweepOf(
+/**
+ * The weights of a beam set's rays at one line of the case: each cell's LensVisualizer bulk transmission along its
+ * trace at the line, as the tab weighs a lit cell, restated from `traceBeam`:
+ *
+ * ```
+ * const w = bulkTransmissionForTrace(state.lens, trace.hits);
+ * ```
+ *
+ * and 0 for the chief rays after the cells, which are references and no samples of the beam.
+ */
+function beamWeights(
   api: LvVignettingApi,
   model: LvCaseModel,
+  rays: readonly LvRay[],
+  cells: number,
+  line: number,
+): Float64Array {
+  const options = lvTraceOptions(model, line);
+  return Float64Array.from(rays, (ray, at) =>
+    at < cells ? api.bulkTransmissionForTrace(model.state.lens, api.traceEngineRay(model.state, ray, options).hits) : 0,
+  );
+}
+
+/** The beam sets of one field, one at each line of the case. */
+function beamSets(
+  api: LvVignettingApi,
+  model: LvCaseModel,
+  setup: LvVignettingSetup,
   fieldAngleDeg: number,
-  launch: LvVignettingLaunch,
-  fractions: readonly number[],
-  entrancePupilSemiDiameter: number,
-): SweepField {
-  const origins = new Float64Array(3 * fractions.length);
-  const directions = new Float64Array(3 * fractions.length);
-  fractions.forEach((fraction, ray) => {
-    const made = lvSweepLaunch(api, model, launch, fraction, entrancePupilSemiDiameter);
-    origins.set(made.origin, 3 * ray);
-    directions.set(made.direction, 3 * ray);
+  beam: LvVignettingBeam,
+  rays: readonly LvRay[],
+  cells: number,
+): RaysTraceSpec[] {
+  const origins = new Float64Array(3 * rays.length);
+  const directions = new Float64Array(3 * rays.length);
+  rays.forEach(({ origin, direction }, ray) => {
+    origins.set(origin, 3 * ray);
+    directions.set(direction, 3 * ray);
   });
-  return { fieldAngleDeg, origins, directions };
-}
-
-/**
- * The sweep sets of the case: every field's sweep in the tab's order, one block a field, as one set at each line of the
- * case. A ray weighs its launch weight of 1 times LensVisualizer's bulk transmission along it at the line
- * (`lvRayWeights`), as the tab's `trace.transmission` weighs it.
- */
-function sweepSets(api: LvVignettingApi, model: LvCaseModel, fields: readonly SweepField[]): RaysTraceSpec[] {
-  const rays = fields.reduce((sum, field) => sum + field.origins.length / 3, 0);
-  const origins = new Float64Array(3 * rays);
-  const directions = new Float64Array(3 * rays);
-  let at = 0;
-  for (const field of fields) {
-    origins.set(field.origins, at);
-    directions.set(field.directions, at);
-    at += field.origins.length;
-  }
+  const { columns, rows, step } = lvBeamLattice(beam.grid, setup.mirror);
   const encoded = {
-    origins: encodeNdArray(origins, [rays, 3]),
-    directions: encodeNdArray(directions, [rays, 3]),
+    origins: encodeNdArray(origins, [rays.length, 3]),
+    directions: encodeNdArray(directions, [rays.length, 3]),
   };
-  const launchWeights = new Float64Array(rays).fill(1);
-  return model.exported.conditions.lines.map((_line, line) => {
-    const weights = lvRayWeights(api, model, { origins, directions, launchWeights, chiefIndex: -1 }, line);
-    return { line, ...encoded, weights: encodeNdArray(weights, [rays]) };
-  });
+  const groups = { field: { angleDeg: fieldAngleDeg }, lattice: { columns, rows, step }, chiefIndex: cells };
+  return model.exported.conditions.lines.map((_line, line) => ({
+    line,
+    ...encoded,
+    weights: encodeNdArray(beamWeights(api, model, rays, cells, line), [rays.length]),
+    groups,
+  }));
 }
 
 /**
- * The vignetting sets of a case that came from a LensVisualizer lens: for each pattern (`VIGNETTING_PATTERNS`), in
- * that order, the rays of every field of the tab (`lvVignettingFields`, the fields `lv`'s answer is of too), the same
- * rays at every line of the case, in the order of the lines.
+ * The vignetting sets of a case that came from a LensVisualizer lens: for every field of the tab with a beam
+ * (`lvVignettingDecision`, the fields `lv`'s answer is of too), the axis first, a beam set at each line of the case,
+ * the same rays at every line, in the order of the lines:
  *
- * 1. `sweep`: of each field, the tab's own meridional sweep across the pupil (`lvSweepLaunch` at each of
- *    `lvVignettingPupilFractions`), one block of rays a field, the axis first, every field in one set at each line;
- *    what the tab's geometric transmission and relative illumination are counted from.
- * 2. `lattice`: of each field, LensVisualizer's own launch lattice over the whole beam it finds for the field
- *    (`lvFieldRaySets`, at the run's `sampling.bundleGrid` cells across, `DEFAULT_BUNDLE_GRID` without it), one set a
- *    field and line, each stating its field, its lattice and its chief ray; what the comparator's flux in two
- *    dimensions is of.
+ * - the cells the tab traces of the beam's lattice of `LV_VIGNETTING_BEAM_CELLS` cells across (`lvBeamCellRays`): of
+ *   each row, the columns from the middle on where the tab mirrors the other half, every column where it does not;
+ *   stated as a lattice of their own under `groups.lattice`, row by row;
+ * - then the chief rays of the tab's image mapping (`lvMappingChiefRays`): the field's (`groups.chiefIndex`), then
+ *   those 0.01 degrees below and above it where the tab has their launches.
  *
- * Beside the sets, the `vignetting.native` request of the tab: at the lines it traces (`lvVignettingLines`: the
- * authored reference line), at the angles of the fields with a sweep, the axis first; none for a run of no such line.
+ * A cell weighs LensVisualizer's bulk transmission along its trace at the line, as the tab weighs a lit cell; a chief
+ * ray weighs 0. Beside the sets, the `vignetting.native` request of the tab: at the lines it traces
+ * (`lvVignettingLines`: the authored reference line), at the angles of the fields with a beam, the axis first; none
+ * for a run of no such line.
  *
  * A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
- * half field (`no-half-field`) or without a pupil (`no-pupil`), and one whose axis has no sweep (`no-axis-sweep`: the
- * tab's every figure is relative to the axis) have no sets and no request, one problem each. A field LensVisualizer
- * launches from a bounding sphere (`lv-vector-launch`), one without a slope (`lv-no-launch`) and one whose rays would
- * not start in front of the first surface (`launch-behind-first-surface`) is a coded problem, and the others are not
- * affected. A state LensVisualizer's MTF launch does not cover has no lattice sets, with the gate's reason as the
- * problem's code, and keeps its sweeps; so does a field the launch finds no chief ray or no beam for.
+ * half field (`no-half-field`) or a pupil (`no-pupil`), one the tab draws no curve of (`lv-outside-beam-model`,
+ * `lv-bounding-sphere-field`), and one whose axis has no beam a set can state (`no-axis-beam`: the tab's every figure
+ * is relative to the axis) have no sets and no request, one problem each. A field without a chief-ray launch
+ * (`chief-ray-failed`) or a footprint (`vignetted`), which the tab plots dark, and one whose rays would not start in
+ * front of the first surface (`launch-behind-first-surface`) is a coded problem, and the others are not affected. A
+ * field whose image mapping the tab takes of ray tubes traced without aperture checks keeps its set, and is named
+ * (`lv-tube-mapping`): its relative illumination rests on rays no set holds.
  */
-export function lvVignettingRaySets(
-  api: LvVignettingApi,
-  model: LvCaseModel,
-  options: { readonly sampling?: Pick<RunSampling, "bundleGrid"> } = {},
-): VignettingSetResolution {
+export function lvVignettingRaySets(api: LvVignettingApi, model: LvCaseModel): VignettingSetResolution {
   const refused = caseProblem(model);
   if (refused !== null) return { sets: [], problems: [refused], asks: [] };
   const geometry = lvChiefGeometry(api, model);
@@ -149,49 +140,40 @@ export function lvVignettingRaySets(
     const problem = rayProblem("no-half-field", "LensVisualizer's field geometry of the state has no half field");
     return { sets: [], problems: [problem], asks: [] };
   }
-  const entrancePupilSemiDiameter = lvTabPupilSemiDiameter(api, model);
-  if (!(entrancePupilSemiDiameter > 0)) {
-    const problem = rayProblem("no-pupil", `the tabs' pupil radius is ${entrancePupilSemiDiameter} mm`);
-    return { sets: [], problems: [problem], asks: [] };
+  const decision = lvVignettingDecision(api, model, geometry);
+  if ("refused" in decision) {
+    return { sets: [], problems: [rayProblem(decision.refused.code, decision.refused.message)], asks: [] };
   }
-  const fractions = lvVignettingPupilFractions(api, model.runtime);
+  const { setup } = decision;
   const problems: string[] = [];
-  const sweeps: SweepField[] = [];
-  for (const { index, fieldAngleDeg, made } of lvVignettingFields(api, model, geometry)) {
-    const field = isVignettingFieldRefusal(made)
+  const sets: RaysTraceSpec[] = [];
+  const angles: number[] = [];
+  for (const { index, fieldAngleDeg, made } of decision.fields) {
+    const cellRays = isVignettingRefusal(made) ? [] : lvBeamCellRays(api, made, setup.mirror);
+    const rays = isVignettingRefusal(made) ? [] : [...cellRays, ...lvMappingChiefRays(api, made)];
+    const problem = isVignettingRefusal(made)
       ? rayProblem(made.code, made.message)
-      : sweepOf(api, model, fieldAngleDeg, made, fractions, entrancePupilSemiDiameter);
-    const behind =
-      typeof field !== "string" && !startsInFront(model.exported.system.surfaces[0], field.origins)
-        ? launchBehindProblem(fieldAngleDeg)
-        : null;
-    if (typeof field === "string" || behind !== null) {
-      problems.push(typeof field === "string" ? field : behind!);
+      : startsInFront(model.exported.system.surfaces[0], Float64Array.from(rays.flatMap((ray) => [...ray.origin])))
+        ? null
+        : launchBehindProblem(fieldAngleDeg);
+    if (problem !== null || isVignettingRefusal(made)) {
+      if (problem !== null) problems.push(problem);
       if (index === 0) {
-        const message = "the vignetting tab's every figure is relative to the axis, and the axis has no sweep";
-        return { sets: [], problems: [...problems, rayProblem("no-axis-sweep", message)], asks: [] };
+        const message = "the vignetting tab's every figure is relative to the axis, and the axis has no beam";
+        return { sets: [], problems: [...problems, rayProblem("no-axis-beam", message)], asks: [] };
       }
       continue;
     }
-    sweeps.push(field);
-  }
-
-  const sets: RaysTraceSpec[] = [...sweepSets(api, model, sweeps)];
-  const setup = lvLaunchSetup(api, model);
-  if ("problem" in setup) problems.push(setup.problem);
-  else {
-    const cells = options.sampling?.bundleGrid ?? DEFAULT_BUNDLE_GRID;
-    for (const { fieldAngleDeg } of sweeps) {
-      const made = lvFieldRaySets(api, model, setup, { angleDeg: fieldAngleDeg }, cells);
-      if ("problem" in made) problems.push(made.problem);
-      else sets.push(...made.sets);
+    if (lvVignettingMapping(api, model, setup, made) === "tube") {
+      const message = `the vignetting tab's image mapping of the field at ${fieldAngleDeg} degrees is the median ray tube of its beam, of copies of its rays tilted and traced without aperture checks, which no rays.trace request states`;
+      problems.push(rayProblem("lv-tube-mapping", message));
     }
+    sets.push(...beamSets(api, model, setup, fieldAngleDeg, made, rays, cellRays.length));
+    angles.push(fieldAngleDeg);
   }
   // The ask is of the lines the tab traces: none of a run whose lines are no line of the tab's.
   const lines = lvVignettingLines(model);
   const asks: VignettingNativeSpec[] =
-    lines.length === 0
-      ? []
-      : [{ lines, maxFieldDeg: geometry.halfFieldDeg, fieldAnglesDeg: sweeps.map((field) => field.fieldAngleDeg) }];
+    lines.length === 0 ? [] : [{ lines, maxFieldDeg: geometry.halfFieldDeg, fieldAnglesDeg: angles }];
   return { sets, problems, asks };
 }

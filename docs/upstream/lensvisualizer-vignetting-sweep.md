@@ -1,8 +1,16 @@
 # LensVisualizer: the vignetting tab sweeps one chord of a fixed pupil, and applies cos^4 of the field angle
 
-Status: **decision taken, LV change pending** (owner, 2026-10-26): the tab is to be changed in LensVisualizer as the
-suggestion below says, a two-dimensional sample of each field's footprint and a relative illumination of the traced exit
-directions in place of cos^4. The owner holds the implementation prompt. For the owner; not filed. Observed at LV
+Status: **resolved by LensVisualizer #925** (`5ba17c20c`, adopted by the comparator at Stage 6.6b, LV `098c91ef6`,
+engine closure `fef2e248`): the tab traces each field's beam on its MTF's launch lattice (64 cells across the footprint,
+one half mirrored), its geometric transmission the lit cells' area, and its relative illumination by conservation of
+energy, the beam's flux times cos θ over the image area a unit of object solid angle covers, `(dh/dθ)(h / sin θ)` of lit
+chief rays 0.01° apart or the median ray tube of the beam where they are vignetted. That is not the second suggestion
+below (the cosine-space flux of the exit directions, Rimmer's method, OpticStudio's), which the engine `flux` computes;
+R11b records the two routes side by side as two methods (per field off the axis on the benchmark, within 0.0110, median
+0.0017). **Owner decision (2026-10-27)**: `flux` keeps Rimmer's method, and LensVisualizer is to move its tab to Rimmer's
+relative illumination and to a vignetting curve of the share of stop samples transmitted (and to aim its spots, fans,
+bokeh, zones and MTF at the real stop) in later changes, pending. The history follows as it was written, and the
+measurements after the change are in `docs/REFERENCE.md`, "Stage 6.6b". For the owner; not filed. Observed at LV
 `be077cbcd` (clean; engine closure `c866fbff` with the comparator's Stage 6.6 names) and optiland `4e893f53`. The comparator reports LensVisualizer's vignetting tab as it is
 and changes no gate for this: rung R11a traces the tab's own sweeps, and LensVisualizer's own MTF launch lattice over
 each field's beam, in `lv`, `ref` and optiland, and they pass the same rays everywhere and bring the same flux into the
