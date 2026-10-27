@@ -36,3 +36,4 @@ export {
   computeFieldCurvatureBundle,
   computeOffAxisFieldGeometryScalar,
 } from "./analysis/curvature.ts";
+export { computeVignettingCurve } from "./analysis/vignetting.ts";

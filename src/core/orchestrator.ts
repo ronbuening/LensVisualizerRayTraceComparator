@@ -34,6 +34,7 @@ import type { SpotSetResolution } from "../rays/spotSets.ts";
 import type { AxialSetResolution } from "../rays/axialSets.ts";
 import type { ChiefSetResolution } from "../rays/chiefSets.ts";
 import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
+import type { VignettingSetResolution } from "../rays/vignettingSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
@@ -324,6 +325,23 @@ async function curvatureRaySetsOf(
   return source.curvatureRaySets(spec, opticalCase);
 }
 
+/** Why a run has no vignetting sets when the source of its case generates none, or no source was given. */
+const NO_VIGNETTING_SOURCE = "vignetting-sets-unavailable: no case source generates vignetting sets for this lens";
+
+/**
+ * The vignetting sets of one run, from the source of its lens (`CaseSource.vignettingRaySets`); none, and the problem
+ * that says so, when no source was given for the lens or the source generates none.
+ */
+async function vignettingRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<VignettingSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.vignettingRaySets === undefined) return { sets: [], problems: [NO_VIGNETTING_SOURCE], asks: [] };
+  return source.vignettingRaySets(spec, opticalCase);
+}
+
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
   /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
@@ -341,6 +359,8 @@ export interface Plan {
   readonly chiefRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The curvature sets of each run that a rung needed them for, by run name. */
   readonly curvatureRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The vignetting sets of each run that a rung needed them for, by run name. */
+  readonly vignettingRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -407,6 +427,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       axialRaySets: new Map(plans.flatMap((plan) => [...plan.axialRaySets])),
       chiefRaySets: new Map(plans.flatMap((plan) => [...plan.chiefRaySets])),
       curvatureRaySets: new Map(plans.flatMap((plan) => [...plan.curvatureRaySets])),
+      vignettingRaySets: new Map(plans.flatMap((plan) => [...plan.vignettingRaySets])),
       recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
     };
   }
@@ -417,6 +438,7 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const axialRaySets = new Map<string, ManifestRaySets>();
   const chiefRaySets = new Map<string, ManifestRaySets>();
   const curvatureRaySets = new Map<string, ManifestRaySets>();
+  const vignettingRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   const runs = [...suite.runs];
   for (const [index, run] of suite.runs.entries()) {
@@ -479,6 +501,13 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       inputs = { ...inputs, curvatureRaySets: sets, curvatureAsks: asks };
       curvatureRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
     }
+    if (rungs.some((rung) => rung.needsVignettingRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.vignetting-generate", () =>
+        vignettingRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, vignettingRaySets: sets, vignettingAsks: asks };
+      vignettingRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
@@ -502,6 +531,9 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
         ...(rung.needsCurvatureRaySets === true
           ? { curvatureRaySets: inputs.curvatureRaySets ?? [], curvatureAsks: inputs.curvatureAsks ?? [] }
           : {}),
+        ...(rung.needsVignettingRaySets === true
+          ? { vignettingRaySets: inputs.vignettingRaySets ?? [], vignettingAsks: inputs.vignettingAsks ?? [] }
+          : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       };
       const requests = requestsOf(rung, quantity, opticalCase, spec, rungInputs);
@@ -522,7 +554,18 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { runs, jobs, raySets, fineRaySets, spotRaySets, axialRaySets, chiefRaySets, curvatureRaySets, recipes };
+  return {
+    runs,
+    jobs,
+    raySets,
+    fineRaySets,
+    spotRaySets,
+    axialRaySets,
+    chiefRaySets,
+    curvatureRaySets,
+    vignettingRaySets,
+    recipes,
+  };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -791,6 +834,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     axialRaySets,
     chiefRaySets,
     curvatureRaySets,
+    vignettingRaySets,
     recipes,
   } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
@@ -960,6 +1004,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
       const axial = axialRaySets.get(spec.name);
       const chief = chiefRaySets.get(spec.name);
       const curvature = curvatureRaySets.get(spec.name);
+      const vignetting = vignettingRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -972,6 +1017,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
         ...(axial === undefined ? {} : { axialRaySets: axial }),
         ...(chief === undefined ? {} : { chiefRaySets: chief }),
         ...(curvature === undefined ? {} : { curvatureRaySets: curvature }),
+        ...(vignetting === undefined ? {} : { vignettingRaySets: vignetting }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

@@ -645,3 +645,58 @@ test("lvrtc run --rungs r10a: lv and ref trace the rays of LensVisualizer's fiel
     assert.match(report, new RegExp(`\\| ${name} \\(≤ 1\\.00e-8 mm\\) \\|`));
   }
 });
+
+test("lvrtc run --rungs r11a,r11b: the tab's sweeps and lattices pass between lv and ref, and lv's tab is set beside flux", (t) => {
+  const rootDir = lvRoot(t);
+  const suite = raySuite(rootDir);
+  const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r11a,r11b");
+  assert.equal(ran.code, EXIT_OK, ran.err);
+  // The tab's fields do not depend on the run's: of each run a sweep set at each line and a lattice of each field at
+  // each line. R11b asks the singlet's reference line of lv and flux; the photopic run has no line of the tab's.
+  const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
+  const [singlet, zoom] = manifest.runs.map((run) => run.vignettingRaySets!);
+  assert.deepEqual([singlet.problems, zoom.problems], [[], []]);
+  const singletSets = singlet.sets.length;
+  assert.ok(singletSets > 2, "a sweep and the lattices of the singlet's fields at its one line");
+  const r11a = manifest.jobs.filter((job) => job.rung === "r11a");
+  const r11b = manifest.jobs.filter((job) => job.rung === "r11b");
+  assert.equal(r11a.length, 2 * (singlet.sets.length + zoom.sets.length));
+  assert.deepEqual(
+    r11b.map((job) => [job.run, job.engine, job.quantity, job.status]),
+    [
+      ["singlet", "flux", "vignetting.native", "ok"],
+      ["singlet", "lv", "vignetting.native", "ok"],
+    ],
+  );
+  assert.ok(r11a.every((job) => job.quantity === "rays.trace" && job.status === "ok"));
+
+  const compared = lvrtc(rootDir, "compare", "lv-ladder");
+  assert.equal(compared.code, EXIT_OK, compared.err + compared.out);
+  const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
+  let fields = 0;
+  for (const set of file.comparisons.filter((each) => each.rung === "r11a")) {
+    const [pair] = set.pairs;
+    assert.deepEqual([pair.a, pair.b, pair.verdict], ["lv", "ref", "PASS"], pair.reason);
+    for (const metric of pair.metrics) {
+      if (metric.name === "fields.compared") fields += metric.value ?? 0;
+      else if (metric.name === "rays.compared") assert.ok((metric.value ?? 0) > 0);
+      else if (metric.name === "illumination.maxAbs") assert.ok((metric.value ?? NaN) <= 1e-9, `${metric.value}`);
+      else assert.equal(metric.value, 0, metric.name);
+    }
+  }
+  assert.ok(fields > 4, `lattice fields compared: ${fields}`);
+  // The fake's MTF launch aims its chief ray otherwise than the fake's tab solves it: the two land farther apart than the
+  // sorting's limit off the axis, so those fields are data and the landing marks the pair (ATTENTION, never a FAIL).
+  const recorded = file.comparisons.filter((each) => each.rung === "r11b" && each.mode === "pairwise");
+  assert.deepEqual(
+    recorded.map((set) => [set.run, set.pairs[0].a, set.pairs[0].b, set.pairs[0].verdict]),
+    [["singlet", "flux", "lv", "ATTENTION"]],
+  );
+  const counts = Object.fromEntries(recorded[0].pairs[0].metrics.map((metric) => [metric.name, metric.value]));
+  assert.ok((counts["fields.compared"] ?? 0) >= 1 && (counts["fields.data"] ?? 0) >= 1, JSON.stringify(counts));
+  const reported = lvrtc(rootDir, "report", "lv-ladder");
+  assert.equal(reported.code, EXIT_OK, reported.err);
+  const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
+  assert.match(report, /\| mask\.mismatches \(≤ 0 rays\) \|/);
+  assert.match(report, /\| illumination\.maxAbs \(≤ 1\.00e-9\) \|/);
+});

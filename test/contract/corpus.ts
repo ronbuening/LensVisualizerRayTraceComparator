@@ -34,6 +34,12 @@ import type {
   CurvatureNativeField,
   CurvatureNativeSpec,
 } from "../../src/contract/quantities/curvatureNative.ts";
+import { VIGNETTING_NATIVE } from "../../src/contract/quantities/vignettingNative.ts";
+import type {
+  VignettingNativeData,
+  VignettingNativeField,
+  VignettingNativeSpec,
+} from "../../src/contract/quantities/vignettingNative.ts";
 import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
@@ -914,6 +920,82 @@ export const CURVATURE_DATA_TWO_LINES: CurvatureNativeData = {
   ),
   method: { name: "synthetic-field-curves", params: {} },
   notes: ["the second line is a chromatic channel"],
+};
+
+// ── vignetting.native ────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own vignetting and relative illumination. The numbers describe no lens: every value
+// is a dyadic fraction.
+
+/** Vignetting at the reference line, at the axis and three fields of a half field of 24 degrees. */
+export const VIGNETTING_SPEC_ONE_LINE: VignettingNativeSpec = {
+  lines: [0],
+  maxFieldDeg: 24,
+  fieldAnglesDeg: [0, 8, 16, 24],
+};
+
+/** Vignetting at two lines, at the axis and two fields. */
+export const VIGNETTING_SPEC_TWO_LINES: VignettingNativeSpec = {
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/**
+ * An answer to `VIGNETTING_SPEC_ONE_LINE` of an engine that sweeps a pupil: the axis and two fields, a geometric
+ * transmission above 1 at the first (a beam wider than the axis's), and the edge without a curve.
+ */
+export const VIGNETTING_DATA_ONE_LINE: VignettingNativeData = {
+  fields: [
+    [0, 0, 1, 1],
+    [8, -7.25, 1.0625, 0.9375],
+    [16, -14.75, 0.75, 0.5625],
+  ]
+    .map(([fieldAngleDeg, landing, transmission, illumination]): VignettingNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: landing,
+      geometricTransmission: transmission,
+      relativeIllumination: illumination,
+      sampling: { pupilSamples: 192, fieldSamples: 9 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 24,
+        status: "unavailable",
+        reason: "no-curve",
+        chiefLandingMm: null,
+        geometricTransmission: null,
+        relativeIllumination: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-sweep", params: { pupilSamples: 192 } },
+  notes: [],
+};
+
+/** An answer to `VIGNETTING_SPEC_TWO_LINES` of an engine that does not stand by one field of its second line. */
+export const VIGNETTING_DATA_TWO_LINES: VignettingNativeData = {
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): VignettingNativeField => ({
+      line,
+      wavelengthNm: line === 0 ? 587.5 : 656.25,
+      fieldAngleDeg,
+      ...(line === 1 && fieldAngleDeg === 20
+        ? { status: "unconverged" as const, reason: "not-converged" }
+        : { status: "ok" as const }),
+      chiefLandingMm: line === 0 ? -fieldAngleDeg / 2 : null,
+      geometricTransmission: 1 - fieldAngleDeg / 64,
+      relativeIllumination: 1 - fieldAngleDeg / 32,
+      sampling: { gridSize: 128, maxDelta: fieldAngleDeg / 4096 },
+    })),
+  ),
+  method: { name: "synthetic-lattice", params: {} },
+  notes: ["the second line states no landing"],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -2826,6 +2908,36 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       "figures-member": fault(CURVATURE_DATA_TWO_LINES, "/fields/0/figures", null, "additionalProperties"),
       "missing-notes": fault(CURVATURE_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
       "no-fields": fault(CURVATURE_DATA_TWO_LINES, "/fields", [], "minItems"),
+    },
+  },
+  [`${VIGNETTING_NATIVE}.spec`]: {
+    valid: { "one-line": VIGNETTING_SPEC_ONE_LINE, "two-lines": VIGNETTING_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(VIGNETTING_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(VIGNETTING_SPEC_ONE_LINE, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(VIGNETTING_SPEC_TWO_LINES, "/fieldAnglesDeg/1", -1, "minimum"),
+      "angle-of-ninety": fault(VIGNETTING_SPEC_ONE_LINE, "/fieldAnglesDeg/3", 90, "exclusiveMaximum"),
+      "missing-angles": fault(VIGNETTING_SPEC_ONE_LINE, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "pupil-stated": fault(VIGNETTING_SPEC_ONE_LINE, "/pupilSamples", 192, "additionalProperties"),
+    },
+  },
+  [`${VIGNETTING_NATIVE}.data`]: {
+    valid: { "one-line-and-unavailable": VIGNETTING_DATA_ONE_LINE, "two-lines-unconverged": VIGNETTING_DATA_TWO_LINES },
+    invalid: {
+      "status-pending": fault(VIGNETTING_DATA_ONE_LINE, "/fields/0/status", "pending", "enum"),
+      "transmission-as-text": fault(VIGNETTING_DATA_ONE_LINE, "/fields/1/geometricTransmission", "1.0625", "type"),
+      "negative-illumination": fault(VIGNETTING_DATA_ONE_LINE, "/fields/2/relativeIllumination", -0.5, "minimum"),
+      "landing-as-text": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/chiefLandingMm", "-0", "type"),
+      "missing-illumination": fault(
+        VIGNETTING_DATA_ONE_LINE,
+        "/fields/0/relativeIllumination",
+        REMOVE,
+        "required",
+        "/fields/0",
+      ),
+      "shifts-member": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/tangentialShiftMm", null, "additionalProperties"),
+      "missing-notes": fault(VIGNETTING_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-fields": fault(VIGNETTING_DATA_TWO_LINES, "/fields", [], "minItems"),
     },
   },
   [`${WAVEFRONT_NATIVE}.spec`]: {

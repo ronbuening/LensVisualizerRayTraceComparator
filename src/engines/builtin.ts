@@ -6,6 +6,7 @@ import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
 import { LV_ENGINE_ID, createLvEngine } from "./lv/engine.ts";
 import { LV_REPLAY_ENGINE_ID, createLvReplayEngine } from "./lv/replayEngine.ts";
 import { LV_WAVE_ENGINE_ID, createLvWaveEngine } from "./lv/waveEngine.ts";
+import { LV_FLUX_ENGINE_ID, createLvFluxEngine } from "./lv/fluxEngine.ts";
 import { OPTILAND_ENGINE_ID, OPTILAND_TIMEOUTS, optilandDefinition } from "./optiland/definition.ts";
 import { REF_ENGINE_ID, createRefEngine } from "./ref/engine.ts";
 import type { EngineTimeouts } from "./remote.ts";
@@ -51,13 +52,15 @@ export type BuiltinEngines = {
  * estimators on a replay of LensVisualizer's sampling (`src/engines/lv/replayEngine.ts`), on the same checkout and
  * unavailable without it; it is what rung R4f holds `lv` to. `wave` is the comparator's wave estimator on the rays
  * LensVisualizer launches and traces (`src/engines/lv/waveEngine.ts`), on the same checkout; it is what rung R6b
- * sets beside LensVisualizer's own diffraction MTF. `optiland` is optiland behind the
+ * sets beside LensVisualizer's own diffraction MTF. `flux` is the comparator's flux estimator on the lattices
+ * LensVisualizer launches over each field's beam and traces (`src/engines/lv/fluxEngine.ts`), on the same checkout; it
+ * is what rung R11b sets beside LensVisualizer's own vignetting tab. `optiland` is optiland behind the
  * comparator's Python worker (`src/engines/optiland/definition.ts`), run by the interpreter the configuration names
  * as `engines.optiland.python`: without one it is unavailable, and nothing else is affected.
  *
  * A built-in engine can be named with any configuration root (`--engines lv,ref`, a run's `engines`). It is not
- * one of the engines a run that names none is run on: those are the engines the configuration defines. `replay`
- * and `wave` are run where the rung that is about each is run (`RungDefinition.engines`), and can be named like
+ * one of the engines a run that names none is run on: those are the engines the configuration defines. `replay`,
+ * `wave` and `flux` are run where the rung that is about each is run (`RungDefinition.engines`), and can be named like
  * any other.
  */
 export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
@@ -66,5 +69,6 @@ export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [REF_ENGINE_ID]: () => createRefEngine(),
   [LV_REPLAY_ENGINE_ID]: ({ config }) => createLvReplayEngine(config.lvPath),
   [LV_WAVE_ENGINE_ID]: ({ config }) => createLvWaveEngine(config.lvPath),
+  [LV_FLUX_ENGINE_ID]: ({ config }) => createLvFluxEngine(config.lvPath),
   [OPTILAND_WAVE_ENGINE_ID]: { transport: optilandWaveTransport, timeouts: OPTILAND_TIMEOUTS },
 });

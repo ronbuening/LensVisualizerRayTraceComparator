@@ -767,6 +767,16 @@ export interface LvBreathingSample {
   readonly distanceLabel: string;
 }
 
+/** One sample of LV's vignetting / relative-illumination curve (`VignettingSample`), each normalised to the axis. */
+export interface LvVignettingSample {
+  /** The field angle, degrees: 0 on the axis. */
+  readonly fieldAngleDeg: number;
+  /** The fraction of the meridional pupil sweep that LV traces through every aperture, over the axis's. */
+  readonly geometricTransmission: number;
+  /** The transmitted bulk intensity of the sweep times cos^4 of the field angle, over the axis's. */
+  readonly relativeIllumination: number;
+}
+
 /** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
 export interface LvAnalysisRequest {
   readonly preparedGeometry: LvPreparedState;
@@ -1385,6 +1395,10 @@ export interface LvApi {
   isHeavyLensForRayWork(L: LvRuntimeLens): boolean;
   /** LV's `uniformFieldFraction`: index over count less one. */
   uniformFieldFraction(index: number, sampleCount: number): number;
+  /** LV's `evenlySpacedSigned`: `count` fractions from -1 to +1, both ends included, `-1 + (2 * index) / (count - 1)`. */
+  evenlySpacedSigned(count: number): number[];
+  /** What LV's vignetting tab presents for a request: its curve, a sample a field from the axis to the half field. */
+  computeVignettingCurve(request: LvAnalysisRequest): readonly LvVignettingSample[];
   /** The unit direction of a meridional slope dy/dz, normalised as LV's meridional launch normalises it. */
   directionFromMeridionalSlope(u: number): LvVec3 | null;
 }

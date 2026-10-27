@@ -1,0 +1,91 @@
+{
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": 0,
+      "geometricTransmission": 1,
+      "relativeIllumination": 1,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0
+      },
+      "tangentialShiftMm": null
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": -5,
+      "geometricTransmission": 0.84375,
+      "relativeIllumination": 0.6875,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0.00244140625
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 20,
+      "status": "ok",
+      "chiefLandingMm": -10,
+      "geometricTransmission": 0.6875,
+      "relativeIllumination": 0.375,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0.0048828125
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": null,
+      "geometricTransmission": 1,
+      "relativeIllumination": 1,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": null,
+      "geometricTransmission": 0.84375,
+      "relativeIllumination": 0.6875,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0.00244140625
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 20,
+      "status": "unconverged",
+      "reason": "not-converged",
+      "chiefLandingMm": null,
+      "geometricTransmission": 0.6875,
+      "relativeIllumination": 0.375,
+      "sampling": {
+        "gridSize": 128,
+        "maxDelta": 0.0048828125
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-lattice",
+    "params": {}
+  },
+  "notes": [
+    "the second line states no landing"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:vignetting.native.data",
+  "title": "vignetting.native data",
+  "description": "An engine's own vignetting and relative illumination of a case: per requested line, and within a line per requested field angle, where the field's chief ray lands, how much of its beam gets through every aperture and how bright its image is, each over the axis's, by the engine's own measure. Code checks that an unavailable field says why and has neither figure, that any other field has both, each a finite number, and that an unconverged field says why.",
+  "type": "object",
+  "properties": {
+    "fields": {
+      "description": "One entry per requested line and field angle: the lines in the order of the request, and within a line the angles in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "description": "The line, as it was requested.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "wavelengthNm": {
+            "description": "The wavelength the engine traced the line at.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          },
+          "fieldAngleDeg": {
+            "description": "The field angle the engine traced, degrees.",
+            "type": "number"
+          },
+          "status": {
+            "description": "ok: the engine stands by its figures. unconverged: it has figures and does not stand by them, and says why. unavailable: it has none, and says why.",
+            "enum": ["ok", "unconverged", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the field is not ok; always there for a field that is not.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "chiefLandingMm": {
+            "description": "The y at which the field's chief ray lands on the image plane of the case: what identifies the field. Null where the engine states no landing.",
+            "type": ["number", "null"]
+          },
+          "geometricTransmission": {
+            "description": "How much of the field's beam gets through every aperture, over the axis's, by the engine's own measure; null for an unavailable field.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "relativeIllumination": {
+            "description": "How bright the field's image is, over the axis's, by the engine's own measure; null for an unavailable field.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "sampling": {
+            "description": "How the engine sampled the field, and what else it states of it, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": [
+          "line",
+          "wavelengthNm",
+          "fieldAngleDeg",
+          "status",
+          "chiefLandingMm",
+          "geometricTransmission",
+          "relativeIllumination",
+          "sampling"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["fields", "method", "notes"],
+  "additionalProperties": false
+}

@@ -25,6 +25,7 @@ import { R7A_GOLDEN, R7B_GOLDEN, r7aCycle, r7bCycle } from "./r7Fixture.ts";
 import { R8A_GOLDEN, R8B_GOLDEN, r8aCycle, r8bCycle } from "./r8Fixture.ts";
 import { R9A_GOLDEN, R9B_GOLDEN, r9aCycle, r9bCycle } from "./r9Fixture.ts";
 import { R10A_GOLDEN, R10B_GOLDEN, r10aCycle, r10bCycle } from "./r10Fixture.ts";
+import { R11A_GOLDEN, R11B_GOLDEN, r11aCycle, r11bCycle } from "./r11Fixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile, mtfGoldenFile } from "./support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
@@ -56,7 +57,8 @@ for (const [golden, standIns, policy] of [
 // Rungs R7a and R7b: the reference engine and its altered copies on a set with a chief ray, and spot stand-ins;
 // rungs R8a and R8b: the same on mirror pairs along the axis, and axial stand-ins; rungs R9a and R9b: the same on a
 // set of chief rays with a near-axis probe at two lines, and chief-ray stand-ins; rungs R10a and R10b: the same on a
-// curvature set of two fields at two lines, and field-curve stand-ins.
+// curvature set of two fields at two lines, and field-curve stand-ins; rungs R11a and R11b: the same on a vignetting
+// sweep and two fields' lattices, and vignetting stand-ins.
 for (const [golden, standIns] of [
   [R7A_GOLDEN, r7aCycle],
   [R7B_GOLDEN, r7bCycle],
@@ -66,6 +68,8 @@ for (const [golden, standIns] of [
   [R9B_GOLDEN, r9bCycle],
   [R10A_GOLDEN, r10aCycle],
   [R10B_GOLDEN, r10bCycle],
+  [R11A_GOLDEN, r11aCycle],
+  [R11B_GOLDEN, r11bCycle],
 ] as const) {
   const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-golden-"));
   try {

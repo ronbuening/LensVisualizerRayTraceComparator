@@ -63,7 +63,7 @@ test("R3 measures geometry while LV phase is unsupported, and independently dete
   assert.ok(fault.comparable);
   assert.ok(Math.abs(fault.metrics.find((m) => m.name === "phasePath.maxAbs")!.value - 2) < 1e-12);
   const policy = JSON.parse(readFileSync(new URL("../../policy/rungs.v1.json", import.meta.url), "utf8"));
-  assert.equal(policy.version, 19);
+  assert.equal(policy.version, 20);
   assert.equal(policy.rungs.r3.metrics["phasePath.maxAbs"].tolerance, 2e-5);
 });
 

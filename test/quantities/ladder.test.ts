@@ -70,6 +70,7 @@ test("system.describe and paraxial.first-order are registered, at the versions t
       "selftest.echo",
       "spot.native",
       "system.describe",
+      "vignetting.native",
       "wavefront.native",
     ],
   );

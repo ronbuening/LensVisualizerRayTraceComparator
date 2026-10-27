@@ -1,7 +1,7 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 19,
+  "version": 20,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -225,6 +225,24 @@
         "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
         "sagittalShift.maxAbs": { "attention": 1e-5, "unit": "mm" },
         "tangentialShift.maxAbs": { "attention": 1e-5, "unit": "mm" }
+      }
+    },
+    "r11a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "illumination.maxAbs": { "tolerance": 1e-9, "unit": "1" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "transmission.maxAbs": { "tolerance": 0, "unit": "1" }
+      }
+    },
+    "r11b": {
+      "quantity": "vignetting.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" }
       }
     }
   }

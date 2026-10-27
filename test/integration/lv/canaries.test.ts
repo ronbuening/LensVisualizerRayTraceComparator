@@ -2039,3 +2039,126 @@ test("the aberrations tab still presents the field curves the engine answers cur
     "the Petzval shift lv states in sampling is paraxial: no rung compares it",
   );
 });
+
+// Stage 6.6, at LV be077cbcd (closure c866fbff with the stage's names): the vignetting sets of the vignetting tab
+// (src/engines/lv/vignettingRaySets.ts, the fields in vignettingFields.ts) restate these lines;
+// test/integration/lv/vignettingRays.test.ts holds the tab's curve to the bit.
+test("the vignetting tab still samples the fields and sweeps the pupils the vignetting sets restate", { skip }, () => {
+  const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
+  const fields =
+    "lvVignettingFieldCount and lvVignettingFields in src/engines/lv/vignettingFields.ts restate the fields";
+  const sweep = "lvVignettingPupilCount, lvVignettingPupilFractions and lvSweepLaunch restate the sweep";
+  // The fields: about every 3 degrees, at least 7, from the axis to the half field, each launched by its solved chief.
+  assertSource(
+    vignetting,
+    "const fieldSamples = sampling.vignettingFieldSampleCount !== undefined ? Math.max(Math.round(sampling.vignettingFieldSampleCount), 3) : Math.max(Math.ceil(halfFieldDeg / 3) + 1, 7);",
+    fields,
+  );
+  assertSource(
+    vignetting,
+    "const geom = fieldGeometry ?? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT);",
+    fields,
+  );
+  assertSource(vignetting, "if (halfFieldDeg <= 0 || !isFinite(halfFieldDeg)) return [];", "no-half-field");
+  assertSource(vignetting, "if (currentEPSD <= 0 || L.N < 1) return [];", "no-pupil");
+  assertSource(vignetting, "const fieldAngleDeg = uniformFieldFraction(i, fieldSamples) * halfFieldDeg;", fields);
+  assertSource(vignetting, "const solve = solveChiefRay(fieldAngleDeg, focusT, zoomT, L, geom, aberrationT);", fields);
+  assertSource(vignetting, "const launch = projectionLaunchSlopeForField(L, fieldAngleDeg);", fields);
+  assertSource(
+    vignetting,
+    'if (launch.status === "out-of-domain" && !solve.vectorLaunch) { rawGT.push(0); rawIntensity.push(0); continue; }',
+    "a field without a slope is lv-no-launch",
+  );
+  assertSource(vignetting, "const uField = launch.uField;", fields);
+  assertSource(
+    vignetting,
+    "const yChief = solve.vectorLaunch ? NaN : solve.yLaunch;",
+    "a vector launch is lv-vector-launch",
+  );
+  // The sweep: 192 rays, 96 for a heavy lens, at evenly spaced signed fractions of the drawer's pupil radius.
+  assertSource(vignetting, "const N_PUPIL_FULL = 192;", sweep);
+  assertSource(vignetting, "const N_PUPIL_HEAVY = 96;", sweep);
+  assertSource(
+    vignetting,
+    "const nPupil = Math.max( sampling.vignettingPupilSampleCount !== undefined ? Math.round(sampling.vignettingPupilSampleCount) : isHeavyLensForRayWork(L) ? N_PUPIL_HEAVY : N_PUPIL_FULL, 3, );",
+    sweep,
+  );
+  assertSource(vignetting, "const pupilFractions = evenlySpacedSigned(nPupil);", sweep);
+  assertSource(
+    vignetting,
+    "const prepared = prepareRayTrace(L, { zPos, focusT, zoomT, stopSD: currentPhysStopSD, ghost: true, aberrationT });",
+    sweep,
+  );
+  assertSource(vignetting, "const pupilOffset = pupilFrac * currentEPSD;", sweep);
+  assertSource(vignetting, ": prepared.ray(yChief + pupilOffset, uField);", sweep);
+  // The meridional adapter's launch: the lead before the first vertex, the direction of the slope's cache.
+  const adapters = "src/optics/trace/rayAdapters.ts";
+  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", sweep);
+  assertSource(adapters, "const firstZ = request.zPos?.[0] ?? state.z[0] ?? 0;", sweep);
+  assertSource(
+    adapters,
+    "ray(y0, u0) { const direction = meridionalDirectionForSlope(u0); const origin: Vec3 = [0, y0 - u0 * lead, firstZ - lead];",
+    sweep,
+  );
+  assertSource(adapters, "const MERIDIONAL_DIRECTION_BY_SLOPE = new Map<number, Vec3>([[0, [0, 0, 1]]]);", sweep);
+  assertSource(adapters, "const direction = directionFromMeridionalSlope(u) ?? ([0, 0, 1] as Vec3);", sweep);
+  assertSource(adapters, "const rayOptions = traceOptions(stopSD, ghost, channel, state, true);", sweep);
+  assertSource(
+    "src/optics/analysis/sampling.ts",
+    "return Array.from({ length: count }, (_, index) => -1 + (2 * index) / (count - 1));",
+    "evenlySpacedSigned is bound from LensVisualizer itself",
+  );
+  // What the tab counts: the rays the trace does not clip, and their bulk transmission (lvRayWeights).
+  const counted = "the vignetting sets weigh each ray by LensVisualizer's bulk transmission; R11a's mask is the tab's";
+  assertSource(
+    vignetting,
+    "if (!trace.clipped) { surviving++; transmittedIntensity += trace.transmission ?? 1; }",
+    counted,
+  );
+  assertSource("src/optics/trace/runtimeRayResult.ts", 'clipped: result.status !== "ok",', counted);
+  assertSource(
+    "src/optics/trace/runtimeRayResult.ts",
+    "transmission: bulkTransmissionForTrace(L, result.hits),",
+    counted,
+  );
+  assertSource(
+    "src/optics/analysis/mtf/mtfTracing.ts",
+    "weight: bulkTransmissionForTrace(state.lens, trace.hits),",
+    counted,
+  );
+});
+
+test("the vignetting tab still presents the curve the engine answers vignetting.native from", { skip }, () => {
+  const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
+  const answer = "answerLvVignetting in src/engines/lv/vignetting.ts writes down the tab's curve";
+  // The figures: each relative to the axis, the illumination times cos^4 of the object-space field angle.
+  assertSource(vignetting, "rawGT.push(surviving / nPupil);", answer);
+  assertSource(vignetting, "rawIntensity.push(transmittedIntensity / nPupil);", answer);
+  assertSource(vignetting, "if (gtAxis === 0 || intensityAxis === 0) return [];", "an empty curve is lv-no-curve");
+  assertSource(vignetting, "const cos4 = Math.pow(Math.cos(thetaRad), 4);", answer);
+  assertSource(vignetting, "const gt = rawGT[i] / gtAxis;", answer);
+  assertSource(vignetting, "const ri = (rawIntensity[i] * cos4) / intensityAxis;", answer);
+  // The tab asks the curve of the drawer's request, or of one of its own with no sampling of the drawer's.
+  const tab = "src/components/display/analysis/VignettingTab.tsx";
+  assertSource(
+    tab,
+    "analysisContext?.request ?? createAnalysisRequest({ preparedState, dynamicEFL: 0, currentEPSD, currentPhysStopSD, fieldGeometry, }),",
+    "lvChiefRequest in src/engines/lv/chiefSetup.ts is the drawer's request, settled, with every family default",
+  );
+  assertSource(
+    tab,
+    'const samples = useMemo(() => probe("computeVignettingCurve", () => context.computeVignettingCurve()), [context]);',
+    answer,
+  );
+  // The landing that identifies a field: the solved chief ray the sweep is centred on, to the design plane.
+  const height = "src/optics/field/imageHeight.ts";
+  const landing = "chiefRayImageHeightAccurateForRuntimeLens identifies each field of lv's answer";
+  assertSource(height, "imagePlaneTransfer: lastThicknessAtState(state),", landing);
+  assertSource(height, "const solve = solveChiefRay(state, { fieldAngleDeg, geometry });", landing);
+  assertSource(
+    height,
+    ": prepareRayTraceForState(stateWithZ(state, zPos), { ghost: true }).ray(solve.yLaunch, launch.uField);",
+    landing,
+  );
+  assertSource(height, "return trace.y + trace.u * imagePlaneTransfer;", landing);
+});

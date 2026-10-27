@@ -157,6 +157,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["mtf.native", "r6c"],
       ["paraxial.first-order", undefined],
       ["rays.trace", "r10a"],
+      ["rays.trace", "r11a"],
       ["rays.trace", "r2"],
       ["rays.trace", "r3"],
       ["rays.trace", "r4"],
@@ -167,6 +168,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["selftest.echo", undefined],
       ["spot.native", "r7b"],
       ["system.describe", undefined],
+      ["vignetting.native", "r11b"],
       ["wavefront.native", undefined],
     ],
   );

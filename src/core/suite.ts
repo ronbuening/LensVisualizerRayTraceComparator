@@ -17,6 +17,7 @@ import type { SpotSetResolution } from "../rays/spotSets.ts";
 import type { AxialSetResolution } from "../rays/axialSets.ts";
 import type { ChiefSetResolution } from "../rays/chiefSets.ts";
 import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
+import type { VignettingSetResolution } from "../rays/vignettingSets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
@@ -97,6 +98,17 @@ export interface CaseSource {
    * function of the run and the case, like the ray sets. A source without this method has no curvature sets to give.
    */
   curvatureRaySets?(run: RunSpec, opticalCase: OpticalCase): CurvatureSetResolution | Promise<CurvatureSetResolution>;
+  /**
+   * The vignetting sets of a run of a case this source resolved (`src/rays/vignettingSets.ts`): the rays of the tab
+   * that presents the vignetting and relative illumination, and a lattice over each of its fields' beams, one
+   * `rays.trace` spec for each pattern, field and line, a coded problem for a case or a field that has none, and the
+   * engines' own vignetting requests of the same fields. A pure function of the run and the case, like the ray sets. A
+   * source without this method has no vignetting sets to give.
+   */
+  vignettingRaySets?(
+    run: RunSpec,
+    opticalCase: OpticalCase,
+  ): VignettingSetResolution | Promise<VignettingSetResolution>;
   /**
    * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
    * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.

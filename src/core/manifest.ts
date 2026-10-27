@@ -102,6 +102,11 @@ export interface ManifestRun {
    */
   readonly curvatureRaySets?: ManifestRaySets;
   /**
+   * The vignetting sets of the run (`CaseSource.vignettingRaySets`): the rays of the vignetting tab and the lattices
+   * over its fields' beams; stated exactly when a rung that compares vignetting was run on it.
+   */
+  readonly vignettingRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

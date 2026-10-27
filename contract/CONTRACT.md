@@ -668,6 +668,34 @@ number from 2 to 128). A state LensVisualizer's launch does not cover is `unsupp
 reason of LensVisualizer's gate; a case that is stale or came from no LensVisualizer lens is treated as `lv`
 treats it.
 
+### The engine `flux`
+
+`flux` (`src/engines/lv/fluxEngine.ts`) is the comparator's flux estimator on LensVisualizer's own rays. It is built in,
+runs on the same LensVisualizer checkout as `lv`, and is no independent engine: its rays are LensVisualizer's launch
+lattices over each field's beam, launched and traced by LensVisualizer. What is its own is the estimate
+(`src/estimators/illumination.ts`) and whether a lattice may carry it. Rung `r11b` sets it beside `lv`. Its
+`fingerprint` is LensVisualizer's engine closure; its `adapterRevision` is the hash of the comparator's code behind it,
+in which the estimator is and which is not `lv`'s.
+
+It answers **`vignetting.native`** at any line of the case:
+
+| Step | Is |
+|---|---|
+| the rays of a field | LensVisualizer's launch lattice over the beam it finds for the field (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets)), at `bundleGrid` cells across and at twice as many, at the line, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: rung `r11b` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
+| the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
+| `geometricTransmission` | the area of the cells taken on the launch plane, over the axis's (`launchArea`), on the finer lattice |
+| `relativeIllumination` | the flux of the lit cells into the image, weight times the area each covers in the optical direction cosines `n' (L, M)` of the image space, over the axis's (`cosineFlux`), on the finer lattice: the projected solid angle of the exit pupil seen from the image point, with no law of the field angle |
+| `chiefLandingMm` | the y at which the finer lattice's chief ray lands on the image plane of the case |
+| a field's `status` | `ok` where both figures moved by no more than 0.005 on the axis, 0.01 off it, from the coarser lattice and no lit cell lies on the finer lattice's outermost rows and columns; `unconverged`, with `not-converged`, `convergence-unknown` (the coarser has no figures) or `lattice-edge-lit` joined by `+`; `unavailable`, with LensVisualizer's code or the estimator's reason, where the field or the axis has no lattice or no figures |
+
+Under `sampling` a field states `gridSize` and `coarseGridSize`, `cells` (the lit cells of the finer lattice),
+`edgeCells` (those on its rim) and `maxDelta` (how far either figure moved from the coarser lattice). `method.name` is
+`lattice-flux`. Its refusals: `option.bundleGrid` (no whole number from 2 to 128: a run that states more than 64 cells),
+`object.finite` and `path.folded`
+(of code `feature`), and a line the case does not have (`line`). A state LensVisualizer's launch does not cover is
+`unsupported` as a `feature`, with the reason of LensVisualizer's gate; a case that is stale or came from no
+LensVisualizer lens is treated as `lv` treats it.
+
 ### `run-spec`
 
 The user's specification of one run. Only `contract`, `kind`, `name` and `lens` are required; an option left out
@@ -1518,6 +1546,7 @@ and `validateData`.
 | `axial.native` | 1 | `quantities/axialNative.ts` | an engine's own figures of the beam along the axis (spherical aberration at a line, axial colour over lines) by its own pupil, or the real rays it traced for them, and its paraxial focus at each line |
 | `chief.native` | 1 | `quantities/chiefNative.ts` | an engine's own figures of the chief rays across the field (distortion and pupils at a line, lateral colour over lines) at given field angles, or the chief rays it traced for them, and what its figures are relative to |
 | `curvature.native` | 1 | `quantities/curvatureNative.ts` | an engine's own field curves at given field angles and lines: the tangential and the sagittal focus of each field along the axis from the image plane of the case, and the landing of the chief ray they are relative to |
+| `vignetting.native` | 1 | `quantities/vignettingNative.ts` | an engine's own vignetting and relative illumination at given field angles and lines, each relative to the axis, and the landing of the chief ray that identifies each field |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2200,6 +2229,48 @@ with `mask.mismatches` at 0 and `mask.rimBand` counted. Shown beside them and ne
 focus). A fan that has a focus in one answer and none, or none for another reason, in the other, and a set that is no
 curvature set, are not comparable.
 
+#### Vignetting sets and rung R11a
+
+**Vignetting sets** (`CaseSource.vignettingRaySets`, `src/rays/vignettingSets.ts`) are the rays of LensVisualizer's
+vignetting tab and a lattice over each of its fields' beams, and no part of a run's ray sets. Only a LensVisualizer lens
+has them (`src/engines/lv/vignettingRaySets.ts`, the fields in `vignettingFields.ts`); the manifest records them under
+`runs[].vignettingRaySets`, sets and problems as above, exactly when a rung that needs them
+(`RungDefinition.needsVignettingRaySets`: `r11a`, `r11b`) was run. Two patterns, the same rays at every line of the
+case:
+
+| | Is, in LensVisualizer |
+|---|---|
+| request | the analysis drawer's, as for the chief sets |
+| fields | `computeVignettingCurve`'s: `max(ceil(halfFieldDeg / 3) + 1, 7)` fields at `uniformFieldFraction(i, n)` of the half field, the axis first; each launched by its solved chief ray's height on the first vertex plane (`solveChiefRayForRuntimeLens` with the drawer's geometry) and the field's slope (`projectionLaunchSlopeForField`) |
+| `sweep` | of each field, the tab's meridional sweep: a ray at each of `evenlySpacedSigned(n)` (n = 192, 96 for a lens `isHeavyLensForRayWork` calls heavy) of the pupil radius the drawer hands, crossing the first vertex plane at `yChief + fraction × EPSD`, started as `bindRayTrace`'s `ray(y, u)` starts it; one set a line, each field a block of consecutive rays of one direction, the axis first; weight 1 times LensVisualizer's bulk transmission (`lvRayWeights`); no groups |
+| `lattice` | of each field, LensVisualizer's launch lattice over the beam its MTF finds for the field (`lvFieldRaySets` at the run's `sampling.bundleGrid`, 32 without it), the chief ray after the cells; one set a field and line, stating its field, lattice and chief ray under `groups` |
+
+A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
+half field (`no-half-field`) or without a pupil (`no-pupil`), and one whose axis has no sweep (`no-axis-sweep`) have no
+vignetting sets and no `vignetting.native` ask. A field LensVisualizer launches from a bounding sphere
+(`lv-vector-launch`), one without a slope (`lv-no-launch`) and one whose rays would not start in front of the first
+surface (`launch-behind-first-surface`) is a coded problem of that field, and no field of the sets or the ask
+(`vignettingFields.ts` decides the fields of the sets, the ask and `lv`'s answer alike). A state LensVisualizer's MTF
+launch does not cover keeps its sweeps and has no lattice sets, with the gate's reason as the problem's code. Every
+restated line has a source canary, and the sweeps, traced as the tab traces them, give the tab's geometric transmission
+and relative illumination to the bit, every ray being, launch, hits and exit to the bit, the ray LensVisualizer's own
+meridional adapter launches for the tab (`test/integration/lv/vignettingRays.test.ts`).
+
+**Rung R11a** asks one `rays.trace` request of each vignetting set and compares the sets of one pattern at one line as
+one span (`spanOf`), every figure of a field being relative to the axis. Which rays got through is judged as R2 judges
+it (`mask.mismatches` at 0, `mask.rimBand` counted). `illumination.maxAbs` is, of a lattice span, the largest
+difference of a field's flux into the image over the axis's (`cosineFlux`, src/estimators/illumination.ts) on the rays
+ok in both answers; `transmission.maxAbs`, aligned with R2, the largest flux of a field's rays of `mask.mismatches` (ok
+in one answer and not in the other, neither in the rim band nor failed by an engine), over the axis's flux on the rays
+ok in both, on the launch plane; `transmission.rimBandOrFailed`, shown beside it and never judged, the same of the rays
+ok in one answer only that R2 counts in neither count (in the rim band, or failed by an engine). Of the rays ok in both
+answers every count and sum is the same bits in both, the request's weights in the same order, so both transmissions
+are of the disagreeing rays alone and 0 where they agree; `illumination.maxAbs` is the rung's only figure of the traced
+numbers, the exit directions. A sweep has no area: `illumination.maxAbs` is inapplicable to it. A span's members are
+taken in an order of their own (the axis first, then by field angle and line), never in the order they are handed
+over. A field with a flux into the image in one answer and none, or none for another reason, in the other
+is not comparable; one without in either for the same reason is named in a note.
+
 ### `axial.native`
 
 Version 1, added at Stage 6.3, changes no existing quantity, contract version or identity. It is an engine's own
@@ -2365,6 +2436,54 @@ where an answer states none); then method. The figures are `chiefLanding.maxAbs`
 each kind. Policy 19 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and each of the three
 figures an attention band of 1e-5 mm: a pair with a figure above its band is ATTENTION. `curvatureFactsOfRecorded`
 repeats the sorting from the values a comparison records.
+
+### `vignetting.native`
+
+Version 1, added at Stage 6.6, changes no existing quantity, contract version or identity. It is an engine's own
+vignetting and relative illumination of a system whose object is at infinity, at field angles in object space,
+degrees, in the meridional plane (an object toward +y), each relative to the axis: how much of a field's beam gets
+through every aperture, and how bright its image is. What LensVisualizer's vignetting tab presents, and what the engine
+`flux` estimates of LensVisualizer's lattices. Nothing of an answer is gated: rung R11b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `lines` | indices of lines of the case, each once |
+| `maxFieldDeg` | the half field the angles are of, above 0 and below 180 |
+| `fieldAnglesDeg` | each at least 0, below 90 and at most `maxFieldDeg`; the first is 0, the axis every figure is relative to |
+
+| Answer member | Meaning |
+|---|---|
+| `fields[]` | one per asked line and field: the lines in the order asked, and within a line the angles in order: `line`, `wavelengthNm` traced, `fieldAngleDeg` traced, `status` `ok`, `unconverged` or `unavailable`, `reason` (always for a field that is not `ok`), `chiefLandingMm`, `geometricTransmission`, `relativeIllumination`, `sampling` |
+| `chiefLandingMm` | the y at which the field's chief ray lands on the image plane of the case, mm: what identifies the field; null where the engine states none |
+| `geometricTransmission` | how much of the field's beam gets through every aperture, over the axis's, by the engine's own measure, at least 0 (above 1 where the beam is wider than the axis's) |
+| `relativeIllumination` | how bright the field's image is, over the axis's, by the engine's own measure, at least 0; both figures finite for a field that is not `unavailable`, both null for one that is |
+| `sampling` | how the engine sampled the field, and what else it states of it, by names of its own |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+The schemas, corpus, quantity invariants and the stdlib Python port (`validate_vignetting_native`) enforce these
+definitions. The engines `lv` and `flux` answer it; `ref` and `optiland` do not (optiland has no analysis of the
+vignetting or the relative illumination).
+
+#### Rung R11b: LensVisualizer's vignetting tab beside the comparator's flux in two dimensions
+
+`r11b` asks one `vignetting.native` request (the case source's ask): at the lines of the case LensVisualizer's tab traces
+(its authored reference line; no request of a run of none), at the tab's own field angles, of `lv` and `flux` only, and
+only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (the fraction
+of the tab's sweep that passes every aperture, over the axis's) and `relativeIllumination` (the sweep's transmitted
+intensity times cos^4 of the object-space field angle, over the axis's) as the tab presents them, and the landing on the
+design plane of the solved chief ray the tab centres the sweep on (`chiefRayImageHeightAccurateForRuntimeLens`), on the
+design plane only and at a line of the authored indices only, decided before the tab is asked. `flux` answers as its
+section says.
+
+A field is sorted before any difference by R9b's sorting (`classifyChiefField`): R5's `classifyNativeField` first,
+unsupported (no figures), data of other wavelengths, numerical (an answer that does not stand by its figures,
+`unconverged`); then data where an answer traced the field at indices other than the case's; then R5's landing of the
+chief rays (`chiefLanding.maxAbs`); then method. The rung adds no reason of its own. The figures are
+`chiefLanding.maxAbs`, `geometricTransmission.maxAbs`, `falloff.maxAbs` (of each answer's relative illumination over its
+geometric transmission, of the fields both let light through: the falloff of no vignetting, the tab's cos^4 against the
+traced flux into the image per unit of transmitted area) and `relativeIllumination.maxAbs`, and counts of fields of each
+kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
+`vignettingFactsOfRecorded` repeats the sorting from the values a comparison records.
 
 ### `wavefront.native`
 

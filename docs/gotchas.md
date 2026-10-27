@@ -2877,3 +2877,100 @@ the benchmark.
   the real-ray shifts and the Petzval shift in `sampling` of R10b, recorded and never compared. The Petzval sum is a
   first-order quantity (Stage 6.8's Seidel sums).
 - **Class.** method: not covered by R10b.
+
+## Vignetting (Stage 6.6)
+
+Measured at LensVisualizer `be077cbcd` (engine closure `c866fbff` with the stage's names) and optiland `4e893f53`, on
+the benchmark. R11a shows the tab's sweeps and LensVisualizer's lattices pass the same rays in three engines, and bring
+the same flux into the image to 1.07e-13; R11b's differences are of method.
+
+### LensVisualizer's vignetting sweep is a chord of the axis's pupil, which the stop's image outgrows off the axis
+
+- **Where.** `computeVignettingCurve` (`src/optics/analysis/vignetting/vignetting.ts`) launches each field's rays at
+  `yChief + pupilFrac * currentEPSD`, `pupilFrac` of `evenlySpacedSigned(nPupil)`: a meridional chord of the axis's
+  entrance-pupil diameter, centred on the field's solved chief ray on the first vertex plane. Where the stop's image
+  grows and moves off the axis (retrofocus wide angles, mirrorless zooms at their wide end), the field's beam on that
+  plane is wider than the chord, and the sweep's fraction cannot rise much above the axis's. LensVisualizer's own MTF
+  says as much (`src/optics/analysis/mtf/mtfFootprint.ts`: "a fixed entrance-pupil circle can miss most of the real flux
+  at the corner") and scans for the footprint (`findMtfFieldFootprint`).
+- **Effect.** The beam's area on the launch plane, over the axis's, reaches 1.79 on the Sony FE 20 mm at f/8 (47°) and
+  1.64 on the Z 24-70 mm wide at f/8 (43.3°), where the tab's geometric transmission is 1.02 and 1.01. Its relative
+  illumination is low there by up to 0.27 (the Z 24-70 mm wide at f/8, 40.4°: 0.340 against 0.613), 0.25 on the Sigma
+  35 mm at f/8 (29°). The tab's axis is also a chord: on the Sony FE 20 mm wide open 6 of its 96 axial rays are stopped,
+  and every field is relative to that clipped axis (geometric transmissions up to 1.067).
+- **Handled.** R11b records it as two methods (`geometricTransmission.maxAbs`, up to 0.773;
+  `relativeIllumination.maxAbs`, up to 0.273); R11a traces the tab's own chords in every engine. Brief:
+  `docs/upstream/lensvisualizer-vignetting-sweep.md` (not filed). The owner decided (2026-10-26) to have LensVisualizer
+  change the tab: a two-dimensional sample of each field's footprint and a relative illumination of the traced exit
+  directions in place of cos^4; the change is pending (the owner holds its prompt). Until it lands R11b records the tab
+  as it is; afterwards the canaries of the tab's lines fail first, and the sets, the asks and the measurements are
+  redone. Pinned by `test/integration/optiland/r11.test.ts` (the Sony FE 20 mm's beam above 1.3 of the axis's where the
+  tab's sweep stays below 1.1) and by the canary "the vignetting tab still samples the fields and sweeps the pupils the
+  vignetting sets restate" (the sweep's lines).
+- **Class.** method: recorded; a LensVisualizer assumption, whose change the owner has decided on (pending).
+
+### A meridional chord overstates a vignetted beam's area
+
+- **Where.** The tab's geometric transmission is the fraction of its meridional chord that passes; an aperture that cuts
+  the beam off axis cuts a lens-shaped area (the intersection of the stop's image and an element's rim), whose chord
+  through the middle is a larger share of the diameter than its area is of the disc.
+- **Effect.** The Canon EF 135 mm wide open at its edge (9.2°): the chord 0.484, the area 0.387; the Z 50 mm f/1.2 at
+  22.9°: 0.424 against 0.357. The largest positive difference of the benchmark, 0.097, is the Canon's.
+- **Handled.** Recorded by R11b with the effect above, in `geometricTransmission.maxAbs`. Part of the brief above and of
+  the owner's pending LensVisualizer change (a two-dimensional footprint sample).
+- **Class.** method: recorded; a LensVisualizer assumption (its module's header says "1D meridional analysis only").
+
+### cos^4 of the object-space angle is no lens's falloff
+
+- **Where.** The tab multiplies its transmitted intensity by `Math.pow(Math.cos(thetaRad), 4)` of the object-space field
+  angle. The irradiance of a field's image is the projected solid angle of the exit pupil seen from the image point,
+  which is cos^4 of the field angle only for an undistorted image of a pupil that subtends at the image as at the object.
+- **Effect.** Per unit of transmitted area (the relative illumination over the geometric transmission, `falloff.maxAbs`),
+  the traced falloff is steeper than cos^4 on the Z 24-70 mm at 70 mm (0.641 against 0.843 at 16.6°) and the Sigma 45 mm
+  (0.552 against 0.662 at 25.6°), and shallower on the GF 63 mm (0.773 against 0.687 at 24.4°) and the Z 24-70 mm at 24 mm
+  (0.412 against 0.337 at 40.4°). Two routes that share nothing give the traced figure: the area of the exit beam in
+  direction cosines (`cosineFlux`), and the object side's transmitted area times `cos θ` over the image mapping's
+  Jacobian `h h' / sin θ` from the chief rays' landings; they agree within 0.011 over 368 fields (median 0.0012).
+- **Handled.** Recorded by R11b, in `falloff.maxAbs` (up to 0.202). Part of the brief above and of the owner's pending
+  LensVisualizer change (a relative illumination of the traced exit directions).
+- **Class.** method: recorded; a LensVisualizer assumption (its module's header names the law and its scope).
+
+### The area of a beam in cosine space is of its rim
+
+- **Where.** `cosineFlux` sums each lit cell's weight times the area its cell covers in optical direction cosines, the
+  Jacobian by central differences (`pupilFunction`'s). Along a row the central differences telescope: the area of the
+  lit region is fixed by its boundary, as the area of any region is (Green's theorem).
+- **Effect.** An interior cell's exit direction enters the flux into the image to second order only: turned by 2^-20 it
+  moved the figure of the R11a stand-ins by nothing in the last bit, where the same turn of a rim cell moved it by
+  1.54e-6. A difference `δ` of the rim's cosines moves R11a's `illumination.maxAbs` by about `2 δ / ρ`, `ρ` the beam's
+  radius in optical cosines (0.040 to 0.40 on the benchmark).
+- **Handled.** R11a judges the figure at a gate of 1e-9 (accepted by the owner, 2026-10-26), tighter than R2's direction
+  gate (1e-9 is a figure of 5e-9 to 5e-8 here), as R4's gate is tighter than R2's; its worst on the suites is 1.07e-13.
+  A FAIL is attributed in extended precision before anything is concluded. Pinned by `test/report/r11.test.ts` (a turned
+  rim cell fails) and `test/compare/raysVignetting.test.ts`.
+- **Class.** numerical: handled.
+
+### Of the rays two engines both let through, a transmitted fraction is the same bits in both
+
+- **Where.** The weights of a vignetting set are the request's (LensVisualizer's bulk transmission at the line,
+  `lvRayWeights`): no engine computes a ray's flux. On the rays ok in both answers every count and sum is the same, in
+  the same order.
+- **Effect.** A comparison of the two answers' transmitted fractions on their common rays is 0 by construction, whatever
+  the engines; only the rays one answer lets through and the other does not can move it, by about one over the axis's
+  rays each (1/192 of a sweep, about 1/800 of a lattice of 32 cells).
+- **Handled.** R11a judges which rays got through as R2 does (`mask.mismatches`, 0) and, aligned with R2 (owner decision
+  2026-10-26), gates the flux of the rays of those mismatches over the axis's (`transmission.maxAbs`, 0); the flux of
+  the rim-band and failed rays one answer lets through and the other does not, which R2 judges in no count, is shown
+  beside it and never judged (`transmission.rimBandOrFailed`). Both are 0 on every pair of the suites. Pinned by
+  `test/compare/raysVignetting.test.ts` ("a ray stopped at the rim in one answer passes the mask and the transmission,
+  and its flux is shown beside it"; a real mismatch fails both).
+- **Class.** convention: handled.
+
+### LensVisualizer's MTF launch lays no lattice of a diffractive surface or a fisheye
+
+- **Where.** The vignetting sets' lattices are LensVisualizer's MTF launch lattices (`lvFieldRaySets`), which need its
+  MTF gate (`assessMtfSupport`): a diffractive surface and a fisheye are outside its MTF path (`unsupported-path`).
+- **Effect.** The diffractive suite's eight states have the tab's sweeps and no lattices: R11a judges their masks and
+  transmission, and has no flux into the image of them; the engine `flux` refuses them.
+- **Handled.** A coded problem of the run's lattices, its sweeps kept (`docs/REFERENCE.md`, "Stage 6.6").
+- **Class.** unsupported: not covered.

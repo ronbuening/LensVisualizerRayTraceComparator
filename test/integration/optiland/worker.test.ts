@@ -310,10 +310,10 @@ test(
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
-    // their own, R4f, R5, R5g, R6b, R7b, R8b, R9b and R10b, ask nobody anything of a case that no LensVisualizer
-    // sampled; nor do the rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take
-    // its frequencies from, nor R7a, R8a, R9a and R10a, whose spot, axial, chief and curvature sets only
-    // LensVisualizer's tabs give.
+    // their own, R4f, R5, R5g, R6b, R7b, R8b, R9b, R10b and R11b, ask nobody anything of a case that no
+    // LensVisualizer sampled; nor do the rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no
+    // recipe to take its frequencies from, nor R7a, R8a, R9a, R10a and R11a, whose spot, axial, chief, curvature and
+    // vignetting sets only LensVisualizer's tabs give.
     const rungs = RUNGS.filter(
       (rung) =>
         rung.engines === undefined &&
@@ -321,11 +321,30 @@ test(
         rung.needsSpotRaySets !== true &&
         rung.needsAxialRaySets !== true &&
         rung.needsChiefRaySets !== true &&
-        rung.needsCurvatureRaySets !== true,
+        rung.needsCurvatureRaySets !== true &&
+        rung.needsVignettingRaySets !== true,
     ).map((rung) => rung.id);
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
-      ["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c", "r7a", "r7b", "r8a", "r8b", "r9a", "r9b", "r10a", "r10b"],
+      [
+        "r4",
+        "r4f",
+        "r5",
+        "r5g",
+        "r6a",
+        "r6b",
+        "r6c",
+        "r7a",
+        "r7b",
+        "r8a",
+        "r8b",
+        "r9a",
+        "r9b",
+        "r10a",
+        "r10b",
+        "r11a",
+        "r11b",
+      ],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());

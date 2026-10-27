@@ -58,8 +58,36 @@ export function tracedSurfaces(
 }
 
 /**
+ * How R2 counts one ray of two answers (`maskMetrics`): `agree` where both ended at the same surface (or both are ok),
+ * `failed` where either engine failed it, which says nothing about the light and is in neither count, and otherwise
+ * `rimBand` or `mismatch`, by whether the hit of the first surface the two disagree at (`surface`: one engine stopped
+ * the ray there, and the other has a hit on it) lies in that surface's rim band (`RIM_BAND_MM`).
+ */
+export function maskRay(
+  a: DecodedTrace,
+  b: DecodedTrace,
+  surfaces: readonly SurfaceIR[],
+  ray: number,
+): { readonly kind: "agree" | "failed" | "mismatch" | "rimBand"; readonly surface: number } {
+  if (a.status[ray] === RAY_STATUS.failed || b.status[ray] === RAY_STATUS.failed)
+    return { kind: "failed", surface: -1 };
+  const [endA, endB] = [endOf(a, ray), endOf(b, ray)];
+  if (endA === endB) return { kind: "agree", surface: -1 };
+  const surface = Math.min(endA, endB);
+  let rim = false;
+  if (surface < surfaces.length) {
+    const passed = endA > endB ? a : b;
+    const at = (surface * a.rays + ray) * 3;
+    const r = Math.sqrt(passed.hits[at] * passed.hits[at] + passed.hits[at + 1] * passed.hits[at + 1]);
+    rim = inRimBand(surfaces[surface].aperture, r);
+  }
+  return { kind: rim ? "rimBand" : "mismatch", surface };
+}
+
+/**
  * Which rays the two answers disagree about, as R2 counts them (`raysGeometryComparator`): `mask.mismatches` and
- * `mask.rimBand`, each with the ray and the surface of its first ray in `where`.
+ * `mask.rimBand`, each with the ray and the surface of its first ray in `where`. A ray either engine failed is in
+ * neither count (`maskRay`).
  */
 export function maskMetrics(
   a: DecodedTrace,
@@ -67,24 +95,12 @@ export function maskMetrics(
   surfaces: readonly SurfaceIR[],
   place: Where,
 ): readonly [mismatches: ComputedMetric, rimBand: ComputedMetric] {
-  const { rays } = a;
-  // Which rays got through. A ray either engine failed says nothing about the light, and is in neither count.
   const mismatches: Tally = { count: 0, ray: -1, surface: -1 };
   const rimBand: Tally = { count: 0, ray: -1, surface: -1 };
-  for (let ray = 0; ray < rays; ray++) {
-    if (a.status[ray] === RAY_STATUS.failed || b.status[ray] === RAY_STATUS.failed) continue;
-    const [endA, endB] = [endOf(a, ray), endOf(b, ray)];
-    if (endA === endB) continue;
-    // The first surface the two disagree at: one engine stopped the ray there, and the other has a hit on it.
-    const surface = Math.min(endA, endB);
-    let rim = false;
-    if (surface < surfaces.length) {
-      const passed = endA > endB ? a : b;
-      const at = (surface * rays + ray) * 3;
-      const r = Math.sqrt(passed.hits[at] * passed.hits[at] + passed.hits[at + 1] * passed.hits[at + 1]);
-      rim = inRimBand(surfaces[surface].aperture, r);
-    }
-    const tally = rim ? rimBand : mismatches;
+  for (let ray = 0; ray < a.rays; ray++) {
+    const { kind, surface } = maskRay(a, b, surfaces, ray);
+    if (kind === "agree" || kind === "failed") continue;
+    const tally = kind === "rimBand" ? rimBand : mismatches;
     if (tally.count++ === 0) Object.assign(tally, { ray, surface });
   }
   return [countMetric("mask.mismatches", mismatches, place), countMetric("mask.rimBand", rimBand, place)];

@@ -16,13 +16,15 @@ import { CHIEF_NATIVE } from "../contract/quantities/chiefNative.ts";
 import type { ChiefNativeSpec } from "../contract/quantities/chiefNative.ts";
 import { CURVATURE_NATIVE } from "../contract/quantities/curvatureNative.ts";
 import type { CurvatureNativeSpec } from "../contract/quantities/curvatureNative.ts";
+import { VIGNETTING_NATIVE } from "../contract/quantities/vignettingNative.ts";
+import type { VignettingNativeSpec } from "../contract/quantities/vignettingNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunFields, RunSpec } from "../contract/runSpec.ts";
-import { DEFAULT_RAY_FIELDS } from "../rays/raySets.ts";
+import { DEFAULT_RAY_FIELDS, FINE_GRID_FACTOR } from "../rays/raySets.ts";
 import type { SpotNativeAsk } from "../rays/spotSets.ts";
 import { waveFrequencies } from "./mtfRecipe.ts";
 import type { MtfRecipe } from "./mtfRecipe.ts";
@@ -81,6 +83,14 @@ export interface RungInputs {
   readonly curvatureRaySets?: readonly RaysTraceSpec[];
   /** The engines' own field-curve requests of the same sections, from the same source, for such a rung. */
   readonly curvatureAsks?: readonly CurvatureNativeSpec[];
+  /**
+   * The vignetting sets of the run, from the source of its case (`CaseSource.vignettingRaySets`), for a rung that says
+   * it `needsVignettingRaySets`: the rays of the vignetting tab and a lattice over each of its fields' beams. Empty, or
+   * left out, for any other rung.
+   */
+  readonly vignettingRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own vignetting requests of the same fields, from the same source, for such a rung. */
+  readonly vignettingAsks?: readonly VignettingNativeSpec[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -129,6 +139,12 @@ export interface RungDefinition {
    * them.
    */
   readonly needsCurvatureRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's vignetting sets (`RungInputs.vignettingRaySets` and
+   * `vignettingAsks`): those are generated, once per run, only when such a rung is run, and no other rung is handed
+   * them.
+   */
+  readonly needsVignettingRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -700,6 +716,53 @@ export const r10bRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r11a`, LensVisualizer's vignetting tab on identical rays: one `rays.trace` request for each of the run's
+ * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own meridional sweep of every field, and
+ * LensVisualizer's launch lattice over the whole beam of each of the same fields, which every engine traces as given.
+ * Which rays get through, how much flux the two engines disagree about, and the flux each field's lattice brings into
+ * the image relative to the axis's are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
+ * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r11aRung: RungDefinition = Object.freeze({
+  id: "r11a",
+  quantity: RAYS_TRACE,
+  needsVignettingRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.vignettingRaySets ?? []),
+});
+
+/** The engines of the rung `r11b`: LensVisualizer, whose tab is asked, and the comparator's flux estimator on its rays. */
+export const R11B_ENGINES: readonly string[] = Object.freeze(["lv", "flux"]);
+
+/**
+ * The rung `r11b`, LensVisualizer's vignetting tab beside the comparator's flux in two dimensions: one
+ * `vignetting.native` request (`RungInputs.vignettingAsks`), at the lines the tab traces and its own fields, asked of
+ * LensVisualizer, whose answer is its tab's curve, and of the engine `flux`, whose answer is the area and the flux into
+ * the image of LensVisualizer's lattice over each field's beam, traced by LensVisualizer. Where the run states a
+ * `sampling.bundleGrid`, the engine `flux` is handed `FINE_GRID_FACTOR` times it as its option `bundleGrid`, the cells
+ * across the coarser of its two lattices: as its default (64, then 128) is twice the run's default of 32, its coarser
+ * lattice is never the run's own, whose staircase rim moves a field's figures by up to 0.02 on doubling. A run of more
+ * than 64 cells gives the engine more than its largest lattice, which it answers as unsupported (`option.bundleGrid`),
+ * never on a lattice it was not asked for. Recorded, of those two engines and of no other, and run only where it is
+ * named.
+ */
+export const r11bRung: RungDefinition = Object.freeze({
+  id: "r11b",
+  quantity: VIGNETTING_NATIVE,
+  needsVignettingRaySets: true,
+  engines: R11B_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (runSpec: RunSpec, _inputs?: RungInputs, engineId?: string): JsonObject | undefined => {
+    const bundleGrid = runSpec.sampling?.bundleGrid;
+    return engineId === "flux" && bundleGrid !== undefined ? { bundleGrid: FINE_GRID_FACTOR * bundleGrid } : undefined;
+  },
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.vignettingAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: VIGNETTING_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -725,6 +788,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r9bRung,
   r10aRung,
   r10bRung,
+  r11aRung,
+  r11bRung,
 ]);
 
 /**

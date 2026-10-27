@@ -3792,9 +3792,9 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2, 6.3, 6.4 or 6.5. Policy versions 16, 17, 18 and 19 change the policy hash, and
-the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines other than the catalog's
-are STALE:
+This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5 or 6.6. Policy versions 16, 17, 18, 19 and 20 change the policy
+hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
+other than the catalog's are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
 - by engine for `optiland-wave`, whose revision hashes the worker's (`src/engines/optiland/wavefrontEngine.ts`), so
@@ -3803,18 +3803,20 @@ are STALE:
 `ref`'s revision did not move. The store therefore recomputes the other five engines, and a cold MTF run of the
 benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
 
-R7a, R8a, R9a and R10a join the rays baselines of the suites whose runs have spot, axial, chief and curvature sets:
-benchmark, features, states and diffractive. focus-stations (finite objects) and folded (folded paths) have none, so
-they are rewritten with their own rungs. R7b, R8b, R9b and R10b stay out of every baseline.
+R7a, R8a, R9a, R10a and R11a join the rays baselines of the suites whose runs have spot, axial, chief, curvature and
+vignetting sets: benchmark, features, states and diffractive (whose vignetting sets are the tab's sweeps alone:
+LensVisualizer's MTF launch, which lays the lattices, refuses a diffractive surface). focus-stations (finite objects)
+and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b and R11b stay out
+of every baseline.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
 another:
 
 ```bash
 for suite in benchmark features states; do
-  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a --jobs 4
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a,r11a --jobs 4
   node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite
 done
-node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a,r10a --jobs 4
+node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a,r10a,r11a --jobs 4
 node bin/lvrtc.mjs compare diffractive --jobs 4 && node bin/lvrtc.mjs baseline write diffractive
 node bin/lvrtc.mjs run suites/folded.json --engines lv,ref,optiland --rungs r0,r1,r2,r3 --jobs 4
 node bin/lvrtc.mjs compare folded --jobs 4 && node bin/lvrtc.mjs baseline write folded
@@ -4662,3 +4664,236 @@ diffractive 96). The adapter revisions of `lv`, `replay` and `wave` moved (the s
    `FieldCurvature` and are not covered by R10b.
 5. **optiland's batched robust aimer** (the Sigma 35 mm at f/8) is held by the owner with the other upstream items; the
    worker reports the field unavailable and never warms the aimer.
+
+## Stage 6.6: vignetting and relative illumination
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11b of lv and flux whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the vignetting in one tab: a curve of each field's geometric transmission (the fraction of one
+meridional sweep of rays across the axis's entrance pupil, centred on the field's solved chief ray, that passes every
+aperture) and its relative illumination (the sweep's transmitted bulk intensity times cos^4 of the object-space field
+angle), each over the axis's (`computeVignettingCurve`, `src/optics/analysis/vignetting/vignetting.ts`). R11a traces the
+tab's own sweeps, and LensVisualizer's own launch lattice over the whole beam of each of the same fields, in every
+engine and judges which rays get through and the flux the lattices bring into the image; R11b sets the tab, as it
+presents it, beside the comparator's flux in two dimensions on those lattices (the built-in engine `flux`).
+
+### The vignetting sets
+
+`CaseSource.vignettingRaySets` makes the rays (`src/engines/lv/vignettingRaySets.ts`, the fields in
+`vignettingFields.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says
+`needsVignettingRaySets`, and the manifest records them under `runs[].vignettingRaySets`; a case source without them (a
+case file) is `vignetting-sets-unavailable`. The fields are the tab's own: `max(ceil(halfFieldDeg / 3) + 1, 7)` at
+`uniformFieldFraction(i, n)` of the drawer's half field, the axis first, each launched by its solved chief ray's height
+on the first vertex plane (`solveChiefRayForRuntimeLens`, the drawer's geometry) and its slope
+(`projectionLaunchSlopeForField`): 7 to 17 a lens on the benchmark. Two patterns, the same rays at every line:
+
+| Pattern | Rays | On the benchmark |
+|---|---|---:|
+| `sweep` | of each field, the tab's sweep: a ray at each of `evenlySpacedSigned(n)` of the drawer's pupil radius, `n` 192 (96 for a lens `isHeavyLensForRayWork` calls heavy), crossing the first vertex plane at `yChief + fraction × EPSD` along the field's slope, started as `bindRayTrace`'s `ray(y, u)` starts it (`lvSweepLaunch`: `rayLead` ahead, `[0, 0, 1]` for the slope 0 from the adapter's cache); one set a line, a block of rays a field, the axis first; each ray of weight 1 times LensVisualizer's bulk transmission at the line (`lvRayWeights`), which the tab sums as `trace.transmission` | 672 to 3,072 rays a line |
+| `lattice` | of each field, LensVisualizer's launch lattice over the beam its MTF finds for the field (`lvFieldRaySets`, the generator of the run's ray sets, at the run's `sampling.bundleGrid`, 32 without it), the chief ray after the cells; one set a field and line, stating its field, lattice and chief ray | 721 to 1,441 rays a field, 1,161 on average |
+
+Every restated line has a canary (two Stage 6.6 tests in `test/integration/lv/canaries.test.ts`).
+`test/integration/lv/vignettingRays.test.ts` traces each sweep with LensVisualizer's exact tracer (`traceEngineRay`, the
+tab's options) and counts it as the tab counts it, in the tab's own arithmetic, and on every benchmark configuration,
+the zoom's far end and the Laowa 105 mm STF (whose absorbing glass weighs its rays) gets every field's geometric
+transmission and relative illumination to the bit (13 configurations, 123 fields, 19,776 rays a line); it holds each
+lattice to `lvFieldRaySets` of the tab's field, and `lv`'s `rays.trace` answer of a sweep to the tab's own count of which
+rays pass. A second test holds every sweep ray, bit for bit, to LensVisualizer's own meridional adapter (`traceRay`, the
+lines of `bindRayTrace`'s `ray` that the tab calls through `prepareRayTrace`, but for reading `rayLead` of the runtime
+view), launched from LensVisualizer's own chief-ray solve and slope of the field and its own pupil fractions: the lead
+point is the set's origin, every hit `lv` records is the adapter's, the exit as the adapter states it (the slope of the
+exit direction and the height at the last vertex, by LensVisualizer's formulas of `lv`'s exit point and direction) and
+the bulk transmission of every ray that passes is the set's weight (19,776 rays, 16,829 of them through the lens). The
+adapter states no landing: `lv`'s is the comparator's projection of that exit, as every engine's.
+
+The case source also makes R11b's ask: one `vignetting.native` request at the lines the tab traces (the authored
+reference line; none of a photopic or spectral run), at the tab's fields with a sweep, the axis first. Which fields are
+decided once, in `vignettingFields.ts`, for the sets, the ask and `lv`'s answer alike: `test/engines/lv/vignetting.test.ts`
+feeds the ask of the fake tree's vector variant (fields beyond 12° launched from a bounding sphere) to `answerLvVignetting`,
+which answers every field.
+
+Coded problems, never approximated: `folded-path`, `object-not-at-infinity`, `no-half-field`, `no-pupil` and
+`no-axis-sweep` (no sets, no ask); `lv-vector-launch` (a field launched from a bounding sphere with a launch bound, which
+a request does not state), `lv-no-launch` (no slope; the tab plots 0 there) and `launch-behind-first-surface`, each of its
+field. A state LensVisualizer's MTF launch does not cover keeps its sweeps and has no lattices, the gate's reason the
+problem's code: the eight diffractive states (`unsupported-path`). focus-stations and folded have no vignetting sets.
+
+### R11a: which rays get through, and the flux into the image (gated)
+
+R11a asks `rays.trace` of every vignetting set and compares the sets of one pattern at one line as one span
+(`raysVignettingComparator`, `src/compare/raysVignetting.ts`): every figure of a field is relative to the axis. Which rays
+got through is judged as R2 judges it. Two figures more, each of the comparator's pure estimator
+`src/estimators/illumination.ts`:
+
+- `transmission.maxAbs`: of a field, aligned with R2, the flux of the rays of `mask.mismatches` (ok in one answer and
+  not in the other, neither in the rim band nor failed by an engine) over the axis's flux on the rays ok in both, on the
+  launch plane (a lattice cell's weight times the square of its step; a sweep's rays by their weights). Of the rays ok
+  in both answers every count and sum is the same bits in both, the request's weights in the same order: no engine
+  computes a weight. So the figure is of the disagreeing rays alone, 0 where they agree, and a count over a total: one
+  ray moves it by about one over the rays the axis lets through (1/192 of a sweep, about 1/800 of a lattice of 32
+  cells). The same flux of the rays ok in one answer only that R2 counts as no mismatch, those in the rim band and those
+  an engine failed, is shown beside it and never judged (`transmission.rimBandOrFailed`), as R2 shows `mask.rimBand`
+  beside `mask.mismatches`.
+- `illumination.maxAbs`: of a lattice span, a field's flux into the image (weight times the area each lit cell covers in
+  the optical direction cosines `n' (L, M)` of the image space, `cosineFlux`) over the axis's, on the rays ok in both
+  answers: the rung's only figure of the traced numbers, the exit directions. The area of a beam in cosine space is of
+  its rim (the cells' central differences telescope along a row and a column), so an interior cell's direction enters to
+  second order and a rim cell's to first: a difference `δ` of the rim's cosines moves the figure by about `2 δ / ρ`,
+  `ρ` the beam's radius in optical cosines (0.040 to 0.40 on the benchmark), so R2's direction gate of 1e-9 is a figure
+  of 5e-9 to 5e-8 here. A sweep has no area: inapplicable to it.
+
+| Metric | Policy 20 |
+|---|---|
+| `mask.mismatches` | gate 0 |
+| `illumination.maxAbs` | gate 1e-9: tighter than R2's direction gate, as R4's gate is tighter than R2's |
+| `transmission.maxAbs` | gate 0, of R2's mask mismatches alone: never the rim band, never a failed ray |
+| `transmission.rimBandOrFailed` | shown, in no policy: the rim-band and failed rays one answer lets through |
+
+The owner accepted these gates on 2026-10-26, `transmission.maxAbs` aligned with R2 as above. No floor. Shown:
+`mask.rimBand`, `transmission.rimBandOrFailed`, `rays.compared`, `rays.dropped`, `fields.compared` (the lattice fields
+with a flux into the image in both answers). The members of a span are taken in an order of their own, the axis first,
+then by field angle and line, in the comparison and the recorded values alike, never in the order they are handed
+over: the first ray of a count and the field of a tie do not depend on it (a test hands them over reversed and gets the
+same bytes). Recorded of each answer: the ray endings, and each field's own figures of the rays it brought
+to the image (of a sweep the tab's fractions before its cos^4, of a lattice the area and the flux each over the axis's).
+A field with a flux into the image in one answer and none, or none for another reason, in the other is not comparable;
+one without in both for the same reason is named in a note.
+
+### R11b: the tab beside the flux in two dimensions (recorded)
+
+`vignetting.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines` and each angle of
+`fieldAnglesDeg` (the first 0), for the geometric transmission and the relative illumination of the field, each over the
+axis's, by the engine's own measure, and the landing of the chief ray that identifies the field.
+
+- **`lv`** answers with the tab as it presents it (`answerLvVignetting`, `src/engines/lv/vignetting.ts`, method
+  `lv-vignetting-tab`): `computeVignettingCurve` of the drawer's request, each field's two figures to the bit, and the
+  landing on the design plane of the solved chief ray the tab centres the sweep on
+  (`chiefRayImageHeightAccurateForRuntimeLens`, the drawer's geometry). Refused before LensVisualizer is asked anything:
+  a line the case does not have (`line`), `lines.not-authored-reference`, `focus.off-design` (the identifying landing is
+  of the design plane; the tab's figures are of no plane), `object.finite`, `path.folded`; `fields.angles` once the tab's
+  fields are known. A tab with no curve (no ray of the axis passes) leaves every field `lv-no-curve`.
+- **`flux`** (`src/engines/lv/fluxEngine.ts`, method `lattice-flux`) is the comparator's estimator on LensVisualizer's
+  rays, in the pattern of `wave`: of each field LensVisualizer's launch lattice over its beam (`lvFieldRaySets`) at 64
+  cells across and at 128 (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32), traced by LensVisualizer
+  (`answerLvRays`), each field's lattices made once whatever line is asked. Where a run states a `sampling.bundleGrid`,
+  R11b hands `flux` twice it as its option `bundleGrid`, the coarser lattice, so the engine's lattices are never the
+  run's own (at 32 and 64 a field moves by up to 0.02 on doubling); a run of more than 64 cells asks for more than the
+  engine's largest lattice of 256, and `flux` answers `option.bundleGrid`, unsupported. Its geometric transmission is the area of the cells taken on the launch plane over the axis's; its
+  relative illumination the flux of the lit cells into the image over the axis's: the projected solid angle of the exit
+  pupil seen from the image point, weighted by each ray's transmission, with no law of the field angle (the method of a
+  relative-illumination analysis in a lens-design program). A field is `ok` where both figures moved by no more than
+  0.005 on the axis, 0.01 off it, on doubling and no lit cell lies on the lattice's rim; else `unconverged`
+  (`not-converged`, `convergence-unknown`, `lattice-edge-lit`). At 32 and 64 cells a field moves by up to 0.02 on
+  doubling, at 64 and 128 by at most 0.00997 on the benchmark.
+
+The two figures of `flux` are held to closed forms (`test/estimators/illumination.test.ts`: the projected solid angle of a
+square stop seen from a field's image point, in closed form, to second order in the cell with a bound derived beside it)
+and, on the benchmark, to a second route that shares nothing with the estimate: the object side's transmitted area times
+`cos θ` over the image mapping's Jacobian `h h' / sin θ` from the chief rays' landings (central differences across the
+tab's fields, the focal length of the first step), which agrees within 0.011 on every one of the 368 fields with a field
+on either side of the 48 reference runs `flux` answered (median 0.0012; worst the Sony FE 20 mm at 44°, where the
+differences are coarsest against its distortion).
+
+`vignettingNativeComparator` (`src/compare/vignettingNative.ts`) sorts each field before any difference by R9b's sorting
+(`classifyChiefField`): unsupported (no figures), data (other wavelengths, other indices, chief rays landing further apart
+than the limit or no landing), numerical (`unconverged`), then method, the only class in a figure; it adds no reason of
+its own. Three figures separate what the methods differ in: `geometricTransmission.maxAbs` (the tab's chord of a fixed
+pupil against the beam's area), `falloff.maxAbs` (each answer's relative illumination over its geometric transmission:
+the tab's cos^4 against the traced flux per unit of transmitted area, of no vignetting) and
+`relativeIllumination.maxAbs` (the two together). `vignettingFactsOfRecorded` repeats the sorting from recorded values.
+
+| Metric | Policy 20 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R10b's) |
+| `geometricTransmission.maxAbs`, `falloff.maxAbs`, `relativeIllumination.maxAbs` | no band (owner decision, 2026-10-26): recorded |
+
+`test/integration/optiland/r11.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 20 mm on its
+reference line, whose beam's growth it pins.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `be077cbcd` (clean; engine closure `c866fbff`, 178 files: the stage's names are of
+modules already loaded) and optiland `4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of `r11a,r11b`
+has 9,312 jobs: 9,288 ok, 24 unsupported (all `lv` in R11b, `focus.off-design`), no error; 3 min 5 s from an empty store,
+the compare 56 s. Compare: 2,976 pairs of both modes, 2,880 PASS, 48 RECORDED, 48 UNSUPPORTED, no FAIL, ERROR or ATTENTION.
+
+**R11a.** 3,072 sets, 576 spans (a sweep and the lattices at each line), 1,728 pairwise pairs, all PASS, over 2,455,174
+rays a pair and 2,784 lattice fields with a flux into the image in both answers; no mask mismatch, no rim-band ray, no
+dropped ray: `transmission.maxAbs` 0 everywhere. `transmission.rimBandOrFailed`, added after this run, is of dropped rays
+alone, so it is 0 there too; the change moved no figure of the run.
+
+| Pair | `illumination.maxAbs` (worst) |
+|---|---:|
+| `lv` / `ref` | 6.26e-14 (Sony FE 20 mm f/8 photopic, 47°, line 4) |
+| `optiland` / `ref` | 6.08e-14 (the same) |
+| `lv` / `optiland` | 2.98e-14 (Z MC 105 mm f/8 photopic, 10.0°) |
+
+The other suites, run the same way, all pass, with no mask mismatch and a transmission of 0:
+
+| Suite | Runs with vignetting sets | R11a pairwise pairs | Lattice fields | Worst `illumination.maxAbs` |
+|---|---:|---:|---:|---:|
+| features | 18 of 18 | 324 | 690 | 3.28e-14 (`optiland`/`ref`, fixed-iris zoom photopic wide, 22.4°) |
+| states | 128 of 128 | 2,304 | 3,768 | 1.07e-13 (`optiland`/`ref`, Z 24-70 mm f/11 photopic tele, 11.1°) |
+| diffractive | 8 of 9 (one source refusal) | 24 | 0 (sweeps alone: `unsupported-path`) | — |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — | — |
+
+The worst figure is 9,000 times inside the gate of 1e-9.
+
+**R11b.** 24 pairwise pairs RECORDED (the reference runs at the design plane, wide open and at f/8) and 24 UNSUPPORTED
+(the best-focus runs); a photopic run has no request. Every one of the 232 fields is of two methods (208 off the axis);
+the two chief rays of a field land within 7.1e-15 mm. The method difference, per field off the axis:
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `geometricTransmission.maxAbs` | 0.017 | 0.773 (Sony FE 20 mm f/8, 47°: the tab 1.02, the beam 1.79) |
+| `falloff.maxAbs` | 0.017 | 0.202 (Z 24-70 mm tele, 16.6°: cos^4 0.843, traced 0.641) |
+| `relativeIllumination.maxAbs` | 0.035 | 0.273 (Z 24-70 mm wide f/8, 40.4°: the tab 0.34, traced 0.61) |
+
+Taken apart, three things, each a LensVisualizer assumption (`docs/gotchas.md`, "Vignetting"):
+
+1. **The sweep is of a fixed chord.** The tab sweeps the axis's pupil diameter about each field's chief ray, which the
+   stop's image overfills where it grows off the axis: the beam's area on the launch plane reaches 1.79 times the axis's
+   (Sony FE 20 mm f/8 at 47°) and 1.64 (Z 24-70 mm wide f/8 at 43.3°), where the sweep's fraction stays at 1.01 to 1.07.
+   The tab understates the illumination there by up to 0.27 (the Z 24-70 mm wide f/8 at 40.4°, 0.340 against 0.613). LensVisualizer's own MTF scans for this footprint
+   (`mtfFootprint.ts`: "a fixed entrance-pupil circle can miss most of the real flux at the corner").
+2. **A chord is no area.** Where apertures cut the beam into a lens shape, the chord through its middle overstates its
+   area: the Canon EF 135 mm wide open at 9.2°, 0.484 against 0.387; the Z 50 mm f/1.2 at 22.9°, 0.424 against 0.357.
+3. **cos^4 of the object-space angle is no lens's falloff.** The traced flux per unit of transmitted area is steeper
+   than cos^4 on the Z 24-70 mm at 70 mm (0.641 against 0.843 at 16.6°) and the Sigma 45 mm (0.552 against 0.662 at
+   25.6°), and shallower on the GF 63 mm (0.773 against 0.687 at 24.4°) and the Z 24-70 mm at 24 mm (0.412 against 0.337
+   at 40.4°): the law assumes an exit pupil that subtends as the entrance pupil does and an undistorted image.
+
+The brief, with the source lines and the per-lens figures, is `docs/upstream/lensvisualizer-vignetting-sweep.md` (not
+filed).
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and 15 NEW of LensVisualizer's new certified station, folded 96,
+diffractive 96). The adapter revisions of `lv` (`3e4dbea1` to `d9f1dfe8`), `replay` (`321e6dd3` to `cc533c5a`) and
+`wave` (`0c2deddd` to `7adb363b`) moved (the stage's names and modules in `lv`'s closure), `optiland`'s
+(`e5cc6eef` to `3f9ff696`, the kit's `validate.py`) and `optiland-wave`'s with it; `ref`'s did not (`2225e342`); `flux`
+is new (`b7712f3f` for these measurements; `de9994af` after the review's changes to its lattice bookkeeping and the
+estimator's notes, which change no answer's bytes).
+
+### Owner decisions, 2026-10-26
+
+1. **R11a's gate is accepted**: `mask.mismatches` 0 (R2's) and `illumination.maxAbs` 1e-9, as in policy 20, and
+   `transmission.maxAbs` 0 **aligned with R2**: of the rays of `mask.mismatches` alone; the flux of the rim-band and
+   failed rays one answer passes and the other does not is shown beside it, ungated (`transmission.rimBandOrFailed`).
+   R11a joins the rays baselines of benchmark, features, states and diffractive at the Phase 6 end refresh.
+2. **R11b's design**: the engine `flux`, LensVisualizer's own lattices and tracer with the comparator's estimator, stays
+   its independent estimate (as `wave`), and the cosine-space flux, the projected solid angle of the exit pupil, is the
+   comparator's relative illumination; optiland has no vignetting analysis, and an engine of optiland's own aiming would
+   weigh its stop-uniform rays by a Jacobian the worker would have to make.
+3. **R11b's limit and bands**: the landing limit of 1e-5 mm stays; no band on its three figures (bands of 0.01 would
+   mark 23 of the 24 pairs).
+4. **R11b stays out of every baseline**, as R7b to R10b; `--rungs r11b` runs it.
+5. **LensVisualizer's vignetting tab is to change**: the owner chose to have LensVisualizer sample each field's footprint
+   in two dimensions and take the relative illumination of the traced exit directions in place of cos^4, as the brief
+   recommends. The change is pending; the owner holds its prompt. Until it lands, R11b records the tab as it is;
+   afterwards the canaries of the tab's lines fail first, and the sets, the asks and the measurements are redone.

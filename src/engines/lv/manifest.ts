@@ -104,6 +104,7 @@ export const LV_IMPORT_MANIFEST = [
         "computeFocusBreathingSeries",
         "computeOffAxisFieldGeometryScalar",
         "computeFieldCurvatureBundle",
+        "computeVignettingCurve",
       ),
       { name: "COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES", as: "comaRingSamples", kind: "object" },
       { name: "COMA_PREVIEW_FIELD_FRACTIONS", as: "comaFieldFractions", kind: "object" },
@@ -119,7 +120,7 @@ export const LV_IMPORT_MANIFEST = [
       { name: "FIELD_CURVATURE_CURVE_FIELD_FRACTIONS", as: "fieldCurvatureCurveFieldFractions", kind: "object" },
     ],
   },
-  { module: "src/optics/analysis/sampling.ts", exports: functions("uniformFieldFraction") },
+  { module: "src/optics/analysis/sampling.ts", exports: functions("uniformFieldFraction", "evenlySpacedSigned") },
   {
     module: "src/optics/analysis/aberration/shared.ts",
     exports: [{ name: "PROFILE_FRACS", as: "saProfileFractions", kind: "object" }],

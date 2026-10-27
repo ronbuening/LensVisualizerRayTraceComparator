@@ -764,6 +764,39 @@ def validate_curvature_native(part: str, value: Any, schemas: SchemaSet | None =
     return issues
 
 
+def validate_vignetting_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/vignettingNative.ts: schema, the lines and angles of a spec, and what a field holds."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("vignetting.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        if value["fieldAnglesDeg"][0] != 0:
+            issue("/fieldAnglesDeg/0", "the first angle is 0: the axis every figure is relative to")
+        for at, angle in enumerate(value["fieldAnglesDeg"]):
+            if angle > value["maxFieldDeg"]:
+                issue(f"/fieldAnglesDeg/{at}", "an angle is at most the half field, maxFieldDeg")
+        return issues
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        figures = (field["geometricTransmission"], field["relativeIllumination"])
+        if field["status"] == "unavailable":
+            if "reason" not in field or any(figure is not None for figure in figures):
+                issue(path, "an unavailable field has a reason and neither figure")
+            continue
+        if not all(figure is not None and math.isfinite(figure) for figure in figures):
+            issue(path, "a field that is not unavailable has both figures, each a finite number")
+        if field["status"] == "unconverged" and "reason" not in field:
+            issue(path, "an unconverged field says why")
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

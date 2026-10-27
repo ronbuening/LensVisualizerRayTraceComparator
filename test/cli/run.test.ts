@@ -212,7 +212,7 @@ test("--rungs runs only the rungs named; an unknown rung is a usage error and no
   assert.equal(unknown.out, "");
   assert.match(
     unknown.err,
-    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b$/m,
+    /^lvrtc run: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b$/m,
   );
   assert.equal(existsSync(runsDir), false);
 
@@ -231,7 +231,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: lv, optiland, optiland-wave, ref, replay, wave$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, replay, wave$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -507,7 +507,7 @@ test("a configuration without engines runs nothing unless an engine is named: a 
   assert.equal(
     ended.err,
     "lvrtc run: run singlet: it names no engine and the configuration defines none: " +
-      "name the engines to run with --engines (built in: lv, optiland, optiland-wave, ref, replay, wave)\n",
+      "name the engines to run with --engines (built in: flux, lv, optiland, optiland-wave, ref, replay, wave)\n",
   );
   assert.equal(existsSync(join(rootDir, "runs")), false);
 });
@@ -661,8 +661,8 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   // are about engines of their own, r4f, r5, r5g and r6b, ask nothing about a case that no LensVisualizer sampled, and the
   // rungs that take an MTF of the traced rays, r4 and r6a, nothing of a run without a recipe to take its
   // frequencies from. The rungs of the coma and bokeh tabs' rays, r7a, of the axial sections' rays, r8a, of the
-  // chief-ray tabs' rays, r9a, and of the field-curve sections' rays, r10a, ask nothing of a case read from a file,
-  // which has no tab of LensVisualizer's to launch them.
+  // chief-ray tabs' rays, r9a, of the field-curve sections' rays, r10a, and of the vignetting tab's rays, r11a, ask
+  // nothing of a case read from a file, which has no tab of LensVisualizer's to launch them.
   const shared = RUNGS.filter(
     (rung) =>
       rung.engines === undefined &&
@@ -670,7 +670,8 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
       rung.needsSpotRaySets !== true &&
       rung.needsAxialRaySets !== true &&
       rung.needsChiefRaySets !== true &&
-      rung.needsCurvatureRaySets !== true,
+      rung.needsCurvatureRaySets !== true &&
+      rung.needsVignettingRaySets !== true,
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.needsRecipe === true).map((rung) => rung.id),
@@ -678,7 +679,7 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   );
   assert.deepEqual(
     RUNGS.filter((rung) => rung.engines !== undefined).map((rung) => rung.id),
-    ["r4f", "r5", "r5g", "r6b", "r6c", "r7b", "r8b", "r9b", "r10b"],
+    ["r4f", "r5", "r5g", "r6b", "r6c", "r7b", "r8b", "r9b", "r10b", "r11b"],
   );
   // No case source of the root generates spot sets of a case read from a file, and the manifest says so.
   assert.deepEqual(
@@ -697,13 +698,15 @@ test("a run's own engines and rungs are used, and one that does not exist is a u
   assert.match(plain.chiefRaySets?.problems[0] ?? "", /^chief-sets-unavailable: /);
   assert.deepEqual(plain.curvatureRaySets?.sets, []);
   assert.match(plain.curvatureRaySets?.problems[0] ?? "", /^curvature-sets-unavailable: /);
+  assert.deepEqual(plain.vignettingRaySets?.sets, []);
+  assert.match(plain.vignettingRaySets?.problems[0] ?? "", /^vignetting-sets-unavailable: /);
 
   writeFileSync(join(rootDir, "worked.json"), suite({ engines: ["ref"], rungs: ["R0"] }));
   const worked = await inProcess(["worked.json"], { rootDir });
   assert.equal(worked.code, EXIT_USAGE);
   assert.equal(
     worked.err,
-    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b\n',
+    'lvrtc run: run choosy: unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b\n',
   );
   // The flags replace what the run asks for, so with both given the same suite runs.
   const replaced = await inProcess(["worked.json", "--rungs", "selftest", "--engines", "fake-a"], { rootDir });
