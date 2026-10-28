@@ -1548,6 +1548,8 @@ and `validateData`.
 | `curvature.native` | 1 | `quantities/curvatureNative.ts` | an engine's own field curves at given field angles and lines: the tangential and the sagittal focus of each field along the axis from the image plane of the case, and the landing of the chief ray they are relative to |
 | `vignetting.native` | 1 | `quantities/vignettingNative.ts` | an engine's own vignetting and relative illumination at given field angles and lines, each relative to the axis, and the landing of the chief ray that identifies each field |
 | `summary.native` | 1 | `quantities/summaryNative.ts` | an engine's own first-order summary of the system at given lines, as it presents it: its f-numbers under the contract's definitions (image-space, paraxial working, working of the real rim rays, marked), and the pupil, stop, focal length, track and half field they are of |
+| `seidel.native` | 1 | `quantities/seidelNative.ts` | an engine's own third-order (Seidel) sums of the system at one line, of each surface and in total, in OpticStudio's names and signs (SPHA, COMA, ASTI, FCUR, DIST, and the chromatic CLA and CTR of two dispersion lines), and the Lagrange invariant of the two paraxial rays they are of |
+| `zernike.native` | 1 | `quantities/zernikeNative.ts` | of each field at one line, an engine's wavefront about the chief ray's reference sphere on a midpoint grid of the normalised pupil: its RMS and peak to valley, and its least-squares Zernike coefficients by OpticStudio's Standard or Fringe ordering, in vacuum waves, with the condition of the fit |
 
 A quantity may have rules that its schemas cannot state: two arrays of one length, a list that ascends. Its module
 checks them on a value the schema accepts, and reports each as an issue whose `keyword` is `invariant`. Such a
@@ -2577,6 +2579,173 @@ unmeasured, with that engine named. The marked f-number and the half field are r
 either is ATTENTION), and the other figures none. optiland's `stopDiameterMm` and `totalTrackMm` are read-backs of the
 case: their figures hold LensVisualizer's tab to the case it exported. `summaryFactsOfRecorded`
 repeats the sorting from the values a comparison records.
+
+### `seidel.native`
+
+Version 1, added at Stage 6.8, changes no existing quantity, contract version or identity. It is an engine's own
+third-order sums of a system at one line, in lens units (mm), under OpticStudio's names and signs (the owner's principle,
+2026-10-27: match OpticStudio with ray aiming, and CODE V, wherever possible). LensVisualizer presents no Seidel sums; the
+engines that answer are `ref-seidel` and `optiland`. Nothing of an answer is gated: rung R13b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `line` | the line whose indices the paraxial rays are traced with: OpticStudio's primary wavelength |
+| `maxFieldDeg` | the field angle, degrees, at least 0 and below 90, of the chief ray of the sums: OpticStudio's maximum field, H = 1 |
+| `dispersionLines` | optional: two lines, the shorter wavelength first; the chromatic sums are of the index of the first less that of the second in each medium (OpticStudio takes the shortest and the longest of the system's wavelengths). Left out, no chromatic sum is stated |
+
+The two rays. The **marginal ray** leaves the axial object point (parallel to the axis for an object at infinity) and
+meets the stop's vertex plane at the height `+conditions.stopSemiDiameter`. The **chief ray** of the field has the slope
+`tan(maxFieldDeg)` in object space, positive in the meridian of the marginal ray's positive height, and crosses the axis
+at the stop's vertex plane. Both are paraxial (`y`, `u`, the slope; `n u' = n u - y (n' - n) c` at a surface of vertex
+curvature `c`), traced with the line's indices, the air in front of the system of index 1. In OpticStudio's frame a
+positive field angle is a chief ray of positive slope; the contract's frame is it mirrored in y, and the sums, of even
+degree in the pair of rays, are the same in both.
+
+| Answer member | Meaning |
+|---|---|
+| `line` | `index` as asked and the line's vacuum `wavelengthNm` |
+| `maxFieldDeg`, `dispersionLines` | as asked; `dispersionLines` null where none was asked |
+| `status`, `reason` | `ok`, or `unavailable` with the engine's own reason and no value stated |
+| `invariant` | the Lagrange invariant `H = n (u_chief y_marginal - u_marginal y_chief)` of the two rays, mm: what identifies the field and the aperture the sums are of |
+| `surfaces[]` | per surface of the case the engine states sums of, ascending, each once: `surface` and the seven sums below |
+| `total` | the seven sums of the system |
+| `sampling` | what else the engine states, by names of its own |
+| `method`, `notes` | the engine's name for its method with its settings, and words for people |
+
+The sums, each a number or null where the engine states none, of a surface between indices `n` and `n'` with the rays'
+heights and slopes in front of it, `A = n (y c + u)`, `Abar = n (ybar c + ubar)` (Welford, *Aberrations of Optical
+Systems*, ch. 8; OpticStudio's Seidel Coefficients):
+
+| Sum | OpticStudio | Of a surface |
+|---|---|---|
+| `SPHA` | SPHA, S1 | `-A^2 y Delta(u/n) + 8 b (n' - n) y^4` |
+| `COMA` | COMA, S2 | `-A Abar y Delta(u/n) + 8 b (n' - n) y^3 ybar` |
+| `ASTI` | ASTI, S3 | `-Abar^2 y Delta(u/n) + 8 b (n' - n) y^2 ybar^2` |
+| `FCUR` | FCUR, S4 | `-H^2 c Delta(1/n)`: the Petzval sum |
+| `DIST` | DIST, S5 | `(Abar / A)(S3 + S4)` of the sphere `+ 8 b (n' - n) y ybar^3`, which is `-Abar^3 y Delta(1/n^2) + Abar ybar c Delta(1/n) (Abar y + H)` without the division |
+| `CLA` | CLA, CL | `A y Delta(dn/n)`, `dn` the dispersion lines' index difference in the medium (0 in the air in front) |
+| `CTR` | CTR, CT | `Abar y Delta(dn/n)` |
+
+`Delta(x)` is `x` behind the surface less `x` in front. `b` is the surface's fourth-order departure from the sphere of
+its vertex curvature: of a conic of base curvature `c0` and constant `K` with a term `a4 r^4` (and a term `a2 r^2`,
+whose vertex curvature is `c = c0 + 2 a2`), `b = ((1 + K) c0^3 - c^3) / 8 + a4`, which is `K c0^3 / 8 + a4` without `a2`.
+A term of power 6 and above is of higher order and adds nothing; a term of power 1 (no vertex curvature) and one of
+power 3 (a wavefront term of lower order than Seidel's) have no sums: an engine refuses them
+(`surface.asphere.linear-term`, `surface.asphere.cubic-term`). The sign is OpticStudio's: a positive surface converging
+a collimated beam has `SPHA > 0` (undercorrected). OpticStudio's wave coefficients are the totals over the line's vacuum
+wavelength: `W040 = SPHA / 8`, `W131 = COMA / 2`, `W222 = ASTI / 2`, `W220P = FCUR / 4` (the Petzval term, OpticStudio's
+`S4 = 4 W220P`), `W311 = DIST / 2`, `W020 = CLA / 2`, `W111 = CTR`, each over `lambda`; the comparison records them of
+each answer, and no engine states them.
+
+An `ok` answer states its invariant and the five totals of third order, every value it states finite; its surfaces
+ascend; without dispersion lines it states no chromatic sum. The schemas, corpus, quantity invariants and the stdlib
+Python port (`validate_seidel_native`) enforce these definitions.
+
+`ref-seidel` (`src/engines/refSeidel`) answers from the reference engine's model of the case (`buildRefSystem`,
+`vertexCurvature`), written from the optics alone: the sums above, each surface's sums that can cancel formed with the
+rounding of each product carried, the totals compensated, `tan` a series of basic operations. It states every surface
+and, of dispersion lines, `CLA` and `CTR`; under `sampling` `marginalSlopeImageSpace` and `chiefHeightAtImageMm`. A
+spec naming a line the case does not have is `bad-spec`; a case whose stop has no image in object space is an answer
+`unavailable` (`system.telecentric.object-space`); a folded path and a diffractive surface are not of its features. It
+is an engine of its own beside `ref`, so that nothing of it enters `ref`'s fingerprint or adapter revision.
+
+`optiland` answers with its own `aberrations` of a verified optic whose one field is `maxFieldDeg`: the totals are the
+negatives of `seidels()` (OpticStudio's sign is the opposite of optiland's on all five, as optiland's own cross-tool test
+against OpticStudio states), each surface's the negative of `third_order()`'s term times optiland's factor `-2 n' u'`, held
+to the total; the invariant the negative of `paraxial.invariant()`. Every setting is read back (`build-mismatch`
+otherwise). optiland's sums read a surface's radius and conic constant alone: a term of power 3 or 4 is refused
+(`surface.asphere.cubic-term`, `surface.asphere.quartic-term`), as are a phase profile and a term of power 1 or 2. It
+states no chromatic sum: its `TAchC` and `TchC` are of an optic dispersing between its wavelengths, and its optic of a
+line has one wavelength of a constant index. A system without first-order data is an answer `unavailable` with the
+item of `paraxial.first-order`.
+
+#### Rung R13b: the comparator's Seidel sums beside optiland's
+
+`r13b` asks one `seidel.native` request of each case whose run has a recipe (`seidelNativeSpec`): at line 0, of the
+largest field angle the recipe resolved, with the shortest and the longest of the case's lines as dispersion lines where
+it has two wavelengths or more; of `ref-seidel` and `optiland` only, and only where named. The answers are sorted before
+any difference by R5's sorting (`classifyNativeField`), the Lagrange invariant standing for the landing: unsupported (an
+answer has no sums), data of other wavelengths, data where the invariants lie further apart than `invariant.maxAbs`
+allows or an answer states none, then method. The figures, of answers of two methods: `invariant.maxAbs`; each total's
+difference `SPHA.maxAbs` to `CTR.maxAbs` (mm; one an answer does not state is unmeasured, the engine named);
+`total.maxScaled`, the largest difference of a total of third order over the larger sum of the magnitudes of its
+surfaces' terms in the two answers (the scale of what cancels in it); `surfaces.maxAbs`, the largest difference of one
+surface's sum, with the surface and the sum. Policy 23 states the figures' units and no limit or band (proposals for
+the owner in docs/REFERENCE.md, "Stage 6.8"). `seidelFactsOfRecorded` repeats the sorting from the recorded values.
+
+### `zernike.native`
+
+Version 1, added at Stage 6.8, changes no existing quantity, contract version or identity. Of each asked field, an
+engine's wavefront at one line, and what a fit of Zernike polynomials makes of it, in vacuum waves. LensVisualizer
+presents no wavefront; the engines that answer are `optiland` and `optiland-wave`. Rung R14b records it.
+
+| Spec member | Meaning |
+|---|---|
+| `line` | a line of the case |
+| `fieldAnglesDeg` | field angles in object space, degrees, an object toward +y positive |
+| `grid` | even, at least 4: the samples are the midpoints `(2 k + 1) / grid - 1` of the square of normalised pupil coordinates strictly inside the unit circle, as `wavefront.native`'s |
+| `ordering` | `standard`, OpticStudio's Zernike Standard: Noll's sequential index from 1 (within a radial order `n`, `\|m\|` ascending, of the two of one `\|m\| > 0` the even index the cosine), each polynomial of unit RMS over the unit disc (`sqrt(n + 1)` for `m = 0`, `sqrt(2 (n + 1))` otherwise); or `fringe`, OpticStudio's Zernike Fringe: the University of Arizona index from 1, unnormalised, at most 37 terms, the 37th the radial polynomial of order 12 |
+| `terms` | how many polynomials, from the first of the ordering, 1 to 231 |
+
+The wavefront. `W(x, y)` is the optical path difference in vacuum waves of a ray of normalised pupil coordinates
+`(x, y)`, referred to the sphere about the chief ray's landing on the case's image plane through the paraxial exit pupil
+(OpticStudio's reference to the chief ray): the chief ray's path less the ray's, so that `W` is positive where the
+wavefront leads, the chief ray's `W` is 0, and an undercorrected lens (`SPHA > 0`) has `W` rising toward the rim (the
+sign of OpticStudio's OPD and of `wavefront.native`'s `opdWaves`). The unit circle is the rim of the pupil as the
+engine's ray aiming defines it: with optiland's robust aiming, the stop's clip radius (OpticStudio with ray aiming). The
+frame is OpticStudio's and optiland's for the same field angle, the case's mirrored in y, as `wavefront.native`'s; the
+azimuth is `atan2(y, x)`, and a polynomial of `m > 0` is `N R_n^m(rho) cos(m theta)`, of `m < 0` `N R_n^|m|(rho)
+sin(|m| theta)`. Of OpticStudio's figures (Zernike Standard Coefficients), only these are defined here, of the valid
+samples, every sample of equal weight (one cell of the grid):
+
+| Field member | Meaning |
+|---|---|
+| `fieldAngleDeg` | as asked |
+| `imageHeightMm` | how far from the axis the chief ray lands on the case's image plane: what identifies the field; null where the engine states none |
+| `status`, `reason` | `ok`, or `unavailable` with a reason and no figure, coefficient or condition |
+| `coefficients` | the least-squares coefficients, waves, of the first `terms` polynomials of the ordering: piston and tilts kept (no tilt or piston is removed before the fit) |
+| `rmsToChiefWaves` | the root mean square of `W` about its mean: the piston removed, the tilt of the chief ray's reference kept |
+| `pvToChiefWaves` | the largest `W` less the smallest |
+| `fitResidualRmsWaves` | the root mean square of `W` less the fitted polynomials |
+| `fitCondition` | the condition of the fit's normal equations, `\|\|G\|\|_1 \|\|G^-1\|\|_1`, `G` the Gram matrix of the polynomials at the valid samples, as the engine computes it; null where it states none. Where the lit samples cover a strip of the disc (a vignetted field) polynomials that differ only outside it are nearly one: the coefficients carry about `log10 sqrt(fitCondition)` fewer digits, and of 2^52 or more none (the field is then `unavailable`, `ill-conditioned`) |
+| `validSamples` | how many samples the figures are of |
+| `sampling` | what else the engine states, by names of its own |
+
+An `ok` field states every figure, finite, a coefficient for every term, and at least as many valid samples as terms; the
+grid is even and a Fringe fit has at most 37 terms. The schemas, corpus, quantity invariants and the stdlib Python port
+(`validate_zernike_native`) enforce these definitions. OpticStudio's "to centroid" figures (the reference sphere
+moved to the image's centroid) are no member: whether its centroid is the rays' or a fitted tilt is not settled here.
+
+`optiland` answers with `wavefront.native`'s samples of one field and grid (`wavefront.wavefront_sample`, one fresh
+verified optic each, every setting read back) and optiland's own `ZernikeFit` of the valid ones, `ZernikeOPD`'s two steps
+(its distribution's coordinates and the OPD of the samples of positive intensity; `ZernikeOPD` itself takes a hexapolar
+grid only): OpticStudio's Standard is optiland's `noll` (its `standard` is the OSA/ANSI ordering), the Fringe its
+`fringe`, whose 37th polynomial is `rho^6 cos 6 theta`, not OpticStudio's: a Fringe fit of 37 terms is refused
+(`zernike.fringe-term-37`). The fit is read back (type, class, terms, points, coordinates and values, every `(n, m)` held
+to the contract's ordering, the coefficients' count). The RMS, the peak to valley, the residual (of optiland's own
+`zernike.poly`) and the condition (numpy's `cond` of order 1 of `G`, of optiland's own polynomials) are computed by the
+worker, since optiland has no accessor of them (its `OPD.rms()` keeps the piston). A field optiland raises on is
+`unavailable` with `optiland-raised-<class>`, one of fewer valid samples than terms with `too-few-samples` (the worker's,
+as `optiland-wave`'s); a finite object is unsupported, as for `wavefront.native`.
+
+`optiland-wave` answers with the comparator's estimator (`src/estimators/zernike.ts`) on optiland's own raw samples of
+the same wavefront: one `wavefront.native` request of the spec's line, angles and grid, validated and held to what was
+asked, then a fit by normal equations summed compensated, solved by Cholesky's factorisation and refined twice; the
+figures summed compensated. Same data, another fit: a difference is of the fits and of the figures' arithmetic, never of
+the wavefront.
+
+#### Rung R14b: optiland's Zernike fit beside the comparator's fit of the same samples
+
+`r14b` asks two `zernike.native` requests of each case whose run has a recipe (`zernikeNativeSpecs`): at line 0, of the
+angles the recipe resolved its fields to, on a grid of 128, one Standard of 37 terms and one Fringe of 36 (optiland's 37th
+Fringe polynomial is not OpticStudio's); of `optiland` and `optiland-wave` only, and only where named. Each field is sorted
+before any difference by R5's sorting: unsupported, data (other wavelengths; landings further apart than
+`chiefLanding.maxAbs` allows, or none stated), numerical (an answer states a condition above `fitCondition.max`: R5's
+reason `unconverged`), method. The figures, of fields of two methods: `chiefLanding.maxAbs`, `fitCondition.max` (the
+largest condition either answer states of a field both have figures of), `coefficients.maxAbs` (waves, with the field and
+the term), `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, and the counts `fields.compared`,
+`fields.data`, `fields.numerical`, `fields.unavailable`. Policy 23 states the units and no limit or band (proposals for
+the owner in docs/REFERENCE.md, "Stage 6.8"). `zernikeFactsOfRecorded` repeats the sorting from the recorded values.
 
 ### `wavefront.native`
 

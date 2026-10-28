@@ -9,6 +9,7 @@ import { LV_WAVE_ENGINE_ID, createLvWaveEngine } from "./lv/waveEngine.ts";
 import { LV_FLUX_ENGINE_ID, createLvFluxEngine } from "./lv/fluxEngine.ts";
 import { OPTILAND_ENGINE_ID, OPTILAND_TIMEOUTS, optilandDefinition } from "./optiland/definition.ts";
 import { REF_ENGINE_ID, createRefEngine } from "./ref/engine.ts";
+import { REF_SEIDEL_ENGINE_ID, createRefSeidelEngine } from "./refSeidel/engine.ts";
 import type { EngineTimeouts } from "./remote.ts";
 import type { Transport } from "../transports/transport.ts";
 import { OPTILAND_WAVE_ENGINE_ID, optilandWaveTransport } from "./optiland/wavefrontEngine.ts";
@@ -60,8 +61,8 @@ export type BuiltinEngines = {
  *
  * A built-in engine can be named with any configuration root (`--engines lv,ref`, a run's `engines`). It is not
  * one of the engines a run that names none is run on: those are the engines the configuration defines. `replay`,
- * `wave` and `flux` are run where the rung that is about each is run (`RungDefinition.engines`), and can be named like
- * any other.
+ * `wave`, `flux`, `optiland-wave` and `ref-seidel` are run where the rung that is about each is run
+ * (`RungDefinition.engines`), and can be named like any other.
  */
 export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [LV_ENGINE_ID]: ({ config }) => createLvEngine(config.lvPath),
@@ -71,4 +72,5 @@ export const BUILTIN_ENGINES: BuiltinEngines = Object.freeze({
   [LV_WAVE_ENGINE_ID]: ({ config }) => createLvWaveEngine(config.lvPath),
   [LV_FLUX_ENGINE_ID]: ({ config }) => createLvFluxEngine(config.lvPath),
   [OPTILAND_WAVE_ENGINE_ID]: { transport: optilandWaveTransport, timeouts: OPTILAND_TIMEOUTS },
+  [REF_SEIDEL_ENGINE_ID]: () => createRefSeidelEngine(),
 });

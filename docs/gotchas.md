@@ -3206,3 +3206,107 @@ afterwards the canaries of the lines below fail first and every case's stop radi
   exported, not two engines' computations to each other.
 - **Handled.** Stated in CONTRACT.md and the REFERENCE; no band.
 - **Class.** data: recorded.
+
+## Seidel sums and Zernike fits (Stage 6.8)
+
+Measured at LensVisualizer `098c91ef6` (engine closure `fef2e248`) and optiland `4e893f53`, on the 36 design-plane runs
+of the benchmark's reference and photopic lines wide open and its reference line at f/8, and on the features suite
+(`docs/REFERENCE.md`, "Stage 6.8"). LensVisualizer presents neither: these are of optiland, beside the comparator's
+`ref-seidel` (R13b) and its own fit of optiland's samples (`optiland-wave`, R14b). Each optiland behaviour below is
+pinned by a test of the real optiland (`test_seidel.py`, `test_zernike.py`).
+
+### optiland's Seidel sums are of the opposite sign to OpticStudio's
+
+- **Where.** `optic.aberrations.seidels()` returns `-sum(T) * 2 n' u'` of its per-surface terms of transverse
+  aberration (`_sum_seidels`), which for a positive surface converging a collimated beam is negative; OpticStudio (and
+  Welford's sums) list it positive, undercorrected. optiland's own cross-tool test of the Hubble telescope against
+  OpticStudio 2023 R1.02 compares the five as magnitudes for that reason ("OpticStudio's sign convention is the opposite
+  of Optiland's on all five terms").
+- **Effect.** Unnegated, every optiland sum would differ from `ref-seidel`'s by twice itself.
+- **Handled.** The worker negates the totals, each surface's sum and `paraxial.invariant()` (its sign is the contract's
+  negated too), and states it in the method. `test_seidel.py` holds the worker's sums of a single refracting surface to
+  the closed forms in OpticStudio's sign and optiland's raw `seidels()` to their negatives.
+- **Class.** convention.
+
+### optiland's Seidel sums do not read a term of power 3 or 4
+
+- **Where.** `ThirdOrderAberrations._get_conic_term` adds the departure of a surface from its sphere as
+  `(n' - n) K c^3 y^4` (in its sign): of the radius and the conic constant alone. An even asphere's term `a4 r^4` adds
+  `8 a4 (n' - n) y^4` to S1 (Welford; OpticStudio's sums include it), and a term of power 3 a wavefront term of lower
+  order than Seidel's.
+- **Effect.** optiland's sums of a lens with such a term are those of another lens. `test_seidel.py` pins it: a sphere
+  with and without a term `1e-5 r^4` has the same `seidels()` to the bit. Seven of the benchmark's eleven lenses have a
+  term of power 4; of the features suite's 18 runs ten have one, and two a term of power 3.
+- **Handled.** The worker refuses a case with a term of power 3 or 4 before anything is built
+  (`surface.asphere.cubic-term`, `surface.asphere.quartic-term`), as for a term of power 1 or 2 and a phase profile;
+  R13b is then UNSUPPORTED and `ref-seidel` answers alone. Whether to ask optiland to read the fourth-order term
+  upstream is the owner's.
+- **Class.** method: optiland's behaviour, refused.
+
+### optiland states no chromatic Seidel sum of the worker's optic of a line
+
+- **Where.** `TAchC` and `TchC` difference the indices at the shortest and the longest of an optic's wavelengths; the
+  builder makes one optic a line, of one wavelength and a constant index (`IdealMaterial`), so both are 0 there.
+- **Effect.** CLA and CTR are `ref-seidel`'s alone: R13b's `CLA.maxAbs` and `CTR.maxAbs` are unmeasured, optiland named.
+- **Handled.** optiland's answer states them null, with a note; asking them would need an optic of a table material of
+  the case's indices at three wavelengths, its read-back and its faults (the owner's to decide).
+- **Class.** unsupported.
+
+### optiland's 37th Fringe polynomial is not OpticStudio's
+
+- **Where.** `ZernikeFringe._index_to_number` orders the polynomials by `(1 + (n + |m|) / 2)^2 - 2 |m| + (m < 0)`, which
+  is the University of Arizona order for the first 36 and makes the 37th `(6, 6)`, rho^6 cos 6 theta. OpticStudio's
+  37-term Fringe set (and the University of Arizona's) ends with the radial polynomial of order 12, `(12, 0)`.
+- **Effect.** A 37-term Fringe fit of optiland's is of another basis: its 37th coefficient is of another polynomial, and
+  the others of another least-squares problem.
+- **Handled.** The worker refuses a Fringe fit of more than 36 terms (`zernike.fringe-term-37`) and holds every term of a
+  fit to the contract's ordering; R14b asks 36. The comparator's estimator has OpticStudio's 37th.
+- **Class.** method: optiland's behaviour, refused.
+
+### optiland's "standard" Zernike ordering is OSA/ANSI's, not OpticStudio's Standard
+
+- **Where.** optiland's `zernike_type="standard"` is the OSA/ANSI index from 0 (`(0, 0), (1, -1), (1, 1), ...`);
+  OpticStudio's Zernike Standard is Noll's index from 1 (`(0, 0), (1, 1), (1, -1), ...`), optiland's `"noll"` (its own
+  docstring says so).
+- **Effect.** Asked by OpticStudio's name, optiland would answer another order of the same normalised polynomials.
+- **Handled.** The contract names OpticStudio's orderings (`standard`, `fringe`); the worker maps `standard` to
+  optiland's `noll` and holds the `(n, m)` of every term.
+- **Class.** convention.
+
+### optiland's OPD.rms() keeps the piston, and remove_tilt keeps the fitted piston
+
+- **Where.** `OPD.rms()` is `sqrt(mean(opd^2))` of the samples of positive intensity: about the chief ray's path, not
+  about the mean. `Wavefront(remove_tilt=True)` calls `fit_and_remove_tilt(data)`, whose default `remove_piston=False`
+  subtracts only the tilt of the plane it fits (in the exit pupil's millimetres, weighted by intensity, with a ridge),
+  though `Wavefront`'s docstring says it "removes tilt and piston".
+- **Effect.** optiland's RMS is not OpticStudio's RMS of a wavefront (piston removed): on the double Gauss at 10 degrees
+  they differ by more than 1e-3 waves.
+- **Handled.** The worker computes the RMS about the mean, the peak to valley and the fit's residual of optiland's
+  samples (`math.fsum`), states that optiland has no accessor of them, and asks no tilt removal. `test_zernike.py` pins
+  both behaviours.
+- **Class.** convention.
+
+### optiland's ZernikeOPD takes a hexapolar grid only
+
+- **Where.** `ZernikeOPD.__init__` hands `OPD` `distribution="hexapolar"` with `num_rings`: a distribution of the
+  caller's would be a second value of one keyword.
+- **Effect.** Its fit cannot be of `wavefront.native`'s midpoint grid, which the comparator's estimator reads.
+- **Handled.** The worker takes `ZernikeOPD`'s two steps itself on the midpoint grid: `Wavefront`'s samples, then
+  `ZernikeFit` of the distribution's coordinates and the OPD of the samples of positive intensity. `test_zernike.py`
+  holds the two steps on `ZernikeOPD`'s own hexapolar grid to its coefficients bit for bit.
+- **Class.** method.
+
+### A Zernike fit of a vignetted field is ill-conditioned
+
+- **Where.** On a field whose rays get through only on a strip of the stop (the Sigma 35 mm wide open at 32 degrees:
+  2,562 of 12,892 cells, `0 <= y <= 0.51`), the polynomials are nearly dependent on the lit samples: optiland's design
+  matrix there has a condition of 1e17 to 1e19 (37 Standard terms), and the normal equations' condition `fitCondition`
+  reaches 1.4e13.
+- **Effect.** The coefficients are not determined by the samples: optiland's fit and the comparator's, of the same
+  samples and with residuals within 1.2e-11 waves of each other, differ by up to 1.29 waves in a coefficient. Below a
+  condition of 1e6 they agree within 3.2e-12 of the largest coefficient; the difference grows with the condition.
+- **Handled.** Both engines state the condition (`fitCondition`); of 2^52 or more a field is `unavailable`
+  (`ill-conditioned`). R14b sorts a field above the policy's `fitCondition.max` as numerical, in no figure; the limit is
+  the owner's to set (a proposal in docs/REFERENCE.md, "Stage 6.8"). Any least-squares fit of these polynomials over the
+  unit circle to samples lit on a strip has this conditioning; how OpticStudio treats such a field is not checked here.
+- **Class.** numerical.

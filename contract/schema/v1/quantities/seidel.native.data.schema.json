@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:seidel.native.data",
+  "title": "seidel.native data",
+  "description": "An engine's own third-order sums of a case at one line, in lens units (mm) under OpticStudio's names and signs: SPHA (S1), COMA (S2), ASTI (S3), FCUR (S4), DIST (S5), and the first-order chromatic sums CLA (CL) and CTR (CT), each of a surface and in total, and the Lagrange invariant of the two paraxial rays they are of. Each value is a number or null where the engine states none. Code checks that an unavailable answer says why and states nothing, that an ok answer states its invariant and the five Seidel totals, that every stated value is finite, that the surfaces ascend and are each listed once, and that no chromatic sum is stated without dispersion lines.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The line the sums are of, as it was requested, and its vacuum wavelength.",
+      "type": "object",
+      "properties": {
+        "index": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+        "wavelengthNm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+      },
+      "required": ["index", "wavelengthNm"],
+      "additionalProperties": false
+    },
+    "maxFieldDeg": {
+      "description": "The field angle of the chief ray of the sums, degrees, as it was requested.",
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 90
+    },
+    "dispersionLines": {
+      "description": "The two lines the chromatic sums are of, as they were requested; null where none was asked.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      ]
+    },
+    "status": {
+      "description": "ok: the engine stands by the values it states. unavailable: it states none, and says why.",
+      "enum": ["ok", "unavailable"]
+    },
+    "reason": {
+      "description": "The engine's own code for an answer that is not ok; always there for one that is not.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+    },
+    "invariant": {
+      "description": "The Lagrange invariant n (u_chief y_marginal - u_marginal y_chief) of the two paraxial rays, mm: what identifies the field and the aperture the sums are of. Null where the engine states none.",
+      "type": ["number", "null"]
+    },
+    "surfaces": {
+      "description": "The sums of each surface of the case the engine states them for, by ascending surface index, each once.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "surface": {
+            "description": "The index of the surface in system.surfaces.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "SPHA": { "$ref": "#/$defs/value" },
+          "COMA": { "$ref": "#/$defs/value" },
+          "ASTI": { "$ref": "#/$defs/value" },
+          "FCUR": { "$ref": "#/$defs/value" },
+          "DIST": { "$ref": "#/$defs/value" },
+          "CLA": { "$ref": "#/$defs/value" },
+          "CTR": { "$ref": "#/$defs/value" }
+        },
+        "required": ["surface", "SPHA", "COMA", "ASTI", "FCUR", "DIST", "CLA", "CTR"],
+        "additionalProperties": false
+      }
+    },
+    "total": {
+      "description": "The sums of the whole system.",
+      "type": "object",
+      "properties": {
+        "SPHA": { "$ref": "#/$defs/value" },
+        "COMA": { "$ref": "#/$defs/value" },
+        "ASTI": { "$ref": "#/$defs/value" },
+        "FCUR": { "$ref": "#/$defs/value" },
+        "DIST": { "$ref": "#/$defs/value" },
+        "CLA": { "$ref": "#/$defs/value" },
+        "CTR": { "$ref": "#/$defs/value" }
+      },
+      "required": ["SPHA", "COMA", "ASTI", "FCUR", "DIST", "CLA", "CTR"],
+      "additionalProperties": false
+    },
+    "sampling": {
+      "description": "What else the engine states of the answer, by names of its own.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "params": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+    }
+  },
+  "required": [
+    "line",
+    "maxFieldDeg",
+    "dispersionLines",
+    "status",
+    "invariant",
+    "surfaces",
+    "total",
+    "sampling",
+    "method",
+    "notes"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "value": {
+      "description": "A sum in lens units, mm; null where the engine states none.",
+      "type": ["number", "null"]
+    }
+  }
+}

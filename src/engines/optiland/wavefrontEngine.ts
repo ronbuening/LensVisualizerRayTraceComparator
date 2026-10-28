@@ -1,11 +1,17 @@
 // A comparator adapter with a worker-owned lifetime. Raw wavefronts come through the ordinary validated
-// optiland adapter; the pure comparator estimator runs in TypeScript. Existing engine closures stay unchanged.
+// optiland adapter; the pure comparator estimators run in TypeScript: the wave OTF for `mtf.native` (rung R6c) and the
+// Zernike fit for `zernike.native` (rung R14b). Existing engine closures stay unchanged.
 import type { EngineDescriptor } from "../../contract/engine.ts";
 import { engineStamp } from "../../contract/engine.ts";
 import { MTF_NATIVE, MTF_NATIVE_VERSION } from "../../contract/quantities/mtfNative.ts";
 import type { MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import { WAVEFRONT_NATIVE } from "../../contract/quantities/wavefrontNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../contract/quantities/wavefrontNative.ts";
+import { ZERNIKE_NATIVE, ZERNIKE_NATIVE_VERSION } from "../../contract/quantities/zernikeNative.ts";
+import type { ZernikeNativeSpec } from "../../contract/quantities/zernikeNative.ts";
+import type { OpticalCase } from "../../contract/case.ts";
+import type { QuantityRequest } from "../../contract/request.ts";
+import type { ResultEnvelope } from "../../contract/result.ts";
 import { makeRequest } from "../../contract/request.ts";
 import { makeResult } from "../../contract/result.ts";
 import type { LoadedConfig } from "../../core/config.ts";
@@ -14,6 +20,7 @@ import { sha256Hex } from "../../core/numeric/hash.ts";
 import { decodeNdArray } from "../../core/numeric/ndarray.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { wavefrontNativeQuantity } from "../../quantities/wavefrontNative.ts";
+import { zernikeNativeQuantity } from "../../quantities/zernikeNative.ts";
 import { createStdioTransport, workerEnvironment } from "../../transports/stdio.ts";
 import type { Transport } from "../../transports/transport.ts";
 import { adapterRevision } from "../adapterRevision.ts";
@@ -21,6 +28,7 @@ import { createProtocolHandler } from "../protocolHandler.ts";
 import { RemoteEngineAdapter } from "../remote.ts";
 import { OPTILAND_TIMEOUTS, optilandDefinition } from "./definition.ts";
 import { polychromaticWavefrontMtf, wavefrontMtf } from "./wavefrontMtf.ts";
+import { wavefrontZernike } from "./wavefrontZernike.ts";
 
 export const OPTILAND_WAVE_ENGINE_ID = "optiland-wave";
 
@@ -45,12 +53,19 @@ export function wavefrontTransport(transport: Transport): Transport {
           id: OPTILAND_WAVE_ENGINE_ID,
           adapterRevision: sha256Hex(`${native.identity.adapterRevision ?? ""}\n${revision}`),
         },
-        capabilities: { ...native.capabilities, quantities: { [MTF_NATIVE]: { version: MTF_NATIVE_VERSION } } },
+        capabilities: {
+          ...native.capabilities,
+          quantities: {
+            [MTF_NATIVE]: { version: MTF_NATIVE_VERSION },
+            [ZERNIKE_NATIVE]: { version: ZERNIKE_NATIVE_VERSION },
+          },
+        },
       };
       handler = createProtocolHandler({
         descriptor,
         run: async (request, opticalCase) => {
           const stamp = engineStamp(descriptor.identity);
+          if (request.quantity === ZERNIKE_NATIVE) return zernikeOf(source, native, request, opticalCase, stamp);
           const spec = request.spec as MtfNativeSpec;
           if (
             request.quantity !== MTF_NATIVE ||
@@ -169,6 +184,87 @@ export function wavefrontTransport(transport: Transport): Transport {
       await source.close();
     },
   };
+}
+
+/**
+ * `zernike.native` of the comparator's estimator on optiland's raw wavefront: one `wavefront.native` request of the
+ * spec's line, angles and grid to the worker, its answer validated and held to what was asked (its line, fields and
+ * grid, each sphere's centre on the case's image plane), then `wavefrontZernike`. A spec that is not the quantity's is
+ * `bad-spec`; a refusal or an error of the worker is passed on with its line named.
+ */
+async function zernikeOf(
+  source: RemoteEngineAdapter,
+  native: EngineDescriptor,
+  request: QuantityRequest,
+  opticalCase: OpticalCase,
+  stamp: ResultEnvelope["engine"],
+): Promise<ResultEnvelope> {
+  const issues = zernikeNativeQuantity.validateSpec(request.spec);
+  if (issues.length > 0)
+    return makeResult(request, stamp, {
+      status: "error",
+      error: { code: "bad-spec", message: JSON.stringify(issues) },
+    });
+  const spec = request.spec as ZernikeNativeSpec;
+  const rawSpec: WavefrontNativeSpec = {
+    line: spec.line,
+    fields: { kind: "angles-deg", values: spec.fieldAnglesDeg },
+    grids: [spec.grid],
+  };
+  const raw = makeRequest({
+    caseId: request.caseId,
+    quantity: WAVEFRONT_NATIVE,
+    spec: rawSpec,
+    ...(request.engineOptions === undefined ? {} : { engineOptions: request.engineOptions }),
+  });
+  const negotiation = negotiate(opticalCase, raw, native, wavefrontNativeQuantity.version);
+  if (negotiation.length > 0) return makeResult(request, stamp, { status: "unsupported", unsupported: negotiation });
+  const result = await source.run(raw, opticalCase);
+  if (result.status !== "ok") {
+    return makeResult(request, stamp, {
+      ...result,
+      ...(result.error === undefined
+        ? {}
+        : { error: { ...result.error, message: `line ${spec.line}: ${result.error.message}` } }),
+      ...(result.unsupported === undefined
+        ? {}
+        : {
+            unsupported: result.unsupported.map((item) => ({ ...item, message: `line ${spec.line}: ${item.message}` })),
+          }),
+    });
+  }
+  const problems = wavefrontNativeQuantity.validateData(result.data);
+  if (problems.length > 0)
+    return makeResult(request, stamp, {
+      status: "error",
+      error: { code: "invalid-wavefront", message: JSON.stringify(problems) },
+    });
+  const data = result.data as WavefrontNativeData;
+  const expected = opticalCase.conditions.lines[spec.line];
+  if (
+    data.line.index !== spec.line ||
+    data.line.wavelengthNm !== expected.wavelengthNm ||
+    data.fields.length !== spec.fieldAnglesDeg.length ||
+    data.fields.some((field, at) => field.fieldAngleDeg !== spec.fieldAnglesDeg[at]) ||
+    data.fields.some(
+      (field) => field.status === "ok" && String(field.samples.map((s) => s.gridSize)) !== String([spec.grid]),
+    ) ||
+    data.fields.some((field) =>
+      field.samples.some(
+        (sample) => !(Math.abs(sample.reference.sphereCenterMm[2] - opticalCase.conditions.imageZ) <= IMAGE_PLANE_MM),
+      ),
+    )
+  ) {
+    return makeResult(request, stamp, {
+      status: "error",
+      error: {
+        code: "wavefront-request-mismatch",
+        message: `line ${spec.line}: the wavefront answers other fields, grids or line`,
+      },
+    });
+  }
+  const zernike = wavefrontZernike(data, spec);
+  return makeResult(request, stamp, { status: "ok", data: zernike, method: zernike.method });
 }
 
 export function optilandWaveTransport(loaded: Pick<LoadedConfig, "rootDir" | "config">): Transport {

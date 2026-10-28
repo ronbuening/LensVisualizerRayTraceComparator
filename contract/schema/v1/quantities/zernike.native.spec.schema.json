@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:zernike.native.spec",
+  "title": "zernike.native spec",
+  "description": "What a zernike.native request asks for: of each field, an engine's wavefront at one line referred to the sphere about the chief ray's landing (OpticStudio's reference to the chief ray), sampled at the midpoints of a square grid strictly inside the unit circle of normalised pupil coordinates, its RMS and peak to valley in waves, and its least-squares Zernike coefficients in waves by the ordering asked. Code checks that the grid is even and that a Fringe fit asks at most 37 terms.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The line, an index in conditions.lines.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+    },
+    "fieldAnglesDeg": {
+      "description": "The field angles in object space, degrees, in the order the answer lists them. A positive angle is an object toward +y.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": -90,
+        "exclusiveMaximum": 90
+      },
+      "minItems": 1
+    },
+    "grid": {
+      "description": "The number of cells across the square of normalised pupil coordinates [-1, 1]: the samples are the midpoints (2 k + 1) / grid - 1 strictly inside the unit circle, as wavefront.native's.",
+      "type": "integer",
+      "minimum": 4
+    },
+    "ordering": {
+      "description": "standard: OpticStudio's Zernike Standard polynomials, Noll's sequential index from 1, each of unit RMS over the unit disc. fringe: OpticStudio's Zernike Fringe polynomials, the University of Arizona index from 1, unnormalised.",
+      "enum": ["standard", "fringe"]
+    },
+    "terms": {
+      "description": "How many polynomials the fit takes, from the first of the ordering.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 231
+    }
+  },
+  "required": ["line", "fieldAnglesDeg", "grid", "ordering", "terms"],
+  "additionalProperties": false
+}

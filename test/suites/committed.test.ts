@@ -56,6 +56,7 @@ for (const name of SUITE_NAMES) {
       "optiland",
       "optiland-wave",
       "ref",
+      "ref-seidel",
       "replay",
       "wave",
     ]);

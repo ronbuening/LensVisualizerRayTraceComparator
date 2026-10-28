@@ -67,12 +67,14 @@ test("system.describe and paraxial.first-order are registered, at the versions t
       "mtf.native",
       "paraxial.first-order",
       "rays.trace",
+      "seidel.native",
       "selftest.echo",
       "spot.native",
       "summary.native",
       "system.describe",
       "vignetting.native",
       "wavefront.native",
+      "zernike.native",
     ],
   );
 });

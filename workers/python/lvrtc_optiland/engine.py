@@ -15,8 +15,9 @@ read back and given its field there. A field optiland cannot compute is a row of
 ``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, ``axial.native`` with
 its own launch along the axis and real trace at each line and its paraxial focus there (``axial``), and
 ``chief.native`` with its own distortion model, its own chief rays across the field and its paraxial pupils
-(``chief``), ``curvature.native`` with its own ``FieldCurvature`` (``curvature``), and ``summary.native`` with its
-paraxial accessors and its working f-number (``summary``).
+(``chief``), ``curvature.native`` with its own ``FieldCurvature`` (``curvature``), ``summary.native`` with its
+paraxial accessors and its working f-number (``summary``), ``seidel.native`` with its ``aberrations.seidels()`` and
+``third_order()`` (``seidel``), and ``zernike.native`` with its ``ZernikeFit`` of its ``Wavefront`` (``zernike``).
 """
 
 from __future__ import annotations
@@ -63,13 +64,20 @@ from .summary import line_counts as summary_line_counts
 from .axial import field_counts as axial_field_counts
 from .spot import field_counts as spot_field_counts
 from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
+from .seidel import SEIDEL_NATIVE, answer_seidel
+from .seidel import answer_counts as seidel_counts
+from .seidel import term_refusals as seidel_term_refusals
+from .zernike import ZERNIKE_NATIVE, answer_zernike
+from .zernike import field_counts as zernike_field_counts
 from lvrtc_worker_kit.validate import (
     validate_axial_native,
     validate_chief_native,
     validate_curvature_native,
+    validate_seidel_native,
     validate_spot_native,
     validate_summary_native,
     validate_wavefront_native,
+    validate_zernike_native,
 )
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
@@ -112,6 +120,8 @@ QUANTITIES: dict[str, dict[str, Any]] = {
     CHIEF_NATIVE: {"version": 1},
     CURVATURE_NATIVE: {"version": 1},
     SUMMARY_NATIVE: {"version": 1},
+    SEIDEL_NATIVE: {"version": 1},
+    ZERNIKE_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -154,7 +164,8 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     optiland's first-order data, and for ``summary.native``, which states them, a phase profile, a term of power 1 and
     a term of power 2
     (``first_order.term_refusals``): optiland's paraxial model sees none of them, and would state the pupil and the
-    focus of another lens. The same for ``chief.native`` of distortion, whose chief rays optiland's default aiming
+    focus of another lens; for ``seidel.native`` those and a term of power 3 or 4, which optiland's Seidel sums do not
+    read (``seidel.term_refusals``). The same for ``chief.native`` of distortion, whose chief rays optiland's default aiming
     aims at its paraxial entrance pupil, and of pupils, which states its paraxial pupils. It is decided from the case,
     before anything is built.
     """
@@ -208,6 +219,8 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             CHIEF_NATIVE,
             CURVATURE_NATIVE,
             SUMMARY_NATIVE,
+            SEIDEL_NATIVE,
+            ZERNIKE_NATIVE,
         ):
             items.append(
                 {
@@ -228,6 +241,8 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             )
     if quantity in (PARAXIAL_FIRST_ORDER, AXIAL_NATIVE, SUMMARY_NATIVE):
         items.extend(term_refusals(case))
+    if quantity == SEIDEL_NATIVE:
+        items.extend(seidel_term_refusals(case))
     spec = request.get("spec")
     if quantity == CHIEF_NATIVE and isinstance(spec, dict) and spec.get("kind") in ("distortion", "pupils"):
         items.extend(term_refusals(case))
@@ -253,6 +268,10 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
         return validate_curvature_native("spec", spec, schemas)
     if quantity == SUMMARY_NATIVE:
         return validate_summary_native("spec", spec, schemas)
+    if quantity == SEIDEL_NATIVE:
+        return validate_seidel_native("spec", spec, schemas)
+    if quantity == ZERNIKE_NATIVE:
+        return validate_zernike_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -365,6 +384,10 @@ class OptilandEngine:
             return self._run_curvature(request, case, engine)
         if quantity == SUMMARY_NATIVE:
             return self._run_summary(request, case, engine)
+        if quantity == SEIDEL_NATIVE:
+            return self._run_seidel(request, case, engine)
+        if quantity == ZERNIKE_NATIVE:
+            return self._run_zernike(request, case, engine)
         if quantity == WAVEFRONT_NATIVE:
             try:
                 data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
@@ -549,6 +572,37 @@ class OptilandEngine:
             raise RuntimeError(f"the answer is not {SUMMARY_NATIVE} data: {format_issues(issues)}")
         counts = {"surfaces": len(case["system"]["surfaces"]), **summary_line_counts(data)}
         diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_seidel(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``seidel.native`` request whose spec is one: optiland's own sums (``seidel``)."""
+        try:
+            data = answer_seidel(request["spec"], case)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_seidel_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {SEIDEL_NATIVE} data: {format_issues(issues)}")
+        diagnostics = {"warnings": [], "counts": seidel_counts(data)}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+    def _run_zernike(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``zernike.native`` request whose spec is one: optiland's own fit (``zernike``)."""
+        try:
+            data = answer_zernike(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_zernike_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {ZERNIKE_NATIVE} data: {format_issues(issues)}")
+        diagnostics = {"warnings": [], "counts": zernike_field_counts(data)}
         return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
 
 

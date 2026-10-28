@@ -234,6 +234,8 @@ class DeclarationTest(unittest.TestCase):
                 "chief.native": {"version": 1},
                 "curvature.native": {"version": 1},
                 "summary.native": {"version": 1},
+                "seidel.native": {"version": 1},
+                "zernike.native": {"version": 1},
             },
         )
         self.assertEqual(QUANTITIES, capabilities["quantities"])

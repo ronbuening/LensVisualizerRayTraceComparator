@@ -38,11 +38,16 @@ import {
   r11aRung,
   r11bRung,
   r12bRung,
+  r13bRung,
+  r14bRung,
   rayTraceRequests,
+  seidelNativeSpec,
   selectRungs,
   selftestRung,
+  zernikeNativeSpecs,
 } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
+import type { MtfRecipe } from "../../src/core/mtfRecipe.ts";
 import { UsageError } from "../../src/core/usageError.ts";
 import { QUANTITIES } from "../../src/quantities/index.ts";
 import { ALL_FEATURES_CASE, RAYS_SPEC_LATTICE, RAYS_SPEC_SINGLET } from "../contract/corpus.ts";
@@ -72,7 +77,7 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b and r12b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b and r14b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
     [
@@ -99,6 +104,8 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
       "r11a",
       "r11b",
       "r12b",
+      "r13b",
+      "r14b",
     ],
   );
   assert.deepEqual(
@@ -127,6 +134,8 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
       r11aRung,
       r11bRung,
       r12bRung,
+      r13bRung,
+      r14bRung,
     ],
   );
   // The two rungs of the coma and bokeh tabs are made from the run's spot sets, and no other is; the two of the
@@ -164,15 +173,29 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a,
   // those need an engine that is not on every machine, and are run only where they are named.
   assert.deepEqual(
     RUNGS.filter((definition) => definition.needsRecipe === true),
-    [r4Rung, r4fRung, r5Rung, r5gRung, r6aRung, r6bRung, r6cRung],
+    [r4Rung, r4fRung, r5Rung, r5gRung, r6aRung, r6bRung, r6cRung, r13bRung, r14bRung],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.engines !== undefined),
-    [r4fRung, r5Rung, r5gRung, r6bRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung, r11bRung, r12bRung],
+    [
+      r4fRung,
+      r5Rung,
+      r5gRung,
+      r6bRung,
+      r6cRung,
+      r7bRung,
+      r8bRung,
+      r9bRung,
+      r10bRung,
+      r11bRung,
+      r12bRung,
+      r13bRung,
+      r14bRung,
+    ],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.onlyWhereNamed === true),
-    [r5Rung, r5gRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung, r11bRung, r12bRung],
+    [r5Rung, r5gRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung, r11bRung, r12bRung, r13bRung, r14bRung],
   );
   assert.equal(new Set(RUNGS.map((definition) => definition.id)).size, RUNGS.length);
   for (const definition of RUNGS) assert.ok(QUANTITIES.has(definition.quantity), definition.id);
@@ -364,7 +387,9 @@ test("a run that names no rungs gets every rung but those run only where named, 
         definition !== r9bRung &&
         definition !== r10bRung &&
         definition !== r11bRung &&
-        definition !== r12bRung,
+        definition !== r12bRung &&
+        definition !== r13bRung &&
+        definition !== r14bRung,
     ),
   );
   assert.deepEqual(selectRungs(["r5", "r0"]), [r0Rung, r5Rung]);
@@ -395,11 +420,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b',
+    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -424,7 +449,7 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b",
+    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b",
   );
 });
 
@@ -624,4 +649,63 @@ test("r10b asks the engines' own field-curve request of the sections, of lv and 
   assert.deepEqual(r10bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
   assert.deepEqual(r10bRung.engines, ["lv", "optiland"]);
   assert.equal(r10bRung.onlyWhereNamed, true);
+});
+
+/** A recipe LensVisualizer resolved of three fields, the full one at 21.5 degrees. */
+const SEIDEL_RECIPE: MtfRecipe = {
+  source: "lv",
+  plane: { kind: "design", shiftMm: 0 },
+  imageZ: 60,
+  stopSemiDiameter: 5,
+  lines: [{ wavelengthNm: 587.5618, weight: 1 }],
+  frequenciesPerMm: [10, 30],
+  referenceHeightMm: 21.5,
+  fields: [
+    { fraction: 0, angleDeg: 0, targetImageHeightMm: 0 },
+    { fraction: 0.5, angleDeg: 11.25, targetImageHeightMm: 10.75 },
+    { fraction: 1, angleDeg: 21.5, targetImageHeightMm: 21.5 },
+  ],
+};
+
+test("r13b asks one seidel.native request of the recipe's largest field, with dispersion lines of two wavelengths", () => {
+  const inputs = { raySets: [], recipe: SEIDEL_RECIPE };
+  const requests = r13bRung.buildRequests(SINGLET, RUN, inputs);
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [["seidel.native", { line: 0, maxFieldDeg: 21.5 }]],
+  );
+  // Of lines of several wavelengths, the shortest and the longest are the dispersion lines.
+  const lines = structuredClone(SINGLET);
+  (lines.conditions as unknown as { lines: unknown[] }).lines = [
+    { wavelengthNm: 587.5618, weight: 1, indexSource: "authored" },
+    { wavelengthNm: 656.2725, weight: 1, indexSource: "authored" },
+    { wavelengthNm: 486.1327, weight: 1, indexSource: "authored" },
+  ];
+  assert.deepEqual(seidelNativeSpec(lines, SEIDEL_RECIPE), { line: 0, maxFieldDeg: 21.5, dispersionLines: [2, 1] });
+  // Without a recipe, or of a recipe without an angle, nothing is asked.
+  assert.deepEqual(r13bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  const none: MtfRecipe = { ...SEIDEL_RECIPE, fields: [{ fraction: 1, angleDeg: null, targetImageHeightMm: 21.5 }] };
+  assert.equal(seidelNativeSpec(SINGLET, none), null);
+  assert.deepEqual(r13bRung.engines, ["ref-seidel", "optiland"]);
+  assert.equal(r13bRung.onlyWhereNamed, true);
+  assert.equal(r13bRung.needsRecipe, true);
+});
+
+test("r14b asks the Standard and the Fringe fit of the recipe's fields, of optiland and optiland-wave only", () => {
+  const requests = r14bRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: SEIDEL_RECIPE });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["zernike.native", { line: 0, fieldAnglesDeg: [0, 11.25, 21.5], grid: 128, ordering: "standard", terms: 37 }],
+      ["zernike.native", { line: 0, fieldAnglesDeg: [0, 11.25, 21.5], grid: 128, ordering: "fringe", terms: 36 }],
+    ],
+  );
+  const missing: MtfRecipe = {
+    ...SEIDEL_RECIPE,
+    fields: [...SEIDEL_RECIPE.fields, { fraction: 0.75, angleDeg: null, targetImageHeightMm: 16 }],
+  };
+  assert.deepEqual(zernikeNativeSpecs(missing), []);
+  assert.deepEqual(r14bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r14bRung.engines, ["optiland", "optiland-wave"]);
+  assert.equal(r14bRung.onlyWhereNamed, true);
 });

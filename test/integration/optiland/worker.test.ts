@@ -42,6 +42,8 @@ import { axialNativeQuantity } from "../../../src/quantities/axialNative.ts";
 import { chiefNativeQuantity } from "../../../src/quantities/chiefNative.ts";
 import { curvatureNativeQuantity } from "../../../src/quantities/curvatureNative.ts";
 import { summaryNativeQuantity } from "../../../src/quantities/summaryNative.ts";
+import { seidelNativeQuantity } from "../../../src/quantities/seidelNative.ts";
+import { zernikeNativeQuantity } from "../../../src/quantities/zernikeNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
@@ -213,8 +215,8 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
   // The built-system echo, the first-order data, the trace of given rays, its own MTF, wavefront, spots, axial rays,
-  // chief rays, field curves and summary, each at the version of its definition the comparator holds; every feature
-  // flag, no limit.
+  // chief rays, field curves, summary, Seidel sums and Zernike fit, each at the version of its definition the comparator
+  // holds; every feature flag, no limit.
   const offered = [
     systemDescribeQuantity,
     paraxialFirstOrderQuantity,
@@ -226,6 +228,8 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
     chiefNativeQuantity,
     curvatureNativeQuantity,
     summaryNativeQuantity,
+    seidelNativeQuantity,
+    zernikeNativeQuantity,
   ];
   assert.deepEqual(
     capabilities.quantities,
@@ -262,6 +266,8 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
     [chiefNativeQuantity.id]: { kind: "distortion", lines: [0], maxFieldDeg: 5, fieldAnglesDeg: [2.5, 5] },
     [curvatureNativeQuantity.id]: { lines: [0], maxFieldDeg: 5, fieldAnglesDeg: [0, 5] },
     [summaryNativeQuantity.id]: { lines: [0] },
+    [seidelNativeQuantity.id]: { line: 0, maxFieldDeg: 5 },
+    [zernikeNativeQuantity.id]: { line: 0, fieldAnglesDeg: [0], grid: 8, ordering: "standard", terms: 4 },
   };
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
     const spec = specs[quantity] ?? {};
@@ -314,8 +320,8 @@ test(
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
     // their own, R4f, R5, R5g, R6b, R7b, R8b, R9b, R10b, R11b and R12b, ask nobody anything of a case that no
-    // LensVisualizer sampled or exported; nor do the rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no
-    // recipe to take its frequencies from, nor R7a, R8a, R9a, R10a and R11a, whose spot, axial, chief, curvature and
+    // LensVisualizer sampled or exported, nor R13b and R14b of a run without a recipe to take a field from; nor do the
+    // rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its frequencies from, nor R7a, R8a, R9a, R10a and R11a, whose spot, axial, chief, curvature and
     // vignetting sets only LensVisualizer's tabs give.
     const rungs = RUNGS.filter(
       (rung) =>
@@ -348,6 +354,8 @@ test(
         "r11a",
         "r11b",
         "r12b",
+        "r13b",
+        "r14b",
       ],
     );
     assert.ok(manifest.jobs.length >= rungs.length);

@@ -37,6 +37,10 @@ import type {
 import { VIGNETTING_NATIVE } from "../../src/contract/quantities/vignettingNative.ts";
 import { SUMMARY_NATIVE } from "../../src/contract/quantities/summaryNative.ts";
 import type { SummaryNativeData, SummaryNativeSpec } from "../../src/contract/quantities/summaryNative.ts";
+import { SEIDEL_NATIVE } from "../../src/contract/quantities/seidelNative.ts";
+import type { SeidelNativeData, SeidelNativeSpec } from "../../src/contract/quantities/seidelNative.ts";
+import { ZERNIKE_NATIVE } from "../../src/contract/quantities/zernikeNative.ts";
+import type { ZernikeNativeData, ZernikeNativeSpec } from "../../src/contract/quantities/zernikeNative.ts";
 import type {
   VignettingNativeData,
   VignettingNativeField,
@@ -1078,6 +1082,118 @@ export const SUMMARY_DATA_TWO_LINES: SummaryNativeData = {
   ],
   method: { name: "synthetic-accessors", params: {} },
   notes: ["the second line has no paraxial data"],
+};
+
+// ── seidel.native ────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own third-order sums. The numbers describe no lens: every value is a dyadic fraction.
+
+/** The sums of a field of 20 degrees at the reference line, without colour. */
+export const SEIDEL_SPEC_ONE_LINE: SeidelNativeSpec = { line: 0, maxFieldDeg: 20 };
+
+/** The same with the chromatic sums of lines 1 and 2. */
+export const SEIDEL_SPEC_DISPERSION: SeidelNativeSpec = { line: 0, maxFieldDeg: 20, dispersionLines: [1, 2] };
+
+/** An answer to `SEIDEL_SPEC_DISPERSION` of an engine that states every sum of two surfaces and their total. */
+export const SEIDEL_DATA_TWO_SURFACES: SeidelNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  maxFieldDeg: 20,
+  dispersionLines: [1, 2],
+  status: "ok",
+  invariant: 1.25,
+  surfaces: [
+    { surface: 0, SPHA: 0.5, COMA: 0.25, ASTI: 0.125, FCUR: 0.0625, DIST: 0.03125, CLA: 0.375, CTR: 0.0625 },
+    { surface: 1, SPHA: -0.25, COMA: -0.125, ASTI: -0.0625, FCUR: 0.0625, DIST: -0.015625, CLA: -0.125, CTR: 0 },
+  ],
+  total: { SPHA: 0.25, COMA: 0.125, ASTI: 0.0625, FCUR: 0.125, DIST: 0.015625, CLA: 0.25, CTR: 0.0625 },
+  sampling: { imageSpaceMarginalSlope: -0.125 },
+  method: { name: "synthetic-sums", params: {} },
+  notes: [],
+};
+
+/** An answer to `SEIDEL_SPEC_ONE_LINE` of an engine that has no sums of the system, and says why. */
+export const SEIDEL_DATA_UNAVAILABLE: SeidelNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  maxFieldDeg: 20,
+  dispersionLines: null,
+  status: "unavailable",
+  reason: "system.afocal",
+  invariant: null,
+  surfaces: [],
+  total: { SPHA: null, COMA: null, ASTI: null, FCUR: null, DIST: null, CLA: null, CTR: null },
+  sampling: {},
+  method: { name: "synthetic-sums", params: {} },
+  notes: ["the system has no image-space marginal slope"],
+};
+
+// ── zernike.native ───────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own wavefront figures. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Four Standard terms of the axis and of a field of 10 degrees on a grid of 8. */
+export const ZERNIKE_SPEC_STANDARD: ZernikeNativeSpec = {
+  line: 0,
+  fieldAnglesDeg: [0, 10],
+  grid: 8,
+  ordering: "standard",
+  terms: 4,
+};
+
+/** The same in the Fringe ordering. */
+export const ZERNIKE_SPEC_FRINGE: ZernikeNativeSpec = { ...ZERNIKE_SPEC_STANDARD, ordering: "fringe" };
+
+/** An answer to `ZERNIKE_SPEC_STANDARD` whose second field is unavailable. */
+export const ZERNIKE_DATA_STANDARD: ZernikeNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  grid: 8,
+  ordering: "standard",
+  terms: 4,
+  fields: [
+    {
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      coefficients: [0.125, 0, 0, 0.0625],
+      rmsToChiefWaves: 0.0625,
+      pvToChiefWaves: 0.25,
+      fitResidualRmsWaves: 0.0078125,
+      fitCondition: 2.5,
+      validSamples: 32,
+      sampling: { gridSize: 8 },
+    },
+    {
+      fieldAngleDeg: 10,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "optiland-raised-ValueError",
+      coefficients: [],
+      rmsToChiefWaves: null,
+      pvToChiefWaves: null,
+      fitResidualRmsWaves: null,
+      fitCondition: null,
+      validSamples: 0,
+      sampling: {},
+    },
+  ],
+  method: { name: "synthetic-fit", params: {} },
+  notes: ["field 10: ValueError: a ray missed"],
+};
+
+/** An answer to `ZERNIKE_SPEC_FRINGE` with both fields. */
+export const ZERNIKE_DATA_FRINGE: ZernikeNativeData = {
+  ...ZERNIKE_DATA_STANDARD,
+  ordering: "fringe",
+  fields: [
+    { ...ZERNIKE_DATA_STANDARD.fields[0], coefficients: [0.25, 0, 0, 0.125] },
+    {
+      ...ZERNIKE_DATA_STANDARD.fields[0],
+      fieldAngleDeg: 10,
+      imageHeightMm: 8.5,
+      coefficients: [0.5, 0, -0.25, 0.125],
+      sampling: {},
+    },
+  ],
+  notes: [],
 };
 
 // ── mtf.native ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -3020,6 +3136,47 @@ export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
       "shifts-member": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/tangentialShiftMm", null, "additionalProperties"),
       "missing-notes": fault(VIGNETTING_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
       "no-fields": fault(VIGNETTING_DATA_TWO_LINES, "/fields", [], "minItems"),
+    },
+  },
+  [`${SEIDEL_NATIVE}.spec`]: {
+    valid: { "one-line": SEIDEL_SPEC_ONE_LINE, dispersion: SEIDEL_SPEC_DISPERSION },
+    invalid: {
+      "field-of-ninety": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", 90, "exclusiveMaximum"),
+      "negative-field": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", -1, "minimum"),
+      "missing-field": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", REMOVE, "required", ""),
+      "three-dispersion-lines": fault(SEIDEL_SPEC_DISPERSION, "/dispersionLines", [0, 1, 2], "maxItems"),
+      "lines-stated": fault(SEIDEL_SPEC_ONE_LINE, "/lines", [0], "additionalProperties"),
+    },
+  },
+  [`${SEIDEL_NATIVE}.data`]: {
+    valid: { "two-surfaces": SEIDEL_DATA_TWO_SURFACES, unavailable: SEIDEL_DATA_UNAVAILABLE },
+    invalid: {
+      "sum-as-text": fault(SEIDEL_DATA_TWO_SURFACES, "/total/SPHA", "0.25", "type"),
+      "missing-total-sum": fault(SEIDEL_DATA_TWO_SURFACES, "/total/CTR", REMOVE, "required", "/total"),
+      "wave-coefficient-member": fault(SEIDEL_DATA_TWO_SURFACES, "/total/W040", 0.5, "additionalProperties"),
+      "status-unconverged": fault(SEIDEL_DATA_TWO_SURFACES, "/status", "unconverged", "enum"),
+      "negative-surface": fault(SEIDEL_DATA_TWO_SURFACES, "/surfaces/0/surface", -1, "minimum"),
+      "missing-invariant": fault(SEIDEL_DATA_TWO_SURFACES, "/invariant", REMOVE, "required", ""),
+    },
+  },
+  [`${ZERNIKE_NATIVE}.spec`]: {
+    valid: { standard: ZERNIKE_SPEC_STANDARD, fringe: ZERNIKE_SPEC_FRINGE },
+    invalid: {
+      "unknown-ordering": fault(ZERNIKE_SPEC_STANDARD, "/ordering", "noll", "enum"),
+      "no-terms": fault(ZERNIKE_SPEC_STANDARD, "/terms", 0, "minimum"),
+      "grid-of-two": fault(ZERNIKE_SPEC_STANDARD, "/grid", 2, "minimum"),
+      "no-fields": fault(ZERNIKE_SPEC_STANDARD, "/fieldAnglesDeg", [], "minItems"),
+      "field-of-ninety": fault(ZERNIKE_SPEC_STANDARD, "/fieldAnglesDeg/1", 90, "exclusiveMaximum"),
+    },
+  },
+  [`${ZERNIKE_NATIVE}.data`]: {
+    valid: { "standard-and-unavailable": ZERNIKE_DATA_STANDARD, fringe: ZERNIKE_DATA_FRINGE },
+    invalid: {
+      "negative-rms": fault(ZERNIKE_DATA_STANDARD, "/fields/0/rmsToChiefWaves", -0.0625, "minimum"),
+      "status-unconverged": fault(ZERNIKE_DATA_STANDARD, "/fields/0/status", "unconverged", "enum"),
+      "missing-coefficients": fault(ZERNIKE_DATA_STANDARD, "/fields/0/coefficients", REMOVE, "required", "/fields/0"),
+      "no-fields": fault(ZERNIKE_DATA_STANDARD, "/fields", [], "minItems"),
+      "missing-grid": fault(ZERNIKE_DATA_STANDARD, "/grid", REMOVE, "required", ""),
     },
   },
   [`${SUMMARY_NATIVE}.spec`]: {

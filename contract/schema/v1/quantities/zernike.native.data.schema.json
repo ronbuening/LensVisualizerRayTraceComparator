@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:zernike.native.data",
+  "title": "zernike.native data",
+  "description": "An engine's own wavefront figures of a case at one line, per requested field: the RMS (piston removed) and the peak to valley of the wavefront referred to the chief ray, its least-squares Zernike coefficients by the ordering asked and what the fit leaves, all in vacuum waves, with the landing of the chief ray that identifies the field. Code checks that an unavailable field says why and states no figure and no condition, and that an ok field states every figure, a coefficient for every term, and at least as many valid samples as terms.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The line the wavefronts are of, as it was requested, and its vacuum wavelength.",
+      "type": "object",
+      "properties": {
+        "index": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/index" },
+        "wavelengthNm": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive" }
+      },
+      "required": ["index", "wavelengthNm"],
+      "additionalProperties": false
+    },
+    "grid": {
+      "description": "The grid the samples are of, as it was requested.",
+      "type": "integer",
+      "minimum": 4
+    },
+    "ordering": {
+      "description": "The ordering of the coefficients, as it was requested.",
+      "enum": ["standard", "fringe"]
+    },
+    "terms": {
+      "description": "How many coefficients an ok field states, as it was requested.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 231
+    },
+    "fields": {
+      "description": "One entry per requested field angle, in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fieldAngleDeg": {
+            "description": "The field angle, as it was requested.",
+            "type": "number"
+          },
+          "imageHeightMm": {
+            "description": "How far from the axis the field's chief ray lands on the image plane of the case, mm: what identifies the field. Null where the engine states none.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "status": {
+            "description": "ok: the engine stands by the figures it states. unavailable: it states none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for a field that is not ok; always there for one that is not.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "coefficients": {
+            "description": "The Zernike coefficients, waves, from the first term of the ordering: as many as terms for an ok field, none for an unavailable one.",
+            "type": "array",
+            "items": { "type": "number" }
+          },
+          "rmsToChiefWaves": {
+            "description": "The root mean square of the wavefront over the valid samples about its mean (piston removed), waves.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "pvToChiefWaves": {
+            "description": "The largest less the smallest wavefront over the valid samples, waves.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "fitResidualRmsWaves": {
+            "description": "The root mean square over the valid samples of the wavefront less the fitted polynomials, waves.",
+            "type": ["number", "null"],
+            "minimum": 0
+          },
+          "fitCondition": {
+            "description": "The condition of the fit's normal equations, ||G||_1 ||G^-1||_1, G the Gram matrix of the polynomials at the valid samples, as the engine computes it: how badly the samples determine the coefficients (a vignetted field's strip of the disc makes it large). Null where the engine states none.",
+            "type": ["number", "null"],
+            "exclusiveMinimum": 0
+          },
+          "validSamples": {
+            "description": "How many samples of the grid the figures are of: those the engine traced to the reference sphere with light.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "sampling": {
+            "description": "What else the engine states of the field, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": [
+          "fieldAngleDeg",
+          "imageHeightMm",
+          "status",
+          "coefficients",
+          "rmsToChiefWaves",
+          "pvToChiefWaves",
+          "fitResidualRmsWaves",
+          "fitCondition",
+          "validSamples",
+          "sampling"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" },
+        "params": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/object" }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": { "$ref": "urn:lvrtc:contract:v1:common#/$defs/text" }
+    }
+  },
+  "required": ["line", "grid", "ordering", "terms", "fields", "method", "notes"],
+  "additionalProperties": false
+}

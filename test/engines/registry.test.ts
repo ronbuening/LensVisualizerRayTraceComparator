@@ -469,14 +469,32 @@ test("what a factory rejects with is what create rejects with", async (t) => {
 
 // ── Built-in engines ─────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the built-in engines are lv, optiland, optiland-wave, ref, replay, wave and flux, and the registry lists them apart from the configured ones", (t) => {
-  assert.deepEqual(Object.keys(BUILTIN_ENGINES), ["lv", "optiland", "ref", "replay", "wave", "flux", "optiland-wave"]);
+test("the built-in engines are lv, optiland, optiland-wave, ref, ref-seidel, replay, wave and flux, and the registry lists them apart from the configured ones", (t) => {
+  assert.deepEqual(Object.keys(BUILTIN_ENGINES), [
+    "lv",
+    "optiland",
+    "ref",
+    "replay",
+    "wave",
+    "flux",
+    "optiland-wave",
+    "ref-seidel",
+  ]);
   assert.ok(Object.isFrozen(BUILTIN_ENGINES));
   const registry = createEngineRegistry(
     loadConfig({ rootDir: rootWith(t, { fake: inProcess(FAKE_ENGINE) }), env: {} }),
   );
   assert.deepEqual(registry.ids(), ["fake"]);
-  assert.deepEqual(registry.builtinIds(), ["flux", "lv", "optiland", "optiland-wave", "ref", "replay", "wave"]);
+  assert.deepEqual(registry.builtinIds(), [
+    "flux",
+    "lv",
+    "optiland",
+    "optiland-wave",
+    "ref",
+    "ref-seidel",
+    "replay",
+    "wave",
+  ]);
   assert.deepEqual(registryOf(rootWith(t, {})).builtinIds(), []);
 });
 
@@ -524,7 +542,16 @@ test("a definition replaces a built-in engine of the same id", async (t) => {
   const rootDir = rootWith(t, { ref: inProcess(FAKE_ENGINE, { id: "ref" }) });
   const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
   assert.deepEqual(registry.ids(), ["ref"]);
-  assert.deepEqual(registry.builtinIds(), ["flux", "lv", "optiland", "optiland-wave", "ref", "replay", "wave"]);
+  assert.deepEqual(registry.builtinIds(), [
+    "flux",
+    "lv",
+    "optiland",
+    "optiland-wave",
+    "ref",
+    "ref-seidel",
+    "replay",
+    "wave",
+  ]);
   const adapter = await registry.create("ref");
   t.after(() => adapter.close());
   const descriptor = await adapter.describe();

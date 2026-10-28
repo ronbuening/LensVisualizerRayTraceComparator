@@ -12,6 +12,8 @@ import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { ALL_FEATURES_CASE, SINGLET_CASE, WAVEFRONT_DATA } from "../../contract/corpus.ts";
 import { decodeNdArray, encodeNdArray } from "../../../src/core/numeric/ndarray.ts";
 import type { WavefrontNativeData } from "../../../src/contract/quantities/wavefrontNative.ts";
+import type { ZernikeNativeData } from "../../../src/contract/quantities/zernikeNative.ts";
+import { zernikeNativeQuantity } from "../../../src/quantities/zernikeNative.ts";
 import { polychromaticWavefrontMtf, wavefrontMtf } from "../../../src/engines/optiland/wavefrontMtf.ts";
 import type { QuantityRequest } from "../../../src/contract/request.ts";
 import { r6cRung, r6bRung, selectRungs } from "../../../src/core/rungs.ts";
@@ -110,7 +112,7 @@ test("the comparator adapter negotiates the raw quantity, preserves ids and fing
     const desc = await s.adapter.describe();
     assert.equal(desc.identity.fingerprint, descriptor.identity.fingerprint);
     assert.notEqual(desc.identity.adapterRevision, descriptor.identity.adapterRevision);
-    assert.deepEqual(desc.capabilities.quantities, { "mtf.native": { version: 1 } });
+    assert.deepEqual(desc.capabilities.quantities, { "mtf.native": { version: 1 }, "zernike.native": { version: 1 } });
     const result = await s.adapter.run(request(), SINGLET_CASE);
     assert.equal(result.status, "ok", JSON.stringify(result.error ?? result.unsupported));
     assert.equal(result.requestId, request().id);
@@ -203,7 +205,7 @@ test("R6c is named-only, uses R6b's native request and R5's angles, and has no f
   );
   assert.deepEqual(r6cRung.engineOptions?.(run, inputs, "optiland-wave"), { fieldAnglesDeg: [0, 5, 10] });
   const policy = loadPolicy();
-  assert.equal(policy.version, 22);
+  assert.equal(policy.version, 23);
   assert.deepEqual(policy.rungs.r6c, {
     ...policy.rungs.r5,
     metrics: {
@@ -308,4 +310,81 @@ test("a spectral field the estimator cannot compute states the estimator's code 
   const field = polychromaticWavefrontMtf([lit, dark], spec).fields[0];
   assert.equal(field.status, "unavailable");
   assert.equal(field.reason, "line 1: no-flux");
+});
+
+/** A Zernike request of the singlet's axis: four Standard terms on the stand-in's grid of 4. */
+const zernikeRequest = (more: Record<string, unknown> = {}) =>
+  makeRequest({
+    caseId: SINGLET_CASE.id,
+    quantity: "zernike.native",
+    spec: { line: 0, fieldAnglesDeg: [0], grid: 4, ordering: "standard", terms: 4, ...more },
+  });
+
+/** The stand-in's answer with a wavefront of piston 1/4, x tilt 1/8 and y tilt -1/16 in Standard terms. */
+function tilted(): WavefrontNativeData {
+  const body = sourceData();
+  const sample = body.fields[0].samples[0];
+  const pupil = decodeNdArray(sample.normalizedPupil).values;
+  const opd = Array.from(
+    { length: 16 },
+    (_, cell) => 0.25 + 0.125 * 2 * pupil[2 * cell] - 0.0625 * 2 * pupil[2 * cell + 1],
+  );
+  const field = { ...body.fields[0], samples: [{ ...sample, opdWaves: encodeNdArray(Float64Array.from(opd), [16]) }] };
+  return {
+    ...body,
+    fields: [field, ...body.fields.slice(1)],
+    line: { ...body.line, wavelengthNm: SINGLET_CASE.conditions.lines[0].wavelengthNm },
+  };
+}
+
+test("optiland-wave answers zernike.native with the comparator's fit of one raw wavefront request", async () => {
+  const s = setup(1, tilted());
+  try {
+    const desc = await s.adapter.describe();
+    assert.deepEqual(desc.capabilities.quantities, {
+      "mtf.native": { version: 1 },
+      "zernike.native": { version: 1 },
+    });
+    const result = await s.adapter.run(zernikeRequest(), SINGLET_CASE);
+    assert.equal(result.status, "ok", JSON.stringify(result.error ?? result.unsupported));
+    assert.deepEqual(s.asked[0].spec, { line: 0, fields: { kind: "angles-deg", values: [0] }, grids: [4] });
+    const data = result.data as unknown as ZernikeNativeData;
+    assert.deepEqual(zernikeNativeQuantity.validateData(data), []);
+    const [field] = data.fields;
+    assert.equal(field.status, "ok");
+    const expected = [0.25, 0.125, -0.0625, 0];
+    // The samples are made of the four polynomials exactly at the dyadic midpoints: the fit returns them within units.
+    field.coefficients.forEach((value, term) =>
+      assert.ok(Math.abs(value - expected[term]) <= 1e-15, `term ${term + 1}: ${value}`),
+    );
+    assert.ok((field.fitResidualRmsWaves as number) <= 1e-15);
+    assert.equal(field.validSamples, 12);
+    assert.equal(data.method.name, "comparator-zernike-optiland-wavefront");
+  } finally {
+    await s.adapter.close();
+  }
+  // Another grid in the answer, a spec that is no Zernike spec, and the worker's refusal.
+  const tilt = tilted();
+  const other: WavefrontNativeData = {
+    ...tilt,
+    fields: [{ ...tilt.fields[0], samples: [{ ...tilt.fields[0].samples[0], gridSize: 8 }] }, ...tilt.fields.slice(1)],
+  };
+  for (const [body, ask, status] of [
+    [other, zernikeRequest(), "error"],
+    [tilted(), zernikeRequest({ grid: 5 }), "error"],
+  ] as const) {
+    const t = setup(1, body);
+    try {
+      assert.equal((await t.adapter.run(ask, SINGLET_CASE)).status, status);
+    } finally {
+      await t.adapter.close();
+    }
+  }
+  const refusing = setup(2, tilted());
+  try {
+    assert.equal((await refusing.adapter.run(zernikeRequest(), SINGLET_CASE)).status, "unsupported");
+    assert.equal(refusing.asked.length, 0);
+  } finally {
+    await refusing.adapter.close();
+  }
 });

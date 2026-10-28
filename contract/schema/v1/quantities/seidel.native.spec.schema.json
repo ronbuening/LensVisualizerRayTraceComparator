@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:seidel.native.spec",
+  "title": "seidel.native spec",
+  "description": "What a seidel.native request asks for: an engine's own third-order (Seidel) sums of a system at one line, surface by surface and in total, in OpticStudio's names and signs, of the paraxial marginal ray through the rim of the stop and the paraxial chief ray of the field maxFieldDeg through the centre of the stop; and, where dispersionLines is stated, the two first-order chromatic sums of the index differences between those two lines. Code checks that the two dispersion lines are distinct.",
+  "type": "object",
+  "properties": {
+    "line": {
+      "description": "The line, an index in conditions.lines, whose indices the paraxial rays are traced with: OpticStudio's primary wavelength.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+    },
+    "maxFieldDeg": {
+      "description": "The field angle in object space, degrees, that is the chief ray of the sums (OpticStudio's maximum field, H = 1): its paraxial slope in object space is tan(maxFieldDeg).",
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 90
+    },
+    "dispersionLines": {
+      "description": "Two lines, indices in conditions.lines, the shorter wavelength first: the chromatic sums are of the index of the first less the index of the second, in each medium. Left out, the answer states no chromatic sum.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    }
+  },
+  "required": ["line", "maxFieldDeg"],
+  "additionalProperties": false
+}

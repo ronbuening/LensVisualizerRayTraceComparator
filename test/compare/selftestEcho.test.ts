@@ -165,12 +165,14 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
       ["rays.trace", "r7a"],
       ["rays.trace", "r8a"],
       ["rays.trace", "r9a"],
+      ["seidel.native", "r13b"],
       ["selftest.echo", undefined],
       ["spot.native", "r7b"],
       ["summary.native", "r12b"],
       ["system.describe", undefined],
       ["vignetting.native", "r11b"],
       ["wavefront.native", undefined],
+      ["zernike.native", "r14b"],
     ],
   );
 });

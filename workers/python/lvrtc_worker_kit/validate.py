@@ -842,6 +842,97 @@ def validate_summary_native(part: str, value: Any, schemas: SchemaSet | None = N
     return issues
 
 
+SEIDEL_SUMS: tuple[str, ...] = ("SPHA", "COMA", "ASTI", "FCUR", "DIST", "CLA", "CTR")
+"""The sums of ``seidel.native``, in OpticStudio's order and names; the first five are of third order."""
+
+
+def validate_seidel_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/seidelNative.ts: schema, the dispersion lines, and what an answer states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("seidel.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        pair = value.get("dispersionLines")
+        if pair is not None and pair[0] == pair[1]:
+            issue("/dispersionLines", "the two dispersion lines are two lines")
+        return issues
+    stated = [value["total"][name] for name in SEIDEL_SUMS if value["total"][name] is not None]
+    if value["status"] == "unavailable":
+        if "reason" not in value or value["invariant"] is not None or value["surfaces"] or stated:
+            issue("", "an unavailable answer has a reason and states no value")
+        return issues
+    if value["invariant"] is None or any(value["total"][name] is None for name in SEIDEL_SUMS[:5]):
+        issue("/total", "an ok answer states its invariant and the five sums of third order")
+
+    def finite(path: str, sums: dict[str, Any]) -> None:
+        for name in SEIDEL_SUMS:
+            entry = sums[name]
+            if entry is not None and not math.isfinite(entry):
+                issue(f"{path}/{name}", "a value an ok answer states is a finite number")
+
+    if value["invariant"] is not None and not math.isfinite(value["invariant"]):
+        issue("/invariant", "a value an ok answer states is a finite number")
+    finite("/total", value["total"])
+    for at, surface in enumerate(value["surfaces"]):
+        finite(f"/surfaces/{at}", surface)
+        if at > 0 and not surface["surface"] > value["surfaces"][at - 1]["surface"]:
+            issue(f"/surfaces/{at}/surface", "the surfaces ascend and are each listed once")
+    pair = value["dispersionLines"]
+    if pair is None:
+        if any(sums[name] is not None for sums in (value["total"], *value["surfaces"]) for name in SEIDEL_SUMS[5:]):
+            issue("/dispersionLines", "a chromatic sum is of two dispersion lines")
+    elif pair[0] == pair[1]:
+        issue("/dispersionLines", "the two dispersion lines are two lines")
+    return issues
+
+
+FRINGE_MAX_TERMS = 37
+"""The most terms a Fringe fit of ``zernike.native`` takes: OpticStudio's 37."""
+
+ZERNIKE_FIGURES: tuple[str, ...] = ("rmsToChiefWaves", "pvToChiefWaves", "fitResidualRmsWaves")
+"""The figures of a field of ``zernike.native`` that are numbers or null."""
+
+
+def validate_zernike_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/zernikeNative.ts: schema, the grid and the terms, and what a field states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("zernike.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if value["grid"] % 2 != 0:
+        issue("/grid", "the grid is even")
+    if value["ordering"] == "fringe" and value["terms"] > FRINGE_MAX_TERMS:
+        issue("/terms", f"a Fringe fit takes at most {FRINGE_MAX_TERMS} terms")
+    if part == "spec":
+        return issues
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        figures = [field[name] for name in ZERNIKE_FIGURES]
+        if field["status"] == "unavailable":
+            stated = field["coefficients"] or any(entry is not None for entry in figures) or field["fitCondition"] is not None
+            if "reason" not in field or stated:
+                issue(path, "an unavailable field has a reason and states no figure")
+            continue
+        coefficients = field["coefficients"]
+        if len(coefficients) != value["terms"] or not all(math.isfinite(entry) for entry in coefficients):
+            issue(f"{path}/coefficients", "an ok field states a finite coefficient for every term")
+        condition = field["fitCondition"]
+        if any(entry is None or not math.isfinite(entry) for entry in figures) or (
+            condition is not None and not math.isfinite(condition)
+        ):
+            issue(path, "an ok field states every figure, finite")
+        if field["validSamples"] < value["terms"]:
+            issue(f"{path}/validSamples", "an ok field has at least as many valid samples as terms")
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

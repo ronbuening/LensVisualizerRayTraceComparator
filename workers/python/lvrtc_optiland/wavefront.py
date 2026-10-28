@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import time
+from dataclasses import dataclass
 from typing import Any, Callable
 
 from lvrtc_worker_kit.ndarray import encode_ndarray
@@ -48,7 +49,37 @@ def verify_launch(optic: Any, angle: float, api: Any) -> None:
         raise BuildMismatch("wavefront chief launch direction differs from its field angle")
 
 
+@dataclass(frozen=True)
+class RawSample:
+    """One grid of one field as ``Wavefront.get_data`` gave it, every setting read back: the full midpoint square
+    (``x``, ``y``, row-major, dark cells included), the traced cells (``inside``), and per cell its point on the
+    reference sphere, OPD in vacuum waves, intensity and validity; the sphere's centre, radius and the exit pupil."""
+
+    grid: int
+    x: list[float]
+    y: list[float]
+    inside: list[int]
+    pupil: list[float]
+    opd: list[float]
+    intensity: list[float]
+    valid: list[int]
+    center: list[float]
+    radius: float
+    exit_pupil: list[float]
+
+
 def wavefront_step(case: dict[str, Any], line: int, angle: float, n: int) -> dict[str, Any]:
+    """One grid of one field of ``wavefront.native``: ``wavefront_sample``, encoded."""
+    raw = wavefront_sample(case, line, angle, n)
+    return {"gridSize": n, "normalizedPupil": encode_ndarray("f8", [v for pair in zip(raw.x, raw.y) for v in pair],
+                                                             [n*n, 2]),
+            "pupilMm": encode_ndarray("f8", raw.pupil, [n*n, 3]), "opdWaves": encode_ndarray("f8", raw.opd),
+            "intensity": encode_ndarray("f8", raw.intensity), "valid": encode_ndarray("u1", raw.valid),
+            "reference": {"strategy": "chief_ray", "removeTilt": False, "sphereCenterMm": raw.center,
+                          "radiusMm": raw.radius, "exitPupilMm": raw.exit_pupil}}
+
+
+def wavefront_sample(case: dict[str, Any], line: int, angle: float, n: int) -> RawSample:
     """Read back every analysis setting, distribution and returned row on an optic used by no other analysis."""
     from optiland.distribution import BaseDistribution  # noqa: PLC0415 - after worker hygiene
     from optiland.wavefront import Wavefront  # noqa: PLC0415
@@ -119,11 +150,8 @@ def wavefront_step(case: dict[str, Any], line: int, angle: float, n: int) -> dic
         valid[cell] = int(intensity[cell] > 0)
     if not any(valid):
         raise ValueError("wavefront has no positive-intensity samples")
-    return {"gridSize": n, "normalizedPupil": encode_ndarray("f8", [v for pair in zip(x, y) for v in pair], [n*n, 2]),
-            "pupilMm": encode_ndarray("f8", pupil, [n*n, 3]), "opdWaves": encode_ndarray("f8", opd),
-            "intensity": encode_ndarray("f8", intensity), "valid": encode_ndarray("u1", valid),
-            "reference": {"strategy": "chief_ray", "removeTilt": False, "sphereCenterMm": center,
-                          "radiusMm": radius, "exitPupilMm": xp}}
+    return RawSample(grid=n, x=x, y=y, inside=inside, pupil=pupil, opd=opd, intensity=intensity, valid=valid,
+                     center=center, radius=radius, exit_pupil=xp)
 
 
 def answer_wavefront(spec: dict[str, Any], options: dict[str, Any], case: dict[str, Any],

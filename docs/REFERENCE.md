@@ -3792,8 +3792,8 @@ through the stop's.
 
 ### The Phase 6 end refresh
 
-This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6, 6.6b or 6.7. Policy versions 16, 17, 18, 19, 20, 21 and 22
-change the policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
+This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6, 6.6b, 6.7 or 6.8. Policy versions 16, 17, 18, 19, 20, 21, 22
+and 23 change the policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
 other than the catalog's are STALE:
 - by policy;
 - by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
@@ -3811,7 +3811,8 @@ vignetting sets below one degree and of the lateral colour: where a set's rays m
 `baseline check` names before the write. focus-stations (finite objects)
 and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b, R11b and R12b
 stay out of every baseline. Stage 6.7 adds no gated rung: the summary tab is covered by R1, which every rays baseline
-already holds.
+already holds. Stage 6.8 adds none either: R13b and R14b stay out of every baseline, and its Seidel sums are an engine of
+their own (`ref-seidel`), so `ref`'s fingerprint and adapter revision still did not move.
 At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
 another:
 
@@ -5183,3 +5184,144 @@ its effective f-number is an estimate of the paraxial working one.
    sizing ray and the linear stop-down. The change is pending (the owner holds its prompt). Until it lands R12b records
    LensVisualizer as it is; afterwards the canaries of those lines fail first, every case's stop radius moves (so every
    case id and baseline record), and the summary's request, R12b's asks and these measurements are redone.
+
+## Stage 6.8: Seidel sums, wavefront and Zernike fits
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r13b,r14b --jobs 4   # of ref-seidel, optiland, optiland-wave whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents no Seidel sums, no wavefront map and no Zernike coefficients (at `098c91ef6`: no tab, section or
+hook computes them; `mtfWaveLattice` and `waveLatticeOtf` of `src/optics/analysis/mtf/mtfWavefront.ts` are an MTF's
+internals that no tab presents, and the spherical-aberration primer's "wavefront" panel is a drawing of a fixed curve).
+The stage is therefore of optiland beside the comparator: two quantities, each answered by optiland from its own
+objects and by the comparator's own code, and a recorded rung of each.
+
+| Quantity | Definition (OpticStudio's names) | optiland | The comparator's |
+|---|---|---|---|
+| `seidel.native` v1 | SPHA, COMA, ASTI, FCUR, DIST (S1 to S5) and CLA, CTR of two dispersion lines, mm, per surface and in total; Welford's sums of the paraxial marginal ray through the stop's rim and the chief ray of slope tan(maxFieldDeg) through its centre; OpticStudio's sign (S1 > 0 undercorrected); the conic and the term of power 4 of an asphere; W040 = SPHA / 8 lambda and the other wave coefficients recorded | `aberrations.seidels()` and `third_order()`, negated (its sign is OpticStudio's opposite); terms of power 3 and 4 refused (it reads the conic alone); no chromatic sum of its one-line optic | `ref-seidel`: the reference engine's model, the sums from the optics alone, compensated |
+| `zernike.native` v1 | of each field, W in vacuum waves about the chief ray's reference sphere (positive where the wavefront leads), on `wavefront.native`'s midpoint grid of normalised stop coordinates (robust aiming); RMS about the mean, peak to valley, Standard (Noll, unit RMS) or Fringe (University of Arizona, 37 at most) coefficients with piston and tilt kept, the residual and the condition of the normal equations | `Wavefront` samples and its own `ZernikeFit` (`ZernikeOPD`'s two steps on the midpoint grid); `noll` for Standard; Fringe 37 refused | `optiland-wave`: the comparator's estimator (`src/estimators/zernike.ts`) on optiland's raw `wavefront.native` samples of the same wavefront |
+
+**`ref-seidel` and its proofs.** An engine of its own (`src/engines/refSeidel`), so that nothing of it is in `ref`'s
+fingerprint (the files of `src/engines/ref`) or adapter revision (the import closure of `engines/ref/engine.ts`, which the
+rays baselines hold): it imports `ref`'s model, paraxial kernel and fingerprint, `ref` imports nothing of it, and a test
+holds the closure apart. Its fingerprint is of both directories, its revision the closure of its own module.
+`test/engines/refSeidel/seidel.test.ts` derives every expected value another way: `tan` of an angle against a series in
+whole numbers (π by Machin's formula); a refracting surface that is its own stop by the closed forms of its eccentricity;
+its S1 as the limit of a real ray's longitudinal aberration (Richardson's extrapolation of exact sphere refractions, to
+1e-9); an aplanatic surface (S1 = S2 = S3 = 0 to 1e-18) and a surface centred on the stop (S2 = S3 = S5 = 0); a thin lens
+with the stop on it (S3 = H^2 K, S4 = H^2 K / n, S5 = 0); the Petzval sum of three separated thin lenses; a plane-parallel
+plate in a diverging beam (Welford's closed forms); a Cartesian ellipsoid without S1, a fourth-order plate's 8 a4 (n' - n)
+y^4, a term `r^2 / 100` that is the paraboloid of radius 50; the stop-shift identities between one lens stopped in two
+places (with a conic and a term of power 4); the colour of thin lenses in contact and an achromat without it.
+
+**The estimator and its proofs** (`test/estimators/zernike.test.ts`): the orderings against Noll's rule and the
+University of Arizona list (and OpticStudio's 37th, the radial polynomial of order 12); the radial coefficients against
+the orthogonal polynomials of the disc by Gram-Schmidt in exact fractions, and the norms by the exact integral (mean
+square 1 over the disc); each value at dyadic points against exact fractions within a bound derived term by term; the
+exact zero of every product of polynomials of other parity on the symmetric grid; the fit of a wavefront made of known
+Fringe polynomials, a pure defocus (rho^2 = Z1 / 2 + Z4 / (2 sqrt 3)) and a pure spherical aberration (rho^4 = Z1 / 3 +
+Z4 / (2 sqrt 3) + Z11 / (6 sqrt 5)); the RMS and peak to valley in whole numbers with a piston of 2^30 (a plain mean is
+some hundred units off); the condition, exact on the symmetric grid, and the strips of the disc where the fit keeps no
+digit.
+
+**`ref` as a third Zernike answer: not covered.** It would have to trace optiland's own pupil rays. `wavefront.native` v1
+carries of a sample its normalised coordinate, its point on the reference sphere and its OPD, not the ray's launch; with
+the robust aiming a normalised coordinate is optiland's aimer's solution at the stop (to 1e-10 mm), which `ref` could only
+repeat with an aimer of its own: other rays, an independent method rather than identical rays. Either a version 2 of
+`wavefront.native` carrying each sample's launch (then `ref` traces those rays and forms its own OPD) or `ref`'s own
+aiming and reference sphere would make one; v1 is unchanged here, and the choice is the owner's.
+
+### Measured, 2026-10-27
+
+At LensVisualizer `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`, `--rungs r13b,r14b --jobs 4` into
+a temporary `LVRTC_RUNS_DIR`: the 36 design-plane runs of the benchmark's reference and photopic lines wide open and its
+reference line at the f/8 comparison (216 jobs, 2 min 52 s), and R13b on the features suite (18 runs, seconds). The
+peak simultaneous RSS of the four slots, each with two optiland workers, was 8.95 GiB (2.31 GiB a slot), within the 2.5
+GiB a job the pool estimates outside R6c.
+
+**R13b** (`ref-seidel` against optiland): benchmark 12 RECORDED, 24 UNSUPPORTED (optiland refuses the seven lenses of a
+term of power 4); features 6 RECORDED, 12 UNSUPPORTED (ten of a term of power 4, two of power 3, which `ref-seidel`
+refuses too). Over the 18 pairs of two methods:
+
+| Figure | Largest | Where |
+|---|---:|---|
+| `invariant.maxAbs` | 2.66e-15 mm | Sony FE 400 mm |
+| `SPHA.maxAbs` | 1.42e-15 mm | Canon EF 135 mm, photopic |
+| `COMA.maxAbs` | 1.20e-15 mm | e-line, photopic |
+| `ASTI.maxAbs` | 1.73e-15 mm | e-line, photopic |
+| `FCUR.maxAbs` | 4.7e-16 mm | e-line |
+| `DIST.maxAbs` | 2.61e-15 mm | GF 63 mm, photopic |
+| `total.maxScaled` | 7.15e-16 | zero-asphere (a total over the larger sum of its surfaces' magnitudes) |
+| `surfaces.maxAbs` | 8.44e-15 mm | Sony FE 400 mm, surface 4, SPHA |
+| `CLA.maxAbs`, `CTR.maxAbs` | unmeasured | optiland states none |
+
+One definition, one number: the two engines' sums agree to the rounding of what cancels in them. The sums themselves,
+recorded with OpticStudio's wave coefficients (`W040`, ...), run from W040 = -4.7 waves (Plena, photopic) to 9.9 (Sigma
+45 mm), and `ref-seidel`'s CLA of the photopic runs from -2.2e-3 to 1.5e-2 mm.
+
+**R14b** (optiland's fit against the comparator's, of the same samples): 72 pairs RECORDED (two orderings of each run, five
+fields each: 360 fields, every one answered by both). The RMS agrees within 1.4e-17 waves and the peak to valley to the
+bit; the two conditions agree within 1.1e-8 of each other below 1e8. The coefficients' agreement is a matter of the
+condition alone:
+
+| Fields of a condition at most | Fields | `coefficients.maxAbs` | Of the largest coefficient | `fitResidualRms.maxAbs` |
+|---|---:|---:|---:|---:|
+| 1e3 | 225 | 3.1e-14 waves | 1.2e-14 | 3.5e-17 waves |
+| 1e4 | 246 | 3.1e-14 | 2.7e-14 | 3.5e-17 |
+| 1e5 | 268 | 2.6e-13 | 1.7e-13 | 6.9e-17 |
+| 1e6 | 295 | 3.0e-12 | 3.2e-12 | 6.9e-17 |
+| 1e8 | 331 | 4.8e-10 | 2.5e-10 | 6.9e-17 |
+| 1e10 | 356 | 5.8e-7 | 1.1e-8 | 6.8e-16 |
+| all (to 1.4e13) | 360 | 1.29 | 2.3e-5 | 1.2e-11 |
+
+The Standard set on a fully lit disc has a condition of 1.08, the unnormalised Fringe set 20.6; vignetting raises it, to
+1.4e13 at the Sigma 35 mm's full field wide open (2,562 of 12,892 cells lit, on a strip), where the two fits differ by
+1.29 waves in the y tilt with residuals 1.2e-11 waves apart: the samples do not determine the coefficients
+(`docs/gotchas.md`, "A Zernike fit of a vignetted field is ill-conditioned").
+
+**The two quantities' signs hold together.** Of a pure third-order spherical aberration `W = W040 rho^4`, the Standard
+coefficient of the axis is `Z11 = W040 / (6 sqrt 5)`. At the f/8 comparison, where third order dominates, `6 sqrt 5 Z11`
+of optiland's fit of the axis has the sign of `ref-seidel`'s W040 on all twelve configurations, and is 0.71 to 1.44 times
+it on ten (the Z 24-70 mm wide 0.0537 against 0.0559 waves, its tele end -0.0454 against -0.0622; the Sony FE 20 mm
+2.6 times a W040 of 5e-4 waves, the Sigma 45 mm 0.35 times, where higher orders weigh): the OPD sign (positive where the
+wavefront leads) and the Seidel sign (S1 > 0 undercorrected) are OpticStudio's together. Wide open the higher orders
+part them (the Z 50 mm, 3.6 against 5.2).
+
+**The rays baselines.** `baseline check benchmark --jobs 4` into a temporary store (47 s): no DRIFT; 1,440 records
+REFRESHABLE, STALE(engine, policy), as at Stage 6.7. The adapter revisions of `lv`, `ref`, `replay`, `wave` and `flux`
+did not move at this stage (no file of their closures changed); the worker's files moved `optiland`'s and
+`optiland-wave`'s; `ref-seidel` is new.
+
+### Proposals for the owner (not decided)
+
+Policy 23 states the figures of both rungs with their units and no limit or band. From the measurement, in the manner of
+earlier stages (ten times the largest measured, rounded up to one digit):
+
+1. **R13b**: `invariant.maxAbs` the limit of the sorting at 3e-14 mm (measured 2.66e-15); an attention band of 8e-15 on
+   `total.maxScaled` (measured 7.15e-16), the figure that is of the rounding's scale; none on the absolute sums, whose
+   size goes with the lens's.
+2. **R14b**: `fitCondition.max` the second limit of the sorting at 1e6 (a field above it numerical, in no figure; the
+   coefficients carry about three fewer digits there, and 295 of the 360 fields are within it); `chiefLanding.maxAbs` at
+   1e-9 mm (the worker's own plane tolerance; measured 0, one optiland trace of the chief ray each); attention bands of
+   4e-11 waves on `coefficients.maxAbs` (3.0e-12 within the limit), 2e-16 on `rmsToChief.maxAbs` (1.4e-17) and 7e-16 on
+   `fitResidualRms.maxAbs` (6.9e-17); none on `pvToChief.maxAbs` (one subtraction of the same two doubles).
+3. **optiland's chromatic Seidel sums**: an optic of a table material of the case's indices at three wavelengths, read
+   back with its faults, would let optiland answer CLA and CTR (its `TAchC`, `TchC`); not built here.
+4. **`ref` as a third Zernike answer**: `wavefront.native` v2 carrying each sample's launch, or `ref`'s own aiming (above).
+5. **Upstream (optiland)**: its Seidel sums omit a term of power 4; its 37th Fringe polynomial is not OpticStudio's;
+   `Wavefront`'s docstring says `remove_tilt` removes the piston, which it keeps. Whether to report them is the owner's.
+
+### The validation matrix
+
+The plan's Phase 6 line asks for `reports/benchmark/validation-matrix.md`, a row for every LensVisualizer analysis tab. It
+does not exist. It would be a report rendered from committed baselines alone (deterministic, held by `lvrtc verify`,
+its sentences wording templates), with a row per tab: MTF (R4, R4f, R6a gated; R5, R5g, R6b, R6c recorded), coma and bokeh
+(R7a; R7b), spherical aberration and axial colour (R8a; R8b), distortion, lateral colour, pupils and breathing (R9a and
+R1; R9b), field curves and astigmatism (R10a; R10b), vignetting and relative illumination (R11a; R11b), the summary (R1;
+R12b), and a row of what LensVisualizer has no tab of (Seidel, wavefront, Zernike: R13b, R14b, engines against the
+comparator), each with its gated verdicts on the benchmark and its not-covered items. It needs: R7a to R11a in the
+benchmark's rays baseline, which only the Phase 6 end refresh writes; and a committed record of the recorded rungs
+R7b to R14b, which are in no baseline (a baseline of recorded rungs, as the MTF baseline holds R5, would be the owner's
+to decide), or a matrix that names them without figures. It is due with the end refresh, not before.

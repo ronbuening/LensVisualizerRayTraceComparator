@@ -70,6 +70,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10a, the tangential and sagittal foci of the field-curve sections' parabasal rays and real-ray fans (gated), and R10b, the sections beside optiland's own FieldCurvature (recorded, only where named, in no baseline)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11a, which rays of the vignetting tab's beams get through, their flux into the image and the landings of its mapping's chief rays (gated), and R11b, the tab beside the flux of LV's lattices, engine flux (recorded, only where named, in no baseline); several minutes and about 10 GB of the store from empty
 node bin/lvrtc.mjs run suites/benchmark.json --rungs r12b --jobs 4   # R12b, LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number (recorded, only where named, in no baseline; asked of lv and optiland); seconds
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r13b,r14b --jobs 4   # R13b, the comparator's Seidel sums (ref-seidel) beside optiland's, and R14b, optiland's Zernike fit beside the comparator's of the same samples (optiland-wave); recorded, only where named, in no baseline; about 8 min
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
@@ -317,7 +318,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   clip at, which raised no version); `paraxial.first-order` is version 1. `mtf.native` is version
   1 and is answered by `lv`, `replay`, `wave` and `optiland`. `spot.native`, `axial.native`, `chief.native` and
   `curvature.native` are version 1 and are answered by `lv` and `optiland`; `vignetting.native` is version 1 and is
-  answered by `lv` and `flux`; `summary.native` is version 1 and is answered by `lv` and `optiland`.
+  answered by `lv` and `flux`; `summary.native` is version 1 and is answered by `lv` and `optiland`; `seidel.native` is
+  version 1 and is answered by `ref-seidel` and `optiland`, `zernike.native` version 1 by `optiland` and `optiland-wave`.
 - **optiland's first-order data is asked, not computed** (`lvrtc_optiland/first_order.py`). Every value is an
   accessor of `optic.paraxial` of the line's optic with only its reference changed: `F1()`, `P1()`, `EPL()` are
   from the first surface (add the first vertex); `F2()`, `P2()`, `XPL()` are from the image surface (add the
@@ -362,11 +364,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **An exception in an engine's `run` is a result** of status "error", code `engine-failure`, `ok: true`, in the
   Python kit as in `createProtocolHandler`. `ok: false` is for what the protocol could not handle, and for an
   engine that cannot describe itself.
-- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `flux`, `optiland`, `optiland-wave`) live in `src/engines/builtin.ts`** and run only where
+- **Built-in engines (`ref`, `lv`, `replay`, `wave`, `flux`, `optiland`, `optiland-wave`, `ref-seidel`) live in `src/engines/builtin.ts`** and run only where
   named: `--engines` or a suite's `engines`. The one exception is a rung that is about engines of its own
   (`RungDefinition.engines`): `r4f` is asked of `lv` and `replay`, `r6b` of `lv` and `wave`, and `r6c` (run only where named) of `lv`, `wave`, `optiland` and `optiland-wave`, whatever
   `--engines` or a run names, `r7b`, `r8b`, `r9b` and `r10b` (each run only where named) of `lv` and `optiland`, and
-  `r11b` (run only where named) of `lv` and `flux`, and `r12b` (run only where named) of `lv` and `optiland`; `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
+  `r11b` (run only where named) of `lv` and `flux`, and `r12b` (run only where named) of `lv` and `optiland`, `r13b` of
+  `ref-seidel` and `optiland` and `r14b` of `optiland` and `optiland-wave` (each run only where named); `r5` and `r5g` are run only where they are named. `ref` is written from the optics alone; never port LV's or optiland's code into it. `lv`
   answers only from LV's own prepared state and re-exports every case (`stale-case`, `case-source`).
 - **`ref` is the arbiter, and its proof is analytic.** Every claim of its tracer is held to a closed form derived
   in the test (`test/engines/ref/trace.test.ts`, `exact.test.ts`), never to another tracer's output. A sum that can
@@ -707,7 +710,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   into the image, `raysVignetting.ts`) those of the vignetting sets. `spot.native` has the one
   comparator of `r7b` (`spotNative.ts`), `axial.native` the one of `r8b` (`axialNative.ts`), `chief.native` the one of
   `r9b` (`chiefNative.ts`), `curvature.native` the one of `r10b` (`curvatureNative.ts`), `vignetting.native` the one of
-  `r11b` (`vignettingNative.ts`), `summary.native` the one of `r12b` (`summaryNative.ts`).
+  `r11b` (`vignettingNative.ts`), `summary.native` the one of `r12b` (`summaryNative.ts`), `seidel.native` the one of
+  `r13b` (`seidelNative.ts`), `zernike.native` the one of `r14b` (`zernikeNative.ts`).
 - **A comparator is given the request's spec and the run's case** (`ComparisonContext`) and says "not comparable"
   when it needs one that is missing; it never guesses. A metric it cannot measure on two answers goes under
   `unmeasured`, is not judged, and is named in the pair's reason.
@@ -1049,7 +1053,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
   this repository hold together") fail only on policy identity (v15 recorded, a later version at hand: v16 at Stage
-  6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6, v21 at Stage 6.6b, v22 at Stage 6.7):
+  6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6, v21 at Stage 6.6b, v22 at Stage 6.7,
+  v23 at Stage 6.8):
   never weaken either.
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
@@ -1560,3 +1565,90 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - The adapter revisions of `lv`, `replay`, `wave` and `flux` moved (the stage's names, of modules already loaded: LV's
   engine closure is unchanged, `fef2e248`), and the worker's files moved `optiland`'s and `optiland-wave`'s; `ref`'s did
   not. No gated rung joins the Phase 6 end refresh.
+
+## Stage 6.8 Seidel sums, wavefront and Zernike fits
+
+- **LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients** (at `098c91ef6`: `mtfWaveLattice` and
+  `waveLatticeOtf` are an MTF's internals no tab presents; the spherical-aberration primer's wavefront panel is a fixed
+  drawing). The stage is optiland beside the comparator, by OpticStudio's conventions (the owner's principle,
+  2026-10-27: match OpticStudio with ray aiming, and CODE V, wherever possible). No identical-ray rung, no `lv` answer.
+- **`seidel.native` v1 (contract 1.0)**: spec `line`, `maxFieldDeg` (0 to below 90: OpticStudio's maximum field, H = 1),
+  optional `dispersionLines` (two lines, the shorter wavelength first); answer `invariant` (the Lagrange invariant
+  `n (u_chief y_marginal - u_marginal y_chief)`, mm: what identifies field and aperture), `surfaces[]` and `total` of
+  OpticStudio's SPHA, COMA, ASTI, FCUR, DIST, CLA, CTR in mm (each null where none is stated), `status`/`reason`,
+  `sampling`. Welford's sums of the paraxial marginal ray through the stop's rim (+stopSemiDiameter) and the chief ray of
+  object-space slope `tan(maxFieldDeg)` through the stop's centre; OpticStudio's sign (S1 > 0 undercorrected); an
+  asphere's conic and term of power 4 enter through `b = ((1 + K) c0^3 - c^3) / 8 + a4`; a term of power 1 or 3 has no
+  sums. OpticStudio's wave coefficients (`W040 = SPHA / 8 lambda`, `W131`, `W222`, `W220P = FCUR / 4 lambda`, `W311`,
+  `W020`, `W111`) are formed by the comparator (`recorded`), never stated by an engine. Schema, corpus, invariants and
+  `validate_seidel_native` change together.
+- **`ref-seidel` is the reference engine's model and the comparator's sums** (`src/engines/refSeidel`), an engine of its
+  own so that `ref`'s fingerprint (the files of `src/engines/ref`) and adapter revision (its module's closure), which the
+  rays baselines hold, do not move: it imports `ref`'s model, paraxial kernel and fingerprint, `ref` imports nothing of
+  it (`seidel.test.ts` holds the closures apart). Its fingerprint is of both directories. Written from the optics alone,
+  only basic operations (`tanDegrees` a series on a reduced argument), each sum that can cancel within a surface formed
+  with the product's rounding carried, the totals compensated. Its proofs are analytic
+  (`test/engines/refSeidel/seidel.test.ts`): `tan` against a whole-number series, a single surface's closed forms, S1 as
+  the limit of a real ray's longitudinal aberration, an aplanatic surface, a surface centred on the stop, a thin lens,
+  the Petzval sum, a plane-parallel plate, a Cartesian ellipsoid, a fourth-order plate, a paraboloid of a term of power 2,
+  the stop-shift identities, the colour of a thin achromat. Never port optiland's sums into it.
+- **optiland answers `seidel.native` with its own `aberrations`** (`lvrtc_optiland/seidel.py`) of a verified optic whose
+  one field is `maxFieldDeg` (`field_optic`): totals the negated `seidels()`, a surface's the negated `third_order()` term
+  times optiland's own factor `2 n' u'`, held to the total (`SURFACE_SUM_TOLERANCE`), the invariant the negated
+  `paraxial.invariant()`: optiland's sign is OpticStudio's opposite on all five (its own cross-tool test says so). Its
+  sums read a surface's radius and conic alone: a term of power 3 or 4 is refused (`surface.asphere.cubic-term`,
+  `surface.asphere.quartic-term`, `seidel.term_refusals`), as are a phase profile and a term of power 1 or 2. It states
+  no chromatic sum (its optic of a line has one wavelength of a constant index; the owner may decide on a dispersive
+  optic). Every setting read back (aperture, wavelength, image index, largest field, surface count, marginal start,
+  chief slope within 4 ulp of `tan`, chief height at the stop, `third_order()`'s total), each with a deliberate fault in
+  `test_seidel.py`, which holds the worker's sums to a single surface's closed forms and pins optiland's raw sign and its
+  blindness to a term of power 4.
+- **`zernike.native` v1 (contract 1.0)**: spec `line`, `fieldAnglesDeg`, `grid` (even: `wavefront.native`'s midpoints),
+  `ordering` (`standard`: OpticStudio's Zernike Standard, Noll's index, unit RMS; `fringe`: OpticStudio's Fringe, 37 at
+  most, the 37th `(12, 0)`), `terms` (1 to 231); per field `imageHeightMm` (the landing that identifies it),
+  `coefficients` (piston and tilt kept), `rmsToChiefWaves` (about the mean), `pvToChiefWaves`, `fitResidualRmsWaves`,
+  `fitCondition` (`||G||_1 ||G^-1||_1` of the normal equations), `validSamples`. W is OpticStudio's OPD sign (chief's path
+  less the ray's, vacuum waves), about the chief ray's reference sphere, in optiland's frame (the case's mirrored in y),
+  unit circle the stop under robust aiming. Schema, corpus, invariants and `validate_zernike_native` change together.
+- **optiland answers `zernike.native` with its own `ZernikeFit` of its `Wavefront` samples** (`lvrtc_optiland/zernike.py`):
+  `wavefront_sample` (the refactored read-back path of `wavefront.native`, unchanged in what it returns) of one field and
+  grid, then `ZernikeOPD`'s two steps on that grid (`ZernikeOPD` takes a hexapolar grid only: `test_zernike.py` holds the
+  two steps to it bit for bit). OpticStudio's Standard is optiland's `noll` (its `standard` is OSA/ANSI); its Fringe 37th
+  polynomial is `(6, 6)`: a Fringe fit of 37 terms is refused (`zernike.fringe-term-37`). The fit is read back (type,
+  class, terms, points, coordinates and values bit for bit, every `(n, m)`, the coefficients' count), each with a fault.
+  RMS, peak to valley, residual (of optiland's `zernike.poly`) and condition (numpy's `cond(G, 1)` of optiland's own
+  polynomials) are the worker's, stated as such (`OPD.rms()` keeps the piston); a condition of 2^52 or more is
+  `unavailable` (`ill-conditioned`), and fewer valid samples than terms `too-few-samples` (`TooFewSamples`, before
+  optiland is asked, as `optiland-wave` says it). `test_zernike.py` holds a Fringe fit to its exact least squares in
+  fractions.
+- **`optiland-wave` also answers `zernike.native`**: one `wavefront.native` request of the spec's line, angles and grid,
+  validated and held to what was asked, then the pure estimator `src/estimators/zernike.ts` (compensated normal
+  equations, Cholesky, two refinements; `normalCondition`; `ill-conditioned` at 2^52, `degenerate-fit` where Cholesky
+  fails). Its proofs are analytic (`test/estimators/zernike.test.ts`): orderings from their definitions, radial
+  polynomials by Gram-Schmidt in fractions, norms by the exact disc integral, values at dyadic points, parity zeros on
+  the grid, recovery of known polynomials, pure defocus and spherical aberration, RMS with a piston of 2^30, the exact
+  condition and the strips that leave no digit. The estimator is in no engine's closure but `optiland-wave`'s.
+- **R13b and R14b are recorded, only where named, out of every baseline** (policy 23): R13b of `ref-seidel` and optiland
+  (`seidelNativeSpec`: line 0, the recipe's largest field angle, the shortest and longest lines as dispersion lines),
+  sorted by R5's `classifyNativeField` with the invariant as the landing (`invariant.maxAbs`), figures each total's
+  `.maxAbs`, `total.maxScaled` (over the larger sum of the surfaces' magnitudes) and `surfaces.maxAbs`; R14b of optiland
+  and `optiland-wave` (`zernikeNativeSpecs`: line 0, the recipe's angles, grid 128, Standard 37 and Fringe 36), sorted by
+  R5's classes with `chiefLanding.maxAbs` and, as numerical (R5's `unconverged`), by `fitCondition.max`; figures
+  `coefficients.maxAbs`, `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, counts of fields.
+  `seidelFactsOfRecorded` and `zernikeFactsOfRecorded` repeat the sortings: change them with `recorded`. **Policy 23
+  states units and no limit or band**: the owner's to set (proposals in `docs/REFERENCE.md`, "Stage 6.8": R13b
+  `invariant.maxAbs` 3e-14 mm, a band of 8e-15 on `total.maxScaled`; R14b `fitCondition.max` 1e6, `chiefLanding.maxAbs`
+  1e-9 mm, bands 4e-11 waves on `coefficients.maxAbs`, 2e-16 on `rmsToChief.maxAbs`, 7e-16 on `fitResidualRms.maxAbs`).
+- **Measured** (`docs/REFERENCE.md`, "Stage 6.8"; 36 design-plane runs of the benchmark and the features suite): R13b 18
+  pairs of two methods, totals within 2.6e-15 mm, scaled 7.2e-16, invariants within 2.7e-15 mm, 36 refused by optiland
+  (a term of power 3 or 4); R14b 360 fields, RMS within 1.4e-17 waves, peak to valley to the bit, coefficients within
+  3.0e-12 waves below a condition of 1e6 and up to 1.29 waves on the Sigma 35 mm's full field (condition 1.4e13, a
+  vignetted strip of the pupil: `docs/gotchas.md`, "A Zernike fit of a vignetted field is ill-conditioned"). Two optiland
+  workers a slot peaked at 2.31 GiB, within the 2.5 GiB estimate (`jobEstimateGiB` unchanged).
+- **Not covered**: `ref` as a third Zernike answer (`wavefront.native` v1 carries no launch rays; a v2 with them, or
+  `ref`'s own aiming, would make one: the owner's), optiland's chromatic Seidel sums, OpticStudio's "to centroid"
+  figures, LensVisualizer (no tab). `reports/benchmark/validation-matrix.md` does not exist; what it needs is in the
+  REFERENCE (due with the end refresh).
+- The adapter revisions of `optiland` and `optiland-wave` moved (worker files, the kit's `validate.py`, the estimator);
+  `lv`, `ref`, `replay`, `wave` and `flux` did not (no file of their closures changed); `ref-seidel` is new. No gated
+  rung joins the Phase 6 end refresh.

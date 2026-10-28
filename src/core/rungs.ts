@@ -20,6 +20,10 @@ import { VIGNETTING_NATIVE } from "../contract/quantities/vignettingNative.ts";
 import type { VignettingNativeSpec } from "../contract/quantities/vignettingNative.ts";
 import { SUMMARY_NATIVE } from "../contract/quantities/summaryNative.ts";
 import type { SummaryNativeSpec } from "../contract/quantities/summaryNative.ts";
+import { SEIDEL_NATIVE } from "../contract/quantities/seidelNative.ts";
+import type { SeidelNativeSpec } from "../contract/quantities/seidelNative.ts";
+import { ZERNIKE_NATIVE } from "../contract/quantities/zernikeNative.ts";
+import type { ZernikeNativeSpec, ZernikeOrdering } from "../contract/quantities/zernikeNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
@@ -800,6 +804,98 @@ export const r12bRung: RungDefinition = Object.freeze({
   },
 });
 
+/** The engines of the rung `r13b`: the comparator's sums on the reference engine's model, and optiland's own. */
+export const R13B_ENGINES: readonly string[] = Object.freeze(["ref-seidel", "optiland"]);
+
+/**
+ * The `seidel.native` spec of a case and its recipe: at the case's first line (its reference line, OpticStudio's
+ * primary wavelength), of the largest field angle the recipe resolved (OpticStudio's maximum field), and, for a case of
+ * lines of two wavelengths or more, of its shortest and its longest line as dispersion lines (OpticStudio's extremes of
+ * the system's wavelengths). Null where the recipe resolved no angle below 90 degrees.
+ */
+export function seidelNativeSpec(opticalCase: OpticalCase, recipe: MtfRecipe): SeidelNativeSpec | null {
+  const angles = recipe.fields.flatMap((field) => (field.angleDeg === null ? [] : [Math.abs(field.angleDeg)]));
+  if (angles.length === 0) return null;
+  const maxFieldDeg = Math.max(...angles);
+  if (!(maxFieldDeg < 90)) return null;
+  const wavelengths = opticalCase.conditions.lines.map((line) => line.wavelengthNm);
+  const shortest = wavelengths.indexOf(Math.min(...wavelengths));
+  const longest = wavelengths.indexOf(Math.max(...wavelengths));
+  return { line: 0, maxFieldDeg, ...(shortest === longest ? {} : { dispersionLines: [shortest, longest] }) };
+}
+
+/**
+ * The rung `r13b`, the engines' own Seidel sums: one `seidel.native` request (`seidelNativeSpec`) of each case whose
+ * run has a recipe, asked of `ref-seidel`, the comparator's sums on the reference engine's model, and of optiland, its
+ * own `aberrations`. Recorded, of those two engines and of no other, and run only where it is named: optiland is not on
+ * every machine. LensVisualizer presents no Seidel sums.
+ */
+export const r13bRung: RungDefinition = Object.freeze({
+  id: "r13b",
+  quantity: SEIDEL_NATIVE,
+  needsRecipe: true,
+  engines: R13B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    const spec = recipe === null ? null : seidelNativeSpec(opticalCase, recipe);
+    return spec === null
+      ? []
+      : [makeRequest({ caseId: opticalCase.id, quantity: SEIDEL_NATIVE, spec: spec as unknown as JsonObject })];
+  },
+});
+
+/** The engines of the rung `r14b`: optiland's own Zernike fit, and the comparator's fit of optiland's raw samples. */
+export const R14B_ENGINES: readonly string[] = Object.freeze(["optiland", "optiland-wave"]);
+
+/** The grid of `r14b`'s samples: cells across the square of normalised pupil coordinates, R6c's first. */
+export const ZERNIKE_GRID = 128;
+
+/**
+ * The orderings `r14b` asks, each with its number of terms: OpticStudio's 37 Standard ones, and 36 Fringe ones, since
+ * optiland's 37th Fringe polynomial is not OpticStudio's (docs/gotchas.md).
+ */
+export const ZERNIKE_ASKS: readonly { readonly ordering: ZernikeOrdering; readonly terms: number }[] = Object.freeze([
+  { ordering: "standard", terms: 37 },
+  { ordering: "fringe", terms: 36 },
+]);
+
+/**
+ * The `zernike.native` specs of a recipe: at the case's first line, of the angles the recipe resolved its fields to,
+ * in its order, on `ZERNIKE_GRID`, one for each of `ZERNIKE_ASKS`. None where a field has no angle.
+ */
+export function zernikeNativeSpecs(recipe: MtfRecipe): ZernikeNativeSpec[] {
+  const angles = recipe.fields.map((field) => field.angleDeg);
+  if (angles.length === 0 || angles.some((angle) => angle === null || !(Math.abs(angle) < 90))) return [];
+  return ZERNIKE_ASKS.map(({ ordering, terms }) => ({
+    line: 0,
+    fieldAnglesDeg: angles as number[],
+    grid: ZERNIKE_GRID,
+    ordering,
+    terms,
+  }));
+}
+
+/**
+ * The rung `r14b`, the engines' own Zernike fits of one wavefront: the `zernike.native` requests of a run's recipe
+ * (`zernikeNativeSpecs`), asked of optiland, its own fit of its `Wavefront`, and of `optiland-wave`, the comparator's
+ * estimator on optiland's raw samples of the same wavefront. Recorded, of those two engines and of no other, and run
+ * only where it is named. LensVisualizer presents no wavefront.
+ */
+export const r14bRung: RungDefinition = Object.freeze({
+  id: "r14b",
+  quantity: ZERNIKE_NATIVE,
+  needsRecipe: true,
+  engines: R14B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    return (recipe === null ? [] : zernikeNativeSpecs(recipe)).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: ZERNIKE_NATIVE, spec: spec as unknown as JsonObject }),
+    );
+  },
+});
+
 /**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
@@ -829,6 +925,8 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r11aRung,
   r11bRung,
   r12bRung,
+  r13bRung,
+  r14bRung,
 ]);
 
 /**
