@@ -190,13 +190,24 @@ export function createProcessRegistry(
     sampleMs: options.memorySampleMs,
   });
   const idle: Slot[] = [];
-  const waiting: ((slot: Slot) => void)[] = [];
+  interface Waiter {
+    readonly accepts: (slot: Slot) => boolean;
+    readonly resolve: (slot: Slot) => void;
+  }
+  const waiting: Waiter[] = [];
   const started = new WeakMap<Slot, Promise<void>>();
   let owners = 0;
   let closed: Promise<void> | undefined;
-  const acquire = async (): Promise<Slot> => {
-    let free = idle.shift();
-    while (free !== undefined && !free.alive()) free = idle.shift();
+  // A job takes a slot it accepts while a live slot it accepts remains; otherwise any live slot.
+  const fits = (accepts: (slot: Slot) => boolean, slot: Slot): boolean =>
+    accepts(slot) || !slots.some((candidate) => candidate.alive() && accepts(candidate));
+  const takeIdle = (accepts: (slot: Slot) => boolean): Slot | undefined => {
+    for (let index = idle.length - 1; index >= 0; index--) if (!idle[index].alive()) idle.splice(index, 1);
+    const index = idle.findIndex((slot) => fits(accepts, slot));
+    return index < 0 ? undefined : idle.splice(index, 1)[0];
+  };
+  const acquire = async (accepts: (slot: Slot) => boolean): Promise<Slot> => {
+    const free = takeIdle(accepts);
     if (free !== undefined) return free;
     if (slots.length < jobs) {
       const slot = new Slot(memoryDirectory);
@@ -213,17 +224,18 @@ export function createProcessRegistry(
       return slot;
     }
     if (slots.every((slot) => !slot.alive())) return slots[0];
-    return new Promise((resolve) => waiting.push(resolve));
+    return new Promise((resolve) => waiting.push({ accepts, resolve }));
   };
   // Slots are handed out in the order `use` is called. Each paused caller polls memory on a timer of its own, so
   // without this turn a later job could pass the pressure first, take a slot, and end a persistent replica (a stdio
   // engine) there before an earlier job of that engine is sent to the same slot. A slot's startup is awaited after
   // the turn, so slots still start side by side.
   let turns: Promise<unknown> = Promise.resolve();
-  const use = async <T>(act: (slot: Slot) => Promise<T>): Promise<T> => {
+  const anySlot = (): boolean => true;
+  const use = async <T>(act: (slot: Slot) => Promise<T>, accepts: (slot: Slot) => boolean = anySlot): Promise<T> => {
     const turn = turns.then(async () => {
       await memory.wait();
-      return acquire();
+      return acquire(accepts);
     });
     turns = turn.catch(() => {});
     const slot = await turn;
@@ -232,12 +244,16 @@ export function createProcessRegistry(
       await memory.wait();
       return await act(slot);
     } finally {
-      if (slot.alive()) {
-        const next = waiting.shift();
-        if (next === undefined) idle.push(slot);
-        else next(slot);
-      } else if (slots.every((candidate) => !candidate.alive())) {
-        for (const next of waiting.splice(0)) next(slot);
+      if (slots.every((candidate) => !candidate.alive())) {
+        for (const next of waiting.splice(0)) next.resolve(slot);
+      } else {
+        if (slot.alive()) idle.push(slot);
+        // A waiter whose last accepted slot has just died, or lost its replica, takes any live slot.
+        for (let index = 0; index < waiting.length;) {
+          const free = takeIdle(waiting[index].accepts);
+          if (free === undefined) index++;
+          else waiting.splice(index, 1)[0].resolve(free);
+        }
       }
     }
   };
@@ -416,6 +432,13 @@ export function createProcessRegistry(
       const definition = loaded.config.engineDefinitions[id];
       const persistent =
         definition === undefined ? ["optiland", "optiland-wave"].includes(id) : definition.transport === "stdio";
+      // The slots whose replica of this engine has ended while the slot lives on. An earlier job asked late (a
+      // duplicate after a failed answer) goes to a slot whose replica lives, as long as one does: a replica is not
+      // restarted, and the serial engine would still have answered that job.
+      const lostReplicas = new Set<Slot>();
+      const accepts = (slot: Slot): boolean => broken || !lostReplicas.has(slot);
+      const ended = (code: string | undefined): boolean =>
+        persistent && ["transport-error", "transport-timeout"].includes(code ?? "");
       return {
         id,
         describe,
@@ -442,6 +465,7 @@ export function createProcessRegistry(
           temporaries.add(temporary);
           try {
             const computed = await use(async (slot) => {
+              const asked = !broken;
               const replica = broken ? descriptor : await describeOn(slot);
               if (canonicalJson(replica) !== canonicalJson(descriptor))
                 throw new Error(`engine ${id}: pool identities differ`);
@@ -457,15 +481,16 @@ export function createProcessRegistry(
                 timeouts.runMs + SLOT_MARGIN_MS,
               );
               if (!reply.ok) throw new PoolTaskError(reply.message);
-              return { value: reply.value as { answer: StoredAnswer; warnings: readonly string[] } };
-            });
+              const value = reply.value as { answer: StoredAnswer; warnings: readonly string[] };
+              if (asked && ended(value.answer.result.error?.code)) lostReplicas.add(slot);
+              return { value };
+            }, accepts);
             const {
               value: { answer, warnings: said },
             } = computed;
             await previous;
             const keep = !broken || answer.source !== "computed";
-            if (persistent && ["transport-error", "transport-timeout"].includes(answer.result.error?.code ?? ""))
-              broken = true;
+            if (ended(answer.result.error?.code)) broken = true;
             admitted = true;
             release();
             if (keep && answer.source === "computed" && answer.storeKey !== null) {
@@ -539,8 +564,10 @@ export function createProcessRegistry(
                   timeouts.runMs + SLOT_MARGIN_MS,
                 );
                 if (!reply.ok) throw new Error(reply.message);
-                return deepFreeze(reply.value as ResultEnvelope);
-              });
+                const result = deepFreeze(reply.value as ResultEnvelope);
+                if (ended(result.error?.code)) lostReplicas.add(slot);
+                return result;
+              }, accepts);
           // Attach a rejection handler immediately, including while an earlier request is still running.
           const settled = computed.then(
             (result) => ({ result, lost: false }),
@@ -552,8 +579,7 @@ export function createProcessRegistry(
           const admitted = previous.then(async () => {
             const { result, lost } = await settled;
             if (broken) return failed("the worker is gone");
-            if (lost || (persistent && ["transport-error", "transport-timeout"].includes(result.error?.code ?? "")))
-              broken = true;
+            if (lost || ended(result.error?.code)) broken = true;
             return result;
           });
           admission = admitted.then(() => undefined);

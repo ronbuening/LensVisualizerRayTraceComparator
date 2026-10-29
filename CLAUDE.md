@@ -88,7 +88,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   timeouts. A slot waits an engine's `runMs` plus `SLOT_MARGIN_MS` (60 s, for the child's store work) before it kills
   its child, so an in-process engine job, unbounded in a serial run, is bounded there. On SIGINT or SIGTERM the
   controller ends its children and removes staged entries and prepared inputs before it dies of the signal. No killed
-  worker is restarted. Terminal failures are admitted in request order per engine; later speculative answers of that
+  worker is restarted. A slot whose stdio replica ended while the slot lives on takes no further job of that engine
+  while another live slot's replica can answer it (an earlier duplicate asked late still gets the serial answer).
+  Terminal failures are admitted in request order per engine; later speculative answers of that
   engine are discarded, so its subsequent jobs fail as in serial execution. Other engines continue. Jobs, callbacks and
   manifests retain planned order; follow-ups wait for their run's rung and precede its next rung. Duplicate store
   requests wait for their first answer. Pool code is outside engine import closures: concurrency changes no fingerprint,

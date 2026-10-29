@@ -17,7 +17,7 @@ import { loadConfig, REPO_ROOT } from "../../src/core/config.ts";
 import { runSuite } from "../../src/core/orchestrator.ts";
 import type { FollowUp } from "../../src/core/orchestrator.ts";
 import { createProcessRegistry } from "../../src/core/processRegistry.ts";
-import type { StoredAdapter } from "../../src/core/processRegistry.ts";
+import type { PoolJobTicket, StoredAdapter } from "../../src/core/processRegistry.ts";
 import { createResultStore } from "../../src/core/resultStore.ts";
 import { selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
@@ -213,6 +213,58 @@ test("a job paused for memory keeps its turn: a later job cannot end a stdio rep
     assert.equal(second.result.error?.code, "transport-error");
   } finally {
     await adapter.close();
+  }
+});
+
+test("an earlier job asked late is sent to a live stdio replica, not to a slot whose replica a later job ended", async (t) => {
+  const root = tempDir(t);
+  const module = join(REPO_ROOT, "test/fixtures/pool-engine/engine.mjs");
+  writeFileSync(
+    join(root, "lvrtc.config.json"),
+    JSON.stringify({
+      engines: {
+        // Holds the first slot while the stdio replica of the second one is ended.
+        "fake-a": { transport: "in-process", module, options: { id: "fake-a", delay: 3_000 } },
+        "fake-stdio": {
+          transport: "stdio",
+          command: [process.execPath, join(REPO_ROOT, "test/fixtures/pool-engine/worker.mjs")],
+          options: { id: "fake-stdio", crashScale: 5 },
+        },
+      },
+    }),
+  );
+  const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: join(root, "runs") } });
+  const registry = createProcessRegistry(loaded, 2, { memoryBudgetGiB: 10 });
+  const stdio = (await registry.create("fake-stdio")) as StoredAdapter;
+  const holder = (await registry.create("fake-a")) as StoredAdapter;
+  try {
+    // Both replicas are on the first slot, the only one so far.
+    await stdio.describe();
+    await holder.describe();
+    const [base] = selftestRung.buildRequests(SINGLET, pairSuite().runs[0].spec);
+    const ask = async (adapter: StoredAdapter, ticket: PoolJobTicket, scale: number) => {
+      try {
+        return await adapter.askStored!(
+          makeRequest({ caseId: SINGLET.id, quantity: base.quantity, spec: { ...base.spec, scale } }),
+          SINGLET,
+          [],
+          ticket,
+        );
+      } finally {
+        ticket.release();
+      }
+    };
+    // The earlier stdio job is asked last, as a duplicate is after the answer it waited for.
+    const earlier = registry.enqueue("fake-stdio");
+    const later = registry.enqueue("fake-stdio");
+    const held = ask(holder, registry.enqueue("fake-a"), 1);
+    const ended = ask(stdio, later, 5);
+    const [answer, crash] = await Promise.all([ask(stdio, earlier, 4), ended, held]);
+    assert.equal(answer.result.status, "ok", answer.result.error?.message);
+    assert.equal(crash.result.error?.code, "transport-error");
+  } finally {
+    await stdio.close();
+    await holder.close();
   }
 });
 
