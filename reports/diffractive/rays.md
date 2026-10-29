@@ -16,27 +16,27 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | diffractive |
 | Suite hash | 9641803ac2132a78445530b795f878211e8b446ed4c8d4257f163c9c884d4ce2 |
-| Baseline hash | 3e58493a8b111a4a91875c23e3bbe095ebcf4c04ff0e87359b887954062298c8 |
+| Baseline hash | cedaf1a0b4e7768a057ec9c30c1979fdceae6fb2ce5489821c480d8d273c54b4 |
 | Contract version | 1.0 |
-| Policy | rungs v15 |
-| Policy hash | 1db393cc152dc19e71ca79b07f474d3a837fa402f51632312a6fc5cbeb671524 |
+| Policy | rungs v24 |
+| Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b | 49b68a617dc135ebdd70d5ff57dc2bce7f09ea74668dd1848e7d973bbcfac0b3 | commit 879c061024519be2b1acaf3cc082947235ea9760, dirty false, engineFileCount 177 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 965e1b3ac30f08fd7d583547cbdc43ccbfd9cf74f6e6bc7cd6af2a98927ca7e7 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
 
 | Run | Case |
 |---|---|
-| canon-ef-400mm-f4-do-is-usm | 96325a6df5e2e5b9c38d490eb46125581c62e382b8cb066ab92e0ef435f42a62 |
-| canon-ef-70-300mm-f45-56-do-is-usm-wide | fe08a6dece72e6929f4b7986075453ce68dbcf012f1dc49772660b0a51b96ad3 |
-| canon-ef-70-300mm-f45-56-do-is-usm-tele | 3f999377c681817c44e19c81115ce5f57655615ce482aef22b726758a16fedb4 |
-| canon-rf-800mm-f11-is-stm | b63c07a15e9fdcb607f8718f678f9e3631616c8ffc5305fad1466048ff556627 |
-| canon-rf600mmf11-is-stm | 34859d874485e9cc85261e1e97c810d087006b3e066c946eb915154d079ea4b4 |
-| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 767018dd3ef5c4264a600ba12193142fbd76af2d49d1bf332b2cb19a57bccbbd |
-| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | cf3a028f1127a5495431edabe9af36e1f6c55ee3cdbd503af8ff8d9b3b0eb828 |
-| nikon-nikkor-z-800mm-f63-vr-s | e4d8e5c6357c2c981a0c16e96470c979728144850b771ead3536930f363a937c |
+| canon-ef-400mm-f4-do-is-usm | 11931c70258ee6bfd8d76caedae224e404b95cecb122836893409468cb50e19c |
+| canon-ef-70-300mm-f45-56-do-is-usm-wide | 29d0d97deca0d536d7e7c336af94976458bb342112a2764e9124ee9a6a694fc5 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | ea1e57a4d1cd516cb8ac3106b786aedd806b158cb856630b52100b9f33d37d21 |
+| canon-rf-800mm-f11-is-stm | 976293184c364a7e7dcc10b28ebd793bd1459e4abb7cfee50f686d08342713af |
+| canon-rf600mmf11-is-stm | 91dcb014c8bbd75e645c8b5a82982c80254c6eecc84aeed824beeea86e360108 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | c7da0529501a363fab563cace7c1d5348adfed094290c61a563c75522d74932b |
+| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 00b019a795aec1d3e4b1a419ceb19a0103770196f130e823135af35cca21c775 |
+| nikon-nikkor-z-800mm-f63-vr-s | 6143cd80253692a9e9f57da6885878d427a65613cf1d30fdc14117e5dfa8b70b |
 | reference-folded-diffractive-plate | — |
 
 ## Run problems
@@ -65,6 +65,18 @@ which is within the policy's floor limit of the arbiter while no other engine si
 | r3 | rays.trace | 8 | 16 | lv – optiland | 8 PASS | 16 PASS |
 | r3 | rays.trace | 8 | 16 | lv – ref | 8 PASS | 16 PASS |
 | r3 | rays.trace | 8 | 16 | optiland – ref | 8 PASS | 16 PASS |
+| r7a | rays.trace | 8 | 80 | lv – optiland | 8 PASS | 80 PASS |
+| r7a | rays.trace | 8 | 80 | lv – ref | 8 PASS | 80 PASS |
+| r7a | rays.trace | 8 | 80 | optiland – ref | 8 PASS | 80 PASS |
+| r8a | rays.trace | 8 | 24 | lv – optiland | 8 PASS | 24 PASS |
+| r8a | rays.trace | 8 | 24 | lv – ref | 8 PASS | 24 PASS |
+| r8a | rays.trace | 8 | 24 | optiland – ref | 8 PASS | 24 PASS |
+| r9a | rays.trace | 8 | 32 | lv – optiland | 8 PASS | 32 PASS |
+| r9a | rays.trace | 8 | 32 | lv – ref | 8 PASS | 32 PASS |
+| r9a | rays.trace | 8 | 32 | optiland – ref | 8 PASS | 32 PASS |
+| r10a | rays.trace | 8 | 16 | lv – optiland | 8 PASS | 16 PASS |
+| r10a | rays.trace | 8 | 16 | lv – ref | 8 PASS | 16 PASS |
+| r10a | rays.trace | 8 | 16 | optiland – ref | 8 PASS | 16 PASS |
 
 ## Support
 
@@ -85,6 +97,18 @@ with the code and the item it names; that is an answer and not a failure.
 | r3 | lv | 8 ok |
 | r3 | optiland | 8 ok |
 | r3 | ref | 8 ok |
+| r7a | lv | 8 ok |
+| r7a | optiland | 8 ok |
+| r7a | ref | 8 ok |
+| r8a | lv | 8 ok |
+| r8a | optiland | 8 ok |
+| r8a | ref | 8 ok |
+| r9a | lv | 8 ok |
+| r9a | optiland | 8 ok |
+| r9a | ref | 8 ok |
+| r10a | lv | 8 ok |
+| r10a | optiland | 8 ok |
+| r10a | ref | 8 ok |
 
 ## r0
 
@@ -133,8 +157,8 @@ Quantity `paraxial.first-order`. The worst of every metric over the suite:
 | lv – ref | firstOrder.maxAbs (≤ 1.00e-9 mm) | 2.27e-11 | canon-rf-800mm-f11-is-stm | line 0, quantity frontFocalZ |
 | lv – ref | pupilZ.maxScaled (≤ 1.00e-9 mm) | 2.39e-12 | canon-rf-800mm-f11-is-stm | line 0, quantity entrancePupilZ |
 | lv – ref | pupilZ.maxAbs [mm] | 2.39e-12 | canon-rf-800mm-f11-is-stm | line 0, quantity entrancePupilZ |
-| lv – ref | pupilRadius.maxScaled (≤ 1.00e-9 mm) | 9.95e-14 | canon-ef-400mm-f4-do-is-usm | line 0, quantity entrancePupilSemiDiameter |
-| lv – ref | pupilRadius.maxAbs [mm] | 9.95e-14 | canon-ef-400mm-f4-do-is-usm | line 0, quantity entrancePupilSemiDiameter |
+| lv – ref | pupilRadius.maxScaled (≤ 1.00e-9 mm) | 9.24e-14 | canon-ef-400mm-f4-do-is-usm | line 0, quantity entrancePupilSemiDiameter |
+| lv – ref | pupilRadius.maxAbs [mm] | 9.24e-14 | canon-ef-400mm-f4-do-is-usm | line 0, quantity entrancePupilSemiDiameter |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance:
 
@@ -160,30 +184,30 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 | lv – optiland | landing.maxDistance (≤ 1.00e-8 mm) | 3.79e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 2.50e-1, line 0, ray 230 |
 | lv – optiland | mask.mismatches (≤ 0 rays) | 0 | — | — |
 | lv – optiland | mask.rimBand [rays] | 0 | — | — |
-| lv – optiland | rays.compared [rays] | 1760 | — | — |
+| lv – optiland | rays.compared [rays] | 1718 | — | — |
 | lv – ref | hits.maxDistance (≤ 1.00e-8 mm) | 4.83e-13 | canon-ef-70-300mm-f45-56-do-is-usm-tele | field 2.50e-1, line 0, ray 118, surface 10 |
 | lv – ref | direction.maxAbs (≤ 1.00e-9) | 1.25e-15 | canon-ef-70-300mm-f45-56-do-is-usm-tele | field 2.50e-1, line 0, ray 98 |
 | lv – ref | landing.maxDistance (≤ 1.00e-8 mm) | 2.15e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 2.50e-1, line 0, ray 82 |
 | lv – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
 | lv – ref | mask.rimBand [rays] | 0 | — | — |
-| lv – ref | rays.compared [rays] | 1760 | — | — |
+| lv – ref | rays.compared [rays] | 1718 | — | — |
 | optiland – ref | hits.maxDistance (≤ 1.00e-8 mm) | 4.98e-13 | canon-ef-70-300mm-f45-56-do-is-usm-tele | field 2.50e-1, line 0, ray 118, surface 10 |
 | optiland – ref | direction.maxAbs (≤ 1.00e-9) | 6.99e-15 | nikon-nikkor-z-800mm-f63-vr-s | field 2.50e-1, line 0, ray 55 |
 | optiland – ref | landing.maxDistance (≤ 1.00e-8 mm) | 3.93e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 2.50e-1, line 0, ray 147 |
 | optiland – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
 | optiland – ref | mask.rimBand [rays] | 0 | — | — |
-| optiland – ref | rays.compared [rays] | 1760 | — | — |
+| optiland – ref | rays.compared [rays] | 1718 | — | — |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance:
 
 | Run | Requests | lv – optiland | lv – ref | optiland – ref | lv rays ok / blocked / failed | optiland rays ok / blocked / failed | ref rays ok / blocked / failed |
 |---|---|---|---|---|---|---|---|
-| canon-ef-400mm-f4-do-is-usm | 2 | PASS: landing.maxDistance 1.97e-13 mm | PASS: landing.maxDistance 1.93e-13 mm | PASS: landing.maxDistance 3.08e-13 mm | 239 / 274 / 0 | 239 / 274 / 0 | 239 / 274 / 0 |
+| canon-ef-400mm-f4-do-is-usm | 2 | PASS: landing.maxDistance 1.97e-13 mm | PASS: landing.maxDistance 1.93e-13 mm | PASS: landing.maxDistance 3.08e-13 mm | 237 / 276 / 0 | 237 / 276 / 0 | 237 / 276 / 0 |
 | canon-ef-70-300mm-f45-56-do-is-usm-wide | 2 | PASS: landing.maxDistance 4.71e-14 mm | PASS: landing.maxDistance 2.05e-14 mm | PASS: landing.maxDistance 5.14e-14 mm | 25 / 488 / 0 | 25 / 488 / 0 | 25 / 488 / 0 |
-| canon-ef-70-300mm-f45-56-do-is-usm-tele | 2 | PASS: landing.maxDistance 2.45e-13 mm | PASS: hits.maxDistance 4.83e-13 mm | PASS: hits.maxDistance 4.98e-13 mm | 271 / 242 / 0 | 271 / 242 / 0 | 271 / 242 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | 2 | PASS: landing.maxDistance 2.37e-13 mm | PASS: hits.maxDistance 4.83e-13 mm | PASS: hits.maxDistance 4.98e-13 mm | 253 / 260 / 0 | 253 / 260 / 0 | 253 / 260 / 0 |
 | canon-rf-800mm-f11-is-stm | 2 | PASS: landing.maxDistance 2.66e-13 mm | PASS: landing.maxDistance 1.76e-13 mm | PASS: landing.maxDistance 3.08e-13 mm | 237 / 276 / 0 | 237 / 276 / 0 | 237 / 276 / 0 |
 | canon-rf600mmf11-is-stm | 2 | PASS: landing.maxDistance 2.40e-13 mm | PASS: landing.maxDistance 1.88e-13 mm | PASS: landing.maxDistance 2.01e-13 mm | 241 / 272 / 0 | 241 / 272 / 0 | 241 / 272 / 0 |
-| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 2 | PASS: landing.maxDistance 2.07e-13 mm | PASS: landing.maxDistance 1.35e-13 mm | PASS: landing.maxDistance 1.99e-13 mm | 277 / 236 / 0 | 277 / 236 / 0 | 277 / 236 / 0 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 2 | PASS: landing.maxDistance 2.07e-13 mm | PASS: landing.maxDistance 1.35e-13 mm | PASS: landing.maxDistance 1.99e-13 mm | 255 / 258 / 0 | 255 / 258 / 0 | 255 / 258 / 0 |
 | nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 2 | PASS: landing.maxDistance 2.50e-13 mm | PASS: landing.maxDistance 1.52e-13 mm | PASS: landing.maxDistance 1.57e-13 mm | 177 / 336 / 0 | 177 / 336 / 0 | 177 / 336 / 0 |
 | nikon-nikkor-z-800mm-f63-vr-s | 2 | PASS: landing.maxDistance 3.79e-13 mm | PASS: landing.maxDistance 2.15e-13 mm | PASS: landing.maxDistance 3.93e-13 mm | 293 / 220 / 0 | 293 / 220 / 0 | 293 / 220 / 0 |
 
@@ -216,3 +240,191 @@ By run, each pair with its verdict and the judged metric that is largest against
 | nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 2 | PASS: opticalPath.maxAbs 2.42e-10 waves | PASS: opticalPath.maxAbs 1.93e-10 waves | PASS: opticalPathToImage.maxAbs 2.90e-10 waves |
 | nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 2 | PASS: opticalPath.maxAbs 2.90e-10 waves | PASS: opticalPathToImage.maxAbs 3.87e-10 waves | PASS: opticalPath.maxAbs 4.84e-10 waves |
 | nikon-nikkor-z-800mm-f63-vr-s | 2 | PASS: opd.maxAbs 7.74e-10 waves | PASS: opticalPath.maxAbs 6.77e-10 waves | PASS: opd.maxAbs 6.77e-10 waves |
+
+## r7a
+
+Quantity `rays.trace`. The worst of every metric over the suite:
+
+| Pair | Metric | Worst, or total | Run | Where |
+|---|---|---|---|---|
+| lv – optiland | transverseError.maxAbs (≤ 1.00e-8 mm) | 5.19e-13 | canon-rf-800mm-f11-is-stm | field 7.90e-1, line 0, ray 133 |
+| lv – optiland | centroid.maxAbs (≤ 1.00e-8 mm) | 1.00e-13 | canon-rf-800mm-f11-is-stm | field 7.90e-1, line 0 |
+| lv – optiland | rmsRadius.maxAbs (≤ 1.00e-8 mm) | 8.88e-14 | canon-rf600mmf11-is-stm | field 0, line 0 |
+| lv – optiland | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – optiland | mask.rimBand [rays] | 0 | — | — |
+| lv – optiland | rays.compared [rays] | 13355 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | — | — |
+| lv – ref | transverseError.maxAbs (≤ 1.00e-8 mm) | 3.69e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 1.18e0, line 0, ray 15 |
+| lv – ref | centroid.maxAbs (≤ 1.00e-8 mm) | 1.22e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 1.18e0, line 0 |
+| lv – ref | rmsRadius.maxAbs (≤ 1.00e-8 mm) | 3.63e-14 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0 |
+| lv – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – ref | mask.rimBand [rays] | 0 | — | — |
+| lv – ref | rays.compared [rays] | 13355 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | — | — |
+| optiland – ref | transverseError.maxAbs (≤ 1.00e-8 mm) | 4.30e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0, ray 288 |
+| optiland – ref | centroid.maxAbs (≤ 1.00e-8 mm) | 1.26e-13 | canon-rf-800mm-f11-is-stm | field 9.48e-1, line 0 |
+| optiland – ref | rmsRadius.maxAbs (≤ 1.00e-8 mm) | 9.93e-14 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| optiland – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| optiland – ref | mask.rimBand [rays] | 0 | — | — |
+| optiland – ref | rays.compared [rays] | 13355 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | — | — |
+
+By run, each pair with its verdict and the judged metric that is largest against its tolerance:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref | lv rays ok / blocked / failed | optiland rays ok / blocked / failed | ref rays ok / blocked / failed |
+|---|---|---|---|---|---|---|---|
+| canon-ef-400mm-f4-do-is-usm | 10 | PASS: transverseError.maxAbs 2.86e-13 mm | PASS: transverseError.maxAbs 3.16e-13 mm | PASS: transverseError.maxAbs 2.92e-13 mm | 1676 / 268 / 0 | 1676 / 268 / 0 | 1676 / 268 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-wide | 10 | PASS: transverseError.maxAbs 1.60e-13 mm | PASS: transverseError.maxAbs 2.06e-13 mm | PASS: transverseError.maxAbs 2.31e-13 mm | 1772 / 172 / 0 | 1772 / 172 / 0 | 1772 / 172 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | 10 | PASS: transverseError.maxAbs 2.57e-13 mm | PASS: transverseError.maxAbs 1.92e-13 mm | PASS: transverseError.maxAbs 2.13e-13 mm | 1607 / 337 / 0 | 1607 / 337 / 0 | 1607 / 337 / 0 |
+| canon-rf-800mm-f11-is-stm | 10 | PASS: transverseError.maxAbs 5.19e-13 mm | PASS: transverseError.maxAbs 3.62e-13 mm | PASS: transverseError.maxAbs 3.38e-13 mm | 1781 / 163 / 0 | 1781 / 163 / 0 | 1781 / 163 / 0 |
+| canon-rf600mmf11-is-stm | 10 | PASS: transverseError.maxAbs 4.23e-13 mm | PASS: transverseError.maxAbs 2.70e-13 mm | PASS: transverseError.maxAbs 3.16e-13 mm | 1784 / 160 / 0 | 1784 / 160 / 0 | 1784 / 160 / 0 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 10 | PASS: transverseError.maxAbs 2.56e-13 mm | PASS: transverseError.maxAbs 2.42e-13 mm | PASS: transverseError.maxAbs 2.50e-13 mm | 1694 / 250 / 0 | 1694 / 250 / 0 | 1694 / 250 / 0 |
+| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 10 | PASS: transverseError.maxAbs 3.21e-13 mm | PASS: transverseError.maxAbs 2.25e-13 mm | PASS: transverseError.maxAbs 3.46e-13 mm | 1436 / 508 / 0 | 1436 / 508 / 0 | 1436 / 508 / 0 |
+| nikon-nikkor-z-800mm-f63-vr-s | 10 | PASS: transverseError.maxAbs 5.19e-13 mm | PASS: transverseError.maxAbs 3.69e-13 mm | PASS: transverseError.maxAbs 4.30e-13 mm | 1685 / 259 / 0 | 1685 / 259 / 0 | 1685 / 259 / 0 |
+
+## r8a
+
+Quantity `rays.trace`. The worst of every metric over the suite:
+
+| Pair | Metric | Worst, or total | Run | Where |
+|---|---|---|---|---|
+| lv – optiland | intercept.maxScaled (≤ 1.00e-8 mm) | 2.45e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0, ray 36 |
+| lv – optiland | intercept.maxAbs [mm] | 5.23e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0, ray 6 |
+| lv – optiland | focus.maxScaled (≤ 1.00e-8 mm) | 6.50e-14 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| lv – optiland | focus.maxAbs [mm] | 1.65e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| lv – optiland | focusRms.maxAbs (≤ 1.00e-8 mm) | 7.28e-14 | nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | field 0, line 0 |
+| lv – optiland | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – optiland | mask.rimBand [rays] | 0 | — | — |
+| lv – optiland | rays.compared [rays] | 508 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | — | — |
+| lv – ref | intercept.maxScaled (≤ 1.00e-8 mm) | 2.11e-13 | canon-ef-400mm-f4-do-is-usm | field 0, line 0, ray 34 |
+| lv – ref | intercept.maxAbs [mm] | 5.85e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0, ray 16 |
+| lv – ref | focus.maxScaled (≤ 1.00e-8 mm) | 5.15e-14 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| lv – ref | focus.maxAbs [mm] | 1.31e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| lv – ref | focusRms.maxAbs (≤ 1.00e-8 mm) | 9.01e-14 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0 |
+| lv – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – ref | mask.rimBand [rays] | 0 | — | — |
+| lv – ref | rays.compared [rays] | 508 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | — | — |
+| optiland – ref | intercept.maxScaled (≤ 1.00e-8 mm) | 3.73e-13 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0, ray 36 |
+| optiland – ref | intercept.maxAbs [mm] | 6.14e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0, ray 14 |
+| optiland – ref | focus.maxScaled (≤ 1.00e-8 mm) | 1.16e-13 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| optiland – ref | focus.maxAbs [mm] | 2.96e-12 | canon-rf-800mm-f11-is-stm | field 0, line 0 |
+| optiland – ref | focusRms.maxAbs (≤ 1.00e-8 mm) | 5.64e-14 | nikon-nikkor-z-800mm-f63-vr-s | field 0, line 0 |
+| optiland – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| optiland – ref | mask.rimBand [rays] | 0 | — | — |
+| optiland – ref | rays.compared [rays] | 508 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | — | — |
+
+By run, each pair with its verdict and the judged metric that is largest against its tolerance:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref | lv rays ok / blocked / failed | optiland rays ok / blocked / failed | ref rays ok / blocked / failed |
+|---|---|---|---|---|---|---|---|
+| canon-ef-400mm-f4-do-is-usm | 3 | PASS: intercept.maxScaled 1.17e-13 mm | PASS: intercept.maxScaled 2.11e-13 mm | PASS: intercept.maxScaled 1.75e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-wide | 3 | PASS: intercept.maxScaled 1.05e-13 mm | PASS: intercept.maxScaled 5.36e-14 mm | PASS: intercept.maxScaled 9.92e-14 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | 3 | PASS: intercept.maxScaled 1.58e-13 mm | PASS: intercept.maxScaled 1.34e-13 mm | PASS: intercept.maxScaled 2.02e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| canon-rf-800mm-f11-is-stm | 3 | PASS: intercept.maxScaled 1.66e-13 mm | PASS: intercept.maxScaled 1.16e-13 mm | PASS: intercept.maxScaled 2.36e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| canon-rf600mmf11-is-stm | 3 | PASS: intercept.maxScaled 1.50e-13 mm | PASS: intercept.maxScaled 1.42e-13 mm | PASS: intercept.maxScaled 2.32e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 3 | PASS: intercept.maxScaled 1.18e-13 mm | PASS: intercept.maxScaled 7.22e-14 mm | PASS: intercept.maxScaled 1.67e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 3 | PASS: intercept.maxScaled 1.44e-13 mm | PASS: intercept.maxScaled 1.38e-13 mm | PASS: intercept.maxScaled 9.21e-14 mm | 46 / 20 / 0 | 46 / 20 / 0 | 46 / 20 / 0 |
+| nikon-nikkor-z-800mm-f63-vr-s | 3 | PASS: intercept.maxScaled 2.45e-13 mm | PASS: intercept.maxScaled 2.09e-13 mm | PASS: intercept.maxScaled 3.73e-13 mm | 66 / 0 / 0 | 66 / 0 / 0 | 66 / 0 / 0 |
+
+## r9a
+
+Quantity `rays.trace`. The worst of every metric over the suite:
+
+| Pair | Metric | Worst, or total | Run | Where |
+|---|---|---|---|---|
+| lv – optiland | landing.maxAbs (≤ 1.00e-8 mm) | 2.98e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 18 |
+| lv – optiland | distortion.maxScaled (≤ 1.00e-8 mm) | 2.22e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 3 |
+| lv – optiland | distortion.maxAbs [percent] | 1.40e-12 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 9 |
+| lv – optiland | exitPupil.maxScaled (≤ 1.00e-8 mm) | 1.45e-13 | canon-ef-400mm-f4-do-is-usm | line 0, ray 18 |
+| lv – optiland | exitPupil.maxAbs [mm] | 9.52e-13 | canon-ef-400mm-f4-do-is-usm | line 0, ray 18 |
+| lv – optiland | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – optiland | mask.rimBand [rays] | 0 | — | — |
+| lv – optiland | rays.compared [rays] | 1192 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | — | — |
+| lv – ref | landing.maxAbs (≤ 1.00e-8 mm) | 2.24e-13 | nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | line 0, ray 18 |
+| lv – ref | distortion.maxScaled (≤ 1.00e-8 mm) | 3.14e-13 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 30 |
+| lv – ref | distortion.maxAbs [percent] | 1.69e-12 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 3 |
+| lv – ref | exitPupil.maxScaled (≤ 1.00e-8 mm) | 6.74e-14 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 18 |
+| lv – ref | exitPupil.maxAbs [mm] | 4.55e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 6 |
+| lv – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – ref | mask.rimBand [rays] | 0 | — | — |
+| lv – ref | rays.compared [rays] | 1192 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | — | — |
+| optiland – ref | landing.maxAbs (≤ 1.00e-8 mm) | 2.49e-13 | nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | line 0, ray 18 |
+| optiland – ref | distortion.maxScaled (≤ 1.00e-8 mm) | 2.74e-13 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 19 |
+| optiland – ref | distortion.maxAbs [percent] | 1.49e-12 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 3 |
+| optiland – ref | exitPupil.maxScaled (≤ 1.00e-8 mm) | 9.55e-14 | canon-ef-400mm-f4-do-is-usm | line 0, ray 18 |
+| optiland – ref | exitPupil.maxAbs [mm] | 6.25e-13 | canon-ef-400mm-f4-do-is-usm | line 0, ray 18 |
+| optiland – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| optiland – ref | mask.rimBand [rays] | 0 | — | — |
+| optiland – ref | rays.compared [rays] | 1192 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | — | — |
+
+By run, each pair with its verdict and the judged metric that is largest against its tolerance:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref | lv rays ok / blocked / failed | optiland rays ok / blocked / failed | ref rays ok / blocked / failed |
+|---|---|---|---|---|---|---|---|
+| canon-ef-400mm-f4-do-is-usm | 4 | PASS: landing.maxAbs 2.70e-13 mm | PASS: landing.maxAbs 9.95e-14 mm | PASS: landing.maxAbs 2.10e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-wide | 4 | PASS: landing.maxAbs 6.04e-14 mm | PASS: distortion.maxScaled 3.14e-13 mm | PASS: distortion.maxScaled 2.74e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | 4 | PASS: landing.maxAbs 1.14e-13 mm | PASS: distortion.maxScaled 8.33e-14 mm | PASS: landing.maxAbs 1.67e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| canon-rf-800mm-f11-is-stm | 4 | PASS: distortion.maxScaled 1.59e-13 mm | PASS: distortion.maxScaled 2.14e-13 mm | PASS: distortion.maxScaled 2.53e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| canon-rf600mmf11-is-stm | 4 | PASS: landing.maxAbs 1.63e-13 mm | PASS: landing.maxAbs 9.95e-14 mm | PASS: landing.maxAbs 1.95e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 4 | PASS: landing.maxAbs 2.06e-13 mm | PASS: landing.maxAbs 9.24e-14 mm | PASS: landing.maxAbs 1.95e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 4 | PASS: landing.maxAbs 2.03e-13 mm | PASS: landing.maxAbs 2.24e-13 mm | PASS: landing.maxAbs 2.49e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| nikon-nikkor-z-800mm-f63-vr-s | 4 | PASS: landing.maxAbs 2.98e-13 mm | PASS: distortion.maxScaled 2.02e-13 mm | PASS: landing.maxAbs 2.31e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+
+## r10a
+
+Quantity `rays.trace`. The worst of every metric over the suite:
+
+| Pair | Metric | Worst, or total | Run | Where |
+|---|---|---|---|---|
+| lv – optiland | landing.maxAbs (≤ 1.00e-8 mm) | 5.04e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 1270 |
+| lv – optiland | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | 1.19e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 1235 |
+| lv – optiland | tangentialFocus.maxAbs [mm] | 9.26e-9 | canon-rf-800mm-f11-is-stm | line 0, ray 84 |
+| lv – optiland | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | 5.95e-14 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 1544 |
+| lv – optiland | sagittalFocus.maxAbs [mm] | 6.26e-12 | canon-rf-800mm-f11-is-stm | line 0, ray 4 |
+| lv – optiland | astigmatism.maxAbs [mm] | 9.27e-9 | canon-rf-800mm-f11-is-stm | line 0, ray 84 |
+| lv – optiland | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – optiland | mask.rimBand [rays] | 0 | — | — |
+| lv – optiland | rays.compared [rays] | 13015 | — | — |
+| lv – optiland | rays.dropped [rays] | 0 | — | — |
+| lv – optiland | fields.compared [elements] | 272 | — | — |
+| lv – ref | landing.maxAbs (≤ 1.00e-8 mm) | 4.03e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 866 |
+| lv – ref | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | 1.58e-13 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 79 |
+| lv – ref | tangentialFocus.maxAbs [mm] | 7.33e-9 | canon-rf-800mm-f11-is-stm | line 0, ray 64 |
+| lv – ref | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | 4.98e-14 | canon-rf600mmf11-is-stm | line 0, ray 102 |
+| lv – ref | sagittalFocus.maxAbs [mm] | 3.81e-12 | canon-rf-800mm-f11-is-stm | line 0, ray 69 |
+| lv – ref | astigmatism.maxAbs [mm] | 7.32e-9 | canon-rf-800mm-f11-is-stm | line 0, ray 64 |
+| lv – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| lv – ref | mask.rimBand [rays] | 0 | — | — |
+| lv – ref | rays.compared [rays] | 13015 | — | — |
+| lv – ref | rays.dropped [rays] | 0 | — | — |
+| lv – ref | fields.compared [elements] | 272 | — | — |
+| optiland – ref | landing.maxAbs (≤ 1.00e-8 mm) | 4.88e-13 | nikon-nikkor-z-800mm-f63-vr-s | line 0, ray 669 |
+| optiland – ref | tangentialFocus.maxScaled (≤ 1.00e-8 mm) | 1.65e-13 | canon-ef-70-300mm-f45-56-do-is-usm-wide | line 0, ray 79 |
+| optiland – ref | tangentialFocus.maxAbs [mm] | 1.20e-8 | canon-rf-800mm-f11-is-stm | line 0, ray 84 |
+| optiland – ref | sagittalFocus.maxScaled (≤ 1.00e-8 mm) | 7.78e-14 | canon-rf-800mm-f11-is-stm | line 0, ray 617 |
+| optiland – ref | sagittalFocus.maxAbs [mm] | 5.88e-12 | canon-rf-800mm-f11-is-stm | line 0, ray 4 |
+| optiland – ref | astigmatism.maxAbs [mm] | 1.20e-8 | canon-rf-800mm-f11-is-stm | line 0, ray 84 |
+| optiland – ref | mask.mismatches (≤ 0 rays) | 0 | — | — |
+| optiland – ref | mask.rimBand [rays] | 0 | — | — |
+| optiland – ref | rays.compared [rays] | 13015 | — | — |
+| optiland – ref | rays.dropped [rays] | 0 | — | — |
+| optiland – ref | fields.compared [elements] | 272 | — | — |
+
+By run, each pair with its verdict and the judged metric that is largest against its tolerance:
+
+| Run | Requests | lv – optiland | lv – ref | optiland – ref | lv rays ok / blocked / failed | optiland rays ok / blocked / failed | ref rays ok / blocked / failed |
+|---|---|---|---|---|---|---|---|
+| canon-ef-400mm-f4-do-is-usm | 2 | PASS: landing.maxAbs 3.51e-13 mm | PASS: landing.maxAbs 2.32e-13 mm | PASS: landing.maxAbs 3.02e-13 mm | 1608 / 228 / 0 | 1608 / 228 / 0 | 1608 / 228 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-wide | 2 | PASS: landing.maxAbs 2.13e-13 mm | PASS: landing.maxAbs 2.70e-13 mm | PASS: landing.maxAbs 2.88e-13 mm | 1683 / 153 / 0 | 1683 / 153 / 0 | 1683 / 153 / 0 |
+| canon-ef-70-300mm-f45-56-do-is-usm-tele | 2 | PASS: landing.maxAbs 2.13e-13 mm | PASS: landing.maxAbs 1.78e-13 mm | PASS: landing.maxAbs 2.66e-13 mm | 1555 / 281 / 0 | 1555 / 281 / 0 | 1555 / 281 / 0 |
+| canon-rf-800mm-f11-is-stm | 2 | PASS: landing.maxAbs 3.94e-13 mm | PASS: landing.maxAbs 3.61e-13 mm | PASS: landing.maxAbs 3.56e-13 mm | 1701 / 135 / 0 | 1701 / 135 / 0 | 1701 / 135 / 0 |
+| canon-rf600mmf11-is-stm | 2 | PASS: landing.maxAbs 3.11e-13 mm | PASS: landing.maxAbs 2.26e-13 mm | PASS: landing.maxAbs 4.30e-13 mm | 1695 / 141 / 0 | 1695 / 141 / 0 | 1695 / 141 / 0 |
+| nikon-af-s-nikkor-300mm-f4e-pf-ed-vr | 2 | PASS: landing.maxAbs 2.47e-13 mm | PASS: landing.maxAbs 1.78e-13 mm | PASS: landing.maxAbs 2.47e-13 mm | 1609 / 227 / 0 | 1609 / 227 / 0 | 1609 / 227 / 0 |
+| nikon-af-s-nikkor-500mm-f56e-pf-ed-vr | 2 | PASS: landing.maxAbs 3.16e-13 mm | PASS: landing.maxAbs 2.86e-13 mm | PASS: landing.maxAbs 4.17e-13 mm | 1518 / 318 / 0 | 1518 / 318 / 0 | 1518 / 318 / 0 |
+| nikon-nikkor-z-800mm-f63-vr-s | 2 | PASS: landing.maxAbs 5.04e-13 mm | PASS: landing.maxAbs 4.03e-13 mm | PASS: landing.maxAbs 4.88e-13 mm | 1646 / 190 / 0 | 1646 / 190 / 0 | 1646 / 190 / 0 |

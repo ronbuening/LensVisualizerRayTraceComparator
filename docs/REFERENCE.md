@@ -3840,6 +3840,54 @@ node bin/lvrtc.mjs statement && node bin/lvrtc.mjs verify
 Before each write, `baseline check <suite> [--mtf] --jobs 4` says whether a record changed beyond going STALE. Read
 `git diff reports/` after the writes.
 
+**Done, 2026-10-29**, at LensVisualizer `6287f4393` (607ff23ae plus #940; engine closure `fc5ae923`, 184 files), optiland
+`4e893f53`, policy 24, on the real store, through a private clone of LensVisualizer (`LVRTC_LV_PATH`), so that the
+owner's checkout could move meanwhile.
+
+- **Checks first, against the committed policy-15 baselines** (at `607ff23ae`):
+  - The six rays baselines and the features and states MTF baselines had no DRIFT.
+  - The focus-stations MTF baseline had 36 DRIFT records, all PASS. They were R6a's wave MTF moving between judged and
+    flagged on 12 close-focus stations. The cause was LensVisualizer #936's aim at a finite object, which left 47
+    fields of 18 stations without an aimed cell. The comparator codes such a field `lv-field-unaimed`, and LV #940
+    fixed the aim.
+  - The benchmark MTF baseline had 9 DRIFT records, all PASS. They were R6a's wave MTF of three best-focus runs, now
+    judged where every field was flagged before, at most 2.0e-10 against 2e-8. Their cause is #936's stop lattices. It
+    also had 310 MOVED records in the recorded rungs.
+- **Checks again at `6287f4393`**, against the writes made at `607ff23ae`: every infinity record was REFRESHABLE (stale
+  by engine only) and none was DRIFT. #940 leaves infinity bit-identical: the pins are unchanged, and the 12 MTF-tab
+  answers and the 192 R4f answers are byte-identical.
+- **The writes:**
+
+  | Baseline | Runs | Records | Comparison |
+  |---|---:|---:|---|
+  | benchmark rays | 96 | 2,880 | 34,800 PASS |
+  | features rays | 18 | 540 | 6,525 PASS |
+  | states rays | 128 | 3,840 | 46,400 PASS |
+  | diffractive | 9 | 192 | 976 PASS, 24 UNSUPPORTED |
+  | folded | 16 | 96 | 153 PASS, 87 UNSUPPORTED |
+  | focus-stations rays | 69 | 1,005 | 3,535 PASS; the 47 close-focus fields compared since #940 |
+  | features MTF | 18 | 126 | 576 PASS |
+  | states MTF | 128 | 896 | 4,096 PASS |
+  | focus-stations MTF | 69 | 469 | 2,044 PASS |
+  | benchmark MTF | 96 | 1,920 | 3,072 PASS, 2,481 RECORDED, 159 ATTENTION, 336 UNSUPPORTED |
+
+  No FAIL, FLOOR or ERROR anywhere. Then `statement` and `verify` ran: 12 baselines, 0 problems.
+- **The validation statement:**
+  - The signed sentence's words are unchanged. It covers 274 configurations, up from 258.
+  - Worst landing 1.2e-12 mm, optical path 3.5e-9 waves, geometric MTF 1.5e-11, wave MTF 1.1e-9.
+  - LensVisualizer's diffraction MTF against optiland's FFT: up to 0.49, up from 0.31. The pair is the Sony FE 20 mm at
+    best focus, full field, 10 cycles/mm. There LensVisualizer and the wave estimate on its rays agree within 0.0053,
+    so the difference is optiland's FFT at a wide field, the method difference `docs/gotchas.md` describes.
+  - LensVisualizer's diffraction MTF against the comparator's OTF of optiland's own wavefront: up to 0.0081, down from
+    0.026.
+  - Recorded rungs that the real stop brought closer: pairs needing attention fell from 152 to 22 in R5g, from 98 to 51
+    in R6c, and from 5 to 1 in R6b.
+- **Wall time:**
+  - From the first check (09:00) to `verify`: about 3 hours.
+  - The benchmark MTF check from an empty store at `--jobs 2`, R6c included: 53 minutes.
+  - Once optiland's answers were in the store, the benchmark MTF run at `6287f4393` (recomputing only the LV side):
+    6 minutes.
+
 ## Stage 6.3: spherical aberration and axial colour
 
 > **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) anchored its d-line channels to the authored index: the colour

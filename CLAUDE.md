@@ -1088,10 +1088,11 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   the tab's own plane (`infSensorZ`) is deferred and not covered.
 - **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
-  this repository hold together") fail only on policy identity (v15 recorded, a later version at hand: v16 at Stage
-  6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6, v21 at Stage 6.6b, v22 at Stage 6.7,
-  v23 at Stage 6.8, v24 at Stage 6.8b):
-  never weaken either.
+  this repository hold together") failed only on policy identity (v15 recorded, v16 to v24 at hand from Stage 6.2 to
+  6.8b): never weaken either. **The refresh is done** (2026-10-29, LensVisualizer `6287f4393`, closure `fc5ae923`,
+  policy 24; `docs/REFERENCE.md`, "The Phase 6 end refresh"): all ten baselines and the validation statement are
+  current, and `verify` reports 0 problems. The rays baselines of benchmark, features and states hold R7a to R11a
+  beside R0 to R4, and diffractive's beside its R0 to R3 (it has no vignetting sets).
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
   (which hashes the worker's revision, so R6c records go STALE(engine)); `ref`'s did not. The recipe is in
