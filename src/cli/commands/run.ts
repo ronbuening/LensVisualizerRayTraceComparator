@@ -57,7 +57,23 @@ const HELP = [
   "                   figures are outside their band. r5g is run only where it is named: the geometric MTF of",
   "                   lv, optiland and replay, with the same second asking of optiland for a run on one line",
   "                   r6c is named-only: lv, wave, optiland FFT and the comparator OTF of optiland",
-  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking",
+  "                   wavefronts (optiland-wave), with R5 bands and no automatic second asking. r7a traces",
+  "                   the rays LensVisualizer's coma and bokeh tabs launch and compares their spots and fans;",
+  "                   r7b is named-only: lv's coma and bokeh tabs beside optiland's own spot and ray fan.",
+  "                   r8a traces the rays LensVisualizer's spherical-aberration and axial-colour sections",
+  "                   launch and compares where each crosses the axis; r8b is named-only: lv's two sections",
+  "                   beside optiland's own real rays and paraxial focus at each line. r9a traces the chief rays",
+  "                   LensVisualizer's distortion, pupils and lateral-colour tabs launch and compares where they",
+  "                   land; r9b is named-only: lv's three tabs beside optiland's own distortion and chief rays.",
+  "                   r10a traces the rays LensVisualizer's field-curve sections launch and compares each field's",
+  "                   tangential and sagittal focus; r10b is named-only: lv's field curves beside optiland's own",
+  "                   FieldCurvature. r11a traces the beams LensVisualizer's vignetting tab traces over each",
+  "                   field's stop lattice and each field's stop-centre ray, and compares which rays get through,",
+  "                   the flux into the image and where the stop-centre rays land; r11b is named-only: lv's vignetting",
+  "                   tab beside the comparator's flux on its own lattices. r12b is named-only: lv's summary tab",
+  "                   and aperture control beside optiland's paraxial accessors and its working f-number. r13b is",
+  "                   named-only: the comparator's Seidel sums (ref-seidel) beside optiland's; r14b is named-only:",
+  "                   optiland's Zernike fit of its wavefront beside the comparator's fit of the same samples.",
   "  --jobs <n>      concurrent jobs in isolated processes (default: 1, serial)",
   "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
   "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
@@ -293,6 +309,21 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         }
         for (const problem of run.fineRaySets?.problems ?? []) {
           io.stderr(`lvrtc run: run ${run.name}: a field has no rays on the finer lattice: ${problem}\n`);
+        }
+        for (const problem of run.spotRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: a spot or fan has no rays: ${problem}\n`);
+        }
+        for (const problem of run.axialRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: the axial tabs have no rays: ${problem}\n`);
+        }
+        for (const problem of run.chiefRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: a chief-ray tab has no rays: ${problem}\n`);
+        }
+        for (const problem of run.curvatureRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: the field curves have no rays: ${problem}\n`);
+        }
+        for (const problem of run.vignettingRaySets?.problems ?? []) {
+          io.stderr(`lvrtc run: run ${run.name}: the vignetting sets: ${problem}\n`);
         }
       }
       for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);

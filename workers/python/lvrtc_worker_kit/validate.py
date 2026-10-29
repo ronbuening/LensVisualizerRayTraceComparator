@@ -588,6 +588,351 @@ def validate_wavefront_native(part: str, value: Any, schemas: SchemaSet | None =
     return issues
 
 
+def validate_spot_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/spotNative.ts: schema, an odd fan, and what an ok or an unavailable field holds."""
+    from .ndarray import decode_ndarray  # stdlib only; avoids a module cycle
+
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("spot.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        pupil = value["pupil"]
+        if pupil["kind"] == "fan" and pupil["samples"] % 2 == 0:
+            issue("/pupil/samples", "a fan has an odd number of samples")
+        return issues
+    pattern = value["pattern"]
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["spot"] is not None or field["fan"] is not None:
+                issue(path, "an unavailable field has a reason and neither spot nor fan")
+            continue
+        wanted, unwanted = ("spot", "fan") if pattern == "rings" else ("fan", "spot")
+        if field[wanted] is None or field[unwanted] is not None:
+            issue(path, f"an ok field of a {pattern} answer has its {wanted} and no {unwanted}")
+            continue
+        if field["fan"] is None:
+            continue
+        try:
+            pupil = decode_ndarray(field["fan"]["pupil"]).values()
+            error = decode_ndarray(field["fan"]["errorMm"]).values()
+            if len(pupil) != len(error) or len(pupil) == 0:
+                issue(path + "/fan", "the pupil and the errors of a fan have one length, above 0")
+            elif not all(math.isfinite(p) and -1 <= p <= 1 for p in pupil):
+                issue(path + "/fan/pupil", "a pupil coordinate is a finite number from -1 to 1")
+        except (ValueError, TypeError) as error:
+            issue(path + "/fan", str(error))
+    return issues
+
+
+def validate_axial_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/axialNative.ts: schema, distinct lines, and what an ok or an unavailable line holds."""
+    from .ndarray import decode_ndarray  # stdlib only; avoids a module cycle
+
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("axial.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        if len(set(value["lines"])) != len(value["lines"]):
+            issue("/lines", "a line is asked once")
+        return issues
+    spherical_only = ("nearAxisInterceptZ", "bestFocusZ", "bestFocusRmsMm", "profileMm")
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["figures"] is not None or field["rays"] is not None:
+                issue(path, "an unavailable line has a reason and neither figures nor rays")
+            continue
+        if (field["figures"] is None) == (field["rays"] is None):
+            issue(path, "an ok line has its figures or its rays, and not both")
+            continue
+        figures = field["figures"]
+        if figures is not None:
+            stated = [name for name in spherical_only if figures[name] is not None]
+            named = ", ".join(spherical_only)
+            if value["kind"] == "spherical" and len(stated) != len(spherical_only):
+                issue(path + "/figures", f"the figures of spherical aberration have every one of {named}")
+            elif value["kind"] == "colour" and stated:
+                issue(path + "/figures", f"the figures of colour have none of {named}")
+            continue
+        rays = field["rays"]
+        try:
+            fractions = decode_ndarray(rays["fractions"]).values()
+            arrived = decode_ndarray(rays["arrived"]).values()
+            count = len(fractions)
+            shapes = [rays["exitPoint"]["$nd"]["shape"], rays["exitDirection"]["$nd"]["shape"]]
+            if count == 0 or len(arrived) != count or any(shape != [count, 3] for shape in shapes):
+                issue(path + "/rays", "the rays are m fractions, m arrivals and exits of shape [m, 3]")
+            elif not all(math.isfinite(f) and f != 0 and -1 <= f <= 1 for f in fractions):
+                issue(path + "/rays/fractions", "a fraction is a finite number from -1 to 1, not 0")
+            elif not all(a in (0, 1) for a in arrived):
+                issue(path + "/rays/arrived", "an arrival is 0 or 1")
+        except (ValueError, TypeError) as error:
+            issue(path + "/rays", str(error))
+    return issues
+
+
+def validate_chief_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/chiefNative.ts: schema, the lines and angles of a spec, and what a field holds."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("chief.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    kind = value["kind"]
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        if kind != "lateral-colour" and len(lines) != 1:
+            issue("/lines", f"{kind} is of one line")
+        for at, angle in enumerate(value["fieldAnglesDeg"]):
+            if angle > value["maxFieldDeg"]:
+                issue(f"/fieldAnglesDeg/{at}", "an angle is at most the half field, maxFieldDeg")
+            elif kind != "lateral-colour" and not angle > 0:
+                issue(f"/fieldAnglesDeg/{at}", f"an angle of {kind} is above 0")
+        return issues
+    members = {
+        "distortion": ("realHeightMm", "idealHeightMm", "percent"),
+        "pupils": ("entrancePupilZ", "exitPupilZ"),
+        "lateral-colour": (),
+    }
+    own = members[kind]
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        if field["status"] == "unavailable":
+            if "reason" not in field or field["figures"] is not None or field["chiefRay"] is not None:
+                issue(path, "an unavailable field has a reason and neither figures nor a chief ray")
+            continue
+        if field["chiefLandingMm"] is None:
+            issue(path + "/chiefLandingMm", "an ok field has its landing")
+        figures, ray = field["figures"], field["chiefRay"]
+        if kind == "lateral-colour" and (figures is not None or ray is not None):
+            issue(path, "a field of lateral colour has neither figures nor a chief ray")
+            continue
+        if kind == "distortion" and (figures is None or ray is not None):
+            issue(path, "an ok field of distortion has its figures and no chief ray")
+            continue
+        if kind == "pupils" and (figures is None) == (ray is None):
+            issue(path, "an ok field of pupils has its figures or its chief ray, and not both")
+            continue
+        if figures is not None and not all((figures[name] is not None) == (name in own) for name in figures):
+            issue(path + "/figures", f"the figures of {kind} have every one of {', '.join(own)} and no other")
+        if ray is not None:
+            parts = (ray["entryPoint"], ray["entryDirection"], ray["exitPoint"], ray["exitDirection"])
+            if not all(math.isfinite(number) for part in parts for number in part):
+                issue(path + "/chiefRay", "a chief ray's points and directions are finite numbers")
+    return issues
+
+
+def validate_curvature_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/curvatureNative.ts: schema, the lines and angles of a spec, and what a field holds."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("curvature.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        for at, angle in enumerate(value["fieldAnglesDeg"]):
+            if angle > value["maxFieldDeg"]:
+                issue(f"/fieldAnglesDeg/{at}", "an angle is at most the half field, maxFieldDeg")
+        return issues
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        shifts = (field["tangentialShiftMm"], field["sagittalShiftMm"])
+        if field["status"] == "unavailable":
+            if "reason" not in field or any(shift is not None for shift in shifts):
+                issue(path, "an unavailable field has a reason and neither focus")
+            continue
+        if not all(shift is not None and math.isfinite(shift) for shift in shifts):
+            issue(path, "an ok field has both foci, each a finite number")
+    return issues
+
+
+def validate_vignetting_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/vignettingNative.ts: schema, the lines and angles of a spec, and what a field holds."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("vignetting.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        if value["fieldAnglesDeg"][0] != 0:
+            issue("/fieldAnglesDeg/0", "the first angle is 0: the axis every figure is relative to")
+        for at, angle in enumerate(value["fieldAnglesDeg"]):
+            if angle > value["maxFieldDeg"]:
+                issue(f"/fieldAnglesDeg/{at}", "an angle is at most the half field, maxFieldDeg")
+        return issues
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        figures = (field["geometricTransmission"], field["relativeIllumination"])
+        if field["status"] == "unavailable":
+            if "reason" not in field or any(figure is not None for figure in figures):
+                issue(path, "an unavailable field has a reason and neither figure")
+            continue
+        if not all(figure is not None and math.isfinite(figure) for figure in figures):
+            issue(path, "a field that is not unavailable has both figures, each a finite number")
+        if field["status"] == "unconverged" and "reason" not in field:
+            issue(path, "an unconverged field says why")
+    return issues
+
+
+SUMMARY_VALUES: tuple[str, ...] = (
+    "rearFocalZ",
+    "focalLengthMm",
+    "entrancePupilDiameterMm",
+    "stopDiameterMm",
+    "imageSpaceFNumber",
+    "paraxialWorkingFNumber",
+    "workingFNumber",
+    "nominalFNumber",
+    "totalTrackMm",
+    "halfFieldDeg",
+)
+"""The values of a ``summary.native`` line, in the order of ``SUMMARY_VALUES`` in contract/quantities/summaryNative.ts."""
+
+
+def validate_summary_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/summaryNative.ts: schema, the lines of a spec, and what a line states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("summary.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        lines = value["lines"]
+        if len(set(lines)) != len(lines):
+            issue("/lines", "a line is asked once")
+        return issues
+    for at, line in enumerate(value["lines"]):
+        path = f"/lines/{at}"
+        stated = [line[name] for name in SUMMARY_VALUES if line[name] is not None]
+        if line["status"] == "unavailable":
+            if "reason" not in line or stated:
+                issue(path, "an unavailable line has a reason and states no value")
+            continue
+        if not stated:
+            issue(path, "an ok line states at least one value")
+        for name in SUMMARY_VALUES:
+            entry = line[name]
+            if entry is not None and not math.isfinite(entry):
+                issue(f"{path}/{name}", "a value an ok line states is a finite number")
+    return issues
+
+
+SEIDEL_SUMS: tuple[str, ...] = ("SPHA", "COMA", "ASTI", "FCUR", "DIST", "CLA", "CTR")
+"""The sums of ``seidel.native``, in OpticStudio's order and names; the first five are of third order."""
+
+
+def validate_seidel_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/seidelNative.ts: schema, the dispersion lines, and what an answer states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("seidel.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if part == "spec":
+        pair = value.get("dispersionLines")
+        if pair is not None and pair[0] == pair[1]:
+            issue("/dispersionLines", "the two dispersion lines are two lines")
+        return issues
+    stated = [value["total"][name] for name in SEIDEL_SUMS if value["total"][name] is not None]
+    if value["status"] == "unavailable":
+        if "reason" not in value or value["invariant"] is not None or value["surfaces"] or stated:
+            issue("", "an unavailable answer has a reason and states no value")
+        return issues
+    if value["invariant"] is None or any(value["total"][name] is None for name in SEIDEL_SUMS[:5]):
+        issue("/total", "an ok answer states its invariant and the five sums of third order")
+
+    def finite(path: str, sums: dict[str, Any]) -> None:
+        for name in SEIDEL_SUMS:
+            entry = sums[name]
+            if entry is not None and not math.isfinite(entry):
+                issue(f"{path}/{name}", "a value an ok answer states is a finite number")
+
+    if value["invariant"] is not None and not math.isfinite(value["invariant"]):
+        issue("/invariant", "a value an ok answer states is a finite number")
+    finite("/total", value["total"])
+    for at, surface in enumerate(value["surfaces"]):
+        finite(f"/surfaces/{at}", surface)
+        if at > 0 and not surface["surface"] > value["surfaces"][at - 1]["surface"]:
+            issue(f"/surfaces/{at}/surface", "the surfaces ascend and are each listed once")
+    pair = value["dispersionLines"]
+    if pair is None:
+        if any(sums[name] is not None for sums in (value["total"], *value["surfaces"]) for name in SEIDEL_SUMS[5:]):
+            issue("/dispersionLines", "a chromatic sum is of two dispersion lines")
+    elif pair[0] == pair[1]:
+        issue("/dispersionLines", "the two dispersion lines are two lines")
+    return issues
+
+
+FRINGE_MAX_TERMS = 37
+"""The most terms a Fringe fit of ``zernike.native`` takes: OpticStudio's 37."""
+
+ZERNIKE_FIGURES: tuple[str, ...] = ("rmsToChiefWaves", "pvToChiefWaves", "fitResidualRmsWaves")
+"""The figures of a field of ``zernike.native`` that are numbers or null."""
+
+
+def validate_zernike_native(part: str, value: Any, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
+    """Port of quantities/zernikeNative.ts: schema, the grid and the terms, and what a field states."""
+    issues = validate(schemas or contract_schemas(), quantity_schema_id("zernike.native", part), value)
+    if issues:
+        return issues
+
+    def issue(path: str, message: str) -> None:
+        issues.append(ValidationIssue(path, "invariant", message))
+
+    if value["grid"] % 2 != 0:
+        issue("/grid", "the grid is even")
+    if value["ordering"] == "fringe" and value["terms"] > FRINGE_MAX_TERMS:
+        issue("/terms", f"a Fringe fit takes at most {FRINGE_MAX_TERMS} terms")
+    if part == "spec":
+        return issues
+    for at, field in enumerate(value["fields"]):
+        path = f"/fields/{at}"
+        figures = [field[name] for name in ZERNIKE_FIGURES]
+        if field["status"] == "unavailable":
+            stated = field["coefficients"] or any(entry is not None for entry in figures) or field["fitCondition"] is not None
+            if "reason" not in field or stated:
+                issue(path, "an unavailable field has a reason and states no figure")
+            continue
+        coefficients = field["coefficients"]
+        if len(coefficients) != value["terms"] or not all(math.isfinite(entry) for entry in coefficients):
+            issue(f"{path}/coefficients", "an ok field states a finite coefficient for every term")
+        condition = field["fitCondition"]
+        if any(entry is None or not math.isfinite(entry) for entry in figures) or (
+            condition is not None and not math.isfinite(condition)
+        ):
+            issue(path, "an ok field states every figure, finite")
+        if field["validSamples"] < value["terms"]:
+            issue(f"{path}/validSamples", "an ok field has at least as many valid samples as terms")
+    return issues
+
+
 def validate_rays_trace_data(value: Any, version: int = 1, schemas: SchemaSet | None = None) -> list[ValidationIssue]:
     """Version and phase-row port of quantities/raysTrace.ts. No engine imports."""
     from .ndarray import decode_ndarray

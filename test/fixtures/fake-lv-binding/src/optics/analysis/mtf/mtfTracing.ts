@@ -1,8 +1,10 @@
-// The fake's MTF launch and bundle, under LV's names: a chief ray per field, a box around it on a launch plane, a
-// lattice of square cells over the box, and the rays of the cells. Its geometry is its own and much cruder than
-// LV's: the chief ray is the straight line to the first vertex, and the box is a fixed multiple of the seed.
+// The fake's MTF launch and bundles, under LV's names: a chief ray per field; for a field it "aims", a lattice of cells
+// evenly spaced over the stop's disc (LV #936), each the fake's ray toward it; for a field it launches from a "bounding
+// sphere", a box around the chief ray on a launch plane and a lattice of square cells over it. Its geometry is its own
+// and much cruder than LV's: the chief ray is the straight line to the first vertex, a cell's ray starts on the launch
+// plane at the cell's fractions of the pupil radius, and the box is a fixed multiple of the seed.
 import { LINE_NM } from "../../chromatic.js";
-import { outside, traceSequential } from "../../trace/sequentialTrace.js";
+import { traceSequential } from "../../trace/sequentialTrace.js";
 import type {
   FakeFieldLaunch,
   FakeFootprint,
@@ -14,6 +16,7 @@ import type {
   Vec3,
 } from "../../types.js";
 import { mtfFiniteObjectPoint } from "./mtfConjugates.js";
+import { bulkTransmissionForTrace } from "../../trace/bulkAbsorption.js";
 
 // A dispersion that is nothing like a glass's and easy to check: 1e-5 of index per nm from the d line, air at 1.
 export function mtfIndexResolver(
@@ -43,17 +46,14 @@ function traceOptions(
   };
 }
 
-// The fake's glasses absorb where a lens says so: exp(-coefficient x path) over every stretch inside an element.
-function transmission(state: FakeState, trace: FakeTraceResult): number {
-  const coefficient = state.lens.runtime.source.absorptionPerMm ?? 0;
-  if (coefficient === 0) return 1;
-  let inGlass = 0;
-  for (let i = 0; i + 1 < trace.hits.length; i++) {
-    if (state.surfaces[trace.hits[i].surfaceIndex].nd === 1) continue;
-    const [from, to] = [trace.hits[i].point, trace.hits[i + 1].point];
-    inGlass += Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
-  }
-  return Math.exp(-coefficient * inGlass);
+// The fake's glasses absorb where a lens says so (`bulkTransmissionForTrace`).
+export function transmission(state: FakeState, trace: FakeTraceResult): number {
+  return bulkTransmissionForTrace(state.lens, trace.hits);
+}
+
+// The fake's surfaces are all of revolution: a meridional field's beam is its own mirror image, as LV's is.
+export function mtfMirrorSymmetric(state: FakeState): boolean {
+  return state.surfaces.every((surface) => ["flat", "spherical", "aspheric"].includes(surface.profile.kind));
 }
 
 export function mtfImagePoint(
@@ -72,23 +72,17 @@ export function mtfImagePoint(
   };
 }
 
-// A ray that found no surface is blocked when it passes the surface's vertex plane outside its aperture, which the
-// fake takes for proof of a miss; anything else it could not find is a failure of its own.
-export function mtfTraceClassification(
-  trace: FakeTraceResult,
-  state?: FakeState,
-  stopRadius?: number,
-): "valid" | "blocked" | "failed" {
-  if (trace.status === "ok") return "valid";
-  if (trace.failureReason === "totalInternalReflection" || (trace.status === "clipped" && !trace.failureReason)) {
-    return "blocked";
-  }
-  const surface = state?.surfaces[trace.terminalSurfaceIndex + 1];
-  if (!state || !surface || trace.failureReason !== "noBracket") return "failed";
-  const [origin, direction] = [trace.terminalPoint, trace.terminalDirection];
-  const t = (surface.z - origin[2]) / direction[2];
-  const radius = Math.hypot(origin[0] + t * direction[0], origin[1] + t * direction[1]);
-  return outside(state, surface, radius, stopRadius) ? "blocked" : "failed";
+// The fake's classification lives where LV's does since #927 (`trace/rayClassification.ts`).
+import { traceRayClassification } from "../../trace/rayClassification.js";
+
+export function mtfTraceOptions(
+  state: FakeState,
+  options: FakeMtfOptions,
+  support: FakeMtfSupport,
+  line: { wavelengthNm: number; weight: number },
+  opticalPath = false,
+): FakeTraceOptions {
+  return traceOptions(state, options, support, line.wavelengthNm, opticalPath);
 }
 
 export function mtfLaunchRay(launch: FakeFieldLaunch, x: number, y: number): { origin: Vec3; direction: Vec3 } {
@@ -117,7 +111,15 @@ export function prepareMtfFieldLaunch(
   const leadZ = Math.max(firstZ - 10, objectPoint ? (objectPoint[2] + firstZ) / 2 : -Infinity);
   // The fake's chief ray is the straight line to the first vertex.
   const centerY = objectPoint ? (objectPoint[1] * leadZ) / objectPoint[2] : leadZ * uField;
-  return { fieldAngleDeg, direction: [0, uField / norm, 1 / norm], objectPoint, leadZ, centerY };
+  // Beyond `vectorBeyondDeg` the fake launches from a "bounding sphere", which its aimed launch does not cover.
+  const sphere = Math.abs(fieldAngleDeg) > (state.lens.runtime.source.field?.vectorBeyondDeg ?? Infinity);
+  // A finite object's aim is handed the fake's chief launch, as LV's is the chief it solved (LV #940).
+  const aim = sphere
+    ? null
+    : objectPoint
+      ? { kind: "finite-object" as const, objectPoint, leadZ, chiefLaunch: [0, centerY] as const }
+      : { uField, yChief: 0 };
+  return { fieldAngleDeg, direction: [0, uField / norm, 1 / norm], objectPoint, leadZ, centerY, aim };
 }
 
 export function findMtfFieldFootprint(
@@ -147,8 +149,227 @@ export function mtfLaunchGrid(
   return { columns, rows, step, x0: (-columns * step) / 2, y0: (footprint.y0 + footprint.y1) / 2 - (rows * step) / 2 };
 }
 
-// The fake's bundle traces half the columns and mirrors the rest in x, as LV's does for a lens of revolution.
-export function traceMtfBundle(
+/** The cell outcomes the fake marks to find unresolved cells beside the beam, as LV's rule: 0 dark, 1 lit, 2 unresolved. */
+function besideBeam(outcome: Uint8Array, weights: Float64Array, columns: number, rows: number) {
+  const lit = (row: number, column: number) =>
+    row >= 0 && column >= 0 && row < rows && column < columns && outcome[row * columns + column] === 1;
+  let count = 0;
+  let weight = 0;
+  for (let row = 0; row < rows; row++)
+    for (let column = 0; column < columns; column++)
+      if (
+        outcome[row * columns + column] === 2 &&
+        (lit(row - 1, column) || lit(row + 1, column) || lit(row, column - 1) || lit(row, column + 1))
+      ) {
+        count++;
+        weight += weights[row * columns + column];
+      }
+  return { count, weight };
+}
+
+function flipped(trace: { input: { origin: Vec3; direction: Vec3 }; terminalPoint: Vec3; terminalDirection: Vec3 }) {
+  const flip = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];
+  return {
+    input: { origin: flip(trace.input.origin), direction: flip(trace.input.direction) },
+    terminalPoint: flip(trace.terminalPoint),
+    terminalDirection: flip(trace.terminalDirection),
+  };
+}
+
+// The fake's stop lattice: the cells of an n x n grid over the disc whose centre lies in it, as LV's.
+export function stopLattice(n: number) {
+  const cells: { index: number; row: number; column: number; xFraction: number; yFraction: number; weight: number }[] =
+    [];
+  for (let row = 0; row < n; row++) {
+    const yFraction = (2 * row + 1 - n) / n;
+    for (let column = 0; column < n; column++) {
+      const xFraction = (2 * column + 1 - n) / n;
+      if (xFraction * xFraction + yFraction * yFraction <= 1)
+        cells.push({ index: cells.length, row, column, xFraction, yFraction, weight: 0 });
+    }
+  }
+  for (const cell of cells) cell.weight = 1 / cells.length;
+  return cells;
+}
+
+// The fake "aims" a cell by starting its ray on the launch plane at the cell's fractions of the pupil radius. A lens may
+// state the radius of the stop beyond which the fake aims nothing (`mtf.unaimedBeyond`) and beyond which a clear
+// aperture ahead of the stop blocks the way (`mtf.blockedBeyond`, at surface 0), as fractions of the stop radius; and
+// the field angle beyond which it aims no ray at all, the chief's included (`mtf.unaimedBeyondDeg`), as LV's aim of a
+// field whose chief seed reaches no stop (before LV #940, a finite object point seeded on the straight line to the
+// stop centre). The fake starts every ray from `centerY`, which a finite object's `chiefLaunch` states.
+export function aimMtfStopLattice(
+  state: FakeState,
+  options: FakeMtfOptions,
+  _support: FakeMtfSupport,
+  launch: FakeFieldLaunch,
+  gridSize: number,
+  _line: { wavelengthNm: number; weight: number },
+  _coarse?: unknown,
+): unknown {
+  if (!launch.aim) return null;
+  if (!Number.isInteger(gridSize) || gridSize < 1)
+    throw new RangeError(`A stop lattice needs a positive whole number of cells across, not ${String(gridSize)}.`);
+  const stated = state.lens.runtime.source.mtf ?? {};
+  const pupil = options.pupilSemiDiameterMm;
+  const R = options.stopSemiDiameterMm;
+  const cells = stopLattice(gridSize);
+  const lost = Math.abs(launch.fieldAngleDeg) > (stated.unaimedBeyondDeg ?? Infinity);
+  const toRay = (index: number, xFraction: number, yFraction: number) => {
+    const r = Math.hypot(xFraction, yFraction);
+    const base = { index, xFraction, yFraction };
+    if (lost) return { ...base, status: "unaimed", reason: "trace-failed", origin: null, direction: null };
+    if (r > (stated.unaimedBeyond ?? Infinity))
+      return { ...base, status: "unaimed", reason: "stop-unreachable", origin: null, direction: null };
+    const ray = mtfLaunchRay(launch, xFraction * pupil, yFraction * pupil);
+    // The fake's blocking ray leaves from far outside the first surface's rim, which clips it there.
+    const far = 4 * state.surfaces[0].sd;
+    const blocking = mtfLaunchRay(launch, (xFraction / r) * far, (yFraction / r) * far);
+    if (r > (stated.blockedBeyond ?? Infinity))
+      return { ...base, status: "blocked", ...blocking, blockedAtSurfaceIndex: 0 };
+    return { ...base, status: "aimed", reason: null, ...ray };
+  };
+  const rays = cells.map((cell, i) => toRay(i, cell.xFraction, cell.yFraction));
+  const count = (status: string) => rays.filter((ray) => ray.status === status).length;
+  const because = (reason: string) => rays.filter((ray) => ray.status === "unaimed" && ray.reason === reason).length;
+  return {
+    launchSurface: launch.aim && "kind" in launch.aim ? "finite-object" : "object-plane",
+    stopSurfaceIndex: state.lens.stop.surfaceIndex,
+    stopSemiDiameterMm: R,
+    residualToleranceMm: R / 1048576,
+    clipSemiDiameterMm: R + R / 1048576,
+    chief: toRay(-1, 0, 0),
+    rays,
+    aimedCount: count("aimed"),
+    blockedCount: count("blocked"),
+    unaimedCount: count("unaimed"),
+    // Every reason of the fake's, counted, in a record of its own order (not LV's).
+    unaimedByReason: { "stop-unreachable": because("stop-unreachable"), "trace-failed": because("trace-failed") },
+    cellsAcross: gridSize,
+    cells,
+  };
+}
+
+type FakeLattice = {
+  cellsAcross: number;
+  cells: { row: number; column: number; xFraction: number }[];
+  rays: { status: string; origin: Vec3 | null; direction: Vec3 | null }[];
+  chief: { status: string; origin: Vec3 | null; direction: Vec3 | null };
+  stopSemiDiameterMm: number;
+  clipSemiDiameterMm: number;
+};
+
+// The fake's bundle of an aimed lattice: the +x half traced and mirrored on a lens of revolution, as LV's; every lit
+// cell of weight 1 times its transmission; unaimed and failed cells counted, those beside the beam apart.
+export function traceMtfLattice(
+  state: FakeState,
+  options: FakeMtfOptions,
+  support: FakeMtfSupport,
+  launch: FakeFieldLaunch,
+  lattice: FakeLattice,
+  line: { wavelengthNm: number; weight: number },
+  imagePlaneZ: number = state.imgZ,
+  extras: { reference?: { x: number; y: number; weight: number }; opticalPath?: boolean } = {},
+): unknown {
+  const tracing = {
+    ...traceOptions(state, options, support, line.wavelengthNm, extras.opticalPath),
+    stopSemiDiameter: lattice.clipSemiDiameterMm,
+  };
+  const chiefRay = (lattice.chief.status === "aimed" ? lattice.chief : mtfLaunchRay(launch, 0, 0)) as {
+    origin: Vec3;
+    direction: Vec3;
+  };
+  const unchecked = traceSequential(state, chiefRay, { ...tracing, checkSemiDiameter: false, stopOnClip: false });
+  const chief = mtfImagePoint(state, unchecked, imagePlaneZ) ?? extras.reference;
+  if (!chief) return null;
+  const n = lattice.cellsAcross;
+  const mirror = mtfMirrorSymmetric(state) && n % 2 === 0;
+  const outcome = new Uint8Array(n * n);
+  const mark = (row: number, column: number, value: number) => {
+    outcome[row * n + column] = value;
+    if (mirror) outcome[row * n + n - 1 - column] = value;
+  };
+  const rays: unknown[] = [];
+  let [blocked, failed, unaimed, unresolvedWeight] = [0, 0, 0, 0];
+  lattice.cells.forEach((cell, i) => {
+    if (mirror && cell.xFraction < 0) return;
+    const samples = mirror ? 2 : 1;
+    const ray = lattice.rays[i];
+    if (ray.status === "blocked") {
+      blocked += samples;
+      return;
+    }
+    if (ray.status === "unaimed") {
+      unaimed += samples;
+      unresolvedWeight += samples;
+      mark(cell.row, cell.column, 2);
+      return;
+    }
+    const trace = traceSequential(state, ray as { origin: Vec3; direction: Vec3 }, tracing);
+    const classification = traceRayClassification(trace, state, lattice.clipSemiDiameterMm);
+    if (classification === "blocked") {
+      blocked += samples;
+      return;
+    }
+    const point = classification === "valid" ? mtfImagePoint(state, trace, imagePlaneZ) : null;
+    if (!point) {
+      failed += samples;
+      unresolvedWeight += samples;
+      mark(cell.row, cell.column, 2);
+      return;
+    }
+    mark(cell.row, cell.column, 1);
+    const { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm } = trace;
+    const record = { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm };
+    rays.push({ ...point, column: cell.column, row: cell.row, trace: record });
+    if (mirror)
+      rays.push({
+        ...point,
+        x: -point.x,
+        column: n - 1 - cell.column,
+        row: cell.row,
+        trace: { ...record, ...flipped(record) },
+      });
+  });
+  const beside = besideBeam(outcome, new Float64Array(n * n).fill(1), n, n);
+  return {
+    sampling: "stop",
+    rays,
+    blocked,
+    failed,
+    unaimed,
+    unresolvedWeight,
+    unresolvedInBeam: beside.count,
+    unresolvedInBeamWeight: beside.weight,
+    chief,
+    chiefClipped: traceRayClassification(traceSequential(state, chiefRay, tracing), state) !== "valid",
+    columns: n,
+    rows: n,
+    mirrored: mirror,
+    stepMm: (2 * lattice.stopSemiDiameterMm) / n,
+    objectPoint: launch.objectPoint,
+    openBorders: { x: false, y0: false, y1: false },
+    lattice,
+  };
+}
+
+export function traceMtfStopBundle(
+  state: FakeState,
+  options: FakeMtfOptions,
+  support: FakeMtfSupport,
+  launch: FakeFieldLaunch,
+  gridSize: number,
+  line: { wavelengthNm: number; weight: number },
+  imagePlaneZ: number = state.imgZ,
+  extras: { reference?: { x: number; y: number; weight: number }; opticalPath?: boolean; coarse?: unknown } = {},
+): unknown {
+  const lattice = aimMtfStopLattice(state, options, support, launch, gridSize, line, extras.coarse) as FakeLattice | null;
+  return lattice && traceMtfLattice(state, options, support, launch, lattice, line, imagePlaneZ, extras);
+}
+
+// The fake's launch-plane bundle traces half the columns and mirrors the rest in x, as LV's does for a lens of
+// revolution.
+export function traceMtfLaunchPlaneBundle(
   state: FakeState,
   options: FakeMtfOptions,
   support: FakeMtfSupport,
@@ -167,12 +388,13 @@ export function traceMtfBundle(
   const grid = mtfLaunchGrid(footprint, gridSize);
   const source = launch.objectPoint;
   const chiefDistance = source ? Math.hypot(...chiefRay.origin.map((v, i) => v - source[i])) : 0;
-  const flip = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];
   const rays: unknown[] = [];
   const openBorders = { x: false, y0: false, y1: false };
+  const outcome = new Uint8Array(grid.rows * grid.columns);
+  const weights = new Float64Array(grid.rows * grid.columns);
   let blocked = 0;
   let failed = 0;
-  let failedWeight = 0;
+  let unresolvedWeight = 0;
   for (let row = 0; row < grid.rows; row++) {
     for (let column = grid.columns / 2; column < grid.columns; column++) {
       const x = grid.x0 + (column + 0.5) * grid.step;
@@ -181,46 +403,43 @@ export function traceMtfBundle(
       const launchWeight = source
         ? (chiefDistance / Math.hypot(...trace.input.origin.map((v, i) => v - source[i]))) ** 3
         : 1;
-      const outcome = mtfTraceClassification(trace, state, options.stopSemiDiameterMm);
-      const point = outcome === "valid" ? mtfImagePoint(state, trace, imagePlaneZ) : null;
-      if (outcome === "blocked") blocked += 2;
+      const classification = traceRayClassification(trace, state, options.stopSemiDiameterMm);
+      const point = classification === "valid" ? mtfImagePoint(state, trace, imagePlaneZ) : null;
+      const cells = [row * grid.columns + column, row * grid.columns + grid.columns - 1 - column];
+      if (classification === "blocked") blocked += 2;
       else if (!point) {
         failed += 2;
-        failedWeight += 2 * launchWeight;
+        unresolvedWeight += 2 * launchWeight;
+        for (const cell of cells) [outcome[cell], weights[cell]] = [2, launchWeight];
       }
       if (!point) continue;
+      for (const cell of cells) outcome[cell] = 1;
       point.weight *= launchWeight;
       if (Math.abs(x) > footprint.x1 - footprint.guardMm) openBorders.x = true;
       if (y < footprint.y0 + footprint.guardMm) openBorders.y0 = true;
       if (y > footprint.y1 - footprint.guardMm) openBorders.y1 = true;
       const { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm } = trace;
-      rays.push({ ...point, column, row, trace: { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm } });
-      rays.push({
-        ...point,
-        x: -point.x,
-        column: grid.columns - 1 - column,
-        row,
-        trace: {
-          input: { origin: flip(input.origin), direction: flip(input.direction) },
-          terminalPoint: flip(terminalPoint),
-          terminalDirection: flip(terminalDirection),
-          finalMedium,
-          opticalPathLengthMm,
-        },
-      });
+      const record = { input, terminalPoint, terminalDirection, finalMedium, opticalPathLengthMm };
+      rays.push({ ...point, column, row, trace: record });
+      rays.push({ ...point, x: -point.x, column: grid.columns - 1 - column, row, trace: { ...record, ...flipped(record) } });
     }
   }
+  const beside = besideBeam(outcome, weights, grid.columns, grid.rows);
   return {
+    sampling: "launch-plane",
     rays,
     blocked,
     failed,
-    failedWeight,
+    unaimed: 0,
+    unresolvedWeight,
+    unresolvedInBeam: beside.count,
+    unresolvedInBeamWeight: beside.weight,
     chief,
-    chiefClipped: mtfTraceClassification(traceSequential(state, chiefRay, tracing), state) !== "valid",
+    chiefClipped: traceRayClassification(traceSequential(state, chiefRay, tracing), state) !== "valid",
     columns: grid.columns,
     rows: grid.rows,
     mirrored: true,
-    launchStepMm: grid.step,
+    stepMm: grid.step,
     objectPoint: source,
     openBorders,
   };

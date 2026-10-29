@@ -37,11 +37,18 @@ import { DEFAULT_ENGINE_TIMEOUTS } from "../../../src/engines/remote.ts";
 import { QUANTITIES } from "../../../src/quantities/index.ts";
 import { mtfNativeQuantity } from "../../../src/quantities/mtfNative.ts";
 import { wavefrontNativeQuantity } from "../../../src/quantities/wavefrontNative.ts";
+import { spotNativeQuantity } from "../../../src/quantities/spotNative.ts";
+import { axialNativeQuantity } from "../../../src/quantities/axialNative.ts";
+import { chiefNativeQuantity } from "../../../src/quantities/chiefNative.ts";
+import { curvatureNativeQuantity } from "../../../src/quantities/curvatureNative.ts";
+import { summaryNativeQuantity } from "../../../src/quantities/summaryNative.ts";
+import { seidelNativeQuantity } from "../../../src/quantities/seidelNative.ts";
+import { zernikeNativeQuantity } from "../../../src/quantities/zernikeNative.ts";
 import { paraxialFirstOrderQuantity } from "../../../src/quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { systemDescribeQuantity } from "../../../src/quantities/systemDescribe.ts";
 import type { StdioTransport } from "../../../src/transports/stdio.ts";
-import { RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
+import { AXIAL_SPEC_SPHERICAL, RAYS_SPEC_SINGLET } from "../../contract/corpus.ts";
 import { caseFixture } from "../../core/support.ts";
 import { CASE } from "../../engines/support.ts";
 import {
@@ -207,14 +214,22 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(details.commit, commit);
   assert.equal(typeof details.dirty, commit === null ? "object" : "boolean");
 
-  // The built-system echo, the first-order data, the trace of given rays and its own MTF, each at the version of
-  // its definition the comparator holds; every feature flag, no limit.
+  // The built-system echo, the first-order data, the trace of given rays, its own MTF, wavefront, spots, axial rays,
+  // chief rays, field curves, summary, Seidel sums and Zernike fit, each at the version of its definition the comparator
+  // holds; every feature flag, no limit.
   const offered = [
     systemDescribeQuantity,
     paraxialFirstOrderQuantity,
     raysTraceQuantity,
     mtfNativeQuantity,
     wavefrontNativeQuantity,
+    spotNativeQuantity,
+    axialNativeQuantity,
+    chiefNativeQuantity,
+    curvatureNativeQuantity,
+    summaryNativeQuantity,
+    seidelNativeQuantity,
+    zernikeNativeQuantity,
   ];
   assert.deepEqual(
     capabilities.quantities,
@@ -236,11 +251,23 @@ test("the engine says which optiland it is: commit, sources, versions and the JI
   assert.equal(capabilities.deterministic, true);
 
   // The engine itself answers "unsupported" for each quantity it does not offer, and for one there is not. A trace
-  // needs rays: the contract's worked two. An MTF needs fields and frequencies: the axis of the singlet.
+  // needs rays: the contract's worked two. An MTF needs fields and frequencies: the axis of the singlet. A distortion
+  // needs a half field and angles: five degrees and half of it.
   const specs: Record<string, JsonObject> = {
     [raysTraceQuantity.id]: RAYS_SPEC_SINGLET,
     [mtfNativeQuantity.id]: MTF_SPEC_AXIS,
     [wavefrontNativeQuantity.id]: { line: 0, fields: { kind: "angles-deg", values: [0] }, grids: [8] },
+    [spotNativeQuantity.id]: {
+      line: 0,
+      fields: { kind: "angles-deg", values: [0] },
+      pupil: { kind: "rings", rings: [1, 6], weighting: "area" },
+    },
+    [axialNativeQuantity.id]: AXIAL_SPEC_SPHERICAL,
+    [chiefNativeQuantity.id]: { kind: "distortion", lines: [0], maxFieldDeg: 5, fieldAnglesDeg: [2.5, 5] },
+    [curvatureNativeQuantity.id]: { lines: [0], maxFieldDeg: 5, fieldAnglesDeg: [0, 5] },
+    [summaryNativeQuantity.id]: { lines: [0] },
+    [seidelNativeQuantity.id]: { line: 0, maxFieldDeg: 5 },
+    [zernikeNativeQuantity.id]: { line: 0, fieldAnglesDeg: [0], grid: 8, ordering: "standard", terms: 4 },
   };
   for (const quantity of [...QUANTITIES.list().map((module) => module.id), "conformance.no-such-quantity"]) {
     const spec = specs[quantity] ?? {};
@@ -292,14 +319,44 @@ test(
     assert.equal(code, EXIT_OK, out.join("") + err.join(""));
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "singlet", MANIFEST_FILE), "utf8"));
     // Every rung that compares the engines of a run is asked of optiland. The rungs that are about engines of
-    // their own, R4f, R5, R5g and R6b, ask nobody anything of a case that no LensVisualizer sampled; nor do the rungs
-    // that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its frequencies from.
-    const rungs = RUNGS.filter((rung) => rung.engines === undefined && rung.needsRecipe !== true).map(
-      (rung) => rung.id,
-    );
+    // their own, R4f, R5, R5g, R6b, R7b, R8b, R9b, R10b, R11b and R12b, ask nobody anything of a case that no
+    // LensVisualizer sampled or exported, nor R13b and R14b of a run without a recipe to take a field from; nor do the
+    // rungs that take an MTF of the traced rays, R4 and R6a, of a run that has no recipe to take its frequencies from, nor R7a, R8a, R9a, R10a and R11a, whose spot, axial, chief, curvature and
+    // vignetting sets only LensVisualizer's tabs give.
+    const rungs = RUNGS.filter(
+      (rung) =>
+        rung.engines === undefined &&
+        rung.needsRecipe !== true &&
+        rung.needsSpotRaySets !== true &&
+        rung.needsAxialRaySets !== true &&
+        rung.needsChiefRaySets !== true &&
+        rung.needsCurvatureRaySets !== true &&
+        rung.needsVignettingRaySets !== true,
+    ).map((rung) => rung.id);
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
-      ["r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c"],
+      [
+        "r4",
+        "r4f",
+        "r5",
+        "r5g",
+        "r6a",
+        "r6b",
+        "r6c",
+        "r7a",
+        "r7b",
+        "r8a",
+        "r8b",
+        "r9a",
+        "r9b",
+        "r10a",
+        "r10b",
+        "r11a",
+        "r11b",
+        "r12b",
+        "r13b",
+        "r14b",
+      ],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());

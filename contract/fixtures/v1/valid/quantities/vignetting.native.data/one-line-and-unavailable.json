@@ -1,0 +1,61 @@
+{
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": 0,
+      "geometricTransmission": 1,
+      "relativeIllumination": 1,
+      "sampling": {
+        "pupilSamples": 192,
+        "fieldSamples": 9
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 8,
+      "status": "ok",
+      "chiefLandingMm": -7.25,
+      "geometricTransmission": 1.0625,
+      "relativeIllumination": 0.9375,
+      "sampling": {
+        "pupilSamples": 192,
+        "fieldSamples": 9
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 16,
+      "status": "ok",
+      "chiefLandingMm": -14.75,
+      "geometricTransmission": 0.75,
+      "relativeIllumination": 0.5625,
+      "sampling": {
+        "pupilSamples": 192,
+        "fieldSamples": 9
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 24,
+      "status": "unavailable",
+      "reason": "no-curve",
+      "chiefLandingMm": null,
+      "geometricTransmission": null,
+      "relativeIllumination": null,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-sweep",
+    "params": {
+      "pupilSamples": 192
+    }
+  },
+  "notes": []
+}

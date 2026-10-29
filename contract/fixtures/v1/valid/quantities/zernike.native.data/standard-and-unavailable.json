@@ -1,0 +1,50 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 587.5
+  },
+  "grid": 8,
+  "ordering": "standard",
+  "terms": 4,
+  "fields": [
+    {
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "status": "ok",
+      "coefficients": [
+        0.125,
+        0,
+        0,
+        0.0625
+      ],
+      "rmsToChiefWaves": 0.0625,
+      "pvToChiefWaves": 0.25,
+      "fitResidualRmsWaves": 0.0078125,
+      "fitCondition": 2.5,
+      "validSamples": 32,
+      "sampling": {
+        "gridSize": 8
+      }
+    },
+    {
+      "fieldAngleDeg": 10,
+      "imageHeightMm": null,
+      "status": "unavailable",
+      "reason": "optiland-raised-ValueError",
+      "coefficients": [],
+      "rmsToChiefWaves": null,
+      "pvToChiefWaves": null,
+      "fitResidualRmsWaves": null,
+      "fitCondition": null,
+      "validSamples": 0,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-fit",
+    "params": {}
+  },
+  "notes": [
+    "field 10: ValueError: a ray missed"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "pupils",
+  "lines": [
+    0
+  ],
+  "maxFieldDeg": 20,
+  "fieldAnglesDeg": [
+    10,
+    20
+  ]
+}

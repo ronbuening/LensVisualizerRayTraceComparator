@@ -109,7 +109,7 @@ test("a tree missing one module fails with that module named, and leaves no load
   const error = await refused(loadLvBinding(lv), "import-failed");
   assert.equal(error.details.length, 1);
   assert.match(error.details[0], /^src\/optics\/fieldGeometry\.ts: /);
-  assert.match(error.message, /1 of 21 modules cannot be imported/);
+  assert.match(error.message, /1 of 30 modules cannot be imported/);
 
   // The failed load uninstalled the loader, so a good tree binds in the same process.
   await bind(t, freshLv(t));
@@ -120,13 +120,20 @@ test("every module that cannot be imported is listed in one error", async (t) =>
   rmSync(join(lv, "src/optics/fieldGeometry.ts"));
   writeFileSync(join(lv, "src/optics/analysis/mtf/mtfSupport.ts"), 'throw new Error("mtfSupport is broken");\n');
   const error = await refused(loadLvBinding(lv), "import-failed");
-  // The MTF module takes its gate from the broken module, and the barrel takes the MTF from that one, so neither
-  // can be imported either. The modules are named in the order of the manifest.
+  // The MTF module takes its gate from the broken module, the vignetting tab its path rules, and the barrels take them
+  // from those, so none of them can be imported either; nor the broken module itself, which the manifest names too.
+  // The modules are named in the order of the manifest.
   assert.deepEqual(
     error.details.map((detail) => detail.split(": ")[0]),
-    ["src/optics/fieldGeometry.ts", "src/optics/mtf.ts", "src/optics/analysis/mtf/mtf.ts"],
+    [
+      "src/optics/fieldGeometry.ts",
+      "src/optics/analysis.ts",
+      "src/optics/mtf.ts",
+      "src/optics/analysis/mtf/mtfSupport.ts",
+      "src/optics/analysis/mtf/mtf.ts",
+    ],
   );
-  assert.match(error.details[1], /mtfSupport/);
+  assert.match(error.details[2], /mtfSupport/);
 });
 
 test("a module that cannot be imported and an export missing elsewhere are named in the same error", async (t) => {
@@ -139,7 +146,7 @@ test("a module that cannot be imported and an export missing elsewhere are named
   assert.equal(error.details[1], "src/optics/trace/aperture.ts: evaluateAperture (expected function, found undefined)");
   assert.match(
     error.message,
-    /1 of 21 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
+    /1 of 30 modules cannot be imported: .*; 1 export is missing: src\/optics\/trace\/aperture/,
   );
 });
 

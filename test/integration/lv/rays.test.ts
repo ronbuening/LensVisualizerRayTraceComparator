@@ -33,6 +33,7 @@ import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLvEngineOn } from "../../../src/engines/lv/engine.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
 import { lvFieldAngles, lvFieldRays, lvLaunchSetup, lvRaySets } from "../../../src/engines/lv/raySets.ts";
+import { lvHookAperture, lvPupilSeed } from "../../../src/engines/lv/tabRequest.ts";
 import type { LvFieldRays, LvLaunchSetup } from "../../../src/engines/lv/raySets.ts";
 import { lvTraceOptions } from "../../../src/engines/lv/rays.ts";
 import type { LvMtfBundle, LvTraceResult, LvVec3 } from "../../../src/engines/lv/types.ts";
@@ -314,21 +315,25 @@ interface FieldCheck {
   readonly bundle: LvMtfBundle;
 }
 
-/** The launch of one field of a model, and LensVisualizer's own bundle of it at one line, with optical paths. */
+/**
+ * The launch of one field of a model at one line, and LensVisualizer's own bundle of it, with optical paths: since
+ * LV #936 its aimed stop lattice of the line (`aimMtfStopLattice`, which the set's rays are), traced by its own
+ * `traceMtfLattice`, the trace its MTF sums.
+ */
 function fieldCheck(binding: LvBinding, model: LvCaseModel, angleDeg: number, line: number): FieldCheck {
   const { api } = binding;
   const setup = lvLaunchSetup(api, model);
   assert.ok(!("problem" in setup), JSON.stringify(setup));
-  const rays = lvFieldRays(api, model, setup, angleDeg, DEFAULT_BUNDLE_GRID);
+  const rays = lvFieldRays(api, model, setup, angleDeg, DEFAULT_BUNDLE_GRID, line);
   assert.ok(!("problem" in rays), JSON.stringify(rays));
+  assert.ok(rays.lattice !== null, "every field of the benchmark is one LensVisualizer aims on the stop");
   const { imageZ } = model.exported.conditions;
-  const bundle = api.traceMtfBundle(
+  const bundle = api.traceMtfLattice(
     model.state,
     setup.options,
     setup.support,
     rays.launch,
-    rays.footprint,
-    DEFAULT_BUNDLE_GRID,
+    rays.lattice,
     setup.support.spectralLines[line],
     imageZ,
     { opticalPath: true },
@@ -343,11 +348,12 @@ function fieldCheck(binding: LvBinding, model: LvCaseModel, angleDeg: number, li
  * - Every ray that is ok lands where LensVisualizer's `mtfImagePoint` lands its trace, and has its optical path,
  *   bit for bit; every other ray has no image point there either. Its path to the image is that path and the index
  *   LensVisualizer ends in times the length of the stretch to the plane (`distanceToPlane`), bit for bit.
- * - The rays of the lattice that are ok are as many as LensVisualizer's own bundle counts as valid, the blocked
- *   and the failed ones as many as it counts as blocked and as failed.
- * - Each ray of the bundle that LensVisualizer traced (it traces half the columns) starts where the set starts the
- *   cell, weighs what the set weighs it, lands where the answer lands it and has the answer's optical path, bit for
- *   bit. Each ray it mirrored instead agrees with the real trace of its cell to 1e-11 mm.
+ * - The cells of the lattice LensVisualizer has a ray for that are ok are as many as its own bundle counts as valid,
+ *   the blocked and the failed ones as many as it counts as blocked and as failed; a vacant cell (outside the stop's
+ *   disc, or unaimed) holds the chief ray at weight 0, which LensVisualizer's bundle does not count.
+ * - Each ray of the bundle that LensVisualizer traced (it traces the cells of xFraction > 0) starts where the set
+ *   starts the cell, weighs what the set weighs it, lands where the answer lands it and has the answer's optical
+ *   path, bit for bit. Each ray it mirrored instead agrees with the real trace of its cell to 1e-11 mm.
  */
 function heldToLensVisualizer(
   binding: LvBinding,
@@ -376,7 +382,7 @@ function heldToLensVisualizer(
     const trace = traced(binding, model, spec, ray);
     const spot = api.mtfImagePoint(model.state, trace, imageZ);
     assert.equal(status[ray] === 0, spot !== null, `${at} ray ${ray}`);
-    if (ray < cells) counts[status[ray]]++;
+    if (ray < cells && check.rays.launchWeights[ray] > 0) counts[status[ray]]++;
     if (spot === null) continue;
     assert.ok(sameBits(image[3 * ray], spot.x) && sameBits(image[3 * ray + 1], spot.y), `${at} ray ${ray} lands`);
     assert.equal(image[3 * ray + 2], imageZ, at);
@@ -634,7 +640,10 @@ test(
     );
     // At d36f44b3: 39 302 rays, of which 22 918 are ok (36 of them chief rays); 11 441 are held to the rays
     // LensVisualizer traced, bit for bit, and 11 441 to the ones it mirrored, within 3.5e-13 mm. No ray failed. By
-    // the reference engine's sag the worst hit is 1.0e-9 mm off its surface: LensVisualizer's own tolerance.
+    // the reference engine's sag the worst hit is 1.0e-9 mm off its surface: LensVisualizer's own tolerance. At
+    // 607ff23ae, on the aimed stop lattices of #936: 36 900 rays, 30 780 ok; 11 556 held to the rays LensVisualizer
+    // traced bit for bit, and 11 556 to the ones it mirrored, to the bit (its lattice's halves are exact mirrors);
+    // the worst hit 1.0e-12 mm off its surface.
     assert.ok(totals.rays > 30_000, String(totals.rays));
     assert.ok(totals.exact > 10_000 && totals.mirrored > 10_000, JSON.stringify(totals));
     assert.ok(totals.worstMirrored < 1e-11, String(totals.worstMirrored));
@@ -642,7 +651,7 @@ test(
 );
 
 test(
-  "the photopic lines of a benchmark lens trace the rays of its reference line, with each line's own indices",
+  "the photopic lines of a benchmark lens trace each line's own aimed lattice, with each line's own indices",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -657,8 +666,9 @@ test(
       sets.map((spec) => spec.line),
       [0, 1, 2, 3, 4],
     );
-    // One field, one footprint, found at 555 nm: the five sets differ in nothing but the line.
-    for (const spec of sets) assert.deepEqual({ ...spec, line: 0 }, sets[0]);
+    // One field, whose stop lattice LensVisualizer aims at each line with that line's anchored indices (LV #936): the
+    // five sets are of five lattices, each held below to LensVisualizer's own bundle of it.
+    assert.equal(new Set(sets.map((spec) => JSON.stringify(spec.origins))).size, 5);
     const setup = lvLaunchSetup(binding.api, model);
     assert.ok(!("problem" in setup));
     assert.equal(setup.support.spectralLines[0].wavelengthNm, 555);
@@ -698,12 +708,12 @@ test(
     const setup = lvLaunchSetup(api, model);
     assert.ok(!("problem" in setup));
     assert.equal(setup.options.stopSemiDiameterMm, stop);
-    // The seed of the footprint is the number the hook of LensVisualizer's MTF tab hands over at this f-number, to
-    // the bit: the entrance pupil of the wide-open stop, times the wide-open f-number, over this one.
-    const tabSeed =
-      (api.entrancePupilAtState(wideOpen, 0, 0, model.runtime).epSD * api.fopenAtZoomClamped(0, model.runtime)) /
-      fNumber;
-    assert.equal(setup.options.pupilSemiDiameterMm, tabSeed);
+    // The stop is the stop rule's at f/8 (LV #933), the tab's f/8 comparison's to the bit; the pupil radius the aimed
+    // launch is scaled by is that comparison's: the hook's wide-open pupil times the two stops' ratio.
+    assert.equal(stop, api.stopSemiDiameterForFNumber(fNumber, 0, model.runtime));
+    assert.equal(setup.options.pupilSemiDiameterMm, lvPupilSeed(api, model.runtime, model.state, stop));
+    const hook = lvHookAperture(api, model.runtime, model.state);
+    assert.equal(setup.options.pupilSemiDiameterMm, (hook.currentEPSD * stop) / hook.currentPhysStopSD);
 
     const { sets, problems } = lvRaySets(api, model, {});
     assert.deepEqual(problems, []);
@@ -719,21 +729,23 @@ test(
       const data = result.data as RaysTraceData;
       heldToLensVisualizer(binding, model, spec, data, fieldCheck(binding, model, angleDeg, 0), at);
       heldToTheCase(opticalCase, spec, data, at);
-      // A ray the iris stops had passed the same surface of the open lens: LensVisualizer's hit on the stop
-      // surface lies within the radius the state keeps for it, and outside the stop radius of the case.
+      // The lattice is aimed on the real stop of the case (LV #936): every cell's ray crosses the stop surface within
+      // the stop radius of the case, which the state's wide-open radius lies far outside, and the iris stops none.
       const endSurface = decodeNdArray(data.endSurface).values;
-      for (let ray = 0; ray < endSurface.length; ray++) {
+      const hits = f8(data.hits);
+      const rays = endSurface.length;
+      for (let ray = 0; ray < rays; ray++) {
         if (endSurface[ray] === -1) ok++;
-        if (endSurface[ray] !== stopIndex) continue;
-        const [x, y] = traced(binding, model, spec, ray).hits[stopIndex].point;
-        const radius = Math.hypot(x, y);
-        assert.ok(radius > stop && radius < wideOpen, `${at} ray ${ray}: ${radius}`);
-        stoppedByIris++;
+        if (endSurface[ray] === stopIndex) stoppedByIris++;
+        if (endSurface[ray] !== -1 && endSurface[ray] <= stopIndex) continue;
+        const at3 = 3 * (stopIndex * rays + ray);
+        const radius = Math.hypot(hits[at3], hits[at3 + 1]);
+        assert.ok(radius < stop, `${at} ray ${ray}: ${radius} of ${stop}`);
       }
     }
-    // At d36f44b3, in the three sets: 2455 rays ok and 1436 stopped by the iris.
     t.diagnostic(`${key} at f/${fNumber}: ${ok} rays ok, ${stoppedByIris} stopped by the iris`);
-    assert.ok(ok > 500 && stoppedByIris > 500, `${ok} ok, ${stoppedByIris} stopped by the iris`);
+    assert.ok(ok > 500, `${ok} ok`);
+    assert.equal(stoppedByIris, 0, "no aimed cell lies outside the stop it was aimed at");
   },
 );
 
@@ -783,11 +795,11 @@ test(
         });
         assert.ok(origins[3 * ray + 2] > source[2] && origins[3 * ray + 2] < 0, `ray ${ray}`);
       }
-      // The weights are solid angles relative to the chief ray's: about 1, on both sides of it, and the chief's 0.
+      // Since LV #936 a cell weighs 1 from a finite object point too, uniform amplitude on the stop (times a bulk
+      // transmission this lens does not have); the chief's 0, and a vacant cell's.
       assert.equal(weights[chief], 0);
-      const cells = [...weights.subarray(0, chief)];
-      assert.ok(Math.min(...cells) > 0.9 && Math.min(...cells) < 1 && Math.max(...cells) <= 1.2, angleDeg.toString());
-      assert.ok(new Set(cells).size > 100, "the weights differ from cell to cell");
+      const cells = [...weights.subarray(0, chief)].filter((_weight, ray) => check.rays.launchWeights[ray] > 0);
+      assert.ok(cells.length > 500 && cells.every((weight) => weight === 1), angleDeg.toString());
 
       const result = await lv.run(makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec }), opticalCase);
       assert.equal(result.status, "ok", JSON.stringify(result.error));
@@ -795,7 +807,7 @@ test(
       const at = `${key} at focus ${station.focusT}, field at ${angleDeg} degrees`;
       const held = heldToLensVisualizer(binding, model, spec, result.data as RaysTraceData, check, at);
       heldToTheCase(opticalCase, spec, result.data as RaysTraceData, at);
-      summary.push(`${weights.length} rays (${held.exact} + ${held.mirrored} ok, weights from ${Math.min(...cells)})`);
+      summary.push(`${weights.length} rays (${held.exact} + ${held.mirrored} ok)`);
     }
     // At d36f44b3: 2305, 1801 and 1921 rays; the weights go down to 0.958, 0.925 and 0.935.
     t.diagnostic(`${key} at focus ${station.focusT}: ${summary.join("; ")}`);
@@ -839,11 +851,11 @@ test(
       if (key === "minolta-stf-135f28-t45") {
         assert.ok(most > 0.5 && least < 0.5 * most, `${least} to ${most}`);
       }
-      // A ray that is stopped keeps its launch weight, which nothing reads: the first cell is a corner of the lattice.
-      const corner = traced(binding, model, spec, 0);
-      const stop = opticalCase.conditions.stopSemiDiameter;
-      assert.equal(binding.api.mtfTraceClassification(corner, model.state, stop), "blocked");
-      assert.equal(weights[0], 1);
+      // The first cell is a corner of the square lattice, outside the stop's disc: vacant, the chief ray at weight 0.
+      assert.equal(check.rays.launchWeights[0], 0);
+      assert.equal(weights[0], 0);
+      const chief = spec.groups?.chiefIndex as number;
+      assert.deepEqual([...f8(spec.origins).subarray(0, 3)], [...f8(spec.origins).subarray(3 * chief, 3 * chief + 3)]);
     }
   },
 );

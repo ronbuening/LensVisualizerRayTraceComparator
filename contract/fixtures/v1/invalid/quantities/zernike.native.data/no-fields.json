@@ -1,0 +1,17 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 587.5
+  },
+  "grid": 8,
+  "ordering": "standard",
+  "terms": 4,
+  "fields": [],
+  "method": {
+    "name": "synthetic-fit",
+    "params": {}
+  },
+  "notes": [
+    "field 10: ValueError: a ray missed"
+  ]
+}

@@ -138,6 +138,13 @@ test(
       [raysTraceQuantity.id]: { version: raysTraceQuantity.version, versions: [1, 2, 3] },
       [mtfNativeQuantity.id]: { version: mtfNativeQuantity.version },
       "wavefront.native": { version: 1 },
+      "spot.native": { version: 1 },
+      "axial.native": { version: 1 },
+      "chief.native": { version: 1 },
+      "curvature.native": { version: 1 },
+      "summary.native": { version: 1 },
+      "seidel.native": { version: 1 },
+      "zernike.native": { version: 1 },
     });
     const opticalCase: OpticalCase = JSON.parse(readFileSync(caseFixture("all-features"), "utf8"));
     const request = makeRequest({ caseId: opticalCase.id, quantity: SYSTEM_DESCRIBE, spec: {} });

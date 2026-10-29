@@ -1,0 +1,52 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 587.5
+  },
+  "grid": 8,
+  "ordering": "fringe",
+  "terms": 4,
+  "fields": [
+    {
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "status": "ok",
+      "coefficients": [
+        0.25,
+        0,
+        0,
+        0.125
+      ],
+      "rmsToChiefWaves": 0.0625,
+      "pvToChiefWaves": 0.25,
+      "fitResidualRmsWaves": 0.0078125,
+      "fitCondition": 2.5,
+      "validSamples": 32,
+      "sampling": {
+        "gridSize": 8
+      }
+    },
+    {
+      "fieldAngleDeg": 10,
+      "imageHeightMm": 8.5,
+      "status": "ok",
+      "coefficients": [
+        0.5,
+        0,
+        -0.25,
+        0.125
+      ],
+      "rmsToChiefWaves": 0.0625,
+      "pvToChiefWaves": 0.25,
+      "fitResidualRmsWaves": 0.0078125,
+      "fitCondition": 2.5,
+      "validSamples": 32,
+      "sampling": {}
+    }
+  ],
+  "method": {
+    "name": "synthetic-fit",
+    "params": {}
+  },
+  "notes": []
+}

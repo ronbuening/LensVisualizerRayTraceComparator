@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   inclusiveClipLimit,
+  lvClearRadius,
   stopRadius,
   surfaceAperture,
   wideOpenStopRadius,
@@ -21,12 +22,25 @@ const RUNTIME: LvRuntimeLens = {
   maxFstop: 22,
 };
 
+/**
+ * A synthetic stop rule (LV #933 in shape, not in number): the stop at N is the rule's `k / N` above the widest
+ * f-number, never wider than wide open, with k a binary fraction so every radius is exact.
+ */
+function ruled(wideOpen: (zoomT: number) => number, fopen: (zoomT: number) => number, k = 24): LvStopApi {
+  return {
+    wideOpenStopAtZoom: wideOpen,
+    stopSemiDiameterForFNumber: (fNumber, zoomT) =>
+      fNumber > fopen(zoomT) ? Math.min(wideOpen(zoomT), k / fNumber) : wideOpen(zoomT),
+    fopenAtZoomClamped: (zoomT) => fopen(zoomT),
+    fNumberAtStopdown: (_stopdownT, zoomT) => fopen(zoomT),
+  };
+}
+
 /** A zoom whose iris opens from 3 mm at the wide end to 6 mm at the tele end, f/4 at both. */
-const ZOOM: LvStopApi = {
-  wideOpenStopAtZoom: (zoomT) => 3 + 3 * zoomT,
-  fopenAtZoomClamped: () => 4,
-  fNumberAtStopdown: () => 4,
-};
+const ZOOM: LvStopApi = ruled(
+  (zoomT) => 3 + 3 * zoomT,
+  () => 4,
+);
 
 /** The next double above and below a positive one. */
 function neighbours(value: number): { below: number; above: number } {
@@ -48,30 +62,29 @@ test("wide open, and no aperture at all, is LensVisualizer's wide-open stop radi
   assert.equal(wideOpenStopRadius(ZOOM, RUNTIME, 0.5), 4.5);
 });
 
-test("an f-number is the hook's rule: wide-open radius times the widest f-number, divided by N", () => {
-  assert.deepEqual(stopRadius(ZOOM, RUNTIME, 0, { kind: "f-number", value: 8 }), { ok: true, radius: 1.5 });
+test("an f-number is the stop LensVisualizer's stop rule gives at that N and zoom position, asked of LensVisualizer", () => {
+  // 24 / 8 = 3 is the rule's radius; at the wide end it is the wide-open 3 mm (never wider), at the tele end 3 of 6.
   assert.deepEqual(stopRadius(ZOOM, RUNTIME, 1, { kind: "f-number", value: 8 }), { ok: true, radius: 3 });
-  // The order of operations is the hook's, (w * fopen) / N, which is not w * (fopen / N) in the last bit.
-  const api: LvStopApi = {
-    wideOpenStopAtZoom: () => 12.7,
-    fopenAtZoomClamped: () => 1.9,
-    fNumberAtStopdown: () => 1.9,
+  assert.deepEqual(stopRadius(ZOOM, RUNTIME, 0, { kind: "f-number", value: 16 }), { ok: true, radius: 1.5 });
+  // The rule is LensVisualizer's own function, called with the f-number, the zoom position and the lens as given.
+  const asked: unknown[][] = [];
+  const recording: LvStopApi = {
+    ...ZOOM,
+    stopSemiDiameterForFNumber: (...args) => {
+      asked.push(args);
+      return 2.25;
+    },
   };
-  const stopped = stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 2.8 });
-  assert.deepEqual(stopped, { ok: true, radius: (12.7 * 1.9) / 2.8 });
-  assert.notEqual((12.7 * 1.9) / 2.8, 12.7 * (1.9 / 2.8), "the example tells the two orders apart");
+  assert.deepEqual(stopRadius(recording, RUNTIME, 0.5, { kind: "f-number", value: 11 }), { ok: true, radius: 2.25 });
+  assert.deepEqual(asked, [[11, 0.5, RUNTIME]]);
 });
 
-test("the widest f-number asked for by number is the hook's (w * fopen) / fopen, not a shortcut to wide open", () => {
-  const api: LvStopApi = {
-    wideOpenStopAtZoom: () => 7.3,
-    fopenAtZoomClamped: () => 1.85,
-    fNumberAtStopdown: () => 1.85,
-  };
-  assert.deepEqual(stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 1.85 }), {
-    ok: true,
-    radius: (7.3 * 1.85) / 1.85,
-  });
+test("the widest f-number asked for by number is the rule's stop at it, which is the wide-open stop", () => {
+  const api = ruled(
+    () => 7.3,
+    () => 1.85,
+  );
+  assert.deepEqual(stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 1.85 }), { ok: true, radius: 7.3 });
 });
 
 test("an f-number faster than wide open is a problem, not a clamp", () => {
@@ -83,39 +96,34 @@ test("an f-number faster than wide open is a problem, not a clamp", () => {
     },
   });
   // The widest aperture is the one of the zoom position asked for.
-  const variable: LvStopApi = {
-    wideOpenStopAtZoom: () => 5,
-    fopenAtZoomClamped: (zoomT) => 3.5 + 2.1 * zoomT,
-    fNumberAtStopdown: (_stopdownT, zoomT) => 3.5 + 2.1 * zoomT,
-  };
+  const variable = ruled(
+    () => 5,
+    (zoomT) => 3.5 + 2.1 * zoomT,
+  );
   assert.equal(stopRadius(variable, RUNTIME, 0, { kind: "f-number", value: 4 }).ok, true);
   assert.equal(stopRadius(variable, RUNTIME, 1, { kind: "f-number", value: 4 }).ok, false);
 });
 
-test("the tab's f/8 comparison is the hook's wide-open radius times its f-number over 8, in the tab's order", () => {
-  // The slider's f-number at wide open need not be the widest f-number: the tab scales by the slider's.
-  const api: LvStopApi = {
-    wideOpenStopAtZoom: () => 12.7,
-    fopenAtZoomClamped: () => 1.9,
-    fNumberAtStopdown: () => 2.87,
-  };
-  const hookRadius = (12.7 * 1.9) / 2.87;
-  assert.deepEqual(stopRadius(api, RUNTIME, 0, { kind: "lv-f8-comparison" }), {
-    ok: true,
-    radius: hookRadius * (2.87 / 8),
-  });
-  // It is not the hook's own f/8, which divides once: here the two differ in the last bit.
-  assert.notEqual(hookRadius * (2.87 / 8), (12.7 * 1.9) / 8);
-  assert.deepEqual(stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 8 }), { ok: true, radius: (12.7 * 1.9) / 8 });
-  assert.deepEqual(stopRadius(ZOOM, RUNTIME, 1, { kind: "lv-f8-comparison" }), {
-    ok: true,
-    radius: ((6 * 4) / 4) * (4 / 8),
-  });
+test("the tab's f/8 comparison is the stop rule's f/8 stop, the slider's f/8 to the bit", () => {
+  const api = ruled(
+    () => 12.7,
+    () => 1.9,
+    25.5,
+  );
+  assert.deepEqual(stopRadius(api, RUNTIME, 0, { kind: "lv-f8-comparison" }), { ok: true, radius: 25.5 / 8 });
+  assert.deepEqual(
+    stopRadius(api, RUNTIME, 0, { kind: "lv-f8-comparison" }),
+    stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 8 }),
+  );
+  assert.deepEqual(stopRadius(ZOOM, RUNTIME, 1, { kind: "lv-f8-comparison" }), { ok: true, radius: 3 });
 });
 
 test("a lens the tab offers no f/8 comparison for has no such stop, and the problem is the tab's reason", () => {
   // Not faster than f/7.95 wide open.
-  const slow: LvStopApi = { wideOpenStopAtZoom: () => 3, fopenAtZoomClamped: () => 8, fNumberAtStopdown: () => 8 };
+  const slow = ruled(
+    () => 3,
+    () => 8,
+  );
   assert.deepEqual(stopRadius(slow, RUNTIME, 0, { kind: "lv-f8-comparison" }), {
     ok: false,
     problem: {
@@ -149,11 +157,10 @@ test("a stop radius is taken as given, also beyond wide open", () => {
 
 test("a wide-open radius that is not a positive number is refused", () => {
   for (const radius of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
-    const api: LvStopApi = {
-      wideOpenStopAtZoom: () => radius,
-      fopenAtZoomClamped: () => 2,
-      fNumberAtStopdown: () => 2,
-    };
+    const api = ruled(
+      () => radius,
+      () => 2,
+    );
     assert.throws(() => wideOpenStopRadius(api, RUNTIME, 0), /wide-open stop radius at zoom 0 is /);
     assert.throws(() => stopRadius(api, RUNTIME, 0, { kind: "f-number", value: 8 }), /wide-open stop radius/);
   }
@@ -289,6 +296,32 @@ test("an answer that is not what the state implies is refused, naming the surfac
     evaluateAperture: () => ({ state: "inside" as const, radius: 0, semiDiameter: null, innerSemiDiameter: 0 }),
   };
   assert.throws(() => surfaceAperture(noLimit, STATE, STATE.surfaces[0], undefined), /semi-diameter null, expected 9/);
+});
+
+// ── A flat rim cut ───────────────────────────────────────────────────────────────────────────────────────────────
+
+test("a surface with a flat rim cut is its cap clipped at the cut radius, which LensVisualizer traces it with", () => {
+  // The cap's sag reaches the land at 6.5 mm, inside the surface's sd of 9 mm: LV clips there.
+  const cut = { ...STATE.surfaces[0], rimCut: { depthMm: 0.5, sag: -0.5, radius: 6.5 } };
+  assert.equal(lvClearRadius(cut), 6.5);
+  assert.deepEqual(surfaceAperture(API, STATE, cut, undefined), {
+    semiDiameter: 6.500000001,
+    nominalSemiDiameter: 6.5,
+    innerSemiDiameter: 0,
+  });
+  // A cut whose radius lies beyond sd ends nothing: the surface is clipped at its sd.
+  const wide = { ...STATE.surfaces[0], rimCut: { depthMm: 0.5, sag: -0.5, radius: 12 } };
+  assert.equal(lvClearRadius(wide), 9);
+  assert.equal(surfaceAperture(API, STATE, wide, undefined).nominalSemiDiameter, 9);
+  // A LensVisualizer that clipped such a surface at its sd would not be doing what its state says: refused, naming it.
+  const uncut = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) =>
+      lvEvaluateAperture(args[0], { ...args[1], rimCut: null }, args[2], args[3]),
+  };
+  assert.throws(
+    () => surfaceAperture(uncut, STATE, cut, undefined),
+    /traces surface 1 with the semi-diameter 9, expected 6\.5/,
+  );
 });
 
 // ── A surface that does not clip ─────────────────────────────────────────────────────────────────────────────────

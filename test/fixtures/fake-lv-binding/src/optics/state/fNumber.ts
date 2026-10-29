@@ -6,3 +6,4 @@ export function fNumberAtStopdown(stopdownT: number, zoomT: number, L: FakeRunti
   const requested = L.FOPEN * Math.pow(L.maxFstop / L.FOPEN, stopdownT);
   return Math.max(requested, fopenAtZoomClamped(zoomT, L));
 }
+

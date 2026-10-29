@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:axial.native.data",
+  "title": "axial.native data",
+  "description": "An engine's own axial figures of a case, or the real rays it traced for them: per requested line, where its marginal ray crosses the axis and, for spherical aberration, where its near-axis pair does, the least-squares focus of the profile's pairs, their RMS height there and the profile itself; or the exit of every ray it traced; and the paraxial rear focal point where the engine presents one. Every z in the contract frame, lengths in mm. Code checks that an unavailable line says why and has neither figures nor rays, that an ok line has exactly one of them, that figures are complete for their kind, and that the arrays of rays agree in length.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "description": "The kind of the spec the answer is of.",
+      "enum": ["spherical", "colour"]
+    },
+    "pupilRadiusMm": {
+      "description": "The radius the spec's fractions are of, by the engine's own construction: the real stop's, where it aims each ray at its point of the stop at the line traced, or its own pupil of the axial beam at the first line asked.",
+      "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+    },
+    "fields": {
+      "description": "One entry per requested line, in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "description": "The line, as it was requested.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "wavelengthNm": {
+            "description": "The wavelength the engine traced the line at.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          },
+          "status": {
+            "description": "ok: the engine stands by its figures or rays. unavailable: it has none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the line is unavailable; always there for an unavailable line.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "paraxialFocusZ": {
+            "description": "The paraxial rear focal point at the line; null where the engine presents none.",
+            "type": ["number", "null"]
+          },
+          "figures": {
+            "description": "The engine's own figures of the line; null for an engine that states its rays instead, and for an unavailable line.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "landingMm": {
+                    "description": "The height on the image plane of the case of the ray the line is identified by: the mean of the near-axis pair for spherical aberration, the marginal ray for colour.",
+                    "type": "number"
+                  },
+                  "marginalFraction": {
+                    "description": "The fraction of the marginal zone or ray taken.",
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 1
+                  },
+                  "marginalInterceptZ": {
+                    "description": "Where the marginal ray crosses the axis: the mean of its pair for spherical aberration.",
+                    "type": "number"
+                  },
+                  "nearAxisInterceptZ": {
+                    "description": "Of spherical aberration: the mean crossing of the near-axis pair. Null for colour.",
+                    "type": ["number", "null"]
+                  },
+                  "bestFocusZ": {
+                    "description": "Of spherical aberration: the least-squares focus of the profile's pairs. Null for colour.",
+                    "type": ["number", "null"]
+                  },
+                  "bestFocusRmsMm": {
+                    "description": "Of spherical aberration: the RMS height of the profile's pairs on the plane of that focus. Null for colour.",
+                    "type": ["number", "null"],
+                    "minimum": 0
+                  },
+                  "profileMm": {
+                    "description": "Of spherical aberration: each profile zone's plus ray at the best focus relative to the near-axis plus ray there, NaN for a zone whose pair did not arrive; shape [zones]. Null for colour.",
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "landingMm",
+                  "marginalFraction",
+                  "marginalInterceptZ",
+                  "nearAxisInterceptZ",
+                  "bestFocusZ",
+                  "bestFocusRmsMm",
+                  "profileMm"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "rays": {
+            "description": "The rays the engine traced for the line: the signed fraction of each, whether it passed every surface, and its point and unit direction where it leaves the last surface, NaN where it did not arrive; shapes [m] and [m, 3]. Null for an engine that states its figures, and for an unavailable line.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "fractions": {
+                    "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Vector"
+                  },
+                  "arrived": {
+                    "type": "object",
+                    "properties": {
+                      "$nd": {
+                        "type": "object",
+                        "properties": {
+                          "dtype": {
+                            "const": "u1"
+                          },
+                          "shape": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+                            },
+                            "minItems": 1,
+                            "maxItems": 1
+                          },
+                          "data": {
+                            "$ref": "urn:lvrtc:contract:v1:common#/$defs/base64"
+                          },
+                          "sha256": {
+                            "$ref": "urn:lvrtc:contract:v1:common#/$defs/sha256"
+                          }
+                        },
+                        "required": ["dtype", "shape", "data", "sha256"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["$nd"],
+                    "additionalProperties": false
+                  },
+                  "exitPoint": {
+                    "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+                  },
+                  "exitDirection": {
+                    "$ref": "urn:lvrtc:contract:v1:common#/$defs/f8Matrix"
+                  }
+                },
+                "required": ["fractions", "arrived", "exitPoint", "exitDirection"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "sampling": {
+            "description": "How the engine sampled the line, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": ["line", "wavelengthNm", "status", "paraxialFocusZ", "figures", "rays", "sampling"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["kind", "pupilRadiusMm", "fields", "method", "notes"],
+  "additionalProperties": false
+}

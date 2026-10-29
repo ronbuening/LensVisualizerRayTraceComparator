@@ -1,0 +1,29 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 587.5
+  },
+  "maxFieldDeg": 20,
+  "dispersionLines": null,
+  "status": "unavailable",
+  "reason": "system.afocal",
+  "invariant": null,
+  "surfaces": [],
+  "total": {
+    "SPHA": null,
+    "COMA": null,
+    "ASTI": null,
+    "FCUR": null,
+    "DIST": null,
+    "CLA": null,
+    "CTR": null
+  },
+  "sampling": {},
+  "method": {
+    "name": "synthetic-sums",
+    "params": {}
+  },
+  "notes": [
+    "the system has no image-space marginal slope"
+  ]
+}

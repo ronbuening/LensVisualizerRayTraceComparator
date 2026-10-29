@@ -30,6 +30,11 @@ import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
 import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
+import type { SpotSetResolution } from "../rays/spotSets.ts";
+import type { AxialSetResolution } from "../rays/axialSets.ts";
+import type { ChiefSetResolution } from "../rays/chiefSets.ts";
+import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
+import type { VignettingSetResolution } from "../rays/vignettingSets.ts";
 import { NO_RUNG_INPUTS, RUNGS, selectRungs } from "./rungs.ts";
 import type { RungDefinition, RungInputs } from "./rungs.ts";
 import type { CaseSources, LoadedRun, LoadedSuite, RunRaySets } from "./suite.ts";
@@ -252,6 +257,91 @@ async function recipeOf(input: RunSuiteInput, spec: RunSpec, opticalCase: Optica
   return source.recipe(spec, opticalCase);
 }
 
+/** Why a run has no spot sets when the source of its case generates none, or no source was given. */
+const NO_SPOT_SOURCE = "spot-sets-unavailable: no case source generates spot sets for this lens";
+
+/**
+ * The spot sets of one run, from the source of its lens (`CaseSource.spotRaySets`); none, and the problem that
+ * says so, when no source was given for the lens or the source generates none.
+ */
+async function spotRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<SpotSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.spotRaySets === undefined) return { sets: [], problems: [NO_SPOT_SOURCE], asks: [] };
+  return source.spotRaySets(spec, opticalCase);
+}
+
+/** Why a run has no axial sets when the source of its case generates none, or no source was given. */
+const NO_AXIAL_SOURCE = "axial-sets-unavailable: no case source generates axial sets for this lens";
+
+/**
+ * The axial sets of one run, from the source of its lens (`CaseSource.axialRaySets`); none, and the problem that
+ * says so, when no source was given for the lens or the source generates none.
+ */
+async function axialRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<AxialSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.axialRaySets === undefined) return { sets: [], problems: [NO_AXIAL_SOURCE], asks: [] };
+  return source.axialRaySets(spec, opticalCase);
+}
+
+/** Why a run has no chief sets when the source of its case generates none, or no source was given. */
+const NO_CHIEF_SOURCE = "chief-sets-unavailable: no case source generates chief sets for this lens";
+
+/**
+ * The chief sets of one run, from the source of its lens (`CaseSource.chiefRaySets`); none, and the problem that
+ * says so, when no source was given for the lens or the source generates none.
+ */
+async function chiefRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<ChiefSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.chiefRaySets === undefined) return { sets: [], problems: [NO_CHIEF_SOURCE], asks: [] };
+  return source.chiefRaySets(spec, opticalCase);
+}
+
+/** Why a run has no curvature sets when the source of its case generates none, or no source was given. */
+const NO_CURVATURE_SOURCE = "curvature-sets-unavailable: no case source generates curvature sets for this lens";
+
+/**
+ * The curvature sets of one run, from the source of its lens (`CaseSource.curvatureRaySets`); none, and the problem
+ * that says so, when no source was given for the lens or the source generates none.
+ */
+async function curvatureRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<CurvatureSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.curvatureRaySets === undefined) return { sets: [], problems: [NO_CURVATURE_SOURCE], asks: [] };
+  return source.curvatureRaySets(spec, opticalCase);
+}
+
+/** Why a run has no vignetting sets when the source of its case generates none, or no source was given. */
+const NO_VIGNETTING_SOURCE = "vignetting-sets-unavailable: no case source generates vignetting sets for this lens";
+
+/**
+ * The vignetting sets of one run, from the source of its lens (`CaseSource.vignettingRaySets`); none, and the problem
+ * that says so, when no source was given for the lens or the source generates none.
+ */
+async function vignettingRaySetsOf(
+  input: RunSuiteInput,
+  spec: RunSpec,
+  opticalCase: OpticalCase,
+): Promise<VignettingSetResolution> {
+  const source = input.sources?.[spec.lens.kind];
+  if (source?.vignettingRaySets === undefined) return { sets: [], problems: [NO_VIGNETTING_SOURCE], asks: [] };
+  return source.vignettingRaySets(spec, opticalCase);
+}
+
 /** Every job of a suite before it is run, and what was generated for its runs. */
 export interface Plan {
   /** Runs after source confirmation: refused runs have no case or jobs; accepted cases may have provenance notes. */
@@ -261,6 +351,16 @@ export interface Plan {
   readonly raySets: ReadonlyMap<string, ManifestRaySets>;
   /** The ray sets on the finer lattice of each run that a rung needed them for, by run name. */
   readonly fineRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The spot sets of each run that a rung needed them for, by run name. */
+  readonly spotRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The axial sets of each run that a rung needed them for, by run name. */
+  readonly axialRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The chief sets of each run that a rung needed them for, by run name. */
+  readonly chiefRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The curvature sets of each run that a rung needed them for, by run name. */
+  readonly curvatureRaySets: ReadonlyMap<string, ManifestRaySets>;
+  /** The vignetting sets of each run that a rung needed them for, by run name. */
+  readonly vignettingRaySets: ReadonlyMap<string, ManifestRaySets>;
   /** The MTF recipe of each run that a rung needed one for, by run name. */
   readonly recipes: ReadonlyMap<string, MtfRecipeResolution>;
 }
@@ -323,12 +423,22 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       ),
       raySets: new Map(plans.flatMap((plan) => [...plan.raySets])),
       fineRaySets: new Map(plans.flatMap((plan) => [...plan.fineRaySets])),
+      spotRaySets: new Map(plans.flatMap((plan) => [...plan.spotRaySets])),
+      axialRaySets: new Map(plans.flatMap((plan) => [...plan.axialRaySets])),
+      chiefRaySets: new Map(plans.flatMap((plan) => [...plan.chiefRaySets])),
+      curvatureRaySets: new Map(plans.flatMap((plan) => [...plan.curvatureRaySets])),
+      vignettingRaySets: new Map(plans.flatMap((plan) => [...plan.vignettingRaySets])),
       recipes: new Map(plans.flatMap((plan) => [...plan.recipes])),
     };
   }
   const jobs: PlannedJob[] = [];
   const raySets = new Map<string, ManifestRaySets>();
   const fineRaySets = new Map<string, ManifestRaySets>();
+  const spotRaySets = new Map<string, ManifestRaySets>();
+  const axialRaySets = new Map<string, ManifestRaySets>();
+  const chiefRaySets = new Map<string, ManifestRaySets>();
+  const curvatureRaySets = new Map<string, ManifestRaySets>();
+  const vignettingRaySets = new Map<string, ManifestRaySets>();
   const recipes = new Map<string, MtfRecipeResolution>();
   const runs = [...suite.runs];
   for (const [index, run] of suite.runs.entries()) {
@@ -363,6 +473,41 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       opticalCase = confirmed.opticalCase;
       runs[index] = { ...run, opticalCase };
     }
+    if (rungs.some((rung) => rung.needsSpotRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.spot-generate", () =>
+        spotRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, spotRaySets: sets, spotAsks: asks };
+      spotRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsAxialRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.axial-generate", () =>
+        axialRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, axialRaySets: sets, axialAsks: asks };
+      axialRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsChiefRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.chief-generate", () =>
+        chiefRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, chiefRaySets: sets, chiefAsks: asks };
+      chiefRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsCurvatureRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.curvature-generate", () =>
+        curvatureRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, curvatureRaySets: sets, curvatureAsks: asks };
+      curvatureRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
+    if (rungs.some((rung) => rung.needsVignettingRaySets === true)) {
+      const { sets, problems, asks } = await profileAsync("rays.vignetting-generate", () =>
+        vignettingRaySetsOf(input, spec, opticalCase),
+      );
+      inputs = { ...inputs, vignettingRaySets: sets, vignettingAsks: asks };
+      vignettingRaySets.set(spec.name, { sets: sets.map(raySetId), problems: [...problems] });
+    }
     if (rungs.some((rung) => rung.needsRecipe === true)) {
       const { recipe, problems } = await profileAsync("recipe.generate", () => recipeOf(input, spec, opticalCase));
       inputs = { ...inputs, recipe };
@@ -374,6 +519,21 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       const rungInputs: RungInputs = {
         raySets: rung.needsRaySets === true ? inputs.raySets : NO_RUNG_INPUTS.raySets,
         ...(rung.needsFineRaySets === true ? { fineRaySets: inputs.fineRaySets ?? [] } : {}),
+        ...(rung.needsSpotRaySets === true
+          ? { spotRaySets: inputs.spotRaySets ?? [], spotAsks: inputs.spotAsks ?? [] }
+          : {}),
+        ...(rung.needsAxialRaySets === true
+          ? { axialRaySets: inputs.axialRaySets ?? [], axialAsks: inputs.axialAsks ?? [] }
+          : {}),
+        ...(rung.needsChiefRaySets === true
+          ? { chiefRaySets: inputs.chiefRaySets ?? [], chiefAsks: inputs.chiefAsks ?? [] }
+          : {}),
+        ...(rung.needsCurvatureRaySets === true
+          ? { curvatureRaySets: inputs.curvatureRaySets ?? [], curvatureAsks: inputs.curvatureAsks ?? [] }
+          : {}),
+        ...(rung.needsVignettingRaySets === true
+          ? { vignettingRaySets: inputs.vignettingRaySets ?? [], vignettingAsks: inputs.vignettingAsks ?? [] }
+          : {}),
         recipe: rung.needsRecipe === true ? inputs.recipe : null,
       };
       const requests = requestsOf(rung, quantity, opticalCase, spec, rungInputs);
@@ -394,7 +554,18 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
       }
     }
   }
-  return { runs, jobs, raySets, fineRaySets, recipes };
+  return {
+    runs,
+    jobs,
+    raySets,
+    fineRaySets,
+    spotRaySets,
+    axialRaySets,
+    chiefRaySets,
+    curvatureRaySets,
+    vignettingRaySets,
+    recipes,
+  };
 }
 
 /** A planned job as the manifest records it, with how it ended. */
@@ -654,7 +825,18 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
   const { suite, registry, runsDir } = input;
   const concurrency = input.jobs ?? 1;
   if (!Number.isSafeInteger(concurrency) || concurrency < 1) throw new UsageError("--jobs must be a positive integer");
-  const { runs, jobs: planned, raySets, fineRaySets, recipes } = await profileAsync("plan", () => planJobs(input));
+  const {
+    runs,
+    jobs: planned,
+    raySets,
+    fineRaySets,
+    spotRaySets,
+    axialRaySets,
+    chiefRaySets,
+    curvatureRaySets,
+    vignettingRaySets,
+    recipes,
+  } = await profileAsync("plan", () => planJobs(input));
   const store = createResultStore(join(runsDir, STORE_DIRECTORY), { parallelCompression: concurrency > 1 });
   const warnings: string[] = [];
   const sessions = new Map<string, EngineSession>();
@@ -818,6 +1000,11 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
     runs: runs.map(({ spec, opticalCase, problems }) => {
       const rays = raySets.get(spec.name);
       const finer = fineRaySets.get(spec.name);
+      const spots = spotRaySets.get(spec.name);
+      const axial = axialRaySets.get(spec.name);
+      const chief = chiefRaySets.get(spec.name);
+      const curvature = curvatureRaySets.get(spec.name);
+      const vignetting = vignettingRaySets.get(spec.name);
       const recipe = recipes.get(spec.name);
       return {
         name: spec.name,
@@ -826,6 +1013,11 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
         ...(spec.referenceEngine === undefined ? {} : { referenceEngine: spec.referenceEngine }),
         ...(rays === undefined ? {} : { raySets: rays }),
         ...(finer === undefined ? {} : { fineRaySets: finer }),
+        ...(spots === undefined ? {} : { spotRaySets: spots }),
+        ...(axial === undefined ? {} : { axialRaySets: axial }),
+        ...(chief === undefined ? {} : { chiefRaySets: chief }),
+        ...(curvature === undefined ? {} : { curvatureRaySets: curvature }),
+        ...(vignetting === undefined ? {} : { vignettingRaySets: vignetting }),
         ...(recipe === undefined ? {} : { recipe }),
       };
     }),

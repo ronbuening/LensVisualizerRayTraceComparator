@@ -13,6 +13,11 @@ import { probeRaySets } from "../rays/probe.ts";
 import { fixtureRecipe } from "./mtfRecipe.ts";
 import type { MtfRecipeResolution } from "./mtfRecipe.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
+import type { SpotSetResolution } from "../rays/spotSets.ts";
+import type { AxialSetResolution } from "../rays/axialSets.ts";
+import type { ChiefSetResolution } from "../rays/chiefSets.ts";
+import type { CurvatureSetResolution } from "../rays/curvatureSets.ts";
+import type { VignettingSetResolution } from "../rays/vignettingSets.ts";
 import { hashCanonical } from "./numeric/hash.ts";
 import { orderedMap } from "./orderedMap.ts";
 import { profileAsync, profileStart } from "./profile.ts";
@@ -65,6 +70,45 @@ export interface CaseSource {
    * bit, so the requests made from them have the same ids. A source without this method has no rays to give.
    */
   raySets?(run: RunSpec, opticalCase: OpticalCase): RaySetResolution | Promise<RaySetResolution>;
+  /**
+   * The spot sets of a run of a case this source resolved (`src/rays/spotSets.ts`): the rays the tabs that show a
+   * spot or a ray fan launch, one `rays.trace` spec for each of their patterns, fields and lines, a coded problem
+   * for each field that has none, and the engines' own spot requests of the same patterns. A pure function of the
+   * run and the case, like the ray sets. A source without this method has no spot sets to give.
+   */
+  spotRaySets?(run: RunSpec, opticalCase: OpticalCase): SpotSetResolution | Promise<SpotSetResolution>;
+  /**
+   * The axial sets of a run of a case this source resolved (`src/rays/axialSets.ts`): the rays the tabs that present
+   * the beam along the axis launch, one `rays.trace` spec for each of their patterns and lines, a coded problem for
+   * a case that has none, and the engines' own axial requests of the same tabs. A pure function of the run and the
+   * case, like the ray sets. A source without this method has no axial sets to give.
+   */
+  axialRaySets?(run: RunSpec, opticalCase: OpticalCase): AxialSetResolution | Promise<AxialSetResolution>;
+  /**
+   * The chief sets of a run of a case this source resolved (`src/rays/chiefSets.ts`): the chief rays the tabs that
+   * present the field launch, one `rays.trace` spec for each of their patterns and lines, a coded problem for a case
+   * or a field that has none, and the engines' own chief-ray requests of the same tabs. A pure function of the run and
+   * the case, like the ray sets. A source without this method has no chief sets to give.
+   */
+  chiefRaySets?(run: RunSpec, opticalCase: OpticalCase): ChiefSetResolution | Promise<ChiefSetResolution>;
+  /**
+   * The curvature sets of a run of a case this source resolved (`src/rays/curvatureSets.ts`): the rays the sections
+   * that present the field curves launch, one `rays.trace` spec for each of their patterns and lines, a coded problem
+   * for a case or a field that has none, and the engines' own field-curve requests of the same sections. A pure
+   * function of the run and the case, like the ray sets. A source without this method has no curvature sets to give.
+   */
+  curvatureRaySets?(run: RunSpec, opticalCase: OpticalCase): CurvatureSetResolution | Promise<CurvatureSetResolution>;
+  /**
+   * The vignetting sets of a run of a case this source resolved (`src/rays/vignettingSets.ts`): the rays of the tab
+   * that presents the vignetting and relative illumination, each field's beam on its stop lattice and its stop-centre ray,
+   * one `rays.trace` spec for each field and line, a coded problem for a case or a field that has none, and the
+   * engines' own vignetting requests of the same fields. A pure function of the run and the case, like the ray sets. A
+   * source without this method has no vignetting sets to give.
+   */
+  vignettingRaySets?(
+    run: RunSpec,
+    opticalCase: OpticalCase,
+  ): VignettingSetResolution | Promise<VignettingSetResolution>;
   /**
    * Confirm the case against exactly the run's generated coarse/fine sets, before any engine job is planned.
    * A refusal is a source problem of the whole run. Success may annotate provenance, never optical identity.

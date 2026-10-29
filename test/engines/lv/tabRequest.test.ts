@@ -8,10 +8,13 @@ import { test } from "node:test";
 import {
   LV_TAB_COMPARISON_F_NUMBER,
   LV_TAB_PROFILE,
+  lvDrawerPupil,
   lvHookAperture,
+  lvHookPupil,
   lvHookStop,
   lvPupilSeed,
   lvTabComparison,
+  lvTabComparisonPupil,
   lvTabFieldFractions,
   lvTabRequest,
   lvResolvedMtfOptions,
@@ -32,10 +35,15 @@ const PREFERENCES: LvMtfPreferences = {
   compareF8: false,
 };
 
-/** What a stand-in lens is: its iris wide open, its widest f-number, its slowest, and its pupil ratio. */
+/**
+ * What a stand-in lens is: its iris wide open, its widest f-number, its slowest, its pupil ratio, and its stop rule:
+ * the wide-open iris up to the widest f-number and `rule / N` above it, never wider (LV #933 in shape, of synthetic
+ * numbers; `rule` 19.3 without it).
+ */
 interface Lens {
   readonly wideOpen: number;
   readonly fopen: number;
+  readonly rule?: number;
   readonly maxFstop?: number;
   readonly yRatio?: number;
   readonly preferences?: Partial<LvMtfPreferences>;
@@ -62,6 +70,10 @@ function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: Lv
       pose: null,
     }),
     wideOpenStopAtZoom: (zoomT, L) => (calls.push(["wideOpenStopAtZoom", zoomT, L]), lens.wideOpen),
+    stopSemiDiameterForFNumber: (fNumber, zoomT, L) => {
+      calls.push(["stopSemiDiameterForFNumber", fNumber, zoomT, L]);
+      return fNumber > lens.fopen ? Math.min(lens.wideOpen, (lens.rule ?? 19.3) / fNumber) : lens.wideOpen;
+    },
     fopenAtZoomClamped: (zoomT, L) => (calls.push(["fopenAtZoomClamped", zoomT, L]), lens.fopen),
     // As LensVisualizer's: the slider's f-number, never below the widest of the zoom state.
     fNumberAtStopdown: (stopdownT, zoomT, L) => {
@@ -94,46 +106,53 @@ function standIn(lens: Lens): { api: LvTabApi; runtime: LvRuntimeLens; state: Lv
 test("the hook's numbers are its own expressions, on its own functions, with the slider at wide open", () => {
   const { api, runtime, state, calls } = standIn({ wideOpen: 6.25, fopen: 2.8, yRatio: 0.8 });
   const hook = lvHookAperture(api, runtime, state);
+  // LV #933: the stop is the stop rule's at the slider's f-number, which wide open is the iris; the pupil the hook's
+  // paraxial pupil of that stop.
   assert.deepEqual(hook, {
     currentFOPEN: 2.8,
     fNumber: 2.8,
     wideOpenStopSD: 6.25,
-    currentPhysStopSD: (6.25 * 2.8) / 2.8,
+    currentPhysStopSD: 6.25,
     baseEPSD: 6.25 / 0.8,
-    currentEPSD: ((6.25 / 0.8) * 2.8) / 2.8,
+    currentEPSD: 6.25 / 0.8,
   });
   // Every function is asked at the state's zoom and focus position; the slider is at 0 and the aberration control
-  // neutral; and the entrance pupil is that of the wide-open iris, found with the analysis field geometry.
+  // neutral; and both pupils are found with the analysis field geometry, of the iris and of the stop.
   const geometry = { yRatio: 0.8, analysis: true };
   assert.deepEqual(
     calls.toSorted(([a], [b]) => (String(a) < String(b) ? -1 : 1)),
     [
       ["computeAnalysisFieldGeometryAtState", 0, 0.5, runtime, 0],
       ["entrancePupilAtState", 6.25, 0, 0.5, runtime, geometry, 0],
+      ["entrancePupilAtState", 6.25, 0, 0.5, runtime, geometry, 0],
       ["fNumberAtStopdown", 0, 0.5, runtime],
       ["fopenAtZoomClamped", 0.5, runtime],
+      ["stopSemiDiameterForFNumber", 2.8, 0.5, runtime],
       ["wideOpenStopAtZoom", 0.5, runtime],
     ],
   );
 });
 
-test("the stop radius the tab traces is the hook's product and quotient, not always the iris to the last bit", () => {
-  // 6 x 1.4 / 1.4 is one unit in the last place short of 6 in double arithmetic.
+test("the stop radius the tab traces is the stop rule's at the slider's f-number, and the pupil of a stop the hook's", () => {
   const { api, runtime, state } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
   const hook = lvHookAperture(api, runtime, state);
-  assert.equal(hook.wideOpenStopSD, 6);
-  assert.equal(hook.currentPhysStopSD, 5.999999999999999);
-  assert.notEqual(hook.currentPhysStopSD, hook.wideOpenStopSD);
-  assert.equal(hook.baseEPSD, 9.6);
-  assert.equal(hook.currentEPSD, (9.6 * 1.4) / 1.4);
-
+  assert.equal(hook.currentPhysStopSD, 6, "wide open the rule gives the iris to the bit");
+  assert.equal(hook.currentEPSD, 9.6);
   // The seed of a wide-open stop is the hook's, whether the stop radius is the hook's or the prepared state's.
-  assert.equal(lvPupilSeed(hook, hook.currentPhysStopSD), hook.currentEPSD);
-  assert.equal(lvPupilSeed(hook, hook.wideOpenStopSD), hook.currentEPSD);
-  // Of any other stop radius it is the hook's rule at the f-number that radius is the stop of.
-  const fNumber = (6 * 1.4) / 2.5;
-  assert.equal(lvPupilSeed(hook, 2.5), (9.6 * 1.4) / fNumber);
-  assert.ok(Math.abs(lvPupilSeed(hook, 2.5) - (9.6 * 2.5) / 6) < 1e-14);
+  assert.equal(lvPupilSeed(api, runtime, state, hook.currentPhysStopSD), hook.currentEPSD);
+  assert.equal(lvPupilSeed(api, runtime, state, hook.wideOpenStopSD), hook.currentEPSD);
+  // Of any other stop radius it is the hook's pupil of that radius: what the slider hands at the position it marks.
+  assert.equal(lvHookPupil(api, runtime, state, 2.5), 4);
+  assert.equal(lvPupilSeed(api, runtime, state, 2.5), 4);
+  assert.equal(lvDrawerPupil(api, runtime, state, 2.5), 4);
+
+  // A slider whose widest f-number lies above the zoom position's: the hook hands the rule's stop there, not the iris.
+  const slow: LvTabApi = { ...api, fNumberAtStopdown: () => 3.5 };
+  const stopped = lvHookAperture(slow, runtime, state);
+  assert.equal(stopped.currentPhysStopSD, 19.3 / 3.5);
+  assert.notEqual(stopped.currentPhysStopSD, stopped.wideOpenStopSD);
+  assert.equal(stopped.currentEPSD, Math.abs(19.3 / 3.5 / 0.625));
+  assert.equal(lvDrawerPupil(slow, runtime, state, stopped.wideOpenStopSD), stopped.currentEPSD);
 });
 
 test("a zoom that is slower than its widest at this zoom state is traced at this state's f-number", () => {
@@ -170,8 +189,8 @@ test("the wide-open request is the tab's options, member for member, and names n
       focus: "best-axial",
       maxGridSize: 64,
       fieldFractions: [0, 0.25, 0.5, 0.75, 1],
-      pupilSemiDiameterMm: (9.6 * 1.4) / 1.4,
-      stopSemiDiameterMm: 5.999999999999999,
+      pupilSemiDiameterMm: 9.6,
+      stopSemiDiameterMm: 6,
       movementActive: false,
     },
     frequenciesPerMm: [0, 10, 20, 30, 40, 50],
@@ -215,47 +234,49 @@ test("the request follows LensVisualizer's defaults as they are, and its spectru
   );
 });
 
-test("the f/8 comparison scales both radii of the wide-open request by N over 8, as the tab does", () => {
-  const { api, runtime, state } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
+test("the f/8 comparison is the stop rule's f/8 stop and the wide-open pupil scaled by the two stops, as the tab does", () => {
+  const { api, runtime, state, calls } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
   const wideOpen = lvTabRequest(api, runtime, state, "wide-open");
+  calls.length = 0;
   const comparison = lvTabRequest(api, runtime, state, "f8-comparison");
-  const scale = 1.4 / 8;
+  const stop = 19.3 / 8;
   assert.equal(LV_TAB_COMPARISON_F_NUMBER, 8);
   assert.deepEqual(comparison.options, {
     ...wideOpen.options,
-    pupilSemiDiameterMm: wideOpen.options.pupilSemiDiameterMm * scale,
-    stopSemiDiameterMm: wideOpen.options.stopSemiDiameterMm * scale,
+    pupilSemiDiameterMm: (9.6 * stop) / 6,
+    stopSemiDiameterMm: stop,
   });
   assert.deepEqual([comparison.view, comparison.fNumber, comparison.unavailable], ["f8-comparison", 8, null]);
-  // It is the tab's own scaling of the radius it traces wide open, which is not the iris to the last bit here.
-  assert.equal(comparison.options.stopSemiDiameterMm, 5.999999999999999 * (1.4 / 8));
+  // The stop is the rule's at 8, asked at the state's zoom position: the slider's own f/8 stop.
+  assert.ok(calls.some((call) => call[0] === "stopSemiDiameterForFNumber" && call[1] === 8 && call[2] === 0.5));
+  assert.deepEqual(lvTabComparison(api, lvHookAperture(api, runtime, state), runtime, state.zoomT), {
+    stopSemiDiameterMm: stop,
+    unavailable: null,
+  });
 });
 
-test("the stop of the f/8 comparison has the comparison's seed, to the bit: the hook's two radii scaled alike", () => {
-  // A zoom state that is f/2.9 on a slider whose widest is f/1.4: the hook's f-number is the slider's.
-  const lens = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
-  const { runtime, state } = lens;
-  const api: LvTabApi = { ...lens.api, fNumberAtStopdown: () => 2.9 };
+test("the stop of the f/8 comparison has the comparison's seed, to the bit, which is not the hook's pupil of it", () => {
+  const { api, runtime, state } = standIn({ wideOpen: 6, fopen: 1.4, yRatio: 0.625 });
   const hook = lvHookAperture(api, runtime, state);
-  assert.equal(hook.fNumber, 2.9);
   const comparison = lvTabRequest(api, runtime, state, "f8-comparison").options;
-  assert.equal(comparison.stopSemiDiameterMm, hook.currentPhysStopSD * (2.9 / 8));
-  assert.equal(lvPupilSeed(hook, comparison.stopSemiDiameterMm), comparison.pupilSemiDiameterMm);
-  assert.equal(comparison.pupilSemiDiameterMm, hook.currentEPSD * (2.9 / 8));
-  // The general rule, at the f-number that radius is the stop of, gives another number in the last bit here: the
-  // comparison's seed is the tab's own, which is why the rule is not asked for it.
-  const fNumber = (6 * 1.4) / comparison.stopSemiDiameterMm;
-  assert.notEqual((9.6 * 1.4) / fNumber, comparison.pupilSemiDiameterMm);
-  assert.ok(Math.abs((9.6 * 1.4) / fNumber - comparison.pupilSemiDiameterMm) < 1e-14);
+  assert.equal(lvPupilSeed(api, runtime, state, comparison.stopSemiDiameterMm), comparison.pupilSemiDiameterMm);
+  assert.equal(lvTabComparisonPupil(hook, comparison.stopSemiDiameterMm), comparison.pupilSemiDiameterMm);
+  // The hook's pupil of the same stop, the slider's at f/8, is another number in the last bit here: the drawer hands
+  // the tabs that one, and the MTF tab's overlay its own.
+  const slider = lvHookPupil(api, runtime, state, comparison.stopSemiDiameterMm);
+  assert.equal(comparison.pupilSemiDiameterMm, 3.86);
+  assert.equal(slider, 3.8600000000000003);
+  assert.equal(lvDrawerPupil(api, runtime, state, comparison.stopSemiDiameterMm), slider);
 
-  // The scale and the tab's rule on their own, and the part of the hook that needs no pupil.
-  assert.deepEqual(lvTabComparison(hook), { scale: 2.9 / 8, unavailable: null });
-  assert.deepEqual(lvTabComparison(hook, runtime), { scale: 2.9 / 8, unavailable: null });
-  assert.match(lvTabComparison(hook, { maxFstop: 4 }).unavailable ?? "", /^the lens stops down to f\/4 at most/);
-  const { currentFOPEN, fNumber: slider, wideOpenStopSD, currentPhysStopSD } = hook;
+  // The tab's rule on its own, and the part of the hook that needs no pupil.
+  assert.match(
+    lvTabComparison(api, hook, { ...runtime, maxFstop: 4 }, state.zoomT).unavailable ?? "",
+    /^the lens stops down to f\/4 at most/,
+  );
+  const { currentFOPEN, fNumber: slider8, wideOpenStopSD, currentPhysStopSD } = hook;
   assert.deepEqual(lvHookStop(api, runtime, state.zoomT), {
     currentFOPEN,
-    fNumber: slider,
+    fNumber: slider8,
     wideOpenStopSD,
     currentPhysStopSD,
   });
@@ -277,9 +298,10 @@ test("the tab offers no f/8 comparison for a lens that is not faster than f/7.95
     view({ wideOpen: 5, fopen: 2, maxFstop: 5.6 }).unavailable,
     "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with",
   );
-  // The radii are the scaled ones all the same: a case can be made of them, and the engine says why it has no MTF.
+  // The radii are the rule's all the same: a case can be made of them, and the engine says why it has no MTF. Below
+  // the widest f-number the rule gives the iris.
   const slow = view({ wideOpen: 5, fopen: 11, maxFstop: 32 });
-  assert.equal(slow.options.stopSemiDiameterMm, ((5 * 11) / 11) * (11 / 8));
+  assert.equal(slow.options.stopSemiDiameterMm, 5);
 });
 
 // ── The spec ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -312,7 +334,7 @@ test("LensVisualizer's design plane is the contract's; its best axial focus and 
   });
 });
 
-test("MTF settings omit the radii and f/8 scales the second analysis request", () => {
+test("MTF settings omit the radii and the f/8 overlay is a second analysis request of the rule's f/8 stop", () => {
   const { api, runtime, state } = standIn({ wideOpen: 7.3, fopen: 1.85 });
   const open = lvTabRequest(api, runtime, state, "wide-open");
   const f8 = lvTabRequest(api, runtime, state, "f8-comparison");
@@ -321,11 +343,11 @@ test("MTF settings omit the radii and f/8 scales the second analysis request", (
   assert.equal(Object.hasOwn(open.settings, "pupilSemiDiameterMm"), false);
   assert.equal(Object.hasOwn(open.settings, "stopSemiDiameterMm"), false);
   assert.deepEqual(f8.settings, open.settings);
+  assert.equal(f8.request.aperture.stopSemiDiameterMm, 19.3 / 8);
   assert.equal(
     f8.request.aperture.entrancePupilSemiDiameterMm,
-    open.request.aperture.entrancePupilSemiDiameterMm * (open.fNumber / 8),
+    (open.request.aperture.entrancePupilSemiDiameterMm * (19.3 / 8)) / open.request.aperture.stopSemiDiameterMm,
   );
-  assert.equal(f8.request.aperture.stopSemiDiameterMm, open.request.aperture.stopSemiDiameterMm * (open.fNumber / 8));
 });
 
 test("lower-level MTF options resolve request radii and the pose's active flag", () => {

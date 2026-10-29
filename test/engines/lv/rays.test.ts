@@ -20,9 +20,15 @@ import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLvEngineOn } from "../../../src/engines/lv/engine.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
-import { lvFieldAngles, lvFieldRays, lvLaunchSetup, lvRaySets } from "../../../src/engines/lv/raySets.ts";
+import {
+  lvFieldAngles,
+  lvFieldRaySets,
+  lvFieldRays,
+  lvLaunchSetup,
+  lvRaySets,
+} from "../../../src/engines/lv/raySets.ts";
 import { answerLvRays, lvTraceOptions } from "../../../src/engines/lv/rays.ts";
-import { lvHookAperture, lvPupilSeed } from "../../../src/engines/lv/tabRequest.ts";
+import { lvPupilSeed } from "../../../src/engines/lv/tabRequest.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { raysTraceQuantity } from "../../../src/quantities/raysTrace.ts";
 import { startsInFront } from "../../../src/rays/probe.ts";
@@ -178,7 +184,7 @@ test("what LensVisualizer's tracer gives is what lv reports, and its own classif
 
   heights.forEach((y, ray) => {
     const trace = binding.api.traceEngineRay(model.state, { origin: [0, y, -10], direction: [0, 0, 1] }, options);
-    const outcome = binding.api.mtfTraceClassification(trace, model.state, opticalCase.conditions.stopSemiDiameter);
+    const outcome = binding.api.traceRayClassification(trace, model.state, opticalCase.conditions.stopSemiDiameter);
     assert.equal(status[ray], { valid: 0, blocked: 1, failed: 2 }[outcome], `the ray at ${y} mm`);
     const spot = binding.api.mtfImagePoint(model.state, trace, opticalCase.conditions.imageZ);
     assert.equal(spot !== null, status[ray] === 0);
@@ -378,7 +384,7 @@ test("lv answers the same request with the same bytes, in two bindings of the sa
 
 // ── The ray sets ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the ray sets of a case are LensVisualizer's launch lattice, every cell of it, and the chief ray after them", async (t) => {
+test("the ray sets of a case are LensVisualizer's aimed stop lattice, every cell of it, and the chief ray after them", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
   const { opticalCase, model } = await modelOf(binding, "acme-singlet-50");
@@ -391,10 +397,10 @@ test("the ray sets of a case are LensVisualizer's launch lattice, every cell of 
   );
   const setup = lvLaunchSetup(api, model);
   assert.ok(!("problem" in setup));
-  // The stop radius is the case's, and the seed of the footprint is the pupil radius the hook of LensVisualizer's
-  // MTF tab hands over for it: here the entrance pupil of the iris wide open, which the fake puts at the stop.
+  // The stop radius is the case's, and the pupil radius (the aimed launch's launch scale) the one the hook of
+  // LensVisualizer's MTF tab hands over for it: here the entrance pupil of the iris wide open, at the stop in the fake.
   const stop = opticalCase.conditions.stopSemiDiameter;
-  assert.equal(lvPupilSeed(lvHookAperture(api, model.runtime, model.state), stop), stop);
+  assert.equal(lvPupilSeed(api, model.runtime, model.state, stop), stop);
   assert.deepEqual(setup.options, {
     method: "geometric",
     spectrum: "reference",
@@ -410,58 +416,181 @@ test("the ray sets of a case are LensVisualizer's launch lattice, every cell of 
     assert.equal(spec.line, 0);
     const angleDeg = spec.groups?.field?.angleDeg as number;
     const launch = api.prepareMtfFieldLaunch(model.state, setup.options, setup.support, angleDeg);
-    assert.ok(launch !== null);
-    const footprint = api.findMtfFieldFootprint(model.state, setup.options, setup.support, launch);
-    assert.ok(footprint !== null);
-    const grid = api.mtfLaunchGrid(footprint, 4);
-    // Four cells across a beam of 12.5 mm, over a box of 15.625 mm: six columns, which is even, and five rows.
-    assert.deepEqual([grid.columns, grid.rows, grid.step], [6, 5, 3.125]);
-    assert.deepEqual(spec.groups?.lattice, { columns: 6, rows: 5, step: 3.125 });
-    assert.equal(spec.groups?.chiefIndex, 30);
-    const [origins, directions, weights] = [f8(spec.origins), f8(spec.directions), f8(spec.weights)];
-    assert.equal(weights.length, 31);
-    for (let cell = 0; cell < 30; cell++) {
-      const [cellRow, column] = [Math.floor(cell / 6), cell % 6];
-      const ray = api.mtfLaunchRay(launch, grid.x0 + (column + 0.5) * grid.step, grid.y0 + (cellRow + 0.5) * grid.step);
-      assert.deepEqual(row(origins, cell), [...ray.origin], `cell ${cell}`);
-      assert.deepEqual(row(directions, cell), [...ray.direction], `cell ${cell}`);
-      assert.equal(weights[cell], 1);
-      // No cell is on the meridional plane, and none is the chief ray.
-      assert.notEqual(origins[3 * cell], 0);
-    }
-    // The left half is there as rays of its own, not as the mirror image of the right half.
-    assert.ok(origins[0] < 0 && origins[3 * 5] > 0);
-    const chief = api.mtfLaunchRay(launch, 0, 0);
-    assert.deepEqual(row(origins, 30), [...chief.origin]);
-    assert.deepEqual(row(directions, 30), [...chief.direction]);
-    assert.equal(weights[30], 0, "the chief ray is a reference, not a sample");
-    // The rays come from in front of the lens and head toward -y for a field toward +y.
-    assert.ok(origins[2] < 0 && directions[2] > 0);
-    // LensVisualizer's own numbers are kept as they are: the axial bundle's y component is its -0.
-    assert.ok(angleDeg === 0 ? directions[1] === 0 : directions[1] < 0);
-
-    // As many rays of the lattice are ok as LensVisualizer's own bundle counts as valid at the same grid, and as
-    // many blocked: the bundle traces half the columns and counts each twice.
-    const answer = answerLvRays(api, model, spec);
-    assert.ok("data" in answer);
-    assert.deepEqual(raysTraceQuantity.validateData(answer.data), []);
-    const bundle = api.traceMtfBundle(model.state, setup.options, setup.support, launch, footprint, 4, {
+    assert.ok(launch !== null && launch.aim !== null);
+    const lattice = api.aimMtfStopLattice(model.state, setup.options, setup.support, launch, 4, {
       wavelengthNm: 587.5618,
       weight: 1,
     });
-    assert.ok(bundle !== null && bundle.mirrored);
+    assert.ok(lattice !== null);
+    // Four cells across the stop's diameter; the four corners lie outside its disc and are no cells of LensVisualizer's.
+    assert.equal(lattice.cells.length, 12);
+    assert.deepEqual(spec.groups?.lattice, { columns: 4, rows: 4, step: (2 * stop) / 4 });
+    assert.equal(spec.groups?.chiefIndex, 16);
+    const [origins, directions, weights] = [f8(spec.origins), f8(spec.directions), f8(spec.weights)];
+    assert.equal(weights.length, 17);
+    const chief = lattice.chief.status === "aimed" ? lattice.chief : api.mtfLaunchRay(launch, 0, 0);
+    const inDisc = new Set(lattice.cells.map((cell) => cell.row * 4 + cell.column));
+    lattice.cells.forEach((cell, i) => {
+      const ray = lattice.rays[i];
+      assert.ok(ray.status !== "unaimed");
+      const index = cell.row * 4 + cell.column;
+      // The cell's ray is LensVisualizer's own, kept verbatim, of weight 1.
+      assert.deepEqual(row(origins, index), [...ray.origin], `cell ${index}`);
+      assert.deepEqual(row(directions, index), [...ray.direction], `cell ${index}`);
+      assert.equal(weights[index], 1);
+      assert.notEqual(origins[3 * index], 0, "no cell is on the meridional plane");
+    });
+    // A vacant cell holds the chief ray at weight 0: LensVisualizer's own ray, which carries no flux.
+    for (const vacant of [0, 3, 12, 15]) {
+      assert.ok(!inDisc.has(vacant));
+      assert.deepEqual(row(origins, vacant), [...chief.origin]);
+      assert.deepEqual(row(directions, vacant), [...chief.direction]);
+      assert.equal(weights[vacant], 0);
+    }
+    assert.deepEqual(row(origins, 16), [...chief.origin]);
+    assert.deepEqual(row(directions, 16), [...chief.direction]);
+    assert.equal(weights[16], 0, "the chief ray is a reference, not a sample");
+    // The rays come from in front of the lens and head toward -y for a field toward +y; the left half is there as
+    // rays of its own.
+    assert.ok(origins[2] < 0 && directions[2] > 0);
+    assert.ok(origins[3 * 4] < 0 && origins[3 * 7] > 0);
+    assert.ok(angleDeg === 0 ? directions[1] === 0 : directions[1] < 0);
+
+    // As many cells of the lattice are ok as LensVisualizer's own bundle of it counts as valid, and as many blocked:
+    // the bundle traces half of a symmetric lattice and counts each twice.
+    const answer = answerLvRays(api, model, spec);
+    assert.ok("data" in answer);
+    assert.deepEqual(raysTraceQuantity.validateData(answer.data), []);
+    const bundle = api.traceMtfLattice(model.state, setup.options, setup.support, launch, lattice, {
+      wavelengthNm: 587.5618,
+      weight: 1,
+    });
+    assert.ok(bundle !== null && bundle.mirrored && bundle.sampling === "stop");
     const status = integers(answer.data.status);
-    const lattice = status.slice(0, 30);
-    assert.equal(lattice.filter((each) => each === 0).length, bundle.rays.length);
-    assert.equal(lattice.filter((each) => each === 1).length, bundle.blocked);
-    assert.equal(lattice.filter((each) => each === 2).length, bundle.failed);
+    const cells = [...inDisc].map((index) => status[index]);
+    assert.equal(cells.filter((each) => each === 0).length, bundle.rays.length);
+    assert.equal(cells.filter((each) => each === 1).length, bundle.blocked);
+    assert.equal(cells.filter((each) => each === 2).length, bundle.failed);
     for (const own of bundle.rays) {
-      const cell = own.row * 6 + own.column;
+      const cell = own.row * 4 + own.column;
       const landed = row(f8(answer.data.imagePoint), cell);
       assert.ok(Math.abs(landed[0] - own.x) < 1e-12 && Math.abs(landed[1] - own.y) < 1e-12, `cell ${cell}`);
     }
-    assert.ok(bundle.rays.length > 0 && bundle.blocked > 0);
+    assert.ok(bundle.rays.length > 0);
   }
+});
+
+test("a cell LensVisualizer could not aim holds the chief ray at weight 0, and a blocked cell its blocking ray", async (t) => {
+  // The fake aims nothing beyond 0.8 of the stop radius, and its way is blocked beyond 0.6 of it.
+  const lv = variantOf(freshLv(t), "unaimed", {
+    [SINGLET_FILE]: (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyond: 0.8, blockedBeyond: 0.6 },"),
+  });
+  const binding = await bind(t, lv);
+  const { model } = await modelOf(binding, "acme-singlet-50");
+  const setup = lvLaunchSetup(binding.api, model);
+  assert.ok(!("problem" in setup));
+  const rays = lvFieldRays(binding.api, model, setup, 0, 4);
+  assert.ok(!("problem" in rays) && rays.lattice !== null);
+  // Of the 12 cells of the disc, the four at (+-0.25, +-0.75) and (+-0.75, +-0.25) lie at 0.79 of the radius: blocked;
+  // none lies beyond 0.8. At eight cells across, the rim cells are unaimed.
+  assert.deepEqual([rays.vacant, rays.unaimed], [4, 0]);
+  const fine = lvFieldRays(binding.api, model, setup, 0, 8);
+  assert.ok(!("problem" in fine) && fine.lattice !== null);
+  const unaimed = fine.lattice.rays.filter((ray) => ray.status === "unaimed").length;
+  assert.ok(unaimed > 0);
+  assert.deepEqual([fine.vacant, fine.unaimed], [64 - fine.lattice.cells.length + unaimed, unaimed]);
+  const chief = fine.lattice.chief as unknown as { origin: number[]; direction: number[] };
+  fine.lattice.cells.forEach((cell, i) => {
+    const ray = fine.lattice!.rays[i];
+    const index = cell.row * 8 + cell.column;
+    const at = [...fine.origins.subarray(3 * index, 3 * index + 3)];
+    if (ray.status === "unaimed") {
+      assert.deepEqual(at, chief.origin);
+      assert.equal(fine.launchWeights[index], 0);
+    } else {
+      assert.deepEqual(at, [...ray.origin]);
+      assert.equal(fine.launchWeights[index], 1);
+    }
+  });
+  // A blocked cell's ray is the one LensVisualizer returns for it, traced like any: lv stops it.
+  const made = lvFieldRaySets(binding.api, model, setup, { angleDeg: 0 }, 8);
+  assert.ok("sets" in made);
+  const answer = answerLvRays(binding.api, model, made.sets[0]);
+  assert.ok("data" in answer);
+  const status = integers(answer.data.status);
+  fine.lattice.cells.forEach((cell, i) => {
+    const index = cell.row * 8 + cell.column;
+    if (fine.lattice!.rays[i].status === "blocked") assert.notEqual(status[index], 0, `cell ${index}`);
+  });
+});
+
+test("a field of which LensVisualizer aims no cell is a coded problem; one it aims or blocks cells of has its set", async (t) => {
+  // The fake aims no ray at all beyond 3 degrees, as LensVisualizer's aim of a finite object point did before #940
+  // where its straight-line chief seed reached no stop (docs/gotchas.md): every cell and the chief "unaimed". No
+  // committed suite has such a field since #940; the code stays for any lattice LensVisualizer aims no cell of.
+  const lv = variantOf(freshLv(t), "lost", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { opticalCase, model } = await modelOf(binding, "acme-singlet-50", {
+    state: { focus: { kind: "focusT", value: 1 } },
+    lines: { kind: "photopic" },
+  });
+  assert.equal(opticalCase.conditions.object.kind, "finite");
+  const setup = lvLaunchSetup(binding.api, model);
+  assert.ok(!("problem" in setup));
+  // The lattice LensVisualizer returns is there, every cell of it unaimed: no ray of its own.
+  const launch = binding.api.prepareMtfFieldLaunch(model.state, setup.options, setup.support, 5);
+  assert.ok(launch !== null && launch.aim !== null);
+  const lattice = binding.api.aimMtfStopLattice(model.state, setup.options, setup.support, launch, 4, {
+    wavelengthNm: 555,
+    weight: 1,
+  });
+  assert.ok(lattice !== null && lattice.rays.length === 12);
+  assert.ok(lattice.rays.every((ray) => ray.status === "unaimed") && lattice.chief.status === "unaimed");
+  const wavelength = opticalCase.conditions.lines[0].wavelengthNm;
+  const problem = (angle: number) =>
+    `lv-field-unaimed: LensVisualizer aims no cell of the stop lattice of the field at ${angle} degrees at line 0 ` +
+    `(${wavelength} nm): all 12 unaimed (trace-failed)`;
+  assert.deepEqual(lvFieldRays(binding.api, model, setup, 5, 4), { problem: problem(5) });
+  assert.deepEqual(lvFieldRaySets(binding.api, model, setup, { angleDeg: -10 }, 4), { problem: problem(-10) });
+  // The run's other fields keep their sets, in their order, at every line.
+  const { sets, problems } = lvRaySets(binding.api, model, {
+    fields: { kind: "angles-deg", values: [5, 0, 2, -10] },
+    sampling: { bundleGrid: 4 },
+  });
+  assert.deepEqual(problems, [problem(5), problem(-10)]);
+  assert.deepEqual(
+    sets.map((spec) => [spec.groups?.field?.angleDeg, spec.line]),
+    [0, 2].flatMap((angle) => [0, 1, 2, 3, 4].map((line) => [angle, line])),
+  );
+  for (const spec of sets) assert.ok(f8(spec.weights).some((weight) => weight > 0));
+  binding.close();
+
+  // A field whose every cell LensVisualizer aims or blocks, and none it leaves unaimed, keeps its set: a blocked cell is
+  // LensVisualizer's own blocking ray, which every engine stops ahead of the stop.
+  const shut = variantOf(lv, "shut", {
+    [SINGLET_FILE]: (text) =>
+      text.replace("mtf: { unaimedBeyondDeg: 3 },", "mtf: { unaimedBeyond: 0.8, blockedBeyond: 0 },"),
+  });
+  const shutBinding = await bind(t, shut);
+  const closed = await modelOf(shutBinding, "acme-singlet-50", { state: { focus: { kind: "focusT", value: 1 } } });
+  const closedSetup = lvLaunchSetup(shutBinding.api, closed.model);
+  assert.ok(!("problem" in closedSetup));
+  const blocked = lvFieldRays(shutBinding.api, closed.model, closedSetup, 5, 8);
+  assert.ok(!("problem" in blocked) && blocked.lattice !== null);
+  const statuses = new Set(blocked.lattice.rays.map((ray) => ray.status));
+  assert.deepEqual([...statuses].sort(), ["blocked", "unaimed"]);
+  const made = lvFieldRaySets(shutBinding.api, closed.model, closedSetup, { angleDeg: 5 }, 8);
+  assert.ok("sets" in made);
+  const answer = answerLvRays(shutBinding.api, closed.model, made.sets[0]);
+  assert.ok("data" in answer);
+  // Every cell of launch flux is a blocking ray, which lv stops: no ray of weight reaches the image.
+  const status = integers(answer.data.status);
+  const lit = [...blocked.launchWeights].flatMap((weight, ray) => (weight > 0 ? [ray] : []));
+  assert.ok(lit.length > 0 && lit.every((ray) => status[ray] !== 0));
+  shutBinding.close();
 });
 
 test("a field without rays is a coded problem of that field, and the other fields have theirs", async (t) => {
@@ -513,8 +642,9 @@ test("a field without rays is a coded problem of that field, and the other field
   ]);
   unsolvedBinding.close();
 
-  // A field given as an angle is taken as given; one LensVisualizer finds no chief ray for, and one whose beam an
-  // aperture stops altogether, have none.
+  // A field given as an angle is taken as given; one LensVisualizer finds no chief ray for has none. On the real
+  // stop (LV #936) no footprint is scanned: a field whose beam an aperture stops altogether has its lattice all the
+  // same, every cell of it stopped.
   const binding = await bind(t, lv);
   const stopped = await modelOf(binding, "acme-singlet-50", { aperture: { kind: "stop-radius", mm: 2 } });
   const angles = lvRaySets(binding.api, stopped.model, {
@@ -523,14 +653,13 @@ test("a field without rays is a coded problem of that field, and the other field
   });
   assert.deepEqual(
     angles.sets.map((spec) => spec.groups?.field),
-    [{ angleDeg: 0 }, { angleDeg: -10 }],
+    [{ angleDeg: 0 }, { angleDeg: 59 }, { angleDeg: -10 }],
   );
   assert.deepEqual(angles.problems, [
-    "vignetted: no ray of the field at 59 degrees reaches the image through the clear apertures",
     "chief-ray-failed: LensVisualizer finds no chief ray for the field at 75 degrees",
   ]);
   // A field toward -y sends its rays toward +y.
-  assert.ok(f8(angles.sets[1].directions)[1] > 0);
+  assert.ok(f8(angles.sets[2].directions)[1] > 0);
 
   // A lens with no field at all: no chief ray reaches the image, at any fraction.
   const resolved = lvFieldAngles(
@@ -541,6 +670,23 @@ test("a field without rays is a coded problem of that field, and the other field
   );
   const none = "chief-ray-failed: LensVisualizer finds no chief ray that reaches the image plane";
   assert.deepEqual(resolved, [{ problem: none }, { problem: none }]);
+  binding.close();
+
+  // The fake launches beyond 12 degrees from a "bounding sphere": sampled on the launch plane, where a beam an aperture
+  // stops altogether is still no set.
+  const sphere = variantOf(lv, "sphere", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  field: { vectorBeyondDeg: 12 },"),
+  });
+  const sphereBinding = await bind(t, sphere);
+  const sphered = await modelOf(sphereBinding, "acme-singlet-50", { aperture: { kind: "stop-radius", mm: 2 } });
+  const plane = lvRaySets(sphereBinding.api, sphered.model, {
+    fields: { kind: "angles-deg", values: [0, 59] },
+    sampling: { bundleGrid: 4 },
+  });
+  assert.deepEqual(plane.problems, [
+    "vignetted: no ray of the field at 59 degrees reaches the image through the clear apertures",
+  ]);
+  sphereBinding.close();
 });
 
 test("rays that would not start in front of the first surface are no set: the contract is held to, field by field", async (t) => {
@@ -587,9 +733,16 @@ test("where LensVisualizer's MTF gate does not pass, no field has rays, and the 
   assert.deepEqual(lvRaySets(refusing, model, {}), { sets: [], problems: [problem] });
 });
 
-test("every line of a case has the rays of its reference line; at a finite conjugate they come from the object point", async (t) => {
+test("every line of a case has its own aimed lattice; at a finite conjugate the rays come from the object point", async (t) => {
   const binding = await bind(t, freshLv(t));
-  const { api } = binding;
+  const asked: number[] = [];
+  const api = {
+    ...binding.api,
+    aimMtfStopLattice: (...args: Parameters<typeof binding.api.aimMtfStopLattice>) => {
+      asked.push(args[5].wavelengthNm);
+      return binding.api.aimMtfStopLattice(...args);
+    },
+  };
   const photopic = await modelOf(binding, "acme-zoom-24-48", { state: { zoomT: 1 }, lines: { kind: "photopic" } });
   const { sets, problems } = lvRaySets(api, photopic.model, { sampling: { bundleGrid: 4 } });
   assert.deepEqual(problems, []);
@@ -597,6 +750,13 @@ test("every line of a case has the rays of its reference line; at a finite conju
   assert.deepEqual(
     sets.map((spec) => [spec.groups?.field?.heightFraction, spec.line]),
     [0, 0.5, 1].flatMap((fraction) => [0, 1, 2, 3, 4].map((line) => [fraction, line])),
+  );
+  // Each line's lattice is aimed at that line (LV #936), which the fake's aim, unlike LensVisualizer's, does not read:
+  // its rays are the same at every line.
+  const wavelengths = photopic.opticalCase.conditions.lines.map((line) => line.wavelengthNm);
+  assert.deepEqual(
+    asked,
+    [0, 0.5, 1].flatMap(() => wavelengths),
   );
   for (let index = 0; index < 15; index++) assert.deepEqual({ ...sets[index], line: 0 }, sets[index - (index % 5)]);
   assert.equal(new Set(sets.map(raySetId)).size, 15);
@@ -644,7 +804,6 @@ test("every line of a case has the rays of its reference line; at a finite conju
     assert.equal(source[2], -500);
     const [origins, directions, weights] = [f8(spec.origins), f8(spec.directions), f8(spec.weights)];
     const chief = spec.groups?.chiefIndex as number;
-    const chiefDistance = Math.hypot(...row(origins, chief).map((value, axis) => value - source[axis]));
     for (let ray = 0; ray < weights.length; ray++) {
       const offset = row(origins, ray).map((value, axis) => value - source[axis]);
       const distance = Math.hypot(...offset);
@@ -654,12 +813,13 @@ test("every line of a case has the rays of its reference line; at a finite conju
         offset.map((component) => component / distance),
       );
       assert.equal(origins[3 * ray + 2], rays.launch.leadZ);
-      // LensVisualizer's weight of a cell: its solid angle relative to the chief ray's.
-      assert.equal(weights[ray], ray === chief ? 0 : (chiefDistance / distance) ** 3, `ray ${ray}`);
+      // LensVisualizer's weight of a stop cell is 1, uniform amplitude on the stop, from a finite object point too;
+      // the chief ray and a vacant cell weigh 0.
+      assert.equal(weights[ray], ray === chief || rays.launchWeights[ray] === 0 ? 0 : 1, `ray ${ray}`);
     }
-    assert.ok(new Set(weights).size > 5 && weights.slice(0, chief).every((weight) => weight > 0.99 && weight < 1.01));
     const answer = answerLvRays(api, close.model, spec);
-    assert.ok("data" in answer && answer.counts.ok > 0 && answer.counts.blocked > 0);
+    // Every cell is aimed inside the stop: the fake's singlet stops none of them.
+    assert.ok("data" in answer && answer.counts.ok > 0);
     assert.deepEqual(raysTraceQuantity.validateData(answer.data), []);
   }
 });
@@ -680,23 +840,28 @@ test("where a glass absorbs, a ray's weight is its launch weight times LensVisua
   const status = integers(answer.data.status);
   const hits = f8(answer.data.hits);
   let transmitted = 0;
-  for (let ray = 0; ray < 30; ray++) {
+  // Four cells across the stop: 16 cells, of which the four corners outside its disc are vacant, and the chief ray.
+  for (let ray = 0; ray < 16; ray++) {
+    if ([0, 3, 12, 15].includes(ray)) {
+      assert.equal(weights[ray], 0, `vacant ${ray}`);
+      continue;
+    }
     if (status[ray] !== 0) {
       // A ray that is stopped keeps its launch weight: nothing reads it.
       assert.equal(weights[ray], 1, `ray ${ray}`);
       continue;
     }
     // The glass lies between the first two surfaces: exp(-0.125 / mm x the length of the ray in it).
-    const inGlass = Math.hypot(...row(hits, 31 + ray).map((value, axis) => value - row(hits, ray)[axis]));
+    const inGlass = Math.hypot(...row(hits, 17 + ray).map((value, axis) => value - row(hits, ray)[axis]));
     assert.ok(Math.abs(weights[ray] - Math.exp(-0.125 * inGlass)) < 1e-15, `ray ${ray}`);
     assert.ok(weights[ray] > 0.55 && weights[ray] < 0.75, String(weights[ray]));
     transmitted++;
   }
   assert.ok(transmitted > 0);
-  assert.equal(weights[30], 0);
+  assert.equal(weights[16], 0);
   // It is what LensVisualizer states as the weight of the ray's image point.
   const options = lvTraceOptions(model, 0);
-  const firstOk = status.indexOf(0);
+  const firstOk = [...status.keys()].find((ray) => status[ray] === 0 && weights[ray] > 0) as number;
   const origin = row(f8(spec.origins), firstOk) as [number, number, number];
   const direction = row(f8(spec.directions), firstOk) as [number, number, number];
   const spot = api.mtfImagePoint(

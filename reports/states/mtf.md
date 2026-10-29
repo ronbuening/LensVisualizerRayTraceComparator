@@ -17,148 +17,148 @@ still those, and what moved.
 |---|---|
 | Suite | states |
 | Suite hash | b45f25ba129d4c0d95ab44ec5084eca68742a36a55828fcdc3a08ae932ed45f2 |
-| Baseline hash | 35b7e6a8c9c8b28842688857082937c20b11c5dc89b13d75defd603aa44c72bc |
+| Baseline hash | 4b79f1d6d2409e512d7ded22cdd57173e1890b732108ed2083722dd2ea87b5eb |
 | Contract version | 1.1 |
-| Policy | rungs v15 |
-| Policy hash | 1db393cc152dc19e71ca79b07f474d3a837fa402f51632312a6fc5cbeb671524 |
+| Policy | rungs v24 |
+| Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b | 49b68a617dc135ebdd70d5ff57dc2bce7f09ea74668dd1848e7d973bbcfac0b3 | commit 879c061024519be2b1acaf3cc082947235ea9760, dirty false, engineFileCount 177 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 965e1b3ac30f08fd7d583547cbdc43ccbfd9cf74f6e6bc7cd6af2a98927ca7e7 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
-| replay | 1 | c46cbf114de40a8df78d7a9fc63a54e47bd2d05d4185afdd9962742ed563878b | f5389fa986ffe5ef5e2109535a761cd4106f3bab97c366e2cf4b322b8c5e2374 | commit 879c061024519be2b1acaf3cc082947235ea9760, dirty false, engineFileCount 177 |
+| replay | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 7b9996fda36eb76f315491268b845e0dae54d65660bbb0d03e4289f80e497f05 | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
 
 | Run | Case |
 |---|---|
-| canon-ef-135-f2l-usm-f5.6-ref | c0e87372783bbd8a8fbb5b8abcf34ab264401ab47744cb64a61c3e49db0a1698 |
-| canon-ef-135-f2l-usm-f5.6-photopic | 6e16cb41d3a1737e746cda1fabd1300b32e1b3a50b72e33ad3a5f14f1669a128 |
-| canon-ef-135-f2l-usm-f5.6-best-ref | 61bc40770280967851419083bffad65f35699994455895b9c378ae3442d977a5 |
-| canon-ef-135-f2l-usm-f5.6-best-photopic | 2a0be2724fab8e1975fbbc3e5ea1c3fa7fd872cb97e8938f47094af1ec48226a |
-| canon-ef-135-f2l-usm-f11-ref | 4bd6eac33e3d5a171eb5ef2270fb40e9dc9ab29ad224e71b8a960b3784bc2ebf |
-| canon-ef-135-f2l-usm-f11-photopic | 46e839b123926690036f4477c1f8b6eab5fb57cc6b8398c54a525e0799591a35 |
-| canon-ef-135-f2l-usm-f11-best-ref | 3e2a3041c3855da032385dab90ce1a5223bb9154df4827dcaad94bea4d56ae72 |
-| canon-ef-135-f2l-usm-f11-best-photopic | 40f488bac07f13920a31f89daabe39542caf5c942934d16f403bd16d3f59f832 |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | ac0c53a9e6287256a14bcb19610b924cd9ed9afa58911bd771112d8cad6c4092 |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 6fa2b736847fc7b57d1dc4e1018f0b2e52565a65d7e79a0ceff749d24564db3d |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | cecfbcdb0d12a82be79efd0d244800de0b199f4c4345eceb90754a4f4f25f24e |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 7d9b4d1fb75a25becfc1d25a6a9d18f659f5ff53010f6968c05b221ebde32caf |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | d5bb8d6ca615f6e5915fa7b602f4ad13c17abca7f9a65a635e832793a275318b |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 1e073ce15995cbf454326cb863293ff2563b111ffd36e48f10224a9595a83ad0 |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 42e040bd859dfa26cf5e6798c96c7542076a2ef26e2b5071d0574e57501ea00f |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | f7c923f583d9c3f7ea15cccd0bc1a49091b4df00370f561090db0425ee019e45 |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | d7cb9811dd23d692fb8eec831f8f07effdac024692708297a55bfb20d83f9edc |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 26897873e891b58b82792c27fd4cf2866424a29fcdcd78c7b82ff9662fbdc43d |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | fece198ea407be993ca9bf2b8f884517cc0f70cc0a2bb9daeafb486fd1b5c467 |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 718f9804619e8d99f21f9be8d273ef31843910a9c01caec7828ca849845d2da8 |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 484c9d9c9b0574fa80df036c1f84ccf0cf8b6355b75eac27843753fba19c9901 |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | ce5247479530f9f4298ae8bfd93a678a03ad5d597650d0c4e2e609e7c4a80642 |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | ca87df8c11615b03da87ad26bcdf55d9f860792dfeb7d518b74ae56d53522020 |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 2eff3fedeb25e680fa9e1bcd324fa38bbfe2ad21b282eaf175fe36622a37036c |
-| nikkor-z50f12-f5.6-ref | 395bb2a10d84250b4d016e57f4cd64be0ff2acbf5af268663dfb1a03973be0a2 |
-| nikkor-z50f12-f5.6-photopic | f70487954823beed0fef4592b3a73ad0a0bfbf5c3c4cd7b5a6b93e397b4fec7c |
-| nikkor-z50f12-f5.6-best-ref | 2477f9de6a098db5439f3679fee665737d4bf9582fe7a51f9a98f282d2e892ef |
-| nikkor-z50f12-f5.6-best-photopic | 53728fd1171f2edfb8b6a1ed5e9c434a033860bce8774651de787eea637745d5 |
-| nikkor-z50f12-f11-ref | 504e25b011c410bf425e597b9489394367d812b96f8af1ef469f44d40b1ee2c5 |
-| nikkor-z50f12-f11-photopic | 9d263f522abec6ef57362684f988b51fc6b98b6b59e93643db40996634a742d2 |
-| nikkor-z50f12-f11-best-ref | 00898aa06f0679bdefe874945adc5520a234e04750ac24f24f8a52e86944102c |
-| nikkor-z50f12-f11-best-photopic | a777af7634be32853fc468c91225d13e3b3995b6f526990e024a2663f33ec18d |
-| sony-fe-20mm-f18-g-f5.6-ref | ca355ce3e19a7e6e41d293d0624df8b0477a45ec3d6ba89cb33dd9a65f67b5da |
-| sony-fe-20mm-f18-g-f5.6-photopic | e8caf86b51b05e49385ff56ba1d2fd8e25327ea36f77785305cc9fde44a105bc |
-| sony-fe-20mm-f18-g-f5.6-best-ref | 74a2416cb466a94854d8976b2f788097ce8387bd58a538997371b607135f83b7 |
-| sony-fe-20mm-f18-g-f5.6-best-photopic | fa585305f7b7dd8bd979b2361918e582ba9436968bfec7556c4c7009ffbb82c8 |
-| sony-fe-20mm-f18-g-f11-ref | 72e4c5b839a2e628560e069e408341781e5e8dcb50ec7a18a65e1e01be8c35da |
-| sony-fe-20mm-f18-g-f11-photopic | 54fc7ff455da62e417dbb43a3238fd29395efa6deaca8745626415146428cfe5 |
-| sony-fe-20mm-f18-g-f11-best-ref | 5146d32441031213c3bc7aee41c0484572deda246eb0a3672189a9858f2481fb |
-| sony-fe-20mm-f18-g-f11-best-photopic | 41d5fda136cd146c1a1ad49a97c6407de0f74403f5e17c108711369e3745f9b7 |
-| sony-fe-400mm-f28-gm-oss-f5.6-ref | 913940f673fca99b15d477593aa10e0932b7d55bd55abb45fc0efe4be43d76db |
-| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 256f65678573fe0555d6a93eb2eee8bd1ed242d27c95589c84eccc63da23d2d3 |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | b48685f5c0be5f13bbf272166f6b66c0f0f23ceab0fe0e492dd1935bab44d5ca |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 5995f5b6bb8a6b4323e972061e74f992cbe682f0011467b66c3b20a9b041a456 |
-| sony-fe-400mm-f28-gm-oss-f11-ref | 440403e6acb4f563e20e83d20f4bdf09894765e8a4dc080ead82aa5c0afa09ac |
-| sony-fe-400mm-f28-gm-oss-f11-photopic | f7542d71ec7dec46c61fec30e604d10dc33893d5c245b97b60ce87f9c742ddc2 |
-| sony-fe-400mm-f28-gm-oss-f11-best-ref | 411d4c0c1f66a286e3d942ea91924a9a11e871638ac37906d27c89ba996de910 |
-| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 75f79a2c148806e1968a75123e111e8bc328c701eaf73f69bd59c63d7d24bdcc |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 7234624d9e180264e0f5e45552e8631fc1b8c9e41f86061a5aa6ae7d61d3161d |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 6e311d5232f60db6dd439c2b54ab26e31957c48547245c09854ee5bf51ee7176 |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 4d250fa32976fa524f5be74807586a1fd85b5fdfb99821053b115c92b1b3ce9f |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 63f399c43a2cb8ad0e7af321dcadb60a4638bc1afb8fa93d9db21076f97ddd04 |
-| sigma-105mm-f28-dg-dn-macro-art-f11-ref | afa106a51bdec89d419dd8ae11a3bae3a0c0e41b1997ef77137b4b5d3509dfa4 |
-| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 847c169f18f40cc63f0cadded7c1ebde458a6b2a3285143d9e0266515330e3e8 |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | cbe645ff996acb36602882677a89c3e22f05320d52b3c6afa56f4fa53472a2c2 |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 4197a0931bd145c11f5e2fde6192ba7ed39f52bafa234ba9749125d9f1aebfba |
-| nikon-z-24-70f4s-f5.6-ref-wide | 43d293e0d03b0d81ac731903ea7291eaf268ffb49de710bc7e70bbc1cba14609 |
-| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 5074f7ae6e0a91f3e61e4dd5decb985875b0449b66fe1c7824ae1f26a336cd09 |
-| nikon-z-24-70f4s-f5.6-ref-tele | d146abd7b30bd4b6202661e89d3f2a6d12ce3a21a69296c31151a5d9203f1b8f |
-| nikon-z-24-70f4s-f5.6-photopic-wide | bd7e3e810de56bda5c27fd1a29485bed6acff93eb8295cacb7accc9d93159e95 |
-| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | ebf5b2c2259fa9616f0a39916806ae42f44678a66735d79242e53fa349670b38 |
-| nikon-z-24-70f4s-f5.6-photopic-tele | c46fe519bf959c6fdec85ad849b3926e89b9f3f1360aaa23e55d78436e7fefaf |
-| nikon-z-24-70f4s-f5.6-best-ref-wide | 4623f24f37c3ff3ee04b106af1c1c1f32c5021eff3e95ef756e16efa15f52e2e |
-| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | ef7d7cd7188c5cdcbd6dab26d098fe0594e95365ade39ac9d69039a9e0f5e97c |
-| nikon-z-24-70f4s-f5.6-best-ref-tele | 631f2e8a60a61fcb0269953842a24aa45c23bb22f59da2864216f015e09fde62 |
-| nikon-z-24-70f4s-f5.6-best-photopic-wide | 59f1ea173aea03b0c488b26bdc049b72581318d81991c278e737a367795ebd9c |
-| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 18f8f36f88edb46a5aa1c5eed1487fae139f0cdf4e3bf21a3fd7948029958d15 |
-| nikon-z-24-70f4s-f5.6-best-photopic-tele | bff5282f4e28c431214b0b284850e83fafe7fd78f9ee8ed725aecf5d3f24962c |
-| nikon-z-24-70f4s-f11-ref-wide | 21482843518999fe0dcbfe3267b92c6f40591d2491c58df828a770245defd9aa |
-| nikon-z-24-70f4s-f11-ref-zoom0.5 | a3f86b1b281dd0ad9e0aacacb290b65b8d99e112090a5f9fa40f6bf6cd265618 |
-| nikon-z-24-70f4s-f11-ref-tele | b29ffec9f36b8adfe171446f19817942c84d38d5b4d11dc13c316e9a405500c3 |
-| nikon-z-24-70f4s-f11-photopic-wide | 6eb129e3994f357248fde926dca0232eb4b23a6449f3855813dc8db8faa03a37 |
-| nikon-z-24-70f4s-f11-photopic-zoom0.5 | b1f1d5850e6a312d32215e16ba93a1878edf3dee4697cba64fe0a85b8856c873 |
-| nikon-z-24-70f4s-f11-photopic-tele | 46b987a1461cdab4a5edd70b39eb90ae5c87393aeb96cc1947de21bc3fc74df8 |
-| nikon-z-24-70f4s-f11-best-ref-wide | e28b742b29485ec7aadb5f1ca761b6a20835778f28768fb363a7f92c05f8d352 |
-| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | e7f9d2bf7379571ac1de0e31d6ab106e54dc1b55ffa50e2f5209d5669b9d0f5a |
-| nikon-z-24-70f4s-f11-best-ref-tele | b0ad205f7abced19915254b04a91554059b5bbd599e4b57a495834f4434de6ab |
-| nikon-z-24-70f4s-f11-best-photopic-wide | f8f8e0c2af46c911a7c88fc30a9a39fa4cd590519129b7e7e531f94b78426370 |
-| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 572b454fecdbc65fa7d8c7a5cd70fa2fab7bc9557f21038aaaec9bda0e505ebe |
-| nikon-z-24-70f4s-f11-best-photopic-tele | 79277a774f5efb9a724d2732aec6a147be6a104bb19054f82160ad0d1d8923de |
-| nikon-z-mc-105f28-f5.6-ref | 062545109261a8892b1d6430caad6d8c078b9ab526a5dee8834102ee243599c1 |
-| nikon-z-mc-105f28-f5.6-photopic | a1773eb592532e21fd5adb73d617d6d31b555cc832107df8be56caf96d4d69dc |
-| nikon-z-mc-105f28-f5.6-best-ref | ee3776a7aef5a826dda346d40320c50e8fd963e49d08fa5dd44c680701107a87 |
-| nikon-z-mc-105f28-f5.6-best-photopic | dab98e82bdb584faa367a4288f7517f7f4a182767982a10401934951f9d2a996 |
-| nikon-z-mc-105f28-f11-ref | b29a367787045441bf4b8d9eb6141a0ef1c60e62e74efd9e5070aced5fa89c7d |
-| nikon-z-mc-105f28-f11-photopic | e89e56f141f3c8a559162e5965025b6d59e996da986c551fa16935b0c14306a9 |
-| nikon-z-mc-105f28-f11-best-ref | 6d6d629ad6bdd902600b617c5b47b2d9fa6de48d5886f22b835a9a4ad6c52318 |
-| nikon-z-mc-105f28-f11-best-photopic | 77e9760dcd80b1d050e34585fb4ece553d6dea57f57ff09b93c6d3345de869e4 |
-| nikon-z-135f18-plena-f5.6-ref | 0e14dcf45d101f3ffc4f088aa9e195dd770df07b92ecd4547b3713741457072c |
-| nikon-z-135f18-plena-f5.6-photopic | b13e7bef38fd640c35817c7bed1bf1001a8a4dbd1c472dbf548f5fa1aa212c44 |
-| nikon-z-135f18-plena-f5.6-best-ref | 94c5f6e4885db9f33d61809c890835970e66a11058683d13e068d5436a29727d |
-| nikon-z-135f18-plena-f5.6-best-photopic | 0820824abdf7085c717fad4d38120b817df7761c01e7456d589d5eed7ca699f5 |
-| nikon-z-135f18-plena-f11-ref | 187718db3b86895a0664d0d39aaa844c1b356c072cfb0df871c09ec8b2f99de0 |
-| nikon-z-135f18-plena-f11-photopic | 65f295b75a1af7635f36afad1dd2ea2338f902c9c91e16f0d156de8ce4449a7b |
-| nikon-z-135f18-plena-f11-best-ref | db91461d9b73907a5a56ce65bfe94aa2fca85755f1ec738968b2e0a6fa40dead |
-| nikon-z-135f18-plena-f11-best-photopic | ec9d4eb91ca6d40ad63a8b6caa7af24ed753672cef1c5105cb1b3a68b600758d |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | ac930dee61058699460a7a827a03cf9ff9b9c621a22a7ece17029a93d8989e8f |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 1507e90fb8d06cc5bedafcfe3ac51ba3afb45f9b6c5f5f25d337933b2d4d0e44 |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 268c5840d37ec93f9e47bb19527b04e2c7ea02ae5d9d4fb1bf4e180f53f74e19 |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | c685d8297b0209846e3441db9960938ae1cb246f9030e6270e015c9d02f10b72 |
-| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 44edcde6e319adf1a5b2b0f0b8d9ddb7aec872990e4d61e2198bba8fbed1a832 |
-| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 501110ed0f4ed088579f6176df5bedeca1a303da7e50014d892a075b8206e08e |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | dbb16f8147e05b2d1232133b6ad8c92ecdc72f136450cd93efa139220a7718e8 |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | e8fa3d07ee50d20e52941b113dbfd39ae157d7486832ec7f6bef1d3ff6f82cd9 |
-| nikon-z-24-70f4s-open-ref-wide | 327403ce09e2fc94b6122c0799aba12156ffad3f9b726829aeccb18d31efd709 |
-| nikon-z-24-70f4s-open-ref-zoom0.5 | 65305725fdb42f1b1ebc1517e989b060cf9412ff14921b29478818d7331fa746 |
-| nikon-z-24-70f4s-open-ref-tele | ab9c8205a728d127b2ec6bf4b38f868de47d255de7807c917d0ba35ec4b8ca24 |
-| nikon-z-24-70f4s-open-photopic-wide | 06eff99a7dc852d126aa09c9eea6d4e7b19d5fc77d79c520b5624c3211295979 |
-| nikon-z-24-70f4s-open-photopic-zoom0.5 | 683328e379b17b2a7147fc88d38fe28c131a7a4f8e917d3925fcb66684ebe748 |
-| nikon-z-24-70f4s-open-photopic-tele | e7c0aa4bf2ee5a2b0afc8ac68e8a6115e586e7adcb01a741e880c320dba248bf |
-| nikon-z-24-70f4s-open-best-ref-wide | 11939c22f49c3c0184e3620ffdb796a7bb13ecaf98c933f746a51d75f09488a4 |
-| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 821c70a576016f11658e60a31796a8de48e1c395be9d3e9c92fdb9a19c01e498 |
-| nikon-z-24-70f4s-open-best-ref-tele | d8144040e169d3e83d1feaada545bce52371252135182e0436f63c9de0442f4b |
-| nikon-z-24-70f4s-open-best-photopic-wide | 303e31f5ade720acd67d934169c6cc0f77527d54bb806e7c6d245723889ffbf9 |
-| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 972eff8a701d87e8063a84908b06e0303adea5dc94a821924e069940b1f92c5a |
-| nikon-z-24-70f4s-open-best-photopic-tele | 07e3cb882e9dac1ec3f9ef22754ae4b0abbcddf4373de3e7a560a1cc23015abf |
-| nikon-z-24-70f4s-f8-ref-wide | a5957b6f15c089d50c0a644948511de4052644c6c1fa3863d7d893f5fc53a63b |
-| nikon-z-24-70f4s-f8-ref-zoom0.5 | 39044dfb4336cc45eb0293c50592f9c204393fafb2bb07a8d5c70d123fd390d5 |
-| nikon-z-24-70f4s-f8-ref-tele | c1783e5c5de7f829e47a84352531ef6c6d2d9d938508504693b20ff52616db71 |
-| nikon-z-24-70f4s-f8-photopic-wide | f849b03951a2a6d4ebd62a8f76d30086bd16d9f0b1782b7bca082f79f7b36ec9 |
-| nikon-z-24-70f4s-f8-photopic-zoom0.5 | d08722c2efdf07ab213db947c9fa7203c3054e1fa873d3a0050ea5397eb42166 |
-| nikon-z-24-70f4s-f8-photopic-tele | 84b4c2f3410b8bce36fa7d5cf994d9a2d89c1d1aad226bcf3f920f3fa2faed12 |
-| nikon-z-24-70f4s-f8-best-ref-wide | 61d7b43c1a213663dfc248e7d8a2c2238912e4ff623656745b2ad5fdf63f167b |
-| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 1543dbf071b51f3bd33c3d82a4b721040d6048370867e54c1091a4f83f2cfdf5 |
-| nikon-z-24-70f4s-f8-best-ref-tele | 16592d7e0ff140de7ac9fe6d32bb7c40e27440d5b5896ce4b4d9d668fe4a3c6e |
-| nikon-z-24-70f4s-f8-best-photopic-wide | 8091381339ef5c9edaa507b3a69a3a4ab2000d06d3cec8914839e09472796a4c |
-| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | ba444ae31a6a3af20b7ec8bda42d41629564af7a67aa7b641c4d44f767ef899c |
-| nikon-z-24-70f4s-f8-best-photopic-tele | 97efc252e05cc6507f706e85b7b58a11288c1466fa91949681772154821a0a3e |
+| canon-ef-135-f2l-usm-f5.6-ref | fb6313aafaef4cc6341c86d507a91837b5deab4417ccdeb699274d5ec65de76f |
+| canon-ef-135-f2l-usm-f5.6-photopic | b8452374e399797318f5bf31060a91fb510a16084a5afb3e6be6ef13063496e6 |
+| canon-ef-135-f2l-usm-f5.6-best-ref | cfb40db60c1920a71df2e3577d416c7c11811ad983785f4a3d7c2d4f2ed45d2b |
+| canon-ef-135-f2l-usm-f5.6-best-photopic | c24132ee4a6e88273a15fa7b038580d6af34b73039befbb7e08e041efa8d574e |
+| canon-ef-135-f2l-usm-f11-ref | 3538c790a1ec7344597b37548aec69a2df46fcb828795c1bd678079a9ad78dc3 |
+| canon-ef-135-f2l-usm-f11-photopic | 4b3888e3e44135a6341be52a170ef25e8f6613cfc09ea3338aff49182f2eb50f |
+| canon-ef-135-f2l-usm-f11-best-ref | fde75efe0d80ad2af8615df46ff798a3e3bf044409d58bf1a3e6271068eb31a3 |
+| canon-ef-135-f2l-usm-f11-best-photopic | 14847603e9b8882bc6969d619c27ff6639819038d8057f8c7863396cefdacad1 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 11fe04d53f56df0f4217bea7f1df0135e80ac3aa14b3ec6a13c163756b00c748 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 69f407ac3545cd29f360a84f86feb767647b5e08e0a6779f33da5e4b376d278e |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | fb61b013bd83b38b13284163754deed2b37a7d26ad84ca1fcc3db9ef49b1e0c4 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 958bf2882dfe47a5c55bc24b117e7e75139fd4ade2540a30966e262c0ad79e11 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 7c3073c4e7dbedf0705593abf810e4d84fd34d97d7903728a421926d55fa4dc4 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | f0f53b7a7c65c33fe10be69f5a2299f0490464845e77d681fb48f2bfcc10d3c6 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 8cec235dbb1353ecce18595c4106e7ca14174f1935bfc6ac081648abec9e23c8 |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | df390f5440cda651600b10cad6ef60995d73c6561661120e2d5b08cd319ad60c |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | d697f32194b1ab48938fa6c330f96591bd77db9ac21e96e0c1ea8132c4c2ef3c |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 5b202930c7dda4b6795a60ebd2fad6f263e1c5e83b405c450763a7eb502201be |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | cf9ba22bb4b5f5bf556a3e643dbb2c6181e3e30f0c9926fc6500a9b95e649948 |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 6520f64ae1c8802b4576f4ed4a716e119a6b2b0d14f972d490a2a35f44201181 |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 40785d2e0c725183d5e2e44edc8b24972bc72b99c5c3d6e2c202d61530a13cb8 |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | b27674ee8be7e06d18f990d3d541b8b636a5e100bf7d8db396bada22c5c0cb87 |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 61ff3c8c2377dfd9a8075c75037b091e2d0a4da435126f81f12852a3f577b38c |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | ab907beab4a0590cad0157f85742779e5a7a3b3747964c85eaba7e49b694d70d |
+| nikkor-z50f12-f5.6-ref | 93370aead6b9eb8def155ccf5f3a8780f977a3fda62560f1c44406cf3a1d7ceb |
+| nikkor-z50f12-f5.6-photopic | 385c7c1d4e996fe30b06b3b3da60c5369b24e303e5504e9bf3a35a18c75b6116 |
+| nikkor-z50f12-f5.6-best-ref | 40adc9d9360db7791e21a3b20e8c0c833654c32f19427a958dd20aced28d9ebf |
+| nikkor-z50f12-f5.6-best-photopic | dfbc55f21b5bfdb94d025914183cf2ce81cae65921e142c50dc28881c41a97df |
+| nikkor-z50f12-f11-ref | 1a34a84b12ddaa766ccc173f659f2b44483089c9560aed71cf85aad1528b9335 |
+| nikkor-z50f12-f11-photopic | 54e397f8a3a165bf4289f3693de28a55d2d298c6b39859466d80e9c30bdba7e3 |
+| nikkor-z50f12-f11-best-ref | e230a19defd0b95cada536016457031dac54e94566818a5c97cb2e8295bc18ac |
+| nikkor-z50f12-f11-best-photopic | 00de2164a93bfc177a1e6b974b04656629fd4f9983b109f508a59969ef3209b8 |
+| sony-fe-20mm-f18-g-f5.6-ref | 032904853c0718dd4654541b6a26e293c3d584c9cc75b880e3327126e0f62550 |
+| sony-fe-20mm-f18-g-f5.6-photopic | 90768dd4f9cff94d6b4d1e8e89aa47b0fa795942082c1fcaa378b7e49c8c6b30 |
+| sony-fe-20mm-f18-g-f5.6-best-ref | 6a018b55d80117d42be3a4b4cd945b3c0930f9544519c314aaed262281e346a2 |
+| sony-fe-20mm-f18-g-f5.6-best-photopic | be213450ef3ba55cb97f2405f03cbe45eee22e9c339070562f09abfa44417bcb |
+| sony-fe-20mm-f18-g-f11-ref | 66629bfed7b0cb8ab55ac7d50e6363ebefaa1922a52a3915db2e38f86de2b5be |
+| sony-fe-20mm-f18-g-f11-photopic | f39722550d38b131d139e69c2e44e3e9dc81360822868e20e3019c23c2c64fff |
+| sony-fe-20mm-f18-g-f11-best-ref | 14626b8ab553320b14dfa90cf59ba2bd7b6b433033a0db1169424e5e61cea556 |
+| sony-fe-20mm-f18-g-f11-best-photopic | 91ab7e1b2e0a399a56c029c125fcf2ecb64abf78f33865037852fe9eab1f5dc3 |
+| sony-fe-400mm-f28-gm-oss-f5.6-ref | cfd2f4b05ff511406ee2fcf6445bb368a1e65da0aef98100ce96e52afd7ee8cc |
+| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 831d378e9ada52a0fce8d30676e13de4ca0529c0ae031a271b2f38a1348cbe92 |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 7978e8b6317cb261a60c5258a804dc0819ed21ec238ced93389bbed06f7820c1 |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 7d9377f6dfbb1db84d432d50fda201c28438d00c0c22b75a8c776e16e9e3b393 |
+| sony-fe-400mm-f28-gm-oss-f11-ref | 1a94040d1d518dd6202eb3867b88ddfc677b2127c68f0e0c14e80f86628c70d7 |
+| sony-fe-400mm-f28-gm-oss-f11-photopic | 0a597562d6a7ba2141c992046ef765f2ae5a0e8a3c5ab32309f274d58961e5ab |
+| sony-fe-400mm-f28-gm-oss-f11-best-ref | e8134f174ecafd2430ad50cfb2ba0d0166b13d1551f90aa9d8ac0ffddbb9a459 |
+| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 96bab879ff1b51208b31b3a7430f275fe19da370173d3ebbb626ff44879c27bd |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 83bc7aa668f82b6b22a13b1acc5b0f5af9ce2968947f11528dea3c0fbeef39e9 |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | bee392758ecb32390004f98f6b12fd207c2819f3295a1c09572706c61e9f8a78 |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | ace750e815937160ee6fb3ca0e4eb1171b25e239d6417acbed4fe523a22999d2 |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | aab2ae39c1bde91b1bfd300d5a037d36ad1c6e728ef18aa1332875a69644862b |
+| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 849578276ae0917f9e2215c51c30145952bb7126cce058be7687a974b9a8dd4a |
+| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | e11209865b09b2ee83b249eeb30292b09385d4be43874895769ea5030815dd10 |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 8216f33f93629b810fa907bef02c40e5bcd420baec4ce1d6c8a81dd3bb7cffd6 |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | cad5d2b8147f295b805debf038e32279cd8034cf4c2f7e8fae16d195c0724c44 |
+| nikon-z-24-70f4s-f5.6-ref-wide | ca4650a2f1cab8126617b31e5e196328c9e6047662925528c44d866fe77ec229 |
+| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | d6dd88710ac133d194348fdebe5810d09477eb6d54d7d92c5a43b78d42913ffc |
+| nikon-z-24-70f4s-f5.6-ref-tele | 8b15e190d96badcfb4ffa2b7d3f4cdb4f140a3f73afd80711ce385e7b298967e |
+| nikon-z-24-70f4s-f5.6-photopic-wide | e5c579f82819d0fd17bab9b165a0d68268e3277d38c601955fc2454ca897f119 |
+| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | f3c166adc1996382f804c64643c8cf33410c689ded36162fc394be6b97c998b9 |
+| nikon-z-24-70f4s-f5.6-photopic-tele | 931e283aaa42145afd364f3f3c3151db6f4d3fff9e17a11a221670001f510d17 |
+| nikon-z-24-70f4s-f5.6-best-ref-wide | 534c54ca70f1030921493f470f9ee0d6a3d238dc3cd43dc509c0f8687e543ea7 |
+| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 672c59fea97eac2518485a560ed393242b1d93aea8dd8eb924af71026aad071b |
+| nikon-z-24-70f4s-f5.6-best-ref-tele | 44724094bec9dc249b2d0587cd4722285afa329dc7ed3247d80487c9bf044284 |
+| nikon-z-24-70f4s-f5.6-best-photopic-wide | 372038f23d287d7729c48ac2a25f7d3063cf9259c9373e3d3cd9634c822a03fd |
+| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 2d5f17c805d756e7c3f19e592c2ce7579ff815aae1622cc5fcbaab7822011cbe |
+| nikon-z-24-70f4s-f5.6-best-photopic-tele | da4a032bcd346477d4a2b163b9649d4c74d1418c7e149a6dbdbea0522ee7b1f7 |
+| nikon-z-24-70f4s-f11-ref-wide | a9fc28dc90bb6ec393151512c95cd9bbed404b4e7aeb6110aee02edda8728dfb |
+| nikon-z-24-70f4s-f11-ref-zoom0.5 | ee0b49410666fe2b115167d3da9eadc492967c802f4457c926b117aafe491428 |
+| nikon-z-24-70f4s-f11-ref-tele | dc0cc7f4f4644e267e862cc6f513fefb957e91c401cd83910f1faafbba1851f1 |
+| nikon-z-24-70f4s-f11-photopic-wide | f9c46dad3bd50217adca4144a3c1685011d2501a69a8bdb43d036d6159fdcb82 |
+| nikon-z-24-70f4s-f11-photopic-zoom0.5 | ef9cc2d09aabd8f2df0079079e7dacf171bf68a97c3c9fc282e70a956ebbc50b |
+| nikon-z-24-70f4s-f11-photopic-tele | fce6bb24cd7ccf4a3348e9e142978fc681e2825120e5ffc4340b003c2396da9e |
+| nikon-z-24-70f4s-f11-best-ref-wide | f286f2dfaa83049a3d5591572f3e47840cf0032e6287523202de250b62561b1f |
+| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 43c74496798ae9506b5038882eb2fe2fc934ecc74286ea98fdea22129bc9db3f |
+| nikon-z-24-70f4s-f11-best-ref-tele | 86e79118d05b624fe13b031ef8c4cd8440be28a8e1bff83babd4d8424dbcd0ac |
+| nikon-z-24-70f4s-f11-best-photopic-wide | c9584523b47f693df0290b83b8b3ab63132e80dbe34e18a859114d18d4f42221 |
+| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | b618c6a4fc165f483f15a9ffe70b01d7c219b7bd22cbfe9a0e436fc6e275bb27 |
+| nikon-z-24-70f4s-f11-best-photopic-tele | fb30f78b0ecd7ccb01891e21c74d1b182e1237ff34e092d8918217830fcea6f0 |
+| nikon-z-mc-105f28-f5.6-ref | 817dcdb72789e4f19aeb0834fdf38f2df1f9981feeda0e849a6fbe878516246e |
+| nikon-z-mc-105f28-f5.6-photopic | 84c9c5f86529a56eb59c98d9699d5ceabde325d4dfd0135ea13b231a7e19947f |
+| nikon-z-mc-105f28-f5.6-best-ref | c083a9ad451157303b51e15cc837a6458e778df9940e23c2ef9b74bd6a6d67f9 |
+| nikon-z-mc-105f28-f5.6-best-photopic | eca0ec2a6833ea0a6ff84fb4abb54d35c8f0884779586cd39085eeaf2d62a0dd |
+| nikon-z-mc-105f28-f11-ref | c7f1b99704f56d90a1f686179860d380dced25c8cd033526fcecd4702519f9e4 |
+| nikon-z-mc-105f28-f11-photopic | 89aff2fe03f9a0a39fb0c4bbc056824d10cf57309e3b559a660da10dee6a9f76 |
+| nikon-z-mc-105f28-f11-best-ref | 731774161533fcf291c1c1269e0e88539a0dd9e65da2ae8f74753a0b5ca2b774 |
+| nikon-z-mc-105f28-f11-best-photopic | ae84db3c87b9edba7b3828e4921efe3eb322811fd888ce54fe3f5a1d583abd10 |
+| nikon-z-135f18-plena-f5.6-ref | 2f48866c86a5c78c9d9985591e3093550306be61ca1b1467ece2a6624837935b |
+| nikon-z-135f18-plena-f5.6-photopic | 158e1ca33d4c80e41a7176d144ce4462055ecc078db8065a1e7efd3b541b9a4b |
+| nikon-z-135f18-plena-f5.6-best-ref | 360b7b852f441111c8d5acb454934d8d59d4eca6b658012be793c9e01569543b |
+| nikon-z-135f18-plena-f5.6-best-photopic | b0a31528f934800ab842ca760d487916e75db648fde6dd0283b9bd01be5f1863 |
+| nikon-z-135f18-plena-f11-ref | 9370a359110296269721cb8c84b7071d063f75cc1e19f176fc6e2e3e747090cf |
+| nikon-z-135f18-plena-f11-photopic | f7d5ed81109323d03e7cabbcec21709cb2ab62c8f37cde1fdbf26f38a7f0334b |
+| nikon-z-135f18-plena-f11-best-ref | e6cc666f0c9c00122578523ed519d8b34a1e9dff2427209471960455699891ec |
+| nikon-z-135f18-plena-f11-best-photopic | 074e0e4a6c56b4a12f20042d69bad4350e9e7dd8b535d60c0e0616a67be4f882 |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 199c2510c32fa327ab1821e2fab7968e7ad6a4bb2b9a9298f59fa94887b06bb2 |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 3b787987b0523c174ae63e6af6a90b3d6dcfe4209652fd059e3648e5c37110d8 |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 8471bafaa095d48e703f204c34d8b0f411aaa31d1f1d70865eb3772e019aacbe |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 0707769a9b97ca9e568da11158f9c6b0510d96d06b860c7348139034fa593d97 |
+| sigma-45mm-f28-dg-dn-contemporary-f11-ref | f3fcc3b63cd7c8c3a567b5f318c8a9dd3e469e78af15979fd5edb6778d604839 |
+| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 1da493f139dea309fe55d78925e539663d88b123a25265afb55d8c454315f1d3 |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | e8b060aaeb44cba02d576fc44c9725a7bd44cc6d4adb173931ddb86caf196c9b |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 2e4db53842a8d8cfe73ba2f2a6fa0dd5b6e72515eed989fa6f6bda3dac11d4b3 |
+| nikon-z-24-70f4s-open-ref-wide | baf5883c8fe1fe3b3bc3ce54df29d33f7815ce0b36c19858ee520040d0906997 |
+| nikon-z-24-70f4s-open-ref-zoom0.5 | 0c1e3e17b791b8b76cc5311d51e8dbd6ad9592081d1f4e853b775cf8253d1f53 |
+| nikon-z-24-70f4s-open-ref-tele | 8dd3c38f79512c8e7ca966ac09bc664a56558247e9905939c4eac322f2190b7a |
+| nikon-z-24-70f4s-open-photopic-wide | 1bd5a8443c6b4b625eb1568bd6805873a1ccbc2caaedbba46e51ee5a5fb5d2dc |
+| nikon-z-24-70f4s-open-photopic-zoom0.5 | 7d159e41726968a2d56b1cdfce31279b854f316d34d0b1fcc3fb2603407882ae |
+| nikon-z-24-70f4s-open-photopic-tele | 7c55143a9f94c725e66c944a44bf00e5871532ed3d91bcde1e1cffa7caa0dc33 |
+| nikon-z-24-70f4s-open-best-ref-wide | 62d96ffeab1ee441a493e20cc765c9c127be4f1229c82c3aaf27a6396df5fbd3 |
+| nikon-z-24-70f4s-open-best-ref-zoom0.5 | e96a55399921f347d7e4cc74cfb6866870a4ce088279506abff48b416df2f370 |
+| nikon-z-24-70f4s-open-best-ref-tele | 438bf375af81ecd80d950758d8e955c586efeb1491823600d9af2a4d08b987c8 |
+| nikon-z-24-70f4s-open-best-photopic-wide | 308ca6f63558edc3dfd3df66d19251db71c6a1b4979d1c8bfacd90078f058234 |
+| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 167b20f99438e790211ba3b18cfc3484e6db92e7a3c4d3f83e3644d08704b87e |
+| nikon-z-24-70f4s-open-best-photopic-tele | 0b6c7a63d711ae9909429895f395bd491939e5b1a569991aa3974b8556a59400 |
+| nikon-z-24-70f4s-f8-ref-wide | ed8aaa73b01961d36274403435feee84c6cb8bfb9211b236431eacf5db04faba |
+| nikon-z-24-70f4s-f8-ref-zoom0.5 | cfe08daed58c95d06787698fb20876419f0d64aeda8b760fcb3c39f5892f1a89 |
+| nikon-z-24-70f4s-f8-ref-tele | a76c758989f346f923ce488b7e1560778a612a5fc85c82a42b28836ed90ab1db |
+| nikon-z-24-70f4s-f8-photopic-wide | 4a7d855215279d3737eda8a3761e8a96a0092ad3976155196b8368f3a728df56 |
+| nikon-z-24-70f4s-f8-photopic-zoom0.5 | e8dcb7a4c161cdf893e35068d743936e001736696a42d5ece8d19551c4d1d4f3 |
+| nikon-z-24-70f4s-f8-photopic-tele | eaf4a65d5a26ba10c6052de8f026e23ff153a7fe64965ae26873a42f2d5c5abf |
+| nikon-z-24-70f4s-f8-best-ref-wide | a0271c9a00da51b882e5b0c6177d1e87108636b9ce7b3252f1794e7a576cd670 |
+| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | c84d1fc5b9e9daa5909cc2530a508854046daba2153963653f5ff7f42ac3bdb5 |
+| nikon-z-24-70f4s-f8-best-ref-tele | b474dca4701ef6ae3fa7967b0c5ff8ae237cb6fc643faf3d829a72c2eb3df974 |
+| nikon-z-24-70f4s-f8-best-photopic-wide | 938ab6f33460ce88478c7d5a7ea39de507459d0703fc620702aac11bf9cf26a4 |
+| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 8466fba19f559cbb012fc31dd8927bce9a4cb7969288ac043407b4ba7104c28b |
+| nikon-z-24-70f4s-f8-best-photopic-tele | 82f3d997a588bde6567ed9b36cdbd4cd2e5596158b253346ba7258e892734e3b |
 
 ## Summary
 
@@ -194,16 +194,16 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 9.38e-12 | 384 of 384 | sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | cut tangential, field 2.56e1, frequencyPerMm 100 |
-| lv – optiland | rays.compared [rays] | 888164 | 384 of 384 | — | — |
+| lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 1.10e-11 | 384 of 384 | sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | cut tangential, field 2.56e1, frequencyPerMm 100 |
+| lv – optiland | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.50e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 94 |
-| lv – ref | rays.compared [rays] | 888164 | 384 of 384 | — | — |
+| lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.48e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 92 |
+| lv – ref | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 1.45e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 92 |
-| optiland – ref | rays.compared [rays] | 888164 | 384 of 384 | — | — |
+| optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 1.43e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 94 |
+| optiland – ref | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
 
@@ -211,134 +211,134 @@ By run, each pair with its verdict and the judged metric that is largest against
 
 | Run | Requests | lv – optiland | lv – ref | optiland – ref |
 |---|---|---|---|---|
-| canon-ef-135-f2l-usm-f5.6-ref | 3 | PASS: mtf.maxAbs 6.16e-13 (3 of 3) | PASS: mtf.maxAbs 5.68e-13 (3 of 3) | PASS: mtf.maxAbs 5.40e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-photopic | 3 | PASS: mtf.maxAbs 3.09e-13 (3 of 3) | PASS: mtf.maxAbs 7.96e-13 (3 of 3) | PASS: mtf.maxAbs 6.59e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-best-ref | 3 | PASS: mtf.maxAbs 6.87e-13 (3 of 3) | PASS: mtf.maxAbs 6.35e-13 (3 of 3) | PASS: mtf.maxAbs 6.45e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.39e-13 (3 of 3) | PASS: mtf.maxAbs 6.10e-13 (3 of 3) | PASS: mtf.maxAbs 6.04e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-ref | 3 | PASS: mtf.maxAbs 3.65e-13 (3 of 3) | PASS: mtf.maxAbs 4.72e-13 (3 of 3) | PASS: mtf.maxAbs 4.08e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-photopic | 3 | PASS: mtf.maxAbs 2.43e-13 (3 of 3) | PASS: mtf.maxAbs 3.60e-13 (3 of 3) | PASS: mtf.maxAbs 5.08e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-best-ref | 3 | PASS: mtf.maxAbs 4.07e-13 (3 of 3) | PASS: mtf.maxAbs 5.20e-13 (3 of 3) | PASS: mtf.maxAbs 4.08e-13 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-best-photopic | 3 | PASS: mtf.maxAbs 2.04e-13 (3 of 3) | PASS: mtf.maxAbs 3.89e-13 (3 of 3) | PASS: mtf.maxAbs 4.66e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 3 | PASS: mtf.maxAbs 3.43e-13 (3 of 3) | PASS: mtf.maxAbs 7.00e-13 (3 of 3) | PASS: mtf.maxAbs 1.03e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 3 | PASS: mtf.maxAbs 5.13e-13 (3 of 3) | PASS: mtf.maxAbs 4.54e-13 (3 of 3) | PASS: mtf.maxAbs 9.67e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 3 | PASS: mtf.maxAbs 4.35e-13 (3 of 3) | PASS: mtf.maxAbs 3.50e-13 (3 of 3) | PASS: mtf.maxAbs 7.30e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 4.91e-13 (3 of 3) | PASS: mtf.maxAbs 4.01e-13 (3 of 3) | PASS: mtf.maxAbs 5.96e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 3 | PASS: mtf.maxAbs 3.45e-13 (3 of 3) | PASS: mtf.maxAbs 2.96e-13 (3 of 3) | PASS: mtf.maxAbs 6.40e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: mtf.maxAbs 2.06e-13 (3 of 3) | PASS: mtf.maxAbs 2.83e-13 (3 of 3) | PASS: mtf.maxAbs 4.33e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: mtf.maxAbs 3.72e-13 (3 of 3) | PASS: mtf.maxAbs 3.08e-13 (3 of 3) | PASS: mtf.maxAbs 6.80e-13 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: mtf.maxAbs 1.79e-13 (3 of 3) | PASS: mtf.maxAbs 3.01e-13 (3 of 3) | PASS: mtf.maxAbs 4.54e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: mtf.maxAbs 1.76e-13 (3 of 3) | PASS: mtf.maxAbs 7.27e-12 (3 of 3) | PASS: mtf.maxAbs 7.45e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: mtf.maxAbs 3.68e-13 (3 of 3) | PASS: mtf.maxAbs 1.15e-12 (3 of 3) | PASS: mtf.maxAbs 1.05e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.85e-13 (3 of 3) | PASS: mtf.maxAbs 7.09e-12 (3 of 3) | PASS: mtf.maxAbs 7.28e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 3.96e-13 (3 of 3) | PASS: mtf.maxAbs 2.75e-12 (3 of 3) | PASS: mtf.maxAbs 2.97e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: mtf.maxAbs 3.02e-13 (3 of 3) | PASS: mtf.maxAbs 2.16e-12 (3 of 3) | PASS: mtf.maxAbs 1.86e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: mtf.maxAbs 8.53e-13 (3 of 3) | PASS: mtf.maxAbs 7.96e-13 (3 of 3) | PASS: mtf.maxAbs 2.40e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: mtf.maxAbs 3.31e-13 (3 of 3) | PASS: mtf.maxAbs 2.16e-12 (3 of 3) | PASS: mtf.maxAbs 1.83e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: mtf.maxAbs 8.90e-13 (3 of 3) | PASS: mtf.maxAbs 9.79e-13 (3 of 3) | PASS: mtf.maxAbs 2.17e-13 (3 of 3) |
-| nikkor-z50f12-f5.6-ref | 3 | PASS: mtf.maxAbs 3.15e-12 (3 of 3) | PASS: mtf.maxAbs 5.91e-12 (3 of 3) | PASS: mtf.maxAbs 6.69e-12 (3 of 3) |
-| nikkor-z50f12-f5.6-photopic | 3 | PASS: mtf.maxAbs 2.09e-12 (3 of 3) | PASS: mtf.maxAbs 4.67e-12 (3 of 3) | PASS: mtf.maxAbs 5.55e-12 (3 of 3) |
-| nikkor-z50f12-f5.6-best-ref | 3 | PASS: mtf.maxAbs 3.12e-12 (3 of 3) | PASS: mtf.maxAbs 5.83e-12 (3 of 3) | PASS: mtf.maxAbs 6.56e-12 (3 of 3) |
-| nikkor-z50f12-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.20e-12 (3 of 3) | PASS: mtf.maxAbs 4.66e-12 (3 of 3) | PASS: mtf.maxAbs 5.65e-12 (3 of 3) |
-| nikkor-z50f12-f11-ref | 3 | PASS: mtf.maxAbs 7.38e-13 (3 of 3) | PASS: mtf.maxAbs 4.58e-13 (3 of 3) | PASS: mtf.maxAbs 6.20e-13 (3 of 3) |
-| nikkor-z50f12-f11-photopic | 3 | PASS: mtf.maxAbs 8.45e-13 (3 of 3) | PASS: mtf.maxAbs 3.58e-13 (3 of 3) | PASS: mtf.maxAbs 7.29e-13 (3 of 3) |
-| nikkor-z50f12-f11-best-ref | 3 | PASS: mtf.maxAbs 7.40e-13 (3 of 3) | PASS: mtf.maxAbs 4.53e-13 (3 of 3) | PASS: mtf.maxAbs 6.22e-13 (3 of 3) |
-| nikkor-z50f12-f11-best-photopic | 3 | PASS: mtf.maxAbs 9.58e-13 (3 of 3) | PASS: mtf.maxAbs 2.47e-13 (3 of 3) | PASS: mtf.maxAbs 8.25e-13 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-ref | 3 | PASS: mtf.maxAbs 1.90e-12 (3 of 3) | PASS: mtf.maxAbs 2.95e-12 (3 of 3) | PASS: mtf.maxAbs 3.02e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-photopic | 3 | PASS: mtf.maxAbs 6.39e-13 (3 of 3) | PASS: mtf.maxAbs 2.82e-12 (3 of 3) | PASS: mtf.maxAbs 2.94e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.92e-12 (3 of 3) | PASS: mtf.maxAbs 3.00e-12 (3 of 3) | PASS: mtf.maxAbs 3.07e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 7.35e-13 (3 of 3) | PASS: mtf.maxAbs 3.09e-12 (3 of 3) | PASS: mtf.maxAbs 3.20e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-ref | 3 | PASS: mtf.maxAbs 4.82e-13 (3 of 3) | PASS: mtf.maxAbs 2.42e-12 (3 of 3) | PASS: mtf.maxAbs 2.72e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-photopic | 3 | PASS: mtf.maxAbs 1.53e-12 (3 of 3) | PASS: mtf.maxAbs 2.25e-12 (3 of 3) | PASS: mtf.maxAbs 1.95e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-best-ref | 3 | PASS: mtf.maxAbs 5.54e-13 (3 of 3) | PASS: mtf.maxAbs 2.44e-12 (3 of 3) | PASS: mtf.maxAbs 2.74e-12 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-best-photopic | 3 | PASS: mtf.maxAbs 1.60e-12 (3 of 3) | PASS: mtf.maxAbs 2.24e-12 (3 of 3) | PASS: mtf.maxAbs 1.97e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-ref | 3 | PASS: mtf.maxAbs 5.14e-12 (3 of 3) | PASS: mtf.maxAbs 3.23e-12 (3 of 3) | PASS: mtf.maxAbs 7.93e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 3 | PASS: mtf.maxAbs 3.53e-12 (3 of 3) | PASS: mtf.maxAbs 3.91e-12 (3 of 3) | PASS: mtf.maxAbs 6.33e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 3 | PASS: mtf.maxAbs 7.02e-13 (3 of 3) | PASS: mtf.maxAbs 8.34e-13 (3 of 3) | PASS: mtf.maxAbs 1.47e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.75e-12 (3 of 3) | PASS: mtf.maxAbs 6.21e-13 (3 of 3) | PASS: mtf.maxAbs 1.32e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-ref | 3 | PASS: mtf.maxAbs 1.64e-12 (3 of 3) | PASS: mtf.maxAbs 1.48e-12 (3 of 3) | PASS: mtf.maxAbs 2.98e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-photopic | 3 | PASS: mtf.maxAbs 3.37e-12 (3 of 3) | PASS: mtf.maxAbs 1.55e-12 (3 of 3) | PASS: mtf.maxAbs 3.74e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-best-ref | 3 | PASS: mtf.maxAbs 8.09e-13 (3 of 3) | PASS: mtf.maxAbs 5.75e-13 (3 of 3) | PASS: mtf.maxAbs 1.19e-12 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.51e-12 (3 of 3) | PASS: mtf.maxAbs 1.47e-12 (3 of 3) | PASS: mtf.maxAbs 2.04e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 3 | PASS: mtf.maxAbs 1.39e-12 (3 of 3) | PASS: mtf.maxAbs 2.14e-12 (3 of 3) | PASS: mtf.maxAbs 3.04e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.67e-12 (3 of 3) | PASS: mtf.maxAbs 1.86e-12 (3 of 3) | PASS: mtf.maxAbs 3.26e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.52e-12 (3 of 3) | PASS: mtf.maxAbs 1.98e-12 (3 of 3) | PASS: mtf.maxAbs 2.84e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.73e-12 (3 of 3) | PASS: mtf.maxAbs 1.92e-12 (3 of 3) | PASS: mtf.maxAbs 3.37e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 3 | PASS: mtf.maxAbs 1.17e-12 (3 of 3) | PASS: mtf.maxAbs 2.34e-12 (3 of 3) | PASS: mtf.maxAbs 3.51e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 3 | PASS: mtf.maxAbs 9.94e-13 (3 of 3) | PASS: mtf.maxAbs 1.76e-12 (3 of 3) | PASS: mtf.maxAbs 2.23e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 3 | PASS: mtf.maxAbs 1.09e-12 (3 of 3) | PASS: mtf.maxAbs 2.42e-12 (3 of 3) | PASS: mtf.maxAbs 3.50e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 3 | PASS: mtf.maxAbs 9.96e-13 (3 of 3) | PASS: mtf.maxAbs 1.73e-12 (3 of 3) | PASS: mtf.maxAbs 2.16e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-wide | 3 | PASS: mtf.maxAbs 5.53e-12 (3 of 3) | PASS: mtf.maxAbs 5.07e-12 (3 of 3) | PASS: mtf.maxAbs 5.25e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.30e-12 (3 of 3) | PASS: mtf.maxAbs 4.51e-12 (3 of 3) | PASS: mtf.maxAbs 5.81e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-tele | 3 | PASS: mtf.maxAbs 1.18e-12 (3 of 3) | PASS: mtf.maxAbs 1.38e-11 (3 of 3) | PASS: mtf.maxAbs 1.31e-11 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-wide | 3 | PASS: mtf.maxAbs 3.32e-12 (3 of 3) | PASS: mtf.maxAbs 4.80e-12 (3 of 3) | PASS: mtf.maxAbs 4.82e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 7.36e-13 (3 of 3) | PASS: mtf.maxAbs 4.12e-12 (3 of 3) | PASS: mtf.maxAbs 3.38e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-tele | 3 | PASS: mtf.maxAbs 4.74e-13 (3 of 3) | PASS: mtf.maxAbs 7.65e-12 (3 of 3) | PASS: mtf.maxAbs 7.21e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-wide | 3 | PASS: mtf.maxAbs 6.67e-12 (3 of 3) | PASS: mtf.maxAbs 1.22e-11 (3 of 3) | PASS: mtf.maxAbs 1.20e-11 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 7.52e-13 (3 of 3) | PASS: mtf.maxAbs 5.32e-12 (3 of 3) | PASS: mtf.maxAbs 5.54e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-tele | 3 | PASS: mtf.maxAbs 9.24e-13 (3 of 3) | PASS: mtf.maxAbs 1.50e-11 (3 of 3) | PASS: mtf.maxAbs 1.45e-11 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-wide | 3 | PASS: mtf.maxAbs 3.01e-12 (3 of 3) | PASS: mtf.maxAbs 5.88e-12 (3 of 3) | PASS: mtf.maxAbs 5.92e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 4.37e-13 (3 of 3) | PASS: mtf.maxAbs 2.88e-12 (3 of 3) | PASS: mtf.maxAbs 3.32e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-tele | 3 | PASS: mtf.maxAbs 6.48e-13 (3 of 3) | PASS: mtf.maxAbs 6.27e-12 (3 of 3) | PASS: mtf.maxAbs 5.97e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-wide | 3 | PASS: mtf.maxAbs 2.00e-13 (3 of 3) | PASS: mtf.maxAbs 6.83e-12 (3 of 3) | PASS: mtf.maxAbs 6.80e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 3.26e-13 (3 of 3) | PASS: mtf.maxAbs 1.82e-12 (3 of 3) | PASS: mtf.maxAbs 1.61e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-tele | 3 | PASS: mtf.maxAbs 4.77e-13 (3 of 3) | PASS: mtf.maxAbs 5.59e-12 (3 of 3) | PASS: mtf.maxAbs 5.79e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-wide | 3 | PASS: mtf.maxAbs 2.85e-13 (3 of 3) | PASS: mtf.maxAbs 4.43e-12 (3 of 3) | PASS: mtf.maxAbs 4.52e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 5.77e-13 (3 of 3) | PASS: mtf.maxAbs 1.77e-12 (3 of 3) | PASS: mtf.maxAbs 2.22e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-tele | 3 | PASS: mtf.maxAbs 4.87e-13 (3 of 3) | PASS: mtf.maxAbs 3.96e-12 (3 of 3) | PASS: mtf.maxAbs 3.83e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-wide | 3 | PASS: mtf.maxAbs 2.13e-13 (3 of 3) | PASS: mtf.maxAbs 1.04e-11 (3 of 3) | PASS: mtf.maxAbs 1.04e-11 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 4.12e-13 (3 of 3) | PASS: mtf.maxAbs 1.55e-12 (3 of 3) | PASS: mtf.maxAbs 1.32e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-tele | 3 | PASS: mtf.maxAbs 3.34e-13 (3 of 3) | PASS: mtf.maxAbs 6.43e-12 (3 of 3) | PASS: mtf.maxAbs 6.75e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-wide | 3 | PASS: mtf.maxAbs 2.38e-13 (3 of 3) | PASS: mtf.maxAbs 4.67e-12 (3 of 3) | PASS: mtf.maxAbs 4.76e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 6.38e-13 (3 of 3) | PASS: mtf.maxAbs 1.62e-12 (3 of 3) | PASS: mtf.maxAbs 2.08e-12 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-tele | 3 | PASS: mtf.maxAbs 5.80e-13 (3 of 3) | PASS: mtf.maxAbs 2.26e-12 (3 of 3) | PASS: mtf.maxAbs 2.80e-12 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-ref | 3 | PASS: mtf.maxAbs 7.41e-13 (3 of 3) | PASS: mtf.maxAbs 4.36e-12 (3 of 3) | PASS: mtf.maxAbs 5.03e-12 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-photopic | 3 | PASS: mtf.maxAbs 5.47e-13 (3 of 3) | PASS: mtf.maxAbs 3.92e-12 (3 of 3) | PASS: mtf.maxAbs 3.54e-12 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.04e-12 (3 of 3) | PASS: mtf.maxAbs 1.01e-12 (3 of 3) | PASS: mtf.maxAbs 1.17e-12 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 9.58e-13 (3 of 3) | PASS: mtf.maxAbs 7.07e-13 (3 of 3) | PASS: mtf.maxAbs 7.18e-13 (3 of 3) |
-| nikon-z-mc-105f28-f11-ref | 3 | PASS: mtf.maxAbs 2.46e-13 (3 of 3) | PASS: mtf.maxAbs 5.82e-13 (3 of 3) | PASS: mtf.maxAbs 3.93e-13 (3 of 3) |
-| nikon-z-mc-105f28-f11-photopic | 3 | PASS: mtf.maxAbs 5.19e-13 (3 of 3) | PASS: mtf.maxAbs 3.02e-13 (3 of 3) | PASS: mtf.maxAbs 8.21e-13 (3 of 3) |
-| nikon-z-mc-105f28-f11-best-ref | 3 | PASS: mtf.maxAbs 3.94e-13 (3 of 3) | PASS: mtf.maxAbs 7.11e-13 (3 of 3) | PASS: mtf.maxAbs 3.58e-13 (3 of 3) |
-| nikon-z-mc-105f28-f11-best-photopic | 3 | PASS: mtf.maxAbs 5.26e-13 (3 of 3) | PASS: mtf.maxAbs 1.95e-13 (3 of 3) | PASS: mtf.maxAbs 6.24e-13 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-ref | 3 | PASS: mtf.maxAbs 7.12e-13 (3 of 3) | PASS: mtf.maxAbs 7.35e-13 (3 of 3) | PASS: mtf.maxAbs 1.41e-12 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.49e-12 (3 of 3) | PASS: mtf.maxAbs 8.40e-13 (3 of 3) | PASS: mtf.maxAbs 1.79e-12 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-best-ref | 3 | PASS: mtf.maxAbs 7.96e-13 (3 of 3) | PASS: mtf.maxAbs 8.60e-13 (3 of 3) | PASS: mtf.maxAbs 1.66e-12 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.38e-12 (3 of 3) | PASS: mtf.maxAbs 7.97e-13 (3 of 3) | PASS: mtf.maxAbs 1.87e-12 (3 of 3) |
-| nikon-z-135f18-plena-f11-ref | 3 | PASS: mtf.maxAbs 5.47e-13 (3 of 3) | PASS: mtf.maxAbs 2.15e-13 (3 of 3) | PASS: mtf.maxAbs 4.50e-13 (3 of 3) |
-| nikon-z-135f18-plena-f11-photopic | 3 | PASS: mtf.maxAbs 7.09e-13 (3 of 3) | PASS: mtf.maxAbs 3.55e-13 (3 of 3) | PASS: mtf.maxAbs 1.04e-12 (3 of 3) |
-| nikon-z-135f18-plena-f11-best-ref | 3 | PASS: mtf.maxAbs 5.53e-13 (3 of 3) | PASS: mtf.maxAbs 2.22e-13 (3 of 3) | PASS: mtf.maxAbs 4.64e-13 (3 of 3) |
-| nikon-z-135f18-plena-f11-best-photopic | 3 | PASS: mtf.maxAbs 6.79e-13 (3 of 3) | PASS: mtf.maxAbs 3.55e-13 (3 of 3) | PASS: mtf.maxAbs 1.02e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 3 | PASS: mtf.maxAbs 8.32e-12 (3 of 3) | PASS: mtf.maxAbs 4.60e-12 (3 of 3) | PASS: mtf.maxAbs 1.01e-11 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 3 | PASS: mtf.maxAbs 3.14e-12 (3 of 3) | PASS: mtf.maxAbs 3.73e-12 (3 of 3) | PASS: mtf.maxAbs 6.50e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 3 | PASS: mtf.maxAbs 9.38e-12 (3 of 3) | PASS: mtf.maxAbs 6.51e-12 (3 of 3) | PASS: mtf.maxAbs 9.21e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 3.38e-12 (3 of 3) | PASS: mtf.maxAbs 3.75e-12 (3 of 3) | PASS: mtf.maxAbs 6.96e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 3 | PASS: mtf.maxAbs 4.81e-13 (3 of 3) | PASS: mtf.maxAbs 6.49e-12 (3 of 3) | PASS: mtf.maxAbs 6.97e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 3 | PASS: mtf.maxAbs 3.59e-13 (3 of 3) | PASS: mtf.maxAbs 2.57e-12 (3 of 3) | PASS: mtf.maxAbs 2.21e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 3 | PASS: mtf.maxAbs 5.32e-13 (3 of 3) | PASS: mtf.maxAbs 8.14e-12 (3 of 3) | PASS: mtf.maxAbs 8.67e-12 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.58e-13 (3 of 3) | PASS: mtf.maxAbs 2.65e-12 (3 of 3) | PASS: mtf.maxAbs 2.33e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-ref-wide | 3 | PASS: mtf.maxAbs 8.82e-12 (3 of 3) | PASS: mtf.maxAbs 1.12e-11 (3 of 3) | PASS: mtf.maxAbs 1.17e-11 (3 of 3) |
-| nikon-z-24-70f4s-open-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 5.70e-13 (3 of 3) | PASS: mtf.maxAbs 3.64e-12 (3 of 3) | PASS: mtf.maxAbs 3.52e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-ref-tele | 3 | PASS: mtf.maxAbs 1.25e-12 (3 of 3) | PASS: mtf.maxAbs 7.19e-12 (3 of 3) | PASS: mtf.maxAbs 7.58e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-photopic-wide | 3 | PASS: mtf.maxAbs 3.40e-12 (3 of 3) | PASS: mtf.maxAbs 7.25e-12 (3 of 3) | PASS: mtf.maxAbs 7.20e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 5.70e-13 (3 of 3) | PASS: mtf.maxAbs 2.27e-12 (3 of 3) | PASS: mtf.maxAbs 2.66e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-photopic-tele | 3 | PASS: mtf.maxAbs 6.94e-13 (3 of 3) | PASS: mtf.maxAbs 7.47e-12 (3 of 3) | PASS: mtf.maxAbs 7.17e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-best-ref-wide | 3 | PASS: mtf.maxAbs 8.84e-12 (3 of 3) | PASS: mtf.maxAbs 1.13e-11 (3 of 3) | PASS: mtf.maxAbs 1.14e-11 (3 of 3) |
-| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.66e-12 (3 of 3) | PASS: mtf.maxAbs 3.36e-12 (3 of 3) | PASS: mtf.maxAbs 5.01e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-best-ref-tele | 3 | PASS: mtf.maxAbs 1.29e-12 (3 of 3) | PASS: mtf.maxAbs 8.23e-12 (3 of 3) | PASS: mtf.maxAbs 8.33e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-wide | 3 | PASS: mtf.maxAbs 3.35e-12 (3 of 3) | PASS: mtf.maxAbs 9.38e-12 (3 of 3) | PASS: mtf.maxAbs 9.40e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 2.73e-13 (3 of 3) | PASS: mtf.maxAbs 2.52e-12 (3 of 3) | PASS: mtf.maxAbs 2.66e-12 (3 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-tele | 3 | PASS: mtf.maxAbs 7.62e-13 (3 of 3) | PASS: mtf.maxAbs 7.79e-12 (3 of 3) | PASS: mtf.maxAbs 7.47e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-ref-wide | 3 | PASS: mtf.maxAbs 1.34e-12 (3 of 3) | PASS: mtf.maxAbs 6.29e-12 (3 of 3) | PASS: mtf.maxAbs 6.24e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 7.94e-13 (3 of 3) | PASS: mtf.maxAbs 3.79e-12 (3 of 3) | PASS: mtf.maxAbs 4.46e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-ref-tele | 3 | PASS: mtf.maxAbs 2.59e-13 (3 of 3) | PASS: mtf.maxAbs 6.99e-12 (3 of 3) | PASS: mtf.maxAbs 7.25e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-wide | 3 | PASS: mtf.maxAbs 1.69e-12 (3 of 3) | PASS: mtf.maxAbs 3.87e-12 (3 of 3) | PASS: mtf.maxAbs 4.03e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 3.21e-13 (3 of 3) | PASS: mtf.maxAbs 4.26e-12 (3 of 3) | PASS: mtf.maxAbs 4.27e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-tele | 3 | PASS: mtf.maxAbs 5.38e-13 (3 of 3) | PASS: mtf.maxAbs 7.94e-12 (3 of 3) | PASS: mtf.maxAbs 7.45e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-wide | 3 | PASS: mtf.maxAbs 1.58e-12 (3 of 3) | PASS: mtf.maxAbs 1.14e-11 (3 of 3) | PASS: mtf.maxAbs 1.10e-11 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.04e-12 (3 of 3) | PASS: mtf.maxAbs 5.76e-12 (3 of 3) | PASS: mtf.maxAbs 6.81e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-tele | 3 | PASS: mtf.maxAbs 3.59e-13 (3 of 3) | PASS: mtf.maxAbs 1.01e-11 (3 of 3) | PASS: mtf.maxAbs 9.78e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-wide | 3 | PASS: mtf.maxAbs 1.77e-12 (3 of 3) | PASS: mtf.maxAbs 4.28e-12 (3 of 3) | PASS: mtf.maxAbs 4.40e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 3.96e-13 (3 of 3) | PASS: mtf.maxAbs 3.55e-12 (3 of 3) | PASS: mtf.maxAbs 3.72e-12 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-tele | 3 | PASS: mtf.maxAbs 4.20e-13 (3 of 3) | PASS: mtf.maxAbs 3.07e-12 (3 of 3) | PASS: mtf.maxAbs 3.25e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-ref | 3 | PASS: mtf.maxAbs 8.29e-13 (3 of 3) | PASS: mtf.maxAbs 6.43e-13 (3 of 3) | PASS: mtf.maxAbs 9.10e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-photopic | 3 | PASS: mtf.maxAbs 4.70e-13 (3 of 3) | PASS: mtf.maxAbs 4.39e-13 (3 of 3) | PASS: mtf.maxAbs 5.73e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-best-ref | 3 | PASS: mtf.maxAbs 6.97e-13 (3 of 3) | PASS: mtf.maxAbs 5.98e-13 (3 of 3) | PASS: mtf.maxAbs 9.78e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 3.90e-13 (3 of 3) | PASS: mtf.maxAbs 5.45e-13 (3 of 3) | PASS: mtf.maxAbs 6.11e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-ref | 3 | PASS: mtf.maxAbs 3.34e-13 (3 of 3) | PASS: mtf.maxAbs 2.37e-13 (3 of 3) | PASS: mtf.maxAbs 4.88e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-photopic | 3 | PASS: mtf.maxAbs 1.13e-12 (3 of 3) | PASS: mtf.maxAbs 8.15e-13 (3 of 3) | PASS: mtf.maxAbs 4.74e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-best-ref | 3 | PASS: mtf.maxAbs 3.53e-13 (3 of 3) | PASS: mtf.maxAbs 2.25e-13 (3 of 3) | PASS: mtf.maxAbs 5.00e-13 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-best-photopic | 3 | PASS: mtf.maxAbs 1.10e-12 (3 of 3) | PASS: mtf.maxAbs 7.10e-13 (3 of 3) | PASS: mtf.maxAbs 4.66e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 3 | PASS: mtf.maxAbs 4.27e-13 (3 of 3) | PASS: mtf.maxAbs 6.20e-13 (3 of 3) | PASS: mtf.maxAbs 1.05e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 3 | PASS: mtf.maxAbs 4.42e-13 (3 of 3) | PASS: mtf.maxAbs 6.27e-13 (3 of 3) | PASS: mtf.maxAbs 1.07e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 3 | PASS: mtf.maxAbs 4.89e-13 (3 of 3) | PASS: mtf.maxAbs 4.45e-13 (3 of 3) | PASS: mtf.maxAbs 8.47e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 3.01e-13 (3 of 3) | PASS: mtf.maxAbs 3.86e-13 (3 of 3) | PASS: mtf.maxAbs 6.36e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 3 | PASS: mtf.maxAbs 2.61e-13 (3 of 3) | PASS: mtf.maxAbs 3.00e-13 (3 of 3) | PASS: mtf.maxAbs 5.37e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: mtf.maxAbs 4.14e-13 (3 of 3) | PASS: mtf.maxAbs 2.90e-13 (3 of 3) | PASS: mtf.maxAbs 4.97e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: mtf.maxAbs 2.62e-13 (3 of 3) | PASS: mtf.maxAbs 3.09e-13 (3 of 3) | PASS: mtf.maxAbs 5.57e-13 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.40e-13 (3 of 3) | PASS: mtf.maxAbs 3.08e-13 (3 of 3) | PASS: mtf.maxAbs 5.17e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: mtf.maxAbs 6.39e-13 (3 of 3) | PASS: mtf.maxAbs 6.52e-12 (3 of 3) | PASS: mtf.maxAbs 7.16e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: mtf.maxAbs 2.56e-13 (3 of 3) | PASS: mtf.maxAbs 1.18e-12 (3 of 3) | PASS: mtf.maxAbs 1.03e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: mtf.maxAbs 6.46e-13 (3 of 3) | PASS: mtf.maxAbs 6.32e-12 (3 of 3) | PASS: mtf.maxAbs 6.96e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.95e-13 (3 of 3) | PASS: mtf.maxAbs 2.90e-12 (3 of 3) | PASS: mtf.maxAbs 2.80e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: mtf.maxAbs 4.80e-13 (3 of 3) | PASS: mtf.maxAbs 1.20e-12 (3 of 3) | PASS: mtf.maxAbs 7.23e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: mtf.maxAbs 2.59e-13 (3 of 3) | PASS: mtf.maxAbs 4.15e-13 (3 of 3) | PASS: mtf.maxAbs 5.27e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: mtf.maxAbs 4.43e-13 (3 of 3) | PASS: mtf.maxAbs 1.15e-12 (3 of 3) | PASS: mtf.maxAbs 7.11e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: mtf.maxAbs 2.56e-13 (3 of 3) | PASS: mtf.maxAbs 5.26e-13 (3 of 3) | PASS: mtf.maxAbs 7.59e-13 (3 of 3) |
+| nikkor-z50f12-f5.6-ref | 3 | PASS: mtf.maxAbs 3.12e-12 (3 of 3) | PASS: mtf.maxAbs 7.45e-12 (3 of 3) | PASS: mtf.maxAbs 7.39e-12 (3 of 3) |
+| nikkor-z50f12-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.89e-12 (3 of 3) | PASS: mtf.maxAbs 5.89e-12 (3 of 3) | PASS: mtf.maxAbs 7.10e-12 (3 of 3) |
+| nikkor-z50f12-f5.6-best-ref | 3 | PASS: mtf.maxAbs 3.08e-12 (3 of 3) | PASS: mtf.maxAbs 7.34e-12 (3 of 3) | PASS: mtf.maxAbs 7.31e-12 (3 of 3) |
+| nikkor-z50f12-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.82e-12 (3 of 3) | PASS: mtf.maxAbs 5.74e-12 (3 of 3) | PASS: mtf.maxAbs 7.17e-12 (3 of 3) |
+| nikkor-z50f12-f11-ref | 3 | PASS: mtf.maxAbs 9.58e-13 (3 of 3) | PASS: mtf.maxAbs 6.61e-13 (3 of 3) | PASS: mtf.maxAbs 1.62e-12 (3 of 3) |
+| nikkor-z50f12-f11-photopic | 3 | PASS: mtf.maxAbs 8.24e-13 (3 of 3) | PASS: mtf.maxAbs 1.91e-13 (3 of 3) | PASS: mtf.maxAbs 7.44e-13 (3 of 3) |
+| nikkor-z50f12-f11-best-ref | 3 | PASS: mtf.maxAbs 9.25e-13 (3 of 3) | PASS: mtf.maxAbs 6.89e-13 (3 of 3) | PASS: mtf.maxAbs 1.61e-12 (3 of 3) |
+| nikkor-z50f12-f11-best-photopic | 3 | PASS: mtf.maxAbs 9.26e-13 (3 of 3) | PASS: mtf.maxAbs 1.33e-13 (3 of 3) | PASS: mtf.maxAbs 8.38e-13 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-ref | 3 | PASS: mtf.maxAbs 1.17e-12 (3 of 3) | PASS: mtf.maxAbs 2.97e-12 (3 of 3) | PASS: mtf.maxAbs 3.20e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.00e-12 (3 of 3) | PASS: mtf.maxAbs 2.66e-12 (3 of 3) | PASS: mtf.maxAbs 2.83e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.17e-12 (3 of 3) | PASS: mtf.maxAbs 3.03e-12 (3 of 3) | PASS: mtf.maxAbs 3.26e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.03e-12 (3 of 3) | PASS: mtf.maxAbs 2.89e-12 (3 of 3) | PASS: mtf.maxAbs 3.06e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-ref | 3 | PASS: mtf.maxAbs 6.67e-13 (3 of 3) | PASS: mtf.maxAbs 2.72e-12 (3 of 3) | PASS: mtf.maxAbs 2.88e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-photopic | 3 | PASS: mtf.maxAbs 6.16e-13 (3 of 3) | PASS: mtf.maxAbs 2.16e-12 (3 of 3) | PASS: mtf.maxAbs 2.10e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-best-ref | 3 | PASS: mtf.maxAbs 6.94e-13 (3 of 3) | PASS: mtf.maxAbs 2.64e-12 (3 of 3) | PASS: mtf.maxAbs 2.82e-12 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-best-photopic | 3 | PASS: mtf.maxAbs 5.87e-13 (3 of 3) | PASS: mtf.maxAbs 2.15e-12 (3 of 3) | PASS: mtf.maxAbs 2.10e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-ref | 3 | PASS: mtf.maxAbs 5.13e-12 (3 of 3) | PASS: mtf.maxAbs 3.78e-12 (3 of 3) | PASS: mtf.maxAbs 6.99e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 3 | PASS: mtf.maxAbs 2.98e-12 (3 of 3) | PASS: mtf.maxAbs 3.26e-12 (3 of 3) | PASS: mtf.maxAbs 5.86e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.43e-12 (3 of 3) | PASS: mtf.maxAbs 6.59e-13 (3 of 3) | PASS: mtf.maxAbs 1.56e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.45e-12 (3 of 3) | PASS: mtf.maxAbs 4.14e-13 (3 of 3) | PASS: mtf.maxAbs 2.86e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-ref | 3 | PASS: mtf.maxAbs 1.57e-12 (3 of 3) | PASS: mtf.maxAbs 1.89e-12 (3 of 3) | PASS: mtf.maxAbs 3.30e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-photopic | 3 | PASS: mtf.maxAbs 2.91e-12 (3 of 3) | PASS: mtf.maxAbs 1.45e-12 (3 of 3) | PASS: mtf.maxAbs 2.71e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-best-ref | 3 | PASS: mtf.maxAbs 2.13e-12 (3 of 3) | PASS: mtf.maxAbs 7.77e-13 (3 of 3) | PASS: mtf.maxAbs 2.44e-12 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 3 | PASS: mtf.maxAbs 2.27e-12 (3 of 3) | PASS: mtf.maxAbs 1.50e-12 (3 of 3) | PASS: mtf.maxAbs 8.48e-13 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 3 | PASS: mtf.maxAbs 1.22e-12 (3 of 3) | PASS: mtf.maxAbs 1.95e-12 (3 of 3) | PASS: mtf.maxAbs 3.05e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.76e-12 (3 of 3) | PASS: mtf.maxAbs 1.82e-12 (3 of 3) | PASS: mtf.maxAbs 3.34e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.14e-12 (3 of 3) | PASS: mtf.maxAbs 1.82e-12 (3 of 3) | PASS: mtf.maxAbs 2.86e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 1.83e-12 (3 of 3) | PASS: mtf.maxAbs 1.89e-12 (3 of 3) | PASS: mtf.maxAbs 3.46e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 3 | PASS: mtf.maxAbs 9.12e-13 (3 of 3) | PASS: mtf.maxAbs 1.95e-12 (3 of 3) | PASS: mtf.maxAbs 1.82e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 3 | PASS: mtf.maxAbs 1.55e-12 (3 of 3) | PASS: mtf.maxAbs 1.05e-12 (3 of 3) | PASS: mtf.maxAbs 2.60e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 3 | PASS: mtf.maxAbs 9.17e-13 (3 of 3) | PASS: mtf.maxAbs 1.97e-12 (3 of 3) | PASS: mtf.maxAbs 1.76e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 3 | PASS: mtf.maxAbs 1.62e-12 (3 of 3) | PASS: mtf.maxAbs 1.06e-12 (3 of 3) | PASS: mtf.maxAbs 2.68e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-wide | 3 | PASS: mtf.maxAbs 7.64e-12 (3 of 3) | PASS: mtf.maxAbs 4.98e-12 (3 of 3) | PASS: mtf.maxAbs 6.38e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 8.35e-13 (3 of 3) | PASS: mtf.maxAbs 5.38e-12 (3 of 3) | PASS: mtf.maxAbs 4.85e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-tele | 3 | PASS: mtf.maxAbs 6.31e-13 (3 of 3) | PASS: mtf.maxAbs 1.35e-11 (3 of 3) | PASS: mtf.maxAbs 1.34e-11 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-wide | 3 | PASS: mtf.maxAbs 3.33e-12 (3 of 3) | PASS: mtf.maxAbs 4.74e-12 (3 of 3) | PASS: mtf.maxAbs 4.67e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 4.60e-13 (3 of 3) | PASS: mtf.maxAbs 4.80e-12 (3 of 3) | PASS: mtf.maxAbs 4.88e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-tele | 3 | PASS: mtf.maxAbs 6.06e-13 (3 of 3) | PASS: mtf.maxAbs 5.40e-12 (3 of 3) | PASS: mtf.maxAbs 5.84e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-wide | 3 | PASS: mtf.maxAbs 6.83e-12 (3 of 3) | PASS: mtf.maxAbs 1.21e-11 (3 of 3) | PASS: mtf.maxAbs 1.21e-11 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 6.50e-13 (3 of 3) | PASS: mtf.maxAbs 7.61e-12 (3 of 3) | PASS: mtf.maxAbs 7.13e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-tele | 3 | PASS: mtf.maxAbs 6.66e-13 (3 of 3) | PASS: mtf.maxAbs 1.48e-11 (3 of 3) | PASS: mtf.maxAbs 1.43e-11 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-wide | 3 | PASS: mtf.maxAbs 3.51e-12 (3 of 3) | PASS: mtf.maxAbs 5.74e-12 (3 of 3) | PASS: mtf.maxAbs 5.74e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 4.43e-13 (3 of 3) | PASS: mtf.maxAbs 3.89e-12 (3 of 3) | PASS: mtf.maxAbs 3.88e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-tele | 3 | PASS: mtf.maxAbs 4.36e-13 (3 of 3) | PASS: mtf.maxAbs 4.82e-12 (3 of 3) | PASS: mtf.maxAbs 5.22e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-wide | 3 | PASS: mtf.maxAbs 1.54e-12 (3 of 3) | PASS: mtf.maxAbs 6.63e-12 (3 of 3) | PASS: mtf.maxAbs 6.35e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 4.79e-13 (3 of 3) | PASS: mtf.maxAbs 1.60e-12 (3 of 3) | PASS: mtf.maxAbs 1.75e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-tele | 3 | PASS: mtf.maxAbs 7.35e-13 (3 of 3) | PASS: mtf.maxAbs 6.93e-12 (3 of 3) | PASS: mtf.maxAbs 7.67e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-wide | 3 | PASS: mtf.maxAbs 6.17e-13 (3 of 3) | PASS: mtf.maxAbs 4.41e-12 (3 of 3) | PASS: mtf.maxAbs 4.43e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 3.27e-13 (3 of 3) | PASS: mtf.maxAbs 2.26e-12 (3 of 3) | PASS: mtf.maxAbs 2.46e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-tele | 3 | PASS: mtf.maxAbs 1.04e-12 (3 of 3) | PASS: mtf.maxAbs 4.43e-12 (3 of 3) | PASS: mtf.maxAbs 4.44e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-wide | 3 | PASS: mtf.maxAbs 1.41e-12 (3 of 3) | PASS: mtf.maxAbs 1.01e-11 (3 of 3) | PASS: mtf.maxAbs 9.77e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 5.36e-13 (3 of 3) | PASS: mtf.maxAbs 1.46e-12 (3 of 3) | PASS: mtf.maxAbs 1.48e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-tele | 3 | PASS: mtf.maxAbs 6.77e-13 (3 of 3) | PASS: mtf.maxAbs 7.34e-12 (3 of 3) | PASS: mtf.maxAbs 8.01e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-wide | 3 | PASS: mtf.maxAbs 6.58e-13 (3 of 3) | PASS: mtf.maxAbs 4.64e-12 (3 of 3) | PASS: mtf.maxAbs 4.66e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 3.68e-13 (3 of 3) | PASS: mtf.maxAbs 2.07e-12 (3 of 3) | PASS: mtf.maxAbs 2.28e-12 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-tele | 3 | PASS: mtf.maxAbs 9.32e-13 (3 of 3) | PASS: mtf.maxAbs 2.28e-12 (3 of 3) | PASS: mtf.maxAbs 2.21e-12 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-ref | 3 | PASS: mtf.maxAbs 9.14e-13 (3 of 3) | PASS: mtf.maxAbs 3.78e-12 (3 of 3) | PASS: mtf.maxAbs 3.51e-12 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-photopic | 3 | PASS: mtf.maxAbs 6.75e-13 (3 of 3) | PASS: mtf.maxAbs 3.59e-12 (3 of 3) | PASS: mtf.maxAbs 3.31e-12 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-best-ref | 3 | PASS: mtf.maxAbs 9.35e-13 (3 of 3) | PASS: mtf.maxAbs 8.77e-13 (3 of 3) | PASS: mtf.maxAbs 8.64e-13 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 6.41e-13 (3 of 3) | PASS: mtf.maxAbs 6.38e-13 (3 of 3) | PASS: mtf.maxAbs 6.36e-13 (3 of 3) |
+| nikon-z-mc-105f28-f11-ref | 3 | PASS: mtf.maxAbs 5.42e-13 (3 of 3) | PASS: mtf.maxAbs 4.66e-13 (3 of 3) | PASS: mtf.maxAbs 7.85e-13 (3 of 3) |
+| nikon-z-mc-105f28-f11-photopic | 3 | PASS: mtf.maxAbs 3.29e-13 (3 of 3) | PASS: mtf.maxAbs 7.52e-13 (3 of 3) | PASS: mtf.maxAbs 6.62e-13 (3 of 3) |
+| nikon-z-mc-105f28-f11-best-ref | 3 | PASS: mtf.maxAbs 5.81e-13 (3 of 3) | PASS: mtf.maxAbs 4.49e-13 (3 of 3) | PASS: mtf.maxAbs 7.34e-13 (3 of 3) |
+| nikon-z-mc-105f28-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.38e-13 (3 of 3) | PASS: mtf.maxAbs 6.61e-13 (3 of 3) | PASS: mtf.maxAbs 5.65e-13 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-ref | 3 | PASS: mtf.maxAbs 9.36e-13 (3 of 3) | PASS: mtf.maxAbs 7.36e-13 (3 of 3) | PASS: mtf.maxAbs 1.59e-12 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-photopic | 3 | PASS: mtf.maxAbs 8.49e-13 (3 of 3) | PASS: mtf.maxAbs 9.26e-13 (3 of 3) | PASS: mtf.maxAbs 1.78e-12 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.08e-12 (3 of 3) | PASS: mtf.maxAbs 9.74e-13 (3 of 3) | PASS: mtf.maxAbs 1.83e-12 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 9.37e-13 (3 of 3) | PASS: mtf.maxAbs 8.93e-13 (3 of 3) | PASS: mtf.maxAbs 1.71e-12 (3 of 3) |
+| nikon-z-135f18-plena-f11-ref | 3 | PASS: mtf.maxAbs 6.08e-13 (3 of 3) | PASS: mtf.maxAbs 2.81e-13 (3 of 3) | PASS: mtf.maxAbs 3.73e-13 (3 of 3) |
+| nikon-z-135f18-plena-f11-photopic | 3 | PASS: mtf.maxAbs 7.80e-13 (3 of 3) | PASS: mtf.maxAbs 5.40e-13 (3 of 3) | PASS: mtf.maxAbs 1.32e-12 (3 of 3) |
+| nikon-z-135f18-plena-f11-best-ref | 3 | PASS: mtf.maxAbs 6.42e-13 (3 of 3) | PASS: mtf.maxAbs 2.88e-13 (3 of 3) | PASS: mtf.maxAbs 3.82e-13 (3 of 3) |
+| nikon-z-135f18-plena-f11-best-photopic | 3 | PASS: mtf.maxAbs 7.60e-13 (3 of 3) | PASS: mtf.maxAbs 5.37e-13 (3 of 3) | PASS: mtf.maxAbs 1.30e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 3 | PASS: mtf.maxAbs 8.64e-12 (3 of 3) | PASS: mtf.maxAbs 4.91e-12 (3 of 3) | PASS: mtf.maxAbs 9.83e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 3 | PASS: mtf.maxAbs 3.65e-12 (3 of 3) | PASS: mtf.maxAbs 3.85e-12 (3 of 3) | PASS: mtf.maxAbs 6.15e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 3 | PASS: mtf.maxAbs 1.10e-11 (3 of 3) | PASS: mtf.maxAbs 7.54e-12 (3 of 3) | PASS: mtf.maxAbs 9.22e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 3.86e-12 (3 of 3) | PASS: mtf.maxAbs 3.03e-12 (3 of 3) | PASS: mtf.maxAbs 6.79e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 3 | PASS: mtf.maxAbs 5.82e-13 (3 of 3) | PASS: mtf.maxAbs 6.06e-12 (3 of 3) | PASS: mtf.maxAbs 6.42e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 3 | PASS: mtf.maxAbs 3.37e-13 (3 of 3) | PASS: mtf.maxAbs 2.44e-12 (3 of 3) | PASS: mtf.maxAbs 2.77e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 3 | PASS: mtf.maxAbs 5.79e-13 (3 of 3) | PASS: mtf.maxAbs 7.62e-12 (3 of 3) | PASS: mtf.maxAbs 7.95e-12 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.50e-13 (3 of 3) | PASS: mtf.maxAbs 2.59e-12 (3 of 3) | PASS: mtf.maxAbs 2.92e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-ref-wide | 3 | PASS: mtf.maxAbs 2.38e-12 (3 of 3) | PASS: mtf.maxAbs 1.05e-11 (3 of 3) | PASS: mtf.maxAbs 1.13e-11 (3 of 3) |
+| nikon-z-24-70f4s-open-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.11e-12 (3 of 3) | PASS: mtf.maxAbs 3.11e-12 (3 of 3) | PASS: mtf.maxAbs 3.40e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-ref-tele | 3 | PASS: mtf.maxAbs 1.23e-12 (3 of 3) | PASS: mtf.maxAbs 1.23e-11 (3 of 3) | PASS: mtf.maxAbs 1.16e-11 (3 of 3) |
+| nikon-z-24-70f4s-open-photopic-wide | 3 | PASS: mtf.maxAbs 2.77e-12 (3 of 3) | PASS: mtf.maxAbs 7.21e-12 (3 of 3) | PASS: mtf.maxAbs 7.09e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 4.27e-13 (3 of 3) | PASS: mtf.maxAbs 2.31e-12 (3 of 3) | PASS: mtf.maxAbs 2.06e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-photopic-tele | 3 | PASS: mtf.maxAbs 8.84e-13 (3 of 3) | PASS: mtf.maxAbs 7.74e-12 (3 of 3) | PASS: mtf.maxAbs 7.60e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-best-ref-wide | 3 | PASS: mtf.maxAbs 2.20e-12 (3 of 3) | PASS: mtf.maxAbs 1.13e-11 (3 of 3) | PASS: mtf.maxAbs 1.16e-11 (3 of 3) |
+| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.22e-12 (3 of 3) | PASS: mtf.maxAbs 7.05e-12 (3 of 3) | PASS: mtf.maxAbs 6.42e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-best-ref-tele | 3 | PASS: mtf.maxAbs 9.15e-13 (3 of 3) | PASS: mtf.maxAbs 1.19e-11 (3 of 3) | PASS: mtf.maxAbs 1.18e-11 (3 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-wide | 3 | PASS: mtf.maxAbs 2.75e-12 (3 of 3) | PASS: mtf.maxAbs 9.46e-12 (3 of 3) | PASS: mtf.maxAbs 9.47e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 7.39e-13 (3 of 3) | PASS: mtf.maxAbs 3.55e-12 (3 of 3) | PASS: mtf.maxAbs 3.79e-12 (3 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-tele | 3 | PASS: mtf.maxAbs 8.29e-13 (3 of 3) | PASS: mtf.maxAbs 7.92e-12 (3 of 3) | PASS: mtf.maxAbs 7.80e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-ref-wide | 3 | PASS: mtf.maxAbs 5.96e-13 (3 of 3) | PASS: mtf.maxAbs 6.54e-12 (3 of 3) | PASS: mtf.maxAbs 6.46e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 7.67e-13 (3 of 3) | PASS: mtf.maxAbs 3.25e-12 (3 of 3) | PASS: mtf.maxAbs 3.34e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-ref-tele | 3 | PASS: mtf.maxAbs 3.13e-13 (3 of 3) | PASS: mtf.maxAbs 6.62e-12 (3 of 3) | PASS: mtf.maxAbs 6.57e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-wide | 3 | PASS: mtf.maxAbs 7.25e-13 (3 of 3) | PASS: mtf.maxAbs 3.92e-12 (3 of 3) | PASS: mtf.maxAbs 3.91e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 3.30e-13 (3 of 3) | PASS: mtf.maxAbs 2.42e-12 (3 of 3) | PASS: mtf.maxAbs 2.47e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-tele | 3 | PASS: mtf.maxAbs 3.95e-13 (3 of 3) | PASS: mtf.maxAbs 8.65e-12 (3 of 3) | PASS: mtf.maxAbs 8.39e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-wide | 3 | PASS: mtf.maxAbs 5.47e-13 (3 of 3) | PASS: mtf.maxAbs 1.18e-11 (3 of 3) | PASS: mtf.maxAbs 1.15e-11 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 3 | PASS: mtf.maxAbs 1.04e-12 (3 of 3) | PASS: mtf.maxAbs 4.90e-12 (3 of 3) | PASS: mtf.maxAbs 5.85e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-tele | 3 | PASS: mtf.maxAbs 7.95e-13 (3 of 3) | PASS: mtf.maxAbs 9.12e-12 (3 of 3) | PASS: mtf.maxAbs 8.33e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-wide | 3 | PASS: mtf.maxAbs 6.24e-13 (3 of 3) | PASS: mtf.maxAbs 4.54e-12 (3 of 3) | PASS: mtf.maxAbs 4.30e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | PASS: mtf.maxAbs 4.05e-13 (3 of 3) | PASS: mtf.maxAbs 2.39e-12 (3 of 3) | PASS: mtf.maxAbs 2.65e-12 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-tele | 3 | PASS: mtf.maxAbs 5.08e-13 (3 of 3) | PASS: mtf.maxAbs 3.46e-12 (3 of 3) | PASS: mtf.maxAbs 2.95e-12 (3 of 3) |
 
 ## r4f
 
@@ -346,7 +346,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – replay | mtf.maxAbs (≤ 1.00e-9) | 1.69e-14 | 128 of 128 | nikon-z-24-70f4s-open-best-ref-tele | cut tangential, field 5.00e-1, frequencyPerMm 16 |
+| lv – replay | mtf.maxAbs (≤ 1.00e-9) | 1.23e-14 | 128 of 128 | nikon-z-24-70f4s-f5.6-ref-zoom0.5 | cut sagittal, field 1, frequencyPerMm 14 |
 | lv – replay | sampling.mismatches (≤ 0 elements) | 0 | 128 of 128 | — | — |
 | lv – replay | fields.mismatches (≤ 0 elements) | 0 | 128 of 128 | — | — |
 
@@ -354,133 +354,133 @@ By run, each pair with its verdict and the judged metric that is largest against
 
 | Run | Requests | lv – replay |
 |---|---|---|
-| canon-ef-135-f2l-usm-f5.6-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.55e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f5.6-ref | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.55e-15 (1 of 1) |
 | canon-ef-135-f2l-usm-f11-ref | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f11-photopic | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f11-best-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
-| canon-ef-135-f2l-usm-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f11-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f11-best-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| canon-ef-135-f2l-usm-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 1 | PASS: mtf.maxAbs 5.55e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.55e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 1 | PASS: mtf.maxAbs 4.66e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 1 | PASS: mtf.maxAbs 5.44e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
 | sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.78e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 1 | PASS: mtf.maxAbs 6.99e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.77e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.55e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
 | sigma-35mm-f14-dg-hsm-a-f11-best-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| nikkor-z50f12-f5.6-ref | 1 | PASS: mtf.maxAbs 4.88e-15 (1 of 1) |
-| nikkor-z50f12-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.55e-15 (1 of 1) |
-| nikkor-z50f12-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
-| nikkor-z50f12-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
-| nikkor-z50f12-f11-ref | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
-| nikkor-z50f12-f11-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| nikkor-z50f12-f11-best-ref | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
-| nikkor-z50f12-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f5.6-ref | 1 | PASS: mtf.maxAbs 4.44e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f5.6-photopic | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 4.11e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f11-ref | 1 | PASS: mtf.maxAbs 6.44e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f11-photopic | 1 | PASS: mtf.maxAbs 2.55e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f11-best-ref | 1 | PASS: mtf.maxAbs 4.33e-15 (1 of 1) |
-| sony-fe-20mm-f18-g-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f5.6-ref | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f11-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f11-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f11-best-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
-| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 1 | PASS: mtf.maxAbs 4.77e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 1 | PASS: mtf.maxAbs 4.11e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 1 | PASS: mtf.maxAbs 4.11e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-ref-wide | 1 | PASS: mtf.maxAbs 7.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 5.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-ref-tele | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-photopic-wide | 1 | PASS: mtf.maxAbs 3.89e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-photopic-tele | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-ref-wide | 1 | PASS: mtf.maxAbs 4.11e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 4.77e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-ref-tele | 1 | PASS: mtf.maxAbs 7.44e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-f5.6-best-photopic-tele | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-ref-wide | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-ref-tele | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-photopic-wide | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-photopic-tele | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-best-ref-wide | 1 | PASS: mtf.maxAbs 4.77e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-best-ref-tele | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| nikkor-z50f12-f5.6-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
+| nikkor-z50f12-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
+| nikkor-z50f12-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
+| nikkor-z50f12-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| nikkor-z50f12-f11-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
+| nikkor-z50f12-f11-photopic | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
+| nikkor-z50f12-f11-best-ref | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| nikkor-z50f12-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f5.6-ref | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.44e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f11-ref | 1 | PASS: mtf.maxAbs 4.44e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f11-photopic | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f11-best-ref | 1 | PASS: mtf.maxAbs 6.22e-15 (1 of 1) |
+| sony-fe-20mm-f18-g-f11-best-photopic | 1 | PASS: mtf.maxAbs 4.33e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f5.6-ref | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f11-ref | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f11-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f11-best-ref | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
+| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 1 | PASS: mtf.maxAbs 5.77e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 1 | PASS: mtf.maxAbs 3.89e-15 (1 of 1) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-ref-wide | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 1.23e-14 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-ref-tele | 1 | PASS: mtf.maxAbs 6.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-photopic-wide | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-photopic-tele | 1 | PASS: mtf.maxAbs 2.78e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-ref-wide | 1 | PASS: mtf.maxAbs 4.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 8.99e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-ref-tele | 1 | PASS: mtf.maxAbs 7.77e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 4.55e-15 (1 of 1) |
+| nikon-z-24-70f4s-f5.6-best-photopic-tele | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-ref-wide | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-ref-tele | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-photopic-wide | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-photopic-tele | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-best-ref-wide | 1 | PASS: mtf.maxAbs 4.33e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-best-ref-tele | 1 | PASS: mtf.maxAbs 4.33e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
 | nikon-z-24-70f4s-f11-best-photopic-tele | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
-| nikon-z-mc-105f28-f5.6-ref | 1 | PASS: mtf.maxAbs 4.44e-15 (1 of 1) |
-| nikon-z-mc-105f28-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
-| nikon-z-mc-105f28-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
-| nikon-z-mc-105f28-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| nikon-z-mc-105f28-f11-ref | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
-| nikon-z-mc-105f28-f11-photopic | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
-| nikon-z-mc-105f28-f11-best-ref | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
-| nikon-z-mc-105f28-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| nikon-z-mc-105f28-f5.6-ref | 1 | PASS: mtf.maxAbs 4.88e-15 (1 of 1) |
+| nikon-z-mc-105f28-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| nikon-z-mc-105f28-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
+| nikon-z-mc-105f28-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| nikon-z-mc-105f28-f11-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| nikon-z-mc-105f28-f11-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| nikon-z-mc-105f28-f11-best-ref | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
+| nikon-z-mc-105f28-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
 | nikon-z-135f18-plena-f5.6-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
 | nikon-z-135f18-plena-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| nikon-z-135f18-plena-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| nikon-z-135f18-plena-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| nikon-z-135f18-plena-f11-ref | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
-| nikon-z-135f18-plena-f11-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| nikon-z-135f18-plena-f11-best-ref | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
-| nikon-z-135f18-plena-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 1 | PASS: mtf.maxAbs 6.11e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 1 | PASS: mtf.maxAbs 4.55e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 1 | PASS: mtf.maxAbs 6.66e-15 (1 of 1) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-ref-wide | 1 | PASS: mtf.maxAbs 9.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 1.55e-14 (1 of 1) |
-| nikon-z-24-70f4s-open-ref-tele | 1 | PASS: mtf.maxAbs 7.99e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-photopic-wide | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 5.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-photopic-tele | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-best-ref-wide | 1 | PASS: mtf.maxAbs 6.77e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 8.44e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-best-ref-tele | 1 | PASS: mtf.maxAbs 1.69e-14 (1 of 1) |
-| nikon-z-24-70f4s-open-best-photopic-wide | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 5.00e-15 (1 of 1) |
-| nikon-z-24-70f4s-open-best-photopic-tele | 1 | PASS: mtf.maxAbs 5.11e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-ref-wide | 1 | PASS: mtf.maxAbs 3.89e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-ref-tele | 1 | PASS: mtf.maxAbs 4.66e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-photopic-wide | 1 | PASS: mtf.maxAbs 2.33e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-photopic-tele | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-best-ref-wide | 1 | PASS: mtf.maxAbs 5.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 6.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-best-ref-tele | 1 | PASS: mtf.maxAbs 5.55e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
-| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| nikon-z-135f18-plena-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| nikon-z-135f18-plena-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.11e-15 (1 of 1) |
+| nikon-z-135f18-plena-f11-ref | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
+| nikon-z-135f18-plena-f11-photopic | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| nikon-z-135f18-plena-f11-best-ref | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
+| nikon-z-135f18-plena-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 1 | PASS: mtf.maxAbs 4.11e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 2.78e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 1 | PASS: mtf.maxAbs 3.89e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-ref-wide | 1 | PASS: mtf.maxAbs 6.55e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 6.33e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-ref-tele | 1 | PASS: mtf.maxAbs 5.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-photopic-wide | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-photopic-tele | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-ref-wide | 1 | PASS: mtf.maxAbs 6.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 9.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-ref-tele | 1 | PASS: mtf.maxAbs 5.33e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.66e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| nikon-z-24-70f4s-open-best-photopic-tele | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-ref-wide | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 5.77e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-ref-tele | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-photopic-wide | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-photopic-tele | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-best-ref-wide | 1 | PASS: mtf.maxAbs 4.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 1 | PASS: mtf.maxAbs 4.22e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-best-ref-tele | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-best-photopic-wide | 1 | PASS: mtf.maxAbs 2.44e-15 (1 of 1) |
+| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 1 | PASS: mtf.maxAbs 2.55e-15 (1 of 1) |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
 
 ## r6a
@@ -489,163 +489,163 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 3.06e-10 | 370 of 384 | nikkor-z50f12-f5.6-photopic | cut sagittal, field 1.19e1, frequencyPerMm 100 |
-| lv – optiland | phaseStep.waves [waves] | 4.63e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 1876 |
-| lv – optiland | convergence.maxAbs | 1.33e-2 | 384 of 384 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | cut sagittal, field 2.40e1, frequencyPerMm 20 |
-| lv – optiland | lattice.columns [cells] | 80 | 384 of 384 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | — |
-| lv – optiland | rays.compared [rays] | 3539384 | 384 of 384 | — | — |
+| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 2.46e-10 | 362 of 384 | nikkor-z50f12-f5.6-photopic | cut sagittal, field 1.19e1, frequencyPerMm 100 |
+| lv – optiland | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
+| lv – optiland | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
+| lv – optiland | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
+| lv – optiland | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – optiland | waveMtf.flagged | 3.70e-11 | 14 of 384 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | cut tangential, field 2.40e1, frequencyPerMm 70 |
-| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.18e-9 | 370 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
-| lv – ref | phaseStep.waves [waves] | 4.63e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 1876 |
-| lv – ref | convergence.maxAbs | 1.33e-2 | 384 of 384 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | cut sagittal, field 2.40e1, frequencyPerMm 20 |
-| lv – ref | lattice.columns [cells] | 80 | 384 of 384 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | — |
-| lv – ref | rays.compared [rays] | 3539384 | 384 of 384 | — | — |
+| lv – optiland | waveMtf.flagged | 1.18e-10 | 22 of 384 | nikon-z-24-70f4s-open-photopic-wide | cut tangential, field 4.33e1, frequencyPerMm 10 |
+| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.08e-9 | 362 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| lv – ref | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
+| lv – ref | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
+| lv – ref | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
+| lv – ref | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – ref | waveMtf.flagged | 3.14e-10 | 14 of 384 | nikon-z-24-70f4s-open-ref-wide | cut tangential, field 0, frequencyPerMm 80 |
-| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.16e-9 | 370 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
-| optiland – ref | phaseStep.waves [waves] | 4.63e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 1876 |
-| optiland – ref | convergence.maxAbs | 1.33e-2 | 384 of 384 | nikon-z-24-70f4s-open-best-ref-zoom0.5 | cut sagittal, field 2.40e1, frequencyPerMm 20 |
-| optiland – ref | lattice.columns [cells] | 80 | 384 of 384 | sigma-35mm-f14-dg-hsm-a-f5.6-ref | — |
-| optiland – ref | rays.compared [rays] | 3539384 | 384 of 384 | — | — |
+| lv – ref | waveMtf.flagged | 1.17e-9 | 22 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.05e-9 | 362 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| optiland – ref | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
+| optiland – ref | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
+| optiland – ref | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
+| optiland – ref | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| optiland – ref | waveMtf.flagged | 3.15e-10 | 14 of 384 | nikon-z-24-70f4s-open-ref-zoom0.5 | cut tangential, field 2.40e1, frequencyPerMm 80 |
+| optiland – ref | waveMtf.flagged | 1.16e-9 | 22 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
 
 | Run | Requests | lv – optiland | lv – ref | optiland – ref |
 |---|---|---|---|---|
-| canon-ef-135-f2l-usm-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.59e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.62e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.73e-11 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.11e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.20e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.01e-11 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.76e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.31e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.47e-11 (3 of 3) |
-| canon-ef-135-f2l-usm-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.02e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.29e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.75e-12 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-ref | 3 | PASS: waveMtf.maxAbs 5.51e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.89e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.46e-12 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-photopic | 3 | PASS: waveMtf.maxAbs 1.41e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.14e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.41e-12 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-best-ref | 3 | PASS: waveMtf.maxAbs 7.61e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.62e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.89e-12 (3 of 3) |
-| canon-ef-135-f2l-usm-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 1.11e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.29e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.46e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.34e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.73e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.86e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 7.93e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.00e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.33e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.24e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.34e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.01e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 6.21e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.44e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.46e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 3 | PASS: waveMtf.maxAbs 5.56e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.47e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.79e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: waveMtf.maxAbs 3.06e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.24e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.21e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: waveMtf.maxAbs 6.40e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.97e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.98e-12 (3 of 3) |
-| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.54e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.09e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.03e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: waveMtf.maxAbs 5.09e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.48e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.81e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 9.67e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.09e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.06e-10 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 6.68e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.65e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.91e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.24e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.51e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.14e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: waveMtf.maxAbs 4.14e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.74e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: waveMtf.maxAbs 3.80e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.98e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: waveMtf.maxAbs 3.06e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.07e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.42e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 4.28e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.13e-11 (3 of 3) |
-| nikkor-z50f12-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.40e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.42e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.13e-10 (3 of 3) |
-| nikkor-z50f12-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 3.06e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.02e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.70e-10 (3 of 3) |
-| nikkor-z50f12-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.30e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.33e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.05e-10 (3 of 3) |
-| nikkor-z50f12-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 2.35e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.39e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.19e-10 (3 of 3) |
-| nikkor-z50f12-f11-ref | 3 | PASS: waveMtf.maxAbs 1.06e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.79e-11 (3 of 3) |
-| nikkor-z50f12-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.37e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.10e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.77e-11 (3 of 3) |
-| nikkor-z50f12-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.14e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.30e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.96e-11 (3 of 3) |
-| nikkor-z50f12-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.27e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.38e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.77e-11 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.05e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.12e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.12e-9 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.11e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.12e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.12e-9 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.79e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.05e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.05e-9 (3 of 3) |
-| sony-fe-20mm-f18-g-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.28e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.98e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.00e-9 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-ref | 3 | PASS: waveMtf.maxAbs 1.37e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.24e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.28e-10 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-photopic | 3 | PASS: waveMtf.maxAbs 7.96e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.17e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.19e-10 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.37e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.21e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.31e-10 (3 of 3) |
-| sony-fe-20mm-f18-g-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 8.61e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.19e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.11e-10 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-ref | 3 | PASS: waveMtf.maxAbs 8.56e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.25e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.30e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.53e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.84e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.20e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.56e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.69e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.38e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.61e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.49e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-ref | 3 | PASS: waveMtf.maxAbs 2.87e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.73e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.19e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-photopic | 3 | PASS: waveMtf.maxAbs 1.28e-11 (3 of 3) | PASS: waveMtf.maxAbs 6.70e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.37e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.97e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-11 (3 of 3) |
-| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.18e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.63e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.55e-11 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.30e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.97e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.63e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.32e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.91e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.40e-11 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.27e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.96e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.49e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 2.18e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.92e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.31e-11 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 3 | PASS: waveMtf.maxAbs 5.18e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.79e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.46e-11 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 3 | PASS: waveMtf.maxAbs 8.10e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.59e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.28e-12 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 3 | PASS: waveMtf.maxAbs 6.53e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.84e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.55e-11 (3 of 3) |
-| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 7.59e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.16e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.51e-12 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-wide | 3 | PASS: waveMtf.maxAbs 9.84e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.56e-10 (3 of 3) | PASS: waveMtf.maxAbs 8.83e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.39e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.42e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.41e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-ref-tele | 3 | PASS: waveMtf.maxAbs 1.98e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.89e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-wide | 3 | PASS: waveMtf.maxAbs 5.87e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.31e-10 (3 of 3) | PASS: waveMtf.maxAbs 5.28e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.13e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.69e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.62e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-photopic-tele | 3 | PASS: waveMtf.maxAbs 1.07e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.11e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.09e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-wide | 3 | PASS: waveMtf.maxAbs 8.39e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.06e-9 (3 of 3) | PASS: waveMtf.maxAbs 9.89e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.80e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.89e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-ref-tele | 3 | PASS: waveMtf.maxAbs 1.49e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.66e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.69e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 5.96e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.23e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.82e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.88e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.70e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.69e-10 (3 of 3) |
-| nikon-z-24-70f4s-f5.6-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 1.26e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.58e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.69e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-wide | 3 | PASS: waveMtf.maxAbs 1.78e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.19e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.18e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.10e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.30e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.39e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-ref-tele | 3 | PASS: waveMtf.maxAbs 1.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.20e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.05e-11 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-wide | 3 | PASS: waveMtf.maxAbs 9.28e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.23e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 9.08e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.52e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.54e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-photopic-tele | 3 | PASS: waveMtf.maxAbs 6.00e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.82e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.09e-11 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-wide | 3 | PASS: waveMtf.maxAbs 1.57e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.72e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.71e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 9.15e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.61e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.64e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-ref-tele | 3 | PASS: waveMtf.maxAbs 1.49e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.44e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.38e-11 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 9.14e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.12e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.10e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 7.65e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.47e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.51e-10 (3 of 3) |
-| nikon-z-24-70f4s-f11-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 5.00e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.98e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.11e-11 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.23e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.24e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.26e-10 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 8.23e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.60e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.54e-10 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.08e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.27e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.19e-11 (3 of 3) |
-| nikon-z-mc-105f28-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 7.47e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.50e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.74e-11 (3 of 3) |
-| nikon-z-mc-105f28-f11-ref | 3 | PASS: waveMtf.maxAbs 1.10e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.99e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.30e-11 (3 of 3) |
-| nikon-z-mc-105f28-f11-photopic | 3 | PASS: waveMtf.maxAbs 1.87e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.78e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.44e-11 (3 of 3) |
-| nikon-z-mc-105f28-f11-best-ref | 3 | PASS: waveMtf.maxAbs 2.11e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.32e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.31e-11 (3 of 3) |
-| nikon-z-mc-105f28-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 1.65e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.13e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.23e-11 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.15e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.94e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.97e-10 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.00e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.59e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.68e-10 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.33e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.98e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.01e-10 (3 of 3) |
-| nikon-z-135f18-plena-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.29e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.65e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.75e-10 (3 of 3) |
-| nikon-z-135f18-plena-f11-ref | 3 | PASS: waveMtf.maxAbs 1.19e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.41e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.33e-11 (3 of 3) |
-| nikon-z-135f18-plena-f11-photopic | 3 | PASS: waveMtf.maxAbs 2.78e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.71e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.83e-11 (3 of 3) |
-| nikon-z-135f18-plena-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.32e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.42e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.40e-11 (3 of 3) |
-| nikon-z-135f18-plena-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 3.17e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.66e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.69e-11 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.52e-10 (3 of 3) | PASS: waveMtf.maxAbs 8.83e-10 (3 of 3) | PASS: waveMtf.maxAbs 8.79e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 9.04e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.86e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.90e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.67e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.64e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.59e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.20e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.86e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.91e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 3 | PASS: waveMtf.maxAbs 3.89e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.36e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.40e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 3 | PASS: waveMtf.maxAbs 8.69e-13 (3 of 3) | PASS: waveMtf.maxAbs 2.02e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.02e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 3 | PASS: waveMtf.maxAbs 4.10e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.48e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.52e-10 (3 of 3) |
-| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 1.18e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.80e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.79e-10 (3 of 3) |
-| nikon-z-24-70f4s-open-ref-wide | 3 | PASS: waveMtf.maxAbs 1.08e-10 (2 of 3) | PASS: waveMtf.maxAbs 8.67e-10 (2 of 3) | PASS: waveMtf.maxAbs 7.91e-10 (2 of 3) |
-| nikon-z-24-70f4s-open-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.00e-11 (1 of 3) | PASS: waveMtf.maxAbs 1.10e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.03e-10 (1 of 3) |
-| nikon-z-24-70f4s-open-ref-tele | 3 | PASS: waveMtf.maxAbs 2.47e-11 (2 of 3) | PASS: waveMtf.maxAbs 1.96e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.73e-10 (2 of 3) |
-| nikon-z-24-70f4s-open-photopic-wide | 3 | PASS: waveMtf.maxAbs 1.29e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.52e-10 (3 of 3) | PASS: waveMtf.maxAbs 5.07e-10 (3 of 3) |
-| nikon-z-24-70f4s-open-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 6.81e-12 (1 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.16e-10 (1 of 3) |
-| nikon-z-24-70f4s-open-photopic-tele | 3 | PASS: waveMtf.maxAbs 5.02e-12 (1 of 3) | PASS: waveMtf.maxAbs 2.08e-10 (1 of 3) | PASS: waveMtf.maxAbs 2.04e-10 (1 of 3) |
-| nikon-z-24-70f4s-open-best-ref-wide | 3 | PASS: waveMtf.maxAbs 1.31e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.18e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.16e-9 (3 of 3) |
-| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 7.00e-12 (1 of 3) | PASS: waveMtf.maxAbs 1.50e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.44e-10 (1 of 3) |
-| nikon-z-24-70f4s-open-best-ref-tele | 3 | PASS: waveMtf.maxAbs 2.22e-11 (2 of 3) | PASS: waveMtf.maxAbs 8.55e-11 (2 of 3) | PASS: waveMtf.maxAbs 6.82e-11 (2 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 1.20e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.93e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.20e-10 (3 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 9.02e-12 (2 of 3) | PASS: waveMtf.maxAbs 1.44e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.50e-10 (2 of 3) |
-| nikon-z-24-70f4s-open-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 2.97e-12 (1 of 3) | PASS: waveMtf.maxAbs 8.10e-11 (1 of 3) | PASS: waveMtf.maxAbs 8.26e-11 (1 of 3) |
-| nikon-z-24-70f4s-f8-ref-wide | 3 | PASS: waveMtf.maxAbs 2.72e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.02e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.04e-9 (3 of 3) |
-| nikon-z-24-70f4s-f8-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.02e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.77e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.84e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-ref-tele | 3 | PASS: waveMtf.maxAbs 9.17e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.34e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.38e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-wide | 3 | PASS: waveMtf.maxAbs 9.54e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.30e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.22e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.05e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.04e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.98e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-photopic-tele | 3 | PASS: waveMtf.maxAbs 5.68e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.23e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.24e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-wide | 3 | PASS: waveMtf.maxAbs 2.27e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.32e-10 (3 of 3) | PASS: waveMtf.maxAbs 9.56e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.30e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.03e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.08e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-ref-tele | 3 | PASS: waveMtf.maxAbs 8.13e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.22e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.81e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.81e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.32e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.49e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.46e-10 (3 of 3) |
-| nikon-z-24-70f4s-f8-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 4.66e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.35e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.36e-10 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.71e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.24e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.73e-11 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 8.03e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.52e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.28e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.75e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.43e-11 (3 of 3) |
+| canon-ef-135-f2l-usm-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 6.13e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.15e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.48e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-ref | 3 | PASS: waveMtf.maxAbs 6.58e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.62e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.64e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-photopic | 3 | PASS: waveMtf.maxAbs 7.06e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.65e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.10e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-best-ref | 3 | PASS: waveMtf.maxAbs 8.77e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.91e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.34e-12 (3 of 3) |
+| canon-ef-135-f2l-usm-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 3.65e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.52e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.56e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-ref | 3 | PASS: waveMtf.maxAbs 8.10e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.06e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.28e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 9.90e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.87e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 8.27e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.29e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.84e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 3.99e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.62e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.99e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-ref | 3 | PASS: waveMtf.maxAbs 6.61e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.86e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.95e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.32e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: waveMtf.maxAbs 5.92e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.89e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-12 (3 of 3) |
+| fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 3.38e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.70e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.85e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: waveMtf.maxAbs 9.93e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.51e-11 (2 of 3) | PASS: waveMtf.maxAbs 7.35e-11 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 7.37e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.19e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 9.57e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.99e-11 (2 of 3) | PASS: waveMtf.maxAbs 7.96e-11 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 5.03e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.02e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.71e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: waveMtf.maxAbs 4.68e-12 (2 of 3) | PASS: waveMtf.maxAbs 2.15e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.10e-12 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.49e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.65e-12 (2 of 3) | PASS: waveMtf.maxAbs 4.32e-12 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: waveMtf.maxAbs 5.28e-12 (2 of 3) | PASS: waveMtf.maxAbs 1.79e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.92e-12 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.13e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.13e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.57e-12 (2 of 3) |
+| nikkor-z50f12-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.11e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.55e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.27e-10 (3 of 3) |
+| nikkor-z50f12-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.46e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.45e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.03e-10 (3 of 3) |
+| nikkor-z50f12-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.02e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.46e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.17e-10 (3 of 3) |
+| nikkor-z50f12-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.89e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.90e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.53e-10 (3 of 3) |
+| nikkor-z50f12-f11-ref | 3 | PASS: waveMtf.maxAbs 1.20e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.27e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.86e-12 (3 of 3) |
+| nikkor-z50f12-f11-photopic | 3 | PASS: waveMtf.maxAbs 3.76e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.69e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.20e-11 (3 of 3) |
+| nikkor-z50f12-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.16e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.32e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.40e-12 (3 of 3) |
+| nikkor-z50f12-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 1.14e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.24e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.06e-11 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-ref | 3 | PASS: waveMtf.maxAbs 3.36e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.04e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.07e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.34e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.11e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.08e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.78e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.10e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.01e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 2.25e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.08e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.06e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-ref | 3 | PASS: waveMtf.maxAbs 1.45e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.72e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.70e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-photopic | 3 | PASS: waveMtf.maxAbs 5.02e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.81e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.12e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.69e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.71e-10 (3 of 3) |
+| sony-fe-20mm-f18-g-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 6.53e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.73e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-10 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-ref | 3 | PASS: waveMtf.maxAbs 4.67e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.92e-11 (3 of 3) | PASS: waveMtf.maxAbs 6.62e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.36e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.64e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.00e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.63e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.02e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.14e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.91e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.99e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-ref | 3 | PASS: waveMtf.maxAbs 2.13e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.99e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-photopic | 3 | PASS: waveMtf.maxAbs 1.19e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.88e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.34e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-best-ref | 3 | PASS: waveMtf.maxAbs 9.73e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.27e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.45e-11 (3 of 3) |
+| sony-fe-400mm-f28-gm-oss-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.41e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.52e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.17e-11 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-ref | 3 | PASS: waveMtf.maxAbs 4.22e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.70e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.46e-11 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.84e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.33e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.31e-11 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 4.24e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.22e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.20e-11 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.91e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.55e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.87e-11 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-ref | 3 | PASS: waveMtf.maxAbs 8.42e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.90e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.25e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-photopic | 3 | PASS: waveMtf.maxAbs 6.43e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.50e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.99e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.19e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.40e-12 (3 of 3) | PASS: waveMtf.maxAbs 5.68e-12 (3 of 3) |
+| sigma-105mm-f28-dg-dn-macro-art-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 6.58e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.21e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.14e-12 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-wide | 3 | PASS: waveMtf.maxAbs 5.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.82e-10 (3 of 3) | PASS: waveMtf.maxAbs 9.34e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.48e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.53e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.55e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-ref-tele | 3 | PASS: waveMtf.maxAbs 2.77e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.91e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-wide | 3 | PASS: waveMtf.maxAbs 6.88e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.03e-10 (3 of 3) | PASS: waveMtf.maxAbs 5.03e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.83e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.63e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.63e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-photopic-tele | 3 | PASS: waveMtf.maxAbs 1.23e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.96e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-wide | 3 | PASS: waveMtf.maxAbs 4.80e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.08e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.05e-9 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.77e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.12e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.05e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-ref-tele | 3 | PASS: waveMtf.maxAbs 2.51e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.66e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.61e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 6.73e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.27e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.89e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 2.16e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.88e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.87e-10 (3 of 3) |
+| nikon-z-24-70f4s-f5.6-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 7.95e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.64e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.60e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-wide | 3 | PASS: waveMtf.maxAbs 2.41e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.22e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.16e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 8.49e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.34e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.28e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-ref-tele | 3 | PASS: waveMtf.maxAbs 1.03e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.13e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.25e-11 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-wide | 3 | PASS: waveMtf.maxAbs 9.12e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.18e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.23e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.56e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.35e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.48e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-photopic-tele | 3 | PASS: waveMtf.maxAbs 2.92e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.39e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.45e-11 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-wide | 3 | PASS: waveMtf.maxAbs 1.95e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.74e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.69e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 7.97e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-ref-tele | 3 | PASS: waveMtf.maxAbs 1.06e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.83e-11 (3 of 3) | PASS: waveMtf.maxAbs 6.73e-11 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 8.48e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.08e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.08e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.32e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.42e-10 (3 of 3) |
+| nikon-z-24-70f4s-f11-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 4.43e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.10e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.39e-11 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.66e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.00e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.97e-10 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.18e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.10e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.13e-10 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.67e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.71e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.63e-11 (3 of 3) |
+| nikon-z-mc-105f28-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 9.44e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.45e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.52e-11 (3 of 3) |
+| nikon-z-mc-105f28-f11-ref | 3 | PASS: waveMtf.maxAbs 7.99e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.56e-11 (3 of 3) |
+| nikon-z-mc-105f28-f11-photopic | 3 | PASS: waveMtf.maxAbs 1.29e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.98e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.42e-11 (3 of 3) |
+| nikon-z-mc-105f28-f11-best-ref | 3 | PASS: waveMtf.maxAbs 1.13e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.55e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.45e-11 (3 of 3) |
+| nikon-z-mc-105f28-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 1.40e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.01e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.33e-11 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.39e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.78e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.58e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.84e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.86e-10 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.64e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.83e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.02e-10 (3 of 3) |
+| nikon-z-135f18-plena-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.49e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.91e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.93e-10 (3 of 3) |
+| nikon-z-135f18-plena-f11-ref | 3 | PASS: waveMtf.maxAbs 4.13e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.56e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.62e-11 (3 of 3) |
+| nikon-z-135f18-plena-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.95e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.72e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.92e-11 (3 of 3) |
+| nikon-z-135f18-plena-f11-best-ref | 3 | PASS: waveMtf.maxAbs 4.01e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.72e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.56e-11 (3 of 3) |
+| nikon-z-135f18-plena-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 5.57e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.70e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.87e-11 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-ref | 3 | PASS: waveMtf.maxAbs 1.56e-10 (3 of 3) | PASS: waveMtf.maxAbs 8.48e-10 (3 of 3) | PASS: waveMtf.maxAbs 8.49e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 1.01e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.74e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.75e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 1.70e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.35e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.36e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 1.28e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.68e-10 (3 of 3) | PASS: waveMtf.maxAbs 7.69e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-ref | 3 | PASS: waveMtf.maxAbs 5.94e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.41e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.47e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-photopic | 3 | PASS: waveMtf.maxAbs 3.14e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.01e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.98e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-ref | 3 | PASS: waveMtf.maxAbs 7.34e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.54e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.61e-10 (3 of 3) |
+| sigma-45mm-f28-dg-dn-contemporary-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.03e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.86e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.84e-10 (3 of 3) |
+| nikon-z-24-70f4s-open-ref-wide | 3 | PASS: waveMtf.maxAbs 1.89e-11 (1 of 3) | PASS: waveMtf.maxAbs 4.25e-10 (1 of 3) | PASS: waveMtf.maxAbs 4.10e-10 (1 of 3) |
+| nikon-z-24-70f4s-open-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.49e-11 (2 of 3) | PASS: waveMtf.maxAbs 3.30e-10 (2 of 3) | PASS: waveMtf.maxAbs 3.39e-10 (2 of 3) |
+| nikon-z-24-70f4s-open-ref-tele | 3 | PASS: waveMtf.maxAbs 1.44e-11 (2 of 3) | PASS: waveMtf.maxAbs 2.12e-10 (2 of 3) | PASS: waveMtf.maxAbs 2.14e-10 (2 of 3) |
+| nikon-z-24-70f4s-open-photopic-wide | 3 | PASS: waveMtf.maxAbs 5.22e-12 (1 of 3) | PASS: waveMtf.maxAbs 9.11e-11 (1 of 3) | PASS: waveMtf.maxAbs 8.64e-11 (1 of 3) |
+| nikon-z-24-70f4s-open-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.26e-11 (1 of 3) | PASS: waveMtf.maxAbs 1.37e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.26e-10 (1 of 3) |
+| nikon-z-24-70f4s-open-photopic-tele | 3 | PASS: waveMtf.maxAbs 1.20e-11 (1 of 3) | PASS: waveMtf.maxAbs 2.51e-10 (1 of 3) | PASS: waveMtf.maxAbs 2.42e-10 (1 of 3) |
+| nikon-z-24-70f4s-open-best-ref-wide | 3 | PASS: waveMtf.maxAbs 2.64e-11 (2 of 3) | PASS: waveMtf.maxAbs 6.01e-10 (2 of 3) | PASS: waveMtf.maxAbs 5.92e-10 (2 of 3) |
+| nikon-z-24-70f4s-open-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.62e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.67e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.67e-10 (3 of 3) |
+| nikon-z-24-70f4s-open-best-ref-tele | 3 | PASS: waveMtf.maxAbs 8.19e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.06e-11 (2 of 3) | PASS: waveMtf.maxAbs 6.73e-11 (2 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 8.61e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.37e-10 (2 of 3) | PASS: waveMtf.maxAbs 3.41e-10 (2 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.84e-11 (2 of 3) | PASS: waveMtf.maxAbs 1.37e-10 (2 of 3) | PASS: waveMtf.maxAbs 1.44e-10 (2 of 3) |
+| nikon-z-24-70f4s-open-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 6.60e-12 (1 of 3) | PASS: waveMtf.maxAbs 1.22e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.20e-10 (1 of 3) |
+| nikon-z-24-70f4s-f8-ref-wide | 3 | PASS: waveMtf.maxAbs 3.86e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.02e-9 (3 of 3) | PASS: waveMtf.maxAbs 1.03e-9 (3 of 3) |
+| nikon-z-24-70f4s-f8-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.03e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.89e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.85e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-ref-tele | 3 | PASS: waveMtf.maxAbs 1.59e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.31e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.37e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-wide | 3 | PASS: waveMtf.maxAbs 1.69e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.32e-10 (3 of 3) | PASS: waveMtf.maxAbs 4.35e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 7.99e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.88e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-photopic-tele | 3 | PASS: waveMtf.maxAbs 6.91e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.40e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.40e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-wide | 3 | PASS: waveMtf.maxAbs 4.11e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.41e-10 (3 of 3) | PASS: waveMtf.maxAbs 9.47e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-zoom0.5 | 3 | PASS: waveMtf.maxAbs 1.07e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.17e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.13e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-ref-tele | 3 | PASS: waveMtf.maxAbs 1.46e-11 (3 of 3) | PASS: waveMtf.maxAbs 9.93e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.03e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-wide | 3 | PASS: waveMtf.maxAbs 1.38e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.83e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.86e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | PASS: waveMtf.maxAbs 8.71e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.43e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.44e-10 (3 of 3) |
+| nikon-z-24-70f4s-f8-best-photopic-tele | 3 | PASS: waveMtf.maxAbs 1.09e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.05e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.06e-10 (3 of 3) |
 
 ## Marked
 

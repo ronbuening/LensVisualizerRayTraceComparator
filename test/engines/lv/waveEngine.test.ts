@@ -45,7 +45,7 @@ import {
 } from "../../../src/rays/wavefront.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { SINGLET as FIXTURE_CASE } from "../../core/support.ts";
-import { bind, freshLv } from "./support.ts";
+import { FAKE_LENS_FILES, bind, freshLv, variantOf } from "./support.ts";
 
 const SINGLET = "acme-singlet-50";
 
@@ -202,9 +202,14 @@ test("the answer is the estimator's on the run's own ray sets, as LensVisualizer
     assert.equal(stated.status, flags.length === 0 ? "ok" : "unconverged");
     assert.equal(stated.reason, flags.length === 0 ? undefined : flags.join("+"));
     const cells = fine.lattice.columns * fine.lattice.rows;
+    // A vacant cell of the stop lattice (outside the stop's disc, or unaimed) holds the chief ray at weight 0 and is
+    // no cell of LensVisualizer's lattice: it is not counted.
     const count = (status: number): number =>
       fine.lines.reduce(
-        (sum, line) => sum + line.trace.status.subarray(0, cells).filter((each) => each === status).length,
+        (sum, line) =>
+          sum +
+          line.trace.status.subarray(0, cells).filter((each, ray) => each === status && line.set.weights[ray] > 0)
+            .length,
         0,
       );
     assert.deepEqual(stated.sampling, {
@@ -216,8 +221,9 @@ test("the answer is the estimator's on the run's own ray sets, as LensVisualizer
       phaseStepWaves: fine.otf.phaseStep.waves,
       maxDelta: moved,
     });
-    // Every cell is counted once, and the chief ray, which follows the cells, is none of them.
-    assert.equal(count(0) + count(1) + count(2), cells * fine.lines.length);
+    // Every cell of the stop's disc is counted once (16 across: 208 of the square's 256), and the chief ray, which
+    // follows the cells, is none of them.
+    assert.equal(count(0) + count(1) + count(2), 208 * fine.lines.length);
     const [{ trace }] = fine.lines;
     assert.equal(stated.imageHeightMm, Math.hypot(trace.x[fine.chief], trace.y[fine.chief]));
     assert.equal(stated.field, SPEC.fields.values[index]);
@@ -268,4 +274,25 @@ test("a field without rays is unavailable with LensVisualizer's code, and the ot
     assert.deepEqual(answer.counts, { fields: 2, frequencies: 3, unavailableFields: 1 });
   }
   assert.notEqual(data.fields[0].status, "unavailable");
+});
+
+test("a field of which LensVisualizer aims no cell is unavailable as lv-field-unaimed, and the others are answered", async (t) => {
+  // The fake aims no ray at all beyond 3 degrees (`mtf.unaimedBeyondDeg`).
+  const [[singletFile]] = FAKE_LENS_FILES;
+  const lv = variantOf(freshLv(t), "lost", {
+    [singletFile]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { model } = await modelOf(binding, SINGLET);
+  const spec: MtfNativeSpec = { ...SPEC, fields: { kind: "angles-deg", values: [0, 5] } };
+  const answer = answerLvWave(binding.api, model, spec, GRID);
+  assert.ok("data" in answer, JSON.stringify(answer).slice(0, 300));
+  const data = answer.data as MtfNativeData;
+  assert.deepEqual(resultDataProblems(mtfNativeQuantity, data), []);
+  assert.equal(data.fields[1].status, "unavailable");
+  assert.equal(data.fields[1].reason, "lv-field-unaimed");
+  assert.equal(data.fields[1].fieldAngleDeg, 5);
+  assert.ok(curve(data, 1, "tangential").every(Number.isNaN));
+  assert.notEqual(data.fields[0].status, "unavailable");
+  assert.deepEqual(answer.counts, { fields: 2, frequencies: 3, unavailableFields: 1 });
 });

@@ -3,6 +3,7 @@ import { DEFAULT_FOPEN, FLAT_RADIUS } from "../../lens-data/defaults.js";
 import { ASPHERIC_POLYNOMIAL_TERMS } from "../../types/asphericSchema.js";
 import { wideOpenStopAtZoom } from "./aperture.js";
 import { FLAT_R_THRESHOLD } from "../geometry.js";
+import { fakeChannelIndex } from "../analysis/axial.js";
 import type { FakeLensData, FakeRuntimeLens, FakeState, FakeStateSurface, FakeSurfaceData } from "../types.js";
 
 
@@ -36,11 +37,20 @@ export function buildLens(data: FakeLensData): FakeRuntimeLens {
     maxFstop: data.maxFstop ?? 16,
     // Stored pupil constants, as LV keeps them on the lens: none of them is a paraxial image of the stop.
     EP: { epSD: 2 * stopPhysSD },
+    // The fraction of the half field the fake's coma fans are drawn at, as LV's lens authors it.
+    offAxisFieldFrac: data.offAxisFieldFrac ?? 0.7,
+    // The projection law, as LV's runtime lens carries it.
+    projection: data.projection ?? { kind: "rectilinear" },
     epZRelStop: -1.5,
     xpZRelLastSurf: -12.5,
     xpSD: 3 * stopPhysSD,
-    // One element per glass that follows an authored surface, as the state numbers them.
-    elements: data.surfaces.flatMap((surface, index) => (surface.nd === 1 ? [] : [{ id: index + 1 }])),
+    // One element per glass that follows an authored surface, as the state numbers them, with the line of its indices
+    // where the lens states one. Rear plates are none of them, as LV's runtime lens leaves them out.
+    elements: data.surfaces.flatMap((surface, index) =>
+      surface.nd === 1
+        ? []
+        : [{ id: index + 1, ...(data.indexReference === undefined ? {} : { indexReference: data.indexReference }) }],
+    ),
   });
 }
 
@@ -86,6 +96,8 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       sd: index === L.stopIndex ? wideOpenStopAtZoom(zoomT, L) : source.sd,
       innerSd: null,
       clips: source.clips !== false,
+      // A flat rim cut, as LV #928 compiles one: the fake takes the radius the lens states for where the cap meets it.
+      rimCut: source.rimCut === undefined ? null : { depthMm: source.rimCut.depthMm, sag: -source.rimCut.depthMm, radius: source.rimCut.radius },
       elemId: source.nd === 1 ? 0 : index + 1,
       asphere: source.asphere ?? null,
       diffractive: source.diffractive ?? null,
@@ -107,7 +119,18 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       stop: { surfaceIndex: L.stopIndex },
       flags: { isZoom: L.isZoom, isFoldedOptics: !!L.source.opticalPath },
       opticalPath: L.source.opticalPath,
-      projection: { kind: "rectilinear" },
+      // The projection, with the authored config LV's launch-surface rule reads; the fake's carries its bounding sphere.
+      projection: {
+        kind: "rectilinear",
+        config: { kind: "rectilinear", vectorBeyondDeg: L.source.field?.vectorBeyondDeg },
+      },
+      // How far ahead of the first vertex the fake's skew rays start, as LV's lens constants say.
+      constants: { rayLead: 10 },
+      // Each medium at the chromatic tab's channels.
+      dispersion: surfaces.map((surface) => ({
+        quality: surface.nd === 1 ? "air" : "abbe",
+        indexAt: (channel: string) => fakeChannelIndex(surface.nd, channel),
+      })),
     },
     focusT,
     zoomT,

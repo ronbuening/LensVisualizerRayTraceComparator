@@ -9,15 +9,32 @@ import { PARAXIAL_FIRST_ORDER } from "../contract/quantities/paraxialFirstOrder.
 import { RAYS_TRACE } from "../contract/quantities/raysTrace.ts";
 import type { RaysTraceSpec } from "../contract/quantities/raysTrace.ts";
 import { SELFTEST_ECHO } from "../contract/quantities/selftestEcho.ts";
+import { SPOT_NATIVE } from "../contract/quantities/spotNative.ts";
+import { AXIAL_NATIVE } from "../contract/quantities/axialNative.ts";
+import type { AxialNativeSpec } from "../contract/quantities/axialNative.ts";
+import { CHIEF_NATIVE } from "../contract/quantities/chiefNative.ts";
+import type { ChiefNativeSpec } from "../contract/quantities/chiefNative.ts";
+import { CURVATURE_NATIVE } from "../contract/quantities/curvatureNative.ts";
+import type { CurvatureNativeSpec } from "../contract/quantities/curvatureNative.ts";
+import { VIGNETTING_NATIVE } from "../contract/quantities/vignettingNative.ts";
+import type { VignettingNativeSpec } from "../contract/quantities/vignettingNative.ts";
+import { SUMMARY_NATIVE } from "../contract/quantities/summaryNative.ts";
+import type { SummaryNativeSpec } from "../contract/quantities/summaryNative.ts";
+import { SEIDEL_NATIVE } from "../contract/quantities/seidelNative.ts";
+import type { SeidelNativeSpec } from "../contract/quantities/seidelNative.ts";
+import { ZERNIKE_NATIVE } from "../contract/quantities/zernikeNative.ts";
+import type { ZernikeNativeSpec, ZernikeOrdering } from "../contract/quantities/zernikeNative.ts";
 import type { SelftestEchoSpec } from "../contract/quantities/selftestEcho.ts";
 import { DEFAULT_SAG_FRACTIONS, SYSTEM_DESCRIBE } from "../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../contract/quantities/systemDescribe.ts";
 import { makeRequest } from "../contract/request.ts";
 import type { QuantityRequest } from "../contract/request.ts";
 import type { RunFields, RunSpec } from "../contract/runSpec.ts";
-import { DEFAULT_RAY_FIELDS } from "../rays/raySets.ts";
+import { DEFAULT_RAY_FIELDS, FINE_GRID_FACTOR } from "../rays/raySets.ts";
+import type { SpotNativeAsk } from "../rays/spotSets.ts";
 import { waveFrequencies } from "./mtfRecipe.ts";
 import type { MtfRecipe } from "./mtfRecipe.ts";
+import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { encodeF8 } from "./numeric/ndarray.ts";
 import { UsageError } from "./usageError.ts";
 
@@ -42,6 +59,44 @@ export interface RungInputs {
    * `needsRecipe`; null, or left out, for any other rung, and where the source has no recipe for the run.
    */
   readonly recipe?: MtfRecipe | null;
+  /**
+   * The spot sets of the run, from the source of its case (`CaseSource.spotRaySets`), for a rung that says it
+   * `needsSpotRaySets`: the rays of the tabs that show a spot or a ray fan. Empty, or left out, for any other rung.
+   */
+  readonly spotRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own spot requests of the same tabs, from the same source, for such a rung (`SpotNativeAsk`). */
+  readonly spotAsks?: readonly SpotNativeAsk[];
+  /**
+   * The axial sets of the run, from the source of its case (`CaseSource.axialRaySets`), for a rung that says it
+   * `needsAxialRaySets`: the rays of the tabs that present the beam along the axis. Empty, or left out, for any other
+   * rung.
+   */
+  readonly axialRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own axial requests of the same tabs, from the same source, for such a rung. */
+  readonly axialAsks?: readonly AxialNativeSpec[];
+  /**
+   * The chief sets of the run, from the source of its case (`CaseSource.chiefRaySets`), for a rung that says it
+   * `needsChiefRaySets`: the chief rays of the tabs that present the field. Empty, or left out, for any other rung.
+   */
+  readonly chiefRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own chief-ray requests of the same tabs, from the same source, for such a rung. */
+  readonly chiefAsks?: readonly ChiefNativeSpec[];
+  /**
+   * The curvature sets of the run, from the source of its case (`CaseSource.curvatureRaySets`), for a rung that says
+   * it `needsCurvatureRaySets`: the rays of the sections that present the field curves. Empty, or left out, for any
+   * other rung.
+   */
+  readonly curvatureRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own field-curve requests of the same sections, from the same source, for such a rung. */
+  readonly curvatureAsks?: readonly CurvatureNativeSpec[];
+  /**
+   * The vignetting sets of the run, from the source of its case (`CaseSource.vignettingRaySets`), for a rung that says
+   * it `needsVignettingRaySets`: the rays of the vignetting tab, each field's beam and the chief rays of its image
+   * mapping. Empty, or left out, for any other rung.
+   */
+  readonly vignettingRaySets?: readonly RaysTraceSpec[];
+  /** The engines' own vignetting requests of the same fields, from the same source, for such a rung. */
+  readonly vignettingAsks?: readonly VignettingNativeSpec[];
 }
 
 /** The inputs of a rung that needs none. */
@@ -69,6 +124,33 @@ export interface RungDefinition {
    * when such a rung is run.
    */
   readonly needsRecipe?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's spot sets (`RungInputs.spotRaySets` and `spotAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsSpotRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's axial sets (`RungInputs.axialRaySets` and `axialAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsAxialRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's chief sets (`RungInputs.chiefRaySets` and `chiefAsks`):
+   * those are generated, once per run, only when such a rung is run, and no other rung is handed them.
+   */
+  readonly needsChiefRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's curvature sets (`RungInputs.curvatureRaySets` and
+   * `curvatureAsks`): those are generated, once per run, only when such a rung is run, and no other rung is handed
+   * them.
+   */
+  readonly needsCurvatureRaySets?: boolean;
+  /**
+   * True for a rung whose requests are made from the run's vignetting sets (`RungInputs.vignettingRaySets` and
+   * `vignettingAsks`): those are generated, once per run, only when such a rung is run, and no other rung is handed
+   * them.
+   */
+  readonly needsVignettingRaySets?: boolean;
   /**
    * The engines the rung is asked of, for a rung that is about named engines and is no comparison between the
    * engines of a run: it is asked of exactly these, whatever engines the run names. Without it the rung is asked
@@ -472,6 +554,349 @@ export const r5gRung: RungDefinition = Object.freeze({
 });
 
 /**
+ * The rung `r7a`, the spot and the ray fan of LensVisualizer's coma and bokeh tabs on identical rays: one
+ * `rays.trace` request for each of the run's spot sets (`RungInputs.spotRaySets`), the rays each tab launches, every
+ * sample of its pupil pattern and its chief ray, which every engine traces as given. The comparator's spot estimator
+ * is applied to where each engine lands them on the plane of the case, and the centroids, the RMS radii and the
+ * transverse error of every ray are compared, beside which rays got through (`src/compare/raysSpot.ts`). It is
+ * asked of the engines of the run, and only of a run whose source has spot sets: a LensVisualizer lens at infinity
+ * focus that is not folded.
+ */
+export const r7aRung: RungDefinition = Object.freeze({
+  id: "r7a",
+  quantity: RAYS_TRACE,
+  needsSpotRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.spotRaySets ?? []),
+});
+
+/** The engines of the rung `r7b`: LensVisualizer, whose tabs are asked, and optiland's own spot and ray fan. */
+export const R7B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r7b`, LensVisualizer's coma and bokeh tabs beside an engine's own spot and ray fan: one `spot.native`
+ * request for each pattern the tabs draw (`RungInputs.spotAsks`), at the case's reference line and the tabs' own
+ * fractions of the half field, asked of LensVisualizer, whose answer is its tab's, and of optiland, whose answer is
+ * its `SpotDiagram` or its `RayFan`. optiland is handed the angle LensVisualizer draws each fraction at as its option
+ * `fieldAnglesDeg`, matched to the request by its spec. Recorded, of those two engines and of no other, and run only
+ * where it is named: optiland is not on every machine.
+ */
+export const r7bRung: RungDefinition = Object.freeze({
+  id: "r7b",
+  quantity: SPOT_NATIVE,
+  needsSpotRaySets: true,
+  engines: R7B_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (
+    _runSpec: RunSpec,
+    inputs?: RungInputs,
+    engineId?: string,
+    request?: QuantityRequest,
+  ): JsonObject | undefined => {
+    if (engineId !== R5_ANGLES_ENGINE || request === undefined) return undefined;
+    const asked = canonicalJson(request.spec);
+    const ask = inputs?.spotAsks?.find((each) => canonicalJson(each.spec) === asked);
+    return ask === undefined ? undefined : { [R5_ANGLES_OPTION]: [...ask.fieldAnglesDeg] };
+  },
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.spotAsks ?? []).map((ask) =>
+      makeRequest({ caseId: opticalCase.id, quantity: SPOT_NATIVE, spec: ask.spec as JsonObject }),
+    ),
+});
+
+/**
+ * The rung `r8a`, LensVisualizer's spherical-aberration and axial-colour sections on identical rays: one `rays.trace`
+ * request for each of the run's axial sets (`RungInputs.axialRaySets`), the rays the two sections launch parallel to
+ * the axis, each beside its mirror image, which every engine traces as given. The comparator's estimator of where a
+ * ray crosses the axis is applied to each engine's trace of them, and the two engines' intercepts, the
+ * least-squares focus of each set's pairs and the RMS of their heights there are compared, beside which rays got
+ * through (`src/compare/raysAxial.ts`). It is asked of the engines of the run, and only of a run whose source has
+ * axial sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r8aRung: RungDefinition = Object.freeze({
+  id: "r8a",
+  quantity: RAYS_TRACE,
+  needsAxialRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.axialRaySets ?? []),
+});
+
+/** The engines of the rung `r8b`: LensVisualizer, whose sections are asked, and optiland's own rays and focus. */
+export const R8B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r8b`, LensVisualizer's spherical-aberration and axial-colour sections beside an engine's own: one
+ * `axial.native` request for each section (`RungInputs.axialAsks`), the spherical aberration at the case's reference
+ * line and the axial colour at every line, at the sections' own pupil zones, asked of LensVisualizer, whose answer
+ * is its sections' figures, and of optiland, whose answer is the real rays it traces at its own pupil and its
+ * paraxial focus at each line. Recorded, of those two engines and of no other, and run only where it is named:
+ * optiland is not on every machine.
+ */
+export const r8bRung: RungDefinition = Object.freeze({
+  id: "r8b",
+  quantity: AXIAL_NATIVE,
+  needsAxialRaySets: true,
+  engines: R8B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.axialAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: AXIAL_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
+ * The rung `r9a`, LensVisualizer's distortion, pupils and lateral-colour tabs on identical rays: one `rays.trace`
+ * request for each of the run's chief sets (`RungInputs.chiefRaySets`), the chief rays the tabs launch, which every
+ * engine traces as given. Where each engine lands them is compared, with what the tabs make of the landings: the
+ * distortion of each ray against the reference its set's probe scales, where each chief ray crosses the axis behind
+ * the system, and how each landing moves from the case's first line to its others (`src/compare/raysChief.ts`). It
+ * is asked of the engines of the run, and only of a run whose source has chief sets: a LensVisualizer lens at
+ * infinity focus that is not folded.
+ */
+export const r9aRung: RungDefinition = Object.freeze({
+  id: "r9a",
+  quantity: RAYS_TRACE,
+  needsChiefRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.chiefRaySets ?? []),
+});
+
+/** The engines of the rung `r9b`: LensVisualizer, whose tabs are asked, and optiland's own chief rays and classes. */
+export const R9B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r9b`, LensVisualizer's distortion, pupils and lateral-colour tabs beside an engine's own: one
+ * `chief.native` request for each tab (`RungInputs.chiefAsks`), the distortion and the pupils at the case's reference
+ * line and the lateral colour at every line, at the tabs' own fields, asked of LensVisualizer, whose answer is its
+ * tabs' figures, and of optiland, whose answer is its own distortion model and the chief rays it traces. Recorded, of
+ * those two engines and of no other, and run only where it is named: optiland is not on every machine.
+ */
+export const r9bRung: RungDefinition = Object.freeze({
+  id: "r9b",
+  quantity: CHIEF_NATIVE,
+  needsChiefRaySets: true,
+  engines: R9B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.chiefAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: CHIEF_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
+ * The rung `r10a`, LensVisualizer's field-curve and astigmatism sections on identical rays: one `rays.trace` request
+ * for each of the run's curvature sets (`RungInputs.curvatureRaySets`), the rays the sections launch, field by field:
+ * the four parabasal rays of each field and its real-ray fans, beside its chief ray, which every engine traces as
+ * given. Where each engine has the tangential and the sagittal focus of each field relative to its chief ray is
+ * compared, with where the rays land (`src/compare/raysCurvature.ts`). It is asked of the engines of the run, and only
+ * of a run whose source has curvature sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r10aRung: RungDefinition = Object.freeze({
+  id: "r10a",
+  quantity: RAYS_TRACE,
+  needsCurvatureRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.curvatureRaySets ?? []),
+});
+
+/** The engines of the rung `r10b`: LensVisualizer, whose sections are asked, and optiland's own `FieldCurvature`. */
+export const R10B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The rung `r10b`, LensVisualizer's field-curve and astigmatism sections beside an engine's own field curves: one
+ * `curvature.native` request (`RungInputs.curvatureAsks`), at every line of the case and at the sections' own fields,
+ * asked of LensVisualizer, whose answer is its sections' foci, and of optiland, whose answer is its own
+ * `FieldCurvature`. Recorded, of those two engines and of no other, and run only where it is named: optiland is not on
+ * every machine.
+ */
+export const r10bRung: RungDefinition = Object.freeze({
+  id: "r10b",
+  quantity: CURVATURE_NATIVE,
+  needsCurvatureRaySets: true,
+  engines: R10B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.curvatureAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: CURVATURE_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/**
+ * The rung `r11a`, LensVisualizer's vignetting tab on identical rays: one `rays.trace` request for each of the run's
+ * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own trace of each field's beam (since LensVisualizer #931
+ * the half of its aimed stop lattice it traces) and the field's stop-centre ray, which every engine traces as given.
+ * Which rays get through, how much flux the two engines disagree about, the flux each field's beam brings into the
+ * image relative to the axis's and where the stop-centre rays land are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
+ * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
+ */
+export const r11aRung: RungDefinition = Object.freeze({
+  id: "r11a",
+  quantity: RAYS_TRACE,
+  needsVignettingRaySets: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    requestsOfSets(opticalCase, inputs?.vignettingRaySets ?? []),
+});
+
+/** The engines of the rung `r11b`: LensVisualizer, whose tab is asked, and the comparator's flux estimator on its rays. */
+export const R11B_ENGINES: readonly string[] = Object.freeze(["lv", "flux"]);
+
+/**
+ * The rung `r11b`, LensVisualizer's vignetting tab beside the comparator's flux in two dimensions: one
+ * `vignetting.native` request (`RungInputs.vignettingAsks`), at the lines the tab traces and its own fields, asked of
+ * LensVisualizer, whose answer is its tab's curve, and of the engine `flux`, whose answer is the area and the flux into
+ * the image of LensVisualizer's lattice over each field's beam, traced by LensVisualizer. Where the run states a
+ * `sampling.bundleGrid`, the engine `flux` is handed `FINE_GRID_FACTOR` times it as its option `bundleGrid`, the cells
+ * across the coarser of its two lattices: as its default (64, then 128) is twice the run's default of 32, its coarser
+ * lattice is never the run's own, whose staircase rim moves a field's figures by up to 0.02 on doubling. A run of more
+ * than 64 cells gives the engine more than its largest lattice, which it answers as unsupported (`option.bundleGrid`),
+ * never on a lattice it was not asked for. Recorded, of those two engines and of no other, and run only where it is
+ * named.
+ */
+export const r11bRung: RungDefinition = Object.freeze({
+  id: "r11b",
+  quantity: VIGNETTING_NATIVE,
+  needsVignettingRaySets: true,
+  engines: R11B_ENGINES,
+  onlyWhereNamed: true,
+  engineOptions: (runSpec: RunSpec, _inputs?: RungInputs, engineId?: string): JsonObject | undefined => {
+    const bundleGrid = runSpec.sampling?.bundleGrid;
+    return engineId === "flux" && bundleGrid !== undefined ? { bundleGrid: FINE_GRID_FACTOR * bundleGrid } : undefined;
+  },
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
+    (inputs?.vignettingAsks ?? []).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: VIGNETTING_NATIVE, spec: spec as JsonObject }),
+    ),
+});
+
+/** The engines of the rung `r12b`: LensVisualizer, whose summary tab is asked, and optiland's own accessors. */
+export const R12B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
+
+/**
+ * The `summary.native` spec of a case: its lines whose indices are the prescription's own (`indexSource`
+ * "authored"), at which LensVisualizer's summary tab is first-order; null for a case of no such line (every photopic
+ * and spectral run) and for a case LensVisualizer did not export (`provenance.source.kind` other than "lv-lens"), whose
+ * state has no summary tab, as the other rungs about engines of their own ask nothing of such a case. Decided from the
+ * case alone: an engine refuses a line it cannot answer.
+ */
+export function summaryNativeSpec(opticalCase: OpticalCase): SummaryNativeSpec | null {
+  if (opticalCase.provenance.source.kind !== "lv-lens") return null;
+  const lines = opticalCase.conditions.lines.flatMap((line, index) => (line.indexSource === "authored" ? [index] : []));
+  return lines.length === 0 ? null : { lines };
+}
+
+/**
+ * The rung `r12b`, LensVisualizer's summary tab and aperture control beside an engine's own first-order summary: one
+ * `summary.native` request (`summaryNativeSpec`), at the case's lines of the prescription's own indices, asked of
+ * LensVisualizer, whose answer is its tab's readouts and its control's f-numbers, and of optiland, whose answer is its
+ * own paraxial accessors and its working f-number of the real rim rays. Recorded, of those two engines and of no other,
+ * and run only where it is named: optiland is not on every machine.
+ */
+export const r12bRung: RungDefinition = Object.freeze({
+  id: "r12b",
+  quantity: SUMMARY_NATIVE,
+  engines: R12B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
+    const spec = summaryNativeSpec(opticalCase);
+    return spec === null
+      ? []
+      : [makeRequest({ caseId: opticalCase.id, quantity: SUMMARY_NATIVE, spec: spec as JsonObject })];
+  },
+});
+
+/** The engines of the rung `r13b`: the comparator's sums on the reference engine's model, and optiland's own. */
+export const R13B_ENGINES: readonly string[] = Object.freeze(["ref-seidel", "optiland"]);
+
+/**
+ * The `seidel.native` spec of a case and its recipe: at the case's first line (its reference line, OpticStudio's
+ * primary wavelength), of the largest field angle the recipe resolved (OpticStudio's maximum field), and, for a case of
+ * lines of two wavelengths or more, of its shortest and its longest line as dispersion lines (OpticStudio's extremes of
+ * the system's wavelengths). Null where the recipe resolved no angle below 90 degrees.
+ */
+export function seidelNativeSpec(opticalCase: OpticalCase, recipe: MtfRecipe): SeidelNativeSpec | null {
+  const angles = recipe.fields.flatMap((field) => (field.angleDeg === null ? [] : [Math.abs(field.angleDeg)]));
+  if (angles.length === 0) return null;
+  const maxFieldDeg = Math.max(...angles);
+  if (!(maxFieldDeg < 90)) return null;
+  const wavelengths = opticalCase.conditions.lines.map((line) => line.wavelengthNm);
+  const shortest = wavelengths.indexOf(Math.min(...wavelengths));
+  const longest = wavelengths.indexOf(Math.max(...wavelengths));
+  return { line: 0, maxFieldDeg, ...(shortest === longest ? {} : { dispersionLines: [shortest, longest] }) };
+}
+
+/**
+ * The rung `r13b`, the engines' own Seidel sums: one `seidel.native` request (`seidelNativeSpec`) of each case whose
+ * run has a recipe, asked of `ref-seidel`, the comparator's sums on the reference engine's model, and of optiland, its
+ * own `aberrations`. Recorded, of those two engines and of no other, and run only where it is named: optiland is not on
+ * every machine. LensVisualizer presents no Seidel sums.
+ */
+export const r13bRung: RungDefinition = Object.freeze({
+  id: "r13b",
+  quantity: SEIDEL_NATIVE,
+  needsRecipe: true,
+  engines: R13B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    const spec = recipe === null ? null : seidelNativeSpec(opticalCase, recipe);
+    return spec === null
+      ? []
+      : [makeRequest({ caseId: opticalCase.id, quantity: SEIDEL_NATIVE, spec: spec as unknown as JsonObject })];
+  },
+});
+
+/** The engines of the rung `r14b`: optiland's own Zernike fit, and the comparator's fit of optiland's raw samples. */
+export const R14B_ENGINES: readonly string[] = Object.freeze(["optiland", "optiland-wave"]);
+
+/** The grid of `r14b`'s samples: cells across the square of normalised pupil coordinates, R6c's first. */
+export const ZERNIKE_GRID = 128;
+
+/**
+ * The orderings `r14b` asks, each with its number of terms: OpticStudio's 37 Standard ones, and 36 Fringe ones, since
+ * optiland's 37th Fringe polynomial is not OpticStudio's (docs/gotchas.md).
+ */
+export const ZERNIKE_ASKS: readonly { readonly ordering: ZernikeOrdering; readonly terms: number }[] = Object.freeze([
+  { ordering: "standard", terms: 37 },
+  { ordering: "fringe", terms: 36 },
+]);
+
+/**
+ * The `zernike.native` specs of a recipe: at the case's first line, of the angles the recipe resolved its fields to,
+ * in its order, on `ZERNIKE_GRID`, one for each of `ZERNIKE_ASKS`. None where a field has no angle.
+ */
+export function zernikeNativeSpecs(recipe: MtfRecipe): ZernikeNativeSpec[] {
+  const angles = recipe.fields.map((field) => field.angleDeg);
+  if (angles.length === 0 || angles.some((angle) => angle === null || !(Math.abs(angle) < 90))) return [];
+  return ZERNIKE_ASKS.map(({ ordering, terms }) => ({
+    line: 0,
+    fieldAnglesDeg: angles as number[],
+    grid: ZERNIKE_GRID,
+    ordering,
+    terms,
+  }));
+}
+
+/**
+ * The rung `r14b`, the engines' own Zernike fits of one wavefront: the `zernike.native` requests of a run's recipe
+ * (`zernikeNativeSpecs`), asked of optiland, its own fit of its `Wavefront`, and of `optiland-wave`, the comparator's
+ * estimator on optiland's raw samples of the same wavefront. Recorded, of those two engines and of no other, and run
+ * only where it is named. LensVisualizer presents no wavefront.
+ */
+export const r14bRung: RungDefinition = Object.freeze({
+  id: "r14b",
+  quantity: ZERNIKE_NATIVE,
+  needsRecipe: true,
+  engines: R14B_ENGINES,
+  onlyWhereNamed: true,
+  buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] => {
+    const recipe = inputs?.recipe ?? null;
+    return (recipe === null ? [] : zernikeNativeSpecs(recipe)).map((spec) =>
+      makeRequest({ caseId: opticalCase.id, quantity: ZERNIKE_NATIVE, spec: spec as unknown as JsonObject }),
+    );
+  },
+});
+
+/**
  * Every rung there is, in ladder order: the order a run evaluates them in, and the order in which a rung is
  * "later" than another for a policy that blocks later rungs. `selftest` needs no optics and comes first. Every
  * rung is judged: each has an entry in the policy and a comparator for its quantity.
@@ -489,6 +914,19 @@ export const RUNGS: readonly RungDefinition[] = Object.freeze([
   r6aRung,
   r6bRung,
   r6cRung,
+  r7aRung,
+  r7bRung,
+  r8aRung,
+  r8bRung,
+  r9aRung,
+  r9bRung,
+  r10aRung,
+  r10bRung,
+  r11aRung,
+  r11bRung,
+  r12bRung,
+  r13bRung,
+  r14bRung,
 ]);
 
 /**

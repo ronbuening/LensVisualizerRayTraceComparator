@@ -1,0 +1,53 @@
+{
+  "line": {
+    "index": 0,
+    "wavelengthNm": 587.5
+  },
+  "maxFieldDeg": 20,
+  "dispersionLines": [
+    1,
+    2
+  ],
+  "status": "ok",
+  "invariant": 1.25,
+  "surfaces": [
+    {
+      "surface": 0,
+      "SPHA": 0.5,
+      "COMA": 0.25,
+      "ASTI": 0.125,
+      "FCUR": 0.0625,
+      "DIST": 0.03125,
+      "CLA": 0.375,
+      "CTR": 0.0625
+    },
+    {
+      "surface": 1,
+      "SPHA": -0.25,
+      "COMA": -0.125,
+      "ASTI": -0.0625,
+      "FCUR": 0.0625,
+      "DIST": -0.015625,
+      "CLA": -0.125,
+      "CTR": 0
+    }
+  ],
+  "total": {
+    "SPHA": 0.25,
+    "COMA": 0.125,
+    "ASTI": 0.0625,
+    "FCUR": 0.125,
+    "DIST": 0.015625,
+    "CLA": 0.25,
+    "CTR": 0.0625,
+    "W040": 0.5
+  },
+  "sampling": {
+    "imageSpaceMarginalSlope": -0.125
+  },
+  "method": {
+    "name": "synthetic-sums",
+    "params": {}
+  },
+  "notes": []
+}

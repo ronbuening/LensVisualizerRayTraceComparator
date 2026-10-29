@@ -27,11 +27,27 @@ import {
   r6aRung,
   r6bRung,
   r6cRung,
+  r7aRung,
+  r7bRung,
+  r8aRung,
+  r8bRung,
+  r9aRung,
+  r9bRung,
+  r10aRung,
+  r10bRung,
+  r11aRung,
+  r11bRung,
+  r12bRung,
+  r13bRung,
+  r14bRung,
   rayTraceRequests,
+  seidelNativeSpec,
   selectRungs,
   selftestRung,
+  zernikeNativeSpecs,
 } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
+import type { MtfRecipe } from "../../src/core/mtfRecipe.ts";
 import { UsageError } from "../../src/core/usageError.ts";
 import { QUANTITIES } from "../../src/quantities/index.ts";
 import { ALL_FEATURES_CASE, RAYS_SPEC_LATTICE, RAYS_SPEC_SINGLET } from "../contract/corpus.ts";
@@ -61,14 +77,88 @@ function usageError(select: () => unknown): string {
 
 // ── The registry ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a and r6b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
+test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a to r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b and r14b, in ladder order, and every rung asks for a quantity the comparator knows", () => {
   assert.deepEqual(
     RUNGS.map((definition) => definition.id),
-    ["selftest", "r0", "r1", "r2", "r3", "r4", "r4f", "r5", "r5g", "r6a", "r6b", "r6c"],
+    [
+      "selftest",
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r4f",
+      "r5",
+      "r5g",
+      "r6a",
+      "r6b",
+      "r6c",
+      "r7a",
+      "r7b",
+      "r8a",
+      "r8b",
+      "r9a",
+      "r9b",
+      "r10a",
+      "r10b",
+      "r11a",
+      "r11b",
+      "r12b",
+      "r13b",
+      "r14b",
+    ],
   );
   assert.deepEqual(
     [...RUNGS],
-    [selftestRung, r0Rung, r1Rung, r2Rung, r3Rung, r4Rung, r4fRung, r5Rung, r5gRung, r6aRung, r6bRung, r6cRung],
+    [
+      selftestRung,
+      r0Rung,
+      r1Rung,
+      r2Rung,
+      r3Rung,
+      r4Rung,
+      r4fRung,
+      r5Rung,
+      r5gRung,
+      r6aRung,
+      r6bRung,
+      r6cRung,
+      r7aRung,
+      r7bRung,
+      r8aRung,
+      r8bRung,
+      r9aRung,
+      r9bRung,
+      r10aRung,
+      r10bRung,
+      r11aRung,
+      r11bRung,
+      r12bRung,
+      r13bRung,
+      r14bRung,
+    ],
+  );
+  // The two rungs of the coma and bokeh tabs are made from the run's spot sets, and no other is; the two of the
+  // spherical-aberration and axial-colour sections from its axial sets, and no other is.
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsSpotRaySets === true),
+    [r7aRung, r7bRung],
+  );
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsAxialRaySets === true),
+    [r8aRung, r8bRung],
+  );
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsChiefRaySets === true),
+    [r9aRung, r9bRung],
+  );
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsCurvatureRaySets === true),
+    [r10aRung, r10bRung],
+  );
+  assert.deepEqual(
+    RUNGS.filter((definition) => definition.needsVignettingRaySets === true),
+    [r11aRung, r11bRung],
   );
   // The rungs that trace rays are the four that compare traced rays, and one of them traces a finer lattice too.
   assert.deepEqual(
@@ -83,15 +173,29 @@ test("the rungs are selftest, r0 to r4, r4f, r5, r5g, r6a and r6b, in ladder ord
   // those need an engine that is not on every machine, and are run only where they are named.
   assert.deepEqual(
     RUNGS.filter((definition) => definition.needsRecipe === true),
-    [r4Rung, r4fRung, r5Rung, r5gRung, r6aRung, r6bRung, r6cRung],
+    [r4Rung, r4fRung, r5Rung, r5gRung, r6aRung, r6bRung, r6cRung, r13bRung, r14bRung],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.engines !== undefined),
-    [r4fRung, r5Rung, r5gRung, r6bRung, r6cRung],
+    [
+      r4fRung,
+      r5Rung,
+      r5gRung,
+      r6bRung,
+      r6cRung,
+      r7bRung,
+      r8bRung,
+      r9bRung,
+      r10bRung,
+      r11bRung,
+      r12bRung,
+      r13bRung,
+      r14bRung,
+    ],
   );
   assert.deepEqual(
     RUNGS.filter((definition) => definition.onlyWhereNamed === true),
-    [r5Rung, r5gRung, r6cRung],
+    [r5Rung, r5gRung, r6cRung, r7bRung, r8bRung, r9bRung, r10bRung, r11bRung, r12bRung, r13bRung, r14bRung],
   );
   assert.equal(new Set(RUNGS.map((definition) => definition.id)).size, RUNGS.length);
   for (const definition of RUNGS) assert.ok(QUANTITIES.has(definition.quantity), definition.id);
@@ -265,10 +369,28 @@ test("a run that names no rungs gets every rung but those run only where named, 
     r4fRung,
     r6aRung,
     r6bRung,
+    r7aRung,
+    r8aRung,
+    r9aRung,
+    r10aRung,
+    r11aRung,
   ]);
   assert.deepEqual(
     selectRungs(undefined),
-    RUNGS.filter((definition) => definition !== r5Rung && definition !== r5gRung && definition !== r6cRung),
+    RUNGS.filter(
+      (definition) =>
+        definition !== r5Rung &&
+        definition !== r5gRung &&
+        definition !== r6cRung &&
+        definition !== r7bRung &&
+        definition !== r8bRung &&
+        definition !== r9bRung &&
+        definition !== r10bRung &&
+        definition !== r11bRung &&
+        definition !== r12bRung &&
+        definition !== r13bRung &&
+        definition !== r14bRung,
+    ),
   );
   assert.deepEqual(selectRungs(["r5", "r0"]), [r0Rung, r5Rung]);
   assert.deepEqual(selectRungs(["r5g", "r5"]), [r5Rung, r5gRung]);
@@ -298,11 +420,11 @@ test("named rungs come in ladder order, each once, however they were named", () 
 test("an unknown rung is a usage error that names it and lists the rungs there are", () => {
   assert.equal(
     usageError(() => selectRungs(["R0"])),
-    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c',
+    'unknown rung "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
   );
   assert.equal(
     usageError(() => selectRungs(["R4", "selftest", "R0", "R4"])),
-    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c',
+    'unknown rungs "R4", "R0": the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b',
   );
   const three = [rung("a"), rung("b"), rung("c")];
   assert.equal(
@@ -327,6 +449,263 @@ test("an unknown rung is a usage error that names it and lists the rungs there a
 test("naming no rung at all is a usage error", () => {
   assert.equal(
     usageError(() => selectRungs([])),
-    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c",
+    "no rung was named: the rungs are selftest, r0, r1, r2, r3, r4, r4f, r5, r5g, r6a, r6b, r6c, r7a, r7b, r8a, r8b, r9a, r9b, r10a, r10b, r11a, r11b, r12b, r13b, r14b",
   );
+});
+
+// ── The rungs of the coma and bokeh tabs ─────────────────────────────────────────────────────────────────────────
+
+test("r7a asks one rays.trace request of each spot set, each set once, and nothing of the run's ray sets", () => {
+  const spots = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }, structuredClone(RAYS_SPEC_SINGLET)];
+  const requests = r7aRung.buildRequests(SINGLET, RUN, { raySets: [RAYS_SPEC_LATTICE], spotRaySets: spots });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["rays.trace", RAYS_SPEC_SINGLET],
+      ["rays.trace", { ...RAYS_SPEC_LATTICE, line: 0 }],
+    ],
+  );
+  assert.deepEqual(r7aRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.equal(r7aRung.engines, undefined);
+  assert.equal(r7aRung.onlyWhereNamed, undefined);
+});
+
+test("r7b asks the engines' own spot requests of the tabs, and hands optiland the angles of its spec's fields", () => {
+  const coma = {
+    spec: {
+      line: 0,
+      fields: { kind: "half-field-fractions", values: [0, 0.5] },
+      pupil: { kind: "rings", rings: [1, 8], weighting: "area" },
+    },
+    fieldAnglesDeg: [0, 12.5],
+  } as const;
+  const fan = {
+    spec: {
+      line: 0,
+      fields: { kind: "half-field-fractions", values: [0.7] },
+      pupil: { kind: "fan", axis: "sagittal", samples: 51 },
+    },
+    fieldAnglesDeg: [17.5],
+  } as const;
+  const inputs = { raySets: [], spotAsks: [coma, fan] };
+  const requests = r7bRung.buildRequests(SINGLET, RUN, inputs);
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec, request.engineOptions]),
+    [
+      ["spot.native", coma.spec, undefined],
+      ["spot.native", fan.spec, undefined],
+    ],
+  );
+  for (const request of requests) assert.ok(QUANTITIES.get("spot.native")?.validateSpec(request.spec).length === 0);
+  assert.deepEqual(
+    requests.map((request) => r7bRung.engineOptions?.(RUN, inputs, "optiland", request)),
+    [{ fieldAnglesDeg: [0, 12.5] }, { fieldAnglesDeg: [17.5] }],
+  );
+  assert.equal(r7bRung.engineOptions?.(RUN, inputs, "lv", requests[0]), undefined);
+  assert.deepEqual(r7bRung.engines, ["lv", "optiland"]);
+  assert.equal(r7bRung.onlyWhereNamed, true);
+});
+
+// ── The rungs of the spherical-aberration and axial-colour sections ───────────────────────────────────────────────
+
+test("r8a asks one rays.trace request of each axial set, each set once, and nothing of the run's ray sets", () => {
+  const axial = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }, structuredClone(RAYS_SPEC_SINGLET)];
+  const requests = r8aRung.buildRequests(SINGLET, RUN, { raySets: [RAYS_SPEC_LATTICE], axialRaySets: axial });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["rays.trace", RAYS_SPEC_SINGLET],
+      ["rays.trace", { ...RAYS_SPEC_LATTICE, line: 0 }],
+    ],
+  );
+  assert.deepEqual(r8aRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.equal(r8aRung.engines, undefined);
+  assert.equal(r8aRung.onlyWhereNamed, undefined);
+});
+
+test("r8b asks the engines' own axial requests of the two sections, of lv and optiland only, where it is named", () => {
+  const spherical = {
+    kind: "spherical",
+    lines: [0],
+    nearAxis: 0.1,
+    marginal: [0.97, 0.95],
+    profile: [0.1, 0.5],
+  } as const;
+  const colour = { kind: "colour", lines: [0, 1], marginal: [0.97, 0.95] } as const;
+  const inputs = { raySets: [], axialAsks: [spherical, colour] };
+  const requests = r8bRung.buildRequests(SINGLET, RUN, inputs);
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec, request.engineOptions]),
+    [
+      ["axial.native", spherical, undefined],
+      ["axial.native", colour, undefined],
+    ],
+  );
+  for (const request of requests) assert.deepEqual(QUANTITIES.get("axial.native")?.validateSpec(request.spec), []);
+  assert.deepEqual(r8bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r8bRung.engines, ["lv", "optiland"]);
+  assert.equal(r8bRung.onlyWhereNamed, true);
+});
+
+// ── The rungs of the distortion, pupils and lateral-colour tabs ──────────────────────────────────────────────────
+
+test("r9a asks one rays.trace request of each chief set, each set once, and nothing of the run's ray sets", () => {
+  const chief = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }, structuredClone(RAYS_SPEC_SINGLET)];
+  const requests = r9aRung.buildRequests(SINGLET, RUN, { raySets: [RAYS_SPEC_LATTICE], chiefRaySets: chief });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["rays.trace", RAYS_SPEC_SINGLET],
+      ["rays.trace", { ...RAYS_SPEC_LATTICE, line: 0 }],
+    ],
+  );
+  assert.deepEqual(r9aRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.equal(r9aRung.engines, undefined);
+  assert.equal(r9aRung.onlyWhereNamed, undefined);
+});
+
+test("r9b asks the engines' own chief-ray requests of the three tabs, of lv and optiland only, where it is named", () => {
+  const distortion = { kind: "distortion", lines: [0], maxFieldDeg: 20, fieldAnglesDeg: [5, 10, 20] } as const;
+  const lateral = { kind: "lateral-colour", lines: [0, 1], maxFieldDeg: 20, fieldAnglesDeg: [0, 10] } as const;
+  const inputs = { raySets: [], chiefAsks: [distortion, lateral] };
+  const requests = r9bRung.buildRequests(SINGLET, RUN, inputs);
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec, request.engineOptions]),
+    [
+      ["chief.native", distortion, undefined],
+      ["chief.native", lateral, undefined],
+    ],
+  );
+  for (const request of requests) assert.deepEqual(QUANTITIES.get("chief.native")?.validateSpec(request.spec), []);
+  assert.deepEqual(r9bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r9bRung.engines, ["lv", "optiland"]);
+  assert.equal(r9bRung.onlyWhereNamed, true);
+});
+
+// ── The rungs of the field-curve sections ────────────────────────────────────────────────────────────────────────
+
+test("r10a asks one rays.trace request of each curvature set, each set once, and nothing of the run's ray sets", () => {
+  const curvature = [RAYS_SPEC_SINGLET, { ...RAYS_SPEC_LATTICE, line: 0 }, structuredClone(RAYS_SPEC_SINGLET)];
+  const requests = r10aRung.buildRequests(SINGLET, RUN, { raySets: [RAYS_SPEC_LATTICE], curvatureRaySets: curvature });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["rays.trace", RAYS_SPEC_SINGLET],
+      ["rays.trace", { ...RAYS_SPEC_LATTICE, line: 0 }],
+    ],
+  );
+  assert.deepEqual(r10aRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r10aRung.buildRequests(SINGLET, RUN, { raySets: [], chiefRaySets: curvature }), []);
+  assert.equal(r10aRung.engines, undefined);
+  assert.equal(r10aRung.onlyWhereNamed, undefined);
+});
+
+test("r12b asks one summary.native request at the lines of the prescription's own indices, of lv and optiland only, where it is named", () => {
+  // A case LensVisualizer exported: its state has a summary tab.
+  const exported = structuredClone(SINGLET);
+  (exported.provenance as { source: unknown }).source = {
+    kind: "lv-lens",
+    lensKey: "acme-singlet-50",
+    file: "src/lens-data/acme/AcmeSinglet50.data.ts",
+    fileSha256: "0".repeat(64),
+    zoomT: 0,
+    focusT: 0,
+  };
+  const requests = r12bRung.buildRequests(exported, RUN);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].quantity, "summary.native");
+  assert.deepEqual(requests[0].spec, { lines: [0] });
+  assert.equal(requests[0].caseId, exported.id);
+  // A case read from a file has no summary tab, and no request.
+  assert.deepEqual(r12bRung.buildRequests(SINGLET, RUN), []);
+  // A case of no line of the prescription's own indices has no request: every photopic and spectral run.
+  const photopic = structuredClone(exported);
+  (photopic.conditions.lines[0] as { indexSource: string }).indexSource = "anchored";
+  assert.deepEqual(r12bRung.buildRequests(photopic, RUN), []);
+  assert.deepEqual(r12bRung.engines, ["lv", "optiland"]);
+  assert.equal(r12bRung.onlyWhereNamed, true);
+});
+
+test("r11b hands the engine flux twice a run's stated lattice, and nothing without one or to lv", () => {
+  const stated: RunSpec = { ...RUN, sampling: { bundleGrid: 32 } };
+  assert.deepEqual(r11bRung.engineOptions?.(stated, NO_RUNG_INPUTS, "flux"), { bundleGrid: 64 });
+  assert.deepEqual(r11bRung.engineOptions?.({ ...RUN, sampling: { bundleGrid: 16 } }, NO_RUNG_INPUTS, "flux"), {
+    bundleGrid: 32,
+  });
+  assert.equal(r11bRung.engineOptions?.(stated, NO_RUNG_INPUTS, "lv"), undefined);
+  assert.equal(r11bRung.engineOptions?.(RUN, NO_RUNG_INPUTS, "flux"), undefined);
+  assert.deepEqual(r11bRung.engines, ["lv", "flux"]);
+  assert.equal(r11bRung.onlyWhereNamed, true);
+});
+
+test("r10b asks the engines' own field-curve request of the sections, of lv and optiland only, where it is named", () => {
+  const ask = { lines: [0, 1], maxFieldDeg: 20, fieldAnglesDeg: [0, 5, 10, 15, 20] };
+  const requests = r10bRung.buildRequests(SINGLET, RUN, { raySets: [], curvatureAsks: [ask] });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec, request.engineOptions]),
+    [["curvature.native", ask, undefined]],
+  );
+  for (const request of requests) assert.deepEqual(QUANTITIES.get("curvature.native")?.validateSpec(request.spec), []);
+  assert.deepEqual(r10bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r10bRung.engines, ["lv", "optiland"]);
+  assert.equal(r10bRung.onlyWhereNamed, true);
+});
+
+/** A recipe LensVisualizer resolved of three fields, the full one at 21.5 degrees. */
+const SEIDEL_RECIPE: MtfRecipe = {
+  source: "lv",
+  plane: { kind: "design", shiftMm: 0 },
+  imageZ: 60,
+  stopSemiDiameter: 5,
+  lines: [{ wavelengthNm: 587.5618, weight: 1 }],
+  frequenciesPerMm: [10, 30],
+  referenceHeightMm: 21.5,
+  fields: [
+    { fraction: 0, angleDeg: 0, targetImageHeightMm: 0 },
+    { fraction: 0.5, angleDeg: 11.25, targetImageHeightMm: 10.75 },
+    { fraction: 1, angleDeg: 21.5, targetImageHeightMm: 21.5 },
+  ],
+};
+
+test("r13b asks one seidel.native request of the recipe's largest field, with dispersion lines of two wavelengths", () => {
+  const inputs = { raySets: [], recipe: SEIDEL_RECIPE };
+  const requests = r13bRung.buildRequests(SINGLET, RUN, inputs);
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [["seidel.native", { line: 0, maxFieldDeg: 21.5 }]],
+  );
+  // Of lines of several wavelengths, the shortest and the longest are the dispersion lines.
+  const lines = structuredClone(SINGLET);
+  (lines.conditions as unknown as { lines: unknown[] }).lines = [
+    { wavelengthNm: 587.5618, weight: 1, indexSource: "authored" },
+    { wavelengthNm: 656.2725, weight: 1, indexSource: "authored" },
+    { wavelengthNm: 486.1327, weight: 1, indexSource: "authored" },
+  ];
+  assert.deepEqual(seidelNativeSpec(lines, SEIDEL_RECIPE), { line: 0, maxFieldDeg: 21.5, dispersionLines: [2, 1] });
+  // Without a recipe, or of a recipe without an angle, nothing is asked.
+  assert.deepEqual(r13bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  const none: MtfRecipe = { ...SEIDEL_RECIPE, fields: [{ fraction: 1, angleDeg: null, targetImageHeightMm: 21.5 }] };
+  assert.equal(seidelNativeSpec(SINGLET, none), null);
+  assert.deepEqual(r13bRung.engines, ["ref-seidel", "optiland"]);
+  assert.equal(r13bRung.onlyWhereNamed, true);
+  assert.equal(r13bRung.needsRecipe, true);
+});
+
+test("r14b asks the Standard and the Fringe fit of the recipe's fields, of optiland and optiland-wave only", () => {
+  const requests = r14bRung.buildRequests(SINGLET, RUN, { raySets: [], recipe: SEIDEL_RECIPE });
+  assert.deepEqual(
+    requests.map((request) => [request.quantity, request.spec]),
+    [
+      ["zernike.native", { line: 0, fieldAnglesDeg: [0, 11.25, 21.5], grid: 128, ordering: "standard", terms: 37 }],
+      ["zernike.native", { line: 0, fieldAnglesDeg: [0, 11.25, 21.5], grid: 128, ordering: "fringe", terms: 36 }],
+    ],
+  );
+  const missing: MtfRecipe = {
+    ...SEIDEL_RECIPE,
+    fields: [...SEIDEL_RECIPE.fields, { fraction: 0.75, angleDeg: null, targetImageHeightMm: 16 }],
+  };
+  assert.deepEqual(zernikeNativeSpecs(missing), []);
+  assert.deepEqual(r14bRung.buildRequests(SINGLET, RUN, NO_RUNG_INPUTS), []);
+  assert.deepEqual(r14bRung.engines, ["optiland", "optiland-wave"]);
+  assert.equal(r14bRung.onlyWhereNamed, true);
 });

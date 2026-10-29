@@ -442,9 +442,12 @@ test("lv's answers for three benchmark lenses are the numbers measured at LV d36
   near(z50.backFocus[0], 13.112212137842732, "z50 back focus, the rear plate inside it");
   near(z50.entrancePupilZ[0], 50.61955508569735, "z50 entrance pupil");
   near(z50.exitPupilZ[0], 98.69653622287234, "z50 exit pupil");
-  near(z50.entrancePupilSemiDiameter[0], 21.615131666794674, "z50 entrance pupil radius");
+  // Since LV #933 the stop is sized by one rule, the paraxial entrance pupil EFL / N: the image of the stop is the
+  // nominal pupil of f/1.23 (measured at 607ff23ae; 21.615131666794674 at d36f44b3, of a stop sized by a real ray).
+  near(z50.entrancePupilSemiDiameter[0], 20.849281439697823, "z50 entrance pupil radius");
+  near(z50.entrancePupilSemiDiameter[0], z50.lvNominalEntrancePupilSemiDiameter[0], "z50 pupil, the nominal one");
   // LensVisualizer's stored constants are other numbers: positions found with real rays, 2.4e-7 mm and 1.3e-6 mm
-  // from the paraxial ones, and a nominal entrance pupil of f/1.23, 0.77 mm smaller than the image of the stop.
+  // from the paraxial ones.
   near(z50.lvStoredEntrancePupilZ[0], 50.61955484914813, "z50 stored entrance pupil");
   near(z50.lvStoredExitPupilZ[0], 98.69653750142477, "z50 stored exit pupil");
   near(z50.lvNominalEntrancePupilSemiDiameter[0], 20.849281439697823, "z50 nominal entrance pupil radius");

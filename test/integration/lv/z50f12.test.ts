@@ -36,18 +36,19 @@ test("fixed-grid sheared diagnostic equals LV's product on its chosen lattice", 
     assert.notEqual(field.fieldAngleDeg, null);
     const rays = lvFieldRays(binding.api, rebuilt.model, setup, field.fieldAngleDeg as number, field.sampling.gridSize);
     assert.ok(!("problem" in rays));
-    const bundle = binding.api.traceMtfBundle(
+    // On the real stop (LV #936): LV's own bundle of the lattice aimed at the field's last grid, unseeded, which is the
+    // product's own lattice to the bit (a coarser lattice seeds the aim and changes no bit of it).
+    assert.ok(rays.lattice !== null);
+    const bundle = binding.api.traceMtfLattice(
       rebuilt.model.state,
       setup.options,
       setup.support,
       rays.launch,
-      rays.footprint,
-      field.sampling.gridSize,
+      rays.lattice,
       setup.support.spectralLines[0],
       made.opticalCase.conditions.imageZ,
     );
     assert.ok(bundle);
-    assert.ok(!Object.values(bundle.openBorders).some(Boolean));
     const otf = binding.api.shearedOtf(
       bundle,
       bundle.chief,

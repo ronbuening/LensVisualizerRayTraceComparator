@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:vignetting.native.spec",
+  "title": "vignetting.native spec",
+  "description": "What a vignetting.native request asks for: an engine's own vignetting and relative illumination of a system whose object is at infinity, at each requested line, the geometric transmission and the relative illumination of the field of each angle in object space, degrees, in the meridional plane, an object toward +y, each relative to the axis. maxFieldDeg is the half field the angles are of. Code checks that the lines are distinct, that the first angle is 0 (the axis every figure is relative to) and that every angle is at most maxFieldDeg.",
+  "type": "object",
+  "properties": {
+    "lines": {
+      "description": "Indices of lines of the case, in conditions.lines, each once.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+      },
+      "minItems": 1
+    },
+    "maxFieldDeg": {
+      "description": "The half field the angles are of, degrees.",
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "exclusiveMaximum": 180
+    },
+    "fieldAnglesDeg": {
+      "description": "The field angle of each field, degrees, in the order the answer lists them within a line; the first is 0, the axis.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "exclusiveMaximum": 90
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["lines", "maxFieldDeg", "fieldAnglesDeg"],
+  "additionalProperties": false
+}

@@ -42,9 +42,14 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
 /**
  * The engine closure the pinned figures are compared at. They were measured at LV 643ef5d0 (closure 94778d3d, 175
  * files; the same at ab0fd4cf); at Stage 4.4 the binding's import of src/optics/publishedStations.ts made it
- * 7b756ee6 (177 files) at ab0fd4cf, and every figure was measured again there and found unchanged.
+ * 7b756ee6 (177 files) at ab0fd4cf, and every figure was measured again there and found unchanged; at Stage 6.6b, at
+ * LV 098c91ef6 (closure fef2e248, 178 files), every grid and case was measured again and found unchanged (worst R4f
+ * mtf.maxAbs 1.69e-14); at Stage 6.8b, at LV 607ff23ae (closure f016b35b, 184 files: every stop resized by LV #933, and
+ * #936's stop lattice refined to a cap of 256 cells across the stop), every case and grid moved and was pinned anew
+ * (worst R4f mtf.maxAbs 1.30e-14); at LV 6287f4393 (closure fc5ae923, 184 files: LV #940), every case and grid was
+ * measured again and found unchanged, the 192 answers the same bytes as at 607ff23ae (worst 1.2989609388114332e-14).
  */
-const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8ca72c6a56";
+const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended
@@ -52,93 +57,90 @@ const PINNED_CLOSURE = "7b756ee63bd252b76b978a1dbc18185a9c565c118ed662ec694def8c
  */
 const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly number[]]>> = {
   "canon-ef-135-f2l-usm-ref": [
-    "8f1f7d95653af82da64d44b73a272e7eb84232c67ee643e47207e067064ee070",
-    [32, 32, 32, 64, 64],
+    "b57c2bcd2ba8aa9225f9abe5f2e4b2f763b3d67d1e1dc2e29186a19c9f4d0f60",
+    [32, 64, 32, 32, 128],
   ],
   "canon-ef-135-f2l-usm-photopic": [
-    "e9e741608e3f5f054625e1189a93c16f57e44893080a8ee4a9451df894df4c60",
-    [32, 32, 32, 64, 64],
+    "5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513",
+    [64, 64, 32, 32, 64],
   ],
   "fujifilm-fujinon-gf-63mm-f28-r-wr-ref": [
-    "a878f44443376f43150577ade0fdbfbebd809fc9bd062250397b27b0ac3eeea6",
-    [64, 64, 128, 128, 128],
-  ],
-  "fujifilm-fujinon-gf-63mm-f28-r-wr-photopic": [
-    "a193bba6b71293a0b4bac4f7d5a5aff691fc23bc2499284e1c033ad238daec10",
+    "650612fe98b240e91dec4edb5e47d115fdfce934fa09cbe9e89f8d388bd3440f",
     [64, 64, 128, 64, 128],
   ],
-  "sigma-35mm-f14-dg-hsm-a-ref": [
-    "ccc14e33b434a6ec5fa8af08a14217b9ff7dc32c9d4f8b92125186fa3a45c97b",
-    [32, 64, 128, 128, 128],
-  ],
-  "sigma-35mm-f14-dg-hsm-a-photopic": [
-    "ecd0befffe5b28039511a637f8bd5c08c0932c526a143b07acfdc6e88c6c1ffa",
-    [32, 64, 128, 128, 128],
-  ],
-  "nikkor-z50f12-ref": ["167e686b31a7497ca34af22c245b0c6cc3ddc6ccd060343c987f04ec18ae4c5f", [128, 128, 128, 128, 128]],
-  "nikkor-z50f12-photopic": [
-    "6981c5efa2e0f14d167c0ff9b3465552a294ef75eece6e3af725cabc027843c2",
-    [64, 128, 64, 128, 128],
-  ],
-  "sony-fe-20mm-f18-g-ref": [
-    "2e2afa23bd756f5a1091b5d7f1e7f85e104c97472530f52a0ea0076b336b4cab",
-    [64, 64, 128, 128, 128],
-  ],
-  "sony-fe-20mm-f18-g-photopic": [
-    "23b051950216b1004d67e9984a3181b877a25e5c1f50e7588fe868ade50fed35",
-    [64, 64, 64, 64, 64],
-  ],
-  "sony-fe-400mm-f28-gm-oss-ref": [
-    "f0819763fb3976af512ce84e17ce149008c06fed4c2f0280f03abc3fe7313fe8",
-    [32, 64, 64, 64, 64],
-  ],
-  "sony-fe-400mm-f28-gm-oss-photopic": [
-    "e3fb8ca13685378d51194b1fdc6cc573018861b1913f5e65407774b352c9b811",
-    [64, 64, 64, 64, 64],
-  ],
-  "sigma-105mm-f28-dg-dn-macro-art-ref": [
-    "e11ed3cae518f0c789667ce443bee69fbbe7fadd303e7a960b052999300848b1",
-    [32, 64, 32, 32, 64],
-  ],
-  "sigma-105mm-f28-dg-dn-macro-art-photopic": [
-    "50d94ea9ff30e0960b74dae45269cecd622dd75af41ca41a945e4761f1839d66",
-    [32, 64, 64, 32, 64],
-  ],
-  "nikon-z-24-70f4s-wide-ref": [
-    "327403ce09e2fc94b6122c0799aba12156ffad3f9b726829aeccb18d31efd709",
-    [64, 128, 64, 64, 128],
-  ],
-  "nikon-z-24-70f4s-wide-photopic": [
-    "06eff99a7dc852d126aa09c9eea6d4e7b19d5fc77d79c520b5624c3211295979",
-    [64, 64, 64, 32, 64],
-  ],
-  "nikon-z-24-70f4s-tele-ref": [
-    "ab9c8205a728d127b2ec6bf4b38f868de47d255de7807c917d0ba35ec4b8ca24",
-    [32, 64, 64, 128, 128],
-  ],
-  "nikon-z-24-70f4s-tele-photopic": [
-    "e7c0aa4bf2ee5a2b0afc8ac68e8a6115e586e7adcb01a741e880c320dba248bf",
-    [32, 64, 64, 128, 128],
-  ],
-  "nikon-z-mc-105f28-ref": ["b5caeb649af604b677236805c0045528ed083c75a1164f65a9148a11a7bfbc54", [32, 32, 32, 128, 64]],
-  "nikon-z-mc-105f28-photopic": [
-    "98d1037760a2c357308bccbe8a4ca815d8c9cce422e54b913d74275645db123d",
-    [32, 32, 32, 128, 64],
-  ],
-  "nikon-z-135f18-plena-ref": [
-    "0403f9a540eed64c9b7aeed98d14bde823ac3dc2167b69b0ce5c8447d26227be",
+  "fujifilm-fujinon-gf-63mm-f28-r-wr-photopic": [
+    "b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f",
     [64, 64, 64, 64, 128],
   ],
+  "sigma-35mm-f14-dg-hsm-a-ref": [
+    "998482d4e947545c167134a7dabe3f522863dc7d7a70aac77c25a969b4b4cb5e",
+    [32, 64, 64, 128, 256],
+  ],
+  "sigma-35mm-f14-dg-hsm-a-photopic": [
+    "c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae",
+    [64, 64, 64, 128, 256],
+  ],
+  "nikkor-z50f12-ref": ["861a915ddd7dd32d774e7b798745bc1395913d8f13482022482c7d083e7acd22", [64, 128, 64, 128, 256]],
+  "nikkor-z50f12-photopic": ["25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2", [64, 64, 64, 64, 128]],
+  "sony-fe-20mm-f18-g-ref": [
+    "b67aae200c54706fe97387ca9c5db8e03eb6da1fc64ec823bc694939ccbe78c5",
+    [64, 64, 128, 128, 256],
+  ],
+  "sony-fe-20mm-f18-g-photopic": [
+    "9bf71fcc2c01fb1e7c25546d8b6a2758be33c6bba8fe4742ebcd3fbac72405d7",
+    [64, 64, 64, 64, 128],
+  ],
+  "sony-fe-400mm-f28-gm-oss-ref": [
+    "75e87a15390874d2073026d386c42123ec98635fe2a7cea25090bc53cdb7c7c5",
+    [64, 64, 64, 64, 128],
+  ],
+  "sony-fe-400mm-f28-gm-oss-photopic": [
+    "25a3d0697df2ed6fe2fd355a06ce5f7a89664142dadd6e7d5e049d3bbc636df7",
+    [64, 64, 64, 32, 64],
+  ],
+  "sigma-105mm-f28-dg-dn-macro-art-ref": [
+    "e3849910ab68459a2090f3b12b9b794afebe02db8c5b10670925ebc2360061c9",
+    [64, 64, 64, 64, 64],
+  ],
+  "sigma-105mm-f28-dg-dn-macro-art-photopic": [
+    "c5a507024e5ab43f94adcb83c67c948a9731a2af72fed96ac5515f6eb04f708e",
+    [64, 64, 64, 64, 64],
+  ],
+  "nikon-z-24-70f4s-wide-ref": [
+    "baf5883c8fe1fe3b3bc3ce54df29d33f7815ce0b36c19858ee520040d0906997",
+    [64, 64, 64, 64, 128],
+  ],
+  "nikon-z-24-70f4s-wide-photopic": [
+    "1bd5a8443c6b4b625eb1568bd6805873a1ccbc2caaedbba46e51ee5a5fb5d2dc",
+    [64, 64, 64, 64, 64],
+  ],
+  "nikon-z-24-70f4s-tele-ref": [
+    "8dd3c38f79512c8e7ca966ac09bc664a56558247e9905939c4eac322f2190b7a",
+    [64, 64, 64, 64, 128],
+  ],
+  "nikon-z-24-70f4s-tele-photopic": [
+    "7c55143a9f94c725e66c944a44bf00e5871532ed3d91bcde1e1cffa7caa0dc33",
+    [32, 64, 64, 64, 128],
+  ],
+  "nikon-z-mc-105f28-ref": ["70d5a589da4a75279b54dfadf45fbbcc39aa6339450f697551548258d7821bfb", [32, 64, 32, 64, 128]],
+  "nikon-z-mc-105f28-photopic": [
+    "e492101b147bcf0f0e156d83376aba617d1c24f20cfdcf0d82b48a03f8b4a92e",
+    [32, 32, 32, 64, 128],
+  ],
+  "nikon-z-135f18-plena-ref": [
+    "449063f9188b52288817615c6d255fa02cff9c9e52e44157614d5714a37258ab",
+    [64, 64, 64, 64, 64],
+  ],
   "nikon-z-135f18-plena-photopic": [
-    "d99ccec01961ff60514d1ae14ec6b29e59a96d0d11e3f02ea70dbd82169e30d3",
-    [64, 64, 32, 64, 128],
+    "9ac66541b918eea604fa81c70999f824029cc1d2d481851438f0d5d7e86d8224",
+    [64, 64, 64, 64, 64],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-ref": [
-    "de1fd91c6b96ca5484034ae48a27924000fb59f1e8f719f78e2ee193da29d561",
+    "2c3afcd18b34bc408c4aca84bae8c07426878b3bf2345520ef31a6d3f17632a8",
     [64, 64, 64, 64, 128],
   ],
   "sigma-45mm-f28-dg-dn-contemporary-photopic": [
-    "3a3ae023a4365a29b0c93a8c939aa2f8c31db5cc4786aa230701c72effd5aac4",
+    "6f62ee09c0c8b3a1cc345e3ed0e0e27aebea0ce5e96cdbee7664ffbab4914e73",
     [64, 64, 64, 64, 64],
   ],
 };
@@ -282,7 +284,7 @@ test(
       const [ofLv, ofReplay] = set.participants.map((participant) => participant.recorded);
       assert.ok(ofLv !== undefined);
       assert.deepEqual(ofReplay, ofLv, run.name);
-      for (const grid of ofLv.gridSize) assert.ok([32, 64, 128].includes(grid as number), `${run.name}: ${grid}`);
+      for (const grid of ofLv.gridSize) assert.ok([32, 64, 128, 256].includes(grid as number), `${run.name}: ${grid}`);
       for (const rays of ofLv.validRays) assert.ok((rays as number) >= 16, `${run.name}: ${rays}`);
       table.push(`${run.name} ${value.toExponential(2)} [${ofLv.gridSize.join(",")}]`);
 

@@ -1,6 +1,6 @@
 // The comparator of `rays.trace` for rung R2: where the same rays went in two engines. Positions and directions are
 // compared on the rays that are ok in both; which rays got through is compared on every ray neither engine failed.
-import type { SurfaceAperture } from "../contract/case.ts";
+import type { SurfaceAperture, SurfaceIR } from "../contract/case.ts";
 import type { JsonObject } from "../contract/json.ts";
 import { RAYS_TRACE, RAY_STATUS, RIM_BAND_MM } from "../contract/quantities/raysTrace.ts";
 import type { ComparatorOutcome, ComparisonContext, ComputedMetric, QuantityComparator } from "./comparator.ts";
@@ -35,48 +35,86 @@ function endOf(trace: DecodedTrace, ray: number): number {
   return trace.status[ray] === RAY_STATUS.ok ? Infinity : trace.endSurface[ray];
 }
 
-function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonContext): ComparatorOutcome {
-  const [a, b] = [decodeTrace(dataA), decodeTrace(dataB)];
+/**
+ * The surfaces two answers to a request about a case are traces through, in the order the rays visit them, or why
+ * they cannot be held to the case: the case is not at hand, or the answers are for another number of surfaces.
+ */
+export function tracedSurfaces(
+  a: DecodedTrace,
+  b: DecodedTrace,
+  context?: ComparisonContext,
+): readonly SurfaceIR[] | { readonly reason: string } {
   const different = differentRays(a, b);
-  if (different !== null) return { comparable: false, reason: different };
+  if (different !== null) return { reason: different };
   const system = context?.opticalCase?.system;
   const surfaces = system?.opticalPath?.map((step) => system.surfaces[step.surfaceIndex]) ?? system?.surfaces;
   if (surfaces === undefined) {
-    return { comparable: false, reason: "the case is not at hand: its clip radii say which rays lie in the rim band" };
+    return { reason: "the case is not at hand: its clip radii say which rays lie in the rim band" };
   }
   if (surfaces.length !== a.surfaces) {
-    const reason = `the answers are for ${a.surfaces} surfaces, and the case has ${surfaces.length}`;
-    return { comparable: false, reason };
+    return { reason: `the answers are for ${a.surfaces} surfaces, and the case has ${surfaces.length}` };
   }
+  return surfaces;
+}
+
+/**
+ * How R2 counts one ray of two answers (`maskMetrics`): `agree` where both ended at the same surface (or both are ok),
+ * `failed` where either engine failed it, which says nothing about the light and is in neither count, and otherwise
+ * `rimBand` or `mismatch`, by whether the hit of the first surface the two disagree at (`surface`: one engine stopped
+ * the ray there, and the other has a hit on it) lies in that surface's rim band (`RIM_BAND_MM`).
+ */
+export function maskRay(
+  a: DecodedTrace,
+  b: DecodedTrace,
+  surfaces: readonly SurfaceIR[],
+  ray: number,
+): { readonly kind: "agree" | "failed" | "mismatch" | "rimBand"; readonly surface: number } {
+  if (a.status[ray] === RAY_STATUS.failed || b.status[ray] === RAY_STATUS.failed)
+    return { kind: "failed", surface: -1 };
+  const [endA, endB] = [endOf(a, ray), endOf(b, ray)];
+  if (endA === endB) return { kind: "agree", surface: -1 };
+  const surface = Math.min(endA, endB);
+  let rim = false;
+  if (surface < surfaces.length) {
+    const passed = endA > endB ? a : b;
+    const at = (surface * a.rays + ray) * 3;
+    const r = Math.sqrt(passed.hits[at] * passed.hits[at] + passed.hits[at + 1] * passed.hits[at + 1]);
+    rim = inRimBand(surfaces[surface].aperture, r);
+  }
+  return { kind: rim ? "rimBand" : "mismatch", surface };
+}
+
+/**
+ * Which rays the two answers disagree about, as R2 counts them (`raysGeometryComparator`): `mask.mismatches` and
+ * `mask.rimBand`, each with the ray and the surface of its first ray in `where`. A ray either engine failed is in
+ * neither count (`maskRay`).
+ */
+export function maskMetrics(
+  a: DecodedTrace,
+  b: DecodedTrace,
+  surfaces: readonly SurfaceIR[],
+  place: Where,
+): readonly [mismatches: ComputedMetric, rimBand: ComputedMetric] {
+  const mismatches: Tally = { count: 0, ray: -1, surface: -1 };
+  const rimBand: Tally = { count: 0, ray: -1, surface: -1 };
+  for (let ray = 0; ray < a.rays; ray++) {
+    const { kind, surface } = maskRay(a, b, surfaces, ray);
+    if (kind === "agree" || kind === "failed") continue;
+    const tally = kind === "rimBand" ? rimBand : mismatches;
+    if (tally.count++ === 0) Object.assign(tally, { ray, surface });
+  }
+  return [countMetric("mask.mismatches", mismatches, place), countMetric("mask.rimBand", rimBand, place)];
+}
+
+function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonContext): ComparatorOutcome {
+  const [a, b] = [decodeTrace(dataA), decodeTrace(dataB)];
+  const surfaces = tracedSurfaces(a, b, context);
+  if ("reason" in surfaces) return { comparable: false, reason: surfaces.reason };
   const place = placeOf(context?.spec);
   const { rays } = a;
 
-  // Which rays got through. A ray either engine failed says nothing about the light, and is in neither count.
-  const mismatches: Tally = { count: 0, ray: -1, surface: -1 };
-  const rimBand: Tally = { count: 0, ray: -1, surface: -1 };
-  for (let ray = 0; ray < rays; ray++) {
-    if (a.status[ray] === RAY_STATUS.failed || b.status[ray] === RAY_STATUS.failed) continue;
-    const [endA, endB] = [endOf(a, ray), endOf(b, ray)];
-    if (endA === endB) continue;
-    // The first surface the two disagree at: one engine stopped the ray there, and the other has a hit on it.
-    const surface = Math.min(endA, endB);
-    let rim = false;
-    if (surface < surfaces.length) {
-      const passed = endA > endB ? a : b;
-      const at = (surface * rays + ray) * 3;
-      const r = Math.sqrt(passed.hits[at] * passed.hits[at] + passed.hits[at + 1] * passed.hits[at + 1]);
-      rim = inRimBand(surfaces[surface].aperture, r);
-    }
-    const tally = rim ? rimBand : mismatches;
-    if (tally.count++ === 0) Object.assign(tally, { ray, surface });
-  }
-
   const both = okInBoth(a, b);
-  const counts = [
-    countMetric("mask.mismatches", mismatches, place),
-    countMetric("mask.rimBand", rimBand, place),
-    { name: "rays.compared", value: both.length },
-  ];
+  const counts = [...maskMetrics(a, b, surfaces, place), { name: "rays.compared", value: both.length }];
   if (both.length === 0) {
     const unmeasured = ["hits.maxDistance", "direction.maxAbs", "landing.maxDistance"].map((name) => ({
       name,
@@ -121,7 +159,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
 }
 
 /** How many rays of an answer ended in each way: what a comparison lists beside its metrics, for each engine. */
-function recorded(data: JsonObject): { readonly [name: string]: readonly number[] } {
+export function rayEndings(data: JsonObject): { readonly [name: string]: readonly number[] } {
   const { status, unrecordedHits } = decodeTrace(data);
   const count = (value: number): number => status.reduce((total, each) => total + (each === value ? 1 : 0), 0);
   return {
@@ -175,5 +213,5 @@ export const raysGeometryComparator: QuantityComparator = Object.freeze({
     { name: "rays.compared", unit: "rays" },
   ]),
   compare,
-  recorded,
+  recorded: rayEndings,
 });

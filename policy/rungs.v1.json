@@ -1,7 +1,7 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 15,
+  "version": 24,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -123,6 +123,173 @@
         "chiefLanding.maxAbs": { "attention": 1e-7, "attentionSeveralLines": 1e-3, "unit": "mm" },
         "mtfOffAxis.maxAbs": { "attention": 0.01, "unit": "1" },
         "mtfOnAxis.maxAbs": { "attention": 0.005, "unit": "1" }
+      }
+    },
+    "r7a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "centroid.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "rmsRadius.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "transverseError.maxAbs": { "tolerance": 1e-8, "unit": "mm" }
+      }
+    },
+    "r7b": {
+      "quantity": "spot.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "fanError.maxAbs": { "attention": 9e-10, "unit": "mm" },
+        "spotCentroid.maxAbs": { "unit": "mm" },
+        "spotRmsRadius.maxAbs": { "unit": "mm" }
+      }
+    },
+    "r8a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "focus.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "focusRms.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "intercept.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" }
+      }
+    },
+    "r8b": {
+      "quantity": "axial.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "bestFocus.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "bestFocusRms.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "landing.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "lineFocus.maxAbs": { "unit": "mm" },
+        "longitudinalSa.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "marginalIntercept.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "nearAxisIntercept.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "paraxialFocalShift.maxAbs": { "unit": "mm" },
+        "profile.maxAbs": { "attention": 1e-10, "unit": "mm" },
+        "pupilRadius.relative": { "attention": 2e-10, "unit": "1" },
+        "relativeFocus.maxAbs": { "unit": "mm" }
+      }
+    },
+    "r9a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "distortion.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "exitPupil.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "landing.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "lateralColour.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" }
+      }
+    },
+    "r9b": {
+      "quantity": "chief.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "distortionPercent.maxAbs": { "unit": "percent" },
+        "entrancePupil.maxAbs": { "unit": "mm" },
+        "exitPupil.maxAbs": { "unit": "mm" },
+        "focalScale.relative": { "unit": "1" },
+        "idealHeight.maxAbs": { "unit": "mm" },
+        "lateralColour.maxAbs": { "unit": "mm" },
+        "paraxialEntrancePupil.maxAbs": { "unit": "mm" },
+        "paraxialExitPupil.maxAbs": { "unit": "mm" },
+        "realHeight.maxAbs": { "unit": "mm" }
+      }
+    },
+    "r10a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "landing.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "sagittalFocus.maxScaled": { "tolerance": 1e-8, "unit": "mm" },
+        "tangentialFocus.maxScaled": { "tolerance": 1e-8, "unit": "mm" }
+      }
+    },
+    "r10b": {
+      "quantity": "curvature.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "astigmatism.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "sagittalShift.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "tangentialShift.maxAbs": { "attention": 1e-5, "unit": "mm" }
+      }
+    },
+    "r11a": {
+      "quantity": "rays.trace",
+      "mode": "identical-rays",
+      "class": "gated",
+      "metrics": {
+        "illumination.maxAbs": { "tolerance": 1e-9, "unit": "1" },
+        "landing.maxAbs": { "tolerance": 1e-8, "unit": "mm" },
+        "mask.mismatches": { "tolerance": 0, "unit": "rays" },
+        "transmission.maxAbs": { "tolerance": 0, "unit": "1" }
+      }
+    },
+    "r11b": {
+      "quantity": "vignetting.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "geometricTransmission.maxAbs": { "attention": 0.01, "unit": "1" }
+      }
+    },
+    "r12b": {
+      "quantity": "summary.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "entrancePupilDiameter.maxAbs": { "attention": 2e-12, "unit": "mm" },
+        "focalLength.maxAbs": { "unit": "mm" },
+        "imageSpaceFNumber.maxAbs": { "attention": 2e-13, "unit": "1" },
+        "paraxialWorkingFNumber.maxAbs": { "attention": 2e-13, "unit": "1" },
+        "rearFocus.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "stopDiameter.maxAbs": { "unit": "mm" },
+        "totalTrack.maxAbs": { "unit": "mm" },
+        "workingFNumber.maxAbs": { "attention": 7e-8, "unit": "1" }
+      }
+    },
+    "r13b": {
+      "quantity": "seidel.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "ASTI.maxAbs": { "unit": "mm" },
+        "CLA.maxAbs": { "unit": "mm" },
+        "COMA.maxAbs": { "unit": "mm" },
+        "CTR.maxAbs": { "unit": "mm" },
+        "DIST.maxAbs": { "unit": "mm" },
+        "FCUR.maxAbs": { "unit": "mm" },
+        "SPHA.maxAbs": { "unit": "mm" },
+        "invariant.maxAbs": { "attention": 3e-14, "unit": "mm" },
+        "surfaces.maxAbs": { "unit": "mm" },
+        "total.maxScaled": { "attention": 8e-15, "unit": "1" }
+      }
+    },
+    "r14b": {
+      "quantity": "zernike.native",
+      "mode": "independent-method",
+      "class": "recorded",
+      "metrics": {
+        "chiefLanding.maxAbs": { "attention": 1e-9, "unit": "mm" },
+        "coefficients.maxAbs": { "attention": 4e-11, "unit": "waves" },
+        "fitCondition.max": { "attention": 1000000, "unit": "1" },
+        "fitResidualRms.maxAbs": { "attention": 7e-16, "unit": "waves" },
+        "pvToChief.maxAbs": { "unit": "waves" },
+        "rmsToChief.maxAbs": { "attention": 2e-16, "unit": "waves" }
       }
     }
   }

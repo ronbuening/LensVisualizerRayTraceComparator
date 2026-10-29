@@ -10,6 +10,12 @@ import type { JsonObject } from "../../contract/json.ts";
 import type { ProtocolHandler } from "../../contract/protocol.ts";
 import type { MtfNativeSpec } from "../../contract/quantities/mtfNative.ts";
 import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
+import type { SpotNativeSpec } from "../../contract/quantities/spotNative.ts";
+import type { AxialNativeSpec } from "../../contract/quantities/axialNative.ts";
+import type { ChiefNativeSpec } from "../../contract/quantities/chiefNative.ts";
+import type { CurvatureNativeSpec } from "../../contract/quantities/curvatureNative.ts";
+import type { VignettingNativeSpec } from "../../contract/quantities/vignettingNative.ts";
+import type { SummaryNativeSpec } from "../../contract/quantities/summaryNative.ts";
 import { DEFAULT_SAG_FRACTIONS } from "../../contract/quantities/systemDescribe.ts";
 import type { SystemDescribeSpec } from "../../contract/quantities/systemDescribe.ts";
 import type { QuantityRequest } from "../../contract/request.ts";
@@ -22,6 +28,12 @@ import type { QuantityModule } from "../../quantities/module.ts";
 import { mtfNativeQuantity } from "../../quantities/mtfNative.ts";
 import { paraxialFirstOrderQuantity } from "../../quantities/paraxialFirstOrder.ts";
 import { raysTraceQuantity } from "../../quantities/raysTrace.ts";
+import { spotNativeQuantity } from "../../quantities/spotNative.ts";
+import { axialNativeQuantity } from "../../quantities/axialNative.ts";
+import { chiefNativeQuantity } from "../../quantities/chiefNative.ts";
+import { curvatureNativeQuantity } from "../../quantities/curvatureNative.ts";
+import { vignettingNativeQuantity } from "../../quantities/vignettingNative.ts";
+import { summaryNativeQuantity } from "../../quantities/summaryNative.ts";
 import { systemDescribeQuantity } from "../../quantities/systemDescribe.ts";
 import { EngineUnavailableError } from "../adapter.ts";
 import { adapterRevision } from "../adapterRevision.ts";
@@ -37,6 +49,12 @@ import { answerLvFirstOrder } from "./firstOrder.ts";
 import { createLensBuilder } from "./lensBuilder.ts";
 import { answerLvMtf } from "./mtf.ts";
 import { answerLvRays } from "./rays.ts";
+import { answerLvSpot } from "./spot.ts";
+import { answerLvAxial } from "./axial.ts";
+import { answerLvChief } from "./chief.ts";
+import { answerLvCurvature } from "./curvature.ts";
+import { answerLvVignetting } from "./vignetting.ts";
+import { answerLvSummary } from "./summary.ts";
 import type { LvApi } from "./types.ts";
 
 /** The id of the engine that is LensVisualizer. */
@@ -108,6 +126,36 @@ const ANSWERED: readonly LvAnswered[] = [
     method: "product-mtf",
     answer: (api, model, spec, engineOptions) => answerLvMtf(api, model, spec as MtfNativeSpec, engineOptions),
   },
+  {
+    quantity: spotNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvSpot(api, model, spec as SpotNativeSpec),
+  },
+  {
+    quantity: axialNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvAxial(api, model, spec as AxialNativeSpec),
+  },
+  {
+    quantity: chiefNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvChief(api, model, spec as ChiefNativeSpec),
+  },
+  {
+    quantity: curvatureNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvCurvature(api, model, spec as CurvatureNativeSpec),
+  },
+  {
+    quantity: vignettingNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvVignetting(api, model, spec as VignettingNativeSpec),
+  },
+  {
+    quantity: summaryNativeQuantity,
+    method: "analysis-tabs",
+    answer: (api, model, spec) => answerLvSummary(api, model, spec as SummaryNativeSpec),
+  },
 ];
 
 /**
@@ -173,7 +221,12 @@ export function lvBackedDescriptor(
  * - `run`, for a case that came from a LensVisualizer lens: the state is rebuilt and held to the case
  *   (`rebuildCase`), and the quantity answered from it: `system.describe` by `describeLvSystem`,
  *   `paraxial.first-order` by `answerLvFirstOrder`, `rays.trace` by `answerLvRays`, and `mtf.native`, LensVisualizer's
- *   product MTF, by `answerLvMtf`, which alone reads an option of the request. A case that is no longer what
+ *   product MTF, by `answerLvMtf`, which alone reads an option of the request, `spot.native`, its coma and
+ *   bokeh tabs, by `answerLvSpot`, `axial.native`, its spherical-aberration and axial-colour sections, by
+ *   `answerLvAxial`, `chief.native`, its distortion, pupils and lateral-colour tabs, by `answerLvChief`,
+ *   `curvature.native`, its field-curve and astigmatism sections, by `answerLvCurvature`, `vignetting.native`, its
+ *   vignetting tab, by `answerLvVignetting`, and `summary.native`, its summary tab and aperture control, by
+ *   `answerLvSummary`. A case that is no longer what
  *   LensVisualizer gives is a result of status "error" with the code `stale-case`, whose message names what
  *   changed.
  * - `run`, for a case from any other source: a result of status "unsupported" with one item of code `case-source`

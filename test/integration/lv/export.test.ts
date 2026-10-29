@@ -24,7 +24,7 @@ import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { createLvCaseSource, createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { CENSUS_FILES, renderCensusMarkdown } from "../../../src/engines/lv/census.ts";
 import type { ExportCensus } from "../../../src/engines/lv/census.ts";
-import { apertureGeometry } from "../../../src/engines/lv/exportAperture.ts";
+import { apertureGeometry, lvClearRadius } from "../../../src/engines/lv/exportAperture.ts";
 import { EXPORT_PROBLEM_CODES, LV_GATE_PROBLEM_CODES } from "../../../src/engines/lv/exportProblems.ts";
 import type { LvMtfOptions, LvPreparedState, LvRuntimeLens } from "../../../src/engines/lv/types.ts";
 import { suitePath } from "../../suites/support.ts";
@@ -257,10 +257,10 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
   assert.equal(system.stopIndex, 17);
   assert.equal(system.lastLensSurfaceIndex, 32);
   assert.equal(system.designImageZ, 163.306);
-  // LensVisualizer solves the wide-open stop radius with a traced ray, so it has the radius to its intersection
-  // tolerance and no further: 20.42354482258628 at d36f44b3 to 33ebdb30 (tolerance 1e-9 mm), 20.423544822487465 at
-  // 31c34396 (1e-12 mm). The canary is of the lens, to the looser of the two.
-  assert.ok(Math.abs(conditions.stopSemiDiameter - 20.42354482258628) < 1e-9, String(conditions.stopSemiDiameter));
+  // LensVisualizer solved the wide-open stop radius with a traced ray (20.42354482258628 at d36f44b3 to 33ebdb30,
+  // 20.423544822487465 at 31c34396); since #933 it is the stop rule's, the stop whose paraxial entrance pupil is
+  // EFL / N: 19.699913956875253 at 607ff23ae. The canary is of the lens, to 1e-9 mm.
+  assert.ok(Math.abs(conditions.stopSemiDiameter - 19.699913956875253) < 1e-9, String(conditions.stopSemiDiameter));
   // The rim of its rear plate is one LensVisualizer generates: from 31c34396 on the plate does not clip.
   const generated = state.surfaces.some((surface) => surface.clips === false);
   assert.deepEqual(opticalCase.features, [
@@ -289,7 +289,8 @@ test("nikkor-z50f12 at its default state is LensVisualizer's prepared state, mem
     assert.equal(surface.label, prepared.label, at);
     assert.ok(Object.is(surface.z, state.z[index]), at);
     assert.ok(Object.is(surface.thickness, prepared.d), at);
-    assert.equal(surface.aperture.nominalSemiDiameter, prepared.sd, at);
+    // The semi-diameter LensVisualizer traces the surface with: its sd, or a flat rim cut's radius (#928, #932).
+    assert.equal(surface.aperture.nominalSemiDiameter, lvClearRadius(prepared), at);
     assert.equal(surface.aperture.innerSemiDiameter, 0, at);
     // A surface has no clip radius exactly where LensVisualizer's state says its rim does not clip.
     assert.equal(surface.aperture.semiDiameter === null, prepared.clips === false, at);
@@ -487,8 +488,16 @@ test("the stop-down rule reproduces the hook's formula, at the zoom position ask
     for (const value of fNumbers) {
       const stopped = await exported(binding, key, { state: { zoomT }, aperture: { kind: "f-number", value } });
       const at = `${key} at zoom ${zoomT}, f/${value}`;
-      // useLensComputation.ts: currentPhysStopSD = (wideOpenStopSD * currentFOPEN) / fNumber.
-      assert.ok(Object.is(stopped.conditions.stopSemiDiameter, (wideOpen * widest) / value), at);
+      // useLensComputation.ts (LV #933): currentPhysStopSD = stopSemiDiameterForFNumber(fNumber, zoomT, L), the one
+      // stop rule, restated from apertureStop.ts's stopForFNumber and fNumberRuleStop: wide open at or below the
+      // widest f-number, else the stop whose paraxial entrance pupil is F / N, capped at the wide-open stop.
+      const { referenceFocalLengthMm: F, stopHeightRatio } = binding.api.stopRuleGeometry(runtime, zoomT);
+      const rule = !(value > widest) ? wideOpen : Math.min(wideOpen, Math.abs((F / (2 * value)) * stopHeightRatio));
+      assert.ok(Object.is(stopped.conditions.stopSemiDiameter, rule), at);
+      assert.ok(
+        Object.is(stopped.conditions.stopSemiDiameter, binding.api.stopSemiDiameterForFNumber(value, zoomT, runtime)),
+        at,
+      );
       const stopSurface = stopped.system.surfaces[stopped.system.stopIndex];
       assert.equal(stopSurface.aperture.nominalSemiDiameter, stopped.conditions.stopSemiDiameter, at);
       assert.ok(stopped.conditions.stopSemiDiameter < wideOpen || value === widest, at);
@@ -519,6 +528,7 @@ test(
       return view.getFloat64(0);
     };
     const unclipped: string[] = [];
+    const rimCuts: string[] = [];
     for (const key of BENCHMARK_KEYS) {
       const { state } = await prepared(binding, key);
       const { system, conditions } = await exported(binding, key, { aperture: { kind: "f-number", value: 8 } });
@@ -526,7 +536,9 @@ test(
         const at = `${key}, surface ${index}`;
         const { semiDiameter: limit, nominalSemiDiameter: nominal } = surface.aperture;
         const stop = index === system.stopIndex ? conditions.stopSemiDiameter : undefined;
-        assert.equal(nominal, stop ?? state.surfaces[index].sd, at);
+        // The semi-diameter LensVisualizer traces with: the stop's, a flat rim cut's radius (#928, #932), or the sd.
+        assert.equal(nominal, stop ?? lvClearRadius(state.surfaces[index]), at);
+        if (stop === undefined && state.surfaces[index].rimCut) rimCuts.push(`${key} ${surface.label}`);
         const evaluate = (radius: number) =>
           binding.api.evaluateAperture(apertureGeometry(state), state.surfaces[index], radius, stop);
         if (limit === null) {
@@ -550,6 +562,7 @@ test(
     // The surfaces without a clip radius come in pairs, the two of a plate, and are those the state marks.
     assert.equal(unclipped.length % 2, 0);
     t.diagnostic(`surfaces that do not clip: ${unclipped.length === 0 ? "none" : unclipped.join(", ")}`);
+    t.diagnostic(`surfaces clipped at a rim cut: ${rimCuts.length === 0 ? "none" : rimCuts.join(", ")}`);
   },
 );
 

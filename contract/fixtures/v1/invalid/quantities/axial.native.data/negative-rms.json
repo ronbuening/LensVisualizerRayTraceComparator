@@ -1,0 +1,40 @@
+{
+  "kind": "spherical",
+  "pupilRadiusMm": 12.5,
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "status": "ok",
+      "paraxialFocusZ": null,
+      "figures": {
+        "landingMm": 0,
+        "marginalFraction": 0.75,
+        "marginalInterceptZ": 99.875,
+        "nearAxisInterceptZ": 100.0625,
+        "bestFocusZ": 99.9375,
+        "bestFocusRmsMm": -0.5,
+        "profileMm": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              3
+            ],
+            "data": "AAAAAAAAAAAAAAAAAAD4fwAAAAAAAJC/",
+            "sha256": "5d5c855c39b79a720e2c438b3a47c62965e5d3a878c52bf18a479dd2a90b215a"
+          }
+        }
+      },
+      "rays": null,
+      "sampling": {
+        "raysLaunched": 10,
+        "raysArrived": 8
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-spherical",
+    "params": {}
+  },
+  "notes": []
+}

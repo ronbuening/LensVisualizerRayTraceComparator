@@ -22,7 +22,6 @@ import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLvEngineOn } from "../../../src/engines/lv/engine.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
 import {
-  LV_DEFAULT_GRID_CAP,
   LV_GRID_CAPS,
   LV_MTF_SPECTRA,
   LV_MTF_UNSUPPORTED,
@@ -165,7 +164,8 @@ test("without a profile the request is the spec's, with the stop of the case and
       frequenciesPerMm: [10, 30],
     },
   ]);
-  assert.equal(LV_DEFAULT_GRID_CAP, 128);
+  // The cap of a request that states none is LensVisualizer's own MTF_DEFAULT_GRID_CAP, read through the binding.
+  assert.equal(binding.api.mtfDefaultGridCap, 128, "the fake's default cap, which is not LensVisualizer's 256");
 
   const { data } = answer;
   assert.deepEqual(resultDataProblems(mtfNativeQuantity, data), []);
@@ -193,6 +193,8 @@ test("without a profile the request is the spec's, with the stop of the case and
       validRays: 800,
       blockedRays: 224,
       failedRays: 0,
+      unaimedRays: 0,
+      unresolvedInBeamRays: 0,
       unknownFluxFraction: 0,
       maxDelta: 0.00390625,
       convergedThroughLpMm: 30,
@@ -212,8 +214,8 @@ test("without a profile the request is the spec's, with the stop of the case and
     },
   });
   assert.deepEqual(data.focus, { mode: "design", appliedShiftMm: 0 });
-  // The fake "traces" the f-number of its image distance over the seed; its iris is surface 2, and limits the beam.
-  assert.deepEqual(data.aperture, { tracedFNumber: 52.5 / 15.625, limitingSurfaceIndex: 2 });
+  // LensVisualizer's MTF traces no f-number of its own since #936, and the fake's axial marginal ray is not vignetted.
+  assert.deepEqual(data.aperture, {});
   assert.deepEqual(data.lines, [{ wavelengthNm: 587.5618, weight: 1 }]);
   assert.deepEqual(data.notes, []);
   assert.deepEqual(answer.counts, { fields: 3, frequencies: 2, unavailableFields: 0 });
@@ -559,7 +561,7 @@ test("converged is ok, unconverged keeps its curves, and an unavailable field is
       text.replace(
         "focusTravel: 5,",
         "focusTravel: 5,\n  field: { referenceHeightMm: 12.5, unsolvedFraction: 0.4 },\n" +
-          '  mtf: { unconvergedFraction: 0.2, clippedChiefFraction: 0.6, limitingSurfaceLabel: "2" },',
+          '  mtf: { unconvergedFraction: 0.2, clippedChiefFraction: 0.6, axialVignettingLabel: "2" },',
       ),
   });
   const binding = await bind(t, lv);
@@ -602,6 +604,8 @@ test("converged is ok, unconverged keeps its curves, and an unavailable field is
     validRays: 800,
     blockedRays: 224,
     failedRays: 0,
+    unaimedRays: 0,
+    unresolvedInBeamRays: 0,
     unknownFluxFraction: 0,
     maxDelta: 0.03125,
   });
@@ -610,6 +614,8 @@ test("converged is ok, unconverged keeps its curves, and an unavailable field is
     validRays: 0,
     blockedRays: 0,
     failedRays: 0,
+    unaimedRays: 0,
+    unresolvedInBeamRays: 0,
     unknownFluxFraction: 0,
   });
   assert.deepEqual(data.notes, [
@@ -619,24 +625,24 @@ test("converged is ok, unconverged keeps its curves, and an unavailable field is
     "field 1: Outside the modeled field: beyond 10.0 mm.",
   ]);
   assert.deepEqual([data.method.params.referenceHeightMm, data.method.params.fieldBasis], [12.5, "format-corner"]);
-  // The surface labelled 2 is the second of the case.
-  assert.equal(data.aperture.limitingSurfaceIndex, 1);
+  // The surface labelled 2, which vignettes the axial marginal ray after the stop, is the second of the case.
+  assert.deepEqual(data.aperture, { axialVignettingSurfaceIndex: 1, axialVignettingBeforeStop: 0 });
   assert.equal(opticalCase.system.surfaces[1].label, "2");
   assert.equal(result.diagnostics.counts.unavailableFields, 2);
 });
 
-test("a limiting surface whose label two surfaces share is named in a note, and by no index", async (t) => {
+test("a vignetting surface whose label two surfaces share is named in a note, and by no index", async (t) => {
   const lv = variantOf(freshLv(t), "twins", {
     [SINGLET_FILE]: (text) =>
       text
         .replace('{ label: "1", R: 50', '{ label: "2", R: 50')
-        .replace("focusTravel: 5,", 'focusTravel: 5,\n  mtf: { limitingSurfaceLabel: "2" },'),
+        .replace("focusTravel: 5,", 'focusTravel: 5,\n  mtf: { axialVignettingLabel: "2" },'),
   });
   const binding = await bind(t, lv);
   const { opticalCase } = await modelOf(binding, SINGLET);
   const data = dataOf(await ask(engineOn(t, binding), opticalCase, SPEC));
-  assert.deepEqual(Object.keys(data.aperture), ["tracedFNumber"]);
-  assert.deepEqual(data.notes, ["the axial beam is limited by a surface labelled 2, which 2 surfaces are"]);
+  assert.deepEqual(data.aperture, { axialVignettingBeforeStop: 0 });
+  assert.deepEqual(data.notes, ["the axial marginal ray is vignetted at a surface labelled 2, which 2 are"]);
 });
 
 // ── The profile ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -849,10 +855,21 @@ test("a lens the tab offers no f/8 comparison for is unsupported, with the tab's
     await reasonOf("short", (text) => text.replace('"fopen": 4,', '"fopen": 4,\n  "maxFstop": 5.6,')),
     "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with",
   );
+  // A lens that is f/8 or slower wide open has the stop rule's f/8 stop for its wide-open one (LV #933): the
+  // comparison has no case of its own, and its case is the wide-open one, which the engine answers as such.
+  const binding = await bind(
+    t,
+    variantOf(lv, "slow", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 11,') }),
+  );
+  const slow = await tabOf(binding, ZOOM, "f8-comparison", 1);
+  const wideOpen = await tabOf(binding, ZOOM, "wide-open", 1);
   assert.equal(
-    await reasonOf("slow", (text) => text.replace('"fopen": 4,', '"fopen": 11,')),
+    slow.unavailable,
     "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/8 only a lens that is faster than f/7.95",
   );
+  assert.equal(slow.opticalCase.id, wideOpen.opticalCase.id);
+  const data = dataOf(await ask(engineOn(t, binding), slow.opticalCase, slow.spec));
+  assert.equal(data.method.params.view, "wide-open");
 });
 
 // ── The resolver ─────────────────────────────────────────────────────────────────────────────────────────────────

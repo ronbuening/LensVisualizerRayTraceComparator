@@ -760,7 +760,10 @@ test("bin/verify-real.mjs refuses, before any check, a machine where LensVisuali
   };
   const child = spawnSync(process.execPath, [VERIFY_BIN], { cwd: REPO_ROOT, env, encoding: "utf8" });
   assert.equal(child.status, EXIT_USAGE, child.stderr + child.stdout);
-  assert.match(child.stdout, /^ {2}benchmark rays {2}rungs r0,r1,r2,r3,r4 {2}--jobs \d+ \(2\.5 GiB a job\)$/m);
+  assert.match(
+    child.stdout,
+    /^ {2}benchmark rays {2}rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a,r11a {2}--jobs \d+ \(2\.5 GiB a job\)$/m,
+  );
   assert.match(child.stderr, /^verify:real: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
   assert.match(child.stderr, /^verify:real: refused: optiland's interpreter \/nonexistent\/python does not run$/m);
   assert.doesNotMatch(child.stdout, /checking/);

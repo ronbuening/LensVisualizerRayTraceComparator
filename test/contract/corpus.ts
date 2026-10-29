@@ -23,6 +23,30 @@ import type { Policy } from "../../src/contract/policy.ts";
 import type { ProtocolRequest, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
 import { WAVEFRONT_NATIVE } from "../../src/contract/quantities/wavefrontNative.ts";
+import { SPOT_NATIVE } from "../../src/contract/quantities/spotNative.ts";
+import { AXIAL_NATIVE } from "../../src/contract/quantities/axialNative.ts";
+import type { AxialNativeData, AxialNativeField, AxialNativeSpec } from "../../src/contract/quantities/axialNative.ts";
+import { CHIEF_NATIVE } from "../../src/contract/quantities/chiefNative.ts";
+import type { ChiefNativeData, ChiefNativeField, ChiefNativeSpec } from "../../src/contract/quantities/chiefNative.ts";
+import { CURVATURE_NATIVE } from "../../src/contract/quantities/curvatureNative.ts";
+import type {
+  CurvatureNativeData,
+  CurvatureNativeField,
+  CurvatureNativeSpec,
+} from "../../src/contract/quantities/curvatureNative.ts";
+import { VIGNETTING_NATIVE } from "../../src/contract/quantities/vignettingNative.ts";
+import { SUMMARY_NATIVE } from "../../src/contract/quantities/summaryNative.ts";
+import type { SummaryNativeData, SummaryNativeSpec } from "../../src/contract/quantities/summaryNative.ts";
+import { SEIDEL_NATIVE } from "../../src/contract/quantities/seidelNative.ts";
+import type { SeidelNativeData, SeidelNativeSpec } from "../../src/contract/quantities/seidelNative.ts";
+import { ZERNIKE_NATIVE } from "../../src/contract/quantities/zernikeNative.ts";
+import type { ZernikeNativeData, ZernikeNativeSpec } from "../../src/contract/quantities/zernikeNative.ts";
+import type {
+  VignettingNativeData,
+  VignettingNativeField,
+  VignettingNativeSpec,
+} from "../../src/contract/quantities/vignettingNative.ts";
+import type { SpotNativeData, SpotNativeSpec } from "../../src/contract/quantities/spotNative.ts";
 import type { WavefrontNativeData, WavefrontNativeSpec } from "../../src/contract/quantities/wavefrontNative.ts";
 import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
 import { PARAXIAL_FIRST_ORDER } from "../../src/contract/quantities/paraxialFirstOrder.ts";
@@ -548,6 +572,627 @@ export const WAVEFRONT_DATA: WavefrontNativeData = {
     },
   ],
   method: { name: "synthetic-wavefront", params: {} },
+  notes: [],
+};
+
+// ── spot.native ──────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own spot and ray fan. The numbers describe no lens: every value is a dyadic fraction.
+
+/** A spot at two fractions of the half field, filled by a centre and two rings, each ray counted for its area. */
+export const SPOT_SPEC_RINGS: SpotNativeSpec = {
+  line: 0,
+  fields: { kind: "half-field-fractions", values: [0, 0.5] },
+  pupil: { kind: "rings", rings: [1, 6, 12], weighting: "area" },
+};
+
+/** A tangential fan of five samples at one field angle. */
+export const SPOT_SPEC_FAN: SpotNativeSpec = {
+  line: 0,
+  fields: { kind: "angles-deg", values: [12.5] },
+  pupil: { kind: "fan", axis: "tangential", samples: 5 },
+};
+
+/** An answer to `SPOT_SPEC_RINGS`: the axis has a spot, the half field none, and says why. */
+export const SPOT_DATA_RINGS: SpotNativeData = {
+  pattern: "rings",
+  fields: [
+    {
+      field: 0,
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      spot: { centroidMm: [0, -0.0009765625], rmsRadiusMm: 0.015625 },
+      fan: null,
+      sampling: { raysLaunched: 19, raysLanded: 19 },
+    },
+    {
+      field: 0.5,
+      fieldAngleDeg: 10.5,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "chief-ray-clipped",
+      spot: null,
+      fan: null,
+      sampling: { raysLaunched: 19, raysLanded: 0 },
+    },
+  ],
+  method: { name: "synthetic-spot", params: {} },
+  lines: [{ wavelengthNm: 587.5, weight: 1 }],
+  notes: [],
+};
+
+/** An answer to `SPOT_SPEC_FAN`: one sample of the five did not land. */
+export const SPOT_DATA_FAN: SpotNativeData = {
+  pattern: "fan",
+  fields: [
+    {
+      field: 12.5,
+      fieldAngleDeg: 12.5,
+      imageHeightMm: 8.75,
+      status: "ok",
+      spot: null,
+      fan: {
+        pupil: encodeNdArray(Float64Array.of(-1, -0.5, 0, 0.5, 1)),
+        errorMm: encodeNdArray(Float64Array.of(NaN, -0.0078125, 0, 0.001953125, 0.0234375)),
+      },
+      sampling: { raysLaunched: 5, raysLanded: 4 },
+    },
+  ],
+  method: { name: "synthetic-fan", params: { samples: 5 } },
+  lines: [{ wavelengthNm: 546.07, weight: 1 }],
+  notes: ["one sample is stopped by an aperture"],
+};
+
+// ── axial.native ─────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own axial figures, and of the rays an engine states instead. The numbers describe no
+// lens: every value is a dyadic fraction.
+
+/** Spherical aberration at the reference line: a near-axis zone, two marginal candidates, a profile of three. */
+export const AXIAL_SPEC_SPHERICAL: AxialNativeSpec = {
+  kind: "spherical",
+  lines: [0],
+  nearAxis: 0.125,
+  marginal: [0.875, 0.75],
+  profile: [0.125, 0.5, 0.875],
+};
+
+/** Axial colour at three lines, the first the reference, with two candidates of the marginal ray. */
+export const AXIAL_SPEC_COLOUR: AxialNativeSpec = { kind: "colour", lines: [0, 1, 2], marginal: [0.875, 0.75] };
+
+/** An answer to `AXIAL_SPEC_SPHERICAL` by an engine that presents its figures: the profile's middle zone is lost. */
+export const AXIAL_DATA_SPHERICAL: AxialNativeData = {
+  kind: "spherical",
+  pupilRadiusMm: 12.5,
+  fields: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      paraxialFocusZ: null,
+      figures: {
+        landingMm: 0,
+        marginalFraction: 0.75,
+        marginalInterceptZ: 99.875,
+        nearAxisInterceptZ: 100.0625,
+        bestFocusZ: 99.9375,
+        bestFocusRmsMm: 0.0078125,
+        profileMm: encodeNdArray(Float64Array.of(0, NaN, -0.015625)),
+      },
+      rays: null,
+      sampling: { raysLaunched: 10, raysArrived: 8 },
+    },
+  ],
+  method: { name: "synthetic-spherical", params: {} },
+  notes: [],
+};
+
+/** An answer to `AXIAL_SPEC_COLOUR` by an engine that states its rays: two lines traced, the last unavailable. */
+export const AXIAL_DATA_COLOUR: AxialNativeData = {
+  kind: "colour",
+  pupilRadiusMm: 12.5,
+  fields: [0, 1]
+    .map((line): AxialNativeField => ({
+      line,
+      wavelengthNm: [587.5, 656.25][line],
+      status: "ok",
+      paraxialFocusZ: [100, 100.25][line],
+      figures: null,
+      rays: {
+        fractions: encodeNdArray(Float64Array.of(0.875, 0.75)),
+        arrived: encodeNdArray(Uint8Array.of(0, 1)),
+        exitPoint: encodeNdArray(Float64Array.of(NaN, NaN, NaN, 0, 8.25, 40), [2, 3]),
+        exitDirection: encodeNdArray(Float64Array.of(NaN, NaN, NaN, 0, -0.1875, 0.96875), [2, 3]),
+      },
+      sampling: { raysLaunched: 2, raysArrived: 1 },
+    }))
+    .concat([
+      {
+        line: 2,
+        wavelengthNm: 486.125,
+        status: "unavailable",
+        reason: "build-failed",
+        paraxialFocusZ: null,
+        figures: null,
+        rays: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-rays", params: { aiming: "paraxial" } },
+  notes: ["the outer candidate is stopped by an aperture"],
+};
+
+// ── chief.native ─────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own chief-ray figures across a field, and of the chief rays an engine states
+// instead. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Distortion at the reference line, at three fields of a half field of 20 degrees. */
+export const CHIEF_SPEC_DISTORTION: ChiefNativeSpec = {
+  kind: "distortion",
+  lines: [0],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [5, 10, 20],
+};
+
+/** Lateral colour at two lines, the first the reference, at the axis and two fields. */
+export const CHIEF_SPEC_LATERAL: ChiefNativeSpec = {
+  kind: "lateral-colour",
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/** Pupils at the reference line, at two fields. */
+export const CHIEF_SPEC_PUPILS: ChiefNativeSpec = {
+  kind: "pupils",
+  lines: [0],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [10, 20],
+};
+
+const NO_CHIEF_FIGURES = {
+  realHeightMm: null,
+  idealHeightMm: null,
+  percent: null,
+  entrancePupilZ: null,
+  exitPupilZ: null,
+};
+const NO_CHIEF_REFERENCE = {
+  focalScaleMm: null,
+  probeAngleDeg: null,
+  paraxialEntrancePupilZ: null,
+  paraxialExitPupilZ: null,
+};
+
+/** An answer to `CHIEF_SPEC_DISTORTION` by an engine that presents its figures: the edge is unavailable. */
+export const CHIEF_DATA_DISTORTION: ChiefNativeData = {
+  kind: "distortion",
+  fields: [
+    [5, -4.375, -4.4375, -1.40625],
+    [10, -8.8125, -8.875, -0.703125],
+  ]
+    .map(([fieldAngleDeg, real, ideal, percent]): ChiefNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: real,
+      figures: { ...NO_CHIEF_FIGURES, realHeightMm: real, idealHeightMm: ideal, percent },
+      chiefRay: null,
+      sampling: { inversionResidualMm: 0.0000152587890625 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 20,
+        status: "unavailable",
+        reason: "no-chief-landing",
+        chiefLandingMm: null,
+        figures: null,
+        chiefRay: null,
+        sampling: {},
+      },
+    ]),
+  reference: { ...NO_CHIEF_REFERENCE, focalScaleMm: 50.25, probeAngleDeg: 0.125 },
+  method: { name: "synthetic-distortion", params: { aiming: "paraxial" } },
+  notes: [],
+};
+
+/** An answer to `CHIEF_SPEC_PUPILS` by an engine that states its chief rays and its paraxial pupils. */
+export const CHIEF_DATA_PUPILS: ChiefNativeData = {
+  kind: "pupils",
+  fields: [10, 20].map((fieldAngleDeg) => ({
+    line: 0,
+    wavelengthNm: 587.5,
+    fieldAngleDeg,
+    status: "ok" as const,
+    chiefLandingMm: -fieldAngleDeg / 2,
+    figures: null,
+    chiefRay: {
+      entryPoint: [0, 3.25, 0.125],
+      entryDirection: [0, -0.1875, 0.96875],
+      exitPoint: [0, -4.5, 60],
+      exitDirection: [0, -0.125, 0.9921875],
+    },
+    sampling: {},
+  })),
+  reference: { ...NO_CHIEF_REFERENCE, paraxialEntrancePupilZ: 18.5, paraxialExitPupilZ: 21.75 },
+  method: { name: "synthetic-chief-rays", params: { aiming: "robust" } },
+  notes: [],
+};
+
+/** An answer to `CHIEF_SPEC_LATERAL` by an engine whose second line is no line it traces. */
+export const CHIEF_DATA_LATERAL: ChiefNativeData = {
+  kind: "lateral-colour",
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): ChiefNativeField =>
+      line === 0
+        ? {
+            line,
+            wavelengthNm: 587.5,
+            fieldAngleDeg,
+            status: "ok" as const,
+            chiefLandingMm: -fieldAngleDeg / 2,
+            figures: null,
+            chiefRay: null,
+            sampling: { indexMaxDelta: 0 },
+          }
+        : {
+            line,
+            wavelengthNm: 656.25,
+            fieldAngleDeg,
+            status: "unavailable" as const,
+            reason: "no-channel-at-line",
+            chiefLandingMm: null,
+            figures: null,
+            chiefRay: null,
+            sampling: {},
+          },
+    ),
+  ),
+  reference: NO_CHIEF_REFERENCE,
+  method: { name: "synthetic-chief-rays", params: {} },
+  notes: [],
+};
+
+// ── curvature.native ─────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own field curves. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Field curves at the reference line, at the axis and three fields of a half field of 22.5 degrees. */
+export const CURVATURE_SPEC_ONE_LINE: CurvatureNativeSpec = {
+  lines: [0],
+  maxFieldDeg: 22.5,
+  fieldAnglesDeg: [0, 5.625, 11.25, 22.5],
+};
+
+/** Field curves at two lines, at the axis and two fields. */
+export const CURVATURE_SPEC_TWO_LINES: CurvatureNativeSpec = {
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/** An answer to `CURVATURE_SPEC_ONE_LINE` of an engine that states its chief rays' landings: the edge is unavailable. */
+export const CURVATURE_DATA_ONE_LINE: CurvatureNativeData = {
+  fields: [
+    [0, 0, 0.000244140625, 0.000244140625],
+    [5.625, -4.875, 0.0029296875, 0.00390625],
+    [11.25, -9.8125, 0.0078125, -0.0234375],
+  ]
+    .map(([fieldAngleDeg, landing, tangential, sagittal]): CurvatureNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: landing,
+      tangentialShiftMm: tangential,
+      sagittalShiftMm: sagittal,
+      sampling: { validSampleCount: 4, petzvalShiftMm: -0.0625 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 22.5,
+        status: "unavailable",
+        reason: "chief-ray-clipped",
+        chiefLandingMm: null,
+        tangentialShiftMm: null,
+        sagittalShiftMm: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-field-curves", params: { parabasalFraction: 0.0009765625 } },
+  notes: [],
+};
+
+/** An answer to `CURVATURE_SPEC_TWO_LINES` whose second line states no landing of the chief rays its foci are of. */
+export const CURVATURE_DATA_TWO_LINES: CurvatureNativeData = {
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): CurvatureNativeField => ({
+      line,
+      wavelengthNm: line === 0 ? 587.5 : 656.25,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: line === 0 ? -fieldAngleDeg / 2 : null,
+      tangentialShiftMm: fieldAngleDeg / 512,
+      sagittalShiftMm: -fieldAngleDeg / 1024,
+      sampling: line === 0 ? {} : { indexMaxDelta: 0.0000152587890625 },
+    })),
+  ),
+  method: { name: "synthetic-field-curves", params: {} },
+  notes: ["the second line is a chromatic channel"],
+};
+
+// ── vignetting.native ────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own vignetting and relative illumination. The numbers describe no lens: every value
+// is a dyadic fraction.
+
+/** Vignetting at the reference line, at the axis and three fields of a half field of 24 degrees. */
+export const VIGNETTING_SPEC_ONE_LINE: VignettingNativeSpec = {
+  lines: [0],
+  maxFieldDeg: 24,
+  fieldAnglesDeg: [0, 8, 16, 24],
+};
+
+/** Vignetting at two lines, at the axis and two fields. */
+export const VIGNETTING_SPEC_TWO_LINES: VignettingNativeSpec = {
+  lines: [0, 1],
+  maxFieldDeg: 20,
+  fieldAnglesDeg: [0, 10, 20],
+};
+
+/**
+ * An answer to `VIGNETTING_SPEC_ONE_LINE` of an engine that sweeps a pupil: the axis and two fields, a geometric
+ * transmission above 1 at the first (a beam wider than the axis's), and the edge without a curve.
+ */
+export const VIGNETTING_DATA_ONE_LINE: VignettingNativeData = {
+  fields: [
+    [0, 0, 1, 1],
+    [8, -7.25, 1.0625, 0.9375],
+    [16, -14.75, 0.75, 0.5625],
+  ]
+    .map(([fieldAngleDeg, landing, transmission, illumination]): VignettingNativeField => ({
+      line: 0,
+      wavelengthNm: 587.5,
+      fieldAngleDeg,
+      status: "ok",
+      chiefLandingMm: landing,
+      geometricTransmission: transmission,
+      relativeIllumination: illumination,
+      sampling: { pupilSamples: 192, fieldSamples: 9 },
+    }))
+    .concat([
+      {
+        line: 0,
+        wavelengthNm: 587.5,
+        fieldAngleDeg: 24,
+        status: "unavailable",
+        reason: "no-curve",
+        chiefLandingMm: null,
+        geometricTransmission: null,
+        relativeIllumination: null,
+        sampling: {},
+      },
+    ]),
+  method: { name: "synthetic-sweep", params: { pupilSamples: 192 } },
+  notes: [],
+};
+
+/** An answer to `VIGNETTING_SPEC_TWO_LINES` of an engine that does not stand by one field of its second line. */
+export const VIGNETTING_DATA_TWO_LINES: VignettingNativeData = {
+  fields: [0, 1].flatMap((line) =>
+    [0, 10, 20].map((fieldAngleDeg): VignettingNativeField => ({
+      line,
+      wavelengthNm: line === 0 ? 587.5 : 656.25,
+      fieldAngleDeg,
+      ...(line === 1 && fieldAngleDeg === 20
+        ? { status: "unconverged" as const, reason: "not-converged" }
+        : { status: "ok" as const }),
+      chiefLandingMm: line === 0 ? -fieldAngleDeg / 2 : null,
+      geometricTransmission: 1 - fieldAngleDeg / 64,
+      relativeIllumination: 1 - fieldAngleDeg / 32,
+      sampling: { gridSize: 128, maxDelta: fieldAngleDeg / 4096 },
+    })),
+  ),
+  method: { name: "synthetic-lattice", params: {} },
+  notes: ["the second line states no landing"],
+};
+
+// ── summary.native ───────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own first-order summary. The numbers describe no lens: every value is a dyadic
+// fraction.
+
+/** A summary at the reference line. */
+export const SUMMARY_SPEC_ONE_LINE: SummaryNativeSpec = { lines: [0] };
+
+/** A summary at two lines. */
+export const SUMMARY_SPEC_TWO_LINES: SummaryNativeSpec = { lines: [0, 1] };
+
+/**
+ * An answer to `SUMMARY_SPEC_ONE_LINE` of an engine that marks its aperture and states its image-space f-number of a
+ * pupil it presents and a half field, but no f-number of a paraxial or a real marginal ray: an estimate of its own is
+ * stated under `sampling`.
+ */
+export const SUMMARY_DATA_ONE_LINE: SummaryNativeData = {
+  lines: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      rearFocalZ: 96.25,
+      focalLengthMm: 50.5,
+      entrancePupilDiameterMm: 25.25,
+      stopDiameterMm: 20.5,
+      imageSpaceFNumber: 2,
+      paraxialWorkingFNumber: null,
+      workingFNumber: null,
+      nominalFNumber: 2.125,
+      totalTrackMm: 90.75,
+      halfFieldDeg: 23.5,
+      sampling: { focusDistanceM: 0.5, nominalEntrancePupilDiameterMm: 23.75, thinLensEffectiveFNumber: 2.125 },
+    },
+  ],
+  method: { name: "synthetic-summary", params: {} },
+  notes: [],
+};
+
+/** An answer to `SUMMARY_SPEC_TWO_LINES` of an engine that has no summary of its second line. */
+export const SUMMARY_DATA_TWO_LINES: SummaryNativeData = {
+  lines: [
+    {
+      line: 0,
+      wavelengthNm: 587.5,
+      status: "ok",
+      rearFocalZ: 96.25,
+      focalLengthMm: 50.5,
+      entrancePupilDiameterMm: 25.25,
+      stopDiameterMm: 20.5,
+      imageSpaceFNumber: 2,
+      paraxialWorkingFNumber: 2,
+      workingFNumber: 2.0625,
+      nominalFNumber: null,
+      totalTrackMm: 90.75,
+      halfFieldDeg: null,
+      sampling: { exitPupilDiameterMm: 30.5 },
+    },
+    {
+      line: 1,
+      wavelengthNm: 656.25,
+      status: "unavailable",
+      reason: "no-paraxial-data",
+      rearFocalZ: null,
+      focalLengthMm: null,
+      entrancePupilDiameterMm: null,
+      stopDiameterMm: null,
+      imageSpaceFNumber: null,
+      paraxialWorkingFNumber: null,
+      workingFNumber: null,
+      nominalFNumber: null,
+      totalTrackMm: null,
+      halfFieldDeg: null,
+      sampling: {},
+    },
+  ],
+  method: { name: "synthetic-accessors", params: {} },
+  notes: ["the second line has no paraxial data"],
+};
+
+// ── seidel.native ────────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own third-order sums. The numbers describe no lens: every value is a dyadic fraction.
+
+/** The sums of a field of 20 degrees at the reference line, without colour. */
+export const SEIDEL_SPEC_ONE_LINE: SeidelNativeSpec = { line: 0, maxFieldDeg: 20 };
+
+/** The same with the chromatic sums of lines 1 and 2. */
+export const SEIDEL_SPEC_DISPERSION: SeidelNativeSpec = { line: 0, maxFieldDeg: 20, dispersionLines: [1, 2] };
+
+/** An answer to `SEIDEL_SPEC_DISPERSION` of an engine that states every sum of two surfaces and their total. */
+export const SEIDEL_DATA_TWO_SURFACES: SeidelNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  maxFieldDeg: 20,
+  dispersionLines: [1, 2],
+  status: "ok",
+  invariant: 1.25,
+  surfaces: [
+    { surface: 0, SPHA: 0.5, COMA: 0.25, ASTI: 0.125, FCUR: 0.0625, DIST: 0.03125, CLA: 0.375, CTR: 0.0625 },
+    { surface: 1, SPHA: -0.25, COMA: -0.125, ASTI: -0.0625, FCUR: 0.0625, DIST: -0.015625, CLA: -0.125, CTR: 0 },
+  ],
+  total: { SPHA: 0.25, COMA: 0.125, ASTI: 0.0625, FCUR: 0.125, DIST: 0.015625, CLA: 0.25, CTR: 0.0625 },
+  sampling: { imageSpaceMarginalSlope: -0.125 },
+  method: { name: "synthetic-sums", params: {} },
+  notes: [],
+};
+
+/** An answer to `SEIDEL_SPEC_ONE_LINE` of an engine that has no sums of the system, and says why. */
+export const SEIDEL_DATA_UNAVAILABLE: SeidelNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  maxFieldDeg: 20,
+  dispersionLines: null,
+  status: "unavailable",
+  reason: "system.afocal",
+  invariant: null,
+  surfaces: [],
+  total: { SPHA: null, COMA: null, ASTI: null, FCUR: null, DIST: null, CLA: null, CTR: null },
+  sampling: {},
+  method: { name: "synthetic-sums", params: {} },
+  notes: ["the system has no image-space marginal slope"],
+};
+
+// ── zernike.native ───────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Format examples of an engine's own wavefront figures. The numbers describe no lens: every value is a dyadic fraction.
+
+/** Four Standard terms of the axis and of a field of 10 degrees on a grid of 8. */
+export const ZERNIKE_SPEC_STANDARD: ZernikeNativeSpec = {
+  line: 0,
+  fieldAnglesDeg: [0, 10],
+  grid: 8,
+  ordering: "standard",
+  terms: 4,
+};
+
+/** The same in the Fringe ordering. */
+export const ZERNIKE_SPEC_FRINGE: ZernikeNativeSpec = { ...ZERNIKE_SPEC_STANDARD, ordering: "fringe" };
+
+/** An answer to `ZERNIKE_SPEC_STANDARD` whose second field is unavailable. */
+export const ZERNIKE_DATA_STANDARD: ZernikeNativeData = {
+  line: { index: 0, wavelengthNm: 587.5 },
+  grid: 8,
+  ordering: "standard",
+  terms: 4,
+  fields: [
+    {
+      fieldAngleDeg: 0,
+      imageHeightMm: 0,
+      status: "ok",
+      coefficients: [0.125, 0, 0, 0.0625],
+      rmsToChiefWaves: 0.0625,
+      pvToChiefWaves: 0.25,
+      fitResidualRmsWaves: 0.0078125,
+      fitCondition: 2.5,
+      validSamples: 32,
+      sampling: { gridSize: 8 },
+    },
+    {
+      fieldAngleDeg: 10,
+      imageHeightMm: null,
+      status: "unavailable",
+      reason: "optiland-raised-ValueError",
+      coefficients: [],
+      rmsToChiefWaves: null,
+      pvToChiefWaves: null,
+      fitResidualRmsWaves: null,
+      fitCondition: null,
+      validSamples: 0,
+      sampling: {},
+    },
+  ],
+  method: { name: "synthetic-fit", params: {} },
+  notes: ["field 10: ValueError: a ray missed"],
+};
+
+/** An answer to `ZERNIKE_SPEC_FRINGE` with both fields. */
+export const ZERNIKE_DATA_FRINGE: ZernikeNativeData = {
+  ...ZERNIKE_DATA_STANDARD,
+  ordering: "fringe",
+  fields: [
+    { ...ZERNIKE_DATA_STANDARD.fields[0], coefficients: [0.25, 0, 0, 0.125] },
+    {
+      ...ZERNIKE_DATA_STANDARD.fields[0],
+      fieldAngleDeg: 10,
+      imageHeightMm: 8.5,
+      coefficients: [0.5, 0, -0.25, 0.125],
+      sampling: {},
+    },
+  ],
   notes: [],
 };
 
@@ -2326,6 +2971,236 @@ const ECHO_DATA = SELFTEST_ECHO_EXAMPLES.matrix.data;
  * `.schema.json`, and of the fixture directory below `valid/quantities/` and `invalid/quantities/`.
  */
 export const QUANTITY_FIXTURES: Readonly<Record<string, QuantityFixtures>> = {
+  [`${SPOT_NATIVE}.spec`]: {
+    valid: { rings: SPOT_SPEC_RINGS, fan: SPOT_SPEC_FAN },
+    invalid: {
+      "missing-line": fault(SPOT_SPEC_RINGS, "/line", REMOVE, "required", ""),
+      "missing-pupil": fault(SPOT_SPEC_RINGS, "/pupil", REMOVE, "required", ""),
+      "fields-of-image-height": fault(SPOT_SPEC_RINGS, "/fields/kind", "image-height-fractions", "oneOf", "/fields"),
+      "ring-of-no-ray": fault(SPOT_SPEC_RINGS, "/pupil/rings/0", 0, "oneOf", "/pupil"),
+      "ring-weighting-unknown": fault(SPOT_SPEC_RINGS, "/pupil/weighting", "flux", "oneOf", "/pupil"),
+      "fan-axis-unknown": fault(SPOT_SPEC_FAN, "/pupil/axis", "radial", "oneOf", "/pupil"),
+      "fan-of-one-sample": fault(SPOT_SPEC_FAN, "/pupil/samples", 1, "oneOf", "/pupil"),
+      "unknown-property": fault(SPOT_SPEC_RINGS, "/frequenciesPerMm", [10], "additionalProperties"),
+    },
+  },
+  [`${SPOT_NATIVE}.data`]: {
+    valid: { "rings-and-unavailable": SPOT_DATA_RINGS, "fan-with-a-lost-sample": SPOT_DATA_FAN },
+    invalid: {
+      "missing-pattern": fault(SPOT_DATA_RINGS, "/pattern", REMOVE, "required", ""),
+      "missing-spot": fault(SPOT_DATA_RINGS, "/fields/0/spot", REMOVE, "required", "/fields/0"),
+      "centroid-of-three": fault(SPOT_DATA_RINGS, "/fields/0/spot/centroidMm", [0, 0, 0], "oneOf", "/fields/0/spot"),
+      "negative-radius": fault(SPOT_DATA_RINGS, "/fields/0/spot/rmsRadiusMm", -0.5, "oneOf", "/fields/0/spot"),
+      "fan-error-as-numbers": fault(SPOT_DATA_FAN, "/fields/0/fan/errorMm", [0, 0], "oneOf", "/fields/0/fan"),
+      "two-lines": fault(
+        SPOT_DATA_FAN,
+        "/lines",
+        [
+          { wavelengthNm: 546.07, weight: 1 },
+          { wavelengthNm: 486.13, weight: 1 },
+        ],
+        "maxItems",
+      ),
+      "status-unconverged": fault(SPOT_DATA_RINGS, "/fields/0/status", "unconverged", "enum"),
+      "mtf-curve": fault(SPOT_DATA_RINGS, "/fields/0/sagittal", [], "additionalProperties"),
+    },
+  },
+  [`${AXIAL_NATIVE}.spec`]: {
+    valid: { spherical: AXIAL_SPEC_SPHERICAL, colour: AXIAL_SPEC_COLOUR },
+    invalid: {
+      "spherical-of-two-lines": fault(AXIAL_SPEC_SPHERICAL, "/lines", [0, 1], "oneOf", ""),
+      "missing-profile": fault(AXIAL_SPEC_SPHERICAL, "/profile", REMOVE, "oneOf", ""),
+      "fraction-of-zero": fault(AXIAL_SPEC_COLOUR, "/marginal/0", 0, "oneOf", ""),
+      "fraction-above-one": fault(AXIAL_SPEC_SPHERICAL, "/nearAxis", 1.5, "oneOf", ""),
+      "colour-with-profile": fault(AXIAL_SPEC_COLOUR, "/profile", [0.5, 0.75], "oneOf", ""),
+      "kind-unknown": fault(AXIAL_SPEC_COLOUR, "/kind", "lateral", "oneOf", ""),
+    },
+  },
+  [`${AXIAL_NATIVE}.data`]: {
+    valid: { "spherical-figures": AXIAL_DATA_SPHERICAL, "colour-rays-and-unavailable": AXIAL_DATA_COLOUR },
+    invalid: {
+      "missing-kind": fault(AXIAL_DATA_SPHERICAL, "/kind", REMOVE, "required", ""),
+      "pupil-of-zero": fault(AXIAL_DATA_SPHERICAL, "/pupilRadiusMm", 0, "exclusiveMinimum"),
+      "missing-rays": fault(AXIAL_DATA_SPHERICAL, "/fields/0/rays", REMOVE, "required", "/fields/0"),
+      "negative-rms": fault(
+        AXIAL_DATA_SPHERICAL,
+        "/fields/0/figures/bestFocusRmsMm",
+        -0.5,
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "profile-as-numbers": fault(
+        AXIAL_DATA_SPHERICAL,
+        "/fields/0/figures/profileMm",
+        [0, 0],
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "arrivals-as-floats": fault(
+        AXIAL_DATA_COLOUR,
+        "/fields/0/rays/arrived",
+        encodeNdArray(Float64Array.of(0, 1)),
+        "oneOf",
+        "/fields/0/rays",
+      ),
+      "status-unconverged": fault(AXIAL_DATA_SPHERICAL, "/fields/0/status", "unconverged", "enum"),
+      "no-fields": fault(AXIAL_DATA_SPHERICAL, "/fields", [], "minItems"),
+    },
+  },
+  [`${CHIEF_NATIVE}.spec`]: {
+    valid: { distortion: CHIEF_SPEC_DISTORTION, "lateral-colour": CHIEF_SPEC_LATERAL, pupils: CHIEF_SPEC_PUPILS },
+    invalid: {
+      "kind-unknown": fault(CHIEF_SPEC_DISTORTION, "/kind", "breathing", "enum"),
+      "no-lines": fault(CHIEF_SPEC_LATERAL, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(CHIEF_SPEC_DISTORTION, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(CHIEF_SPEC_LATERAL, "/fieldAnglesDeg/0", -1, "minimum"),
+      "missing-angles": fault(CHIEF_SPEC_PUPILS, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "fractions-instead": fault(CHIEF_SPEC_PUPILS, "/fieldFractions", [0.5, 1], "additionalProperties"),
+    },
+  },
+  [`${CHIEF_NATIVE}.data`]: {
+    valid: {
+      "distortion-figures": CHIEF_DATA_DISTORTION,
+      "pupils-chief-rays": CHIEF_DATA_PUPILS,
+      "lateral-colour-and-unavailable": CHIEF_DATA_LATERAL,
+    },
+    invalid: {
+      "missing-reference": fault(CHIEF_DATA_DISTORTION, "/reference", REMOVE, "required", ""),
+      "status-unconverged": fault(CHIEF_DATA_DISTORTION, "/fields/0/status", "unconverged", "enum"),
+      "landing-as-text": fault(CHIEF_DATA_LATERAL, "/fields/0/chiefLandingMm", "-5", "type"),
+      "figures-without-percent": fault(
+        CHIEF_DATA_DISTORTION,
+        "/fields/0/figures/percent",
+        REMOVE,
+        "oneOf",
+        "/fields/0/figures",
+      ),
+      "chief-ray-of-two": fault(
+        CHIEF_DATA_PUPILS,
+        "/fields/0/chiefRay/exitPoint",
+        [0, -4.5],
+        "oneOf",
+        "/fields/0/chiefRay",
+      ),
+      "no-fields": fault(CHIEF_DATA_PUPILS, "/fields", [], "minItems"),
+    },
+  },
+  [`${CURVATURE_NATIVE}.spec`]: {
+    valid: { "one-line": CURVATURE_SPEC_ONE_LINE, "two-lines": CURVATURE_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(CURVATURE_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(CURVATURE_SPEC_ONE_LINE, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(CURVATURE_SPEC_TWO_LINES, "/fieldAnglesDeg/0", -1, "minimum"),
+      "angle-of-ninety": fault(CURVATURE_SPEC_ONE_LINE, "/fieldAnglesDeg/3", 90, "exclusiveMaximum"),
+      "missing-angles": fault(CURVATURE_SPEC_ONE_LINE, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "kind-stated": fault(CURVATURE_SPEC_ONE_LINE, "/kind", "parabasal", "additionalProperties"),
+    },
+  },
+  [`${CURVATURE_NATIVE}.data`]: {
+    valid: { "one-line-and-unavailable": CURVATURE_DATA_ONE_LINE, "two-lines": CURVATURE_DATA_TWO_LINES },
+    invalid: {
+      "status-unconverged": fault(CURVATURE_DATA_ONE_LINE, "/fields/0/status", "unconverged", "enum"),
+      "shift-as-text": fault(CURVATURE_DATA_ONE_LINE, "/fields/1/tangentialShiftMm", "0.0029296875", "type"),
+      "landing-as-text": fault(CURVATURE_DATA_TWO_LINES, "/fields/0/chiefLandingMm", "-0", "type"),
+      "missing-sagittal": fault(CURVATURE_DATA_ONE_LINE, "/fields/0/sagittalShiftMm", REMOVE, "required", "/fields/0"),
+      "figures-member": fault(CURVATURE_DATA_TWO_LINES, "/fields/0/figures", null, "additionalProperties"),
+      "missing-notes": fault(CURVATURE_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-fields": fault(CURVATURE_DATA_TWO_LINES, "/fields", [], "minItems"),
+    },
+  },
+  [`${VIGNETTING_NATIVE}.spec`]: {
+    valid: { "one-line": VIGNETTING_SPEC_ONE_LINE, "two-lines": VIGNETTING_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(VIGNETTING_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "half-field-of-zero": fault(VIGNETTING_SPEC_ONE_LINE, "/maxFieldDeg", 0, "exclusiveMinimum"),
+      "negative-angle": fault(VIGNETTING_SPEC_TWO_LINES, "/fieldAnglesDeg/1", -1, "minimum"),
+      "angle-of-ninety": fault(VIGNETTING_SPEC_ONE_LINE, "/fieldAnglesDeg/3", 90, "exclusiveMaximum"),
+      "missing-angles": fault(VIGNETTING_SPEC_ONE_LINE, "/fieldAnglesDeg", REMOVE, "required", ""),
+      "pupil-stated": fault(VIGNETTING_SPEC_ONE_LINE, "/pupilSamples", 192, "additionalProperties"),
+    },
+  },
+  [`${VIGNETTING_NATIVE}.data`]: {
+    valid: { "one-line-and-unavailable": VIGNETTING_DATA_ONE_LINE, "two-lines-unconverged": VIGNETTING_DATA_TWO_LINES },
+    invalid: {
+      "status-pending": fault(VIGNETTING_DATA_ONE_LINE, "/fields/0/status", "pending", "enum"),
+      "transmission-as-text": fault(VIGNETTING_DATA_ONE_LINE, "/fields/1/geometricTransmission", "1.0625", "type"),
+      "negative-illumination": fault(VIGNETTING_DATA_ONE_LINE, "/fields/2/relativeIllumination", -0.5, "minimum"),
+      "landing-as-text": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/chiefLandingMm", "-0", "type"),
+      "missing-illumination": fault(
+        VIGNETTING_DATA_ONE_LINE,
+        "/fields/0/relativeIllumination",
+        REMOVE,
+        "required",
+        "/fields/0",
+      ),
+      "shifts-member": fault(VIGNETTING_DATA_TWO_LINES, "/fields/0/tangentialShiftMm", null, "additionalProperties"),
+      "missing-notes": fault(VIGNETTING_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-fields": fault(VIGNETTING_DATA_TWO_LINES, "/fields", [], "minItems"),
+    },
+  },
+  [`${SEIDEL_NATIVE}.spec`]: {
+    valid: { "one-line": SEIDEL_SPEC_ONE_LINE, dispersion: SEIDEL_SPEC_DISPERSION },
+    invalid: {
+      "field-of-ninety": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", 90, "exclusiveMaximum"),
+      "negative-field": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", -1, "minimum"),
+      "missing-field": fault(SEIDEL_SPEC_ONE_LINE, "/maxFieldDeg", REMOVE, "required", ""),
+      "three-dispersion-lines": fault(SEIDEL_SPEC_DISPERSION, "/dispersionLines", [0, 1, 2], "maxItems"),
+      "lines-stated": fault(SEIDEL_SPEC_ONE_LINE, "/lines", [0], "additionalProperties"),
+    },
+  },
+  [`${SEIDEL_NATIVE}.data`]: {
+    valid: { "two-surfaces": SEIDEL_DATA_TWO_SURFACES, unavailable: SEIDEL_DATA_UNAVAILABLE },
+    invalid: {
+      "sum-as-text": fault(SEIDEL_DATA_TWO_SURFACES, "/total/SPHA", "0.25", "type"),
+      "missing-total-sum": fault(SEIDEL_DATA_TWO_SURFACES, "/total/CTR", REMOVE, "required", "/total"),
+      "wave-coefficient-member": fault(SEIDEL_DATA_TWO_SURFACES, "/total/W040", 0.5, "additionalProperties"),
+      "status-unconverged": fault(SEIDEL_DATA_TWO_SURFACES, "/status", "unconverged", "enum"),
+      "negative-surface": fault(SEIDEL_DATA_TWO_SURFACES, "/surfaces/0/surface", -1, "minimum"),
+      "missing-invariant": fault(SEIDEL_DATA_TWO_SURFACES, "/invariant", REMOVE, "required", ""),
+    },
+  },
+  [`${ZERNIKE_NATIVE}.spec`]: {
+    valid: { standard: ZERNIKE_SPEC_STANDARD, fringe: ZERNIKE_SPEC_FRINGE },
+    invalid: {
+      "unknown-ordering": fault(ZERNIKE_SPEC_STANDARD, "/ordering", "noll", "enum"),
+      "no-terms": fault(ZERNIKE_SPEC_STANDARD, "/terms", 0, "minimum"),
+      "grid-of-two": fault(ZERNIKE_SPEC_STANDARD, "/grid", 2, "minimum"),
+      "no-fields": fault(ZERNIKE_SPEC_STANDARD, "/fieldAnglesDeg", [], "minItems"),
+      "field-of-ninety": fault(ZERNIKE_SPEC_STANDARD, "/fieldAnglesDeg/1", 90, "exclusiveMaximum"),
+    },
+  },
+  [`${ZERNIKE_NATIVE}.data`]: {
+    valid: { "standard-and-unavailable": ZERNIKE_DATA_STANDARD, fringe: ZERNIKE_DATA_FRINGE },
+    invalid: {
+      "negative-rms": fault(ZERNIKE_DATA_STANDARD, "/fields/0/rmsToChiefWaves", -0.0625, "minimum"),
+      "status-unconverged": fault(ZERNIKE_DATA_STANDARD, "/fields/0/status", "unconverged", "enum"),
+      "missing-coefficients": fault(ZERNIKE_DATA_STANDARD, "/fields/0/coefficients", REMOVE, "required", "/fields/0"),
+      "no-fields": fault(ZERNIKE_DATA_STANDARD, "/fields", [], "minItems"),
+      "missing-grid": fault(ZERNIKE_DATA_STANDARD, "/grid", REMOVE, "required", ""),
+    },
+  },
+  [`${SUMMARY_NATIVE}.spec`]: {
+    valid: { "one-line": SUMMARY_SPEC_ONE_LINE, "two-lines": SUMMARY_SPEC_TWO_LINES },
+    invalid: {
+      "no-lines": fault(SUMMARY_SPEC_TWO_LINES, "/lines", [], "minItems"),
+      "negative-line": fault(SUMMARY_SPEC_ONE_LINE, "/lines/0", -1, "minimum"),
+      "missing-lines": fault(SUMMARY_SPEC_ONE_LINE, "/lines", REMOVE, "required", ""),
+      "fields-stated": fault(SUMMARY_SPEC_ONE_LINE, "/fieldAnglesDeg", [0], "additionalProperties"),
+      "lines-as-number": fault(SUMMARY_SPEC_ONE_LINE, "/lines", 0, "type"),
+    },
+  },
+  [`${SUMMARY_NATIVE}.data`]: {
+    valid: { "one-line": SUMMARY_DATA_ONE_LINE, "two-lines-and-unavailable": SUMMARY_DATA_TWO_LINES },
+    invalid: {
+      "status-unconverged": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/status", "unconverged", "enum"),
+      "f-number-as-text": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/imageSpaceFNumber", "2", "type"),
+      "negative-pupil": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/entrancePupilDiameterMm", -25.25, "minimum"),
+      "missing-working": fault(SUMMARY_DATA_TWO_LINES, "/lines/0/workingFNumber", REMOVE, "required", "/lines/0"),
+      "magnification-member": fault(SUMMARY_DATA_ONE_LINE, "/lines/0/magnification", 0.5, "additionalProperties"),
+      "missing-notes": fault(SUMMARY_DATA_ONE_LINE, "/notes", REMOVE, "required", ""),
+      "no-lines": fault(SUMMARY_DATA_TWO_LINES, "/lines", [], "minItems"),
+    },
+  },
   [`${WAVEFRONT_NATIVE}.spec`]: {
     valid: {
       "one-line": WAVEFRONT_SPEC,

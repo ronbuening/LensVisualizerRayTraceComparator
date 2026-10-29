@@ -1451,7 +1451,7 @@ into its class, the bands, the statuses of a row, the wording and its lint.
 | Engines | `lv`, `optiland` and `replay`, whatever `--engines` names; only where the rung is named. | As R5. |
 | Photopic runs | optiland answers, by the worker's sum of optiland's own landings over the lines of the case; the report says under such a table whose rays and whose sum the column is. | A landing is a point of the image plane, so the lines can be added as complex numbers before the modulus is taken; the FFT's moduli cannot. |
 | The 512 step | A field whose pair of `lv` and `optiland` is outside its band asks optiland that request once more with `geometricRays: 512` (a job that states `step: "geo512"`), and only where optiland's answer is of one line. | The finer ladder costs four to seven times the first, and five lines of it are more than a worker may take for one request. |
-| The chief-landing limit | `chiefLanding.maxAbs` of `r5g` is **1e-3 mm**, not R5's 1e-7. | The modulus of a geometric MTF does not depend on the point its phases are measured from, so a chief ray's landing is no input of either curve, only a check that both answers are of one field. On several lines the two engines call different rays the chief ray ([docs/gotchas.md](gotchas.md#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line)) and land up to 3.0e-4 mm apart at one field angle; a micrometre still tells one field of a request from another, which is millimetres away. |
+| The chief-landing limit | `chiefLanding.maxAbs` of `r5g` is **1e-3 mm**, not R5's 1e-7. | The modulus of a geometric MTF does not depend on the point its phases are measured from, so a chief ray's landing is no input of either curve, only a check that both answers are of one field. On several lines the two engines call different rays the chief ray ([docs/gotchas.md](gotchas.md#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line)) and land up to 3.0e-4 mm apart at one field angle (before LV #936, which aims each line's chief ray at the stop centre: measured again at the Phase 6 end refresh); a micrometre still tells one field of a request from another, which is millimetres away. |
 
 **The report** has, for each field, the table of R5 without the rim rays, which a geometric MTF has none of, and
 with each of the two engines' own sampling beside its flag: cells (`gridSize`) or rays (`numRays`) across the
@@ -3576,3 +3576,2079 @@ The cold benchmark MTF check at `--jobs 2` had written about 6,800 store entries
 6.5 hours. The owner accepted the cold features run, rays and MTF, as the stage's evidence. Against the warm owner
 store, where the committed engines' answers are already held, the benchmark check takes minutes. None of these
 runs touched `runs/store`, `baselines/` or `reports/`.
+
+## Stage 6.2: spots and ray fans
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a --jobs 4   # the rays rungs with R7a
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r7b --jobs 4   # R7b: lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+**Stage 6.1 is moot** (owner decision, 2026-10-26). LensVisualizer's optics rewrite left one trace stack, so there
+is no `lv-legacy` tracer behind its coma, field-curvature, bokeh or lateral-colour tabs. Each Phase 6 stage's
+identical-ray rung covers the rays its own tab launches instead. For coma and bokeh that rung is R7a.
+
+### The spot sets
+
+`CaseSource.spotRaySets` makes the rays the coma and bokeh tabs launch (`src/engines/lv/spotRaySets.ts`). The
+orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says `needsSpotRaySets`. The
+manifest records them under `runs[].spotRaySets`, and a rung gets them as `RungInputs.spotRaySets` and
+`RungInputs.spotAsks`. At LensVisualizer `879c06102` the patterns are:
+
+| Pattern | Pupil | Fields (fraction of the half field) | Rays a field | Weight of a ray |
+|---|---|---|---:|---|
+| coma point cloud | rings `[1, 8, 16, 24, 32, 40]` (`sampleCircularPupil`) | `[0, 0.25, 0.5, 0.75]` | 121 + chief | area (`sample.weight`) |
+| coma tangential fan | 51 samples (`sampleOrthogonalPupilFan`) | the detail field, `L.offAxisFieldFrac` | 51 + chief | 1 |
+| coma sagittal fan | 51 samples | the detail field | 51 + chief | 1 |
+| bokeh tile | rings `[1, 12, 24, 36, 48, 60, 72, 84]` | `[0, 0.25, 0.5, 0.75]` | 337 + chief | area × LensVisualizer's bulk transmission at the line (`lvRayWeights`) |
+
+That makes ten sets per line, each with its chief ray last (`groups.chiefIndex`) and its field angle under
+`groups.field`. A sample crosses the first vertex plane at `(x · EPSD, yChief + y · EPSD)` with the slopes
+`(0, uField)` of `computeOffAxisFieldGeometry`. It is launched `rayLead` before that plane, in the direction
+`directionFromSkewSlope`, as the tabs' skew adapter launches it. EPSD is the hook's paraxial entrance-pupil radius
+(`lvPupilSeed`), and the field geometry is the hook's (`lvSpotSetup`, `src/engines/lv/spotSetup.ts`).
+
+Each restated line has a canary in `test/integration/lv/canaries.test.ts`. There are four Stage 6.2 tests there:
+the patterns and fields, the launch, `traceSkewRay` as the tabs' skew adapter, and the drawer's request, with the
+tabs' channel and the bokeh tab's sensor plane.
+
+`test/integration/lv/spotRays.test.ts` checks the sets against LensVisualizer's own output. It traces each ray of
+a set with LensVisualizer's exact tracer (`traceEngineRay`, with the tabs' trace options), carries it to the plane
+as the tabs carry a skew ray, and sums in LensVisualizer's order. On every benchmark lens that gives the tabs' own
+figures to the bit:
+- the point cloud's centroid and RMS radius;
+- every sample of both fans;
+- every bokeh tile's centroid, both components, and its RMS radius.
+
+`lv`'s answers of all four asks are checked against the tabs' output on the same lenses. A second test holds every
+bokeh tile ray by ray to LensVisualizer's `traceSkewRay` of its samples, which is the adapter's launch. It checks
+each ray's offsets from the chief ray of `lvBokehChiefLanding` and its weight, on three kinds of case:
+- the benchmark lenses;
+- a lens on a plane 0.05 mm behind its design plane;
+- `laowa-105mm-f2-stf`, whose apodizing glass absorbs. There a weight is not the area alone, so the case tests
+  `lvRayWeights` as the stand-in for the tab's `sample.trace.transmission`.
+
+What is not tested is that the tabs' React code hands these functions exactly this request: that rests on the
+canaries of the drawer's lines.
+
+The source makes no sets in these cases, each a coded problem of the run:
+- a finite object (`object-not-at-infinity`): the tabs launch collimated rays at every focus;
+- a folded path (`folded-path`);
+- a fan whose field angle is not above 0 (`lv-no-fan-on-axis`);
+- a field LensVisualizer gives no launch (`lv-no-launch`), or only a vector launch (`lv-vector-launch`).
+
+focus-stations (61 runs, finite objects) and folded therefore have no R7a jobs.
+
+### R7a: the spot of identical rays (gated)
+
+R7a asks `rays.trace` of the spot sets (`r7aRung`) and compares them with `raysSpotComparator`
+(`src/compare/raysSpot.ts`). The rays used are those valid in both answers of a pair, as in R4. On them, the
+pure estimator `estimateSpot` (`src/estimators/spot.ts`) gives:
+- each ray's transverse error from the chief ray's landing;
+- the flux-weighted centroid relative to the chief ray;
+- the RMS radius about that centroid.
+
+The estimator uses compensated sums and IEEE basic operations only. It keeps what the rounding of each landing
+difference left out, and carries the centroid in two doubles. Its proofs are analytic
+(`test/estimators/spot.test.ts`):
+- perfect focus;
+- a defocus disc (RMS `D/√2`);
+- a pure coma comet (centroid `(0, C)`, RMS `C√(2/3)`);
+- a tilted plane.
+
+Each proof is a cubature with derived bounds. Exact dyadic sums check the definition, including a spot 2^-50 mm
+across at 1024 mm from its chief ray, where no difference is exact.
+
+The Stage 6.2 review found that the first version kept the rests but not the centroid's own rounding. On that spot
+its radius was 7.5e-14 mm against an exact 4.3e-15 mm. Removing any of the carried terms turns that test red.
+
+Under policy version 16 the gates are:
+
+| Metric | Gate |
+|---|---|
+| `transverseError.maxAbs` | 1e-8 mm |
+| `centroid.maxAbs` | 1e-8 mm |
+| `rmsRadius.maxAbs` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+`mask.rimBand`, `rays.compared` and `rays.dropped` are reported. There is no floor. A bundle with nothing to
+measure (`no-rays`, `no-flux`, `no-reference`) is unmeasured, not failed.
+
+### R7b: the tabs beside optiland (recorded)
+
+`spot.native` v1 (contract 1.0; `contract/CONTRACT.md`) is a spot or a fan per field.
+- **`lv`** answers with the tabs' numbers as they present them (`answerLvSpot`, `src/engines/lv/spot.ts`, method
+  `lv-coma-tab` or `lv-bokeh-tab`). The point cloud comes from `computeComaAnalysis`, the fans from its meridional
+  and sagittal coma, and a tile from `computeBokehFieldFootprint` on the case's plane.
+- **`optiland`** answers with its own `SpotDiagram` (hexapolar rings nearest the asked count, about the centroid)
+  and `RayFan`, one field per fresh optic (`workers/python/lvrtc_optiland/spot.py`). Every setting is read back
+  (`test_spot.py`, with a deliberate mistake for each check). Results are converted to the contract's frame: y is
+  mirrored, and a tangential fan is reversed and negated.
+
+`lv` refuses, as unsupported, what its tabs do not draw. The case and the spec decide every item except
+`focus.off-design` before LensVisualizer is asked anything; only the design plane needs LensVisualizer:
+
+| Item | When |
+|---|---|
+| `lines.not-authored-reference` | Line 0 is not the authored indices: the tabs trace no chromatic channel. Every photopic run, whose line 0 is 555 nm. |
+| `focus.off-design` | A coma pattern off the design plane. Every best-focus run. |
+| `pupil.rings` | A bokeh tile of other rings than LensVisualizer's own. |
+| `fields.angles-deg` | Fields as angles. |
+| `object.finite` | A finite object. |
+| `path.folded` | A folded path. |
+
+`spotNativeComparator` (`src/compare/spotNative.ts`) sorts each field with R5's `classifyNativeField` before any
+difference is taken. It then records:
+- `chiefLanding.maxAbs`, `spotCentroid.maxAbs`, `spotRmsRadius.maxAbs` and `fanError.maxAbs`;
+- `fields.compared`, `fields.data` and `fields.unavailable`;
+- `fanSamples.unpaired`.
+
+The chief-landing limit of the sorting is 1e-5 mm (policy 16, owner decision 2026-10-26). If two answers' chief
+rays land further apart than that, the field is data, set aside, and the pair is ATTENTION. The spot and fan
+figures have no attention band (see the owner's decisions below). A policy without the limit sets no field aside,
+and the pair's notes then say so.
+
+`test/integration/optiland/r7.test.ts` (tier 3) runs both rungs on three benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines, and at its best axial focus. R7a must pass with every
+figure measured. `lv` must answer and refuse exactly as listed above, and optiland must answer every ask.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `a94c0ecd7` (the tree of `879c06102`, closure `c46cbf11`) and optiland
+`4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of
+`r0,r1,r2,r3,r4,r7a,r7b` has 17,760 jobs: 17,496 ok, 264 unsupported (all `lv` in R7b), no error, 1 min 37 s.
+Compare took 20 s: 26,208 pairs, 25,440 PASS, 240 RECORDED, 528 UNSUPPORTED, and no FAIL, ERROR or BLOCKED.
+
+**R7a.** 2,880 requests. All 8,640 pairwise pairs pass, each over 526,118 rays per pair.
+
+| Pair | transverse error | centroid | RMS radius |
+|---|---:|---:|---:|
+| `lv` / `ref` | 6.50e-13 (sigma-45 photopic) | 1.39e-13 | 7.72e-14 |
+| `optiland` / `ref` | 6.48e-13 | 1.42e-13 | 1.15e-13 |
+| `lv` / `optiland` | 5.17e-13 | 1.02e-13 | 1.59e-13 |
+
+No mask mismatch, no rim-band ray and no dropped ray. The worst figure is 15,000 times inside the gate. The other
+suites, run the same way into temporary directories, all pass:
+
+| Suite | R7a pairs | Worst transverse error |
+|---|---:|---:|
+| features | 2,700 | 7.39e-13 |
+| states | 19,200 | 6.73e-13 |
+| diffractive | 400 | 5.93e-13 |
+
+**R7b.** There are 120 recorded pairs: the 24 reference runs at the design plane with all four patterns, and the
+bokeh tiles of the 24 reference best-focus runs. The other 264 pairs are unsupported by `lv` as listed above. All
+336 fields are of two methods: none is data and none is unavailable. The largest chief-landing distance is
+1.40e-6 mm, inside the 1e-5 mm limit that came later, so the limit sets no field aside and marks no pair.
+
+The R7a figures above were measured before the review's estimator fix, which R7b does not use. That fix moves
+an RMS radius by at most the rounding of its first centroid: a few 1e-15 mm at the benchmark's image heights. The
+R7a maxima can therefore change in their last digit only.
+
+| Figure | Pairs | Median | Largest |
+|---|---:|---:|---:|
+| `chiefLanding.maxAbs` | 120 | 9.8e-14 | 1.40e-6 mm (sony-fe-400 f/8, field 0.25) |
+| `spotCentroid.maxAbs` | 72 | 3.4e-4 | 3.34e-3 mm (GF 63, field 0.5) |
+| `spotRmsRadius.maxAbs` | 72 | 4.3e-4 | 8.65e-3 mm (sigma-45, on the axis) |
+| `fanError.maxAbs` | 48 | 2.8e-4 | 5.29e-2 mm (sony-fe-20 tangential fan, near the rim) |
+
+Field by field, the coma clouds' RMS radii differ by a median of 8 % of LensVisualizer's and up to 72 %
+(Z 24-70 tele, on the axis). The bokeh tiles differ by a median of 6 % and up to 71 %. Across a fan's span, the
+tangential fans differ by a median of 5 % and up to 61 %.
+
+**Where the difference comes from: a LensVisualizer assumption to look at, not settled.** R7a shows that the rays
+LensVisualizer launches land alike in three engines to 1e-12 mm, so R7b's difference comes from which rays each
+side launches, not from tracing. LensVisualizer assumes the beam that reaches the image is a collimated disc of the
+paraxial entrance-pupil radius, about the paraxial chief ray on the first vertex plane. It samples that disc on
+equal-area rings, so its outermost ring is at 0.914 of the radius and never reaches the rim. optiland aims each
+field through the real stop, with a hexapolar pupil whose outer ring lies on the stop's rim. Whether
+LensVisualizer's pupil model is right for these tabs is open. Two things follow:
+- **The pupil size differs.** The real axial marginal ray that clears every aperture is 0.946 (sigma-35 f/1.4) to
+  1.0048 (GF 63) of LensVisualizer's radius.
+- **optiland loses rim rays.** Its rim ring is often clipped on the axis of fast lenses: 91 to 127 of 127 land in
+  a cloud, and 271 to 331 of 331 in a tile. LensVisualizer lands all of its own.
+
+Wide-angle fields add pupil aberration, which moves a fan's abscissae; this gives sony-fe-20's 5.3e-2 mm. The chief
+rays differ by up to 1.40e-6 mm because LensVisualizer's goes through the paraxial pupil's centre and optiland's
+through the stop's.
+
+### Owner decisions, 2026-10-26
+
+1. **The baselines are refreshed once, at the end of Phase 6**, as in Phase 4, and not in the Stage 6.2 commit.
+   Until then two checks fail, and only on policy identity (v15 recorded, v16 at hand): `lvrtc verify`, and
+   `test/cli/baseline.test.ts`'s "the committed baselines and reports of this repository hold together". Neither is
+   weakened. Before its commit, each Phase 6 stage instead checks the rays baselines for no DRIFT
+   (`node bin/lvrtc.mjs baseline check <suite> --jobs 4`).
+2. **R7b's chief-landing sorting limit is 1e-5 mm** (still policy 16, since nothing has been written at 16). The
+   spot and fan figures get **no attention band** until the pupil-model difference above is resolved: either
+   LensVisualizer's collimated disc of the paraxial entrance pupil or optiland's real stop to its rim.
+3. **R7b stays out of every baseline for now.** It can be run with `--rungs r7b`. A rays baseline holds every rung
+   its run was compared on, so the refresh below never names R7b beside the rays rungs.
+4. **The validation statement and its signed sentence are unchanged.** `STATEMENT_RUNGS` does not describe R7a.
+5. **The bokeh tile at the tab's own plane is deferred, and not covered.** The tab draws its infinity grid at its
+   own best focus (`infSensorZ`, canary). R7b intercepts the tile on the case's plane: the design plane and the
+   benchmark's best axial focus, never the tab's plane. Comparing there would need a new image-plane kind.
+
+### The Phase 6 end refresh
+
+This refresh is not run at Stage 6.2, 6.3, 6.4, 6.5, 6.6, 6.6b, 6.7 or 6.8. Policy versions 16, 17, 18, 19, 20, 21, 22
+and 23 change the policy hash, and the stages add names to the LensVisualizer manifest and files to the optiland worker. So all ten baselines
+other than the catalog's are STALE:
+- by policy;
+- by engine for `lv`, `replay`, `wave` and `optiland`, whose adapter revisions moved;
+- by engine for `optiland-wave`, whose revision hashes the worker's (`src/engines/optiland/wavefrontEngine.ts`), so
+  the R6c records of the benchmark's MTF baseline are STALE(engine) too.
+
+`ref`'s revision did not move. The store therefore recomputes the other five engines, and a cold MTF run of the
+benchmark takes hours (Stage 5.4). The catalog stays the dated snapshot of policy 15.
+
+R7a, R8a, R9a, R10a and R11a join the rays baselines of the suites whose runs have spot, axial, chief, curvature and
+vignetting sets: benchmark, features, states and diffractive (which has no vignetting sets since Stage 6.6b: the tab
+draws no curve of a state outside its MTF's beam model, a diffractive surface among them, `lv-outside-beam-model`).
+LensVisualizer #925 (`5ba17c20c`, Stage 6.6b) also moved the rays of the MTF launch, of the chief, curvature and
+vignetting sets below one degree and of the lateral colour: where a set's rays moved its request is a new one, which a
+`baseline check` names before the write. focus-stations (finite objects)
+and folded (folded paths) have none, so they are rewritten with their own rungs. R7b, R8b, R9b, R10b, R11b and R12b
+stay out of every baseline. Stage 6.7 adds no gated rung: the summary tab is covered by R1, which every rays baseline
+already holds. Stage 6.8 adds none either: R13b and R14b stay out of every baseline, and its Seidel sums are an engine of
+their own (`ref-seidel`), so `ref`'s fingerprint and adapter revision still did not move.
+At the end of Phase 6, with that phase's rungs added to the lists, run these on the real store strictly one after
+another:
+
+```bash
+for suite in benchmark features states; do
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a,r11a --jobs 4
+  node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite
+done
+node bin/lvrtc.mjs run suites/diffractive.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r7a,r8a,r9a,r10a,r11a --jobs 4
+node bin/lvrtc.mjs compare diffractive --jobs 4 && node bin/lvrtc.mjs baseline write diffractive
+node bin/lvrtc.mjs run suites/folded.json --engines lv,ref,optiland --rungs r0,r1,r2,r3 --jobs 4
+node bin/lvrtc.mjs compare folded --jobs 4 && node bin/lvrtc.mjs baseline write folded
+node bin/lvrtc.mjs run suites/focus-stations.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4 --jobs 4
+node bin/lvrtc.mjs compare focus-stations --jobs 4 && node bin/lvrtc.mjs baseline write focus-stations
+# the MTF baselines, each after its rays baseline: the rungs it holds
+for suite in features states focus-stations; do
+  node bin/lvrtc.mjs run suites/$suite.json --engines lv,ref,optiland --rungs r4,r4f,r6a --jobs 4
+  node bin/lvrtc.mjs compare $suite --jobs 4 && node bin/lvrtc.mjs baseline write $suite --mtf
+done
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r4,r4f,r5,r5g,r6a,r6b,r6c --jobs 2
+node bin/lvrtc.mjs compare benchmark --jobs 4 && node bin/lvrtc.mjs baseline write benchmark --mtf
+node bin/lvrtc.mjs statement && node bin/lvrtc.mjs verify
+```
+
+Before each write, `baseline check <suite> [--mtf] --jobs 4` says whether a record changed beyond going STALE. Read
+`git diff reports/` after the writes.
+
+**Done, 2026-10-29**, at LensVisualizer `6287f4393` (607ff23ae plus #940; engine closure `fc5ae923`, 184 files), optiland
+`4e893f53`, policy 24, on the real store, through a private clone of LensVisualizer (`LVRTC_LV_PATH`), so that the
+owner's checkout could move meanwhile.
+
+- **Checks first, against the committed policy-15 baselines** (at `607ff23ae`):
+  - The six rays baselines and the features and states MTF baselines had no DRIFT.
+  - The focus-stations MTF baseline had 36 DRIFT records, all PASS. They were R6a's wave MTF moving between judged and
+    flagged on 12 close-focus stations. The cause was LensVisualizer #936's aim at a finite object, which left 47
+    fields of 18 stations without an aimed cell. The comparator codes such a field `lv-field-unaimed`, and LV #940
+    fixed the aim.
+  - The benchmark MTF baseline had 9 DRIFT records, all PASS. They were R6a's wave MTF of three best-focus runs, now
+    judged where every field was flagged before, at most 2.0e-10 against 2e-8. Their cause is #936's stop lattices. It
+    also had 310 MOVED records in the recorded rungs.
+- **Checks again at `6287f4393`**, against the writes made at `607ff23ae`: every infinity record was REFRESHABLE (stale
+  by engine only) and none was DRIFT. #940 leaves infinity bit-identical: the pins are unchanged, and the 12 MTF-tab
+  answers and the 192 R4f answers are byte-identical.
+- **The writes:**
+
+  | Baseline | Runs | Records | Comparison |
+  |---|---:|---:|---|
+  | benchmark rays | 96 | 2,880 | 34,800 PASS |
+  | features rays | 18 | 540 | 6,525 PASS |
+  | states rays | 128 | 3,840 | 46,400 PASS |
+  | diffractive | 9 | 192 | 976 PASS, 24 UNSUPPORTED |
+  | folded | 16 | 96 | 153 PASS, 87 UNSUPPORTED |
+  | focus-stations rays | 69 | 1,005 | 3,535 PASS; the 47 close-focus fields compared since #940 |
+  | features MTF | 18 | 126 | 576 PASS |
+  | states MTF | 128 | 896 | 4,096 PASS |
+  | focus-stations MTF | 69 | 469 | 2,044 PASS |
+  | benchmark MTF | 96 | 1,920 | 3,072 PASS, 2,481 RECORDED, 159 ATTENTION, 336 UNSUPPORTED |
+
+  No FAIL, FLOOR or ERROR anywhere. Then `statement` and `verify` ran: 12 baselines, 0 problems.
+- **The validation statement:**
+  - The signed sentence's words are unchanged. It covers 274 configurations, up from 258.
+  - Worst landing 1.2e-12 mm, optical path 3.5e-9 waves, geometric MTF 1.5e-11, wave MTF 1.1e-9.
+  - LensVisualizer's diffraction MTF against optiland's FFT: up to 0.49, up from 0.31. The pair is the Sony FE 20 mm at
+    best focus, full field, 10 cycles/mm. There LensVisualizer and the wave estimate on its rays agree within 0.0053,
+    so the difference is optiland's FFT at a wide field, the method difference `docs/gotchas.md` describes.
+  - LensVisualizer's diffraction MTF against the comparator's OTF of optiland's own wavefront: up to 0.0081, down from
+    0.026.
+  - Recorded rungs that the real stop brought closer: pairs needing attention fell from 152 to 22 in R5g, from 98 to 51
+    in R6c, and from 5 to 1 in R6b.
+- **Wall time:**
+  - From the first check (09:00) to `verify`: about 3 hours.
+  - The benchmark MTF check from an empty store at `--jobs 2`, R6c included: 53 minutes.
+  - Once optiland's answers were in the store, the benchmark MTF run at `6287f4393` (recomputing only the LV side):
+    6 minutes.
+
+## Stage 6.3: spherical aberration and axial colour
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) anchored its d-line channels to the authored index: the colour
+> lines of the reference runs are no longer `indices-differ`. The measurements below are as they were taken; those after
+> the change are in "Stage 6.6b: LensVisualizer #925 adopted".
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4   # R8b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents spherical aberration in a section of its aberrations tab, and longitudinal colour (LoCA) in a
+section of its chromatic tab. Both trace real rays parallel to the axis through the prepared state and read where each
+crosses the axis behind the last surface. R8a traces exactly those rays in every engine and judges where they cross;
+R8b sets the sections, as they present them, beside optiland's own rays and its paraxial focus at each line.
+
+### The axial sets
+
+`CaseSource.axialRaySets` makes the rays the two sections launch (`src/engines/lv/axialRaySets.ts`, the zones in
+`axialZones.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says
+`needsAxialRaySets`, and the manifest records them under `runs[].axialRaySets`. At LensVisualizer `45e6f852d` (engine
+closure `afef1f81`) the sets of a line are:
+
+| Set | Zones (fractions of the tabs' pupil radius) | Rays |
+|---|---|---|
+| profile | `PROFILE_FRACS`: 0.05 to 0.97, rim-dense, 22 zones | 44 |
+| marginal | the near-axis zone `NEAR_AXIS_REAL_FRAC` (0.1), the marginal candidates in the order tried (`MARGINAL_PUPIL_FRACTIONS`: 0.97, 0.95, 0.9, 0.85, 0.8), and the colour candidates not among them (`DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS`, the same list) | 12 |
+
+Each zone `f` is a mirror pair: ray `2k` is launched at the height `f · r` and ray `2k + 1` at `-f · r`, `r` the pupil
+radius the analysis drawer hands every tab (`lvTabPupilSemiDiameter`, the hook's paraxial entrance pupil for the
+case's stop). A ray starts on the meridian `rayLead` ahead of the first vertex plane, along `(0, 0, 1)`, as
+LensVisualizer's meridional adapter launches `ray(h, 0)` (`bindRayTrace`). Every ray weighs 1 (neither section
+weights a ray), the set states the field 0 and has no chief ray, and the rays are the same at every line of the case,
+as the axial-colour section traces the same heights at each of its four channels.
+
+Each restated line has a canary in `test/integration/lv/canaries.test.ts`: three Stage 6.3 tests, of the zones, of
+the launch and the reading of a ray, and of the sections the engine answers from. `test/integration/lv/axialRays.test.ts`
+traces each ray of the sets with LensVisualizer's exact tracer (`traceEngineRay` with the sections' trace options: the
+authored indices for spherical aberration, each channel's for colour), reads it as LensVisualizer's runtime result
+does (the height carried to the last vertex plane, the slope `dy/dz`), and sums in LensVisualizer's order. On every
+benchmark configuration and the Z 24-70 mm's far end that gives, to the bit:
+- `computeSphericalAberration`: the near-axis and marginal intercepts, the longitudinal spherical aberration, the best
+  focus and the RMS and peak heights there and on the image plane, and the count of rays;
+- every point of `computeSAProfile`;
+- every channel's focus, focus shift, relative focus shift and image height, and the two spreads, of
+  `computeLongitudinalChromaticFocus`.
+
+It also holds every ray at the authored indices to LensVisualizer's public `traceRay` of its height, and holds `lv`'s
+`rays.trace` answer of a set to bring the same rays to the image. What is not tested is that the tabs' React code hands
+these functions exactly this request: that rests on the canaries of the drawer's lines. A finite object
+(`object-not-at-infinity`), a folded path (`folded-path`), no pupil and a launch behind the first surface are coded
+problems: focus-stations and folded have no axial sets.
+
+### R8a: the axial intercepts of identical rays (gated)
+
+R8a asks `rays.trace` of the axial sets (`r8aRung`) and compares them with `raysAxialComparator`
+(`src/compare/raysAxial.ts`), on the rays valid in both answers of a pair, as R4 takes them. The pure estimator
+`src/estimators/axialIntercept.ts` gives, of each engine's exit point `(0, y, z)` and direction `(0, m, n)`:
+- the axial intercept `z* = z - y n / m` and the slope `u = m / n`; a ray off the meridian (`skew`), parallel to the
+  axis (`parallel`), on it (`on-axis`), or whose intercept or slope is no finite double (`out-of-range`: a crossing
+  that overflows, or a direction with no z) has none, and says why;
+- of a set of mirror pairs whose two rays both cross the axis, the least-squares focus `Zf = Σ u² z* / Σ u²` (the
+  plane where `Σ h²` is least, LensVisualizer's `bestFocusPlane`), and the RMS height `h = u (Zf - z*)` there.
+
+The intercept is formed in twice the precision and rounded once; the focus about the first intercept, its moments
+compensated over the exact squares and differences; a height rounded once. Its proofs are analytic
+(`test/estimators/axialIntercept.test.ts`): rays aimed at one point cross it to the bit, every intercept of 5,000 random
+rays is the nearest double of the exact one (the plain formula misses more than a hundred of them), an undercorrected zone
+pattern has the focus and RMS of its closed form, a focus whose moments cancel is within a unit of its last place,
+which a plain sum is not, the weight of a focus whose squares leave rests that add up is held to the bit, and so is
+the RMS at a focus, the root of the exact sum of its squared heights rounded once. Removing any carried rest turns a
+test red (each of the twelve was removed in turn, and each removal failed a test).
+
+**The gate.** The plan names no figure. An intercept is ill-conditioned for a ray of small slope: two traces that
+differ by a height `δ` near the focus cross the axis `δ / |u|` apart. On the benchmark the slopes behind the lens run
+from 0.0031 (the GF 63 mm at f/8, zone 0.05) to 0.448 (the Z 50 mm f/1.2 at its marginal zone): a gate on the plain
+intercept would demand of the shallowest ray 144 times what it demands of the steepest, and 320 times what R2 demands
+of a landing. So the intercept is judged on the transverse scale: `intercept.maxScaled` is the intercept difference
+times the larger of the two slopes, which is the height at which each engine's ray passes the other's crossing, the
+quantity R2's landing gate and R7a's transverse gate are of. The focus is judged alike, times the larger RMS slope.
+The larger slope, of a ray or of a set, and never one engine's: an engine whose slope is wrong and small would
+otherwise scale its own difference away (`test/compare/raysAxial.test.ts` holds both orders of two such answers, and
+replacing the larger slope by the smaller or by either engine's own turns it red). Where the two answers' slopes are
+the same, the focus figure is bounded by the intercept figure (Cauchy–Schwarz), and adds only a check of the
+estimator. Where the slopes differ it is not: two answers whose intercepts agree and whose slopes differ weight the
+zones differently, and their foci part (one pair's slopes 1 + 2^-11 times the other's leaves every intercept figure
+a rounding and puts `focus.maxScaled` above the gate). The focus figures are R8a's only sign of a difference of the
+exit slopes on these rays. Under policy version 17:
+
+| Metric | Gate |
+|---|---|
+| `intercept.maxScaled` | 1e-8 mm |
+| `focus.maxScaled` | 1e-8 mm |
+| `focusRms.maxAbs` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+`intercept.maxAbs` and `focus.maxAbs`, along the axis, are shown beside them and never judged. `mask.rimBand`,
+`rays.compared` and `rays.dropped` are reported. There is no floor. A ray that crosses the axis in one answer and not
+in the other, a ray that leaves the meridian in both, and a set off the meridian are not comparable. **The owner
+accepted the transverse-scale rule as implemented (2026-10-26).**
+
+### R8b: the sections beside optiland (recorded)
+
+`axial.native` v1 (contract 1.0; `contract/CONTRACT.md`) is of two kinds: `spherical`, at one line, with the near-axis
+zone, the marginal candidates and the profile; `colour`, over lines, with the candidates of the marginal ray. A
+fraction is of the engine's own pupil radius at the first line asked, the same heights at every line.
+- **`lv`** answers with the sections' numbers as they present them (`answerLvAxial`, `src/engines/lv/axial.ts`):
+  `computeSphericalAberration` and `computeSAProfile` (method `lv-aberrations-tab`), and
+  `computeLongitudinalChromaticFocus` (`lv-chromatic-tab`) at each line whose wavelength is one of its channels'.
+- **`optiland`** answers with its own rays (`workers/python/lvrtc_optiland/axial.py`): its ray generator launches the
+  rays at the pupil coordinates `(0, f)` of the builder's axial field, with its default `paraxial` aiming, on the first
+  line's verified optic; those rays are traced on every line's verified optic; and `F2()` plus the image plane is the
+  paraxial focus of each line. Each setting of the launch is read back (`test_axial.py`, with a deliberate mistake for
+  each check: the aiming, the field, its type, the fields, vignetting, apodization, an `EPD()` that is no number or 0,
+  each launched coordinate, the length of a launched column; and lines of another pupil each, which catch a launch
+  from another line's optic), and the worker computes no intercept: the comparator's estimator forms the figures of
+  the rays, at the marginal fraction LensVisualizer took. The pupil and the focus are optiland's first-order data, so
+  the engine refuses, before anything is built, the cases whose first-order data it refuses
+  (`optiland-phase-paraxial-unseen`, `surface.asphere.linear-term`, `surface.asphere.quadratic-term`): asked
+  anyway, the worker would state the focus of a lens without its term of power 2 (2.4 mm from the contract's on the
+  test's lens) and no focus of a kinoform whose rays cross at 100 mm.
+
+`lv` refuses, as unsupported, what its sections do not present; everything but the design plane is decided before
+LensVisualizer is asked anything:
+
+| Item | When |
+|---|---|
+| `lines.not-authored-reference` | Spherical aberration at a line that is not the authored indices: every photopic run. |
+| `lines.not-chromatic-channels` | Colour at no line whose wavelength is a channel's (C, d, F, g; C′, e, F′, g for a lens of native e-line indices): every photopic run. A line that is none, beside one that is, is unavailable (`lv-no-channel-at-line`). |
+| `lines.mixed-reference` | Colour of a lens that mixes d-line and e-line indices. |
+| `focus.off-design` | A case off the design plane, where both sections present their figures. Every best-focus run. |
+| `pupil.fractions` | Zones other than the section's own. |
+| `object.finite`, `path.folded` | A finite object; a folded path. |
+
+`axialNativeComparator` (`src/compare/axialNative.ts`) sorts each line before any difference (`classifyAxialLine`):
+
+1. R5's `classifyNativeField` first: a line without figures is `unsupported`, a line of other wavelengths `data`;
+2. then the rung's own reasons of class `data`: `indices-differ`, where an answer states that it traced the line at
+   indices other than the case's (`sampling.indexMaxDelta` above 0; two traces of one source of indices are the same
+   bits, so any other value is other indices, and no smaller threshold is measured), and `pupils-apart`, where the
+   two pupils' radii differ by more than 2e-10 of the larger (`pupilRadius.relative`): the same fractions of other
+   radii are other rays, and the spherical line's identifying ray, the near-axis pair's mean, lands on the axis by
+   symmetry whatever the pupil, so its landing alone could never set a spherical line aside;
+3. then R5's landing of the identifying ray (the near-axis pair's mean, or the marginal ray of colour) against
+   1e-5 mm, R7b's limit;
+4. then `method`, two methods: only such a line enters a figure.
+
+`axialFactsOfRecorded` reads the sorting's facts back from the values a comparison records (`landingMm`, `settled`,
+`pupilRadiusMm`, `indexMaxDelta`), so that a report can repeat it; `test/compare/axialNative.test.ts` holds the
+repeated sorting to the comparator's on each class. It then records `pupilRadius.relative` and `landing.maxAbs`; of
+spherical aberration `marginalIntercept.maxAbs`, `nearAxisIntercept.maxAbs`, `longitudinalSa.maxAbs`,
+`bestFocus.maxAbs`, `bestFocusRms.maxAbs` and `profile.maxAbs`; of colour `lineFocus.maxAbs` (each line's real focus,
+its marginal ray's intercept), `relativeFocus.maxAbs` (each line's real focus relative to the first line, the
+quantity the chart plots) and `paraxialFocalShift.maxAbs` (one engine's real relative focus beside the other's
+paraxial chromatic focal shift: a different quantity, which spherochromatism separates); and how many lines are of
+each class. Policy 17's limits and bands, the owner's of 2026-10-26 except the pupil limit:
+
+| Metric | Policy 17 |
+|---|---|
+| `landing.maxAbs` | limit of the sorting, 1e-5 mm |
+| `pupilRadius.relative` | limit of the sorting, 2e-10 (signed off by the owner, 2026-10-26) |
+| `marginalIntercept.maxAbs`, `nearAxisIntercept.maxAbs`, `longitudinalSa.maxAbs`, `bestFocus.maxAbs`, `bestFocusRms.maxAbs`, `profile.maxAbs` | attention band 1e-10 mm |
+| `lineFocus.maxAbs`, `relativeFocus.maxAbs` | no band, until LensVisualizer's index question is settled |
+| `paraxialFocalShift.maxAbs` | never a band: a different quantity |
+
+The pupil limit is the project's rule for a limit from a measurement: ten times the measured maximum, rounded up to
+one digit. The largest relative difference of the two pupils on the benchmark is 1.37e-11 (the Sony FE 20 mm, wide
+open and at f/8; median 7.5e-13), so 1.37e-10, rounded up to 2e-10. The spherical bands are the owner's 1e-10 mm:
+ten times the largest measured figure (8.5e-12 mm), rounded up to its decade.
+
+`test/integration/optiland/r8.test.ts` (tier 3) runs both rungs on three benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines, and at its best axial focus.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `45e6f852d` (clean; engine closure `afef1f81`, the same at `e3b1f0f81`) and
+optiland `4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of `r8a,r8b` has 2,112 jobs: 1,968 ok,
+144 unsupported (all `lv` in R8b), no error, 12 s. Compare: 3,264 pairs, 2,880 PASS, 54 RECORDED, 42 ATTENTION, 288
+UNSUPPORTED, no FAIL, ERROR or BLOCKED. Measured again after the owner's decisions and the review's corrections, with
+the bands, the pupil limit and the index sorting, at LensVisualizer `2c908a801` (clean; nothing under `src/optics` or
+`src/lens-data` changed since `45e6f852d`; closure `afef1f81`): the same jobs and the same verdict counts, R8a's
+figures to the bit, and R8b sorted as below.
+
+**R8a.** 576 requests. All 1,728 pairwise pairs pass, over 15,848 rays a pair.
+
+| Pair | `intercept.maxScaled` | `intercept.maxAbs` | `focus.maxScaled` | `focusRms.maxAbs` |
+|---|---:|---:|---:|---:|
+| `lv` / `ref` | 2.32e-13 (Z 24-70 tele f/8 photopic) | 4.12e-12 | 9.91e-14 | 3.33e-14 |
+| `optiland` / `ref` | 4.72e-13 (Z 50 mm, ray 38) | 4.26e-12 | 1.42e-13 | 1.32e-13 |
+| `lv` / `optiland` | 4.12e-13 | 1.59e-12 | 1.22e-13 | 1.52e-13 |
+
+No mask mismatch, no rim-band ray and no dropped ray. The worst figure is 21,000 times inside the gate; the plain
+intercepts, along the axis, differ by up to 4.26e-12 mm. The other suites, run the same way, all pass:
+
+| Suite | R8a pairs | Worst `intercept.maxScaled` |
+|---|---:|---:|
+| features | 324 | 3.40e-13 |
+| states | 2,304 | 2.40e-13 |
+| diffractive | 48 | 3.73e-13 |
+
+**R8b, spherical aberration.** 24 pairs, the reference runs at the design plane (wide open and f/8), all 24 lines of
+two methods, all RECORDED (no figure reaches the 1e-10 mm band). LensVisualizer's tab pupil and optiland's paraxial
+entrance pupil agree to 1.37e-11 of their radius at most (`pupilRadius.relative`, within its limit on every pair), so
+the section and optiland's own rays differ only in arithmetic:
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `marginalIntercept.maxAbs` | 2.5e-13 | 8.4e-12 mm (Sony FE 20 mm) |
+| `nearAxisIntercept.maxAbs` | 1.1e-13 | 7.1e-13 mm |
+| `longitudinalSa.maxAbs` | 3.1e-13 | 8.5e-12 mm |
+| `bestFocus.maxAbs` | 5.7e-14 | 3.5e-12 mm |
+| `bestFocusRms.maxAbs` | 2.2e-15 | 5.4e-13 mm |
+| `profile.maxAbs` | 3.8e-14 | 1.7e-12 mm |
+
+**R8b, axial colour.** 24 pairs of one line each, the d line (the reference runs), which LensVisualizer traces as its
+G channel (its reference channel: the d line, 587.56 nm, for these lenses of d-line indices; not the Fraunhofer g
+line, which is its channel V). Its G channel's indices are not the case's on any pair (`sampling.indexMaxDelta` 7.7e-9
+to 7.0e-4, median 6.1e-6), and its marginal ray crosses the axis 1.4e-6 mm (Sony FE 20 mm) to 3.0e-2 mm (Z 24-70 mm
+tele) from optiland's at the case's indices. All 24 lines are data, `indices-differ`, and no colour figure is taken:
+21 pairs are ATTENTION, their identifying rays landing 2.4e-5 to 3.7e-3 mm apart, beyond the 1e-5 mm limit; 3
+(GF 63 mm at f/8, Sony FE 20 mm wide open and at f/8) land within it and are RECORDED. Before the index sorting those
+three were counted as lines of two methods, 1.1e-4 mm apart at most: they were of other indices. The photopic runs
+have no line of a channel, and no colour of LensVisualizer's.
+
+To see the figures the chart plots, the 12 configurations were also run on the C, d and F lines, in a temporary
+suite outside the benchmark (`lines: { kind: "cdf" }`, wide open; not committed). There:
+- LensVisualizer's relative focus (C − d and F − d at its marginal zone) is optiland's real relative focus at the
+  case's indices within 1e-4 mm: the index offset moves all three lines nearly alike;
+- the paraxial chromatic focal shift differs from the real one by up to 8.8e-2 mm (Nikon Z MC 105 mm, F − d: real
+  −0.0426, paraxial +0.0453), and its sign differs on four lenses: a different quantity, as the plan says.
+
+**Where the colour difference comes from: a LensVisualizer assumption, with evidence.** R8a shows the rays land alike
+in three engines to 5e-13 mm, so R8b's colour difference comes from the indices, not from tracing. LensVisualizer's
+chromatic channels (`makeSurfaceDispersion`, `materialResolver.ts`) give a d-line glass it matched to a catalog the
+catalog's own Sellmeier index at every channel, its G channel included
+(`const nG = evaluateSellmeier(entry, CHANNEL_NM.G);`). A native e-line element is anchored to its authored index
+instead, and so is LensVisualizer's MTF path (`anchoredIndexAtWavelength`, whose own comment names the defocus that
+anchoring prevents). The aberrations tab traces the authored indices. So LensVisualizer's two sections disagree on the
+d-line focus of one lens:
+- the Z 50 mm f/1.2 has three glasses 4.3e-4, -6.5e-4 and 7.0e-4 from their catalog matches, and its G-channel
+  marginal focus moves 4.3e-3 mm wide open;
+- the Z 24-70 mm f/4 has one 2.3e-4 off, and moves 3.0e-2 mm at the tele end;
+- one glass of three lenses (the Sigma 35 mm, the Sony FE 400 mm, the GF 63 mm) differs by 6.8e-6, the catalog fit's
+  own residual at the d line, and moves 1e-4 to 2e-3 mm.
+
+The plotted relative focus moves by 1e-4 mm at most, but the absolute focus shift the section returns
+(`focusShiftMm`) and its image-plane fan span are of the catalog's lens. A census of the prepared states (no trace;
+LensVisualizer `36b5768bf`, the same optics and lens data) finds a medium whose G-channel index is not its authored
+one in 881 of the 1,014 catalog lenses, every such medium of the `sellmeier` tier, 328 lenses by 1e-4 or more, the
+largest 3.0e-3, the match's own tolerance. Whether LensVisualizer anchors these channels as it anchors its e-line
+elements is the owner's: LensVisualizer is read-only here. The owner's brief, with the source lines, the per-lens
+figures and a suggested fix, is `docs/upstream/lensvisualizer-loca-unanchored-index.md` (not filed); the entry is
+`docs/gotchas.md`, "Axial rays".
+
+### Owner decisions (2026-10-26)
+
+1. **R8a's gate rule is accepted as implemented**: intercepts on the transverse scale `|Δz| · max |u|` at 1e-8 mm
+   (`intercept.maxScaled`), the focus scaled by the larger RMS slope at 1e-8 mm (`focus.maxScaled`), the RMS at the
+   focus at 1e-8 mm absolute (`focusRms.maxAbs`), the plain `|Δz|` shown and not judged, the mask at 0, no floor.
+2. **R8b's landing limit stays 1e-5 mm**; the spherical figures have an attention band of 1e-10 mm; the colour
+   figures none until LensVisualizer's index question is settled; `paraxialFocalShift.maxAbs` never one. Policy
+   version 17 carries them.
+3. **R8b stays out of every baseline** (`--rungs r8b` runs it).
+4. **LensVisualizer's chromatic channels of d-line catalog glasses** are unanchored (above): the owner's brief is
+   `docs/upstream/lensvisualizer-loca-unanchored-index.md`, for the owner and not filed.
+
+Signed off by the owner on 2026-10-26: **the pupil limit of R8b's sorting**, `pupilRadius.relative` at 2e-10 (ten
+times the measured 1.37e-11, rounded up), which the review's finding that the spherical landing cannot tell pupils
+apart required.
+
+
+## Stage 6.4: distortion, lateral colour, pupils and breathing
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) solves the chief ray below one degree and traces each channel's
+> own chief ray in the lateral colour; the `lateral-colour` sets hold all four channels' chief rays of each field. The
+> measurements below are as they were taken; those after the change are in "Stage 6.6b: LensVisualizer #925 adopted".
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r9b --jobs 4   # R9b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the chief rays across the field in three places: its distortion tab (a curve of percent
+distortion against field angle, and a traced grid), its pupils tab (the real entrance and exit pupils of each field's
+chief ray beside the paraxial ones), and the lateral-colour section of its chromatic tab (each channel's chief-ray
+landing relative to its reference channel). R9a traces exactly the chief rays those tabs launch in every engine and
+judges where they land, how far apart their lines' landings move, the distortion of the landings and where the rays
+cross the axis behind the system. R9b sets the tabs, as they present them, beside optiland's own distortion model,
+its own chief rays and its paraxial pupils. The focus-breathing chart is the focal length of a prepared state, which
+R1 judges wherever the state is a case.
+
+### The chief sets
+
+`CaseSource.chiefRaySets` makes the chief rays the tabs launch (`src/engines/lv/chiefRaySets.ts`, the request and the
+distortion reference in `chiefSetup.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with
+a rung that says `needsChiefRaySets`, and the manifest records them under `runs[].chiefRaySets`; a case source
+without them (a case file) is `chief-sets-unavailable`. Four patterns, in this order, each one set at every line of
+the case, the same rays at every line (as the lateral-colour section traces one chief ray at each channel), every ray
+of weight 1:
+
+| Pattern | Rays | Per line on the benchmark |
+|---|---|---:|
+| `distortion-curve` | the near-axis probe of the reference (the paraxial pupil's chief ray at `min(max(0.01 · half field, 0.02), 0.5)` degrees), the edge chief ray (the half field, whose landing sets the curve's target heights), then the chief ray of every sample after the axis, at the angle LensVisualizer's inversion solved for it; `groups.chiefIndex` 0 names the probe | 22 |
+| `distortion-grid` | the probe, then every grid point LensVisualizer traces, launched skew at its ideal point's slopes with the pupil correction interpolated from LensVisualizer's table (17 field samples, 9 for a heavy lens); `groups.chiefIndex` 0 | 91 |
+| `pupils` | the solved chief ray of each field the pupils tab traces off the axis (`uniformFieldFraction(i, PUPIL_ABERRATION_SAMPLE_COUNT)` of the half field) | 16 |
+| `lateral-colour` | the coma tab's chief ray at each of `DEFAULT_LATERAL_COLOR_FIELD_FRACTIONS` | 5 |
+
+A meridional ray starts as LensVisualizer's `bindRayTrace` starts `ray(y0, u0)`: at `(0, y0 − u0 · rayLead,
+z0 − rayLead)`, along `directionFromMeridionalSlope(u0)` (or `(0, 0, 1)` for a slope of 0); a skew ray as the coma
+tab's (`lvSkewLaunch`). The fields, the solved launches, the grid's points and the curve's samples are LensVisualizer's
+own exports; what the tabs do inline (the probe, the edge, the pupil-correction table and its interpolation, the
+pupils tab's fields, the section's fractions, the launches) is restated, each line with a canary: four Stage 6.4 tests
+in `test/integration/lv/canaries.test.ts`. `test/integration/lv/chiefRays.test.ts` traces each ray with
+LensVisualizer's exact tracer (`traceEngineRay`, each tab's options; a channel's indices for the lateral colour) and,
+on every benchmark configuration and the zoom's far end (1,608 rays), gets to the bit: the probe's and the edge's
+heights, every sample's ideal height and percent from its target and its angle, every traced grid point, every
+field's real exit pupil and entrance-pupil correction, and every channel's landing; it also holds that every sample's
+chief ray lands within LensVisualizer's 1e-4 mm of the target the curve plots. The case source also makes the
+`chief.native` asks of R9b (`ChiefSetResolution.asks`): the distortion curve at the reference line at the solved
+angles, the pupils at the reference line at their fields, the lateral colour at every line.
+
+Which fields have a chief ray a set can state is decided once, in `src/engines/lv/chiefFields.ts` (`lvSolvedChief` for
+a solved chief ray, `lvPupilFields` for the pupils tab's fields, `lvLateralChief` for the section's), and both sides
+use it: the sets and asks of `chiefRaySets.ts`, and `lv`'s answer in `chief.ts`, which keeps of each tab's samples
+only the fields that module admits. A field LensVisualizer launches from a bounding sphere, or has no slope for, is a
+coded problem of its set, no field of the ask and none of `lv`'s answer: no engine is asked a field `lv` cannot
+launch, and `lv` answers every ask of its own case source. `test/engines/lv/chief.test.ts` feeds the asks of the fake
+tree's vector variant (fields beyond 12° launched from a bounding sphere) to `answerLvChief` for all three kinds.
+
+Coded problems, each of the run or of the pattern it names and never approximated: `folded-path`,
+`object-not-at-infinity` and `no-half-field` (no sets, no asks); `lv-fisheye-projection` (no distortion sets or ask:
+a fisheye's reference is its declared law, which no probe scales), `lv-no-distortion-reference`,
+`lv-no-distortion-curve`, `lv-no-distortion-grid` (a grid of no line, or whose lines have no traced point: a set of
+the probe alone has no distortion); `lv-exit-pupil-at-infinity` (no pupils); `no-pupil`,
+`lv-no-launch`, `lv-vector-launch` (a field launched from a bounding sphere); `launch-behind-first-surface`.
+focus-stations (finite objects) and folded (folded paths) have no chief sets.
+
+### R9a: the chief rays of identical launches (gated)
+
+R9a asks `rays.trace` of every chief set at every line (`r9aRung`) and compares them with `raysChiefComparator`
+(`src/compare/raysChief.ts`), a comparator of spans: a set's rays without its line are its key (`spanOf`), so the
+answers to one set at all lines are one comparison. The rays of a line are those ok in both answers of a pair; which
+rays those are is judged as R2 judges it. The figures, each with the line and the ray of its largest value:
+
+- `landing.maxAbs`: a landing's difference, along x or y, the engine's own `imagePoint` on the case's plane;
+- `lateralColour.maxAbs`: the difference of the two engines' moves of a landing from the span's first line to
+  another; inapplicable to a case of one line;
+- `distortion.maxScaled`: the difference of a ray's displacement from its ideal point, along x or y. The pure
+  estimator `estimateDistortion` (`src/estimators/distortion.ts`) takes each engine's own probe landing as the scale:
+  the ideal point of a ray is the probe's landing times the ray's slope over the probe's, formed with the rest of the
+  product (`twoProductError`), and the displacement with the rest of the difference (`twoSumError`), rounded once.
+  The probe must be on the meridian (its x slope and x landing 0, as every meridional launch keeps them), or it scales
+  nothing (`no-scale`). `distortion.maxAbs`, the radial percent, is shown beside it. Inapplicable to a set without a
+  probe; a line whose probe gives no distortion while other lines do is named in the pair's reason;
+- `exitPupil.maxScaled`: where a chief ray crosses the axis behind the system (the axial estimator,
+  `axialIntercept`), its difference times the larger of the two exit slopes; `exitPupil.maxAbs`, along the axis,
+  shown;
+- `mask.mismatches`, `mask.rimBand`, `rays.compared`, `rays.dropped`, as R2's and R4's.
+
+**The gate.** A percent distortion is a displacement over an ideal height that vanishes on the axis, and an exit
+pupil is a crossing that moves `δ / |u|` for a height `δ` at a slope `u`: both are ill-conditioned near the axis. So
+the percent is judged as the displacement it is a percentage of, and the crossing times the larger slope, never one
+engine's (an engine whose slope is wrong and small would scale its own difference away;
+`test/compare/raysChief.test.ts` holds both orders). The exit-pupil figure is the rung's only sign of a difference of
+the exit slopes, which a landing does not separate from a difference of the exit heights (an exit turned about its
+landing shows in it alone). **The owner accepted the gate as proposed (2026-10-26).** Two conditionings of it are
+stated here, and neither is gated away:
+
+- **`exitPupil.maxScaled` amplifies a slope difference by the lever arm.** Two exits at one height `y` whose slopes
+  are `m` and `m + dm` cross the axis about `y dm / m²` apart, which times the slope is `y dm / m`. A slope is known
+  to about a rounding of a unit direction's component, 1.1e-16, so a nearly image-telecentric chief ray, its exit
+  pupil finite but far (a ray 20 mm off the axis at a slope of 2e-7, its pupil 1e8 mm away), shows 1.1e-8 mm for one
+  rounding: above the gate on arithmetic alone. `lv-exit-pupil-at-infinity` does not catch it, since such a pupil is
+  finite. The worst measured figure is 5.97e-13 mm (features, the fixed-iris zoom).
+- **`distortion.maxScaled` is not on the transverse scale for the probe.** A difference `δ` of the probe's landing
+  moves each ray's ideal point by `δ s_ray / s_probe`, its slope over the probe's: about 100 for a small half field
+  (the probe is a hundredth of it), 136 at a 50° half field, 200 to 270 for ultra-wide rectilinear lenses, whose probe
+  is held at 0.5°. So the figure holds the probe's landing to about 4e-11 mm, not 1e-8 mm. Today's margin: landings
+  agree to 3.6e-13 mm, and the worst measured figure, every probe's difference times its amplification included, is
+  3.83e-13 mm.
+
+A FAIL of either figure is attributed (the ray in extended precision, the slopes and the probe's landing apart) before
+anything is concluded, and the gate is never widened for it.
+
+Under policy version 18:
+
+| Metric | Gate |
+|---|---|
+| `landing.maxAbs` | 1e-8 mm |
+| `lateralColour.maxAbs` | 1e-8 mm |
+| `distortion.maxScaled` | 1e-8 mm |
+| `exitPupil.maxScaled` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+No floor. A probe that is no ray of its set, a ray that crosses the axis in one answer and not the other, and a ray
+with a distortion in one answer and not the other are not comparable; a probe not ok in both, or of no scale, leaves
+the distortion unmeasured. The estimator's proofs are in `test/estimators/distortion.test.ts`: a perfect rectilinear
+image has no distortion to the bit, a barrel image its closed form, a displacement whose landing and ideal height
+nearly cancel keeps the product's rest, and every displacement of a series of 200,000 is the nearest double of the
+exact one, which removing either rest breaks; a probe off the meridian, by its slope or its landing, scales nothing.
+
+### R9b: the tabs beside optiland (recorded)
+
+`chief.native` v1 (contract 1.0; `contract/CONTRACT.md`) is of three kinds: `distortion` and `pupils`, at one line,
+and `lateral-colour`, over lines, the first the reference; each at the field angles of the spec (above 0 but for
+lateral colour), within `maxFieldDeg`. Every field states `chiefLandingMm`, the landing of its chief ray through the
+centre of the stop, which identifies it; distortion its `figures` (real height, ideal height, percent), pupils its
+`figures` (entrance and exit pupil z) or the chief ray it traced (`chiefRay`: entry point and direction, exit point
+and direction), lateral colour neither; the answer states its `reference` (the distortion scale and its probe angle,
+the paraxial pupils).
+
+- **`lv`** answers with the tabs as they present them (`answerLvChief`, `src/engines/lv/chief.ts`):
+  `computeDistortionCurve` (method `lv-distortion-tab`; each sample's solved chief-ray landing beside it, and
+  `sampling.inversionResidualMm`), `computeBothPupilAberrationProfiles` (`lv-pupils-tab`: the real entrance pupil
+  `z0 + epRatio + epShiftMm`, the real exit pupil `zLast + xpZRelLastSurf`, the paraxial ones stored), and
+  `computeLateralColorCurve` (`lv-chromatic-tab`, at each line that is a channel's, with `sampling.indexMaxDelta`);
+  of each, only the fields `chiefFields.ts` admits.
+- **`optiland`** answers with its own classes (`workers/python/lvrtc_optiland/chief.py`). Distortion is
+  `create_distortion_model("paraxial", distortion_type="f-tan")`, the `RotationalDistortionModel` its `Distortion`
+  builds by default, on a fresh verified optic whose one field is the spec's half field, asked at the normalised
+  field `angle / maxFieldDeg` (the answer states the angle asked), under optiland's default `paraxial` aiming
+  (accepted by the owner, 2026-10-26): its robust aimer launches the model's
+  near-axis probe (1e-10 of the half field) along the axis and gives a scale of 0 (`docs/gotchas.md`). Each field is
+  identified by the robust-aimed chief ray (`spot.chief_landing`). Pupils are that chief ray traced once
+  (`trace_generic` at the pupil (0, 0)), stated as it enters and leaves, and the line's `EPL()` and `XPL()`
+  (`first_order.line_data`). Every setting is read back, each check with a deliberate fault in `test_chief.py`: the
+  model's class, distortion type, reference point, near-axis probe, half field and aiming, the number of values; the
+  optic's field count, type, angles, vignetting, weight, half field and aiming; the chief ray's aimer, launch
+  direction, rows and image plane. A test pins the robust aimer's scale of 0. The frame is mirrored in y. What
+  optiland cannot compute is a field with a reason (`no-scale`, `no-chief-landing`, `no-chief-ray`,
+  `optiland-raised-<class>`). Distortion and pupils are of optiland's paraxial model, so the engine refuses them
+  where `first_order.term_refusals` does (a phase profile, a term of power 1 or 2), before anything is built.
+  optiland's `PupilAberration` (the stop's real-against-paraxial ray error over the pupil) is another quantity and is
+  not asked.
+
+`lv` refuses, as unsupported, what its tabs do not present, decided before LensVisualizer is asked anything but
+readings of the lens (but `fields.angles`, decided once the tab has said its fields):
+
+| Item | When |
+|---|---|
+| `lines.not-authored-reference` | Distortion or pupils at a line that is not the authored indices: every photopic run. |
+| `lines.not-chromatic-channels` | Lateral colour at no line that is a channel's: every photopic run. A line that is none, beside one that is, is unavailable (`lv-no-channel-at-line`). |
+| `lines.mixed-reference` | Lateral colour of a lens that mixes d-line and e-line indices. |
+| `focus.off-design` | A case off the design plane (the last vertex plus its gap), where the tabs present their figures: every best-focus run. Decided from the prepared state for all three kinds, the lateral colour included, before any tab is asked. |
+| `projection.fisheye` | Distortion of a fisheye lens. |
+| `fields.angles` | Angles other than the tab's own. |
+| `object.finite`, `path.folded` | A finite object; a folded path. |
+
+`chiefNativeComparator` (`src/compare/chiefNative.ts`) sorts each field before any difference
+(`classifyChiefField`): R5's `classifyNativeField` first (a field without figures is `unsupported`, one of other
+wavelengths `data`); then `indices-differ`, of class `data`, where an answer states it traced the field at indices
+other than the case's (`sampling.indexMaxDelta` above 0); then the chief rays' landing against 1e-5 mm, R7b's and
+R8b's limit; then `method`, the only class that enters a figure. `chiefFactsOfRecorded` repeats the sorting from the
+recorded values. It records `chiefLanding.maxAbs`; of distortion `distortionPercent.maxAbs` (percentage points),
+`realHeight.maxAbs`, `idealHeight.maxAbs` and `focalScale.relative`; of lateral colour `lateralColour.maxAbs` (each
+landing relative to the first line, where both lines are of two methods); of pupils `entrancePupil.maxAbs` and
+`exitPupil.maxAbs` (an engine's own, or the axial crossings of the chief ray it traced, by `axialIntercept`), and
+`paraxialEntrancePupil.maxAbs`, `paraxialExitPupil.maxAbs`; and the fields of each class. Policy 18:
+
+| Metric | Policy 18 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (owner, 2026-10-26) |
+| every other figure | no band (owner, 2026-10-26) |
+
+`test/integration/optiland/r9.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 400 mm on its
+reference line, whose pupils below one degree it pins.
+
+### Breathing
+
+LensVisualizer's focus-breathing chart plots 21 evenly spaced focus positions, each the focal length of that prepared
+state (`computeFocusEFL`, through `computeFocusBreathingSeries`), relative to its sample at infinity focus.
+`test/integration/lv/breathing.test.ts` holds, on every benchmark lens at both ends of its zoom and at every focus
+station the exporter exports (14 states, two of them focus stations), the chart's focal length to `lv`'s R1 answer
+within 2 units in the last place (two arithmetics of one kernel), the chart's own sample at the state's focus to it,
+and its reference to the zoom position's infinity case. So R1 judges the chart wherever a state is a case. The
+positions between the stations have object distances LensVisualizer does not certify, which the exporter refuses: no
+other engine is asked about them, and no rung is added for breathing.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `d6df08c7f` and again at `cfa91d0a5` (clean; the commits between change the
+user interface and the summary tab; engine closure `c866fbff`, 178 files, with the stage's names) and optiland
+`4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`; the figures are the same at both. The run of `r9a,r9b`
+has 4,032 jobs: 3,816 ok, 216 unsupported (all `lv` in R9b), no error; 3 min 12 s from an empty store. Compare:
+2,496 pairs of both modes (pairwise and reference-vs-each), 1,920 PASS, 100 RECORDED, 44 ATTENTION, 432 UNSUPPORTED,
+no FAIL, ERROR or BLOCKED. Pairwise alone: R9a 1,152 PASS; R9b 72 pairs recorded or marked (50 RECORDED, 22
+ATTENTION) and 216 UNSUPPORTED. The counts below are of pairwise pairs.
+
+**R9a.** 384 spans (96 runs, four patterns; 134 rays a line). All 1,152 pairwise pairs pass, over 38,592 rays a pair
+of engines.
+
+| Pair | `landing.maxAbs` | `lateralColour.maxAbs` | `distortion.maxScaled` | `exitPupil.maxScaled` |
+|---|---:|---:|---:|---:|
+| `lv` / `ref` | 3.45e-13 | 3.73e-13 | 3.65e-13 | 4.83e-13 (Z 24-70 wide, photopic) |
+| `optiland` / `ref` | 3.62e-13 (Sony FE 20 mm, photopic) | 4.05e-13 | 3.83e-13 | 4.82e-13 |
+| `lv` / `optiland` | 1.85e-13 | 2.56e-13 | 2.87e-13 | 2.85e-13 |
+
+No mask mismatch, no rim-band ray, no dropped ray. The worst figure is 20,000 times inside the gate. The shown
+figures: `distortion.maxAbs` 2.24e-12 percentage points at most, `exitPupil.maxAbs` 1.96e-12 mm. The other suites,
+run the same way, all pass:
+
+| Suite | Runs with chief sets | R9a pairwise pairs | Worst gated figure |
+|---|---:|---:|---:|
+| features | 18 of 18 | 216 | 5.97e-13 (`exitPupil.maxScaled`, the fixed-iris zoom) |
+| states | 128 of 128 | 1,536 | 4.83e-13 |
+| diffractive | 8 of 9 (one source refusal) | 96 | 3.14e-13 |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — |
+
+**R9b, distortion.** 24 pairwise pairs, the reference runs at the design plane (wide open and f/8), every one of their 20
+fields of two methods, all RECORDED. The two chief rays of a field land within 2.36e-6 mm (median 2.3e-10).
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `distortionPercent.maxAbs` | 4.2e-3 | 1.46e-2 points (Z 24-70 tele f/8, 16.6°) |
+| `realHeight.maxAbs` | 1.0e-3 | 2.84e-3 mm (the same) |
+| `idealHeight.maxAbs` | 4.2e-5 | 1.97e-4 mm (Z 24-70 wide, 43.3°) |
+| `focalScale.relative` | 1.9e-6 | 8.46e-6 (Z 24-70 wide) |
+
+Where the percent comes from, taken apart on the largest pair: optiland's model traces the chief ray of its paraxial
+pupil (its default aiming), which against its robust chief ray through the stop's centre accounts for up to 0.014
+points; LensVisualizer plots its targets, not its rays' landings (up to 3.7e-3 points); the two chief rays through the
+stop's centre, each on its own engine's scale, differ by up to 8.5e-4 points (the scales: LensVisualizer's probe is up
+to 0.5° off the axis, 0.43° at the Z 24-70 wide end, and holds a little distortion); on one scale they differ by
+3.6e-5 at most (the Sony FE 400 mm at 0.96°, where LensVisualizer's chief ray is its paraxial estimate).
+
+**R9b, pupils.** 24 pairwise pairs, every one of their 16 fields of two methods, all RECORDED; the chief rays land within
+2.52e-6 mm. At one degree and above every lens agrees within 5.0e-6 mm in both pupils. Below one
+degree LensVisualizer's chief ray is its paraxial estimate (`docs/gotchas.md`), and its pupils there are those of the
+paraxial pupil's chief ray:
+
+| Lens | Fields below 1° | Entrance pupil apart | Exit pupil apart |
+|---|---:|---:|---:|
+| Sony FE 400 mm f/2.8 (half field 3.15°) | 5 of 16 | 1.30 mm | 5.17e-2 mm |
+| Nikon Z MC 105 mm | 1 | 1.48e-2 mm | 6.35e-3 mm |
+| Canon EF 135 mm f/2L | 1 | 9.27e-3 mm | 1.10e-2 mm |
+| Sigma 105 mm f/2.8 DG DN Macro | 1 | 5.94e-3 mm | 1.98e-3 mm |
+| Nikon Z 135 mm f/1.8 Plena | 1 | 5.58e-3 mm | 1.39e-3 mm |
+
+The paraxial pupils agree within 2.47e-5 mm (entrance) and 8.17e-6 mm (exit), both at the Sony FE 400 mm.
+
+**R9b, lateral colour.** 24 pairwise pairs of one line each, the d line, which LensVisualizer traces as its G channel at the
+catalog's index of a d-line catalog glass (Stage 6.3): every one of the 120 fields is data, `indices-differ`, and no
+lateral-colour figure is taken. 22 pairs are ATTENTION, their chief rays landing up to 7.19e-3 mm apart (the Z 24-70
+wide end at its edge), beyond the 1e-5 mm limit; two are RECORDED. The photopic runs have no line of a channel.
+
+To see the figures the section plots, the 12 configurations were also run on the C, d and F lines in a temporary suite
+(`lines: { kind: "cdf" }`, wide open; not committed): 504 jobs, 312 pairs, 240 PASS (R9a, `lateralColour.maxAbs` to
+4e-13 mm), 24 ATTENTION, 48 UNSUPPORTED. Each channel's landing relative to the d line's differs from optiland's
+per-line chief ray by up to 1.09e-3 mm (the Sony FE 20 mm at its edge, F − d: LensVisualizer −5.77e-3 mm, optiland
+−4.68e-3 mm), 2.7e-4 mm on the Z 24-70 wide end, 1.5e-5 to 8.5e-5 mm on the rest. Tracing LensVisualizer's own launch
+at the case's indices (R9a's optiland trace) moves those differences by 3.8e-5 mm at most: the rest is
+LensVisualizer's one chief ray, solved at the authored indices and traced at every channel, where optiland traces each
+line's own chief ray through the stop's centre (`docs/gotchas.md`).
+
+**LensVisualizer assumptions found, with evidence.** R9a shows the tabs' chief rays land alike in three engines to
+6e-13 mm, so R9b's differences come from which rays and which indices, not from tracing:
+- below one degree a chief ray is LensVisualizer's paraxial estimate (`computeChiefRaySolve`), so its pupils tab's
+  real pupils there are paraxial (up to 1.30 mm on the Sony FE 400 mm);
+- its lateral colour is one chief ray at every channel (up to 1.09e-3 mm, a fifth of the Sony FE 20 mm's at its
+  edge), and its channels' indices are the catalog's (Stage 6.3's brief);
+- its distortion curve plots its targets (9.8e-5 mm, 3.7e-3 points), and its scale's probe is up to half a degree off
+  the axis (8.5e-6 relative).
+
+LensVisualizer is read-only here. **The owner decided (2026-10-26) to have LensVisualizer change the first two**: a
+real chief ray below one degree for the pupils tab and the distortion curve, and each channel's own chief ray for the
+lateral colour. The change is pending in LensVisualizer; the owner holds its prompts. The brief, with the source
+lines and the per-lens figures, is `docs/upstream/lensvisualizer-chief-ray-conventions.md` (not filed). When the
+change lands, the canaries of those lines fail first, and the chief sets, the asks and these measurements are redone.
+
+### Owner decisions (2026-10-26)
+
+1. **R9a's gate is accepted as proposed**: landing and lateral colour at 1e-8 mm; distortion as its displacement at
+   1e-8 mm, the percent shown and not judged; the exit pupil's crossing times the larger slope at 1e-8 mm, the plain
+   crossing shown; the mask at 0; no floor. Its two conditionings (above) are stated, not gated away.
+2. **R9b as proposed**: the landing limit of its sorting stays 1e-5 mm, R7b's and R8b's; no R9b figure has an
+   attention band; R9b stays out of every baseline (`--rungs r9b` runs it).
+3. **optiland's distortion under its default paraxial aiming** (the chief ray of its paraxial pupil; its robust aimer
+   gives no scale) is accepted, stated in the answer; the identifying chief ray is the robust one.
+4. **Breathing between the certified stations is not covered**: a chart position whose object distance
+   LensVisualizer does not certify is no case. R1 judges every state that is a case.
+5. **LensVisualizer's chief-ray conventions are to change** (the brief above): a real chief ray below one degree, and
+   each channel's own chief ray for the lateral colour. Pending in LensVisualizer; the brief is not filed.
+
+## Stage 6.5: field curvature and astigmatism
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) centres the fields below one degree on a solved chief ray. The
+> measurements below are as they were taken; those after the change are in "Stage 6.6b: LensVisualizer #925 adopted".
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r10a,r10b --jobs 4   # R10b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the field curves in two sections of its aberrations tab: the field curves (the tangential and
+sagittal foci of each field, of four parabasal rays beside its chief ray, with the paraxial Petzval surface; the foci
+of its real-ray fans; and, in the chromatic variant the tab draws, the parabasal foci at each of its four chromatic
+channels) and the astigmatism (the difference of the two). R10a traces exactly the rays those sections launch in every
+engine and judges the foci of identical rays; R10b sets the sections, as they present them, beside optiland's own
+`FieldCurvature`.
+
+### The curvature sets
+
+`CaseSource.curvatureRaySets` makes the rays the sections launch (`src/engines/lv/curvatureRaySets.ts`, the fields in
+`curvatureFields.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says
+`needsCurvatureRaySets`, and the manifest records them under `runs[].curvatureRaySets`; a case source without them (a
+case file) is `curvature-sets-unavailable`. The fields are the sections' own: `FIELD_CURVATURE_FIELD_FRACTIONS` (the
+marked fields) and `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS` (the curve's, sixteenths of the half field) of the drawer's
+field geometry, each fraction once, ascending: 17 on the benchmark. The sections compute a field of each list on its own
+of its fraction alone, and the integration test holds a marked field to the curve's of the same fraction, bit for bit.
+A field's launch is LensVisualizer's `computeOffAxisFieldGeometryScalar`: the solved chief ray's height on the first
+vertex plane and the field's slope, never a bounding sphere's launch (the sections take the scalar launch whatever the
+projection). Two patterns, in this order, each one set at every line, the same rays at every line (as the chromatic
+field curves trace the same rays at each channel), every ray of weight 1:
+
+| Pattern | Rays of a field | Per line on the benchmark |
+|---|---|---:|
+| `parabasal` | the four parabasal rays of `computeStandardizedFieldFocus` (tangential at `-p` and `+p` of the pupil, sagittal at `-p` and `+p`, `p = min(0.02, max(1e-4, 0.01 / EPSD))`: 0.01 mm on the first vertex plane), then the chief ray | 85 |
+| `real-ray` | the tangential and the sagittal fan of `computeDiagnosticFieldFocus` (`sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`, 51 rays each, each with its centre sample, the chief ray's own launch), then the chief ray | 1,751 |
+
+A ray beside the chief ray crosses the first vertex plane at `(x · EPSD, yChief + y · EPSD)` at the slopes
+`(0, uField)` and starts as the skew launch of the spot sets (`lvSkewLaunch`; `traceSkewRay`, the parabasal rays'
+adapter, starts it the same way). A set states no groups: a field is a block of consecutive rays launched along one
+direction, its chief ray last, and a ray of the block offset from the chief ray's start along y alone is of the
+tangential fan, along x alone of the sagittal fan (`src/rays/curvatureSets.ts`, read by `curvatureFieldsOf`; since
+Stage 6.8b, LensVisualizer #927, read by place: "Stage 6.8b (part B)", design choice 6). The
+sections trace a field's parabasal rays only once its chief ray passes, and its fans only once its parabasal foci are
+found; a set states them for every field with a launch. Every restated line has a canary (two Stage 6.5 tests in
+`test/integration/lv/canaries.test.ts`). `test/integration/lv/curvatureRays.test.ts` traces each ray with
+LensVisualizer's exact tracer (`traceEngineRay`, the sections' options; a channel's indices for the chromatic curves)
+and, on every benchmark configuration and the zoom's far end (22,032 rays, 204 fields), gets to the bit every field's
+chief landing, its parabasal foci as z and as shifts from the design plane, its real-ray foci, and its parabasal shifts
+at each of the four channels R, G, B and V; and that `lv`'s `rays.trace` answer of a set brings the same rays to the
+image as the sections' traces.
+
+The case source also makes R10b's ask: one `curvature.native` request at the lines the sections present curves at
+(`lvCurvatureLines`: the authored reference line and the lines of a chromatic channel), at the angles of the fields with
+a launch; none for a run of no such line (every photopic run). Which fields, and which lines, are decided once, in
+`curvatureFields.ts`, for the sets, the ask and `lv`'s answer alike: `test/engines/lv/curvature.test.ts` feeds the ask
+of the fake tree's vector variant (fields beyond 12° launched from a bounding sphere elsewhere) to `answerLvCurvature`,
+which answers every field.
+
+Coded problems, each of the run or of the field it names and never approximated: `folded-path`,
+`object-not-at-infinity`, `no-half-field` and `no-pupil` (no sets, no ask); `lv-no-launch` (a field without a slope);
+`launch-behind-first-surface`. focus-stations (finite objects) and folded (folded paths) have no curvature sets.
+
+### R10a: the field curves of identical rays (gated)
+
+R10a asks `rays.trace` of every curvature set at every line (`r10aRung`) and compares each request with
+`raysCurvatureComparator` (`src/compare/raysCurvature.ts`), on the rays ok in both answers of a pair; which rays those
+are is judged as R2 judges it. The focus of a fan is the comparator's own pure estimator `relativeFocus`
+(`src/estimators/fieldFocus.ts`): the plane of least squares of its rays' coordinates relative to the field's chief
+ray, along y for the tangential fan and x for the sagittal one, from each engine's own landing (`imagePoint`) and exit
+direction, `s = -Σ Δc Δu / Σ Δu²` from the image plane of the case, the definition of LensVisualizer's
+`bestRelativeFocusPlane` less its design plane. Its arithmetic carries every rest (the differences of the coordinates
+and of the slopes, the quotients' remainders, the products of the two sums, the remainder of the shift), each
+mutation-checked: `test/estimators/fieldFocus.test.ts` holds closed forms to the bit (rays through one point, an
+astigmatic field, a fan with spherical aberration), and 5,200 series of parabasal pairs and aberrated fans to within a
+unit of the exact focus of the doubles given, worked out in whole numbers, which the plain formula misses by thousands
+of units. The figures, each with the line and the field's chief ray of its largest value:
+
+- `landing.maxAbs`: a landing's difference, along x or y;
+- `tangentialFocus.maxScaled`, `sagittalFocus.maxScaled`: the difference of a field's two foci times the larger of the
+  two answers' RMS relative slopes of the fan;
+- `tangentialFocus.maxAbs`, `sagittalFocus.maxAbs`: the difference along the axis, shown; `astigmatism.maxAbs`, of the
+  sagittal less the tangential focus, shown;
+- `mask.mismatches`, `mask.rimBand`, `rays.compared`, `rays.dropped`, as R2's; `fields.compared`, the fields with both
+  foci in both answers.
+
+**The gate (accepted by the owner as implemented, 2026-10-26).** A parabasal ray's slope relative to its chief ray's is about 0.01 mm over the focal length
+(5e-4 to 2.5e-5 on the benchmark, 1.25e-5 for the diffractive suite's 800 mm lenses): a relative landing that differs by
+`δ` moves its focus `δ / Δu` along the axis, 2,000 to 80,000 times further. So a focus is judged on the transverse
+scale, as R8a judges an intercept: the difference times the larger RMS relative slope, never one engine's
+(`test/compare/raysCurvature.test.ts` holds both orders; the smaller turns it red), which is the distance across the
+field at which one engine's rays pass the other's focus. The figure is about `|δΔc + s δΔu|`: a difference of relative
+landings, not amplified, and a difference of relative slopes amplified by the distance `s` of the focus from the image
+plane (up to 0.38 mm on the benchmark), where a rounding of a slope (1.1e-16) contributes 4e-17 mm. It is the rung's
+only sign of a difference of the exit slopes. Of a symmetric pair it is half a single ray's landing difference. The
+plain differences along the axis are shown and never judged: on the diffractive suite one is above 1e-8 mm on arithmetic
+alone (below).
+
+| Metric | Gate (policy 19) |
+|---|---|
+| `landing.maxAbs` | 1e-8 mm |
+| `tangentialFocus.maxScaled` | 1e-8 mm |
+| `sagittalFocus.maxScaled` | 1e-8 mm |
+| `mask.mismatches` | 0 |
+
+No floor. A fan with a focus in one answer and none (or none for another reason) in the other, and a set that is no
+curvature set (a ray offset along both axes), are not comparable; a figure no field has in both answers is unmeasured,
+with the estimator's reason (`no-reference`, `no-rays`, `no-slope`), always a reason of that figure's own fan (a set
+of sagittal fans alone says of its tangential figures that no field has a tangential fan). A FAIL is attributed in extended precision before
+anything is concluded, and the gate is never widened for it.
+
+### R10b: the sections beside optiland (recorded)
+
+`curvature.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines` and each angle of
+`fieldAnglesDeg` (within `maxFieldDeg`), for the tangential and the sagittal focus of the field as its z less the z of
+the image plane of the case (`tangentialShiftMm`, `sagittalShiftMm`, + toward the image), with the landing of the chief
+ray they are relative to (`chiefLandingMm`, null where an engine states none) and the engine's `sampling`.
+
+- **`lv`** answers with the sections as they present them (`answerLvCurvature`, `src/engines/lv/curvature.ts`,
+  method `lv-field-curves`): at the authored reference line its field curves (`computeFieldCurvatureBundle`'s
+  `fieldCurvature`: each field's parabasal shifts and `chiefImageHeight`; in `sampling` the parabasal fraction, the rays
+  that landed, the paraxial Petzval shift and, where the section has them, the real-ray shifts); at a line of a
+  chromatic channel (`lvChannelLines`) the chromatic field curves' shifts of that channel, `chiefLandingMm` null and
+  `sampling.indexMaxDelta`; a line that is neither is unavailable at every field (`lv-no-channel-at-line`), a field the
+  sections cannot use `lv-field-unusable`.
+- **`optiland`** answers with its own `FieldCurvature` (`workers/python/lvrtc_optiland/curvature.py`, method
+  `optiland-field-curvature`): `FieldCurvature(optic, wavelengths="primary", num_points=2)` on a fresh verified optic
+  whose one field is the angle asked, under the worker's `robust` aiming, read at its point of the normalised field 1:
+  the crossing of a parabasal pair at `±1e-5` of the pupil, along z from the image surface. Every setting is read back,
+  each check with a deliberate fault in `test_curvature.py`: the class, its points, its one wavelength, the `delta` of
+  its two methods, the values it gave, and the optic's field, aiming and stop after it (`verify_field`); a focus that is
+  no number is `no-focus`, and a parabasal ray of the field that optiland's own trace does not bring to the image
+  `parabasal-ray-lost`. That trace is of the analysis's two batches in their own shape (`parabasal_batches`: the axis
+  and the field, a pair each, along y and then along x), on the same optic: the robust aimer reuses the pupil maps it
+  solved there, and a test holds the rays to the analysis's own, bit for bit.
+  Each field is identified by the robust-aimed chief ray (`spot.chief_landing`). The real tests hold optiland's foci of
+  a sphere that is its own stop to Coddington's equations within 1e-6 mm.
+
+`lv` refuses, as unsupported, what its sections do not present, decided before LensVisualizer is asked anything but
+readings of the lens (`fields.angles` once the sections have said their fields):
+
+| Item | When |
+|---|---|
+| `line` | A line the case does not have, decided before any line is read (`linesBeyondCase`; so too `axial.native` and `chief.native`). |
+| `lines.not-traced` | No line asked is the authored reference line or a channel's: every photopic run, were it asked. |
+| `lines.mixed-reference` | No line asked is the authored one, of a lens that mixes d-line and e-line indices. |
+| `focus.off-design` | A case off the design plane (the last vertex plus its gap): every best-focus run. |
+| `fields.angles` | Angles other than the sections' own. |
+| `object.finite`, `path.folded` | A finite object; a folded path. |
+
+`curvatureNativeComparator` (`src/compare/curvatureNative.ts`) sorts each field before any difference by R9b's sorting
+(`classifyChiefField`): R5's `classifyNativeField` first (no foci `unsupported`, other wavelengths `data`), then
+`indices-differ`, then the chief rays' landing (`chief-landing-apart`, or `chief-landing-unknown` where an answer states
+none), then `method`, the only class that enters a figure. `curvatureFactsOfRecorded` repeats the sorting from the
+recorded values. It records `chiefLanding.maxAbs`, `tangentialShift.maxAbs`, `sagittalShift.maxAbs`,
+`astigmatism.maxAbs` (the sagittal less the tangential shift) and the fields of each class. Policy 19:
+
+| Metric | Policy 19 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R9b's) |
+| `tangentialShift.maxAbs`, `sagittalShift.maxAbs`, `astigmatism.maxAbs` | attention band 1e-5 mm each: a pair with a figure above one is ATTENTION |
+
+`test/integration/optiland/r10.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 400 mm on its
+reference line, whose fields below one degree it pins.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `cfa91d0a5` (clean; engine closure `c866fbff`, 178 files: the stage's names are
+of modules already loaded) and optiland `4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of
+`r10a,r10b` has 1,824 jobs: 1,800 ok, 24 unsupported (all `lv` in R10b, `focus.off-design`), no error; 78 s from an
+empty store. Compare: 2,976 pairs of both modes, 2,880 PASS, 48 RECORDED, 48 UNSUPPORTED, no FAIL, ERROR or BLOCKED.
+
+**R10a.** 576 requests (96 runs, two patterns, at each line; 1,836 rays a line). All 1,728 pairwise pairs pass, over
+1,490,352 rays compared and 29,376 fields with both foci; no mask mismatch, no rim-band ray, no dropped ray.
+
+| Pair | `landing.maxAbs` | `tangentialFocus.maxScaled` | `sagittalFocus.maxScaled` | `tangentialFocus.maxAbs` (shown) |
+|---|---:|---:|---:|---:|
+| `lv` / `ref` | 9.41e-13 (Sony FE 20 mm, photopic) | 1.10e-13 | 1.33e-13 | 3.98e-9 |
+| `optiland` / `ref` | 9.17e-13 | 1.33e-13 (Sony FE 400 mm f/8 best, photopic) | 1.23e-13 | 4.87e-9 (the same) |
+| `lv` / `optiland` | 8.67e-13 | 1.19e-13 | 5.89e-14 | 4.43e-9 |
+
+The worst gated figure is 75,000 times inside the gate. The plain tangential focus is up to 4.87e-9 mm, 37,000 times
+the scaled one; the sagittal foci of a mirror-symmetric pair differ by 2.0e-12 mm at most. The other suites, run the
+same way, all pass:
+
+| Suite | Runs with curvature sets | R10a pairwise pairs | Worst gated figure | Worst plain focus (shown) |
+|---|---:|---:|---:|---:|
+| features | 18 of 18 | 324 | 6.64e-13 (`landing.maxAbs`) | 2.79e-10 |
+| states | 128 of 128 | 2,304 | 7.67e-13 (`landing.maxAbs`) | 4.87e-9 |
+| diffractive | 8 of 9 (one source refusal) | 48 | 5.44e-13 (`landing.maxAbs`) | 1.20e-8 (Canon RF 800 mm f/11) |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — | — |
+
+On the diffractive suite the plain tangential focus of the Canon RF 800 mm f/11 differs by 1.20e-8 mm between optiland
+and `ref`, above 1e-8 mm, where its scaled figure is 1.65e-13 mm: a gate on the plain focus would fail on rounding
+alone.
+
+**R10b.** 24 pairwise pairs RECORDED (the reference runs at the design plane, wide open and at f/8, 17 fields each) and
+24 UNSUPPORTED (the best-focus runs); a photopic run has no request. Of the 408 fields, 407 are of two methods and one
+is unavailable (optiland's `no-focus` at the Sigma 35 mm's edge at f/8, `docs/gotchas.md`); no field is data. The two
+chief rays of a field land within 2.52e-6 mm (the Sony FE 400 mm below one degree), median 2.8e-14. Rerun with the
+bands of 1e-5 mm in policy 19 and the worker's check of the parabasal rays in the analysis's own batches (`--rungs r10b
+--jobs 4`, a temporary store, 79 s): the same 24 RECORDED and 24 UNSUPPORTED, no ATTENTION, the same 407 fields of two
+methods and one `no-focus`, the same largest figures.
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `tangentialShift.maxAbs` (per field) | 6.3e-8 | 5.72e-6 mm (Sigma 45 mm, 25.6°) |
+| `sagittalShift.maxAbs` | 5.2e-8 | 1.38e-6 mm (Z 24-70 mm wide at f/8, the axis) |
+| `astigmatism.maxAbs` (per pair) | | 6.66e-6 mm (Z 24-70 mm wide at f/8) |
+
+Where they come from, taken apart with LensVisualizer's own launch and tracer: the parabasal pencil. LensVisualizer's
+pencil is 0.01 mm wide, optiland's pair `1e-5` of the pupil; a finite pencil focuses away from the infinitesimal one by
+the square of its width, and the same fields traced at a tenth and a hundredth of LensVisualizer's height converge on
+optiland's as that square:
+
+| Field | 0.01 mm (LV's) | 0.001 mm | 0.0001 mm |
+|---|---:|---:|---:|
+| Sigma 45 mm, 25.6°, tangential | 5.72e-6 | 5.1e-8 | 5.7e-9 |
+| Z 24-70 mm wide at f/8, the axis | 1.38e-6 | 1.38e-8 | 1.34e-10 |
+| Z 50 mm f/1.2, 22.9°, tangential | 5.34e-7 | 5.8e-9 | 1.3e-8 (optiland's floor) |
+
+Below one degree the Sony FE 400 mm's tangential foci are up to 2.31e-6 mm from optiland's and its sagittal 1.23e-7,
+whatever the height: LensVisualizer centres the pencil on its paraxial chief ray there (Stage 6.4). Every difference
+is fifteen times below the 0.1 µm the tab's readouts round to.
+
+**LensVisualizer assumptions found, with evidence.** R10a shows the sections' rays focus alike in three engines to
+1.3e-13 mm across the field, so R10b's differences are which rays, not tracing: LensVisualizer's parabasal pencil is
+0.01 mm wide (up to 5.72e-6 mm on the benchmark), and below one degree it is centred on the paraxial chief ray (up to
+2.31e-6 mm, the Stage 6.4 convention LensVisualizer is to change by the owner's decision). The brief, with the source
+lines and the per-lens figures, is `docs/upstream/lensvisualizer-parabasal-pencil.md` (not filed): no LensVisualizer
+change, the 0.01 mm pencil being a documented convention of its own. optiland's `FieldCurvature` traces the axis with
+the field, and its robust aimer, marching from the axis, loses the Sigma 35 mm's edge pair at f/8 where the field alone
+converges (`docs/gotchas.md`): an optiland behaviour, held by the owner with the other upstream items.
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and 15 NEW of LensVisualizer's new certified station, folded 96,
+diffractive 96). The adapter revisions of `lv`, `replay` and `wave` moved (the stage's modules in `lv`'s closure), and
+`optiland`'s and `optiland-wave`'s with the worker's files; `ref`'s did not (`2225e342`).
+
+### Owner decisions, 2026-10-26
+
+1. **R10a's gate is accepted as implemented**: landing and the tangential and sagittal foci on the transverse scale
+   (the difference times the larger RMS relative slope), each 1e-8 mm; the plain foci and the astigmatism shown and
+   never judged; mask 0; no floor.
+2. **R10b's limit and bands**: the landing limit of its sorting stays 1e-5 mm (R7b's to R9b's; the measured maximum is
+   2.52e-6 mm); `tangentialShift.maxAbs`, `sagittalShift.maxAbs` and `astigmatism.maxAbs` have attention bands of 1e-5
+   mm (in policy 19, above the parabasal pencil's measured 6.66e-6 mm, so that a band marks a change of either method
+   beyond it). A pair with a figure above its band is ATTENTION, as R8b's spherical figures are.
+3. **R10b stays out of every baseline**, as R7b to R9b; `--rungs r10b` runs it.
+4. **LensVisualizer's parabasal pencil is not changed**: the 0.01 mm pencil is a documented convention of
+   LensVisualizer's (the brief above). The Petzval surface and the real-ray curves have no counterpart in optiland's
+   `FieldCurvature` and are not covered by R10b.
+5. **optiland's batched robust aimer** (the Sigma 35 mm at f/8) is held by the owner with the other upstream items; the
+   worker reports the field unavailable and never warms the aimer.
+
+## Stage 6.6: vignetting and relative illumination
+
+> **Stage 6.6b.** LensVisualizer #925 (`5ba17c20c`) replaced the tab's sweep and cos^4 with a beam traced in two
+> dimensions and a relative illumination by conservation of energy; the vignetting sets are now the tab's beams (one
+> pattern, `beam`) and R11a adds `landing.maxAbs` (policy 21). This section is the Stage 6.6 design and measurement as
+> they were; the current ones are in "Stage 6.6b: LensVisualizer #925 adopted".
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r11a,r11b --jobs 4   # R11b of lv and flux whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents the vignetting in one tab: a curve of each field's geometric transmission (the fraction of one
+meridional sweep of rays across the axis's entrance pupil, centred on the field's solved chief ray, that passes every
+aperture) and its relative illumination (the sweep's transmitted bulk intensity times cos^4 of the object-space field
+angle), each over the axis's (`computeVignettingCurve`, `src/optics/analysis/vignetting/vignetting.ts`). R11a traces the
+tab's own sweeps, and LensVisualizer's own launch lattice over the whole beam of each of the same fields, in every
+engine and judges which rays get through and the flux the lattices bring into the image; R11b sets the tab, as it
+presents it, beside the comparator's flux in two dimensions on those lattices (the built-in engine `flux`).
+
+### The vignetting sets
+
+`CaseSource.vignettingRaySets` makes the rays (`src/engines/lv/vignettingRaySets.ts`, the fields in
+`vignettingFields.ts`). The orchestrator asks for them after `confirmRaySets`, only for a run with a rung that says
+`needsVignettingRaySets`, and the manifest records them under `runs[].vignettingRaySets`; a case source without them (a
+case file) is `vignetting-sets-unavailable`. The fields are the tab's own: `max(ceil(halfFieldDeg / 3) + 1, 7)` at
+`uniformFieldFraction(i, n)` of the drawer's half field, the axis first, each launched by its solved chief ray's height
+on the first vertex plane (`solveChiefRayForRuntimeLens`, the drawer's geometry) and its slope
+(`projectionLaunchSlopeForField`): 7 to 17 a lens on the benchmark. Two patterns, the same rays at every line:
+
+| Pattern | Rays | On the benchmark |
+|---|---|---:|
+| `sweep` | of each field, the tab's sweep: a ray at each of `evenlySpacedSigned(n)` of the drawer's pupil radius, `n` 192 (96 for a lens `isHeavyLensForRayWork` calls heavy), crossing the first vertex plane at `yChief + fraction × EPSD` along the field's slope, started as `bindRayTrace`'s `ray(y, u)` starts it (`lvSweepLaunch`: `rayLead` ahead, `[0, 0, 1]` for the slope 0 from the adapter's cache); one set a line, a block of rays a field, the axis first; each ray of weight 1 times LensVisualizer's bulk transmission at the line (`lvRayWeights`), which the tab sums as `trace.transmission` | 672 to 3,072 rays a line |
+| `lattice` | of each field, LensVisualizer's launch lattice over the beam its MTF finds for the field (`lvFieldRaySets`, the generator of the run's ray sets, at the run's `sampling.bundleGrid`, 32 without it), the chief ray after the cells; one set a field and line, stating its field, lattice and chief ray | 721 to 1,441 rays a field, 1,161 on average |
+
+Every restated line has a canary (two Stage 6.6 tests in `test/integration/lv/canaries.test.ts`).
+`test/integration/lv/vignettingRays.test.ts` traces each sweep with LensVisualizer's exact tracer (`traceEngineRay`, the
+tab's options) and counts it as the tab counts it, in the tab's own arithmetic, and on every benchmark configuration,
+the zoom's far end and the Laowa 105 mm STF (whose absorbing glass weighs its rays) gets every field's geometric
+transmission and relative illumination to the bit (13 configurations, 123 fields, 19,776 rays a line); it holds each
+lattice to `lvFieldRaySets` of the tab's field, and `lv`'s `rays.trace` answer of a sweep to the tab's own count of which
+rays pass. A second test holds every sweep ray, bit for bit, to LensVisualizer's own meridional adapter (`traceRay`, the
+lines of `bindRayTrace`'s `ray` that the tab calls through `prepareRayTrace`, but for reading `rayLead` of the runtime
+view), launched from LensVisualizer's own chief-ray solve and slope of the field and its own pupil fractions: the lead
+point is the set's origin, every hit `lv` records is the adapter's, the exit as the adapter states it (the slope of the
+exit direction and the height at the last vertex, by LensVisualizer's formulas of `lv`'s exit point and direction) and
+the bulk transmission of every ray that passes is the set's weight (19,776 rays, 16,829 of them through the lens). The
+adapter states no landing: `lv`'s is the comparator's projection of that exit, as every engine's.
+
+The case source also makes R11b's ask: one `vignetting.native` request at the lines the tab traces (the authored
+reference line; none of a photopic or spectral run), at the tab's fields with a sweep, the axis first. Which fields are
+decided once, in `vignettingFields.ts`, for the sets, the ask and `lv`'s answer alike: `test/engines/lv/vignetting.test.ts`
+feeds the ask of the fake tree's vector variant (fields beyond 12° launched from a bounding sphere) to `answerLvVignetting`,
+which answers every field.
+
+Coded problems, never approximated: `folded-path`, `object-not-at-infinity`, `no-half-field`, `no-pupil` and
+`no-axis-sweep` (no sets, no ask); `lv-vector-launch` (a field launched from a bounding sphere with a launch bound, which
+a request does not state), `lv-no-launch` (no slope; the tab plots 0 there) and `launch-behind-first-surface`, each of its
+field. A state LensVisualizer's MTF launch does not cover keeps its sweeps and has no lattices, the gate's reason the
+problem's code: the eight diffractive states (`unsupported-path`). focus-stations and folded have no vignetting sets.
+
+### R11a: which rays get through, and the flux into the image (gated)
+
+R11a asks `rays.trace` of every vignetting set and compares the sets of one pattern at one line as one span
+(`raysVignettingComparator`, `src/compare/raysVignetting.ts`): every figure of a field is relative to the axis. Which rays
+got through is judged as R2 judges it. Two figures more, each of the comparator's pure estimator
+`src/estimators/illumination.ts`:
+
+- `transmission.maxAbs`: of a field, aligned with R2, the flux of the rays of `mask.mismatches` (ok in one answer and
+  not in the other, neither in the rim band nor failed by an engine) over the axis's flux on the rays ok in both, on the
+  launch plane (a lattice cell's weight times the square of its step; a sweep's rays by their weights). Of the rays ok
+  in both answers every count and sum is the same bits in both, the request's weights in the same order: no engine
+  computes a weight. So the figure is of the disagreeing rays alone, 0 where they agree, and a count over a total: one
+  ray moves it by about one over the rays the axis lets through (1/192 of a sweep, about 1/800 of a lattice of 32
+  cells). The same flux of the rays ok in one answer only that R2 counts as no mismatch, those in the rim band and those
+  an engine failed, is shown beside it and never judged (`transmission.rimBandOrFailed`), as R2 shows `mask.rimBand`
+  beside `mask.mismatches`.
+- `illumination.maxAbs`: of a lattice span, a field's flux into the image (weight times the area each lit cell covers in
+  the optical direction cosines `n' (L, M)` of the image space, `cosineFlux`) over the axis's, on the rays ok in both
+  answers: the rung's only figure of the traced numbers, the exit directions. The area of a beam in cosine space is of
+  its rim (the cells' central differences telescope along a row and a column), so an interior cell's direction enters to
+  second order and a rim cell's to first: a difference `δ` of the rim's cosines moves the figure by about `2 δ / ρ`,
+  `ρ` the beam's radius in optical cosines (0.040 to 0.40 on the benchmark), so R2's direction gate of 1e-9 is a figure
+  of 5e-9 to 5e-8 here. A sweep has no area: inapplicable to it.
+
+| Metric | Policy 20 |
+|---|---|
+| `mask.mismatches` | gate 0 |
+| `illumination.maxAbs` | gate 1e-9: tighter than R2's direction gate, as R4's gate is tighter than R2's |
+| `transmission.maxAbs` | gate 0, of R2's mask mismatches alone: never the rim band, never a failed ray |
+| `transmission.rimBandOrFailed` | shown, in no policy: the rim-band and failed rays one answer lets through |
+
+The owner accepted these gates on 2026-10-26, `transmission.maxAbs` aligned with R2 as above. No floor. Shown:
+`mask.rimBand`, `transmission.rimBandOrFailed`, `rays.compared`, `rays.dropped`, `fields.compared` (the lattice fields
+with a flux into the image in both answers). The members of a span are taken in an order of their own, the axis first,
+then by field angle and line, in the comparison and the recorded values alike, never in the order they are handed
+over: the first ray of a count and the field of a tie do not depend on it (a test hands them over reversed and gets the
+same bytes). Recorded of each answer: the ray endings, and each field's own figures of the rays it brought
+to the image (of a sweep the tab's fractions before its cos^4, of a lattice the area and the flux each over the axis's).
+A field with a flux into the image in one answer and none, or none for another reason, in the other is not comparable;
+one without in both for the same reason is named in a note.
+
+### R11b: the tab beside the flux in two dimensions (recorded)
+
+`vignetting.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines` and each angle of
+`fieldAnglesDeg` (the first 0), for the geometric transmission and the relative illumination of the field, each over the
+axis's, by the engine's own measure, and the landing of the chief ray that identifies the field.
+
+- **`lv`** answers with the tab as it presents it (`answerLvVignetting`, `src/engines/lv/vignetting.ts`, method
+  `lv-vignetting-tab`): `computeVignettingCurve` of the drawer's request, each field's two figures to the bit, and the
+  landing on the design plane of the solved chief ray the tab centres the sweep on
+  (`chiefRayImageHeightAccurateForRuntimeLens`, the drawer's geometry). Refused before LensVisualizer is asked anything:
+  a line the case does not have (`line`), `lines.not-authored-reference`, `focus.off-design` (the identifying landing is
+  of the design plane; the tab's figures are of no plane), `object.finite`, `path.folded`; `fields.angles` once the tab's
+  fields are known. A tab with no curve (no ray of the axis passes) leaves every field `lv-no-curve`.
+- **`flux`** (`src/engines/lv/fluxEngine.ts`, method `lattice-flux`) is the comparator's estimator on LensVisualizer's
+  rays, in the pattern of `wave`: of each field LensVisualizer's launch lattice over its beam (`lvFieldRaySets`) at 64
+  cells across and at 128 (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32), traced by LensVisualizer
+  (`answerLvRays`), each field's lattices made once whatever line is asked. Where a run states a `sampling.bundleGrid`,
+  R11b hands `flux` twice it as its option `bundleGrid`, the coarser lattice, so the engine's lattices are never the
+  run's own (at 32 and 64 a field moves by up to 0.02 on doubling); a run of more than 64 cells asks for more than the
+  engine's largest lattice of 256, and `flux` answers `option.bundleGrid`, unsupported. Its geometric transmission is the area of the cells taken on the launch plane over the axis's; its
+  relative illumination the flux of the lit cells into the image over the axis's: the projected solid angle of the exit
+  pupil seen from the image point, weighted by each ray's transmission, with no law of the field angle (the method of a
+  relative-illumination analysis in a lens-design program). A field is `ok` where both figures moved by no more than
+  0.005 on the axis, 0.01 off it, on doubling and no lit cell lies on the lattice's rim; else `unconverged`
+  (`not-converged`, `convergence-unknown`, `lattice-edge-lit`). At 32 and 64 cells a field moves by up to 0.02 on
+  doubling, at 64 and 128 by at most 0.00997 on the benchmark.
+
+The two figures of `flux` are held to closed forms (`test/estimators/illumination.test.ts`: the projected solid angle of a
+square stop seen from a field's image point, in closed form, to second order in the cell with a bound derived beside it)
+and, on the benchmark, to a second route that shares nothing with the estimate: the object side's transmitted area times
+`cos θ` over the image mapping's Jacobian `h h' / sin θ` from the chief rays' landings (central differences across the
+tab's fields, the focal length of the first step), which agrees within 0.011 on every one of the 368 fields with a field
+on either side of the 48 reference runs `flux` answered (median 0.0012; worst the Sony FE 20 mm at 44°, where the
+differences are coarsest against its distortion).
+
+`vignettingNativeComparator` (`src/compare/vignettingNative.ts`) sorts each field before any difference by R9b's sorting
+(`classifyChiefField`): unsupported (no figures), data (other wavelengths, other indices, chief rays landing further apart
+than the limit or no landing), numerical (`unconverged`), then method, the only class in a figure; it adds no reason of
+its own. Three figures separate what the methods differ in: `geometricTransmission.maxAbs` (the tab's chord of a fixed
+pupil against the beam's area), `falloff.maxAbs` (each answer's relative illumination over its geometric transmission:
+the tab's cos^4 against the traced flux per unit of transmitted area, of no vignetting) and
+`relativeIllumination.maxAbs` (the two together). `vignettingFactsOfRecorded` repeats the sorting from recorded values.
+
+| Metric | Policy 20 |
+|---|---|
+| `chiefLanding.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R10b's) |
+| `geometricTransmission.maxAbs`, `falloff.maxAbs`, `relativeIllumination.maxAbs` | no band (owner decision, 2026-10-26): recorded |
+
+`test/integration/optiland/r11.test.ts` (tier 3) runs both rungs on four benchmark runs: the Z 50 mm f/1.2 on its
+reference line at the design plane, on the photopic lines and at its best axial focus, and the Sony FE 20 mm on its
+reference line, whose beam's growth it pins.
+
+### Measured, 2026-10-26
+
+Benchmark, 96 runs, at LensVisualizer `be077cbcd` (clean; engine closure `c866fbff`, 178 files: the stage's names are of
+modules already loaded) and optiland `4e893f53`, in a temporary `LVRTC_RUNS_DIR` with `--jobs 4`. The run of `r11a,r11b`
+has 9,312 jobs: 9,288 ok, 24 unsupported (all `lv` in R11b, `focus.off-design`), no error; 3 min 5 s from an empty store,
+the compare 56 s. Compare: 2,976 pairs of both modes, 2,880 PASS, 48 RECORDED, 48 UNSUPPORTED, no FAIL, ERROR or ATTENTION.
+
+**R11a.** 3,072 sets, 576 spans (a sweep and the lattices at each line), 1,728 pairwise pairs, all PASS, over 2,455,174
+rays a pair and 2,784 lattice fields with a flux into the image in both answers; no mask mismatch, no rim-band ray, no
+dropped ray: `transmission.maxAbs` 0 everywhere. `transmission.rimBandOrFailed`, added after this run, is of dropped rays
+alone, so it is 0 there too; the change moved no figure of the run.
+
+| Pair | `illumination.maxAbs` (worst) |
+|---|---:|
+| `lv` / `ref` | 6.26e-14 (Sony FE 20 mm f/8 photopic, 47°, line 4) |
+| `optiland` / `ref` | 6.08e-14 (the same) |
+| `lv` / `optiland` | 2.98e-14 (Z MC 105 mm f/8 photopic, 10.0°) |
+
+The other suites, run the same way, all pass, with no mask mismatch and a transmission of 0:
+
+| Suite | Runs with vignetting sets | R11a pairwise pairs | Lattice fields | Worst `illumination.maxAbs` |
+|---|---:|---:|---:|---:|
+| features | 18 of 18 | 324 | 690 | 3.28e-14 (`optiland`/`ref`, fixed-iris zoom photopic wide, 22.4°) |
+| states | 128 of 128 | 2,304 | 3,768 | 1.07e-13 (`optiland`/`ref`, Z 24-70 mm f/11 photopic tele, 11.1°) |
+| diffractive | 8 of 9 (one source refusal) | 24 | 0 (sweeps alone: `unsupported-path`) | — |
+| focus-stations | 0 (`object-not-at-infinity`) | 0 | — | — |
+| folded | 0 (`folded-path`, and source refusals) | 0 | — | — |
+
+The worst figure is 9,000 times inside the gate of 1e-9.
+
+**R11b.** 24 pairwise pairs RECORDED (the reference runs at the design plane, wide open and at f/8) and 24 UNSUPPORTED
+(the best-focus runs); a photopic run has no request. Every one of the 232 fields is of two methods (208 off the axis);
+the two chief rays of a field land within 7.1e-15 mm. The method difference, per field off the axis:
+
+| Figure | Median | Largest |
+|---|---:|---:|
+| `geometricTransmission.maxAbs` | 0.017 | 0.773 (Sony FE 20 mm f/8, 47°: the tab 1.02, the beam 1.79) |
+| `falloff.maxAbs` | 0.017 | 0.202 (Z 24-70 mm tele, 16.6°: cos^4 0.843, traced 0.641) |
+| `relativeIllumination.maxAbs` | 0.035 | 0.273 (Z 24-70 mm wide f/8, 40.4°: the tab 0.34, traced 0.61) |
+
+Taken apart, three things, each a LensVisualizer assumption (`docs/gotchas.md`, "Vignetting"):
+
+1. **The sweep is of a fixed chord.** The tab sweeps the axis's pupil diameter about each field's chief ray, which the
+   stop's image overfills where it grows off the axis: the beam's area on the launch plane reaches 1.79 times the axis's
+   (Sony FE 20 mm f/8 at 47°) and 1.64 (Z 24-70 mm wide f/8 at 43.3°), where the sweep's fraction stays at 1.01 to 1.07.
+   The tab understates the illumination there by up to 0.27 (the Z 24-70 mm wide f/8 at 40.4°, 0.340 against 0.613). LensVisualizer's own MTF scans for this footprint
+   (`mtfFootprint.ts`: "a fixed entrance-pupil circle can miss most of the real flux at the corner").
+2. **A chord is no area.** Where apertures cut the beam into a lens shape, the chord through its middle overstates its
+   area: the Canon EF 135 mm wide open at 9.2°, 0.484 against 0.387; the Z 50 mm f/1.2 at 22.9°, 0.424 against 0.357.
+3. **cos^4 of the object-space angle is no lens's falloff.** The traced flux per unit of transmitted area is steeper
+   than cos^4 on the Z 24-70 mm at 70 mm (0.641 against 0.843 at 16.6°) and the Sigma 45 mm (0.552 against 0.662 at
+   25.6°), and shallower on the GF 63 mm (0.773 against 0.687 at 24.4°) and the Z 24-70 mm at 24 mm (0.412 against 0.337
+   at 40.4°): the law assumes an exit pupil that subtends as the entrance pupil does and an undistorted image.
+
+The brief, with the source lines and the per-lens figures, is `docs/upstream/lensvisualizer-vignetting-sweep.md` (not
+filed).
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and 15 NEW of LensVisualizer's new certified station, folded 96,
+diffractive 96). The adapter revisions of `lv` (`3e4dbea1` to `d9f1dfe8`), `replay` (`321e6dd3` to `cc533c5a`) and
+`wave` (`0c2deddd` to `7adb363b`) moved (the stage's names and modules in `lv`'s closure), `optiland`'s
+(`e5cc6eef` to `3f9ff696`, the kit's `validate.py`) and `optiland-wave`'s with it; `ref`'s did not (`2225e342`); `flux`
+is new (`b7712f3f` for these measurements; `de9994af` after the review's changes to its lattice bookkeeping and the
+estimator's notes, which change no answer's bytes).
+
+### Owner decisions, 2026-10-26
+
+1. **R11a's gate is accepted**: `mask.mismatches` 0 (R2's) and `illumination.maxAbs` 1e-9, as in policy 20, and
+   `transmission.maxAbs` 0 **aligned with R2**: of the rays of `mask.mismatches` alone; the flux of the rim-band and
+   failed rays one answer passes and the other does not is shown beside it, ungated (`transmission.rimBandOrFailed`).
+   R11a joins the rays baselines of benchmark, features, states and diffractive at the Phase 6 end refresh.
+2. **R11b's design**: the engine `flux`, LensVisualizer's own lattices and tracer with the comparator's estimator, stays
+   its independent estimate (as `wave`), and the cosine-space flux, the projected solid angle of the exit pupil, is the
+   comparator's relative illumination; optiland has no vignetting analysis, and an engine of optiland's own aiming would
+   weigh its stop-uniform rays by a Jacobian the worker would have to make.
+3. **R11b's limit and bands**: the landing limit of 1e-5 mm stays; no band on its three figures (bands of 0.01 would
+   mark 23 of the 24 pairs).
+4. **R11b stays out of every baseline**, as R7b to R10b; `--rungs r11b` runs it.
+5. **LensVisualizer's vignetting tab is to change**: the owner chose to have LensVisualizer sample each field's footprint
+   in two dimensions and take the relative illumination of the traced exit directions in place of cos^4, as the brief
+   recommends. The change is pending; the owner holds its prompt. Until it lands, R11b records the tab as it is;
+   afterwards the canaries of the tab's lines fail first, and the sets, the asks and the measurements are redone.
+
+## Stage 6.6b: LensVisualizer #925 adopted
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r9a,r10a,r11a,r8b,r9b,r10b,r11b --jobs 4
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer #925 (`5ba17c20c`, the owner's change on the comparator's briefs) is adopted at `098c91ef6` (clean; engine
+closure `fef2e248`, 178 files). #924 and #926 between them add a lens builder to the UI; under `src/optics` they change
+only `compileLabels.ts`'s label index (a null prototype, so that a label named like a member of `Object` resolves to
+its own entry), which moves no case id and no pinned figure here. #925 did four things, each of which failed the
+canaries of the lines the comparator restates:
+
+1. **Anchored channels** (`materialResolver.ts`): a d-line glass LensVisualizer matched to a catalog takes the
+   catalog's dispersion added to its authored `nd`, as an e-line one did; its G channel is the authored index.
+2. **The chief ray below one degree** (`chiefRaySolve.ts`): every field but the axis is solved through the stop's
+   centre, to a stop-height tolerance of `1e-7 · min(1, |θ| / 1°)` mm; the axis launches at 0.
+3. **Lateral colour of each channel's own chief ray** (`computeOffAxisChannelFieldGeometry`, `computeLateralColorField`).
+4. **The vignetting tab in two dimensions** (`vignetting.ts`): each field's beam on its MTF's launch lattice and an
+   image mapping of chief rays; `mtfSupport.ts` gave its gate's two rules functions of their own
+   (`mtfSequentialRefractivePath`, `mtfAxialImagePlane`), with the gate's behaviour unchanged (the expressions are
+   the old ones, negated twice; a NaN normal passes both as before).
+
+### What the comparator changed
+
+- **Canaries.** The six that failed restate the new lines: the gate's two functions and the two calls that reject by
+  them; the anchored tier (its anchor, R, B, V with and without `dPgF`, G returning `nd`) and the case's anchored
+  table beside it; the axis-only shortcut and the field-scaled tolerance (and no `< 1` shortcut left); the per-channel
+  geometries of the lateral colour, the solve with a channel and the section's channels; the tab's setup, fields,
+  beams, counting, image mapping, ray tubes and curve. 46 canaries pass at `098c91ef6`.
+- **Axial sets (6.3) and curvature sets (6.5)**: no code change. The sets are LensVisualizer's exports;
+  `axialRays.test.ts` and `curvatureRays.test.ts` hold them to the sections to the bit again, the colour sections now
+  anchored and the curvature fields below one degree centred on a solved chief ray.
+- **Chief sets (6.4)**: the distortion and pupils patterns follow LensVisualizer's solve without a change. The
+  `lateral-colour` pattern holds each channel's own chief ray of each field (four a field, R, G, B, V, in the section's
+  order), the same rays at every line: R9a's spans (a set's rays without its line) and `lateralColour.maxAbs` (each ray's
+  move from the span's first line) stand as they were, and a line's own channel's chief ray is among the rays of its
+  set. A field is of the sets, the ask and `lv`'s answer only where every channel has a scalar launch (`lvLateralChief`).
+  `chiefRays.test.ts` gets the curve, the grid, the pupils and every channel's lateral colour to the bit (1,788 rays).
+  optiland's lateral colour already traced each line's own chief ray through the stop, so R9b now compares like with
+  like.
+- **Vignetting sets (6.6)**: the `sweep` and `lattice` patterns are gone; one pattern, `beam`, is the tab's own trace
+  (CLAUDE.md, Stage 6.6). The set holds the half of the lattice the tab traces, not the whole lattice: on the 14
+  configurations of `vignettingRays.test.ts` 2,921 of 5,043 column pairs of the lattices are not mirror images of each
+  other to the bit (`x0 + (c + 0.5) step` against `-(x0 + (columns - 1 - c + 0.5) step)`), so the other half's cells
+  are not where the tab's mirrored rays start, though at the edge fields none of 22,950 cell pairs is classified apart.
+  The mapping's chief rays follow the cells (`groups.chiefIndex`). The test reproduces `computeVignettingCurve` to the
+  bit on 142 fields, two of them mapped with ray tubes, which it restates and traces with LensVisualizer
+  (`tubeImageArea`); in the catalog (1,308 curves at wide open, both zoom ends) 9 fields on 7 lenses are of ray tubes,
+  7 fields plotted dark for want of a footprint, 2 for want of a chief ray, and 33 states have no curve
+  (`lv-outside-beam-model`). The beams of a run are more rays than the sweeps and lattices they replace: 327,212 a
+  line on the test's 14 configurations, and on the benchmark 1.7 times the rays compared a pair (below).
+- **Policy 21**: R11a's `landing.maxAbs`, 1e-8 mm, of the mapping's chief rays (accepted by the owner, 2026-10-27).
+  `flux` keeps its method, the cosine-space relative illumination (Rimmer's method, OpticStudio's): owner decision,
+  2026-10-27. The owner decided too that LensVisualizer is to adopt Rimmer's method, and a vignetting curve of the share
+  of stop samples transmitted, in later changes (pending).
+- **Pins**: `PINNED_CLOSURE` of `mtf.test.ts` and `fidelity.test.ts` moved to `fef2e248`; every MTF figure, R4f grid and
+  case measured there is the pinned one (worst R4f `mtf.maxAbs` 1.69e-14).
+
+### The benchmark after the change
+
+The run above, `lv`, `ref` and `optiland` (R11b of `lv` and `flux`), `--jobs 4` into a temporary store: 14,688 jobs,
+14,280 ok, 408 unsupported, no error, in 7.5 minutes; 7,392 pairs, 6,240 PASS, 336 RECORDED, 816 UNSUPPORTED, no FAIL,
+no ATTENTION and no ERROR. No set of the 96 runs has a coded problem (no ray-tube field, no field plotted dark).
+
+| Rung | Pairs | What moved | Worst |
+|---|---|---|---|
+| R9a (gated) | 1,152 PASS | the pupils' and distortion's chief rays below one degree are solved; the lateral-colour sets hold four chief rays a field | `landing.maxAbs` 3.6e-13 mm, `exitPupil.maxScaled` 4.8e-13 mm, `distortion.maxScaled` 3.8e-13 mm, `lateralColour.maxAbs` 4.1e-13 mm |
+| R10a (gated) | 1,728 PASS | the fields below one degree are centred on a solved chief ray | `tangentialFocus.maxScaled` 1.3e-13 mm, `landing.maxAbs` 9.4e-13 mm |
+| R11a (gated) | 864 PASS (288 spans, one a line) | the beam sets: 2,784 sets, 4.09 million rays compared a pair (2.46 million before) | `illumination.maxAbs` 6.3e-14 (Sony FE 20 mm f/8 photopic, 47°), `landing.maxAbs` 2.1e-13 mm; no mask mismatch, no rim-band or dropped ray, `transmission.maxAbs` 0 |
+| R8b (recorded) | 48 RECORDED, 144 UNSUPPORTED | every colour line of the 24 reference runs is of two methods (all were `indices-differ`) | `lineFocus.maxAbs` 8.4e-12 mm (Sony FE 20 mm); the spherical figures as before (`longitudinalSa.maxAbs` 8.5e-12 mm), `pupilRadius.relative` 1.37e-11 |
+| R9b (recorded) | 72 RECORDED, 216 UNSUPPORTED | all 120 lateral-colour fields of two methods (all were `indices-differ`, 22 pairs ATTENTION); the pupils below one degree | lateral colour's landing 1.2e-10 mm (median 1.2e-14); entrance pupil below one degree 3.8e-6 mm (Sony FE 400 mm at 0.2°; 1.30 mm before), exit pupil 4.1e-7 mm (5.17e-2 before); above it 5.0e-6 and 5.0e-6 mm as before; distortion as before (`distortionPercent.maxAbs` 0.0146) |
+| R10b (recorded) | 24 RECORDED, 24 UNSUPPORTED | the Sony FE 400 mm's ten fields below one degree | tangential below one degree 4.0e-8 mm (2.31e-6 before), sagittal 4.8e-10; over all 407 fields as before: tangential 5.72e-6, sagittal 1.38e-6, astigmatism 6.66e-6 mm, one field `no-focus` |
+| R11b (recorded) | 24 RECORDED, 24 UNSUPPORTED | the tab's beam and energy route against the flux's area and cosine-space flux | per field off the axis (208): geometric transmission 0.0100 (median 0.0017; 0.773 before), relative illumination 0.0110 (Sony FE 20 mm at 47°; median 0.0017; 0.273 before), falloff 0.023 (Sigma 35 mm at 31.9°; median 0.00075; 0.202 before); chief landings within 7.1e-15 mm |
+
+R11b's remaining differences are of two routes to one quantity on two lattices: the tab's lit area on half of a lattice
+of 64 cells, mirrored, against the flux's area on a whole lattice of 128 (a staircase of each rim, of first order in
+the cell: the flux's own answers move by up to 0.01 on doubling from 64 to 128); and the tab's conservation of energy,
+its flux times cos θ over `(dh/dθ)(h / sin θ)` of its chief rays 0.01° apart, against the projected solid angle of the
+exit beam in direction cosines (Rimmer's method, OpticStudio's). Stage 6.6 measured the two routes agreeing within
+0.011 over 368 fields; the tab now takes the first, and R11b records it against `flux`'s second as two methods, the
+difference measured above. Owner decisions (2026-10-27): `flux` keeps Rimmer's method; LensVisualizer is to adopt it
+for its tab, with a vignetting curve of the share of stop samples transmitted (and its spots, fans, bokeh, zones and
+MTF aimed at the real stop), in later LensVisualizer changes, pending; when they land the canaries fail first and the
+vignetting sets, the ask and the measurements are redone.
+
+**Store.** R11a's beam sets are the bulk of the run's store: 9.6 GB compressed for the benchmark's 8,352 R11a answers
+(about 1.15 MB each: every surface's hits of a beam's rays), against 0.7 GB for R10a and 0.05 GB for R9a. The
+Phase 6 end refresh writes them for benchmark, features and states on the real store.
+
+## Stage 6.7: the summary tab and cardinal elements
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r12b --jobs 4   # R12b of lv and optiland whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark
+npm run test:lv   # test/integration/lv/summary.test.ts: the tab's readouts against R1
+```
+
+LensVisualizer's summary tab (`OpticalSummaryTab.tsx`) presents `computeOpticalSummary` of the analysis drawer's request
+(`src/optics/analysis/summary/summary.ts`); its aperture control presents the marked f-number and, at close focus, an
+effective one. Nothing of either traces a ray of its own: the readouts are of the prepared state, the hook's two radii
+and its field geometry, and LensVisualizer's paraxial kernel.
+
+| Readout (section) | Computed as, in LensVisualizer | Covered |
+|---|---|---|
+| Path, Surfaces, Rear plates | the prepared lens's flags and surfaces | the case (R0): surfaces plus two a plate, sequential |
+| Focus, Zoom, Aberration | `focusDistanceAt` (authored close focus over `focusT`), the controls | not by R1 (the state's labels; the focus readout recorded) |
+| Current EFL | the hook's `computeFocusEFL`: the stored focal length at infinity, `-1 / u'` of one paraxial ray elsewhere | R1 `efl` (a measured margin of 8 units in the last place) |
+| Infinity EFL, Breathing | `eflAtZoom` (the stored station table); the percentage of the two | R1 `efl` of the zoom position's infinity case (the same margin); the percentage derived to the bit |
+| FFD, Hiatus, Cardinal EFL, BFD | `computeCardinalElementsFromState` (the paraxial system matrix) | R1 `frontFocalZ`, principal points, `efl`, `backFocus`: to the bit |
+| Working f/# | `\|currentEFL\| / entrancePupilDiameter` | R1 `efl` over twice its `entrancePupilSemiDiameter` (a measured margin of 1e-10 relative) |
+| Entrance pupil | twice the hook's `currentEPSD`: the stop over the height at the stop of a real ray 1e-4 mm from the axis, over 1e-4 | twice R1's `entrancePupilSemiDiameter` (the same margin) |
+| Physical stop | twice the hook's `currentPhysStopSD` | twice the case's stop radius, within two units (derived) |
+| Half field, Full field | the hook's analysis field geometry (`computeAnalysisFieldGeometry`): the field whose solved real chief ray lands at the image corner (half the stated image circle, or the format's diagonal) within 1e-4 mm; the last field whose chief ray clears every aperture where one clips it short of the corner; or the projection's authored trace field, no larger than the corner's | not by R1 (recorded by R12b); R9a judges the chief ray at that angle |
+| Image plane Z, Total track, Telephoto ratio | the prepared state's image plane, `imgZ - z[0]`, track over the current focal length | the case's `imageZ` and first vertex, to the bit; the ratio derived to the bit |
+
+Beside the readouts the tab shows a "Current Perspective Pose" section where the request's pose is active (no case has
+one), and the aperture control its "eff. f/" only where it differs from the mark by more than 0.05 and
+`showEffectiveAperture` is on.
+
+### Covered by R1
+
+`test/integration/lv/summary.test.ts` (tier 2) asks the tab of every state of the benchmark, states and focus-stations
+suites on the reference line at the design plane (113 states, 61 of them finite) and holds each readout to `lv`'s R1
+answer of the same case (`answerLvFirstOrder`) or to the case. To the bit: the cardinal focal length, back focus, front
+focus (the first vertex less R1's `frontFocalZ`), hiatus (R1's principal points), image plane and track, and the
+breathing and telephoto ratio by the tab's own expressions. Derived: the physical stop within two units in the last
+place (the hook's `(w × FOPEN) / N`, a product and a quotient each rounded once). Two measured margins, held only while
+the engine closure and the case are the ones they were measured with (`PINNED_CLOSURE`, `MEASURED_CASES`, as
+`mtf.test.ts` pins its figures), so that a lens edit cannot turn the tier red, and written down elsewhere: the current
+and infinity focal lengths within 8 units in the last place (measured 7, the Leica Summilux-C 18 mm at a focus station;
+2 on the benchmark: `-1 / u'` or the stored value against the cardinal construction), and the entrance pupil and the
+"Working f/#" within 1e-10 relative (measured 3.4e-11). The pupil's margin is not derived: the real ray 1e-4 mm from
+the axis departs from the paraxial one by terms of the order of `(1e-4 / r)^2`, and dividing by its height multiplies
+an absolute rounding of that height by 1e4. R1 judges each of those values against `ref` and optiland at 1e-9 mm. What
+R1 does not cover is `NOT_COVERED_BY_R1` in the test: the half field, the focus distance, the controls, the perspective
+pose section and the aperture control's "eff. f/".
+
+### No identical-ray rung
+
+The plan's row asks whether a value of the tab needs real rays. Two do, and neither warrants a rung of identical rays
+(owner, 2026-10-27):
+
+1. **The entrance pupil** is of a real ray 1e-4 mm from the axis. It agrees with the paraxial pupil R1 judges to
+   3.4e-11 relative at every state; the test above holds it there within 1e-10. A rung of that ray would judge its
+   height at the stop, about 1e-4 mm, at R2's 1e-8 mm: 1e-4 relative, about 10^6 times looser than the coverage it
+   already has.
+2. **The half field** is the angle whose solved chief ray lands at the image corner on 103 of the 113 states; on one
+   (the GF 80 mm f/1.7 at its close station, landing 25.07 mm short of its 27.39 mm corner) the last angle whose chief
+   ray clears every aperture, bisected eight times; on four the authored trace field (the Sony FE 20 mm's 47°, landing
+   21.23 mm, short of its 21.65 mm corner); on five an authored field the corner lowered (the Samyang AF 14 mm, the
+   Hasselblad XCD 25 mm, the Lumix S 26 mm and the Sigma 24 mm at close focus). R9a already traces the solved chief ray
+   at that angle (the distortion curve's edge, `chiefRaySets.ts`) in every engine at every infinity state of the three
+   suites (52), its landing judged at 1e-8 mm; the angle itself is LensVisualizer's solve, which no engine has.
+
+So Stage 6.7 adds no `r12a`; the gated column of the plan is R1, as it says.
+
+### R12b: the tab beside optiland's accessors (recorded)
+
+`summary.native` v1 (contract 1.0; `contract/CONTRACT.md`) asks, at each line of `lines`, for an engine's own summary
+under the contract's definitions: `rearFocalZ` (what identifies the system), `focalLengthMm`,
+`entrancePupilDiameterMm`, `stopDiameterMm`, `imageSpaceFNumber` (OpticStudio's image-space F/#),
+`paraxialWorkingFNumber` (`1 / (2 n' |u'|)` of the paraxial marginal ray at the case's conjugate), `workingFNumber`
+(OpticStudio's working F/#, `1 / (2 n' sin θ')` of the real marginal ray), `nominalFNumber`, `totalTrackMm`,
+`halfFieldDeg`, each null where the engine states none under that definition.
+
+- **`lv`** (`answerLvSummary`, `src/engines/lv/summary.ts`, method `lv-summary-tab`): the tab's readouts of the drawer's
+  request (`lvSummaryRequest`: the hook's focal length of the state, the hook's two radii for the case's stop, its field
+  geometry), the "Working f/#" as `imageSpaceFNumber`; the aperture control's marked f-number (`lvNominalFNumber`); no
+  `paraxialWorkingFNumber` and no `workingFNumber` (LensVisualizer traces neither marginal ray for an f-number).
+  `sampling`: the control's "eff. f/" as `lvThinLensEffectiveFNumber` (a thin-lens estimate of stored pupils, of no
+  definition of the contract's), the infinity focal length, the breathing, the focus distance where there is one and
+  the stored wide-open nominal pupil. Refused before LensVisualizer is asked anything: `path.folded`, `line`,
+  `focus.off-design`, `lines.not-authored-reference`. The test above holds the answer to the tab asked with a request
+  spelled out again: to the bit on the 74 wide-open states, within two units elsewhere (a case carries its stop radius,
+  not the slider's f-number, which `lvPupilSeed`'s rule takes back from it).
+- **`optiland`** (`workers/python/lvrtc_optiland/summary.py`, method `optiland-summary`): of a verified optic of the line,
+  `F2()` and `f2()` as for `paraxial.first-order`, `|EPD()|`, `|FNO()|`, `1 / (2 n' |u'|)` of `marginal_ray()`, and
+  `get_working_FNO` on the axis on a `field_optic` under robust aiming (the rim rays through the stop's clip radius).
+  Its `stopDiameterMm` (the system aperture's value) and `totalTrackMm` (`total_track`) are read-backs of the case:
+  their figures hold LensVisualizer's tab to the case, not two engines to each other. `sampling`: `|XPD()|`, the
+  magnification of a finite object, `workingRimRaysVignetted` (aimed rim rays dark first at a surface of the case other
+  than the stop; one dark at the stop, clipped there by a rounding, or at no surface of the case is not counted), and
+  the working f-number under optiland's default paraxial aiming with `unaimedRimRaysLost`. Every setting is read back,
+  each with a deliberate fault in `test_summary.py`; its expected values are an exact rational trace and 60-digit rim
+  rays (`exact.py`), the aimed one behind a lens found by bisection in 60 digits.
+
+`summaryNativeComparator` (`src/compare/summaryNative.ts`) sorts each line by R5's `classifyNativeField`, the rear focal
+point standing for the landing (as R8b's near-axis intercept): unsupported, other wavelengths, rear focal points apart
+or unstated (data), then method, the only class in a figure. The figures are the differences of the values both answers
+state under one definition; a value one answer never states is unmeasured, the engine named (`paraxialWorkingFNumber`
+and `workingFNumber`, `lv-summary-tab states none`). The marked f-number and the half field are recorded and never in a
+figure. `summaryFactsOfRecorded` repeats the sorting from recorded values.
+
+| Metric | Policy 22 (accepted by the owner, 2026-10-27) |
+|---|---|
+| `rearFocus.maxAbs` | limit of the sorting, 1e-5 mm (R7b's to R11b's; measured 2.0e-13 mm) |
+| `imageSpaceFNumber.maxAbs` | attention band 2e-9 (ten times the measured 1.45e-10, rounded up) |
+| `entrancePupilDiameter.maxAbs` | attention band 3e-9 mm (ten times the measured 3.0e-10 mm, rounded up) |
+| `focalLength.maxAbs`, `stopDiameter.maxAbs`, `totalTrack.maxAbs` (mm), `paraxialWorkingFNumber.maxAbs`, `workingFNumber.maxAbs` | unit only: no band |
+
+`test/integration/optiland/r12.test.ts` (tier 3) runs R12b on the Z 50 mm f/1.2 (reference line at the design plane,
+photopic, best axial focus and the MTF tab's f/8) and the Sigma 105 mm macro's two certified stations.
+
+### Measured, 2026-10-27
+
+At LensVisualizer `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`, `--rungs r12b --jobs 4` into a
+temporary `LVRTC_RUNS_DIR`, each suite in about 9 s:
+
+| Suite | Jobs | Pairwise pairs | `imageSpaceFNumber.maxAbs` | `entrancePupilDiameter.maxAbs` |
+|---|---|---|---:|---:|
+| benchmark | 96: 72 ok, 24 unsupported (`lv`, `focus.off-design`) | 24 RECORDED, 24 UNSUPPORTED | 1.05e-10 | 1.55e-10 mm |
+| states | 128: 96 ok, 32 unsupported | 32 RECORDED, 32 UNSUPPORTED | 1.45e-10 | 5.1e-11 mm |
+| focus-stations | 122 ok | 61 RECORDED | 9.5e-11 | 3.0e-10 mm |
+
+Over all three: rear focal points within 2.0e-13 mm, focal lengths within 6.8e-13 mm, stops within 7.1e-15 mm, tracks
+equal; no line set aside, no ATTENTION (both bands hold); `paraxialWorkingFNumber.maxAbs` and `workingFNumber.maxAbs`
+unmeasured on every pair. What the rung records of the definitions, from the values each answer records
+(`docs/gotchas.md`, "Summary"; the brief `docs/upstream/lensvisualizer-summary-conventions.md`, not filed):
+
+| Relation | Benchmark (24) | states (32) | focus-stations (61) |
+|---|---|---|---|
+| tab "Working f/#" against the real rim rays' working F/# | −4.8% (Plena) to +0.45% (GF 63 mm) | −2.3% to +0.16% | −78% (Sigma 105 mm at 1:1, 1.03 against 4.75) to +38% (GF 80 mm, rim rays vignetted) |
+| marked f-number against the working F/# | wide open within 0.34%; at f/8 up to +4.8% (Plena) | up to +4.95% (Plena at f/11) | −39% to +35% (the mark is of infinity) |
+| `lvThinLensEffectiveFNumber` against optiland's paraxial working F/# | the mark at infinity: up to +5.1% (Plena at f/8) | up to +5.1% | −8.5% (Sigma 105 mm at 1:1) to +58% (Sony FE 600 mm) |
+| optiland's aimed rim rays dark at another surface | 2 (Sigma 35 mm, surface 13 by 0.58 mm; Canon EF 135 mm, 1.3 µm) | 0 | 12 |
+
+**The rays baselines.** `baseline check` of benchmark, features, states, focus-stations, folded and diffractive, each
+with `--jobs 4` into a temporary store: no DRIFT; every record REFRESHABLE, STALE(engine, policy) (benchmark 1,440,
+features 270, states 1,920, focus-stations 900 and the 15 NEW of Stage 6.6's new certified station, folded 96,
+diffractive 96).
+
+### Industry alignment
+
+| Value | LensVisualizer | OpticStudio | optiland |
+|---|---|---|---|
+| EFFL | `computeFocusEFL`, `-1 / u'` (stored at infinity); the cardinal construction's | paraxial, image space, primary wavelength | `f2()` |
+| BFL | the tab's BFD: rear focal point less the last lens vertex, rear plates inside | from the last surface before the image surface (to be confirmed in its Conventions and Definitions) | `F2()` from the image surface (the worker adds the image plane) |
+| Image-space F/# | the tab's "Working f/#": `\|EFL\| / EPD`, also at finite conjugates | EFFL / ENPD at infinite conjugates, whatever the object | `FNO()` |
+| Paraxial working F/# | none; the control's "eff. f/" is a thin-lens estimate, `N (1 + \|m\| / p)` | `1 / (2 n' tan θ')` of the paraxial marginal ray at the conjugate | none (the worker forms `1 / (2 n' \|u'\|)` of `marginal_ray()`) |
+| Working F/# | none | `1 / (2 n' sin θ')` of the real marginal ray at the conjugate | `get_working_FNO` (mean of four rim rays' `n'^2 sin^2`; vignetted ones left out) |
+| Marked f-number | the slider's N; sizes the stop by a real ray wide open, linear stopped down (exceptions in `docs/gotchas.md`) | none: the system aperture is a value of the user's (EPD, image-space F/#, float by stop size, ...) | none |
+| ENPD, ENPP | EPD of a real ray 1e-4 mm from the axis; no position in the tab (the stored one is drawn) | paraxial | `EPD()`, `EPL()` |
+| EXPD, EXPP | none in the tab (stored, drawn) | paraxial | `XPD()`, `XPL()` |
+| Paraxial magnification | none in the tab (R1 records the kernel's) | paraxial, finite conjugates | `magnification()` |
+| Total track | `imgZ - z[0]` | TOTR, first surface to image surface | `total_track` |
+
+R1 holds the first-order values of all three engines to each other at 1e-9 mm; they agree in definition except the
+BFL's reference surface where a plate is modelled. The f-numbers are where the three part: LensVisualizer's label names
+OpticStudio's working F/# and presents its image-space F/#, its marked f-number is neither at a stopped-down state, and
+its effective f-number is an estimate of the paraxial working one.
+
+### Owner decisions, 2026-10-27
+
+1. **R12b is accepted as proposed**: recorded, of `lv` and `optiland`, only where named, out of every baseline;
+   `rearFocus.maxAbs` the limit of the sorting at 1e-5 mm; attention bands of 2e-9 on `imageSpaceFNumber.maxAbs` and
+   3e-9 mm on `entrancePupilDiameter.maxAbs`, none on the other figures (policy 22).
+2. **No `r12a`**, on the evidence above.
+3. **LensVisualizer is to adopt OpticStudio's three f-numbers under their names** (image-space f/# = EFL / EPD; the
+   paraxial working f/# of LensVisualizer's own paraxial trace at the current focus, in place of the thin-lens "eff.
+   f/"; the working f/# of the real marginal ray, `1 / (2 n' sin θ')`) **and one stop rule at every f-number**: the
+   paraxial entrance pupil `EFL / N` (OpticStudio's image-space F/# aperture), in place of the unaimed, unclipped real
+   sizing ray and the linear stop-down. The change is pending (the owner holds its prompt). Until it lands R12b records
+   LensVisualizer as it is; afterwards the canaries of those lines fail first, every case's stop radius moves (so every
+   case id and baseline record), and the summary's request, R12b's asks and these measurements are redone.
+
+## Stage 6.8: Seidel sums, wavefront and Zernike fits
+
+```bash
+node bin/lvrtc.mjs run suites/benchmark.json --rungs r13b,r14b --jobs 4   # of ref-seidel, optiland, optiland-wave whatever --engines names; only where named
+node bin/lvrtc.mjs compare benchmark --jobs 4
+```
+
+LensVisualizer presents no Seidel sums, no wavefront map and no Zernike coefficients (at `098c91ef6`: no tab, section or
+hook computes them; `mtfWaveLattice` and `waveLatticeOtf` of `src/optics/analysis/mtf/mtfWavefront.ts` are an MTF's
+internals that no tab presents, and the spherical-aberration primer's "wavefront" panel is a drawing of a fixed curve).
+The stage is therefore of optiland beside the comparator: two quantities, each answered by optiland from its own
+objects and by the comparator's own code, and a recorded rung of each.
+
+| Quantity | Definition (OpticStudio's names) | optiland | The comparator's |
+|---|---|---|---|
+| `seidel.native` v1 | SPHA, COMA, ASTI, FCUR, DIST (S1 to S5) and CLA, CTR of two dispersion lines, mm, per surface and in total; Welford's sums of the paraxial marginal ray through the stop's rim and the chief ray of slope tan(maxFieldDeg) through its centre; OpticStudio's sign (S1 > 0 undercorrected); the conic and the term of power 4 of an asphere; W040 = SPHA / 8 lambda and the other wave coefficients recorded | `aberrations.seidels()` and `third_order()`, negated (its sign is OpticStudio's opposite); terms of power 3 and 4 refused (it reads the conic alone); no chromatic sum of its one-line optic | `ref-seidel`: the reference engine's model, the sums from the optics alone, compensated |
+| `zernike.native` v1 | of each field, W in vacuum waves about the chief ray's reference sphere (positive where the wavefront leads), on `wavefront.native`'s midpoint grid of normalised stop coordinates (robust aiming); RMS about the mean, peak to valley, Standard (Noll, unit RMS) or Fringe (University of Arizona, 37 at most) coefficients with piston and tilt kept, the residual and the condition of the normal equations | `Wavefront` samples and its own `ZernikeFit` (`ZernikeOPD`'s two steps on the midpoint grid); `noll` for Standard; Fringe 37 refused | `optiland-wave`: the comparator's estimator (`src/estimators/zernike.ts`) on optiland's raw `wavefront.native` samples of the same wavefront |
+
+**`ref-seidel` and its proofs.** An engine of its own (`src/engines/refSeidel`), so that nothing of it is in `ref`'s
+fingerprint (the files of `src/engines/ref`) or adapter revision (the import closure of `engines/ref/engine.ts`, which the
+rays baselines hold): it imports `ref`'s model, paraxial kernel and fingerprint, `ref` imports nothing of it, and a test
+holds the closure apart. Its fingerprint is of both directories, its revision the closure of its own module.
+`test/engines/refSeidel/seidel.test.ts` derives every expected value another way: `tan` of an angle against a series in
+whole numbers (π by Machin's formula); a refracting surface that is its own stop by the closed forms of its eccentricity;
+its S1 as the limit of a real ray's longitudinal aberration (Richardson's extrapolation of exact sphere refractions, to
+1e-9); an aplanatic surface (S1 = S2 = S3 = 0 to 1e-18) and a surface centred on the stop (S2 = S3 = S5 = 0); a thin lens
+with the stop on it (S3 = H^2 K, S4 = H^2 K / n, S5 = 0); the Petzval sum of three separated thin lenses; a plane-parallel
+plate in a diverging beam (Welford's closed forms); a Cartesian ellipsoid without S1, a fourth-order plate's 8 a4 (n' - n)
+y^4, a term `r^2 / 100` that is the paraboloid of radius 50; the stop-shift identities between one lens stopped in two
+places (with a conic and a term of power 4); the colour of thin lenses in contact and an achromat without it.
+
+**The estimator and its proofs** (`test/estimators/zernike.test.ts`): the orderings against Noll's rule and the
+University of Arizona list (and OpticStudio's 37th, the radial polynomial of order 12); the radial coefficients against
+the orthogonal polynomials of the disc by Gram-Schmidt in exact fractions, and the norms by the exact integral (mean
+square 1 over the disc); each value at dyadic points against exact fractions within a bound derived term by term; the
+exact zero of every product of polynomials of other parity on the symmetric grid; the fit of a wavefront made of known
+Fringe polynomials, a pure defocus (rho^2 = Z1 / 2 + Z4 / (2 sqrt 3)) and a pure spherical aberration (rho^4 = Z1 / 3 +
+Z4 / (2 sqrt 3) + Z11 / (6 sqrt 5)); the RMS and peak to valley in whole numbers with a piston of 2^30 (a plain mean is
+some hundred units off); the condition, exact on the symmetric grid, and the strips of the disc where the fit keeps no
+digit.
+
+**`ref` as a third Zernike answer: not covered.** It would have to trace optiland's own pupil rays. `wavefront.native` v1
+carries of a sample its normalised coordinate, its point on the reference sphere and its OPD, not the ray's launch; with
+the robust aiming a normalised coordinate is optiland's aimer's solution at the stop (to 1e-10 mm), which `ref` could only
+repeat with an aimer of its own: other rays, an independent method rather than identical rays. Either a version 2 of
+`wavefront.native` carrying each sample's launch (then `ref` traces those rays and forms its own OPD) or `ref`'s own
+aiming and reference sphere would make one; v1 is unchanged here, and the choice is the owner's.
+
+### Measured, 2026-10-27
+
+At LensVisualizer `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`, `--rungs r13b,r14b --jobs 4` into
+a temporary `LVRTC_RUNS_DIR`: the 36 design-plane runs of the benchmark's reference and photopic lines wide open and its
+reference line at the f/8 comparison (216 jobs, 2 min 52 s), and R13b on the features suite (18 runs, seconds). The
+peak simultaneous RSS of the four slots, each with two optiland workers, was 8.95 GiB (2.31 GiB a slot), within the 2.5
+GiB a job the pool estimates outside R6c.
+
+**R13b** (`ref-seidel` against optiland): benchmark 12 RECORDED, 24 UNSUPPORTED (optiland refuses the seven lenses of a
+term of power 4); features 6 RECORDED, 12 UNSUPPORTED (ten of a term of power 4, two of power 3, which `ref-seidel`
+refuses too). Over the 18 pairs of two methods:
+
+| Figure | Largest | Where |
+|---|---:|---|
+| `invariant.maxAbs` | 2.66e-15 mm | Sony FE 400 mm |
+| `SPHA.maxAbs` | 1.42e-15 mm | Canon EF 135 mm, photopic |
+| `COMA.maxAbs` | 1.20e-15 mm | e-line, photopic |
+| `ASTI.maxAbs` | 1.73e-15 mm | e-line, photopic |
+| `FCUR.maxAbs` | 4.7e-16 mm | e-line |
+| `DIST.maxAbs` | 2.61e-15 mm | GF 63 mm, photopic |
+| `total.maxScaled` | 7.15e-16 | zero-asphere (a total over the larger sum of its surfaces' magnitudes) |
+| `surfaces.maxAbs` | 8.44e-15 mm | Sony FE 400 mm, surface 4, SPHA |
+| `CLA.maxAbs`, `CTR.maxAbs` | unmeasured | optiland states none |
+
+One definition, one number: the two engines' sums agree to the rounding of what cancels in them. The sums themselves,
+recorded with OpticStudio's wave coefficients (`W040`, ...), run from W040 = -4.7 waves (Plena, photopic) to 9.9 (Sigma
+45 mm), and `ref-seidel`'s CLA of the photopic runs from -2.2e-3 to 1.5e-2 mm.
+
+**R14b** (optiland's fit against the comparator's, of the same samples): 72 pairs RECORDED (two orderings of each run, five
+fields each: 360 fields, every one answered by both). The RMS agrees within 1.4e-17 waves and the peak to valley to the
+bit; the two conditions agree within 1.1e-8 of each other below 1e8. The coefficients' agreement is a matter of the
+condition alone:
+
+| Fields of a condition at most | Fields | `coefficients.maxAbs` | Of the largest coefficient | `fitResidualRms.maxAbs` |
+|---|---:|---:|---:|---:|
+| 1e3 | 225 | 3.1e-14 waves | 1.2e-14 | 3.5e-17 waves |
+| 1e4 | 246 | 3.1e-14 | 2.7e-14 | 3.5e-17 |
+| 1e5 | 268 | 2.6e-13 | 1.7e-13 | 6.9e-17 |
+| 1e6 | 295 | 3.0e-12 | 3.2e-12 | 6.9e-17 |
+| 1e8 | 331 | 4.8e-10 | 2.5e-10 | 6.9e-17 |
+| 1e10 | 356 | 5.8e-7 | 1.1e-8 | 6.8e-16 |
+| all (to 1.4e13) | 360 | 1.29 | 2.3e-5 | 1.2e-11 |
+
+The Standard set on a fully lit disc has a condition of 1.08, the unnormalised Fringe set 20.6; vignetting raises it, to
+1.4e13 at the Sigma 35 mm's full field wide open (2,562 of 12,892 cells lit, on a strip), where the two fits differ by
+1.29 waves in the y tilt with residuals 1.2e-11 waves apart: the samples do not determine the coefficients
+(`docs/gotchas.md`, "A Zernike fit of a vignetted field is ill-conditioned").
+
+**The two quantities' signs hold together.** Of a pure third-order spherical aberration `W = W040 rho^4`, the Standard
+coefficient of the axis is `Z11 = W040 / (6 sqrt 5)`. At the f/8 comparison, where third order dominates, `6 sqrt 5 Z11`
+of optiland's fit of the axis has the sign of `ref-seidel`'s W040 on all twelve configurations, and is 0.71 to 1.44 times
+it on ten (the Z 24-70 mm wide 0.0537 against 0.0559 waves, its tele end -0.0454 against -0.0622; the Sony FE 20 mm
+2.6 times a W040 of 5e-4 waves, the Sigma 45 mm 0.35 times, where higher orders weigh): the OPD sign (positive where the
+wavefront leads) and the Seidel sign (S1 > 0 undercorrected) are OpticStudio's together. Wide open the higher orders
+part them (the Z 50 mm, 3.6 against 5.2).
+
+**The rays baselines.** `baseline check benchmark --jobs 4` into a temporary store (47 s): no DRIFT; 1,440 records
+REFRESHABLE, STALE(engine, policy), as at Stage 6.7. The adapter revisions of `lv`, `ref`, `replay`, `wave` and `flux`
+did not move at this stage (no file of their closures changed); the worker's files moved `optiland`'s and
+`optiland-wave`'s; `ref-seidel` is new.
+
+### Proposals for the owner (not decided)
+
+Policy 23 states the figures of both rungs with their units and no limit or band. From the measurement, in the manner of
+earlier stages (ten times the largest measured, rounded up to one digit):
+
+1. **R13b**: `invariant.maxAbs` the limit of the sorting at 3e-14 mm (measured 2.66e-15); an attention band of 8e-15 on
+   `total.maxScaled` (measured 7.15e-16), the figure that is of the rounding's scale; none on the absolute sums, whose
+   size goes with the lens's.
+2. **R14b**: `fitCondition.max` the second limit of the sorting at 1e6 (a field above it numerical, in no figure; the
+   coefficients carry about three fewer digits there, and 295 of the 360 fields are within it); `chiefLanding.maxAbs` at
+   1e-9 mm (the worker's own plane tolerance; measured 0, one optiland trace of the chief ray each); attention bands of
+   4e-11 waves on `coefficients.maxAbs` (3.0e-12 within the limit), 2e-16 on `rmsToChief.maxAbs` (1.4e-17) and 7e-16 on
+   `fitResidualRms.maxAbs` (6.9e-17); none on `pvToChief.maxAbs` (one subtraction of the same two doubles).
+3. **optiland's chromatic Seidel sums**: an optic of a table material of the case's indices at three wavelengths, read
+   back with its faults, would let optiland answer CLA and CTR (its `TAchC`, `TchC`); not built here.
+4. **`ref` as a third Zernike answer**: `wavefront.native` v2 carrying each sample's launch, or `ref`'s own aiming (above).
+5. **Upstream (optiland)**: its Seidel sums omit a term of power 4; its 37th Fringe polynomial is not OpticStudio's;
+   `Wavefront`'s docstring says `remove_tilt` removes the piston, which it keeps. Whether to report them is the owner's.
+
+### The validation matrix
+
+The plan's Phase 6 line asks for `reports/benchmark/validation-matrix.md`, a row for every LensVisualizer analysis tab. It
+does not exist. It would be a report rendered from committed baselines alone (deterministic, held by `lvrtc verify`,
+its sentences wording templates), with a row per tab: MTF (R4, R4f, R6a gated; R5, R5g, R6b, R6c recorded), coma and bokeh
+(R7a; R7b), spherical aberration and axial colour (R8a; R8b), distortion, lateral colour, pupils and breathing (R9a and
+R1; R9b), field curves and astigmatism (R10a; R10b), vignetting and relative illumination (R11a; R11b), the summary (R1;
+R12b), and a row of what LensVisualizer has no tab of (Seidel, wavefront, Zernike: R13b, R14b, engines against the
+comparator), each with its gated verdicts on the benchmark and its not-covered items. It needs: R7a to R11a in the
+benchmark's rays baseline, which only the Phase 6 end refresh writes; and a committed record of the recorded rungs
+R7b to R14b, which are in no baseline (a baseline of recorded rungs, as the MTF baseline holds R5, would be the owner's
+to decide), or a matrix that names them without figures. It is due with the end refresh, not before.
+
+## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part A)
+
+LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b`, 184 files (178 at `fef2e248`: `mtfAperture.ts` and
+`mtfRayClassification.ts` are gone; `pupils/aimedPupil.ts`, `pupils/stopLattice.ts`, `summary/fNumbers.ts`,
+`chromatic/zoneSelection.ts`, `geometry/rimCut.ts`, `state/apertureStop.ts`, `trace/rayClassification.ts` and
+`trace/symmetry.ts` are new). Part A is the binding, the stop rule and f-numbers, the MTF's stop lattice, the step
+backwards and the rim cuts; part B the ray sets of the spot, axial, curvature and vignetting tabs. Since then
+LensVisualizer main `6287f4393` (clean; `607ff23ae` and #940 alone), engine closure `fc5ae923`, 184 files, is adopted:
+"LensVisualizer #940" below.
+
+### What each PR changed, and what the comparator did
+
+| PR | LensVisualizer | The comparator |
+|---|---|---|
+| #933 (`445fa1711`) | One stop rule at every N, the paraxial entrance pupil `EFL / N` (`stopSemiDiameterForFNumber`, capped at the iris wide open; an authored schedule, a fixed iris kept); the hook's pupil paraxial (`entrancePupilAtState` of the stop); OpticStudio's three f-numbers under their names (`imageSpaceFNumber`, `paraxialWorkingFNumber`, `computeWorkingFNumber`); the thin-lens "eff. f/" gone | `stopSemiDiameterForFNumber` and `stopRuleGeometry` bound, `effectiveFNumber` dropped; `lvHookStop`, the exporter's `f-number`, `lvPupilSeed`, `lvTabComparison` (the f/8 stop is the rule's) and `lvTabComparisonPupil`, `lvSummaryStopSemiDiameter`, `lvNominalFNumber` restated with canaries; `summary.native` of `lv` states the two working f-numbers at infinity focus |
+| #936 (`bf6a2f11a`) | The MTF on the real stop: an aimed stop lattice per line (`aimMtfStopLattice`, `traceMtfLattice`, `traceMtfStopBundle`), cells across the stop's diameter, the default cap 256, unaimed and unresolved-in-beam samples, dark lines, a refinement past a refused share; a field launched from the bounding sphere keeps a launch-plane bundle (`traceMtfLaunchPlaneBundle`); no traced f-number, `axialVignetting` instead | `traceMtfBundle` and `mtfTraceClassification` dropped, the four new names bound with fakes; the ray sets are the stop lattice (below); `replay` restates `fieldAtGrid` line for line with canaries and closed-form stand-in tests; `FIDELITY_SAMPLING` adds `unaimedRays`, `unresolvedInBeamRays`; the tab request reads the cap (`mtfDefaultGridCap`); `mtf.native`'s `aperture` is `axialVignettingSurfaceIndex`, `axialVignettingBeforeStop`; the MTF and R4f pins measured again |
+| #934 (`f53a14327`) | The sequential trace steps backwards to a surface behind the last hit, where the forward search finds no root (`intersectSequentialSurface`, `sequentialSurfaceBackT`); the classification moves to `trace/rayClassification.ts` and proves a miss along the whole line where it may step back | `traceRayClassification` bound from its new module; the tracer's canary restates the lines; the crossing test of `rungs.test.ts` now holds each lens to the step backwards in both engines and R2 PASS |
+| #928 (`29d0e2a9e`), #932 (`c8171fb5b`) | Rim cuts: a flat land at a cut radius on a rim (`surface.rimCut`); `evaluateAperture` clips the cap at `min(sd, cut.radius)`, the land is drawn only; the validator keeps forward rays inside the cap off the land | the exporter writes that radius (`lvClearRadius`); a canary holds the lines |
+| #929, #935, #937, #938, #939 | Lens data, audits, documentation | no file of the engine closure (each PR's files against `f016b35b`'s 184) |
+
+### Design choices
+
+1. **Vacant cells, never fabricated rays.** The set is the square of `bundleGrid` cells of side `2R / bundleGrid` on the
+   stop (`groups.lattice`, ray `r · n + c`); LensVisualizer's lattice holds only the cells whose centre is in the disc,
+   and of those it aims what it can. A cell it has no ray for holds the field's chief ray at weight 0: LensVisualizer's
+   own ray, carrying no flux as in its sums. So `groups.lattice` stays a regular lattice, the geometric estimator adds
+   nothing of a vacant cell, and the wave estimator takes it for a dark cell (checked as a taken ray, never summed;
+   `TracedLattice` needs a lattice, the request's weights as flux and the cells' map to cosines, which a lattice on the
+   stop gives as one on the launch plane does). A blocked cell keeps LensVisualizer's blocking ray, which every engine
+   stops. `flux` counts only cells of weight above 0, and on a stop lattice flags no rim (the disc's rim is inside the
+   square).
+2. **A lattice per line.** LensVisualizer aims each line's lattice at that line, so each set is of its own line's rays;
+   on the launch plane the rays stay the same at every line.
+3. **`lv-f8-comparison` kept.** Since #933 it is the same stop double and the same case id as
+   `{ kind: "f-number", value: 8 }` on all 12 benchmark configurations (`mtf.test.ts`), and a lens f/8 or slower wide
+   open has its wide-open case for both. It is kept because it names the tab's comparison, whose pupil
+   (`(currentEPSD · stop) / currentPhysStopSD`) is one unit in the last place from the slider's on the GF 63 mm and the
+   Z 50 mm. The slider's range rules (`fopenAtZoomClamped`, `maxFstop`) did not change.
+4. **The working f-numbers of `lv` at infinity focus only.** LensVisualizer forms both at the paraxial conjugate of its
+   image plane, which is the case's object only at infinity focus; at a finite focus they are recorded under
+   `sampling` by names of their own, and a vignetted marginal ray names its surface.
+5. **Rim cuts are a clear radius**, as LensVisualizer traces them: the exporter never writes a land.
+
+### Measured, 2026-10-29
+
+Benchmark (96 runs), LensVisualizer `607ff23ae`, optiland `4e893f53`, a temporary store, `--jobs 4`, one run at a time.
+
+| Rung | Pairs | Worst |
+|---|---|---|
+| R0–R4, `lv`, `ref`, `optiland` | 11,040 PASS (both modes) | lv–ref: R0 `sag.maxAbs` 3.6e-15 mm; R1 `firstOrder.maxAbs` 2.0e-12 mm, `pupilZ.maxScaled` 3.4e-13, `pupilRadius.maxScaled` 3.9e-14; R2 `hits.maxDistance` 1.10e-12 mm, `direction.maxAbs` 2.4e-14, `landing.maxDistance` 1.02e-12 mm, no mask mismatch; R3 `opticalPath.maxAbs` 2.7e-9 waves; R4 `mtf.maxAbs` 1.2e-11. lv–optiland and ref–optiland of the same scale (R2 hits 1.17e-12 mm, R3 3.0e-9 waves) |
+| R4f, `lv`, `replay` | 192 PASS | `mtf.maxAbs` 1.3e-14 (GF 63 mm), `sampling.mismatches` and `fields.mismatches` 0 |
+| R6a, `lv`, `ref`, `optiland` | 1,440 PASS | 211 of 288 fields judged a pair (77 flagged; 208 at Stage 3.12); `waveMtf.maxAbs` lv–ref 1.02e-9, ref–optiland 1.03e-9 (within the 2e-9 defect bound), lv–optiland 1.5e-10 |
+| R12b, `lv`, `optiland` | 48 RECORDED, 48 UNSUPPORTED (`focus.off-design`), no ATTENTION | of 24 pairs: `imageSpaceFNumber.maxAbs` 1.1e-14 (1.45e-10 before), `entrancePupilDiameter.maxAbs` 8.5e-14 mm (3.0e-10), `focalLength.maxAbs` 2.8e-13 mm, `rearFocus.maxAbs` 1.1e-13 mm, `stopDiameter.maxAbs` and `totalTrack.maxAbs` 0; first measured: `paraxialWorkingFNumber.maxAbs` 2.0e-14 (Sony FE 400 mm at f/8), `workingFNumber.maxAbs` 3.4e-9 (Sigma 45 mm at f/8) |
+
+**Proposals for the owner (not decided):** attention bands, ten times the measured maximum rounded up to one digit, of
+2e-13 on `paraxialWorkingFNumber.maxAbs` (one definition, two paraxial traces) and 4e-8 on `workingFNumber.maxAbs` (two
+real-ray constructions aimed at the stop's rim, LensVisualizer's and optiland's `get_working_FNO`); the existing bands
+on `imageSpaceFNumber.maxAbs` (2e-9) and `entrancePupilDiameter.maxAbs` (3e-9 mm) now hold a measured 1.1e-14 and
+8.5e-14 mm and could be tightened from this measurement (2e-13 and 9e-13 mm).
+
+**The crossing-surface reproducers** (`suites/catalog-repro/` of the seven lenses whose FAILs `docs/known-failures.json`
+classifies as LensVisualizer's crossing-surface loss; rung R2, `lv`, `ref`, `optiland`, a temporary store): every one 15
+pairs PASS, no mask mismatch (Bertele Sonnar 50 mm scaled, Leica Elmarit 90 mm, the Nikon 35-70 mm and 25-50 mm at the
+tele end, Nokton 50 mm f/1, Olympus Zuiko 50 mm f/1.4, Pentax DA 18-55 mm at the wide end). The catalog baselines and
+the known-failure list are a dated snapshot and are not edited; the end-of-project refresh will find those FAILs gone.
+
+**Census** (into a temporary directory; `reports/census` untouched): 1,026 lenses, 350 zooms, 1,376 states; 1,368
+export, 8 do not, none throws (at `879c06102`: 1,007, 334, 1,341, 1,333 and 8). Not exportable, by reason (a state
+counted under each of its reasons): `folded-auto-path` 6, `mixed-reference` 1, `off-axis-image-plane` 2,
+`surface-profile-unsupported` 2, `tilted-image-plane` 2, `tilted-surface` 1. Rim cuts: 85 on 44 exported states of 29
+lenses, every one written as its clear radius.
+
+**No ray turns back at `607ff23ae`.** LensVisualizer `2e7c81088` capped the XF 27 mm's surface 8A below its turnover, and
+a search of 1,900 exports' launch-plane lattices (fields 0.7, 0.9 and 1, 32 cells, every line) found no ray that leaves a
+surface toward the object; the convention is held by the tracer's canary and `ref`'s analytic test.
+
+**Adapter revisions** of `lv`, `replay`, `wave` and `flux` moved (the binding's names and the restated lines); `ref`'s,
+`ref-seidel`'s, `optiland`'s and `optiland-wave`'s did not (no file of their closures changed). The stop radius of
+nearly every case moved with #933, so its baseline records are STALE(case) as well as STALE(engine) until the Phase 6
+end refresh.
+
+**A field LensVisualizer aims no cell of** (found after part B, 2026-10-29; `docs/gotchas.md`, "A finite object's stop
+lattice that LensVisualizer aims no cell of"; brief `docs/upstream/lensvisualizer-finite-object-aim.md`, not filed). At
+`607ff23ae` the aimed launch seeds a finite object's chief on the straight line from the object point to the stop
+centre, not on the chief `prepareMtfFieldLaunch` solved; where that line reaches no stop, every sample is `unaimed`
+(`trace-failed`). A survey of every documented focus station that exports (67 states; LensVisualizer's `MTF_FIELDS`, an
+8-cell lattice at the reference line, a read-only script through the binding) found 47 such fields on 18 stations, exactly the fields whose
+straight-line seed fails (43 `noBracket`, 20 of them a miss of the first surface; four total internal reflections), and
+no field whose seed fails that is aimed; no state at infinity. On the Panasonic 12-60 mm's close station at its wide end
+the solved chief crosses the stop within 4.3e-13 mm (27.1°) and 3.7e-10 mm (47.9°) of its centre where the seed fails;
+LensVisualizer's own MTF calls both fields `empty-pupil` at every grid to 256 (`validRays` 0, `unaimedRays` 51468), so
+its tab draws no curve there. Each such field is now the coded problem `lv-field-unaimed` (`lvFieldRays`), no set is made
+of it, and `wave` and `flux` answer it unavailable with that code; before, each was a set of vacant cells only. A field
+of blocked cells and no aimed one keeps its set. The adapter revisions of `wave` and `flux` moved (`raySets.ts` is in
+their closures); `lv`'s, `replay`'s, `ref`'s and the optiland engines' did not. Sets of states at infinity are unchanged
+byte for byte; the focus-stations suite loses those fields' sets (its records of them GONE at the end refresh).
+
+**LensVisualizer #940 adopted at `6287f4393`** (`607ff23ae` and #940 alone; engine closure `fc5ae923`, 184 files, the
+same files; no binding name added or lost). It resolves the finding above, by options (a) and (c) of the brief:
+`prepareMtfFieldLaunch` hands a finite object's aim the chief it solved, `chiefLaunch: [0, aim.root]`, which `launchFrame`
+seeds the chief at (the straight line only without one) and `fieldGeometryKey` keys by; and `fieldAtGrid` ends a field
+`aim-failed` (a new `MtfUnavailableReason`) where a line's stop lattice aims nothing (`aimedNothing`: no cell aimed, none
+blocked, some unaimed), after that line's counts and without a finer grid, with a message of the aimer's reasons
+(`aimFailedMessage`). The same survey at `6287f4393` (67 states, 319 MTF fields, an 8-cell lattice at the reference
+line) finds no field whose lattice is all unaimed: each of the 47 fields whose straight-line seed fails is aimed, its
+chief included, with no unaimed cell (some cells blocked at the rim). `lv-field-unaimed` stays the code of such a
+lattice, met on no committed suite, and the focus-stations suite has those fields' sets again (new records at the end
+refresh, traced and judged by R2–R4 and R6a as every other field). The comparator restates the new end of `fieldAtGrid`
+in `replay` (`aimedNothing`, `aimFailedMessage`, a canary each), so an aim-failed field has the same status, reason,
+grid and counts in `lv`'s and `replay`'s answers (R4f's `fields.mismatches` and `sampling.mismatches` 0 in
+`test/engines/lv/replay.test.ts`, on the fake tree's lattice made to aim nothing; a stand-in turns red without the
+line). `LvAimedFieldGeometry` states `chiefLaunch`, the fake tree mirrors #940 (its chief launch; its own words for
+`aim-failed`). Two canaries were restated: the replay's bookkeeping of `fieldAtGrid` and the finite object's seed. The
+fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved; of the adapter revisions those of
+`replay` (`replay.ts`), `wave` and `flux` (a comment of `raySets.ts`) moved, and `lv`'s, `ref`'s, `ref-seidel`'s and the
+optiland engines' did not.
+
+**The pins at `fc5ae923`** (2026-10-29, `test:lv` at `6287f4393`): measured again, every one unchanged; only
+`PINNED_CLOSURE` of `mtf.test.ts`, `fidelity.test.ts` and `summary.test.ts` moved. Beyond the pins' printed precision,
+the answers are the same bytes at both commits: the MTF tab's 12 answers (`lvrtc mtf` of each benchmark configuration,
+diffraction, photopic, best-axial focus, 11 fields of 51 frequencies) and the 192 answers of R4f on the benchmark (`lv`
+and `replay`, 96 runs, the same case and request ids), each run into a temporary store at `607ff23ae` and at
+`6287f4393`; R4f's worst `mtf.maxAbs` is 1.2989609388114332e-14 at both (the GF 63 mm, reference line, half field).
+The summary's 119 states (67 finite) are the 119 cases of `MEASURED_CASES`, and its worst margins are those of
+`f016b35b`: the focal lengths 15 units (the Olympus 7-14 mm at its focus station of zoom station 32), the pupil 0, the
+"Image-space f/#" 19 and the "Paraxial working f/#" at infinity 3.
+
+## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part B)
+
+LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b` unchanged by part B (its new names are of modules
+already loaded; since #940, `6287f4393`, closure `fc5ae923`: part A). Part B is the ray sets of the spot, axial,
+curvature and vignetting tabs, `lv`'s answers of their quantities, the engine `flux`, and policy 24.
+
+### What each PR changed, and what the comparator did
+
+| PR | LensVisualizer | The comparator |
+|---|---|---|
+| #927 (`d4426c973`) | One pupil convention: every pupil sample of the coma and bokeh tabs, the real-ray field-curve fans and the spherical-aberration and axial-colour zones is the ray of the shared aimed launch (`prepareAimedPupilLaunch`) through `(px R, py R)` of the real stop, Newton-aimed and polished, a sample behind a clear aperture ahead of the stop `blocked`, one no ray reaches `unaimed` (never traced); the full trace checks the stop at `R (1 + 1e-7)` (`prepareAimedPupilTrace`); the field-curve parabasal pencil kept about the chief ray's launch; a real-ray focus needs a fan two-sided to 0.25 R | `prepareAimedPupilLaunch` and `prepareAimedPupilTrace` bound (faked in `pupils/aimedPupil.ts`, a deliberately linear aim of the fake's own); the spot, axial and curvature sets keep the launch's rays verbatim, a blocked sample its blocking ray, an unaimed one the chief ray at weight 0, the chief ray the launch's stop-centre ray; `lvBokehChiefLanding` takes that ray; `traceSkewRay` dropped; `lv`'s `axial.native` states `pupilRadiusMm` the stop radius; R10a reads a field by place (design choice 6); canaries restated |
+| #930 (`fb58b3084`) | Every chromatic readout chooses its zone of all four channels (`CHROMATIC_ZONE_CHANNELS`), each aimed at its own indices; an unaimed ray ends the search; the lateral-colour maximum leaves out a field that loses a channel | `CHROMATIC_ZONE_CHANNELS` bound; the axial colour pattern is a set at each line that is a channel's, aimed at that channel; `lv`'s colour answer states `sampling.channelsOmitted`; the lateral-colour section's chief rays are unchanged (R9a's canaries and `chiefRays.test.ts` pass) |
+| #931 (`4092f6a25`) | The vignetting tab is OpticStudio's two field analyses on one lattice on the real stop a field (`prepareAimedStopLattice`, 64 cells across the stop, the `+x` half traced and mirrored): the share of the samples, neither unaimed nor failed, that reach the image (absolute), and Rimmer's relative illumination of the directions referred to the chief ray's image point through a reference sphere; no image mapping, no ray tubes | `prepareAimedStopLattice`, `computeVignettingField`, `BEAM_GRID_CELLS` and `MIN_BEAM_GRID_CELLS` bound; the vignetting sets are the half square of the stop lattice, vacant cells the stop-centre ray at weight 0, then that ray; `lv` answers the unvignetted fraction as `geometricTransmission` and Rimmer's relative illumination, a field without a figure `lv-<reason>`; `flux` states the same share of its own stop lattice; `lv-tube-mapping` gone |
+
+### Design choices
+
+1. **The launch's rays, never a restatement of the aim.** The aim is a Newton solve with a fitted seed and Broyden
+   updates; the comparator calls it and keeps what it returns. A sample's solve depends only on the state, the field,
+   the stop radius, the spectrum and its own target (LensVisualizer's documented contract, canaried), so the sets may
+   ask it in lists of their own (a bokeh tile's chief ray with no sample, each zone pair alone of the sections' lists).
+2. **The clip radius is the tabs' and not the case's.** LensVisualizer's tabs trace with the stop at `R (1 + 1e-7)` so
+   that a rim sample aimed at `R` is admitted; every engine traces the case's stop at `R`. A cell admitted only by the
+   clip radius is R2's rim band. On the benchmark none is: R7a–R11a have no mask mismatch and no rim-band count, and
+   `vignettingRays.test.ts` finds no cell of 229,188 the tab admits and the case's stop does not.
+3. **The colour is of the case's lines.** The section aims each of R, G, B, V at its own indices and chooses its zone of
+   all four; a case has a colour set only at the lines that are channels'. `axialRays.test.ts` exports each
+   configuration with the four channels' lines to hold the zone choice and every channel's focus to the bit.
+4. **The vignetting set is the half the tab traces.** The other half is the exact mirror the launch returns, which the
+   tab never traces. `flux` takes its own lattices (the MTF's at the line), so R11b sets two samplings beside each
+   other.
+5. **`geometricTransmission` is absolute in both engines.** The contract's definition was of the engine's own measure;
+   since #931 both state the share of the stop's samples that reach the image (`flux` on a launch-plane lattice has
+   none and is `launch-plane-lattice`). The relative illumination stays relative to the axis, so R11b's falloff, "of no
+   vignetting", is each answer's relative illumination over its transmission relative to its own axis's,
+   `RI / (GT / GT(axis))` (from the review, 2026-10-29: before it the figure carried `1 / GT(axis)`, which is 1 on every
+   benchmark axis, so the measured figures did not move).
+6. **R10a reads a curvature field by place, exactly.** An aimed sagittal ray starts off the chief ray's height, so a
+   field's fans cannot be told by an offset along one axis alone. The layout the sets keep is the reading: before the
+   chief ray, as many rays of the tangential fan as of the sagittal fan (LensVisualizer's two fans have one sample
+   count, and a sample it could not aim holds the chief ray in its place), the tangential half first; a ray of the
+   tangential half starts on the chief ray's x, one of the sagittal half off it, either may start at the chief ray's
+   start (a fan's centre, a held sample) and is in neither fan. Any other layout (an odd number beside the chief ray, a
+   ray off x in the tangential half, a ray on x but off y in the sagittal half, one off the plane of launch) is not
+   comparable, never read into a fan; no tolerance. The sets keep it by construction (`realRayLaunches` refuses a field
+   whose fans LensVisualizer does not aim on and off its meridian, `lv-fan-off-meridian`, or with two stop-centre
+   rays, `lv-chief-differs`).
+
+### Measured, 2026-10-29
+
+Benchmark (96 runs), LensVisualizer `607ff23ae`, optiland `4e893f53`, a temporary store, `--jobs 4`, one run at a time.
+Gated, `--engines lv,ref,optiland --rungs r7a,r8a,r9a,r10a,r11a`: 24,048 jobs ok (3 min 11 s, 9.4 GB of store from empty), 23,760
+pairs PASS (both modes), no mask mismatch, no rim-band count, no ray dropped.
+
+| Rung | Judged figure | lv–ref | ref–optiland |
+|---|---|---:|---:|
+| R7a | `transverseError.maxAbs` | 6.7e-13 mm | 7.6e-13 mm |
+| | `centroid.maxAbs`, `rmsRadius.maxAbs` | 1.5e-13, 9.3e-14 mm | 1.5e-13, 1.1e-13 mm |
+| R8a | `intercept.maxScaled` | 3.0e-13 mm | 3.5e-13 mm |
+| | `focus.maxScaled`, `focusRms.maxAbs` | 7.5e-14, 4.4e-14 mm | 1.2e-13, 1.0e-13 mm |
+| R9a | `landing.maxAbs`, `lateralColour.maxAbs` | 3.5e-13, 3.8e-13 mm | 3.7e-13, 4.1e-13 mm |
+| | `distortion.maxScaled`, `exitPupil.maxScaled` | 3.7e-13, 4.8e-13 mm | 3.9e-13, 4.8e-13 mm |
+| R10a | `tangentialFocus.maxScaled`, `sagittalFocus.maxScaled` | 1.1e-13, 8.9e-14 mm | 1.3e-13, 9.0e-14 mm |
+| | `landing.maxAbs` | 7.9e-13 mm | 7.9e-13 mm |
+| R11a | `illumination.maxAbs` | 7.1e-14 | 7.2e-14 |
+| | `transmission.maxAbs`, `landing.maxAbs` | 0, 2.0e-13 mm | 0, 2.0e-13 mm |
+
+Recorded, each `--rungs <r> --jobs 4` alone:
+
+| Rung | At `607ff23ae` | Before (Stages 6.2–6.6b) |
+|---|---|---|
+| R7b | 240 RECORDED, 528 UNSUPPORTED; fans `fanError.maxAbs` 8.1e-11 mm; spots' RMS radii a median 7.3 % (coma, up to 73 %) and 3.9 % (bokeh, up to 102 %) apart, `spotRmsRadius.maxAbs` 7.5e-3 mm; chief landings within 1.2e-10 mm; 480 blocked samples, none unaimed | fans up to 61 % of the span (5.3e-2 mm), spots a median 8 % and 6 % apart: LensVisualizer's disc of the paraxial pupil against optiland's real stop |
+| R8b | 96 ATTENTION, 288 UNSUPPORTED: every line `pupils-apart` (84 data, 12 unsupported), the radii up to 0.75 of the larger apart | every spherical and colour line of two methods, the foci within 8.4e-12 mm |
+| R9b | 144 RECORDED, 432 UNSUPPORTED, no ATTENTION; chief landings within 2.4e-10 mm | 144 RECORDED, no ATTENTION |
+| R10b | 48 RECORDED, 48 UNSUPPORTED, no ATTENTION; shifts within 5.7e-6 mm, astigmatism 6.7e-6 mm | the same bands held |
+| R11b | 48 RECORDED, 48 UNSUPPORTED, no ATTENTION; of 208 fields off the axis: transmission within 0.0037 (median 0), relative illumination within 0.0062 (median 0.00093), falloff within 0.014 (median 0.00065); every axis 1 in both | transmission 0.0100, illumination 0.0110, falloff 0.023 |
+
+R12b (`--rungs r12b`, seconds each), maxima of the pairs of each suite (the benchmark's from part A):
+
+| Figure | benchmark (24) | states (32) | focus-stations (67) |
+|---|---:|---:|---:|
+| `imageSpaceFNumber.maxAbs` | 1.1e-14 | 1.6e-14 | 1.2e-14 |
+| `entrancePupilDiameter.maxAbs` | 8.5e-14 mm | 4.3e-14 mm | 1.7e-13 mm |
+| `paraxialWorkingFNumber.maxAbs` | 2.0e-14 | 2.0e-14 | unmeasured (finite focus) |
+| `workingFNumber.maxAbs` | 3.4e-9 | 6.4e-9 (Sigma 45 mm at f/11) | unmeasured |
+| `focalLength.maxAbs` | 2.8e-13 mm | 2.8e-13 mm | 6.8e-13 mm |
+| `rearFocus.maxAbs` | 1.1e-13 mm | 1.1e-13 mm | 2.0e-13 mm |
+
+Every pair RECORDED, none ATTENTION. R13b and R14b, with policy 24 (all 96 benchmark runs, and R13b on the features
+suite): R13b 64 pairs RECORDED and 128 UNSUPPORTED on the benchmark (invariants within 3.1e-15 mm, `total.maxScaled`
+5.4e-16), 12 RECORDED and 24 UNSUPPORTED on the features suite (5.0e-16): no data, no ATTENTION. R14b 216 RECORDED and
+168 ATTENTION: of the 48 design-plane runs' 480 fields 418 of two methods and 62 numerical (a condition above 1e6, to
+9.7e12 at the Sigma 35 mm's full field), every pair ATTENTION that has one; the fields of two methods within every band
+(`coefficients.maxAbs` 1.05e-11 waves, `rmsToChief.maxAbs` 5.6e-17, `fitResidualRms.maxAbs` 5.6e-17), as Stage 6.8
+measured them.
+
+### The owner's decisions (2026-10-29), policy 24
+
+Also policy version 24; each band is an attention band of a recorded rung, so nothing gated moves.
+
+1. **R7b**: a band of 9e-10 mm on `fanError.maxAbs` (ten times 8.1e-11, rounded up): the two fans are now of one pupil
+   (the real stop, the same points), aimed by two solvers. The spot figures keep no band: their rings differ.
+2. **R8b**: optiland's `axial.native` aiming at the real stop is **deferred until after Phase 6**; the worker is
+   unchanged. Until it is made every line is `pupils-apart` (LensVisualizer's zones are fractions of the stop's radius,
+   optiland's of its paraxial entrance pupil at the first line) and every pair ATTENTION. The fix pending, an open item
+   of the plan: optiland's `robust` aimer at each zone's point of the stop, one optic a line, its aiming, stop radius
+   and launches read back, each with a deliberate fault in `test_axial.py` (`docs/gotchas.md`, "Axial rays").
+3. **R11b**: a band of 0.01 on `geometricTransmission.maxAbs`, the lattices' convergence band off the axis (one
+   definition on two lattices, the tab's 64 cells and `flux`'s 128). The relative illumination and the falloff are two
+   Rimmer integrals (referred against own exit directions): no band.
+4. **R12b**, of all three suites: `imageSpaceFNumber.maxAbs` 2e-13 (was 2e-9), `entrancePupilDiameter.maxAbs` 2e-12 mm
+   (was 3e-9 mm), `paraxialWorkingFNumber.maxAbs` 2e-13, `workingFNumber.maxAbs` 7e-8.
+5. **R14b**: a field set aside as numerical by `fitCondition.max` (above 1e6) is R5's unconverged field: counted in
+   `fields.numerical`, named in the notes, never a reason for ATTENTION. The judged `fitCondition.max` is taken over the
+   fields of two methods alone, so it stays within its limit by construction, and the set-aside fields' largest
+   condition is shown under a name of its own, `fitCondition.setAsideMax`, reported only where a field was set aside,
+   in no policy and never banded. A chief landing beyond 1e-9 mm is still data, its pair ATTENTION; so is a field of
+   R13b whose invariants lie further apart than 3e-14 mm (confirmed, unchanged).
+
+### Measured under policy 24 as decided, 2026-10-29
+
+After the review's fixes (R11b's falloff over each answer's axis transmission, R14b's set-aside condition, R10a's
+reading by place, `MIN_BEAM_GRID_CELLS` bound), LensVisualizer `607ff23ae`, optiland `4e893f53`, a temporary store,
+`--jobs 4`, one run at a time: the benchmark with `--rungs r7b,r11b,r12b,r14b` (1,344 jobs, 6 min 4 s, no error), then
+`--rungs r12b` on states and focus-stations. Pairs in both modes.
+
+| Rung | Suite | Classes | Banded figures, largest | Of the band |
+|---|---|---|---|---|
+| R7b | benchmark | 240 RECORDED, 528 UNSUPPORTED, no ATTENTION | `fanError.maxAbs` 8.1e-11 mm (Sony FE 20 mm, field 0.6) | 9e-10 mm |
+| R11b | benchmark | 48 RECORDED, 48 UNSUPPORTED, no ATTENTION | `geometricTransmission.maxAbs` 0.0037 (Sigma 45 mm, 14.2°) | 0.01 |
+| R12b | benchmark | 48 RECORDED, 48 UNSUPPORTED, no ATTENTION | `imageSpaceFNumber` 1.1e-14, `entrancePupilDiameter` 8.5e-14 mm, `paraxialWorkingFNumber` 2.0e-14, `workingFNumber` 3.4e-9 | 2e-13, 2e-12 mm, 2e-13, 7e-8 |
+| R12b | states | 64 RECORDED, 64 UNSUPPORTED, no ATTENTION | 1.6e-14, 4.3e-14 mm, 2.0e-14, 6.4e-9 (Sigma 45 mm at f/11) | the same |
+| R12b | focus-stations | 134 RECORDED, no ATTENTION | 1.2e-14, 1.7e-13 mm; both working f-numbers unmeasured (finite focus) | the same |
+| R14b | benchmark | 384 RECORDED, no ATTENTION (168 ATTENTION before the decision) | `coefficients.maxAbs` 1.05e-11 waves, `rmsToChief.maxAbs` 5.6e-17, `fitResidualRms.maxAbs` 5.6e-17; judged `fitCondition.max` 9.2e5 | 4e-11, 2e-16, 7e-16; limit 1e6 |
+
+R14b: of each fit's 480 fields (48 design-plane runs, ten fields) 418 are of two methods and 62 numerical, shown as
+`fitCondition.setAsideMax` up to 9.7e12 (the Sigma 35 mm's full field, photopic), no field data (chief landings to the
+bit). R11b's falloff is unchanged by the fix (0.014, the Sigma 35 mm at 31.9°): every benchmark axis transmits all its
+samples in both answers, so `1 / GT(axis)` was 1 there. R8b (deferred), R9b, R10b and R13b are as measured above.
+Beyond Stage 6.8's scope, R14b was also run on the features suite (18 runs, 64 jobs, 21 min 31 s): 64 pairs RECORDED,
+no ATTENTION; of each mode's 160 fields 132 of two methods, within every band (`coefficients.maxAbs` 3.8e-12 waves,
+`rmsToChief.maxAbs` 1.1e-16, `fitResidualRms.maxAbs` 7.3e-17; judged `fitCondition.max` 7.8e5), and 28 numerical
+(`fitCondition.setAsideMax` 8.1e10, `asphere-a20` at 40.6°). 8 pairs ERROR: both lines of `odd-asphere`, where each
+engine's request gave up as `time-budget` (optiland's wavefront of that lens at a grid of 128 takes more than
+`REQUEST_BUDGET_S`, 300 s, before its next field). Not investigated further; R14b runs only where named and is in no
+baseline.
+
+**Adapter revisions** of `lv`, `replay`, `wave` and `flux` moved (the binding's names and the sets); `ref`'s,
+`ref-seidel`'s, `optiland`'s and `optiland-wave`'s did not (no file of their closures changed; no file under
+`workers/python`). Policy 24 changes no gated rung; the rays and MTF baselines stay STALE(case, engine, policy) until the
+Phase 6 end refresh.

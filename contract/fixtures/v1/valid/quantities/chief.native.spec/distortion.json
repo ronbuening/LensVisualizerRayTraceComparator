@@ -1,0 +1,12 @@
+{
+  "kind": "distortion",
+  "lines": [
+    0
+  ],
+  "maxFieldDeg": 20,
+  "fieldAnglesDeg": [
+    5,
+    10,
+    20
+  ]
+}

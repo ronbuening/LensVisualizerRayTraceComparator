@@ -1,0 +1,57 @@
+{
+  "pattern": "fan",
+  "fields": [
+    {
+      "field": 12.5,
+      "fieldAngleDeg": 12.5,
+      "imageHeightMm": 8.75,
+      "status": "ok",
+      "spot": null,
+      "fan": {
+        "pupil": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              5
+            ],
+            "data": "AAAAAAAA8L8AAAAAAADgvwAAAAAAAAAAAAAAAAAA4D8AAAAAAADwPw==",
+            "sha256": "9fa4a5b5772de47d89e253aad23cbb1e0770acd696586fe780d32fb6b8130e13"
+          }
+        },
+        "errorMm": {
+          "$nd": {
+            "dtype": "f8",
+            "shape": [
+              5
+            ],
+            "data": "AAAAAAAA+H8AAAAAAACAvwAAAAAAAAAAAAAAAAAAYD8AAAAAAACYPw==",
+            "sha256": "0cfc232c752adee479dd157ef035647e45c6ec7827e5c0db57046373f6315a7f"
+          }
+        }
+      },
+      "sampling": {
+        "raysLaunched": 5,
+        "raysLanded": 4
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-fan",
+    "params": {
+      "samples": 5
+    }
+  },
+  "lines": [
+    {
+      "wavelengthNm": 546.07,
+      "weight": 1
+    },
+    {
+      "wavelengthNm": 486.13,
+      "weight": 1
+    }
+  ],
+  "notes": [
+    "one sample is stopped by an aperture"
+  ]
+}

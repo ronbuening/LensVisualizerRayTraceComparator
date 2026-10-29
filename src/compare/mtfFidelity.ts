@@ -10,9 +10,17 @@ import type { ComparatorOutcome, ComparisonContext, ComputedMetric, QuantityComp
 /**
  * What both answers state of how a field was sampled, and what must be equal for the replay to be of the same
  * sampling: the grid the refinement ended at, and how many rays landed, were stopped and were not resolved, summed
- * over the lines.
+ * over the lines; and since LensVisualizer #936 how many stop samples could not be aimed and how many unresolved
+ * samples lie beside the beam, which the unresolved share is of.
  */
-export const FIDELITY_SAMPLING = ["gridSize", "validRays", "blockedRays", "failedRays"] as const;
+export const FIDELITY_SAMPLING = [
+  "gridSize",
+  "validRays",
+  "blockedRays",
+  "failedRays",
+  "unaimedRays",
+  "unresolvedInBeamRays",
+] as const;
 
 const CUTS = ["sagittal", "tangential"] as const;
 

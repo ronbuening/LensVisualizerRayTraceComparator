@@ -3,8 +3,8 @@
 // with the reason when one is missing. Run output goes to a temporary directory: nothing is written into the
 // repository, into LensVisualizer or into optiland.
 //
-// The baselines were written at LensVisualizer ab0fd4cf (engine closure 94778d3d, 175 files) and optiland 4e893f53
-// (source hash 279af5c5). A record is held to OK only while its case and its two engines are the ones the baseline
+// The baselines were written at LensVisualizer 6287f4393 (engine closure fc5ae923, 184 files; the Phase 6 end refresh)
+// and optiland 4e893f53 (source hash 279af5c5). A record is held to OK only while its case and its two engines are the ones the baseline
 // names: LensVisualizer's lens files change by the day, and a record of an edited lens is STALE(case), which is
 // reported and is no failure of this test. What the stale records come to is said in the diagnostics.
 import assert from "node:assert/strict";
@@ -33,15 +33,15 @@ interface Checked {
 }
 
 for (const [suite, records] of [
-  // 12 configurations in four conditions, on two sets of lines: five rungs, R0 to R4, and three pairs of engines
-  // each. R4 is held here on every run of both suites: its requests are those of R2 and R3, so the check traces
-  // nothing more for it.
-  ["benchmark", 96 * 5 * 3],
-  ["features", 18 * 5 * 3],
+  // 12 configurations in four conditions, on two sets of lines: ten rungs, R0 to R4 and R7a to R11a (since the Phase 6
+  // end refresh), and three pairs of engines each. R4 is held here on every run of both suites: its requests are those
+  // of R2 and R3, so the check traces nothing more for it.
+  ["benchmark", 96 * 10 * 3],
+  ["features", 18 * 10 * 3],
 ] as const) {
   test(
     `baseline check ${suite}: every record of the cases and engines at hand is OK`,
-    { skip, timeout: 900_000 },
+    { skip, timeout: 1_800_000 },
     (t) => {
       const ended = lvrtc(tempDir(t), REPO_ROOT, ["baseline", "check", suite, "--json"]);
       assert.ok(ended.code === 0 || ended.code === 1, ended.err);

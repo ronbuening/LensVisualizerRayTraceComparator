@@ -1,0 +1,29 @@
+{
+  "lines": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "status": "ok",
+      "rearFocalZ": 96.25,
+      "focalLengthMm": 50.5,
+      "entrancePupilDiameterMm": 25.25,
+      "stopDiameterMm": 20.5,
+      "imageSpaceFNumber": "2",
+      "paraxialWorkingFNumber": null,
+      "workingFNumber": null,
+      "nominalFNumber": 2.125,
+      "totalTrackMm": 90.75,
+      "halfFieldDeg": 23.5,
+      "sampling": {
+        "focusDistanceM": 0.5,
+        "nominalEntrancePupilDiameterMm": 23.75,
+        "thinLensEffectiveFNumber": 2.125
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-summary",
+    "params": {}
+  },
+  "notes": []
+}

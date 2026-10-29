@@ -11,7 +11,13 @@ the surface and the field, and nothing is said about it.
 
 It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``), the method "diffraction", and with its own geometric
 MTF (``geometric``), the method "geometric": a line and a field at a time, each on an optic of its own that is built,
-read back and given its field there. A field optiland cannot compute is a row of the answer.
+read back and given its field there. A field optiland cannot compute is a row of the answer. It answers
+``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, ``axial.native`` with
+its own launch along the axis and real trace at each line and its paraxial focus there (``axial``), and
+``chief.native`` with its own distortion model, its own chief rays across the field and its paraxial pupils
+(``chief``), ``curvature.native`` with its own ``FieldCurvature`` (``curvature``), ``summary.native`` with its
+paraxial accessors and its working f-number (``summary``), ``seidel.native`` with its ``aberrations.seidels()`` and
+``third_order()`` (``seidel``), and ``zernike.native`` with its ``ZernikeFit`` of its ``Wavefront`` (``zernike``).
 """
 
 from __future__ import annotations
@@ -47,8 +53,32 @@ from .mtf import MTF_NATIVE, TIME_BUDGET, MtfMeasure, OptilandMtf, TimeBudgetExc
 from .mtf import read_request as read_mtf_request
 from .trace import METHOD_NAME as TRACE_METHOD_NAME
 from .trace import RAYS_TRACE, encode_trace, method_params, ray_columns, ray_counts, read_spec, trace_rays
+from .spot import SPOT_NATIVE, answer_spot
+from .axial import AXIAL_NATIVE, answer_axial
+from .chief import CHIEF_NATIVE, answer_chief
+from .chief import field_counts as chief_field_counts
+from .curvature import CURVATURE_NATIVE, answer_curvature
+from .curvature import field_counts as curvature_field_counts
+from .summary import SUMMARY_NATIVE, answer_summary
+from .summary import line_counts as summary_line_counts
+from .axial import field_counts as axial_field_counts
+from .spot import field_counts as spot_field_counts
 from .wavefront import WAVEFRONT_NATIVE, answer_wavefront
-from lvrtc_worker_kit.validate import validate_wavefront_native
+from .seidel import SEIDEL_NATIVE, answer_seidel
+from .seidel import answer_counts as seidel_counts
+from .seidel import term_refusals as seidel_term_refusals
+from .zernike import ZERNIKE_NATIVE, answer_zernike
+from .zernike import field_counts as zernike_field_counts
+from lvrtc_worker_kit.validate import (
+    validate_axial_native,
+    validate_chief_native,
+    validate_curvature_native,
+    validate_seidel_native,
+    validate_spot_native,
+    validate_summary_native,
+    validate_wavefront_native,
+    validate_zernike_native,
+)
 
 SUPPORTED_FEATURES: tuple[str, ...] = (
     "aperture.annular",
@@ -85,6 +115,13 @@ QUANTITIES: dict[str, dict[str, Any]] = {
     RAYS_TRACE: {"version": 1, "versions": [1, 2, 3]},
     MTF_NATIVE: {"version": 1},
     WAVEFRONT_NATIVE: {"version": 1},
+    SPOT_NATIVE: {"version": 1},
+    AXIAL_NATIVE: {"version": 1},
+    CHIEF_NATIVE: {"version": 1},
+    CURVATURE_NATIVE: {"version": 1},
+    SUMMARY_NATIVE: {"version": 1},
+    SEIDEL_NATIVE: {"version": 1},
+    ZERNIKE_NATIVE: {"version": 1},
 }
 """The quantities the engine answers, each with the version of its definition that the worker implements."""
 
@@ -123,8 +160,14 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     that is not supported. The engine states no limit, so none is exceeded.
 
     Then what the quantity asked for has no answer about in this case, which no flag of a descriptor says: for
-    ``paraxial.first-order``, a term of power 1 and a term of power 2 (``first_order.term_refusals``). It is decided
-    from the case, before anything is built.
+    ``paraxial.first-order``, for ``axial.native``, whose pupil (``EPD()``) and paraxial focus (``F2()``) are
+    optiland's first-order data, and for ``summary.native``, which states them, a phase profile, a term of power 1 and
+    a term of power 2
+    (``first_order.term_refusals``): optiland's paraxial model sees none of them, and would state the pupil and the
+    focus of another lens; for ``seidel.native`` those and a term of power 3 or 4, which optiland's Seidel sums do not
+    read (``seidel.term_refusals``). The same for ``chief.native`` of distortion, whose chief rays optiland's default aiming
+    aims at its paraxial entrance pupil, and of pupils, which states its paraxial pupils. It is decided from the case,
+    before anything is built.
     """
     items: list[dict[str, str]] = []
     written = (("the case", case["contract"]), ("the request", request["contract"]))
@@ -168,7 +211,17 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
             items.append(
                 {"code": "quantity", "item": "rays.trace", "message": "a folded path requires rays.trace version 2"}
             )
-        if quantity in (MTF_NATIVE, WAVEFRONT_NATIVE):
+        if quantity in (
+            MTF_NATIVE,
+            WAVEFRONT_NATIVE,
+            SPOT_NATIVE,
+            AXIAL_NATIVE,
+            CHIEF_NATIVE,
+            CURVATURE_NATIVE,
+            SUMMARY_NATIVE,
+            SEIDEL_NATIVE,
+            ZERNIKE_NATIVE,
+        ):
             items.append(
                 {
                     "code": "feature",
@@ -186,7 +239,12 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
                     "message": "the fixed path does not visit the stop; no paraxial pupil of it is defined",
                 }
             )
-    if quantity == PARAXIAL_FIRST_ORDER:
+    if quantity in (PARAXIAL_FIRST_ORDER, AXIAL_NATIVE, SUMMARY_NATIVE):
+        items.extend(term_refusals(case))
+    if quantity == SEIDEL_NATIVE:
+        items.extend(seidel_term_refusals(case))
+    spec = request.get("spec")
+    if quantity == CHIEF_NATIVE and isinstance(spec, dict) and spec.get("kind") in ("distortion", "pupils"):
         items.extend(term_refusals(case))
     return items
 
@@ -200,6 +258,20 @@ def spec_issues(schemas: SchemaSet, quantity: str, spec: dict[str, Any]) -> list
     """
     if quantity == WAVEFRONT_NATIVE:
         return validate_wavefront_native("spec", spec, schemas)
+    if quantity == SPOT_NATIVE:
+        return validate_spot_native("spec", spec, schemas)
+    if quantity == AXIAL_NATIVE:
+        return validate_axial_native("spec", spec, schemas)
+    if quantity == CHIEF_NATIVE:
+        return validate_chief_native("spec", spec, schemas)
+    if quantity == CURVATURE_NATIVE:
+        return validate_curvature_native("spec", spec, schemas)
+    if quantity == SUMMARY_NATIVE:
+        return validate_summary_native("spec", spec, schemas)
+    if quantity == SEIDEL_NATIVE:
+        return validate_seidel_native("spec", spec, schemas)
+    if quantity == ZERNIKE_NATIVE:
+        return validate_zernike_native("spec", spec, schemas)
     issues = validate(schemas, quantity_schema_id(quantity, "spec"), spec)
     if issues or quantity not in _ASCENDING:
         return issues
@@ -302,6 +374,20 @@ class OptilandEngine:
         read = time.perf_counter()
         if quantity == MTF_NATIVE:
             return self._run_mtf(request, case, engine)
+        if quantity == SPOT_NATIVE:
+            return self._run_spot(request, case, engine)
+        if quantity == AXIAL_NATIVE:
+            return self._run_axial(request, case, engine)
+        if quantity == CHIEF_NATIVE:
+            return self._run_chief(request, case, engine)
+        if quantity == CURVATURE_NATIVE:
+            return self._run_curvature(request, case, engine)
+        if quantity == SUMMARY_NATIVE:
+            return self._run_summary(request, case, engine)
+        if quantity == SEIDEL_NATIVE:
+            return self._run_seidel(request, case, engine)
+        if quantity == ZERNIKE_NATIVE:
+            return self._run_zernike(request, case, engine)
         if quantity == WAVEFRONT_NATIVE:
             try:
                 data = answer_wavefront(spec, request.get("engineOptions") or {}, case, clock=self._clock)
@@ -400,6 +486,123 @@ class OptilandEngine:
         if self._log is not None:
             self._log(mtf_log_line(counts, asked.ladder, seconds, time.perf_counter() - started))
         diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_spot(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``spot.native`` request whose spec is one: optiland's SpotDiagram or RayFan (``spot``)."""
+        try:
+            data = answer_spot(request["spec"], request.get("engineOptions") or {}, case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_spot_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {SPOT_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **spot_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_axial(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of an ``axial.native`` request whose spec is one: optiland's own rays and focus (``axial``)."""
+        try:
+            data = answer_axial(request["spec"], case)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_axial_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {AXIAL_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **axial_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_chief(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``chief.native`` request whose spec is one: optiland's distortion and chief rays (``chief``)."""
+        try:
+            data = answer_chief(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_chief_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {CHIEF_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **chief_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+    def _run_curvature(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``curvature.native`` request whose spec is one: optiland's field curves (``curvature``)."""
+        try:
+            data = answer_curvature(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_curvature_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {CURVATURE_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **curvature_field_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+    def _run_summary(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``summary.native`` request whose spec is one: optiland's own summary (``summary``)."""
+        try:
+            data = answer_summary(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_summary_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {SUMMARY_NATIVE} data: {format_issues(issues)}")
+        counts = {"surfaces": len(case["system"]["surfaces"]), **summary_line_counts(data)}
+        diagnostics = {"warnings": [], "counts": counts}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+
+    def _run_seidel(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``seidel.native`` request whose spec is one: optiland's own sums (``seidel``)."""
+        try:
+            data = answer_seidel(request["spec"], case)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_seidel_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {SEIDEL_NATIVE} data: {format_issues(issues)}")
+        diagnostics = {"warnings": [], "counts": seidel_counts(data)}
+        return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
+
+    def _run_zernike(self, request: dict[str, Any], case: dict[str, Any], engine: dict[str, Any]) -> dict[str, Any]:
+        """The result of a ``zernike.native`` request whose spec is one: optiland's own fit (``zernike``)."""
+        try:
+            data = answer_zernike(request["spec"], case, clock=self._clock)
+        except BuildMismatch as error:
+            return make_result(request, engine, "error", error={"code": BUILD_MISMATCH, "message": str(error)})
+        except TimeBudgetExceeded as error:
+            return make_result(request, engine, "error", error={"code": TIME_BUDGET, "message": str(error)})
+        if isinstance(data, list):
+            return make_result(request, engine, "unsupported", unsupported=data)
+        issues = validate_zernike_native("data", data, self._schemas)
+        if issues:
+            raise RuntimeError(f"the answer is not {ZERNIKE_NATIVE} data: {format_issues(issues)}")
+        diagnostics = {"warnings": [], "counts": zernike_field_counts(data)}
         return make_result(request, engine, "ok", method=data["method"], data=data, diagnostics=diagnostics)
 
 

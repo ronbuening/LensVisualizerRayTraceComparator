@@ -1,0 +1,48 @@
+{
+  "pattern": "rings",
+  "fields": [
+    {
+      "field": 0,
+      "fieldAngleDeg": 0,
+      "imageHeightMm": 0,
+      "status": "ok",
+      "spot": {
+        "centroidMm": [
+          0,
+          0,
+          0
+        ],
+        "rmsRadiusMm": 0.015625
+      },
+      "fan": null,
+      "sampling": {
+        "raysLaunched": 19,
+        "raysLanded": 19
+      }
+    },
+    {
+      "field": 0.5,
+      "fieldAngleDeg": 10.5,
+      "imageHeightMm": null,
+      "status": "unavailable",
+      "reason": "chief-ray-clipped",
+      "spot": null,
+      "fan": null,
+      "sampling": {
+        "raysLaunched": 19,
+        "raysLanded": 0
+      }
+    }
+  ],
+  "method": {
+    "name": "synthetic-spot",
+    "params": {}
+  },
+  "lines": [
+    {
+      "wavelengthNm": 587.5,
+      "weight": 1
+    }
+  ],
+  "notes": []
+}

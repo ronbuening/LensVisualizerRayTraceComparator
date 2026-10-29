@@ -10,7 +10,7 @@ import type { LvCaseModel } from "./caseModel.ts";
 import type { LvApi, LvTraceOptions, LvTraceResult } from "./types.ts";
 
 /** The LensVisualizer exports a ray trace is answered with. */
-export type LvRaysApi = Pick<LvApi, "traceEngineRay" | "mtfTraceClassification" | "projectCoordinateToZ">;
+export type LvRaysApi = Pick<LvApi, "traceEngineRay" | "traceRayClassification" | "projectCoordinateToZ">;
 
 /** What the engine makes of a `rays.trace` spec: the trace with its ray counts, or why the spec cannot be traced. */
 export type LvRaysAnswer =
@@ -73,7 +73,7 @@ function f8Of(wire: NdArrayWire, name: string): Float64Array {
  * Traces the rays of a `rays.trace` spec through the state of a case's model.
  *
  * Each ray is one call of LensVisualizer's `traceEngineRay` with `lvTraceOptions` of the spec's line, and
- * LensVisualizer's own `mtfTraceClassification` says what became of it:
+ * LensVisualizer's own `traceRayClassification` says what became of it:
  *
  * - "valid": the ray passed every surface. `hits` are its hit points, `exitPoint` and `exitDirection` the last of
  *   them and the direction behind it, `opticalPath` LensVisualizer's `opticalPathLengthMm`. `imagePoint` is the
@@ -130,7 +130,7 @@ export function answerLvRays(api: LvRaysApi, model: LvCaseModel, spec: RaysTrace
       },
       options,
     );
-    const outcome = api.mtfTraceClassification(trace, state, conditions.stopSemiDiameter);
+    const outcome = api.traceRayClassification(trace, state, conditions.stopSemiDiameter);
     const passed = surfacesPassed(trace);
     for (let surface = 0; surface < passed; surface++) recorder.hit(ray, surface, trace.hits[surface].point);
     if (outcome !== "valid") {

@@ -20,7 +20,7 @@ import type {
 import { RAY_STATUS } from "../../contract/quantities/raysTrace.ts";
 import type { RayLattice, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { UnsupportedItem } from "../../contract/result.ts";
-import { encodeNdArray } from "../../core/numeric/ndarray.ts";
+import { decodeNdArray, encodeNdArray } from "../../core/numeric/ndarray.ts";
 import { countValid, maskWhere } from "../../estimators/validity.ts";
 import { QUARTER_WAVE, gridConvergence } from "../../estimators/waveOtf.ts";
 import type { PolychromaticWaveOtf, WaveOtfUnavailable } from "../../estimators/waveOtf.ts";
@@ -142,13 +142,17 @@ function estimateOn(
   return { lattice, sets, traces, otf };
 }
 
-/** How many of the cells of a lattice ended as `status`, over the lines. The chief ray is no cell. */
+/**
+ * How many of the cells of a lattice ended as `status`, over the lines. The chief ray is no cell, and neither is a
+ * vacant cell of a stop lattice (LV #936: outside the stop's disc, or unaimed), which holds the chief ray at weight 0.
+ */
 function cellsThat(estimate: LatticeEstimate, status: number): number {
   const cells = estimate.lattice.columns * estimate.lattice.rows;
-  return estimate.traces.reduce(
-    (sum, trace) => sum + countValid(maskWhere(trace.status.subarray(0, cells), status)),
-    0,
-  );
+  return estimate.traces.reduce((sum, trace, line) => {
+    const weights = decodeNdArray(estimate.sets[line].weights).values;
+    const sampled = maskWhere(trace.status.subarray(0, cells), status).map((at, ray) => (weights[ray] > 0 ? at : 0));
+    return sum + countValid(sampled);
+  }, 0);
 }
 
 /** A field without curves: NaN at every frequency, and the reason. */

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:lvrtc:contract:v1:quantities:curvature.native.data",
+  "title": "curvature.native data",
+  "description": "An engine's own field curves of a case: per requested line, and within a line per requested field angle, where the field's chief ray lands, and where its tangential and its sagittal focus lie along the axis relative to the image plane of the case, mm, + toward the image. Code checks that an unavailable field says why and has neither focus, and that an ok field has both, each a finite number.",
+  "type": "object",
+  "properties": {
+    "fields": {
+      "description": "One entry per requested line and field angle: the lines in the order of the request, and within a line the angles in the order of the request.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line": {
+            "description": "The line, as it was requested.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/index"
+          },
+          "wavelengthNm": {
+            "description": "The wavelength the engine traced the line at.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
+          },
+          "fieldAngleDeg": {
+            "description": "The field angle the engine traced, degrees.",
+            "type": "number"
+          },
+          "status": {
+            "description": "ok: the engine stands by its foci. unavailable: it has none, and says why.",
+            "enum": ["ok", "unavailable"]
+          },
+          "reason": {
+            "description": "The engine's own code for why the field is unavailable; always there for an unavailable field.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+          },
+          "chiefLandingMm": {
+            "description": "The y at which the field's chief ray lands on the image plane of the case: what identifies the field. Null where the engine states no landing of the chief ray its foci are relative to.",
+            "type": ["number", "null"]
+          },
+          "tangentialShiftMm": {
+            "description": "The z of the field's tangential focus less the z of the image plane of the case, mm; null for an unavailable field.",
+            "type": ["number", "null"]
+          },
+          "sagittalShiftMm": {
+            "description": "The z of the field's sagittal focus less the z of the image plane of the case, mm; null for an unavailable field.",
+            "type": ["number", "null"]
+          },
+          "sampling": {
+            "description": "How the engine sampled the field, and what else it states of it, by names of its own.",
+            "$ref": "urn:lvrtc:contract:v1:common#/$defs/numberMap"
+          }
+        },
+        "required": [
+          "line",
+          "wavelengthNm",
+          "fieldAngleDeg",
+          "status",
+          "chiefLandingMm",
+          "tangentialShiftMm",
+          "sagittalShiftMm",
+          "sampling"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "method": {
+      "description": "The engine's own name for how it computed the answer, and the settings it computed with.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+        },
+        "params": {
+          "$ref": "urn:lvrtc:contract:v1:common#/$defs/object"
+        }
+      },
+      "required": ["name", "params"],
+      "additionalProperties": false
+    },
+    "notes": {
+      "description": "What the engine says about the answer, for people.",
+      "type": "array",
+      "items": {
+        "$ref": "urn:lvrtc:contract:v1:common#/$defs/text"
+      }
+    }
+  },
+  "required": ["fields", "method", "notes"],
+  "additionalProperties": false
+}

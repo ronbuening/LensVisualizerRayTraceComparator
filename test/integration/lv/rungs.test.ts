@@ -43,9 +43,11 @@ import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import type { LvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLvEngineOn } from "../../../src/engines/lv/engine.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
+import { lvFieldAngles, lvLaunchSetup } from "../../../src/engines/lv/raySets.ts";
 import { lvTraceOptions } from "../../../src/engines/lv/rays.ts";
 import { createRefEngine } from "../../../src/engines/ref/engine.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
+import { DEFAULT_BUNDLE_GRID, raySetSpec } from "../../../src/rays/raySets.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { suitePath } from "../../suites/support.ts";
 import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
@@ -335,7 +337,18 @@ async function tracedSets(
   const { sets, problems } = await ask.exporter.raySets(opticalCase, options);
   assert.deepEqual(problems, [], key);
   const traced: TracedSet[] = [];
-  for (const spec of sets) {
+  for (const spec of sets) traced.push(await tracedSet(ask, key, opticalCase, spec));
+  return traced;
+}
+
+/** One ray set of a case traced by `lv` and `ref`, with the two rungs' pairs. */
+async function tracedSet(
+  ask: { lv: RemoteEngineAdapter; ref: RemoteEngineAdapter },
+  key: string,
+  opticalCase: OpticalCase,
+  spec: RaysTraceSpec,
+): Promise<TracedSet> {
+  {
     const request = makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec });
     const [mine, theirs] = [await ask.lv.run(request, opticalCase), await ask.ref.run(request, opticalCase)];
     assert.deepEqual([mine.status, theirs.status], ["ok", "ok"], key);
@@ -359,16 +372,15 @@ async function tracedSets(
         },
         "pairwise",
       ).pairs[0];
-    traced.push({
+    return {
       opticalCase,
       spec,
       lvData: mine.data as RaysTraceData,
       refData: theirs.data as RaysTraceData,
       r2: pairOf("r2"),
       r3: pairOf("r3"),
-    });
+    };
   }
-  return traced;
 }
 
 function metricOf(pair: PairComparison, name: string) {
@@ -392,7 +404,7 @@ async function lensVisualizerSays(binding: LvBinding, opticalCase: OpticalCase, 
     },
     lvTraceOptions(model, spec.line),
   );
-  const classified = binding.api.mtfTraceClassification(trace, model.state, opticalCase.conditions.stopSemiDiameter);
+  const classified = binding.api.traceRayClassification(trace, model.state, opticalCase.conditions.stopSemiDiameter);
   return { status: trace.status, failureReason: trace.failureReason, classified };
 }
 
@@ -407,9 +419,11 @@ const TELE_ONLY_CROSSINGS: readonly (readonly [key: string, surface: number, zoo
 ];
 
 /**
- * The lenses in which a surface lies behind the one before it within both clear apertures, with the surface at
- * which LensVisualizer loses rays: a stop or a flat face set into the curve of its neighbour. A zoom is named with
- * the end it does so at: at its default state, the wide end, where none is named.
+ * The lenses in which a surface lay behind the one before it within both clear apertures at LV ed78cf40, with the
+ * surface at which LensVisualizer lost rays then: a stop or a flat face set into the curve of its neighbour. A zoom is
+ * named with the end it does so at: at its default state, the wide end, where none is named. Since LV #934 its
+ * sequential trace meets such a surface by a step backwards, as `ref` does; #929 moved three of these stops out of
+ * the glass (the Leica 90, the Olympus 50/1.4, the Sonnar 50/2) and #928 cut the Nokton's surface 8 at its stop plane.
  */
 const CROSSING_SURFACES: readonly (readonly [key: string, surface: number, zoomT?: 1])[] = [
   ["bertele-sonnar-50f2-scaled", 6],
@@ -424,54 +438,53 @@ const CROSSING_SURFACES: readonly (readonly [key: string, surface: number, zoomT
 // example of the defect any more, at either commit's reading of it.
 
 test(
-  "where two surfaces cross inside their clear apertures LensVisualizer loses the ray, and R2 says so as a mask mismatch",
+  "where two surfaces cross inside their clear apertures LensVisualizer steps back as ref does, and R2 passes",
   { skip, timeout: 600_000 },
   async (t) => {
     const ask = await engines(t);
     const seen: string[] = [];
+    let backwards = 0;
     for (const [key, surface, zoomT] of CROSSING_SURFACES) {
       const sets = await tracedSets(ask, key, zoomT === undefined ? {} : { state: { zoomT } });
-      const mismatches = sets.map((set) => metricOf(set.r2, "mask.mismatches").value ?? 0);
-      seen.push(
-        `${key}${zoomT === undefined ? "" : " at the tele end"} surface ${surface}: ${mismatches.join(", ")} rays`,
-      );
-      assert.ok(Math.max(...mismatches) > 0, key);
-      const { opticalCase, spec, lvData, refData, r2 } = sets[mismatches.findIndex((count) => count > 0)];
-      // A mismatch, not a rim: the pair fails, and the reason names the surface. No floor excuses a mask.
-      assert.equal(r2.verdict, "FAIL", key);
-      const first = metricOf(r2, "mask.mismatches");
-      assert.equal(first.where?.surface, surface, key);
-      assert.equal(metricOf(r2, "mask.rimBand").value, 0, key);
-      assert.match(r2.reason ?? "", /mask\.mismatches \d+ exceeds its tolerance 0 at .*$/);
-
-      // Whose ray is it? LensVisualizer stopped it at that surface; the reference engine has it there, behind its
-      // hit on the surface before: a step backwards along a ray that travels forwards.
-      const ray = Number(first.where?.ray);
-      const rays = lvData.status.$nd.shape[0];
-      assert.equal(decodeNdArray(lvData.status).values[ray], RAY_STATUS.blocked, key);
-      assert.equal(decodeNdArray(lvData.endSurface).values[ray], surface, key);
-      const refEnd = decodeNdArray(refData.endSurface).values[ray];
-      assert.ok(refEnd === -1 || refEnd > surface, `${key}: ref ends at ${refEnd}`);
-      const hits = decodeNdArray(refData.hits).values;
-      const z = (at: number): number => hits[(at * rays + ray) * 3 + 2];
-      assert.ok(z(surface) < z(surface - 1), `${key}: z ${z(surface - 1)} then ${z(surface)}`);
-      // And the ray does travel forwards: the surface after is met further on.
-      if (surface + 1 < opticalCase.system.surfaces.length && (refEnd === -1 || refEnd > surface + 1)) {
-        assert.ok(z(surface + 1) > z(surface), key);
+      let stepped = 0;
+      for (const { opticalCase, spec, lvData, refData, r2 } of sets) {
+        // No ray that one engine stops and the other passes: the pair passes, and the mask is the same.
+        assert.equal(metricOf(r2, "mask.mismatches").value, 0, key);
+        assert.equal(r2.verdict, "PASS", `${key}: ${r2.reason}`);
+        const rays = lvData.status.$nd.shape[0];
+        const [lvStatus, refStatus] = [decodeNdArray(lvData.status).values, decodeNdArray(refData.status).values];
+        const [lvHits, refHits] = [decodeNdArray(lvData.hits).values, decodeNdArray(refData.hits).values];
+        const z = (hits: ArrayLike<number>, at: number, ray: number): number => hits[(at * rays + ray) * 3 + 2];
+        for (let ray = 0; ray < rays; ray++) {
+          // A ray ref meets the surface with behind its hit on the surface before: a step backwards along a ray that
+          // travels forwards. LensVisualizer meets it there too since #934, and ends it as ref does.
+          if (!(z(refHits, surface, ray) < z(refHits, surface - 1, ray))) continue;
+          assert.equal(lvStatus[ray], refStatus[ray], `${key} ray ${ray}`);
+          assert.ok(
+            z(lvHits, surface, ray) < z(lvHits, surface - 1, ray),
+            `${key} ray ${ray}: LensVisualizer stepped back`,
+          );
+          assert.ok(Math.abs(z(lvHits, surface, ray) - z(refHits, surface, ray)) < 1e-8, `${key} ray ${ray}`);
+          if (stepped === 0) {
+            // LensVisualizer's own words for the first such ray: no noBracket at the surface behind the hit.
+            const says = await lensVisualizerSays(ask.binding, opticalCase, spec, ray);
+            assert.notEqual(says.failureReason, "noBracket", `${key} ray ${ray}`);
+          }
+          stepped++;
+        }
       }
-      // LensVisualizer's own words for it: no intersection in the stretch it searches, which is forward only, and
-      // its classification calls that a ray that carries no light.
-      const says = await lensVisualizerSays(ask.binding, opticalCase, spec, ray);
-      assert.deepEqual(says, { status: "failed", failureReason: "noBracket", classified: "blocked" }, key);
+      backwards += stepped;
+      seen.push(`${key}${zoomT === undefined ? "" : " at the tele end"} surface ${surface}: ${stepped} rays step back`);
     }
-    // At the wide end of the zooms that cross at the tele end only, no ray is lost: the two engines stop the same.
+    t.diagnostic(`rays both engines meet by a step backwards: ${seen.join("; ")}`);
+    assert.ok(backwards > 0, "no ray of these lenses steps back: the class is not exercised");
+    // At the wide end of the zooms that cross at the tele end only, the two engines stop the same as ever.
     for (const [key] of TELE_ONLY_CROSSINGS) {
       for (const { r2 } of await tracedSets(ask, key, { state: { zoomT: 0 } })) {
         assert.equal(metricOf(r2, "mask.mismatches").value, 0, `${key} at the wide end`);
         assert.equal(r2.verdict, "PASS", `${key} at the wide end: ${r2.reason}`);
       }
     }
-    t.diagnostic(`rays LensVisualizer loses at crossing surfaces, by field: ${seen.join("; ")}`);
   },
 );
 
@@ -480,27 +493,77 @@ test(
   { skip, timeout: 600_000 },
   async (t) => {
     const ask = await engines(t);
-    // fujifilm-fujinon-xf-27mm-f28 at 510 nm, full field: two rays of its lattice leave surface 10 at 94 degrees to
-    // the axis. Their lines cross surface 11 behind them; neither engine takes that for a hit.
-    const sets = await tracedSets(ask, "fujifilm-fujinon-xf-27mm-f28", { lines: { kind: "photopic" } });
-    const set = sets.find(({ spec }) => spec.line === 2 && spec.groups?.field?.heightFraction === 1);
-    assert.ok(set !== undefined);
+    // fujifilm-fujinon-xf-27mm-f28 at 510 nm, full field, on LensVisualizer's launch-plane lattice over the field's
+    // footprint (its MTF's sampling before #936, which its exports still lay). At 098c91ef6 two of its rays left
+    // surface 10 at 94 degrees to the axis; their lines crossed surface 11 behind them, and neither engine took that
+    // for a hit. LensVisualizer 2e7c81088 capped that asphere's rim (8A) at 4.91 mm, below its turnover (its rim angle
+    // -2.53 degrees, 62.16 before), and at 607ff23ae no ray of the catalog's launch-plane lattices turns back (none of
+    // 1,900 exports, fields 0.7, 0.9 and 1 of the image height, 32 cells, every line). The rule stays held by the
+    // tracer's canary (#934 steps back only for a ray that still travels toward +z) and by ref's analytic test of a
+    // turned ray; this test holds the steep field to no mismatch and says how many rays turned back, if any did.
+    const key = "fujifilm-fujinon-xf-27mm-f28";
+    const options: RunOptions = { lines: { kind: "photopic" } };
+    const exported = await ask.exporter.exportLens(key, options);
+    assert.ok(exported.ok, key);
+    const rebuilt = await rebuildCase(ask.binding, createLensBuilder(ask.binding), exported.opticalCase);
+    assert.ok(rebuilt.ok, key);
+    const { api } = ask.binding;
+    const setup = lvLaunchSetup(api, rebuilt.model);
+    assert.ok(!("problem" in setup));
+    const [field] = lvFieldAngles(api, rebuilt.model, setup, { kind: "image-height-fractions", values: [1] });
+    assert.ok(!("problem" in field));
+    const launch = api.prepareMtfFieldLaunch(rebuilt.model.state, setup.options, setup.support, field.angleDeg);
+    assert.ok(launch !== null);
+    const footprint = api.findMtfFieldFootprint(rebuilt.model.state, setup.options, setup.support, launch);
+    assert.ok(footprint !== null);
+    const grid = api.mtfLaunchGrid(footprint, DEFAULT_BUNDLE_GRID);
+    const cells = grid.columns * grid.rows;
+    const [origins, directions] = [new Float64Array(3 * (cells + 1)), new Float64Array(3 * (cells + 1))];
+    for (let cell = 0; cell <= cells; cell++) {
+      const [row, column] = [Math.floor(cell / grid.columns), cell % grid.columns];
+      const ray =
+        cell === cells
+          ? api.mtfLaunchRay(launch, 0, 0)
+          : api.mtfLaunchRay(launch, grid.x0 + (column + 0.5) * grid.step, grid.y0 + (row + 0.5) * grid.step);
+      origins.set(ray.origin, 3 * cell);
+      directions.set(ray.direction, 3 * cell);
+    }
+    const weights = new Float64Array(cells + 1).fill(1);
+    weights[cells] = 0;
+    const set = await tracedSet(ask, key, exported.opticalCase, {
+      ...raySetSpec(2, { origins, directions, weights }),
+      groups: { field, lattice: { columns: grid.columns, rows: grid.rows, step: grid.step }, chiefIndex: cells },
+    });
     assert.equal(metricOf(set.r2, "mask.mismatches").value, 0);
     assert.equal(metricOf(set.r2, "mask.rimBand").value, 0);
     const [lvEnd, refEnd] = [decodeNdArray(set.lvData.endSurface).values, decodeNdArray(set.refData.endSurface).values];
     assert.deepEqual([...lvEnd], [...refEnd]);
-    const directions = decodeNdArray(set.refData.hits).values;
-    const rays = lvEnd.length;
-    // The rays that end at surface 11 with a hit on surface 10 further from the object than surface 11's vertex.
-    const turned = [...lvEnd.keys()].filter((ray) => {
-      if (lvEnd[ray] !== 11) return false;
-      const z10 = directions[(10 * rays + ray) * 3 + 2];
-      return Number.isFinite(z10);
-    });
-    assert.ok(turned.length >= 2, String(turned));
-    const says = await lensVisualizerSays(ask.binding, set.opticalCase, set.spec, turned[0]);
+    // The rays LensVisualizer leaves travelling toward the object: each must have ended in both engines, at one surface.
+    const turned: number[] = [];
+    const traceOptions = lvTraceOptions(rebuilt.model, set.spec.line);
+    for (let ray = 0; ray < cells; ray++) {
+      const at = (values: Float64Array): [number, number, number] => [
+        values[3 * ray],
+        values[3 * ray + 1],
+        values[3 * ray + 2],
+      ];
+      const trace = api.traceEngineRay(
+        rebuilt.model.state,
+        { origin: at(origins), direction: at(directions) },
+        traceOptions,
+      );
+      if (trace.status !== "ok" && !(trace.terminalDirection[2] > 1e-12)) turned.push(ray);
+    }
+    const lvStatus = decodeNdArray(set.lvData.status).values;
+    const refStatus = decodeNdArray(set.refData.status).values;
+    for (const ray of turned) {
+      assert.notEqual(lvStatus[ray], RAY_STATUS.ok, `ray ${ray}`);
+      assert.notEqual(refStatus[ray], RAY_STATUS.ok, `ray ${ray}`);
+    }
     t.diagnostic(
-      `${turned.length} rays end at surface 11 in both engines; LensVisualizer says ${JSON.stringify(says)}`,
+      turned.length === 0
+        ? `no ray of the lattice turns back at this LensVisualizer (${cells} cells)`
+        : `${turned.length} rays turn back and end at surfaces ${turned.map((ray) => lvEnd[ray]).join(" ")} in both engines`,
     );
   },
 );

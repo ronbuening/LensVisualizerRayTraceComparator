@@ -1,11 +1,13 @@
-// Ray sets from LensVisualizer: its own launch rays. "Identical rays" in the comparison ladder are these: the
-// lattice LensVisualizer's MTF lays over the beam of a field, every cell of it, traced as given by every engine.
+// Ray sets from LensVisualizer: its own launch rays. "Identical rays" in the comparison ladder are these: the stop
+// lattice LensVisualizer's MTF aims for a field at each line (LV #936: cells evenly spaced on the real aperture stop,
+// each the ray its shared aimed launch finds through that point), every cell of it, traced as given by every engine.
 //
-// The chief ray of a field, the footprint of its beam and the lattice over the footprint are LensVisualizer's own
-// functions. Two things LensVisualizer does inside `traceMtfBundle` and `computeMtfSteps`, and exports no function
-// for, are restated here: where a lattice cell's ray starts and what it weighs, and how the field axis is put
-// together from its parts. Integration tests hold both to LensVisualizer: the rays to those of its own bundle, bit
-// for bit, and the source lines to their text.
+// The chief ray of a field, the aimed lattice and, for a field launched from the bounding sphere, the footprint of its
+// beam and the lattice over it are LensVisualizer's own functions. What LensVisualizer does inside `traceMtfLattice`,
+// `traceMtfLaunchPlaneBundle` and `computeMtfSteps`, and exports no function for, is restated here: which chief ray a
+// line's bundle refers to, what a cell weighs, where a launch-plane cell's ray starts, and how the field axis is put
+// together from its parts. Integration tests hold them to LensVisualizer: the rays to those of its own bundle, bit for
+// bit, and the source lines to their text.
 import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import type { RayGroups, RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { RunFields, RunSampling } from "../../contract/runSpec.ts";
@@ -18,13 +20,13 @@ import { exportOptionsOf } from "./caseModel.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { lvTraceOptions } from "./rays.ts";
 import type { LvRaysApi } from "./rays.ts";
-import { lvHookAperture, lvPupilSeed } from "./tabRequest.ts";
+import { lvPupilSeed } from "./tabRequest.ts";
 import type { LvHookApi } from "./tabRequest.ts";
 import type {
+  LvAimedStopLattice,
   LvApi,
   LvMtfFieldLaunch,
   LvMtfFootprint,
-  LvMtfLaunchGrid,
   LvMtfOptions,
   LvMtfSupport,
   LvVec3,
@@ -43,6 +45,7 @@ export type LvRaySetApi = LvRaysApi &
     | "resolveMtfFieldGeometry"
     | "resolveMtfFieldTargets"
     | "prepareMtfFieldLaunch"
+    | "aimMtfStopLattice"
     | "findMtfFieldFootprint"
     | "mtfLaunchGrid"
     | "mtfLaunchRay"
@@ -51,7 +54,10 @@ export type LvRaySetApi = LvRaysApi &
 
 /** What LensVisualizer's launch functions are asked with, for one case. */
 export interface LvLaunchSetup {
-  /** The MTF request the launch is asked with: its stop radius is the case's, its pupil radius the footprint's seed. */
+  /**
+   * The MTF request the launch is asked with: its stop radius is the case's, its pupil radius the aimed launch's
+   * launch scale (and the seed of a launch-plane footprint).
+   */
   readonly options: LvMtfOptions;
   /** LensVisualizer's support record, with the lines of the case: its first line is the one the launch is found at. */
   readonly support: LvMtfSupport;
@@ -60,13 +66,13 @@ export interface LvLaunchSetup {
 /**
  * The setup of LensVisualizer's launch for a case, or the coded problem that keeps every field from having rays.
  *
- * - The stop radius is the case's. The seed of the footprint scan is the pupil radius LensVisualizer's own hook
- *   hands its MTF tab for that stop radius (`lvPupilSeed`): for a case that is the tab's, the launch is then the
- *   tab's, to the bit.
+ * - The stop radius is the case's. The pupil radius is the one LensVisualizer's own hook hands its MTF tab for that stop
+ *   radius (`lvPupilSeed`): the aimed launch's launch scale, which sizes its Jacobian probes, so that for a case that
+ *   is the tab's the aimed rays are the tab's, to the bit.
  * - The support record is LensVisualizer's own (`assessMtfSupport`), asked for the reference line when that is all
  *   the case has and for a spectral run otherwise, as the case's export was (`exportOptionsOf`); its lines are then
- *   those of the case, so that the chief ray is aimed and the beam is found at the case's reference line, with the
- *   indices LensVisualizer traces that line with.
+ *   those of the case, so that each line's lattice is aimed with the indices LensVisualizer traces that line with,
+ *   and a finite conjugate's chief ray at the case's reference line.
  *
  * Where LensVisualizer's gate does not pass, there is no launch of its own to take: the problem carries the gate's
  * reason as its code.
@@ -77,7 +83,7 @@ export function lvLaunchSetup(
 ): LvLaunchSetup | { readonly problem: string } {
   const { state, runtime, exported } = model;
   const { lines, stopSemiDiameter } = exported.conditions;
-  const seed = lvPupilSeed(lvHookAperture(api, runtime, state), stopSemiDiameter);
+  const seed = lvPupilSeed(api, runtime, state, stopSemiDiameter);
   const asked = exportOptionsOf(exported, state.zoomT, state.focusT).lines;
   const options: LvMtfOptions = {
     method: "geometric",
@@ -156,19 +162,38 @@ export function lvFieldAngles(
   });
 }
 
-/** The launch rays of one field: LensVisualizer's lattice, every cell of it, and the chief ray after them. */
+/** The launch rays of one field at one line: LensVisualizer's lattice, every cell of it, and the chief ray after them. */
 export interface LvFieldRays {
   readonly launch: LvMtfFieldLaunch;
-  readonly footprint: LvMtfFootprint;
-  readonly grid: LvMtfLaunchGrid;
+  /**
+   * How LensVisualizer samples the field's pupil: "stop", the lattice it aims on the real stop (LV #936); or
+   * "launch-plane", equal cells over the footprint of the beam, for a field it launches from the bounding sphere.
+   */
+  readonly sampling: "stop" | "launch-plane";
+  /** The aimed stop lattice of the line; null on the launch plane. */
+  readonly lattice: LvAimedStopLattice | null;
+  /** The footprint the launch-plane lattice is laid over; null on the stop. */
+  readonly footprint: LvMtfFootprint | null;
+  /** The lattice the cells are the rays of: `columns * rows` cells of side `step`, mm, on the stop or the launch plane. */
+  readonly grid: { readonly columns: number; readonly rows: number; readonly step: number };
   /** x, y, z of each ray's origin: the cells row by row, then the chief ray. */
   readonly origins: Float64Array;
   /** x, y, z of each ray's direction, in the same order. */
   readonly directions: Float64Array;
-  /** The flux of each ray as it is launched, before anything absorbs: 1 in a collimated bundle; the chief's is 0. */
+  /**
+   * The flux of each ray as it is launched, before anything absorbs: 1 for a cell LensVisualizer has a ray for on the
+   * stop, the launch-plane flux on the launch plane; 0 for a vacant cell and for the chief ray.
+   */
   readonly launchWeights: Float64Array;
   /** The index of the chief ray: the last ray. */
   readonly chiefIndex: number;
+  /**
+   * The cells of the square lattice LensVisualizer has no ray for: those whose centre lies outside the stop's disc,
+   * which its lattice does not have, and those it could not aim. Each holds the chief ray at weight 0.
+   */
+  readonly vacant: number;
+  /** Of them, the cells of the disc LensVisualizer could not aim ("unaimed"). */
+  readonly unaimed: number;
 }
 
 function distance(a: LvVec3, b: LvVec3): number {
@@ -176,26 +201,58 @@ function distance(a: LvVec3, b: LvVec3): number {
 }
 
 /**
- * The launch rays of the field at `angleDeg`, or the coded problem of a field that has none: `chief-ray-failed`
- * when LensVisualizer finds no chief ray for it, and `vignetted` when no ray of it reaches the image.
+ * The launch rays of the field at `angleDeg` at one line of the case (the set's `line`, LensVisualizer's support line
+ * of that index), or the coded problem of a field that has none: `chief-ray-failed` when LensVisualizer finds no
+ * chief ray for it, `launch-unavailable` when its aimed launch has no stop to aim at, `lv-field-unaimed` when its
+ * aimed launch aims no cell of the lattice, and, for a field launched from the bounding sphere, `vignetted` when no
+ * ray of it reaches the image.
  *
- * The lattice is LensVisualizer's (`mtfLaunchGrid`) over the footprint it finds for the field
- * (`findMtfFieldFootprint`), with `cells` cells across the beam's larger side. Every cell is a ray, the ones an
- * aperture will stop included, and none is the mirror image of another: the cell of row r and column c is ray
- * `r * columns + c`, launched from the lattice point `(x0 + (c + 0.5) step, y0 + (r + 0.5) step)` by
- * `mtfLaunchRay`, which is where LensVisualizer's own bundle launches it. The chief ray, `mtfLaunchRay(launch, 0,
- * 0)`, is not a cell of the lattice, which has an even number of columns; it follows the cells as the last ray.
+ * A lattice LensVisualizer aims no cell of (every ray "unaimed", the chief's too as a rule) has no ray of its own:
+ * each cell would hold the chief ray at weight 0, a set of no ray that every engine would trace a thousand times
+ * over and no estimator would read. LensVisualizer's own MTF ends such a field `aim-failed` at its first grid (since
+ * LV #940; before it, `empty-pupil` at every grid). It is a field without rays, a coded problem of that field (the
+ * first line that has no aimed cell names it), and no set is made of it. Since #940 seeds a finite object's aim at
+ * its solved chief, no committed suite has such a field. A lattice of which LensVisualizer aims no cell but blocks
+ * some is not: a blocked cell is a ray it states, toward a target whose way a clear aperture ahead of the stop
+ * closes, which every engine traces and stops there, as a vignetted field's.
  *
- * The launch weight of a cell is LensVisualizer's: 1 in a collimated bundle, and from a finite object point the
- * solid angle of the cell relative to the chief ray's, `(chief distance / ray distance)^3`. The chief ray is a
- * reference and no sample of the pupil: its weight is 0.
+ * **On the real stop** (`launch.aim`, every field LensVisualizer's MTF aims): the lattice is LensVisualizer's own,
+ * `aimMtfStopLattice` of the line at `cells` cells across the stop's diameter, the ray of each cell as it returns it,
+ * kept verbatim: the aimed ray through the cell's point of the stop, or, for a cell whose way a clear aperture or a
+ * total reflection ahead of the stop blocks, the blocking ray it returns, which every engine then stops there. The
+ * set's lattice is the square of `cells` × `cells` of side `2 R / cells` on the stop, so that the cell of row r and
+ * column c is ray `r * cells + c`, as the contract's `groups.lattice` says. LensVisualizer has no ray for a cell
+ * whose centre lies outside the stop's disc, which it does not trace, nor for one it could not aim, which it counts
+ * and never traces: such a cell's ray is the field's chief ray at weight 0. That is LensVisualizer's own ray, so
+ * nothing is fabricated; at weight 0 it carries no flux, as the cell carries none in LensVisualizer's sums, so the
+ * geometric estimator adds nothing of it and the wave estimator takes it for a dark cell, whose numbers it never
+ * reads. Every other cell weighs 1 (LensVisualizer's uniform amplitude on the stop), times its bulk transmission at
+ * the line (`lvRayWeights`). The chief ray is the line's own aimed stop-centre ray where LensVisualizer aimed one,
+ * and the field's chief, `mtfLaunchRay(launch, 0, 0)`, where it did not, as `traceMtfLattice` takes it.
+ *
+ * **On the launch plane** (a field launched from the bounding sphere, which no field of LensVisualizer's MTF is
+ * today): the lattice is LensVisualizer's (`mtfLaunchGrid`) over the footprint it finds for the field
+ * (`findMtfFieldFootprint`), with `cells` cells across the beam's larger side, every cell a ray launched from
+ * `(x0 + (c + 0.5) step, y0 + (r + 0.5) step)` by `mtfLaunchRay`; a cell weighs 1 in a collimated bundle and from a
+ * finite object point the solid angle of the cell relative to the chief ray's, `(chief distance / ray distance)^3`.
+ * The chief ray, `mtfLaunchRay(launch, 0, 0)`, follows the cells.
+ *
+ * Every cell is a ray of its own, which every engine traces in its own right; the set mirrors nothing. LensVisualizer
+ * traces one half of a symmetric pupil and mirrors its traces, but its aimed lattice states the launches of both
+ * halves (on a meridional field of a lens symmetric about the meridian the one half's launches are the exact mirror
+ * images of the other's, the aim mapping a cell of negative x back from its mirror's solve), and the set takes each
+ * cell's launch as the lattice states it.
  */
 export function lvFieldRays(
-  api: Pick<LvApi, "prepareMtfFieldLaunch" | "findMtfFieldFootprint" | "mtfLaunchGrid" | "mtfLaunchRay">,
+  api: Pick<
+    LvApi,
+    "prepareMtfFieldLaunch" | "aimMtfStopLattice" | "findMtfFieldFootprint" | "mtfLaunchGrid" | "mtfLaunchRay"
+  >,
   model: LvCaseModel,
   setup: LvLaunchSetup,
   angleDeg: number,
   cells: number,
+  line = 0,
 ): LvFieldRays | { readonly problem: string } {
   const { state } = model;
   const { options, support } = setup;
@@ -203,6 +260,60 @@ export function lvFieldRays(
   if (launch === null) {
     const message = `LensVisualizer finds no chief ray for the field at ${angleDeg} degrees`;
     return { problem: rayProblem("chief-ray-failed", message) };
+  }
+  if (launch.aim !== null) {
+    const lattice = api.aimMtfStopLattice(state, options, support, launch, cells, support.spectralLines[line]);
+    if (lattice === null) {
+      const message = `LensVisualizer's aimed launch has no stop to aim the field at ${angleDeg} degrees at`;
+      return { problem: rayProblem("launch-unavailable", message) };
+    }
+    // A lattice of which LensVisualizer aims no cell has no ray of its own: every cell would hold the chief ray at
+    // weight 0, a set of no ray. A blocked cell is a ray LensVisualizer states, which every engine stops.
+    if (lattice.rays.every((ray) => ray.status === "unaimed")) {
+      const { wavelengthNm } = support.spectralLines[line];
+      const reasons = [...new Set(lattice.rays.map((ray) => (ray.status === "unaimed" ? ray.reason : "")))].join(", ");
+      const message =
+        `LensVisualizer aims no cell of the stop lattice of the field at ${angleDeg} degrees at line ${line} ` +
+        `(${wavelengthNm} nm): all ${lattice.rays.length} unaimed (${reasons})`;
+      return { problem: rayProblem("lv-field-unaimed", message) };
+    }
+    const n = lattice.cellsAcross;
+    const count = n * n + 1;
+    const chief = lattice.chief.status === "aimed" ? lattice.chief : api.mtfLaunchRay(launch, 0, 0);
+    const origins = new Float64Array(count * 3);
+    const directions = new Float64Array(count * 3);
+    const launchWeights = new Float64Array(count);
+    for (let index = 0; index < count; index++) {
+      origins.set(chief.origin, 3 * index);
+      directions.set(chief.direction, 3 * index);
+    }
+    let unaimed = 0;
+    lattice.cells.forEach((cell, i) => {
+      const ray = lattice.rays[i];
+      if (ray.status === "unaimed") {
+        unaimed++;
+        return;
+      }
+      const index = cell.row * n + cell.column;
+      origins.set(ray.origin, 3 * index);
+      directions.set(ray.direction, 3 * index);
+      launchWeights[index] = 1;
+    });
+    const vacant = n * n - lattice.cells.length + unaimed;
+    const grid = { columns: n, rows: n, step: (2 * lattice.stopSemiDiameterMm) / n };
+    return {
+      launch,
+      sampling: "stop",
+      lattice,
+      footprint: null,
+      grid,
+      origins,
+      directions,
+      launchWeights,
+      chiefIndex: count - 1,
+      vacant,
+      unaimed,
+    };
   }
   const footprint = api.findMtfFieldFootprint(state, options, support, launch);
   if (footprint === null) {
@@ -231,25 +342,39 @@ export function lvFieldRays(
   const chiefIndex = count - 1;
   origins.set(chief.origin, 3 * chiefIndex);
   directions.set(chief.direction, 3 * chiefIndex);
-  return { launch, footprint, grid, origins, directions, launchWeights, chiefIndex };
+  const { columns, rows, step } = grid;
+  return {
+    launch,
+    sampling: "launch-plane",
+    lattice: null,
+    footprint,
+    grid: { columns, rows, step },
+    origins,
+    directions,
+    launchWeights,
+    chiefIndex,
+    vacant: 0,
+    unaimed: 0,
+  };
 }
 
 /**
  * The weights of a field's rays at one line of the case: the launch weight of each, times LensVisualizer's bulk
  * transmission along its path where a glass of the lens absorbs. LensVisualizer states that transmission as the
- * weight of a ray's image point (`mtfImagePoint`), so every ray is traced once to ask for it; a ray that does not
- * land keeps its launch weight, which nothing reads.
+ * weight of a ray's image point (`mtfImagePoint`), so every ray of launch flux is traced once to ask for it; a ray that
+ * does not land keeps its launch weight, which nothing reads, and a ray of none weighs 0.
  */
 export function lvRayWeights(
   api: LvRaysApi & Pick<LvApi, "mtfImagePoint">,
   model: LvCaseModel,
-  rays: LvFieldRays,
+  rays: Pick<LvFieldRays, "origins" | "directions" | "launchWeights" | "chiefIndex">,
   line: number,
 ): Float64Array {
   const { state, exported } = model;
   const options = lvTraceOptions(model, line);
   return rays.launchWeights.map((launchWeight, ray) => {
-    if (ray === rays.chiefIndex) return 0;
+    // A ray of no launch flux (a chief ray, a vacant cell of a stop lattice) weighs 0 whatever it transmits.
+    if (ray === rays.chiefIndex || launchWeight === 0) return 0;
     const origin: LvVec3 = [rays.origins[3 * ray], rays.origins[3 * ray + 1], rays.origins[3 * ray + 2]];
     const direction: LvVec3 = [rays.directions[3 * ray], rays.directions[3 * ray + 1], rays.directions[3 * ray + 2]];
     const trace = api.traceEngineRay(state, { origin, direction }, options);
@@ -260,10 +385,14 @@ export function lvRayWeights(
 
 /**
  * The ray sets of one field of a case: LensVisualizer's own launch rays for it (`lvFieldRays`) at `cells` cells
- * across the beam, as one set for each line of the case, in the order of the lines; or the coded problem of a field
- * that has none. The rays are the same at every line, as in LensVisualizer, which finds a field's chief ray and
- * footprint once, at the reference line; the weights are those of the line (`lvRayWeights`). Each set states its
- * field, its lattice and the index of its chief ray under `groups`.
+ * across the stop (across the beam on the launch plane), as one set for each line of the case, in the order of the
+ * lines; or the coded problem of a field that has none. On the real stop each line has the lattice LensVisualizer
+ * aims at that line's own indices (LV #936), so a field's rays differ from line to line; on the launch plane they are
+ * the same at every line, the footprint being found once, at the reference line. The weights are those of the line
+ * (`lvRayWeights`). Each set states its field, its lattice and the index of its chief ray under `groups`.
+ *
+ * `sampling` says which of LensVisualizer's two samplings the lattices are of: on a stop lattice the stop's disc
+ * touches the square's outermost rows and columns, and a beam cannot reach beyond it.
  *
  * A field whose rays would not start in front of the first surface of the case, as the contract requires of every
  * ray, has the problem `launch-behind-first-surface`.
@@ -274,28 +403,32 @@ export function lvFieldRaySets(
   setup: LvLaunchSetup,
   field: { readonly angleDeg: number; readonly heightFraction?: number },
   cells: number,
-): { readonly sets: RaysTraceSpec[] } | { readonly problem: string } {
-  const rays = lvFieldRays(api, model, setup, field.angleDeg, cells);
-  if ("problem" in rays) return rays;
-  // LensVisualizer launches from a plane in front of the first surface's rim; the contract is held to here.
-  if (!startsInFront(model.exported.system.surfaces[0], rays.origins)) {
-    return { problem: launchBehindProblem(field.angleDeg) };
+): { readonly sets: RaysTraceSpec[]; readonly sampling: "stop" | "launch-plane" } | { readonly problem: string } {
+  const sets: RaysTraceSpec[] = [];
+  let shared: LvFieldRays | null = null;
+  let sampling: "stop" | "launch-plane" = "stop";
+  for (let line = 0; line < model.exported.conditions.lines.length; line++) {
+    const made: LvFieldRays | { readonly problem: string } =
+      shared ?? lvFieldRays(api, model, setup, field.angleDeg, cells, line);
+    if ("problem" in made) return made;
+    // A launch-plane lattice is found once, at the reference line, and serves every line.
+    if (made.sampling === "launch-plane") shared = made;
+    sampling = made.sampling;
+    // LensVisualizer launches from in front of the first surface's rim; the contract is held to here.
+    if (!startsInFront(model.exported.system.surfaces[0], made.origins)) {
+      return { problem: launchBehindProblem(field.angleDeg) };
+    }
+    const { columns, rows, step } = made.grid;
+    const groups: RayGroups = { field, lattice: { columns, rows, step }, chiefIndex: made.chiefIndex };
+    const { origins, directions } = raySetSpec(0, { ...made, weights: made.launchWeights });
+    sets.push({ line, origins, directions, weights: encodeNdArray(lvRayWeights(api, model, made, line)), groups });
   }
-  const { columns, rows, step } = rays.grid;
-  const groups: RayGroups = { field, lattice: { columns, rows, step }, chiefIndex: rays.chiefIndex };
-  // One encoding of the rays serves every line: only the weights are the line's.
-  const { origins, directions } = raySetSpec(0, { ...rays, weights: rays.launchWeights });
-  return {
-    sets: model.exported.conditions.lines.map((_line, line) => {
-      const weights = encodeNdArray(lvRayWeights(api, model, rays, line));
-      return { line, origins, directions, weights, groups };
-    }),
-  };
+  return { sets, sampling };
 }
 
 /**
  * The ray sets of a case that came from a LensVisualizer lens: for every field of `fields` (`DEFAULT_RAY_FIELDS`
- * without them) the sets of the field (`lvFieldRaySets`) at `sampling.bundleGrid` cells across the beam
+ * without them) the sets of the field (`lvFieldRaySets`) at `sampling.bundleGrid` cells across the stop
  * (`DEFAULT_BUNDLE_GRID` without it). Collimated bundles and the bundles of a certified finite conjugate are made
  * alike.
  *

@@ -1,0 +1,85 @@
+{
+  "kind": "lateral-colour",
+  "fields": [
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 0,
+      "status": "ok",
+      "chiefLandingMm": 0,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {
+        "indexMaxDelta": 0
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 10,
+      "status": "ok",
+      "chiefLandingMm": -5,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {
+        "indexMaxDelta": 0
+      }
+    },
+    {
+      "line": 0,
+      "wavelengthNm": 587.5,
+      "fieldAngleDeg": 20,
+      "status": "ok",
+      "chiefLandingMm": -10,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {
+        "indexMaxDelta": 0
+      }
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 0,
+      "status": "unavailable",
+      "reason": "no-channel-at-line",
+      "chiefLandingMm": null,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {}
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 10,
+      "status": "unavailable",
+      "reason": "no-channel-at-line",
+      "chiefLandingMm": null,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {}
+    },
+    {
+      "line": 1,
+      "wavelengthNm": 656.25,
+      "fieldAngleDeg": 20,
+      "status": "unavailable",
+      "reason": "no-channel-at-line",
+      "chiefLandingMm": null,
+      "figures": null,
+      "chiefRay": null,
+      "sampling": {}
+    }
+  ],
+  "reference": {
+    "focalScaleMm": null,
+    "probeAngleDeg": null,
+    "paraxialEntrancePupilZ": null,
+    "paraxialExitPupilZ": null
+  },
+  "method": {
+    "name": "synthetic-chief-rays",
+    "params": {}
+  },
+  "notes": []
+}

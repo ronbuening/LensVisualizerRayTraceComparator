@@ -82,6 +82,31 @@ export interface ManifestRun {
    */
   readonly fineRaySets?: ManifestRaySets;
   /**
+   * The spot sets of the run (`CaseSource.spotRaySets`): the rays of the tabs that show a spot or a ray fan; stated
+   * exactly when a rung that compares spots was run on it.
+   */
+  readonly spotRaySets?: ManifestRaySets;
+  /**
+   * The axial sets of the run (`CaseSource.axialRaySets`): the rays of the tabs that present the beam along the
+   * axis; stated exactly when a rung that compares axial intercepts was run on it.
+   */
+  readonly axialRaySets?: ManifestRaySets;
+  /**
+   * The chief sets of the run (`CaseSource.chiefRaySets`): the chief rays of the tabs that present the field; stated
+   * exactly when a rung that compares chief rays was run on it.
+   */
+  readonly chiefRaySets?: ManifestRaySets;
+  /**
+   * The curvature sets of the run (`CaseSource.curvatureRaySets`): the rays of the sections that present the field
+   * curves; stated exactly when a rung that compares field curves was run on it.
+   */
+  readonly curvatureRaySets?: ManifestRaySets;
+  /**
+   * The vignetting sets of the run (`CaseSource.vignettingRaySets`): the rays of the vignetting tab, each field's beam
+   * on its stop lattice and its stop-centre ray; stated exactly when a rung that compares vignetting was run on it.
+   */
+  readonly vignettingRaySets?: ManifestRaySets;
+  /**
    * The MTF recipe of the run (`src/core/mtfRecipe.ts`), or why it has none; stated exactly when a rung that needs
    * a recipe was run on it.
    */

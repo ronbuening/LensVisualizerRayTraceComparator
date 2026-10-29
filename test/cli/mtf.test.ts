@@ -192,7 +192,8 @@ test("the tab's request for a lens: a table per engine, and the request, the cas
   assert.match(run.out, /^field {2}height mm {2}angle deg {2}status {4}S 20 {4}T 20 {4}S 40 {4}T 40$/m);
   assert.match(run.out, /^1 {9}10\.000 {5}20\.000 {2}ok {6}0\.6719 {2}0\.5039 {2}0\.5938 {2}0\.4453$/m);
   assert.match(run.out, /^focus {5}best-axial, shift -0\.0469 mm$/m);
-  assert.match(run.out, /^aperture {2}traced f\/[0-9.]+, limited by surface STO, the stop$/m);
+  // LV #936 traces no f-number of its own; the fake's axial marginal ray is vignetted nowhere.
+  assert.match(run.out, /^aperture {2}-$/m);
   assert.match(run.out, /^lines {5}555 nm \(1\), /m);
 
   // Asked again, the answer comes from the store, and the record is the same bytes.
@@ -228,8 +229,8 @@ test("a comparison the tab does not offer is said to be none, also where its cas
   const said = (reason: string) =>
     `profile  lv-tab-default: the tab's comparison at f/8, which the tab does not offer here: ${reason}`;
 
-  // A lens that is f/8 wide open is scaled by 8 / 8: its comparison is the very case of the lens wide open, which
-  // the engine answers as that. The command does not call it a comparison the tab makes.
+  // A lens that is f/8 wide open has the stop rule's f/8 stop for its wide-open stop: its comparison is the very case of
+  // the lens wide open, which the engine answers as that. The command does not call it a comparison the tab makes.
   variantOf(lv, "at-eight", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 8,') });
   await onTree(rootDir, "at-eight", async () => {
     const wideOpen = await mtf(["acme-zoom-24-48"], rootDir);
@@ -246,14 +247,13 @@ test("a comparison the tab does not offer is said to be none, also where its cas
     assert.deepEqual([params.view, params.fNumber], ["wide-open", 8]);
   });
 
-  // A slower lens has a case of its own for the comparison, and the engine says the same as the command.
-  variantOf(lv, "slow", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 11,') });
-  await onTree(rootDir, "slow", async () => {
+  // A slower lens has no case of its own for the comparison either since LV #933: the stop rule's f/8 stop is its
+  // wide-open stop. A lens that does not stop down to f/8 has one, and the engine says the same as the command.
+  variantOf(lv, "short", { [ZOOM_FILE]: (text) => text.replace('"fopen": 4,', '"fopen": 4,\n  "maxFstop": 5.6,') });
+  await onTree(rootDir, "short", async () => {
     const comparison = await mtf(["acme-zoom-24-48", "--aperture", "f/8"], rootDir);
     assert.equal(comparison.code, EXIT_OK, comparison.err);
-    const reason =
-      "the lens is at f/11 wide open, and LensVisualizer's MTF tab compares with f/8 only a lens that is faster " +
-      "than f/7.95";
+    const reason = "the lens stops down to f/5.6 at most, so LensVisualizer's MTF tab has no f/8 to compare it with";
     assert.equal(comparison.out.split("\n")[1], said(reason));
     assert.ok(comparison.out.includes(`lv  unsupported  computed\n  feature aperture.f8-comparison: ${reason}\n`));
   });
@@ -496,7 +496,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],
-    'unknown engine "zemax": the configuration defines no engine; built in: lv, optiland, optiland-wave, ref, replay, wave',
+    'unknown engine "zemax": the configuration defines no engine; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave',
   );
   await usage(["acme-singlet-50", "--root", "no-such-root"], "--root no-such-root: not a directory");
   // The tab reaches any other aperture only through its slider: the profile has no request for one.
