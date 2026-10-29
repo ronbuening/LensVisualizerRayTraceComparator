@@ -953,6 +953,39 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   cells. Measured at `33ebdb30`, closure `78215d72`.
 - **Class.** method (sampling).
 
+### A finite object's stop lattice that LensVisualizer aims no cell of
+
+- **Where.** `prepareMtfFieldLaunch` (`src/optics/analysis/mtf/mtfTracing.ts`) solves a finite object's chief ray
+  through the stop centre (`solveScalarRoot` on the launch height, `centerY`), but hands the aimed launch only
+  `{ kind: "finite-object", objectPoint, leadZ }`. `launchFrame` in `src/optics/analysis/pupils/aimedPupil.ts` then
+  seeds the field's chief on the straight line from the object point to the stop centre (`seedFraction`), and
+  `fieldModel` traces that seed to the stop without apertures. Where it reaches no stop, `chiefStop` is null, no
+  Jacobian is formed, and `aimSample` returns every sample, the chief's included, `unaimed` with `trace-failed`
+  after no iteration. A finer lattice is seeded from the coarser one, so every grid is lost alike.
+- **Effect.** At `607ff23ae` 47 MTF fields (of `MTF_FIELDS`) on 18 certified focus stations, wide lenses at close
+  focus: `hasselblad-xcd-25mm-f25-v`, `leica-summilux-c-18mm-t14` (two stations), `olympus-mzuiko-digital-ed-17mm-f12-pro`
+  (two), `olympus-zuiko-digital-ed-7-14mm-f4`, `panasonic-lumix-g-vario-12-60mm-f35-56`, `samyang-af-14mm-f28-ef`
+  (two), `sigma-12mm-f14-dc-contemporary`, `sigma-18-35-f18-dc-hsm-art` (three), `sigma-24mm-f2-dg-dn-contemporary`,
+  `sigma-28mm-f14-dg-hsm-art`, `sigma-apo-50-500mm-f45-63-dg-os-hsm`, `tamron-35-150mm-f2-28-di-iii-vxd-a058`,
+  `thypoch-ksana-21mm-f35`. The 47 are exactly the fields whose straight-line seed fails to reach the stop (43
+  `noBracket`, 20 of them a miss of the first surface; four total internal reflections; none fails otherwise), and
+  every field whose seed fails is lost: the cause, not a correlate. On the Panasonic's close station at its widest
+  (object 159.4 mm in front of the first vertex) the seed fails at 27.1° (`noBracket` at surface 3) and 47.9° (the
+  first surface missed), while the chief LensVisualizer solved for the same fields crosses the stop within 4.3e-13
+  and 3.7e-10 mm of its centre. LensVisualizer's own MTF calls each such field `empty-pupil` ("Too little pupil
+  remains to estimate MTF") at every grid up to 256, with `validRays` 0 and `unaimedRays` 51468: the tab draws no
+  curve, and the message names vignetting where the cause is the aim. States at infinity have none (the collimated
+  frame starts at the solved chief, `{ uField, yChief }`). Before #936 the same fields were traced on the launch plane.
+- **Handled.** A lattice of which LensVisualizer aims no cell is the coded problem `lv-field-unaimed` of that field,
+  naming its angle and line (`lvFieldRays`): no set is made of it, no engine is asked, and `wave` and `flux` answer
+  the field unavailable with that code. Before, each was a set of 1,024 or 4,096 vacant cells holding the chief ray at
+  weight 0, traced by every engine and read by no estimator. A lattice whose cells LensVisualizer blocks, and aims
+  none of, keeps its set: a blocked cell is LensVisualizer's own ray toward its target, which every engine stops ahead
+  of the stop. The owner's brief is `docs/upstream/lensvisualizer-finite-object-aim.md` (not filed); a fix in
+  LensVisualizer (seed the finite-object frame at the solved chief) makes the problem disappear by itself, and a
+  canary of the seed's lines (`canaries.test.ts`) fails first: run the focus-stations suite again then.
+- **Class.** data (an LensVisualizer defect in its aim, recorded as a coded problem).
+
 ## Any two engines
 
 ### A fast lens wide open is undersampled by any lattice a run can afford

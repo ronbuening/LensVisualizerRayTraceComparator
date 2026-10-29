@@ -45,7 +45,7 @@ import {
 } from "../../../src/rays/wavefront.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
 import { SINGLET as FIXTURE_CASE } from "../../core/support.ts";
-import { bind, freshLv } from "./support.ts";
+import { FAKE_LENS_FILES, bind, freshLv, variantOf } from "./support.ts";
 
 const SINGLET = "acme-singlet-50";
 
@@ -274,4 +274,25 @@ test("a field without rays is unavailable with LensVisualizer's code, and the ot
     assert.deepEqual(answer.counts, { fields: 2, frequencies: 3, unavailableFields: 1 });
   }
   assert.notEqual(data.fields[0].status, "unavailable");
+});
+
+test("a field of which LensVisualizer aims no cell is unavailable as lv-field-unaimed, and the others are answered", async (t) => {
+  // The fake aims no ray at all beyond 3 degrees (`mtf.unaimedBeyondDeg`).
+  const [[singletFile]] = FAKE_LENS_FILES;
+  const lv = variantOf(freshLv(t), "lost", {
+    [singletFile]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { model } = await modelOf(binding, SINGLET);
+  const spec: MtfNativeSpec = { ...SPEC, fields: { kind: "angles-deg", values: [0, 5] } };
+  const answer = answerLvWave(binding.api, model, spec, GRID);
+  assert.ok("data" in answer, JSON.stringify(answer).slice(0, 300));
+  const data = answer.data as MtfNativeData;
+  assert.deepEqual(resultDataProblems(mtfNativeQuantity, data), []);
+  assert.equal(data.fields[1].status, "unavailable");
+  assert.equal(data.fields[1].reason, "lv-field-unaimed");
+  assert.equal(data.fields[1].fieldAngleDeg, 5);
+  assert.ok(curve(data, 1, "tangential").every(Number.isNaN));
+  assert.notEqual(data.fields[0].status, "unavailable");
+  assert.deepEqual(answer.counts, { fields: 2, frequencies: 3, unavailableFields: 1 });
 });

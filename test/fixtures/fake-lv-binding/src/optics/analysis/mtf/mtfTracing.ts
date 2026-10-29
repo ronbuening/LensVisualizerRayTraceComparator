@@ -193,7 +193,9 @@ export function stopLattice(n: number) {
 
 // The fake "aims" a cell by starting its ray on the launch plane at the cell's fractions of the pupil radius. A lens may
 // state the radius of the stop beyond which the fake aims nothing (`mtf.unaimedBeyond`) and beyond which a clear
-// aperture ahead of the stop blocks the way (`mtf.blockedBeyond`, at surface 0), as fractions of the stop radius.
+// aperture ahead of the stop blocks the way (`mtf.blockedBeyond`, at surface 0), as fractions of the stop radius; and
+// the field angle beyond which it aims no ray at all, the chief's included (`mtf.unaimedBeyondDeg`), as LV's aim of a
+// finite object point whose straight-line chief seed reaches no stop.
 export function aimMtfStopLattice(
   state: FakeState,
   options: FakeMtfOptions,
@@ -210,9 +212,11 @@ export function aimMtfStopLattice(
   const pupil = options.pupilSemiDiameterMm;
   const R = options.stopSemiDiameterMm;
   const cells = stopLattice(gridSize);
+  const lost = Math.abs(launch.fieldAngleDeg) > (stated.unaimedBeyondDeg ?? Infinity);
   const toRay = (index: number, xFraction: number, yFraction: number) => {
     const r = Math.hypot(xFraction, yFraction);
     const base = { index, xFraction, yFraction };
+    if (lost) return { ...base, status: "unaimed", reason: "trace-failed", origin: null, direction: null };
     if (r > (stated.unaimedBeyond ?? Infinity))
       return { ...base, status: "unaimed", reason: "stop-unreachable", origin: null, direction: null };
     const ray = mtfLaunchRay(launch, xFraction * pupil, yFraction * pupil);

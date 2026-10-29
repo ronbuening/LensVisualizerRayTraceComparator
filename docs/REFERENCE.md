@@ -5406,6 +5406,22 @@ surface toward the object; the convention is held by the tracer's canary and `re
 nearly every case moved with #933, so its baseline records are STALE(case) as well as STALE(engine) until the Phase 6
 end refresh.
 
+**A field LensVisualizer aims no cell of** (found after part B, 2026-10-29; `docs/gotchas.md`, "A finite object's stop
+lattice that LensVisualizer aims no cell of"; brief `docs/upstream/lensvisualizer-finite-object-aim.md`, not filed). At
+`607ff23ae` the aimed launch seeds a finite object's chief on the straight line from the object point to the stop
+centre, not on the chief `prepareMtfFieldLaunch` solved; where that line reaches no stop, every sample is `unaimed`
+(`trace-failed`). A survey of every documented focus station that exports (67 states; LensVisualizer's `MTF_FIELDS`, an
+8-cell lattice at the reference line, a read-only script through the binding) found 47 such fields on 18 stations, exactly the fields whose
+straight-line seed fails (43 `noBracket`, 20 of them a miss of the first surface; four total internal reflections), and
+no field whose seed fails that is aimed; no state at infinity. On the Panasonic 12-60 mm's close station at its wide end
+the solved chief crosses the stop within 4.3e-13 mm (27.1°) and 3.7e-10 mm (47.9°) of its centre where the seed fails;
+LensVisualizer's own MTF calls both fields `empty-pupil` at every grid to 256 (`validRays` 0, `unaimedRays` 51468), so
+its tab draws no curve there. Each such field is now the coded problem `lv-field-unaimed` (`lvFieldRays`), no set is made
+of it, and `wave` and `flux` answer it unavailable with that code; before, each was a set of vacant cells only. A field
+of blocked cells and no aimed one keeps its set. The adapter revisions of `wave` and `flux` moved (`raySets.ts` is in
+their closures); `lv`'s, `replay`'s, `ref`'s and the optiland engines' did not. Sets of states at infinity are unchanged
+byte for byte; the focus-stations suite loses those fields' sets (its records of them GONE at the end refresh).
+
 ## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part B)
 
 LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b` unchanged by part B (its new names are of modules

@@ -764,7 +764,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   the field's chief ray at weight 0: never a fabricated ray. A field LV launches from its bounding sphere keeps the
   launch-plane lattice over its footprint (`traceMtfLaunchPlaneBundle`). No mirroring, no normalising (a `-0`
   stays), the chief ray last at weight 0. What the lattice's tracing and `computeMtfSteps` do inline is restated in
-  `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own lattice.
+  `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own lattice. A lattice of
+  which LV aims no cell (every ray `unaimed`) is no set: the coded problem `lv-field-unaimed` of that field (`lvFieldRays`,
+  naming angle and line; `wave` and `flux` answer it unavailable with that code); a lattice of blocked cells and no
+  aimed one keeps its set, LV's blocking rays being rays every engine stops.
 - **A sequential trace follows the order of the case, not of z**: a surface behind the last hit is met by a step
   backwards, as LV does since #934 (`intersectSequentialSurface`, a canary; before it LV failed there with
   `noBracket`); a ray that no longer travels toward +z is blocked at the next surface (LV steps back only for a ray
@@ -1744,6 +1747,17 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `f016b35b`. Adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`, `ref-seidel`, `optiland` and
   `optiland-wave` did not. No gate or floor moved; policy 24 adds only recorded rungs' limits and bands: R13b's and
   R14b's (2026-10-28), R7b's fans, R11b's transmission and R12b's four f-number and pupil bands (2026-10-29, above).
+- **LV assumption found: a finite object's aimed lattice is seeded on a straight line** (`docs/gotchas.md`, "A finite
+  object's stop lattice that LensVisualizer aims no cell of"; owner's brief
+  `docs/upstream/lensvisualizer-finite-object-aim.md`, not filed). LV's aimed launch seeds a finite object's chief on
+  the straight line from the object point to the stop centre, not on the chief `prepareMtfFieldLaunch` solved; where
+  that line reaches no stop (`noBracket`, a total reflection, or a miss of the first surface) the field model has no
+  chief crossing and every sample, the chief's included, is `unaimed`/`trace-failed`. At `607ff23ae` 47 MTF fields of
+  18 focus stations (wide lenses at close focus), exactly those whose straight-line seed fails; LV's MTF calls each
+  `empty-pupil` at every grid to 256 (validRays 0, unaimedRays 51468). Infinity states have none. The fields are the
+  coded problem `lv-field-unaimed` (above); a canary holds the seed's lines (run focus-stations again when it
+  fails). The adapter revisions of `wave` and `flux` moved (`raySets.ts`); `lv`'s, `replay`'s, `ref`'s and the
+  optiland engines' did not.
 - **The crossing-surface FAILs of the catalog snapshot stay as recorded**: since #934 their seven reproducers PASS R2,
   but `docs/known-failures.json` and the catalog baselines are edited only by the end-of-project refresh, which will
   report the entries unused (`unusedKnownFailures`).

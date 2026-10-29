@@ -2846,3 +2846,26 @@ test(
     );
   },
 );
+
+test("a finite object's aimed launch still seeds its chief on the straight line to the stop centre", { skip }, () => {
+  // Read at 607ff23ae. Where that straight line reaches no stop, the field model has no chief crossing and every
+  // sample is unaimed (47 fields of 18 focus stations): lvFieldRays makes no set of such a field (lv-field-unaimed).
+  // When these lines change, run the focus-stations suite again: the fields may then be aimed and have sets
+  // (docs/gotchas.md, "A finite object's stop lattice that LensVisualizer aims no cell of";
+  // docs/upstream/lensvisualizer-finite-object-aim.md).
+  const why = "lvFieldRays's lv-field-unaimed of the focus stations, whose cause docs/gotchas.md describes";
+  const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
+  assertSource(
+    "src/optics/analysis/mtf/mtfTracing.ts",
+    '? { kind: "finite-object", objectPoint, leadZ }',
+    `${why}: the aimed launch is handed the object point, not the solved chief`,
+  );
+  assertSource(aimed, "const seedFraction = (stopZ - leadZ) / (stopZ - objectPoint[2]);", why);
+  assertSource(aimed, "chief: axial ? [0, 0] : [objectPoint[0] * seedFraction, objectPoint[1] * seedFraction],", why);
+  assertSource(aimed, "chiefStop: stopAt(frame.chief),", why);
+  assertSource(
+    aimed,
+    'return { status: "unaimed", reason: "trace-failed", launch: model.chief, stop: null, iterations: 0 };',
+    why,
+  );
+});

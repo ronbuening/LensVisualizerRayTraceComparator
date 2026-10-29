@@ -63,6 +63,8 @@ export interface FakeLensData {
     unaimedBeyond?: number;
     /** Beyond this fraction of the stop radius the fake's aim is "blocked" ahead of the stop, at surface 0. */
     blockedBeyond?: number;
+    /** Beyond this field angle, degrees, the fake's aim finds no ray at all: every cell and the chief "unaimed". */
+    unaimedBeyondDeg?: number;
   };
   /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
   field?: {

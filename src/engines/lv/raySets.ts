@@ -203,8 +203,17 @@ function distance(a: LvVec3, b: LvVec3): number {
 /**
  * The launch rays of the field at `angleDeg` at one line of the case (the set's `line`, LensVisualizer's support line
  * of that index), or the coded problem of a field that has none: `chief-ray-failed` when LensVisualizer finds no
- * chief ray for it, `launch-unavailable` when its aimed launch has no stop to aim at, and, for a field launched from
- * the bounding sphere, `vignetted` when no ray of it reaches the image.
+ * chief ray for it, `launch-unavailable` when its aimed launch has no stop to aim at, `lv-field-unaimed` when its
+ * aimed launch aims no cell of the lattice, and, for a field launched from the bounding sphere, `vignetted` when no
+ * ray of it reaches the image.
+ *
+ * A lattice LensVisualizer aims no cell of (every ray "unaimed", the chief's too as a rule) has no ray of its own:
+ * each cell would hold the chief ray at weight 0, a set of no ray that every engine would trace a thousand times
+ * over and no estimator would read. LensVisualizer's own MTF calls such a field `empty-pupil` at every grid. It is a
+ * field without rays, a coded problem of that field (the first line that has no aimed cell names it), and no set is
+ * made of it. A lattice of which LensVisualizer aims no cell but blocks some is not: a blocked cell is a ray it
+ * states, toward a target whose way a clear aperture ahead of the stop closes, which every engine traces and stops
+ * there, as a vignetted field's.
  *
  * **On the real stop** (`launch.aim`, every field LensVisualizer's MTF aims): the lattice is LensVisualizer's own,
  * `aimMtfStopLattice` of the line at `cells` cells across the stop's diameter, the ray of each cell as it returns it,
@@ -256,6 +265,16 @@ export function lvFieldRays(
     if (lattice === null) {
       const message = `LensVisualizer's aimed launch has no stop to aim the field at ${angleDeg} degrees at`;
       return { problem: rayProblem("launch-unavailable", message) };
+    }
+    // A lattice of which LensVisualizer aims no cell has no ray of its own: every cell would hold the chief ray at
+    // weight 0, a set of no ray. A blocked cell is a ray LensVisualizer states, which every engine stops.
+    if (lattice.rays.every((ray) => ray.status === "unaimed")) {
+      const { wavelengthNm } = support.spectralLines[line];
+      const reasons = [...new Set(lattice.rays.map((ray) => (ray.status === "unaimed" ? ray.reason : "")))].join(", ");
+      const message =
+        `LensVisualizer aims no cell of the stop lattice of the field at ${angleDeg} degrees at line ${line} ` +
+        `(${wavelengthNm} nm): all ${lattice.rays.length} unaimed (${reasons})`;
+      return { problem: rayProblem("lv-field-unaimed", message) };
     }
     const n = lattice.cellsAcross;
     const count = n * n + 1;

@@ -525,6 +525,73 @@ test("a cell LensVisualizer could not aim holds the chief ray at weight 0, and a
   });
 });
 
+test("a field of which LensVisualizer aims no cell is a coded problem; one it aims or blocks cells of has its set", async (t) => {
+  // The fake aims no ray at all beyond 3 degrees, as LensVisualizer's aim of a finite object point whose
+  // straight-line chief seed reaches no stop (docs/gotchas.md): every cell and the chief "unaimed".
+  const lv = variantOf(freshLv(t), "lost", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { opticalCase, model } = await modelOf(binding, "acme-singlet-50", {
+    state: { focus: { kind: "focusT", value: 1 } },
+    lines: { kind: "photopic" },
+  });
+  assert.equal(opticalCase.conditions.object.kind, "finite");
+  const setup = lvLaunchSetup(binding.api, model);
+  assert.ok(!("problem" in setup));
+  // The lattice LensVisualizer returns is there, every cell of it unaimed: no ray of its own.
+  const launch = binding.api.prepareMtfFieldLaunch(model.state, setup.options, setup.support, 5);
+  assert.ok(launch !== null && launch.aim !== null);
+  const lattice = binding.api.aimMtfStopLattice(model.state, setup.options, setup.support, launch, 4, {
+    wavelengthNm: 555,
+    weight: 1,
+  });
+  assert.ok(lattice !== null && lattice.rays.length === 12);
+  assert.ok(lattice.rays.every((ray) => ray.status === "unaimed") && lattice.chief.status === "unaimed");
+  const wavelength = opticalCase.conditions.lines[0].wavelengthNm;
+  const problem = (angle: number) =>
+    `lv-field-unaimed: LensVisualizer aims no cell of the stop lattice of the field at ${angle} degrees at line 0 ` +
+    `(${wavelength} nm): all 12 unaimed (trace-failed)`;
+  assert.deepEqual(lvFieldRays(binding.api, model, setup, 5, 4), { problem: problem(5) });
+  assert.deepEqual(lvFieldRaySets(binding.api, model, setup, { angleDeg: -10 }, 4), { problem: problem(-10) });
+  // The run's other fields keep their sets, in their order, at every line.
+  const { sets, problems } = lvRaySets(binding.api, model, {
+    fields: { kind: "angles-deg", values: [5, 0, 2, -10] },
+    sampling: { bundleGrid: 4 },
+  });
+  assert.deepEqual(problems, [problem(5), problem(-10)]);
+  assert.deepEqual(
+    sets.map((spec) => [spec.groups?.field?.angleDeg, spec.line]),
+    [0, 2].flatMap((angle) => [0, 1, 2, 3, 4].map((line) => [angle, line])),
+  );
+  for (const spec of sets) assert.ok(f8(spec.weights).some((weight) => weight > 0));
+  binding.close();
+
+  // A field whose every cell LensVisualizer aims or blocks, and none it leaves unaimed, keeps its set: a blocked cell is
+  // LensVisualizer's own blocking ray, which every engine stops ahead of the stop.
+  const shut = variantOf(lv, "shut", {
+    [SINGLET_FILE]: (text) =>
+      text.replace("mtf: { unaimedBeyondDeg: 3 },", "mtf: { unaimedBeyond: 0.8, blockedBeyond: 0 },"),
+  });
+  const shutBinding = await bind(t, shut);
+  const closed = await modelOf(shutBinding, "acme-singlet-50", { state: { focus: { kind: "focusT", value: 1 } } });
+  const closedSetup = lvLaunchSetup(shutBinding.api, closed.model);
+  assert.ok(!("problem" in closedSetup));
+  const blocked = lvFieldRays(shutBinding.api, closed.model, closedSetup, 5, 8);
+  assert.ok(!("problem" in blocked) && blocked.lattice !== null);
+  const statuses = new Set(blocked.lattice.rays.map((ray) => ray.status));
+  assert.deepEqual([...statuses].sort(), ["blocked", "unaimed"]);
+  const made = lvFieldRaySets(shutBinding.api, closed.model, closedSetup, { angleDeg: 5 }, 8);
+  assert.ok("sets" in made);
+  const answer = answerLvRays(shutBinding.api, closed.model, made.sets[0]);
+  assert.ok("data" in answer);
+  // Every cell of launch flux is a blocking ray, which lv stops: no ray of weight reaches the image.
+  const status = integers(answer.data.status);
+  const lit = [...blocked.launchWeights].flatMap((weight, ray) => (weight > 0 ? [ray] : []));
+  assert.ok(lit.length > 0 && lit.every((ray) => status[ray] !== 0));
+  shutBinding.close();
+});
+
 test("a field without rays is a coded problem of that field, and the other fields have theirs", async (t) => {
   const lv = freshLv(t);
   // A lens whose format corner lies beyond what its model reaches, and one height of which has no solved angle.

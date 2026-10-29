@@ -342,6 +342,27 @@ test("flux makes a field's lattices once whatever line is asked: an answer of se
   assert.equal(together.fields.length, 3 * ask.fieldAnglesDeg.length);
 });
 
+test("flux answers a field of which LensVisualizer aims no cell unavailable as lv-field-unaimed", async (t) => {
+  // The fake's MTF aim finds no ray at all beyond 3 degrees (`mtf.unaimedBeyondDeg`); the tab's fields are its own.
+  const lv = variantOf(freshLv(t), "lost", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const model = await modelOf(binding);
+  const ask = askOf(binding, model);
+  const data = dataOf(answerLvFlux(binding.api, model, ask, { bundleGrid: 8 }));
+  const beyond = data.fields.filter((field) => Math.abs(field.fieldAngleDeg) > 3);
+  const within = data.fields.filter((field) => Math.abs(field.fieldAngleDeg) <= 3);
+  assert.ok(beyond.length > 0 && within.length > 0, JSON.stringify(ask.fieldAnglesDeg));
+  for (const field of beyond) {
+    assert.deepEqual(
+      [field.status, field.reason, field.relativeIllumination],
+      ["unavailable", "lv-field-unaimed", null],
+    );
+  }
+  for (const field of within) assert.notEqual(field.status, "unavailable");
+});
+
 test("what flux does not answer is unsupported, each with its item", async (t) => {
   const binding = await bind(t, freshLv(t));
   const model = await modelOf(binding);
