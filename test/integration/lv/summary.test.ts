@@ -24,7 +24,7 @@
 //
 // What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer is
 // held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae (engine
-// closure f016b35b).
+// closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -51,10 +51,10 @@ const skip = LV_UNAVAILABLE;
 /** The suites whose states the tab is held at. */
 const SUITES = ["benchmark", "states", "focus-stations"] as const;
 
-/** The engine closure the margins were measured with (LensVisualizer 607ff23ae). */
-const PINNED_CLOSURE = "f016b35b258be0c4b00df43fdf103384e8fad21a75506213611c42136189f0cf";
+/** The engine closure the margins were measured with (LensVisualizer 6287f4393; the same at 607ff23ae, f016b35b). */
+const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
 
-/** The first 16 hex digits of the id of each case the margins were measured on at `PINNED_CLOSURE`: 119 at 607ff23ae. */
+/** The first 16 hex digits of the id of each case the margins were measured on: 119 at 607ff23ae and at 6287f4393. */
 const MEASURED_CASES: ReadonlySet<string> = new Set([
   "02dd902ccabd7e9e",
   "032904853c0718dd",
@@ -181,7 +181,8 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
  * The measured margins, in units in the last place (at 607ff23ae, on the 119 cases of `MEASURED_CASES`): the focal
  * lengths 16 (measured 15, the Olympus Zuiko Digital ED 7-14 mm, new at 607ff23ae, at its focus station of zoom
  * station 32; 7 at 098c91ef6 on the older cases), the pupil 0 (to the bit), the image-space and paraxial working
- * f-numbers 20 (measured 19 on the same station, and 3 for the paraxial working f-number at infinity).
+ * f-numbers 20 (measured 19 on the same station, and 3 for the paraxial working f-number at infinity). Measured again
+ * at 6287f4393 (closure fc5ae923): 15, 0, 19 and 3 on the same 119 cases.
  */
 const MARGINS = { focalUnits: 16, pupilUnits: 0, fNumberUnits: 20 } as const;
 

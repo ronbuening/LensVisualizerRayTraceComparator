@@ -612,7 +612,8 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 - **Since LV #933 and #936** the hook's radii are `stopSemiDiameterForFNumber(fNumber, zoomT, L)` and the paraxial
   `entrancePupilAtState` of that stop, `DEFAULT_MTF_PREFERENCES` caps the grid at 256 cells across the stop, and the
   MTF traces no f-number of its own (it states `axialVignetting` instead); `tabRequest.ts`, its canaries and
-  `test/integration/lv/mtf.test.ts` follow, the pins measured again at closure `f016b35b`.
+  `test/integration/lv/mtf.test.ts` follow, the pins measured again at closure `f016b35b` (and at `fc5ae923`, LV
+  #940, unchanged).
 - **Class.** data.
 
 ### The iris the MTF tab traces wide open is not always the iris of the prepared state

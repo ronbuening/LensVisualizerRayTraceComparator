@@ -46,9 +46,10 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
  * LV 098c91ef6 (closure fef2e248, 178 files), every grid and case was measured again and found unchanged (worst R4f
  * mtf.maxAbs 1.69e-14); at Stage 6.8b, at LV 607ff23ae (closure f016b35b, 184 files: every stop resized by LV #933, and
  * #936's stop lattice refined to a cap of 256 cells across the stop), every case and grid moved and was pinned anew
- * (worst R4f mtf.maxAbs 1.30e-14).
+ * (worst R4f mtf.maxAbs 1.30e-14); at LV 6287f4393 (closure fc5ae923, 184 files: LV #940), every case and grid was
+ * measured again and found unchanged, the 192 answers the same bytes as at 607ff23ae (worst 1.2989609388114332e-14).
  */
-const PINNED_CLOSURE = "f016b35b258be0c4b00df43fdf103384e8fad21a75506213611c42136189f0cf";
+const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended

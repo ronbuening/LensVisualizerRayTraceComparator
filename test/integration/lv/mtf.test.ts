@@ -5,8 +5,9 @@
 //
 // Pins were re-measured at LV 643ef5d0, closure 94778d3d (175 files); the same engine closure is at ab0fd4cf; and
 // again at 098c91ef6, closure fef2e248 (178 files), unchanged; and at Stage 6.8b, at 607ff23ae, closure f016b35b
-// (184 files: LV #933's stop rule and #936's MTF on the real stop), where every figure moved and was pinned anew.
-// Only the measured closure and case activate a pin: a lens edit is another case.
+// (184 files: LV #933's stop rule and #936's MTF on the real stop), where every figure moved and was pinned anew; and
+// at 6287f4393, closure fc5ae923 (184 files: LV #940), unchanged. Only the measured closure and case activate a pin: a
+// lens edit is another case.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -71,9 +72,11 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * below one degree, the anchored channels, the vignetting tab's beams), every figure and case was measured again and
  * found unchanged. At Stage 6.8b, at LV 607ff23ae (closure f016b35b, 184 files), every case and figure moved (LV #933
  * resized every stop by the paraxial EPD = F/N; #936 samples the pupil on the real stop at a cap of 256): measured and
- * pinned anew; no configuration's axial marginal ray is vignetted.
+ * pinned anew; no configuration's axial marginal ray is vignetted. At LV 6287f4393 (closure fc5ae923, 184 files: LV
+ * #940, a finite object's aim seeded at its solved chief and `aim-failed`), every case and figure was measured again
+ * and found unchanged: the 12 answers are the same bytes as at 607ff23ae.
  */
-const PINNED_CLOSURE = "f016b35b258be0c4b00df43fdf103384e8fad21a75506213611c42136189f0cf";
+const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

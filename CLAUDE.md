@@ -1543,7 +1543,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `rearPrincipalZ`), the image plane and the track (the case's) to the bit; breathing and telephoto ratio derived to the
   bit; since LV #933 the physical stop to the bit of twice the case's (the hook's stop is the stop rule's). Measured
   margins (`MARGINS`), held only at `PINNED_CLOSURE` and the cases of `MEASURED_CASES` (as `mtf.test.ts` pins), so a
-  lens edit cannot turn `test:lv` red, and written down elsewhere; at 607ff23ae (closure `f016b35b`, 119 cases): the
+  lens edit cannot turn `test:lv` red, and written down elsewhere; at 607ff23ae (closure `f016b35b`, 119 cases; the
+  same cases and figures at 6287f4393, closure `fc5ae923`): the
   current and infinity focal lengths within 16 units in the last place of R1's (measured 15, the Olympus 7-14 mm at a
   focus station; 7 before), the entrance pupil to the bit (the hook's pupil is paraxial since #933; 3.4e-11 relative
   before), the "Image-space f/#" and, at infinity, the "Paraxial working f/#" within 20 units of R1's efl over that
@@ -1750,8 +1751,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `traceMtfLaunchPlaneBundle` and `traceRayClassification` (from `src/optics/trace/rayClassification.ts`, a fake of its
   own in `FAKE_ENGINE_FILES`); the fakes' defaults stay unlike LV's. The rules above say what each restates; the
   evidence is `docs/REFERENCE.md`, "Stage 6.8b". The MTF and R4f pins and the summary margins were measured again at
-  `f016b35b`. Adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`, `ref-seidel`, `optiland` and
-  `optiland-wave` did not. No gate or floor moved; policy 24 adds only recorded rungs' limits and bands: R13b's and
+  `f016b35b`, and at `fc5ae923` (below). Adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`,
+  `ref-seidel`, `optiland` and `optiland-wave` did not. No gate or floor moved; policy 24 adds only recorded rungs'
+  limits and bands: R13b's and
   R14b's (2026-10-28), R7b's fans, R11b's transmission and R12b's four f-number and pupil bands (2026-10-29, above).
 - **LV assumption found, resolved by LV #940: a finite object's aimed lattice was seeded on a straight line**
   (`docs/gotchas.md`, "A finite object's stop lattice that LensVisualizer aims no cell of"; owner's brief
@@ -1777,8 +1779,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   included, with no unaimed cell: `lv-field-unaimed` stays, met on no committed suite. Two canaries were restated (the
   replay's `fieldAtGrid` bookkeeping and the finite object's seed). The fingerprint of `lv`, `replay`, `wave` and
   `flux` (LV's closure) moved, and the adapter revisions of `replay` (`replay.ts`), `wave` and `flux` (a comment of
-  `raySets.ts`); `lv`'s, `ref`'s, `ref-seidel`'s and the optiland engines' did not. The MTF and R4f pins and the summary margins (`PINNED_CLOSURE` of
-  `mtf.test.ts`, `fidelity.test.ts`, `summary.test.ts`, at `f016b35b`) are to be measured again at `fc5ae923`.
+  `raySets.ts`); `lv`'s, `ref`'s, `ref-seidel`'s and the optiland engines' did not. The MTF and R4f pins and the
+  summary margins were measured again at `fc5ae923` and found unchanged (only `PINNED_CLOSURE` of `mtf.test.ts`,
+  `fidelity.test.ts` and `summary.test.ts` moved): the 12 tab answers and the 192 R4f answers of the benchmark are the
+  bytes they were at `607ff23ae`, the summary's 119 cases the same, its worst margins 15, 0, 19 and 3 units again.
 - **The crossing-surface FAILs of the catalog snapshot stay as recorded**: since #934 their seven reproducers PASS R2,
   but `docs/known-failures.json` and the catalog baselines are edited only by the end-of-project refresh, which will
   report the entries unused (`unusedKnownFailures`).

@@ -5442,15 +5442,23 @@ line). `LvAimedFieldGeometry` states `chiefLaunch`, the fake tree mirrors #940 (
 `aim-failed`). Two canaries were restated: the replay's bookkeeping of `fieldAtGrid` and the finite object's seed. The
 fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved; of the adapter revisions those of
 `replay` (`replay.ts`), `wave` and `flux` (a comment of `raySets.ts`) moved, and `lv`'s, `ref`'s, `ref-seidel`'s and the
-optiland engines' did not. The MTF and R4f pins and the summary margins, measured at `f016b35b`, are measured
-again at `fc5ae923` (`PINNED_CLOSURE` and `PINNED` of `mtf.test.ts` and `fidelity.test.ts`; `PINNED_CLOSURE`,
-`MEASURED_CASES` and `MARGINS` of `summary.test.ts`).
+optiland engines' did not.
+
+**The pins at `fc5ae923`** (2026-10-29, `test:lv` at `6287f4393`): measured again, every one unchanged; only
+`PINNED_CLOSURE` of `mtf.test.ts`, `fidelity.test.ts` and `summary.test.ts` moved. Beyond the pins' printed precision,
+the answers are the same bytes at both commits: the MTF tab's 12 answers (`lvrtc mtf` of each benchmark configuration,
+diffraction, photopic, best-axial focus, 11 fields of 51 frequencies) and the 192 answers of R4f on the benchmark (`lv`
+and `replay`, 96 runs, the same case and request ids), each run into a temporary store at `607ff23ae` and at
+`6287f4393`; R4f's worst `mtf.maxAbs` is 1.2989609388114332e-14 at both (the GF 63 mm, reference line, half field).
+The summary's 119 states (67 finite) are the 119 cases of `MEASURED_CASES`, and its worst margins are those of
+`f016b35b`: the focal lengths 15 units (the Olympus 7-14 mm at its focus station of zoom station 32), the pupil 0, the
+"Image-space f/#" 19 and the "Paraxial working f/#" at infinity 3.
 
 ## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part B)
 
 LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b` unchanged by part B (its new names are of modules
-already loaded; since #940, `6287f4393`, closure `fc5ae923`: part A). Part B is the ray sets of the spot, axial, curvature and vignetting tabs, `lv`'s answers of their
-quantities, the engine `flux`, and policy 24.
+already loaded; since #940, `6287f4393`, closure `fc5ae923`: part A). Part B is the ray sets of the spot, axial,
+curvature and vignetting tabs, `lv`'s answers of their quantities, the engine `flux`, and policy 24.
 
 ### What each PR changed, and what the comparator did
 
