@@ -9,6 +9,7 @@ import { lvMtfInputs } from "../../../src/engines/lv/tabRequest.ts";
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
+import { mtfFidelityComparator } from "../../../src/compare/mtfFidelity.ts";
 import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { JsonObject } from "../../../src/contract/json.ts";
 import { MTF_NATIVE } from "../../../src/contract/quantities/mtfNative.ts";
@@ -550,6 +551,94 @@ test("the unresolved share is of the samples beside the beam, held to LensVisual
   assert.deepEqual(refused.bundles, []);
 });
 
+/**
+ * A stand-in for an aimed lattice of `size` cells across with the counts given; `byReason` of the unaimed samples, in
+ * the order LensVisualizer's record has its reasons, and the stop-centre chief unaimed for `chiefReason` if one is given.
+ */
+function countedLattice(
+  size: number,
+  counts: { aimed: number; blocked: number; unaimed: number },
+  byReason: Record<string, number> = {},
+  chiefReason?: string,
+): LvAimedStopLattice {
+  const centre = { index: -1, xFraction: 0, yFraction: 0 };
+  const chief: LvAimedStopLattice["chief"] =
+    chiefReason === undefined
+      ? { ...centre, status: "aimed", origin: [0, 0, -10], direction: [0, 0, 1] }
+      : { ...centre, status: "unaimed", reason: chiefReason, origin: null, direction: null };
+  return {
+    ...latticeOf(size),
+    chief,
+    aimedCount: counts.aimed,
+    blockedCount: counts.blocked,
+    unaimedCount: counts.unaimed,
+    unaimedByReason: byReason,
+  };
+}
+
+test("a line whose lattice the aim found no ray of ends the field as aim-failed, in LensVisualizer's words, at once", () => {
+  // LV #940. Two lines; at the second, 486.1327 nm, the aim finds no ray of the lattice: no cell aimed, none blocked,
+  // 2 + 7 unaimed. The bundle has no ray, so without the rule it would be too little pupil, which asks for a finer grid.
+  const lines = [
+    { wavelengthNm: 550, weight: 1 },
+    { wavelengthNm: 486.1327, weight: 0.5 },
+  ];
+  const api = standIn({ lines, halfWidth: () => 0.01 });
+  const byReason = { "aim-not-converged": 0, "stop-unreachable": 2, "trace-failed": 7 };
+  const lostAt = (chiefReason?: string): LvReplayApi => ({
+    ...api,
+    traceMtfStopBundle: (...args) => {
+      const bundle = api.traceMtfStopBundle(...args) as LvMtfBundle;
+      const [, , , , size, line] = args;
+      if (line.wavelengthNm !== 486.1327) return bundle;
+      const lattice = countedLattice(size, { aimed: 0, blocked: 0, unaimed: 9 }, byReason, chiefReason);
+      return { ...bundle, rays: [], blocked: 0, failed: 0, unaimed: 9, lattice };
+    },
+  });
+  const options = optionsOf({ fieldFractions: [0] });
+  const [lost] = replayLvMtf(lostAt("trace-failed"), STATE, options).fields;
+  // The first grid ends the ladder: a finer lattice is aimed as this one was.
+  assert.deepEqual(lost.gridSizes, [8]);
+  assert.deepEqual([lost.field.status, lost.field.reason, lost.field.gridSize], ["unavailable", "aim-failed", 8]);
+  assert.equal(
+    lost.field.message,
+    "No sample of the 8-cell stop lattice could be aimed at 486.1 nm (2 stop-unreachable, 7 trace-failed). " +
+      "The stop-centre chief is unaimed too (trace-failed).",
+  );
+  // The line's counts are added before the field ends, as LensVisualizer adds them: the first line's 64 rays and 3
+  // blocked samples, and the second's 9 unaimed.
+  assert.deepEqual(
+    [lost.field.validRays, lost.field.blockedRays, lost.field.failedRays, lost.field.unaimedRays],
+    [64, 3, 0, 9],
+  );
+  assert.deepEqual(lost.bundles, []);
+  assert.equal(lost.reference, null);
+  // An aimed stop-centre chief adds no sentence.
+  const [chiefAimed] = replayLvMtf(lostAt(), STATE, options).fields;
+  assert.equal(
+    chiefAimed.field.message,
+    "No sample of the 8-cell stop lattice could be aimed at 486.1 nm (2 stop-unreachable, 7 trace-failed).",
+  );
+
+  // A lattice of which some cell is aimed, or blocked ahead of the stop, or that has no unaimed cell, is no such
+  // lattice: the field has its curves on the grids the ladder is walked to.
+  for (const counts of [
+    { aimed: 5, blocked: 0, unaimed: 4 },
+    { aimed: 0, blocked: 3, unaimed: 6 },
+    { aimed: 0, blocked: 0, unaimed: 0 },
+  ]) {
+    const kept: LvReplayApi = {
+      ...api,
+      traceMtfStopBundle: (...args) => {
+        const bundle = api.traceMtfStopBundle(...args) as LvMtfBundle;
+        return { ...bundle, lattice: countedLattice(args[4], counts, { "trace-failed": counts.unaimed }) };
+      },
+    };
+    const [field] = replayLvMtf(kept, STATE, options).fields;
+    assert.deepEqual([field.field.status, field.gridSizes], ["converged", [8, 16]], JSON.stringify(counts));
+  }
+});
+
 test("a field the estimator has no value for is unavailable with the estimator's reason, never left out", () => {
   const api = standIn({ lines: [{ wavelengthNm: 550, weight: 1 }], halfWidth: () => 0.01, brokenLanding: true });
   const replay = replayLvMtf(api, STATE, optionsOf());
@@ -745,6 +834,41 @@ test("cells the fake cannot aim or that are blocked ahead of its stop are counte
   }
 });
 
+test("a field whose lattice the fake aims no cell of is aim-failed in the replay as in the fake, at its first grid", async (t) => {
+  // Beyond 3 degrees the fake's aim finds no ray at all, the chief's included (`mtf.unaimedBeyondDeg`); the case is at
+  // a finite focus, whose aim the fake hands its chief launch (LV #940).
+  const lv = variantOf(freshLv(t), "lost", {
+    [SINGLET_FILE]: (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { sampled: true, unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { model } = await modelOf(binding, { state: { focus: { kind: "focusT", value: 1 } } });
+  const { own, replay } = both(binding, model);
+  assertSameSampling(own, replay);
+  const lost = replay.fields.filter(({ field }) => Math.abs(field.fieldAngleDeg as number) > 3);
+  const aimed = replay.fields.filter(({ field }) => Math.abs(field.fieldAngleDeg as number) <= 3);
+  assert.ok(lost.length > 0 && aimed.length > 0, JSON.stringify(replay.fields.map(({ field }) => field.fieldAngleDeg)));
+  for (const { field, gridSizes, bundles } of lost) {
+    // The fake's first grid, 4 cells across: 12 cells in the disc, all unaimed, and no finer grid asked for.
+    assert.deepEqual(
+      [field.status, field.reason, field.gridSize, field.unaimedRays],
+      ["unavailable", "aim-failed", 4, 12],
+    );
+    assert.deepEqual(gridSizes, [4]);
+    assert.deepEqual(bundles, []);
+    // The replay states LensVisualizer's words of the fake's lattice, at the case's reference line, 587.5618 nm; the
+    // fake's own words are its own.
+    assert.equal(
+      field.message,
+      "No sample of the 4-cell stop lattice could be aimed at 587.6 nm (12 trace-failed). " +
+        "The stop-centre chief is unaimed too (trace-failed).",
+    );
+    const fake = own.fields.find((each) => each.fieldFraction === field.fieldFraction);
+    assert.equal(fake?.message, "The fake aims no cell of this lattice.");
+  }
+  for (const { field } of aimed) assert.notEqual(field.status, "unavailable");
+});
+
 test("a footprint the fake's scan found too small is widened in the replay as in the fake, to the same counts", async (t) => {
   // The fake's scan finds 0.7 of the beam: rays reach the border of the box, which is widened once, the fake's limit.
   // Every field is one the fake launches from its "bounding sphere", which alone is sampled on the launch plane.
@@ -887,6 +1011,33 @@ test("replay answers the request lv answers, in lv's form: the two answers diffe
   const capped = dataOf(await ask(replay, opticalCase, SPEC, { lvGridCap: 32 }));
   assert.deepEqual(capped.method.params.ladder, [4, 8, 16, 32]);
   assert.equal(capped.method.params.maxGridSize, 32);
+});
+
+test("an aim-failed field is the same field in lv's answer and replay's: R4f finds no field or sampling mismatch", async (t) => {
+  const lv = variantOf(freshLv(t), "lost", {
+    [SINGLET_FILE]: (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { sampled: true, unaimedBeyondDeg: 3 },"),
+  });
+  const binding = await bind(t, lv);
+  const { opticalCase } = await modelOf(binding);
+  const [product, replayed] = [
+    dataOf(await ask(engineOn(t, binding, "lv"), opticalCase, SPEC)),
+    dataOf(await ask(engineOn(t, binding, "replay"), opticalCase, SPEC)),
+  ];
+  const lost = product.fields.filter((field) => field.reason === "aim-failed");
+  assert.ok(
+    lost.length > 0 && lost.length < product.fields.length,
+    JSON.stringify(product.fields.map((f) => f.reason)),
+  );
+  for (const field of lost) {
+    assert.deepEqual([field.status, field.sampling.gridSize, field.sampling.unaimedRays], ["unavailable", 4, 12]);
+  }
+  const outcome = mtfFidelityComparator.compare(product as unknown as JsonObject, replayed as unknown as JsonObject, {
+    spec: SPEC as unknown as JsonObject,
+  });
+  assert.ok(outcome.comparable, JSON.stringify(outcome));
+  const metric = (name: string) => outcome.metrics.find((each) => each.name === name)?.value;
+  assert.deepEqual([metric("fields.mismatches"), metric("sampling.mismatches")], [0, 0]);
 });
 
 test("replay has the geometric estimator and no profile; whatever lv refuses, it refuses with the same item", async (t) => {

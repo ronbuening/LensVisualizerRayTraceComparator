@@ -5333,7 +5333,9 @@ LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b`, 184 files (1
 `mtfRayClassification.ts` are gone; `pupils/aimedPupil.ts`, `pupils/stopLattice.ts`, `summary/fNumbers.ts`,
 `chromatic/zoneSelection.ts`, `geometry/rimCut.ts`, `state/apertureStop.ts`, `trace/rayClassification.ts` and
 `trace/symmetry.ts` are new). Part A is the binding, the stop rule and f-numbers, the MTF's stop lattice, the step
-backwards and the rim cuts; part B the ray sets of the spot, axial, curvature and vignetting tabs.
+backwards and the rim cuts; part B the ray sets of the spot, axial, curvature and vignetting tabs. Since then
+LensVisualizer main `6287f4393` (clean; `607ff23ae` and #940 alone), engine closure `fc5ae923`, 184 files, is adopted:
+"LensVisualizer #940" below.
 
 ### What each PR changed, and what the comparator did
 
@@ -5422,10 +5424,32 @@ of blocked cells and no aimed one keeps its set. The adapter revisions of `wave`
 their closures); `lv`'s, `replay`'s, `ref`'s and the optiland engines' did not. Sets of states at infinity are unchanged
 byte for byte; the focus-stations suite loses those fields' sets (its records of them GONE at the end refresh).
 
+**LensVisualizer #940 adopted at `6287f4393`** (`607ff23ae` and #940 alone; engine closure `fc5ae923`, 184 files, the
+same files; no binding name added or lost). It resolves the finding above, by options (a) and (c) of the brief:
+`prepareMtfFieldLaunch` hands a finite object's aim the chief it solved, `chiefLaunch: [0, aim.root]`, which `launchFrame`
+seeds the chief at (the straight line only without one) and `fieldGeometryKey` keys by; and `fieldAtGrid` ends a field
+`aim-failed` (a new `MtfUnavailableReason`) where a line's stop lattice aims nothing (`aimedNothing`: no cell aimed, none
+blocked, some unaimed), after that line's counts and without a finer grid, with a message of the aimer's reasons
+(`aimFailedMessage`). The same survey at `6287f4393` (67 states, 319 MTF fields, an 8-cell lattice at the reference
+line) finds no field whose lattice is all unaimed: each of the 47 fields whose straight-line seed fails is aimed, its
+chief included, with no unaimed cell (some cells blocked at the rim). `lv-field-unaimed` stays the code of such a
+lattice, met on no committed suite, and the focus-stations suite has those fields' sets again (new records at the end
+refresh, traced and judged by R2–R4 and R6a as every other field). The comparator restates the new end of `fieldAtGrid`
+in `replay` (`aimedNothing`, `aimFailedMessage`, a canary each), so an aim-failed field has the same status, reason,
+grid and counts in `lv`'s and `replay`'s answers (R4f's `fields.mismatches` and `sampling.mismatches` 0 in
+`test/engines/lv/replay.test.ts`, on the fake tree's lattice made to aim nothing; a stand-in turns red without the
+line). `LvAimedFieldGeometry` states `chiefLaunch`, the fake tree mirrors #940 (its chief launch; its own words for
+`aim-failed`). Two canaries were restated: the replay's bookkeeping of `fieldAtGrid` and the finite object's seed. The
+fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved; of the adapter revisions those of
+`replay` (`replay.ts`), `wave` and `flux` (a comment of `raySets.ts`) moved, and `lv`'s, `ref`'s, `ref-seidel`'s and the
+optiland engines' did not. The MTF and R4f pins and the summary margins, measured at `f016b35b`, are measured
+again at `fc5ae923` (`PINNED_CLOSURE` and `PINNED` of `mtf.test.ts` and `fidelity.test.ts`; `PINNED_CLOSURE`,
+`MEASURED_CASES` and `MARGINS` of `summary.test.ts`).
+
 ## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part B)
 
 LensVisualizer main `607ff23ae` (clean), engine closure `f016b35b` unchanged by part B (its new names are of modules
-already loaded). Part B is the ray sets of the spot, axial, curvature and vignetting tabs, `lv`'s answers of their
+already loaded; since #940, `6287f4393`, closure `fc5ae923`: part A). Part B is the ray sets of the spot, axial, curvature and vignetting tabs, `lv`'s answers of their
 quantities, the engine `flux`, and policy 24.
 
 ### What each PR changed, and what the comparator did

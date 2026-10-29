@@ -113,10 +113,11 @@ export function prepareMtfFieldLaunch(
   const centerY = objectPoint ? (objectPoint[1] * leadZ) / objectPoint[2] : leadZ * uField;
   // Beyond `vectorBeyondDeg` the fake launches from a "bounding sphere", which its aimed launch does not cover.
   const sphere = Math.abs(fieldAngleDeg) > (state.lens.runtime.source.field?.vectorBeyondDeg ?? Infinity);
+  // A finite object's aim is handed the fake's chief launch, as LV's is the chief it solved (LV #940).
   const aim = sphere
     ? null
     : objectPoint
-      ? { kind: "finite-object" as const, objectPoint, leadZ }
+      ? { kind: "finite-object" as const, objectPoint, leadZ, chiefLaunch: [0, centerY] as const }
       : { uField, yChief: 0 };
   return { fieldAngleDeg, direction: [0, uField / norm, 1 / norm], objectPoint, leadZ, centerY, aim };
 }
@@ -195,7 +196,8 @@ export function stopLattice(n: number) {
 // state the radius of the stop beyond which the fake aims nothing (`mtf.unaimedBeyond`) and beyond which a clear
 // aperture ahead of the stop blocks the way (`mtf.blockedBeyond`, at surface 0), as fractions of the stop radius; and
 // the field angle beyond which it aims no ray at all, the chief's included (`mtf.unaimedBeyondDeg`), as LV's aim of a
-// finite object point whose straight-line chief seed reaches no stop.
+// field whose chief seed reaches no stop (before LV #940, a finite object point seeded on the straight line to the
+// stop centre). The fake starts every ray from `centerY`, which a finite object's `chiefLaunch` states.
 export function aimMtfStopLattice(
   state: FakeState,
   options: FakeMtfOptions,
@@ -229,6 +231,7 @@ export function aimMtfStopLattice(
   };
   const rays = cells.map((cell, i) => toRay(i, cell.xFraction, cell.yFraction));
   const count = (status: string) => rays.filter((ray) => ray.status === status).length;
+  const because = (reason: string) => rays.filter((ray) => ray.status === "unaimed" && ray.reason === reason).length;
   return {
     launchSurface: launch.aim && "kind" in launch.aim ? "finite-object" : "object-plane",
     stopSurfaceIndex: state.lens.stop.surfaceIndex,
@@ -240,6 +243,8 @@ export function aimMtfStopLattice(
     aimedCount: count("aimed"),
     blockedCount: count("blocked"),
     unaimedCount: count("unaimed"),
+    // Every reason of the fake's, counted, in a record of its own order (not LV's).
+    unaimedByReason: { "stop-unreachable": because("stop-unreachable"), "trace-failed": because("trace-failed") },
     cellsAcross: gridSize,
     cells,
   };

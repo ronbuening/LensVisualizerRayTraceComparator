@@ -926,7 +926,10 @@ export interface LvMtfFieldResult {
   readonly tangential: readonly number[];
   /** "pending" only while a request is still being computed. */
   readonly status: "converged" | "unconverged" | "unavailable" | "pending";
-  /** LV's MtfUnavailableReason for an unavailable field. */
+  /**
+   * LV's MtfUnavailableReason for an unavailable field: "chief-ray-failed", "aim-failed" (LV #940: a stop lattice of
+   * which its aim found no ray at all), "trace-failed", "empty-pupil", "vignetted", "outside-modeled-field", ...
+   */
   readonly reason: string | null;
   readonly message: string;
   readonly notes: readonly string[];
@@ -1032,10 +1035,19 @@ export interface LvMtfFieldLaunch {
   readonly aim: LvAimedFieldGeometry | null;
 }
 
-/** The field geometry LV's aimed launch takes (`AimedPupilFieldGeometry`), of the two kinds its MTF hands it. */
+/**
+ * The field geometry LV's aimed launch takes (`AimedPupilFieldGeometry`), of the two kinds its MTF hands it. A finite
+ * object's states the chief `prepareMtfFieldLaunch` solved, (0, its launch height), as `chiefLaunch` (LV #940): the aim
+ * seeds its chief there, and on the straight line from the object point to the stop centre only without one.
+ */
 export type LvAimedFieldGeometry =
   | { readonly uField: number; readonly yChief: number }
-  | { readonly kind: "finite-object"; readonly objectPoint: LvVec3; readonly leadZ: number };
+  | {
+      readonly kind: "finite-object";
+      readonly objectPoint: LvVec3;
+      readonly leadZ: number;
+      readonly chiefLaunch?: readonly [number, number];
+    };
 
 /** One cell of LV's stop lattice (`StopLatticeCell`): a stop sample at normalised coordinates in the unit disc. */
 export interface LvStopLatticeCell {
@@ -1122,6 +1134,8 @@ export interface LvAimedPupilLaunch {
   readonly aimedCount: number;
   readonly blockedCount: number;
   readonly unaimedCount: number;
+  /** How many samples are unaimed for each of the aimer's reasons, every reason present, in LV's order. */
+  readonly unaimedByReason: Readonly<Record<string, number>>;
 }
 
 /** LV's AimedStopLattice: a stop lattice aimed for one field at one line; `rays[i]` is the ray of `cells[i]`. */

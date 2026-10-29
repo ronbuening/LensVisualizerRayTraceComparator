@@ -526,8 +526,9 @@ test("a cell LensVisualizer could not aim holds the chief ray at weight 0, and a
 });
 
 test("a field of which LensVisualizer aims no cell is a coded problem; one it aims or blocks cells of has its set", async (t) => {
-  // The fake aims no ray at all beyond 3 degrees, as LensVisualizer's aim of a finite object point whose
-  // straight-line chief seed reaches no stop (docs/gotchas.md): every cell and the chief "unaimed".
+  // The fake aims no ray at all beyond 3 degrees, as LensVisualizer's aim of a finite object point did before #940
+  // where its straight-line chief seed reached no stop (docs/gotchas.md): every cell and the chief "unaimed". No
+  // committed suite has such a field since #940; the code stays for any lattice LensVisualizer aims no cell of.
   const lv = variantOf(freshLv(t), "lost", {
     [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  mtf: { unaimedBeyondDeg: 3 },"),
   });

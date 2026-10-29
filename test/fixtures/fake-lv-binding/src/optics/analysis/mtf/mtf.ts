@@ -7,8 +7,9 @@ import type { FakeAnalysisRequest } from "../request.ts";
 // launch; its stop lattice, aimed at each line and seeded from the line's coarser one, or for a field launched from a
 // "bounding sphere" a footprint that is widened when rays reach its border; a ladder of grids with a test of
 // convergence between them, which goes on past a grid that asks for a finer one; a transfer function summed over the
-// rays of every line about one reference point; and LV's bookkeeping of dark lines and of the unresolved samples
-// beside the beam. Every number of it (the ladder, the tolerance, the limits) is the fake's own.
+// rays of every line about one reference point; and LV's bookkeeping of dark lines, of the unresolved samples beside
+// the beam and (since #940) of a lattice that aims nothing. Every number of it (the ladder, the tolerance, the limits)
+// is the fake's own.
 import type {
   FakeFieldLaunch,
   FakeFootprint,
@@ -198,6 +199,11 @@ function sampledAtGrid(
     openBorders.x ||= bundle.openBorders.x;
     openBorders.y0 ||= bundle.openBorders.y0;
     openBorders.y1 ||= bundle.openBorders.y1;
+    // As LV since #940: a lattice the aim found no ray of (no cell aimed or blocked) ends the field, in words of the
+    // fake's own, and asks for no finer grid.
+    const lattice = bundle.lattice as { aimedCount: number; blockedCount: number; unaimedCount: number } | undefined;
+    if (lattice && lattice.aimedCount === 0 && lattice.blockedCount === 0 && lattice.unaimedCount > 0)
+      return unavailable("aim-failed", "The fake aims no cell of this lattice.");
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
     sampled += transmitted + bundle.unresolvedInBeamWeight;
     unresolved += bundle.unresolvedInBeamWeight;

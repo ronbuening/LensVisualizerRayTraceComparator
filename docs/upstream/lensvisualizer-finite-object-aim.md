@@ -1,6 +1,15 @@
 # LensVisualizer: the aimed launch of a finite object starts from a chief ray that reaches no stop
 
-Status: **open; for the owner, not filed.** Observed at LV `607ff23ae` (clean; engine closure `f016b35b`), the
+Status: **resolved by LensVisualizer #940** (`6287f4393`, adopted by the comparator at Stage 6.8b; engine closure
+`fc5ae923`): options (a) and (c) below. `prepareMtfFieldLaunch` hands the aim `chiefLaunch: [0, aim.root]`, which
+`launchFrame` seeds the chief at (the straight line the fallback) and `fieldGeometryKey` keys by; and `fieldAtGrid` ends
+a field whose lattice aims nothing as `aim-failed` at its first grid, in place of `empty-pupil` at every grid. Surveyed
+again at `6287f4393` as in section 2 (67 states, 319 fields, 8 cells at the reference line): no field has a lattice all
+unaimed, and each of the 47 fields below is aimed, its chief included, with no unaimed cell. The comparator's
+`lv-field-unaimed` stays, met on no committed suite; the replay restates the `aim-failed` line for R4f. The history
+follows as it was written.
+
+Status then: **open; for the owner, not filed.** Observed at LV `607ff23ae` (clean; engine closure `f016b35b`), the
 commit the comparator adopted at Stage 6.8b. The comparator reports LensVisualizer's MTF as it is and changes no gate
 for this: a field of which LensVisualizer's aimed launch aims no cell is the coded problem `lv-field-unaimed` of that
 field (`lvFieldRays`, `docs/gotchas.md`, "A finite object's stop lattice that LensVisualizer aims no cell of"), no set

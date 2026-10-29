@@ -84,6 +84,8 @@ function launchFor(
     aimedCount: count("aimed"),
     blockedCount: count("blocked"),
     unaimedCount: count("unaimed"),
+    // The fake's one reason, in a record of its own order (not LV's).
+    unaimedByReason: { "stop-unreachable": count("unaimed"), "trace-failed": 0 },
     ...(cells === undefined ? {} : (cells as object)),
   };
 }

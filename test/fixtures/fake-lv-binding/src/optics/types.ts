@@ -138,7 +138,10 @@ export interface FakeFieldLaunch {
   leadZ: number;
   centerY: number;
   /** The field as the fake's aimed launch takes it; null beyond `field.vectorBeyondDeg`, a "bounding sphere". */
-  aim: { uField: number; yChief: number } | { kind: "finite-object"; objectPoint: Vec3; leadZ: number } | null;
+  aim:
+    | { uField: number; yChief: number }
+    | { kind: "finite-object"; objectPoint: Vec3; leadZ: number; chiefLaunch?: readonly [number, number] }
+    | null;
 }
 
 export interface FakeFootprint {

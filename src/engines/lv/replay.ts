@@ -16,7 +16,8 @@
 // What LensVisualizer does inline in `computeMtfSteps`, `traceField` and `fieldAtGrid` (src/optics/analysis/mtf/mtf.ts)
 // and exports no function for is restated here, expression by expression and in its order: the ladder of a
 // request, the image plane, which sampling a field has, the lattice each line's next grid is seeded with, the loop
-// that widens a launch-plane footprint, and the bookkeeping of one field at one grid. Source
+// that widens a launch-plane footprint, and the bookkeeping of one field at one grid, with its end of a lattice the
+// aim found no ray of (`aimedNothing`, `aimFailedMessage`, LV #940). Source
 // canaries hold every restated line to LensVisualizer's text (test/integration/lv/canaries.test.ts). The one thing
 // that is not LensVisualizer's is the transfer function: where LensVisualizer calls its own `geometricOtf` and
 // `combineOtfs`, the replay calls the comparator's `polychromaticOtf`.
@@ -149,6 +150,28 @@ function markUnavailable(field: LvMtfFieldDraft, reason: string, message: string
 }
 
 /**
+ * True when a stop lattice's aim found no ray at all: no cell aimed and none proven blocked. `aimedNothing` of mtf.ts,
+ * restated (LV #940).
+ */
+function aimedNothing(lattice: LvAimedStopLattice): boolean {
+  return lattice.aimedCount === 0 && lattice.blockedCount === 0 && lattice.unaimedCount > 0;
+}
+
+/**
+ * Why a lattice aimed nothing, in the aimer's own reason codes, in the order of its record: `aimFailedMessage` of
+ * mtf.ts, restated (LV #940). R4f compares no message, but the field states it as LensVisualizer's does.
+ */
+function aimFailedMessage(lattice: LvAimedStopLattice, wavelengthNm: number): string {
+  const reasons = Object.entries(lattice.unaimedByReason)
+    .filter(([, count]) => count > 0)
+    .map(([reason, count]) => `${count} ${reason}`)
+    .join(", ");
+  const chief =
+    lattice.chief.status === "unaimed" ? ` The stop-centre chief is unaimed too (${lattice.chief.reason}).` : "";
+  return `No sample of the ${lattice.cellsAcross}-cell stop lattice could be aimed at ${wavelengthNm.toFixed(1)} nm (${reasons}).${chief}`;
+}
+
+/**
  * One field at one grid size: `fieldAtGrid` of LensVisualizer for the geometric method, restated line for line (LV
  * #936), with the comparator's estimator in the place of LensVisualizer's.
  *
@@ -159,6 +182,9 @@ function markUnavailable(field: LvMtfFieldDraft, reason: string, message: string
  * - The counts add up over the lines, the unaimed and the unresolved samples beside the beam included. The flux the
  *   beam could carry is the transmitted weight plus the weight of the unresolved samples beside it, which alone are
  *   the unresolved share (`unresolvedInBeamWeight`, the third argument of `assessUnresolvedFlux`).
+ * - A line whose stop lattice the aim found no ray of (no cell aimed, none blocked, some unaimed) ends the field as
+ *   "aim-failed", with the aimer's reasons, once that line's counts are added (LV #940). It asks for no finer grid:
+ *   a finer lattice is solved as this one was.
  * - A line no ray reaches, every sample of it resolved, is dark (`darkLines`) and adds no curve; a line with fewer
  *   rays than `MTF_MIN_RAYS`, or without flux, ends the grid as "empty-pupil". Every line dark is "vignetted", some
  *   dark "empty-pupil"; both ask for a finer grid, which may find a thin beam.
@@ -225,6 +251,9 @@ function fieldAtGrid(
     openBorders.x ||= bundle.openBorders.x;
     openBorders.y0 ||= bundle.openBorders.y0;
     openBorders.y1 ||= bundle.openBorders.y1;
+    // A finer lattice solves its cells as this one does, so a lattice that aims nothing ends the ladder.
+    if (bundle.lattice && aimedNothing(bundle.lattice))
+      return unavailable("aim-failed", aimFailedMessage(bundle.lattice, line.wavelengthNm));
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
     sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
     unresolvedWeight += bundle.unresolvedInBeamWeight;
@@ -369,7 +398,7 @@ function replayField(api: LvReplayApi, context: ReplayContext, target: LvMtfFiel
  * A request LensVisualizer's gate refuses has no fields: `support` says why. A request without a field axis has the
  * fields LensVisualizer gives it, each unavailable. A field that cannot be replayed is a field with a status and a
  * reason like any other, never one left out: LensVisualizer's own reasons where its sampling ends
- * ("chief-ray-failed", "vignetted", "empty-pupil", "trace-failed", "outside-modeled-field"), and
+ * ("chief-ray-failed", "aim-failed", "vignetted", "empty-pupil", "trace-failed", "outside-modeled-field"), and
  * `REPLAY_ESTIMATOR_REASON` with the estimator's reason where the comparator's estimator has no value.
  *
  * The method of the request is not read: the replay is of the sampling, and its curves are always the geometric

@@ -450,7 +450,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `traceMtfStopBundle`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`,
   `assessUnresolvedFlux`, the constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping (since LV
   #936: the stop lattice of each line kept for the next grid, unaimed and unresolved-in-beam rays, dark lines, the
-  share of the beam's unresolved flux, a refinement past a failed share) and the ladder, each line with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
+  share of the beam's unresolved flux, a refinement past a failed share; since LV #940 a line whose lattice the aim
+  found no ray of ends the field `aim-failed` at once, with LV's message, `aimedNothing` and `aimFailedMessage`) and
+  the ladder, each line with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
   that decide which grids are traced (flux, unresolved share) stay LV's plain ones. Its request is `lvMtfRequest`,
   the one function `lv` builds its own with: never build a second. The stand-in of
   `test/engines/lv/replay.test.ts` holds each line of the bookkeeping to a closed form: removing one must turn a
@@ -767,7 +769,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own lattice. A lattice of
   which LV aims no cell (every ray `unaimed`) is no set: the coded problem `lv-field-unaimed` of that field (`lvFieldRays`,
   naming angle and line; `wave` and `flux` answer it unavailable with that code); a lattice of blocked cells and no
-  aimed one keeps its set, LV's blocking rays being rays every engine stops.
+  aimed one keeps its set, LV's blocking rays being rays every engine stops. Since LV #940 (adopted at `6287f4393`) a
+  finite object's aim is seeded at the chief `prepareMtfFieldLaunch` solved (`chiefLaunch`) and no MTF field of the
+  documented focus stations is unaimed: `lv-field-unaimed` stays the code of any such lattice, met on no committed
+  suite, and LV's own MTF (and the replay) end such a field `aim-failed` at its first grid.
 - **A sequential trace follows the order of the case, not of z**: a surface behind the last hit is met by a step
   backwards, as LV does since #934 (`intersectSequentialSurface`, a canary; before it LV failed there with
   `noBracket`); a ray that no longer travels toward +z is blocked at the next surface (LV steps back only for a ray
@@ -1737,7 +1742,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 
 ## Stage 6.8b LensVisualizer PRs adopted (parts A and B)
 
-- **LV `607ff23ae` adopted** (engine closure `f016b35b`, 184 files): #933 (stop rule, three f-numbers), #934 (step
+- **LV `607ff23ae` adopted** (engine closure `f016b35b`, 184 files), **then `6287f4393`** (`607ff23ae` and #940 only;
+  engine closure `fc5ae923`, 184 files; below): #933 (stop rule, three f-numbers), #934 (step
   backwards), #936 (MTF on the real stop), #928/#932 (rim cuts) touch the engine; #929, #935, #937, #938, #939 add no
   engine file. The binding lost `effectiveFNumber`, `traceMtfBundle`, `mtfTraceClassification` and gained
   `stopSemiDiameterForFNumber`, `stopRuleGeometry`, `aimMtfStopLattice`, `traceMtfLattice`, `traceMtfStopBundle`,
@@ -1747,17 +1753,32 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `f016b35b`. Adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`, `ref-seidel`, `optiland` and
   `optiland-wave` did not. No gate or floor moved; policy 24 adds only recorded rungs' limits and bands: R13b's and
   R14b's (2026-10-28), R7b's fans, R11b's transmission and R12b's four f-number and pupil bands (2026-10-29, above).
-- **LV assumption found: a finite object's aimed lattice is seeded on a straight line** (`docs/gotchas.md`, "A finite
-  object's stop lattice that LensVisualizer aims no cell of"; owner's brief
-  `docs/upstream/lensvisualizer-finite-object-aim.md`, not filed). LV's aimed launch seeds a finite object's chief on
-  the straight line from the object point to the stop centre, not on the chief `prepareMtfFieldLaunch` solved; where
-  that line reaches no stop (`noBracket`, a total reflection, or a miss of the first surface) the field model has no
-  chief crossing and every sample, the chief's included, is `unaimed`/`trace-failed`. At `607ff23ae` 47 MTF fields of
-  18 focus stations (wide lenses at close focus), exactly those whose straight-line seed fails; LV's MTF calls each
-  `empty-pupil` at every grid to 256 (validRays 0, unaimedRays 51468). Infinity states have none. The fields are the
-  coded problem `lv-field-unaimed` (above); a canary holds the seed's lines (run focus-stations again when it
-  fails). The adapter revisions of `wave` and `flux` moved (`raySets.ts`); `lv`'s, `replay`'s, `ref`'s and the
-  optiland engines' did not.
+- **LV assumption found, resolved by LV #940: a finite object's aimed lattice was seeded on a straight line**
+  (`docs/gotchas.md`, "A finite object's stop lattice that LensVisualizer aims no cell of"; owner's brief
+  `docs/upstream/lensvisualizer-finite-object-aim.md`, not filed). At `607ff23ae` LV's aimed launch seeded a finite
+  object's chief on the straight line from the object point to the stop centre, not on the chief
+  `prepareMtfFieldLaunch` solved; where that line reached no stop (`noBracket`, a total reflection, or a miss of the
+  first surface) the field model had no chief crossing and every sample, the chief's included, was
+  `unaimed`/`trace-failed`: 47 MTF fields of 18 focus stations (wide lenses at close focus), exactly those whose
+  straight-line seed fails; LV's MTF called each `empty-pupil` at every grid to 256 (validRays 0, unaimedRays 51468).
+  Infinity states had none. The fields were made the coded problem `lv-field-unaimed` (above); the adapter revisions
+  of `wave` and `flux` moved (`raySets.ts`); `lv`'s, `replay`'s, `ref`'s and the optiland engines' did not.
+- **LV #940 adopted at `6287f4393`** (`607ff23ae` and #940 only; engine closure `fc5ae923`, 184 files, no binding
+  name added or lost). `prepareMtfFieldLaunch` hands a finite object's aim the chief it solved (`aim.chiefLaunch`,
+  `[0, aim.root]`; `LvAimedFieldGeometry` types it), which `launchFrame` seeds the chief at (the straight line only
+  without one) and `fieldGeometryKey` keys by; and `fieldAtGrid` ends a field `aim-failed` (a new
+  `MtfUnavailableReason`) where a line's stop lattice aims nothing (`aimedNothing`: no cell aimed or blocked, some
+  unaimed), after that line's counts, with no finer grid. The replay restates both new lines (`aimedNothing`,
+  `aimFailedMessage`), an aim-failed field is the same field in `lv` and `replay` for R4f (status, reason, grid and
+  counts; `replay.test.ts` holds it with the fake's lattice made to aim nothing, and a stand-in that turns red without
+  the line), and the fake tree mirrors #940 (its chief launch, its aim-failed in words of its own). A survey of every
+  documented focus station at `6287f4393` (67 states, 319 MTF fields, an 8-cell lattice at the reference line) found no
+  field whose lattice is all unaimed, and each of the 47 fields whose straight-line seed fails is aimed, its chief
+  included, with no unaimed cell: `lv-field-unaimed` stays, met on no committed suite. Two canaries were restated (the
+  replay's `fieldAtGrid` bookkeeping and the finite object's seed). The fingerprint of `lv`, `replay`, `wave` and
+  `flux` (LV's closure) moved, and the adapter revisions of `replay` (`replay.ts`), `wave` and `flux` (a comment of
+  `raySets.ts`); `lv`'s, `ref`'s, `ref-seidel`'s and the optiland engines' did not. The MTF and R4f pins and the summary margins (`PINNED_CLOSURE` of
+  `mtf.test.ts`, `fidelity.test.ts`, `summary.test.ts`, at `f016b35b`) are to be measured again at `fc5ae923`.
 - **The crossing-surface FAILs of the catalog snapshot stay as recorded**: since #934 their seven reproducers PASS R2,
   but `docs/known-failures.json` and the catalog baselines are edited only by the end-of-project refresh, which will
   report the entries unused (`unusedKnownFailures`).

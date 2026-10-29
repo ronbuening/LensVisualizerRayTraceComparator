@@ -209,11 +209,12 @@ function distance(a: LvVec3, b: LvVec3): number {
  *
  * A lattice LensVisualizer aims no cell of (every ray "unaimed", the chief's too as a rule) has no ray of its own:
  * each cell would hold the chief ray at weight 0, a set of no ray that every engine would trace a thousand times
- * over and no estimator would read. LensVisualizer's own MTF calls such a field `empty-pupil` at every grid. It is a
- * field without rays, a coded problem of that field (the first line that has no aimed cell names it), and no set is
- * made of it. A lattice of which LensVisualizer aims no cell but blocks some is not: a blocked cell is a ray it
- * states, toward a target whose way a clear aperture ahead of the stop closes, which every engine traces and stops
- * there, as a vignetted field's.
+ * over and no estimator would read. LensVisualizer's own MTF ends such a field `aim-failed` at its first grid (since
+ * LV #940; before it, `empty-pupil` at every grid). It is a field without rays, a coded problem of that field (the
+ * first line that has no aimed cell names it), and no set is made of it. Since #940 seeds a finite object's aim at
+ * its solved chief, no committed suite has such a field. A lattice of which LensVisualizer aims no cell but blocks
+ * some is not: a blocked cell is a ray it states, toward a target whose way a clear aperture ahead of the stop
+ * closes, which every engine traces and stops there, as a vignetted field's.
  *
  * **On the real stop** (`launch.aim`, every field LensVisualizer's MTF aims): the lattice is LensVisualizer's own,
  * `aimMtfStopLattice` of the line at `cells` cells across the stop's diameter, the ray of each cell as it returns it,

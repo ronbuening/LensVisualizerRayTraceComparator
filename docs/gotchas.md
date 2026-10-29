@@ -721,6 +721,10 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   a line no ray reaches is dark and adds no curve; a refused share asks for a finer grid. The replay restates each
   line with a canary, and R4f's `sampling` holds the two new counts too: on the benchmark at `607ff23ae` its 192
   pairs PASS, `mtf.maxAbs` 1.3e-14, no mismatch.
+- **Since LV #940** (`6287f4393`) a line whose stop lattice the aim found no ray of (no cell aimed or blocked) ends
+  the field `aim-failed` at that grid, its counts added, with no finer grid; the replay restates the test and the
+  message (`aimedNothing`, `aimFailedMessage`) with a canary, so such a field has the same status, reason, grid and
+  counts in both answers (`test/engines/lv/replay.test.ts`). No committed suite has one.
 - **Class.** method.
 
 ### Two sums of the same terms differ in the fourteenth place
@@ -955,6 +959,15 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 
 ### A finite object's stop lattice that LensVisualizer aims no cell of
 
+- **Resolved by LV #940** (`6287f4393`, adopted at Stage 6.8b; engine closure `fc5ae923`); the entry below is of
+  `607ff23ae`, kept as history. `prepareMtfFieldLaunch` now hands the aim the chief it solved
+  (`chiefLaunch: [0, aim.root]`), which `launchFrame` seeds the chief at, the straight line being the fallback of a
+  geometry without one. A survey of every documented focus station at `6287f4393` (67 states, 319 MTF fields, an
+  8-cell lattice at the reference line, a read-only script through the binding) found no field whose lattice is all
+  unaimed; each of the 47 fields whose straight-line seed fails is aimed, its chief included, with no unaimed cell.
+  #940 also ends a field LensVisualizer's MTF aims nothing of as `aim-failed` at its first grid (`fieldAtGrid`), in
+  place of `empty-pupil` at every grid; the replay restates the line (R4f). `lv-field-unaimed` stays the code of
+  such a lattice, met on no committed suite.
 - **Where.** `prepareMtfFieldLaunch` (`src/optics/analysis/mtf/mtfTracing.ts`) solves a finite object's chief ray
   through the stop centre (`solveScalarRoot` on the launch height, `centerY`), but hands the aimed launch only
   `{ kind: "finite-object", objectPoint, leadZ }`. `launchFrame` in `src/optics/analysis/pupils/aimedPupil.ts` then
@@ -983,8 +996,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   none of, keeps its set: a blocked cell is LensVisualizer's own ray toward its target, which every engine stops ahead
   of the stop. The owner's brief is `docs/upstream/lensvisualizer-finite-object-aim.md` (not filed); a fix in
   LensVisualizer (seed the finite-object frame at the solved chief) makes the problem disappear by itself, and a
-  canary of the seed's lines (`canaries.test.ts`) fails first: run the focus-stations suite again then.
-- **Class.** data (an LensVisualizer defect in its aim, recorded as a coded problem).
+  canary of the seed's lines (`canaries.test.ts`) fails first: run the focus-stations suite again then. (#940 is that
+  fix; the canary now holds its lines.)
+- **Class.** data (an LensVisualizer defect in its aim, recorded as a coded problem; resolved by #940).
 
 ## Any two engines
 

@@ -5,7 +5,8 @@
 // reread at Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files). Those LensVisualizer's PRs #927 to #936 moved
 // (the stop rule, the MTF's stop lattice, the aimed pupil samples of the spot, axial and curvature sets, the colour
 // zone of four channels, the vignetting tab's stop lattice) were reread at Stage 6.8b, at LV 607ff23ae (closure
-// f016b35b, 184 files).
+// f016b35b, 184 files). Those LensVisualizer #940 moved (a finite object's chief seed, the end of a lattice that aims
+// nothing) were reread at LV 6287f4393 (closure fc5ae923, 184 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -1205,7 +1206,8 @@ test(
 );
 
 test("the MTF still accounts for one field at one grid as the replay restates it", { skip }, () => {
-  // Read at 607ff23ae (LV #936: the stop lattice, dark lines, the unresolved samples beside the beam).
+  // Read at 607ff23ae (LV #936: the stop lattice, dark lines, the unresolved samples beside the beam), and at
+  // 6287f4393 (LV #940: a lattice that aims nothing ends the field as "aim-failed").
   const mtf = "src/optics/analysis/mtf/mtf.ts";
   const mirror = "fieldAtGrid in src/engines/lv/replay.ts restates the bookkeeping, line by line and in this order";
   assertSource(
@@ -1267,6 +1269,9 @@ test("the MTF still accounts for one field at one grid as the replay restates it
        openBorders.x ||= bundle.openBorders.x;
        openBorders.y0 ||= bundle.openBorders.y0;
        openBorders.y1 ||= bundle.openBorders.y1;
+       // A finer lattice solves its cells as this one does, so a lattice that aims nothing ends the ladder.
+       if (bundle.lattice && aimedNothing(bundle.lattice))
+         return unavailable("aim-failed", aimFailedMessage(bundle.lattice, line.wavelengthNm));
        const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
        sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
        unresolvedWeight += bundle.unresolvedInBeamWeight;
@@ -1276,6 +1281,34 @@ test("the MTF still accounts for one field at one grid as the replay restates it
          continue;
        }`,
     mirror,
+  );
+  // LV #940: which lattice aimed nothing, and the words the field is ended with, restated in replay.ts.
+  assertSource(
+    mtf,
+    `function aimedNothing(lattice: AimedStopLattice): boolean {
+       return lattice.aimedCount === 0 && lattice.blockedCount === 0 && lattice.unaimedCount > 0;
+     }`,
+    "aimedNothing in src/engines/lv/replay.ts is this test",
+  );
+  assertSource(
+    mtf,
+    `function aimFailedMessage(lattice: AimedStopLattice, wavelengthNm: number): string {
+       const reasons = Object.entries(lattice.unaimedByReason)
+         .filter(([, count]) => count > 0)
+         .map(([reason, count]) => \`\${count} \${reason}\`)
+         .join(", ");
+       const chief =
+         lattice.chief.status === "unaimed" ? \` The stop-centre chief is unaimed too (\${lattice.chief.reason}).\` : "";
+       return \`No sample of the \${lattice.cellsAcross}-cell stop lattice could be aimed at \${wavelengthNm.toFixed(1)} nm (\${reasons}).\${chief}\`;
+     }`,
+    "aimFailedMessage in src/engines/lv/replay.ts builds this message",
+  );
+  assertSource(
+    "src/types/mtf.ts",
+    `| "chief-ray-failed"
+     | "aim-failed"
+     | "trace-failed"`,
+    'replay.ts and the LvMtfFieldResult reason name "aim-failed" among LensVisualizer\'s reasons; fieldOf passes it on',
   );
   assertSource(
     mtf,
@@ -2847,25 +2880,50 @@ test(
   },
 );
 
-test("a finite object's aimed launch still seeds its chief on the straight line to the stop centre", { skip }, () => {
-  // Read at 607ff23ae. Where that straight line reaches no stop, the field model has no chief crossing and every
-  // sample is unaimed (47 fields of 18 focus stations): lvFieldRays makes no set of such a field (lv-field-unaimed).
-  // When these lines change, run the focus-stations suite again: the fields may then be aimed and have sets
-  // (docs/gotchas.md, "A finite object's stop lattice that LensVisualizer aims no cell of";
-  // docs/upstream/lensvisualizer-finite-object-aim.md).
-  const why = "lvFieldRays's lv-field-unaimed of the focus stations, whose cause docs/gotchas.md describes";
-  const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
-  assertSource(
-    "src/optics/analysis/mtf/mtfTracing.ts",
-    '? { kind: "finite-object", objectPoint, leadZ }',
-    `${why}: the aimed launch is handed the object point, not the solved chief`,
-  );
-  assertSource(aimed, "const seedFraction = (stopZ - leadZ) / (stopZ - objectPoint[2]);", why);
-  assertSource(aimed, "chief: axial ? [0, 0] : [objectPoint[0] * seedFraction, objectPoint[1] * seedFraction],", why);
-  assertSource(aimed, "chiefStop: stopAt(frame.chief),", why);
-  assertSource(
-    aimed,
-    'return { status: "unaimed", reason: "trace-failed", launch: model.chief, stop: null, iterations: 0 };',
-    why,
-  );
-});
+test(
+  "a finite object's aimed launch seeds its chief at the solved chief, on the straight line to the stop centre only without it",
+  { skip },
+  () => {
+    // Read at 607ff23ae, where the seed was the straight line alone: where it reached no stop, the field model had no
+    // chief crossing and every sample was unaimed (47 fields of 18 focus stations), which lvFieldRays makes no set of
+    // (lv-field-unaimed). Read again at 6287f4393 (LV #940): prepareMtfFieldLaunch hands the aim the chief it solved,
+    // and no MTF field of the 67 documented focus stations is then left with no aimed cell. When these lines change,
+    // run the focus-stations suite again (docs/gotchas.md, "A finite object's stop lattice that LensVisualizer aims no
+    // cell of"; docs/upstream/lensvisualizer-finite-object-aim.md).
+    const why =
+      "lvFieldRays's lv-field-unaimed, met on no focus station since LV #940, whose history docs/gotchas.md describes";
+    const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
+    assertSource(
+      "src/optics/analysis/mtf/mtfTracing.ts",
+      `return {
+         ...launch,
+         centerY: aim.root,
+         aim: { kind: "finite-object", objectPoint, leadZ, chiefLaunch: [0, aim.root] },
+       };`,
+      `${why}: the aimed launch is handed the solved chief (LvAimedFieldGeometry's chiefLaunch in types.ts)`,
+    );
+    assertSource(
+      aimed,
+      "readonly chiefLaunch?: readonly [number, number];",
+      "LvAimedFieldGeometry in src/engines/lv/types.ts states it so",
+    );
+    assertSource(aimed, "const { objectPoint, leadZ, chiefLaunch } = geometry;", why);
+    assertSource(aimed, "const seedFraction = (stopZ - leadZ) / (stopZ - objectPoint[2]);", why);
+    assertSource(
+      aimed,
+      "chief: axial ? [0, 0] : (chiefLaunch ?? [objectPoint[0] * seedFraction, objectPoint[1] * seedFraction]),",
+      why,
+    );
+    assertSource(aimed, "chiefStop: stopAt(frame.chief),", why);
+    assertSource(
+      aimed,
+      'return { status: "unaimed", reason: "trace-failed", launch: model.chief, stop: null, iterations: 0 };',
+      why,
+    );
+    assertSource(
+      aimed,
+      'return join("f", [...geometry.objectPoint, geometry.leadZ, ...(geometry.chiefLaunch ?? [])]);',
+      `${why}: two fields of one object point and another chief are aimed apart`,
+    );
+  },
+);
