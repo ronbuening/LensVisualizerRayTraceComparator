@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { baselineText, buildBaseline } from "../../src/baseline/build.ts";
 import { renderBaselineReport } from "../../src/baseline/report.ts";
@@ -16,13 +17,14 @@ import { loadConfig, REPO_ROOT } from "../../src/core/config.ts";
 import { runSuite } from "../../src/core/orchestrator.ts";
 import type { FollowUp } from "../../src/core/orchestrator.ts";
 import { createProcessRegistry } from "../../src/core/processRegistry.ts";
+import type { PoolJobTicket, StoredAdapter } from "../../src/core/processRegistry.ts";
 import { createResultStore } from "../../src/core/resultStore.ts";
 import { selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { createEngineRegistry } from "../../src/engines/registry.ts";
 import { buildReport } from "../../src/report/model.ts";
 import { renderMarkdown } from "../../src/report/markdown.ts";
-import { pairSuite, tempDir } from "./support.ts";
+import { pairSuite, SINGLET, tempDir } from "./support.ts";
 
 const rung: RungDefinition = {
   ...selftestRung,
@@ -158,6 +160,113 @@ for (const dies of [false, true]) {
     );
   });
 }
+
+test("a job paused for memory keeps its turn: a later job cannot end a stdio replica before it is sent there", async (t) => {
+  const root = tempDir(t);
+  writeFileSync(
+    join(root, "lvrtc.config.json"),
+    JSON.stringify({
+      engines: {
+        "fake-stdio": {
+          transport: "stdio",
+          command: [process.execPath, join(REPO_ROOT, "test/fixtures/pool-engine/worker.mjs")],
+          options: { id: "fake-stdio", crashScale: 5 },
+        },
+      },
+    }),
+  );
+  const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: join(root, "runs") } });
+  let pressure = false;
+  // One slot: the job that takes it first is the first its replica answers.
+  const registry = createProcessRegistry(loaded, 1, {
+    memoryBudgetGiB: 10,
+    memorySampleMs: 200,
+    memoryReader: async (children) =>
+      children.map((child) => ({ pid: child.pid, nodeRssBytes: pressure ? 11 * 2 ** 30 : 1, workers: [] })),
+  });
+  const adapter = (await registry.create("fake-stdio")) as StoredAdapter;
+  try {
+    await adapter.describe();
+    const [base] = selftestRung.buildRequests(SINGLET, pairSuite().runs[0].spec);
+    // As the orchestrator asks: a ticket per job, in order, released when the job has ended.
+    const ask = async (scale: number) => {
+      const ticket = registry.enqueue("fake-stdio");
+      try {
+        return await adapter.askStored!(
+          makeRequest({ caseId: SINGLET.id, quantity: base.quantity, spec: { ...base.spec, scale } }),
+          SINGLET,
+          [],
+          ticket,
+        );
+      } finally {
+        ticket.release();
+      }
+    };
+    pressure = true;
+    const earlier = ask(4);
+    // The earlier job reads the pressure and waits a sampling period; the later one arrives after it has gone.
+    await delay(20);
+    pressure = false;
+    const later = ask(5);
+    const [first, second] = await Promise.all([earlier, later]);
+    assert.equal(first.result.status, "ok", first.result.error?.message);
+    assert.equal(second.result.error?.code, "transport-error");
+  } finally {
+    await adapter.close();
+  }
+});
+
+test("an earlier job asked late is sent to a live stdio replica, not to a slot whose replica a later job ended", async (t) => {
+  const root = tempDir(t);
+  const module = join(REPO_ROOT, "test/fixtures/pool-engine/engine.mjs");
+  writeFileSync(
+    join(root, "lvrtc.config.json"),
+    JSON.stringify({
+      engines: {
+        // Holds the first slot while the stdio replica of the second one is ended.
+        "fake-a": { transport: "in-process", module, options: { id: "fake-a", delay: 3_000 } },
+        "fake-stdio": {
+          transport: "stdio",
+          command: [process.execPath, join(REPO_ROOT, "test/fixtures/pool-engine/worker.mjs")],
+          options: { id: "fake-stdio", crashScale: 5 },
+        },
+      },
+    }),
+  );
+  const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: join(root, "runs") } });
+  const registry = createProcessRegistry(loaded, 2, { memoryBudgetGiB: 10 });
+  const stdio = (await registry.create("fake-stdio")) as StoredAdapter;
+  const holder = (await registry.create("fake-a")) as StoredAdapter;
+  try {
+    // Both replicas are on the first slot, the only one so far.
+    await stdio.describe();
+    await holder.describe();
+    const [base] = selftestRung.buildRequests(SINGLET, pairSuite().runs[0].spec);
+    const ask = async (adapter: StoredAdapter, ticket: PoolJobTicket, scale: number) => {
+      try {
+        return await adapter.askStored!(
+          makeRequest({ caseId: SINGLET.id, quantity: base.quantity, spec: { ...base.spec, scale } }),
+          SINGLET,
+          [],
+          ticket,
+        );
+      } finally {
+        ticket.release();
+      }
+    };
+    // The earlier stdio job is asked last, as a duplicate is after the answer it waited for.
+    const earlier = registry.enqueue("fake-stdio");
+    const later = registry.enqueue("fake-stdio");
+    const held = ask(holder, registry.enqueue("fake-a"), 1);
+    const ended = ask(stdio, later, 5);
+    const [answer, crash] = await Promise.all([ask(stdio, earlier, 4), ended, held]);
+    assert.equal(answer.result.status, "ok", answer.result.error?.message);
+    assert.equal(crash.result.error?.code, "transport-error");
+  } finally {
+    await stdio.close();
+    await holder.close();
+  }
+});
 
 test("a Node pool slot dying retires its engine without replacing the slot; other engines finish", async (t) => {
   const root = tempDir(t);
