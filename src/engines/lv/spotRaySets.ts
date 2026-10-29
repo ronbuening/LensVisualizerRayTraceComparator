@@ -2,15 +2,16 @@
 // patterns, as `rays.trace` specs. "Identical rays" for the rung R7a are these: each tab's own launch, traced as
 // given by every engine.
 //
-// The field of a pattern, its pupil samples and the slope of its launch are LensVisualizer's own functions
-// (`computeOffAxisFieldGeometry`, `sampleCircularPupil`, `sampleOrthogonalPupilFan`, `directionFromSkewSlope`).
-// What the tabs do inline, and export no function for, is restated here, each line with a source canary
-// (test/integration/lv/canaries.test.ts): which fields, rings and fan the tabs draw (`buildComaTraceContext` in
-// coma.ts, `buildBokehTraceContext` in bokeh.ts), the detail field of the coma fans (`comaDetailFieldFraction`),
-// where a sample of the pupil crosses the first vertex plane (`traceOffAxisBundleFromSamples` in offAxis.ts), and
-// where LensVisualizer's skew launch then starts the ray and in which direction (`bindRayTrace` in
-// rayAdapters.ts). An integration test holds the rays to LensVisualizer's own: traced by LensVisualizer, they give
-// its coma point cloud, its coma fans and its bokeh tiles to the bit (test/integration/lv/spotRays.test.ts).
+// The field of a pattern, its pupil samples and, since LensVisualizer #927, each sample's ray are LensVisualizer's own
+// functions (`computeOffAxisFieldGeometry`, `sampleCircularPupil`, `sampleOrthogonalPupilFan`, and the shared aimed
+// launch `prepareAimedPupilLaunch`, which aims a sample at (px, py) at its point (px R, py R) of the real stop): the
+// rays are kept verbatim. What the tabs do inline, and export no function for, is restated here, each line with a
+// source canary (test/integration/lv/canaries.test.ts): which fields, rings and fan the tabs draw
+// (`buildComaTraceContext` in coma.ts, `buildBokehTraceContext` in bokeh.ts), the detail field of the coma fans
+// (`comaDetailFieldFraction`), and which of the launch's rays `traceOffAxisBundleFromSamples` in offAxis.ts traces (its
+// chief ray, the aimed and the blocked samples; never an unaimed one). An integration test holds the rays to
+// LensVisualizer's own: traced as the tabs trace them, they give its coma point cloud, its coma fans and its bokeh
+// tiles to the bit (test/integration/lv/spotRays.test.ts).
 import type { RaysTraceSpec } from "../../contract/quantities/raysTrace.ts";
 import type { SpotNativeSpec, SpotPupil } from "../../contract/quantities/spotNative.ts";
 import { encodeNdArray } from "../../core/numeric/ndarray.ts";
@@ -22,9 +23,11 @@ import type { LvRaysApi } from "./rays.ts";
 import { lvRayWeights } from "./raySets.ts";
 import type { LvHookApi } from "./tabRequest.ts";
 import type { LvSpotSetup } from "./spotSetup.ts";
-export { lvSpotSetup } from "./spotSetup.ts";
+export { lvSpotRequest, lvSpotSetup } from "./spotSetup.ts";
 export type { LvSpotSetup } from "./spotSetup.ts";
 import type {
+  LvAimedObjectPlaneField,
+  LvAnalysisRequest,
   LvApi,
   LvCircularPupilSample,
   LvFieldGeometry,
@@ -32,7 +35,7 @@ import type {
   LvOrthogonalPupilSample,
   LvVec3,
 } from "./types.ts";
-import { lvSpotSetup } from "./spotSetup.ts";
+import { lvSpotRequest, lvSpotSetup } from "./spotSetup.ts";
 
 /** The LensVisualizer exports the spot sets are made with. */
 export type LvSpotApi = LvRaysApi &
@@ -49,6 +52,8 @@ export type LvSpotApi = LvRaysApi &
     | "comaFanSampleCount"
     | "bokehRingSamples"
     | "bokehFieldFractions"
+    | "createAnalysisRequest"
+    | "prepareAimedPupilLaunch"
   >;
 
 /** The two tabs whose rays are the spot sets. */
@@ -124,10 +129,17 @@ export interface LvSpotFieldRays {
   readonly origins: Float64Array;
   /** x, y, z of each ray's direction, in the same order. */
   readonly directions: Float64Array;
-  /** The area weight of each sample as LensVisualizer states it, 1 for a fan's sample; the chief's is 0. */
+  /**
+   * The area weight of each sample as LensVisualizer states it, 1 for a fan's sample; 0 for an unaimed sample, which
+   * holds the chief ray, and for the chief ray.
+   */
   readonly launchWeights: Float64Array;
   /** The index of the chief ray: the last ray. */
   readonly chiefIndex: number;
+  /** How many samples LensVisualizer could not aim: each holds the chief ray at weight 0. */
+  readonly unaimed: number;
+  /** How many samples a clear aperture or a total reflection ahead of the stop blocks: each is LV's blocking ray. */
+  readonly blocked: number;
 }
 
 /**
@@ -147,6 +159,8 @@ export interface LvSpotFieldRays {
  * ```
  * const direction = directionFromSkewSlope(ux, uy) ?? ([0, 0, 1] as Vec3);
  * ```
+ *
+ * The chief and the parabasal rays of the curvature sets and the chief rays of the chief sets are launched so.
  */
 export function lvSkewLaunch(
   api: Pick<LvApi, "directionFromSkewSlope">,
@@ -165,67 +179,64 @@ export function lvSkewLaunch(
 }
 
 /**
- * The launch rays of one field of a pattern, at a scalar field geometry: restated from
- * `traceOffAxisBundleFromSamples` in offAxis.ts, which launches each sample with
+ * The launch rays of one field of a pattern, at a scalar field geometry: LensVisualizer's shared aimed launch of the
+ * pattern's samples (`prepareAimedPupilLaunch`, LV #927) with the request the drawer hands the tabs, as
+ * `traceOffAxisBundleFromSamples` in offAxis.ts asks it and traces it:
  *
  * ```
- * const trace = adapter.skew(
- *   sample.xFraction * entrancePupilSemiDiameter,
- *   geometry.yChief + sample.yFraction * entrancePupilSemiDiameter,
- *   0,
- *   geometry.uField,
- * );
+ * const launch = prepareAimedPupilLaunch(request, samples, geometry, channel);
+ * if (launch === null || launch.chief.status !== "aimed") return null;
+ * const chiefTrace = tracer.skew(launch.chief);
+ * if (ray.status === "unaimed") { unaimedSamples.push(...); return []; }
+ * if (ray.status === "blocked") { blockedSampleCount++; return []; }
+ * const trace = tracer.skew(ray);
  * ```
  *
- * and the chief ray with (`traceOffAxisChiefRay`)
- *
- * ```
- * const trace = adapter.skew(
- *   0 * entrancePupilSemiDiameter,
- *   geometry.yChief + 0 * entrancePupilSemiDiameter,
- *   0,
- *   geometry.uField,
- * );
- * ```
- *
- * Every sample is a ray, the ones an aperture will stop included; LensVisualizer drops those after tracing them.
+ * Every ray is LensVisualizer's as it returns it: the aimed ray of each sample, the blocking ray of a blocked sample,
+ * which every engine stops ahead of the stop (LensVisualizer counts it vignetted without tracing it), and the
+ * launch's stop-centre ray as the chief ray. A sample LensVisualizer could not aim has no ray, and is never traced:
+ * it holds the chief ray at weight 0, so the set keeps a ray a sample and nothing is fabricated. A field whose launch
+ * LensVisualizer has none of (no stop), or whose stop-centre ray it could not aim (the tab then draws nothing of the
+ * field), is a coded problem.
  */
 export function lvSpotFieldRays(
-  api: Pick<LvApi, "directionFromSkewSlope">,
-  model: LvCaseModel,
-  entrancePupilSemiDiameter: number,
-  geometry: { readonly yChief: number; readonly uField: number },
+  api: Pick<LvApi, "prepareAimedPupilLaunch">,
+  request: LvAnalysisRequest,
+  geometry: LvAimedObjectPlaneField,
   samples: readonly (LvCircularPupilSample | LvOrthogonalPupilSample)[],
-): LvSpotFieldRays {
+): LvSpotFieldRays | { readonly problem: string } {
+  const launch = api.prepareAimedPupilLaunch(request, samples, geometry);
+  if (launch === null) {
+    return { problem: rayProblem("lv-no-launch", "LensVisualizer's aimed launch has no stop to aim at") };
+  }
+  const chief = launch.chief;
+  if (chief.status !== "aimed") {
+    const why = chief.status === "unaimed" ? chief.reason : `blocked at surface ${chief.blockedAtSurfaceIndex}`;
+    const message = `LensVisualizer aims no ray through the stop's centre (${why}): the tabs draw nothing of the field`;
+    return { problem: rayProblem("lv-chief-unaimed", message) };
+  }
   const count = samples.length + 1;
   const origins = new Float64Array(count * 3);
   const directions = new Float64Array(count * 3);
   const launchWeights = new Float64Array(count);
+  let [unaimed, blocked] = [0, 0];
   for (const [index, sample] of samples.entries()) {
-    const { origin, direction } = lvSkewLaunch(
-      api,
-      model,
-      sample.xFraction * entrancePupilSemiDiameter,
-      geometry.yChief + sample.yFraction * entrancePupilSemiDiameter,
-      0,
-      geometry.uField,
-    );
-    origins.set(origin, 3 * index);
-    directions.set(direction, 3 * index);
+    const ray = launch.rays[index];
+    if (ray.status === "unaimed") {
+      unaimed++;
+      origins.set(chief.origin, 3 * index);
+      directions.set(chief.direction, 3 * index);
+      continue;
+    }
+    if (ray.status === "blocked") blocked++;
+    origins.set(ray.origin, 3 * index);
+    directions.set(ray.direction, 3 * index);
     launchWeights[index] = "weight" in sample ? sample.weight : 1;
   }
   const chiefIndex = count - 1;
-  const chief = lvSkewLaunch(
-    api,
-    model,
-    0 * entrancePupilSemiDiameter,
-    geometry.yChief + 0 * entrancePupilSemiDiameter,
-    0,
-    geometry.uField,
-  );
   origins.set(chief.origin, 3 * chiefIndex);
   directions.set(chief.direction, 3 * chiefIndex);
-  return { origins, directions, launchWeights, chiefIndex };
+  return { origins, directions, launchWeights, chiefIndex, unaimed, blocked };
 }
 
 /** The field angle a tab draws a fraction of the half field at, restated from `computeOffAxisFieldGeometry`. */
@@ -282,7 +293,8 @@ function fieldSets(
     const message = `LensVisualizer draws no coma fan on the axis (the fraction ${fraction} of the half field)`;
     return { problem: rayProblem("lv-no-fan-on-axis", message) };
   }
-  const rays = lvSpotFieldRays(api, model, setup.pupilSemiDiameterMm, geometry, samplesOf(api, pattern.pupil));
+  const rays = lvSpotFieldRays(api, lvSpotRequest(api, model, setup), geometry, samplesOf(api, pattern.pupil));
+  if ("problem" in rays) return { problem: rays.problem };
   if (!startsInFront(model.exported.system.surfaces[0], rays.origins)) {
     return { problem: launchBehindProblem(geometry.fieldAngleDeg) };
   }
@@ -310,18 +322,21 @@ function askOf(setup: LvSpotSetup, pattern: LvSpotPattern): SpotNativeAsk {
 
 /**
  * The spot sets of a case that came from a LensVisualizer lens: for every pattern of the coma and the bokeh tab
- * (`lvSpotPatterns`), in that order, and every field of it, the field's launch rays (`lvSpotFieldRays`) as one set
- * for each line of the case, in the order of the lines. The rays are the same at every line, as in LensVisualizer,
- * which traces its tabs at the authored indices; the weights are the pattern's: the area weight of a sample of the
- * point cloud, 1 for a fan's, and for a bokeh tile the area weight times LensVisualizer's bulk transmission of the
- * ray at the line (`lvRayWeights`). Each set states its field angle and its chief ray under `groups`.
+ * (`lvSpotPatterns`), in that order, and every field of it, the field's launch rays (`lvSpotFieldRays`: since
+ * LensVisualizer #927 each sample aimed at its point of the real stop) as one set for each line of the case, in the
+ * order of the lines. The rays are the same at every line, as in LensVisualizer, which aims and traces its tabs at the
+ * authored indices; the weights are the pattern's: the area weight of a sample of the point cloud, 1 for a fan's, and
+ * for a bokeh tile the area weight times LensVisualizer's bulk transmission of the ray at the line (`lvRayWeights`);
+ * 0 for a sample LensVisualizer could not aim, which holds the chief ray. Each set states its field angle and its
+ * chief ray under `groups`.
  *
  * Beside the sets: the `spot.native` request of every pattern at the case's reference line, with the angles of its
  * fields (`SpotNativeAsk`).
  *
  * A field without rays is a coded problem and the others are not affected: no launch of LensVisualizer's
- * (`lv-no-launch`), a fisheye field launched from a bounding sphere (`lv-vector-launch`), a coma fan on the axis
- * (`lv-no-fan-on-axis`), rays that would not start in front of the first surface (`launch-behind-first-surface`).
+ * (`lv-no-launch`), a stop-centre ray it could not aim (`lv-chief-unaimed`), a fisheye field launched from a bounding
+ * sphere (`lv-vector-launch`), a coma fan on the axis (`lv-no-fan-on-axis`), rays that would not start in front of the
+ * first surface (`launch-behind-first-surface`).
  * A folded case (`folded-path`) and a case whose object is not at infinity (`object-not-at-infinity`) have no sets
  * and no requests at all, one problem each.
  */

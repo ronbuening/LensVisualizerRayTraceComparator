@@ -7,7 +7,3 @@ export function fNumberAtStopdown(stopdownT: number, zoomT: number, L: FakeRunti
   return Math.max(requested, fopenAtZoomClamped(zoomT, L));
 }
 
-// The fake's effective f-number: the marked one at infinity, and twice it at the closest focus, its own rule.
-export function effectiveFNumber(nominalFNumber: number, focusT: number): number {
-  return nominalFNumber * (1 + focusT);
-}

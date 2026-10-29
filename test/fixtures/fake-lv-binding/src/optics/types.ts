@@ -13,6 +13,8 @@ export interface FakeSurfaceData {
   synthetic?: "rearPlate";
   /** False only on a rear plate whose rim the fake generated: it clips no ray, and its `sd` is an envelope. */
   clips?: false;
+  /** A flat rim cut, as LV #928: the land's depth from the vertex and the radius where the cap meets it. */
+  rimCut?: { depthMm: number; radius: number };
 }
 
 export interface FakeFiniteConjugate {
@@ -51,11 +53,16 @@ export interface FakeLensData {
   mtf?: {
     unconvergedFraction?: number;
     clippedChiefFraction?: number;
-    limitingSurfaceLabel?: string;
+    /** The surface the fake says vignettes the axial marginal ray, after the stop; none without it. */
+    axialVignettingLabel?: string;
     /** True: the geometric MTF is sampled, grid by grid, from the fake's own bundles, and is no closed form. */
     sampled?: boolean;
     /** The share of the beam the fake's footprint scan finds; 1 without it. */
     footprintScale?: number;
+    /** Beyond this fraction of the stop radius the fake's aim finds no ray: the cells are "unaimed". */
+    unaimedBeyond?: number;
+    /** Beyond this fraction of the stop radius the fake's aim is "blocked" ahead of the stop, at surface 0. */
+    blockedBeyond?: number;
   };
   /** The fake's field axis: image height per degree, the angle its model reaches, a format corner, and its limits. */
   field?: {
@@ -128,6 +135,8 @@ export interface FakeFieldLaunch {
   objectPoint?: Vec3;
   leadZ: number;
   centerY: number;
+  /** The field as the fake's aimed launch takes it; null beyond `field.vectorBeyondDeg`, a "bounding sphere". */
+  aim: { uField: number; yChief: number } | { kind: "finite-object"; objectPoint: Vec3; leadZ: number } | null;
 }
 
 export interface FakeFootprint {
@@ -168,6 +177,7 @@ export interface FakeStateSurface {
   sd: number;
   innerSd: number | null;
   clips: boolean;
+  rimCut: { depthMm: number; sag: number; radius: number } | null;
   elemId: number;
   asphere: Record<string, number> | null;
   diffractive: FakeSurfaceData["diffractive"] | null;
@@ -235,10 +245,13 @@ export interface FakeMtfFieldResult {
   reason: string | null;
   message: string;
   notes: string[];
+  pupilSampling: "stop" | "launch-plane";
   gridSize: number;
   validRays: number;
   blockedRays: number;
   failedRays: number;
+  unaimedRays: number;
+  unresolvedInBeamRays: number;
   unknownFluxFraction: number;
   maxDelta: number | null;
   convergedThroughLpMm: number | null;
@@ -252,5 +265,5 @@ export interface FakeMtfResult {
   fields: FakeMtfFieldResult[];
   geometry: unknown;
   focus: { requestedMode: string; mode: string; appliedShiftMm: number; bestAxialShiftMm: number | null } | null;
-  aperture: { tracedFNumber: number; limitingSurfaceLabel: string | null } | null;
+  axialVignetting: { surfaceLabel: string; beforeStop: boolean } | null;
 }

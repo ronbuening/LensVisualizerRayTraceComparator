@@ -60,10 +60,11 @@ function isLvSpectrum(spectrum: string): spectrum is (typeof LV_MTF_SPECTRA)[num
  *    is then on the reference line, the one line such a lens can be exported on, and the engine answers it as the
  *    gate does.
  *
- * The f/8 comparison of a lens the tab offers none for is resolved all the same, with the radii the tab's scaling
- * gives, and `unavailable` says why the tab makes no such request: the engine then says "unsupported" with that
- * reason. One such lens has no case of its own for the comparison: a lens that is f/8 wide open is scaled by 8 / 8,
- * so its comparison is its wide-open case, and the engine answers that. Rejects where `exportCase` throws.
+ * The f/8 comparison of a lens the tab offers none for is resolved all the same, with the radii the tab's expressions
+ * give, and `unavailable` says why the tab makes no such request: the engine then says "unsupported" with that
+ * reason. A lens that is f/8 or slower wide open has no case of its own for the comparison: the stop rule's f/8 stop
+ * is then its wide-open stop (LV #933), so its comparison is its wide-open case, and the engine answers that. Rejects
+ * where `exportCase` throws.
  */
 export function createLvTabProfileResolver(
   binding: LvBinding,

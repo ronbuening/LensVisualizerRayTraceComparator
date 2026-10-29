@@ -1,10 +1,11 @@
 // The engine `flux`: the comparator's flux estimator on LensVisualizer's own rays. It answers `vignetting.native`, and
-// where the engine `lv` hands such a request to LensVisualizer's vignetting tab, whose relative illumination is a
-// conservation of energy over the image mapping of its chief rays, this engine launches LensVisualizer's lattice over
-// the whole beam of each field, has LensVisualizer trace it, and sums what gets through in two dimensions
-// (src/estimators/illumination.ts): the area of the beam on the launch plane, and its flux into the image in the
-// optical direction cosines of the image space, the relative illumination of the projected solid angle of the exit
-// pupil, with no law of the field angle assumed. Rung R11b sets the two answers beside each other.
+// where the engine `lv` hands such a request to LensVisualizer's vignetting tab, this engine launches LensVisualizer's
+// MTF lattice on the real stop of each field (since LensVisualizer #936; the tab's own is the same kind of lattice
+// since #931), has LensVisualizer trace it, and sums what gets through (src/estimators/illumination.ts): the share of
+// the stop's samples that reach the image, and their flux into the image in the optical direction cosines of each ray's
+// own exit direction, the relative illumination of the projected solid angle of the exit pupil (Rimmer's, as the tab's
+// since #931, which refers each ray's direction to the chief ray's image point through a reference sphere instead),
+// with no law of the field angle assumed. Rung R11b sets the two answers beside each other.
 //
 // It is no independent engine: its rays are LensVisualizer's, launched and traced by LensVisualizer, the very lattices
 // a run asks every engine to trace in rung R11a (`lvFieldRaySets`) and the very trace `lv` answers `rays.trace` with
@@ -22,7 +23,7 @@ import type {
 import type { UnsupportedItem } from "../../contract/result.ts";
 import { decodeNdArray } from "../../core/numeric/ndarray.ts";
 import { cosineFlux, launchArea } from "../../estimators/illumination.ts";
-import type { CosineFlux, IlluminationUnavailable, LaunchArea } from "../../estimators/illumination.ts";
+import type { CosineFlux, IlluminationUnavailable } from "../../estimators/illumination.ts";
 import { maskWhere } from "../../estimators/validity.ts";
 import { CONVERGENCE_BANDS } from "../../estimators/waveValidity.ts";
 import { vignettingNativeQuantity } from "../../quantities/vignettingNative.ts";
@@ -88,7 +89,13 @@ export type LvFluxEngineApi = LvRaySetApi;
 /** A field on one lattice at one line: what gets through, or why nothing could be said of it. */
 interface LatticeTake {
   readonly lattice: RayLattice;
-  readonly area: LaunchArea | IlluminationUnavailable;
+  /**
+   * The share of the lattice's samples of the real stop that reach the image: of the cells LensVisualizer has a ray
+   * for, those an engine did not fail; or why there is none (a launch-plane lattice has no samples of the stop).
+   */
+  readonly share:
+    | { readonly available: true; readonly value: number }
+    | { readonly available: false; readonly reason: string; readonly message: string };
   readonly flux: CosineFlux | IlluminationUnavailable;
   /** Where the chief ray of the set lands, y, mm; null where it does not. */
   readonly chiefLandingMm: number | null;
@@ -140,6 +147,10 @@ function takeOn(
   const made = setsOf(angleDeg, cells);
   if ("problem" in made) return made;
   const set: RaysTraceSpec = made.sets[line];
+  // Since LensVisualizer #936 a field's lattice is of cells on the real stop: a cell that is no sample of it (outside
+  // the stop's disc, or unaimed) holds the chief ray at weight 0, and is taken by neither estimate; and the stop's
+  // disc touches the square's rim, which a beam bounded by the stop cannot reach beyond.
+  const onStop = made.sampling === "stop";
   const lattice = set.groups?.lattice as RayLattice;
   const answer = answerLvRays(api, model, set);
   if ("error" in answer) throw new Error(`a set of the engine's own was not traced: ${answer.error.message}`);
@@ -151,17 +162,39 @@ function takeOn(
   const weight = decodeNdArray(set.weights).values as Float64Array;
   const valid = maskWhere(status, RAY_STATUS.ok);
   const { columns, rows, step } = lattice;
+  const lit = valid.map((taken, ray) => (taken && weight[ray] > 0 ? 1 : 0));
   let edgeCells = 0;
-  for (let ray = 0; ray < columns * rows; ray++) {
-    if (!valid[ray] || !(weight[ray] > 0)) continue;
+  for (let ray = 0; ray < columns * rows && !onStop; ray++) {
+    if (!lit[ray]) continue;
     const [column, row] = [ray % columns, Math.floor(ray / columns)];
     if (column === 0 || row === 0 || column === columns - 1 || row === rows - 1) edgeCells++;
   }
+  // The samples of the stop: the cells LensVisualizer has a ray for (of a weight above 0), but those the trace failed,
+  // which LensVisualizer's tab leaves out of both counts as it does an unaimed sample.
+  let samples = 0;
+  let transmitted = 0;
+  for (let ray = 0; ray < columns * rows; ray++) {
+    if (!(weight[ray] > 0) || status[ray] === RAY_STATUS.failed) continue;
+    samples++;
+    if (lit[ray]) transmitted++;
+  }
+  const area = launchArea({ columns, rows, step, valid: lit });
+  const share: LatticeTake["share"] = !onStop
+    ? {
+        available: false,
+        reason: "launch-plane-lattice",
+        message: "a lattice on the launch plane has no samples of the stop to take a share of",
+      }
+    : samples === 0
+      ? { available: false, reason: "no-rays", message: "no cell of the lattice is a sample of the stop" }
+      : !area.available
+        ? area
+        : { available: true, value: transmitted / samples };
   const chief = set.groups?.chiefIndex;
   const landed = chief !== undefined && status[chief] === RAY_STATUS.ok;
   return {
     lattice,
-    area: launchArea({ columns, rows, step, valid }),
+    share,
     flux: cosineFlux({
       columns,
       rows,
@@ -177,18 +210,18 @@ function takeOn(
   };
 }
 
-/** The two figures of a field on one lattice, over the axis's of the same lattice; null where either has none. */
+/**
+ * The two figures of a field on one lattice: its share of the stop's samples that reach the image, absolute, and its
+ * flux into the image over the axis's of the same lattice; null where either has none.
+ */
 function figuresOf(field: LatticeTake, axis: LatticeTake): { transmission: number; illumination: number } | null {
-  if (!field.area.available || !axis.area.available || !field.flux.available || !axis.flux.available) return null;
-  return {
-    transmission: field.area.areaMm2 / axis.area.areaMm2,
-    illumination: field.flux.flux / axis.flux.flux,
-  };
+  if (!field.share.available || !field.flux.available || !axis.flux.available) return null;
+  return { transmission: field.share.value, illumination: field.flux.flux / axis.flux.flux };
 }
 
-/** Why a lattice has no figures: the estimator's reason of the first of its two estimates without one. */
+/** Why a lattice has no figures: the reason of the first of its two estimates without one. */
 function whyNone(take: LatticeTake): string {
-  if (!take.area.available) return take.area.reason;
+  if (!take.share.available) return take.share.reason;
   return take.flux.available ? "no-figures" : take.flux.reason;
 }
 
@@ -207,8 +240,9 @@ function whyNone(take: LatticeTake): string {
  *
  * **The answer**, per line and field:
  *
- * - `geometricTransmission`: the area of the cells taken on the launch plane, over the axis's (`launchArea`), on the
- *   finer lattice: how much of the beam gets through every aperture, in two dimensions;
+ * - `geometricTransmission`: the share of the finer lattice's samples of the real stop (the cells LensVisualizer has a
+ *   ray for, but those the trace failed) that reach the image, absolute, as LensVisualizer's tab takes it since #931; a
+ *   lattice on the launch plane has no samples of the stop, and its field is unavailable (`launch-plane-lattice`);
  * - `relativeIllumination`: the flux of the lit cells into the image, weight times the area each covers in the optical
  *   direction cosines of the image space, over the axis's (`cosineFlux`), on the finer lattice;
  * - `chiefLandingMm`: the y at which the finer lattice's chief ray lands on the image plane of the case;
@@ -325,11 +359,12 @@ export function answerLvFlux(
         convergenceOnAxis: CONVERGENCE_BANDS.onAxis,
         convergenceOffAxis: CONVERGENCE_BANDS.offAxis,
         stopSemiDiameterMm: exported.conditions.stopSemiDiameter,
+        transmission: "share of the lattice's samples of the real stop that reach the image",
         illumination: "flux of the lit cells into the image in the optical direction cosines of the image space",
       },
     },
     notes: [
-      "the lattice is LensVisualizer's own launch lattice over the beam it finds for each field, traced by LensVisualizer",
+      "the lattice is LensVisualizer's own aimed lattice on the real stop of each field (its MTF's), traced by LensVisualizer",
       "the relative illumination is the projected solid angle of the exit pupil seen from the image point, weighted by each ray's transmission: no law of the field angle is applied",
       ...notes,
     ],

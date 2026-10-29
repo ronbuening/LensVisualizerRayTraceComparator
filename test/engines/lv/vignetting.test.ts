@@ -35,7 +35,7 @@ import type { LvVignettingAnswer } from "../../../src/engines/lv/vignetting.ts";
 import { lvVignettingFieldAngles } from "../../../src/engines/lv/vignettingFields.ts";
 import { lvVignettingRaySets } from "../../../src/engines/lv/vignettingRaySets.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
-import { cosineFlux, launchArea } from "../../../src/estimators/illumination.ts";
+import { cosineFlux } from "../../../src/estimators/illumination.ts";
 import { maskWhere } from "../../../src/estimators/validity.ts";
 import { vignettingNativeQuantity } from "../../../src/quantities/vignettingNative.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
@@ -83,12 +83,14 @@ test("lv's answer is the tab's curve as the tab presents it, each field identifi
   assert.equal(data.method.name, LV_VIGNETTING_TAB);
   assert.deepEqual(
     data.fields.map((field) => [field.line, field.fieldAngleDeg, field.status]),
-    curve.map((sample) => [0, sample.fieldAngleDeg, "ok"]),
+    curve.samples.map((sample) => [0, sample.fieldAngleDeg, "ok"]),
   );
   const geometry = lvChiefGeometry(api, model)!;
   data.fields.forEach((field, at) => {
-    assert.equal(field.geometricTransmission, curve[at].geometricTransmission);
-    assert.equal(field.relativeIllumination, curve[at].relativeIllumination);
+    const sample = curve.samples[at];
+    // The unvignetted fraction, absolute (LV #931), and Rimmer's relative illumination, over the axis's.
+    assert.equal(field.geometricTransmission, sample.unvignettedFraction);
+    assert.equal(field.relativeIllumination, sample.relativeIllumination);
     const landing = api.chiefRayImageHeightAccurateForRuntimeLens(
       field.fieldAngleDeg,
       [...model.state.z],
@@ -99,30 +101,44 @@ test("lv's answer is the tab's curve as the tab presents it, each field identifi
       0,
     );
     assert.equal(field.chiefLandingMm, landing);
-    assert.deepEqual(field.sampling, { gridCells: 64, fieldSamples: 8, mirrored: 1, tubeMapping: 0 });
+    assert.deepEqual(field.sampling, {
+      gridCells: 64,
+      fieldSamples: 8,
+      mirrored: 1,
+      samples: sample.sampleCount,
+      transmitted: sample.transmittedCount,
+      blocked: sample.blockedCount,
+      unaimed: sample.unaimedCount,
+      failed: sample.failedCount,
+    });
   });
   assert.equal(data.method.params.gridCells, 64);
-  assert.equal(data.method.params.mappingStepDeg, 0.01);
 });
 
-test("a field whose chief rays the tab finds vignetted is answered with its mapping of ray tubes named", async (t) => {
-  // The fake made to stop every chief ray steeper than about 11.5 degrees, and no ray of a lattice.
-  const lv = variantOf(freshLv(t), "chief-vignetted", {
-    "src/optics/analysis/mtf/mtfTracing.ts": (text) =>
+test("a field the tab has a fraction and no relative illumination of is unavailable with the tab's reason", async (t) => {
+  // The fake made to give no relative illumination beyond half its field.
+  const lv = variantOf(freshLv(t), "dark-edge", {
+    "src/optics/analysis/vignetting.ts": (text) =>
       text.replace(
-        '  if (trace.status === "ok") return "valid";',
-        '  if (trace.input.origin[0] === 0 && trace.input.direction[1] < -0.2) return "blocked";\n  if (trace.status === "ok") return "valid";',
+        '    rimmerSum: sum,\n    unavailableReason: null,\n    relativeIlluminationReason: sum === null ? "isolated-cell" : null,',
+        '    rimmerSum: fieldFraction > 0.5 ? null : sum,\n    unavailableReason: null,\n    relativeIlluminationReason: sum === null || fieldFraction > 0.5 ? "isolated-cell" : null,',
       ),
   });
   const binding = await bind(t, lv);
   const model = await modelOf(binding);
   const data = dataOf(answerLvVignetting(binding.api, model, askOf(binding, model)));
-  assert.ok(data.fields.every((field) => field.status === "ok"));
-  for (const field of data.fields) {
-    const steep = Math.sin((field.fieldAngleDeg * Math.PI) / 180) > 0.2;
-    assert.equal(field.sampling.tubeMapping, steep ? 1 : 0, `${field.fieldAngleDeg}`);
-  }
-  assert.ok(data.notes.some((note) => note.includes("ray tubes traced without aperture checks")));
+  const curve = binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model));
+  data.fields.forEach((field, at) => {
+    const sample = curve.samples[at];
+    if (sample.fieldFraction > 0.5) {
+      assert.deepEqual(
+        [field.status, field.reason, field.relativeIllumination],
+        ["unavailable", "lv-isolated-cell", null],
+      );
+      assert.equal(field.sampling.unvignettedFraction, sample.unvignettedFraction);
+    } else assert.equal(field.status, "ok");
+  });
+  assert.ok(data.fields.some((field) => field.status === "unavailable"));
 });
 
 /**
@@ -179,14 +195,18 @@ test("an angle of no field of the tab's is unsupported, and a tab without a curv
     some.fieldAnglesDeg,
   );
   binding.close();
-  // The fake's tab made to draw no curve: every field is the answer's, unavailable with the reason.
+  // The fake's tab made to draw no curve: every field is the answer's, unavailable with the tab's reason.
   const blank = variantOf(lv, "blank", {
-    "src/optics/analysis/vignetting.ts": (text) => text.replace("if (currentEPSD <= 0) return [];", "return [];"),
+    "src/optics/analysis/vignetting.ts": (text) =>
+      text.replace(
+        'if (!(request.aperture.stopSemiDiameterMm > 0)) return none("invalid-state");',
+        'return none("invalid-state");',
+      ),
   });
   const bound = await bind(t, blank);
   const blankModel = await modelOf(bound);
   const data = dataOf(answerLvVignetting(bound.api, blankModel, askOf(bound, blankModel)));
-  assert.ok(data.fields.every((field) => field.status === "unavailable" && field.reason === "lv-no-curve"));
+  assert.ok(data.fields.every((field) => field.status === "unavailable" && field.reason === "lv-invalid-state"));
 });
 
 test("a state the tab draws no curve of is asked nothing, and answered unavailable at each of the tab's fields", async (t) => {
@@ -204,7 +224,8 @@ test("a state the tab draws no curve of is asked nothing, and answered unavailab
     data.fields.map((field) => [field.status, field.reason]),
     angles.map(() => ["unavailable", "lv-bounding-sphere-field"]),
   );
-  assert.deepEqual(binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model)), []);
+  const curve = binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model));
+  assert.deepEqual([curve.available, curve.reason, curve.samples], [false, "bounding-sphere-field", []]);
   assert.deepEqual(itemsOf(answerLvVignetting(binding.api, model, { ...spec, fieldAnglesDeg: [0, 1] })), [
     "fields.angles",
   ]);
@@ -263,8 +284,14 @@ test("flux's answer is the estimator's on LensVisualizer's lattice of each field
     const answer = answerLvRays(api, model, set);
     assert.ok("data" in answer);
     const { columns, rows, step } = set.groups!.lattice as RayLattice;
-    const valid = maskWhere(decodeNdArray(answer.data.status).values, 0);
-    const area = launchArea({ columns, rows, step, valid });
+    const status = decodeNdArray(answer.data.status).values;
+    const valid = maskWhere(status, 0);
+    // A cell of weight 0 is no sample of the stop (outside its disc, or unaimed: the chief ray holds it); of the
+    // others, those the trace failed are left out, as LensVisualizer's tab leaves them out (LV #931).
+    const weights = decodeNdArray(set.weights).values;
+    const samples = weights.filter((weight, ray) => ray < columns * rows && weight > 0 && status[ray] !== 2).length;
+    const lit = valid.map((taken, ray) => (taken && weights[ray] > 0 ? 1 : 0));
+    const transmitted = lit.filter((each, ray) => ray < columns * rows && each === 1).length;
     const flux = cosineFlux({
       columns,
       rows,
@@ -275,13 +302,14 @@ test("flux's answer is the estimator's on LensVisualizer's lattice of each field
       direction: decodeNdArray(answer.data.exitDirection).values,
       imageIndex: 1,
     });
-    assert.ok(area.available && flux.available);
-    return { area: area.areaMm2, flux: flux.flux };
+    assert.ok(flux.available && samples > 0);
+    return { share: transmitted / samples, flux: flux.flux };
   };
   const axis = figures(0, 16);
   data.fields.forEach((field) => {
     const own = figures(field.fieldAngleDeg, 16);
-    assert.equal(field.geometricTransmission, own.area / axis.area);
+    // The share of the stop's samples that reach the image, absolute, as LensVisualizer's tab takes it since #931.
+    assert.equal(field.geometricTransmission, own.share);
     assert.equal(field.relativeIllumination, own.flux / axis.flux);
     assert.equal(field.sampling.gridSize, 16);
     assert.equal(field.sampling.coarseGridSize, 8);
@@ -289,9 +317,10 @@ test("flux's answer is the estimator's on LensVisualizer's lattice of each field
   });
   assert.equal(data.fields[0].geometricTransmission, 1);
   assert.equal(data.fields[0].relativeIllumination, 1);
-  // On the fake's coarse lattices the figures move on doubling, and the beam reaches the rim of some: no arbiter there.
-  assert.ok(data.fields.some((field) => field.reason?.includes("lattice-edge-lit")));
-  assert.ok(data.notes.some((note) => note.includes("is no arbiter")));
+  // On the fake's coarse lattices the figures move on doubling: no arbiter there. A stop lattice has no rim a beam could
+  // reach past (LV #936): the stop's disc bounds it, and no field is flagged for its rim.
+  assert.ok(data.fields.every((field) => !field.reason?.includes("lattice-edge-lit")));
+  assert.ok(data.fields.every((field) => field.sampling.edgeCells === 0));
   // Without the option the coarser lattice has twice a run's own cells.
   assert.equal(LV_FLUX_DEFAULT_GRID, 64);
 });

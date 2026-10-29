@@ -9,7 +9,9 @@
 // rung's limit `chiefLanding.maxAbs`, or an answer that states no landing), numerical (an answer states a condition of
 // its normal equations above the rung's limit `fitCondition.max`: the samples light a strip of the disc, on which the
 // polynomials are nearly dependent, and the coefficients carry that many fewer digits in either fit; R5's reason
-// `unconverged`), method. Only a field of two methods enters a figure.
+// `unconverged`), method. Only a field of two methods enters a figure. A field set aside as numerical is R5's
+// unconverged field: counted (`fields.numerical`), its condition shown apart (`fitCondition.setAsideMax`, unbanded),
+// and never a reason for ATTENTION; the judged `fitCondition.max` is of the fields of two methods alone.
 import type { JsonObject } from "../contract/json.ts";
 import type { RecordedValues } from "../contract/comparison.ts";
 import { ZERNIKE_NATIVE } from "../contract/quantities/zernikeNative.ts";
@@ -44,8 +46,17 @@ export const ZERNIKE_FIGURES: readonly {
 /** The largest difference of a coefficient, in waves, with the field and the term. */
 export const COEFFICIENTS_METRIC = "coefficients.maxAbs";
 
-/** The largest condition of the normal equations either answer states of a field: the limit of the sorting. */
+/**
+ * The largest condition of the normal equations either answer states of a field of two methods. Its band in the policy
+ * is the limit of the sorting: a field above it is numerical and in no figure, this one included.
+ */
 export const CONDITION_METRIC = "fitCondition.max";
+
+/**
+ * The largest condition either answer states of a field the sorting set aside as numerical: a figure of the fields in
+ * no figure, shown and never judged (the policy gives it no band), as R5 shows nothing of an unconverged field's moduli.
+ */
+export const SET_ASIDE_CONDITION_METRIC = "fitCondition.setAsideMax";
 
 function settledOf(field: ZernikeNativeField): number | null {
   return field.status === "ok" ? 1 : null;
@@ -167,6 +178,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     ...ZERNIKE_FIGURES.map(({ name }) => name),
   ];
   const largest = Object.fromEntries(names.map((name) => [name, largestOf(name)]));
+  const setAside = largestOf(SET_ASIDE_CONDITION_METRIC);
   const counts = { compared: 0, data: 0, numerical: 0, unavailable: 0 };
   for (const [index, fieldA] of a.fields.entries()) {
     const fieldB = b.fields[index];
@@ -180,9 +192,10 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     if (sorting.landingMm !== null && sorting.class !== "unsupported") {
       largest[CHIEF_LANDING_METRIC].take(sorting.landingMm, where);
     }
-    if (sorting.class !== "unsupported") {
+    if (sorting.class === "method" || sorting.class === "numerical") {
+      const into = sorting.class === "method" ? largest[CONDITION_METRIC] : setAside;
       for (const condition of [fieldA.fitCondition, fieldB.fitCondition]) {
-        if (condition !== null) largest[CONDITION_METRIC].take(condition, where);
+        if (condition !== null) into.take(condition, where);
       }
     }
     if (!sorting.banded) {
@@ -219,11 +232,14 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
         name === CHIEF_LANDING_METRIC
           ? "no field has a landing in both answers"
           : name === CONDITION_METRIC
-            ? "no answer states the condition of a field it has figures of"
+            ? "no answer states the condition of a field of two methods"
             : "no field of two methods states it in both answers";
       unmeasured.push({ name, reason });
     }
   }
+  // Only where a field was set aside by its condition: of none there is nothing to show.
+  const setAsideValue = setAside.value();
+  if (setAsideValue !== null) metrics.push(setAsideValue);
   metrics.push(
     { name: "fields.compared", value: counts.compared },
     { name: "fields.data", value: counts.data },
@@ -279,8 +295,11 @@ function recorded(data: JsonObject): { readonly [name: string]: readonly number[
  *
  * - `chiefLanding.maxAbs`: how far apart the two answers' chief rays land, the largest over the fields both state
  *   one of. A band of it in the policy is the limit of the sorting, as in R5;
- * - `fitCondition.max`: the largest condition of the normal equations either answer states of a field both have
- *   figures of. A band of it in the policy is the second limit of the sorting: a field above it is numerical;
+ * - `fitCondition.max`: the largest condition of the normal equations either answer states of a field of two methods.
+ *   A band of it in the policy is the second limit of the sorting: a field above it is numerical, R5's unconverged
+ *   field, and in no figure, so it never makes a pair ATTENTION;
+ * - `fitCondition.setAsideMax`: the largest condition either answer states of a field set aside as numerical, only
+ *   where there is one; shown beside `fitCondition.max` and never banded;
  * - `coefficients.maxAbs`: the largest difference of a Zernike coefficient, waves, with the field and the term;
  * - `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`: the difference of each figure, waves;
  * - `fields.compared`, `fields.data`, `fields.numerical`, `fields.unavailable`: how many fields are of each kind.
@@ -294,6 +313,7 @@ export const zernikeNativeComparator: QuantityComparator = Object.freeze({
   metrics: Object.freeze([
     { name: CHIEF_LANDING_METRIC, unit: "mm" },
     { name: CONDITION_METRIC, unit: "1" },
+    { name: SET_ASIDE_CONDITION_METRIC, unit: "1" },
     { name: COEFFICIENTS_METRIC, unit: "waves" },
     ...ZERNIKE_FIGURES.map(({ name }) => ({ name, unit: "waves" })),
     { name: "fields.compared", unit: "elements" },

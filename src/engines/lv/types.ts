@@ -100,6 +100,12 @@ export interface LvSurface {
    * absent in a LensVisualizer from before it told the two apart, where every surface clips.
    */
   readonly clips?: boolean;
+  /**
+   * A flat rim cut (LV #928): a land square to the axis at `sag` from the vertex, out from `radius`, where the cap's
+   * sag reaches it. LV traces the uncut cap and clips a ray beyond `radius` (`clearSemiDiameter`); the land is drawn
+   * and no surface of the trace. Null on an uncut surface; absent in a LensVisualizer from before #928.
+   */
+  readonly rimCut?: { readonly depthMm: number; readonly sag: number; readonly radius: number } | null;
   readonly elemId: number;
   readonly asphere: LvAsphere | null;
   /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */
@@ -191,6 +197,8 @@ export interface LvTraceOptions {
   readonly directionNormalized?: boolean;
   /** One height per visit LV found an intersection for, recorded or passed without a record. */
   readonly recordHeights?: boolean;
+  /** A bound on the search for the first surface along a launch from a bounding sphere or a launch frame. */
+  readonly launchBoundT?: number;
 }
 
 /** The index after a surface at one wavelength, given the surface's index and its authored `nd`. */
@@ -435,6 +443,9 @@ export interface LvComaFanResult {
   readonly fieldAngleDeg: number;
   readonly sampleCount: number;
   readonly validSampleCount: number;
+  /** Samples LV could not aim at the stop, and those blocked ahead of it (LV #927); absent before #927. */
+  readonly unaimedSampleCount?: number;
+  readonly blockedSampleCount?: number;
   readonly clippedSampleCount: number;
   /** Where the chief ray lands: its y for the meridional fan, its x for the sagittal one. */
   readonly centerIntercept: number;
@@ -447,6 +458,9 @@ export interface LvComaPointCloudField {
   readonly fieldAngleDeg: number;
   readonly sampleCount: number;
   readonly validSampleCount: number;
+  /** Samples LV could not aim at the stop, and those blocked ahead of it (LV #927); absent before #927. */
+  readonly unaimedSampleCount?: number;
+  readonly blockedSampleCount?: number;
   readonly clippedSampleCount: number;
   /** Where the chief ray lands along y. */
   readonly chiefIntercept: number;
@@ -472,6 +486,9 @@ export interface LvBokehField {
   readonly fieldAngleDeg: number;
   readonly totalRays: number;
   readonly passedRays: number;
+  /** Rays LV could not aim at the stop, and those blocked ahead of it (LV #927); absent before #927. */
+  readonly unaimedRays?: number;
+  readonly blockedRays?: number;
   readonly centroidSagittal: number;
   readonly centroidTangential: number;
   readonly rmsRadiusMm: number;
@@ -501,6 +518,9 @@ export interface LvSphericalAberration {
   readonly currentPlanePeakMm: number;
   /** How many profile rays the figures at a plane are of: both rays of every pair that arrived. */
   readonly validSampleCount: number;
+  /** Profile zones LV aimed no ray at, and those blocked ahead of the stop (LV #927); absent before #927. */
+  readonly unaimedZoneCount?: number;
+  readonly blockedZoneCount?: number;
 }
 
 /** One point of LV's spherical-aberration profile (`computeSAProfile`): transverse SA at best focus, mm. */
@@ -533,6 +553,8 @@ export interface LvLongitudinalChromaticFocus {
   readonly transverseSpreadMm: number;
   readonly samples: readonly LvLongitudinalChromaticSample[];
   readonly validChannelCount: number;
+  /** Requested channels the chosen zone leaves out, each with why (LV #930); absent before #930. */
+  readonly omittedChannels?: readonly { readonly channel: string; readonly reason: string }[];
 }
 
 /** LV's skew trace result: where the ray crosses the last vertex plane and its slopes there. */
@@ -770,17 +792,65 @@ export interface LvBreathingSample {
   readonly distanceLabel: string;
 }
 
-/** One sample of LV's vignetting / relative-illumination curve (`VignettingSample`), each normalised to the axis. */
+/**
+ * One sample of LV's vignetting / relative-illumination curve (`VignettingSample`, LV #931): OpticStudio's two field
+ * analyses on one lattice on the real stop.
+ */
 export interface LvVignettingSample {
   /** The field angle, degrees: 0 on the axis. */
   readonly fieldAngleDeg: number;
-  /** The area on the launch plane of the field's transmitted beam, traced on a lattice, over the axis's. */
-  readonly geometricTransmission: number;
-  /**
-   * The beam's transmitted flux times the cosine of the field angle, over the image area a unit of object solid angle
-   * covers, over the axis's.
-   */
-  readonly relativeIllumination: number;
+  readonly fieldFraction: number;
+  /** The share of the field's stop samples, neither unaimed nor failed, that reach the image (absolute), or null. */
+  readonly unvignettedFraction: number | null;
+  /** Rimmer's projected solid angle with transmission, over the axis's; null where the field has none. */
+  readonly relativeIllumination: number | null;
+  readonly sampleCount: number;
+  readonly transmittedCount: number;
+  readonly blockedCount: number;
+  readonly unaimedCount: number;
+  readonly failedCount: number;
+  readonly unavailableReason: string | null;
+  readonly relativeIlluminationReason: string | null;
+}
+
+/** LV's VignettingCurve: the tab's samples, or the reason the state has no curve. */
+export interface LvVignettingCurve {
+  readonly available: boolean;
+  readonly reason: string | null;
+  readonly cellsAcross: number;
+  readonly samples: readonly LvVignettingSample[];
+}
+
+/** One cell of one field of LV's vignetting tab (`VignettingCellResult`), the members the comparator reads. */
+export interface LvVignettingCell {
+  readonly cell: LvStopLatticeCell;
+  readonly ray: LvAimedPupilRay;
+  readonly transmitted: boolean;
+  readonly failed: boolean;
+  readonly bulkTransmission: number;
+  readonly exitDirectionCosines: readonly [number, number] | null;
+  readonly referredDirectionCosines: readonly [number, number] | null;
+  readonly imageIndex: number | null;
+  readonly cosineArea: number | null;
+}
+
+/** One field of LV's vignetting tab on its stop lattice (`VignettingFieldResult`), the members the comparator reads. */
+export interface LvVignettingField {
+  readonly fieldFraction: number;
+  readonly fieldAngleDeg: number;
+  readonly cellsAcross: number;
+  readonly mirrored: boolean;
+  readonly imagePoint: LvVec3 | null;
+  readonly sampleCount: number;
+  readonly transmittedCount: number;
+  readonly blockedCount: number;
+  readonly unaimedCount: number;
+  readonly failedCount: number;
+  readonly unvignettedFraction: number | null;
+  readonly rimmerSum: number | null;
+  readonly unavailableReason: string | null;
+  readonly relativeIlluminationReason: string | null;
+  readonly cells: readonly LvVignettingCell[];
 }
 
 /**
@@ -791,8 +861,16 @@ export interface LvOpticalSummary {
   readonly currentEFLMm: number | null;
   readonly infinityEFLMm: number | null;
   readonly breathingPercent: number | null;
-  /** Labelled "Working f/#" by the tab: the current focal length over the entrance pupil's diameter. */
-  readonly effectiveFNumber: number | null;
+  /** Labelled "Image-space f/#" by the tab: EFL / EPD, both paraxial, of the state (OpticStudio's image-space F/#). */
+  readonly imageSpaceFNumber: number | null;
+  /**
+   * Labelled "Paraxial working f/#": 1 / (2 n' |u'|) of the paraxial marginal ray through the stop rim, from the axial
+   * object point at the paraxial object distance the image plane is conjugate to (`paraxialObjectVergence`; infinite
+   * at infinity focus); null on a folded path.
+   */
+  readonly paraxialWorkingFNumber: number | null;
+  /** Labelled "Working f/#": 1 / (2 n' sin θ') of the real marginal ray through the stop rim, or that ray's state. */
+  readonly workingFNumber: LvWorkingFNumberResult;
   readonly entrancePupilDiameterMm: number | null;
   readonly physicalStopDiameterMm: number | null;
   readonly halfFieldDeg: number | null;
@@ -813,6 +891,17 @@ export interface LvOpticalSummary {
   readonly ffdMm: number | null;
   readonly principalHiatusMm: number | null;
 }
+
+/**
+ * LV's WorkingFNumberResult (`computeWorkingFNumber`): the real marginal ray from the axial object point at the
+ * paraxial object distance, aimed at the stop rim (the aimed launch's axial zone at f = 1, under its rim rule) and
+ * traced at the authored indices; or why it gives no f-number.
+ */
+export type LvWorkingFNumberResult =
+  | { readonly status: "traced"; readonly value: number; readonly indexLine: string }
+  | { readonly status: "vignetted"; readonly surfaceLabel: string; readonly beforeStop: boolean }
+  | { readonly status: "unaimed"; readonly reason: string }
+  | { readonly status: "unavailable"; readonly reason: string };
 
 /** LV's AnalysisRequest, the members the comparator reads: the state, and the two radii under `aperture`. */
 export interface LvAnalysisRequest {
@@ -841,12 +930,23 @@ export interface LvMtfFieldResult {
   readonly reason: string | null;
   readonly message: string;
   readonly notes: readonly string[];
-  /** Launch cells across the beam's larger side at the last grid LV refined the field to. */
+  /**
+   * Where the pupil is sampled (LV #936): "stop", cells evenly spaced on the real aperture stop; "launch-plane", equal
+   * cells of the launch plane, kept for a field launched from the bounding sphere.
+   */
+  readonly pupilSampling: "stop" | "launch-plane";
+  /** Cells across the stop's diameter (across the beam's larger side on the launch plane) at the last grid traced. */
   readonly gridSize: number;
   /** Summed over the lines of the spectrum. */
   readonly validRays: number;
   readonly blockedRays: number;
+  /** Aimed samples whose full trace failed or never reached the image plane. */
   readonly failedRays: number;
+  /** Stop samples no ray could be aimed at. */
+  readonly unaimedRays: number;
+  /** Unaimed or failed samples beside the transmitted beam: the row or column neighbour of a transmitted cell. */
+  readonly unresolvedInBeamRays: number;
+  /** The share of the beam's flux carried by the unresolved samples beside it, which the field is judged by. */
   readonly unknownFluxFraction: number;
   readonly maxDelta: number | null;
   readonly convergedThroughLpMm: number | null;
@@ -862,15 +962,18 @@ export interface LvMtfFocus {
   readonly bestAxialShiftMm: number | null;
 }
 
-/** LV's MtfAperture: the f-number the axial beam traces at, and the surface that bounds it when it is not the iris. */
-export interface LvMtfAperture {
-  readonly tracedFNumber: number;
-  readonly limitingSurfaceLabel: string | null;
+/**
+ * LV's MtfAxialVignetting: the surface that vignettes the axial marginal ray, the summary's working f-number in its
+ * `vignetted` state (`computeWorkingFNumber`), and whether that is before the stop.
+ */
+export interface LvMtfAxialVignetting {
+  readonly surfaceLabel: string;
+  readonly beforeStop: boolean;
 }
 
 /**
  * LV's MtfResult, the members the comparator reads. `fields` is in the order of the request's fractions; it is
- * empty, and `focus` and `aperture` null, when `support` is not available.
+ * empty, and `focus` and `axialVignetting` null, when `support` is not available.
  */
 export interface LvMtfResult {
   readonly method: string;
@@ -881,7 +984,8 @@ export interface LvMtfResult {
   /** The field axis; null when no chief ray reaches the image. */
   readonly geometry: LvMtfFieldGeometry | null;
   readonly focus: LvMtfFocus | null;
-  readonly aperture: LvMtfAperture | null;
+  /** Where the axial marginal ray is vignetted; null when it is not. */
+  readonly axialVignetting: LvMtfAxialVignetting | null;
 }
 
 /** What `resolveMtfSpectrum` gives: the spectrum the MTF tab requests, and its note when that is not the preferred. */
@@ -920,6 +1024,121 @@ export interface LvMtfFieldLaunch {
   readonly leadZ: number;
   /** The chief ray's height on the launch plane. */
   readonly centerY: number;
+  /**
+   * The field as LV's aimed launch takes it (LV #936): the solved chief's slope and height on the first vertex plane
+   * for a collimated field, the object point and launch plane for a finite one; null for a field LV launches from
+   * the bounding sphere, which keeps launch-plane sampling.
+   */
+  readonly aim: LvAimedFieldGeometry | null;
+}
+
+/** The field geometry LV's aimed launch takes (`AimedPupilFieldGeometry`), of the two kinds its MTF hands it. */
+export type LvAimedFieldGeometry =
+  | { readonly uField: number; readonly yChief: number }
+  | { readonly kind: "finite-object"; readonly objectPoint: LvVec3; readonly leadZ: number };
+
+/** One cell of LV's stop lattice (`StopLatticeCell`): a stop sample at normalised coordinates in the unit disc. */
+export interface LvStopLatticeCell {
+  readonly index: number;
+  /** Row of the `cellsAcross` × `cellsAcross` grid over the stop's diameter, 0 at yFraction -1. */
+  readonly row: number;
+  /** Column, 0 at xFraction -1. */
+  readonly column: number;
+  readonly xFraction: number;
+  readonly yFraction: number;
+  readonly weight: number;
+}
+
+/**
+ * One sample of LV's aimed launch (`AimedPupilRay`): a ray that crosses the stop at its target ("aimed"), the ray
+ * toward a target that a clear aperture or a total reflection ahead of the stop blocks ("blocked", with that
+ * surface), or no ray at all ("unaimed", with the reason; LV never traces it).
+ */
+export type LvAimedPupilRay =
+  | {
+      readonly status: "aimed";
+      readonly index: number;
+      readonly xFraction: number;
+      readonly yFraction: number;
+      readonly weight?: number;
+      readonly origin: LvVec3;
+      readonly direction: LvVec3;
+    }
+  | {
+      readonly status: "blocked";
+      readonly index: number;
+      readonly xFraction: number;
+      readonly yFraction: number;
+      readonly weight?: number;
+      readonly origin: LvVec3;
+      readonly direction: LvVec3;
+      readonly blockedAtSurfaceIndex: number;
+    }
+  | {
+      readonly status: "unaimed";
+      readonly index: number;
+      readonly xFraction: number;
+      readonly yFraction: number;
+      readonly weight?: number;
+      readonly reason: string;
+      readonly origin: null;
+      readonly direction: null;
+    };
+
+/** One pupil sample LV's aimed launch is asked for (`AimedPupilSampleInput`): stop coordinates and a weight. */
+export interface LvAimedPupilSample {
+  readonly xFraction: number;
+  readonly yFraction: number;
+  /** The sample's weight; LV gives equal weights (1 / count) without one. */
+  readonly weight?: number | null;
+}
+
+/**
+ * The field geometry LV's shared aimed launch takes for a collimated field (`AimedObjectPlaneField`): the slope of the
+ * launch and the chief ray's height on the first vertex plane; the tabs' scalar off-axis geometry is one as it is.
+ */
+export interface LvAimedObjectPlaneField {
+  readonly uField: number;
+  readonly yChief: number;
+}
+
+/**
+ * LV's AimedPupilLaunch (LV #927): one field's aimed launch of a list of pupil samples, in the order asked; a sample at
+ * (px, py) is the ray from the field's object point that crosses the stop at (px R, py R). The chief is the stop-centre
+ * ray of the same solve.
+ */
+export interface LvAimedPupilLaunch {
+  readonly launchSurface: string;
+  readonly stopSurfaceIndex: number;
+  /** The stop radius R the targets scale with, mm. */
+  readonly stopSemiDiameterMm: number;
+  readonly residualToleranceMm: number;
+  /** The stop radius LV's full trace of the lattice checks: R plus the residual tolerance (the rim rule). */
+  readonly clipSemiDiameterMm: number;
+  readonly launchBoundT?: number;
+  /** The stop-centre ray. */
+  readonly chief: LvAimedPupilRay;
+  readonly rays: readonly LvAimedPupilRay[];
+  readonly aimedCount: number;
+  readonly blockedCount: number;
+  readonly unaimedCount: number;
+}
+
+/** LV's AimedStopLattice: a stop lattice aimed for one field at one line; `rays[i]` is the ray of `cells[i]`. */
+export interface LvAimedStopLattice extends LvAimedPupilLaunch {
+  /** Cells across the stop's diameter. */
+  readonly cellsAcross: number;
+  readonly cells: readonly LvStopLatticeCell[];
+}
+
+/**
+ * LV's AimedPupilTrace: the full trace of an aimed launch's rays, every aperture checked and the stop at the launch's
+ * clip radius, as every tab traces them.
+ */
+export interface LvAimedPupilTrace {
+  engine(ray: LvRay): LvTraceResult;
+  skew(ray: LvRay): LvSkewTrace;
+  meridional(ray: LvRay): LvMeridionalTraceResult;
 }
 
 /** The box of the launch plane, relative to the chief ray, that holds every transmitted ray of one field. */
@@ -963,24 +1182,35 @@ export interface LvMtfPupilRay extends LvMtfSpot {
 }
 
 /**
- * What LV's `traceMtfBundle` returns. When `mirrored` is true only the columns from `columns / 2` on were traced:
- * every other ray of `rays` is the mirror image in x of one that was, and `blocked` and `failed` count both.
+ * What LV's `traceMtfStopBundle`, `traceMtfLattice` and `traceMtfLaunchPlaneBundle` return. When `mirrored` is true
+ * only one half of the pupil was traced (on the stop the cells of xFraction > 0, on the launch plane the columns from
+ * `columns / 2` on): every other ray of `rays` is the mirror image in x of one that was, and the counts count both.
  */
 export interface LvMtfBundle {
+  readonly sampling: "stop" | "launch-plane";
   readonly rays: readonly LvMtfPupilRay[];
   readonly blocked: number;
   readonly failed: number;
-  /** The launch flux of the rays LV could not resolve, in the units of the rays' weights. */
-  readonly failedWeight: number;
+  /** Stop samples no ray could be aimed at; 0 on the launch plane. */
+  readonly unaimed: number;
+  /** The weight of the unaimed and failed samples, in the units of the rays' weights, each at full transmission. */
+  readonly unresolvedWeight: number;
+  /** Unaimed or failed samples beside the transmitted beam: the row or column neighbour of a transmitted cell. */
+  readonly unresolvedInBeam: number;
+  /** Their weight: the share a field is judged by. */
+  readonly unresolvedInBeamWeight: number;
   /** The reference point: where this line's chief ray lands with no aperture checked, or the reference handed in. */
   readonly chief: LvMtfSpot;
   readonly chiefClipped: boolean;
   readonly columns: number;
   readonly rows: number;
   readonly mirrored: boolean;
-  readonly launchStepMm: number;
-  /** The sides of the footprint in whose guard band a ray landed: flux may lie outside the box that was sampled. */
+  /** The side of a cell, mm: on the stop for stop sampling, on the launch plane otherwise. */
+  readonly stepMm: number;
+  /** Launch-plane sampling only: the sides of the footprint in whose guard band a ray landed. */
   readonly openBorders: LvMtfOpenBorders;
+  /** Stop sampling only: the aimed lattice, which seeds the line's next, finer one. */
+  readonly lattice?: LvAimedStopLattice;
 }
 
 /** The sides of a footprint: both sides in x, which a footprint has alike, and the lower and the upper side in y. */
@@ -1130,7 +1360,22 @@ export interface LvApi {
   epZRelStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
   xpZRelLastSurfAtZoom(zoomT: number, L: LvRuntimeLens): number;
   xpAtZoom(zoomT: number, L: LvRuntimeLens): number;
-  wideOpenStopAtZoom(zoomT: number, L: Pick<LvRuntimeLens, "zoomStopSDs" | "isZoom" | "stopPhysSD">): number;
+  /**
+   * The wide-open stop at a zoom position (LV #933, `state/apertureStop.ts`): by the lens's stop rule, the paraxial
+   * entrance pupil F/N at the marked wide-open N of the position, or its exception's physical stop.
+   */
+  wideOpenStopAtZoom(zoomT: number, L: LvRuntimeLens): number;
+  /**
+   * The stop a lens traces at a marked f-number (LV #933, `stopForFNumber`): the wide-open stop at or below the
+   * position's wide-open f-number, and above it the rule, paraxial EPD = F/N at infinity focus of the zoom position,
+   * capped at the wide-open stop.
+   */
+  stopSemiDiameterForFNumber(fNumber: number, zoomT: number, L: LvRuntimeLens): number;
+  /** The paraxial data the stop rule sizes a stop with at a zoom position: F and the marginal ray's height ratio. */
+  stopRuleGeometry(
+    L: LvRuntimeLens,
+    zoomT: number,
+  ): { readonly referenceFocalLengthMm: number; readonly stopHeightRatio: number };
   /** Where a hit of a radius lies against a surface's clear aperture; the geometry is the state's `traceGeometry`. */
   evaluateAperture(
     geometry: LvTraceGeometry,
@@ -1172,8 +1417,49 @@ export interface LvApi {
   ): LvMtfFootprint | null;
   mtfLaunchGrid(footprint: LvMtfFootprint, gridSize: number): LvMtfLaunchGrid;
   mtfLaunchRay(launch: LvMtfFieldLaunch, x: number, y: number): LvRay;
-  /** LV's own bundle over the lattice of one grid size, at one line: what its MTF sums. */
-  traceMtfBundle(
+  /**
+   * LV's aimed stop lattice of a field at one line (LV #936): `gridSize` cells across the stop's diameter, the cells
+   * whose centre lies in the stop's disc, each aimed through the shared aimed launch at the line's own indices
+   * (`mtfAimSpectrum`). Null for a field launched from the bounding sphere. Throws a RangeError when `gridSize` is
+   * no positive integer.
+   */
+  aimMtfStopLattice(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    launch: LvMtfFieldLaunch,
+    gridSize: number,
+    line: LvSpectralLine,
+    coarse?: LvAimedStopLattice | null,
+  ): LvAimedStopLattice | null;
+  /** LV's own bundle of an aimed stop lattice at one line, every aperture checked, the stop at its clip radius. */
+  traceMtfLattice(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    launch: LvMtfFieldLaunch,
+    lattice: LvAimedStopLattice,
+    line: LvSpectralLine,
+    imagePlaneZ?: number,
+    extras?: { readonly reference?: LvMtfSpot; readonly opticalPath?: boolean },
+  ): LvMtfBundle | null;
+  /** `aimMtfStopLattice` then `traceMtfLattice`: what LV's MTF sums for a field on the real stop at one grid size. */
+  traceMtfStopBundle(
+    state: LvPreparedState,
+    options: LvMtfOptions,
+    support: LvMtfSupport,
+    launch: LvMtfFieldLaunch,
+    gridSize: number,
+    line: LvSpectralLine,
+    imagePlaneZ?: number,
+    extras?: {
+      readonly reference?: LvMtfSpot;
+      readonly opticalPath?: boolean;
+      readonly coarse?: LvAimedStopLattice | null;
+    },
+  ): LvMtfBundle | null;
+  /** LV's bundle over a launch-plane footprint, for a field launched from the bounding sphere: the old sampling. */
+  traceMtfLaunchPlaneBundle(
     state: LvPreparedState,
     options: LvMtfOptions,
     support: LvMtfSupport,
@@ -1198,8 +1484,11 @@ export interface LvApi {
   };
   /** Where a trace that ended "ok" lands on the image plane, with its bulk transmission; null when it does not. */
   mtfImagePoint(state: LvPreparedState, trace: LvTraceResult, imagePlaneZ?: number): LvMtfSpot | null;
-  /** Whether a trace is a sample, was stopped by an aperture (a proven miss included) or could not be resolved. */
-  mtfTraceClassification(trace: LvTraceResult, state?: LvPreparedState, stopRadius?: number): LvMtfRayClass;
+  /**
+   * Whether a trace is a sample, was stopped by an aperture or a total reflection (a proven miss, over the whole line
+   * where the trace may step back, included) or could not be resolved (`traceRayClassification`, LV #927).
+   */
+  traceRayClassification(trace: LvTraceResult, state?: LvPreparedState, stopRadius?: number): LvMtfRayClass;
   /** The options LV's MTF traces a pupil sample with at one line: apertures checked, stopped at the first clip. */
   mtfTraceOptions(
     state: LvPreparedState,
@@ -1265,10 +1554,14 @@ export interface LvApi {
     fraction: number,
     target?: { readonly targetImageHeightMm: number | null; readonly fieldAngleDeg: number | null },
   ): LvMtfFieldDraft;
-  /** Whether a field with this many unresolved rays, of this share of its flux, may still be reported. */
+  /**
+   * Whether a field with this many unresolved samples (unaimed and failed), of this judged share of its flux, may still
+   * be reported; `inBeam`, how many lie beside the transmitted beam, makes the share theirs alone (LV #936).
+   */
   assessUnresolvedFlux(
-    failedRays: number,
+    unresolvedRays: number,
     unknownFluxFraction: number,
+    inBeam?: number | null,
   ): { readonly acceptable: boolean; readonly note: string | null };
   /** A footprint widened on the sides whose guard band carried flux. */
   expandMtfFootprint(footprint: LvMtfFootprint, sides: LvMtfOpenBorders, fraction?: number): LvMtfFootprint;
@@ -1323,19 +1616,6 @@ export interface LvApi {
   computeComaAnalysis(request: LvAnalysisRequest): LvComaAnalysis;
   /** One tile of LV's bokeh tab: the field traced at the request's focus and intercepted at `sensorZ`. */
   computeBokehFieldFootprint(request: LvAnalysisRequest, fieldFraction: number, sensorZ: number): LvBokehField | null;
-  /** LV's skew trace of a ray given by its crossing of the first vertex plane and its slopes. */
-  traceSkewRay(
-    x0: number,
-    y0: number,
-    ux0: number,
-    uy0: number,
-    focusT: number,
-    zoomT: number,
-    stopSD: number | undefined,
-    ghost: boolean,
-    L: LvRuntimeLens,
-    aberrationT?: number,
-  ): LvSkewTrace;
   /** LV's projection of a skew trace from the last vertex plane to an image plane. */
   skewImagePlaneIntercept(
     x: number,
@@ -1463,21 +1743,46 @@ export interface LvApi {
   /** LV's `evenlySpacedSigned`: `count` fractions from -1 to +1, both ends included, `-1 + (2 * index) / (count - 1)`. */
   evenlySpacedSigned(count: number): number[];
   /** What LV's vignetting tab presents for a request: its curve, a sample a field from the axis to the half field. */
-  computeVignettingCurve(request: LvAnalysisRequest): readonly LvVignettingSample[];
+  computeVignettingCurve(request: LvAnalysisRequest): LvVignettingCurve;
+  /** One field of LV's vignetting tab on its stop lattice, every cell with its ray and how its full trace ended. */
+  computeVignettingField(
+    request: LvAnalysisRequest,
+    fieldFraction: number,
+    cellsAcross?: number,
+    stateGeometry?: LvFieldGeometry,
+  ): LvVignettingField;
+  /** LV's `BEAM_GRID_CELLS`: the cells across the stop's diameter of the vignetting tab's lattice. */
+  readonly vignettingBeamCells: number;
+  /** LV's `MIN_BEAM_GRID_CELLS`: the fewest cells across the stop's diameter the tab's lattice is made of. */
+  readonly vignettingMinBeamCells: number;
+  /**
+   * LV's shared aimed launch (LV #927): each pupil sample of a field aimed at its point of the real stop of the
+   * request, at a chromatic channel's indices ("R", "G", "B", "V") or the authored ones without one; null without a
+   * stop. What every tab of rays launches since #927.
+   */
+  prepareAimedPupilLaunch(
+    request: LvAnalysisRequest,
+    samples: readonly LvAimedPupilSample[],
+    geometry: LvAimedObjectPlaneField | LvOffAxisFieldGeometry,
+    spectrum?: string,
+  ): LvAimedPupilLaunch | null;
+  /** LV's full trace of an aimed launch's rays, as the tabs trace them: the stop at the launch's clip radius. */
+  prepareAimedPupilTrace(
+    state: LvPreparedState,
+    launch: Pick<LvAimedPupilLaunch, "clipSemiDiameterMm" | "launchBoundT">,
+    spectrum?: string,
+  ): LvAimedPupilTrace;
+  /** LV's aimed stop lattice of a field (`stopLattice` of `cellsAcross` across the stop), as the vignetting tab aims it. */
+  prepareAimedStopLattice(
+    request: LvAnalysisRequest,
+    cellsAcross: number,
+    geometry: LvAimedObjectPlaneField | LvOffAxisFieldGeometry,
+    spectrum?: string,
+  ): LvAimedStopLattice | null;
+  /** LV's `CHROMATIC_ZONE_CHANNELS`: the channels every chromatic readout traces to choose its zone, R, G, B, V. */
+  readonly chromaticZoneChannels: readonly string[];
   /** The unit direction of a meridional slope dy/dz, normalised as LV's meridional launch normalises it. */
   directionFromMeridionalSlope(u: number): LvVec3 | null;
   /** What LV's summary tab presents for a request: first-order, aperture, field and geometry readouts of the state. */
   computeOpticalSummary(request: LvAnalysisRequest): LvOpticalSummary;
-  /**
-   * The effective f-number LV's aperture control shows beside the marked one ("eff. f/"): the marked f-number at
-   * infinity, and its close-focus estimate `N (1 + |m| / p)` elsewhere, of a thin-lens magnification and LV's stored
-   * pupils.
-   */
-  effectiveFNumber(
-    nominalFNumber: number,
-    focusT: number,
-    zoomT: number,
-    L: LvRuntimeLens,
-    aberrationT?: number,
-  ): number;
 }

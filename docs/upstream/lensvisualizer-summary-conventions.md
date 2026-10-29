@@ -1,14 +1,17 @@
 # LensVisualizer: the summary tab's f-numbers and the stop they are of
 
-Status: **decided by the owner, 2026-10-27: LensVisualizer is to change (pending; the owner holds its prompt).** Not
-filed. LensVisualizer is to present OpticStudio's three f-numbers under their names, the image-space f/# (EFL / EPD),
-the paraxial working f/# of its own paraxial trace at the current focus (in place of the thin-lens "eff. f/") and the
-working f/# of the real marginal ray (`1 / (2 n' sin θ')`), and to size the stop by one rule at every f-number, the
-paraxial entrance pupil `EFL / N` (OpticStudio's image-space F/# aperture type), in place of the unaimed, unclipped real
-sizing ray and the linear stop-down (sections 1 to 3, options (a) of section 2). Until the change lands R12b records
-LensVisualizer as it is; afterwards the canaries of the lines quoted below fail first, every case's stop radius moves
-(and with it every case id and baseline record), and the summary's request, R12b's asks and the measurements are
-redone. Observed at LV `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`. The comparator reports LensVisualizer's summary tab as it is and changes no gate for this: rung R1 judges
+Status: **resolved by LensVisualizer #933** (`445fa1711`, adopted by the comparator at Stage 6.8b,
+LV `607ff23ae`, engine closure `f016b35b`). Decided by the owner on 2026-10-27 and not filed. LensVisualizer
+presents OpticStudio's three f-numbers under their names, "Image-space f/#" (EFL / EPD of the paraxial pupil),
+"Paraxial working f/#" (`1 / (2 n' |u'|)` of its own paraxial marginal ray at the current focus; it replaces the
+thin-lens "eff. f/" beside the mark) and "Working f/#" (`computeWorkingFNumber`, `1 / (2 n' sin θ')` of the real
+marginal ray aimed at the stop's rim), and sizes the stop by one rule at every f-number, the paraxial entrance pupil
+`EFL / N` (`stopSemiDiameterForFNumber`, capped at the iris wide open; an authored schedule and a fixed iris kept),
+in place of the real sizing ray and the linear stop-down. The canaries of the lines quoted below failed first and were
+restated; the stop radius and case id of nearly every case moved; the summary's request, R12b's asks and the measurements were
+redone (`docs/REFERENCE.md`, "Stage 6.8b": on the benchmark the image-space f-numbers within 1.1e-14 of optiland's,
+the paraxial working ones within 2.0e-14, the working ones within 3.4e-9, the pupils within 8.5e-14 mm, the pupil to
+the bit of R1's). The history follows as it was written. Observed at LV `098c91ef6` (clean; engine closure `fef2e248`) and optiland `4e893f53`. The comparator reports LensVisualizer's summary tab as it is and changes no gate for this: rung R1 judges
 its first-order readouts (`test/integration/lv/summary.test.ts`: the cardinal focal length, back and front focus and
 hiatus to the bit, the focal lengths within 8 units in the last place, the entrance pupil and the "Working f/#" within
 3.4e-11 relative), and rung R12b records the tab and the aperture control beside optiland's own accessors and working
@@ -136,6 +139,6 @@ ray from the conjugate's axial point, `1 / (2 n' |u'|)`), with no stored constan
 
 The owner decided the f-numbers and the stop rule (status, above); the rest of section 4 is for the record. When
 LensVisualizer changes, the canaries of the lines quoted above fail first (`test/integration/lv/canaries.test.ts`, Stage
-6.7), and the summary's request, R12b's asks and these measurements are redone. Today R12b records the "eff. f/" under
-`sampling.lvThinLensEffectiveFNumber`, of no definition of the contract's, and LensVisualizer's paraxial and real
-working f-numbers as none.
+6.7), and the summary's request, R12b's asks and these measurements are redone. That happened with #933 (status,
+above): `sampling.lvThinLensEffectiveFNumber` is gone, and R12b records LensVisualizer's paraxial and real working
+f-numbers at infinity focus.

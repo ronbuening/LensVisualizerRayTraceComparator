@@ -11,7 +11,8 @@ import type {
 } from "../../contract/quantities/axialNative.ts";
 import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import { decodeNdArray, encodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
-import { lvAxialZones } from "./axialZones.ts";
+import { channelAt, lvAxialZones, lvChannelLines } from "./axialZones.ts";
+export { lvChannelLines } from "./axialZones.ts";
 import type { LvAxialApi } from "./axialZones.ts";
 import type { LvCaseModel } from "./caseModel.ts";
 import { linesBeyondCase, tracesAuthored } from "./spot.ts";
@@ -47,25 +48,6 @@ export const LV_COLOUR_SECTION = "lv-chromatic-tab";
 /** Two lists of fractions alike, value by value. */
 function sameFractions(a: readonly number[], b: readonly number[]): boolean {
   return a.length === b.length && a.every((value, at) => Object.is(value, b[at]));
-}
-
-/**
- * The line each chromatic channel of a lens is traced at, nm, as LensVisualizer's materials resolve it: C, d, F and g
- * for a lens whose elements state d-line indices; C', e, F' and g for a lens whose elements all state e-line indices
- * (`makeSurfaceDispersion` in materialResolver.ts gives a native e-line element those lines on every tier). Which a
- * lens is, LensVisualizer says: its chromatic tab asks `lensChromaticReference(L.elements)` of the runtime lens, whose
- * elements leave the synthetic rear plates out, and the comparator asks the same of the same elements. A lens that
- * mixes the two, whose reference is "d" with an element whose own reference (asked of it alone) is "e", has no one
- * line a channel is of: null.
- */
-export function lvChannelLines(
-  api: Pick<LvAxialAnswerApi, "lensChromaticReference" | "eLineChannelWavelengthsNm" | "chromaticChannelWavelengthsNm">,
-  model: LvCaseModel,
-): Readonly<Record<string, number>> | null {
-  const elements = model.runtime.elements;
-  if (api.lensChromaticReference(elements) === "e") return api.eLineChannelWavelengthsNm;
-  const mixed = elements.some((element) => api.lensChromaticReference([element]) === "e");
-  return mixed ? null : api.chromaticChannelWavelengthsNm;
 }
 
 /** Why the sections cannot answer a spec about a case, before anything is asked of LensVisualizer. */
@@ -111,11 +93,6 @@ function refusals(api: LvAxialAnswerApi, model: LvCaseModel, spec: AxialNativeSp
     }
   }
   return refused;
-}
-
-/** The channel traced at a wavelength, or null. */
-function channelAt(channels: Readonly<Record<string, number>>, wavelengthNm: number | undefined): string | null {
-  return Object.keys(channels).find((channel) => channels[channel] === wavelengthNm) ?? null;
 }
 
 /** An unavailable line of an answer, with LensVisualizer's reason. */
@@ -193,7 +170,12 @@ function spherical(
     bestFocusRmsMm: result.bestFocusRmsMm,
     profileMm: encodeNdArray(Float64Array.from(profile)),
   };
-  const sampling = { raysArrived: result.validSampleCount, profilePoints: points.length };
+  const sampling = {
+    raysArrived: result.validSampleCount,
+    profilePoints: points.length,
+    ...(result.unaimedZoneCount === undefined ? {} : { zonesUnaimed: result.unaimedZoneCount }),
+    ...(result.blockedZoneCount === undefined ? {} : { zonesBlocked: result.blockedZoneCount }),
+  };
   return [{ line, wavelengthNm, status: "ok", paraxialFocusZ: null, figures, rays: null, sampling }];
 }
 
@@ -233,7 +215,11 @@ function colour(
     const channel = channelAt(channels, wavelengthNm);
     if (channel === null) return unavailableField(line, wavelengthNm, "lv-no-channel-at-line");
     const delta = indexDelta(model, line, channel);
-    const sampling = { validChannels: result.validChannelCount, indexMaxDelta: delta };
+    const sampling = {
+      validChannels: result.validChannelCount,
+      indexMaxDelta: delta,
+      ...(result.omittedChannels === undefined ? {} : { channelsOmitted: result.omittedChannels.length }),
+    };
     const sample = result.samples.find((each) => each.channel === channel);
     if (sample === undefined || sample.focusZ === null || sample.imageHeightMm === null) {
       return unavailableField(line, wavelengthNm, "lv-channel-clipped", sampling);
@@ -261,8 +247,9 @@ function colour(
  *   wavelength is the line of one of its channels (`lvChannelLines`), that channel's focus and image height, at the
  *   fraction the section took; a line that is no channel is unavailable (`lv-no-channel-at-line`). The section traces
  *   its channels at its own indices, which `sampling.indexMaxDelta` sets against the case's.
- * - Both sections present their figures on the design image plane, and answer only a case of that plane; the
- *   fractions are of the tabs' pupil radius (`lvTabPupilSemiDiameter`). No paraxial focus is presented.
+ * - Both sections present their figures on the design image plane, and answer only a case of that plane; since
+ *   LensVisualizer #927 the fractions are of the real stop's radius, each zone aimed there (`pupilRadiusMm` is the
+ *   case's stop radius); since #930 the colour zone is chosen from all four channels. No paraxial focus is presented.
  *
  * Unsupported: a finite object, a folded path, a line the case does not have (`line`), zones other than the section's
  * own, spherical aberration at a line that is not the authored reference line, colour of a lens that mixes d-line and
@@ -278,14 +265,17 @@ export function answerLvAxial(api: LvAxialAnswerApi, model: LvCaseModel, spec: A
   const offCase = fields.some((field) => (field.sampling.indexMaxDelta ?? 0) > 0);
   const data: AxialNativeData = {
     kind: spec.kind,
-    pupilRadiusMm: lvTabPupilSemiDiameter(api, model),
+    pupilRadiusMm: model.exported.conditions.stopSemiDiameter,
     fields: fields as AxialNativeField[],
     method: {
       name: spec.kind === "spherical" ? LV_SPHERICAL_SECTION : LV_COLOUR_SECTION,
-      params: { stopSemiDiameterMm: model.exported.conditions.stopSemiDiameter },
+      params: {
+        stopSemiDiameterMm: model.exported.conditions.stopSemiDiameter,
+        pupilSemiDiameterMm: lvTabPupilSemiDiameter(api, model),
+      },
     },
     notes: [
-      "LensVisualizer launches every ray parallel to the axis at a fraction of the entrance pupil's radius, on the first vertex plane",
+      "LensVisualizer aims every ray parallel to the axis at a fraction of the real stop's radius (pupilRadiusMm), at the authored indices for spherical aberration and at each channel's own for axial colour",
       ...(offCase
         ? [
             "LensVisualizer's chromatic tab traces some media at indices of its own, not the case's (sampling.indexMaxDelta)",

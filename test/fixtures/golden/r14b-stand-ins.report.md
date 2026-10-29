@@ -8,7 +8,7 @@
 | Suite hash | 577c75a2a5045f333ae5d5d38feea947f07faf907cbf3d7825ad297e0396fe00 |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | 288830c35311d983c5036df6739fe5823523b85ba7b0f0d1183fa055d0a47dfa |
+| Policy hash | 1b7b5915a699f543d7434657e697e4b5eb78cc18d84e1233e4ca06337d5e5378 |
 
 ### Engines
 
@@ -54,16 +54,16 @@ Quantity `zernike.native`, compared independent-method, recorded. Request `4acbe
 
 Reference vs each, against `optiland`:
 
-| Engine | chiefLanding.maxAbs [mm] | coefficients.maxAbs [waves] | fitCondition.max | fitResidualRms.maxAbs [waves] | pvToChief.maxAbs [waves] | rmsToChief.maxAbs [waves] | fields.compared [elements] | fields.data [elements] | fields.numerical [elements] | fields.unavailable [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-9 mm) | coefficients.maxAbs (band 4.00e-11 waves) | fitCondition.max (band 1000000) | fitResidualRms.maxAbs (band 7.00e-16 waves) | pvToChief.maxAbs [waves] | rmsToChief.maxAbs (band 2.00e-16 waves) | fields.compared [elements] | fields.data [elements] | fields.numerical [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| optiland-wave | 0 at field 0 | 9.09e-13 at field 0, term 4 | 2.50e0 at field 0 | 0 at field 0 | 0 at field 0 | 0 at field 0 | 1 | 0 | 0 | 1 | RECORDED | the rung sets no limit on chiefLanding.maxAbs: no field is set aside by its chief ray's landing; the rung sets no limit on fitCondition.max: no field is set aside by the condition of its fit; field 20: unsupported, no-curve (optiland-zernike-fit: unavailable (optiland-raised-ValueError)) |
+| optiland-wave | 0 at field 0 | 9.09e-13 at field 0, term 4 | 2.50e0 at field 0 | 0 at field 0 | 0 at field 0 | 0 at field 0 | 1 | 0 | 0 | 1 | RECORDED | field 20: unsupported, no-curve (optiland-zernike-fit: unavailable (optiland-raised-ValueError)) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
 | Engine | optiland | optiland-wave |
 |---|---|---|
-| optiland | — | RECORDED (chiefLanding.maxAbs 0 at field 0) |
-| optiland-wave | RECORDED (chiefLanding.maxAbs 0 at field 0) | — |
+| optiland | — | RECORDED (coefficients.maxAbs 9.09e-13 at field 0, term 4) |
+| optiland-wave | RECORDED (coefficients.maxAbs 9.09e-13 at field 0, term 4) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 

@@ -1,18 +1,17 @@
 // The fake's spherical-aberration section and axial-colour section, under LV's names. Its zones and its channel
-// indices are its own, deliberately not LV's; the launch of a ray (where it starts, along which direction) and the
-// reading of an intercept (the height carried to the last vertex plane, over the slope) are LV's rule, so that rays
-// made by the comparator's restatement give the fake's section numbers back to the bit.
-import { traceSequential } from "../trace/sequentialTrace.js";
-import { projectCoordinateToZ } from "../trace/utils.js";
-import { CHROMATIC_CHANNEL_WAVELENGTH_NM, LINE_NM } from "../chromatic.js";
+// indices are its own, deliberately not LV's; since LV #927 each zone is the fake's aimed launch of the axis at the
+// fraction of the stop (prepareAimedPupilLaunch, with a channel for the colour), traced as the launch's own trace, and
+// the intercept is read as LV reads it (the height carried to the last vertex plane, over the slope); since LV #930 the
+// colour zone is chosen from all four channels. So rays made by the comparator give the fake's numbers back to the bit.
+import { CHROMATIC_CHANNEL_WAVELENGTH_NM, CHROMATIC_ZONE_CHANNELS, LINE_NM } from "../chromatic.js";
 import { PROFILE_FRACS } from "./aberration/shared.js";
-import type { FakeState, Vec3 } from "../types.js";
+import { prepareAimedPupilLaunch, prepareAimedPupilTrace } from "./pupils/aimedPupil.js";
 import type { FakeAnalysisRequest } from "./request.js";
 
 export const NEAR_AXIS_REAL_FRAC = 0.25;
 export const MARGINAL_PUPIL_FRACTIONS = [0.9, 0.75, 0.5] as const;
 export const DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS = [0.9, 0.75, 0.5] as const;
-const CHANNELS = ["R", "G", "B", "V"] as const;
+const CHANNELS = CHROMATIC_ZONE_CHANNELS;
 
 /** The fake's index of a medium at a chromatic channel: its own rule, not its MTF's. */
 export function fakeChannelIndex(nd: number, channel: string): number {
@@ -21,36 +20,19 @@ export function fakeChannelIndex(nd: number, channel: string): number {
   return nd + (LINE_NM.d - wavelength) * 2e-5 + 1e-6;
 }
 
-/** A meridional ray of LV's shape, at the height `y0` with the slope 0, at the authored indices or a channel's. */
-function meridional(state: FakeState, y0: number, stopSD: number, channel?: string) {
-  const lead = state.lens.constants.rayLead ?? 0;
-  const origin: Vec3 = [0, y0 - 0 * lead, (state.z[0] ?? 0) - lead];
-  const trace = traceSequential(
-    state,
-    { origin, direction: [0, 0, 1] },
-    {
-      checkSemiDiameter: true,
-      stopSemiDiameter: stopSD,
-      stopOnClip: true,
-      directionNormalized: true,
-      ...(channel === undefined
-        ? {}
-        : { indexAtSurface: (_index: number, nd: number) => fakeChannelIndex(nd, channel) }),
-    },
-  );
-  const [point, toward] = [trace.terminalPoint, trace.terminalDirection];
-  const last = state.surfaces.length - 1;
-  return {
-    clipped: trace.status !== "ok",
-    y: projectCoordinateToZ(point[1], point[2], toward[1], toward[2], state.z[last]),
-    u: toward[1] * (1 / toward[2]),
-  };
+/** The axis's zone at a signed fraction of the stop, aimed and traced at the authored indices or a channel's. */
+function meridional(request: FakeAnalysisRequest, signedFraction: number, channel?: string) {
+  const launch = prepareAimedPupilLaunch(request, [{ xFraction: 0, yFraction: signedFraction }], { uField: 0, yChief: 0 }, channel);
+  const aimed = launch?.rays[0];
+  if (!launch || !aimed || aimed.status === "unaimed") return { unaimed: true, clipped: true, y: NaN, u: NaN };
+  const ray = prepareAimedPupilTrace(request.preparedGeometry, launch, channel).meridional(aimed as never);
+  return { unaimed: false, ...ray };
 }
 
 function hitOf(request: FakeAnalysisRequest, signedFraction: number) {
   const state = request.preparedGeometry;
   const last = state.z[state.surfaces.length - 1];
-  const ray = meridional(state, signedFraction * request.aperture.entrancePupilSemiDiameterMm, request.aperture.stopSemiDiameterMm);
+  const ray = meridional(request, signedFraction);
   if (ray.clipped || Math.abs(ray.u) < 1e-12) return null;
   return {
     signedFraction,
@@ -140,15 +122,13 @@ export function computeLongitudinalChromaticFocus(request: FakeAnalysisRequest) 
   const last = state.z[state.surfaces.length - 1];
   for (const marginalFraction of DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS) {
     const rays = CHANNELS.map((channel) => {
-      const ray = meridional(
-        state,
-        marginalFraction * request.aperture.entrancePupilSemiDiameterMm,
-        request.aperture.stopSemiDiameterMm,
-        channel,
-      );
+      const ray = meridional(request, marginalFraction, channel);
       return { channel, ray, usable: !ray.clipped && Math.abs(ray.u) > 1e-15 };
     });
-    if (rays.filter((each) => each.usable).length < 2) continue;
+    // An unaimed zone ends the search; a zone all four channels pass is taken, else (the fake's simplification of LV's
+    // rule) none: the fake has no fallback to two channels.
+    if (rays.some((each) => each.ray.unaimed)) return null;
+    if (rays.some((each) => !each.usable)) continue;
     const reference = rays.find((each) => each.channel === "G")!;
     const focus = (each: (typeof rays)[number]) => (each.usable ? last - each.ray.y / each.ray.u : null);
     const height = (each: (typeof rays)[number]) => (each.usable ? each.ray.y + (state.imgZ - last) * each.ray.u : null);

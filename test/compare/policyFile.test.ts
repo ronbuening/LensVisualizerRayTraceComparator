@@ -17,7 +17,7 @@ import { tempDir } from "../core/support.ts";
 test("the policy file is policy/rungs.v1.json, and holds the comparator's own policy", () => {
   assert.equal(POLICY_FILE, join(REPO_ROOT, "policy", "rungs.v1.json"));
   const policy = loadPolicy();
-  assert.equal(policy.version, 23);
+  assert.equal(policy.version, 24);
   assert.equal(policy.contract, "1.3");
   assert.deepEqual(policy.rungs.selftest, {
     quantity: "selftest.echo",

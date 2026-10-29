@@ -1,5 +1,6 @@
 // The axial sets of a LensVisualizer lens, with no LensVisualizer: on the fake LV tree, whose spherical-aberration and
-// axial-colour sections have LensVisualizer's names, its meridional launch and zones of their own. What is held here
+// axial-colour sections have LensVisualizer's names, its aimed launch (each zone at its fraction of the stop, a
+// channel's at a factor of its own) and zones of their own. What is held here
 // is which rays the case source makes for the two sections and that, traced, they are the sections' own: the fake's
 // intercepts, best focus, profile and per-channel focus come back from them to the bit. That the restatement is
 // LensVisualizer's own is test/integration/lv/axialRays.test.ts, against the real one.
@@ -10,12 +11,13 @@ import type { OpticalCase } from "../../../src/contract/case.ts";
 import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.ts";
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
-import { lvAxialLaunch, lvAxialRaySets, lvAxialZones } from "../../../src/engines/lv/axialRaySets.ts";
+import { lvAxialRaySets, lvAxialZones } from "../../../src/engines/lv/axialRaySets.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
 import { createLvExporter } from "../../../src/engines/lv/caseSource.ts";
 import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
+import { answerLvRays } from "../../../src/engines/lv/rays.ts";
 import { lvTabPupilSemiDiameter } from "../../../src/engines/lv/spotSetup.ts";
 import type { LvApi } from "../../../src/engines/lv/types.ts";
 import { bind, freshLv, variantOf } from "./support.ts";
@@ -69,12 +71,14 @@ function sectionRay(api: LvApi, model: LvCaseModel, set: RaysTraceSpec, ray: num
   return { y, u, intercept: last - y / u };
 }
 
-test("the axial sets are the two sections' zones in mirror pairs, the same rays at every line", async (t) => {
+test("the axial sets are the sections' zones in mirror pairs: two at every line, the colour at each channel's", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
-  const { opticalCase, model } = await modelOf(binding, SINGLET, { lines: { kind: "photopic" } });
+  // The reference line, the fake's R channel (656.2725 nm, C), and 600 nm, no channel's.
+  const { opticalCase, model } = await modelOf(binding, SINGLET, {
+    lines: { kind: "explicit", wavelengthsNm: [587.5618, 656.2725, 600] },
+  });
   const lines = opticalCase.conditions.lines.length;
-  assert.ok(lines > 1);
   const made = lvAxialRaySets(api, model);
   assert.deepEqual(made.problems, []);
   // The fake's zones: a profile of 0.1, 0.25, 0.5, 0.75 and 0.9; the near-axis zone 0.25; marginal candidates and
@@ -85,22 +89,31 @@ test("the axial sets are the two sections' zones in mirror pairs, the same rays 
     profile: [0.1, 0.25, 0.5, 0.75, 0.9],
     colour: [0.9, 0.75, 0.5],
   });
-  const patterns = [
-    [0.1, 0.25, 0.5, 0.75, 0.9],
-    [0.25, 0.9, 0.75, 0.5],
-  ];
-  assert.equal(made.sets.length, 2 * lines);
+  // The profile and the marginal rays at every line, aimed at the authored indices; the colour at line 0 (G) and line
+  // 1 (R), each aimed at its channel's indices; none at 600 nm.
   const pupil = lvTabPupilSemiDiameter(api, model);
+  const expected = [
+    ...[0, 1, 2].map((line) => ({ line, zones: [0.1, 0.25, 0.5, 0.75, 0.9], scale: 1 })),
+    ...[0, 1, 2].map((line) => ({ line, zones: [0.25, 0.9, 0.75, 0.5], scale: 1 })),
+    { line: 0, zones: [0.9, 0.75, 0.5], scale: 1 },
+    { line: 1, zones: [0.9, 0.75, 0.5], scale: 1 + 1 / 1024 },
+  ];
+  assert.equal(lines, 3);
+  assert.deepEqual(
+    made.sets.map((set) => set.line),
+    expected.map(({ line }) => line),
+  );
   const firstZ = model.state.z[0];
   made.sets.forEach((set, at) => {
-    const pattern = patterns[Math.floor(at / lines)];
-    assert.equal(set.line, at % lines);
+    const { zones, scale } = expected[at];
     assert.deepEqual(set.groups, { field: { angleDeg: 0 } });
-    const heights = pattern.flatMap((fraction) => [fraction * pupil, -fraction * pupil]);
-    // Each ray starts the fake's lead of 10 mm ahead of the first vertex plane, at its height, along the axis.
+    // The fake aims a zone at its fraction of the stop by its fraction of the pupil, times its channel's factor; each
+    // ray starts the fake's lead of 10 mm ahead of the first vertex plane, along the axis, beside its mirror image.
+    const heights = zones.flatMap((fraction) => [fraction * pupil * scale, -fraction * pupil * scale]);
     assert.deepEqual(
       [...f8(set, "origins")],
       heights.flatMap((y) => [0, y, firstZ - 10]),
+      `set ${at}`,
     );
     assert.deepEqual(
       [...f8(set, "directions")],
@@ -113,17 +126,52 @@ test("the axial sets are the two sections' zones in mirror pairs, the same rays 
   });
   assert.deepEqual(made.asks, [
     { kind: "spherical", lines: [0], nearAxis: 0.25, marginal: [0.9, 0.75, 0.5], profile: [0.1, 0.25, 0.5, 0.75, 0.9] },
-    { kind: "colour", lines: Array.from({ length: lines }, (_unused, line) => line), marginal: [0.9, 0.75, 0.5] },
+    { kind: "colour", lines: [0, 1, 2], marginal: [0.9, 0.75, 0.5] },
   ]);
-  // The launch of a height: LensVisualizer's meridional launch with the slope 0.
-  assert.deepEqual(lvAxialLaunch(model, -2.5), { origin: [0, -2.5, firstZ - 10], direction: [0, 0, 1] });
+});
+
+test("a zone LensVisualizer aims no ray at is left out of its set and named; a blocked zone keeps its rays", async (t) => {
+  const lv = freshLv(t);
+  // The fake aims nothing beyond 0.8 of the stop, and blocks what is beyond 0.6 at the first surface.
+  const aimed = variantOf(lv, "aimed", {
+    "src/lens-data/acme/AcmeSinglet50.data.ts": (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  aim: { unaimedBeyond: 0.8, blockedBeyond: 0.6 },"),
+  });
+  const binding = await bind(t, aimed);
+  const { model } = await modelOf(binding, SINGLET);
+  const made = lvAxialRaySets(binding.api, model);
+  assert.deepEqual(
+    made.problems.map((problem) => problem.split(":")[0]),
+    ["lv-zone-unaimed", "lv-zone-unaimed", "lv-zone-unaimed"],
+  );
+  // The profile without 0.9, the marginal set without 0.9, the colour set without 0.9: 0.75 stays, and is blocked.
+  assert.deepEqual(
+    made.sets.map((set) => f8(set, "origins").length / 3),
+    [8, 6, 4],
+  );
+  const traced = made.sets.map((set) => {
+    const answer = answerLvRays(binding.api, model, set);
+    assert.ok("data" in answer);
+    return decodeNdArray(answer.data.status).values;
+  });
+  // The blocked pair of 0.75 is stopped by every engine; LensVisualizer counts it vignetted.
+  assert.deepEqual([...traced[2]], [1, 1, 0, 0]);
 });
 
 test("traced as the sections trace them, the sets give the fake's intercepts, focus and channels to the bit", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
-  const { model } = await modelOf(binding, SINGLET);
-  const [profile, marginal] = lvAxialRaySets(api, model).sets;
+  // Every channel of the fake is a line: d (G) first, then C (R), F (B) and g (V).
+  const { model } = await modelOf(binding, SINGLET, {
+    lines: { kind: "explicit", wavelengthsNm: [587.5618, 656.2725, 486.1327, 435.8343] },
+  });
+  const made = lvAxialRaySets(api, model);
+  const [profile, , , , marginal] = made.sets;
+  const colourSets = made.sets.slice(8);
+  assert.deepEqual(
+    colourSets.map((set) => set.line),
+    [0, 1, 2, 3],
+  );
   const request = api.createAnalysisRequest({
     preparedState: model.state,
     dynamicEFL: 0,
@@ -157,16 +205,17 @@ test("traced as the sections trace them, the sets give the fake's intercepts, fo
     api.computeSAProfile(request).map((point) => point.transverseSaMm),
     [0, 2, 4, 6, 8].flatMap((ray) => (hits[ray] === null ? [] : [at(hits[ray]!) - reference])),
   );
-  // The axial colour: the marginal candidates' plus rays at each channel, the first that arrives at two.
+  // The axial colour: each channel's own set, its candidates' plus rays traced at its indices, the first zone that
+  // every channel brings to the image.
   const colour = api.computeLongitudinalChromaticFocus(request);
   assert.ok(colour !== null);
-  const channels = ["R", "G", "B", "V"];
-  const chosen = [2, 4, 6].find(
-    (ray) => channels.filter((channel) => sectionRay(api, model, marginal, ray, channel) !== null).length >= 2,
+  const channels = ["G", "R", "B", "V"];
+  const chosen = [0, 2, 4].find((ray) =>
+    channels.every((channel, line) => sectionRay(api, model, colourSets[line], ray, channel) !== null),
   )!;
-  assert.equal(colour.marginalFraction, [0.9, 0.75, 0.5][(chosen - 2) / 2]);
+  assert.equal(colour.marginalFraction, [0.9, 0.75, 0.5][chosen / 2]);
   colour.samples.forEach((sample) => {
-    const traced = sectionRay(api, model, marginal, chosen, sample.channel);
+    const traced = sectionRay(api, model, colourSets[channels.indexOf(sample.channel)], chosen, sample.channel);
     assert.equal(sample.focusZ, traced?.intercept ?? null, sample.channel);
   });
 });

@@ -12,7 +12,10 @@ export function apertureGeometry(state: LvPreparedState): LvTraceGeometry {
 }
 
 /** The LensVisualizer functions that size the stop. */
-export type LvStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoomClamped" | "fNumberAtStopdown">;
+export type LvStopApi = Pick<
+  LvApi,
+  "wideOpenStopAtZoom" | "stopSemiDiameterForFNumber" | "fopenAtZoomClamped" | "fNumberAtStopdown"
+>;
 
 /** The code of the problem of a run that asks for the tab's f/8 comparison of a lens the tab offers none for. */
 export const F8_COMPARISON_UNAVAILABLE = "f8-comparison-unavailable";
@@ -37,16 +40,16 @@ export function wideOpenStopRadius(api: LvStopApi, runtime: LvRuntimeLens, zoomT
  * The stop radius a run's aperture asks for, at one zoom position.
  *
  * - `wide-open` (and no aperture at all): `wideOpenStopRadius`.
- * - `f-number` N: LensVisualizer stops down linearly, `wide-open radius × fopenAtZoom(zoomT, L) / N`. The rule
- *   exists only in its React hook (src/components/hooks/useLensComputation.ts, `currentPhysStopSD`), so it is
- *   mirrored here, in the hook's order of operations, and an integration test fails when the hook's expression
- *   changes. The widest f-number asked for by number, f/fopen, is therefore the hook's `(w × fopen) / fopen`, which
- *   can differ from `wide-open` in the last bit. An N below the widest or above maxFstop is a coded problem: it is outside the slider range.
- * - `lv-f8-comparison`: the stop of the f/8 comparison of LensVisualizer's MTF tab, which is not the hook's f/8:
- *   the radius the hook hands the tab wide open, `(wide-open radius × fopen) / fNumber` with the f-number of the
- *   aperture slider at wide open, times `fNumber / 8` (`lvHookStop`, `lvTabComparison`, both restated from
- *   LensVisualizer with source canaries). A lens the tab offers no comparison for, because it is not faster than
- *   f/7.95 wide open or does not stop down to f/8, is a problem with the tab's own reason
+ * - `f-number` N: the stop LensVisualizer's hook hands every tab at the slider's N (src/components/hooks/
+ *   useLensComputation.ts, `currentPhysStopSD = stopSemiDiameterForFNumber(fNumber, zoomT, L)`, LV #933): its one
+ *   stop rule, paraxial EPD = F/N at infinity focus of the zoom position, the wide-open stop at or below the
+ *   position's wide-open f-number and never more than it above (`stopForFNumber`). The hook's call is restated here,
+ *   with a source canary; the rule itself is LensVisualizer's function, which the binding imports. An N below the
+ *   widest or above maxFstop is a coded problem: it is outside the slider range.
+ * - `lv-f8-comparison`: the stop of the f/8 comparison of LensVisualizer's MTF tab,
+ *   `stopSemiDiameterForFNumber(8, zoomT, L)` (`lvTabComparison`, restated with a source canary): since #933 the same
+ *   radius, to the bit, as `f-number` 8 (the slider at f/8). A lens the tab offers no comparison for, because it is
+ *   not faster than f/7.95 wide open or does not stop down to f/8, is a problem with the tab's own reason
  *   (`F8_COMPARISON_UNAVAILABLE`).
  * - `stop-radius`: the radius as given.
  */
@@ -61,9 +64,9 @@ export function stopRadius(
   if (aperture === undefined || aperture.kind === "wide-open") return { ok: true, radius: wideOpen };
   if (aperture.kind === "lv-f8-comparison") {
     const hook = lvHookStop(api, runtime, zoomT);
-    const { scale, unavailable } = lvTabComparison(hook, runtime);
+    const { stopSemiDiameterMm, unavailable } = lvTabComparison(api, hook, runtime, zoomT);
     if (unavailable !== null) return { ok: false, problem: { code: F8_COMPARISON_UNAVAILABLE, message: unavailable } };
-    return { ok: true, radius: hook.currentPhysStopSD * scale };
+    return { ok: true, radius: stopSemiDiameterMm };
   }
 
   const widest = api.fopenAtZoomClamped(zoomT, runtime);
@@ -85,7 +88,7 @@ export function stopRadius(
       },
     };
   }
-  return { ok: true, radius: (wideOpen * widest) / aperture.value };
+  return { ok: true, radius: api.stopSemiDiameterForFNumber(aperture.value, zoomT, runtime) };
 }
 
 const view = new DataView(new ArrayBuffer(8));
@@ -139,7 +142,7 @@ function unclippedProbeRadii(sd: number): number[] {
  * LV's tracers override the stop surface's semi-diameter with it in exactly this way.
  *
  * - `nominalSemiDiameter`: the semi-diameter LV traces the surface with (`evaluateAperture(...).semiDiameter`): the
- *   prepared surface's `sd`, or the stop radius on the stop surface.
+ *   prepared surface's `sd`, the stop radius on the stop surface, or the radius of a flat rim cut (`lvClearRadius`).
  * - `semiDiameter`: LV's inclusive clip limit for it (`inclusiveClipLimit`).
  * - `innerSemiDiameter`: LV's inner semi-diameter, 0 for none.
  *
@@ -150,8 +153,16 @@ function unclippedProbeRadii(sd: number): number[] {
  * semi-diameter, and only after LV has been asked: it must call no radius of `unclippedProbeRadii` outside, and
  * report no central obstruction.
  *
- * Throws when LV's answer is not the one its own state implies: a semi-diameter that is not the surface's `sd` (or
- * the stop radius), or not a positive number; no semi-diameter for a surface the state does not mark `clips:
+ * **A surface with a flat rim cut** (LV #928, `rimCut`): LV traces the uncut cap and clips a ray beyond the cut
+ * radius, where the cap's sag reaches the land (`clearSemiDiameter` in `evaluateAperture`); the land itself is drawn
+ * and is no surface of any trace. That is what the case states: the cap's own profile, clipped at the cut radius
+ * (`semiDiameter`, LV's inclusive limit of it, and `nominalSemiDiameter` the cut radius, so R0 samples the cap out to
+ * there and no further). It is no approximation of the cut lens either: LV's validator holds the cap beyond the land
+ * from the cut radius out to `sd`, so a forward ray that would meet the land first meets the uncut cap beyond the cut
+ * radius first, and the two models stop the same rays.
+ *
+ * Throws when LV's answer is not the one its own state implies: a semi-diameter that is not the surface's clear
+ * radius (or the stop radius), or not a positive number; no semi-diameter for a surface the state does not mark `clips:
  * false`, or one for a surface it does; a surface it does not clip at that it stops a ray at, or that has a hole.
  * Each means the exporter no longer reads LV correctly.
  */
@@ -164,7 +175,7 @@ export function surfaceAperture(
   const evaluate = (radius: number) => api.evaluateAperture(apertureGeometry(state), surface, radius, stopRadius);
   const onAxis = evaluate(0);
   const nominal = onAxis.semiDiameter;
-  const expected = stopRadius ?? surface.sd;
+  const expected = stopRadius ?? lvClearRadius(surface);
   if (nominal === null && surface.clips === false && stopRadius === undefined) {
     const envelope = surface.sd;
     if (!(Number.isFinite(envelope) && envelope > 0)) {
@@ -206,6 +217,16 @@ export function surfaceAperture(
         ? inclusiveInnerLimit((radius) => evaluate(radius).state === "inside-hole", onAxis.innerSemiDiameter)
         : onAxis.innerSemiDiameter,
   };
+}
+
+/**
+ * The radius LensVisualizer passes rays to on a surface that is not the stop (LV #928): its `sd`, or the radius of a
+ * flat rim cut where the cut ends the cap inside it. Restated from `clearSemiDiameter` (src/optics/geometry/rimCut.ts),
+ * `cut ? Math.min(sd, cut.radius) : sd`, with a source canary; `surfaceAperture` holds LV's `evaluateAperture` to it.
+ */
+export function lvClearRadius(surface: Pick<LvSurface, "sd" | "rimCut">): number {
+  const cut = surface.rimCut ?? null;
+  return cut ? Math.min(surface.sd, cut.radius) : surface.sd;
 }
 
 /** Smallest double on the active side of LV's annular boundary; no tolerance is guessed. */

@@ -90,7 +90,7 @@ export interface LvExporter {
   curvatureRaySets(opticalCase: OpticalCase): Promise<CurvatureSetResolution>;
   /**
    * The vignetting sets of a case this checkout exported: the rays LensVisualizer's vignetting tab launches, each
-   * field's beam on its lattice and the chief rays of its image mapping, and the engines' own vignetting requests of
+   * field's beam on its stop lattice and its stop-centre ray, and the engines' own vignetting requests of
    * the same fields (`lvVignettingRaySets`), from the state the case was exported from, rebuilt and held to the case
    * first. A stale case has none, and the one problem `stale-case`.
    */
@@ -241,8 +241,8 @@ function unavailable(error: LvBindingError): ExportProblem {
  * astigmatism sections, and the engines' own field-curve requests of the same sections (`lvCurvatureRaySets`).
  *
  * `vignettingRaySets` gives the vignetting sets of a case it resolved: the rays of LensVisualizer's vignetting tab,
- * each field's beam on its lattice and the chief rays of its image mapping, and the engines' own vignetting requests
- * of the same fields (`lvVignettingRaySets`).
+ * each field's beam on its stop lattice and its stop-centre ray, and the engines' own vignetting requests of the same
+ * fields (`lvVignettingRaySets`).
  *
  * `recipe` gives the MTF recipe of a case it resolved: the plane, the fields and the frequencies as LensVisualizer
  * resolves them (`lvMtfRecipe`).

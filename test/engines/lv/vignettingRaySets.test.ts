@@ -1,8 +1,9 @@
 // The vignetting sets of a LensVisualizer lens, with no LensVisualizer: on the fake LV tree, whose vignetting tab has
-// LensVisualizer's name and rules, and a tracer, an MTF launch and lenses of its own. What is held here is which rays
-// the case source makes for the tab and that, traced, they are the tab's own: the fake's geometric transmission and
-// relative illumination come back from them to the bit, in the tab's own arithmetic, an absorbing glass included.
-// That the restatement is LensVisualizer's own is test/integration/lv/vignettingRays.test.ts, against the real one.
+// LensVisualizer's name and rules (LV #931: a lattice on the real stop a field, aimed through the shared launch), and a
+// tracer, an aim and lenses of its own. What is held here is which rays the case source makes for the tab and that,
+// traced as the tab traces them, they are the tab's own: each cell's ray, whether it reaches the image, and the fake's
+// unvignetted fraction come back from them to the bit, an absorbing glass included. That the restatement is
+// LensVisualizer's own is test/integration/lv/vignettingRays.test.ts, against the real one.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -19,8 +20,8 @@ import { createLensBuilder } from "../../../src/engines/lv/lensBuilder.ts";
 import { answerLvRays } from "../../../src/engines/lv/rays.ts";
 import type { LvApi, LvVec3 } from "../../../src/engines/lv/types.ts";
 import {
-  LV_VIGNETTING_BEAM_CELLS,
   isVignettingRefusal,
+  lvBeamLattice,
   lvVignettingDecision,
   lvVignettingFieldCount,
 } from "../../../src/engines/lv/vignettingFields.ts";
@@ -30,7 +31,6 @@ import { bind, freshLv, variantOf } from "./support.ts";
 
 const SINGLET = "acme-singlet-50";
 const SINGLET_FILE = "src/lens-data/acme/AcmeSinglet50.data.ts";
-const TRACING = "src/optics/analysis/mtf/mtfTracing.ts";
 
 async function modelOf(
   binding: LvBinding,
@@ -48,81 +48,16 @@ function f8(set: RaysTraceSpec, name: "origins" | "directions" | "weights"): Flo
   return decodeNdArray(set[name]).values as Float64Array;
 }
 
-/** A ray of a set traced as the tab traces it: with its own trace options, the d line at the authored indices. */
-function tabTrace(api: LvApi, model: LvCaseModel, setup: LvVignettingSetup, set: RaysTraceSpec, ray: number) {
+/** A ray of a set traced as the tab traces it: the launch's own trace, the stop at the lattice's clip radius. */
+function tabTrace(api: LvApi, model: LvCaseModel, beam: LvVignettingBeam, set: RaysTraceSpec, ray: number) {
   const [origins, directions] = [f8(set, "origins"), f8(set, "directions")];
   const at = (array: Float64Array): LvVec3 => [array[3 * ray], array[3 * ray + 1], array[3 * ray + 2]];
-  return api.traceEngineRay(model.state, { origin: at(origins), direction: at(directions) }, setup.traceOptions);
+  return api
+    .prepareAimedPupilTrace(model.state, beam.lattice)
+    .engine({ origin: at(origins), direction: at(directions) });
 }
 
-/**
- * The fake tab's curve of the beam sets of one line, counted as the tab counts its beams (a mirrored cell twice, a
- * running sum of the weights) and mapped as it maps them (the landings of lit chief rays 0.01 degrees apart), in its
- * own arithmetic; null where its arithmetic gives no curve.
- */
-function tabCurve(
-  api: LvApi,
-  model: LvCaseModel,
-  setup: LvVignettingSetup,
-  beams: readonly LvVignettingBeam[],
-  sets: readonly RaysTraceSpec[],
-) {
-  const stopRadius = setup.options.stopSemiDiameterMm;
-  const raw = sets.map((set, at) => {
-    const { columns, rows, step } = set.groups!.lattice!;
-    const weights = f8(set, "weights");
-    let [cells, transmitted] = [0, 0];
-    for (let ray = 0; ray < columns * rows; ray++) {
-      if (api.mtfTraceClassification(tabTrace(api, model, setup, set, ray), model.state, stopRadius) !== "valid") {
-        continue;
-      }
-      cells += setup.mirror ? 2 : 1;
-      transmitted += setup.mirror ? 2 * weights[ray] : weights[ray];
-    }
-    const cellArea = step * step;
-    const [area, flux] = [cells * cellArea, transmitted * cellArea];
-    // The chief rays after the cells: the field's, then those below and above it where the tab launches them.
-    const beam = beams[at];
-    const height = (ray: number | null): number | null => {
-      if (ray === null) return null;
-      const trace = tabTrace(api, model, setup, set, ray);
-      if (api.mtfTraceClassification(trace, model.state, stopRadius) !== "valid") return null;
-      return api.mtfImagePoint(model.state, trace)?.y ?? null;
-    };
-    const chief = columns * rows;
-    const below = beam.below === null ? null : chief + 1;
-    const above = beam.above === null ? null : chief + (beam.below === null ? 1 : 2);
-    return {
-      angle: set.groups!.field!.angleDeg!,
-      area,
-      flux,
-      own: height(chief),
-      low: height(below),
-      high: height(above),
-    };
-  });
-  const samples = raw.map(({ angle, area, flux, own, low, high }, at) => {
-    if (!(flux > 0)) return { angle, area, illumination: 0 };
-    if (own === null) return null;
-    const rise =
-      low !== null && high !== null ? (high - low) / 2 : high !== null ? high - own : low !== null ? own - low : null;
-    if (rise === null) return null;
-    const slope = Math.abs(rise / ((0.01 * Math.PI) / 180));
-    const imageArea = slope * (angle === 0 ? slope : Math.abs(own) / Math.sin((angle * Math.PI) / 180));
-    if (!(imageArea > 0)) return null;
-    // The launch's direction, every cell's: `beam.flux * launch.direction[2]`.
-    return { angle, area, illumination: (flux * f8(sets[at], "directions")[2]) / imageArea };
-  });
-  if (samples.some((sample) => sample === null)) return null;
-  const axis = samples[0]!;
-  return samples.map((sample) => ({
-    fieldAngleDeg: sample!.angle,
-    geometricTransmission: sample!.area / axis.area,
-    relativeIllumination: sample!.illumination / axis.illumination,
-  }));
-}
-
-/** The beams of the fields of a model, in the tab's order. */
+/** The fields of a model with a lattice, in the tab's order. */
 function beamsOf(api: LvApi, model: LvCaseModel): { setup: LvVignettingSetup; beams: LvVignettingBeam[] } {
   const decision = lvVignettingDecision(api, model, lvChiefGeometry(api, model)!);
   assert.ok("setup" in decision);
@@ -130,7 +65,7 @@ function beamsOf(api: LvApi, model: LvCaseModel): { setup: LvVignettingSetup; be
   return { setup: decision.setup, beams };
 }
 
-test("the vignetting sets are the tab's beams, a set a field and line, the chief rays of its mapping after the cells", async (t) => {
+test("the vignetting sets are the tab's stop lattices, a set a field and line, the stop-centre ray after the cells", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
   const { opticalCase, model } = await modelOf(binding, SINGLET, {
@@ -141,46 +76,55 @@ test("the vignetting sets are the tab's beams, a set a field and line, the chief
   assert.deepEqual(VIGNETTING_PATTERNS, ["beam"]);
   const geometry = lvChiefGeometry(api, model)!;
   const fields = lvVignettingFieldCount(geometry.halfFieldDeg);
-  assert.deepEqual([fields, LV_VIGNETTING_BEAM_CELLS], [8, 64], "LensVisualizer's counts: a half field of 20 degrees");
+  assert.deepEqual([fields, api.vignettingBeamCells], [8, 64], "the fake's counts: a half field of 20 degrees");
   const lines = opticalCase.conditions.lines.length;
   assert.equal(made.sets.length, fields * lines);
   const { setup, beams } = beamsOf(api, model);
-  assert.equal(setup.mirror, true, "the fake's surfaces are of revolution: the tab traces one half of each beam");
+  assert.equal(setup.mirror, true, "the fake's surfaces are of revolution: the tab traces one half of each lattice");
   const angles = made.asks[0].fieldAnglesDeg;
   beams.forEach((beam, field) => {
     const [first, second] = made.sets.slice(field * lines, (field + 1) * lines);
     assert.deepEqual([first.line, second.line], [0, 1]);
     assert.deepEqual(second.origins, first.origins, "the same rays at every line");
     assert.deepEqual(first.groups?.field, { angleDeg: angles[field] });
-    // The half lattice the tab traces, row by row, from the middle column on; then the chief rays of its mapping.
+    // The +x half of the stop's square, row by row, from the middle column on; then the stop-centre ray.
     const { columns, rows, step } = first.groups!.lattice!;
-    assert.deepEqual([columns, rows, step], [beam.grid.columns / 2, beam.grid.rows, beam.grid.step]);
+    const n = beam.lattice.cellsAcross;
+    assert.deepEqual([columns, rows, step], [n / 2, n, (2 * beam.lattice.stopSemiDiameterMm) / n]);
+    assert.deepEqual(lvBeamLattice(beam, true).firstColumn, n / 2);
     assert.equal(first.groups!.chiefIndex, columns * rows);
-    const origins = f8(first, "origins");
-    const own = api.mtfLaunchRay(
-      beam.launch,
-      beam.grid.x0 + (beam.grid.columns / 2 + 0.5) * step,
-      beam.grid.y0 + 0.5 * step,
-    );
-    assert.deepEqual([...origins.subarray(0, 3)], own.origin);
-    assert.ok(origins.subarray(0, 3 * columns * rows).every((value, at) => at % 3 !== 0 || value > 0));
-    const chiefs = [beam.launch, beam.below, beam.above].filter((launch) => launch !== null);
-    assert.equal(origins.length / 3, columns * rows + chiefs.length);
-    chiefs.forEach((launch, at) => {
-      const ray = api.mtfLaunchRay(launch, 0, 0);
-      assert.deepEqual([...origins.subarray(3 * (columns * rows + at), 3 * (columns * rows + at + 1))], ray.origin);
-    });
-    // A chief ray weighs nothing; a cell its bulk transmission, 1 through the fake's clear glass.
-    const weights = f8(first, "weights");
-    assert.ok(weights.subarray(0, columns * rows).every((weight) => weight === 1));
-    assert.ok(weights.subarray(columns * rows).every((weight) => weight === 0));
+    const [origins, directions, weights] = [f8(first, "origins"), f8(first, "directions"), f8(first, "weights")];
+    assert.equal(origins.length / 3, columns * rows + 1);
+    const chief = beam.lattice.chief as { origin: LvVec3; direction: LvVec3 };
+    const chiefAt = columns * rows;
+    assert.deepEqual([...origins.subarray(3 * chiefAt)], chief.origin);
+    assert.equal(weights[chiefAt], 0);
+    // The tab's own field: every cell of the half is its ray to the bit; a square's cell outside the disc holds the
+    // stop-centre ray at weight 0.
+    const tab = api.computeVignettingField(lvChiefRequest(api, model), beam.fieldFraction);
+    let cells = 0;
+    for (let row = 0; row < rows; row++) {
+      for (let column = 0; column < columns; column++) {
+        const ray = row * columns + column;
+        const cell = tab.cells.find((each) => each.cell.row === row && each.cell.column === column + n / 2);
+        const [origin, direction] = [origins.subarray(3 * ray, 3 * ray + 3), directions.subarray(3 * ray, 3 * ray + 3)];
+        if (cell === undefined) {
+          assert.deepEqual([...origin, ...direction, weights[ray]], [...chief.origin, ...chief.direction, 0]);
+          continue;
+        }
+        cells++;
+        assert.deepEqual([...origin, ...direction], [...cell.ray.origin!, ...cell.ray.direction!]);
+        assert.equal(weights[ray], 1, "a cell weighs its bulk transmission, 1 through the fake's clear glass");
+      }
+    }
+    assert.equal(2 * cells, tab.sampleCount, "the half holds half the disc's cells");
   });
   // The ask: the tab's line, the authored reference line, at its fields, the axis first.
   assert.deepEqual(made.asks, [{ lines: [0], maxFieldDeg: geometry.halfFieldDeg, fieldAnglesDeg: angles }]);
   assert.equal(angles[0], 0);
 });
 
-test("traced as the tab traces them, the beams give the fake's tab curve back to the bit, an absorbing glass included", async (t) => {
+test("traced as the tab traces them, the sets give the fake's unvignetted fractions back to the bit, an absorbing glass included", async (t) => {
   const lv = freshLv(t);
   const absorbing = variantOf(lv, "absorbing", {
     [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  absorptionPerMm: 0.125,"),
@@ -190,12 +134,41 @@ test("traced as the tab traces them, the beams give the fake's tab curve back to
     const { api } = binding;
     const { model } = await modelOf(binding, SINGLET);
     const made = lvVignettingRaySets(api, model);
-    const curve = api.computeVignettingCurve(lvChiefRequest(api, model));
-    const { setup, beams } = beamsOf(api, model);
-    assert.deepEqual(tabCurve(api, model, setup, beams, made.sets), curve);
+    const request = lvChiefRequest(api, model);
+    const curve = api.computeVignettingCurve(request);
+    assert.ok(curve.available);
+    const { beams } = beamsOf(api, model);
+    beams.forEach((beam, field) => {
+      const set = made.sets[field];
+      const { columns, rows } = set.groups!.lattice!;
+      const weights = f8(set, "weights");
+      const tab = api.computeVignettingField(request, beam.fieldFraction);
+      // Each cell of the half, traced as the tab traces it, reaches the image where the tab's does; mirrored, twice.
+      let transmitted = 0;
+      for (let ray = 0; ray < columns * rows; ray++) {
+        if (!(weights[ray] > 0)) continue;
+        const trace = tabTrace(api, model, beam, set, ray);
+        const valid = api.traceRayClassification(trace, model.state, beam.lattice.clipSemiDiameterMm) === "valid";
+        const [row, column] = [Math.floor(ray / columns), (ray % columns) + columns];
+        const cell = tab.cells.find((each) => each.cell.row === row && each.cell.column === column)!;
+        assert.equal(valid, cell.transmitted, `field ${field} cell ${row} ${column}`);
+        if (valid) {
+          transmitted += 2;
+          assert.equal(weights[ray], api.bulkTransmissionForTrace(model.state.lens, trace.hits));
+          assert.deepEqual(cell.exitDirectionCosines, [trace.terminalDirection[0], trace.terminalDirection[1]]);
+        }
+      }
+      const sample = curve.samples[field];
+      assert.equal(sample.transmittedCount, transmitted);
+      assert.equal(
+        sample.unvignettedFraction,
+        transmitted / (sample.sampleCount - sample.unaimedCount - sample.failedCount),
+      );
+    });
     assert.ok(
-      curve.some((sample) => sample.geometricTransmission !== 1) && curve.at(-1)!.relativeIllumination < 0.9,
-      "the fake singlet's beam grows across the field, and its edge is dimmer",
+      curve.samples.some((sample) => sample.unvignettedFraction !== 1) &&
+        curve.samples.at(-1)!.relativeIllumination! < 1,
+      "the fake singlet's beam is vignetted across the field, and its edge is dimmer",
     );
     if (tree === absorbing) {
       assert.ok(
@@ -203,37 +176,43 @@ test("traced as the tab traces them, the beams give the fake's tab curve back to
         "an absorbing glass weighs the cells",
       );
     }
-    // lv's own trace of a beam brings to the image exactly the rays the tab counts.
-    for (const set of made.sets) {
+    // lv's own trace of a set brings to the image exactly the rays the tab traced through, at the case's stop.
+    for (const [field, set] of made.sets.entries()) {
       const answer = answerLvRays(api, model, set);
       assert.ok("data" in answer);
       const status = decodeNdArray(answer.data.status).values as Uint8Array;
       status.forEach((each, ray) =>
-        assert.equal(each === 0, tabTrace(api, model, setup, set, ray).status === "ok", `ray ${ray}`),
+        assert.equal(each === 0, tabTrace(api, model, beams[field], set, ray).status === "ok", `ray ${ray}`),
       );
     }
     binding.close();
   }
 });
 
-test("a field whose chief rays the tab finds vignetted keeps its beam, and is named: its mapping is of ray tubes", async (t) => {
-  // The fake made to stop every chief ray steeper than about 11.5 degrees, and no ray of a lattice: those fields' image
-  // mapping is the tab's ray tubes, which are the fake's own.
-  const lv = variantOf(freshLv(t), "chief-vignetted", {
-    [TRACING]: (text) =>
-      text.replace(
-        '  if (trace.status === "ok") return "valid";',
-        '  if (trace.input.origin[0] === 0 && trace.input.direction[1] < -0.2) return "blocked";\n  if (trace.status === "ok") return "valid";',
-      ),
+test("a cell the tab could not aim holds the stop-centre ray at weight 0, and is left out of the fake's fraction", async (t) => {
+  // The fake aims nothing beyond 0.995 of the stop: a ring of the lattice's outermost cells.
+  const lv = variantOf(freshLv(t), "unaimed", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  aim: { unaimedBeyond: 0.995 },"),
   });
   const binding = await bind(t, lv);
+  const { api } = binding;
   const { model } = await modelOf(binding, SINGLET);
-  const made = lvVignettingRaySets(binding.api, model);
-  const tubes = made.problems.filter((problem) => problem.startsWith("lv-tube-mapping: "));
-  const angles = made.asks[0].fieldAnglesDeg;
-  assert.equal(tubes.length, angles.filter((angle) => Math.sin((angle * Math.PI) / 180) > 0.2).length);
-  assert.ok(tubes.length > 0);
-  assert.equal(made.sets.length, angles.length, "a field of ray tubes keeps its beam set");
+  const made = lvVignettingRaySets(api, model);
+  const { beams } = beamsOf(api, model);
+  const [beam, set] = [beams[0], made.sets[0]];
+  const unaimed = beam.lattice.rays.filter(
+    (ray, at) => ray.status === "unaimed" && beam.lattice.cells[at].xFraction > 0,
+  );
+  assert.ok(unaimed.length > 0);
+  const weights = f8(set, "weights");
+  const { columns, rows } = set.groups!.lattice!;
+  const n = beam.lattice.cellsAcross;
+  const vacant = weights.subarray(0, columns * rows).filter((weight) => weight === 0).length;
+  const outside = columns * rows - beam.lattice.cells.filter((cell) => cell.xFraction > 0).length;
+  assert.equal(vacant, outside + unaimed.length);
+  const sample = api.computeVignettingCurve(lvChiefRequest(api, model)).samples[0];
+  assert.equal(sample.unaimedCount, 2 * unaimed.length);
+  assert.equal(n, 64);
 });
 
 test("a state the tab draws no curve of has no sets: a bounding-sphere field, a path outside the beam model", async (t) => {
@@ -248,9 +227,9 @@ test("a state the tab draws no curve of has no sets: a bounding-sphere field, a 
         "export function mtfAxialImagePlane(state: FakeState): boolean {\n  return false;",
       ),
   });
-  for (const [tree, code] of [
-    [vector, "lv-bounding-sphere-field"],
-    [outside, "lv-outside-beam-model"],
+  for (const [tree, code, reason] of [
+    [vector, "lv-bounding-sphere-field", "bounding-sphere-field"],
+    [outside, "lv-outside-beam-model", "tilted-image-plane"],
   ] as const) {
     const binding = await bind(t, tree);
     const { model } = await modelOf(binding, SINGLET);
@@ -258,28 +237,33 @@ test("a state the tab draws no curve of has no sets: a bounding-sphere field, a 
     assert.deepEqual([made.sets, made.asks], [[], []]);
     assert.equal(made.problems.length, 1);
     assert.match(made.problems[0], new RegExp(`^${code}: `));
-    assert.deepEqual(binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model)), []);
+    const curve = binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model));
+    assert.deepEqual([curve.available, curve.reason], [false, reason]);
     binding.close();
   }
 });
 
-test("a field without a chief ray is plotted dark and has no set; the axis must have a beam", async (t) => {
+test("a field without a launch has no set; the axis must have a lattice", async (t) => {
   const lv = freshLv(t);
-  // The fake finds no chief ray beyond 15 degrees: those fields are dark in the tab and coded problems of the sets.
+  // The fake has no launch beyond 15 degrees: those fields have no figures in the tab and are coded problems.
   const limited = variantOf(lv, "limited", {
     [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  field: { chiefLimitDeg: 15 },"),
   });
   const binding = await bind(t, limited);
   const { model } = await modelOf(binding, SINGLET);
   const made = lvVignettingRaySets(binding.api, model);
-  const failed = made.problems.filter((problem) => problem.startsWith("chief-ray-failed: "));
+  const failed = made.problems.filter((problem) => problem.startsWith("no-field-launch: "));
   assert.ok(failed.length > 0);
   assert.ok(made.asks[0].fieldAnglesDeg.every((angle) => angle <= 15));
   assert.equal(made.sets.length, made.asks[0].fieldAnglesDeg.length);
   const curve = binding.api.computeVignettingCurve(lvChiefRequest(binding.api, model));
-  assert.ok(curve.filter((sample) => sample.fieldAngleDeg > 15).every((sample) => sample.relativeIllumination === 0));
+  assert.ok(
+    curve.samples
+      .filter((sample) => sample.fieldAngleDeg > 15)
+      .every((sample) => sample.unvignettedFraction === null && sample.unavailableReason === "no-field-launch"),
+  );
   binding.close();
-  // No chief ray even on the axis: no sets at all.
+  // No launch even on the axis: no sets at all.
   const none = variantOf(lv, "none", {
     [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", "focusTravel: 5,\n  field: { chiefLimitDeg: -1 },"),
   });
@@ -301,4 +285,21 @@ test("a folded path, a finite object and a run of no authored line are coded pro
   const made = lvVignettingRaySets(api, photopic.model);
   assert.ok(made.sets.length > 0);
   assert.deepEqual(made.asks, []);
+});
+
+test("the tab's lattice is BEAM_GRID_CELLS across, never fewer than LensVisualizer's MIN_BEAM_GRID_CELLS, both bound", async (t) => {
+  // A tree whose tab asks for 2 cells across and whose floor is 6: the sets are of the floor's 6, read from the binding
+  // as the tab reads it (`Math.max(Math.round(cellsAcross), MIN_BEAM_GRID_CELLS)`), never of a number of the comparator's.
+  const lv = freshLv(t);
+  const coarse = variantOf(lv, "coarse", {
+    "src/optics/analysis/vignetting.ts": (text) =>
+      text
+        .replace("export const BEAM_GRID_CELLS = 64;", "export const BEAM_GRID_CELLS = 2;")
+        .replace("export const MIN_BEAM_GRID_CELLS = 4;", "export const MIN_BEAM_GRID_CELLS = 6;"),
+  });
+  const binding = await bind(t, coarse);
+  const { api } = binding;
+  assert.deepEqual([api.vignettingBeamCells, api.vignettingMinBeamCells], [2, 6]);
+  const { setup } = beamsOf(api, (await modelOf(binding, SINGLET)).model);
+  assert.equal(setup.cells, 6);
 });

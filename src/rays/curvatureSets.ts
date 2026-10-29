@@ -5,8 +5,11 @@
 // them, and are no part of the run's ray sets (`raySets.ts`), which the rungs R2 to R4 judge.
 //
 // A curvature set is a series of fields, each a block of consecutive rays launched along one direction, its chief
-// ray last; every other ray of a block is launched beside the chief ray, offset from its start along y alone (a ray of
-// the field's tangential fan) or along x alone (of its sagittal fan). Consecutive blocks are of different directions.
+// ray last, and before it the field's tangential fan, then its sagittal fan, of one number of rays each. A ray of the
+// tangential half starts where the chief ray does along x and z, a ray of the sagittal half off it along x (an aimed
+// sagittal ray may start off the chief ray's height too) and where it does along z, and a ray that starts where the
+// chief ray starts (a fan's centre, a sample held by the chief ray) may stand in either. Consecutive blocks are of
+// different directions.
 // The rung R10a reads the fields of a set so (`src/compare/raysCurvature.ts`), and a set that is not so is not
 // comparable.
 import type { CurvatureNativeSpec } from "../contract/quantities/curvatureNative.ts";

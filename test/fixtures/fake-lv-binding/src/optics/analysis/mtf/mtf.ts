@@ -3,10 +3,12 @@ import type { FakeAnalysisRequest } from "../request.ts";
 // shows in what comes back: a straight fall to a cutoff that is the method's and the stop's, lowered with the
 // field. The numbers describe no lens.
 //
-// A lens that says so (`mtf.sampled`) has its geometric MTF sampled instead, as LV samples one: a field's launch
-// and footprint, a ladder of grids with a test of convergence between them, a footprint that is widened when rays
-// reach its border, and a transfer function summed over the rays of every line about one reference point. Every
-// number of it (the ladder, the tolerance, the limits) is the fake's own.
+// A lens that says so (`mtf.sampled`) has its geometric MTF sampled instead, as LV samples one since #936: a field's
+// launch; its stop lattice, aimed at each line and seeded from the line's coarser one, or for a field launched from a
+// "bounding sphere" a footprint that is widened when rays reach its border; a ladder of grids with a test of
+// convergence between them, which goes on past a grid that asks for a finer one; a transfer function summed over the
+// rays of every line about one reference point; and LV's bookkeeping of dark lines and of the unresolved samples
+// beside the beam. Every number of it (the ladder, the tolerance, the limits) is the fake's own.
 import type {
   FakeFieldLaunch,
   FakeFootprint,
@@ -27,7 +29,12 @@ import {
 import { mtfChiefHeight, mtfModeledHalfField, resolveMtfFieldGeometry, resolveMtfFieldTargets } from "./mtfFields.js";
 import { expandMtfFootprint } from "./mtfFootprint.js";
 import { assessMtfSupport, resolveMtfOptions } from "./mtfSupport.js";
-import { findMtfFieldFootprint, prepareMtfFieldLaunch, traceMtfBundle } from "./mtfTracing.js";
+import {
+  findMtfFieldFootprint,
+  prepareMtfFieldLaunch,
+  traceMtfLaunchPlaneBundle,
+  traceMtfStopBundle,
+} from "./mtfTracing.js";
 
 /** The frequencies of a request that names none. */
 export const MTF_FREQUENCIES: readonly number[] = Object.freeze([0, 10, 20, 30, 40, 50]);
@@ -61,10 +68,13 @@ export function emptyMtfField(
     reason: null,
     message: "Waiting to be traced.",
     notes: [],
+    pupilSampling: "stop",
     gridSize: 0,
     validRays: 0,
     blockedRays: 0,
     failedRays: 0,
+    unaimedRays: 0,
+    unresolvedInBeamRays: 0,
     unknownFluxFraction: 0,
     maxDelta: null,
     convergedThroughLpMm: null,
@@ -85,10 +95,16 @@ interface FakeBundle {
   rays: Spot[];
   blocked: number;
   failed: number;
-  failedWeight: number;
+  unaimed: number;
+  unresolvedWeight: number;
+  unresolvedInBeam: number;
+  unresolvedInBeamWeight: number;
   chief: Spot;
   openBorders: { x: boolean; y0: boolean; y1: boolean };
+  lattice?: unknown;
 }
+
+type Sampling = { kind: "stop"; lattices: Map<number, unknown> } | { kind: "launch-plane"; footprint: FakeFootprint };
 
 type GridOutcome =
   | { kind: "curves"; field: FakeMtfFieldResult; openBorders?: { x: boolean; y0: boolean; y1: boolean } }
@@ -111,12 +127,13 @@ function mark(field: FakeMtfFieldResult, reason: string, message: string): FakeM
 }
 
 export function assessUnresolvedFlux(
-  failedRays: number,
+  unresolvedRays: number,
   unknownFluxFraction: number,
+  inBeam: number | null = null,
 ): { acceptable: boolean; note: string | null } {
   if (unknownFluxFraction > MTF_MAX_UNKNOWN_FLUX) return { acceptable: false, note: null };
-  if (failedRays === 0) return { acceptable: true, note: null };
-  return { acceptable: true, note: `${failedRays} unresolved rays are omitted.` };
+  if (unresolvedRays === 0) return { acceptable: true, note: null };
+  return { acceptable: true, note: `${unresolvedRays} unresolved samples, ${inBeam ?? "?"} beside the beam, are omitted.` };
 }
 
 // The fake's transfer function of one line: plain sums in the order of the rays, a cosine and a sine a ray.
@@ -138,12 +155,14 @@ function sampledAtGrid(
   job: Job,
   target: FakeFieldTarget,
   launch: FakeFieldLaunch,
-  footprint: FakeFootprint,
+  sampling: Sampling,
   size: number,
 ): GridOutcome {
   const { state, options, support } = job;
   const field = emptyMtfField(target.fraction, target);
   field.gridSize = size;
+  field.pupilSampling = sampling.kind;
+  if (sampling.kind === "launch-plane") field.notes.push("The fake samples this field on its launch plane.");
   const unavailable = (reason: string, message: string, refine = false): GridOutcome => ({
     kind: "unavailable",
     field: mark(field, reason, message),
@@ -152,24 +171,40 @@ function sampledAtGrid(
   const openBorders = { x: false, y0: false, y1: false };
   const cuts = { x: [] as { re: number[]; im: number[]; weight: number }[], y: [] as { re: number[]; im: number[]; weight: number }[] };
   let reference: Spot | undefined;
-  let launched = 0;
+  let sampled = 0;
   let unresolved = 0;
-  for (const line of support.spectralLines) {
-    const bundle = traceMtfBundle(state, options, support, launch, footprint, size, line, job.imagePlaneZ, {
-      reference,
-    }) as FakeBundle | null;
+  let dark = 0;
+  for (const [index, line] of support.spectralLines.entries()) {
+    let bundle: FakeBundle | null;
+    if (sampling.kind === "stop") {
+      bundle = traceMtfStopBundle(state, options, support, launch, size, line, job.imagePlaneZ, {
+        reference,
+        coarse: sampling.lattices.get(index),
+      }) as FakeBundle | null;
+      if (bundle?.lattice) sampling.lattices.set(index, bundle.lattice);
+    } else {
+      bundle = traceMtfLaunchPlaneBundle(state, options, support, launch, sampling.footprint, size, line, job.imagePlaneZ, {
+        reference,
+      }) as FakeBundle | null;
+    }
     if (!bundle) return unavailable("chief-ray-failed", "No valid chief ray reaches the image plane.");
     reference ??= bundle.chief;
     field.imageHeightMm = Math.hypot(reference.x, reference.y);
     field.validRays += bundle.rays.length;
     field.blockedRays += bundle.blocked;
     field.failedRays += bundle.failed;
+    field.unaimedRays += bundle.unaimed;
+    field.unresolvedInBeamRays += bundle.unresolvedInBeam;
     openBorders.x ||= bundle.openBorders.x;
     openBorders.y0 ||= bundle.openBorders.y0;
     openBorders.y1 ||= bundle.openBorders.y1;
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-    launched += transmitted + bundle.failedWeight;
-    unresolved += bundle.failedWeight;
+    sampled += transmitted + bundle.unresolvedInBeamWeight;
+    unresolved += bundle.unresolvedInBeamWeight;
+    if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
+      dark++;
+      continue;
+    }
     if (bundle.rays.length < MTF_MIN_RAYS || !(transmitted > 0))
       return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
     const about = reference;
@@ -178,9 +213,12 @@ function sampledAtGrid(
     cuts.x.push({ ...plainOtf(points, job.frequencies, "x"), weight });
     cuts.y.push({ ...plainOtf(points, job.frequencies, "y"), weight });
   }
-  field.unknownFluxFraction = launched > 0 ? unresolved / launched : 0;
-  const flux = assessUnresolvedFlux(field.failedRays, field.unknownFluxFraction);
-  if (!flux.acceptable) return unavailable("trace-failed", "Numerical ray failures prevent an MTF estimate.");
+  if (dark === support.spectralLines.length) return unavailable("vignetted", "No rays reach this image height.", true);
+  if (dark > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
+  field.unknownFluxFraction = sampled > 0 ? unresolved / sampled : 0;
+  const unresolvedRays = field.failedRays + field.unaimedRays;
+  const flux = assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+  if (!flux.acceptable) return unavailable("trace-failed", "Unresolved samples beside the beam carry too much flux.", true);
   if (flux.note) field.notes.push(flux.note);
   const modulus = (lines: { re: number[]; im: number[]; weight: number }[]): number[] => {
     const total = lines.reduce((sum, line) => sum + line.weight, 0);
@@ -243,15 +281,22 @@ function* sampledField(job: Job, target: FakeFieldTarget): Generator<FakeMtfFiel
     yield mark(emptyMtfField(target.fraction, target), "chief-ray-failed", "No valid chief ray reaches this image height.");
     return;
   }
+  if (launch.aim) {
+    const sampling: Sampling = { kind: "stop", lattices: new Map() };
+    yield* refineMtfField(job.ladder, (size) => sampledAtGrid(job, target, launch, sampling, size), job.frequencies);
+    return;
+  }
   let footprint = findMtfFieldFootprint(state, options, support, launch);
   if (!footprint) {
-    yield mark(emptyMtfField(target.fraction, target), "vignetted", "No rays reach this image height.");
+    const field = emptyMtfField(target.fraction, target);
+    field.pupilSampling = "launch-plane";
+    yield mark(field, "vignetted", "No rays reach this image height.");
     return;
   }
   let expansions = 0;
   const evaluate = (size: number): GridOutcome => {
     for (;;) {
-      const outcome = sampledAtGrid(job, target, launch, footprint!, size);
+      const outcome = sampledAtGrid(job, target, launch, { kind: "launch-plane", footprint: footprint! }, size);
       const open = outcome.kind === "curves" ? outcome.openBorders : undefined;
       if (!open || !(open.x || open.y0 || open.y1)) return outcome;
       if (expansions >= MTF_MAX_FOOTPRINT_EXPANSIONS) {
@@ -279,7 +324,7 @@ export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<Fa
     fields: [],
     geometry: null,
     focus: null,
-    aperture: null,
+    axialVignetting: null,
   };
   if (!support.available) return result;
 
@@ -312,10 +357,9 @@ export function* computeMtfSteps(request: FakeAnalysisRequest, settings: Omit<Fa
     bestAxialShiftMm: bestShift,
   };
   const stated = state.lens.runtime.source.mtf ?? {};
-  result.aperture = {
-    tracedFNumber: state.imgZ / (2 * options.pupilSemiDiameterMm),
-    limitingSurfaceLabel: stated.limitingSurfaceLabel ?? null,
-  };
+  // The fake's axial marginal ray is vignetted only where a lens says so, at the surface it names, after the stop.
+  result.axialVignetting =
+    stated.axialVignettingLabel === undefined ? null : { surfaceLabel: stated.axialVignettingLabel, beforeStop: false };
   yield result;
 
   if (stated.sampled && options.method === "geometric") {

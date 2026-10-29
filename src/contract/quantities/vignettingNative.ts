@@ -47,8 +47,8 @@ export type VignettingNativeField = {
    */
   readonly chiefLandingMm: number | null;
   /**
-   * How much of the field's beam gets through every aperture, over the axis's: the engine's own measure of it, at
-   * least 0. Null for an unavailable field.
+   * The share of the field's beam that gets through every aperture: the engine's own measure of it, at least 0, and
+   * not over the axis's (an axis an aperture clips is below 1). Null for an unavailable field.
    */
   readonly geometricTransmission: number | null;
   /** How bright the field's image is, over the axis's: the engine's own measure of it, at least 0. Null likewise. */

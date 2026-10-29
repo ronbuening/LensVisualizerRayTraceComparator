@@ -2,9 +2,11 @@
 // engines let through the same rays. A comparator of spans (`spanOf`): the beam sets of one line of a run are compared
 // together, since every figure of a field is relative to the axis (src/rays/vignettingSets.ts).
 //
-// A beam set is the tab's own trace of one field (src/engines/lv/vignettingRaySets.ts): the cells of its launch
-// lattice the tab traces, stated as a lattice of their own (`groups.lattice`), and after them the chief rays of the
-// tab's image mapping, the field's own (`groups.chiefIndex`) and those 0.01 degrees to either side of it.
+// A beam set is the tab's own trace of one field (src/engines/lv/vignettingRaySets.ts): the cells of its lattice the
+// tab traces (since LensVisualizer #931 the half of its stop lattice, vacant cells at weight 0), stated as a lattice of
+// their own (`groups.lattice`), and after them the field's chief rays (`groups.chiefIndex`): since #931 its stop-centre
+// ray alone, whose landing names the image point of the tab's reference sphere (before it, the chief rays of the tab's
+// image mapping, 0.01 degrees apart).
 //
 // Which rays got through is judged as R2 judges it (`mask.mismatches`, `mask.rimBand`): no other rung traces these
 // rays, and it is the rung's first figure. Three figures more:
@@ -28,11 +30,11 @@
 //   cells across). The flux of the other rays one answer lets through and the other does not, those in the rim band
 //   and those an engine failed, which R2 judges in no count, is shown beside it the same way and never judged
 //   (`transmission.rimBandOrFailed`).
-// - **The landing** of each chief ray of the image mapping, ok in both answers: the largest difference along x or y
-//   (`landing.maxAbs`), the transverse figure R2, R9a and R10a judge. The tab's image area of a field is
-//   `(dh/dθ)(h / sin θ)` of these landings 0.01 degrees apart, so a landing's difference `δ` moves it by about
-//   `δ / (f · 1.75e-4)` relative to it, `f` the focal length: the tab's own figure is that ill-conditioned, and the rung
-//   judges the landings themselves.
+// - **The landing** of each chief ray after the cells, ok in both answers: the largest difference along x or y
+//   (`landing.maxAbs`), the transverse figure R2, R9a and R10a judge. Since LensVisualizer #931 that is the field's
+//   stop-centre ray, the centre of the tab's reference sphere; before it the tab's image area of a field was
+//   `(dh/dθ)(h / sin θ)` of three chief rays' landings 0.01 degrees apart, ill-conditioned in them, and the rung
+//   judged the landings themselves.
 //
 // The members of a span are taken in an order of their own, the axis first, then by field angle and line, never in the
 // order they are handed over: the first ray of a count and the field of a tie do not depend on it.
@@ -56,7 +58,7 @@ export const VIGNETTING_RAYS_RUNG = "r11a";
 
 export const ILLUMINATION_METRIC = "illumination.maxAbs";
 export const TRANSMISSION_METRIC = "transmission.maxAbs";
-/** The landing of the chief rays of the tab's image mapping. */
+/** The landing of the chief rays after the cells: the stop-centre ray (before LV #931, the image mapping's). */
 export const LANDING_METRIC = "landing.maxAbs";
 /** The transmission of the rays R2 judges in no count, shown beside `transmission.maxAbs` and never judged. */
 export const RIM_OR_FAILED_TRANSMISSION_METRIC = "transmission.rimBandOrFailed";
@@ -179,7 +181,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   // The fields with no flux into the image in either answer, for the same reason: named when others are measured.
   const skipped: string[] = [];
 
-  // The landings of the chief rays of the tab's image mapping, ok in both answers.
+  // The landings of the chief rays after the cells, ok in both answers.
   for (const { spec, a, b, valid, place } of traced) {
     for (let ray = spec.groups!.chiefIndex!; ray < a.rays; ray++) {
       if (!valid[ray]) continue;
@@ -284,7 +286,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     transmissionMissing,
     "no-rays: no field is ok in both answers",
   );
-  figure(LANDING_METRIC, landing, null, "no-rays: no chief ray of the image mapping is ok in both answers");
+  figure(LANDING_METRIC, landing, null, "no-rays: no chief ray of a field is ok in both answers");
   const count = (name: string, value: number, where: Where | null): ComputedMetric => ({
     name,
     value,
@@ -372,7 +374,7 @@ function recorded(data: JsonObject, context?: ComparisonContext): { readonly [na
  *   R2's mask mismatches, over the axis's flux on the rays ok in both, on the launch plane;
  * - `transmission.rimBandOrFailed`: the same of the rays ok in one answer only that R2 counts as no mismatch, those in
  *   the rim band and those an engine failed; shown, never judged;
- * - `landing.maxAbs`: the largest difference of a landing of a chief ray of the image mapping, along x or y, mm;
+ * - `landing.maxAbs`: the largest difference of a landing of a chief ray after the cells, along x or y, mm;
  * - `mask.mismatches` and `mask.rimBand`: as R2's, summed over the span;
  * - `rays.compared`: the rays ok in both answers; `rays.dropped`: those ok in one answer only, with the first in
  *   `where`; `fields.compared`: the fields with a flux into the image in both answers.

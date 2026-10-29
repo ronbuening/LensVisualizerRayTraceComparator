@@ -8,15 +8,18 @@
 //
 // - the chief ray's landing on the design plane (`chiefImageHeight`), and the tangential and sagittal foci of its four
 //   parabasal rays, as z and as shifts from the plane;
-// - the tangential and sagittal foci of its real-ray fans (the sections' real-ray curves);
+// - the tangential and sagittal foci of its real-ray fans (the sections' real-ray curves), since LV #927 the shared aimed
+//   launch's rays through their points of the real stop, traced as the sections trace them (the stop at the launch's
+//   clip radius), relative to the launch's stop-centre ray, where the section has a two-sided fan of three rays or more;
 // - at each of LensVisualizer's four chromatic channels, the parabasal shifts of the chromatic field curves.
 //
 // It also holds that the fields the sections mark are the fields of their curves at the same fractions, bit for bit,
 // so that a set traces each once, that the ask is of the fields of the sets, and that `lv`'s `rays.trace` answer of a
 // set brings the same rays to the image as the sections' traces do. What is not tested is that the sections' React
 // code hands these functions exactly this request: that rests on the canaries of the drawer's lines. Nothing is
-// written. Measured at LV cfa91d0a5 (engine closure c866fbff), and again at 098c91ef6 (closure fef2e248), whose fields
-// below one degree are centred on a solved chief ray and whose channels are anchored.
+// written. Measured at LV cfa91d0a5 (engine closure c866fbff), again at 098c91ef6 (closure fef2e248), whose fields
+// below one degree are centred on a solved chief ray and whose channels are anchored, and at 607ff23ae (closure
+// f016b35b), whose real-ray fans are aimed at the real stop.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -110,6 +113,22 @@ function tabRay(
   // directionSlopes: `const invDz = Math.abs(direction[2]) > 1e-12 ? 1 / direction[2] : Infinity;`
   const invDz = Math.abs(toward[2]) > 1e-12 ? 1 / toward[2] : Infinity;
   return { x: carried(0), y: carried(1), ux: toward[0] * invDz, uy: toward[1] * invDz, clipped: trace.status !== "ok" };
+}
+
+/**
+ * A ray of a real-ray set as the sections trace it since LV #927: the aimed launch's own trace
+ * (`prepareAimedPupilTrace(...).skew`, the stop at the launch's clip radius), its crossing of the last vertex plane and
+ * its slopes.
+ */
+function aimedRay(binding: LvBinding, model: LvCaseModel, set: RaysTraceSpec, ray: number): TabRay {
+  const { api } = binding;
+  const [origins, directions] = [f8(set, "origins"), f8(set, "directions")];
+  const launch = api.prepareAimedPupilLaunch(lvChiefRequest(api, model), [], { uField: 0, yChief: 0 });
+  assert.ok(launch !== null);
+  return api.prepareAimedPupilTrace(model.state, launch).skew({
+    origin: [origins[3 * ray], origins[3 * ray + 1], origins[3 * ray + 2]],
+    direction: [directions[3 * ray], directions[3 * ray + 1], directions[3 * ray + 2]],
+  });
 }
 
 /** A hit as the sections' focus solvers read it: a coordinate on the last vertex plane and its slope. */
@@ -247,23 +266,37 @@ test(
         assert.ok(Object.is(field.tangentialShiftMm, own.tangential - base.imagePlaneZ), `${named}: tangential shift`);
         assert.ok(Object.is(field.sagittalShiftMm, own.sagittal - base.imagePlaneZ), `${named}: sagittal shift`);
 
-        // The real-ray fans: the tangential fan, the sagittal fan, then the chief ray; the samples that land.
+        // The real-ray fans: the tangential fan, the sagittal fan, then the chief ray; the samples LensVisualizer aimed
+        // (a weight above 0) that land, traced as the launch's own trace.
         const width = 2 * perFan + 1;
+        const realWeights = decodeNdArray(realRaySet.weights).values as Float64Array;
+        const fractions = api
+          .sampleOrthogonalPupilFan(api.comaFanSampleCount, "tangential")
+          .map((s) => s.pupilFraction);
+        assert.equal(fractions.length, perFan, named);
         const fan = (from: number) =>
-          Array.from({ length: perFan }, (_, ray) =>
-            tabRay(binding, model, realRaySet, width * at + from + ray, stopSD),
-          );
+          Array.from({ length: perFan }, (_, ray) => ({
+            ray: aimedRay(binding, model, realRaySet, width * at + from + ray),
+            aimed: realWeights[width * at + from + ray] > 0,
+            fraction: fractions[ray],
+          }));
         const [tangentialFan, sagittalFan] = [fan(0), fan(perFan)];
-        const chief = tabRay(binding, model, realRaySet, width * at + 2 * perFan, stopSD);
-        const valid = (rays: readonly TabRay[]) => rays.filter((ray) => !ray.clipped);
-        if (valid(tangentialFan).length >= 3 && valid(sagittalFan).length >= 3) {
+        const chief = aimedRay(binding, model, realRaySet, width * at + 2 * perFan);
+        type FanRay = { readonly ray: TabRay; readonly aimed: boolean; readonly fraction: number };
+        const valid = (rays: readonly FanRay[]) => rays.filter(({ ray, aimed }) => aimed && !ray.clipped);
+        // fanGap: three rays or more, out to a quarter of the stop on both sides of the chief ray.
+        const twoSided = (rays: readonly FanRay[]) => {
+          const kept = valid(rays).map(({ fraction }) => fraction);
+          return kept.length >= 3 && Math.min(...kept) <= -0.25 && Math.max(...kept) >= 0.25;
+        };
+        if (!chief.clipped && twoSided(tangentialFan) && twoSided(sagittalFan)) {
           const tangential = bestRelativeFocusPlane(
-            valid(tangentialFan).map((ray) => hitOf(ray, "tangential")),
+            valid(tangentialFan).map(({ ray }) => hitOf(ray, "tangential")),
             hitOf(chief, "tangential"),
             lastSurfZ,
           );
           const sagittal = bestRelativeFocusPlane(
-            valid(sagittalFan).map((ray) => hitOf(ray, "sagittal")),
+            valid(sagittalFan).map(({ ray }) => hitOf(ray, "sagittal")),
             hitOf(chief, "sagittal"),
             lastSurfZ,
           );

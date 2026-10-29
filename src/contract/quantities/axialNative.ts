@@ -41,8 +41,10 @@ export type AxialColourSpec = {
 };
 
 /**
- * What an `axial.native` request asks for. A fraction is of the radius of the engine's own pupil of the axial beam
- * at the first line of the request (`AxialNativeData.pupilRadiusMm`), and a ray has the same height at every line.
+ * What an `axial.native` request asks for. A fraction is of the radius the engine states its zones of
+ * (`AxialNativeData.pupilRadiusMm`), by its own construction: the real stop's, each ray aimed at its point of the stop
+ * at the line it is traced at (LensVisualizer since #927), or the engine's own pupil of the axial beam at the first
+ * line of the request, a ray then at the same height at every line (optiland). Which one is the engine's to say.
  */
 export type AxialNativeSpec = AxialSphericalSpec | AxialColourSpec;
 

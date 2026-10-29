@@ -11,6 +11,7 @@ import type { RaysTraceSpec } from "../../../src/contract/quantities/raysTrace.t
 import type { RunOptions } from "../../../src/contract/runSpec.ts";
 import { curvatureFieldsOf } from "../../../src/compare/raysCurvature.ts";
 import { decodeNdArray } from "../../../src/core/numeric/ndarray.ts";
+import { loadLvBinding } from "../../../src/engines/lv/binding.ts";
 import type { LvBinding } from "../../../src/engines/lv/binding.ts";
 import { rebuildCase } from "../../../src/engines/lv/caseModel.ts";
 import type { LvCaseModel } from "../../../src/engines/lv/caseModel.ts";
@@ -247,6 +248,151 @@ test("a folded lens, a finite object and a field without a launch have no curvat
     [15, 45],
   );
   assert.deepEqual(made.asks[0].fieldAnglesDeg, [0, 5, 10]);
+});
+
+test("a fan sample LensVisualizer could not aim holds the chief ray at weight 0; a blocked one keeps its ray", async (t) => {
+  const lv = freshLv(t);
+  // The fake aims nothing beyond 0.95 of the stop (each fan's ends) and blocks what is beyond 0.5 (its samples at 2/3)
+  // at the first surface.
+  const aimed = variantOf(lv, "aimed", {
+    "src/lens-data/acme/AcmeSinglet50.data.ts": (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  aim: { unaimedBeyond: 0.95, blockedBeyond: 0.5 },"),
+  });
+  const binding = await bind(t, aimed);
+  const { opticalCase, model } = await modelOf(binding, SINGLET);
+  const made = lvCurvatureRaySets(binding.api, model);
+  assert.deepEqual(made.problems, []);
+  const set = made.sets[opticalCase.conditions.lines.length];
+  const [origins, directions, weights] = [f8(set, "origins"), f8(set, "directions"), f8(set, "weights")];
+  const ray = (values: Float64Array, at: number) => [...values.slice(3 * at, 3 * at + 3)];
+  const far = 4 * model.state.surfaces[0].sd;
+  const fractions = [-1, -2 / 3, -1 / 3, 0, 1 / 3, 2 / 3, 1];
+  for (let field = 0; field < weights.length / 15; field++) {
+    const chief = 15 * field + 14;
+    assert.equal(weights[chief], 1);
+    for (const [half, axis] of [
+      [0, "tangential"],
+      [1, "sagittal"],
+    ] as const) {
+      fractions.forEach((fraction, sample) => {
+        const at = 15 * field + 7 * half + sample;
+        if (Math.abs(fraction) > 0.95) {
+          // Unaimed: the chief ray, at weight 0, never traced by the sections.
+          assert.deepEqual(
+            [ray(origins, at), ray(directions, at), weights[at]],
+            [ray(origins, chief), ray(directions, chief), 0],
+          );
+          return;
+        }
+        assert.equal(weights[at], 1, `${axis} sample ${sample}`);
+        assert.deepEqual(ray(directions, at), ray(directions, chief));
+        if (Math.abs(fraction) > 0.5) {
+          // Blocked: LensVisualizer's blocking ray, far out along its fan (the fake's, 4 clear radii from the chief
+          // ray's start, in the fan's own coordinate alone).
+          const [x, y] = ray(origins, at);
+          const [x0, y0] = ray(origins, chief);
+          const [along, across] = axis === "tangential" ? [y - y0, x - x0] : [x - x0, y - y0];
+          assert.equal(across, 0, `${axis} sample ${sample}`);
+          assert.ok(Math.abs(along - Math.sign(fraction) * far) <= 1e-12 * far, `${axis} sample ${sample}: ${along}`);
+        }
+      });
+    }
+  }
+  // The comparator reads the held samples as in neither fan, and the fans' centres too.
+  const fields = curvatureFieldsOf(set, weights.length);
+  assert.ok(Array.isArray(fields));
+  assert.deepEqual(fields[1], { chief: 29, tangential: [16, 17, 19, 20], sagittal: [23, 24, 26, 27] });
+});
+
+test("a field whose fans LensVisualizer aims no common stop-centre ray of, or not on its meridian, has no real-ray block", async (t) => {
+  const lv = freshLv(t);
+  const launch = "src/optics/analysis/pupils/aimedPupil.ts";
+  const aimedLine =
+    'return { ...base, status: "aimed", reason: null, ...ray(xFraction * pupil, yChief + yFraction * pupil + lift) };';
+  const aimedAs = (x: string, more = "") =>
+    `return { ...base, status: "aimed", reason: null, ...ray(${x}, yChief + yFraction * pupil + lift)${more} };`;
+  for (const [name, edits, code] of [
+    // No stop-centre ray: the fake aims nothing, not even the stop's centre.
+    [
+      "unaimed",
+      {
+        "src/lens-data/acme/AcmeSinglet50.data.ts": (text: string) =>
+          text.replace("focusTravel: 5,", "focusTravel: 5,\n  aim: { unaimedBeyond: -1 },"),
+      },
+      "lv-chief-unaimed",
+    ],
+    // The sagittal fan's launch solves its stop-centre ray elsewhere than the tangential fan's.
+    [
+      "differs",
+      {
+        [launch]: (text: string) =>
+          text.replace(
+            "chief: toRay(-1, 0, 0, 0),",
+            "chief: toRay(-1, samples.some((sample) => sample.xFraction !== 0) ? 2 ** -20 : 0, 0, 0),",
+          ),
+      },
+      "lv-chief-differs",
+    ],
+    // The sagittal fan's launch turns its stop-centre ray.
+    [
+      "differs-turned",
+      {
+        [launch]: (text: string) =>
+          text.replace(
+            "chief: toRay(-1, 0, 0, 0),",
+            "chief: { ...toRay(-1, 0, 0, 0), ...(samples.some((sample) => sample.xFraction !== 0) ? { direction: [direction[0], direction[1] + 2 ** -40, direction[2]] as Vec3 } : {}) },",
+          ),
+      },
+      "lv-chief-differs",
+    ],
+    // A tangential sample starts off the chief ray along x.
+    [
+      "tangential-off",
+      {
+        [launch]: (text: string) =>
+          text.replace(aimedLine, aimedAs("xFraction * pupil + (xFraction === 0 && yFraction !== 0 ? 2 ** -20 : 0)")),
+      },
+      "lv-fan-off-meridian",
+    ],
+    // A sagittal sample starts on the chief ray's meridian.
+    [
+      "sagittal-on",
+      { [launch]: (text: string) => text.replace(aimedLine, aimedAs("yFraction === 0 ? 0 : xFraction * pupil")) },
+      "lv-fan-off-meridian",
+    ],
+    // A sample is launched along another direction than the chief ray.
+    [
+      "turned",
+      {
+        [launch]: (text: string) =>
+          text.replace(
+            aimedLine,
+            aimedAs(
+              "xFraction * pupil",
+              ", ...(index < 0 ? {} : { direction: [direction[0], direction[1] + 2 ** -40, direction[2]] as Vec3 })",
+            ),
+          ),
+      },
+      "lv-fan-off-meridian",
+    ],
+  ] as const) {
+    const variant = variantOf(lv, name, edits);
+    const binding = await loadLvBinding(variant);
+    try {
+      const { opticalCase, model } = await modelOf(binding, SINGLET);
+      const made = lvCurvatureRaySets(binding.api, model);
+      // Every field keeps its parabasal block and the ask; none has a real-ray block, each a coded problem.
+      assert.deepEqual(
+        made.problems.map((problem) => problem.split(":")[0]),
+        Array(5).fill(code),
+        name,
+      );
+      assert.equal(made.sets.length, opticalCase.conditions.lines.length, name);
+      assert.equal(made.asks[0].fieldAnglesDeg.length, 5, name);
+    } finally {
+      binding.close();
+    }
+  }
 });
 
 test("a lens whose first surface bulges past the launch plane has no curvature set, nor an ask", async (t) => {

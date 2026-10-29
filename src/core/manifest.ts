@@ -103,7 +103,7 @@ export interface ManifestRun {
   readonly curvatureRaySets?: ManifestRaySets;
   /**
    * The vignetting sets of the run (`CaseSource.vignettingRaySets`): the rays of the vignetting tab, each field's beam
-   * and the chief rays of its image mapping; stated exactly when a rung that compares vignetting was run on it.
+   * on its stop lattice and its stop-centre ray; stated exactly when a rung that compares vignetting was run on it.
    */
   readonly vignettingRaySets?: ManifestRaySets;
   /**

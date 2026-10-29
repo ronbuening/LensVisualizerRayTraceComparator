@@ -4,16 +4,19 @@
 // LensVisualizer's own `computeMtf`: if the two agree, the comparator understands LensVisualizer's sampling.
 //
 // What LensVisualizer exports is called, never restated: the request before any field is traced, with the focus
-// and each field's target (`computeMtfSteps`, its first step); a field's launch and footprint
-// (`prepareMtfFieldLaunch`, `findMtfFieldFootprint`); a grid's bundle at a line, with the reference point
-// (`traceMtfBundle`); the widening of a footprint (`expandMtfFootprint`); the walk through the ladder, with the
-// test of convergence (`refineMtfField`); the record of a field (`emptyMtfField`) and the rule of unresolved flux
-// (`assessUnresolvedFlux`); and the constants (`MTF_GRID_LADDER`, `MTF_DEFAULT_GRID_CAP`,
-// `MTF_MAX_FOOTPRINT_EXPANSIONS`, `MTF_MIN_RAYS`).
+// and each field's target (`computeMtfSteps`, its first step); a field's launch (`prepareMtfFieldLaunch`); a grid's
+// bundle at a line, with the reference point: on the real stop, aimed and traced (`traceMtfStopBundle`, LV #936,
+// whose aimer blocks a total internal reflection ahead of the stop, retries a seeded cell by the lone solve, and
+// throws a RangeError for a size that is no whole number), and for a field launched from the bounding sphere over a
+// footprint (`findMtfFieldFootprint`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`); the walk through the ladder,
+// with the test of convergence and the refinement past a failed grid (`refineMtfField`); the record of a field
+// (`emptyMtfField`) and the rule of unresolved flux (`assessUnresolvedFlux`); and the constants (`MTF_GRID_LADDER`,
+// `MTF_DEFAULT_GRID_CAP`, `MTF_MAX_FOOTPRINT_EXPANSIONS`, `MTF_MIN_RAYS`).
 //
 // What LensVisualizer does inline in `computeMtfSteps`, `traceField` and `fieldAtGrid` (src/optics/analysis/mtf/mtf.ts)
 // and exports no function for is restated here, expression by expression and in its order: the ladder of a
-// request, the image plane, the loop that widens a footprint, and the bookkeeping of one field at one grid. Source
+// request, the image plane, which sampling a field has, the lattice each line's next grid is seeded with, the loop
+// that widens a launch-plane footprint, and the bookkeeping of one field at one grid. Source
 // canaries hold every restated line to LensVisualizer's text (test/integration/lv/canaries.test.ts). The one thing
 // that is not LensVisualizer's is the transfer function: where LensVisualizer calls its own `geometricOtf` and
 // `combineOtfs`, the replay calls the comparator's `polychromaticOtf`.
@@ -21,6 +24,7 @@ import { lvMtfInputs, lvResolvedMtfOptions } from "./tabRequest.ts";
 import { polychromaticOtf } from "../../estimators/geometricOtf.ts";
 import type { SpectralSpots } from "../../estimators/geometricOtf.ts";
 import type {
+  LvAimedStopLattice,
   LvApi,
   LvMtfBundle,
   LvMtfFieldDraft,
@@ -45,7 +49,8 @@ export type LvReplayApi = Pick<
   | "computeMtfSteps"
   | "prepareMtfFieldLaunch"
   | "findMtfFieldFootprint"
-  | "traceMtfBundle"
+  | "traceMtfStopBundle"
+  | "traceMtfLaunchPlaneBundle"
   | "expandMtfFootprint"
   | "refineMtfField"
   | "emptyMtfField"
@@ -72,14 +77,16 @@ export interface LvReplayField {
   readonly field: LvMtfFieldResult;
   /** The grid sizes that were traced for the field, in order: every level of the ladder the refinement asked for. */
   readonly gridSizes: readonly number[];
-  /** How often the footprint was widened, over all the grid sizes. */
+  /** How often the footprint was widened, over all the grid sizes; 0 for a field on the real stop, which has none. */
   readonly expansions: number;
-  /** The footprint the field was last traced over; null for a field that has none. */
+  /**
+   * The footprint the field was last traced over: a field LensVisualizer launches from the bounding sphere, sampled
+   * on the launch plane; null for a field on the real stop, and for a field that has none.
+   */
   readonly footprint: LvMtfFootprint | null;
   /**
-   * The bundle of each line at the grid the field's curves are of (`field.gridSize`), over `footprint` as it was
-   * then: the rays as LensVisualizer launched and traced them, each with where it lands and what it weighs. Empty
-   * for a field without curves.
+   * The bundle of each line at the grid the field's curves are of (`field.gridSize`): the rays as LensVisualizer
+   * aimed and traced them, each with where it lands and what it weighs. Empty for a field without curves.
    */
   readonly bundles: readonly LvMtfBundle[];
   /** The one point every line's landings are taken relative to; null for a field without curves. */
@@ -108,8 +115,21 @@ export interface LvReplay {
 interface GridTrace {
   readonly bundles: readonly LvMtfBundle[];
   readonly reference: LvMtfSpot | null;
-  readonly footprint: LvMtfFootprint;
+  readonly footprint: LvMtfFootprint | null;
 }
+
+/**
+ * How one field samples its pupil across the grid ladder: `MtfFieldSampling` of LensVisualizer, restated. On the real
+ * stop each line's latest lattice seeds its next, finer one (the map is keyed by the line's index in the support
+ * record); on the launch plane, a footprint, for a field launched from the bounding sphere.
+ */
+type FieldSampling =
+  | { readonly kind: "stop"; readonly lattices: Map<number, LvAimedStopLattice> }
+  | { readonly kind: "launch-plane"; readonly footprint: LvMtfFootprint };
+
+/** The note of a field sampled on the launch plane: `MTF_LAUNCH_PLANE_NOTE` of mtf.ts, restated. */
+export const LV_LAUNCH_PLANE_NOTE =
+  "This field launches from the bounding sphere, which the stop lattice does not cover: its pupil is sampled in equal cells of the launch plane, not evenly on the stop.";
 
 /** Everything one request shares across its fields: `MtfJobContext` of LensVisualizer. */
 interface ReplayContext {
@@ -129,26 +149,39 @@ function markUnavailable(field: LvMtfFieldDraft, reason: string, message: string
 }
 
 /**
- * One field at one grid size: `fieldAtGrid` of LensVisualizer for the geometric method, restated, with the
- * comparator's estimator in the place of LensVisualizer's. Every line is traced by LensVisualizer's own
- * `traceMtfBundle` over the same footprint; the first line's chief ray, traced with no aperture checked, is the
- * reference of all of them; the counts add up over the lines; a line with fewer rays than `MTF_MIN_RAYS`, or
- * without flux, ends the grid as "empty-pupil", which a finer grid may mend; and the share of flux the tracer
- * could not resolve is held to LensVisualizer's own rule. The sums that decide these are LensVisualizer's plain
- * ones, in its order, since they decide which grids are traced.
+ * One field at one grid size: `fieldAtGrid` of LensVisualizer for the geometric method, restated line for line (LV
+ * #936), with the comparator's estimator in the place of LensVisualizer's.
+ *
+ * - Every line is traced by LensVisualizer's own bundle: on the real stop `traceMtfStopBundle`, seeded with the
+ *   line's lattice of the grid before and keeping this one for the next; on the launch plane
+ *   `traceMtfLaunchPlaneBundle` over the footprint, with `MTF_LAUNCH_PLANE_NOTE`. The first line's chief ray, traced
+ *   with no aperture checked, is the reference of all of them.
+ * - The counts add up over the lines, the unaimed and the unresolved samples beside the beam included. The flux the
+ *   beam could carry is the transmitted weight plus the weight of the unresolved samples beside it, which alone are
+ *   the unresolved share (`unresolvedInBeamWeight`, the third argument of `assessUnresolvedFlux`).
+ * - A line no ray reaches, every sample of it resolved, is dark (`darkLines`) and adds no curve; a line with fewer
+ *   rays than `MTF_MIN_RAYS`, or without flux, ends the grid as "empty-pupil". Every line dark is "vignetted", some
+ *   dark "empty-pupil"; both ask for a finer grid, which may find a thin beam.
+ * - A share LensVisualizer's rule refuses is "trace-failed" and asks for a finer grid too, which can resolve a beam
+ *   edge this one cannot: the ladder goes on past it (`refineMtfField`).
+ *
+ * The sums that decide these are LensVisualizer's plain ones, in its order, since they decide which grids are traced.
  */
 function fieldAtGrid(
   api: LvReplayApi,
   context: ReplayContext,
   target: LvMtfFieldResult,
   launch: LvMtfFieldLaunch,
-  footprint: LvMtfFootprint,
+  sampling: FieldSampling,
   size: number,
   traces: WeakMap<LvMtfFieldDraft, GridTrace>,
 ): LvMtfGridOutcome {
   const { state, options, support } = context;
   const field = api.emptyMtfField(target.fieldFraction, target);
   field.gridSize = size;
+  field.pupilSampling = sampling.kind;
+  if (sampling.kind === "launch-plane") field.notes.push(LV_LAUNCH_PLANE_NOTE);
+  const footprint = sampling.kind === "launch-plane" ? sampling.footprint : null;
   const bundles: LvMtfBundle[] = [];
   let commonReference: LvMtfSpot | undefined;
   const unavailable = (reason: string, message: string, refine = false): LvMtfGridOutcome => {
@@ -157,32 +190,67 @@ function fieldAtGrid(
   };
   const openBorders = { x: false, y0: false, y1: false };
   const lines: SpectralSpots[] = [];
-  let launchedWeight = 0;
-  let failedWeight = 0;
-  for (const line of support.spectralLines) {
-    const bundle = api.traceMtfBundle(state, options, support, launch, footprint, size, line, context.imagePlaneZ, {
-      reference: commonReference,
-    });
+  let sampledWeight = 0;
+  let unresolvedWeight = 0;
+  let darkLines = 0;
+  for (const [index, line] of support.spectralLines.entries()) {
+    let bundle: LvMtfBundle | null;
+    if (sampling.kind === "stop") {
+      bundle = api.traceMtfStopBundle(state, options, support, launch, size, line, context.imagePlaneZ, {
+        reference: commonReference,
+        coarse: sampling.lattices.get(index),
+      });
+      if (bundle?.lattice) sampling.lattices.set(index, bundle.lattice);
+    } else {
+      bundle = api.traceMtfLaunchPlaneBundle(
+        state,
+        options,
+        support,
+        launch,
+        sampling.footprint,
+        size,
+        line,
+        context.imagePlaneZ,
+        { reference: commonReference },
+      );
+    }
     if (!bundle) return unavailable("chief-ray-failed", "No valid chief ray reaches the image plane.");
     commonReference ??= bundle.chief;
     field.imageHeightMm = Math.hypot(commonReference.x, commonReference.y);
     field.validRays += bundle.rays.length;
     field.blockedRays += bundle.blocked;
     field.failedRays += bundle.failed;
+    field.unaimedRays += bundle.unaimed;
+    field.unresolvedInBeamRays += bundle.unresolvedInBeam;
     openBorders.x ||= bundle.openBorders.x;
     openBorders.y0 ||= bundle.openBorders.y0;
     openBorders.y1 ||= bundle.openBorders.y1;
     const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-    launchedWeight += transmitted + bundle.failedWeight;
-    failedWeight += bundle.failedWeight;
+    sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
+    unresolvedWeight += bundle.unresolvedInBeamWeight;
+    if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
+      darkLines++;
+      continue;
+    }
     if (bundle.rays.length < api.mtfMinRays || !(transmitted > 0))
       return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
     bundles.push(bundle);
     lines.push(spotsOf(line, bundle));
   }
-  field.unknownFluxFraction = launchedWeight > 0 ? failedWeight / launchedWeight : 0;
-  const unresolved = api.assessUnresolvedFlux(field.failedRays, field.unknownFluxFraction);
-  if (!unresolved.acceptable) return unavailable("trace-failed", "Numerical ray failures prevent an MTF estimate.");
+  if (darkLines === support.spectralLines.length)
+    return unavailable("vignetted", "No rays reach this image height through the model's clear apertures.", true);
+  if (darkLines > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
+  field.unknownFluxFraction = sampledWeight > 0 ? unresolvedWeight / sampledWeight : 0;
+  const unresolvedRays = field.failedRays + field.unaimedRays;
+  const unresolved = api.assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+  if (!unresolved.acceptable) {
+    const away = unresolvedRays - field.unresolvedInBeamRays;
+    return unavailable(
+      "trace-failed",
+      `${field.unresolvedInBeamRays} pupil samples beside the transmitted beam could not be aimed or traced and carry ${(field.unknownFluxFraction * 100).toFixed(1)}% of its flux, too much for an MTF estimate.${away > 0 ? ` ${away} more touch no transmitted cell.` : ""}`,
+      true,
+    );
+  }
   if (unresolved.note) field.notes.push(unresolved.note);
 
   // The comparator's part: one sum over every line, about the one reference, with no modulus cut off.
@@ -210,48 +278,66 @@ function spotsOf(line: LvSpectralLine, bundle: LvMtfBundle): SpectralSpots {
 }
 
 /**
- * One field through launch, footprint and refinement: `traceField` of LensVisualizer, restated. A field without a
- * chief ray is "chief-ray-failed" and one without a beam "vignetted". A grid whose rays reach the guard band of
- * the footprint is traced again over a wider one, at most `MTF_MAX_FOOTPRINT_EXPANSIONS` times for the field over
- * all its grids, and the widened footprint is the one every later grid is laid over. The ladder is walked by
- * LensVisualizer's own `refineMtfField`, so which grids are traced, and what a field's status is, are decided by
- * LensVisualizer's code on the estimator's curves.
+ * One field through launch and refinement: `traceField` of LensVisualizer, restated (LV #936). A field without a
+ * chief ray is "chief-ray-failed". A field the aimed launch reaches (`launch.aim`) refines its stop lattice, each
+ * line's latest lattice seeding its next. A field launched from the bounding sphere scans a launch-plane footprint
+ * first ("vignetted" without one, its `pupilSampling` "launch-plane"), and a grid whose rays reach the guard band of
+ * the footprint is traced again over a wider one, at most `MTF_MAX_FOOTPRINT_EXPANSIONS` times for the field over all
+ * its grids. The ladder is walked by LensVisualizer's own `refineMtfField`, so which grids are traced, and what a
+ * field's status is, are decided by LensVisualizer's code on the estimator's curves.
  */
 function replayField(api: LvReplayApi, context: ReplayContext, target: LvMtfFieldResult): LvReplayField {
   const { state, options, support } = context;
-  const none = (reason: string, message: string): LvReplayField => ({
-    field: markUnavailable(api.emptyMtfField(target.fieldFraction, target), reason, message),
-    gridSizes: [],
-    expansions: 0,
-    footprint: null,
-    bundles: [],
-    reference: null,
-  });
+  const none = (reason: string, message: string, pupilSampling: "stop" | "launch-plane" = "stop"): LvReplayField => {
+    const field = api.emptyMtfField(target.fieldFraction, target);
+    field.pupilSampling = pupilSampling;
+    return {
+      field: markUnavailable(field, reason, message),
+      gridSizes: [],
+      expansions: 0,
+      footprint: null,
+      bundles: [],
+      reference: null,
+    };
+  };
   const launch =
     target.fieldAngleDeg === null ? null : api.prepareMtfFieldLaunch(state, options, support, target.fieldAngleDeg);
   if (!launch) return none("chief-ray-failed", "No valid chief ray reaches this image height.");
-  let footprint = api.findMtfFieldFootprint(state, options, support, launch);
-  if (!footprint) return none("vignetted", "No rays reach this image height through the model's clear apertures.");
 
   const traces = new WeakMap<LvMtfFieldDraft, GridTrace>();
   const gridSizes: number[] = [];
   let expansions = 0;
-  const evaluate = (size: number): LvMtfGridOutcome => {
-    gridSizes.push(size);
-    for (;;) {
-      const outcome = fieldAtGrid(api, context, target, launch, footprint as LvMtfFootprint, size, traces);
-      const open: LvMtfOpenBorders | undefined = outcome.kind === "curves" ? outcome.openBorders : undefined;
-      if (!open || !(open.x || open.y0 || open.y1)) return outcome;
-      if (expansions >= api.mtfMaxFootprintExpansions) {
-        outcome.field.notes.push(
-          "Transmitted rays reach the edge of the sampled pupil region; some flux may be missing.",
-        );
-        return outcome;
-      }
-      footprint = api.expandMtfFootprint(footprint as LvMtfFootprint, open);
-      expansions++;
+  let evaluate: (size: number) => LvMtfGridOutcome;
+  let footprint: LvMtfFootprint | null = null;
+  if (launch.aim) {
+    const sampling: FieldSampling = { kind: "stop", lattices: new Map() };
+    evaluate = (size) => {
+      gridSizes.push(size);
+      return fieldAtGrid(api, context, target, launch, sampling, size, traces);
+    };
+  } else {
+    footprint = api.findMtfFieldFootprint(state, options, support, launch);
+    if (!footprint) {
+      return none("vignetted", "No rays reach this image height through the model's clear apertures.", "launch-plane");
     }
-  };
+    evaluate = (size) => {
+      gridSizes.push(size);
+      for (;;) {
+        const sampling: FieldSampling = { kind: "launch-plane", footprint: footprint as LvMtfFootprint };
+        const outcome = fieldAtGrid(api, context, target, launch, sampling, size, traces);
+        const open: LvMtfOpenBorders | undefined = outcome.kind === "curves" ? outcome.openBorders : undefined;
+        if (!open || !(open.x || open.y0 || open.y1)) return outcome;
+        if (expansions >= api.mtfMaxFootprintExpansions) {
+          outcome.field.notes.push(
+            "Transmitted rays reach the edge of the sampled pupil region; some flux may be missing.",
+          );
+          return outcome;
+        }
+        footprint = api.expandMtfFootprint(footprint as LvMtfFootprint, open);
+        expansions++;
+      }
+    };
+  }
   let finished: LvMtfFieldDraft | undefined;
   for (const field of api.refineMtfField(context.ladder, evaluate, context.frequencies)) finished = field;
   // Unreachable while a ladder has a size: the refinement yields after every size it asks for.

@@ -278,10 +278,11 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
     const entry = JSON.parse(
       gunzipSync(readFileSync(join(rootDir, "runs", "store", `${job.storeKey}.json.gz`))).toString("utf8"),
     );
-    // 6 columns by 5 rows and the chief ray, through 3 surfaces of the singlet or the 7 of the zoom.
-    assert.equal(entry.result.diagnostics.counts.rays, 31);
-    assert.equal(entry.request.spec.groups.chiefIndex, 30);
-    assert.deepEqual(entry.result.data.hits.$nd.shape, [job.run === "singlet" ? 3 : 7, 31, 3]);
+    // A stop lattice of 4 by 4 cells (LV #936; its four corners lie outside the stop's disc and hold the chief ray at
+    // weight 0) and the chief ray, through 3 surfaces of the singlet or the 7 of the zoom.
+    assert.equal(entry.result.diagnostics.counts.rays, 17);
+    assert.equal(entry.request.spec.groups.chiefIndex, 16);
+    assert.deepEqual(entry.result.data.hits.$nd.shape, [job.run === "singlet" ? 3 : 7, 17, 3]);
     assert.equal(entry.result.engine.adapterRevision, adapterRevision(LV_ENGINE_MODULE).revision);
   }
 
@@ -496,19 +497,20 @@ test("lvrtc run --rungs r8a: lv and ref trace the rays of LensVisualizer's axial
   const suite = raySuite(rootDir);
   const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r8a");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  // The sections' zones do not depend on the run's fields: two sets of the singlet on its one line, and two of the
-  // zoom at each of its lines. Each engine traces each set once.
+  // The sections' zones do not depend on the run's fields: of the singlet on its one line, the reference line, which
+  // is a chromatic channel's, the profile, the marginal rays and the colour; of the zoom at each of its photopic lines,
+  // none a channel's, the profile and the marginal rays. Each engine traces each set once.
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   const lines = (manifest.runs[1].axialRaySets?.sets.length ?? 0) / 2;
   assert.ok(lines > 1);
   assert.deepEqual(
     manifest.runs.map((run) => [run.name, run.axialRaySets?.sets.length, run.axialRaySets?.problems, run.raySets]),
     [
-      ["singlet", 2, [], undefined],
+      ["singlet", 3, [], undefined],
       ["zoom-photopic", 2 * lines, [], undefined],
     ],
   );
-  assert.equal(manifest.jobs.length, 2 * 2 * (1 + lines));
+  assert.equal(manifest.jobs.length, 2 * (3 + 2 * lines));
   assert.ok(manifest.jobs.every((job) => job.rung === "r8a" && job.quantity === "rays.trace" && job.status === "ok"));
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, every

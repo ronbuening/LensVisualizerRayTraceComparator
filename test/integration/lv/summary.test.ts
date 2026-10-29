@@ -8,24 +8,23 @@
 //   (the first vertex less R1's `frontFocalZ`, R1's `frontPrincipalZ` less its `rearPrincipalZ`), the image plane and
 //   the total track (the case's `imageZ`, less its first vertex): the tab's cardinal construction is the one `lv`'s R1
 //   answer assembles, on the same rows;
-// - within two units in the last place, derived: the physical stop, against twice the case's stop radius (the hook's
-//   wide-open radius `(w * FOPEN) / FOPEN` is a product and a quotient, each rounded once: at most 2^-52 of `w`);
+// - to the bit: the physical stop, against twice the case's stop radius: since LV #933 the hook's stop is the stop rule's
+//   at the slider's f-number, which is the case's stop radius itself (wide open the iris, stopped down the same rule);
 // - derived from those, to the bit: the breathing percentage and the telephoto ratio, by the tab's own expressions;
-// - two measured margins, held only while LensVisualizer's engine closure and the case are the ones they were measured
+// - measured margins, held only while LensVisualizer's engine closure and the case are the ones they were measured
 //   with (`PINNED_CLOSURE`, `MEASURED_CASES`), so that a lens edit cannot turn this test red; elsewhere they are written
-//   down. The current and infinity focal lengths within eight units in the last place of R1's (`-1 / u'` of one ray, or
-//   the focal length LensVisualizer stores for the zoom position, against the cardinal construction, which divides by
-//   the system matrix's C and subtracts the rear principal point from the rear focal point: measured 7 units at a catalog
-//   focus station, the Leica Summilux-C 18 mm's, 2 on the benchmark). The entrance pupil and the "Working f/#" within
-//   1e-10 relative of twice R1's `entrancePupilSemiDiameter` and R1's `efl` over it: the hook's pupil is the stop radius
-//   over the height at the stop of a real ray 1e-4 mm from the axis, parallel to it, over 1e-4, which departs from the
-//   paraxial ray's by terms of the order of (1e-4 / r)^2 of the surfaces' radii r and multiplies an absolute rounding of
-//   that height by 1e4; measured at most 3.4e-11 relative (1.4e-11 on the benchmark, 1.6e-10 mm of a diameter), inside
-//   R1's own 1e-9 mm gate of the radius.
+//   down. The current and infinity focal lengths within `MARGINS` units in the last place of R1's (`-1 / u'` of one
+//   ray, or the focal length LensVisualizer stores for the zoom position, against the cardinal construction, which
+//   divides by the system matrix's C and subtracts the rear principal point from the rear focal point; measured below
+//   `MARGINS`). The entrance pupil, the "Image-space f/#" and,
+//   at infinity focus, the "Paraxial working f/#" (LV #933) within `MARGINS` units in the last place of
+//   twice R1's `entrancePupilSemiDiameter`, of R1's `efl` over that diameter, and of the same over the image space's
+//   index: since #933 the hook's pupil is the stop radius over the paraxial marginal ray's height ratio at the stop, a
+//   paraxial quantity as R1's is, so the two differ by roundings of two paraxial traces only.
 //
 // What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer is
-// held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 098c91ef6 (engine
-// closure fef2e248).
+// held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae (engine
+// closure f016b35b).
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -52,133 +51,144 @@ const skip = LV_UNAVAILABLE;
 /** The suites whose states the tab is held at. */
 const SUITES = ["benchmark", "states", "focus-stations"] as const;
 
-/** The engine closure the margins were measured with (LensVisualizer 098c91ef6). */
-const PINNED_CLOSURE = "fef2e248117fc696015fe513b4b2a43f92ccde5bd7381536047ccab3ac3406bd";
+/** The engine closure the margins were measured with (LensVisualizer 607ff23ae). */
+const PINNED_CLOSURE = "f016b35b258be0c4b00df43fdf103384e8fad21a75506213611c42136189f0cf";
 
-/** The first 16 hex digits of the id of each case the margins were measured on, at `PINNED_CLOSURE`. */
+/** The first 16 hex digits of the id of each case the margins were measured on at `PINNED_CLOSURE`: 119 at 607ff23ae. */
 const MEASURED_CASES: ReadonlySet<string> = new Set([
-  "0403f9a540eed64c",
-  "0521f47cf726e1b8",
-  "062545109261a889",
-  "09377d60ff786893",
+  "02dd902ccabd7e9e",
+  "032904853c0718dd",
+  "0659c248d82dbf06",
   "094c8ed68417c334",
-  "0974cc94e4d04caa",
-  "0d53a895f4385bf5",
-  "0e14dcf45d101f3f",
-  "10bbcde40490c2a5",
-  "1164cee682861c41",
-  "132b9c776877d26b",
-  "1477f4fdb398fd9b",
-  "162fbfc11fb7a78c",
-  "167e686b31a7497c",
-  "187718db3b86895a",
-  "1f2050f3ba63d376",
-  "20ee691a337d6dc6",
-  "21482843518999fe",
+  "0c1e3e17b791b8b7",
+  "10bff0b1d82d1387",
+  "11e8a91c1e7e9666",
+  "11fe04d53f56df0f",
+  "17d8f3a57a99e178",
+  "18b137c95a0dea4a",
+  "199c2510c32fa327",
+  "1a34a84b12ddaa76",
+  "1a94040d1d518dd6",
+  "1cf221df7808f788",
+  "1ffeed7214f4c219",
+  "22198c5be871fa98",
+  "22234d65f21f2d91",
+  "22f573c4dcca9f77",
   "26022f540fbb0f39",
-  "2e2afa23bd756f5a",
-  "302349c7dd8c39bf",
-  "327403ce09e2fc94",
-  "32e225863877c36b",
-  "344ffcebce2fd7e1",
-  "3836e9fa92a4a9bd",
-  "39044dfb4336cc45",
-  "395bb2a10d84250b",
-  "3960852d628118b4",
-  "3d3cde4a639dbe26",
-  "3e0050bebabe2ef3",
-  "42d45f93538e8180",
-  "42e0f9ef38bebc0d",
-  "43123fa14ee4fbc8",
-  "43d293e0d03b0d81",
-  "440403e6acb4f563",
-  "44edcde6e319adf1",
-  "4796c91049d6d85a",
-  "484c9d9c9b0574fa",
-  "49fed327bafd0359",
-  "4bd6eac33e3d5a17",
-  "4fb64909817675ac",
-  "504e25b011c410bf",
-  "5074f7ae6e0a91f3",
-  "54a6b4fd4493aa1c",
-  "558d181f7fe332e3",
-  "595902c51920e15a",
-  "5cf10d8c8b6422ed",
-  "5ee5d6fc109ea15c",
-  "5f620f64d9e31190",
-  "60619bd4baf81548",
-  "61b10ec1e9b1f97c",
-  "62626b3e8f2320cf",
-  "65305725fdb42f1b",
-  "66c1a2eaf12c6eeb",
-  "6c56c2c2c0d95b39",
-  "7234624d9e180264",
-  "72e4c5b839a2e628",
-  "79b9a2dd1a1f4b9e",
-  "81be87b898b8d464",
-  "84abefd3a467f7e9",
-  "8babe67e5197b131",
-  "8c21e5ccda69543a",
-  "8f0d0bb5ce374c8c",
-  "8f1f7d95653af82d",
-  "913940f673fca99b",
-  "94333a4c6df8cc43",
-  "9533eca7053a8bc1",
-  "9861b90fd6db9b9f",
-  "a3f86b1b281dd0ad",
-  "a4833d79d00d382f",
-  "a5957b6f15c089d5",
-  "a8647fae8029be2b",
-  "a878f44443376f43",
-  "a89f33e9185b8cf8",
-  "ab9c8205a728d127",
-  "ac0c53a9e6287256",
-  "ac930dee61058699",
-  "ad86753053be0d55",
-  "af803a345eceb552",
-  "afa106a51bdec89d",
-  "b1088647562098bf",
-  "b29a367787045441",
-  "b29ffec9f36b8adf",
-  "b5caeb649af604b6",
-  "be7f2899b89eed48",
-  "bebc9392adca28c3",
-  "bf047195927f492d",
-  "c0e87372783bbd8a",
-  "c1783e5c5de7f829",
-  "c2318d538a784c5e",
-  "c722c7755ca07f86",
-  "c7bd0cc65d8af8e0",
-  "c80693a543423dc3",
-  "ca355ce3e19a7e6e",
-  "ccc14e33b434a6ec",
-  "d146abd7b30bd4b6",
-  "d444984ee236770b",
-  "d5bb8d6ca615f6e5",
-  "d6a1a73811dcd0b3",
-  "d7cb9811dd23d692",
-  "d8b0395277a164fd",
-  "db7f14bc7e96feab",
-  "de1fd91c6b96ca54",
-  "e11ed3cae518f0c7",
-  "e30f376ef3f6eb25",
-  "e843015bc39fa4c3",
-  "eb7807b4cfcfd269",
-  "ef02f7b2a5e99dbf",
-  "efa493ba8bf49dc6",
-  "f0819763fb3976af",
-  "f68826b235dcdb9b",
-  "fc151b4a7fce9eb6",
-  "fcc388dfb0932025",
+  "2c3afcd18b34bc40",
+  "2d27265e6b0031b0",
+  "2e6f278dd2f1ec94",
+  "2f48866c86a5c78c",
+  "30e4a4eec70f588e",
+  "32256a3f62cfc695",
+  "3538c790a1ec7344",
+  "3a6c0b2f69addb62",
+  "40785d2e0c725183",
+  "412e617abaf928fc",
+  "449063f9188b5228",
+  "4c007de74973def2",
+  "53c5ca7e688cbf9f",
+  "568f93341d119dcc",
+  "58eb582de9ad963e",
+  "5eb9db0466b9fe71",
+  "61751a849d977beb",
+  "617deed34e0bc25b",
+  "62d4f5600679b10f",
+  "650612fe98b240e9",
+  "66629bfed7b0cb8a",
+  "673095cfc1f5665f",
+  "6fcf69c5570573dc",
+  "70d5a589da4a7527",
+  "72842c3de154ccbb",
+  "739496a530c13d6d",
+  "73f942b93db286a4",
+  "75e87a15390874d2",
+  "77240b3249fc2f96",
+  "7c3073c4e7dbedf0",
+  "7cdedfe0afa1f948",
+  "7f0c3394b7c516d1",
+  "817dcdb72789e4f1",
+  "8270906e01b3faca",
+  "827ce23a9b1f784a",
+  "83bc7aa668f82b6b",
+  "849578276ae0917f",
+  "851b25697188fac9",
+  "861a915ddd7dd32d",
+  "874854625cf1dd58",
+  "88fee4e84777e718",
+  "894debefc6fdb16f",
+  "8b15e190d96badcf",
+  "8dd3c38f79512c8e",
+  "904ae8663e1e2381",
+  "9276015f4a09ae0d",
+  "93370aead6b9eb8d",
+  "9370a35911029626",
+  "9876f2f2d40b0326",
+  "998482d4e947545c",
+  "99b6b35e6ae7faa9",
+  "9aee102182725025",
+  "9ff925fa82ee6749",
+  "a6a31446c8e77964",
+  "a76c758989f346f9",
+  "a9fc28dc90bb6ec3",
+  "acd7822027052cc1",
+  "ae188d3eb305c520",
+  "b0be2f20e5b95353",
+  "b0f8f5466dfaa4f6",
+  "b2e66abb6142cc75",
+  "b3794c6c5924cee4",
+  "b4a9bef13532c716",
+  "b549e5c3c090d253",
+  "b57c2bcd2ba8aa92",
+  "b67aae200c54706f",
+  "baf5883c8fe1fe3b",
+  "bb47082c2e9124e5",
+  "bbd4687c1f32e281",
+  "bdba0ea2e9d167e3",
+  "c4cafe389ff19f2b",
+  "c7f1b99704f56d90",
+  "ca2990fbd67f5671",
+  "ca4650a2f1cab812",
+  "cd2d5eb4481fbd7b",
+  "ce632d6fe72f4ec5",
+  "cf90a40810f02e10",
+  "cfd2f4b05ff51140",
+  "cfdaf3f52ab425d4",
+  "cfe08daed58c95d0",
+  "d1fd0633e961ca14",
+  "d697f32194b1ab48",
+  "d6dd88710ac133d1",
+  "db455dd71151e3a2",
+  "dc0cc7f4f4644e26",
+  "e05ac48d6f62767a",
+  "e2778a011e81560e",
+  "e29835a068866e0e",
+  "e3849910ab68459a",
+  "e3c1b9c0842d88e4",
+  "e44ac8f3c84fa88e",
+  "e66d7ce98eb7ba9e",
+  "e92c44ff169ec871",
+  "ed8aaa73b01961d3",
+  "ee0b49410666fe2b",
+  "eeb1536ebab03437",
+  "f2ba46d7a8b2499a",
+  "f3fcc3b63cd7c8c3",
+  "fb6313aafaef4cc6",
+  "fc71d244aec38864",
 ]);
 
-/** The measured margins: focal lengths in units in the last place, the pupil and the "Working f/#" relative. */
-const MARGINS = { focalUnits: 8, pupilRelative: 1e-10 } as const;
+/**
+ * The measured margins, in units in the last place (at 607ff23ae, on the 119 cases of `MEASURED_CASES`): the focal
+ * lengths 16 (measured 15, the Olympus Zuiko Digital ED 7-14 mm, new at 607ff23ae, at its focus station of zoom
+ * station 32; 7 at 098c91ef6 on the older cases), the pupil 0 (to the bit), the image-space and paraxial working
+ * f-numbers 20 (measured 19 on the same station, and 3 for the paraxial working f-number at infinity).
+ */
+const MARGINS = { focalUnits: 16, pupilUnits: 0, fNumberUnits: 20 } as const;
 
 /**
  * Each readout of the summary tab that R1 does not judge, and why, then what is presented beside the readouts. Each is
- * recorded by rung R12b where it is a value of `summary.native` (the half field), or in its `sampling` (the focus
- * distance, the "eff. f/"); the controls are the state itself.
+ * recorded by rung R12b where it is a value of `summary.native` (the half field, the working f-number), or in its
+ * `sampling` (the focus distance); the controls are the state itself.
  */
 export const NOT_COVERED_BY_R1: Readonly<Record<string, string>> = Object.freeze({
   halfFieldDeg:
@@ -196,20 +206,26 @@ export const NOT_COVERED_BY_R1: Readonly<Record<string, string>> = Object.freeze
   "Current Perspective Pose":
     "the section the tab shows above the readouts where the request's pose is active (a shift or tilt): no case has " +
     "one, and the readouts are of the lens without it",
-  "eff. f/":
-    "the aperture control's effective f-number, shown beside the mark only where it differs by more than 0.05 and " +
-    "showEffectiveAperture is on: a thin-lens estimate of stored pupils, recorded under R12b's sampling",
+  workingFNumber:
+    "1 / (2 n' sin t') of the real marginal ray aimed at the stop rim (LV #933, computeWorkingFNumber): no first-order " +
+    "quantity; R12b records it beside optiland's own get_working_FNO at infinity focus, and at a finite focus, where " +
+    "LensVisualizer's object is the paraxial conjugate of the image plane and not the case's, under sampling",
+  "paraxial working f/":
+    "the aperture control's readout beside the mark (LV #933, the summary's paraxial working f-number), shown only " +
+    "where it differs from the mark by more than PARAXIAL_WORKING_NOTE_DIFFERENCE (0.05) and showEffectiveAperture is " +
+    "on: the readout of paraxialWorkingFNumber, which is covered",
 });
 
 /** The entries of `NOT_COVERED_BY_R1` that are no readout of `computeOpticalSummary`. */
-const BESIDE_THE_READOUTS = ["Current Perspective Pose", "eff. f/"];
+const BESIDE_THE_READOUTS = ["Current Perspective Pose", "paraxial working f/"];
 
 /** The readouts R1 or the case covers, and how: each is asserted below. */
 const COVERED = [
   "currentEFLMm",
   "infinityEFLMm",
   "breathingPercent",
-  "effectiveFNumber",
+  "imageSpaceFNumber",
+  "paraxialWorkingFNumber",
   "entrancePupilDiameterMm",
   "physicalStopDiameterMm",
   "imagePlaneZMm",
@@ -284,7 +300,8 @@ test(
     const build = createLensBuilder(binding);
     const states = await tabStates(binding);
     const pinnedClosure = binding.fingerprint().engineClosureHash === PINNED_CLOSURE;
-    const worst = { focal: 0, stop: 0, pupil: 0, fNumber: 0 };
+    const worst = { focal: 0, pupil: 0, fNumber: 0, paraxialWorking: 0 };
+    const where = { focal: "", fNumber: "" };
     let held = 0;
     let finite = 0;
     const infinityEfl = new Map<string, number>();
@@ -327,20 +344,30 @@ test(
           `${name}: infinity EFL ${summary.infinityEFLMm} against ${infinityEfl.get(zoomKey)}`,
         );
       }
+      if (Math.max(current, infinity) > worst.focal) where.focal = name;
       worst.focal = Math.max(worst.focal, current, infinity);
-      // Within two units, derived: the hook's wide-open radius is a product and a quotient, each rounded once.
-      const stop = units(summary.physicalStopDiameterMm!, 2 * stopSemiDiameter);
-      assert.ok(stop <= 2, `${name}: physical stop ${summary.physicalStopDiameterMm} against ${2 * stopSemiDiameter}`);
-      worst.stop = Math.max(worst.stop, stop);
-      // Within 1e-10 relative: the hook's pupil of a real ray 1e-4 mm from the axis against the paraxial one.
-      const pupil = relative(summary.entrancePupilDiameterMm!, 2 * r1("entrancePupilSemiDiameter"));
-      const fNumber = relative(summary.effectiveFNumber!, Math.abs(r1("efl")) / (2 * r1("entrancePupilSemiDiameter")));
+      // To the bit: the hook's stop is the stop rule's, which is the case's stop radius (LV #933).
+      assert.equal(summary.physicalStopDiameterMm, 2 * stopSemiDiameter, `${name}: physical stop`);
+      // A measured margin: the hook's paraxial pupil, and the f-numbers formed of it, against R1's paraxial ones.
+      const diameter = 2 * r1("entrancePupilSemiDiameter");
+      const pupil = units(summary.entrancePupilDiameterMm!, diameter);
+      const fNumber = units(summary.imageSpaceFNumber!, Math.abs(r1("efl")) / diameter);
       if (pinned) {
-        assert.ok(pupil <= MARGINS.pupilRelative, `${name}: entrance pupil ${pupil} relative`);
-        assert.ok(fNumber <= MARGINS.pupilRelative, `${name}: Working f/# ${fNumber} relative`);
+        assert.ok(pupil <= MARGINS.pupilUnits, `${name}: entrance pupil ${pupil} units`);
+        assert.ok(fNumber <= MARGINS.fNumberUnits, `${name}: Image-space f/# ${fNumber} units`);
       }
       worst.pupil = Math.max(worst.pupil, pupil);
+      if (fNumber > worst.fNumber) where.fNumber = name;
       worst.fNumber = Math.max(worst.fNumber, fNumber);
+      // At infinity focus the paraxial working f-number is the image-space one over the image space's index, the
+      // marginal ray being parallel to the axis: R1's efl over its pupil's diameter, which lv states.
+      if (exported.conditions.object.kind === "infinity") {
+        const indices = decodeNdArray(exported.conditions.indexAfterSurface).values;
+        const imageIndex = indices[exported.system.surfaces.length - 1];
+        const working = units(summary.paraxialWorkingFNumber!, Math.abs(r1("efl")) / (imageIndex * diameter));
+        if (pinned) assert.ok(working <= MARGINS.fNumberUnits, `${name}: Paraxial working f/# ${working} units`);
+        worst.paraxialWorking = Math.max(worst.paraxialWorking, working);
+      }
       // Derived, to the bit, by the tab's own expressions of the readouts held above.
       const breathing = (100 * (summary.currentEFLMm! - summary.infinityEFLMm!)) / summary.infinityEFLMm!;
       assert.equal(summary.breathingPercent, breathing, `${name}: breathing`);
@@ -362,8 +389,8 @@ test(
     assert.deepEqual(presented, [...COVERED, ...notCovered].sort());
     t.diagnostic(
       `${binding.fingerprint().commit}: ${states.length} states (${finite} finite), the margins held on ${held}; worst: focal lengths ` +
-        `${worst.focal} units, stop ${worst.stop} unit, pupil ${worst.pupil.toExponential(2)} relative, ` +
-        `Working f/# ${worst.fNumber.toExponential(2)} relative`,
+        `${worst.focal} units (${where.focal}), pupil ${worst.pupil} units, Image-space f/# ${worst.fNumber} units ` +
+        `(${where.fNumber}), Paraxial working f/# at infinity ${worst.paraxialWorking} units`,
     );
   },
 );
@@ -380,6 +407,8 @@ test(
     // The landing of the solved chief ray at each half field that is not authored, mm to 1e-3: the image corners.
     const landings = new Map<string, number>();
     let largestMarked = { name: "", value: 0 };
+    let largestWorking = { name: "", value: 0 };
+    let vignettedMarginal = 0;
     let largestFocus = { name: "", value: 0 };
     for (const { name, model } of states) {
       const answer = answerLvSummary(api, model, { lines: [0] });
@@ -405,10 +434,14 @@ test(
         const key = Math.abs(landing).toFixed(3);
         landings.set(key, (landings.get(key) ?? 0) + 1);
       }
-      // The marked f-number against the tab's "Working f/#", at infinity focus.
+      // The marked f-number against the tab's "Image-space f/#", and the real marginal ray's against it, at infinity.
       if (model.exported.conditions.object.kind === "infinity") {
         const marked = relative(line.imageSpaceFNumber!, line.nominalFNumber!);
         if (marked > largestMarked.value) largestMarked = { name, value: marked };
+        if (line.workingFNumber !== null) {
+          const working = relative(line.workingFNumber, line.imageSpaceFNumber!);
+          if (working > largestWorking.value) largestWorking = { name, value: working };
+        } else vignettedMarginal++;
       } else {
         // The focus distance readout against the case's object, measured to the image plane, in metres.
         const object = model.exported.conditions.object as { kind: "finite"; z: number };
@@ -420,8 +453,10 @@ test(
     t.diagnostic(
       `${binding.fingerprint().commit}: ${authoredField} of ${states.length} states have the authored half field, ` +
         `the others' chief rays land at ${[...landings].map(([mm, count]) => `${mm} mm (${count})`).join(", ")}; ` +
-        `the tab's Working f/# is furthest from the marked f-number at ${largestMarked.name}, ` +
-        `${(100 * largestMarked.value).toFixed(2)}%; the focus readout is furthest from the case's object distance ` +
+        `the tab's Image-space f/# is furthest from the marked f-number at ${largestMarked.name}, ` +
+        `${(100 * largestMarked.value).toFixed(4)}%; its Working f/# from its Image-space f/# at ${largestWorking.name}, ` +
+        `${(100 * largestWorking.value).toFixed(2)}% (${vignettedMarginal} infinity states without one: the marginal ray ` +
+        `vignetted, unaimed or not traced); the focus readout is furthest from the case's object distance ` +
         `at ${largestFocus.name}, ${(1000 * largestFocus.value).toFixed(3)} mm`,
     );
   },
@@ -439,8 +474,8 @@ test(
     for (const { name, model, aperture } of states) {
       const { state, runtime, exported } = model;
       const { focusT, zoomT } = state;
-      // The hook, as useLensComputation.ts writes it, with the aperture slider at the f-number the run asked: wide open,
-      // a number, or the MTF tab's f/8 comparison, which scales the hook's two radii of wide open by fNumber / 8.
+      // The hook, as useLensComputation.ts writes it (LV #933), with the aperture slider at the f-number the run asked:
+      // wide open, a number, or 8 for the MTF tab's f/8 comparison, whose stop is the slider's f/8 to the bit.
       const firstOrderRequest = api.createAnalysisRequest({
         preparedState: api.prepareRuntimeState(runtime, focusT, zoomT, 0),
         dynamicEFL: runtime.EFL as number,
@@ -449,17 +484,12 @@ test(
       });
       const dynamicEFL = api.computeFocusEFL(firstOrderRequest);
       const fieldGeometry = api.computeAnalysisFieldGeometryAtState(focusT, zoomT, runtime, 0);
-      const currentFOPEN = api.fopenAtZoomClamped(zoomT, runtime);
-      const wideOpenStopSD = api.wideOpenStopAtZoom(zoomT, runtime);
       const slider = api.fNumberAtStopdown(0, zoomT, runtime);
-      const fNumber = aperture?.kind === "f-number" ? aperture.value : slider;
-      let currentPhysStopSD = (wideOpenStopSD * currentFOPEN) / fNumber;
-      const baseEPSD = api.entrancePupilAtState(wideOpenStopSD, focusT, zoomT, runtime, fieldGeometry, 0).epSD;
-      let currentEPSD = (baseEPSD * currentFOPEN) / fNumber;
-      let marked = fNumber;
-      if (aperture?.kind === "lv-f8-comparison") {
-        [currentEPSD, currentPhysStopSD, marked] = [currentEPSD * (slider / 8), currentPhysStopSD * (slider / 8), 8];
-      }
+      const fNumber =
+        aperture?.kind === "f-number" ? aperture.value : aperture?.kind === "lv-f8-comparison" ? 8 : slider;
+      const currentPhysStopSD = api.stopSemiDiameterForFNumber(fNumber, zoomT, runtime);
+      const currentEPSD = api.entrancePupilAtState(currentPhysStopSD, focusT, zoomT, runtime, fieldGeometry, 0).epSD;
+      const marked = fNumber;
       // The drawer, as AnalysisDrawerContent.tsx writes it, settled.
       const request = api.createAnalysisRequest({
         preparedState: state,
@@ -472,37 +502,36 @@ test(
       const answer = answerLvSummary(api, model, { lines: [0] });
       assert.ok("data" in answer, name);
       const [line] = answer.data.lines;
+      const atInfinity = exported.conditions.object.kind === "infinity";
+      const traced = tab.workingFNumber.status === "traced" ? tab.workingFNumber.value : null;
       const presented: [string, number | null, number | null][] = [
         ["focalLengthMm", line.focalLengthMm, tab.currentEFLMm],
         ["entrancePupilDiameterMm", line.entrancePupilDiameterMm, tab.entrancePupilDiameterMm],
         ["stopDiameterMm", line.stopDiameterMm, tab.physicalStopDiameterMm],
-        ["imageSpaceFNumber", line.imageSpaceFNumber, tab.effectiveFNumber],
+        ["imageSpaceFNumber", line.imageSpaceFNumber, tab.imageSpaceFNumber],
+        ["paraxialWorkingFNumber", line.paraxialWorkingFNumber, atInfinity ? tab.paraxialWorkingFNumber : null],
+        ["workingFNumber", line.workingFNumber, atInfinity ? traced : null],
         ["totalTrackMm", line.totalTrackMm, tab.totalTrackMm],
         ["halfFieldDeg", line.halfFieldDeg, tab.halfFieldDeg],
-        ["nominalFNumber", line.nominalFNumber, marked],
-        [
-          "lvThinLensEffectiveFNumber",
-          line.sampling.lvThinLensEffectiveFNumber,
-          api.effectiveFNumber(marked, focusT, zoomT, runtime, 0),
-        ],
       ];
-      // Wide open the case's stop is the hook's state to the bit. Stopped down, the case carries its stop radius and
-      // not the slider's f-number, which the engine takes back from the radius by the hook's rule (lvPupilSeed): a
-      // product and a quotient, within two units in the last place of the hook's own.
-      const wideOpen = aperture === undefined || aperture.kind === "wide-open";
-      for (const [value, answered, expected] of presented) {
-        if (wideOpen) assert.equal(answered, expected, `${name}: ${value}`);
-        else assert.ok(units(answered!, expected!) <= 2, `${name}: ${value} ${answered} against ${expected}`);
+      // The case's stop is the hook's to the bit, wide open and stopped down (LV #933): every value is the tab's.
+      for (const [value, answered, expected] of presented) assert.equal(answered, expected, `${name}: ${value}`);
+      if (!atInfinity) {
+        assert.equal(line.sampling.lvParaxialWorkingFNumberAtParaxialObject, tab.paraxialWorkingFNumber, name);
+        if (traced !== null) assert.equal(line.sampling.lvWorkingFNumberAtParaxialObject, traced, name);
       }
-      if (wideOpen) exact++;
-      assert.equal(stopOf(exported), aperture?.kind === "f-number" ? currentPhysStopSD : stopOf(exported));
-      assert.equal(line.workingFNumber, null);
-      assert.equal(line.paraxialWorkingFNumber, null);
+      // The mark: the slider's own wide open, and otherwise the rule's f-number taken back from the stop radius.
+      const wideOpen = aperture === undefined || aperture.kind === "wide-open";
+      if (wideOpen) assert.equal(line.nominalFNumber, marked, `${name}: nominalFNumber`);
+      else assert.ok(units(line.nominalFNumber!, marked) <= 4, `${name}: nominalFNumber ${line.nominalFNumber}`);
+      exact++;
+      assert.equal(stopOf(exported), currentPhysStopSD, name);
+      assert.ok(!("lvThinLensEffectiveFNumber" in line.sampling), name);
       assert.equal(line.rearFocalZ, api.computeCardinalElementsFromState(state)!.points.rearFocal.z, name);
     }
     assert.ok(exact > 0);
     t.diagnostic(
-      `${binding.fingerprint().commit}: ${states.length} states; ${exact} wide open, every value the tab's to the bit`,
+      `${binding.fingerprint().commit}: ${states.length} states; every value the tab's to the bit on ${exact}`,
     );
   },
 );

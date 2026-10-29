@@ -2,7 +2,10 @@
 // the slider's range and of the finite-conjugate addresses were added at Stage 4.4 (ab0fd4cf, closure 7b756ee6,
 // 177 files: the binding now imports src/optics/publishedStations.ts). Those LensVisualizer #925 (5ba17c20c) moved,
 // of the support gate, the anchored indices, the chief-ray solve, the lateral colour and the vignetting tab, were
-// reread at Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files).
+// reread at Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files). Those LensVisualizer's PRs #927 to #936 moved
+// (the stop rule, the MTF's stop lattice, the aimed pupil samples of the spot, axial and curvature sets, the colour
+// zone of four channels, the vignetting tab's stop lattice) were reread at Stage 6.8b, at LV 607ff23ae (closure
+// f016b35b, 184 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
@@ -33,15 +36,22 @@ function occurrences(file: string, text: string): number {
   return squeezed(readFileSync(join(LV_PATH ?? "", ...file.split("/")), "utf8")).split(squeezed(text)).length - 1;
 }
 
-test("the hook still stops down linearly: wide-open radius times the widest f-number, divided by N", { skip }, () => {
+test("the hook still sizes every stop by LensVisualizer's one stop rule at the slider's f-number", { skip }, () => {
+  // Read at 607ff23ae (LV #933): one rule at every f-number, paraxial EPD = F/N at infinity focus of the zoom position.
   const hook = "src/components/hooks/useLensComputation.ts";
-  const mirror = "stopRadius in src/engines/lv/exportAperture.ts restates the rule, in this order of operations";
+  const mirror =
+    "stopRadius in src/engines/lv/exportAperture.ts and lvHookStop in tabRequest.ts call the same function";
   assertSource(hook, "const currentFOPEN = L ? fopenAtZoom(zoomT, L) : 1;", mirror);
   assertSource(hook, "const wideOpenStopSD = L ? wideOpenStopAtZoom(zoomT, L) : 0;", mirror);
-  assertSource(hook, "const currentPhysStopSD = L ? (wideOpenStopSD * currentFOPEN) / fNumber : 0;", mirror);
+  assertSource(hook, "const currentPhysStopSD = L ? stopSemiDiameterForFNumber(fNumber, zoomT, L) : 0;", mirror);
+  assertSource(
+    hook,
+    'import { stopSemiDiameterForFNumber, wideOpenStopAtZoom } from "../../optics/optics.js";',
+    "the binding takes stopSemiDiameterForFNumber and wideOpenStopAtZoom from the optics barrel, as the hook does",
+  );
   // The hook's fopenAtZoom is the function the binding imports as fopenAtZoomClamped, and its f-number never goes below it.
   assertSource(
-    "src/components/hooks/useLensComputation.ts",
+    hook,
     "fopenAtZoomClamped as fopenAtZoom,",
     "the binding takes fopenAtZoomClamped for the hook's fopenAtZoom",
   );
@@ -49,6 +59,27 @@ test("the hook still stops down linearly: wide-open radius times the widest f-nu
     "src/optics/state/aperture.ts",
     "return Math.max(requested, fopenAtZoomClamped(zoomT, L));",
     "stopRadius reports an f-number below the widest as a problem, where the hook clamps it",
+  );
+  // The rule, which the comparator does not restate but calls: the wide-open stop up to the position's wide-open
+  // f-number, the rule's radius above it, never wider; and the rule's radius, which lvNominalFNumber takes back.
+  const rule = "src/optics/state/apertureStop.ts";
+  assertSource(
+    rule,
+    `const wideOpen = wideOpenStop(lens, zoomT);
+     if (!(fNumber > wideOpenFNumber(lens.constants, zoomT))) return wideOpen;
+     return Math.min(wideOpen, fNumberRuleStop(lens, fNumber, zoomT));`,
+    "CLAUDE.md and exportAperture.ts describe the stop of an f-number run so",
+  );
+  assertSource(
+    rule,
+    `const { referenceFocalLengthMm, stopHeightRatio } = stopRuleGeometry(lens, zoomT);
+     return Math.abs((referenceFocalLengthMm / (2 * fNumber)) * stopHeightRatio);`,
+    "lvNominalFNumber in src/engines/lv/summary.ts takes the f-number back from a radius by this rule",
+  );
+  assertSource(
+    "src/optics/optics.ts",
+    'fNumberRuleStopSemiDiameter, stopSemiDiameterForFNumber, stopRuleGeometry, wideOpenStopAtZoom, } from "./state/apertureStop.js";',
+    "LV_IMPORT_MANIFEST takes the three from the optics barrel",
   );
 });
 
@@ -440,13 +471,50 @@ test(
     assertSource(
       "src/optics/trace/utils.ts",
       'const status = failureReason !== null ? "failed" : clipped ? "clipped" : "ok";',
-      "a total internal reflection ends as status failed; mtfTraceClassification is what calls it blocked",
+      "a total internal reflection ends as status failed; traceRayClassification is what calls it blocked",
     );
+    // Since #927 the classification lives in trace/rayClassification.ts, as traceRayClassification.
+    const classification = "src/optics/trace/rayClassification.ts";
     assertSource(
-      "src/optics/analysis/mtf/mtfRayClassification.ts",
+      classification,
       `if (trace.failureReason === "totalInternalReflection" || (trace.status === "clipped" && !trace.failureReason))
        return "blocked";`,
       "answerLvRays in src/engines/lv/rays.ts takes LensVisualizer's own word for blocked and failed",
+    );
+    // Since #934 a surface behind the last hit is met by a step backwards, as in ref and the contract: the hit is
+    // recorded in sequence like any other, so the hits before the first clipped one are still the surfaces passed.
+    const back = "rays.ts reads a backward hit as any hit; CLAUDE.md says LensVisualizer now steps back as ref does";
+    assertSource(
+      tracer,
+      "const hit = intersectSequentialSurface(geometry, i, origin, direction, { minT, maxT, refractiveIndex: n });",
+      back,
+    );
+    const planner = "src/optics/trace/pathPlanner.ts";
+    assertSource(
+      planner,
+      'if (surfaceIndex === 0 || !(direction[2] > 1e-12) || geometry.traversal.kind !== "sequential") return 0;',
+      back + ": no step back to the first surface, for a ray that no longer travels toward +z, or on a folded path",
+    );
+    assertSource(
+      planner,
+      `const forward = intersectStateSurface({ origin, direction }, geometry, surfaceIndex, options);
+       if (forward.ok || forward.failureReason !== "noBracket") return forward;`,
+      back + ": forward first, so a ray that passed before traces bit for bit",
+    );
+    assertSource(
+      planner,
+      `return {
+       ...hit,
+       t: -hit.t,
+       segmentLength: -hit.segmentLength,
+       opticalPathLength: hit.opticalPathLength === null ? null : -hit.opticalPathLength,
+     };`,
+      "opticalPath of lv counts a stretch that runs backwards with its sign, as the contract and ref do",
+    );
+    assertSource(
+      classification,
+      "const wholeLine = sequentialSurfaceBackT(state.traceGeometry, surfaceIndex, origin, direction) > 0;",
+      "a ray LensVisualizer calls blocked by a proven miss misses the surface along its whole line where it may step back",
     );
     assertSource(
       "src/optics/trace/capture.ts",
@@ -504,16 +572,35 @@ test("the MTF still puts the field axis together as the ray sets resolve image-h
     'const traceOptions = { ...mtfTraceOptions(state, options, support, support.spectralLines[0]), capture: "terminal", } as const;',
     "lvLaunchSetup in src/engines/lv/raySets.ts puts the lines of the case into the support record",
   );
-  // The seed of the footprint scan is the pupil radius of the request, which the ray sets take from the hook's rule
-  // (the canary of the hook is below).
+  // The pupil radius of the request scales the aimed launch's Jacobian probes, and seeds a launch-plane footprint
+  // scan; the ray sets take it from the hook's rule (the canary of the hook is below). Read at 607ff23ae.
   assertSource(
     "src/optics/analysis/mtf/mtfTracing.ts",
-    `(x, y) => mtfTraceClassification(traceRay(mtfLaunchRay(launch, x, y)), state, options.stopSemiDiameterMm),
+    `(x, y) => traceRayClassification(traceRay(mtfLaunchRay(launch, x, y)), state, options.stopSemiDiameterMm),
      options.pupilSemiDiameterMm,
      mtfMirrorSymmetric(state),
      growths,
    );`,
     "lvLaunchSetup in src/engines/lv/raySets.ts seeds the footprint scan with lvPupilSeed, as pupilSemiDiameterMm",
+  );
+  assertSource(
+    "src/optics/analysis/mtf/mtfTracing.ts",
+    `return prepareAimedStopLatticeForState(
+       state,
+       { stopSemiDiameterMm: options.stopSemiDiameterMm, launchScaleMm: options.pupilSemiDiameterMm },
+       gridSize,
+       launch.aim,
+       mtfAimSpectrum(state, support, line),
+       coarse,
+     );`,
+    "lvFieldRays aims each line's lattice with lvPupilSeed as the launch scale, through aimMtfStopLattice",
+  );
+  // A field the aimed launch reaches is sampled on the stop; one launched from the bounding sphere on the launch plane.
+  assertSource(
+    mtf,
+    `if (launch.aim) {
+       const sampling: MtfFieldSampling = { kind: "stop", lattices: new Map() };`,
+    "lvFieldRays takes the stop lattice where launch.aim is set, and the launch-plane lattice where it is null",
   );
 });
 
@@ -524,19 +611,25 @@ test("the MTF still puts the field axis together as the ray sets resolve image-h
 // below are the ones it restates, pinned at LV commit ed78cf40.
 
 test("the hook still hands the MTF tab the stop and the pupil radius by the expressions lv restates", { skip }, () => {
+  // Read at 607ff23ae (LV #933): both radii follow the stop rule and the state's paraxial entrance pupil.
   const hook = "src/components/hooks/useLensComputation.ts";
   const mirror = "lvHookAperture in src/engines/lv/tabRequest.ts restates it, in this order of operations";
   assertSource(hook, "const currentFOPEN = L ? fopenAtZoom(zoomT, L) : 1;", mirror);
   assertSource(hook, "const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;", mirror);
   assertSource(hook, "const wideOpenStopSD = L ? wideOpenStopAtZoom(zoomT, L) : 0;", mirror);
-  assertSource(hook, "const currentPhysStopSD = L ? (wideOpenStopSD * currentFOPEN) / fNumber : 0;", mirror);
+  assertSource(hook, "const currentPhysStopSD = L ? stopSemiDiameterForFNumber(fNumber, zoomT, L) : 0;", mirror);
   assertSource(
     hook,
     `const baseEPSD =
        L && fieldGeometry ? entrancePupilAtState(wideOpenStopSD, focusT, zoomT, L, fieldGeometry, aberrationT).epSD : 0;`,
     mirror,
   );
-  assertSource(hook, "const currentEPSD = L ? (baseEPSD * currentFOPEN) / fNumber : 0;", mirror);
+  assertSource(
+    hook,
+    `const currentEPSD =
+       L && fieldGeometry ? entrancePupilAtState(currentPhysStopSD, focusT, zoomT, L, fieldGeometry, aberrationT).epSD : 0;`,
+    mirror + "; lvHookPupil asks the same of any stop radius",
+  );
   assertSource(
     hook,
     `const fieldGeometry = useMemo(
@@ -555,19 +648,23 @@ test("the hook still hands the MTF tab the stop and the pupil radius by the expr
     "lvHookAperture asks fNumberAtStopdown at the slider position 0, which is wide open",
   );
   // The hook's functions are the rewritten exports the binding imports.
-  const barrel = "src/components/hooks/useLensComputation.ts";
   const imported = "the binding takes the same function the hook calls";
-  assertSource(barrel, "fopenAtZoomClamped as fopenAtZoom,", imported);
+  assertSource(hook, "fopenAtZoomClamped as fopenAtZoom,", imported);
   assertSource(
-    barrel,
+    hook,
     'import { computeAnalysisFieldGeometryAtState, entrancePupilAtState } from "../../optics/fieldGeometry.js";',
     imported,
   );
-  // The pupil radius the hook derives follows the stop radius through the geometry's pupil ratio alone.
+  // The pupil follows the stop radius through the paraxial marginal ray's height ratio at the stop alone.
+  const geometry = "src/optics/field/geometry.ts";
+  const pupil = "lvHookPupil takes the pupil of a stop radius as the state's paraxial image of it";
   assertSource(
-    "src/optics/field/geometry.ts",
-    "const epSD = Math.abs(geom.yRatio) > 1e-9 ? Math.abs(stopSD / geom.yRatio) : 0;",
-    "lvHookAperture takes the entrance pupil of the wide-open iris for the pupil the tab scales",
+    geometry,
+    `const pupilRatio = state.lens.flags.isFoldedOptics
+       ? geom.yRatio
+       : traceParaxialSurfaces(state.surfaces, 1, 0, { stopAt: state.lens.stop.surfaceIndex }).y;
+     const epSD = Math.abs(pupilRatio) > 1e-9 ? Math.abs(stopSD / pupilRatio) : 0;`,
+    pupil,
   );
 });
 
@@ -621,11 +718,13 @@ test(
 );
 
 test(
-  "the tab's f/8 comparison still scales both radii by N over 8, for a lens that is faster and reaches f/8",
+  "the tab's f/8 comparison still takes the stop rule's f/8 stop and scales the pupil by the stops, for a lens that is faster and reaches f/8",
   { skip },
   () => {
+    // Read at 607ff23ae (LV #933). The run aperture lv-f8-comparison is this stop, and its pupil this one.
     const tab = "src/components/display/analysis/MtfTab.tsx";
-    const mirror = 'lvTabRequest in src/engines/lv/tabRequest.ts restates it for the view "f8-comparison"';
+    const mirror =
+      'lvTabComparison and lvTabRequest in src/engines/lv/tabRequest.ts restate it for the view "f8-comparison"';
     assertSource(tab, "const COMPARISON_F_NUMBER = 8;", "LV_TAB_COMPARISON_F_NUMBER in tabRequest.ts is this number");
     assertSource(
       tab,
@@ -634,15 +733,28 @@ test(
     );
     assertSource(
       tab,
-      `const scale = fNumber / COMPARISON_F_NUMBER;
-     return createAnalysisRequest({
-       preparedState: job.preparedGeometry,
-       dynamicEFL: job.dynamicEFL,
-       currentEPSD: job.aperture.entrancePupilSemiDiameterMm * scale,
-       currentPhysStopSD: job.aperture.stopSemiDiameterMm * scale,
-       perspectiveTraceContext: job.perspectiveTraceContext,
-     });`,
-      mirror,
+      "if (!job || !compareF8Available || !preferences.compareF8 || !(job.aperture.stopSemiDiameterMm > 0)) return null;",
+      mirror + ": the hook's wide-open stop is above 0 on every lens LensVisualizer builds",
+    );
+    assertSource(
+      tab,
+      `const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
+       // At one state the paraxial entrance pupil is proportional to the stop.
+       const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
+       return createAnalysisRequest({
+         preparedState: job.preparedGeometry,
+         dynamicEFL: job.dynamicEFL,
+         currentEPSD: pupil,
+         currentPhysStopSD: stop,
+         perspectiveTraceContext: job.perspectiveTraceContext,
+       });`,
+      mirror + "; stopRadius in exportAperture.ts makes the stop of lv-f8-comparison, and lvPupilSeed its pupil",
+    );
+    // The stop is the slider's f/8 stop to the bit: the same function, asked for the same f-number and position.
+    assertSource(
+      "src/components/hooks/useLensComputation.ts",
+      "const currentPhysStopSD = L ? stopSemiDiameterForFNumber(fNumber, zoomT, L) : 0;",
+      "CLAUDE.md says lv-f8-comparison and f-number 8 now give the same stop radius",
     );
   },
 );
@@ -650,7 +762,7 @@ test(
 test("the tab's defaults are still the ones the profile lv-tab-default is documented and pinned with", { skip }, () => {
   // The profile reads LensVisualizer's defaults when it runs, so a change here changes no code of the comparator:
   // it changes what the profile is. README.md, contract/CONTRACT.md and the figures pinned in
-  // test/integration/lv/mtf.test.ts describe these.
+  // test/integration/lv/mtf.test.ts describe these. Read at 607ff23ae: since #936 256 cells across the stop.
   assertSource(
     "src/utils/state/mtfPreferences.ts",
     `export const DEFAULT_MTF_PREFERENCES: MtfPreferences = Object.freeze({
@@ -660,7 +772,7 @@ test("the tab's defaults are still the ones the profile lv-tab-default is docume
        view: "field",
        fieldStepPercent: 10,
        frequencies: Object.freeze([10, 30] as const),
-       maxGridSize: 128,
+       maxGridSize: 256,
        compareF8: false,
      });`,
     "the profile lv-tab-default follows it at run time; its documented defaults and pinned figures are of these",
@@ -679,10 +791,11 @@ test("the grid caps, the names and the limits of a request are still as lv state
     "export const MTF_GRID_CAPS: readonly MtfGridCap[] = Object.freeze([32, 64, 128, 256]);",
     "LV_GRID_CAPS in src/engines/lv/mtf.ts is this list: a cap of the option lvGridCap is held to it",
   );
+  // The default cap is not restated: lvMtfRequest reads MTF_DEFAULT_GRID_CAP through the binding (256 at 607ff23ae).
   assertSource(
     constants,
-    "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 128;",
-    "LV_DEFAULT_GRID_CAP in src/engines/lv/mtf.ts is this number: the cap of a request without a profile",
+    "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 256;",
+    "lvMtfRequest in src/engines/lv/mtf.ts takes this cap for a request without a profile or an lvGridCap",
   );
   // The names lv maps to the contract's, and the ones it passes on, are still all there are.
   const types = "src/types/mtf.ts";
@@ -705,6 +818,15 @@ test("the grid caps, the names and the limits of a request are still as lv state
     types,
     'export type MtfFieldStatus = "converged" | "unconverged" | "unavailable" | "pending";',
     'fieldOf in src/engines/lv/mtf.ts maps "converged" to ok, passes two on and refuses "pending"',
+  );
+  // What the MTF states of a field's sampling and of the axial beam, which fieldOf and mtfData write down.
+  assertSource(types, 'pupilSampling: "stop" | "launch-plane";', "fieldOf records the counts beside it");
+  assertSource(types, "unaimedRays: number;", "fieldOf records sampling.unaimedRays");
+  assertSource(types, "unresolvedInBeamRays: number;", "fieldOf records sampling.unresolvedInBeamRays");
+  assertSource(
+    types,
+    "axialVignetting: MtfAxialVignetting | null;",
+    "mtfData records axialVignettingSurfaceIndex and axialVignettingBeforeStop under aperture",
   );
   // The limits on the fields and frequencies of one request are not restated: lv asks the gate, which must still
   // answer for them with the reason lv reads as a refusal of what was added to a request it had passed.
@@ -938,7 +1060,7 @@ test(
   "the MTF still sets a request up, walks a field and widens its footprint as the replay restates them",
   { skip },
   () => {
-    // Read at 33ebdb30 (engine closure 78215d72).
+    // Read at 33ebdb30 (engine closure 78215d72); traceField and refineMtfField again at 607ff23ae (LV #936).
     const mtf = "src/optics/analysis/mtf/mtf.ts";
     const job =
       "replayLvMtf in src/engines/lv/replay.ts takes the request from the first step of computeMtfSteps and " +
@@ -991,7 +1113,7 @@ test(
       "the best axial focus is of one grid cap, which lvBestAxialFocus is handed and CONTRACT.md says",
     );
 
-    const field = "replayField in src/engines/lv/replay.ts restates traceField, line by line";
+    const field = "replayField in src/engines/lv/replay.ts restates traceField, line by line (read at 607ff23ae)";
     assertSource(
       mtf,
       `const launch =
@@ -1004,19 +1126,26 @@ test(
          );
          return;
        }
+       if (launch.aim) {
+         const sampling: MtfFieldSampling = { kind: "stop", lattices: new Map() };
+         yield* refineMtfField(
+           context.ladder,
+           (size) => fieldAtGrid(context, target, launch, sampling, size),
+           context.frequencies,
+         );
+         return;
+       }
        let footprint = findMtfFieldFootprint(state, options, support, launch);
        if (!footprint) {
-         yield markUnavailable(
-           emptyMtfField(target.fraction, target),
-           "vignetted",
-           "No rays reach this image height through the model's clear apertures.",
-         );
+         const field = emptyMtfField(target.fraction, target);
+         field.pupilSampling = "launch-plane";
+         yield markUnavailable(field, "vignetted", "No rays reach this image height through the model's clear apertures.");
          return;
        }
        let expansions = 0;
        const evaluate = (size: number): MtfGridOutcome => {
          for (;;) {
-           const outcome = fieldAtGrid(context, target, launch, footprint!, size);
+           const outcome = fieldAtGrid(context, target, launch, { kind: "launch-plane", footprint: footprint! }, size);
            const open = outcome.kind === "curves" ? outcome.openBorders : undefined;
            if (!open || !(open.x || open.y0 || open.y1)) return outcome;
            if (expansions >= MTF_MAX_FOOTPRINT_EXPANSIONS) {
@@ -1037,21 +1166,31 @@ test(
       field,
     );
     // The walk through the ladder is LensVisualizer's own function, which the replay calls: it still yields the
-    // best field after every size, ends at a converged one, and goes on after a failure a finer grid may mend.
+    // best field after every size, ends at a converged one, goes on after a failure a finer grid may mend (a share of
+    // unresolved samples included, since #936), and says why a coarser curve was kept.
     assertSource(
       mtf,
       `for (const size of ladder) {
          const outcome = evaluate(size);
          if (outcome.kind === "unavailable") {
-           const best = previous ?? outcome.field;
-           yield best;
-           if (outcome.refine) continue;
-           return;
+           failed = { size, message: outcome.field.message };
+           if (!outcome.refine) {
+             if (previous) explain(previous);
+             yield previous ?? outcome.field;
+             return;
+           }
+           yield previous ?? outcome.field;
+           continue;
          }
+         failed = null;
          applyConvergence(outcome.field, previous, frequencies);
          yield outcome.field;
          if (outcome.field.status === "converged") return;
          previous = outcome.field;
+       }
+       if (previous && failed) {
+         explain(previous);
+         yield previous;
        }`,
       "replayField takes the last field refineMtfField yields for the field's result, as computeMtfSteps does",
     );
@@ -1066,13 +1205,15 @@ test(
 );
 
 test("the MTF still accounts for one field at one grid as the replay restates it", { skip }, () => {
-  // Read at 33ebdb30 (engine closure 78215d72).
+  // Read at 607ff23ae (LV #936: the stop lattice, dark lines, the unresolved samples beside the beam).
   const mtf = "src/optics/analysis/mtf/mtf.ts";
   const mirror = "fieldAtGrid in src/engines/lv/replay.ts restates the bookkeeping, line by line and in this order";
   assertSource(
     mtf,
     `const field = emptyMtfField(target.fraction, target);
      field.gridSize = size;
+     field.pupilSampling = sampling.kind;
+     if (sampling.kind === "launch-plane") field.notes.push(MTF_LAUNCH_PLANE_NOTE);
      const unavailable = (reason: MtfUnavailableReason, message: string, refine = false): MtfGridOutcome => ({
        kind: "unavailable",
        field: markUnavailable(field, reason, message),
@@ -1083,12 +1224,37 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   );
   assertSource(
     mtf,
-    `let launchedWeight = 0;
-     let failedWeight = 0;
-     for (const line of support.spectralLines) {
-       const bundle = traceMtfBundle(state, options, support, launch, footprint, size, line, context.imagePlaneZ, {
-         reference: commonReference,
-       });
+    `const MTF_LAUNCH_PLANE_NOTE =
+       "This field launches from the bounding sphere, which the stop lattice does not cover: its pupil is sampled in equal cells of the launch plane, not evenly on the stop.";`,
+    "LV_LAUNCH_PLANE_NOTE in src/engines/lv/replay.ts is this note",
+  );
+  assertSource(
+    mtf,
+    `let sampledWeight = 0;
+     let unresolvedWeight = 0;
+     /** Wavelengths no ray reaches at this grid. */
+     let darkLines = 0;
+     for (const [index, line] of support.spectralLines.entries()) {
+       let bundle: MtfBundle | null;
+       if (sampling.kind === "stop") {
+         bundle = traceMtfStopBundle(state, options, support, launch, size, line, context.imagePlaneZ, {
+           reference: commonReference,
+           coarse: sampling.lattices.get(index),
+         });
+         if (bundle?.lattice) sampling.lattices.set(index, bundle.lattice);
+       } else {
+         bundle = traceMtfLaunchPlaneBundle(
+           state,
+           options,
+           support,
+           launch,
+           sampling.footprint,
+           size,
+           line,
+           context.imagePlaneZ,
+           { reference: commonReference },
+         );
+       }
        if (!bundle) return unavailable("chief-ray-failed", "No valid chief ray reaches the image plane.");
        chiefClipped ??= bundle.chiefClipped;
        commonReference ??= bundle.chief;
@@ -1096,12 +1262,19 @@ test("the MTF still accounts for one field at one grid as the replay restates it
        field.validRays += bundle.rays.length;
        field.blockedRays += bundle.blocked;
        field.failedRays += bundle.failed;
+       field.unaimedRays += bundle.unaimed;
+       field.unresolvedInBeamRays += bundle.unresolvedInBeam;
        openBorders.x ||= bundle.openBorders.x;
        openBorders.y0 ||= bundle.openBorders.y0;
        openBorders.y1 ||= bundle.openBorders.y1;
        const transmitted = bundle.rays.reduce((sum, ray) => sum + ray.weight, 0);
-       launchedWeight += transmitted + bundle.failedWeight;
-       failedWeight += bundle.failedWeight;`,
+       sampledWeight += transmitted + bundle.unresolvedInBeamWeight;
+       unresolvedWeight += bundle.unresolvedInBeamWeight;
+       // A wavelength no ray reaches, with every sample resolved: the grid is vignetted if every wavelength is.
+       if (bundle.rays.length === 0 && bundle.unaimed + bundle.failed === 0) {
+         darkLines++;
+         continue;
+       }`,
     mirror,
   );
   assertSource(
@@ -1112,23 +1285,54 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   );
   assertSource(
     mtf,
-    `field.unknownFluxFraction = launchedWeight > 0 ? failedWeight / launchedWeight : 0;
-     const unresolved = assessUnresolvedFlux(field.failedRays, field.unknownFluxFraction);
-     if (!unresolved.acceptable) return unavailable("trace-failed", "Numerical ray failures prevent an MTF estimate.");
+    `if (darkLines === support.spectralLines.length)
+       return unavailable("vignetted", "No rays reach this image height through the model's clear apertures.", true);
+     if (darkLines > 0) return unavailable("empty-pupil", "Too little pupil remains to estimate MTF.", true);
+     field.unknownFluxFraction = sampledWeight > 0 ? unresolvedWeight / sampledWeight : 0;
+     const unresolvedRays = field.failedRays + field.unaimedRays;
+     const unresolved = assessUnresolvedFlux(unresolvedRays, field.unknownFluxFraction, field.unresolvedInBeamRays);
+     // A finer grid can resolve a beam edge this one cannot, so the ladder goes on.
+     if (!unresolved.acceptable) {
+       const away = unresolvedRays - field.unresolvedInBeamRays;
+       return unavailable(
+         "trace-failed",
+         \`\${field.unresolvedInBeamRays} pupil samples beside the transmitted beam could not be aimed or traced and carry \${(field.unknownFluxFraction * 100).toFixed(1)}% of its flux, too much for an MTF estimate.\${away > 0 ? \` \${away} more touch no transmitted cell.\` : ""}\`,
+         true,
+       );
+     }
      if (unresolved.note) field.notes.push(unresolved.note);`,
     mirror,
   );
   assertSource(mtf, 'return { kind: "curves", field, openBorders };', mirror);
   // The reference a later line is handed stands in only where that line's own chief ray has no image point; the
-  // bundle states the point it used as its chief, and which sides of the footprint carried flux.
+  // bundle states the point it used as its chief, the counts it adds, and on the launch plane which sides of the
+  // footprint carried flux.
   const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
-  const bundle = "the replay reads the reference, the open borders and the unresolved flux off traceMtfBundle's bundle";
+  const bundle =
+    "the replay reads the reference, the counts, the unresolved weights and the open borders off LensVisualizer's bundles";
   assertSource(
     tracing,
     "const chiefPoint = mtfImagePoint(state, chiefTrace, imagePlaneZ) ?? extras.reference;",
     bundle,
   );
-  assertSource(tracing, "extras: { reference?: MtfSpot; opticalPath?: boolean } = {},", bundle);
+  assertSource(
+    tracing,
+    "extras: { reference?: MtfSpot; opticalPath?: boolean; coarse?: AimedStopLattice | null } = {},",
+    bundle,
+  );
+  assertSource(
+    tracing,
+    `const lattice = aimMtfStopLattice(state, options, support, launch, gridSize, line, extras.coarse);
+     return lattice && traceMtfLattice(state, options, support, launch, lattice, line, imagePlaneZ, extras);`,
+    bundle,
+  );
+  assertSource(
+    tracing,
+    `const beside = unresolvedBesideBeam(outcome, unresolvedWeights, n, n);
+     bundle.unresolvedInBeam = beside.count;
+     bundle.unresolvedInBeamWeight = beside.weight;`,
+    bundle,
+  );
   assertSource(
     tracing,
     `if (Math.abs(x) > footprint.x1 - footprint.guardMm) bundle.openBorders.x = true;
@@ -1136,12 +1340,23 @@ test("the MTF still accounts for one field at one grid as the replay restates it
      if (y > footprint.y1 - footprint.guardMm) bundle.openBorders.y1 = true;`,
     bundle,
   );
-  assertSource(tracing, "bundle.failedWeight += samples * launchWeight;", bundle);
+  // What the replay calls and does not restate: the aimer's block of a total reflection ahead of the stop, its retry
+  // of a seeded cell by the lone solve, and its refusal of a size that is no whole number.
+  const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
+  const called =
+    "the replay calls traceMtfStopBundle, which aims through these; test/engines/lv/replay.test.ts says so";
+  assertSource(
+    aimed,
+    `if (!Number.isInteger(cellsAcross) || cellsAcross < 1)
+       throw new RangeError(\`A stop lattice needs a positive whole number of cells across, not \${String(cellsAcross)}.\`);`,
+    called,
+  );
+  assertSource(tracing, "@throws RangeError when `gridSize` is not a positive integer", called);
   // The constants the replay is handed are still exported under these names, with the values it was read at.
   const constants = "src/optics/analysis/mtf/mtfConstants.ts";
   const named = "LV_IMPORT_MANIFEST in src/engines/lv/manifest.ts imports the constant by this name";
   assertSource(constants, "export const MTF_GRID_LADDER = Object.freeze([16, 32, 64, 128, 256] as const);", named);
-  assertSource(constants, "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 128;", named);
+  assertSource(constants, "export const MTF_DEFAULT_GRID_CAP: MtfGridCap = 256;", named);
   assertSource(constants, "export const MTF_MAX_FOOTPRINT_EXPANSIONS = 2;", named);
   assertSource(constants, "export const MTF_MIN_RAYS = 16;", named);
   assertSource(
@@ -1151,21 +1366,23 @@ test("the MTF still accounts for one field at one grid as the replay restates it
   );
 });
 
-test("the tab's f/8 comparison is still the hook's two radii scaled by the slider's f-number over 8", { skip }, () => {
-  // Read at 33ebdb30. The run aperture lv-f8-comparison is this stop, and the seed of its footprint scan this pupil.
-  const tab = "src/components/display/analysis/MtfTab.tsx";
-  const mirror =
-    "lvTabComparison in src/engines/lv/tabRequest.ts restates the scale and the tab's rule; stopRadius in " +
-    "exportAperture.ts makes the stop of the aperture lv-f8-comparison of it, and lvPupilSeed its seed";
-  assertSource(tab, "const scale = fNumber / COMPARISON_F_NUMBER;", mirror);
-  assertSource(tab, "currentPhysStopSD: job.aperture.stopSemiDiameterMm * scale,", mirror);
-  assertSource(tab, "currentEPSD: job.aperture.entrancePupilSemiDiameterMm * scale,", mirror);
-  assertSource(
-    tab,
-    "const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;",
-    mirror,
-  );
-});
+test(
+  "the request the tab hands its worker keeps both radii as given, which the f/8 pupil is formed of",
+  { skip },
+  () => {
+    // Read at 607ff23ae: lvTabComparisonPupil reads the wide-open request's radii as the hook's two, unchanged.
+    const request = "src/optics/analysis/request.ts";
+    const mirror = "lvTabComparisonPupil in src/engines/lv/tabRequest.ts takes job.aperture for the hook's radii";
+    assertSource(
+      request,
+      `aperture: Object.freeze({
+       entrancePupilSemiDiameterMm: params.currentEPSD,
+       stopSemiDiameterMm: params.currentPhysStopSD,
+     }),`,
+      mirror,
+    );
+  },
+);
 
 test("the request snapshots both aperture radii, and MTF resolves them with the pose override", { skip }, () => {
   const mirror = "lvMtfInputs and lvResolvedMtfOptions in src/engines/lv/tabRequest.ts";
@@ -1395,62 +1612,57 @@ test("the coma and bokeh tabs still draw the patterns and fields the spot sets r
   );
 });
 
-test("a sample of the tabs' pupil still crosses the first vertex plane where the spot sets launch it", { skip }, () => {
+// Stage 6.8b, at LV 607ff23ae (closure f016b35b): since LV #927 every sample of a tab's pupil is the shared aimed
+// launch's ray through its point of the real stop; the spot, axial and curvature sets keep those rays verbatim.
+test("a sample of the tabs' pupil is still the aimed launch's ray, traced as the spot sets state it", { skip }, () => {
   const offAxis = "src/optics/analysis/aberration/offAxis.ts";
-  const adapters = "src/optics/trace/rayAdapters.ts";
-  const mirror = "lvSpotFieldRays and lvSkewLaunch in src/engines/lv/spotRaySets.ts restate the launch";
+  const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
+  const mirror = "lvSpotFieldRays in src/engines/lv/spotRaySets.ts takes the aimed launch's rays verbatim";
+  assertSource(offAxis, "const launch = prepareAimedPupilLaunch(request, samples, geometry, channel);", mirror);
+  assertSource(offAxis, 'if (launch === null || launch.chief.status !== "aimed") return null;', "lv-chief-unaimed");
+  assertSource(offAxis, "const tracer = prepareAimedPupilTrace(request.preparedGeometry, launch, channel);", mirror);
+  assertSource(offAxis, "const chiefTrace = tracer.skew(launch.chief);", "the chief ray of a spot set is launch.chief");
   assertSource(
     offAxis,
-    "const trace = adapter.skew( sample.xFraction * entrancePupilSemiDiameter, geometry.yChief + sample.yFraction * entrancePupilSemiDiameter, 0, geometry.uField, );",
-    mirror,
+    'if (ray.status === "unaimed") { unaimedSamples.push({ sourceSampleIndex: sample.index, reason: ray.reason }); return []; }',
+    "an unaimed sample holds the chief ray at weight 0: LensVisualizer never traces it",
   );
   assertSource(
     offAxis,
-    "const trace = adapter.skew( 0 * entrancePupilSemiDiameter, geometry.yChief + 0 * entrancePupilSemiDiameter, 0, geometry.uField, );",
-    mirror,
+    'if (ray.status === "blocked") { blockedSampleCount++; return []; }',
+    "a blocked sample keeps LensVisualizer's blocking ray, which every engine stops",
   );
+  assertSource(offAxis, "const trace = tracer.skew(ray); if (trace.clipped) return [];", mirror);
   assertSource(offAxis, "const fieldAngleDeg = geometry.halfFieldDeg * fieldFraction;", "lvSpotFieldAngle");
-  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", mirror);
-  assertSource(adapters, "const skewFirstZ = scalarSkewState.z[0] ?? 0;", mirror);
-  assertSource(adapters, "const direction = skewDirectionForSlopes(ux0, uy0);", mirror);
-  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, skewFirstZ - lead];", mirror);
-  assertSource(adapters, "const direction = directionFromSkewSlope(ux, uy) ?? ([0, 0, 1] as Vec3);", mirror);
+  // A sample's ray is its own: the same asked alone, in any list, or not at all (the bokeh tile's chief ray is asked
+  // with no sample, an axial zone in the sets' lists, not the sections').
+  const own = "lvBokehChiefLanding and lvAxialPairs ask the aimed launch with lists of their own";
+  assertSource(
+    aimed,
+    "itself: no state carries between samples, and the per-field model reused across calls is the one a fresh build",
+    own,
+  );
+  assertSource(aimed, "const chief = toRay(-1, 0, 0, 0);", own);
+  // The tabs trace with the stop at the launch's clip radius: the integration tests trace so.
+  assertSource(
+    aimed,
+    "checkSemiDiameter: true, stopSemiDiameter: launch.clipSemiDiameterMm, stopOnClip: true, directionNormalized: true, launchBoundT: launch.launchBoundT, ...spectralTraceOptions(state, spectrum),",
+    "test/integration/lv/spotRays.test.ts and its siblings trace a set with prepareAimedPupilTrace",
+  );
   // The bokeh tile's chief ray, intercepted at the tile's plane: bokehChiefLanding in src/engines/lv/spot.ts.
   assertSource(
     "src/optics/analysis/bokeh/bokeh.ts",
     "const chiefDefocused: SkewImagePlaneIntercept | null = skewImagePlaneIntercept( bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, bundle.chiefRay.trace.ux, bundle.chiefRay.trace.uy, geometry.lastSurfZ, sensorZ, );",
     "bokehChiefLanding in src/engines/lv/spot.ts lands the tile's chief ray so",
   );
-});
-
-test("traceSkewRay is still the tabs' skew adapter: one launch, one direction, one set of options", { skip }, () => {
-  // lvBokehChiefLanding in src/engines/lv/spot.ts traces a tile's chief ray with `traceSkewRay`, where the tab traces
-  // it with the adapter that `prepareOffAxisTrace` binds (`ghost: true`, no channel). The two are one trace while
-  // these lines hold; test/integration/lv/spotRays.test.ts holds every ray of every benchmark tile to it.
+  // The skew launch of the chief sets and of the curvature sets' parabasal rays (lvSkewLaunch).
   const adapters = "src/optics/trace/rayAdapters.ts";
-  const mirror = "lvBokehChiefLanding's traceSkewRay is the adapter's skew launch";
-  assertSource(
-    adapters,
-    "return traceSkewRayExactCore(x0, y0, ux0, uy0, focusT, zoomT, stopSD, ghost, L, undefined, aberrationT);",
-    mirror,
-  );
-  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, (state.z[0] ?? 0) - lead];", mirror);
-  assertSource(
-    adapters,
-    "traceOptions(stopSD, ghost, channel, state, true, transmissionTraceCapture(state.lens)),",
-    mirror,
-  );
-  assertSource(
-    adapters,
-    "const skewOptions = traceOptions( stopSD, ghost, channel, scalarSkewState, true, transmissionTraceCapture(scalarSkewState.lens), );",
-    mirror,
-  );
-  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, skewFirstZ - lead];", mirror);
-  assertSource(
-    "src/optics/analysis/aberration/offAxis.ts",
-    "channel, aberrationT, ghost: true, zPos: vector?.zPos,",
-    "lvBokehChiefLanding asks traceSkewRay with ghost true, no channel and no aberration",
-  );
+  const skew = "lvSkewLaunch in src/engines/lv/spotRaySets.ts restates the skew launch";
+  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", skew);
+  assertSource(adapters, "const skewFirstZ = scalarSkewState.z[0] ?? 0;", skew);
+  assertSource(adapters, "const direction = skewDirectionForSlopes(ux0, uy0);", skew);
+  assertSource(adapters, "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, skewFirstZ - lead];", skew);
+  assertSource(adapters, "const direction = directionFromSkewSlope(ux, uy) ?? ([0, 0, 1] as Vec3);", skew);
 });
 
 test(
@@ -1488,42 +1700,55 @@ test(
     const chromatic = "src/optics/analysis/chromatic/analysis.ts";
     const mirror =
       "lvAxialZones in src/engines/lv/axialZones.ts and lvAxialPairs in src/engines/lv/axialRaySets.ts restate the sections' zones";
+    // Since LV #927 every zone is the aimed launch's ray of the axial object through its fraction of the stop.
     assertSource(
       spherical,
-      "const nearAxisSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, NEAR_AXIS_REAL_FRAC, prepared);",
+      "const SA_ZONE_FRACTIONS = [ ...new Set(symmetricZoneFractions([NEAR_AXIS_REAL_FRAC, ...MARGINAL_FRACS, ...PROFILE_FRACS])), ];",
       mirror,
     );
-    assertSource(spherical, "for (const fraction of MARGINAL_FRACS) {", mirror);
+    assertSource(spherical, "const zones = prepareAxialZoneLaunch(request, SA_ZONE_FRACTIONS);", mirror);
     assertSource(
       spherical,
-      "marginalSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, fraction, prepared);",
+      "const nearAxisSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, NEAR_AXIS_REAL_FRAC, zones);",
       mirror,
+    );
+    assertSource(spherical, "for (const fraction of MARGINAL_FRACS) { if (zones.unaimed(fraction)) break;", mirror);
+    assertSource(
+      spherical,
+      "marginalSample = computeSymmetricRealSample(request, lastSurfZ, imagePlaneZ, fraction, zones);",
+      mirror,
+    );
+    assertSource(
+      spherical,
+      "const zones = prepareAxialZoneLaunch(request, symmetricZoneFractions(PROFILE_FRACS));",
+      "the profile's zones, asked of the launch in a list of their own: the same rays (a sample's solve is its own)",
     );
     // Both the figures and the profile trace the profile's zones, each with its mirror image, and drop a zone whole.
     assert.equal(occurrences(spherical, "const hits = PROFILE_FRACS.flatMap((fraction) => {"), 2, mirror);
     assert.equal(
-      occurrences(spherical, "const plusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, fraction, prepared);"),
+      occurrences(spherical, "const plusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, fraction, zones);"),
       2,
       mirror,
     );
     assert.equal(
-      occurrences(
-        spherical,
-        "const minusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, -fraction, prepared);",
-      ),
+      occurrences(spherical, "const minusHit = computeRealRayHit(request, lastSurfZ, imagePlaneZ, -fraction, zones);"),
       2,
       mirror,
     );
     assertSource(spherical, "if (plusHit === null || minusHit === null) return [];", mirror);
-    assertSource(
-      spherical,
-      "const zPos = state.z as number[];",
-      "lvAxialLaunch launches from the state's first vertex",
-    );
     assertSource(shared, "export const MARGINAL_FRACS = MARGINAL_PUPIL_FRACTIONS;", mirror);
-    assertSource(shared, "const h = signedFraction * currentEPSD;", mirror);
-    assertSource(shared, "const ray = adapter.ray(h, 0);", mirror);
-    // The axial-colour section: its candidates and the one ray of each, at the same height at every channel.
+    assertSource(shared, "const AXIAL_FIELD: AimedObjectPlaneField = { uField: 0, yChief: 0 };", "LV_AXIAL_FIELD");
+    assertSource(shared, "const samples = signedFractions.map((yFraction) => ({ xFraction: 0, yFraction }));", mirror);
+    assertSource(shared, "const launch = prepareAimedPupilLaunch(request, samples, AXIAL_FIELD, channel);", mirror);
+    assertSource(shared, "trace: prepareAimedPupilTrace(request.preparedGeometry, launch, channel),", mirror);
+    assertSource(shared, "return fractions.flatMap((fraction) => [fraction, -fraction]);", mirror);
+    assertSource(
+      shared,
+      'const aimed = zones.ray(signedFraction); if (aimed === null || aimed.status === "unaimed") return null; const ray = zones.trace.meridional(aimed);',
+      "an unaimed zone has no pair (lv-zone-unaimed); a traced zone is the launch's ray, traced as the launch's",
+    );
+    // The axial-colour section: its candidates, each aimed at every zone channel's own indices (LV #930: R, G, B, V,
+    // whichever are shown), the zone chosen from all four.
     assertSource(
       chromatic,
       "const fractions = normalizeFractions(options.longitudinalFractions, DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS, { allowZero: false, });",
@@ -1536,24 +1761,39 @@ test(
     );
     assertSource(chromatic, "return Array.from(new Set(values));", "normalizedFractions keeps each fraction once");
     assertSource(chromatic, "longitudinalFractions: request.sampling.chromaticLongitudinalFractions,", mirror);
-    assertSource(chromatic, "const ray = adapters.get(channel)!.ray(marginalFraction * currentEPSD, 0);", mirror);
+    assertSource(
+      chromatic,
+      "CHROMATIC_ZONE_CHANNELS.map((channel) => [channel, prepareAxialZoneLaunch(request, fractions, channel)]),",
+      "the colour sets aim each channel's zones at its own indices, at the line of the channel",
+    );
+    // The zone the section chooses: the first all four channels pass, else the first two do; an unaimed zone ends the
+    // search. test/integration/lv/axialRays.test.ts restates the choice.
+    const zone = "chosenZone in test/integration/lv/axialRays.test.ts restates the choice";
+    assertSource(
+      chromatic,
+      'const aimed = zonesByChannel.get(channel)?.ray(fraction); if (aimed?.status === "unaimed") { searchEndedBy = { fraction, channel, reason: aimed.reason }; return; }',
+      zone,
+    );
+    assertSource(chromatic, "const chosen = selectChromaticZone(candidates(), CHROMATIC_ZONE_CHANNELS.length);", zone);
+    assertSource(
+      "src/optics/chromatic/zoneSelection.ts",
+      "if (zone.omittedChannels.length === 0) return zone; if (channelCount - zone.omittedChannels.length >= 2) firstTwoChannelZone ??= zone;",
+      zone,
+    );
+    assertSource(
+      "src/optics/chromatic/zoneSelection.ts",
+      'if (ray.clipped) return "vignetted"; return Math.abs(ray.u) > 1e-15 ? null : "no-axis-crossing";',
+      zone,
+    );
   },
 );
 
-test("the sections' meridional launch and reading of a ray are still the ones the axial sets restate", { skip }, () => {
-  const adapters = "src/optics/trace/rayAdapters.ts";
-  const mirror = "lvAxialLaunch in src/engines/lv/axialRaySets.ts restates the launch";
-  assertSource(adapters, "const lead = state.lens.constants.rayLead ?? 0;", mirror);
-  assertSource(adapters, "const firstZ = request.zPos?.[0] ?? state.z[0] ?? 0;", mirror);
-  assertSource(adapters, "const direction = meridionalDirectionForSlope(u0);", mirror);
-  assertSource(adapters, "const origin: Vec3 = [0, y0 - u0 * lead, firstZ - lead];", mirror);
-  assertSource(adapters, "const MERIDIONAL_DIRECTION_BY_SLOPE = new Map<number, Vec3>([[0, [0, 0, 1]]]);", mirror);
-  assertSource(adapters, "const cached = MERIDIONAL_DIRECTION_BY_SLOPE.get(u); if (cached) return cached;", mirror);
-  // A channel's trace takes the channel's index of each medium: test/integration/lv/axialRays.test.ts restates it.
+test("the sections' reading of a ray is still the one the axial sets' figures restate", { skip }, () => {
+  // A channel's trace takes the channel's index of each medium: test/integration/lv/axialRays.test.ts traces so.
   assertSource(
-    adapters,
-    "indexAtSurface: channel ? (i, nd) => state.lens.dispersion[i]?.indexAt(channel) ?? nd : undefined,",
-    "sectionRay in test/integration/lv/axialRays.test.ts traces a channel with these indices",
+    "src/optics/analysis/pupils/aimedPupil.ts",
+    "indexAtSurface: (i, nd) => state.lens.dispersion[i]?.indexAt(spectrum) ?? nd, wavelengthNm: CHROMATIC_CHANNEL_WAVELENGTH_NM[spectrum],",
+    "the colour sets are traced at a channel's indices as prepareAimedPupilTrace traces them",
   );
   // Where a ray crosses the axis, and its height on a plane: the definition of src/estimators/axialIntercept.ts.
   const definition = "axialIntercept in src/estimators/axialIntercept.ts is this crossing, rounded once";
@@ -1975,7 +2215,7 @@ test(
     const curvature = "src/optics/analysis/aberration/fieldCurvature.ts";
     const fields = "lvCurvatureFractions and lvCurvatureFields in src/engines/lv/curvatureFields.ts restate the fields";
     const parabasal = "lvParabasalFraction and lvParabasalOffsets restate the four parabasal rays";
-    const fans = "lvRealRayOffsets in src/engines/lv/curvatureRaySets.ts restates the real-ray fans";
+    const fans = "lvRealRayFans and realRayLaunches in src/engines/lv/curvatureRaySets.ts restate the real-ray fans";
     // The fields: the marked ones and the curve's, each computed on its own of its fraction alone.
     assertSource(
       curvature,
@@ -2071,15 +2311,34 @@ test(
       "const origin: Vec3 = [x0 - ux0 * lead, y0 - uy0 * lead, (state.z[0] ?? 0) - lead];",
       skew,
     );
-    // The real-ray fans: the coma tab's orthogonal fans at the sections' default count, from the scalar geometry.
+    // The real-ray fans: the coma tab's orthogonal fans at the sections' default count, from the scalar geometry, each
+    // its own aimed launch (traceOffAxisBundleFromSamples, LV #927), relative to that launch's stop-centre ray.
     assertSource(
       curvature,
-      "const diagnosticFieldFocus = computeDiagnosticFieldFocus( request, geometry, sampling.fieldCurvatureDiagnosticSampleCount, );",
+      "const diagnostic = computeDiagnosticFieldFocus(request, geometry, sampling.fieldCurvatureDiagnosticSampleCount);",
       fans,
     );
     assertSource(curvature, "sampleCount = MERIDIONAL_COMA_SAMPLE_COUNT,", fans);
-    assertSource(curvature, 'sampleOrthogonalPupilFan(sampleCount, "tangential"),', fans);
-    assertSource(curvature, 'sampleOrthogonalPupilFan(sampleCount, "sagittal"),', fans);
+    assertSource(
+      curvature,
+      'const tangentialBundle = traceOffAxisBundleFromSamples( request, sampleOrthogonalPupilFan(sampleCount, "tangential"), geometry, undefined, );',
+      fans,
+    );
+    assertSource(
+      curvature,
+      'const sagittalBundle = traceOffAxisBundleFromSamples( request, sampleOrthogonalPupilFan(sampleCount, "sagittal"), geometry, undefined, );',
+      fans,
+    );
+    // A one-sided fan has no real-ray focus in LV's section (fanGap); R10a's estimator takes the rays of both answers.
+    const gap = "twoSided in test/integration/lv/curvatureRays.test.ts restates fanGap; lv's sampling omits the focus";
+    assertSource(curvature, "const FIELD_CURVATURE_MIN_FAN_HALF_SPAN = 0.25;", gap);
+    assertSource(curvature, 'if (bundle.validSampleCount < 3) return "too-few-rays";', gap);
+    assertSource(curvature, "const fractions = bundle.samples.map((sample) => sample.pupilFraction ?? 0);", gap);
+    assertSource(
+      curvature,
+      "Math.min(...fractions) <= -FIELD_CURVATURE_MIN_FAN_HALF_SPAN && Math.max(...fractions) >= FIELD_CURVATURE_MIN_FAN_HALF_SPAN;",
+      gap,
+    );
     // The chromatic field curves: the same rays at each channel, of the usable fields.
     const chromatic = "answerLvCurvature in src/engines/lv/curvature.ts reads each channel's shifts";
     assertSource(
@@ -2112,190 +2371,120 @@ test("the aberrations tab still presents the field curves the engine answers cur
   );
 });
 
-// Stage 6.6, at LV be077cbcd (closure c866fbff with the stage's names), and Stage 6.6b, at LV 098c91ef6 (closure
-// fef2e248), whose tab (5ba17c20c) traces each field's beam on its MTF's launch lattice: the vignetting sets of the tab
-// (src/engines/lv/vignettingRaySets.ts, the fields and the setup in vignettingFields.ts) restate these lines;
-// test/integration/lv/vignettingRays.test.ts holds the tab's curve to the bit.
-test("the vignetting tab still samples the fields and traces the beams the vignetting sets restate", { skip }, () => {
-  const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
-  const fields =
-    "lvVignettingFieldCount and lvVignettingFieldAngles in src/engines/lv/vignettingFields.ts restate the fields";
-  const setup = "lvVignettingSetup in src/engines/lv/vignettingFields.ts restates the tab's setup";
-  const beams = "lvVignettingDecision and lvBeamCellRays in src/engines/lv/vignettingFields.ts restate the beams";
-  // The fields: about every 3 degrees, at least 7, from the axis to the half field of the drawer's geometry.
-  assertSource(
-    vignetting,
-    "const fieldSamples = sampling.vignettingFieldSampleCount !== undefined ? Math.max(Math.round(sampling.vignettingFieldSampleCount), 3) : Math.max(Math.ceil(halfFieldDeg / 3) + 1, 7);",
-    fields,
-  );
-  assertSource(
-    vignetting,
-    "const geom = fieldGeometry ?? computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT);",
-    fields,
-  );
-  assertSource(
-    vignetting,
-    "const fieldAngles = Array.from( { length: fieldSamples }, (_, i) => uniformFieldFraction(i, fieldSamples) * halfFieldDeg, );",
-    fields,
-  );
-  assertSource(vignetting, "if (halfFieldDeg <= 0 || !isFinite(halfFieldDeg)) return [];", "no-half-field");
-  // The setup: the drawer's two radii, the MTF's options and the tab's own support of the d line at authored indices.
-  assertSource(vignetting, "if (currentEPSD <= 0 || L.N < 1) return [];", "no-pupil");
-  assertSource(
-    vignetting,
-    "if (!mtfSequentialRefractivePath(state) || !mtfAxialImagePlane(state)) return [];",
-    "lv-outside-beam-model",
-  );
-  assertSource(
-    vignetting,
-    'const options: MtfOptions = { method: "geometric", spectrum: "reference", focus: "design", pupilSemiDiameterMm: currentEPSD, stopSemiDiameterMm: currentPhysStopSD, };',
-    setup,
-  );
-  assertSource(
-    vignetting,
-    'const support: MtfSupport = { available: true, reason: null, message: "", referenceWavelengthNm: LINE_NM.d, useResolvedReference: false, spectralLines: [{ wavelengthNm: LINE_NM.d, weight: 1 }], limitations: [], };',
-    setup,
-  );
-  assertSource(
-    vignetting,
-    "const traceOptions = mtfTraceOptions(state, options, support, support.spectralLines[0]);",
-    setup,
-  );
-  assertSource(vignetting, "const traceRay = prepareEngineTrace(state, traceOptions);", setup);
-  assertSource(vignetting, "const mirror = mtfMirrorSymmetric(state);", setup);
-  // The beams: the MTF's launch and footprint of each field, none of a bounding sphere, and the lattice's half.
-  assertSource(
-    vignetting,
-    'const launchAt = (fieldAngleDeg: number): MtfFieldLaunch | null => launchSurfaceForFieldDeg(fieldAngleDeg, state.lens.projection.config) === "object-plane" ? prepareMtfFieldLaunch(state, options, support, fieldAngleDeg) : null;',
-    beams,
-  );
-  assertSource(
-    vignetting,
-    'if (fieldAngles.some((deg) => launchSurfaceForFieldDeg(deg, state.lens.projection.config) !== "object-plane")) return [];',
-    "lv-bounding-sphere-field",
-  );
-  assertSource(
-    vignetting,
-    "const launch = launchAt(fieldAngleDeg); const footprint = launch && findMtfFieldFootprint(state, options, support, launch);",
-    beams,
-  );
-  assertSource(vignetting, "const BEAM_GRID_CELLS = 64;", "LV_VIGNETTING_BEAM_CELLS");
-  assertSource(
-    vignetting,
-    "const gridSize = Math.max( sampling.vignettingPupilSampleCount !== undefined ? Math.round(sampling.vignettingPupilSampleCount) : BEAM_GRID_CELLS, MIN_BEAM_GRID_CELLS, );",
-    "LV_VIGNETTING_BEAM_CELLS, with no count of the drawer's",
-  );
-  assertSource(vignetting, "const grid = mtfLaunchGrid(footprint, gridSize);", beams);
-  assertSource(
-    vignetting,
-    "for (let column = mirror ? columns / 2 : 0; column < columns; column++) { const trace = traceRay( mtfLaunchRay(launch, grid.x0 + (column + 0.5) * grid.step, grid.y0 + (row + 0.5) * grid.step), );",
-    beams,
-  );
-  // What the tab counts of a cell: a valid trace, its bulk transmission, twice where it mirrors (the cells' weights).
-  const counted = "the beam sets weigh each cell by LensVisualizer's bulk transmission; R11a's mask is the tab's";
-  assertSource(
-    vignetting,
-    'if (mtfTraceClassification(trace, state, stopRadius) !== "valid") continue; const w = bulkTransmissionForTrace(state.lens, trace.hits);',
-    counted,
-  );
-  assertSource(vignetting, "cells += mirror ? 2 : 1; transmitted += mirror ? 2 * w : w;", counted);
-  // The mapping's chief rays: the field's and those 0.01 degrees to either side, lit (lvMappingChiefRays,
-  // lvVignettingMapping); where they are vignetted, the beam's ray tubes.
-  const mapping =
-    "lvMappingChiefRays and lvVignettingMapping in src/engines/lv/vignettingFields.ts restate the mapping";
-  assertSource(vignetting, "const MAPPING_STEP_DEG = 0.01;", "LV_VIGNETTING_MAPPING_STEP_DEG");
-  assertSource(
-    vignetting,
-    'const trace = traceRay(mtfLaunchRay(launch, 0, 0)); return mtfTraceClassification(trace, state, currentPhysStopSD) === "valid" ? (mtfImagePoint(state, trace)?.y ?? null) : null;',
-    mapping,
-  );
-  assertSource(
-    vignetting,
-    "const [low, high] = [fieldAngleDeg - MAPPING_STEP_DEG, fieldAngleDeg + MAPPING_STEP_DEG].map((deg) => litChiefHeight(launchAt(deg)), );",
-    mapping,
-  );
-  assertSource(vignetting, "const height = litChiefHeight(launch); if (height === null) return null;", mapping);
-  assertSource(
-    vignetting,
-    "const rise = low !== null && high !== null ? (high - low) / 2 : high !== null ? high - height : low !== null ? height - low : null; if (rise === null) return null;",
-    mapping,
-  );
-  assertSource(vignetting, "const imageArea = chiefMapping(fieldAngleDeg, launch) ?? beam.tubeMapping();", mapping);
-  assertSource(vignetting, "if (!launch || !beam || !(beam.flux > 0)) {", "a field without flux has no mapping");
-  // The ray tubes, which tubeImageArea in test/integration/lv/vignettingRays.test.ts restates.
-  const tubes = "tubeImageArea in test/integration/lv/vignettingRays.test.ts restates the ray tubes";
-  assertSource(vignetting, "const MAPPING_TILT_RAD = 1e-4;", tubes);
-  assertSource(vignetting, "const MAPPING_SUBLATTICE_CELLS = 16;", tubes);
-  assertSource(
-    vignetting,
-    "const mappingOptions: TraceOptions = { ...traceOptions, checkSemiDiameter: false, stopOnClip: false };",
-    tubes,
-  );
-  assertSource(
-    vignetting,
-    "const tilts: Vec3[] = [ [0, dy + MAPPING_TILT_RAD * dz, dz - MAPPING_TILT_RAD * dy], [MAPPING_TILT_RAD, dy, dz], ];",
-    tubes,
-  );
-  assertSource(
-    vignetting,
-    "const values = crossings(traceEngineRay(state, ray, mappingOptions)); return values && ([0, 1, 2, 3].map((k) => (values[k] - base[k]) / MAPPING_TILT_RAD) as Vec4);",
-    tubes,
-  );
-  assertSource(vignetting, "const stride = Math.max(1, Math.floor(gridSize / MAPPING_SUBLATTICE_CELLS));", tubes);
-  assertSource(
-    vignetting,
-    "const [pa, pb, pc, pd] = [0, 1, 2, 3].map((k) => median(tubes.map((tube) => tube[k]))); return Math.abs(pa * pd - pb * pc);",
-    tubes,
-  );
-  assertSource(
-    vignetting,
-    "const stop = trace.hits.find((hit) => hit.surfaceIndex === stopIndex)?.point; return landing && stop ? [landing.x, landing.y, stop[0], stop[1]] : null;",
-    tubes,
-  );
-});
+// Stage 6.6, at LV be077cbcd (closure c866fbff with the stage's names), Stage 6.6b, at LV 098c91ef6 (closure fef2e248),
+// and Stage 6.8b, at LV 607ff23ae (closure f016b35b), whose tab (#931) is OpticStudio's two field analyses on one
+// lattice on the real stop a field: the vignetting sets of the tab (src/engines/lv/vignettingRaySets.ts, the fields and
+// the setup in vignettingFields.ts) restate these lines; test/integration/lv/vignettingRays.test.ts holds the tab's
+// cells and curve to the bit.
+test(
+  "the vignetting tab still samples the fields and traces the lattices the vignetting sets restate",
+  { skip },
+  () => {
+    const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
+    const fields =
+      "lvVignettingFieldCount and lvVignettingFieldFractions in src/engines/lv/vignettingFields.ts restate the fields";
+    const setup = "lvVignettingSetup in src/engines/lv/vignettingFields.ts restates the tab's setup";
+    const lattices = "lvVignettingDecision, lvBeamLattice and lvBeamRays in src/engines/lv/vignettingFields.ts";
+    // The fields: about every 3 degrees, at least 7, from the axis to the half field of the drawer's geometry.
+    assertSource(
+      vignetting,
+      "const fieldCount = sampling.vignettingFieldSampleCount !== undefined ? Math.max(Math.round(sampling.vignettingFieldSampleCount), 3) : Math.max(Math.ceil(halfFieldDeg / 3) + 1, 7);",
+      fields,
+    );
+    assertSource(
+      vignetting,
+      "const fractions = Array.from({ length: fieldCount }, (_, i) => uniformFieldFraction(i, fieldCount));",
+      fields,
+    );
+    assertSource(
+      vignetting,
+      "request.fieldGeometry ?? computeAnalysisFieldGeometryAtState(state.focusT, state.zoomT, runtimeView(state.lens), state.aberrationT)",
+      fields,
+    );
+    assertSource(
+      vignetting,
+      'if (!(halfFieldDeg > 0) || !isFinite(halfFieldDeg)) return none("invalid-state");',
+      "no-half-field",
+    );
+    // The setup: the drawer's request, its stop, the MTF's beam model, the lattice's size and the mirror.
+    assertSource(
+      vignetting,
+      'if (!(request.aperture.stopSemiDiameterMm > 0) || L.N < 1) return none("invalid-state");',
+      "no-stop",
+    );
+    assertSource(
+      vignetting,
+      'if (!mtfSequentialRefractivePath(state)) return none("unsupported-path");',
+      "lv-outside-beam-model",
+    );
+    assertSource(
+      vignetting,
+      'if (!mtfAxialImagePlane(state)) return none("tilted-image-plane");',
+      "lv-outside-beam-model",
+    );
+    assertSource(
+      vignetting,
+      'fractions.some( (fraction) => launchSurfaceForFieldDeg(fraction * halfFieldDeg, state.lens.projection.config) !== "object-plane", ) ) return none("bounding-sphere-field");',
+      "lv-bounding-sphere-field",
+    );
+    assertSource(vignetting, "export const BEAM_GRID_CELLS = 64;", "vignettingBeamCells, bound");
+    assertSource(
+      vignetting,
+      "return latticeSize(override !== undefined ? override : BEAM_GRID_CELLS);",
+      "the sets' cells: BEAM_GRID_CELLS with no count of the drawer's",
+    );
+    assertSource(vignetting, "return Math.max(Math.round(cellsAcross), MIN_BEAM_GRID_CELLS);", setup);
+    assertSource(vignetting, "const mirrored = mirrorSymmetricAboutMeridian(state);", setup);
+    assertSource(
+      "src/optics/analysis/mtf/mtfTracing.ts",
+      "export function mtfMirrorSymmetric(state: PreparedGeometry): boolean { return mirrorSymmetricAboutMeridian(state); }",
+      "lvVignettingSetup asks mtfMirrorSymmetric, which hands mirrorSymmetricAboutMeridian on",
+    );
+    // A field: its geometry, its aimed stop lattice (the MTF's, at the authored indices), none of a bounding sphere.
+    assertSource(vignetting, "const geometry = computeOffAxisFieldGeometry(state, fieldFraction, fields);", lattices);
+    assertSource(vignetting, "const fieldAngleDeg = fieldFraction * fields.halfFieldDeg;", fields);
+    assertSource(
+      vignetting,
+      "const scalar = geometry && !isOffAxisVectorFieldGeometry(geometry) ? geometry : null;",
+      lattices,
+    );
+    assertSource(vignetting, "const launch = scalar && prepareAimedStopLattice(request, n, scalar);", lattices);
+    assertSource(
+      vignetting,
+      'if (!scalar || !launch) return unavailableField(base, "no-field-launch");',
+      "no-field-launch",
+    );
+    assertSource(vignetting, "const tracer = prepareAimedPupilTrace(state, launch);", lattices);
+    // The cells the tab traces: the +x half where it mirrors; an aimed ray only, at the lattice's clip radius.
+    assertSource(vignetting, "if (mirrored && cell.xFraction < 0) continue;", "lvBeamLattice's first column");
+    assertSource("src/optics/analysis/pupils/stopLattice.ts", "const xFraction = (2 * column + 1 - n) / n;", lattices);
+    assertSource(vignetting, 'if (ray.status !== "aimed") return dark;', lattices);
+    assertSource(
+      vignetting,
+      "const outcome = traceRayClassification(result, state, launch.clipSemiDiameterMm);",
+      "test/integration/lv/vignettingRays.test.ts classifies a ray so",
+    );
+    assertSource(
+      vignetting,
+      "bulkTransmission: bulkTransmissionForTrace(state.lens, result.hits),",
+      "the beam sets weigh each cell by LensVisualizer's bulk transmission",
+    );
+  },
+);
 
 test("the vignetting tab still presents the curve the engine answers vignetting.native from", { skip }, () => {
   const vignetting = "src/optics/analysis/vignetting/vignetting.ts";
   const answer = "answerLvVignetting in src/engines/lv/vignetting.ts writes down the tab's curve";
-  const restated = "test/integration/lv/vignettingRays.test.ts restates the curve's arithmetic";
-  // The figures: each relative to the axis; the illumination the beam's flux times the cosine of the field angle over
-  // the image area a unit of object solid angle covers.
+  // The figures: the share of the samples neither unaimed nor failed that get through, absolute; Rimmer's relative
+  // illumination over the axis's; a field without either, with its reason.
   assertSource(
     vignetting,
-    "const slope = Math.abs(rise / ((MAPPING_STEP_DEG * Math.PI) / 180)); return slope * (fieldAngleDeg === 0 ? slope : Math.abs(height) / Math.sin((fieldAngleDeg * Math.PI) / 180));",
-    restated,
+    "const unvignettedFraction = transmittedCount / (lattice.length - unaimedCount - failedCount);",
+    "test/integration/lv/vignettingRays.test.ts restates the fraction",
   );
-  assertSource(
-    vignetting,
-    "const rise = low !== null && high !== null ? (high - low) / 2 : high !== null ? high - height : low !== null ? height - low : null;",
-    restated,
-  );
-  assertSource(
-    vignetting,
-    "samples.push({ fieldAngleDeg, area: beam.area, illumination: (beam.flux * launch.direction[2]) / imageArea });",
-    restated,
-  );
-  assertSource(vignetting, "samples.push({ fieldAngleDeg, area: beam?.area ?? 0, illumination: 0 });", restated);
-  assertSource(
-    vignetting,
-    "const cellArea = grid.step * grid.step; return { area: cells * cellArea, flux: transmitted * cellArea, tubeMapping: tubeMappingArea };",
-    restated,
-  );
-  assertSource(
-    vignetting,
-    "if (!(imageArea !== null && imageArea > 0)) return [];",
-    "a curve the tab has none of is lv-no-curve",
-  );
-  assertSource(
-    vignetting,
-    "if (!(axis.area > 0) || !(axis.illumination > 0)) return [];",
-    "a curve the tab has none of is lv-no-curve",
-  );
-  assertSource(
-    vignetting,
-    "geometricTransmission: area / axis.area, relativeIllumination: illumination / axis.illumination,",
-    answer,
-  );
+  assertSource(vignetting, "relativeIllumination = field.rimmerSum / axisSum;", answer);
+  assertSource(vignetting, "unvignettedFraction: field.unvignettedFraction, relativeIllumination,", answer);
+  assertSource(vignetting, "unavailableReason: field.unavailableReason, relativeIlluminationReason,", answer);
   // The tab asks the curve of the drawer's request, or of one of its own with no sampling of the drawer's.
   const tab = "src/components/display/analysis/VignettingTab.tsx";
   assertSource(
@@ -2305,7 +2494,7 @@ test("the vignetting tab still presents the curve the engine answers vignetting.
   );
   assertSource(
     tab,
-    'const samples = useMemo(() => probe("computeVignettingCurve", () => context.computeVignettingCurve()), [context]);',
+    'const curve = useMemo(() => probe("computeVignettingCurve", () => context.computeVignettingCurve()), [context]);',
     answer,
   );
   // The landing that identifies a field: LensVisualizer's solved chief ray of the field, to the design plane.
@@ -2368,10 +2557,31 @@ test(
     // The readouts the answer writes down, under the labels the tab gives them.
     const answer = "answerLvSummary in src/engines/lv/summary.ts maps each readout to a value of the contract";
     assertSource(tab, '<AnalysisMetricRow label="Current EFL" value={formatMm(summary.currentEFLMm)} t={t} />', answer);
+    // Since #933 the tab presents OpticStudio's three f-numbers under their names, and the marked one beside them.
     assertSource(
       tab,
-      '<AnalysisMetricRow label="Working f/#" value={formatFNumber(summary.effectiveFNumber)} t={t} />',
+      '<AnalysisMetricRow label="Image-space f/#" value={formatFNumber(summary.imageSpaceFNumber)} t={t} />',
       answer,
+    );
+    assertSource(
+      tab,
+      `<AnalysisMetricRow
+         label="Paraxial working f/#"
+         value={formatFNumber(summary.paraxialWorkingFNumber)}`,
+      answer,
+    );
+    assertSource(
+      tab,
+      `<AnalysisMetricRow
+         label="Working f/#"
+         value={formatWorkingFNumber(summary.workingFNumber)}`,
+      answer,
+    );
+    assertSource(
+      tab,
+      `case "traced":
+         return formatFNumber(working.value);`,
+      "answerLvSummary states workingFNumber only of a traced marginal ray, and null of its other states",
     );
     assertSource(
       tab,
@@ -2386,18 +2596,50 @@ test(
     assertSource(tab, '<AnalysisMetricRow label="Half field" value={formatDeg(summary.halfFieldDeg)} t={t} />', answer);
     assertSource(tab, '<AnalysisMetricRow label="Total track" value={formatMm(summary.totalTrackMm)} t={t} />', answer);
     assertSource(tab, '<AnalysisMetricRow label="BFD" value={formatMm(summary.bfdMm)} t={t} />', answer);
-    // What the "Working f/#" is: the current focal length over the diameter of the hook's pupil, at every focus.
+    // What the three are (read at 607ff23ae, LV #933): EFL / EPD, both paraxial; 1 / (2 n' |u'|) of the paraxial
+    // marginal ray; 1 / (2 n' sin θ') of the real marginal ray aimed at the stop rim; the last two at the paraxial
+    // object distance the image plane is conjugate to, which is the case's only at infinity focus.
     const summary = "src/optics/analysis/summary/summary.ts";
-    const working = "docs/gotchas.md (Summary) and the owner's brief read the tab's Working f/# as this quotient";
+    const definitions = "answerLvSummary in src/engines/lv/summary.ts states each under the contract's definition";
     assertSource(
       summary,
       "const entrancePupilDiameterMm = currentEPSD > 0 ? finiteOrNull(currentEPSD * 2) : null;",
-      working,
+      definitions,
+    );
+    assertSource(summary, ": imageSpaceFNumber(state, currentPhysStopSD);", definitions);
+    assertSource(summary, "paraxialWorkingFNumber: paraxialWorkingFNumber(state, currentPhysStopSD),", definitions);
+    assertSource(summary, "workingFNumber: computeWorkingFNumber(request),", definitions);
+    const fNumber = "src/optics/first-order/fNumber.ts";
+    assertSource(
+      fNumber,
+      "return finitePositive(Math.abs(stopRatio / image.u) / (2 * stopSemiDiameterMm));",
+      definitions,
     );
     assertSource(
-      summary,
-      "currentEFLMm !== null && entrancePupilDiameterMm !== null && entrancePupilDiameterMm > 1e-9 ? Math.abs(currentEFLMm) / entrancePupilDiameterMm : null;",
+      fNumber,
+      `const vergence = paraxialObjectVergence(state);
+       const atStop = traceParaxialSurfaces(state.surfaces, 1, vergence, { stopAt: state.lens.stop.surfaceIndex }).y;
+       const image = traceParaxialSurfaces(state.surfaces, 1, vergence, { skipLastTransfer: true });
+       const marginalSlope = (stopSemiDiameterMm / Math.abs(atStop)) * Math.abs(image.u);
+       return finitePositive(1 / (2 * image.n * marginalSlope));`,
+      definitions,
+    );
+    assertSource(
+      "src/optics/field/geometry.ts",
+      "if (state.focusT < FOCUS_INFINITY_CUTOFF || state.lens.flags.isFoldedOptics) return 0;",
+      "workingFNumbers takes LensVisualizer's object for the case's only at infinity focus, where both are infinite",
+    );
+    const working = "src/optics/analysis/summary/fNumbers.ts";
+    assertSource(
       working,
+      "const launch = prepareAimedPupilLaunch(request, [{ xFraction: 0, yFraction: 1 }], field);",
+      definitions,
+    );
+    assertSource(
+      working,
+      `const sine = sineToNormal(trace.terminalDirection, state.imagePlane.normal);
+       const value = 1 / (2 * trace.finalMedium * sine);`,
+      definitions,
     );
     assertSource(summary, "const cardinals = computeCardinalElements(request);", answer);
     assertSource(
@@ -2406,21 +2648,11 @@ test(
       "rearFocalZ is computeCardinalElementsFromState's rear focal point, the construction of the tab's BFD",
     );
     assertSource(summary, "focusDistanceM: focusDistanceAt(state.focusT, L, state.zoomT),", answer);
-    // The hook's pupil: the stop radius over the height at the stop of a real ray 1e-4 mm from the axis.
+    // The hook's pupil since #933: the stop radius over the paraxial marginal ray's height ratio at the stop.
     const pupil = "the tab's entrance pupil, held to lv's R1 radius in test/integration/lv/summary.test.ts";
     assertSource(
       "src/optics/field/geometry.ts",
-      "const realMarg = traceStateSurfacesReal(state, delta, 0, { stopAt: stopIndex });",
-      pupil,
-    );
-    assertSource(
-      "src/optics/field/geometry.ts",
-      "const yRatio = Number.isFinite(realMarg.y) ? realMarg.y / delta : paraxMarg.y;",
-      pupil,
-    );
-    assertSource(
-      "src/optics/field/geometry.ts",
-      "const epSD = Math.abs(geom.yRatio) > 1e-9 ? Math.abs(stopSD / geom.yRatio) : 0;",
+      "const epSD = Math.abs(pupilRatio) > 1e-9 ? Math.abs(stopSD / pupilRatio) : 0;",
       pupil,
     );
     // The half field: the hook's analysis field geometry, the field whose solved chief ray lands at the image corner.
@@ -2447,55 +2679,170 @@ test(
   },
 );
 
-test("the aperture control still marks the slider's f-number and shows its effective one beside it", { skip }, () => {
-  const hook = "src/components/hooks/useLensComputation.ts";
-  const control = "answerLvSummary in src/engines/lv/summary.ts records the control's marked and effective f-numbers";
-  assertSource(hook, "const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;", control);
-  assertSource(hook, "() => (L ? effectiveFNumber(fNumber, focusT, zoomT, L, aberrationT) : fNumber),", control);
-  assertSource(
-    "src/components/controls/DiagramControls.tsx",
-    'displayValue={`f/${formatFNumber(fNumber)}${showEffectiveAperture && effApertureDiffers ? ` (eff. f/${formatFNumber(effectiveFNum)})` : ""}`}',
-    control,
-  );
-  assertSource(
-    "src/components/controls/DiagramControls.tsx",
-    "const effApertureDiffers = Math.abs(effectiveFNum - fNumber) > 0.05;",
-    "NOT_COVERED_BY_R1 says the control shows its eff. f/ only above that difference",
-  );
-  const nominal = "the owner's brief: LensVisualizer's marked f-number sizes its stop with a real ray";
-  const constants = "src/optics/first-order/lensConstants.ts";
-  assertSource(constants, "const nominalEPSD = apertureReferenceFocalLength / (2 * baseNomFno);", nominal);
-  assertSource(constants, "const nomRealY = realTraceStopHeight(geometry, nominalEPSD, 0, stopIdx);", nominal);
-  // The rule's exceptions: an authored stop schedule, a stop inside an element, a fixed iris, a fisheye's projection
-  // focal length, and the paraxial height where the real ray fails.
-  assertSource(
-    constants,
-    "if (data.zoomStopSemiDiameters) { S[stopIdx].sd = data.zoomStopSemiDiameters[0]; } else if (!preserveAuthoredStopSD) {",
-    nominal,
-  );
-  assertSource(
-    constants,
-    "const apertureReferenceFocalLength = fisheyeProjectionFocalLengthAtZoom(projection, 0) ?? nomEFL;",
-    nominal,
-  );
-  assertSource(
-    constants,
-    'isZoom && (data.zoomStopSemiDiameters || (data.zoomApertureModel !== "fixed-iris" && !preserveAuthoredStopSD))',
-    nominal,
-  );
-  assertSource(
-    constants,
-    "data.zoomStopSemiDiameters?.[zi] ?? Math.abs(isFinite(zRealY) && Math.abs(zRealY) > 1e-15 ? zRealY : zNomEP * epT.y);",
-    nominal,
-  );
-  assertSource(
-    constants,
-    "S[stopIdx].sd = isFinite(nomRealY) && Math.abs(nomRealY) > 1e-15 ? nomRealY : nominalEPSD * nomYRatio;",
-    nominal,
-  );
-  assertSource(
-    "src/optics/first-order/fNumber.ts",
-    "return nominalFNumber * (1 + Math.abs(m) / (p > 1e-10 ? p : 1));",
-    "the effective f-number is a thin-lens bellows estimate of the marked one",
-  );
-});
+test(
+  "the aperture control still marks the slider's f-number and shows the paraxial working one beside it",
+  { skip },
+  () => {
+    // Read at 607ff23ae (LV #933): the thin-lens "eff. f/" is gone; beside the mark the control shows the paraxial
+    // working f-number, which the summary tab also presents.
+    const hook = "src/components/hooks/useLensComputation.ts";
+    const control =
+      "answerLvSummary in src/engines/lv/summary.ts records the control's marked f-number (lvNominalFNumber)";
+    assertSource(hook, "const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;", control);
+    assertSource(
+      hook,
+      "? paraxialWorkingFNumberForRuntimeLens(currentPhysStopSD, focusT, zoomT, L, aberrationT)",
+      "the control's paraxial working f-number is the summary tab's, which answerLvSummary states",
+    );
+    const controls = "src/components/controls/DiagramControls.tsx";
+    assertSource(controls, "displayValue={`f/${formatFNumber(fNumber)}${paraxialWorkingNote}`}", control);
+    assertSource(
+      controls,
+      "showEffectiveAperture && showsParaxialWorkingFNumber(paraxialWorkingFNum, fNumber)",
+      "NOT_COVERED_BY_R1 says the control shows the paraxial working f-number only above a difference from the mark",
+    );
+    assertSource(
+      "src/optics/first-order/format.ts",
+      "const PARAXIAL_WORKING_NOTE_DIFFERENCE = 0.05;",
+      "NOT_COVERED_BY_R1 names the difference",
+    );
+    // The marked f-number sizes the stop by the paraxial rule, with the exceptions a lens declares (stopRule).
+    const nominal = "the owner's brief: LensVisualizer's marked f-number now sizes its stop by the paraxial EPD = F/N";
+    const constants = "src/optics/first-order/lensConstants.ts";
+    assertSource(
+      constants,
+      `const stopRule: ApertureStopRule = data.zoomStopSemiDiameters
+       ? "schedule"
+       : preserveAuthoredStopSD
+         ? "authored"
+         : isZoom && data.zoomApertureModel === "fixed-iris"
+           ? "fixed-iris"
+           : "f-number";
+     if (stopRule === "schedule") S[stopIdx].sd = data.zoomStopSemiDiameters![0];
+     else if (stopRule !== "authored") S[stopIdx].sd = fNumberRuleStop(lens, baseNomFno, 0);`,
+      nominal,
+    );
+    assertSource(
+      constants,
+      "const apertureReferenceFocalLength = fisheyeProjectionFocalLengthAtZoom(projection, 0) ?? nomEFL;",
+      nominal,
+    );
+  },
+);
+
+// ── Stage 6.8b: LensVisualizer #928, #932 and #936 ───────────────────────────────────────────────────────────────
+
+test(
+  "a flat rim cut is still only a clear radius of the trace, the land a drawing and no surface of it",
+  { skip },
+  () => {
+    // Read at 607ff23ae (LV #928, #932): LV traces the uncut cap and clips a ray beyond the cut radius.
+    const mirror =
+      "lvClearRadius in src/engines/lv/exportAperture.ts restates clearSemiDiameter; surfaceAperture exports the cap " +
+      "clipped at that radius";
+    assertSource(
+      "src/optics/geometry/rimCut.ts",
+      `export function clearSemiDiameter(sd: number, cut: RimCut | null): number {
+       return cut ? Math.min(sd, cut.radius) : sd;
+     }`,
+      mirror,
+    );
+    assertSource(
+      "src/optics/trace/aperture.ts",
+      `if (typeof surface.sd !== "number" || !surface.clips) return null;
+     return clearSemiDiameter(surface.sd, surface.rimCut);`,
+      mirror,
+    );
+    // The land is met by no trace: only the drawing of a clipped hit is moved onto it.
+    assertSource(
+      "src/optics/trace/runtimeRayResult.ts",
+      `const land = rimCutLandPoint(L.surfaces[hit.surfaceIndex], hit);
+     if (ghost) ghostPts.push(land ? [land[2], land[1]] : point);`,
+      "exportAperture.ts says no ray of a trace meets the land; a change here would make the land a surface",
+    );
+    assert.equal(
+      occurrences("src/optics/trace/sequentialTrace.ts", "rimCut"),
+      0,
+      "the sequential tracer now reads a rim cut: the land may be a surface of the trace, which the contract cannot express",
+    );
+    // The validator holds the cap beyond the land from the cut radius out to sd, which makes the two models one.
+    assertSource(
+      "src/optics/prescription/validate/geometry.ts",
+      "const reentry = rimCutReentryRadius(sag, s.sd, cut);",
+      "exportAperture.ts relies on it: a forward ray that would meet the land first meets the uncut cap beyond the cut first",
+    );
+    assertSource(
+      "src/optics/prescription/surfaces.ts",
+      "rimCut: compileRimCut(surface, profile),",
+      "the binding reads the prepared surface's rimCut, which LvSurface types",
+    );
+  },
+);
+
+test(
+  "the MTF still traces its stop lattice as the ray sets hold it: every aimed cell, of one weight each",
+  { skip },
+  () => {
+    // Read at 607ff23ae (LV #936). lvFieldRays keeps the rays of aimMtfStopLattice verbatim, in the set's square
+    // lattice of cellsAcross cells, a vacant cell (outside the disc, or unaimed) the chief ray at weight 0.
+    const tracing = "src/optics/analysis/mtf/mtfTracing.ts";
+    const mirror = "lvFieldRays in src/engines/lv/raySets.ts";
+    assertSource(
+      tracing,
+      'const chief: Ray3 = lattice.chief.status === "aimed" ? lattice.chief : mtfLaunchRay(launch, 0, 0);',
+      `${mirror} takes the line's aimed stop-centre ray for the chief, or the field's chief where it has none`,
+    );
+    assertSource(
+      tracing,
+      `if (ray.status === "unaimed") {
+       bundle.unaimed += samples;`,
+      `${mirror} gives an unaimed cell no ray of its own, as LensVisualizer traces none`,
+    );
+    assertSource(
+      tracing,
+      "const ray0: MtfPupilRay = { ...point, column: cell.column, row: cell.row, trace: record };",
+      `${mirror} weighs a cell 1, which lvRayWeights multiplies by the bulk transmission of mtfImagePoint`,
+    );
+    assertSource(
+      tracing,
+      "stepMm: (2 * lattice.stopSemiDiameterMm) / n,",
+      `${mirror} states the lattice's step on the stop`,
+    );
+    assertSource(
+      tracing,
+      "const mirror = mtfMirrorSymmetric(state) && n % 2 === 0;",
+      `${mirror} holds both halves, which the aimed lattice states exactly, where the bundle traces one`,
+    );
+    // The rim rule: the bundle checks the stop at the lattice's clip radius; lv traces the case's own stop radius,
+    // as every engine does, which no aimed cell's centre comes near (see docs/REFERENCE.md, Stage 6.8b).
+    assertSource(
+      tracing,
+      `stopSemiDiameter: lattice.clipSemiDiameterMm,
+     launchBoundT: lattice.launchBoundT,`,
+      "R4f's replay calls traceMtfStopBundle for it; the ray sets are traced at the case's stop radius",
+    );
+    const lattice = "src/optics/analysis/pupils/stopLattice.ts";
+    assertSource(
+      lattice,
+      `const yFraction = (2 * row + 1 - n) / n;
+     for (let column = 0; column < n; column++) {
+       const xFraction = (2 * column + 1 - n) / n;
+       if (xFraction * xFraction + yFraction * yFraction <= 1) cells.push({ row, column, xFraction, yFraction });`,
+      `${mirror} places each cell's ray at row * cellsAcross + column of its set`,
+    );
+    const aimed = "src/optics/analysis/pupils/aimedPupil.ts";
+    assertSource(
+      aimed,
+      `if (solve.status === "blocked" && solve.blocked) {
+       const ray = frame.ray(solve.blocked.launch[0], solve.blocked.launch[1]);`,
+      `${mirror} keeps a blocked cell's blocking ray, which every engine stops ahead of the stop`,
+    );
+    assertSource(
+      aimed,
+      `const { uField, yChief } = geometry;
+     // The skew adapters' launch: coordinates on the first-vertex plane, origin stepped back by the lead.
+     const lead = state.lens.constants.rayLead ?? 0;`,
+      `${mirror} holds the origins in front of the first surface (launch-behind-first-surface otherwise)`,
+    );
+  },
+);

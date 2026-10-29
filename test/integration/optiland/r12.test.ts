@@ -1,17 +1,19 @@
 // Rung R12b on the real engines, through `lvrtc run`, `compare` and `report`, on four runs of the benchmark and the two
 // focus stations of a macro lens: a lens wide open on its reference line at its design plane, the same on the photopic
-// lines, the same at the best axial focus, the same at the MTF tab's f/8 comparison, and the Sigma 105 mm macro at
-// 1:2 and 1:1. The rung on the benchmark, states and focus-stations suites is a measurement of its own
-// (docs/REFERENCE.md, "Stage 6.7"), seconds. Each test skips with the reason when LensVisualizer or optiland is missing.
-// Run output goes to a temporary directory.
+// lines, the same at the best axial focus, the same at the MTF tab's f/8 comparison, and the Sigma 105 mm macro at 1:2
+// and 1:1. The rung on the benchmark, states and focus-stations suites is a measurement of its own (docs/REFERENCE.md,
+// "Stage 6.7"), seconds. Each test skips with the reason when LensVisualizer or optiland is missing. Run output goes to
+// a temporary directory.
 //
 // R12b is recorded. What is held is that LensVisualizer answers the ask at the authored line on the design plane and
 // says why not of the other, that optiland answers every ask, that every line is of two methods within the limit of the
-// sorting, so the pair is RECORDED; that the values both engines state under one definition agree (the tab's "Working
-// f/#" is the image-space f-number, optiland's FNO(), to 1e-9; the pupil to 1e-9 mm; the stop to the bit within a unit
-// in the last place), that the working f-number of a real ray is optiland's alone, and that the report claims nothing it
-// may not. The pupil and the image-space f-number are within their bands (owner, 2026-10-27). The differences of
-// definition the rung records (docs/gotchas.md, "Summary") are written as diagnostics.
+// sorting, so the pair is RECORDED; that the values both engines state under one definition agree within the bands of
+// policy 24 (the owner, 2026-10-29): the tab's "Image-space f/#", optiland's FNO(), within 2e-13 and the pupil within
+// 2e-12 mm everywhere, the focal length to 1e-9 mm, the stop within a unit in the last place; that since
+// LensVisualizer #933 the tab states both working f-numbers at infinity focus (the paraxial one within 2e-13, the real
+// marginal ray's within 7e-8 of optiland's), and at the macro's finite stations neither under the case's conjugate, its
+// values at its own paraxial object recorded under its sampling; and that the report claims nothing it may not. What
+// the rung records beside them (docs/gotchas.md, "Summary") is written as diagnostics.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -40,6 +42,8 @@ const MACRO_KEY = "sigma-105mm-f28-dg-dn-macro-art";
 
 /** The rung's limit of the sorting: two rear focal points lie within it, or the line is data. */
 const SAME_SYSTEM_MM = R12B.metrics["rearFocus.maxAbs"].attention as number;
+/** A figure's attention band in the policy at hand. */
+const band = (name: string): number => R12B.metrics[name].attention as number;
 
 test(
   "R12b: LensVisualizer's summary tab and aperture control beside optiland's accessors and working f-number",
@@ -91,10 +95,11 @@ test(
       );
       const rear = value(pair, "rearFocus.maxAbs");
       assert.ok(typeof rear === "number" && rear <= SAME_SYSTEM_MM, `${run} ${rear}`);
-      // One definition, one number: the image-space f-number, the pupil, the focal length, the stop and the track.
+      // One definition, one number: the image-space f-number and the pupil within their bands, the focal length, the
+      // stop and the track.
       const close: [string, number][] = [
-        ["imageSpaceFNumber.maxAbs", 1e-9],
-        ["entrancePupilDiameter.maxAbs", 1e-9],
+        ["imageSpaceFNumber.maxAbs", band("imageSpaceFNumber.maxAbs")],
+        ["entrancePupilDiameter.maxAbs", band("entrancePupilDiameter.maxAbs")],
         ["focalLength.maxAbs", 1e-9],
         ["stopDiameter.maxAbs", 1e-12],
         ["totalTrack.maxAbs", 0],
@@ -103,16 +108,22 @@ test(
         const difference = value(pair, figure);
         assert.ok(typeof difference === "number" && difference <= within, `${run} ${figure} ${difference}`);
       }
-      // LensVisualizer states no working f-number of a paraxial or a real ray: the figures are unmeasured, and the
-      // reason says whose; its control's thin-lens estimate is recorded under its sampling.
+      // Since LensVisualizer #933 the tab states both working f-numbers at infinity focus, of the case's own object:
+      // measured, within their bands. At a finite station its object is the paraxial conjugate of its image plane, not
+      // the case's certified one: both null, the figures unmeasured with the reason saying whose.
       for (const figure of ["paraxialWorkingFNumber.maxAbs", "workingFNumber.maxAbs"]) {
-        assert.equal(value(pair, figure), undefined, figure);
-        assert.ok((pair.reason ?? "").includes(`${figure} was not measured: lv-summary-tab states none`), figure);
+        const difference = value(pair, figure);
+        if (stations.includes(run)) {
+          assert.equal(difference, undefined, `${run} ${figure}`);
+          assert.ok((pair.reason ?? "").includes(`${figure} was not measured: lv-summary-tab states none`), figure);
+        } else {
+          assert.ok(typeof difference === "number" && difference <= band(figure), `${run} ${figure} ${difference}`);
+        }
       }
     }
 
-    // What the rung records of the definitions: the tab's "Working f/#" beside optiland's working f-number of the real
-    // rim rays, and the marked and effective f-numbers beside them.
+    // What the rung records of the definitions: the tab's "Image-space f/#", its marked f-number and its two working
+    // f-numbers (at a finite station those of its own paraxial object) beside optiland's.
     for (const run of [DESIGN, F8, ...stations]) {
       const set = comparisons.comparisons.find(
         (candidate) => candidate.requestId === of(run).requestId && candidate.mode === "pairwise",
@@ -123,14 +134,31 @@ test(
       const at = (values: readonly (number | null)[]): number => values[0] ?? Number.NaN;
       const working = at(optiland.workingFNumber);
       assert.ok(Number.isFinite(working), run);
+      const finite = stations.includes(run);
+      if (finite) {
+        // The tab's values at its own paraxial object are recorded: its paraxial working f-number, and its real
+        // marginal ray's, or the surface that vignettes that ray.
+        assert.ok(Number.isFinite(at(lv.lvParaxialWorkingFNumberAtParaxialObject ?? [])), run);
+        const vignettedAt = at(lv.lvMarginalRayVignettedSurfaceIndex ?? []);
+        assert.ok(
+          Number.isFinite(at(lv.lvWorkingFNumberAtParaxialObject ?? [])) !== Number.isFinite(vignettedAt),
+          `${run}: ${Object.keys(lv).join(", ")}`,
+        );
+      }
+      const lvParaxial = at((finite ? lv.lvParaxialWorkingFNumberAtParaxialObject : lv.paraxialWorkingFNumber) ?? []);
+      const lvWorking = at((finite ? lv.lvWorkingFNumberAtParaxialObject : lv.workingFNumber) ?? []);
       t.diagnostic(
-        `${run}: tab Working f/# ${at(lv.imageSpaceFNumber).toFixed(4)}, marked f/${at(lv.nominalFNumber).toFixed(3)}, ` +
-          `eff. f/${at(lv.lvThinLensEffectiveFNumber).toFixed(4)}; optiland working ${working.toFixed(4)}, ` +
-          `paraxial working ${at(optiland.paraxialWorkingFNumber).toFixed(4)}, unaimed ${at(optiland.workingFNumberUnaimed).toFixed(4)}`,
+        `${run}: tab image-space f/# ${at(lv.imageSpaceFNumber).toFixed(4)}, marked f/${at(lv.nominalFNumber).toFixed(3)}, ` +
+          `paraxial working ${lvParaxial.toFixed(4)}, working ${lvWorking.toFixed(4)}${finite ? " (at its paraxial object)" : ""}` +
+          ` (marginal ray vignetted at ${at(lv.lvMarginalRayVignettedSurfaceIndex ?? [])}); ` +
+          `optiland working ${working.toFixed(4)}, paraxial working ${at(optiland.paraxialWorkingFNumber).toFixed(4)}, ` +
+          `unaimed ${at(optiland.workingFNumberUnaimed).toFixed(4)}`,
       );
     }
-    // At 1:1 the tab's quotient of the focused focal length and a pupil of rays parallel to the axis is far below the
-    // working f-number of the real rim rays (at LV 098c91ef6, 1.028 against 4.747): it is no working f-number there.
+    // At 1:1 the tab's image-space f-number, the quotient of the focused focal length and a pupil of rays parallel to
+    // the axis, is far below the working f-number of the real rim rays (at LV 607ff23ae, 1.056 against optiland's
+    // 4.874; 1.028 against 4.747 at 098c91ef6): it is no working f-number there. Since #933 the tab states its working
+    // f-numbers beside it, at its own paraxial object (paraxial 4.847; its real marginal ray vignetted at surface 13).
     const closest = stations[stations.length - 1];
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === of(closest).requestId && candidate.mode === "pairwise",

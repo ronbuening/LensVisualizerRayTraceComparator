@@ -8,7 +8,7 @@
 | Suite hash | 51b2ad854e02a30921f72fd84d86379f887f06737f77337a2f0f39f92349209b |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | 5be1cb6ca7424fcc71d92e2eb9059ed14c1dd0709eedde7a2dca75d852f5c52e |
+| Policy hash | 11209888e5c9afcf704cc7614fd65760f4126e609c9868e8d6593d3063c78a45 |
 
 ### Engines
 
@@ -54,16 +54,16 @@ Quantity `summary.native`, compared independent-method, recorded. Request `91390
 
 Reference vs each, against `lv`:
 
-| Engine | entrancePupilDiameter.maxAbs (band 3.00e-9 mm) | focalLength.maxAbs [mm] | imageSpaceFNumber.maxAbs (band 2.00e-9) | paraxialWorkingFNumber.maxAbs | rearFocus.maxAbs (band 1.00e-5 mm) | stopDiameter.maxAbs [mm] | totalTrack.maxAbs [mm] | workingFNumber.maxAbs | lines.compared [elements] | lines.data [elements] | lines.unavailable [elements] | Verdict | Note |
+| Engine | entrancePupilDiameter.maxAbs (band 2.00e-12 mm) | focalLength.maxAbs [mm] | imageSpaceFNumber.maxAbs (band 2.00e-13) | paraxialWorkingFNumber.maxAbs (band 2.00e-13) | rearFocus.maxAbs (band 1.00e-5 mm) | stopDiameter.maxAbs [mm] | totalTrack.maxAbs [mm] | workingFNumber.maxAbs (band 7.00e-8) | lines.compared [elements] | lines.data [elements] | lines.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| optiland | 1.56e-2 at line 0 | 0 at line 0 | 4.94e-3 at line 0 | — | 2.44e-4 at line 1 | 0 at line 0 | 0 at line 0 | — | 1 | 1 | 0 | ATTENTION | entrancePupilDiameter.maxAbs 1.56e-2 is outside its attention band 3.00e-9 at line 0; imageSpaceFNumber.maxAbs 4.94e-3 is outside its attention band 2.00e-9 at line 0; rearFocus.maxAbs 2.44e-4 is outside its attention band 1.00e-5 at line 1; paraxialWorkingFNumber.maxAbs was not measured: lv-summary-tab states none; workingFNumber.maxAbs was not measured: lv-summary-tab states none; line 1: data, chief-landing-apart (the rear focal points lie 2.44e-4 mm apart) |
+| optiland | 1.56e-2 at line 0 | 0 at line 0 | 4.94e-3 at line 0 | — | 2.44e-4 at line 1 | 0 at line 0 | 0 at line 0 | — | 1 | 1 | 0 | ATTENTION | entrancePupilDiameter.maxAbs 1.56e-2 is outside its attention band 2.00e-12 at line 0; imageSpaceFNumber.maxAbs 4.94e-3 is outside its attention band 2.00e-13 at line 0; rearFocus.maxAbs 2.44e-4 is outside its attention band 1.00e-5 at line 1; paraxialWorkingFNumber.maxAbs was not measured: lv-summary-tab states none; workingFNumber.maxAbs was not measured: lv-summary-tab states none; line 1: data, chief-landing-apart (the rear focal points lie 2.44e-4 mm apart) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
 | Engine | lv | optiland |
 |---|---|---|
-| lv | — | ATTENTION (entrancePupilDiameter.maxAbs 1.56e-2 at line 0) |
-| optiland | ATTENTION (entrancePupilDiameter.maxAbs 1.56e-2 at line 0) | — |
+| lv | — | ATTENTION (imageSpaceFNumber.maxAbs 4.94e-3 at line 0) |
+| optiland | ATTENTION (imageSpaceFNumber.maxAbs 4.94e-3 at line 0) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 

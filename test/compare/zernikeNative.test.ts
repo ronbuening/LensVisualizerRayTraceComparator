@@ -5,11 +5,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { ComparatorOutcome, ComputedMetric } from "../../src/compare/comparator.ts";
+import { comparePair } from "../../src/compare/pair.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import {
   CHIEF_LANDING_METRIC,
   COEFFICIENTS_METRIC,
   CONDITION_METRIC,
+  SET_ASIDE_CONDITION_METRIC,
   zernikeFactsOf,
   zernikeFactsOfRecorded,
   zernikeNativeComparator,
@@ -96,7 +98,8 @@ test("an unavailable field is unsupported and a landing apart is data, each in n
   assert.match(notes, /field 0: data, chief-landing-apart \(the chief rays land 3\.91e-3 mm apart\)/);
   assert.match(notes, /field 10: unsupported, no-curve/);
   // Without a limit the same landings are of two methods, and the pair says it set none aside.
-  const unlimited = compared(standard, other, undefined);
+  const free: RungPolicy = { ...POLICY, metrics: { ...POLICY.metrics, [CHIEF_LANDING_METRIC]: { unit: "mm" } } };
+  const unlimited = compared(standard, other, free);
   assert.equal(metric(unlimited, "fields.compared")?.value, 1);
   assert.match(
     unlimited.comparable ? (unlimited.notes?.join("; ") ?? "") : "",
@@ -154,7 +157,13 @@ test("a field whose fit an answer states ill-conditioned beyond the limit is num
     ["compared", "data", "numerical", "unavailable"].map((kind) => metric(outcome, `fields.${kind}`)?.value),
     [1, 0, 1, 0],
   );
-  assert.deepEqual(metric(outcome, CONDITION_METRIC), { name: CONDITION_METRIC, value: 2 ** 20, where: { field: 10 } });
+  // The judged condition is of the field of two methods alone; the field set aside shows its own apart.
+  assert.deepEqual(metric(outcome, CONDITION_METRIC), { name: CONDITION_METRIC, value: 2.5, where: { field: 0 } });
+  assert.deepEqual(metric(outcome, SET_ASIDE_CONDITION_METRIC), {
+    name: SET_ASIDE_CONDITION_METRIC,
+    value: 2 ** 20,
+    where: { field: 10 },
+  });
   // The moved coefficient is of the field set aside: what is left differs in nothing.
   assert.equal(metric(outcome, COEFFICIENTS_METRIC)?.value, 0);
   assert.match(
@@ -162,7 +171,85 @@ test("a field whose fit an answer states ill-conditioned beyond the limit is num
     /field 10: numerical, unconverged \(comparator-zernike-optiland-wavefront: normal equations of condition 1048576, above 1024\)/,
   );
   // Without a limit the field is of two methods, and the pair says so.
-  const unlimited = compared(ZERNIKE_DATA_FRINGE, moved(2 ** -30, conditioned(2 ** 20)), undefined);
+  const free: RungPolicy = { ...POLICY, metrics: { ...POLICY.metrics, [CONDITION_METRIC]: { unit: "1" } } };
+  const unlimited = compared(ZERNIKE_DATA_FRINGE, moved(2 ** -30, conditioned(2 ** 20)), free);
   assert.equal(metric(unlimited, "fields.compared")?.value, 2);
+  assert.equal(metric(unlimited, CONDITION_METRIC)?.value, 2 ** 20);
+  assert.equal(metric(unlimited, SET_ASIDE_CONDITION_METRIC), undefined);
   assert.match(unlimited.comparable ? (unlimited.notes?.join("; ") ?? "") : "", /sets no limit on fitCondition\.max/);
+});
+
+test("policy 24: the limits of the landing and the fit's condition, and the bands the owner accepted", () => {
+  // The owner's decision of 2026-10-28, of the Stage 6.8 measurement.
+  assert.deepEqual(POLICY.metrics[CHIEF_LANDING_METRIC], { attention: 1e-9, unit: "mm" });
+  assert.deepEqual(POLICY.metrics[CONDITION_METRIC], { attention: 1e6, unit: "1" });
+  assert.deepEqual(POLICY.metrics[COEFFICIENTS_METRIC], { attention: 4e-11, unit: "waves" });
+  assert.deepEqual(POLICY.metrics["rmsToChief.maxAbs"], { attention: 2e-16, unit: "waves" });
+  assert.deepEqual(POLICY.metrics["fitResidualRms.maxAbs"], { attention: 7e-16, unit: "waves" });
+  assert.deepEqual(POLICY.metrics["pvToChief.maxAbs"], { unit: "waves" });
+  // The condition of a field set aside is shown and never judged: the policy names no band of it (2026-10-29).
+  assert.equal(POLICY.metrics[SET_ASIDE_CONDITION_METRIC], undefined);
+  const pairOf = (b: ZernikeNativeData) =>
+    comparePair(
+      { engine: "optiland", fingerprint: "a", status: "ok", data: ZERNIKE_DATA_FRINGE as unknown as JsonObject },
+      { engine: "optiland-wave", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      POLICY,
+      zernikeNativeComparator,
+    );
+  // Within every band: a coefficient 2^-40 waves (9.1e-13) apart, the RMS 2^-55 (2.8e-17), the residual 2^-52
+  // (2.2e-16).
+  /** The Fringe answer with field 1 changed. */
+  const withField = (change: Partial<ZernikeNativeData["fields"][number]>): ZernikeNativeData => {
+    const copy = structuredClone(ZERNIKE_DATA_FRINGE);
+    return { ...copy, fields: [copy.fields[0], { ...copy.fields[1], ...change }] };
+  };
+  const field1 = ZERNIKE_DATA_FRINGE.fields[1];
+  const within = withField({
+    coefficients: field1.coefficients.map((value, term) => (term === 2 ? value + 2 ** -40 : value)),
+    rmsToChiefWaves: (field1.rmsToChiefWaves as number) + 2 ** -55,
+    fitResidualRmsWaves: (field1.fitResidualRmsWaves as number) + 2 ** -52,
+  });
+  const recorded = pairOf(within);
+  assert.equal(recorded.verdict, "RECORDED", recorded.reason);
+  // Above each band in turn, the others within.
+  for (const [figure, change] of [
+    [COEFFICIENTS_METRIC, { coefficients: [0.5, 0, -0.25 + 2 ** -30, 0.125] }],
+    ["rmsToChief.maxAbs", { rmsToChiefWaves: (ZERNIKE_DATA_FRINGE.fields[1].rmsToChiefWaves as number) + 2 ** -50 }],
+    [
+      "fitResidualRms.maxAbs",
+      { fitResidualRmsWaves: (ZERNIKE_DATA_FRINGE.fields[1].fitResidualRmsWaves as number) + 2 ** -48 },
+    ],
+  ] as const) {
+    const pair = pairOf(withField(change));
+    assert.equal(pair.verdict, "ATTENTION", figure);
+    assert.match(pair.reason ?? "", new RegExp(`^${figure.replace(".", "\\.")} \\S+ is outside its attention band`));
+  }
+  // A landing 2^-28 mm (3.7e-9 mm) off, beyond the limit: data, in no figure; 2^-32 mm (2.3e-10 mm), within: compared.
+  const landed = (offset: number): ZernikeNativeData => withField({ imageHeightMm: 8.5 + offset });
+  const apart = compared(ZERNIKE_DATA_FRINGE, landed(2 ** -28));
+  assert.deepEqual(
+    ["compared", "data", "numerical"].map((kind) => metric(apart, `fields.${kind}`)?.value),
+    [1, 1, 0],
+  );
+  assert.equal(pairOf(landed(2 ** -28)).verdict, "ATTENTION");
+  assert.equal(metric(compared(ZERNIKE_DATA_FRINGE, landed(2 ** -32)), "fields.compared")?.value, 2);
+  // A fit of condition 2^21 (2.1e6), beyond the limit: numerical, in no figure; 2^19 (5.2e5), within: compared.
+  const conditioned = (condition: number): ZernikeNativeData => withField({ fitCondition: condition });
+  const illConditioned = compared(ZERNIKE_DATA_FRINGE, conditioned(2 ** 21));
+  assert.deepEqual(
+    ["compared", "data", "numerical"].map((kind) => metric(illConditioned, `fields.${kind}`)?.value),
+    [1, 0, 1],
+  );
+  // The owner's decision of 2026-10-29: a field set aside by its condition is R5's unconverged field, counted and
+  // named, never a reason for ATTENTION, though its coefficients be far apart; a landing beyond the limit still is.
+  const setAside = pairOf(
+    withField({ fitCondition: 2 ** 21, coefficients: [0.5, 0, -0.25 + 2 ** -10, 0.125], imageHeightMm: 8.5 }),
+  );
+  assert.equal(setAside.verdict, "RECORDED", setAside.reason);
+  assert.match(setAside.reason ?? "", /field 10: numerical, unconverged/);
+  assert.equal(setAside.metrics.find(({ name }) => name === SET_ASIDE_CONDITION_METRIC)?.value, 2 ** 21);
+  const setAsideAndApart = pairOf(withField({ fitCondition: 2 ** 21, imageHeightMm: 8.5 + 2 ** -28 }));
+  assert.equal(setAsideAndApart.verdict, "ATTENTION");
+  assert.match(setAsideAndApart.reason ?? "", /^chiefLanding\.maxAbs \S+ is outside its attention band/);
+  assert.equal(metric(compared(ZERNIKE_DATA_FRINGE, conditioned(2 ** 19)), "fields.compared")?.value, 2);
 });

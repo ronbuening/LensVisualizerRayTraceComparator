@@ -1,16 +1,28 @@
 // The zones of LensVisualizer's spherical-aberration section (its aberrations tab) and its axial-colour section (its
-// chromatic tab): which fractions of the pupil each traces. Shared by the axial sets (axialRaySets.ts) and the
-// engine's answer of the sections (axial.ts), which keeps the engine's closure to what it answers with.
+// chromatic tab): which fractions of the stop each traces, and which chromatic channel a line of a case is. Shared by
+// the axial sets (axialRaySets.ts) and the engine's answer of the sections (axial.ts), which keeps the engine's closure
+// to what it answers with.
+import type { LvCaseModel } from "./caseModel.ts";
 import type { LvHookApi } from "./tabRequest.ts";
 import type { LvApi } from "./types.ts";
 
 /** The LensVisualizer exports the axial sets are made with. */
 export type LvAxialApi = LvHookApi &
-  Pick<LvApi, "saNearAxisFraction" | "marginalPupilFractions" | "saProfileFractions" | "locaMarginalFractions">;
+  Pick<
+    LvApi,
+    | "saNearAxisFraction"
+    | "marginalPupilFractions"
+    | "saProfileFractions"
+    | "locaMarginalFractions"
+    | "lensChromaticReference"
+    | "eLineChannelWavelengthsNm"
+    | "chromaticChannelWavelengthsNm"
+  >;
 
 /**
  * The zones of the two sections as they open (`analysisQuality` "settled", whose sampling leaves every zone at its
- * family default), each a fraction of the tabs' pupil radius:
+ * family default), each a fraction of the stop radius (LV #927: a zone is the ray from the axial object aimed at that
+ * height of the real stop):
  *
  * - `nearAxis`, `marginal` and `profile` of the spherical-aberration section, restated from spherical.ts:
  *
@@ -57,4 +69,28 @@ export function lvAxialZones(api: LvAxialApi): LvAxialZones {
     profile: [...api.saProfileFractions],
     colour: normalizedFractions(api.locaMarginalFractions),
   };
+}
+
+/**
+ * The line each chromatic channel of a lens is traced at, nm, as LensVisualizer's materials resolve it: C, d, F and g
+ * for a lens whose elements state d-line indices; C', e, F' and g for a lens whose elements all state e-line indices
+ * (`makeSurfaceDispersion` in materialResolver.ts gives a native e-line element those lines on every tier). Which a
+ * lens is, LensVisualizer says: its chromatic tab asks `lensChromaticReference(L.elements)` of the runtime lens, whose
+ * elements leave the synthetic rear plates out, and the comparator asks the same of the same elements. A lens that
+ * mixes the two, whose reference is "d" with an element whose own reference (asked of it alone) is "e", has no one
+ * line a channel is of: null.
+ */
+export function lvChannelLines(
+  api: Pick<LvApi, "lensChromaticReference" | "eLineChannelWavelengthsNm" | "chromaticChannelWavelengthsNm">,
+  model: LvCaseModel,
+): Readonly<Record<string, number>> | null {
+  const elements = model.runtime.elements;
+  if (api.lensChromaticReference(elements) === "e") return api.eLineChannelWavelengthsNm;
+  const mixed = elements.some((element) => api.lensChromaticReference([element]) === "e");
+  return mixed ? null : api.chromaticChannelWavelengthsNm;
+}
+
+/** The channel traced at a wavelength, or null. */
+export function channelAt(channels: Readonly<Record<string, number>>, wavelengthNm: number | undefined): string | null {
+  return Object.keys(channels).find((channel) => channels[channel] === wavelengthNm) ?? null;
 }

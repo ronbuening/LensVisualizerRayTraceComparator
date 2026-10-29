@@ -723,10 +723,10 @@ export const r10bRung: RungDefinition = Object.freeze({
 
 /**
  * The rung `r11a`, LensVisualizer's vignetting tab on identical rays: one `rays.trace` request for each of the run's
- * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own trace of each field's beam on its launch lattice and
- * the chief rays of its image mapping, which every engine traces as given. Which rays get through, how much flux the
- * two engines disagree about, the flux each field's beam brings into the image relative to the axis's and where the
- * mapping's chief rays land are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
+ * vignetting sets (`RungInputs.vignettingRaySets`): the tab's own trace of each field's beam (since LensVisualizer #931
+ * the half of its aimed stop lattice it traces) and the field's stop-centre ray, which every engine traces as given.
+ * Which rays get through, how much flux the two engines disagree about, the flux each field's beam brings into the
+ * image relative to the axis's and where the stop-centre rays land are compared (`src/compare/raysVignetting.ts`). It is asked of the engines of the
  * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
  */
 export const r11aRung: RungDefinition = Object.freeze({

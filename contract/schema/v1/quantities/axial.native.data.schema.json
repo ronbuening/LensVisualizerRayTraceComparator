@@ -10,7 +10,7 @@
       "enum": ["spherical", "colour"]
     },
     "pupilRadiusMm": {
-      "description": "The radius the spec's fractions are of: the engine's own pupil of the axial beam at the first line asked.",
+      "description": "The radius the spec's fractions are of, by the engine's own construction: the real stop's, where it aims each ray at its point of the stop at the line traced, or its own pupil of the axial beam at the first line asked.",
       "$ref": "urn:lvrtc:contract:v1:common#/$defs/positive"
     },
     "fields": {

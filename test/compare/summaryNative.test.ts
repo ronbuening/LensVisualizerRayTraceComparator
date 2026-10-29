@@ -23,8 +23,8 @@ import type { SummaryNativeData, SummaryNativeLine } from "../../src/contract/qu
 const POLICY: RungPolicy = loadPolicy().rungs.r12b;
 
 /**
- * A line as LensVisualizer's tab states one: a marked f-number and a half field, no working f-number of a paraxial or a
- * real ray (its control's thin-lens estimate under `sampling`).
+ * A line as LensVisualizer's tab states one at a finite focus: a marked f-number and a half field, no working f-number of
+ * a paraxial or a real ray at the case's conjugate (its values at its own paraxial object under `sampling`).
  */
 function tab(line: number, more: Partial<SummaryNativeLine> = {}): SummaryNativeLine {
   return {
@@ -41,14 +41,18 @@ function tab(line: number, more: Partial<SummaryNativeLine> = {}): SummaryNative
     nominalFNumber: 2.125,
     totalTrackMm: 90.75,
     halfFieldDeg: 23.5,
-    sampling: { focusDistanceM: 0.5, lvThinLensEffectiveFNumber: 2.125 },
+    sampling: { focusDistanceM: 0.5, lvParaxialWorkingFNumberAtParaxialObject: 2.125 },
     ...more,
   };
 }
 
-/** Within the bands of R12b (3e-9 mm and 2e-9): 2^-30, 9.3e-10; above them: 2^-28, 3.7e-9. */
-const WITHIN = 2 ** -30;
-const ABOVE = 2 ** -28;
+/**
+ * Within and above each band of R12b (policy 24): the pupil's 2e-12 mm (2^-40, 9.1e-13; 2^-38, 3.6e-12), the image-space
+ * and paraxial working f-numbers' 2e-13 (2^-43, 1.1e-13; 2^-42, 2.3e-13) and the working f-number's 7e-8 (2^-24, 6.0e-8;
+ * 2^-23, 1.2e-7). Each is exact beside the value it moves.
+ */
+const WITHIN = { pupil: 2 ** -40, fNumber: 2 ** -43, working: 2 ** -24 };
+const ABOVE = { pupil: 2 ** -38, fNumber: 2 ** -42, working: 2 ** -23 };
 
 /**
  * A line as optiland states one: no marked f-number or half field, a working f-number of the rim rays, and a pupil and
@@ -57,8 +61,8 @@ const ABOVE = 2 ** -28;
 function accessors(line: number, more: Partial<SummaryNativeLine> = {}): SummaryNativeLine {
   return {
     ...tab(line),
-    entrancePupilDiameterMm: 25.25 + WITHIN,
-    imageSpaceFNumber: 2 - WITHIN,
+    entrancePupilDiameterMm: 25.25 + WITHIN.pupil,
+    imageSpaceFNumber: 2 - WITHIN.fNumber,
     paraxialWorkingFNumber: 2,
     workingFNumber: 2.0625,
     nominalFNumber: null,
@@ -85,13 +89,18 @@ function metric(outcome: ComparatorOutcome, name: string): ComputedMetric | unde
   return outcome.metrics.find((each) => each.name === name);
 }
 
-/** The bands the owner accepted (2026-10-27): of the two values of one definition that one answer's pupil makes. */
+/**
+ * The bands the owner set (2026-10-29, policy 24), ten times the figures measured at LensVisualizer 607ff23ae rounded up:
+ * the two of one definition that one answer's pupil makes, and since #933 the two working f-numbers.
+ */
 const BANDS: Readonly<Record<string, number>> = {
-  "imageSpaceFNumber.maxAbs": 2e-9,
-  "entrancePupilDiameter.maxAbs": 3e-9,
+  "imageSpaceFNumber.maxAbs": 2e-13,
+  "entrancePupilDiameter.maxAbs": 2e-12,
+  "paraxialWorkingFNumber.maxAbs": 2e-13,
+  "workingFNumber.maxAbs": 7e-8,
 };
 
-test("the policy gives the rear focus its limit of 1e-5 mm, two figures a band, and the others none", () => {
+test("the policy gives the rear focus its limit of 1e-5 mm, four figures a band, and the others none", () => {
   // Every figure is named with its unit, so that one an engine never states is said to be unmeasured in the reason.
   assert.deepEqual(POLICY.metrics[REAR_FOCUS_METRIC], { attention: 1e-5, unit: "mm" });
   for (const { name, unit } of SUMMARY_FIGURES) {
@@ -118,10 +127,10 @@ test("each figure is the difference of a value both answers state, and one an an
   const outcome = compared(answer([tab(0)], "lv-summary-tab"), answer([accessors(0)], "optiland-summary"));
   assert.deepEqual(metric(outcome, "entrancePupilDiameter.maxAbs"), {
     name: "entrancePupilDiameter.maxAbs",
-    value: WITHIN,
+    value: WITHIN.pupil,
     where: { line: 0 },
   });
-  assert.equal(metric(outcome, "imageSpaceFNumber.maxAbs")!.value, WITHIN);
+  assert.equal(metric(outcome, "imageSpaceFNumber.maxAbs")!.value, WITHIN.fNumber);
   for (const name of ["focalLength.maxAbs", "stopDiameter.maxAbs", "totalTrack.maxAbs", REAR_FOCUS_METRIC]) {
     assert.equal(metric(outcome, name)!.value, 0, name);
   }
@@ -230,22 +239,32 @@ test("answers of other lines are not comparable", () => {
   }
 });
 
-test("a pair is RECORDED with both banded figures within their bands, and ATTENTION with one above its band", () => {
+test("a pair is RECORDED with every banded figure within its band, and ATTENTION with one above its band", () => {
+  // At infinity focus the tab states both working f-numbers, so all four banded figures are measured.
+  const infinity = tab(0, { paraxialWorkingFNumber: 2, workingFNumber: 2.0625, sampling: {} });
   const pairOf = (b: SummaryNativeLine) =>
     comparePair(
-      { engine: "lv", fingerprint: "a", status: "ok", data: answer([tab(0)], "tab") as unknown as JsonObject },
+      { engine: "lv", fingerprint: "a", status: "ok", data: answer([infinity], "tab") as unknown as JsonObject },
       { engine: "optiland", fingerprint: "b", status: "ok", data: answer([b], "acc") as unknown as JsonObject },
       POLICY,
       summaryNativeComparator,
     );
-  // Within: 2^-30 below each band.
-  assert.equal(pairOf(accessors(0)).verdict, "RECORDED");
-  // Above: each figure in turn 2^-28 from the tab's, the other within.
+  // Within: each figure below its band, the working f-numbers too.
+  const within = { paraxialWorkingFNumber: 2 + WITHIN.fNumber, workingFNumber: 2.0625 - WITHIN.working };
+  const recorded = pairOf(accessors(0, within));
+  assert.equal(recorded.verdict, "RECORDED");
+  assert.deepEqual(
+    Object.keys(BANDS).map((name) => recorded.metrics.find((each) => each.name === name)?.value),
+    [WITHIN.fNumber, WITHIN.pupil, WITHIN.fNumber, WITHIN.working],
+  );
+  // Above: each figure in turn above its band, the others within.
   for (const [figure, change] of [
-    ["entrancePupilDiameter.maxAbs", { entrancePupilDiameterMm: 25.25 + ABOVE }],
-    ["imageSpaceFNumber.maxAbs", { imageSpaceFNumber: 2 - ABOVE }],
+    ["entrancePupilDiameter.maxAbs", { entrancePupilDiameterMm: 25.25 + ABOVE.pupil }],
+    ["imageSpaceFNumber.maxAbs", { imageSpaceFNumber: 2 - ABOVE.fNumber }],
+    ["paraxialWorkingFNumber.maxAbs", { paraxialWorkingFNumber: 2 + ABOVE.fNumber }],
+    ["workingFNumber.maxAbs", { workingFNumber: 2.0625 - ABOVE.working }],
   ] as const) {
-    const pair = pairOf(accessors(0, change));
+    const pair = pairOf(accessors(0, { ...within, ...change }));
     assert.equal(pair.verdict, "ATTENTION", figure);
     assert.match(pair.reason ?? "", new RegExp(`^${figure.replace(".", "\\.")} \\S+ is outside its attention band`));
   }

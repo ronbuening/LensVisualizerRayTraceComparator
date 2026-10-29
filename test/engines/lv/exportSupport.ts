@@ -144,7 +144,9 @@ export function lvEvaluateAperture(
   const stopIndex = state.stopSurfaceIndex;
   const isStop = surface.physicalIndex === stopIndex;
   const overridden = isStop && stopSemiDiameter !== undefined;
-  const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : surface.sd;
+  // A flat rim cut clips at its radius inside the surface's sd (LV #928's clearSemiDiameter).
+  const clear = surface.rimCut ? Math.min(surface.sd, surface.rimCut.radius) : surface.sd;
+  const semiDiameter = overridden ? stopSemiDiameter : surface.clips === false ? null : clear;
   const innerSemiDiameter = surface.innerSd ?? 0;
   let apertureState: LvApertureEvaluation["state"] = "inside";
   if (semiDiameter !== null && radius > semiDiameter + Math.max(1e-9, Math.abs(semiDiameter) * 1e-12)) {
@@ -268,7 +270,7 @@ export function stepsOf(
         appliedShiftMm: refocused ? best : 0,
         bestAxialShiftMm: best,
       },
-      aperture: null,
+      axialVignetting: null,
     };
     yield result;
     return result;
@@ -293,6 +295,11 @@ export function apiFor(state: LvPreparedState, overrides: Partial<LvExportApi> =
     prepareRuntimeState: () => state,
     rearMediumSurfaceIndex: (index) => (index === 0 ? null : index - 1),
     wideOpenStopAtZoom: () => state.surfaces[state.lens.stop.surfaceIndex].sd,
+    // A stop rule of the stand-in's own: the wide-open stop up to f/2, then 2 / N of it, never wider.
+    stopSemiDiameterForFNumber: (fNumber) => {
+      const wideOpen = state.surfaces[state.lens.stop.surfaceIndex].sd;
+      return fNumber > 2 ? Math.min(wideOpen, (2 * wideOpen) / fNumber) : wideOpen;
+    },
     fopenAtZoomClamped: () => 2,
     fNumberAtStopdown: () => 2,
     computeAnalysisFieldGeometryAtState: () => ({ yRatio: 1 }),

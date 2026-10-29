@@ -345,7 +345,7 @@ traced, states the focus of the request, found by its own search on the axial be
 | `stopSemiDiameterMm`, `pupilSemiDiameterMm` | the stop radius of the case, and the seed the tab's hook would hand over for it (`lvPupilSeed`) |
 | `spectrum` | the one of LensVisualizer's three whose lines the case has. Lines that are none of them have no focus of LensVisualizer's: `lv-best-axial-needs-lv-spectrum` |
 | `focus` | `best-axial` |
-| `maxGridSize` | `sampling.lvGridCap` of the run, where it states one; LensVisualizer's own default, 128, without |
+| `maxGridSize` | `sampling.lvGridCap` of the run, where it states one; LensVisualizer's own default, `MTF_DEFAULT_GRID_CAP`, without (256 cells across the stop since LV #936) |
 
 So the plane is that of one stop, one spectrum and one grid cap: the reference line and the photopic lines of one
 lens have two best planes, and so have wide open and f/8. The grid cap matters only below 64: the search is of an
@@ -465,7 +465,8 @@ the hash of the comparator's own code behind it ([fingerprint and adapter revisi
   ray ended at the first surface that stops it, the indices of the spec's line handed over as the case states them
   (which are LensVisualizer's own for that line), the direction taken as the unit vector it is, and the optical
   path recorded. These are the options of LensVisualizer's own MTF bundle. What became of a ray is what
-  LensVisualizer's `mtfTraceClassification` says: `valid` is status 0, `blocked` (an aperture, a total internal
+  LensVisualizer's `traceRayClassification` says (`src/optics/trace/rayClassification.ts` since LV #934, which
+  proves a miss along the whole line where its trace may step back): `valid` is status 0, `blocked` (an aperture, a total internal
   reflection, a miss it can prove) status 1, `failed` status 2. `hits` are its hit points, `exitPoint` and
   `exitDirection` its `terminalPoint` and `terminalDirection`, `opticalPath` its `opticalPathLengthMm`.
   LensVisualizer's trace ends on the last surface, so `imagePoint` is the comparator's own projection of that end
@@ -507,16 +508,16 @@ resolved options through `lvResolvedMtfOptions`, including `request.pose?.active
 | `focus` | `design` for the spec's `design`; `best-axial`, LensVisualizer's axial best-focus search, for `engine-best`. For a case at LensVisualizer's own best axial focus, `best-axial` for the spec's `design` ([below](#a-case-at-lensvisualizers-best-axial-focus)) |
 | `stopSemiDiameterMm` | `conditions.stopSemiDiameter` |
 | `pupilSemiDiameterMm` | the seed of LensVisualizer's footprint scan: the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`). It is never the nominal pupil of the lens, which LensVisualizer's audit scripts pass and which gives another MTF |
-| `maxGridSize` | the engine option `lvGridCap`: 32, 64, 128 or 256, the grid LensVisualizer's refinement may go up to; 128 without it. It is what `sampling.lvGridCap` of a run is for |
+| `maxGridSize` | the engine option `lvGridCap`: 32, 64, 128 or 256, the grid LensVisualizer's refinement may go up to (cells across the stop since LV #936); LensVisualizer's `MTF_DEFAULT_GRID_CAP` without it, read at run time (256 since #936). It is what `sampling.lvGridCap` of a run is for |
 
 | Of the answer | Is, in LensVisualizer's result |
 |---|---|
 | a field's `fieldAngleDeg`, `imageHeightMm`, curves | `fieldAngleDeg`, `imageHeightMm` (the reference chief ray's landing on the analysed plane), `sagittal`, `tangential` |
 | `status` | `ok` for `converged`; `unconverged`; `unavailable`, with NaN curves and LensVisualizer's `reason` (`outside-modeled-field`, `vignetted`, `chief-ray-failed`, `empty-pupil`, `trace-failed`) |
-| `sampling` | `gridSize`, the grid the field's refinement ended at; `validRays`, `blockedRays`, `failedRays`, summed over the lines; `unknownFluxFraction`; and, where it has them, `maxDelta` and `convergedThroughLpMm` |
+| `sampling` | `gridSize`, the grid the field's refinement ended at (cells across the stop's diameter since LV #936); `validRays`, `blockedRays`, `failedRays`, `unaimedRays` and `unresolvedInBeamRays` (the last two since #936), summed over the lines; `unknownFluxFraction`; and, where it has them, `maxDelta` and `convergedThroughLpMm` |
 | `method` | `name` is LensVisualizer's (`diffraction`, `geometric`); `params` hold the request as it was made (`spectrum`, `focus`, `maxGridSize`, both radii) and the height the fractions are of (`referenceHeightMm`, `fieldBasis`) |
 | `focus` | `mode` and `appliedShiftMm` of its focus record: `design`, or `best-axial` with its shift, positive away from the lens |
-| `aperture` | `tracedFNumber`, and `limitingSurfaceIndex` from `limitingSurfaceLabel`: the stop's index where LensVisualizer says the iris limits the beam |
+| `aperture` | since LV #936 no traced f-number (its MTF traces none); where the axial marginal ray is vignetted (`axialVignetting`) `axialVignettingSurfaceIndex`, the index of the surface its label names, and `axialVignettingBeforeStop`, 1 before the stop and 0 after it; empty otherwise |
 | `lines` | the lines of its support record |
 | `notes` | what it says of a field in words (`message` of a field that is not converged, and its `notes`), each prefixed with the field |
 
@@ -550,7 +551,7 @@ radius, the lines and the grid cap of the request (`lvBestAxialFocus`) and holds
 | any other plane | either | nothing | `unsupported`, `image-plane.shifted` |
 
 The check is of the request, not of the run's words: a case at the best focus of a grid cap of 32 is at no best
-focus of a request capped at 128, and the same plane asked for as a shift by its number is the same case and is
+focus of a request capped at 256, and the same plane asked for as a shift by its number is the same case and is
 answered. Should LensVisualizer's result then be of another plane than the case's, the engine fails
 (`engine-failure`) and gives no answer.
 
@@ -564,29 +565,31 @@ the comparator's: every value is LensVisualizer's own when the engine runs.
 
 | Of the request | Is, in LensVisualizer |
 |---|---|
-| `method`, `focus`, `maxGridSize` | `DEFAULT_MTF_PREFERENCES` (`src/utils/state/mtfPreferences.ts`): today `diffraction`, `best-axial` and 128 |
+| `method`, `focus`, `maxGridSize` | `DEFAULT_MTF_PREFERENCES` (`src/utils/state/mtfPreferences.ts`): today `diffraction`, `best-axial` and 256 (128 before LV #936) |
 | `spectrum` | `resolveMtfSpectrum(state, preferences.spectrum).spectrum`: the preferred spectrum, today `photopic`, or the reference line for a lens without the glass data. Its note, when it has one, is the first of the answer's `notes` |
 | `fieldFractions` | `mtfFieldFractions(preferences.fieldStepPercent)`: today the eleven fractions i/10 |
 | frequencies | none are named, so LensVisualizer computes its `MTF_FREQUENCIES`: today 0 to 100 cycles/mm in steps of 2. The tab draws `preferences.frequencies` of them, today 10 and 30 |
-| `stopSemiDiameterMm` | the hook's `currentPhysStopSD`, `(wideOpenStopAtZoom × fopenAtZoom) / fNumber`, with `fNumber` that of the aperture slider at wide open, `fNumberAtStopdown(0, zoomT, L)` |
-| `pupilSemiDiameterMm` | the hook's `currentEPSD`, `(baseEPSD × fopenAtZoom) / fNumber`, with `baseEPSD` the entrance pupil of the wide-open iris, `entrancePupilAtState(wideOpenStopAtZoom, focusT, zoomT, L, fieldGeometry, 0).epSD`, found with the hook's analysis field geometry |
+| `stopSemiDiameterMm` | the hook's `currentPhysStopSD`, since LV #933 `stopSemiDiameterForFNumber(fNumber, zoomT, L)`, the one stop rule (the paraxial entrance pupil EFL / N, capped at the iris wide open; an authored stop schedule or a fixed iris as LensVisualizer has them), with `fNumber` that of the aperture slider at wide open, `fNumberAtStopdown(0, zoomT, L)`: wide open the iris of the prepared state, to the bit |
+| `pupilSemiDiameterMm` | the hook's `currentEPSD`, `entrancePupilAtState(currentPhysStopSD, focusT, zoomT, L, fieldGeometry, 0).epSD`, the paraxial entrance pupil of that stop, found with the hook's analysis field geometry; the aimed launch's pupil radius since #936 |
 | `movementActive` | false |
 
-The tab also makes a second request, its **f/8 comparison**: the same options with both radii multiplied by
-`fNumber / 8`. It makes it only for a lens that is faster than f/7.95 wide open and stops down to f/8. For any
-other lens the radii that scaling gives are still a case, and the answer to it is `unsupported`
-(`aperture.f8-comparison`), with one exception that no case can tell apart: a lens that is f/8 wide open is scaled
-by 8 / 8, so its comparison is its wide-open case, and that is what is answered (`view` `wide-open`, `fNumber` 8).
+The tab also makes a second request, its **f/8 comparison**: since LV #933 the stop of the one rule at f/8,
+`stopSemiDiameterForFNumber(8, zoomT, L)` (the slider's f/8 stop to the bit), and the wide-open request's pupil
+scaled by the two stops, `(currentEPSD × stop) / currentPhysStopSD`. It makes it only for a lens that is faster
+than f/7.95 wide open and stops down to f/8. For any other lens the radii are still a case, and the answer to it
+is `unsupported` (`aperture.f8-comparison`), with one exception that no case can tell apart: for a lens that is f/8
+or slower wide open the rule's f/8 stop is its wide-open stop, so its comparison is its wide-open case, and that is
+what is answered (`view` `wide-open`).
 
 - **The spec** of the profile states the frequencies LensVisualizer computes, the tab's fractions, its method and
   its focus (`design`, or `engine-best` for either of LensVisualizer's other modes), and names the profile
   (`lvTabSpec`). `lv` builds the tab's request again from the case and answers `bad-spec` when the spec states
   anything else.
 - **The case says which of the two requests.** Its stop radius is the tab's wide-open radius, or that of the
-  tab's f/8 comparison, to the bit; with any other the profile is not about the case (`bad-spec`). The tab's
-  wide-open radius is a product divided by one of its factors, which is not always the other factor again: on some
-  lenses it lies one unit in the last place from the iris of the prepared state, and the case of the profile is
-  then not the case a run exports for `wide-open`. `lvrtc mtf` builds the case of the profile
+  tab's f/8 comparison, to the bit; with any other the profile is not about the case (`bad-spec`). Since LV #933 the
+  tab's wide-open radius is the iris of the prepared state to the bit, so the case of the profile is the case a run
+  exports for `wide-open` on the tab's lines; its f/8 radius is the case of `{ kind: "f-number", value: 8 }` and of
+  `lv-f8-comparison` alike. `lvrtc mtf` builds the case of the profile
   (`src/engines/lv/tabProfile.ts`).
 - **The lines of the case are the spectrum the tab resolves.** A case on other lines is not what the tab traces
   (`bad-spec`, with the lines to export it on).
@@ -623,7 +626,7 @@ Where `lv` hands the request to `computeMtf`, `replay` replays the sampling (`re
 | the ladder | `MTF_GRID_LADDER` up to the request's `maxGridSize`, restated from `computeMtfSteps` |
 | the image plane | `state.imgZ` plus the focus's applied shift, restated likewise |
 | a field's launch and footprint | LensVisualizer's `prepareMtfFieldLaunch` and `findMtfFieldFootprint`; a field without the one is `chief-ray-failed`, without the other `vignetted` |
-| a grid of a field | every line traced by LensVisualizer's `traceMtfBundle` over the footprint. The first line's chief ray, traced with no aperture checked, is the reference of every line. The counts add up over the lines. Fewer rays at a line than `MTF_MIN_RAYS`, or no flux, is `empty-pupil`, which a finer grid may mend; too much unresolved flux, by LensVisualizer's own `assessUnresolvedFlux`, is `trace-failed`. Restated from `fieldAtGrid` |
+| a grid of a field | every line traced by LensVisualizer's own bundle (since LV #936): on the real stop `traceMtfStopBundle`, its aimed stop lattice seeded with the line's lattice of the grid before; for a field launched from the bounding sphere `traceMtfLaunchPlaneBundle` over the footprint, with LensVisualizer's note. The first line's chief ray, traced with no aperture checked, is the reference of every line. The counts add up over the lines, the unaimed and the unresolved samples beside the beam included. A line no ray reaches is dark and adds no curve; every line dark is `vignetted`, some dark, fewer rays at a line than `MTF_MIN_RAYS`, or no flux, `empty-pupil`; too much unresolved flux of the beam, by LensVisualizer's own `assessUnresolvedFlux` with the in-beam weight, is `trace-failed`; each asks for a finer grid. Restated from `fieldAtGrid` |
 | widening | a grid whose rays reach the guard band of the footprint is traced again over LensVisualizer's `expandMtfFootprint` of it, at most `MTF_MAX_FOOTPRINT_EXPANSIONS` times for a field over all its grids. Restated from `traceField` |
 | the walk through the ladder | LensVisualizer's own `refineMtfField`, on the replay's curves: which grids are traced, and whether a field is converged, are decided by LensVisualizer's code |
 | the curves | the comparator's `polychromaticOtf` (`src/estimators/geometricOtf.ts`) on the landings and weights of the bundles, about the reference: the one thing that is not LensVisualizer's |
@@ -631,7 +634,7 @@ Where `lv` hands the request to `computeMtf`, `replay` replays the sampling (`re
 Every restated line has a source canary (`test/integration/lv/canaries.test.ts`). The answer has the form `lv`
 gives LensVisualizer's own result, member for member, so the two can be held to each other: a field's status,
 reason, angle and image height; under `sampling` the same names (`gridSize`, `validRays`, `blockedRays`,
-`failedRays`, `unknownFluxFraction`, `maxDelta`, `convergedThroughLpMm`) and two of its own, `gridSizesTraced` and
+`failedRays`, `unaimedRays`, `unresolvedInBeamRays`, `unknownFluxFraction`, `maxDelta`, `convergedThroughLpMm`) and two of its own, `gridSizesTraced` and
 `footprintExpansions`; `method.name` is `replay-geometric`, and `method.params` hold the request and the `ladder`.
 A value the rounding of a modulus left above 1 is written as 1, the range the contract gives an MTF. A field the
 estimator has no value for is `unavailable` with the reason `estimator-<why>`
@@ -681,10 +684,10 @@ It answers **`vignetting.native`** at any line of the case:
 
 | Step | Is |
 |---|---|
-| the rays of a field | LensVisualizer's launch lattice over the beam it finds for the field (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets)), at `bundleGrid` cells across and at twice as many, at the line, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: rung `r11b` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
+| the rays of a field | LensVisualizer's aimed lattice on the real stop of the field at the line (`lvFieldRaySets`, the generator of the run's [ray sets](#ray-sets), LV #936), at `bundleGrid` cells across and at twice as many, a field's lattices made once whatever line is asked. `bundleGrid` is the engine option of that name: rung `r11b` hands it twice a run's `sampling.bundleGrid`, where the run states one, so the engine's coarser lattice is never the run's own; 64 without it (`LV_FLUX_DEFAULT_GRID`, twice the run's default of 32) |
 | the trace | LensVisualizer's own, as `lv` answers [`rays.trace`](#raystrace) (`answerLvRays`): the rays taken are the ones it brings to the image |
-| `geometricTransmission` | the area of the cells taken on the launch plane, over the axis's (`launchArea`), on the finer lattice |
-| `relativeIllumination` | the flux of the lit cells into the image, weight times the area each covers in the optical direction cosines `n' (L, M)` of the image space, over the axis's (`cosineFlux`), on the finer lattice: the projected solid angle of the exit pupil seen from the image point, with no law of the field angle |
+| `geometricTransmission` | the share of the finer lattice's samples of the stop (the cells LensVisualizer has a ray for, but those an engine failed) that reach the image, absolute, as LensVisualizer's tab takes it since #931; a lattice on the launch plane has none, and its field is unavailable (`launch-plane-lattice`) |
+| `relativeIllumination` | the flux of the lit cells into the image, weight times the area each covers in the optical direction cosines `n' (L, M)` of its ray's own exit direction, over the axis's (`cosineFlux`), on the finer lattice: the projected solid angle of the exit pupil, Rimmer's method without the tab's reference-sphere referral, with no law of the field angle |
 | `chiefLandingMm` | the y at which the finer lattice's chief ray lands on the image plane of the case |
 | a field's `status` | `ok` where both figures moved by no more than 0.005 on the axis, 0.01 off it, from the coarser lattice and no lit cell lies on the finer lattice's outermost rows and columns; `unconverged`, with `not-converged`, `convergence-unknown` (the coarser has no figures) or `lattice-edge-lit` joined by `+`; `unavailable`, with LensVisualizer's code or the estimator's reason, where the field or the axis has no lattice or no figures |
 
@@ -2052,14 +2055,15 @@ ones its MTF samples a pupil with:
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | its MTF options with the stop radius of the case and, as the seed of the footprint scan, the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`, `src/engines/lv/tabRequest.ts`; see [the tab's request](#the-request-of-the-mtf-tab)); its support record (`assessMtfSupport`) with the lines of the case, so that everything below is found at the case's reference line with LensVisualizer's indices for it |
+| request | its MTF options with the stop radius of the case and, as the aimed launch's pupil radius (the seed of a launch-plane footprint), the pupil radius the hook of its MTF tab hands over for that stop radius (`lvPupilSeed`, `src/engines/lv/tabRequest.ts`; see [the tab's request](#the-request-of-the-mtf-tab)); its support record (`assessMtfSupport`) with the lines of the case, so that everything below is found at the case's reference line with LensVisualizer's indices for it |
 | fields, as fractions | the field axis `resolveMtfFieldGeometry(state, mtfModeledHalfField(state), mtfChiefHeight(…), { reference: mtfChiefHeight(…, false), beam: mtfBeamHeight(…) })`, then `resolveMtfFieldTargets`: the chief-ray angle of each fraction of LensVisualizer's reference image height, as its MTF resolves it. That solved angle is the field of the set |
 | fields, as angles | taken as given |
-| chief ray and beam | `prepareMtfFieldLaunch`, `findMtfFieldFootprint` |
-| lattice | `mtfLaunchGrid(footprint, bundleGrid)`: square cells, an even number of columns |
-| rays | every cell, the ones an aperture will stop included and none mirrored: the cell of row r and column c is `mtfLaunchRay(launch, x0 + (c + 0.5) step, y0 + (r + 0.5) step)`, which is where LensVisualizer's own bundle launches it; then the chief ray, `mtfLaunchRay(launch, 0, 0)`, which is no cell of the lattice, as the last ray, with its index under `groups.chiefIndex` |
-| weights | LensVisualizer's weight of a pupil sample: 1 in a collimated bundle and `(chief distance / ray distance)³` from the object point of a certified finite conjugate, times its bulk transmission where a glass of the lens absorbs, which it states as the weight of `mtfImagePoint` at that line. The chief ray weighs 0 |
-| lines | the same rays at every line, as LensVisualizer finds a field's chief ray and footprint once, at the reference line; only the weights are a line's |
+| chief ray and launch | `prepareMtfFieldLaunch`; since LV #936 its aimed launch (`launch.aim`) for every field its MTF aims at the real stop |
+| lattice, on the stop | since LV #936 `aimMtfStopLattice` of the line at `bundleGrid` cells across the stop's diameter (cells whose centre lies in the stop's disc, at `(2k + 1 − n) / n` of its radius); the set states the square of `bundleGrid` × `bundleGrid` cells of side `2 R / bundleGrid` on the stop under `groups.lattice` |
+| rays, on the stop | the cell of row r and column c is ray `r · bundleGrid + c`: the aimed ray LensVisualizer returns through that point of the stop, or, where a clear aperture or a total reflection ahead of the stop blocks the way, the blocking ray it returns, kept verbatim and none mirrored. A cell LensVisualizer has no ray for (its centre outside the disc, or not aimed) is **vacant**: it holds the field's chief ray at weight 0, LensVisualizer's own ray, so nothing is fabricated; it carries no flux, as in LensVisualizer's sums. Then the chief ray, the line's aimed stop-centre ray (or `mtfLaunchRay(launch, 0, 0)` where none was aimed), as the last ray, with its index under `groups.chiefIndex` |
+| lattice and rays, on the launch plane | a field launched from LensVisualizer's bounding sphere, which its stop lattice does not cover: `findMtfFieldFootprint`, `mtfLaunchGrid(footprint, bundleGrid)`, the cell of row r and column c `mtfLaunchRay(launch, x0 + (c + 0.5) step, y0 + (r + 0.5) step)`, then the chief ray `mtfLaunchRay(launch, 0, 0)` |
+| weights | on the stop 1 for a cell LensVisualizer aimed (its uniform amplitude on the stop), 0 for a vacant one; on the launch plane 1 in a collimated bundle and `(chief distance / ray distance)³` from the object point of a certified finite conjugate; each times its bulk transmission where a glass of the lens absorbs, which it states as the weight of `mtfImagePoint` at that line. The chief ray weighs 0 |
+| lines | on the stop each line's own lattice, as LensVisualizer aims each line (so a set's rays are of its line); on the launch plane the same rays at every line, only the weights a line's |
 
 A field without rays has LensVisualizer's own reason as its code: `outside-modeled-field` for an image height
 beyond the modeled edge, `chief-ray-failed` where it finds no chief ray, `vignetted` where no ray of the field
@@ -2067,13 +2071,16 @@ reaches the image. LensVisualizer launches from a plane 10 mm or more in front o
 rim, which is in front of the surface as the contract asks; the sets are checked for it all the same, and a field
 that broke it would be `launch-behind-first-surface`. Where its MTF gate does not pass for the state at all (a
 fisheye projection, an annular aperture, an unverified scale), there is no launch of its own to take, and the
-gate's reason is the one problem of every field. LensVisualizer's `traceMtfBundle` traces half the columns and
-mirrors the rest; the sets hold every cell as a ray of its own, and `lv` traces each. Two things `traceMtfBundle`
-and `computeMtfSteps` do inline, and export no function for, are restated: the lattice point and weight of a cell,
-and the assembly of the field axis.
+gate's reason is the one problem of every field. LensVisualizer traces one half of a symmetric pupil and mirrors
+it; the sets hold every cell as a ray of its own, and `lv` traces each. What `traceMtfLattice`,
+`traceMtfLaunchPlaneBundle` and `computeMtfSteps` do inline, and export no function for, is restated: the chief ray
+a line's bundle refers to, the weight of a cell, the launch point of a launch-plane cell, and the assembly of the
+field axis.
 Tests hold both to LensVisualizer, the rays to those of its own bundle bit for bit and the source lines to their
-text. The seed is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays of a
-set are the tab's own launch rays at that grid, to the bit.
+text. The pupil radius is the one LensVisualizer's MTF tab asks with: for a case whose stop is the tab's, the rays
+of a set are the tab's own launch rays at that grid, to the bit. A cell of weight 0 is dark to the wave estimator
+(checked as a taken ray, never in a sum), so the stop lattice is a regular lattice of cells on the stop for it,
+and its Jacobian of cells to cosines holds as on any lattice.
 
 #### Spot sets and rung R7a
 
@@ -2084,19 +2091,21 @@ exactly when a rung that needs them (`RungDefinition.needsSpotRaySets`: `r7a`, `
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | the analysis drawer's: the prepared state, the hook's pupil radius for the case's stop radius (`lvPupilSeed`), the stop radius of the case, the hook's field geometry, the quality "settled", whose sampling is every family default |
+| request | the analysis drawer's (`lvSpotRequest`): the prepared state, the hook's pupil radius for the case's stop radius (`lvDrawerPupil`; LensVisualizer's aimed launch takes it for the scale of its probes), the stop radius `R` of the case, the hook's field geometry, the quality "settled", whose sampling is every family default |
 | patterns | the coma tab's point cloud (`COMA_PREVIEW_CIRCULAR_PUPIL_RING_SAMPLES` at `COMA_PREVIEW_FIELD_FRACTIONS`), its tangential and sagittal fans of `MERIDIONAL_COMA_SAMPLE_COUNT` samples (made odd) at the lens's authored `offAxisFieldFrac`, and the bokeh tab's tiles (`BOKEH_CIRCULAR_PUPIL_RING_SAMPLES` at `BOKEH_PREVIEW_FIELD_FRACTIONS`), in that order. Fractions are of the half-field angle of the state |
 | field | `computeOffAxisFieldGeometry(state, fraction, fieldGeometry)`: the slope `uField` of the field and the height `yChief` at which its chief ray crosses the first vertex plane |
-| rays | every sample of the pattern (`sampleCircularPupil`, `sampleOrthogonalPupilFan`), the ones an aperture stops included, crossing the first vertex plane at `(xFraction × r, yChief + yFraction × r)` with `r` the pupil radius, collimated along `(0, uField, 1)` made a unit vector (`directionFromSkewSlope`), and started `rayLead` ahead of that plane as LensVisualizer's skew launch starts them; then the chief ray, `(0, yChief)`, as the last ray, with its index under `groups.chiefIndex`. `groups.field.angleDeg` is LensVisualizer's angle of the fraction |
-| weights | a point of the cloud its area weight (`1/N`), a fan's sample 1, a ray of a tile its area weight times LensVisualizer's bulk transmission at the line (`lvRayWeights`); the chief ray 0 |
+| rays | since LensVisualizer #927, every sample of the pattern (`sampleCircularPupil`, `sampleOrthogonalPupilFan`) as LensVisualizer's shared aimed launch returns it (`prepareAimedPupilLaunch` of the field): the ray from the field's object point that crosses the real stop at `(xFraction × R, yFraction × R)`, collimated along the field's slope, kept verbatim; a sample a clear aperture or a total reflection ahead of the stop blocks is LensVisualizer's blocking ray, which every engine stops; a sample it could not aim, which it never traces, holds the chief ray at weight 0; then the chief ray, the launch's stop-centre ray, as the last ray, with its index under `groups.chiefIndex`. `groups.field.angleDeg` is LensVisualizer's angle of the fraction |
+| weights | a point of the cloud its area weight (`1/N`), a fan's sample 1, a ray of a tile its area weight times LensVisualizer's bulk transmission at the line (`lvRayWeights`); an unaimed sample and the chief ray 0 |
 | lines | the same rays at every line of the case |
 
 A fisheye field LensVisualizer launches from a bounding sphere (`lv-vector-launch`), a field it has no launch for
-(`lv-no-launch`), a coma fan on the axis (`lv-no-fan-on-axis`) and rays that would not start in front of the first
-surface (`launch-behind-first-surface`) are coded problems of that field. A folded case (`folded-path`) and a case
+(`lv-no-launch`) or no aimed stop-centre ray of (`lv-chief-unaimed`: its tabs then draw nothing of the field), a coma
+fan on the axis (`lv-no-fan-on-axis`) and rays that would not start in front of the first surface
+(`launch-behind-first-surface`) are coded problems of that field. A folded case (`folded-path`) and a case
 whose object is not at infinity (`object-not-at-infinity`) have no spot sets: LensVisualizer's tabs launch collimated
 rays at every focus, and they are compared at infinity focus. Every restated line has a source canary, and the sets,
-traced as the tabs trace them, give the tabs' point cloud, fans and tiles to the bit
+traced as the tabs trace them (`prepareAimedPupilTrace`: every aperture checked, the stop at the launch's clip radius,
+`R` plus the aim's tolerance of `1e-7 R`), give the tabs' point cloud, fans and tiles to the bit
 (`test/integration/lv/spotRays.test.ts`).
 
 **Rung R7a** asks one `rays.trace` request of each spot set and compares each pair of answers with the comparator's
@@ -2117,16 +2126,18 @@ manifest records them under `runs[].axialRaySets`, sets and problems as above, e
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | the analysis drawer's, as for the spot sets: the hook's pupil radius `r` for the case's stop radius |
+| request | the analysis drawer's, as for the spot sets: the stop radius `R` of the case |
 | zones | of spherical aberration the near-axis zone (`NEAR_AXIS_REAL_FRAC`), the marginal candidates in the order tried (`MARGINAL_PUPIL_FRACTIONS`) and the profile (`PROFILE_FRACS`); of axial colour its candidates (`DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS`, each once, clamped, above 0) |
-| rays | two sets: the profile's zones, and the near-axis zone, the marginal candidates and the colour candidates not among them, each zone once; each zone `f` the ray launched at the height `f × r` and its mirror image at `-f × r`, in that order, on the meridian, parallel to the axis (`(0, 0, 1)`), started `rayLead` ahead of the first vertex plane as LensVisualizer's meridional launch starts it. Weight 1; `groups.field.angleDeg` 0; no chief ray |
-| lines | the same rays at every line of the case, as the axial-colour section traces the same heights at each channel |
+| rays | since LensVisualizer #927 a zone `f` is the ray LensVisualizer's shared aimed launch returns for the axial object (`prepareAimedPupilLaunch` with `{ uField: 0, yChief: 0 }`, as `prepareAxialZoneLaunch` asks it): the ray parallel to the axis that crosses the real stop at `f × R`, and its mirror image at `-f × R`, in that order, kept verbatim (on the axis the second is the exact mirror of the first). Three patterns: the profile's zones and the marginal rays (the near-axis zone, then the marginal candidates in the order tried), aimed at the authored indices; the colour candidates, aimed at a chromatic channel's own indices, as the axial-colour section aims each channel. Weight 1; `groups.field.angleDeg` 0; no chief ray |
+| lines | the profile and the marginal rays at every line of the case, the same rays at each; the colour at each line that is a chromatic channel's (`lvChannelLines`), aimed at that channel; since LensVisualizer #930 the section chooses its zone from all four channels, R, G, B and V, whatever lines a case has |
 
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a pupil radius not
-above 0 (`no-pupil`) and rays that would not start in front of the first surface (`launch-behind-first-surface`) have
-no axial sets. Every restated line has a source canary, and the sets, traced as the sections trace them (the authored
-indices, or a channel's), give the sections' intercepts, best focus, RMS, profile and channel foci to the bit
-(`test/integration/lv/axialRays.test.ts`).
+above 0 (`no-pupil`), a launch without a stop (`lv-no-launch`) and rays that would not start in front of the first
+surface (`launch-behind-first-surface`) have no axial sets. A zone LensVisualizer aims no ray at is left out of its set
+(`lv-zone-unaimed`), and a lens that mixes d-line and e-line indices has no colour set (`lv-mixed-reference`). Every
+restated line has a source canary, and the sets, traced as the sections trace them (`prepareAimedPupilTrace`, the
+authored indices or a channel's), give the sections' intercepts, best focus, RMS, profile, colour zone and channel foci
+to the bit (`test/integration/lv/axialRays.test.ts`, the colour of a run whose lines are the four channels).
 
 **Rung R8a** asks one `rays.trace` request of each axial set and compares each pair of answers with the comparator's
 axial estimator (`src/estimators/axialIntercept.ts`), on the rays both answers brought to the image: where each ray's
@@ -2196,24 +2207,29 @@ field-curve and astigmatism sections (aberrations tab), and no part of a run's r
 has them (`src/engines/lv/curvatureRaySets.ts`, the fields in `curvatureFields.ts`); the manifest records them under
 `runs[].curvatureRaySets`, sets and problems as above, exactly when a rung that needs them
 (`RungDefinition.needsCurvatureRaySets`: `r10a`, `r10b`) was run. A curvature set is a series of fields, each a block
-of consecutive rays launched along one direction, its chief ray last; every other ray of a block starts beside the
-chief ray, offset along y alone (a ray of the field's tangential fan) or along x alone (of its sagittal fan), and one
-that starts where the chief ray starts (the centre of a fan) is in neither. A spec states no groups: the blocks are read
-from the launches.
+of consecutive rays launched along one direction, its chief ray last, and before it as many rays of the field's
+tangential fan as of its sagittal fan, the tangential half first. A ray of the tangential half starts on the chief
+ray's x and z, a ray of the sagittal half off its x, whatever its y (since LensVisualizer #927 a sagittal ray aimed at
+its point of the real stop starts a little off the chief ray's height), and on its z; a ray that starts where the
+chief ray starts (the centre of a fan, a sample held by the chief ray) may stand in either half and is in neither fan.
+A spec states no groups: the blocks are read from the launches, and a block of any other layout is not comparable.
 
 | | Is, in LensVisualizer |
 |---|---|
 | request | the analysis drawer's, as for the chief sets |
 | fields | `FIELD_CURVATURE_FIELD_FRACTIONS` and `FIELD_CURVATURE_CURVE_FIELD_FRACTIONS` of the half field, each fraction once, ascending (a fraction of both lists is one field, to the bit); the launch of each is `computeOffAxisFieldGeometryScalar`, the solved chief ray's height and the field's slope, never a bounding sphere's |
 | `parabasal` | of each field, the four parabasal rays of `computeStandardizedFieldFocus` (tangential at `-p`, `+p`, sagittal at `-p`, `+p` of the pupil, `p = min(0.02, max(1e-4, 0.01 / EPSD))`: 0.01 mm on the first vertex plane), then the chief ray |
-| `real-ray` | of each field, the tangential and the sagittal real-ray fan of `computeDiagnosticFieldFocus` (`sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`, each with its centre sample), then the chief ray |
-| launches | a ray beside the chief ray crosses the first vertex plane at `(x × EPSD, yChief + y × EPSD)` with the slopes `(0, uField)`, started as the skew launch of the spot sets; weight 1 |
+| `real-ray` | of each field, the tangential and the sagittal real-ray fan of `computeDiagnosticFieldFocus` (`sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`, each with its centre sample), each as LensVisualizer's shared aimed launch returns it (LV #927: the ray through `(x × R, y × R)` of the real stop, kept verbatim, an unaimed sample the chief ray at weight 0), then the launch's stop-centre ray |
+| launches | a parabasal ray crosses the first vertex plane at `(x × EPSD, yChief + y × EPSD)` beside the chief ray `(0, yChief)` with the slopes `(0, uField)`, started as the skew launch of the spot sets (LensVisualizer keeps its parabasal pencil about the chief ray's launch, 0.01 mm across, the one exception to aiming); weight 1 |
 | lines | the same rays at every line of the case, as the chromatic field curves trace the same rays at each channel |
 
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
 half field (`no-half-field`) and one without a pupil (`no-pupil`) have no curvature sets and no `curvature.native`
 ask. A field without a launch (`lv-no-launch`) or whose rays would not start in front of the first surface
-(`launch-behind-first-surface`) is a coded problem of that field, and no field of the ask (`curvatureFields.ts` decides
+(`launch-behind-first-surface`) is a coded problem of that field, and no field of the ask; a field whose real-ray fans
+have no aimed stop-centre ray (`lv-chief-unaimed`), two different ones (`lv-chief-differs`), or a fan ray that does not
+start on (tangential) or off (sagittal) the chief ray's meridian (`lv-fan-off-meridian`) keeps its parabasal block and
+has no real-ray block (`curvatureFields.ts` decides
 the fields of the sets, the ask and `lv`'s answer alike). The sets state the rays of every field with a launch:
 LensVisualizer traces a field's parabasal rays only once its chief ray passes and its fans only once its parabasal foci
 are found. Every restated line has a source canary, and the sets, traced as the sections trace them, give every field's
@@ -2238,25 +2254,26 @@ curvature set, are not comparable.
 vignetting tab, and no part of a run's ray sets. Only a LensVisualizer lens has them (`src/engines/lv/vignettingRaySets.ts`,
 the tab's setup, fields, beams and mapping in `vignettingFields.ts`); the manifest records them under
 `runs[].vignettingRaySets`, sets and problems as above, exactly when a rung that needs them
-(`RungDefinition.needsVignettingRaySets`: `r11a`, `r11b`) was run. Since LensVisualizer #925 (`5ba17c20c`, Stage 6.6b)
-the tab traces each field's beam in two dimensions; one pattern, the same rays at every line of the case:
+(`RungDefinition.needsVignettingRaySets`: `r11a`, `r11b`) was run. Since LensVisualizer #931 (`4092f6a25`) the tab is
+OpticStudio's two field analyses on one lattice on the real stop a field; one pattern, the same rays at every line of
+the case:
 
 | | Is, in LensVisualizer |
 |---|---|
-| request | the analysis drawer's, as for the chief sets; the tab's MTF options of its two radii and a support record of its own (the d line, the authored indices, no finite conjugate), traced with `mtfTraceOptions` of that line |
-| fields | `computeVignettingCurve`'s: `max(ceil(halfFieldDeg / 3) + 1, 7)` fields at `uniformFieldFraction(i, n)` of the drawer's half field, the axis first; each launched by the MTF's chief-ray launch (`prepareMtfFieldLaunch`), its beam found by `findMtfFieldFootprint` |
-| `beam` | of each field, a set a line: the cells of its lattice of 64 cells across the footprint (`mtfLaunchGrid`) that the tab traces, of each row the columns from the middle on where every surface is mirror-symmetric (`mtfMirrorSymmetric`; every column otherwise), stated as a lattice of their own under `groups.lattice`, each weighing LensVisualizer's bulk transmission along it at the line; right after them the chief rays of the tab's image mapping, weight 0: the field's (`groups.chiefIndex`), then those 0.01° below and above it where the tab launches them; `groups.field` states the field |
+| request | the analysis drawer's, as for the chief sets: the stop radius `R` of the case |
+| fields | `computeVignettingCurve`'s: `max(ceil(halfFieldDeg / 3) + 1, 7)` fields at `uniformFieldFraction(i, n)` of the drawer's half field, the axis first; each of `computeOffAxisFieldGeometry` (none from a bounding sphere) |
+| `beam` | of each field, a set a line: the cells the tab traces of its aimed stop lattice (`prepareAimedStopLattice`, the MTF's, at the authored indices, `BEAM_GRID_CELLS` = 64 cells across the stop's diameter, the cells whose centre is in the unit disc), the `+x` half where every surface is mirror-symmetric about the meridian (`mirrorSymmetricAboutMeridian`; every cell otherwise), stated as the square of those columns under `groups.lattice`, row by row, of side `2R / 64` on the stop; a cell LensVisualizer has no ray for (outside the disc, or unaimed) holds the stop-centre ray at weight 0, a blocked cell its blocking ray; each other cell weighs LensVisualizer's bulk transmission along it at the line; right after the cells the stop-centre ray (`groups.chiefIndex`, weight 0), whose landing LensVisualizer takes for the field's image point; `groups.field` states the field |
 
 A folded case (`folded-path`), a case whose object is not at infinity (`object-not-at-infinity`), a state without a
-half field (`no-half-field`) or without a pupil (`no-pupil`), a state the tab draws no curve of
-(`lv-outside-beam-model`: outside the MTF's beam model; `lv-bounding-sphere-field`: a field launched from a bounding
-sphere), and one whose axis has no beam (`no-axis-beam`) have no vignetting sets and no `vignetting.native` ask. A field
-the tab plots dark (`chief-ray-failed`, `vignetted`) and one whose rays would not start in front of the first surface
-(`launch-behind-first-surface`) is a coded problem of that field, and no field of the sets or the ask
-(`vignettingFields.ts` decides the fields of the sets, the ask and `lv`'s answer alike). A field the tab maps with ray
-tubes traced without aperture checks keeps its set and is named (`lv-tube-mapping`). Every restated line has a source
-canary, and the sets, traced as the tab traces them, give the tab's geometric transmission and relative illumination to
-the bit (`test/integration/lv/vignettingRays.test.ts`).
+half field (`no-half-field`) or a stop (`no-stop`), a state the tab draws no curve of (`lv-outside-beam-model`: outside
+the MTF's beam model; `lv-bounding-sphere-field`: a field launched from a bounding sphere), and one whose axis has no
+lattice (`no-axis-beam`) have no vignetting sets and no `vignetting.native` ask. A field without a launch
+(`no-field-launch`, which the tab draws without figures) or an aimed stop-centre ray (`lv-chief-unaimed`), and one whose
+rays would not start in front of the first surface (`launch-behind-first-surface`), is a coded problem of that field,
+and no field of the sets or the ask (`vignettingFields.ts` decides the fields of the sets, the ask and `lv`'s answer
+alike). Every restated line has a source canary, and the sets, traced as the tab traces them (the stop at the lattice's
+clip radius), are its cells to the bit and give its unvignetted fractions to the bit
+(`test/integration/lv/vignettingRays.test.ts`).
 
 **Rung R11a** asks one `rays.trace` request of each vignetting set and compares the beam sets of one line as one span
 (`spanOf`), every figure of a field being relative to the axis; a set that is no beam (no lattice, or its chief ray not
@@ -2267,7 +2284,8 @@ with R2, the largest flux of a field's cells of `mask.mismatches` (ok in one ans
 rim band nor failed by an engine), over the axis's flux on the rays ok in both, on the launch plane;
 `transmission.rimBandOrFailed`, shown beside it and never judged, the same of the rays ok in one answer only that R2
 counts in neither count (in the rim band, or failed by an engine); `landing.maxAbs` (policy 21) the largest difference,
-along x or y, of the landing of a chief ray of the image mapping ok in both answers. Of the rays ok in both answers
+along x or y, of the landing of the chief rays after the cells ok in both answers (since LensVisualizer #931 the
+stop-centre ray alone, the image point of the tab's reference sphere). Of the rays ok in both answers
 every count and sum is the same bits in both, the request's weights in the same order, so both transmissions are of the
 disagreeing rays alone and 0 where they agree; `illumination.maxAbs` and `landing.maxAbs` are the rung's figures of the
 traced numbers, the exit directions and the landings. A span's members are taken in an order of their own (the axis
@@ -2279,9 +2297,10 @@ reason is named in a note.
 
 Version 1, added at Stage 6.3, changes no existing quantity, contract version or identity. It is an engine's own
 figures of the beam along the axis of a system whose object is at infinity, from rays launched parallel to the axis
-at fractions of the engine's own pupil radius at the first line asked, the same heights at every line: what
-LensVisualizer's spherical-aberration and axial-colour sections present, and what optiland traces with its own pupil
-and paraxial focus at each line. Nothing of an answer is gated: rung R8b records it.
+at fractions of the engine's own pupil radius (`pupilRadiusMm` states it): what LensVisualizer's spherical-aberration
+and axial-colour sections present (since LensVisualizer #927 each zone aimed at its fraction of the real stop's radius,
+each channel's at its own indices), and what optiland traces with its own pupil (its paraxial entrance pupil, the same
+heights at every line) and paraxial focus at each line. Nothing of an answer is gated: rung R8b records it.
 
 The spec is one of two kinds:
 
@@ -2445,7 +2464,7 @@ repeats the sorting from the values a comparison records.
 
 Version 1, added at Stage 6.6, changes no existing quantity, contract version or identity. It is an engine's own
 vignetting and relative illumination of a system whose object is at infinity, at field angles in object space,
-degrees, in the meridional plane (an object toward +y), each relative to the axis: how much of a field's beam gets
+degrees, in the meridional plane (an object toward +y), the relative illumination relative to the axis: how much of a field's beam gets
 through every aperture, and how bright its image is. What LensVisualizer's vignetting tab presents, and what the engine
 `flux` estimates of LensVisualizer's lattices. Nothing of an answer is gated: rung R11b records it.
 
@@ -2459,7 +2478,7 @@ through every aperture, and how bright its image is. What LensVisualizer's vigne
 |---|---|
 | `fields[]` | one per asked line and field: the lines in the order asked, and within a line the angles in order: `line`, `wavelengthNm` traced, `fieldAngleDeg` traced, `status` `ok`, `unconverged` or `unavailable`, `reason` (always for a field that is not `ok`), `chiefLandingMm`, `geometricTransmission`, `relativeIllumination`, `sampling` |
 | `chiefLandingMm` | the y at which the field's chief ray lands on the image plane of the case, mm: what identifies the field; null where the engine states none |
-| `geometricTransmission` | how much of the field's beam gets through every aperture, over the axis's, by the engine's own measure, at least 0 (above 1 where the beam is wider than the axis's) |
+| `geometricTransmission` | how much of the field's beam gets through every aperture, by the engine's own measure, at least 0: since LensVisualizer #931 both engines state the share of the field's samples of the real stop that reach the image (OpticStudio's Vignetting Diagram), absolute, at most 1 and below 1 on the axis where an aperture clips its beam |
 | `relativeIllumination` | how bright the field's image is, over the axis's, by the engine's own measure, at least 0; both figures finite for a field that is not `unavailable`, both null for one that is |
 | `sampling` | how the engine sampled the field, and what else it states of it, by names of its own |
 | `method`, `notes` | the engine's name for its method with its settings, and words for people |
@@ -2472,10 +2491,12 @@ vignetting or the relative illumination).
 
 `r11b` asks one `vignetting.native` request (the case source's ask): at the lines of the case LensVisualizer's tab traces
 (its authored reference line; no request of a run of none), at the tab's own field angles, of `lv` and `flux` only, and
-only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (the area on
-the launch plane of the field's beam, traced on a lattice, over the axis's) and `relativeIllumination` (since
-LensVisualizer #925, the beam's flux times the cosine of the field angle over the image area a unit of object solid
-angle covers, over the axis's) as the tab presents them, and the landing on the design plane of LensVisualizer's solved
+only where it is named. `lv` answers from `computeVignettingCurve`: each field's `geometricTransmission` (since
+LensVisualizer #931 its `unvignettedFraction`, the share of the field's stop lattice samples, neither unaimed nor
+failed, that reach the image) and `relativeIllumination` (Rimmer's: n'² times bulk transmission times each transmitted
+cell's area in the direction cosines of its ray referred to the chief ray's image point through a reference sphere about
+it through the state's exit pupil, over the axis's) as the tab presents them, a field the tab has no figure of
+unavailable with the tab's reason (`lv-<reason>`), and the landing on the design plane of LensVisualizer's solved
 chief ray of the field (`chiefRayImageHeightAccurateForRuntimeLens`), on the design plane only and at a line of the
 authored indices only, decided before the tab is asked; a state the tab draws no curve of is every field unavailable
 with the reason. `flux` answers as its
@@ -2486,9 +2507,9 @@ unsupported (no figures), data of other wavelengths, numerical (an answer that d
 `unconverged`); then data where an answer traced the field at indices other than the case's; then R5's landing of the
 chief rays (`chiefLanding.maxAbs`); then method. The rung adds no reason of its own. The figures are
 `chiefLanding.maxAbs`, `geometricTransmission.maxAbs`, `falloff.maxAbs` (of each answer's relative illumination over its
-geometric transmission, of the fields both let light through: the falloff of no vignetting, the tab's energy route
-over its chief rays' image mapping against the traced flux into the image per unit of transmitted area) and `relativeIllumination.maxAbs`, and counts of fields of each
-kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
+geometric transmission, of the fields both let light through: the falloff of no vignetting; since LensVisualizer #931
+two Rimmer integrals, the tab's of directions referred to the image point and `flux`'s of the rays' own exit directions)
+and `relativeIllumination.maxAbs`, and counts of fields of each kind. Policy 20 gives `chiefLanding.maxAbs` a limit of 1e-5 mm, the limit of the sorting, and no figure a band.
 `vignettingFactsOfRecorded` repeats the sorting from the values a comparison records.
 
 ### `summary.native`
@@ -2533,17 +2554,17 @@ and from its aperture control, each restated with a source canary:
 |---|---|
 | `rearFocalZ` | the rear focal point of `computeCardinalElementsFromState`, the construction whose back focus the tab presents |
 | `focalLengthMm` | the tab's "Current EFL", `computeFocusEFL` of the state: at infinity focus the stored focal length of the zoom position, elsewhere `-1 / u'` of the paraxial ray of height 1 |
-| `entrancePupilDiameterMm` | the tab's "Entrance pupil", twice the hook's `currentEPSD`: the stop radius over the height at the stop of a real ray 1e-4 mm from the axis, parallel to it |
-| `stopDiameterMm` | the tab's "Physical stop", twice the hook's `currentPhysStopSD` |
-| `imageSpaceFNumber` | the tab's "Working f/#", `\|currentEFL\| / entrancePupilDiameter` |
-| `paraxialWorkingFNumber` | null: LensVisualizer traces no paraxial marginal ray for an f-number. Its aperture control's "eff. f/", `effectiveFNumber(fNumber, focusT, zoomT, L)` (the marked f-number at infinity, `N (1 + \|m\| / p)` of a thin-lens magnification and the stored pupils elsewhere), is recorded under `sampling.lvThinLensEffectiveFNumber` |
-| `workingFNumber` | null: LensVisualizer traces no real marginal ray for an f-number |
-| `nominalFNumber` | the aperture slider's marked `fNumber` for the case's stop (`lvNominalFNumber`) |
+| `entrancePupilDiameterMm` | the tab's "Entrance pupil", twice the hook's `currentEPSD`: since LV #933 the paraxial entrance pupil of the stop (`entrancePupilAtState`) |
+| `stopDiameterMm` | the tab's "Physical stop", twice the hook's `currentPhysStopSD`: since #933 the stop rule's for the slider's f-number (`stopSemiDiameterForFNumber`), the case's |
+| `imageSpaceFNumber` | the tab's "Image-space f/#" (#933; its "Working f/#" before), EFL over the paraxial entrance pupil |
+| `paraxialWorkingFNumber` | the tab's "Paraxial working f/#" (#933), `1 / (2 n' \|u'\|)` of the paraxial marginal ray through the stop's rim, at infinity focus; null at a finite focus, where LensVisualizer's object is the paraxial conjugate of its image plane and not the case's: its value is then `sampling.lvParaxialWorkingFNumberAtParaxialObject` |
+| `workingFNumber` | the tab's "Working f/#" (#933, `computeWorkingFNumber`), `1 / (2 n' sin θ')` of the real marginal ray aimed at the stop's rim, at infinity focus where LensVisualizer traced it; null at a finite focus (`sampling.lvWorkingFNumberAtParaxialObject`) and where the ray is vignetted (`sampling.lvMarginalRayVignettedSurfaceIndex`, `lvMarginalRayVignettedBeforeStop`) |
+| `nominalFNumber` | the aperture slider's marked `fNumber` for the case's stop (`lvNominalFNumber`: wide open the lens's mark, else the f-number whose stop by the rule is the case's) |
 | `totalTrackMm`, `halfFieldDeg` | the tab's "Total track" and "Half field" (the hook's analysis field geometry: the field whose solved chief ray lands at the image corner, the last field whose chief ray clears every aperture where one clips it short of the corner, or an authored trace field) |
 
 Under `sampling` it states `infinityFocalLengthMm` and `breathingPercent` (the tab's "Infinity EFL" and "Breathing"),
 `focusDistanceM` (its "Focus", where it states one: the authored close-focus distance over the focus position),
-`lvThinLensEffectiveFNumber` (the aperture control's "eff. f/") and `wideOpenNominalEntrancePupilDiameterMm` (twice `epAtZoomClamped`, the stored pupil, focal length over twice the marked
+`wideOpenNominalEntrancePupilDiameterMm` (twice `epAtZoomClamped`, the stored pupil, focal length over twice the marked
 f-number wide open). Every asked line has the same values: they are of the authored indices. Unsupported, decided before
 LensVisualizer is asked anything: a folded path (`path.folded`), a line the case does not have (`line`), a case off the
 prepared state's image plane (`focus.off-design`) and a line whose indices are not the authored ones
@@ -2670,8 +2691,9 @@ allows or an answer states none, then method. The figures, of answers of two met
 difference `SPHA.maxAbs` to `CTR.maxAbs` (mm; one an answer does not state is unmeasured, the engine named);
 `total.maxScaled`, the largest difference of a total of third order over the larger sum of the magnitudes of its
 surfaces' terms in the two answers (the scale of what cancels in it); `surfaces.maxAbs`, the largest difference of one
-surface's sum, with the surface and the sum. Policy 23 states the figures' units and no limit or band (proposals for
-the owner in docs/REFERENCE.md, "Stage 6.8"). `seidelFactsOfRecorded` repeats the sorting from the recorded values.
+surface's sum, with the surface and the sum. Policy 24 (the owner's decision of 2026-10-28) gives `invariant.maxAbs` a
+limit of 3e-14 mm, the limit of the sorting, and `total.maxScaled` a band of 8e-15; the other figures none.
+`seidelFactsOfRecorded` repeats the sorting from the recorded values.
 
 ### `zernike.native`
 
@@ -2744,8 +2766,10 @@ before any difference by R5's sorting: unsupported, data (other wavelengths; lan
 reason `unconverged`), method. The figures, of fields of two methods: `chiefLanding.maxAbs`, `fitCondition.max` (the
 largest condition either answer states of a field both have figures of), `coefficients.maxAbs` (waves, with the field and
 the term), `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, and the counts `fields.compared`,
-`fields.data`, `fields.numerical`, `fields.unavailable`. Policy 23 states the units and no limit or band (proposals for
-the owner in docs/REFERENCE.md, "Stage 6.8"). `zernikeFactsOfRecorded` repeats the sorting from the recorded values.
+`fields.data`, `fields.numerical`, `fields.unavailable`. Policy 24 (the owner's decision of 2026-10-28) gives
+`chiefLanding.maxAbs` a limit of 1e-9 mm and `fitCondition.max` one of 1e6, the limits of the sorting, and bands of
+4e-11 waves to `coefficients.maxAbs`, 2e-16 to `rmsToChief.maxAbs` and 7e-16 to `fitResidualRms.maxAbs`; a pair with a
+field set aside by a limit is ATTENTION, as R5's. `zernikeFactsOfRecorded` repeats the sorting from the recorded values.
 
 ### `wavefront.native`
 
@@ -2938,7 +2962,9 @@ A field:
 - **`aperture` and `sampling`** are recorded, like the `recorded` values of `paraxial.first-order`: listed beside an
   answer and never judged. Two names are agreed, so that whoever reads an answer can find them: `tracedFNumber`,
   the working f-number of the axial beam as the engine traced it, and `limitingSurfaceIndex`, the index, in the
-  surfaces of the case, of the surface that bounds that beam: the stop's own index when the stop does.
+  surfaces of the case, of the surface that bounds that beam: the stop's own index when the stop does. An engine
+  that traces no such beam states neither (`lv` since LensVisualizer #936, whose MTF traces no f-number of its own;
+  it states where the axial marginal ray is vignetted instead, under names of its own).
 
 **Invariants checked in code** (`src/quantities/mtfNative.ts`). A spec's frequencies ascend. In the data, every
 curve has F values, for one F of at least 1; a field that is `unavailable` holds NaN at every frequency and states

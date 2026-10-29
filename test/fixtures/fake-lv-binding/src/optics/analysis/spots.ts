@@ -6,6 +6,7 @@ import { traceSequential } from "../trace/sequentialTrace.js";
 import { projectCoordinateToZ } from "../trace/utils.js";
 import { directionFromSkewSlope } from "../math/vector.js";
 import { prepareRuntimeState } from "../state/runtime.js";
+import { prepareAimedPupilLaunch, prepareAimedPupilTrace } from "./pupils/aimedPupil.js";
 import { transmission } from "./mtf/mtfTracing.js";
 import type { FakeRuntimeLens, FakeState, Vec3 } from "../types.js";
 import type { FakeAnalysisRequest } from "./request.js";
@@ -138,7 +139,11 @@ export function skewImagePlaneIntercept(
   return isFinite(imagePoint.x) && isFinite(imagePoint.y) ? imagePoint : null;
 }
 
-/** One traced bundle of a field: its chief ray's landing and every sample that landed, at a plane. */
+/**
+ * One traced bundle of a field: its chief ray's landing and every sample that landed, at a plane. Since LV #927 every
+ * sample is the fake's aimed launch at its point of the stop (`prepareAimedPupilLaunch`), traced as the launch's own
+ * trace; the chief ray is the launch's stop-centre ray, an unaimed sample is counted and never traced.
+ */
 function bundleOf(
   request: FakeAnalysisRequest,
   fieldFraction: number,
@@ -148,27 +153,23 @@ function bundleOf(
   const state = request.preparedGeometry;
   const geometry = computeOffAxisFieldGeometry(state, fieldFraction, request.fieldGeometry ?? undefined);
   if (geometry === null || "kind" in geometry) return null;
-  const epsd = request.aperture.entrancePupilSemiDiameterMm;
-  const stopSD = request.aperture.stopSemiDiameterMm;
+  const launch = prepareAimedPupilLaunch(request, samples, geometry);
+  if (launch === null || launch.chief.status !== "aimed") return null;
+  const tracer = prepareAimedPupilTrace(state, launch);
   const plane = planeZ ?? geometry.imagePlaneZ;
   const land = (trace: SkewTrace) =>
     skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, plane);
-  const chiefTrace = skewOn(state, 0 * epsd, geometry.yChief + 0 * epsd, 0, geometry.uField, stopSD);
+  const chiefTrace = tracer.skew(launch.chief as never);
   const chief = chiefTrace.clipped ? null : land(chiefTrace);
   if (chief === null) return null;
-  const landed = samples.flatMap((sample) => {
-    const trace = skewOn(
-      state,
-      sample.xFraction * epsd,
-      geometry.yChief + sample.yFraction * epsd,
-      0,
-      geometry.uField,
-      stopSD,
-    );
+  const landed = samples.flatMap((sample, at) => {
+    const ray = launch.rays[at];
+    if (ray.status !== "aimed") return [];
+    const trace = tracer.skew(ray as never);
     const point = trace.clipped ? null : land(trace);
     return point === null ? [] : [{ sample, point, transmission: trace.transmission }];
   });
-  return { geometry, chief, landed, total: samples.length };
+  return { geometry, chief, landed, total: samples.length, unaimed: launch.unaimedCount };
 }
 
 /** The fake's coma tab: its point cloud at its preview fields, and its two fans at the detail field. */
@@ -281,7 +282,8 @@ export function computeBokehFieldFootprint(request: FakeAnalysisRequest, fieldFr
     centroidTangential: ct,
     rmsRadiusMm: rms,
     maxRadiusMm: usable ? Math.max(...points.map((p) => Math.hypot(p.s - cs, p.t - ct))) : 0,
-    transmission: points.length / rings.length,
+    // Transmission is over the rays that have a launch: unaimed ones are left out (LV #927).
+    transmission: points.length / (rings.length - bundle.unaimed),
     usable,
   };
 }

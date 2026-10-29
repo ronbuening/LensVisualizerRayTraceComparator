@@ -202,7 +202,7 @@ test("answers of other patterns, of other fields or of other numbers of fields a
   ]);
 });
 
-test("the policy records every pair: RECORDED whatever the spot and fan figures, ATTENTION past the landing limit", () => {
+test("the policy records every pair: RECORDED whatever the spot figures, ATTENTION past the landing limit", () => {
   const other = rings("optiland-spot-diagram", [
     spotField(0, [1, 1], 2, 0),
     spotField(0.5, [1, 1], 2),
@@ -241,6 +241,35 @@ test("the policy records every pair: RECORDED whatever the spot and fan figures,
   );
   assert.equal(marked.verdict, "ATTENTION");
   assert.equal(marked.metrics.find(({ name }) => name === "fields.data")?.value, 1);
+});
+
+test("policy 24 bands the fans at 9e-10 mm: within it a pair is RECORDED, above it ATTENTION; the spots stay unbanded", () => {
+  // The owner's decision of 2026-10-29: since LensVisualizer #927 a fan's rays are aimed at the real stop as optiland's
+  // are, one definition; the spots (LV's rings against optiland's hexapolar pattern) are two samplings, unbanded.
+  assert.deepEqual(POLICY.metrics["fanError.maxAbs"], { attention: 9e-10, unit: "mm" });
+  assert.deepEqual(POLICY.metrics["spotCentroid.maxAbs"], { unit: "mm" });
+  assert.deepEqual(POLICY.metrics["spotRmsRadius.maxAbs"], { unit: "mm" });
+  const lvFan = fan("lv-coma-tab", fanField([-1 / 4, -1 / 8, 0, 1 / 4, 1 / 2]));
+  const pairOf = (errors: number[]) =>
+    comparePair(
+      { engine: "lv", fingerprint: "a", status: "ok", data: lvFan as unknown as JsonObject },
+      {
+        engine: "optiland",
+        fingerprint: "b",
+        status: "ok",
+        data: fan("optiland-ray-fan", fanField(errors)) as unknown as JsonObject,
+      },
+      POLICY,
+      spotNativeComparator,
+    );
+  // 2^-31 mm (4.7e-10) apart at one sample: within the band.
+  const within = pairOf([-1 / 4, -1 / 8 + 2 ** -31, 0, 1 / 4, 1 / 2]);
+  assert.equal(within.verdict, "RECORDED");
+  assert.equal(within.metrics.find(({ name }) => name === "fanError.maxAbs")?.value, 2 ** -31);
+  // 2^-30 mm (9.3e-10) apart: above it.
+  const above = pairOf([-1 / 4, -1 / 8 + 2 ** -30, 0, 1 / 4, 1 / 2]);
+  assert.equal(above.verdict, "ATTENTION");
+  assert.match(above.reason ?? "", /^fanError\.maxAbs \S+ is outside its attention band/);
 });
 
 test("each answer records its fields, its spot or its fan, its sampling and its line", () => {

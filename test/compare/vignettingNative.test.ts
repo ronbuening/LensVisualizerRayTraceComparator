@@ -52,17 +52,28 @@ function metric(outcome: ComparatorOutcome, name: string): ComputedMetric | unde
   return outcome.metrics.find((each) => each.name === name);
 }
 
-test("the policy gives the landing its limit of 1e-5 mm and no figure a band: it is recorded, and never judged", () => {
-  assert.deepEqual(POLICY.metrics, { [CHIEF_LANDING_METRIC]: { attention: 1e-5, unit: "mm" } });
-  const a = answer([field(0), field(8)]);
-  const b = answer([field(0), field(8, { geometricTransmission: 0.5, relativeIllumination: 0.25 })], "two");
-  const pair = comparePair(
-    { engine: "lv", fingerprint: "a", status: "ok", data: a as unknown as JsonObject },
-    { engine: "flux", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
-    POLICY,
-    vignettingNativeComparator,
-  );
-  assert.equal(pair.verdict, "RECORDED");
+test("policy 24: the landing's limit of 1e-5 mm and a band of 0.01 on the transmission; the illuminations none", () => {
+  // The owner's decision of 2026-10-29: since LensVisualizer #931 the transmission is one definition (the share of the
+  // stop's samples) on two lattices, banded at the lattices' convergence band; the relative illumination and the
+  // falloff are two Rimmer integrals, unbanded.
+  assert.deepEqual(POLICY.metrics, {
+    [CHIEF_LANDING_METRIC]: { attention: 1e-5, unit: "mm" },
+    "geometricTransmission.maxAbs": { attention: 0.01, unit: "1" },
+  });
+  const pairOf = (b: VignettingNativeData) =>
+    comparePair(
+      { engine: "lv", fingerprint: "a", status: "ok", data: answer([field(0), field(8)]) as unknown as JsonObject },
+      { engine: "flux", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      POLICY,
+      vignettingNativeComparator,
+    );
+  // Transmissions 7/8 and 7/8 - 2^-7 (2^-7 = 0.0078 within the band), illuminations 1/2 apart: RECORDED.
+  const within = answer([field(0), field(8, { geometricTransmission: 7 / 8 - 2 ** -7, relativeIllumination: 0.25 })]);
+  assert.equal(pairOf(within).verdict, "RECORDED");
+  // Transmissions 2^-6 = 0.0156 apart, above the band: ATTENTION.
+  const above = pairOf(answer([field(0), field(8, { geometricTransmission: 7 / 8 - 2 ** -6 })]));
+  assert.equal(above.verdict, "ATTENTION");
+  assert.match(above.reason ?? "", /^geometricTransmission\.maxAbs \S+ is outside its attention band/);
 });
 
 test("the three figures: the transmissions, the falloffs of the light that gets through, and the illuminations", () => {
@@ -153,8 +164,32 @@ test("a field neither answer lets light through has no falloff, and the reason s
   assert.equal(metric(outcome, "falloff.maxAbs"), undefined);
   assert.ok(outcome.comparable);
   assert.deepEqual(outcome.unmeasured, [
-    { name: "falloff.maxAbs", reason: "no field of two methods lets light through in both answers" },
+    { name: "falloff.maxAbs", reason: "no field of two methods lets light through in both answers, its axis's too" },
   ]);
+});
+
+test("the falloff is of the transmission relative to the axis's, which since LensVisualizer #931 is absolute", () => {
+  // An axis an aperture clips: 3/4 of its samples get through in one answer, 7/8 in the other. A field at 8 degrees of
+  // the same falloff in both (illumination 1/2 for a transmission of 3/8 against an axis of 3/4, and of 7/16 against
+  // 7/8): relative to its axis each transmits 1/2, so the falloffs are equal and the figure 0, where the absolute
+  // ratios differ.
+  const a = answer([
+    field(0, { geometricTransmission: 3 / 4 }),
+    field(8, { geometricTransmission: 3 / 8, relativeIllumination: 1 / 2 }),
+  ]);
+  const b = answer(
+    [
+      field(0, { geometricTransmission: 7 / 8 }),
+      field(8, { geometricTransmission: 7 / 16, relativeIllumination: 1 / 2 }),
+    ],
+    "two",
+  );
+  const outcome = compared(a, b);
+  assert.equal(metric(outcome, "falloff.maxAbs")!.value, 0);
+  assert.equal(metric(outcome, "geometricTransmission.maxAbs")!.value, 1 / 8);
+  // Each over its own axis: 1/2 / ((3/8) / (3/4)) = 1 and 1/2 / ((7/16) / (7/8)) = 1; the absolute ratios, 4/3 and 8/7,
+  // would differ by 4/21.
+  assert.notEqual(Math.abs(1 / 2 / (3 / 8) - 1 / 2 / (7 / 16)), 0);
 });
 
 test("answers of other fields, lines or angles are not comparable", () => {

@@ -1,12 +1,14 @@
 // The spot sets against the real LensVisualizer: the rays its coma and bokeh tabs launch, as the case source
-// restates them (src/engines/lv/spotRaySets.ts). Each ray of a set is traced by LensVisualizer's exact tracer
-// (`traceEngineRay`, with the tabs' trace options) and carried to the plane as its tabs carry a skew ray; the
-// figures, summed in LensVisualizer's order, are then the tabs' own to the bit: the point cloud's centroid and RMS
-// radius, every sample of the two fans, and every bokeh tile's centroid and RMS radius. A bokeh tile is also held
-// ray by ray to LensVisualizer's own skew trace of its samples (`traceSkewRay`, the adapter's launch): offsets from
-// the comparator's chief ray (`lvBokehChiefLanding`) and weights, the latter on a lens whose glass absorbs, where
-// the weight is not the area alone. `lv`'s answers of all four asks are the tabs' output. Nothing is written.
-// Measured at LV 879c06102 (engine code unchanged to db72a7761).
+// restates them (src/engines/lv/spotRaySets.ts): since LV #927 the shared aimed launch's rays, each through its point of
+// the real stop. Each ray of a set is traced as the tabs trace it (`prepareAimedPupilTrace`: every aperture checked, the
+// stop at the launch's clip radius) and carried to the plane as its tabs carry a skew ray; the figures, summed in
+// LensVisualizer's order over the samples it aimed, are then the tabs' own to the bit: the point cloud's centroid and RMS
+// radius, every sample of the two fans, and every bokeh tile's centroid and RMS radius. A bokeh tile is also held ray by
+// ray to LensVisualizer's own launch of its samples (`prepareAimedPupilLaunch`): each set ray is the launch's, and the
+// tile's offsets from the comparator's chief ray (`lvBokehChiefLanding`) and weights are of it, the latter on a lens
+// whose glass absorbs, where the weight is not the area alone. `lv`'s answers of all four asks are the tabs' output.
+// Nothing is written. Measured at LV 879c06102 (engine code unchanged to db72a7761), and at 607ff23ae (closure
+// f016b35b), whose tabs aim their samples at the real stop.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -45,10 +47,10 @@ function vec(values: Float64Array, ray: number): LvVec3 {
 }
 
 /**
- * Where LensVisualizer's tabs land a ray of a set: traced as a skew ray of its tabs (clear apertures, the stop
- * radius, stop on a clip, the authored indices, a unit direction), its end carried back to the vertex plane of the
- * surface it ended on and its slopes taken as `directionSlopes` takes them (finalizeTraceResult in
- * trace/utils.ts), then on to the plane by `skewImagePlaneIntercept`. Null for a ray that is not "ok".
+ * Where LensVisualizer's tabs land a ray of a set: traced as the tabs trace an aimed launch's rays
+ * (`prepareAimedPupilTrace(...).skew`: clear apertures, the stop at the launch's clip radius, stop on a clip, the
+ * authored indices, a unit direction; its end on the last vertex plane and its slopes), then on to the plane by
+ * `skewImagePlaneIntercept`. Null for a ray that clipped.
  */
 function landing(
   binding: LvBinding,
@@ -59,26 +61,17 @@ function landing(
   planeZ: number,
 ): { x: number; y: number } | null {
   const { api } = binding;
-  const { state, exported } = model;
-  const options = {
-    checkSemiDiameter: true,
-    stopSemiDiameter: exported.conditions.stopSemiDiameter,
-    stopOnClip: true,
-    directionNormalized: true,
-  };
-  const trace = api.traceEngineRay(
-    state,
-    { origin: vec(f8(set, "origins"), ray), direction: vec(f8(set, "directions"), ray) },
-    options,
-  );
-  if (trace.status !== "ok") return null;
-  const [point, direction] = [trace.terminalPoint, trace.terminalDirection];
-  const z = state.z[trace.terminalSurfaceIndex];
-  const x = api.projectCoordinateToZ(point[0], point[2], direction[0], direction[2], z);
-  const y = api.projectCoordinateToZ(point[1], point[2], direction[1], direction[2], z);
-  // directionSlopes: `const invDz = Math.abs(direction[2]) > 1e-12 ? 1 / direction[2] : Infinity;`
-  const invDz = Math.abs(direction[2]) > 1e-12 ? 1 / direction[2] : Infinity;
-  return api.skewImagePlaneIntercept(x, y, direction[0] * invDz, direction[1] * invDz, lastSurfZ, planeZ);
+  const tracer = api.prepareAimedPupilTrace(model.state, clipOf(binding, model));
+  const trace = tracer.skew({ origin: vec(f8(set, "origins"), ray), direction: vec(f8(set, "directions"), ray) });
+  if (trace.clipped) return null;
+  return api.skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, lastSurfZ, planeZ);
+}
+
+/** The clip radius of the tabs' launch of the case: its stop radius and the aim's tolerance, as LV states it. */
+function clipOf(binding: LvBinding, model: LvCaseModel): { readonly clipSemiDiameterMm: number } {
+  const launch = binding.api.prepareAimedPupilLaunch(tabRequest(binding, model), [], { uField: 0, yChief: 0 });
+  assert.ok(launch !== null);
+  return { clipSemiDiameterMm: launch.clipSemiDiameterMm };
 }
 
 /** The analysis request of the drawer for a case, as the engine makes it. */
@@ -126,6 +119,8 @@ test(
         assert.ok(chief !== null, `${key} ${field.fieldFraction}`);
         const cloud: { t: number; s: number; w: number }[] = [];
         for (let ray = 0; ray < weights.length - 1; ray++) {
+          // A sample of weight 0 is one LensVisualizer could not aim: it holds the chief ray, and is never traced.
+          if (!(weights[ray] > 0)) continue;
           const point = landing(binding, model, set, ray, last, plane);
           if (point !== null) cloud.push({ t: point.y - chief.y, s: point.x - chief.x, w: weights[ray] });
         }
@@ -160,7 +155,7 @@ test(
         assert.ok(chief !== null);
         assert.equal(fan.samples.length, weights.length - 1);
         fan.samples.forEach((sample, ray) => {
-          const point = landing(binding, model, set, ray, last, plane);
+          const point = weights[ray] > 0 ? landing(binding, model, set, ray, last, plane) : null;
           const relative = axis === "y" ? sample.relativeImageHeight : sample.relativeImageX;
           const expected = point === null ? null : point[axis] - chief[axis];
           assert.ok(Object.is(relative, expected), `${key} ${axis} fan sample ${ray}: ${relative} ${expected}`);
@@ -179,6 +174,7 @@ test(
         assert.ok(chief !== null);
         const passed: { s: number; t: number; w: number }[] = [];
         for (let ray = 0; ray < weights.length - 1; ray++) {
+          if (!(weights[ray] > 0)) continue;
           const point = landing(binding, model, set, ray, last, plane);
           if (point !== null) passed.push({ s: point.x - chief.x, t: point.y - chief.y, w: weights[ray] });
         }
@@ -260,13 +256,14 @@ interface LvBokehPoint {
 const ABSORBING = "laowa-105mm-f2-stf";
 
 test(
-  "a bokeh tile, ray by ray, is LensVisualizer's skew trace of its samples, about the comparator's chief ray",
+  "a bokeh tile, ray by ray, is LensVisualizer's aimed launch of its samples, about the comparator's chief ray",
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     t.after(() => binding.close());
     const { api } = binding;
     let absorbed = 0;
+    let unaimed = 0;
     // The benchmark lenses on their design plane, the absorbing lens, and one lens on a plane 0.05 mm behind its
     // design plane, where the tile and its chief ray are intercepted off the plane the tab's bundle is traced to.
     const shifted: RunOptions = { imagePlane: { kind: "shift", mm: 0.05 } };
@@ -283,7 +280,6 @@ test(
       const request = tabRequest(binding, model);
       const plane = model.exported.conditions.imageZ;
       const samples = api.sampleCircularPupil(api.bokehRingSamples);
-      const epsd = setup.pupilSemiDiameterMm;
       const first = made.sets.length - api.bokehFieldFractions.length;
       api.bokehFieldFractions.forEach((fraction, index) => {
         const where = `${key} tile ${fraction}`;
@@ -294,23 +290,25 @@ test(
         assert.ok(geometry !== null && geometry.kind !== "vector", where);
         const chief = lvBokehChiefLanding(api, model, setup, fraction, plane);
         assert.ok(chief !== null, where);
-        // Each sample as the tab's skew adapter launches it (offAxis.ts), kept where it is not clipped and lands on
-        // the design plane and on the tile's plane (bokeh.ts), with its offsets from the chief ray and its weight.
-        const weights = f8(made.sets[first + index], "weights");
+        // Each sample as the tab's aimed launch returns it (offAxis.ts), traced as the tab traces it, kept where it is
+        // aimed, not clipped, and lands on the design plane and on the tile's plane (bokeh.ts), with its offsets from
+        // the chief ray and its weight.
+        const set = made.sets[first + index];
+        const [origins, directions, weights] = [f8(set, "origins"), f8(set, "directions"), f8(set, "weights")];
+        const launch = api.prepareAimedPupilLaunch(request, samples, geometry);
+        assert.ok(launch !== null, where);
+        const tracer = api.prepareAimedPupilTrace(model.state, launch);
         const expected: (LvBokehPoint & { readonly ray: number })[] = [];
         samples.forEach((sample, ray) => {
-          const trace = api.traceSkewRay(
-            sample.xFraction * epsd,
-            geometry.yChief + sample.yFraction * epsd,
-            0,
-            geometry.uField,
-            model.state.focusT,
-            model.state.zoomT,
-            model.exported.conditions.stopSemiDiameter,
-            true,
-            model.runtime,
-            0,
-          );
+          const aimed = launch.rays[ray];
+          if (aimed.status === "unaimed") {
+            unaimed++;
+            assert.equal(weights[ray], 0, `${where} ray ${ray}: an unaimed sample weighs nothing`);
+            return;
+          }
+          assert.deepEqual([...vec(origins, ray), ...vec(directions, ray)], [...aimed.origin, ...aimed.direction]);
+          if (aimed.status === "blocked") return;
+          const trace = tracer.skew(aimed);
           if (trace.clipped) return;
           const onDesign = api.skewImagePlaneIntercept(
             trace.x,
@@ -347,5 +345,6 @@ test(
     // The absorbing lens is the one whose weights are more than the area: without it this test says nothing of
     // the transmission.
     assert.ok(absorbed > 100, `rays whose weight is not their area: ${absorbed}`);
+    assert.equal(unaimed, 0, "no benchmark tile has an unaimed sample");
   },
 );

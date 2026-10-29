@@ -8,7 +8,7 @@
 | Suite hash | 8ff478540d752a79710858c275a1bc087220e296a3c88ca5b240331a4b407bdd |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | dfe8f84f23faa9384e26296450613915a830228ad9508902dd95b42275955f41 |
+| Policy hash | f461c0312598cb69e2fb201158814adc00c58d1ddc26d5c0a98ed328bc6f075f |
 
 ### Engines
 
@@ -33,8 +33,8 @@ No pair is FAIL or ERROR, of 8 compared.
 | PASS | 0 | 0 |
 | FLOOR | 0 | 0 |
 | FAIL | 0 | 0 |
-| RECORDED | 4 | 4 |
-| ATTENTION | 0 | 0 |
+| RECORDED | 3 | 3 |
+| ATTENTION | 1 | 1 |
 | UNSUPPORTED | 0 | 0 |
 | BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
@@ -58,7 +58,7 @@ Quantity `spot.native`, compared independent-method, recorded. Request `d2aca299
 
 Reference vs each, against `lv`:
 
-| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs [mm] | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs (band 9.00e-10 mm) | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 0 | — | 7.81e-3 at field 7.50e-1 | 1.95e-3 at field 7.50e-1 | 3 | 0 | 0 | RECORDED |  |
 
@@ -108,16 +108,16 @@ Quantity `spot.native`, compared independent-method, recorded. Request `cf379781
 
 Reference vs each, against `lv`:
 
-| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs [mm] | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | fanSamples.unpaired [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs (band 9.00e-10 mm) | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | fanSamples.unpaired [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
-| optiland | 0 at field 7.50e-1 | 3.91e-3 at field 7.50e-1, ray 1 | — | — | 1 | 0 | 0 | 2 | RECORDED |  |
+| optiland | 0 at field 7.50e-1 | 3.91e-3 at field 7.50e-1, ray 1 | — | — | 1 | 0 | 0 | 2 | ATTENTION | fanError.maxAbs 3.91e-3 is outside its attention band 9.00e-10 at field 7.50e-1, ray 1 |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
 | Engine | lv | optiland |
 |---|---|---|
-| lv | — | RECORDED (chiefLanding.maxAbs 0 at field 7.50e-1) |
-| optiland | RECORDED (chiefLanding.maxAbs 0 at field 7.50e-1) | — |
+| lv | — | ATTENTION (fanError.maxAbs 3.91e-3 at field 7.50e-1, ray 1) |
+| optiland | ATTENTION (fanError.maxAbs 3.91e-3 at field 7.50e-1, ray 1) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
@@ -149,7 +149,7 @@ Quantity `spot.native`, compared independent-method, recorded. Request `8e2516a7
 
 Reference vs each, against `lv`:
 
-| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs [mm] | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs (band 9.00e-10 mm) | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 0 | — | 0 at field 0 | 0 at field 0 | 1 | 1 | 1 | RECORDED | field 0.5: data, chief-landing-unknown (no chief-ray landing from optiland-spot-diagram); field 0.75: unsupported, no-curve (optiland-spot-diagram: unavailable (optiland-raised-ValueError)) |
 
@@ -199,7 +199,7 @@ Quantity `spot.native`, compared independent-method, recorded. Request `24b3fcaa
 
 Reference vs each, against `lv`:
 
-| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs [mm] | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | fanSamples.unpaired [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | fanError.maxAbs (band 9.00e-10 mm) | spotCentroid.maxAbs [mm] | spotRmsRadius.maxAbs [mm] | fields.compared [elements] | fields.data [elements] | fields.unavailable [elements] | fanSamples.unpaired [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
 | optiland | 0 at field 7.50e-1 | — | — | — | 0 | 1 | 0 | 0 | RECORDED | fanError.maxAbs was not measured: no field of two methods has figures in both answers; field 0.75: data, lines-differ (the answers are of the lines 546.07 and 587.5 nm) |
 

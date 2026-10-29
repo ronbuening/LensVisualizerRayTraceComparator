@@ -148,17 +148,18 @@ export async function lvGridDiagnostic(directory: string, lvPath: string | null)
         for (const size of [32, 64, 128, 256]) {
           const rays = lvFieldRays(binding.api, model, setup, field.fieldAngleDeg, size);
           if ("problem" in rays) throw new Error(rays.problem);
-          const bundle = binding.api.traceMtfBundle(
+          // Since LV #936 the pupil is sampled on the real stop: LV's own bundle of the aimed lattice of the size.
+          if (rays.lattice === null) throw new Error("a field launched from the bounding sphere");
+          const bundle = binding.api.traceMtfLattice(
             model.state,
             setup.options,
             setup.support,
             rays.launch,
-            rays.footprint,
-            size,
+            rays.lattice,
             setup.support.spectralLines[0],
             opticalCase.conditions.imageZ,
           );
-          if (!bundle || Object.values(bundle.openBorders).some(Boolean)) throw new Error("missing or open bundle");
+          if (!bundle) throw new Error("missing bundle");
           const otf = binding.api.shearedOtf(
             bundle,
             bundle.chief,
@@ -179,7 +180,7 @@ export async function lvGridDiagnostic(directory: string, lvPath: string | null)
                 .map((r) => ({
                   row: r.row,
                   column: r.column,
-                  y: rays.grid.y0 + (r.row + 0.5) * rays.grid.step,
+                  y: (r.row + 0.5) * rays.grid.step - (rays.grid.rows * rays.grid.step) / 2,
                   cosine: r.trace.finalMedium * r.trace.terminalDirection[1],
                 })),
             ),

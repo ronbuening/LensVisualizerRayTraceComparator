@@ -8,7 +8,7 @@
 | Suite hash | 5a90f384b839ddb495826ab1d059dc585ea1ea4ecd0f76cb7847a0c348c03aed |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | 468a7405c97375cba5e7dafd9692e11f093ad275658b4685b22e5b8edbe2b0b9 |
+| Policy hash | 3c31743fbe3367e4d772d4e2438ccd7771bb5ef53bf99e067b34aceaa5e23be4 |
 
 ### Engines
 
@@ -54,9 +54,9 @@ Quantity `vignetting.native`, compared independent-method, recorded. Request `03
 
 Reference vs each, against `flux`:
 
-| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | geometricTransmission.maxAbs | falloff.maxAbs | relativeIllumination.maxAbs | fields.compared [elements] | fields.data [elements] | fields.unconverged [elements] | fields.unavailable [elements] | Verdict | Note |
+| Engine | chiefLanding.maxAbs (band 1.00e-5 mm) | geometricTransmission.maxAbs (band 1.00e-2) | falloff.maxAbs | relativeIllumination.maxAbs | fields.compared [elements] | fields.data [elements] | fields.unconverged [elements] | fields.unavailable [elements] | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|
-| lv | 2.44e-4 at field 24, line 0 | 6.25e-2 at field 8, line 0 | 7.62e-2 at field 8, line 0 | 1.25e-1 at field 8, line 0 | 2 | 1 | 1 | 0 | ATTENTION | chiefLanding.maxAbs 2.44e-4 is outside its attention band 1.00e-5 at field 24, line 0; line 0, field 16: numerical, unconverged (lattice-flux: unconverged (not-converged)); line 0, field 24: data, chief-landing-apart (the chief rays land 2.44e-4 mm apart) |
+| lv | 2.44e-4 at field 24, line 0 | 6.25e-2 at field 8, line 0 | 7.62e-2 at field 8, line 0 | 1.25e-1 at field 8, line 0 | 2 | 1 | 1 | 0 | ATTENTION | chiefLanding.maxAbs 2.44e-4 is outside its attention band 1.00e-5 at field 24, line 0; geometricTransmission.maxAbs 6.25e-2 is outside its attention band 1.00e-2 at field 8, line 0; line 0, field 16: numerical, unconverged (lattice-flux: unconverged (not-converged)); line 0, field 24: data, chief-landing-apart (the chief rays land 2.44e-4 mm apart) |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 

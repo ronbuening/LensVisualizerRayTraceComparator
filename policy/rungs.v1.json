@@ -1,7 +1,7 @@
 {
   "contract": "1.3",
   "kind": "policy",
-  "version": 23,
+  "version": 24,
   "rungs": {
     "selftest": {
       "quantity": "selftest.echo",
@@ -142,7 +142,7 @@
       "class": "recorded",
       "metrics": {
         "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
-        "fanError.maxAbs": { "unit": "mm" },
+        "fanError.maxAbs": { "attention": 9e-10, "unit": "mm" },
         "spotCentroid.maxAbs": { "unit": "mm" },
         "spotRmsRadius.maxAbs": { "unit": "mm" }
       }
@@ -243,7 +243,8 @@
       "mode": "independent-method",
       "class": "recorded",
       "metrics": {
-        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" }
+        "chiefLanding.maxAbs": { "attention": 1e-5, "unit": "mm" },
+        "geometricTransmission.maxAbs": { "attention": 0.01, "unit": "1" }
       }
     },
     "r12b": {
@@ -251,14 +252,14 @@
       "mode": "independent-method",
       "class": "recorded",
       "metrics": {
-        "entrancePupilDiameter.maxAbs": { "attention": 3e-9, "unit": "mm" },
+        "entrancePupilDiameter.maxAbs": { "attention": 2e-12, "unit": "mm" },
         "focalLength.maxAbs": { "unit": "mm" },
-        "imageSpaceFNumber.maxAbs": { "attention": 2e-9, "unit": "1" },
-        "paraxialWorkingFNumber.maxAbs": { "unit": "1" },
+        "imageSpaceFNumber.maxAbs": { "attention": 2e-13, "unit": "1" },
+        "paraxialWorkingFNumber.maxAbs": { "attention": 2e-13, "unit": "1" },
         "rearFocus.maxAbs": { "attention": 1e-5, "unit": "mm" },
         "stopDiameter.maxAbs": { "unit": "mm" },
         "totalTrack.maxAbs": { "unit": "mm" },
-        "workingFNumber.maxAbs": { "unit": "1" }
+        "workingFNumber.maxAbs": { "attention": 7e-8, "unit": "1" }
       }
     },
     "r13b": {
@@ -273,9 +274,9 @@
         "DIST.maxAbs": { "unit": "mm" },
         "FCUR.maxAbs": { "unit": "mm" },
         "SPHA.maxAbs": { "unit": "mm" },
-        "invariant.maxAbs": { "unit": "mm" },
+        "invariant.maxAbs": { "attention": 3e-14, "unit": "mm" },
         "surfaces.maxAbs": { "unit": "mm" },
-        "total.maxScaled": { "unit": "1" }
+        "total.maxScaled": { "attention": 8e-15, "unit": "1" }
       }
     },
     "r14b": {
@@ -283,12 +284,12 @@
       "mode": "independent-method",
       "class": "recorded",
       "metrics": {
-        "chiefLanding.maxAbs": { "unit": "mm" },
-        "coefficients.maxAbs": { "unit": "waves" },
-        "fitCondition.max": { "unit": "1" },
-        "fitResidualRms.maxAbs": { "unit": "waves" },
+        "chiefLanding.maxAbs": { "attention": 1e-9, "unit": "mm" },
+        "coefficients.maxAbs": { "attention": 4e-11, "unit": "waves" },
+        "fitCondition.max": { "attention": 1000000, "unit": "1" },
+        "fitResidualRms.maxAbs": { "attention": 7e-16, "unit": "waves" },
         "pvToChief.maxAbs": { "unit": "waves" },
-        "rmsToChief.maxAbs": { "unit": "waves" }
+        "rmsToChief.maxAbs": { "attention": 2e-16, "unit": "waves" }
       }
     }
   }

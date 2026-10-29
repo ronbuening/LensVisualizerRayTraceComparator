@@ -26,16 +26,14 @@ import type {
 export { LV_MTF_SPECTRA, lvSpectrumOf } from "./focus.ts";
 
 /** The LensVisualizer exports an MTF request is built with. */
-export type LvMtfRequestApi = LvTabApi & Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport" | "computeMtfSteps">;
+export type LvMtfRequestApi = LvTabApi &
+  Pick<LvApi, "createAnalysisRequest" | "assessMtfSupport" | "computeMtfSteps" | "mtfDefaultGridCap">;
 
 /** The LensVisualizer exports an MTF is answered with. */
 export type LvMtfApi = LvMtfRequestApi & Pick<LvApi, "computeMtf">;
 
-/** The pupil grids LensVisualizer's refinement may be capped at. */
+/** The pupil grids LensVisualizer's refinement may be capped at: cells across the stop's diameter since LV #936. */
 export const LV_GRID_CAPS: readonly number[] = [32, 64, 128, 256];
-
-/** The grid cap of a request that states none: LensVisualizer's own default, and that of its MTF tab. */
-export const LV_DEFAULT_GRID_CAP = 128;
 
 /** The engine option that caps the pupil grid: `sampling.lvGridCap` of a run. A profile fixes it. */
 export const LV_GRID_CAP_OPTION = "lvGridCap";
@@ -193,6 +191,8 @@ export function fieldOf(field: LvMtfFieldResult, requested: number, frequencies:
       validRays: field.validRays,
       blockedRays: field.blockedRays,
       failedRays: field.failedRays,
+      unaimedRays: field.unaimedRays,
+      unresolvedInBeamRays: field.unresolvedInBeamRays,
       unknownFluxFraction: field.unknownFluxFraction,
       maxDelta: field.maxDelta,
       convergedThroughLpMm: field.convergedThroughLpMm,
@@ -209,9 +209,10 @@ export function fieldNotes(field: LvMtfFieldResult): string[] {
 /**
  * LensVisualizer's result as `mtf.native` data.
  *
- * - `fields`: one per requested fraction, in order (`fieldOf`). `sampling` holds LensVisualizer's `gridSize`, its
- *   three ray counts, which are summed over the lines, `unknownFluxFraction` and, where it has them, `maxDelta` and
- *   `convergedThroughLpMm`.
+ * - `fields`: one per requested fraction, in order (`fieldOf`). `sampling` holds LensVisualizer's `gridSize` (cells
+ *   across the stop since #936), its ray counts, which are summed over the lines (`validRays`, `blockedRays`,
+ *   `failedRays`, `unaimedRays` and `unresolvedInBeamRays`, the last two of #936), `unknownFluxFraction` and, where it
+ *   has them, `maxDelta` and `convergedThroughLpMm`.
  * - `method`: LensVisualizer's own name of the method, and under `params` the request as it was made: `spectrum`,
  *   `focus` (LensVisualizer's mode), `maxGridSize`, both radii and, where it resolved a field axis, the height the
  *   fractions are of (`referenceHeightMm`) and what that height is (`fieldBasis`), with `extra` beside them.
@@ -220,9 +221,10 @@ export function fieldNotes(field: LvMtfFieldResult): string[] {
  *   LensVisualizer's own best axial focus (`caseAtBestAxial`), that plane is the plane of the case as it is: the
  *   mode is the contract's `design` and the shift 0, and `method.params.focus` says that LensVisualizer was asked
  *   for "best-axial". It throws when LensVisualizer's result is then of another plane than the case's.
- * - `aperture`: `tracedFNumber`, the working f-number of the axial beam LensVisualizer traced, and
- *   `limitingSurfaceIndex`, the index of the surface that bounds that beam: the stop's when LensVisualizer says
- *   the iris does. Empty when LensVisualizer found no axial rim.
+ * - `aperture`: since LV #936 its MTF traces no f-number of its own (the "traced f-number" is gone); where the
+ *   axial marginal ray is vignetted (`axialVignetting`, the summary's working f-number in its `vignetted` state) it is
+ *   `axialVignettingSurfaceIndex`, the index of the surface labelled so, and `axialVignettingBeforeStop`, 1 before
+ *   the stop and 0 after it. Empty when the ray is not vignetted.
  * - `lines`: the lines of LensVisualizer's support record for the request.
  * - `notes`: `notes` as given, then what LensVisualizer says of each field (`fieldNotes`).
  */
@@ -249,13 +251,12 @@ function mtfData(
   }
   const notes = [...extra.notes, ...result.fields.flatMap(fieldNotes)];
   const aperture: { [name: string]: number } = {};
-  if (result.aperture !== null) {
-    aperture.tracedFNumber = result.aperture.tracedFNumber;
-    const label = result.aperture.limitingSurfaceLabel;
+  if (result.axialVignetting !== null) {
+    const label = result.axialVignetting.surfaceLabel;
     const labelled = state.surfaces.flatMap((surface, index) => (surface.label === label ? [index] : []));
-    if (label === null) aperture.limitingSurfaceIndex = state.lens.stop.surfaceIndex;
-    else if (labelled.length === 1) aperture.limitingSurfaceIndex = labelled[0];
-    else notes.push(`the axial beam is limited by a surface labelled ${label}, which ${labelled.length} surfaces are`);
+    if (labelled.length === 1) aperture.axialVignettingSurfaceIndex = labelled[0];
+    else notes.push(`the axial marginal ray is vignetted at a surface labelled ${label}, which ${labelled.length} are`);
+    aperture.axialVignettingBeforeStop = result.axialVignetting.beforeStop ? 1 : 0;
   }
   const geometry =
     result.geometry === null
@@ -287,7 +288,8 @@ function mtfData(
 
 /**
  * The view of the tab that the stop radius of a case is the stop of, or why it is the stop of neither. A lens that
- * is f/8 wide open has one radius for both, its comparison being scaled by 8 / 8: it is the wide-open view.
+ * is f/8 or slower wide open has one radius for both, the stop rule's f/8 stop being its wide-open one (LV #933): it is
+ * the wide-open view.
  */
 function tabViewOf(api: LvTabApi, model: LvCaseModel): LvTabRequest | { readonly neither: string } {
   const { runtime, state, exported } = model;
@@ -336,9 +338,10 @@ export interface LvMtfRequest {
  *
  * **Without a profile** the request is the spec's: its method, its frequencies and its fractions; the spectrum of
  * the case's lines; the focus "design", or LensVisualizer's "best-axial" for "engine-best"; the stop radius of the
- * case; as the seed of the footprint scan the pupil radius the tab's hook would hand over for that stop radius
- * (`lvPupilSeed`), never the nominal pupil LensVisualizer's audit scripts pass; and the grid cap of the engine
- * option `lvGridCap`, 128 without one.
+ * case; as the pupil radius (the aimed launch's launch scale) the one the tab's hook would hand over for that stop
+ * radius (`lvPupilSeed`), never the nominal pupil LensVisualizer's audit scripts pass; and the grid cap of the engine
+ * option `lvGridCap`, or LensVisualizer's own `MTF_DEFAULT_GRID_CAP` without one (256 cells across the stop since
+ * #936, read at run time, never restated).
  *
  * **A case at LensVisualizer's best axial focus.** LensVisualizer's MTF is of its design plane or of its own best
  * axial focus, and of no plane it is given. So a case whose image plane is not the design plane is answered only
@@ -405,7 +408,7 @@ export function lvMtfRequest(
   if (spec.profile === undefined) {
     const refusal = specRefusal(api, state, general, spec);
     if (refusal !== null) return { refused: refusal };
-    const maxGridSize = (cap as number | undefined) ?? LV_DEFAULT_GRID_CAP;
+    const maxGridSize = (cap as number | undefined) ?? api.mtfDefaultGridCap;
     if (shifted) {
       if (spec.focus !== "design") {
         return offDesign(", and the engine's own best focus is asked of a case at its design plane");

@@ -1,7 +1,7 @@
 // `summary.native` of the engine `lv`, with no LensVisualizer: on the fake LV tree, whose summary tab, aperture control
 // and paraxial kernel have LensVisualizer's names and rules of their own. What is held here is what the engine asks
-// and how it writes the numbers down: the tab's readouts and the aperture control's two f-numbers as LensVisualizer
-// presents them, refusing before it asks anything what the case decides. LensVisualizer's own tab is tier 2
+// and how it writes the numbers down: the tab's readouts, its three f-numbers (LV #933) and the aperture control's
+// marked one as LensVisualizer presents them, refusing before it asks anything what the case decides. LensVisualizer's own tab is tier 2
 // (test/integration/lv/summary.test.ts).
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -30,7 +30,9 @@ import type { LvHookAperture } from "../../../src/engines/lv/tabRequest.ts";
 import { RemoteEngineAdapter } from "../../../src/engines/remote.ts";
 import { summaryNativeQuantity } from "../../../src/quantities/summaryNative.ts";
 import { createInProcessTransport } from "../../../src/transports/inProcess.ts";
-import { bind, freshLv } from "./support.ts";
+import { FAKE_LENS_FILES, bind, freshLv, variantOf } from "./support.ts";
+
+const [SINGLET_FILE] = FAKE_LENS_FILES.map(([file]) => file);
 
 const SINGLET = "acme-singlet-50";
 const ASK: SummaryNativeSpec = { lines: [0] };
@@ -54,7 +56,7 @@ function itemsOf(answer: LvSummaryAnswer): string[] {
   return answer.unsupported.map(({ item }) => item);
 }
 
-test("lv's answer is the summary tab's readouts and the aperture control's f-numbers, as LensVisualizer presents them", async (t) => {
+test("lv's answer is the summary tab's readouts and its three f-numbers, as LensVisualizer presents them", async (t) => {
   const binding = await bind(t, freshLv(t));
   const { api } = binding;
   for (const options of [{}, { aperture: { kind: "f-number" as const, value: 5.6 } }]) {
@@ -62,11 +64,11 @@ test("lv's answer is the summary tab's readouts and the aperture control's f-num
     const [line] = dataOf(answerLvSummary(api, model, ASK)).lines;
     const request = lvSummaryRequest(api, model);
     const summary = api.computeOpticalSummary(request);
-    // The tab's readouts, to the bit: its "Working f/#" is the contract's image-space f-number.
+    // The tab's readouts, to the bit: its "Image-space f/#" is the contract's image-space f-number.
     assert.equal(line.focalLengthMm, summary.currentEFLMm);
     assert.equal(line.entrancePupilDiameterMm, summary.entrancePupilDiameterMm);
     assert.equal(line.stopDiameterMm, summary.physicalStopDiameterMm);
-    assert.equal(line.imageSpaceFNumber, summary.effectiveFNumber);
+    assert.equal(line.imageSpaceFNumber, summary.imageSpaceFNumber);
     assert.equal(line.totalTrackMm, summary.totalTrackMm);
     assert.equal(line.halfFieldDeg, summary.halfFieldDeg);
     assert.equal(
@@ -74,35 +76,54 @@ test("lv's answer is the summary tab's readouts and the aperture control's f-num
       (api.computeCardinalElementsFromState(model.state) as { points: { rearFocal: { z: number } } }).points.rearFocal
         .z,
     );
+    // At infinity focus the tab's two working f-numbers are of the case's own axial object point: stated.
+    assert.equal(line.paraxialWorkingFNumber, summary.paraxialWorkingFNumber);
+    assert.equal(line.workingFNumber, (summary.workingFNumber as { value: number }).value);
+    assert.equal(line.workingFNumber, (line.imageSpaceFNumber! * 33) / 32, "the fake's own working f-number");
+    assert.ok(!("lvThinLensEffectiveFNumber" in line.sampling), "the thin-lens eff. f/ is gone");
     // The drawer's request: the hook's focal length of the state and the hook's pupil for the case's stop.
     assert.equal(request.dynamicEFL, api.computeFocusEFL(request));
     assert.equal(request.aperture.entrancePupilSemiDiameterMm, lvTabPupilSemiDiameter(api, model));
-    // The aperture control: the marked f-number of the stop, and the fake's effective one, which is it at infinity.
+    // The aperture control's mark: the slider's f-number wide open, and otherwise the rule's taken back from the stop.
     const hook = lvHookAperture(api, model.runtime, model.state);
+    const { referenceFocalLengthMm, stopHeightRatio } = api.stopRuleGeometry(model.runtime, model.state.zoomT);
     const marked =
       options.aperture === undefined
         ? hook.fNumber
-        : (hook.wideOpenStopSD * hook.currentFOPEN) / model.exported.conditions.stopSemiDiameter;
+        : Math.abs(referenceFocalLengthMm * stopHeightRatio) / (2 * model.exported.conditions.stopSemiDiameter);
     assert.equal(line.nominalFNumber, marked);
-    // The control's "eff. f/" is of no definition of the contract's: recorded, and the paraxial working f-number null.
-    assert.equal(line.paraxialWorkingFNumber, null);
-    assert.equal(line.sampling.lvThinLensEffectiveFNumber, marked);
-    assert.equal(line.workingFNumber, null);
+    if (options.aperture !== undefined) assert.ok(Math.abs(marked - 5.6) < 1e-12, String(marked));
     assert.equal(line.wavelengthNm, model.exported.conditions.lines[0].wavelengthNm);
     assert.equal(line.sampling.wideOpenNominalEntrancePupilDiameterMm, 2 * api.epAtZoomClamped(0, model.runtime));
     assert.ok(!("focusDistanceM" in line.sampling), "at infinity the tab has no focus distance");
   }
 });
 
-test("at a focus station the tab's focus distance and the control's effective f-number are recorded", async (t) => {
+test("at a focus station the working f-numbers are of another object point than the case's: recorded, not stated", async (t) => {
   const binding = await bind(t, freshLv(t));
   const model = await modelOf(binding, { state: { focus: { kind: "focusT", value: 1 } } });
   const [line] = dataOf(answerLvSummary(binding.api, model, ASK)).lines;
-  // The fake's own rules: a focus distance of 0.5 m over the focus position, an effective f-number twice the marked.
+  // The fake's own rules: a focus distance of 0.5 m over the focus position, a paraxial working f-number twice the
+  // image-space one there, and the working one 33/32 of that.
   assert.equal(line.sampling.focusDistanceM, 0.5);
-  assert.equal(line.sampling.lvThinLensEffectiveFNumber, 2 * line.nominalFNumber!);
   assert.equal(line.paraxialWorkingFNumber, null);
+  assert.equal(line.workingFNumber, null);
+  assert.equal(line.sampling.lvParaxialWorkingFNumberAtParaxialObject, 2 * line.imageSpaceFNumber!);
+  assert.equal(line.sampling.lvWorkingFNumberAtParaxialObject, (2 * line.imageSpaceFNumber! * 33) / 32);
   assert.equal(line.imageSpaceFNumber, Math.abs(line.focalLengthMm!) / line.entrancePupilDiameterMm!);
+});
+
+test("a vignetted marginal ray has no working f-number, and the surface that stops it is recorded", async (t) => {
+  const lv = variantOf(freshLv(t), "vignetted", {
+    [SINGLET_FILE]: (text) => text.replace("focusTravel: 5,", 'focusTravel: 5,\n  mtf: { axialVignettingLabel: "2" },'),
+  });
+  const binding = await bind(t, lv);
+  const model = await modelOf(binding);
+  const [line] = dataOf(answerLvSummary(binding.api, model, ASK)).lines;
+  assert.equal(line.workingFNumber, null);
+  assert.notEqual(line.paraxialWorkingFNumber, null);
+  assert.equal(line.sampling.lvMarginalRayVignettedSurfaceIndex, 1);
+  assert.equal(line.sampling.lvMarginalRayVignettedBeforeStop, 0);
 });
 
 test("the hook's stop and marked f-number of a case's stop", () => {
@@ -114,12 +135,16 @@ test("the hook's stop and marked f-number of a case's stop", () => {
     baseEPSD: 12,
     currentEPSD: 12,
   };
-  // Wide open, the hook's own stop: a unit in the last place from the case's, as LensVisualizer's tab presents it.
+  const api = { stopRuleGeometry: () => ({ referenceFocalLengthMm: 50, stopHeightRatio: 0.8 }) };
+  const runtime = {} as Parameters<typeof lvNominalFNumber>[1];
+  // Wide open, the hook's own stop, where the slider's widest f-number lies above the zoom position's.
   assert.equal(lvSummaryStopSemiDiameter(hook, 10), 10 + 2 ** -49);
   assert.equal(lvSummaryStopSemiDiameter(hook, 5), 5);
-  assert.equal(lvNominalFNumber(hook, 10), 2);
-  assert.equal(lvNominalFNumber(hook, 10 + 2 ** -49), 2);
-  assert.equal(lvNominalFNumber(hook, 5), 4);
+  assert.equal(lvNominalFNumber(api, runtime, 0, hook, 10), 2);
+  assert.equal(lvNominalFNumber(api, runtime, 0, hook, 10 + 2 ** -49), 2);
+  // Otherwise the rule's f-number taken back from the radius: |F rho| / (2 radius).
+  assert.equal(lvNominalFNumber(api, runtime, 0, hook, 5), 4);
+  assert.equal(lvNominalFNumber(api, runtime, 0, hook, 2.5), 8);
 });
 
 /**

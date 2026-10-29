@@ -5,10 +5,10 @@
 // the rungs R2 to R4 judge.
 //
 // One pattern, read by the rung R11a (`src/compare/raysVignetting.ts`): a beam set is one field at one line, the cells
-// of the tab's lattice over the field's beam that the tab traces, as a lattice of their own under `groups.lattice`, and
-// right after them the chief rays of the tab's image mapping, the field's own first (`groups.chiefIndex`), stating its
-// field under `groups` too. The sets of one line, the axis's among them, are one figure together: the axis is what each
-// field's flux is relative to.
+// of the tab's lattice that the tab traces (since LensVisualizer #931 the half of its stop lattice, vacant cells at
+// weight 0), as a lattice of their own under `groups.lattice`, and right after them the chief rays of the field, its
+// stop-centre ray first (`groups.chiefIndex`), stating its field under `groups` too. The sets of one line, the axis's
+// among them, are one figure together: the axis is what each field's flux is relative to.
 import type { VignettingNativeSpec } from "../contract/quantities/vignettingNative.ts";
 import type { RaySetResolution } from "./raySets.ts";
 

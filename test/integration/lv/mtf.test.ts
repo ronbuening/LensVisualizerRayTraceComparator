@@ -4,7 +4,8 @@
 // source, bit for bit. Run output goes to a temporary directory.
 //
 // Pins were re-measured at LV 643ef5d0, closure 94778d3d (175 files); the same engine closure is at ab0fd4cf; and
-// again at 098c91ef6, closure fef2e248 (178 files), unchanged.
+// again at 098c91ef6, closure fef2e248 (178 files), unchanged; and at Stage 6.8b, at 607ff23ae, closure f016b35b
+// (184 files: LV #933's stop rule and #936's MTF on the real stop), where every figure moved and was pinned anew.
 // Only the measured closure and case activate a pin: a lens edit is another case.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -68,14 +69,17 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * src/optics/publishedStations.ts made the closure 7b756ee6 (177 files) at ab0fd4cf; every figure was measured
  * again there and found unchanged. At Stage 6.6b, at LV 098c91ef6 (closure fef2e248, 178 files: the chief ray solved
  * below one degree, the anchored channels, the vignetting tab's beams), every figure and case was measured again and
- * found unchanged.
+ * found unchanged. At Stage 6.8b, at LV 607ff23ae (closure f016b35b, 184 files), every case and figure moved (LV #933
+ * resized every stop by the paraxial EPD = F/N; #936 samples the pupil on the real stop at a cap of 256): measured and
+ * pinned anew; no configuration's axial marginal ray is vignetted.
  */
-const PINNED_CLOSURE = "fef2e248117fc696015fe513b4b2a43f92ccde5bd7381536047ccab3ac3406bd";
+const PINNED_CLOSURE = "f016b35b258be0c4b00df43fdf103384e8fad21a75506213611c42136189f0cf";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures
- * are of, the spectrum, the focus shift in mm, the traced f-number, and the sagittal and tangential MTF at 10 and
- * 30 cycles/mm (S 10, T 10, S 30, T 30) on the axis and at 70 % of the image height.
+ * are of, the spectrum, the focus shift in mm, the surface that vignettes the axial marginal ray ("-" where none does;
+ * LV #936 traces no f-number of its own), and the sagittal and tangential MTF at 10 and 30 cycles/mm (S 10, T 10,
+ * S 30, T 30) on the axis and at 70 % of the image height.
  */
 const PINNED: Readonly<
   Record<
@@ -84,107 +88,107 @@ const PINNED: Readonly<
       readonly caseId: string;
       readonly spectrum: string;
       readonly shift: string;
-      readonly tracedF: string;
+      readonly vignetted: string;
       readonly axis: readonly string[];
       readonly field70: readonly string[];
     }
   >
 > = {
   "canon-ef-135-f2l-usm": {
-    caseId: "e9e741608e3f5f054625e1189a93c16f57e44893080a8ee4a9451df894df4c60",
+    caseId: "5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513",
     spectrum: "photopic",
-    shift: "-0.0280",
-    tracedF: "2.0593",
-    axis: ["0.9487", "0.9487", "0.7512", "0.7512"],
-    field70: ["0.9442", "0.9440", "0.6761", "0.7111"],
+    shift: "-0.0269",
+    vignetted: "-",
+    axis: ["0.9492", "0.9492", "0.7546", "0.7546"],
+    field70: ["0.9428", "0.9430", "0.6692", "0.7050"],
   },
   "fujifilm-fujinon-gf-63mm-f28-r-wr": {
-    caseId: "fd5731cb1a7143cd5789a8808a284e317c6f5018fa3e40c969f88851fd32f836",
+    caseId: "b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f",
     spectrum: "photopic",
-    shift: "-0.0426",
-    tracedF: "2.8670",
-    axis: ["0.9699", "0.9699", "0.8813", "0.8813"],
-    field70: ["0.8351", "0.8794", "0.5916", "0.6270"],
+    shift: "-0.0420",
+    vignetted: "-",
+    axis: ["0.9693", "0.9693", "0.8786", "0.8786"],
+    field70: ["0.8312", "0.8813", "0.5938", "0.6326"],
   },
   "sigma-35mm-f14-dg-hsm-a": {
-    caseId: "9e5e79e2ba13d37b6f0c7b3ea9f2bf0c6e2a047d55bd4b3f421d8bec742fca49",
+    caseId: "c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae",
     spectrum: "photopic",
-    shift: "-0.0256",
-    tracedF: "1.4854",
-    axis: ["0.9571", "0.9571", "0.7706", "0.7706"],
-    field70: ["0.7245", "0.9059", "0.4818", "0.6297"],
+    shift: "-0.0257",
+    vignetted: "-",
+    axis: ["0.9564", "0.9564", "0.7684", "0.7684"],
+    field70: ["0.7152", "0.9057", "0.4754", "0.6234"],
   },
   "nikkor-z50f12": {
-    caseId: "6981c5efa2e0f14d167c0ff9b3465552a294ef75eece6e3af725cabc027843c2",
+    caseId: "25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2",
     spectrum: "photopic",
-    shift: "-0.0515",
-    tracedF: "1.2278",
-    axis: ["0.9753", "0.9753", "0.8494", "0.8494"],
-    field70: ["0.8501", "0.9308", "0.6273", "0.7047"],
+    shift: "-0.0507",
+    vignetted: "-",
+    axis: ["0.9756", "0.9756", "0.8540", "0.8540"],
+    field70: ["0.8431", "0.9277", "0.6152", "0.6973"],
   },
   "sony-fe-20mm-f18-g": {
-    caseId: "23b051950216b1004d67e9984a3181b877a25e5c1f50e7588fe868ade50fed35",
+    caseId: "9bf71fcc2c01fb1e7c25546d8b6a2758be33c6bba8fe4742ebcd3fbac72405d7",
     spectrum: "photopic",
-    shift: "-0.0400",
-    tracedF: "1.8507",
-    axis: ["0.9615", "0.9615", "0.8173", "0.8173"],
-    field70: ["0.7397", "0.3123", "0.1115", "0.0263"],
+    shift: "-0.0394",
+    vignetted: "-",
+    axis: ["0.9715", "0.9715", "0.8630", "0.8630"],
+    field70: ["0.7606", "0.3210", "0.1453", "0.0447"],
   },
   "sony-fe-400mm-f28-gm-oss": {
-    caseId: "e3fb8ca13685378d51194b1fdc6cc573018861b1913f5e65407774b352c9b811",
+    caseId: "25a3d0697df2ed6fe2fd355a06ce5f7a89664142dadd6e7d5e049d3bbc636df7",
     spectrum: "photopic",
-    shift: "0.0511",
-    tracedF: "2.9081",
-    axis: ["0.9773", "0.9773", "0.9221", "0.9221"],
-    field70: ["0.9739", "0.9667", "0.9015", "0.8861"],
+    shift: "0.0512",
+    vignetted: "-",
+    axis: ["0.9768", "0.9768", "0.9209", "0.9209"],
+    field70: ["0.9737", "0.9669", "0.9017", "0.8865"],
   },
   "sigma-105mm-f28-dg-dn-macro-art": {
-    caseId: "50d94ea9ff30e0960b74dae45269cecd622dd75af41ca41a945e4761f1839d66",
+    caseId: "c5a507024e5ab43f94adcb83c67c948a9731a2af72fed96ac5515f6eb04f708e",
     spectrum: "photopic",
-    shift: "-0.0215",
-    tracedF: "2.8978",
-    axis: ["0.9717", "0.9717", "0.8922", "0.8922"],
-    field70: ["0.9585", "0.9247", "0.7814", "0.6011"],
+    shift: "-0.0191",
+    vignetted: "-",
+    axis: ["0.9733", "0.9733", "0.9023", "0.9023"],
+    field70: ["0.9545", "0.9191", "0.7555", "0.5763"],
   },
   "nikon-z-24-70f4s": {
-    caseId: "06eff99a7dc852d126aa09c9eea6d4e7b19d5fc77d79c520b5624c3211295979",
+    caseId: "1bd5a8443c6b4b625eb1568bd6805873a1ccbc2caaedbba46e51ee5a5fb5d2dc",
     spectrum: "photopic",
-    shift: "-0.0734",
-    tracedF: "4.0019",
-    axis: ["0.9662", "0.9662", "0.8775", "0.8775"],
-    field70: ["0.9644", "0.9232", "0.8733", "0.6426"],
+    shift: "-0.0729",
+    vignetted: "-",
+    axis: ["0.9663", "0.9663", "0.8785", "0.8785"],
+    field70: ["0.9640", "0.9222", "0.8718", "0.6402"],
   },
   "nikon-z-24-70f4s-zoom1": {
-    caseId: "e7c0aa4bf2ee5a2b0afc8ac68e8a6115e586e7adcb01a741e880c320dba248bf",
+    caseId: "7c55143a9f94c725e66c944a44bf00e5871532ed3d91bcde1e1cffa7caa0dc33",
     spectrum: "photopic",
-    shift: "0.0181",
-    tracedF: "4.0048",
-    axis: ["0.9685", "0.9685", "0.9029", "0.9029"],
-    field70: ["0.8519", "0.8881", "0.5974", "0.6896"],
+    shift: "0.0153",
+    vignetted: "-",
+    axis: ["0.9688", "0.9688", "0.9024", "0.9024"],
+    field70: ["0.8553", "0.8808", "0.5863", "0.6755"],
   },
   "nikon-z-mc-105f28": {
-    caseId: "98d1037760a2c357308bccbe8a4ca815d8c9cce422e54b913d74275645db123d",
+    caseId: "e492101b147bcf0f0e156d83376aba617d1c24f20cfdcf0d82b48a03f8b4a92e",
     spectrum: "photopic",
-    shift: "0.0294",
-    tracedF: "2.8904",
-    axis: ["0.9750", "0.9750", "0.9133", "0.9133"],
-    field70: ["0.9725", "0.9400", "0.8909", "0.7350"],
+    shift: "0.0304",
+    vignetted: "-",
+    axis: ["0.9756", "0.9756", "0.9167", "0.9167"],
+    field70: ["0.9721", "0.9389", "0.8889", "0.7269"],
   },
   "nikon-z-135f18-plena": {
-    caseId: "d99ccec01961ff60514d1ae14ec6b29e59a96d0d11e3f02ea70dbd82169e30d3",
+    caseId: "9ac66541b918eea604fa81c70999f824029cc1d2d481851438f0d5d7e86d8224",
     spectrum: "photopic",
-    shift: "-0.0109",
-    tracedF: "1.8467",
-    axis: ["0.9808", "0.9808", "0.9115", "0.9115"],
-    field70: ["0.9685", "0.9704", "0.8386", "0.8765"],
+    shift: "-0.0088",
+    vignetted: "-",
+    axis: ["0.9804", "0.9804", "0.9167", "0.9167"],
+    field70: ["0.9657", "0.9660", "0.8237", "0.8605"],
   },
   "sigma-45mm-f28-dg-dn-contemporary": {
-    caseId: "3a3ae023a4365a29b0c93a8c939aa2f8c31db5cc4786aa230701c72effd5aac4",
+    caseId: "6f62ee09c0c8b3a1cc345e3ed0e0e27aebea0ce5e96cdbee7664ffbab4914e73",
     spectrum: "photopic",
-    shift: "-0.0316",
-    tracedF: "2.8980",
-    axis: ["0.9370", "0.9370", "0.7722", "0.7722"],
-    field70: ["0.9521", "0.9163", "0.7656", "0.6900"],
+    shift: "-0.0315",
+    vignetted: "-",
+    axis: ["0.9376", "0.9376", "0.7729", "0.7729"],
+    field70: ["0.9519", "0.9148", "0.7649", "0.6872"],
   },
 };
 
@@ -311,28 +315,26 @@ async function stateOf(
 
 /**
  * The request LensVisualizer's MTF tab makes for a lens as it opens, written out from MtfTab.tsx and
- * useLensComputation.ts as they read at ed78cf40, with the tab's defaults as literals: diffraction, the photopic
- * spectrum where the glass data allows, best axial focus, a grid cap of 128 and fields at 10 % steps; the stop
- * radius `(wideOpenStopSD * currentFOPEN) / fNumber` and the pupil radius `(baseEPSD * currentFOPEN) / fNumber`,
- * with the aperture slider at 0. The comparator's own restatement is src/engines/lv/tabRequest.ts; this one shares
- * no line with it.
+ * useLensComputation.ts as they read at 607ff23ae, with the tab's defaults as literals: diffraction, the photopic
+ * spectrum where the glass data allows, best axial focus, a grid cap of 256 (LV #936) and fields at 10 % steps; the
+ * stop radius the stop rule's at the slider's f-number, `stopSemiDiameterForFNumber(fNumber, zoomT, L)`, and the pupil
+ * radius the paraxial pupil of that stop, `entrancePupilAtState(stop, ...)` (LV #933), with the aperture slider at 0.
+ * The comparator's own restatement is src/engines/lv/tabRequest.ts; this one shares no line with it.
  */
 function tabRequest(binding: LvBinding, runtime: LvRuntimeLens, state: LvPreparedState): LvMtfOptions {
   const { api } = binding;
   const { focusT, zoomT } = state;
-  const currentFOPEN = api.fopenAtZoomClamped(zoomT, runtime);
   const fNumber = api.fNumberAtStopdown(0, zoomT, runtime);
-  const wideOpenStopSD = api.wideOpenStopAtZoom(zoomT, runtime);
+  const stop = api.stopSemiDiameterForFNumber(fNumber, zoomT, runtime);
   const fieldGeometry = api.computeAnalysisFieldGeometryAtState(focusT, zoomT, runtime, 0);
-  const baseEPSD = api.entrancePupilAtState(wideOpenStopSD, focusT, zoomT, runtime, fieldGeometry, 0).epSD;
   return {
     method: "diffraction",
     spectrum: api.resolveMtfSpectrum(state, "photopic").spectrum,
     focus: "best-axial",
-    maxGridSize: 128,
+    maxGridSize: 256,
     fieldFractions: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
-    pupilSemiDiameterMm: (baseEPSD * currentFOPEN) / fNumber,
-    stopSemiDiameterMm: (wideOpenStopSD * currentFOPEN) / fNumber,
+    pupilSemiDiameterMm: api.entrancePupilAtState(stop, focusT, zoomT, runtime, fieldGeometry, 0).epSD,
+    stopSemiDiameterMm: stop,
     movementActive: false,
   };
 }
@@ -349,6 +351,8 @@ function assertIsResult(data: MtfNativeData, direct: LvMtfResult, at: string): v
     assert.equal(field.status, theirs.status === "converged" ? "ok" : theirs.status, where);
     assert.equal(field.sampling.gridSize, theirs.gridSize, where);
     assert.equal(field.sampling.validRays, theirs.validRays, where);
+    assert.equal(field.sampling.unaimedRays, theirs.unaimedRays, where);
+    assert.equal(field.sampling.unresolvedInBeamRays, theirs.unresolvedInBeamRays, where);
     if (theirs.status === "unavailable") {
       assert.ok(curve(field.sagittal).every(Number.isNaN) && curve(field.tangential).every(Number.isNaN), where);
       assert.equal(field.reason, theirs.reason, where);
@@ -359,7 +363,12 @@ function assertIsResult(data: MtfNativeData, direct: LvMtfResult, at: string): v
     }
   });
   assert.deepEqual(data.focus, { mode: direct.focus?.mode, appliedShiftMm: direct.focus?.appliedShiftMm }, at);
-  assert.equal(data.aperture.tracedFNumber, direct.aperture?.tracedFNumber, at);
+  const vignetting = direct.axialVignetting;
+  assert.equal(
+    data.aperture.axialVignettingBeforeStop,
+    vignetting === null ? undefined : vignetting.beforeStop ? 1 : 0,
+    at,
+  );
   assert.deepEqual(data.lines, direct.support.spectralLines, at);
   assert.equal(data.method.name, direct.method, at);
 }
@@ -386,13 +395,13 @@ function shown(row: MtfTableRow): string[] {
 }
 
 /**
- * What an answer says bounds the axial beam, in the words of LensVisualizer's report: "iris", or the label of the
- * surface; "-" where LensVisualizer found no rim of the beam.
+ * The surface an answer says vignettes the axial marginal ray, by its label, with ", before the stop" as the tab's
+ * header adds it; "-" where LensVisualizer says none does.
  */
-function limitOf(opticalCase: OpticalCase, data: MtfNativeData): string {
-  if (!Object.hasOwn(data.aperture, "limitingSurfaceIndex")) return "-";
-  const index = data.aperture.limitingSurfaceIndex;
-  return index === opticalCase.system.stopIndex ? "iris" : opticalCase.system.surfaces[index].label;
+function vignettedAt(opticalCase: OpticalCase, data: MtfNativeData): string {
+  if (!Object.hasOwn(data.aperture, "axialVignettingSurfaceIndex")) return "-";
+  const label = opticalCase.system.surfaces[data.aperture.axialVignettingSurfaceIndex].label;
+  return data.aperture.axialVignettingBeforeStop === 1 ? `${label}, before the stop` : label;
 }
 
 /** A focus shift as LensVisualizer's report prints it: four decimals, with its sign unless it rounds to zero. */
@@ -467,11 +476,11 @@ test(
 
       const [axis, field70] = [printed.tables.lv[0], printed.tables.lv[7]];
       assert.deepEqual([axis.field, field70.field], [0, 0.7], at);
-      const limitedBy = limitOf(opticalCase, data);
+      const vignetted = vignettedAt(opticalCase, data);
       measured.push(
-        `${at}: case ${printed.caseId.slice(0, 12)}, ${String(data.method.params.spectrum)}, shift ` +
-          `${formatFixed(data.focus.appliedShiftMm, 4)} mm, traced f/${formatFixed(data.aperture.tracedFNumber, 4)} ` +
-          `(${limitedBy}), axis ${shown(axis).join(" ")}, 70 % ${shown(field70).join(" ")}, grids ` +
+        `${at}: case ${printed.caseId}, ${String(data.method.params.spectrum)}, shift ` +
+          `${formatFixed(data.focus.appliedShiftMm, 4)} mm, axial beam vignetted at ${vignetted}, ` +
+          `axis ${shown(axis).join(" ")}, 70 % ${shown(field70).join(" ")}, grids ` +
           `${data.fields.map((field) => field.sampling.gridSize).join(" ")}, ` +
           `${data.fields.filter((field) => field.status !== "ok").length} fields not ok`,
       );
@@ -482,7 +491,7 @@ test(
       if (binding.fingerprint().engineClosureHash === PINNED_CLOSURE && pinned?.caseId === printed.caseId) {
         assert.equal(data.method.params.spectrum, pinned.spectrum, at);
         assert.equal(formatFixed(data.focus.appliedShiftMm, 4), pinned.shift, at);
-        assert.equal(formatFixed(data.aperture.tracedFNumber, 4), pinned.tracedF, at);
+        assert.equal(vignetted, pinned.vignetted, at);
         assert.deepEqual(shown(axis), pinned.axis, at);
         assert.deepEqual(shown(field70), pinned.field70, at);
       } else {
@@ -531,7 +540,7 @@ test(
 );
 
 test(
-  "the seed of the footprint scan matters: the audit scripts' nominal pupil gives another MTF than the tab's",
+  "the pupil radius of the request scales LensVisualizer's aimed launch: the stored nominal pupil moves its rays",
   { skip, timeout: 300_000 },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
@@ -541,85 +550,68 @@ test(
       assert.ok(configuration !== undefined);
       const { runtime, state } = await stateOf(binding, configuration.key, configuration.zoomT);
       const options = tabRequest(binding, runtime, state);
-      // LensVisualizer's audit scripts ask with the lens's stored nominal pupil (scripts/audit-mtf.mjs,
-      // `pupilSemiDiameterMm: L.EP.epSD`): the one place this repository reads it.
+      // The lens's stored nominal pupil, focal length over twice the marked f-number (`L.EP.epSD`), which the tab's
+      // paraxial pupil of the rule's stop equals to a rounding since LV #933; its audit scripts now pass the latter.
       const nominal = (runtime.EP as { readonly epSD: number }).epSD;
       const audit = binding.api.computeMtf(
         ...lvMtfInputs(binding.api, state, { ...options, pupilSemiDiameterMm: nominal }),
       );
       const tab = binding.api.computeMtf(...lvMtfInputs(binding.api, state, options));
-      const { printed, data } = runs.get(run) as Presented;
+      const { data } = runs.get(run) as Presented;
       // What lvrtc mtf printed is the tab's, to the bit.
       assertIsResult(data, tab, run);
       const difference = largestDifference(tab, audit);
       const seeds = `${nominal} mm for ${options.pupilSemiDiameterMm} mm`;
-      t.diagnostic(`${run}: seed ${seeds}: the MTF differs by up to ${formatFixed(difference, 4)}`);
-      // At ed78cf40 the audit scripts' seed is 1 % to 3 % below the tab's on these three lenses, and their MTF
-      // lies 0.006 to 0.008 from the tab's. How far is the lens's: it is held while the lens is the measured one.
-      if (binding.fingerprint().engineClosureHash === PINNED_CLOSURE && PINNED[run]?.caseId === printed.caseId) {
-        assert.notEqual(nominal, options.pupilSemiDiameterMm, run);
-        assert.ok(difference > 1e-3, `${run}: ${difference}`);
-      }
+      t.diagnostic(`${run}: pupil ${seeds}: the MTF differs by up to ${difference}`);
+      // The pupil radius sizes the aimed launch's Jacobian probes, and a lattice is aimed to a tolerance, never
+      // polished: another radius is other rays, to the tolerance of 1e-7 of the stop radius, and so another MTF in its
+      // last digits only.
+      assert.ok(Math.abs(nominal / options.pupilSemiDiameterMm - 1) < 1e-9, `${run}: ${seeds}`);
+      assert.ok(difference < 1e-4, `${run}: ${difference}`);
     }
   },
 );
 
 test(
-  "the focus shift and the traced f-number are those of LensVisualizer's committed chart-regression report",
+  "the focus shift is that of LensVisualizer's own chart-regression request, which asks the tab's stop and pupil",
   { skip, timeout: 300_000 },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const runs = await benchmark();
     const report = readFileSync(join(LV_PATH ?? "", ...CHART_REPORT.split("/")), "utf8");
-    for (const [run, [tracedF, limitedBy, shift]] of Object.entries(CHART_REPORT_ROWS)) {
+    for (const [run, [, , shift]] of Object.entries(CHART_REPORT_ROWS)) {
       const configuration = CONFIGURATIONS.find((candidate) => candidate.run === run);
       assert.ok(configuration !== undefined, run);
-      const { printed, opticalCase, data } = runs.get(run) as Presented;
+      const { data } = runs.get(run) as Presented;
       const { runtime, state } = await stateOf(binding, configuration.key, configuration.zoomT);
 
-      // The report does not ask what the tab asks: its grid cap is 256, its fields and frequencies are those of
-      // the charts, and its radii are the iris and its entrance pupil unscaled (reports/mtfChartRegression.report.ts).
-      // None of that enters the axial focus search or the traced aperture, which the report's own request, asked
-      // here for the axis alone, shows: the two numbers are the tab's to the report's precision.
+      // The report does not ask what the tab asks: its fields and frequencies are those of the charts, and its radii
+      // the iris and the state's paraxial entrance pupil of it, which since LV #933 are the tab's wide open. None of
+      // that enters the axial focus search, which the report's own request, asked here for the axis alone, shows.
       const options = tabRequest(binding, runtime, state);
       const stop = binding.api.wideOpenStopAtZoom(configuration.zoomT, runtime);
       const geometry = binding.api.computeAnalysisFieldGeometryAtState(0, configuration.zoomT, runtime, 0);
       const pupil = binding.api.entrancePupilAtState(stop, 0, configuration.zoomT, runtime, geometry, 0).epSD;
+      assert.equal(stop, options.stopSemiDiameterMm, run);
+      assert.equal(pupil, options.pupilSemiDiameterMm, run);
       const theirs = binding.api.computeMtf(
         ...lvMtfInputs(binding.api, state, {
           ...options,
-          maxGridSize: 256,
           frequenciesPerMm: [0, 10, 20, 30, 40, 50],
           fieldFractions: [0],
           pupilSemiDiameterMm: pupil,
           stopSemiDiameterMm: stop,
         }),
       );
-      assert.ok(theirs.focus !== null && theirs.aperture !== null, run);
-      assert.equal(signed(theirs.focus.appliedShiftMm), signed(data.focus.appliedShiftMm), run);
-      assert.equal(theirs.aperture.tracedFNumber.toFixed(2), data.aperture.tracedFNumber.toFixed(2), run);
-
-      const mine = [
-        data.aperture.tracedFNumber.toFixed(2),
-        limitOf(opticalCase, data),
-        signed(data.focus.appliedShiftMm),
-      ];
-      // The committed report is of the lens as it was when the report was written: its row is held while the
-      // engine files and the case are still the ones the figures above were measured with.
-      const pinned = PINNED[run];
-      if (binding.fingerprint().engineClosureHash === PINNED_CLOSURE && pinned?.caseId === printed.caseId) {
-        assert.deepEqual(mine, [tracedF, limitedBy, shift], run);
-      } else {
-        t.diagnostic(`${run}: measured ${mine.join(", ")}; the report's row is ${tracedF}, ${limitedBy}, ${shift}`);
-      }
-      // The row copied here is still the one the checkout's report holds.
+      assert.ok(theirs.focus !== null, run);
+      assert.equal(theirs.focus.appliedShiftMm, data.focus.appliedShiftMm, run);
+      // LensVisualizer's committed report (607ff23ae) is of its MTF before #936, which the PR says is regenerated after
+      // the merge: its rows are a record of the past, compared in words only.
+      const measured = signed(data.focus.appliedShiftMm);
+      if (measured !== shift) t.diagnostic(`${run}: shift ${measured}; the committed report's row says ${shift}`);
       const zoom = configuration.zoomT;
-      const row = new RegExp(
-        `^\\| \`${configuration.key}\` \\| ${zoom} \\|[^|]*\\|[^|]*\\|[^|]*\\| ${tracedF.replace(".", "\\.")} \\| ` +
-          `${limitedBy} \\| ${shift.replace("+", "\\+").replace(".", "\\.")} \\|`,
-        "m",
-      );
-      if (!row.test(report)) t.diagnostic(`${run}: ${CHART_REPORT} no longer holds the row that is copied here`);
+      const row = new RegExp(`^\\| \`${configuration.key}\` \\| ${zoom} \\|`, "m");
+      if (!row.test(report)) t.diagnostic(`${run}: ${CHART_REPORT} no longer holds a row of the configuration`);
     }
   },
 );
@@ -642,33 +634,52 @@ test("two processes present the same lens with the same bytes", { skip, timeout:
 // ── The f/8 comparison ───────────────────────────────────────────────────────────────────────────────────────────
 
 test(
-  "--aperture f/8 is the tab's comparison: both radii of the wide-open request scaled by N over 8",
+  "--aperture f/8 is the tab's comparison: the stop rule's f/8 stop, which is the slider's f/8 to the bit",
   { skip, timeout: 300_000 },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const runsDir = tempDir();
-    const [configuration] = CONFIGURATIONS;
-    const { printed, opticalCase, data } = await present(runsDir, argsOf(configuration, "--aperture", "f/8"));
-    assert.equal(printed.name, `${configuration.run}-f8`);
-    const { runtime, state } = await stateOf(binding, configuration.key, configuration.zoomT);
-    const wideOpen = tabRequest(binding, runtime, state);
-    // MtfTab.tsx: `const scale = fNumber / COMPARISON_F_NUMBER;`, and both radii of the job times `scale`.
-    const scale = binding.api.fNumberAtStopdown(0, configuration.zoomT, runtime) / 8;
-    const options = {
-      ...wideOpen,
-      pupilSemiDiameterMm: wideOpen.pupilSemiDiameterMm * scale,
-      stopSemiDiameterMm: wideOpen.stopSemiDiameterMm * scale,
-    };
-    assert.equal(opticalCase.conditions.stopSemiDiameter, options.stopSemiDiameterMm);
-    assert.deepEqual([data.method.params.view, data.method.params.fNumber], ["f8-comparison", 8]);
-    assertIsResult(
-      data,
-      binding.api.computeMtf(...lvMtfInputs(binding.api, state, options)),
-      `${configuration.run} at f/8`,
-    );
-    // The beam the tab traces for f/8 is slower than the one it traces wide open.
-    const open = (await benchmark()).get(configuration.run) as Presented;
-    assert.ok(data.aperture.tracedFNumber > open.data.aperture.tracedFNumber, String(data.aperture.tracedFNumber));
+    const exporter = createLvExporter(binding);
+    for (const configuration of CONFIGURATIONS) {
+      const { printed, opticalCase, data } = await present(runsDir, argsOf(configuration, "--aperture", "f/8"));
+      const at = `${configuration.run} at f/8`;
+      assert.equal(printed.name, `${configuration.run}-f8`);
+      const { runtime, state } = await stateOf(binding, configuration.key, configuration.zoomT);
+      const wideOpen = tabRequest(binding, runtime, state);
+      // MtfTab.tsx (LV #933): the stop rule's f/8 stop, and the wide-open pupil times the ratio of the two stops.
+      const stop = binding.api.stopSemiDiameterForFNumber(8, configuration.zoomT, runtime);
+      const options = {
+        ...wideOpen,
+        pupilSemiDiameterMm: (wideOpen.pupilSemiDiameterMm * stop) / wideOpen.stopSemiDiameterMm,
+        stopSemiDiameterMm: stop,
+      };
+      assert.equal(opticalCase.conditions.stopSemiDiameter, options.stopSemiDiameterMm, at);
+      assert.deepEqual([data.method.params.view, data.method.params.fNumber], ["f8-comparison", 8], at);
+      assertIsResult(data, binding.api.computeMtf(...lvMtfInputs(binding.api, state, options)), at);
+      // The case of the tab's comparison is the case of the slider at f/8, to the bit: the same stop radius, and so
+      // the same case id (CLAUDE.md: lv-f8-comparison and f-number 8 now give one double). Both on the tab's lines.
+      const lines = { kind: data.method.params.spectrum as "photopic" | "reference" | "cdf" };
+      const slider = await exporter.exportLens(configuration.key, {
+        state: { zoomT: configuration.zoomT },
+        aperture: { kind: "f-number", value: 8 },
+        lines,
+      });
+      const comparison = await exporter.exportLens(configuration.key, {
+        state: { zoomT: configuration.zoomT },
+        aperture: { kind: "lv-f8-comparison" },
+        lines,
+      });
+      assert.ok(slider.ok && comparison.ok, at);
+      assert.equal(slider.opticalCase.conditions.stopSemiDiameter, stop, at);
+      assert.equal(comparison.opticalCase.id, slider.opticalCase.id, at);
+      assert.equal(comparison.opticalCase.id, printed.caseId, at);
+      // Whose pupil the MTF is asked with is not in the case: the tab's comparison's, which is not the slider's
+      // paraxial pupil of the stop to the bit on every lens (lvPupilSeed).
+      const geometry = binding.api.computeAnalysisFieldGeometryAtState(0, configuration.zoomT, runtime, 0);
+      const sliderPupil = binding.api.entrancePupilAtState(stop, 0, configuration.zoomT, runtime, geometry, 0).epSD;
+      if (sliderPupil !== options.pupilSemiDiameterMm)
+        t.diagnostic(`${at}: the slider's pupil ${sliderPupil} mm, the comparison's ${options.pupilSemiDiameterMm} mm`);
+    }
 
     // A lens that is not faster than f/7.95 wide open, or does not stop down to f/8, has no such comparison in the
     // tab, and the answer is the tab's reason. At ed78cf40 this zoom is f/8.2 at its long end; whatever it is
@@ -677,11 +688,14 @@ test(
     const slowLens = await stateOf(binding, slowKey, 1);
     const fNumber = binding.api.fNumberAtStopdown(0, 1, slowLens.runtime);
     const offered = fNumber < 8 - 0.05 && slowLens.runtime.maxFstop >= 8;
+    // A lens at f/8 or slower wide open has the stop rule's f/8 stop for its wide-open stop (LV #933): its comparison is
+    // its wide-open case, which the engine answers as such.
+    const wideOpenCase = fNumber >= 8;
     const slow = await lvrtc(runsDir, "mtf", slowKey, "--zoom", "1", "--aperture", "f/8");
     assert.equal(slow.code, 0, slow.err);
     assert.match(
       slow.out,
-      offered
+      offered || wideOpenCase
         ? /^lv {2}ok {2}computed$/m
         : /^lv {2}unsupported {2}computed\n {2}feature aperture\.f8-comparison: the lens /m,
     );
@@ -723,7 +737,7 @@ test(
           method: "geometric",
           focus: "design",
         },
-        request: { method: "geometric", spectrum: "reference", focus: "design", maxGridSize: 128 },
+        request: { method: "geometric", spectrum: "reference", focus: "design", maxGridSize: 256 },
       },
       {
         said: "f/5.6, C d F, best focus, cap 64",
@@ -748,7 +762,7 @@ test(
           method: "diffraction",
           focus: "engine-best",
         },
-        request: { method: "diffraction", spectrum: "reference", focus: "best-axial", maxGridSize: 128 },
+        request: { method: "diffraction", spectrum: "reference", focus: "best-axial", maxGridSize: 256 },
       },
     ];
     for (const one of asked) {
@@ -761,19 +775,16 @@ test(
       }
       const { opticalCase } = exported;
       const stop = opticalCase.conditions.stopSemiDiameter;
-      // The seed by the hook's rule, at the f-number that stop radius is the stop of.
+      // The pupil by the hook's rule (LV #933): the state's paraxial pupil of that stop radius.
       const state = api.prepareRuntimeState(runtime, one.focusT, 0, 0);
-      const wideOpenStopSD = api.wideOpenStopAtZoom(0, runtime);
-      const currentFOPEN = api.fopenAtZoomClamped(0, runtime);
       const geometry = api.computeAnalysisFieldGeometryAtState(one.focusT, 0, runtime, 0);
-      const baseEPSD = api.entrancePupilAtState(wideOpenStopSD, one.focusT, 0, runtime, geometry, 0).epSD;
-      const fNumber = stop === wideOpenStopSD ? currentFOPEN : (wideOpenStopSD * currentFOPEN) / stop;
+      const pupil = api.entrancePupilAtState(stop, one.focusT, 0, runtime, geometry, 0).epSD;
       const direct = api.computeMtf(
         ...lvMtfInputs(api, state, {
           ...one.request,
           fieldFractions: values,
           frequenciesPerMm: one.spec.frequenciesPerMm,
-          pupilSemiDiameterMm: (baseEPSD * currentFOPEN) / fNumber,
+          pupilSemiDiameterMm: pupil,
           stopSemiDiameterMm: stop,
           movementActive: false,
         }),
@@ -790,11 +801,11 @@ test(
       assert.deepEqual(resultDataProblems(mtfNativeQuantity, result.data), [], at);
       const data = result.data as MtfNativeData;
       assertIsResult(data, direct, at);
-      assert.equal(data.method.params.pupilSemiDiameterMm, (baseEPSD * currentFOPEN) / fNumber, at);
+      assert.equal(data.method.params.pupilSemiDiameterMm, pupil, at);
       assert.equal(data.method.params.profile, undefined, at);
       t.diagnostic(
         `${at}: ${opticalCase.conditions.object.kind} object, shift ${formatFixed(data.focus.appliedShiftMm, 4)} mm, ` +
-          `traced f/${formatFixed(data.aperture.tracedFNumber, 4)}`,
+          `axial beam vignetted at ${vignettedAt(opticalCase, data)}`,
       );
     }
   },

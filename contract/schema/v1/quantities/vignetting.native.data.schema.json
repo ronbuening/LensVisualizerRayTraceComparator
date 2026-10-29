@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lvrtc:contract:v1:quantities:vignetting.native.data",
   "title": "vignetting.native data",
-  "description": "An engine's own vignetting and relative illumination of a case: per requested line, and within a line per requested field angle, where the field's chief ray lands, how much of its beam gets through every aperture and how bright its image is, each over the axis's, by the engine's own measure. Code checks that an unavailable field says why and has neither figure, that any other field has both, each a finite number, and that an unconverged field says why.",
+  "description": "An engine's own vignetting and relative illumination of a case: per requested line, and within a line per requested field angle, where the field's chief ray lands, the share of its beam that gets through every aperture and how bright its image is over the axis's, each by the engine's own measure. Code checks that an unavailable field says why and has neither figure, that any other field has both, each a finite number, and that an unconverged field says why.",
   "type": "object",
   "properties": {
     "fields": {
@@ -36,7 +36,7 @@
             "type": ["number", "null"]
           },
           "geometricTransmission": {
-            "description": "How much of the field's beam gets through every aperture, over the axis's, by the engine's own measure; null for an unavailable field.",
+            "description": "The share of the field's beam that gets through every aperture, by the engine's own measure (not over the axis's: an axis an aperture clips is below 1); null for an unavailable field.",
             "type": ["number", "null"],
             "minimum": 0
           },

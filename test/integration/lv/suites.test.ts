@@ -317,13 +317,14 @@ test(
     // and has each engine trace the same fields on the finer lattice, 27 sets more; and R6b is about lv and the
     // wave estimator on its rays, one request of each for a run. R7a has each engine trace the spot sets of the coma
     // and bokeh tabs, ten a line: 90 sets, at one line four times and at five lines once. R8a has each engine trace
-    // the axial sets of the spherical-aberration and axial-colour sections, two a line: 18 sets. R9a has each engine
-    // trace the chief sets of the distortion, pupils and lateral-colour tabs, four a line: 36 sets. R10a has each
-    // engine trace the curvature sets of the field-curve sections, two a line: 18 sets. R11a has each engine trace
-    // the vignetting tab's beam of each of its fields at every line: 83 sets (LensVisualizer 098c91ef6).
+    // the axial sets of the spherical-aberration and axial-colour sections, two a line and the colour at a line that
+    // is a chromatic channel's (each of the four runs of one line, none of the photopic run): 22 sets. R9a has each
+    // engine trace the chief sets of the distortion, pupils and lateral-colour tabs, four a line: 36 sets. R10a has
+    // each engine trace the curvature sets of the field-curve sections, two a line: 18 sets. R11a has each engine
+    // trace the vignetting tab's stop lattice of each of its fields at every line: 83 sets (LensVisualizer 607ff23ae).
     assert.match(
       ran.stdout,
-      /^smoke: 810 jobs: 800 ok, 10 unsupported, 0 error, 0 pending \(638 computed, 162 cached\)$/m,
+      /^smoke: 818 jobs: 808 ok, 10 unsupported, 0 error, 0 pending \(646 computed, 162 cached\)$/m,
     );
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +ok +computed$/m);
     assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
@@ -339,11 +340,11 @@ test(
     // 2.2e-8 of the reference engine's on every field of the suite, against a gate of 1e-7.
     // R6a is of a field on both lattices, fifteen fields like R4, and passes wherever it is judged; R6b is
     // recorded, one pair a run, and whether it is marked for attention is no matter of this test. R7a is of the 90
-    // spot sets, and passes; R8a of the 18 axial sets, and passes; R9a of the chief sets of a pattern at every line,
+    // spot sets, and passes; R8a of the 22 axial sets, and passes; R9a of the chief sets of a pattern at every line,
     // four spans a run, 20, and passes; R10a of the 18 curvature sets, and passes; R11a of the beam sets of a line,
     // one span a line, 9, and passes. A pair is counted in both modes.
     const summary =
-      /^smoke: 528 pairs: 508 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^smoke: 536 pairs: 516 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
         compared.stdout,
       );
     assert.ok(
@@ -365,7 +366,7 @@ test(
         sets("r10a").length,
         sets("r11a").length,
       ],
-      [15, 5, 90, 18, 20, 18, 9],
+      [15, 5, 90, 22, 20, 18, 9],
     );
     for (const set of [...sets("r7a"), ...sets("r8a"), ...sets("r9a"), ...sets("r10a"), ...sets("r11a")])
       assert.equal(set.pairs[0].verdict, "PASS", set.run);

@@ -100,7 +100,7 @@ export interface CaseSource {
   curvatureRaySets?(run: RunSpec, opticalCase: OpticalCase): CurvatureSetResolution | Promise<CurvatureSetResolution>;
   /**
    * The vignetting sets of a run of a case this source resolved (`src/rays/vignettingSets.ts`): the rays of the tab
-   * that presents the vignetting and relative illumination, each field's beam and the chief rays of its image mapping,
+   * that presents the vignetting and relative illumination, each field's beam on its stop lattice and its stop-centre ray,
    * one `rays.trace` spec for each field and line, a coded problem for a case or a field that has none, and the
    * engines' own vignetting requests of the same fields. A pure function of the run and the case, like the ray sets. A
    * source without this method has no vignetting sets to give.

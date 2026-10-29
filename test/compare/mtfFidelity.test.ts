@@ -66,7 +66,14 @@ test("the comparator is mtf.native's for r4f, and reports the three metrics the 
     { name: "sampling.mismatches", unit: "elements" },
     { name: "fields.mismatches", unit: "elements" },
   ]);
-  assert.deepEqual(FIDELITY_SAMPLING, ["gridSize", "validRays", "blockedRays", "failedRays"]);
+  assert.deepEqual(FIDELITY_SAMPLING, [
+    "gridSize",
+    "validRays",
+    "blockedRays",
+    "failedRays",
+    "unaimedRays",
+    "unresolvedInBeamRays",
+  ]);
   assert.deepEqual(mtfNativeQuantity.validateData(BASE), []);
 });
 
@@ -110,6 +117,14 @@ test("sampling.mismatches counts every grid size and ray count that is another n
     withField(BASE, index, (field) => ({ ...field, sampling }));
   const axis = BASE.fields[0].sampling;
   assert.equal(metricsOf(BASE, sampled(0, { ...axis, gridSize: 64 }))["sampling.mismatches"].value, 1);
+  // LensVisualizer #936's two counts: a stop sample not aimed, and an unresolved sample beside the beam.
+  assert.equal(metricsOf(BASE, sampled(0, { ...axis, unaimedRays: 2 }))["sampling.mismatches"].value, 1);
+  assert.equal(
+    metricsOf(sampled(0, { ...axis, unresolvedInBeamRays: 1 }), sampled(0, { ...axis, unresolvedInBeamRays: 2 }))[
+      "sampling.mismatches"
+    ].value,
+    1,
+  );
   assert.equal(
     metricsOf(BASE, sampled(0, { ...axis, validRays: 813, blockedRays: 211 }))["sampling.mismatches"].value,
     2,
@@ -217,6 +232,8 @@ test("each answer's grid sizes and ray counts are recorded beside the comparison
     validRays: [812, 11584, NaN],
     blockedRays: [212, 4800, NaN],
     failedRays: [0, 0, NaN],
+    unaimedRays: [NaN, NaN, NaN],
+    unresolvedInBeamRays: [NaN, NaN, NaN],
   });
 });
 

@@ -7,9 +7,12 @@
 // R8a is gated: every pair of the three engines passes, every figure is measured, and no ray is valid in one engine
 // and not in another. R8b is recorded: nothing here is held to a figure of an intercept. What is held is that
 // LensVisualizer answers exactly the asks its sections answer and says why not of the others, that optiland answers
-// every ask, that the spherical aberration of the design run is of two methods within the pupil limit, that the colour
-// line is of two methods too since LensVisualizer #925 anchored its G channel (the d line, 587.56 nm, for a lens of
-// d-line indices) to the authored index, which is the case's to the bit, and that the report claims nothing it may not.
+// every ask, and that the report claims nothing it may not. Since LensVisualizer #927 the sections' zones are fractions
+// of the real stop's radius and optiland's worker's of its paraxial entrance pupil at the first line: both pairs of the
+// design run, the spherical aberration and the colour, are ATTENTION by their pupils' radii and no figure is measured,
+// until optiland's axial aim moves to the real stop (the owner deferred it until after Phase 6; docs/gotchas.md,
+// "Axial rays"). LensVisualizer #925's anchored G channel (the d line, 587.56 nm, for a lens of d-line
+// indices) still traces the case's index to the bit.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -39,10 +42,11 @@ const RUNS = [DESIGN, PHOTOPIC, BEST];
 const ASKS = 2;
 /** The sets of a run at each line: the profile's pairs, and the near-axis and marginal pairs. */
 const SETS = 2;
+/** The colour set (LensVisualizer #930): one more at a line that is a channel's, as the d line of these runs. */
+const COLOUR_SETS = 1;
 
-/** The rung's limits of the sorting: two identifying rays of one line land within the first, two pupils' radii
- * differ by no more than the second of the larger, or the line is data. */
-const SAME_LINE_MM = loadPolicy().rungs.r8b.metrics["landing.maxAbs"].attention as number;
+/** The rung's limit of the sorting by pupils: two pupils' radii differ by no more than it of the larger, or the line
+ * is data. */
 const SAME_PUPIL = loadPolicy().rungs.r8b.metrics["pupilRadius.relative"].attention as number;
 
 test(
@@ -66,11 +70,13 @@ test(
     // R8a: every set is traced by the three engines, and every pair passes with every figure measured.
     const traced = manifest.jobs.filter((job) => job.rung === "r8a");
     const sets = new Map(manifest.runs.map((run) => [run.name, run.axialRaySets?.sets.length ?? 0]));
-    assert.equal(sets.get(DESIGN), SETS);
-    assert.equal(sets.get(BEST), SETS);
+    // One line, the d line, LensVisualizer's G channel: the profile, the marginal rays and the colour.
+    assert.equal(sets.get(DESIGN), SETS + COLOUR_SETS);
+    assert.equal(sets.get(BEST), SETS + COLOUR_SETS);
+    // The photopic lines are no channel's: the profile and the marginal rays at each line, no colour set.
     const photopicSets = sets.get(PHOTOPIC) ?? 0;
     assert.ok(photopicSets > SETS && photopicSets % SETS === 0, `${photopicSets}`);
-    const total = 2 * SETS + photopicSets;
+    const total = 2 * (SETS + COLOUR_SETS) + photopicSets;
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
     const gated = pairsOf(comparisons, "r8a", RAYS_TRACE);
@@ -115,23 +121,30 @@ test(
     const value = (pair: (typeof answered)[number], name: string): number | null | undefined =>
       pair.metrics[name]?.value;
     const [spherical, colour] = answered;
-    // Spherical aberration at the authored indices: two methods, every figure measured.
-    assert.equal(spherical.verdict, "RECORDED");
-    assert.equal(value(spherical, "fields.compared"), 1);
-    const landing = value(spherical, "landing.maxAbs");
-    assert.ok(typeof landing === "number" && landing <= SAME_LINE_MM, `${landing}`);
-    const pupil = value(spherical, "pupilRadius.relative");
-    assert.ok(typeof pupil === "number" && pupil <= SAME_PUPIL, `${pupil}`);
-    for (const figure of ["marginalIntercept.maxAbs", "longitudinalSa.maxAbs", "bestFocus.maxAbs", "profile.maxAbs"]) {
-      assert.equal(typeof value(spherical, figure), "number", figure);
+    // Both lines of the design run are of two pupils (LensVisualizer's real stop, 19.70 mm, optiland's paraxial
+    // entrance pupil, 20.85 mm, 5.5e-2 apart at LensVisualizer 607ff23ae): each pair ATTENTION by
+    // `pupilRadius.relative` beyond its limit, and no figure measured. On this lens the line is not even set aside as
+    // data: the figures are formed at the marginal fraction LensVisualizer took, 0.97, and optiland's rays at 0.97 of
+    // its larger pupil do not arrive (its own first arriving marginal pair is at 0.95), so they give no figures and the
+    // line is unsupported.
+    for (const [pair, figures] of [
+      [spherical, ["marginalIntercept.maxAbs", "longitudinalSa.maxAbs", "bestFocus.maxAbs", "profile.maxAbs"]],
+      [colour, ["lineFocus.maxAbs"]],
+    ] as const) {
+      assert.equal(pair.verdict, "ATTENTION", pair.reason ?? "");
+      assert.deepEqual(
+        [value(pair, "fields.compared"), value(pair, "fields.data"), value(pair, "fields.unavailable")],
+        [0, 0, 1],
+        pair.reason ?? "",
+      );
+      const pupil = value(pair, "pupilRadius.relative");
+      assert.ok(typeof pupil === "number" && pupil > SAME_PUPIL, `${pupil}`);
+      assert.match(pair.reason ?? "", /^pupilRadius\.relative \S+ is outside its attention band/);
+      assert.match(pair.reason ?? "", /line 0: unsupported, no-curve \(optiland-real-rays: no figures of its rays\)/);
+      for (const figure of [...figures, "landing.maxAbs"]) assert.equal(value(pair, figure), undefined, figure);
     }
     // Axial colour at the reference line, LensVisualizer's G channel (the d line for these d-line indices): since
-    // LensVisualizer #925 its indices are the authored ones, the case's to the bit (docs/gotchas.md, "Axial rays"), and
-    // the line is of two methods, its figures recorded with no band.
-    assert.equal(colour.verdict, "RECORDED", colour.reason ?? "");
-    assert.equal(value(colour, "fields.data"), 0);
-    assert.equal(value(colour, "fields.compared"), 1);
-    assert.equal(typeof value(colour, "lineFocus.maxAbs"), "number");
+    // LensVisualizer #925 its indices are the authored ones, the case's to the bit (docs/gotchas.md, "Axial rays").
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === colour.requestId && candidate.mode === "pairwise",
     );

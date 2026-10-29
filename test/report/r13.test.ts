@@ -14,7 +14,8 @@ test("R13b: the sums of two methods are recorded, the colour one engine states n
   try {
     const { comparisons, report } = await r13bCycle(root);
     const pairs = comparisons.comparisons.flatMap((set) => set.pairs);
-    assert.ok(pairs.every((pair) => pair.class === "recorded" && pair.verdict === "RECORDED"));
+    // The stand-ins' SPHA 2^-30 apart over the 0.75 that cancels is 1.24e-9 scaled, beyond policy 24's band of 8e-15.
+    assert.ok(pairs.every((pair) => pair.class === "recorded" && pair.verdict === "ATTENTION"));
     const [pairwise] = comparisons.comparisons.filter((set) => set.mode === "pairwise");
     const value = (name: string) => pairwise.pairs[0].metrics.find((metric) => metric.name === name)?.value;
     assert.equal(value("SPHA.maxAbs"), 2 ** -30);
@@ -22,8 +23,9 @@ test("R13b: the sums of two methods are recorded, the colour one engine states n
     assert.equal(value("invariant.maxAbs"), 0);
     assert.equal(value("CLA.maxAbs"), undefined);
     const reason = pairwise.pairs[0].reason ?? "";
+    assert.match(reason, /^total\.maxScaled \S+ is outside its attention band 8\.00e-15/);
     assert.match(reason, /CLA\.maxAbs was not measured: optiland-seidels states none/);
-    assert.match(reason, /the rung sets no limit on invariant\.maxAbs/);
+    assert.doesNotMatch(reason, /the rung sets no limit/);
     const recorded = pairwise.participants.find((participant) => participant.engine === "ref-seidel")?.recorded;
     assert.ok(recorded !== undefined && Number.isFinite(recorded.W040[0]) && Number.isFinite(recorded.W020[0]));
     assert.deepEqual(wordingProblems(report.markdown), []);

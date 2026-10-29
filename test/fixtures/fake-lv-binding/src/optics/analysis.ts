@@ -36,5 +36,15 @@ export {
   computeFieldCurvatureBundle,
   computeOffAxisFieldGeometryScalar,
 } from "./analysis/curvature.ts";
-export { computeVignettingCurve } from "./analysis/vignetting.ts";
+export {
+  BEAM_GRID_CELLS,
+  MIN_BEAM_GRID_CELLS,
+  computeVignettingCurve,
+  computeVignettingField,
+} from "./analysis/vignetting.ts";
+export {
+  prepareAimedPupilLaunch,
+  prepareAimedPupilTrace,
+  prepareAimedStopLattice,
+} from "./analysis/pupils/aimedPupil.ts";
 export { computeOpticalSummary } from "./analysis/summary.ts";

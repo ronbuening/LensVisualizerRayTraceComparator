@@ -9,3 +9,6 @@ export function lensChromaticReference(elements: readonly { indexReference?: str
 
 // The line of each of the fake's chromatic channels of a lens of d-line indices, under LV's name.
 export const CHROMATIC_CHANNEL_WAVELENGTH_NM = Object.freeze({ R: LINE_NM.C, G: LINE_NM.d, B: LINE_NM.F, V: LINE_NM.g });
+
+// The channels every chromatic readout traces to choose its zone, under LV's name (LV #930): LV's four.
+export const CHROMATIC_ZONE_CHANNELS = Object.freeze(["R", "G", "B", "V"] as const);

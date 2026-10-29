@@ -257,3 +257,51 @@ test("a ray of a set starts where LensVisualizer's skew launch starts it: rayLea
   const length = Math.sqrt(1 + 0.25 ** 2);
   assert.deepEqual(direction, [0 / length, -0.25 / length, 1 / length]);
 });
+
+test("a sample the tabs could not aim holds the chief ray at weight 0; a blocked one keeps LensVisualizer's ray", async (t) => {
+  const lv = freshLv(t);
+  // The fake aims nothing beyond 0.95 of the stop (the rings' outer ring, the fans' ends) and blocks what is beyond 0.5
+  // (the fans' samples at 2/3) at the first surface.
+  const aimed = variantOf(lv, "aimed", {
+    "src/lens-data/acme/AcmeSinglet50.data.ts": (text) =>
+      text.replace("focusTravel: 5,", "focusTravel: 5,\n  aim: { unaimedBeyond: 0.95, blockedBeyond: 0.5 },"),
+  });
+  const binding = await bind(t, aimed);
+  const { model } = await modelOf(binding, SINGLET);
+  const { api } = binding;
+  const made = lvSpotRaySets(api, model);
+  assert.deepEqual(made.problems, []);
+  const setup = lvSpotSetup(api, model);
+  const request = api.createAnalysisRequest({
+    preparedState: model.state,
+    dynamicEFL: 0,
+    currentEPSD: setup.pupilSemiDiameterMm,
+    currentPhysStopSD: model.exported.conditions.stopSemiDiameter,
+    fieldGeometry: setup.fieldGeometry,
+  });
+  const coma = api.computeComaAnalysis(request);
+  for (const [set, fan] of [
+    [made.sets[3], coma.meridionalComa],
+    [made.sets[4], coma.sagittalComa],
+  ] as const) {
+    const { origins, directions, weights } = raysOf(set);
+    const chief = weights.length - 1;
+    const fractions = [-1, -2 / 3, -1 / 3, 0, 1 / 3, 2 / 3, 1];
+    const landed = fractions.map((fraction, ray) => {
+      if (Math.abs(fraction) > 0.95) {
+        // Unaimed: the chief ray, at weight 0, never traced by the tab.
+        assert.deepEqual(vec(origins, ray), vec(origins, chief));
+        assert.deepEqual(vec(directions, ray), vec(directions, chief));
+        assert.equal(weights[ray], 0);
+        return false;
+      }
+      assert.equal(weights[ray], 1);
+      // A blocked sample is LensVisualizer's blocking ray, which the trace stops.
+      const point = landing(api, model, vec(origins, ray), vec(directions, ray), model.state.imgZ);
+      assert.equal(point === null, Math.abs(fraction) > 0.5, `sample ${ray}`);
+      return point !== null;
+    });
+    assert.ok(fan !== null);
+    assert.equal(fan.validSampleCount, landed.filter(Boolean).length);
+  }
+});

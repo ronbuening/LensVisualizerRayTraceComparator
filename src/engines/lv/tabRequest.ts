@@ -18,6 +18,7 @@ import type {
 export type LvHookApi = Pick<
   LvApi,
   | "wideOpenStopAtZoom"
+  | "stopSemiDiameterForFNumber"
   | "fopenAtZoomClamped"
   | "fNumberAtStopdown"
   | "computeAnalysisFieldGeometryAtState"
@@ -51,34 +52,38 @@ export interface LvHookAperture {
   readonly fNumber: number;
   /** The radius of the iris wide open at the zoom state, mm: the prepared stop surface's. */
   readonly wideOpenStopSD: number;
-  /** The radius the hook hands the tab as the stop's: `wideOpenStopSD` to one rounding, not always to the bit. */
+  /**
+   * The radius the hook hands the tabs as the stop's: the stop rule's at the slider's f-number
+   * (`stopSemiDiameterForFNumber`), which wide open is `wideOpenStopSD`.
+   */
   readonly currentPhysStopSD: number;
-  /** The entrance pupil of the wide-open iris at the state, mm. */
+  /** The paraxial entrance pupil of the wide-open iris at the state, mm. */
   readonly baseEPSD: number;
-  /** The radius the hook hands the tab as the pupil's: the seed of the footprint scan. */
+  /** The radius the hook hands the tabs as the pupil's: the paraxial entrance pupil of `currentPhysStopSD`. */
   readonly currentEPSD: number;
 }
 
 /**
  * The hook's aperture numbers for a prepared state, with the aperture slider at wide open (`stopdownT` 0) and the
- * aberration control neutral, as a lens opens. Restated from useLensComputation.ts:
+ * aberration control neutral, as a lens opens. Restated from useLensComputation.ts (LV #933):
  *
  * ```
  * const currentFOPEN = L ? fopenAtZoom(zoomT, L) : 1;
  * const fNumber = L ? fNumberAtStopdown(stopdownT, zoomT, L) : 1;
  * const wideOpenStopSD = L ? wideOpenStopAtZoom(zoomT, L) : 0;
- * const currentPhysStopSD = L ? (wideOpenStopSD * currentFOPEN) / fNumber : 0;
+ * const currentPhysStopSD = L ? stopSemiDiameterForFNumber(fNumber, zoomT, L) : 0;
  * const baseEPSD =
  *   L && fieldGeometry ? entrancePupilAtState(wideOpenStopSD, focusT, zoomT, L, fieldGeometry, aberrationT).epSD : 0;
- * const currentEPSD = L ? (baseEPSD * currentFOPEN) / fNumber : 0;
+ * const currentEPSD =
+ *   L && fieldGeometry ? entrancePupilAtState(currentPhysStopSD, focusT, zoomT, L, fieldGeometry, aberrationT).epSD : 0;
  * ```
  *
  * with `fieldGeometry = computeAnalysisFieldGeometryAtState(focusT, zoomT, L, aberrationT)`. The hook's
  * `fopenAtZoom`, `entrancePupilAtState` and `computeAnalysisFieldGeometryAtState` are the functions the binding
- * imports under their rewritten names (the hook aliases fopenAtZoomClamped as fopenAtZoom). A product divided
- * by its own factor is not always the other factor again: on
- * some lenses `currentPhysStopSD` is one unit in the last place from `wideOpenStopSD`, and the tab traces with the
- * former.
+ * imports under their rewritten names (the hook aliases fopenAtZoomClamped as fopenAtZoom). Both radii now follow the
+ * one stop rule and the state's paraxial pupil (`entrancePupil`: the stop radius over the paraxial marginal ray's
+ * height ratio at the stop): no product is divided by its own factor any more, and wide open `currentPhysStopSD` is
+ * `wideOpenStopSD` to the bit.
  */
 export function lvHookAperture(api: LvHookApi, runtime: LvRuntimeLens, state: LvPreparedState): LvHookAperture {
   const { focusT, zoomT } = state;
@@ -86,17 +91,45 @@ export function lvHookAperture(api: LvHookApi, runtime: LvRuntimeLens, state: Lv
   const fieldGeometry = api.computeAnalysisFieldGeometryAtState(focusT, zoomT, runtime, aberrationT);
   const { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD } = lvHookStop(api, runtime, zoomT);
   const baseEPSD = api.entrancePupilAtState(wideOpenStopSD, focusT, zoomT, runtime, fieldGeometry, aberrationT).epSD;
-  const currentEPSD = (baseEPSD * currentFOPEN) / fNumber;
+  const currentEPSD = api.entrancePupilAtState(
+    currentPhysStopSD,
+    focusT,
+    zoomT,
+    runtime,
+    fieldGeometry,
+    aberrationT,
+  ).epSD;
   return { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD, baseEPSD, currentEPSD };
 }
 
+/**
+ * The paraxial entrance pupil the hook hands every tab for a stop radius at a state: `currentEPSD` of the slider
+ * position whose stop the radius is, `entrancePupilAtState(stop, focusT, zoomT, L, fieldGeometry, aberrationT).epSD`
+ * with the hook's field geometry (`lvHookAperture`, the same expression). Since #933 it is the pupil of the radius
+ * itself, whatever f-number marks it: no slider position need be found.
+ */
+export function lvHookPupil(
+  api: Pick<LvApi, "computeAnalysisFieldGeometryAtState" | "entrancePupilAtState">,
+  runtime: LvRuntimeLens,
+  state: LvPreparedState,
+  stopSemiDiameterMm: number,
+): number {
+  const { focusT, zoomT } = state;
+  const aberrationT = 0;
+  const fieldGeometry = api.computeAnalysisFieldGeometryAtState(focusT, zoomT, runtime, aberrationT);
+  return api.entrancePupilAtState(stopSemiDiameterMm, focusT, zoomT, runtime, fieldGeometry, aberrationT).epSD;
+}
+
 /** The LensVisualizer exports the hook's stop radius is rebuilt from. */
-export type LvHookStopApi = Pick<LvApi, "wideOpenStopAtZoom" | "fopenAtZoomClamped" | "fNumberAtStopdown">;
+export type LvHookStopApi = Pick<
+  LvApi,
+  "wideOpenStopAtZoom" | "stopSemiDiameterForFNumber" | "fopenAtZoomClamped" | "fNumberAtStopdown"
+>;
 
 /**
  * The part of the hook's aperture numbers that needs no pupil (`lvHookAperture`): the widest f-number of a zoom
  * position, the f-number of the aperture slider at wide open, the radius of the iris wide open, and the radius the
- * hook hands the tab as the stop's. The same expressions, in the same order.
+ * hook hands the tabs as the stop's. The same expressions, in the same order.
  */
 export function lvHookStop(
   api: LvHookStopApi,
@@ -107,59 +140,98 @@ export function lvHookStop(
   const currentFOPEN = api.fopenAtZoomClamped(zoomT, runtime);
   const fNumber = api.fNumberAtStopdown(stopdownT, zoomT, runtime);
   const wideOpenStopSD = api.wideOpenStopAtZoom(zoomT, runtime);
-  const currentPhysStopSD = (wideOpenStopSD * currentFOPEN) / fNumber;
+  const currentPhysStopSD = api.stopSemiDiameterForFNumber(fNumber, zoomT, runtime);
   return { currentFOPEN, fNumber, wideOpenStopSD, currentPhysStopSD };
 }
 
 /**
- * The seed of LensVisualizer's footprint scan for a stop radius, by the hook's rule. The hook derives both radii
- * of a request from one f-number N: the stop's is `(wideOpenStopSD * currentFOPEN) / N` and the pupil's
- * `(baseEPSD * currentFOPEN) / N`. For the stop radius of the hook's own wide-open state, and for the prepared
- * state's, N is the hook's f-number and the seed the hook's own, to the bit. For the stop radius of the tab's f/8
- * comparison, the hook's scaled by `fNumber / 8` (`lvTabComparison`), the seed is the comparison's, the hook's
- * scaled alike, to the bit. For any other radius N is the f-number that radius is the stop of,
- * `(wideOpenStopSD * currentFOPEN) / radius`: the tab reaches such a state only through a slider position, so it
- * has no number there to be equal to.
+ * The pupil radius the hook hands the analysis drawer, and so every tab but the MTF tab's f/8 overlay, for a stop
+ * radius: the hook's own `currentEPSD` for its wide-open stop, and otherwise the hook's pupil of the radius
+ * (`lvHookPupil`), the slider's `currentEPSD` at the position whose stop it is.
  */
-export function lvPupilSeed(hook: LvHookAperture, stopSemiDiameterMm: number): number {
-  const { wideOpenStopSD, currentFOPEN, currentPhysStopSD, baseEPSD, currentEPSD } = hook;
+export function lvDrawerPupil(
+  api: LvHookApi,
+  runtime: LvRuntimeLens,
+  state: LvPreparedState,
+  stopSemiDiameterMm: number,
+): number {
+  const { wideOpenStopSD, currentPhysStopSD, currentEPSD } = lvHookAperture(api, runtime, state);
   if (stopSemiDiameterMm === currentPhysStopSD || stopSemiDiameterMm === wideOpenStopSD) return currentEPSD;
-  const { scale } = lvTabComparison(hook);
-  if (stopSemiDiameterMm === currentPhysStopSD * scale) return currentEPSD * scale;
-  const fNumber = (wideOpenStopSD * currentFOPEN) / stopSemiDiameterMm;
-  return (baseEPSD * currentFOPEN) / fNumber;
+  return lvHookPupil(api, runtime, state, stopSemiDiameterMm);
 }
 
-/** The tab's f/8 comparison for a state: what it scales both radii by, and why it offers none, if it offers none. */
+/**
+ * The pupil radius LensVisualizer's MTF launches are asked with for a stop radius (`pupilSemiDiameterMm`:
+ * the aimed launch's launch scale, which sizes its Jacobian probes, and the seed of a launch-plane footprint scan), by
+ * the hook's rule (LV #933). For the hook's own wide-open stop, the hook's `currentEPSD`. For the stop of the tab's
+ * f/8 comparison, where the tab offers it, the comparison's own pupil, `(currentEPSD * stop) / currentPhysStopSD`
+ * (`lvTabComparison`): the tab scales the wide-open request's pupil by the two stops, and that is not the hook's
+ * pupil of the f/8 stop to the bit. For any other radius, the hook's pupil of that radius (`lvHookPupil`), which is
+ * what the hook hands every tab at the slider position whose stop it is.
+ */
+export function lvPupilSeed(
+  api: LvHookApi,
+  runtime: LvRuntimeLens,
+  state: LvPreparedState,
+  stopSemiDiameterMm: number,
+): number {
+  const hook = lvHookAperture(api, runtime, state);
+  const { wideOpenStopSD, currentPhysStopSD, currentEPSD } = hook;
+  if (stopSemiDiameterMm === currentPhysStopSD || stopSemiDiameterMm === wideOpenStopSD) return currentEPSD;
+  const comparison = lvTabComparison(api, hook, runtime, state.zoomT);
+  if (comparison.unavailable === null && stopSemiDiameterMm === comparison.stopSemiDiameterMm) {
+    return lvTabComparisonPupil(hook, stopSemiDiameterMm);
+  }
+  return lvHookPupil(api, runtime, state, stopSemiDiameterMm);
+}
+
+/**
+ * The pupil radius of the tab's f/8 comparison for its stop, restated from MtfTab.tsx (LV #933), with the wide-open
+ * request's radii the hook's (`createAnalysisRequest` keeps both as given):
+ *
+ * ```
+ * const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
+ * ```
+ */
+export function lvTabComparisonPupil(
+  hook: Pick<LvHookAperture, "currentEPSD" | "currentPhysStopSD">,
+  stopSemiDiameterMm: number,
+): number {
+  return (hook.currentEPSD * stopSemiDiameterMm) / hook.currentPhysStopSD;
+}
+
+/** The tab's f/8 comparison for a state: the stop it traces, and why it offers none, if it offers none. */
 export interface LvTabComparison {
-  /** What the tab multiplies the stop radius and the pupil radius of its wide-open request by. */
-  readonly scale: number;
+  /** The stop radius of the comparison, mm: `stopSemiDiameterForFNumber(8, zoomT, L)`. */
+  readonly stopSemiDiameterMm: number;
   /** Why the tab does not offer the comparison for the state; null when it does. */
   readonly unavailable: string | null;
 }
 
 /**
- * The scale of the tab's f/8 comparison, restated from MtfTab.tsx:
+ * The stop of the tab's f/8 comparison, restated from MtfTab.tsx (LV #933: "The f/8 stop comes from the stop rule, as
+ * the aperture control's does"):
  *
  * ```
- * const scale = fNumber / COMPARISON_F_NUMBER;
+ * const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
  * ```
  *
- * with `fNumber` the hook's. Without `runtime` nothing is said of whether the tab offers the comparison. With it,
- * `unavailable` is the tab's own rule, restated:
+ * which is the slider's f/8 stop to the bit. `unavailable` is the tab's own rule, restated, with `fNumber` the
+ * hook's:
  *
  * ```
  * const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;
  * ```
  */
 export function lvTabComparison(
+  api: Pick<LvApi, "stopSemiDiameterForFNumber">,
   hook: Pick<LvHookAperture, "fNumber">,
-  runtime?: Pick<LvRuntimeLens, "maxFstop">,
+  runtime: LvRuntimeLens,
+  zoomT: number,
 ): LvTabComparison {
   const { fNumber } = hook;
-  const scale = fNumber / LV_TAB_COMPARISON_F_NUMBER;
+  const stopSemiDiameterMm = api.stopSemiDiameterForFNumber(LV_TAB_COMPARISON_F_NUMBER, zoomT, runtime);
   let unavailable: string | null = null;
-  if (runtime === undefined) return { scale, unavailable };
   if (!(!!fNumber && fNumber < LV_TAB_COMPARISON_F_NUMBER - 0.05)) {
     unavailable =
       `the lens is at f/${fNumber} wide open, and LensVisualizer's MTF tab compares with ` +
@@ -169,7 +241,7 @@ export function lvTabComparison(
       `the lens stops down to f/${runtime.maxFstop} at most, so LensVisualizer's MTF tab has no ` +
       `f/${LV_TAB_COMPARISON_F_NUMBER} to compare it with`;
   }
-  return { scale, unavailable };
+  return { stopSemiDiameterMm, unavailable };
 }
 
 /**
@@ -224,16 +296,17 @@ export interface LvTabRequest {
  * ```
  *
  * with the hook's two radii (`lvHookAperture`) and no tilt or shift. The view "f8-comparison" is the tab's overlay,
- * a second analysis request with both radii scaled:
+ * a second analysis request with the stop rule's f/8 stop and the wide-open pupil scaled by the two stops (LV #933):
  *
  * ```
  * const compareF8Available = !!fNumber && fNumber < COMPARISON_F_NUMBER - 0.05 && L.maxFstop >= COMPARISON_F_NUMBER;
- * const scale = fNumber / COMPARISON_F_NUMBER;
- * currentEPSD: job.aperture.entrancePupilSemiDiameterMm * scale,
- * currentPhysStopSD: job.aperture.stopSemiDiameterMm * scale,
+ * const stop = stopSemiDiameterForFNumber(COMPARISON_F_NUMBER, job.preparedGeometry.zoomT, L);
+ * const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
+ * currentEPSD: pupil,
+ * currentPhysStopSD: stop,
  * ```
  *
- * Where the tab does not offer the comparison, the request still states the radii that scaling gives, and
+ * Where the tab does not offer the comparison, the request still states the radii those expressions give, and
  * `unavailable` says why the tab makes no such request: the lens is not faster than f/8 by the tab's margin, or
  * does not stop down to f/8. Nothing here is computed by LensVisualizer's MTF: the request is only built.
  */
@@ -265,12 +338,9 @@ export function lvTabRequest(
   if (view === "wide-open")
     return { view, request: job, settings, fNumber: hook.fNumber, options: wideOpen, ...shared, unavailable: null };
 
-  const { scale, unavailable } = lvTabComparison(hook, runtime);
-  const options = {
-    ...wideOpen,
-    pupilSemiDiameterMm: job.aperture.entrancePupilSemiDiameterMm * scale,
-    stopSemiDiameterMm: job.aperture.stopSemiDiameterMm * scale,
-  };
+  const { stopSemiDiameterMm: stop, unavailable } = lvTabComparison(api, hook, runtime, state.zoomT);
+  const pupil = (job.aperture.entrancePupilSemiDiameterMm * stop) / job.aperture.stopSemiDiameterMm;
+  const options = { ...wideOpen, pupilSemiDiameterMm: pupil, stopSemiDiameterMm: stop };
   const [request] = lvMtfInputs(api, state, options);
   return { view, request, settings, fNumber: LV_TAB_COMPARISON_F_NUMBER, options, ...shared, unavailable };
 }

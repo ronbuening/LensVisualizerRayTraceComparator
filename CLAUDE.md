@@ -418,8 +418,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **The benchmark is 96 runs: 12 configurations in four conditions** (`suites/benchmark.json`). The 24 runs of
   the lenses as they open come first and are never reordered; then, per configuration, `-best-`, `-f8-` and
   `-f8-best-` on both sets of lines. f/8 is `aperture: { kind: "lv-f8-comparison" }`, the stop of the MTF tab's
-  own comparison (`lvHookStop`, `lvTabComparison`, with canaries), never `{ kind: "f-number", value: 8 }`, which
-  is the hook's slider and not the same double on every lens. A test that means "the 12 configurations" filters
+  own comparison (`lvHookStop`, `lvTabComparison`, with canaries). Since LV #933 (one stop rule at every N, the
+  paraxial entrance pupil EFL / N, `stopSemiDiameterForFNumber`) it is the same double and the same case id as
+  `{ kind: "f-number", value: 8 }` on all 12 configurations (`test/integration/lv/mtf.test.ts` holds both), and a
+  lens f/8 or slower wide open has its wide-open stop for either; keep `lv-f8-comparison` all the same: it names the
+  tab's comparison, and the tab's pupil for it (`lvTabComparisonPupil`, the hook's pupil scaled by the stop) is one
+  unit in the last place from the slider's on two lenses (GF 63 mm, Z 50 mm). A test that means "the 12 configurations" filters
   with `asItOpens` (`test/suites/support.ts`); the optiland rung tests run those 24 (`rungSuite`), and
   `baseline.test.ts` all 96.
 - **Stage 4.4's suites are `states` and `focus-stations`** (`docs/REFERENCE.md`, "Stage 4.4"): `states` is every
@@ -443,9 +447,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   none (`recipe-needs-field-angles`). It is no contract kind: a request states what it needs of it in its own spec.
 - **`replay` is LensVisualizer's rays and the comparator's sums** (`src/engines/lv/replay.ts`, `replayEngine.ts`).
   It calls what LV exports (the first step of `computeMtfSteps`, `prepareMtfFieldLaunch`, `findMtfFieldFootprint`,
-  `traceMtfBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`, `assessUnresolvedFlux`, the
-  constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping and the ladder, each line with a
-  canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
+  `traceMtfStopBundle`, `traceMtfLaunchPlaneBundle`, `expandMtfFootprint`, `refineMtfField`, `emptyMtfField`,
+  `assessUnresolvedFlux`, the constants) and restates only `traceField`'s loop, `fieldAtGrid`'s bookkeeping (since LV
+  #936: the stop lattice of each line kept for the next grid, unaimed and unresolved-in-beam rays, dark lines, the
+  share of the beam's unresolved flux, a refinement past a failed share) and the ladder, each line with a canary. Never call or port LV's `geometricOtf` or `combineOtfs` there: the sum is `polychromaticOtf`. The sums
   that decide which grids are traced (flux, unresolved share) stay LV's plain ones. Its request is `lvMtfRequest`,
   the one function `lv` builds its own with: never build a second. The stand-in of
   `test/engines/lv/replay.test.ts` holds each line of the bookkeeping to a closed form: removing one must turn a
@@ -455,8 +460,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   no run reference to such a rung, and `baseline check` names an engine that only such a rung has for no other
   rung (`runEngines`). A hermetic test whose registry knows neither engine names its rungs.
 - **R4f is gated on three figures (policy version 6)**: `mtf.maxAbs` <= 1e-9, pinned at Stage 3.2 on a measured
-  maximum of 1.25e-14; `sampling.mismatches` and `fields.mismatches` at 0; no floor. A grid size, a ray count or a
-  status that differs is a defect of the replay or a change in LV: read the canaries, never widen. R4f is in the MTF baselines.
+  maximum of 1.25e-14; `sampling.mismatches` and `fields.mismatches` at 0; no floor. `sampling` is the grid size and
+  the valid, blocked, failed, unaimed and unresolved-in-beam rays (`FIDELITY_SAMPLING`; the last two since LV #936).
+  A grid size, a ray count or a status that differs is a defect of the replay or a change in LV: read the canaries,
+  never widen. R4f is in the MTF baselines.
 - **R4 is the geometric MTF of the run's ray sets** (`src/compare/raysMtf.ts`): the rays are the sets R2 and R3
   judge (`rayTraceRequests`), never the grid a field's refinement ends at, which is R4f's; the landing is each
   engine's own `imagePoint` on the plane of the run's case, which is the recipe's plane (a recipe of another plane
@@ -495,7 +502,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   the rays valid in every engine, the line's wavelength and image-space index, and
   `launchPaths(origins, directions, conditions.object)`, since a ray's `opticalPath` starts at its own origin. Ray
   `row * columns + column` is the cell (`groups.lattice`); what follows the cells, the chief ray, is not looked
-  at. It needs no chief ray and no lattice step.
+  at. It needs no chief ray and no lattice step. A cell of weight 0 is dark: it is checked as a taken ray is (a
+  finite point, direction and path) but enters no sum, so a vacant cell of a stop lattice holds a traced ray.
 - **The rim of a lattice is a staircase, and `undersampled` is a fact about a lattice** (`waveOtf.ts`): on an even
   lattice the estimate is the autocorrelation of the lit cells to a rounding, and against the true aperture it is
   of first order in the cell (`3 e / (1 - e)`); never claim more of it. `phaseStep` above `QUARTER_WAVE` between
@@ -571,9 +579,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `attentionSeveralLines: 1e-3` mm when either records several. Select from the answers, never the case alone;
   record each answer's selected `chiefLandingLimitMm` with its line wavelengths so `factsOfField`,
   `factsOfRecorded` and the report repeat the same sorting, including peers and baseline reports.
-  On several lines LV's chief ray is one launch, solved at the d line without a wavelength and traced at every
-  line; optiland-wave states optiland's line-0 chief aimed through the stop centre at 555 nm. They are different
-  rays (1.1e-6 to 5.7e-6 mm apart in the two Stage 4.3 configurations, up to 3.0e-4 mm on the R5g benchmark).
+  Since LV #936 each line of LV's MTF has its own aimed stop lattice, whose stop-centre ray (`lattice.chief`, aimed at
+  that line's indices by `mtfAimSpectrum`) is traced unclipped, and every line's reference is line 0's landing
+  (`commonReference`, LV `mtf.ts`); optiland-wave states optiland's line-0 chief aimed through the stop centre at
+  555 nm, each engine in its own model of the line's indices. The gaps measured before #936, when LV traced one
+  launch solved at the d line at every line (1.1e-6 to 5.7e-6 mm in the two Stage 4.3 configurations, up to
+  3.0e-4 mm on the R5g benchmark), are history, measured again at the Phase 6 end refresh; the 1e-3 mm limit stays.
   A common reference point does not change the modulus, so the several-line landing only checks that the
   answers are of the same field. Never read `imageHeightMm` of two engines on several lines as the landing of
   one ray. The several-line report names its selected sorting limit through a linted wording template.
@@ -658,6 +669,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   marks the surface `clips: false` and `evaluateAperture` reports no semi-diameter, no hole, and calls no height of
   `unclippedProbeRadii` outside. Any other answer throws, as before; a plate with a published rim clips. A canary
   holds the six LensVisualizer lines this rests on.
+- **A rim cut is a clear radius** (LV #928, #932; `surface.rimCut`, `lvClearRadius` in `exportAperture.ts`): LV clips
+  the cap at `min(sd, cut.radius)` (`evaluateAperture`, `clearSemiDiameter`) and draws the flat land only; the
+  exporter writes that radius as the surface's `aperture.semiDiameter` and the land is no surface of any engine.
+  LV's validator keeps every forward ray inside the cap from meeting the land (`rimCutReentryRadius`), so the two
+  models are one; a canary holds the lines. R0's sag samples run to that radius. Exports of 607ff23ae: 85 cuts on
+  44 states of 29 lenses.
 - **In `ref` a surface that does not clip is its sag wherever it has one**: a plane and a conic are met in closed
   form at any height; on an asphere whose conic does not end, a line on which Newton's method settles on no hit is
   failed, never blocked, since no stretch of it is the last to scan (a line along the axis is still met in closed
@@ -737,14 +754,21 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   only wraps the sets it is handed (`RungInputs`). A set must be the same bytes whenever it is generated: its
   hash is in the request id. A field without rays is a coded problem of that field and fails nothing. The spot
   sets of a run come from `CaseSource.spotRaySets` alike (Stage 6.2).
-- **One seed for LV's footprint scan, the MTF tab's** (`lvPupilSeed`): the ray sets and the product MTF both ask
-  with it, so the rays of a set are the tab's own launch rays for a case that is the tab's.
-- **LV's launch rays are kept verbatim**: every lattice cell as its own ray, no mirroring, no normalising (a `-0`
-  stays), the chief ray last at weight 0. What `traceMtfBundle` and `computeMtfSteps` do inline is restated in
-  `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own bundle.
+- **One pupil for LV's aimed launch, the MTF tab's** (`lvPupilSeed`): the ray sets and the product MTF both ask
+  with it (wide open the hook's paraxial pupil; at the f/8 comparison the tab's), so the rays of a set are the tab's
+  own launch rays for a case that is the tab's.
+- **LV's launch rays are kept verbatim**: since LV #936 a field's rays are its aimed stop lattice
+  (`aimMtfStopLattice`, `traceMtfLattice`), each line its own: an n x n square on the stop (`groups.lattice`, step
+  2R / n of the stop), every cell whose centre is in the unit disc and that LV aimed as its own ray at weight 1
+  (times `lvRayWeights`), a blocked cell with LV's blocking ray, and a vacant cell (outside the disc, or not aimed)
+  the field's chief ray at weight 0: never a fabricated ray. A field LV launches from its bounding sphere keeps the
+  launch-plane lattice over its footprint (`traceMtfLaunchPlaneBundle`). No mirroring, no normalising (a `-0`
+  stays), the chief ray last at weight 0. What the lattice's tracing and `computeMtfSteps` do inline is restated in
+  `raySets.ts` and held to LV by source canaries and by a bit-for-bit comparison with LV's own lattice.
 - **A sequential trace follows the order of the case, not of z**: a surface behind the last hit is met by a step
-  backwards (LV fails there with `noBracket`); a ray that no longer travels toward +z is blocked at the next
-  surface. Every engine writes its answer through `src/rays/traceRecorder.ts`.
+  backwards, as LV does since #934 (`intersectSequentialSurface`, a canary; before it LV failed there with
+  `noBracket`); a ray that no longer travels toward +z is blocked at the next surface (LV steps back only for a ray
+  that still travels toward +z; no catalog ray turns back at 607ff23ae, `rungs.test.ts`). Every engine writes its answer through `src/rays/traceRecorder.ts`.
 - **In `rays.trace` every value of a ray that did not arrive is NaN from the surface where it ended**, that
   surface's hit included; `endSurface` is S for a ray that passed every surface and cannot reach the image plane.
   A trace that ends on the last surface is landed by `src/estimators/imageProjection.ts`, for every engine alike.
@@ -835,10 +859,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   complex OTF by `exp(-2 pi i nu (chief_l-chief_0))` and case weight times transmitted cell flux, then adds
   compensated complex sums and normalizes by total weighted flux before the modulus. Chief coordinates stay in
   the declared y-mirrored frame, x sagittal / y tangential. Line 0's chief landing is the common origin, as the
-  plan and case contract prescribe. LV uses one chief launch for all lines and `wave` uses the reference-line
-  flux centroid: those are common origins too; changing a common origin rotates the whole sum and preserves
-  its modulus. Do not recenter each line separately or change either existing engine. Each line retains its
-  own chief-relative phase-step check; the complete spectral estimates supply grid-doubling convergence.
+  plan and case contract prescribe. LV uses line 0's aimed stop-centre ray for all lines (since #936) and `wave`
+  uses the reference-line flux centroid: those are common origins too; changing a common origin rotates the whole
+  sum and preserves its modulus. Do not recenter each line separately or change either existing engine. Each line
+  retains its own chief-relative phase-step check; the complete spectral estimates supply grid-doubling convergence.
   A failed line makes its field unavailable and names the line; none is dropped. The case plane, including
   LV's photopic best-axial shift, is used unchanged. FFT stays unsupported on several lines.
   Report such a table with `WAVEFRONT_SEVERAL_LINES`, selected from its recorded line count and linted.
@@ -1001,18 +1025,19 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `src/engines/lv/spotRaySets.ts`, setup in `spotSetup.ts`), generated by `planJobs` after `confirmRaySets`, only
   for a rung that says `needsSpotRaySets`, and recorded under `runs[].spotRaySets`. Per line: the coma cloud's rings
   at its preview fields, its tangential and sagittal fans at the detail field (`L.offAxisFieldFrac`), the bokeh
-  tile's rings at its preview fields; each set has the chief ray last. Every sample is LV's own
-  (`sampleCircularPupil`, `sampleOrthogonalPupilFan`, `computeOffAxisFieldGeometry`, `directionFromSkewSlope`), crossing
-  the first vertex plane at `(x EPSD, yChief + y EPSD)` and launched `rayLead` before it, with the hook's EPSD
-  (`lvPupilSeed`) and field geometry. Weights: area for the cloud, 1 for a fan, area times `lvRayWeights` for a tile.
-  Every restated line has a canary (four Stage 6.2 tests in `canaries.test.ts`, one holding `traceSkewRay` to the
-  tabs' skew adapter). `test/integration/lv/spotRays.test.ts` traces the sets with LV's exact tracer
-  (`traceEngineRay`, the tabs' options) and, summed in LV's order, gets the clouds, fans and every tile's centroid
-  and radius to the bit, and `lv`'s answers of all four asks are the tabs' output; it holds every tile ray by ray to
-  LV's `traceSkewRay` (offsets from `lvBokehChiefLanding`, weights), on a shifted plane too and on
-  `laowa-105mm-f2-stf`, whose absorbing glass tests the `lvRayWeights` stand-in for `sample.trace.transmission`.
-  A finite object, a folded path, a fan on the axis, no launch or a vector launch are coded problems, never
-  approximated.
+  tile's rings at its preview fields; each set has the chief ray last. The patterns and fields are LV's own
+  (`sampleCircularPupil`, `sampleOrthogonalPupilFan`, `computeOffAxisFieldGeometry`); since LV #927 every sample's ray
+  is LV's shared aimed launch's (`prepareAimedPupilLaunch` of the drawer's request, `lvSpotRequest`: the ray through
+  `(x R, y R)` of the real stop), kept verbatim: a blocked sample LV's blocking ray, a sample LV could not aim (never
+  traced) the chief ray at weight 0, the chief ray the launch's stop-centre ray (`lv-chief-unaimed` without one).
+  Weights: area for the cloud, 1 for a fan, area times `lvRayWeights` for a tile. Every restated line has a canary
+  (Stage 6.2 and 6.8b tests in `canaries.test.ts`). `test/integration/lv/spotRays.test.ts` traces the sets as the tabs
+  do (`prepareAimedPupilTrace`, the stop at the launch's clip radius `R (1 + 1e-7)`) and, summed in LV's order, gets
+  the clouds, fans and every tile's centroid and radius to the bit, and `lv`'s answers of all four asks are the tabs'
+  output; it holds every tile ray by ray to LV's aimed launch (offsets from `lvBokehChiefLanding`, weights), on a
+  shifted plane too and on `laowa-105mm-f2-stf`, whose absorbing glass tests the `lvRayWeights` stand-in for
+  `sample.trace.transmission`. A finite object, a folded path, a fan on the axis, no launch or a vector launch are
+  coded problems, never approximated.
 - **R7a is gated, identical rays** (policy version 16): `rays.trace` of the spot sets, `raysSpotComparator`, on the
   rays valid in both answers of a pair (as R4); `transverseError.maxAbs`, `centroid.maxAbs`, `rmsRadius.maxAbs` at
   1e-8 mm and `mask.mismatches` at 0, no floor. Everything is relative to the chief ray (`groups.chiefIndex`,
@@ -1046,15 +1071,18 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   sorts each field before any difference. Owner decisions 2026-10-26: the chief-landing sorting limit is 1e-5 mm in
   the policy (a field further apart is data, its pair ATTENTION); the spot and fan figures have **no attention
   band** until the pupil-model difference is resolved: LV's collimated disc of the paraxial entrance pupil on
-  equal-area rings against optiland's real stop to its rim, an LV assumption to look at, not settled
-  (`docs/gotchas.md`, "Spots and ray fans"). R7b stays out of every baseline (run it with `--rungs r7b`, never
-  beside the rays rungs before a `baseline write`). The bokeh tile at the tab's own plane (`infSensorZ`) is
-  deferred and not covered.
+  equal-area rings against optiland's real stop to its rim (`docs/gotchas.md`, "Spots and ray fans"). Since LV #927
+  both aim at the real stop: the fans agree to 8.1e-11 mm on the benchmark (5.3e-2 mm before), the spots still differ
+  by their rings (LV's equal-area rings, optiland's hexapolar ones to the rim; RMS radii a median 7.3 % apart, coma).
+  **Owner decision (2026-10-29), policy 24:** a band of 9e-10 mm on `fanError.maxAbs` (one definition since #927); the
+  spot figures stay unbanded (`spotNative.test.ts` holds a fan within RECORDED, above ATTENTION). R7b stays out of
+  every baseline (run it with `--rungs r7b`, never beside the rays rungs before a `baseline write`). The bokeh tile at
+  the tab's own plane (`infSensorZ`) is deferred and not covered.
 - **Baselines are refreshed once, at the end of Phase 6** (owner decision 2026-10-26, as in Phase 4), never in a
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
   this repository hold together") fail only on policy identity (v15 recorded, a later version at hand: v16 at Stage
   6.2, v17 at Stage 6.3, v18 at Stage 6.4, v19 at Stage 6.5, v20 at Stage 6.6, v21 at Stage 6.6b, v22 at Stage 6.7,
-  v23 at Stage 6.8):
+  v23 at Stage 6.8, v24 at Stage 6.8b):
   never weaken either.
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
@@ -1067,17 +1095,19 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **The axial sets are the rays LV's spherical-aberration section (aberrations tab) and axial-colour section
   (chromatic tab) launch** (`CaseSource.axialRaySets`, `src/engines/lv/axialRaySets.ts`, zones in `axialZones.ts`),
   generated by `planJobs` after `confirmRaySets`, only for a rung that says `needsAxialRaySets`, and recorded under
-  `runs[].axialRaySets`. Two sets at every line: the profile's zones (`PROFILE_FRACS`), and the near-axis zone
-  (`NEAR_AXIS_REAL_FRAC`), the marginal candidates in the order tried (`MARGINAL_PUPIL_FRACTIONS`) and the colour
-  candidates not among them (`DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS` as `normalizeFractions` keeps them). Each zone
-  `f` is a mirror pair, ray `2k` at `f x r` and ray `2k + 1` at `-f x r` (`r` the tabs' pupil, `lvTabPupilSemiDiameter`),
-  parallel to the axis from `rayLead` ahead of the first vertex (`bindRayTrace`'s `ray(h, 0)`), weight 1, field 0, no
-  chief ray. Every restated line has a canary (three Stage 6.3 tests in `canaries.test.ts`).
-  `test/integration/lv/axialRays.test.ts` traces the sets with LV's `traceEngineRay` (the sections' options; a
-  channel's indices for colour) and gets `computeSphericalAberration`, `computeSAProfile` and
-  `computeLongitudinalChromaticFocus` to the bit on every benchmark configuration and the zoom's far end, and holds
-  every authored-index ray to LV's `traceRay`. A finite object, a folded path, no pupil and a launch behind the first
-  surface are coded problems; focus-stations and folded have no axial sets.
+  `runs[].axialRaySets`. Since LV #927 a zone `f` is LV's shared aimed launch's ray of the axial object
+  (`prepareAimedPupilLaunch` with `{ uField: 0, yChief: 0 }`, as `prepareAxialZoneLaunch` asks it) through `f x R` of
+  the real stop, and its mirror at `-f x R` (exact on the axis), rays `2k`, `2k + 1`, kept verbatim, weight 1, field 0,
+  no chief ray. Three patterns: the profile (`PROFILE_FRACS`) and the marginal rays (`NEAR_AXIS_REAL_FRAC`, then
+  `MARGINAL_PUPIL_FRACTIONS` in the order tried), aimed at the authored indices, at every line; the colour candidates
+  (`DEFAULT_LONGITUDINAL_CHROMATIC_FRACTIONS` as `normalizeFractions` keeps them), aimed at a channel's own indices, at
+  each line that is a channel's (`lvChannelLines`; LV #930 chooses the zone from all four channels, R, G, B, V). An
+  unaimed zone is left out and named (`lv-zone-unaimed`). Every restated line has a canary (Stage 6.3 tests in
+  `canaries.test.ts`). `test/integration/lv/axialRays.test.ts` traces the sets as the sections do
+  (`prepareAimedPupilTrace`, a channel's indices for colour) and gets `computeSphericalAberration`, `computeSAProfile`
+  and `computeLongitudinalChromaticFocus` (its zone of four channels too, of a run whose lines are the four) to the bit
+  on every benchmark configuration and the zoom's far end. A finite object, a folded path, no pupil and a launch
+  behind the first surface are coded problems; focus-stations and folded have no axial sets.
 - **R8a is gated, identical rays** (policy version 17): `rays.trace` of the axial sets, `raysAxialComparator`, on the
   rays valid in both answers of a pair (as R4). An intercept error is a transverse error over the ray's slope, so it is
   judged on the transverse scale: `intercept.maxScaled` = |dz| x the larger |dy/dz| of the two (the height at which each
@@ -1136,7 +1166,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `paraxialFocalShift.maxAbs`, a different quantity (spherochromatism), never one; R8b stays out of every baseline
   (`--rungs r8b`). The pupil limit, 2e-10 relative (ten times the measured 1.37e-11, rounded up), was signed off by the
   owner on 2026-10-26. On the benchmark every spherical line is of two methods, and since LV #925 (Stage 6.6b) every
-  colour line too (every one was `indices-differ` before).
+  colour line too (every one was `indices-differ` before). Since LV #927 (Stage 6.8b) `lv`'s zones are fractions of
+  the real stop's radius (`pupilRadiusMm` the case's stop radius) and optiland's of its paraxial entrance pupil: every
+  line of the benchmark is `pupils-apart` (84 lines data, 12 unsupported; 96 pairs ATTENTION). **Owner decision
+  (2026-10-29): optiland's axial aim at the real stop is deferred until after Phase 6**; the worker is unchanged. The
+  fix pending (an open item of the plan; `docs/REFERENCE.md`, "Stage 6.8b (part B)"; `docs/gotchas.md`, "Axial rays"):
+  optiland's robust aimer at each zone's point of the stop, one optic a line, with its read-backs and faults.
 - **LV assumption found, resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Axial rays"; owner's brief
   `docs/upstream/lensvisualizer-loca-unanchored-index.md`, not filed): LV's chromatic tab traced a d-line glass it
   matched to a catalog at the catalog's own Sellmeier index at every channel, its G channel included (LV's reference
@@ -1261,14 +1296,23 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   sphere's). Two patterns, one set at every line, the same rays at every line, weight 1: `parabasal` (of each field the
   four rays `±p` of the pupil, tangential then sagittal, `p = min(0.02, max(1e-4, 0.01 / EPSD))`, then the chief ray)
   and `real-ray` (the tangential and sagittal fans of `sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, ...)`,
-  then the chief ray), each ray started as `lvSkewLaunch`. A set states no groups: a field is a block of consecutive
-  rays of one direction, its chief ray last, a ray offset along y alone tangential, along x alone sagittal, one at the
-  chief ray's start in neither (`src/rays/curvatureSets.ts`, `curvatureFieldsOf`); keep that layout, or the comparator
-  says not comparable. Every restated line has a canary (two Stage 6.5 tests in `canaries.test.ts`).
-  `test/integration/lv/curvatureRays.test.ts` traces the sets with `traceEngineRay` and gets every field's chief
-  landing, parabasal and real-ray foci and its shifts at the four channels R, G, B, V to the bit on every benchmark
-  configuration and the zoom's far end. A finite object, a folded path, no half field, no pupil, no launch and a launch
-  behind the first surface are coded problems; focus-stations and folded have no curvature sets.
+  then the chief ray). The parabasal rays and their chief ray are started as `lvSkewLaunch` (LV keeps its 0.01 mm
+  pencil about the chief ray's launch, its one exception to aiming); since LV #927 the real-ray fans are LV's shared
+  aimed launch's rays through `(x R, y R)` of the real stop, verbatim (an unaimed sample the chief ray at weight 0),
+  and their chief ray the launch's stop-centre ray (`realRayLaunches`; a field without one, or whose two fans' differ,
+  or whose fan ray starts on the wrong side of the meridian keeps its parabasal block and has none:
+  `lv-chief-unaimed`, `lv-chief-differs`, `lv-fan-off-meridian`). A set states no groups: a field is a block of
+  consecutive rays of one direction, its chief ray last, before it as many rays of the tangential fan as of the
+  sagittal fan, the tangential half first; a tangential ray starts on the chief ray's x, a sagittal one off it (whatever
+  its y: an aimed sagittal ray starts off the chief ray's height), one at the chief ray's start is in neither, in
+  either half (`src/rays/curvatureSets.ts`, `curvatureFieldsOf`); keep that layout, or the comparator says not
+  comparable (`raysCurvature.test.ts` refuses each other layout). Every
+  restated line has a canary (two Stage 6.5 tests in `canaries.test.ts`). `test/integration/lv/curvatureRays.test.ts`
+  traces the sets as the sections do (the real-ray fans with `prepareAimedPupilTrace`, LV's two-sided rule of a fan,
+  `FIELD_CURVATURE_MIN_FAN_HALF_SPAN`, restated) and gets every field's chief landing, parabasal and real-ray foci and
+  its shifts at the four channels R, G, B, V to the bit on every benchmark configuration and the zoom's far end. A
+  finite object, a folded path, no half field, no pupil, no launch and a launch behind the first surface are coded
+  problems; focus-stations and folded have no curvature sets.
 - **One decision of fields and lines for the sets, the ask and `lv`'s answer** (`curvatureFields.ts`:
   `lvCurvatureFields`, `lvCurvatureLines`, `lvCurvatureLine`): the R10b ask is at the lines LV's sections trace (the
   authored reference line, a chromatic channel's line), none for a run of no such line (every photopic run).
@@ -1339,42 +1383,37 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 ## Stage 6.6 vignetting and relative illumination
 
 - **The vignetting sets are the rays LV's vignetting tab launches** (`CaseSource.vignettingRaySets`,
-  `src/engines/lv/vignettingRaySets.ts`, the tab's setup, fields, beams and mapping in `vignettingFields.ts`), generated
-  by `planJobs` after `confirmRaySets`, only for a rung that says `needsVignettingRaySets`, and recorded under
-  `runs[].vignettingRaySets`; a case source without them is `vignetting-sets-unavailable`. **Since LV #925
-  (`5ba17c20c`, Stage 6.6b) the tab traces each field's beam in two dimensions** with its MTF's own launch: the drawer's
-  two radii, `{ method: "geometric", spectrum: "reference", focus: "design" }` and a support record of its own (the d
-  line, no index resolver), `mtfTraceOptions` of that line (`lvVignettingSetup`); the fields are
-  `max(ceil(halfFieldDeg / 3) + 1, 7)` at `uniformFieldFraction`, the axis first; each field's launch is
-  `prepareMtfFieldLaunch` (none from a bounding sphere), its footprint `findMtfFieldFootprint`, its lattice
-  `mtfLaunchGrid(footprint, 64)` (`LV_VIGNETTING_BEAM_CELLS`, the tab's `BEAM_GRID_CELLS`). One pattern, `beam`: a set a
-  field and line, the same rays at every line: the cells the tab traces (of each row, the columns from the middle on,
-  where `mtfMirrorSymmetric` lets it mirror the other half; every column otherwise), stated as a lattice of their own
-  (`groups.lattice`, half the grid's columns), each weighing LV's bulk transmission at the line
-  (`bulkTransmissionForTrace`, the tab's `w`); right after them the chief rays of the tab's image mapping, weight 0: the
-  field's (`groups.chiefIndex` = the cells) and those `MAPPING_STEP_DEG` (0.01°) below and above it where the tab has a
-  launch (`lvMappingChiefRays`). **The set holds the half the tab traces, never the whole lattice**: the lattice's
-  columns are not mirror images to the bit (2,921 of 5,043 column pairs on the test's 14 configurations), so the other
-  half's cells are not where the tab's mirrored rays start. Where the tab maps a field with ray tubes (its chief ray or
-  both neighbours vignetted: copies of the beam's rays tilted by 1e-4 rad and traced without aperture checks, which no
-  `rays.trace` request states) the field keeps its set and is the coded note `lv-tube-mapping` (`lvVignettingMapping`);
-  9 fields of 1,308 catalog curves at `098c91ef6`, none on the benchmark. Every restated line has a canary (two Stage
-  6.6 tests in `canaries.test.ts`). `test/integration/lv/vignettingRays.test.ts` traces the sets with `traceEngineRay`
-  and the tab's options, counts them in the tab's own arithmetic (a mirrored cell twice, a running sum, the image area
-  `(dh/dθ)(h / sin θ)` of the lit chief rays) and gets `computeVignettingCurve` to the bit on every benchmark
-  configuration, the zoom's far end, the absorbing Laowa 105 mm STF and the Viltrox AF 14 mm f/4 Air (142 fields), whose
-  two ray-tube fields it gets to the bit by restating the tubes itself (`tubeImageArea`) and tracing them with LV; and
-  holds each beam's cells to the right half of LV's own MTF lattice of the field at 64 cells. A folded path, a finite
-  object, no half field and no pupil are coded problems of the run, and so is a state the tab draws no curve of
-  (`lv-outside-beam-model`: `mtfSequentialRefractivePath` or `mtfAxialImagePlane` false, the eight diffractive states
-  among them; `lv-bounding-sphere-field`) and an axis without a beam (`no-axis-beam`); a field the tab plots dark
-  (`chief-ray-failed`, `vignetted`) and a launch behind the first surface are coded problems of the field.
-  focus-stations and folded have no vignetting sets.
+  `src/engines/lv/vignettingRaySets.ts`, the tab's setup, fields and lattices in `vignettingFields.ts`), generated by
+  `planJobs` after `confirmRaySets`, only for a rung that says `needsVignettingRaySets`, and recorded under
+  `runs[].vignettingRaySets`; a case source without them is `vignetting-sets-unavailable`. **Since LV #931
+  (`4092f6a25`, Stage 6.8b) the tab is OpticStudio's two field analyses on one lattice on the real stop a field**: the
+  drawer's request (`lvChiefRequest`), the fields `max(ceil(halfFieldDeg / 3) + 1, 7)` at `uniformFieldFraction`, the
+  axis first, each of `computeOffAxisFieldGeometry` (none from a bounding sphere), its lattice
+  `prepareAimedStopLattice(request, 64, geometry)` (`BEAM_GRID_CELLS`, bound as `vignettingBeamCells`; the MTF's aimed
+  stop lattice, at the authored indices). One pattern, `beam`: a set a field and line, the same rays at every line: the
+  cells the tab traces (`x > 0`, the columns from the middle on, where `mtfMirrorSymmetric`, which hands on
+  `mirrorSymmetricAboutMeridian`, lets it mirror the other half; every cell otherwise), stated as the square of those
+  columns (`groups.lattice`, step `2R / 64` on the stop), a cell LV has no ray for (outside the disc, unaimed) the
+  stop-centre ray at weight 0, a blocked cell its blocking ray, each other cell weighing LV's bulk transmission at the
+  line (`bulkTransmissionForTrace`); right after them the stop-centre ray, weight 0 (`groups.chiefIndex`), whose
+  landing names the tab's image point. The other half is LV's own mirror image of the traced one, never traced: the set
+  holds the half the tab traces. Every restated line has a canary (two vignetting tests in `canaries.test.ts`).
+  `test/integration/lv/vignettingRays.test.ts` holds every cell of every set to `computeVignettingField`'s ray to the
+  bit, traces each as the tab does (`prepareAimedPupilTrace(...).engine`, the stop at the lattice's clip radius;
+  `traceRayClassification`), gets each cell's transmission, exit cosines and bulk transmission and every field's counts
+  and unvignetted fraction to the bit, and its relative illumination as the ratio of LV's Rimmer sums, on every
+  benchmark configuration, the zoom's far end, the absorbing Laowa 105 mm STF and the Viltrox AF 14 mm f/4 Air (142
+  fields). A folded path, a finite object, no half field and no stop are coded problems of the run, and so is a state
+  the tab draws no curve of (`lv-outside-beam-model`: `mtfSequentialRefractivePath` or `mtfAxialImagePlane` false;
+  `lv-bounding-sphere-field`) and an axis without a lattice (`no-axis-beam`); a field without a launch
+  (`no-field-launch`) or a stop-centre ray (`lv-chief-unaimed`) and a launch behind the first surface are coded
+  problems of the field. The ray tubes, `MAPPING_STEP_DEG` and `lv-tube-mapping` are gone. focus-stations and folded
+  have no vignetting sets.
 - **One decision of fields and lines for the sets, the ask and `lv`'s answer** (`vignettingFields.ts`:
-  `lvVignettingDecision`, `lvVignettingMapping`, `lvVignettingLines`): the R11b ask is of the fields with a beam, at the
-  lines that trace the authored indices (`tracesAuthored`), none for a photopic or spectral run; `lv` answers each asked
-  field from the tab's curve, a state with no curve at every field with the refusal's code (asked at the tab's own
-  angles), and states `sampling.tubeMapping` of the same decision (`test/engines/lv/vignetting.test.ts`).
+  `lvVignettingDecision`, `lvVignettingLines`): the R11b ask is of the fields with a lattice, at the lines that trace
+  the authored indices (`tracesAuthored`), none for a photopic or spectral run; `lv` answers each asked field from the
+  tab's curve, a state with no curve at every field with the refusal's code (asked at the tab's own angles)
+  (`test/engines/lv/vignetting.test.ts`).
 - **R11a is gated, identical rays** (policy version 20; its beam sets and `landing.maxAbs` policy version 21, Stage
   6.6b): `rays.trace` of the vignetting sets, `raysVignettingComparator`, a comparator of spans (`spanOf`: the beam sets
   of one line; every figure of a field is relative to the axis). A set that is no beam (no lattice, or its chief ray not
@@ -1391,9 +1430,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   interior cell's direction enters to second order, a rim cell's `δ` by about `2 δ / ρ` (`ρ` 0.040 to 0.40 on the
   benchmark), so the gate is tighter than R2's direction gate, as R4's is; the conditioning is stated, never gated away,
   and a FAIL is attributed in extended precision first. `landing.maxAbs` is the largest landing difference, along x or
-  y, of the chief rays of the image mapping ok in both answers, gate 1e-8 mm (R2's, R9a's and R10a's): the tab's image
-  area is `(dh/dθ)(h / sin θ)` of these landings 0.01° apart, so its own figure moves by about `δ / (f · 1.75e-4)`
-  relative to it for a landing difference `δ`, and the rung judges the landings themselves. No floor. A span's members
+  y, of the chief rays after the cells ok in both answers, gate 1e-8 mm (R2's, R9a's and R10a's): since LV #931 the
+  stop-centre ray alone, the image point of the tab's reference sphere (before it, the image mapping's chief rays
+  0.01° apart). No floor. A span's members
   are taken in an order of their own (`memberOrder`: the axis first, then by field angle, then by line) in `compare` and
   `recorded` alike, never the order handed over (a test reverses them and gets the same bytes). **The owner accepted
   these gates**: `mask.mismatches` 0, `illumination.maxAbs` 1e-9 and `transmission.maxAbs` 0 aligned with R2
@@ -1410,39 +1449,53 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `bad-line`, `bad-ray`, `degenerate-pupil`). It is in no engine's closure but `flux`'s; never in `lv`, `ref` or
   `replay`.
 - **`vignetting.native` v1 (contract 1.0)**: a spec of `lines`, `maxFieldDeg` and `fieldAnglesDeg` (the first 0, the
-  axis); per line and field `chiefLandingMm`, `geometricTransmission` and `relativeIllumination` (over the axis's, the
-  engine's own measure, at least 0; both finite unless `unavailable`), `status` `ok`, `unconverged` (with a reason) or
+  axis); per line and field `chiefLandingMm`, `geometricTransmission` (the share of the beam that gets through, absolute
+  since LV #931: an axis an aperture clips is below 1) and `relativeIllumination` (over the axis's), each the engine's
+  own measure, at least 0, both finite unless `unavailable`; `status` `ok`, `unconverged` (with a reason) or
   `unavailable`, `sampling`. Schema, corpus, `validate.py` port (`validate_vignetting_native`) and invariants change
   together.
 - **`lv` answers `vignetting.native` from the tab as it presents it** (`src/engines/lv/vignetting.ts`,
   `lv-vignetting-tab`): `computeVignettingCurve` of the drawer's request (`lvChiefRequest`), each field's figures to the
-  bit, identified by the landing on the design plane of LV's solved chief ray of the field
-  (`chiefRayImageHeightAccurateForRuntimeLens`); `sampling` `gridCells`, `fieldSamples`, `mirrored` and `tubeMapping`.
+  bit (since LV #931 `geometricTransmission` its `unvignettedFraction`, absolute, and Rimmer's `relativeIllumination`),
+  identified by the landing on the design plane of LV's solved chief ray of the field
+  (`chiefRayImageHeightAccurateForRuntimeLens`); `sampling` `gridCells`, `fieldSamples`, `mirrored` and the tab's counts
+  (`samples`, `transmitted`, `blocked`, `unaimed`, `failed`). A field the tab has no figure of is unavailable
+  `lv-<reason>` (one of a fraction and no relative illumination with the fraction under `sampling.unvignettedFraction`).
   Refused before LV is asked anything: `line` (`linesBeyondCase`), `lines.not-authored-reference`, `focus.off-design`,
   `object.finite`, `path.folded` (a test makes every LV call throw); `fields.angles` once the tab's fields are known. A
-  state the tab draws no curve of is every field unavailable with the code (`no-pupil`, `lv-outside-beam-model`,
-  `lv-bounding-sphere-field`); an empty curve otherwise is `lv-no-curve` at every field.
+  state the tab draws no curve of is every field unavailable with the code (`no-stop`, `lv-outside-beam-model`,
+  `lv-bounding-sphere-field`); a curve the tab has none of otherwise `lv-<reason>` at every field.
 - **`flux` is LV's lattices and the comparator's flux estimator** (`src/engines/lv/fluxEngine.ts`, `lattice-flux`), in
   the pattern of `wave`: `lvFieldRaySets` at 64 and 128 cells (`LV_FLUX_DEFAULT_GRID`, twice the run's default), or
   where a run states a `bundleGrid` at twice and four times it (R11b hands `flux` twice the stated grid as its option,
   so its coarser lattice is never the run's own; a run of more than 64 is `option.bundleGrid`, unsupported), each
-  field's sets made once a field and lattice whatever line is asked, traced by `answerLvRays`; `geometricTransmission`
-  the launch-plane area of the cells taken over the axis's, `relativeIllumination` the cosine flux over the axis's, on
-  the finer lattice; `ok` only where both moved by no more than `CONVERGENCE_BANDS` on doubling and no lit cell is on
-  the lattice's rim, else `unconverged` (`not-converged`, `convergence-unknown`, `lattice-edge-lit`). Its fingerprint is
-  LV's. optiland has no vignetting analysis and answers no `vignetting.native`. **Owner decision (2026-10-27): `flux`
-  keeps its cosine-space relative illumination** (Rimmer's method, OpticStudio's); R11b records LV's #925 energy route
-  against it as two methods, and the owner decided that LV is to adopt Rimmer's method, and a vignetting curve of the
-  share of stop samples transmitted, in later LV changes (pending).
+  field's sets made once a field and lattice whatever line is asked, traced by `answerLvRays`; since Stage 6.8b (LV
+  #936's lattices are on the real stop) `geometricTransmission` the share of the finer lattice's samples of the stop
+  (cells of a weight above 0, but those an engine failed) that reach the image, absolute as the tab's (a launch-plane
+  lattice has none: `launch-plane-lattice`), `relativeIllumination` the cosine flux of each ray's own exit direction
+  over the axis's, on the finer lattice; `ok` only where both moved by no more than `CONVERGENCE_BANDS` on doubling and
+  no lit cell is on a launch-plane lattice's rim, else `unconverged` (`not-converged`, `convergence-unknown`,
+  `lattice-edge-lit`). Its fingerprint is LV's. optiland has no vignetting analysis and answers no `vignetting.native`.
+  **Owner decision (2026-10-27): `flux` keeps its cosine-space relative illumination** (Rimmer's method,
+  OpticStudio's); the owner decided that LV is to adopt Rimmer's method and a vignetting curve of the share of stop
+  samples transmitted, which **LV #931 did** (its Rimmer refers each ray's direction to the image point through a
+  reference sphere, `flux` takes the rays' own: two Rimmer integrals on two stop lattices).
 - **R11b is recorded, of `lv` and `flux`, only where named** (`vignettingNativeComparator`): R9b's `classifyChiefField`
   sorts each field (R5's classes with `numerical` for `unconverged`, `indices-differ`, the landing at 1e-5 mm); no
   reason of its own. Figures: `geometricTransmission.maxAbs`, `falloff.maxAbs` (each answer's relative illumination over
-  its geometric transmission, of no vignetting: since `5ba17c20c` the tab's energy route, its flux times cos θ over the
-  chief rays' image mapping, against the cosine-space flux) and `relativeIllumination.maxAbs`.
+  its geometric transmission relative to the axis's, of no vignetting: since LV #931 the transmission is absolute and
+  the illumination relative to the axis, so each answer's falloff is `RI / (GT / GT(axis))`; the tab's Rimmer of
+  referred directions on its 64-cell stop lattice against `flux`'s of exit directions on the MTF's 128-cell one) and
+  `relativeIllumination.maxAbs`. On the benchmark at `607ff23ae`, 48 pairs RECORDED, no ATTENTION; per field off the
+  axis (208) the transmission within 0.0037 (median 0; 0.0100 at `098c91ef6`), the relative illumination within 0.0062
+  (median 0.00093; 0.0110 before) and the falloff within 0.014 (median 0.00065; 0.023 before; every axis transmits all
+  its samples in both answers, so the review's axis-relative falloff gives the same figures).
   `vignettingFactsOfRecorded` repeats the sorting: change it, `vignettingFactsOf` and `recorded` together. **Owner
   decisions (2026-10-26):** the engine `flux` stays R11b's independent estimate, and its cosine-space flux (the
   projected solid angle of the exit pupil) is the comparator's relative illumination; the 1e-5 mm landing limit stays
-  (policy 20); the three figures have no attention band; R11b stays out of every baseline (`--rungs r11b`).
+  (policy 20); R11b stays out of every baseline (`--rungs r11b`). **Owner decision (2026-10-29), policy 24:** a band
+  of 0.01 on `geometricTransmission.maxAbs` (one definition since #931, the lattices' convergence band); the relative
+  illumination and the falloff stay unbanded (`vignettingNative.test.ts` holds a pair within RECORDED, above ATTENTION).
 - **LV assumptions found, resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Vignetting"; owner's brief
   `docs/upstream/lensvisualizer-vignetting-sweep.md`, not filed): the tab's sweep was a chord of the axis's pupil, which
   the stop's image outgrows off the axis (the beam's area 1.79 times the axis's on the Sony FE 20 mm at f/8 and 47°,
@@ -1456,7 +1509,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   half lattice of 64 cells against the flux's cosine-space flux on a lattice of 128, two methods recorded). **Owner
   decision (2026-10-27)**: LV is to move the tab to Rimmer's relative illumination (the cosine-space flux, `flux`'s and
   OpticStudio's) and to a vignetting curve of the share of stop samples transmitted, and to aim its spots, fans, bokeh,
-  zones and MTF at the real stop, in later LV changes (pending; the canaries of those lines will fail first).
+  zones and MTF at the real stop, in later LV changes: **done by LV #927, #931 and #936** (adopted at Stage 6.8b, LV
+  `607ff23ae`; the vignetting sets above).
 - The adapter revisions of `lv`, `replay` and `wave` moved (the stage's names and modules); the kit's `validate.py`
   moved `optiland`'s and `optiland-wave`'s; `ref`'s did not; `flux` is new; LV's engine closure did not (`c866fbff`).
   The recipe in `docs/REFERENCE.md`, "The Phase 6 end refresh", names `r11a` beside `r7a` to `r10a`.
@@ -1479,19 +1533,20 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   focus-stations at the design plane, 113 at `098c91ef6`, 61 finite): the cardinal focal length, the BFD (R1's
   `backFocus`), the FFD (the first vertex less R1's `frontFocalZ`), the hiatus (R1's `frontPrincipalZ` less its
   `rearPrincipalZ`), the image plane and the track (the case's) to the bit; breathing and telephoto ratio derived to the
-  bit; the physical stop within two units in the last place of twice the case's (derived: a product and a quotient each
-  rounded once). Two **measured margins**, held only at `PINNED_CLOSURE` and the cases of `MEASURED_CASES` (as
-  `mtf.test.ts` pins), so a lens edit cannot turn `test:lv` red, and written down elsewhere: the current and infinity
-  focal lengths within 8 units in the last place of R1's (measured 7, the Leica Summilux-C 18 mm at a focus station),
-  the entrance pupil and the "Working f/#" within 1e-10 relative (measured 3.4e-11; the hook's pupil is of a real ray
-  1e-4 mm from the axis, whose height over 1e-4 multiplies an absolute rounding by 1e4). Measure again and pin anew when
-  the closure or the cases move; never loosen a margin without a measurement. Not covered, listed in the test
-  (`NOT_COVERED_BY_R1`): the half field, the focus distance, the controls, the "Current Perspective Pose" section (shown
-  only with an active pose; no case has one) and the aperture control's "eff. f/" (shown only above a 0.05 difference
-  with `showEffectiveAperture` on).
+  bit; since LV #933 the physical stop to the bit of twice the case's (the hook's stop is the stop rule's). Measured
+  margins (`MARGINS`), held only at `PINNED_CLOSURE` and the cases of `MEASURED_CASES` (as `mtf.test.ts` pins), so a
+  lens edit cannot turn `test:lv` red, and written down elsewhere; at 607ff23ae (closure `f016b35b`, 119 cases): the
+  current and infinity focal lengths within 16 units in the last place of R1's (measured 15, the Olympus 7-14 mm at a
+  focus station; 7 before), the entrance pupil to the bit (the hook's pupil is paraxial since #933; 3.4e-11 relative
+  before), the "Image-space f/#" and, at infinity, the "Paraxial working f/#" within 20 units of R1's efl over that
+  pupil (measured 19, and 3). Measure again and pin anew when the closure or the cases move; never loosen a margin
+  without a measurement. Not covered, listed in the test (`NOT_COVERED_BY_R1`): the half field, the focus distance,
+  the controls, the "Current Perspective Pose" section (shown only with an active pose; no case has one), the real
+  marginal ray's "Working f/#" (R12b's) and the aperture control's "paraxial working f/" beside the mark (shown only
+  above a 0.05 difference with `showEffectiveAperture` on).
 - **No `r12a`** (decided with evidence; the owner accepted it, 2026-10-27): the hook's pupil ray 1e-4 mm from the axis
-  matches R1's paraxial pupil to 3.4e-11 relative; a rung of its height at R2's 1e-8 mm would judge it to 1e-4 relative,
-  about 10^6 times looser. The half field is the hook's analysis field geometry (`computeAnalysisFieldGeometry`, not
+  matched R1's paraxial pupil to 3.4e-11 relative; a rung of its height at R2's 1e-8 mm would judge it to 1e-4 relative,
+  about 10^6 times looser. Since LV #933 the pupil is paraxial and matches R1's to the bit. The half field is the hook's analysis field geometry (`computeAnalysisFieldGeometry`, not
   the paraxial estimate of `computeFieldGeometry` alone): the field whose solved real chief ray lands at the image
   corner (half the stated image circle, or the format's diagonal) within 1e-4 mm on 103 of 113 states; the last field
   whose chief ray clears every aperture where one clips it short of the corner (one: the GF 80 mm's close station); the
@@ -1506,17 +1561,22 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   (`validate_summary_native`) and invariants change together.
 - **`lv` answers from the tab and the aperture control as they present them** (`src/engines/lv/summary.ts`,
   `lv-summary-tab`): `lvSummaryRequest` restates the hook's `dynamicEFL` (`computeFocusEFL` of a request of the state,
-  which reads nothing else) and the drawer's request (the hook's pupil for the case's stop, `lvPupilSeed`; the hook's
-  stop, `lvSummaryStopSemiDiameter`: wide open its `currentPhysStopSD`, a unit from the case's on some lenses; its field
-  geometry). The tab's "Working f/#" is `imageSpaceFNumber`; `paraxialWorkingFNumber` and `workingFNumber` are null (LV
-  traces neither marginal ray for an f-number); the slider's marked f-number is `nominalFNumber` (`lvNominalFNumber`);
-  the control's "eff. f/" (`effectiveFNumber`, bound from `optics.ts`), a thin-lens estimate of stored pupils, is
-  `sampling.lvThinLensEffectiveFNumber`; `rearFocalZ` is `computeCardinalElementsFromState`'s. Refused before LV is asked
+  which reads nothing else) and the drawer's request (the hook's pupil for the case's stop, `lvDrawerPupil`; the hook's
+  stop, `lvSummaryStopSemiDiameter`, the case's since #933; its field geometry). Since LV #933 the tab presents
+  OpticStudio's three f-numbers under their names: its "Image-space f/#" is `imageSpaceFNumber`; its "Paraxial working
+  f/#" (`1 / (2 n' |u'|)` of the paraxial marginal ray) and "Working f/#" (`computeWorkingFNumber`, `1 / (2 n' sin θ')`
+  of the real marginal ray aimed at the stop rim) are `paraxialWorkingFNumber` and `workingFNumber` at infinity focus
+  only, where LV's object (the paraxial conjugate of its image plane) is the case's; at a finite focus both are null
+  and recorded as `sampling.lvParaxialWorkingFNumberAtParaxialObject` and `lvWorkingFNumberAtParaxialObject`, and a
+  vignetted marginal ray names its surface (`lvMarginalRayVignettedSurfaceIndex`, `...BeforeStop`). The slider's
+  marked f-number is `nominalFNumber` (`lvNominalFNumber`: wide open the lens's mark, else the N whose stop by the
+  rule is the case's, `|F ρ| / 2s`); the thin-lens "eff. f/" (`effectiveFNumber`) is gone, and so is `sampling.lvThinLensEffectiveFNumber`;
+  `rearFocalZ` is `computeCardinalElementsFromState`'s. Refused before LV is asked
   anything: `path.folded`, `line`, `focus.off-design` (the case's plane is not the state's `imgZ`),
   `lines.not-authored-reference` (a test makes every LV call throw). Two canaries (Stage 6.7 in `canaries.test.ts`) hold
   the restated lines, the tab's labels, `analysisJobs.computeOpticalSummary`, the half field's corner rule and the stop
-  sizing with its exceptions; the integration test holds `lv`'s answer to the tab asked with a request spelled out again
-  (to the bit wide open, within two units stopped down: a case carries its stop, not the slider's N).
+  sizing with its exceptions; the integration test holds `lv`'s answer to the tab asked with a request spelled out again,
+  every value to the bit (since #933 the case's stop is the slider's N by the one rule).
 - **optiland answers with its own accessors** (`lvrtc_optiland/summary.py`): of a verified optic of the line
   `first_order.line_data`'s `F2()` and `f2()`, `|EPD()|`, the system aperture's value, `|FNO()|`, `1 / (2 n' |u'|)` of
   `marginal_ray()` (optiland has no accessor of it), `total_track`; `get_working_FNO` on the axis on a `field_optic`
@@ -1540,15 +1600,20 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `paraxialWorkingFNumber`, `workingFNumber`, `totalTrack`, each `.maxAbs`); one an answer never states is unmeasured
   with the engine named. The mark and the half field are recorded, never a figure. `summaryFactsOfRecorded` repeats the
   sorting. **Owner decisions (2026-10-27): accepted as proposed**: the sorting limit `rearFocus.maxAbs` 1e-5 mm;
-  attention bands of 2e-9 on `imageSpaceFNumber.maxAbs` and 3e-9 mm on `entrancePupilDiameter.maxAbs` (ten times the
-  measured 1.45e-10 and 3.0e-10, rounded up; `summaryNative.test.ts` holds a pair above each band ATTENTION and one
-  within RECORDED), none on the others; R12b out of every baseline (`--rungs r12b`).
+  R12b out of every baseline (`--rungs r12b`). **Owner decision (2026-10-29), policy 24** (of the measurements at LV
+  `607ff23ae`, where #933 made the pupil paraxial and the tab states both working f-numbers): attention bands of 2e-13
+  on `imageSpaceFNumber.maxAbs` (was 2e-9), 2e-12 mm on `entrancePupilDiameter.maxAbs` (was 3e-9), 2e-13 on
+  `paraxialWorkingFNumber.maxAbs` and 7e-8 on `workingFNumber.maxAbs` (two real-ray constructions aimed at the stop
+  rim), none on the others; `summaryNative.test.ts` holds a pair above each band ATTENTION and one within RECORDED.
 - **Measured** (`docs/REFERENCE.md`, "Stage 6.7"): benchmark 24, states 32, focus-stations 61 pairs RECORDED, no
   ATTENTION; one definition, one number: image-space f-numbers within 1.45e-10, pupils within 3.0e-10 mm, rear focal
   points within 2.0e-13 mm, stops within 7.1e-15 mm; `paraxialWorkingFNumber.maxAbs` and `workingFNumber.maxAbs`
-  unmeasured.
-- **LV assumptions found** (`docs/gotchas.md`, "Summary"; brief `docs/upstream/lensvisualizer-summary-conventions.md`,
-  not filed): the tab's "Working f/#" is OpticStudio's image-space F/#, up to 4.8% below the real rim rays' working F/#
+  unmeasured. At LV 607ff23ae (Stage 6.8b, benchmark, 24 pairs RECORDED, no ATTENTION): image-space f-numbers within
+  1.1e-14, pupils within 8.5e-14 mm, focal lengths 2.8e-13 mm, rear focal points 1.1e-13 mm, stops and tracks to the
+  bit, paraxial working f-numbers within 2.0e-14, working f-numbers (two real-ray constructions aimed at the stop rim)
+  within 3.4e-9.
+- **LV assumptions found, resolved by LV #933** (`445fa1711`; history: `docs/gotchas.md`, "Summary"; brief
+  `docs/upstream/lensvisualizer-summary-conventions.md`, not filed): before it the tab's "Working f/#" was OpticStudio's image-space F/#, up to 4.8% below the real rim rays' working F/#
   at infinity and 1.03 against 4.75 at the Sigma 105 mm's 1:1; the stop is sized wide open by an unaimed, unclipped real
   ray at `EFL / (2 N)` (exceptions: an authored zoom stop schedule, a stop inside an element, a fixed iris, a fisheye's
   projection focal length, the paraxial height where the real ray fails; interpolated between zoom stations), so the
@@ -1559,9 +1624,11 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   names** (image-space f/# = EFL / EPD; the paraxial working f/# of LV's own paraxial trace at the current focus, in
   place of the thin-lens "eff. f/"; the working f/# of the real marginal ray, `1 / (2 n' sin θ')`) **and one stop rule
   at every N, the paraxial EPD = EFL / N** (OpticStudio's image-space F/# aperture), in place of the real sizing ray and
-  the linear stop-down. The LV change is pending (the owner holds its prompt). Until it lands R12b records LV as it is;
-  afterwards the canaries of those lines fail first, every case's stop radius moves (every case id and baseline record),
-  and the summary's request, R12b's asks and the measurements are redone.
+  the linear stop-down. **Landed in LV #933** and adopted at Stage 6.8b (607ff23ae): the canaries were restated, every
+  case's stop radius moved but an authored schedule's or a fixed iris's (its case id and baseline records:
+  STALE(case) until the Phase 6 end refresh), and the
+  summary's request, R12b's asks and the measurements were redone. The stop rule's exceptions stay LV's (an authored
+  zoom stop schedule, a fixed iris, `stopForFNumber` capped wide open).
 - The adapter revisions of `lv`, `replay`, `wave` and `flux` moved (the stage's names, of modules already loaded: LV's
   engine closure is unchanged, `fef2e248`), and the worker's files moved `optiland`'s and `optiland-wave`'s; `ref`'s did
   not. No gated rung joins the Phase 6 end refresh.
@@ -1628,17 +1695,29 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   polynomials by Gram-Schmidt in fractions, norms by the exact disc integral, values at dyadic points, parity zeros on
   the grid, recovery of known polynomials, pure defocus and spherical aberration, RMS with a piston of 2^30, the exact
   condition and the strips that leave no digit. The estimator is in no engine's closure but `optiland-wave`'s.
-- **R13b and R14b are recorded, only where named, out of every baseline** (policy 23): R13b of `ref-seidel` and optiland
+- **R13b and R14b are recorded, only where named, out of every baseline** (policy 24): R13b of `ref-seidel` and optiland
   (`seidelNativeSpec`: line 0, the recipe's largest field angle, the shortest and longest lines as dispersion lines),
   sorted by R5's `classifyNativeField` with the invariant as the landing (`invariant.maxAbs`), figures each total's
   `.maxAbs`, `total.maxScaled` (over the larger sum of the surfaces' magnitudes) and `surfaces.maxAbs`; R14b of optiland
   and `optiland-wave` (`zernikeNativeSpecs`: line 0, the recipe's angles, grid 128, Standard 37 and Fringe 36), sorted by
   R5's classes with `chiefLanding.maxAbs` and, as numerical (R5's `unconverged`), by `fitCondition.max`; figures
   `coefficients.maxAbs`, `rmsToChief.maxAbs`, `pvToChief.maxAbs`, `fitResidualRms.maxAbs`, counts of fields.
-  `seidelFactsOfRecorded` and `zernikeFactsOfRecorded` repeat the sortings: change them with `recorded`. **Policy 23
-  states units and no limit or band**: the owner's to set (proposals in `docs/REFERENCE.md`, "Stage 6.8": R13b
-  `invariant.maxAbs` 3e-14 mm, a band of 8e-15 on `total.maxScaled`; R14b `fitCondition.max` 1e6, `chiefLanding.maxAbs`
-  1e-9 mm, bands 4e-11 waves on `coefficients.maxAbs`, 2e-16 on `rmsToChief.maxAbs`, 7e-16 on `fitResidualRms.maxAbs`).
+  `seidelFactsOfRecorded` and `zernikeFactsOfRecorded` repeat the sortings: change them with `recorded`. **Owner
+  decision (2026-10-28), policy 24: the Stage 6.8 proposals accepted**: R13b's sorting limit `invariant.maxAbs` 3e-14
+  mm and a band of 8e-15 on `total.maxScaled`; R14b's sorting limits `fitCondition.max` 1e6 (numerical) and
+  `chiefLanding.maxAbs` 1e-9 mm (data), bands 4e-11 waves on `coefficients.maxAbs`, 2e-16 on `rmsToChief.maxAbs`, 7e-16
+  on `fitResidualRms.maxAbs`; the other figures none. A limit is the metric's `attention`, which the comparator reads
+  (`context.policy`). A field beyond a landing limit is data and its pair ATTENTION, as R5's (R13b's invariant, R14b's
+  chief landing). **Owner decision (2026-10-29): a field R14b sets aside as numerical is R5's unconverged field**,
+  counted (`fields.numerical`) and named in the notes, never a reason for ATTENTION: the judged `fitCondition.max` is
+  taken over the fields of two methods alone (so it is within its limit by construction), and the set-aside fields'
+  largest condition is shown as `fitCondition.setAsideMax`, reported only where there is one, named in no policy, so
+  never banded. `seidelNative.test.ts` and `zernikeNative.test.ts` hold a pair within each band RECORDED, one above
+  ATTENTION, a field beyond each limit sorted as data or numerical, and a pair whose only peculiarity is an
+  ill-conditioned field RECORDED. On the benchmark at `607ff23ae` (all 96 runs): R13b 64 pairs RECORDED (no data, no
+  ATTENTION); R14b 168 ATTENTION before that decision, every one of a field of condition above 1e6, and under it all
+  384 RECORDED: of each fit's 480 fields 418 of two methods (judged `fitCondition.max` 9.2e5, every band held,
+  coefficients 1.05e-11 waves) and 62 numerical (`fitCondition.setAsideMax` 9.7e12, the Sigma 35 mm's full field).
 - **Measured** (`docs/REFERENCE.md`, "Stage 6.8"; 36 design-plane runs of the benchmark and the features suite): R13b 18
   pairs of two methods, totals within 2.6e-15 mm, scaled 7.2e-16, invariants within 2.7e-15 mm, 36 refused by optiland
   (a term of power 3 or 4); R14b 360 fields, RMS within 1.4e-17 waves, peak to valley to the bit, coefficients within
@@ -1652,3 +1731,43 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - The adapter revisions of `optiland` and `optiland-wave` moved (worker files, the kit's `validate.py`, the estimator);
   `lv`, `ref`, `replay`, `wave` and `flux` did not (no file of their closures changed); `ref-seidel` is new. No gated
   rung joins the Phase 6 end refresh.
+
+## Stage 6.8b LensVisualizer PRs adopted (parts A and B)
+
+- **LV `607ff23ae` adopted** (engine closure `f016b35b`, 184 files): #933 (stop rule, three f-numbers), #934 (step
+  backwards), #936 (MTF on the real stop), #928/#932 (rim cuts) touch the engine; #929, #935, #937, #938, #939 add no
+  engine file. The binding lost `effectiveFNumber`, `traceMtfBundle`, `mtfTraceClassification` and gained
+  `stopSemiDiameterForFNumber`, `stopRuleGeometry`, `aimMtfStopLattice`, `traceMtfLattice`, `traceMtfStopBundle`,
+  `traceMtfLaunchPlaneBundle` and `traceRayClassification` (from `src/optics/trace/rayClassification.ts`, a fake of its
+  own in `FAKE_ENGINE_FILES`); the fakes' defaults stay unlike LV's. The rules above say what each restates; the
+  evidence is `docs/REFERENCE.md`, "Stage 6.8b". The MTF and R4f pins and the summary margins were measured again at
+  `f016b35b`. Adapter revisions of `lv`, `replay`, `wave` and `flux` moved; `ref`, `ref-seidel`, `optiland` and
+  `optiland-wave` did not. No gate or floor moved; policy 24 adds only recorded rungs' limits and bands: R13b's and
+  R14b's (2026-10-28), R7b's fans, R11b's transmission and R12b's four f-number and pupil bands (2026-10-29, above).
+- **The crossing-surface FAILs of the catalog snapshot stay as recorded**: since #934 their seven reproducers PASS R2,
+  but `docs/known-failures.json` and the catalog baselines are edited only by the end-of-project refresh, which will
+  report the entries unused (`unusedKnownFailures`).
+- **Part B: #927, #930 and #931 adopted** (the Stage 6.2, 6.3, 6.5 and 6.6 rules above say what each set now is). #927
+  aims every pupil sample of the coma, bokeh, field-curve, spherical-aberration and axial-colour tabs at the real stop
+  through one export, `prepareAimedPupilLaunch`; the sets keep its rays verbatim (a blocked sample its blocking ray,
+  an unaimed one the chief ray at weight 0, the chief ray the launch's stop-centre ray), and the integration tests
+  trace them as the tabs do (`prepareAimedPupilTrace`, the stop at `R (1 + 1e-7)`). #930 aims each colour channel at
+  its own indices and chooses the zone of all four: the colour pattern is a set at each line that is a channel's. #931
+  makes the vignetting tab a stop lattice (`prepareAimedStopLattice`) and Rimmer's relative illumination, its vignetting
+  curve the absolute share of the stop's samples; `flux` takes the same share, and both state it as
+  `geometricTransmission`. The binding gained `prepareAimedPupilLaunch`, `prepareAimedPupilTrace`,
+  `prepareAimedStopLattice`, `computeVignettingField`, `BEAM_GRID_CELLS` (`vignettingBeamCells`) and
+  `CHROMATIC_ZONE_CHANNELS` (`chromaticZoneChannels`), `MIN_BEAM_GRID_CELLS` (`vignettingMinBeamCells`), each faked
+  (`pupils/aimedPupil.ts` a new fake file), and lost `traceSkewRay`. R10a reads a curvature field by place
+  (`curvatureFieldsOf`): before its chief ray, as many rays of its tangential fan as of its sagittal fan, the
+  tangential half first; a ray of the sagittal half off the chief ray along x whatever its y (an aimed sagittal ray
+  starts off its height), one of the tangential half on it along x, one at the chief ray's start in neither; any other
+  layout is not comparable, never read into a fan.
+- **Measured, part B** (`docs/REFERENCE.md`, "Stage 6.8b ... (part B)"; benchmark, `--jobs 4`): R7a–R11a 23,760 pairs
+  PASS, no mask mismatch, every gated lv–ref figure below 1e-12 (R7a `transverseError.maxAbs` 6.7e-13 mm, R11a
+  `illumination.maxAbs` 7.1e-14); R7b 240 RECORDED (fans within 8.1e-11 mm; 5.3e-2 mm before), R8b 96 ATTENTION
+  (`pupils-apart`, above), R9b 144 and R10b 48 RECORDED as before, R11b 48 RECORDED (above); R12b on states (64
+  RECORDED) and focus-stations (134 RECORDED), no ATTENTION. The owner decided the proposals on 2026-10-29 (policy 24,
+  above; optiland's axial aim deferred until after Phase 6). Under them (REFERENCE, "Measured under policy 24"): R7b
+  240, R11b 48, R12b 48/64/134 and R14b 384 RECORDED, no ATTENTION, every banded figure within its band; R14b on the
+  features suite 64 RECORDED and 8 ERROR (`odd-asphere`: both engines' `time-budget`).

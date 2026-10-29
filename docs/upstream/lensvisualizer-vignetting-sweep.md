@@ -1,6 +1,12 @@
 # LensVisualizer: the vignetting tab sweeps one chord of a fixed pupil, and applies cos^4 of the field angle
 
-Status: **resolved by LensVisualizer #925** (`5ba17c20c`, adopted by the comparator at Stage 6.6b, LV `098c91ef6`,
+Status: **resolved by LensVisualizer #931** (`4092f6a25`, adopted by the comparator at Stage 6.8b, LV `607ff23ae`): the
+tab is now OpticStudio's two field analyses on one lattice on the real stop a field (the MTF's aimed stop lattice, 64
+cells across the stop), its vignetting curve the share of the stop's samples that reach the image and its relative
+illumination Rimmer's, each ray's direction referred to the chief ray's image point through a reference sphere: the
+second suggestion below, with Rimmer's correction. On the benchmark R11b's two answers now differ per field off the axis
+by at most 0.0037 in transmission and 0.0062 in relative illumination (`docs/REFERENCE.md`, "Stage 6.8b ... (part B)").
+Before it, **resolved in part by LensVisualizer #925** (`5ba17c20c`, adopted by the comparator at Stage 6.6b, LV `098c91ef6`,
 engine closure `fef2e248`): the tab traces each field's beam on its MTF's launch lattice (64 cells across the footprint,
 one half mirrored), its geometric transmission the lit cells' area, and its relative illumination by conservation of
 energy, the beam's flux times cos θ over the image area a unit of object solid angle covers, `(dh/dθ)(h / sin θ)` of lit
@@ -9,7 +15,8 @@ below (the cosine-space flux of the exit directions, Rimmer's method, OpticStudi
 R11b records the two routes side by side as two methods (per field off the axis on the benchmark, within 0.0110, median
 0.0017). **Owner decision (2026-10-27)**: `flux` keeps Rimmer's method, and LensVisualizer is to move its tab to Rimmer's
 relative illumination and to a vignetting curve of the share of stop samples transmitted (and to aim its spots, fans,
-bokeh, zones and MTF at the real stop) in later changes, pending. The history follows as it was written, and the
+bokeh, zones and MTF at the real stop) in later changes, pending; the MTF's part landed in LV #936 (its aimed stop
+lattice, adopted at Stage 6.8b, LV `607ff23ae`). The history follows as it was written, and the
 measurements after the change are in `docs/REFERENCE.md`, "Stage 6.6b". For the owner; not filed. Observed at LV
 `be077cbcd` (clean; engine closure `c866fbff` with the comparator's Stage 6.6 names) and optiland `4e893f53`. The comparator reports LensVisualizer's vignetting tab as it is
 and changes no gate for this: rung R11a traces the tab's own sweeps, and LensVisualizer's own MTF launch lattice over

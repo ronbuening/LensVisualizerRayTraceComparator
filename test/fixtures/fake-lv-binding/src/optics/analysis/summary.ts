@@ -25,13 +25,24 @@ export function computeOpticalSummary(request: FakeAnalysisRequest) {
     distances: Record<string, { valueMm: number }>;
   } | null;
   const totalTrackMm = state.imgZ - state.z[0];
+  const imageSpace =
+    currentEFLMm !== null && entrancePupilDiameterMm !== null ? Math.abs(currentEFLMm) / entrancePupilDiameterMm : null;
   return {
     currentEFLMm,
     infinityEFLMm,
     breathingPercent:
       currentEFLMm !== null && infinityEFLMm !== null ? (100 * (currentEFLMm - infinityEFLMm)) / infinityEFLMm : null,
-    effectiveFNumber:
-      currentEFLMm !== null && entrancePupilDiameterMm !== null ? Math.abs(currentEFLMm) / entrancePupilDiameterMm : null,
+    // The fake's three f-numbers, under LV's names and of rules of its own: the image-space one is the focal length
+    // over the pupil's diameter; the paraxial working one that, times one and a focus position, and the working one
+    // that times 33/32 at infinity focus; a lens may state that its marginal ray is vignetted at a surface.
+    imageSpaceFNumber: imageSpace,
+    paraxialWorkingFNumber: imageSpace === null ? null : imageSpace * (1 + state.focusT),
+    workingFNumber:
+      L.source.mtf?.axialVignettingLabel !== undefined
+        ? { status: "vignetted", surfaceLabel: L.source.mtf.axialVignettingLabel, beforeStop: false }
+        : imageSpace === null
+          ? { status: "unavailable", reason: "no-stop" }
+          : { status: "traced", value: (imageSpace * (1 + state.focusT) * 33) / 32, indexLine: "d" },
     entrancePupilDiameterMm,
     physicalStopDiameterMm: stop > 0 ? 2 * stop : null,
     halfFieldDeg,

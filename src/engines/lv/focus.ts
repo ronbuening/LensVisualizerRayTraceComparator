@@ -5,7 +5,7 @@
 import { lvMtfInputs } from "./tabRequest.ts";
 import type { SpectralLine } from "../../contract/case.ts";
 import type { ExportProblem } from "./exportProblems.ts";
-import { lvHookAperture, lvPupilSeed } from "./tabRequest.ts";
+import { lvPupilSeed } from "./tabRequest.ts";
 import type { LvHookApi } from "./tabRequest.ts";
 import type { LvApi, LvMtfFocus, LvMtfOptions, LvPreparedState, LvRuntimeLens } from "./types.ts";
 
@@ -43,7 +43,7 @@ export function lvGeneralMtfOptions(
     method: "geometric",
     spectrum: "reference",
     focus: "design",
-    pupilSemiDiameterMm: lvPupilSeed(lvHookAperture(api, runtime, state), stopSemiDiameterMm),
+    pupilSemiDiameterMm: lvPupilSeed(api, runtime, state, stopSemiDiameterMm),
     stopSemiDiameterMm,
     movementActive: false,
   };

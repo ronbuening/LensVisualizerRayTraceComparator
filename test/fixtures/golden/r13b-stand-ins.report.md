@@ -8,7 +8,7 @@
 | Suite hash | a179716fbc805a8ae2c69c91d1a5e16e0d4cfcc2ecd5bacb9ae4f5c627d181da |
 | Contract version | 1.0 |
 | Policy | rungs v1 |
-| Policy hash | a5983ebefb59c2975c741870c48877b1a02f5bbdb29aaa02138137c8b2a953dc |
+| Policy hash | c52db6298c7fa1980246196311e3d3b817ad0cb8448810be658b5c5394ca8409 |
 
 ### Engines
 
@@ -32,8 +32,8 @@ No pair is FAIL or ERROR, of 2 compared.
 | PASS | 0 | 0 |
 | FLOOR | 0 | 0 |
 | FAIL | 0 | 0 |
-| RECORDED | 1 | 1 |
-| ATTENTION | 0 | 0 |
+| RECORDED | 0 | 0 |
+| ATTENTION | 1 | 1 |
 | UNSUPPORTED | 0 | 0 |
 | BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
@@ -54,16 +54,16 @@ Quantity `seidel.native`, compared independent-method, recorded. Request `092ccb
 
 Reference vs each, against `optiland`:
 
-| Engine | ASTI.maxAbs [mm] | CLA.maxAbs [mm] | COMA.maxAbs [mm] | CTR.maxAbs [mm] | DIST.maxAbs [mm] | FCUR.maxAbs [mm] | SPHA.maxAbs [mm] | invariant.maxAbs [mm] | surfaces.maxAbs [mm] | total.maxScaled | Verdict | Note |
+| Engine | ASTI.maxAbs [mm] | CLA.maxAbs [mm] | COMA.maxAbs [mm] | CTR.maxAbs [mm] | DIST.maxAbs [mm] | FCUR.maxAbs [mm] | SPHA.maxAbs [mm] | invariant.maxAbs (band 3.00e-14 mm) | surfaces.maxAbs [mm] | total.maxScaled (band 8.00e-15) | Verdict | Note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ref-seidel | 0 | — | 0 | — | 0 | 0 | 9.31e-10 | 0 | 9.31e-10 at sum SPHA, surface 0 | 1.24e-9 at sum SPHA | RECORDED | CLA.maxAbs was not measured: optiland-seidels states none; CTR.maxAbs was not measured: optiland-seidels states none; the rung sets no limit on invariant.maxAbs: no answer is set aside by its Lagrange invariant |
+| ref-seidel | 0 | — | 0 | — | 0 | 0 | 9.31e-10 | 0 | 9.31e-10 at sum SPHA, surface 0 | 1.24e-9 at sum SPHA | ATTENTION | total.maxScaled 1.24e-9 is outside its attention band 8.00e-15 at sum SPHA; CLA.maxAbs was not measured: optiland-seidels states none; CTR.maxAbs was not measured: optiland-seidels states none |
 
 Pairwise, the verdict of each two engines and the metric nearest to or furthest past its limit:
 
 | Engine | optiland | ref-seidel |
 |---|---|---|
-| optiland | — | RECORDED (ASTI.maxAbs 0) |
-| ref-seidel | RECORDED (ASTI.maxAbs 0) | — |
+| optiland | — | ATTENTION (total.maxScaled 1.24e-9 at sum SPHA) |
+| ref-seidel | ATTENTION (total.maxScaled 1.24e-9 at sum SPHA) | — |
 
 Recorded values, as each engine reports them. They are listed and never judged:
 

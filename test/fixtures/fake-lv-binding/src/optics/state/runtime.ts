@@ -96,6 +96,8 @@ export function prepareRuntimeState(L: FakeRuntimeLens, focusT: number, zoomT: n
       sd: index === L.stopIndex ? wideOpenStopAtZoom(zoomT, L) : source.sd,
       innerSd: null,
       clips: source.clips !== false,
+      // A flat rim cut, as LV #928 compiles one: the fake takes the radius the lens states for where the cap meets it.
+      rimCut: source.rimCut === undefined ? null : { depthMm: source.rimCut.depthMm, sag: -source.rimCut.depthMm, radius: source.rimCut.radius },
       elemId: source.nd === 1 ? 0 : index + 1,
       asphere: source.asphere ?? null,
       diffractive: source.diffractive ?? null,

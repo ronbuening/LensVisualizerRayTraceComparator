@@ -49,10 +49,14 @@ export interface CurvatureField {
 
 /**
  * The fields of a curvature set, from its spec (src/rays/curvatureSets.ts): each a block of consecutive rays launched
- * along one direction, its chief ray last; a ray of the block whose start is the chief ray's but along y is of the
- * tangential fan, but along x of the sagittal fan, and one that starts where the chief ray starts is in neither (the
- * centre of a fan, which adds nothing to a focus). A ray offset along both, or along z, says the set is no curvature
- * set: the reason it cannot be compared.
+ * along one direction, its chief ray last, and before it as many rays of its tangential fan as of its sagittal fan,
+ * the tangential half first (LensVisualizer's two fans have one sample count, and a sample it could not aim holds the
+ * chief ray in its place). Each ray is read by where it starts against the chief ray, exactly: one that starts where
+ * the chief ray does is in neither fan (a fan's centre, or a sample held by the chief ray, which adds nothing to a
+ * focus); in the tangential half the others start where the chief ray does along x and z; in the sagittal half off it
+ * along x and where it does along z, whatever their y (a sagittal ray aimed at its point of the real stop starts a
+ * little above or below the chief ray's height). A block of an even number of rays, or a ray that is not where its
+ * half says, says the set is no curvature set: the reason it cannot be compared, never a ray read into a fan.
  */
 export function curvatureFieldsOf(spec: JsonObject | undefined, rays: number): CurvatureField[] | string {
   if (spec === undefined) return "the spec of the request is not at hand: it says which rays are of which field";
@@ -66,15 +70,24 @@ export function curvatureFieldsOf(spec: JsonObject | undefined, rays: number): C
     let end = first;
     while (end + 1 < rays && sameDirection(end + 1, first)) end++;
     const chief = end;
+    const beside = chief - first;
+    if (beside % 2 !== 0) {
+      return `the field of chief ray ${chief} has ${beside} rays beside it: its two fans cannot be of one number`;
+    }
+    const sagittalFrom = first + beside / 2;
     const tangential: number[] = [];
     const sagittal: number[] = [];
     for (let ray = first; ray < chief; ray++) {
       const [dx, dy, dz] = [0, 1, 2].map((at) => o[3 * ray + at] !== o[3 * chief + at]);
-      if (dz || (dx && dy)) {
-        return `ray ${ray} starts beside its field's chief ray, ray ${chief}, other than along x or along y alone`;
+      if (dz) return `ray ${ray} starts beside its field's chief ray, ray ${chief}, off its plane of launch`;
+      if (!dx && !dy) continue;
+      if (ray < sagittalFrom) {
+        if (dx) return `ray ${ray}, of the tangential half of the field of chief ray ${chief}, starts off it along x`;
+        tangential.push(ray);
+      } else {
+        if (!dx) return `ray ${ray}, of the sagittal half of the field of chief ray ${chief}, starts off it along y`;
+        sagittal.push(ray);
       }
-      if (dy) tangential.push(ray);
-      else if (dx) sagittal.push(ray);
     }
     fields.push({ chief, tangential, sagittal });
     first = end + 1;

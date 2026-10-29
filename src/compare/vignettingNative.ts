@@ -1,9 +1,9 @@
 // The comparator of `vignetting.native` for rung R11b: two engines' own vignetting and relative illumination of one
-// case, each by its own method, set beside each other field by field. LensVisualizer's vignetting tab (each field's beam
-// on its MTF's launch lattice, its relative illumination the beam's flux times the cosine of the field angle over the
-// image area a unit of object solid angle covers) beside the comparator's flux in two dimensions on LensVisualizer's
-// lattice over each field's whole beam is the pair the rung is named for. Nothing here is gated, and
-// no figure of it says that one method is right.
+// case, each by its own method, set beside each other field by field. LensVisualizer's vignetting tab (since its #931
+// each field's stop lattice, the share of its samples that reach the image, and Rimmer's relative illumination of the
+// directions referred to the chief ray's image point) beside the comparator's flux on LensVisualizer's MTF lattice on
+// the stop of each field (the same share, and Rimmer's integral of the rays' own exit directions) is the pair the rung
+// is named for. Nothing here is gated, and no figure of it says that one method is right.
 //
 // A field is sorted before any difference is taken, by the sorting of R9b (`classifyChiefField`,
 // src/compare/chiefNative.ts): R5's sorting first (`classifyNativeField`, src/compare/mtfNative.ts) and R5's classes in
@@ -15,12 +15,12 @@
 //
 // Three figures separate what the methods differ in:
 //
-// - `geometricTransmission.maxAbs`: how much of the beam gets through, over the axis's: two areas in two dimensions on
-//   the launch plane, each of its own lattice. Neither applies a law of the field angle.
-// - `falloff.maxAbs`: the relative illumination over the geometric transmission, of each answer: the tab's flux times
-//   the cosine of the field angle over the image area of the chief rays' mapping (energy conservation) against the flux
-//   into the image per unit of transmitted area in the optical direction cosines of the image space, which the traced
-//   exit directions give. It is of no vignetting.
+// - `geometricTransmission.maxAbs`: how much of the beam gets through, by each answer's own measure: since
+//   LensVisualizer #931 in both engines the share of the field's samples of the real stop that reach the image,
+//   absolute (below 1 on the axis where an aperture clips its beam), each of its own lattice.
+// - `falloff.maxAbs`: the relative illumination over the geometric transmission relative to the axis's (both figures
+//   then relative to the axis), of each answer: the illumination of a unit of transmitted beam, of no vignetting. The
+//   two Rimmer integrals differ in it: directions referred to the image point against the rays' own exit directions.
 // - `relativeIllumination.maxAbs`: the two together.
 import type { JsonObject } from "../contract/json.ts";
 import type { RecordedValues } from "../contract/comparison.ts";
@@ -166,6 +166,10 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
   const largest = Object.fromEntries([CHIEF_LANDING_METRIC, ...FIGURES].map((name) => [name, largestOf(name)]));
   const counts = { compared: 0, data: 0, unconverged: 0, unavailable: 0 };
   let blind = 0;
+  // Each answer's geometric transmission of the axis at a line (the field at 0 degrees): a falloff is of the
+  // transmission relative to it, as the relative illumination is relative to the axis.
+  const axisOf = (answer: VignettingNativeData, line: number): number | null =>
+    answer.fields.find((field) => field.line === line && field.fieldAngleDeg === 0)?.geometricTransmission ?? null;
   for (const [index, fieldA] of a.fields.entries()) {
     const fieldB = b.fields[index];
     const sorting = classifyChiefField(
@@ -198,9 +202,12 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
     ];
     largest[TRANSMISSION_METRIC].take(Math.abs(ta - tb), where);
     largest[ILLUMINATION_METRIC].take(Math.abs(ra - rb), where);
-    // The falloff is of transmitted light: a field either answer lets none through has none.
-    if (ta > 0 && tb > 0) largest[FALLOFF_METRIC].take(Math.abs(ra / ta - rb / tb), where);
-    else blind++;
+    // The falloff is of transmitted light, relative to the axis's: a field either answer lets none through, or whose
+    // axis it lets none through, has none.
+    const [axisA, axisB] = [axisOf(a, fieldA.line), axisOf(b, fieldB.line)];
+    if (ta > 0 && tb > 0 && axisA !== null && axisA > 0 && axisB !== null && axisB > 0) {
+      largest[FALLOFF_METRIC].take(Math.abs(ra / (ta / axisA) - rb / (tb / axisB)), where);
+    } else blind++;
   }
   const metrics: ComputedMetric[] = [];
   const unmeasured: UnmeasuredMetric[] = [];
@@ -212,7 +219,7 @@ function compare(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
         name === CHIEF_LANDING_METRIC
           ? "no field has a landing of its chief ray in both answers"
           : name === FALLOFF_METRIC && blind > 0
-            ? "no field of two methods lets light through in both answers"
+            ? "no field of two methods lets light through in both answers, its axis's too"
             : "no field of two methods has the figure in both answers";
       unmeasured.push({ name, reason });
     }
@@ -261,9 +268,12 @@ function recorded(data: JsonObject): { readonly [name: string]: readonly number[
  * - `chiefLanding.maxAbs`: how far apart the two answers' chief rays land on the image plane, the largest over the
  *   fields both have a landing of. A band of it in the policy is the limit of the sorting, as in R5: a field beyond it
  *   is of class `data`. Without one, no field is set aside by its landing, and the pair's reason says so;
- * - `geometricTransmission.maxAbs`: the difference of the two geometric transmissions, each over the axis's;
- * - `falloff.maxAbs`: the difference of the two relative illuminations each over its geometric transmission, of the
- *   fields both answers let light through;
+ * - `geometricTransmission.maxAbs`: the difference of the two geometric transmissions, each by its engine's measure
+ *   (since LensVisualizer #931 the absolute share of the stop's samples in both); a band of it in the policy marks a
+ *   pair for attention;
+ * - `falloff.maxAbs`: the difference of the two relative illuminations each over its geometric transmission relative
+ *   to its axis's (the axis's field of the line, at 0 degrees), of the fields both answers let light through and
+ *   whose axis both let light through;
  * - `relativeIllumination.maxAbs`: the difference of the two relative illuminations;
  * - `fields.compared`, `fields.data`, `fields.unconverged`, `fields.unavailable`: how many fields are of each kind.
  *

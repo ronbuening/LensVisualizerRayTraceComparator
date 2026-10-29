@@ -1,10 +1,11 @@
 // The fake's field-curve and astigmatism sections, under LV's names. Their fields, their fans and their Petzval
 // shift are the fake's own, deliberately not LV's; the rays each field launches (the chief ray, the four parabasal
-// rays at LV's pupil fraction of 0.01 mm over the pupil radius, the real-ray fans) and how their foci are found (LV's
-// least squares of the hits relative to the chief ray's) follow LV's rules, so that rays made by the comparator's
-// restatement give the fake's numbers back to the bit.
+// rays at LV's pupil fraction of 0.01 mm over the pupil radius, the real-ray fans aimed at the stop since LV #927) and
+// how their foci are found (LV's least squares of the hits relative to the chief ray's) follow LV's rules, so that rays
+// made by the comparator's restatement give the fake's numbers back to the bit.
 import { sampleOrthogonalPupilFan, MERIDIONAL_COMA_SAMPLE_COUNT } from "./spots.js";
 import { skewTrace } from "../trace/chiefTrace.js";
+import { prepareAimedPupilLaunch, prepareAimedPupilTrace } from "./pupils/aimedPupil.js";
 import type { FakeState } from "../types.js";
 import type { FakeAnalysisRequest } from "./request.js";
 
@@ -100,22 +101,41 @@ function standardized(request: FakeAnalysisRequest, geometry: Geometry, channel?
   };
 }
 
-/** The real-ray foci of a field's fans, as LV's `computeDiagnosticFieldFocus`, or undefined with fewer than 3 rays. */
+/**
+ * The real-ray foci of a field's fans, as LV's `computeDiagnosticFieldFocus` since LV #927: each fan the fake's aimed
+ * launch at its points of the stop, traced as the launch's own trace, relative to that launch's stop-centre ray; or
+ * undefined with fewer than 3 rays of a fan.
+ */
 function diagnostic(request: FakeAnalysisRequest, geometry: Geometry) {
   const state = request.preparedGeometry;
-  const epsd = request.aperture.entrancePupilSemiDiameterMm;
-  const stopSD = request.aperture.stopSemiDiameterMm;
-  const chief = skewTrace(state, 0 * epsd, geometry.yChief + 0 * epsd, 0, geometry.uField, stopSD);
-  const fan = (axis: "tangential" | "sagittal"): Hit[] =>
-    sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, axis).flatMap((sample) => {
-      const trace = skewTrace(state, sample.xFraction * epsd, geometry.yChief + sample.yFraction * epsd, 0, geometry.uField, stopSD);
+  const fan = (axis: "tangential" | "sagittal") => {
+    const samples = sampleOrthogonalPupilFan(MERIDIONAL_COMA_SAMPLE_COUNT, axis);
+    const launch = prepareAimedPupilLaunch(request, samples, geometry);
+    if (launch === null || launch.chief.status !== "aimed") return null;
+    const tracer = prepareAimedPupilTrace(state, launch);
+    const chief = tracer.skew(launch.chief as never);
+    if (chief.clipped) return null;
+    const hits: Hit[] = samples.flatMap((_sample, at) => {
+      const ray = launch.rays[at];
+      if (ray.status !== "aimed") return [];
+      const trace = tracer.skew(ray as never);
       if (trace.clipped) return [];
       return [axis === "tangential" ? { coordinate: trace.y, slope: trace.uy } : { coordinate: trace.x, slope: trace.ux }];
     });
+    return { chief, hits };
+  };
   const [tangential, sagittal] = [fan("tangential"), fan("sagittal")];
-  if (chief.clipped || tangential.length < 3 || sagittal.length < 3) return undefined;
-  const t = bestRelativeFocusPlane(tangential, { coordinate: chief.y, slope: chief.uy }, geometry.lastSurfZ);
-  const s = bestRelativeFocusPlane(sagittal, { coordinate: chief.x, slope: chief.ux }, geometry.lastSurfZ);
+  if (tangential === null || sagittal === null || tangential.hits.length < 3 || sagittal.hits.length < 3) return undefined;
+  const t = bestRelativeFocusPlane(
+    tangential.hits,
+    { coordinate: tangential.chief.y, slope: tangential.chief.uy },
+    geometry.lastSurfZ,
+  );
+  const s = bestRelativeFocusPlane(
+    sagittal.hits,
+    { coordinate: sagittal.chief.x, slope: sagittal.chief.ux },
+    geometry.lastSurfZ,
+  );
   return { t, s };
 }
 

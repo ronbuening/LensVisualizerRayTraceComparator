@@ -7,9 +7,11 @@ import { test } from "node:test";
 
 import type { ComparatorOutcome, ComputedMetric } from "../../src/compare/comparator.ts";
 import { classifyNativeField } from "../../src/compare/mtfNative.ts";
+import { comparePair } from "../../src/compare/pair.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import {
   INVARIANT_METRIC,
+  SUM_METRICS,
   SURFACES_METRIC,
   TOTAL_SCALED_METRIC,
   seidelFactsOf,
@@ -110,7 +112,8 @@ test("an answer without sums is unsupported, and invariants apart beyond the lim
     /data, chief-landing-apart \(the Lagrange invariants lie 9\.77e-4 mm apart\)/,
   );
   // Without a limit nothing is set aside, and the pair says so.
-  const unlimited = compared(SEIDEL_DATA_TWO_SURFACES, other(0, { invariant: 1.25 + 2 ** -10 }), undefined);
+  const free: RungPolicy = { ...POLICY, metrics: { ...POLICY.metrics, [INVARIANT_METRIC]: { unit: "mm" } } };
+  const unlimited = compared(SEIDEL_DATA_TWO_SURFACES, other(0, { invariant: 1.25 + 2 ** -10 }), free);
   assert.ok(unlimited.comparable);
   assert.equal(metric(unlimited, "SPHA.maxAbs")?.value, 0);
   assert.match(unlimited.notes?.join("; ") ?? "", /sets no limit on invariant\.maxAbs/);
@@ -146,4 +149,45 @@ test("the recorded values are the sums and OpticStudio's wave coefficients, and 
   }
   const sorting = classifyNativeField(seidelFactsOf(SEIDEL_DATA_TWO_SURFACES), seidelFactsOf(other(0)), true, 1e-9);
   assert.deepEqual([sorting.class, sorting.reason], ["method", "two-methods"]);
+});
+
+test("policy 24: the invariant's limit of 3e-14 mm and a band of 8e-15 on the scaled total, which the owner accepted", () => {
+  // The owner's decision of 2026-10-28, of the Stage 6.8 measurement: ten times the measured maxima, rounded up.
+  assert.deepEqual(POLICY.metrics[INVARIANT_METRIC], { attention: 3e-14, unit: "mm" });
+  assert.deepEqual(POLICY.metrics[TOTAL_SCALED_METRIC], { attention: 8e-15, unit: "1" });
+  for (const { name } of SUM_METRICS) assert.deepEqual(POLICY.metrics[name], { unit: "mm" }, name);
+  assert.deepEqual(POLICY.metrics[SURFACES_METRIC], { unit: "mm" });
+  assert.equal(POLICY.class, "recorded");
+  const pairOf = (b: SeidelNativeData) =>
+    comparePair(
+      { engine: "ref-seidel", fingerprint: "a", status: "ok", data: SEIDEL_DATA_TWO_SURFACES as unknown as JsonObject },
+      { engine: "optiland", fingerprint: "b", status: "ok", data: b as unknown as JsonObject },
+      POLICY,
+      seidelNativeComparator,
+    );
+  // Within: SPHA 2^-52 apart on each surface, 2^-51 in the total, over the 0.75 that cancels: 5.9e-16, inside the band.
+  const within = pairOf(other(2 ** -52));
+  assert.equal(within.verdict, "RECORDED", within.reason);
+  // Above: 2^-45 on each surface, 2^-44 / 0.75 = 7.6e-14 scaled: above the band, ATTENTION.
+  const above = pairOf(other(2 ** -45));
+  assert.equal(above.verdict, "ATTENTION");
+  assert.match(above.reason ?? "", /^total\.maxScaled \S+ is outside its attention band/);
+  // An invariant 2^-40 mm off (9.1e-13 mm), beyond the limit: data, in no figure, its pair ATTENTION by the invariant;
+  // 2^-52 mm off (2.2e-16 mm), within it: two methods, RECORDED.
+  const apart = compared(SEIDEL_DATA_TWO_SURFACES, other(0, { invariant: 1.25 + 2 ** -40 }));
+  assert.ok(apart.comparable);
+  assert.equal(metric(apart, "SPHA.maxAbs"), undefined);
+  assert.match(
+    apart.notes?.join("; ") ?? "",
+    /data, chief-landing-apart \(the Lagrange invariants lie 9\.09e-13 mm apart\)/,
+  );
+  const apartPair = pairOf(other(0, { invariant: 1.25 + 2 ** -40 }));
+  assert.equal(apartPair.verdict, "ATTENTION");
+  assert.match(apartPair.reason ?? "", /^invariant\.maxAbs \S+ is outside its attention band/);
+  const close = pairOf(other(0, { invariant: 1.25 + 2 ** -52 }));
+  assert.equal(close.verdict, "RECORDED", close.reason);
+  assert.equal(
+    metric(compared(SEIDEL_DATA_TWO_SURFACES, other(0, { invariant: 1.25 + 2 ** -52 })), "SPHA.maxAbs")?.value,
+    0,
+  );
 });

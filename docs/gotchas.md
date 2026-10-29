@@ -418,9 +418,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 - **Where.** `finalizeTraceResult` in `src/optics/trace/utils.ts` gives every trace with a failure reason the
   status `failed`: a reflection as well as an intersection that was not found (`noBracket`,
   `noConvergedIntersection`). What is physical and what is numerical is decided afterwards, by
-  `mtfTraceClassification` in `src/optics/analysis/mtf/mtfRayClassification.ts`: a clip and a total internal
-  reflection are `blocked`; a missed surface is `blocked` only where an independent test proves that the ray
-  passes outside the surface's clear cap, and `failed` otherwise.
+  `mtfTraceClassification` in `src/optics/analysis/mtf/mtfRayClassification.ts` (until LV #927; since, below): a
+  clip and a total internal reflection are `blocked`; a missed surface is `blocked` only where an independent test
+  proves that the ray passes outside the surface's clear cap, and `failed` otherwise.
 - **Effect.** Read by its status alone, a ray that passes a lens 60 mm off the axis and meets nothing would be a
   failure of the tracer, and every probe lattice that reaches past a front element would be full of them.
 - **Handled.** `lv` reports LensVisualizer's own classification: `blocked` is status 1 and `failed` status 2. The
@@ -429,6 +429,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   catalog sweep none is: every ray LensVisualizer does not land, it calls `blocked`. So no ray of `lv` is left out
   of the mask that R2 judges, and a ray it loses for a reason of its own is a mismatch there (the next two
   entries).
+- **Since LV #927 and #934** (adopted at Stage 6.8b, LV `607ff23ae`) the classification is `traceRayClassification`
+  in `src/optics/trace/rayClassification.ts` (moved out of `mtf/` by #927), by the same rules; where the trace may
+  step back (#934), a miss is proven along the whole line (`sequentialSurfaceBackT`), not only ahead of the last hit.
 - **Class.** convention.
 
 ### Beyond a clear aperture a hit is computed by rules of LensVisualizer's own
@@ -449,6 +452,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   10 mm or more, and a ray that does not meet a surface within its clear aperture is blocked there. It has no hit
   on the surface a ray ended at: every value of a ray is NaN from its end surface on, in every engine. Positions
   are compared on rays that passed.
+- **Since LV #934** the search also runs backwards from the last hit where the forward one finds no root, out to
+  the plane behind the surface's rim (`intersectSequentialSurface`, `sequentialSurfaceBackT`): where two surfaces
+  cross inside a clear aperture LensVisualizer now finds the hit (next entry).
 - **Class.** method.
 
 ### Where two neighbouring surfaces cross, the ray is lost
@@ -456,7 +462,7 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 - **Where.** `traceSequential` searches for the next surface forwards only, from the last hit, between the bounds
   of `sequentialSurfaceMinT` and `sequentialSurfaceMaxT` (`src/optics/trace/pathPlanner.ts`). A surface that lies
   behind the hit, by more than the 1e-9 mm it forgives, is not found: the trace ends `failed` with the reason
-  `noBracket`, and `mtfTraceClassification` calls the ray `blocked`.
+  `noBracket`, and `mtfTraceClassification` (until LV #927; `traceRayClassification` since) calls the ray `blocked`.
 - **Effect.** A prescription can put a surface behind the one before it within both clear apertures: a stop or a
   flat face set into the curve of its neighbour, where the neighbour's sag at the rim is more than the gap at the
   vertex. A sequential trace follows the order of the prescription and steps back to it; that is what the contract
@@ -506,6 +512,15 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   tracers and the contract do, count a failed trace apart from vignetting, or have these lens files corrected as
   the Vivitar's was, is the owner's to decide in LensVisualizer; nothing is filed, and the comparator keeps the
   FAIL until LensVisualizer changes.
+- **Resolved by LV #934** (`f53a14327`, adopted at Stage 6.8b, LV `607ff23ae`); the entry is kept as history.
+  LensVisualizer's sequential trace meets a surface behind the last hit by a step backwards, as the contract and
+  `ref` do (`intersectSequentialSurface`: only where the forward search finds no root, back to
+  `sequentialSurfaceBackT`, the crossing nearer the vertex plane of the first two, as OpticStudio takes a root, the
+  path charged with its sign). The seven one-run reproducers (`suites/catalog-repro/`, rung R2, `lv`, `ref`,
+  `optiland`, a temporary store) give 15 PASS pairs each, no mask mismatch; `rungs.test.ts` now holds every lens of
+  the list to a step backwards in both engines and R2 PASS. The catalog baselines are a dated snapshot: they keep
+  their FAIL rows, and `docs/known-failures.json` its 14 entries that link here, until the end-of-project refresh,
+  which will find those FAILs gone (`unusedKnownFailures`); nothing of them is edited before it.
 - **Class.** method.
 
 ### A ray bent past the perpendicular to the axis
@@ -520,11 +535,17 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   surface and is blocked at the next one. LensVisualizer finds no intersection there (`noBracket`, classified
   `blocked`), `ref` does not look for one, and the two agree. It is the one place where the comparison corrected
   the reference engine and not the other way round.
+- **At LV `607ff23ae`** no ray of the catalog turns back: LV `2e7c81088` capped the XF 27 mm's surface 8A at
+  4.91 mm, below its turnover (its rim angle −2.53°, 62.16° before), and none of 1,900 exports' launch-plane lattices
+  (fields 0.7, 0.9 and 1 of the image height, 32 cells, every line; one search outside the tests) has such a ray.
+  #934 steps back only for a ray that still travels toward +z, so the convention stands; the tracer's canary and
+  `ref`'s analytic test hold it, and `rungs.test.ts` says how many rays turned back, if any did.
 - **Class.** convention.
 
 ### The MTF bundle traces half its lattice and mirrors the rest
 
-- **Where.** `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts` starts at `grid.columns / 2` when every
+- **Where.** Until LV #936, `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts` started at `grid.columns / 2`
+  when every
   profile is symmetric in x, and writes each ray a second time with x negated (`mirrorPupilRay`). The lattice has
   an even number of columns, so no cell is on the meridional plane, and the chief ray, `mtfLaunchRay(launch, 0, 0)`,
   is no cell of it.
@@ -536,6 +557,13 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   `lv` traces each: 39 266 cells where LensVisualizer's bundles trace 19 633. Its 11 441 rays that land, of those
   it did trace, are reproduced bit for bit, in origin, weight, landing and optical path. The chief ray follows the
   cells as the last ray, with weight 0.
+- **Since LV #936** (adopted at Stage 6.8b) the bundle is the aimed stop lattice (`aimMtfStopLattice`,
+  `traceMtfLattice`): cells evenly spaced on the real stop, the centres in its disc, each the ray the shared aimed
+  launch finds through that point. LensVisualizer still traces one half of a symmetric pupil and mirrors it. The ray
+  sets hold every cell of the square on the stop as a ray of its own, a vacant cell (outside the disc, or one it
+  could not aim) the field's chief ray at weight 0, never a fabricated ray; `test/integration/lv/rays.test.ts` holds
+  them to LensVisualizer's lattice bit for bit. A field launched from the bounding sphere keeps the launch-plane
+  lattice of this entry.
 - **Class.** method.
 
 ### A bundle is found once, at the reference line, from a seed
@@ -555,6 +583,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   reference line, and with the seed of the MTF tab: the pupil radius its hook hands over for the stop radius of
   the case (`lvPupilSeed`, `src/engines/lv/tabRequest.ts`), which the product MTF of `lv` asks with too. A set is
   identified by its content, never by the request that made it.
+- **Since LV #936** a field LensVisualizer's MTF aims at the stop has no footprint scan: each line's lattice is
+  aimed at that line, and the pupil radius is the aimed launch's scale (it sizes its probes). The ray sets follow,
+  each set of its own line; the footprint and the seed remain for a field launched from the bounding sphere.
 - **Class.** data.
 
 ### What the MTF tab asks is written in React, and nowhere else
@@ -578,6 +609,10 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   same bits. The focus shift and the traced f-number of the eight configurations that are also in
   LensVisualizer's committed chart-regression report are that report's to its printed precision: the axial focus
   search and the traced aperture do not depend on what the report asks differently.
+- **Since LV #933 and #936** the hook's radii are `stopSemiDiameterForFNumber(fNumber, zoomT, L)` and the paraxial
+  `entrancePupilAtState` of that stop, `DEFAULT_MTF_PREFERENCES` caps the grid at 256 cells across the stop, and the
+  MTF traces no f-number of its own (it states `axialVignetting` instead); `tabRequest.ts`, its canaries and
+  `test/integration/lv/mtf.test.ts` follow, the pins measured again at closure `f016b35b`.
 - **Class.** data.
 
 ### The iris the MTF tab traces wide open is not always the iris of the prepared state
@@ -596,6 +631,10 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   benchmark suite runs on the photopic lines; for `nikon-z-mc-105f28` it is another, and the engine refuses the
   profile on the suite's case (`bad-spec`) rather than answer about a stop that is not the tab's. An integration
   test holds the two statements together: the cases are the same exactly where the two radii are.
+- **Resolved by LV #933** (adopted at Stage 6.8b); kept as history. The hook's stop is the one stop rule's
+  (`stopSemiDiameterForFNumber`), wide open the iris of the prepared state to the bit, and its pupil the paraxial
+  pupil of that stop: no product is divided by its own factor, so the tab's wide-open case is the case a run
+  exports for `wide-open` on the tab's lines.
 - **Class.** numerical.
 
 ### The geometric OTF is a sum about the chief ray of the first line, and its magnitude is cut off at 1
@@ -617,17 +656,19 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   A chief ray of a ray set is traced as every other ray is, with the apertures checked: one that an aperture stops
   has no landing in `rays.trace`, and the estimator then says `no-reference`. The replay of LensVisualizer's own
   MTF (`src/engines/lv/replay.ts`) obtains its reference as LensVisualizer does: it is the `chief` of the bundle
-  `traceMtfBundle` returns for the first line, which is that unclipped landing, and it is handed to every later
-  line as LensVisualizer hands it.
+  `traceMtfBundle` returned for the first line until LV #936 (since, `traceMtfStopBundle`'s or
+  `traceMtfLaunchPlaneBundle`'s: next entry), which is that unclipped landing, and it is handed to every later line
+  as LensVisualizer hands it.
 - **Class.** convention.
 
 ### The chief ray of an MTF field is one launch for every line
 
-- **Where.** `prepareMtfFieldLaunch` and `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts` ("One field's
-  chief-ray launch, shared by every wavelength and refinement level"), and `solveChiefRay` in
+- **Where.** Until LV #936: `prepareMtfFieldLaunch` and `traceMtfBundle` in `src/optics/analysis/mtf/mtfTracing.ts`
+  ("One field's chief-ray launch, shared by every wavelength and refinement level"), and `solveChiefRay` in
   `src/optics/field/chiefRaySolve.ts`, whose residual at the stop is `CHIEF_RAY_RESIDUAL_TOLERANCE`, 1e-7 mm (read at
   `33ebdb30`).
-- **Effect.** LensVisualizer solves the launch of a field's chief ray once and traces that one ray at every line.
+- **Effect** (history, until LV #936). LensVisualizer solved the launch of a field's chief ray once and traced that
+  one ray at every line; what follows is of that launch.
   The reference point of a field, and the `imageHeightMm` its MTF states, is where that launch lands at the first
   line of the spectrum: at a line that is not the one the launch was solved at, it is a ray that misses the centre
   of the stop by the chromatic shift of the pupil. An engine that aims the chief ray of the first line at the
@@ -635,6 +676,14 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   field angle, bit for bit the same in both: on the reference line the two land within 9.2e-10 mm of each other in
   every one of 144 fields; on the photopic lines, whose first is 555 nm, 95 of the 96 off-axis fields land more
   than 1e-7 mm apart, by up to 3.0e-4 mm (`sony-fe-20mm-f18-g` at full field).
+- **Since LV #936** (adopted at Stage 6.8b, `607ff23ae`) each line of a field has its own aimed stop lattice, and
+  its stop-centre ray (`lattice.chief`, aimed at that line's indices, `mtfAimSpectrum`; where that aim cannot reach
+  the stop centre, the field's own chief ray, `mtfLaunchRay(launch, 0, 0)`, stands in) is traced with no aperture
+  checked; the reference of every line is the first line's landing (`commonReference ??= bundle.chief` in
+  `fieldAtGrid`). LensVisualizer's reference on several lines is then the first line's chief ray aimed through the
+  stop centre at that line, as optiland's and `optiland-wave`'s is (each in its own model of the line's indices). The
+  distances above, and Stage 4.3's 1.1e-6 to 5.7e-6 mm, are of the launch before #936 and are history: they are
+  measured again at the Phase 6 end refresh.
 - **Handled.** Nothing is corrected. The modulus of a geometric MTF does not depend on the point its phases are
   measured from when one point serves every line, so the landing of a chief ray is no input of either curve of
   rung R5g, only a check that the two answers are of one field. That rung's limit on it is 1e-3 mm
@@ -648,7 +697,9 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
 
 - **Where.** `traceField`, `fieldAtGrid` and `refineMtfField` in `src/optics/analysis/mtf/mtf.ts`, the constants of
   `mtfConstants.ts` and `expandMtfFootprint` in `mtfFootprint.ts` (read at `33ebdb30`). Only `refineMtfField`,
-  `expandMtfFootprint`, `traceMtfBundle` and the constants are exported; the loop that ties them together is not.
+  `expandMtfFootprint`, `traceMtfBundle` (until LV #936; since, `aimMtfStopLattice`, `traceMtfLattice`,
+  `traceMtfStopBundle` and `traceMtfLaunchPlaneBundle`) and the constants are exported; the loop that ties them
+  together is not.
 - **Effect.** Which rays an MTF value is of is the outcome of a walk, not of a setting. A field starts at 16 cells
   across its beam and doubles (32, 64, 128, up to the request's cap) until two successive grids agree within 0.01
   at every frequency up to 50 cycles/mm, so the grid a field ends at depends on its curves, and two fields of one
@@ -665,6 +716,11 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   status the same (`fields.mismatches` 0). On the 480 fields of the benchmark they are. A decision that sat within
   a rounding of 0.01 could come out the other way in the replay, whose curves differ from LensVisualizer's by
   1e-14; that would be a mismatch of the sampling, reported as one and no difference of the MTF.
+- **Since LV #936** a grid is of cells across the stop (16 up to the cap, 256 by default). A grid's bookkeeping also
+  counts the unaimed rays and the unresolved samples beside the beam, whose weight alone is the unresolved share;
+  a line no ray reaches is dark and adds no curve; a refused share asks for a finer grid. The replay restates each
+  line with a canary, and R4f's `sampling` holds the two new counts too: on the benchmark at `607ff23ae` its 192
+  pairs PASS, `mtf.maxAbs` 1.3e-14, no mismatch.
 - **Class.** method.
 
 ### Two sums of the same terms differ in the fourteenth place
@@ -2264,6 +2320,12 @@ shares no code with any engine.
   [REFERENCE.md](REFERENCE.md#stage-43-photopic-complex-wavefront-sum-two-configurations).
   Hermetic synthetic cases in `test/report/r6c.test.ts` cover 5e-6 mm on one/several lines and beyond 1e-3 mm,
   including report sorting from recorded values.
+- **Since LV #936** (adopted at Stage 6.8b, `607ff23ae`) LensVisualizer no longer reuses one launch: each line's
+  aimed stop lattice has its own stop-centre ray, and the first line's landing is the common reference of every line
+  ([above](#the-chief-ray-of-an-mtf-field-is-one-launch-for-every-line)). On the photopic lines both engines' chief ray
+  is then line 0's aimed through the stop centre at 555 nm, each in its own model of that line's indices. The
+  distances in **Where** and **Effect** are of the launch before #936, history, measured again at the Phase 6 end
+  refresh; the owner's 1e-3 mm several-line limit stays.
 - **Class.** convention. Never read two engines' several-line chief heights as the landing of one ray.
 
 ## Folded systems (Stage 5.2a)
@@ -2419,6 +2481,14 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
   from the restated rays traced by LensVisualizer's exact tracer, and by the canary "a sample of the tabs' pupil
   still crosses the first vertex plane where the spot sets launch it".
 - **Class.** method: recorded.
+- **Resolved by LensVisualizer #927** (`d4426c973`; adopted at Stage 6.8b, LV `607ff23ae`, engine closure `f016b35b`):
+  every sample of the tabs is now the shared aimed launch's ray through its point of the real stop
+  (`prepareAimedPupilLaunch`, OpticStudio's ray aiming), and the spot sets keep those rays verbatim (a sample
+  LensVisualizer could not aim holds the chief ray at weight 0; a blocked one its blocking ray). On the benchmark R7b's
+  fans now agree with optiland's to 8.1e-11 mm (5.3e-2 mm before): one pupil, the same points of it. The spots still
+  differ by their pupil patterns, LensVisualizer's equal-area rings inside the rim against optiland's hexapolar rings
+  to it (next but two): RMS radii a median 7.3 % (coma cloud) and 3.9 % (bokeh tiles) apart, up to 73 % and 102 %.
+  R7a passes: lv–ref `transverseError.maxAbs` 6.7e-13 mm. The heading is kept as history.
 
 ### The tabs trace the authored indices, and the coma tab only at the design plane
 
@@ -2612,6 +2682,22 @@ is the history as it was measured.
   `test_each_setting_of_the_launch_is_read_back_with_the_mistake_made_on_purpose` and
   `test_the_rays_of_every_line_are_launched_in_the_pupil_of_the_first_line_asked` (`test_axial.py`).
 - **Class.** convention: handled.
+
+### Since LensVisualizer #927 the sections' zones are of the real stop, and optiland's of its paraxial pupil
+
+- **Where.** LensVisualizer's spherical-aberration and axial-colour sections aim each zone `f` at `f · R` of the real
+  stop (`prepareAxialZoneLaunch`, each channel at its own indices; LV #927, adopted at Stage 6.8b, LV `607ff23ae`), and
+  `lv`'s answer states `pupilRadiusMm` the case's stop radius. optiland's worker launches `(0, f)` of its paraxial
+  entrance pupil, as the previous heading says.
+- **Effect.** The two answers' pupils are not one: on the benchmark every R8b line is `pupils-apart` (84 lines data,
+  12 unsupported; the radii up to 0.75 of the larger apart), and every pair ATTENTION. R8a still traces
+  LensVisualizer's aimed zones in every engine and passes (lv–ref `intercept.maxScaled` 3.0e-13 mm).
+- **Handled.** Not changed: **the owner deferred the fix until after Phase 6** (2026-10-29), and the worker is as it
+  was. The fix pending: optiland's `axial.native` aims each zone at its point of the real stop with optiland's
+  `robust` aimer, one optic a line, its aiming, stop radius and launches read back, each read-back with a deliberate
+  fault in `test_axial.py` (an open item of the plan; `docs/REFERENCE.md`, "Stage 6.8b (part B)"). Until then every
+  R8b line is `pupils-apart` and every pair ATTENTION: the record says the pupils differ, never that the sections do.
+- **Class.** method: recorded (data by the sorting).
 
 ### The spherical aberration's identifying ray cannot tell pupils apart
 
@@ -3051,6 +3137,24 @@ below, to that one, are the history as it was measured.
   LensVisualizer, and gets the two ray-tube fields of the Viltrox AF 14 mm f/4 Air to the bit. Never approximate the
   tubes by aperture-checked rays.
 - **Class.** unsupported: not covered (by an identical-ray rung).
+- **Resolved by LensVisualizer #931** (`4092f6a25`; adopted at Stage 6.8b, LV `607ff23ae`): the tab has no image
+  mapping and no ray tubes; `lv-tube-mapping` is gone. The heading is kept as history.
+
+### Since LensVisualizer #931 the tab is Rimmer's, of directions referred to the image point, on a stop lattice
+
+- **Where.** `computeVignettingField` aims a lattice of 64 cells across the real stop at each field (the MTF's
+  `prepareAimedStopLattice`, at the authored indices), traces the `+x` half and mirrors it, and states the share of the
+  samples, neither unaimed nor failed, that reach the image (absolute: the axis below 1 where an aperture clips it)
+  and Rimmer's relative illumination: n′² times bulk transmission times each lit cell's area in direction cosines, a
+  ray's direction referred to the chief ray's image point through a reference sphere about it through the state's
+  exit pupil (Rimmer's Eq. 3), over the axis's. The engine `flux` takes the same share of its own stop lattice (the
+  MTF's at the line) and the cosine-space flux of each ray's own exit direction.
+- **Effect.** R11b's two answers are now one measure of transmission and two Rimmer integrals: per field off the axis
+  on the benchmark see `docs/REFERENCE.md`, "Stage 6.8b".
+- **Handled.** R11a traces the tab's own stop lattice in every engine and passes (`illumination.maxAbs` lv–ref
+  7.1e-14, `mask.mismatches` 0). The reference sphere's exit pupil is a chief ray LensVisualizer traces without
+  aperture checks (`exitPupilZ`); the field's own stop-centre ray, which names the image point, is the set's chief ray.
+- **Class.** method: recorded.
 
 ## Summary (Stage 6.7)
 
@@ -3059,8 +3163,8 @@ of the benchmark, states and focus-stations suites at the design plane (24, 32 a
 `test/integration/lv/summary.test.ts`). The tab's first-order readouts are R1's (`test/integration/lv/summary.test.ts`):
 the entries below are of what R1 does not cover, and of the definitions R12b records side by side. **Owner decision
 (2026-10-27):** LensVisualizer is to adopt OpticStudio's three f-numbers under their names and one stop rule at every
-f-number (the first two entries); the change is pending. Until it lands R12b records LensVisualizer as it is;
-afterwards the canaries of the lines below fail first and every case's stop radius moves.
+f-number (the first two entries). **It landed in LV #933** (`445fa1711`) and was adopted at Stage 6.8b (LV
+`607ff23ae`): the entries below are of LensVisualizer before it, kept as history, each with what changed.
 
 ### LensVisualizer's "Working f/#" is the image-space f-number of the focused state
 
@@ -3081,6 +3185,10 @@ afterwards the canaries of the lines below fail first and every case's stop radi
   working f-number of LensVisualizer's; `workingFNumber.maxAbs` is unmeasured, `lv-summary-tab states none`. The owner
   decided (2026-10-27) that LensVisualizer present OpticStudio's image-space, paraxial working and working f-numbers
   under their names (pending). Brief: `docs/upstream/lensvisualizer-summary-conventions.md` (not filed).
+- **Since LV #933** the tab presents OpticStudio's three f-numbers under their names: "Image-space f/#" (this
+  value, of the paraxial pupil now), "Paraxial working f/#" and "Working f/#" (`computeWorkingFNumber`, the real
+  marginal ray aimed at the stop's rim). `lv` states the last two at infinity focus, where LensVisualizer's object is
+  the case's; on the benchmark they are within 2.0e-14 and 3.4e-9 of optiland's.
 - **Class.** convention: a LensVisualizer label of another definition; recorded.
 
 ### LensVisualizer's marked f-number sizes the stop wide open by a real ray, and stops down linearly
@@ -3106,6 +3214,10 @@ afterwards the canaries of the lines below fail first and every case's stop radi
   f-numbers; the stop is the case's, every engine's (CONTRACT.md: "The sizing of the stop" is not covered). The owner
   decided (2026-10-27) that LensVisualizer size the stop by one rule at every N, the paraxial entrance pupil `EFL / N`
   (pending): every case's stop radius, case id and baseline record will move with it.
+- **Resolved by LV #933**: one stop rule at every N, the paraxial entrance pupil `EFL / N`
+  (`stopSemiDiameterForFNumber`, capped at the iris wide open; an authored schedule and a fixed iris as before). The stop
+  radius and case id of nearly every case moved; `lv-f8-comparison` and `{ kind: "f-number", value: 8 }` are now the same
+  stop and case on every benchmark configuration.
 - **Class.** convention: a LensVisualizer assumption; recorded.
 
 ### LensVisualizer's sizing ray of the stop is clipped by another surface on some lenses
@@ -3121,6 +3233,9 @@ afterwards the canaries of the lines below fail first and every case's stop radi
 - **Handled.** optiland's answer states `workingRimRaysVignetted` (4 there) and a note; no figure sets the line aside.
   The owner's paraxial stop rule (above) removes the sizing ray; whether the beam is limited elsewhere stays a fact of
   the lens.
+- **Since LV #933** no ray sizes the stop. Where the axial marginal ray is vignetted LensVisualizer says so
+  (`computeWorkingFNumber`'s `vignetted`, the MTF's `axialVignetting`), and `lv` states the surface
+  (`sampling.lvMarginalRayVignettedSurfaceIndex`, `aperture.axialVignettingSurfaceIndex`).
 - **Class.** data: recorded.
 
 ### optiland's working f-number takes the rim rays' angles even where every one is dark
@@ -3163,6 +3278,8 @@ afterwards the canaries of the lines below fail first and every case's stop radi
   LensVisualizer's `paraxialWorkingFNumber` is null, so `paraxialWorkingFNumber.maxAbs` is unmeasured
   (`lv-summary-tab states none`). The owner decided (2026-10-27) that LensVisualizer present the paraxial working
   f-number of its own paraxial trace at the current focus in its place (pending).
+- **Removed by LV #933**: the control shows the paraxial working f-number beside the mark instead
+  (`PARAXIAL_WORKING_NOTE_DIFFERENCE`, 0.05); `sampling.lvThinLensEffectiveFNumber` is gone.
 - **Class.** method: a LensVisualizer estimate; recorded.
 
 ### LensVisualizer's half field is the angle its solved chief ray takes to the image corner
@@ -3196,6 +3313,8 @@ afterwards the canaries of the lines below fail first and every case's stop radi
 - **Handled.** `test/integration/lv/summary.test.ts` holds the tab's pupil and "Working f/#" to R1's within 1e-10
   relative, a measured margin pinned to the closure and the cases it was measured on: covered by R1, so no identical-ray
   rung traces this ray (one would judge its 1e-4 mm height at 1e-8 mm, 1e-4 relative).
+- **Resolved by LV #933**: the hook's pupil is the paraxial `entrancePupilAtState` of the stop, R1's to the bit on
+  the 119 cases of `summary.test.ts` (`MARGINS.pupilUnits` 0); R12b's pupils are within 8.5e-14 mm of optiland's.
 - **Class.** numerical: covered by R1.
 
 ### optiland's stop and track in R12b are the case's
@@ -3306,7 +3425,9 @@ pinned by a test of the real optiland (`test_seidel.py`, `test_zernike.py`).
   samples and with residuals within 1.2e-11 waves of each other, differ by up to 1.29 waves in a coefficient. Below a
   condition of 1e6 they agree within 3.2e-12 of the largest coefficient; the difference grows with the condition.
 - **Handled.** Both engines state the condition (`fitCondition`); of 2^52 or more a field is `unavailable`
-  (`ill-conditioned`). R14b sorts a field above the policy's `fitCondition.max` as numerical, in no figure; the limit is
-  the owner's to set (a proposal in docs/REFERENCE.md, "Stage 6.8"). Any least-squares fit of these polynomials over the
-  unit circle to samples lit on a strip has this conditioning; how OpticStudio treats such a field is not checked here.
+  (`ill-conditioned`). R14b sorts a field above the policy's `fitCondition.max` (1e6, the owner's, policy 24) as
+  numerical, in no figure: R5's unconverged field, counted and named, never a reason for ATTENTION (the owner,
+  2026-10-29); its condition is shown apart as `fitCondition.setAsideMax`. Any least-squares fit of these polynomials
+  over the unit circle to samples lit on a strip has this conditioning; how OpticStudio treats such a field is not
+  checked here.
 - **Class.** numerical.

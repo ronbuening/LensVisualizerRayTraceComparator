@@ -6,7 +6,7 @@ import type { ErrorInfo, UnsupportedItem } from "../../contract/result.ts";
 import type { SpotNativeData, SpotNativeField, SpotNativeSpec } from "../../contract/quantities/spotNative.ts";
 import { decodeNdArray, encodeNdArray, ndRow } from "../../core/numeric/ndarray.ts";
 import type { LvCaseModel } from "./caseModel.ts";
-import { lvSpotSetup } from "./spotSetup.ts";
+import { lvSpotRequest, lvSpotSetup } from "./spotSetup.ts";
 import type { LvSpotSetup } from "./spotSetup.ts";
 import type { LvSpotApi } from "./spotRaySets.ts";
 import type { LvAnalysisRequest, LvAnalysisSampling, LvApi, LvComaFanResult } from "./types.ts";
@@ -18,7 +18,7 @@ export type LvSpotAnswerApi = LvSpotApi &
     | "createAnalysisRequest"
     | "computeComaAnalysis"
     | "computeBokehFieldFootprint"
-    | "traceSkewRay"
+    | "prepareAimedPupilTrace"
     | "skewImagePlaneIntercept"
   >;
 
@@ -81,6 +81,14 @@ function refusals(model: LvCaseModel, spec: SpotNativeSpec): UnsupportedItem[] {
     refused.push({ code: FEATURE, item: "path.folded", message });
   }
   return refused;
+}
+
+/** How many of a pattern's samples LensVisualizer could not aim, and how many it found blocked ahead of the stop. */
+function aimed(unaimed: number | undefined, blocked: number | undefined): { readonly [name: string]: number } {
+  return {
+    ...(unaimed === undefined ? {} : { raysUnaimed: unaimed }),
+    ...(blocked === undefined ? {} : { raysBlocked: blocked }),
+  };
 }
 
 /** An unavailable field of an answer, with LensVisualizer's reason. */
@@ -149,7 +157,11 @@ function comaRings(
   if (preview === null) return fractions.map((fraction) => unavailableField(fraction, "lv-preview-unusable"));
   return fractions.map((fraction, index): SpotNativeField => {
     const field = preview.fields[index];
-    const sampling = { raysLaunched: field.sampleCount, raysLanded: field.validSampleCount };
+    const sampling = {
+      raysLaunched: field.sampleCount,
+      raysLanded: field.validSampleCount,
+      ...aimed(field.unaimedSampleCount, field.blockedSampleCount),
+    };
     if (!field.usable) return unavailableField(fraction, "lv-field-unusable", sampling);
     return {
       field: fraction,
@@ -168,16 +180,19 @@ function comaRings(
 
 /**
  * Where a bokeh tile's chief ray lands on the plane `sensorZ`, x sagittal and y tangential, restated from bokeh.ts and
- * offAxis.ts, which trace it with the request's skew adapter and intercept it at the tile's plane:
+ * offAxis.ts: since LensVisualizer #927 the tile's chief ray is the stop-centre ray of the field's aimed launch, traced
+ * as the launch's own trace (the stop at its clip radius) and intercepted at the tile's plane:
  *
  * ```
- * const trace = adapter.skew(0 * entrancePupilSemiDiameter, geometry.yChief + 0 * entrancePupilSemiDiameter, 0, geometry.uField);
- * const chiefDefocused = skewImagePlaneIntercept(bundle.chiefRay.trace.x, bundle.chiefRay.trace.y, ..., geometry.lastSurfZ, sensorZ);
+ * const launch = prepareAimedPupilLaunch(request, samples, geometry, channel);
+ * const tracer = prepareAimedPupilTrace(request.preparedGeometry, launch, channel);
+ * const chiefTrace = tracer.skew(launch.chief);
+ * const chiefDefocused = skewImagePlaneIntercept(bundle.chiefRay.trace.x, ..., geometry.lastSurfZ, sensorZ);
  * ```
  *
- * `traceSkewRay` is the adapter's launch and trace (`traceSkewRayExactCore` and `bindRayTrace` in rayAdapters.ts,
- * canaried) with the request's stop radius, `ghost` true as `prepareOffAxisTrace` asks, no channel and no aberration.
- * A tier-2 test holds it to the tile's own chief ray on the benchmark. Null where LensVisualizer has none.
+ * The stop-centre ray is the same whatever samples the launch is asked with (each sample's solve is its own): it is
+ * asked with none. A tier-2 test holds it to the tile's own chief ray on the benchmark. Null where LensVisualizer has
+ * none.
  */
 export function lvBokehChiefLanding(
   api: LvSpotAnswerApi,
@@ -186,22 +201,12 @@ export function lvBokehChiefLanding(
   fraction: number,
   sensorZ: number,
 ): { readonly x: number; readonly y: number } | null {
-  const { state, runtime } = model;
+  const { state } = model;
   const geometry = api.computeOffAxisFieldGeometry(state, fraction, setup.fieldGeometry);
   if (geometry === null || geometry.kind === "vector") return null;
-  const epsd = setup.pupilSemiDiameterMm;
-  const trace = api.traceSkewRay(
-    0 * epsd,
-    geometry.yChief + 0 * epsd,
-    0,
-    geometry.uField,
-    state.focusT,
-    state.zoomT,
-    model.exported.conditions.stopSemiDiameter,
-    true,
-    runtime,
-    0,
-  );
+  const launch = api.prepareAimedPupilLaunch(lvSpotRequest(api, model, setup), [], geometry);
+  if (launch === null || launch.chief.status !== "aimed") return null;
+  const trace = api.prepareAimedPupilTrace(state, launch).skew(launch.chief);
   if (trace.clipped) return null;
   return api.skewImagePlaneIntercept(trace.x, trace.y, trace.ux, trace.uy, geometry.lastSurfZ, sensorZ);
 }
@@ -235,6 +240,7 @@ function bokehRings(
       raysLanded: tile.passedRays,
       maxRadiusMm: tile.maxRadiusMm,
       transmission: tile.transmission,
+      ...aimed(tile.unaimedRays, tile.blockedRays),
     };
     if (!tile.usable) return unavailableField(fraction, "lv-field-unusable", sampling);
     return {
@@ -279,7 +285,11 @@ function comaFans(
         pupil: encodeNdArray(Float64Array.from(fan.samples.map((sample) => sample.pupilFraction))),
         errorMm: encodeNdArray(Float64Array.from(errors)),
       },
-      sampling: { raysLaunched: fan.sampleCount, raysLanded: fan.validSampleCount },
+      sampling: {
+        raysLaunched: fan.sampleCount,
+        raysLanded: fan.validSampleCount,
+        ...aimed(fan.unaimedSampleCount, fan.blockedSampleCount),
+      },
     };
   });
 }
@@ -337,7 +347,7 @@ export function answerLvSpot(api: LvSpotAnswerApi, model: LvCaseModel, spec: Spo
     },
     lines: [{ wavelengthNm: line.wavelengthNm, weight: 1 }],
     notes: [
-      "LensVisualizer launches a disc of the entrance pupil's radius about the chief ray, on the first vertex plane, collimated along the chief ray's slope",
+      "LensVisualizer aims each sample of its pupil pattern at its point of the real stop (stopSemiDiameterMm), collimated along the field's slope, and refers every figure to the stop-centre ray",
     ],
   };
   return { data, counts: { fields: fields.length } };

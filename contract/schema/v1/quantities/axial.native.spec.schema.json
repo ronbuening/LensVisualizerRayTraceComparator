@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:lvrtc:contract:v1:quantities:axial.native.spec",
   "title": "axial.native spec",
-  "description": "What an axial.native request asks for: an engine's own figures of the beam along the axis of a system whose object is at infinity, from rays launched parallel to the axis at fractions of the engine's own pupil radius at the first line asked, the same heights at every line. spherical: one line; the near-axis zone, the candidates of the marginal zone in the order they are tried, and the zones of the profile; each zone is a ray and its mirror image. colour: the lines, the first of them the reference of the relative focus, and the candidates of the marginal ray, one ray each. Code checks that the lines of a request are distinct.",
+  "description": "What an axial.native request asks for: an engine's own figures of the beam along the axis of a system whose object is at infinity, from rays launched parallel to the axis at fractions of the radius the engine states its zones of (pupilRadiusMm): the real stop's, each ray aimed at its point of the stop at the line traced, or its own pupil of the axial beam at the first line asked, the same heights at every line. spherical: one line; the near-axis zone, the candidates of the marginal zone in the order they are tried, and the zones of the profile; each zone is a ray and its mirror image. colour: the lines, the first of them the reference of the relative focus, and the candidates of the marginal ray, one ray each. Code checks that the lines of a request are distinct.",
   "oneOf": [
     {
       "description": "Spherical aberration at one line, as LensVisualizer's spherical-aberration section presents it.",

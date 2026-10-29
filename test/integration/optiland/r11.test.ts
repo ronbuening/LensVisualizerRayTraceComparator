@@ -5,11 +5,12 @@
 // optiland is missing. Run output goes to a temporary directory.
 //
 // R11a is gated: every pair of the three engines passes, no ray is valid in one engine and not in another, every
-// field's flux into the image is measured and so is the landing of the image mapping's chief rays. R11b is recorded, of
+// field's flux into the image is measured and so is the landing of each field's stop-centre ray. R11b is recorded, of
 // LensVisualizer and the engine `flux`. What is held is that LensVisualizer answers exactly the ask its tab answers and
-// says why not of the other, that `flux` answers every ask, that every field of the design runs is of two methods within
-// the limit of the sorting, that since LensVisualizer #925 the tab's beam grows across the wide angle's field as the
-// flux's lattice does (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
+// says why not of the other, that `flux` answers every ask, that every field of the design runs is of two methods
+// within the limit of the sorting, that since LensVisualizer #931 the tab's geometric transmission and the flux's are
+// one measure on two stop lattices, the share of the stop's samples that reach the image, within R11b's band of each
+// other across the wide angle's field (docs/gotchas.md, "Vignetting"), and that the report claims nothing it may not.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -85,8 +86,8 @@ test(
       assert.equal(pair.metrics["rays.dropped"].value, 0, pair.run);
       assert.equal(pair.metrics["transmission.maxAbs"].value, 0, pair.run);
       assert.equal(pair.metrics["transmission.rimBandOrFailed"].value, 0, pair.run);
-      // Every field has a flux into the image in both answers and its mapping's chief rays land in both: the rung does
-      // not pass vacuously.
+      // Every field has a flux into the image in both answers and its stop-centre ray lands in both: the rung does not
+      // pass vacuously.
       assert.equal(pair.metrics["fields.compared"].value, FIELDS[pair.run], pair.run);
       assert.equal(typeof pair.metrics["landing.maxAbs"]?.value, "number", pair.run);
     }
@@ -137,22 +138,47 @@ test(
       }
     }
 
-    // The wide angle: the stop's image grows across the field, and since LensVisualizer #925 the tab's beam in two
-    // dimensions grows with it, as the flux's lattice does: both by more than a third toward the edge, within 0.02 of
-    // each other at every field (at 098c91ef6, 1.4766 and 1.4774 at their largest, 6.4e-3 apart at worst).
+    // The wide angle. Since LensVisualizer #931 both engines' geometric transmission is the share of a field's samples
+    // of the real stop that reach the image, absolute: at most 1 at every field, 1 on the axis, and the two lattices
+    // (the tab's 64 cells, the flux's 128) within R11b's band of 0.01 of each other at every field. Wide open the Sony
+    // FE 20 mm lets every sample through to about half its field and is vignetted beyond, never gaining toward the
+    // edge: at LensVisualizer 607ff23ae the tab's transmission is 1 to 26.4 degrees and 0.7485 at 47, the flux's 0.7507
+    // there, 2.2e-3 apart at worst; the relative illumination falls to 0.2880 and 0.2942.
     const set = comparisons.comparisons.find(
       (candidate) => candidate.requestId === of(WIDE).requestId && candidate.mode === "pairwise",
     );
     const side = (engine: string) => set?.participants.find((participant) => participant.engine === engine)?.recorded;
     const [lv, flux] = [side("lv"), side("flux")];
     assert.ok(lv !== undefined && flux !== undefined);
-    const largest = (values: readonly (number | null)[]): number => Math.max(...values.map((v) => v ?? Number.NaN));
-    const [tab, area] = [largest(lv.geometricTransmission), largest(flux.geometricTransmission)];
-    assert.ok(tab > 1.3 && area > 1.3, `the tab's beam ${tab}, the flux's ${area}`);
-    lv.geometricTransmission.forEach((value, at) =>
-      assert.ok(Math.abs((value ?? Number.NaN) - (flux.geometricTransmission[at] ?? Number.NaN)) <= 0.02, `${at}`),
+    const curve = (values: readonly (number | null)[]): number[] => values.map((v) => v ?? Number.NaN);
+    const [tab, lattice] = [curve(lv.geometricTransmission), curve(flux.geometricTransmission)];
+    const transmissionBand = R11B.metrics["geometricTransmission.maxAbs"].attention as number;
+    assert.equal(tab.length, FIELDS[WIDE]);
+    assert.deepEqual([tab[0], lattice[0]], [1, 1]);
+    tab.forEach((value, at) => {
+      assert.ok(value >= 0 && value <= 1 && lattice[at] >= 0 && lattice[at] <= 1, `${at}: ${value}, ${lattice[at]}`);
+      assert.ok(Math.abs(value - lattice[at]) <= transmissionBand, `${at}: ${value}, ${lattice[at]}`);
+    });
+    for (const values of [tab, lattice]) {
+      assert.ok(
+        values.slice(0, 9).every((value) => value >= 0.999),
+        values.join(" "),
+      );
+      assert.ok(values[values.length - 1] < 0.8, values.join(" "));
+      values.forEach((value, at) => assert.ok(at === 0 || value <= values[at - 1], `${at}: ${values.join(" ")}`));
+    }
+    t.diagnostic(`${WIDE}: the tab's geometric transmission ${tab.map((v) => v.toFixed(4)).join(" ")}`);
+    t.diagnostic(`${WIDE}: the flux's geometric transmission ${lattice.map((v) => v.toFixed(4)).join(" ")}`);
+    t.diagnostic(
+      `${WIDE}: the tab's relative illumination ${curve(lv.relativeIllumination)
+        .map((v) => v.toFixed(4))
+        .join(" ")}`,
     );
-    t.diagnostic(`${WIDE}: the tab's largest geometric transmission ${tab}, the flux's ${area}`);
+    t.diagnostic(
+      `${WIDE}: the flux's relative illumination ${curve(flux.relativeIllumination)
+        .map((v) => v.toFixed(4))
+        .join(" ")}`,
+    );
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);
     assert.equal(reported.code, 0, reported.out + reported.err);

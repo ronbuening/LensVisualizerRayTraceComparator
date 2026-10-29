@@ -32,12 +32,22 @@ test("R7a: a moved landing fails on its transverse error, a stopped ray on the m
   }
 });
 
-test("R7b: every pair is recorded, every field sorted before a difference, and no band is the comparator's own", async () => {
+test("R7b: every pair is recorded, every field sorted before a difference; a fan beyond its band marks its pair", async () => {
   const root = mkdtempSync(join(tmpdir(), "lvrtc-r7b-"));
   try {
     const { comparisons, report } = await r7bCycle(root);
     const pairs = comparisons.comparisons.flatMap((set) => set.pairs);
-    assert.ok(pairs.every((pair) => pair.verdict === "RECORDED" && pair.class === "recorded"));
+    assert.ok(pairs.every((pair) => pair.class === "recorded"));
+    // Policy 24 bands the fans at 9e-10 mm (the owner, 2026-10-29): the stand-ins' fans 1/256 mm apart mark their pair;
+    // the spots have no band, so every other pair is RECORDED whatever its figures.
+    const banded = (pair: (typeof pairs)[number]) =>
+      pair.metrics.some((metric) => metric.name === "fanError.maxAbs" && (metric.value ?? 0) > 9e-10);
+    assert.ok(pairs.some(banded));
+    for (const pair of pairs) {
+      assert.equal(pair.verdict, banded(pair) ? "ATTENTION" : "RECORDED", pair.reason);
+      if (banded(pair))
+        assert.match(pair.reason ?? "", /^fanError\.maxAbs 3\.91e-3 is outside its attention band 9\.00e-10/);
+    }
     const doubleGauss = comparisons.comparisons.filter((set) => set.run === "double-gauss" && set.mode === "pairwise");
     assert.match(doubleGauss[0].pairs[0].reason ?? "", /field 0\.5: data, chief-landing-unknown/);
     assert.match(doubleGauss[0].pairs[0].reason ?? "", /field 0\.75: unsupported, no-curve/);

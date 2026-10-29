@@ -43,9 +43,10 @@ function specOf(launches: readonly Launch[], line = 0): RaysTraceSpec {
 
 /**
  * Two fields: along the axis, its chief ray 0.75 mm off it, with its tangential pair, a tangential ray the stop of
- * `LENS` clips (4.5 mm) and its sagittal pair; and 4 degrees, with its pairs. The chief rays are rays 5 and 10.
+ * `LENS` clips (4.5 mm), its sagittal pair and the sagittal fan's centre, where the chief ray starts; and 4 degrees,
+ * with its pairs. The chief rays are rays 6 and 11.
  */
-const SPEC = specOf([...field(0, [-0.5, 0.5, 4.5], [-0.4, 0.4], 0.75), ...field(4, [-0.25, 0.25], [-0.25, 0.25])]);
+const SPEC = specOf([...field(0, [-0.5, 0.5, 4.5], [-0.4, 0.4, 0], 0.75), ...field(4, [-0.25, 0.25], [-0.25, 0.25])]);
 const BASE = traceOf(SPEC);
 const CONTEXT = { spec: SPEC as unknown as JsonObject, opticalCase: LENS };
 
@@ -80,32 +81,90 @@ function focusOf(
   return focus;
 }
 
-const ALL_OK = [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1];
+const ALL_OK = [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
-test("the fields of a curvature set are its blocks of one direction, each its chief ray last, its fans by offset", () => {
-  assert.deepEqual(curvatureFieldsOf(SPEC as unknown as JsonObject, 11), [
-    { chief: 5, tangential: [0, 1, 2], sagittal: [3, 4] },
-    { chief: 10, tangential: [6, 7], sagittal: [8, 9] },
+test("the fields of a curvature set are its blocks of one direction, each its chief ray last, its fans by place", () => {
+  assert.deepEqual(curvatureFieldsOf(SPEC as unknown as JsonObject, 12), [
+    { chief: 6, tangential: [0, 1, 2], sagittal: [3, 4] },
+    { chief: 11, tangential: [7, 8], sagittal: [9, 10] },
   ]);
-  // A ray where its chief ray starts is the centre of a fan, in neither; one offset along both is no curvature set.
-  const centred = specOf([...field(0, [0, 0.5], [0.5])]);
-  assert.deepEqual(curvatureFieldsOf(centred as unknown as JsonObject, 4), [
-    { chief: 3, tangential: [1], sagittal: [2] },
+  // A ray where its chief ray starts is the centre of a fan, or a sample held by the chief ray, in neither, in either
+  // half; a ray of the sagittal half off the chief ray along x is of the sagittal fan whatever its y (an aimed sagittal
+  // ray starts off the chief ray's height too).
+  const centred = specOf([...field(0, [0, 0.5], [0.5, 0])]);
+  assert.deepEqual(curvatureFieldsOf(centred as unknown as JsonObject, 5), [
+    { chief: 4, tangential: [1], sagittal: [2] },
   ]);
-  const both = specOf([
-    [0.5, 0.5, -10, 0, 0, 1],
+  const lifted = specOf([
+    [0, 0.25, -10, 0, 0, 1],
+    [0.5, 2 ** -20, -10, 0, 0, 1],
+    [0, 0, -10, 0, 0, 1],
+  ]);
+  assert.deepEqual(curvatureFieldsOf(lifted as unknown as JsonObject, 3), [
+    { chief: 2, tangential: [0], sagittal: [1] },
+  ]);
+  // Exactly where its half says, or the set is no curvature set: a skew or stray ray is refused, never read into a fan.
+  for (const [launches, reason] of [
+    // The sagittal fan first: a ray off the chief ray along x in the tangential half.
+    [
+      [
+        [0.5, 0, -10, 0, 0, 1],
+        [0, 0.25, -10, 0, 0, 1],
+        [0, 0, -10, 0, 0, 1],
+      ],
+      /^ray 0, of the tangential half of the field of chief ray 2, starts off it along x/,
+    ],
+    // A skew ray in the tangential half, off along x by the least step there is.
+    [
+      [
+        [2 ** -1074, 0.25, -10, 0, 0, 1],
+        [0.5, 0, -10, 0, 0, 1],
+        [0, 0, -10, 0, 0, 1],
+      ],
+      /^ray 0, of the tangential half of the field of chief ray 2, starts off it along x/,
+    ],
+    // A ray off the chief ray along y alone in the sagittal half.
+    [
+      [
+        [0, 0.25, -10, 0, 0, 1],
+        [0, -0.25, -10, 0, 0, 1],
+        [0, 0, -10, 0, 0, 1],
+      ],
+      /^ray 1, of the sagittal half of the field of chief ray 2, starts off it along y/,
+    ],
+    // Fans of different numbers of rays.
+    [
+      [
+        [0, 0.25, -10, 0, 0, 1],
+        [0, -0.25, -10, 0, 0, 1],
+        [0.5, 0, -10, 0, 0, 1],
+        [0, 0, -10, 0, 0, 1],
+      ],
+      /^the field of chief ray 3 has 3 rays beside it: its two fans cannot be of one number/,
+    ],
+  ] as const) {
+    const malformed = specOf(launches as unknown as Launch[]);
+    assert.match(String(curvatureFieldsOf(malformed as unknown as JsonObject, launches.length)), reason);
+    const answer = traceOf(malformed);
+    const refused = compared(answer, answer, { spec: malformed, opticalCase: LENS });
+    assert.ok(!refused.comparable);
+    assert.match(refused.reason, reason);
+  }
+  const behind = specOf([
+    [0, 0.5, -11, 0, 0, 1],
+    [0.5, 0, -10, 0, 0, 1],
     [0, 0, -10, 0, 0, 1],
   ]);
   assert.match(
-    String(curvatureFieldsOf(both as unknown as JsonObject, 2)),
-    /^ray 0 starts beside its field's chief ray/,
+    String(curvatureFieldsOf(behind as unknown as JsonObject, 3)),
+    /^ray 0 starts beside its field's chief ray, ray 2, off its plane of launch/,
   );
   assert.match(String(curvatureFieldsOf(undefined, 11)), /the spec of the request is not at hand/);
-  assert.match(String(curvatureFieldsOf(SPEC as unknown as JsonObject, 7)), /the request is of 11 rays/);
+  assert.match(String(curvatureFieldsOf(SPEC as unknown as JsonObject, 7)), /the request is of 12 rays/);
 });
 
 test("the reference engine brings every ray to the image but the one the stop clips", () => {
-  assert.deepEqual([...decodeNdArray(BASE.status).values], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual([...decodeNdArray(BASE.status).values], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
 });
 
 test("a faithful copy differs by nothing: every figure 0, both fields' foci compared", () => {
@@ -122,7 +181,7 @@ test("a faithful copy differs by nothing: every figure 0, both fields' foci comp
       ["astigmatism.maxAbs", 0],
       ["mask.mismatches", 0],
       ["mask.rimBand", 0],
-      ["rays.compared", 10],
+      ["rays.compared", 11],
       ["rays.dropped", 0],
       ["fields.compared", 2],
     ],
@@ -133,18 +192,18 @@ test("a faithful copy differs by nothing: every figure 0, both fields' foci comp
 test("a landing moved along y moves the tangential focus by the step over the relative slope, judged as half the step", () => {
   const step = 2 ** -26;
   const moved = changed(BASE, (arrays) => {
-    arrays.imagePoint[3 * 7 + 1] += step;
+    arrays.imagePoint[3 * 8 + 1] += step;
   });
   const outcome = compared(BASE, moved);
   const [first, second] = [
-    focusOf(BASE, 10, [6, 7], "tangential", ALL_OK),
-    focusOf(moved, 10, [6, 7], "tangential", ALL_OK),
+    focusOf(BASE, 11, [7, 8], "tangential", ALL_OK),
+    focusOf(moved, 11, [7, 8], "tangential", ALL_OK),
   ];
   const along = Math.abs(first.shiftMm - second.shiftMm);
   const scaled = metric(outcome, "tangentialFocus.maxScaled");
   assert.deepEqual(
     [scaled?.value, scaled?.where],
-    [along * Math.max(first.rmsSlope, second.rmsSlope), { line: 0, ray: 10 }],
+    [along * Math.max(first.rmsSlope, second.rmsSlope), { line: 0, ray: 11 }],
   );
   assert.equal(metric(outcome, "tangentialFocus.maxAbs")?.value, along);
   assert.equal(metric(outcome, "astigmatism.maxAbs")?.value, along);
@@ -163,14 +222,14 @@ test("the focus is scaled by the larger of the two answers' relative slopes, nev
   // where the reference's do: its focus is about four times as far, and its own RMS slope about a quarter of the
   // reference's.
   const smaller = changed(BASE, (arrays) => {
-    const chief = arrays.exitDirection[3 * 5];
+    const chief = arrays.exitDirection[3 * 6];
     for (const ray of [3, 4]) {
       arrays.exitDirection[3 * ray] = chief + (arrays.exitDirection[3 * ray] - chief) / 4;
     }
   });
   const [reference, wrong] = [
-    focusOf(BASE, 5, [3, 4], "sagittal", ALL_OK),
-    focusOf(smaller, 5, [3, 4], "sagittal", ALL_OK),
+    focusOf(BASE, 6, [3, 4], "sagittal", ALL_OK),
+    focusOf(smaller, 6, [3, 4], "sagittal", ALL_OK),
   ];
   const along = Math.abs(reference.shiftMm - wrong.shiftMm);
   assert.ok(wrong.rmsSlope < reference.rmsSlope / 3);
@@ -191,8 +250,8 @@ test("a ray stopped in one answer is a mask mismatch, dropped from both foci; a 
   assert.deepEqual(metric(outcome, "rays.dropped"), { name: "rays.dropped", value: 1, where: { line: 0, ray: 0 } });
   assert.equal(metric(outcome, "tangentialFocus.maxAbs")?.value, 0, "both foci of the axis are of ray 1 alone");
   const chiefless = changed(BASE, (arrays) => {
-    stopAt(arrays, 5, 2);
-    stopAt(arrays, 10, 2);
+    stopAt(arrays, 6, 2);
+    stopAt(arrays, 11, 2);
   });
   const lost = compared(BASE, chiefless);
   assert.ok(lost.comparable);
@@ -210,16 +269,16 @@ test("a ray stopped in one answer is a mask mismatch, dropped from both foci; a 
 });
 
 test("a fan's figures are unmeasured for a reason of that fan's own: a set of sagittal fans alone", () => {
-  // The two fields' sagittal pairs alone; the axis's pair is stopped in both answers, so the first reason met is of a
-  // sagittal fan, and it is never said of the tangential figures.
-  const sagittal = specOf([...field(0, [], [-0.4, 0.4], 0.75), ...field(4, [], [-0.25, 0.25])]);
-  assert.deepEqual(curvatureFieldsOf(sagittal as unknown as JsonObject, 6), [
-    { chief: 2, tangential: [], sagittal: [0, 1] },
-    { chief: 5, tangential: [], sagittal: [3, 4] },
+  // The two fields' sagittal pairs alone, each tangential half held by the chief ray; the axis's pair is stopped in
+  // both answers, so the first reason met is of a sagittal fan, and it is never said of the tangential figures.
+  const sagittal = specOf([...field(0, [0, 0], [-0.4, 0.4], 0.75), ...field(4, [0, 0], [-0.25, 0.25])]);
+  assert.deepEqual(curvatureFieldsOf(sagittal as unknown as JsonObject, 10), [
+    { chief: 4, tangential: [], sagittal: [2, 3] },
+    { chief: 9, tangential: [], sagittal: [7, 8] },
   ]);
   const both = changed(traceOf(sagittal), (arrays) => {
-    stopAt(arrays, 0, 2);
-    stopAt(arrays, 1, 2);
+    stopAt(arrays, 2, 2);
+    stopAt(arrays, 3, 2);
   });
   const outcome = compared(both, structuredClone(both), { spec: sagittal, opticalCase: LENS });
   assert.equal(metric(outcome, "sagittalFocus.maxScaled")?.value, 0);
@@ -231,15 +290,15 @@ test("a fan's figures are unmeasured for a reason of that fan's own: a set of sa
   ]);
   // With every sagittal ray stopped, the sagittal figures say why, of the sagittal fan.
   const none = changed(both, (arrays) => {
-    stopAt(arrays, 3, 2);
-    stopAt(arrays, 4, 2);
+    stopAt(arrays, 7, 2);
+    stopAt(arrays, 8, 2);
   });
   const lost = compared(none, structuredClone(none), { spec: sagittal, opticalCase: LENS });
   assert.ok(lost.comparable);
   const reasons = Object.fromEntries((lost.unmeasured ?? []).map(({ name, reason }) => [name, reason]));
   assert.equal(
     reasons["sagittalFocus.maxScaled"],
-    "no-rays: the sagittal fan of the field of chief ray 2: no ray of the sagittal fan is taken",
+    "no-rays: the sagittal fan of the field of chief ray 4: no ray of the sagittal fan is taken",
   );
   assert.equal(reasons["tangentialFocus.maxAbs"], "no field of the set has a tangential fan");
   assert.equal(reasons["astigmatism.maxAbs"], "no field of the set has a tangential fan");
@@ -248,22 +307,23 @@ test("a fan's figures are unmeasured for a reason of that fan's own: a set of sa
 test("a fan with a focus in one answer and none in the other, and a set that is no curvature set, are not comparable", () => {
   // The sagittal rays of the 4 degree field leave parallel to the chief ray in one answer: no plane is its focus.
   const parallel = changed(BASE, (arrays) => {
-    for (const ray of [8, 9]) {
-      for (let at = 0; at < 3; at++) arrays.exitDirection[3 * ray + at] = arrays.exitDirection[3 * 10 + at];
+    for (const ray of [9, 10]) {
+      for (let at = 0; at < 3; at++) arrays.exitDirection[3 * ray + at] = arrays.exitDirection[3 * 11 + at];
     }
   });
   const outcome = compared(BASE, parallel);
   assert.ok(!outcome.comparable);
   assert.match(
     outcome.reason,
-    /the field of chief ray 10: its sagittal fan in the first answer has a focus, in the second has none: no-slope/,
+    /the field of chief ray 11: its sagittal fan in the first answer has a focus, in the second has none: no-slope/,
   );
-  const skew = specOf([
-    [0.5, 0.5, -10, 0, 0, 1],
+  const behind = specOf([
+    [0, 0.5, -11, 0, 0, 1],
+    [0.5, 0, -10, 0, 0, 1],
     [0, 0, -10, 0, 0, 1],
   ]);
-  const answer = traceOf(skew);
-  const refused = compared(answer, answer, { spec: skew, opticalCase: LENS });
+  const answer = traceOf(behind);
+  const refused = compared(answer, answer, { spec: behind, opticalCase: LENS });
   assert.ok(!refused.comparable);
-  assert.match(refused.reason, /^ray 0 starts beside its field's chief ray/);
+  assert.match(refused.reason, /^ray 0 starts beside its field's chief ray, ray 2, off its plane of launch/);
 });

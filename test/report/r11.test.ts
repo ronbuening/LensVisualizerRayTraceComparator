@@ -53,7 +53,7 @@ test("R11a: a turned rim direction fails as the flux into the image, a stopped r
   }
 });
 
-test("R11b: every field sorted before a difference; the landing marks the pair, the figures are only recorded", async () => {
+test("R11b: every field sorted before a difference; the landing and the transmission mark the pair, the rest recorded", async () => {
   const root = mkdtempSync(join(tmpdir(), "lvrtc-r11b-"));
   try {
     const { comparisons, report } = await r11bCycle(root);
@@ -70,9 +70,13 @@ test("R11b: every field sorted before a difference; the landing marks the pair, 
       [2, 1, 1, 0],
     );
     const reason = pairwise.pairs[0].reason ?? "";
-    assert.match(reason, /^chiefLanding\.maxAbs 2\.44e-4 is outside its attention band 1\.00e-5 at field 24, line 0; /);
+    // Policy 24 bands the transmission at 0.01 (the owner, 2026-10-29); the illuminations have no band.
+    assert.match(
+      reason,
+      /^chiefLanding\.maxAbs 2\.44e-4 is outside its attention band 1\.00e-5 at field 24, line 0; geometricTransmission\.maxAbs 6\.25e-2 is outside its attention band 1\.00e-2 at field 8, line 0; /,
+    );
     assert.match(reason, /line 0, field 16: numerical, unconverged \(lattice-flux: unconverged \(not-converged\)\)/);
-    assert.ok(!reason.includes("geometricTransmission"), "no figure has a band");
+    assert.ok(!/(relativeIllumination|falloff)\.maxAbs \S+ is outside/.test(reason), "the illuminations have no band");
     assert.deepEqual(wordingProblems(report.markdown), []);
     assert.equal(report.markdown, readFileSync(goldenFile(R11B_GOLDEN), "utf8"));
   } finally {

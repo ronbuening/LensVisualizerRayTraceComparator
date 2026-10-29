@@ -9,7 +9,7 @@ import { wordingProblems } from "../../src/report/wording.ts";
 import { R12B_GOLDEN, r12bCycle } from "./r12Fixture.ts";
 import { goldenFile } from "./support.ts";
 
-test("R12b: every line sorted before a difference; the rear focus and the two banded figures mark the pair", async () => {
+test("R12b: every line sorted before a difference; the rear focus and the banded figures mark the pair", async () => {
   const root = mkdtempSync(join(tmpdir(), "lvrtc-r12b-"));
   try {
     const { comparisons, report } = await r12bCycle(root);
@@ -30,7 +30,7 @@ test("R12b: every line sorted before a difference; the rear focus and the two ba
     // The pupil 1/64 mm wider and its image-space f-number are outside their bands; the rear foci apart set line 1 aside.
     assert.match(
       reason,
-      /^entrancePupilDiameter\.maxAbs 1\.56e-2 is outside its attention band 3\.00e-9 at line 0; imageSpaceFNumber\.maxAbs 4\.94e-3 is outside its attention band 2\.00e-9 at line 0; rearFocus\.maxAbs 2\.44e-4 is outside its attention band 1\.00e-5 at line 1; /,
+      /^entrancePupilDiameter\.maxAbs 1\.56e-2 is outside its attention band 2\.00e-12 at line 0; imageSpaceFNumber\.maxAbs 4\.94e-3 is outside its attention band 2\.00e-13 at line 0; rearFocus\.maxAbs 2\.44e-4 is outside its attention band 1\.00e-5 at line 1; /,
     );
     assert.match(reason, /paraxialWorkingFNumber\.maxAbs was not measured: lv-summary-tab states none/);
     assert.match(reason, /line 1: data, chief-landing-apart \(the rear focal points lie 2\.44e-4 mm apart\)/);
