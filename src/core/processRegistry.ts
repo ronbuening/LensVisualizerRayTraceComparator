@@ -191,6 +191,7 @@ export function createProcessRegistry(
   });
   const idle: Slot[] = [];
   const waiting: ((slot: Slot) => void)[] = [];
+  const started = new WeakMap<Slot, Promise<void>>();
   let owners = 0;
   let closed: Promise<void> | undefined;
   const acquire = async (): Promise<Slot> => {
@@ -200,19 +201,33 @@ export function createProcessRegistry(
     if (slots.length < jobs) {
       const slot = new Slot(memoryDirectory);
       slots.push(slot);
-      try {
-        await profileAsync("startup.worker", () => slot.call({ method: "init", loaded }, 180_000));
-      } catch {
-        slot.child.kill("SIGKILL");
-      }
+      started.set(
+        slot,
+        profileAsync("startup.worker", () => slot.call({ method: "init", loaded }, 180_000)).then(
+          () => {},
+          () => {
+            slot.child.kill("SIGKILL");
+          },
+        ),
+      );
       return slot;
     }
     if (slots.every((slot) => !slot.alive())) return slots[0];
     return new Promise((resolve) => waiting.push(resolve));
   };
+  // Slots are handed out in the order `use` is called. Each paused caller polls memory on a timer of its own, so
+  // without this turn a later job could pass the pressure first, take a slot, and end a persistent replica (a stdio
+  // engine) there before an earlier job of that engine is sent to the same slot. A slot's startup is awaited after
+  // the turn, so slots still start side by side.
+  let turns: Promise<unknown> = Promise.resolve();
   const use = async <T>(act: (slot: Slot) => Promise<T>): Promise<T> => {
-    await memory.wait();
-    const slot = await acquire();
+    const turn = turns.then(async () => {
+      await memory.wait();
+      return acquire();
+    });
+    turns = turn.catch(() => {});
+    const slot = await turn;
+    await started.get(slot);
     try {
       await memory.wait();
       return await act(slot);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { baselineText, buildBaseline } from "../../src/baseline/build.ts";
 import { renderBaselineReport } from "../../src/baseline/report.ts";
@@ -16,13 +17,14 @@ import { loadConfig, REPO_ROOT } from "../../src/core/config.ts";
 import { runSuite } from "../../src/core/orchestrator.ts";
 import type { FollowUp } from "../../src/core/orchestrator.ts";
 import { createProcessRegistry } from "../../src/core/processRegistry.ts";
+import type { StoredAdapter } from "../../src/core/processRegistry.ts";
 import { createResultStore } from "../../src/core/resultStore.ts";
 import { selftestRung } from "../../src/core/rungs.ts";
 import type { RungDefinition } from "../../src/core/rungs.ts";
 import { createEngineRegistry } from "../../src/engines/registry.ts";
 import { buildReport } from "../../src/report/model.ts";
 import { renderMarkdown } from "../../src/report/markdown.ts";
-import { pairSuite, tempDir } from "./support.ts";
+import { pairSuite, SINGLET, tempDir } from "./support.ts";
 
 const rung: RungDefinition = {
   ...selftestRung,
@@ -158,6 +160,61 @@ for (const dies of [false, true]) {
     );
   });
 }
+
+test("a job paused for memory keeps its turn: a later job cannot end a stdio replica before it is sent there", async (t) => {
+  const root = tempDir(t);
+  writeFileSync(
+    join(root, "lvrtc.config.json"),
+    JSON.stringify({
+      engines: {
+        "fake-stdio": {
+          transport: "stdio",
+          command: [process.execPath, join(REPO_ROOT, "test/fixtures/pool-engine/worker.mjs")],
+          options: { id: "fake-stdio", crashScale: 5 },
+        },
+      },
+    }),
+  );
+  const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: join(root, "runs") } });
+  let pressure = false;
+  // One slot: the job that takes it first is the first its replica answers.
+  const registry = createProcessRegistry(loaded, 1, {
+    memoryBudgetGiB: 10,
+    memorySampleMs: 200,
+    memoryReader: async (children) =>
+      children.map((child) => ({ pid: child.pid, nodeRssBytes: pressure ? 11 * 2 ** 30 : 1, workers: [] })),
+  });
+  const adapter = (await registry.create("fake-stdio")) as StoredAdapter;
+  try {
+    await adapter.describe();
+    const [base] = selftestRung.buildRequests(SINGLET, pairSuite().runs[0].spec);
+    // As the orchestrator asks: a ticket per job, in order, released when the job has ended.
+    const ask = async (scale: number) => {
+      const ticket = registry.enqueue("fake-stdio");
+      try {
+        return await adapter.askStored!(
+          makeRequest({ caseId: SINGLET.id, quantity: base.quantity, spec: { ...base.spec, scale } }),
+          SINGLET,
+          [],
+          ticket,
+        );
+      } finally {
+        ticket.release();
+      }
+    };
+    pressure = true;
+    const earlier = ask(4);
+    // The earlier job reads the pressure and waits a sampling period; the later one arrives after it has gone.
+    await delay(20);
+    pressure = false;
+    const later = ask(5);
+    const [first, second] = await Promise.all([earlier, later]);
+    assert.equal(first.result.status, "ok", first.result.error?.message);
+    assert.equal(second.result.error?.code, "transport-error");
+  } finally {
+    await adapter.close();
+  }
+});
 
 test("a Node pool slot dying retires its engine without replacing the slot; other engines finish", async (t) => {
   const root = tempDir(t);

@@ -109,7 +109,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   artifacts. The controller samples child RSS and interpreter-owned worker RSS heartbeats every 250 ms;
   Python's own current RSS comes from Mach task_info on macOS or /proc/self/statm on Linux, with lifetime peaks
   also reported. Unknown custom launchers require `ps` descendant accounting. Above the budget, new dispatches
-  wait until the sum falls; running work and ordered result publication continue. No job is killed for memory.
+  wait until the sum falls, in the order they were asked (a later job never passes an earlier one through a
+  pause and ends a stdio replica it would then be sent to); running work and ordered result publication
+  continue. No job is killed for memory.
   Sampling failures also pause dispatch until readable. Never use `os.freemem()` to estimate macOS pressure.
   Profiles include `pool-memory-*.json` with peak simultaneous RSS, per-slot/worker peaks and pauses. These
   scheduling diagnostics stay outside engine source hashes and persisted results. See `docs/REFERENCE.md`.
