@@ -27,7 +27,10 @@ import { FIXTURE_DIR, SINGLET_CASE } from "../contract/corpus.ts";
  * beyond any tolerance), `fake-near` (a bias of 2e-14, within the tolerance of the `selftest` rung) and `fake-none`
  * (no quantity). Two are the Python fake engine as a stdio worker: `fake-py`, and `fake-pyn` with the bias of
  * `fake-near` and a fingerprint stated in the configuration, so that a report that names it does not change with
- * every edit of the worker kit. A test that runs the root without naming engines needs Python.
+ * every edit of the worker kit; `fake-py-oneshot` is that fake as a one-shot worker. `fake-human` is a file-exchange
+ * engine whose descriptor is the TypeScript fake's of that id, answered by the fake operator
+ * (`test/fixtures/fake-operator/operator.mjs`): its jobs are pending until then. A test that runs the root without
+ * naming engines needs Python.
  */
 export const FAKE_ROOT: string = fileURLToPath(new URL("../fixtures/fake-root", import.meta.url));
 /** The fixture suite: the singlet and the Double-Gauss case on `selftest`, by paths relative to `FAKE_ROOT`. */

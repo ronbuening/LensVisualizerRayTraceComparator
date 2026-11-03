@@ -330,7 +330,7 @@ conformance kit passes on it; a group report shows the pairwise matrix and conse
 | Stage | Deliver | Verify |
 |---|---|---|
 | 7.1 (delivered) | The `oneshot` transport (a process per message, request and result files in a private temporary directory), its configuration with per-definition `timeouts`, and the kit's `serve_oneshot` with `fake_engine --oneshot` | Conformance kit passes over it with the Python fake engine |
-| 7.2 File exchange | Outbox, pending, inbox, `lvrtc collect`; prescription writers with full coefficient sets for human-operated engines | A pending job survives a restart and is collected, using a fake human-operated engine |
+| 7.2 (delivered) | The `file-exchange` transport (a configured descriptor, jobs named by their store key handed over whole to `<runsDir>/exchange/<id>/outbox`, pending until `inbox/<job>.json` answers), `lvrtc collect` admitting each answer through `askEngine` and moving its job to `collected/` or `rejected/` with a reason, and the `table` prescription writer of every member and coefficient, proven with the fake operator and `fake-human` | A pending job survives a restart and is collected, using a fake human-operated engine |
 | 7.3 Second external engine (deferred) | Deferred by the owner (2026-11-03); chosen later (e.g. rayoptics through the worker kit, or OpticStudio by file exchange) | Conformance kit; R0–R3 on the benchmark suite; `docs/adding-an-engine.md` followed as written |
 | 7.4 Group reports | Pairwise matrix, consensus, outlier engine | Golden group report from three fakes including an outlier |
 | 7.5 HTTP transport (deferred) | Deferred by the owner (2026-11-03): built when a consumer exists | Conformance kit over HTTP |

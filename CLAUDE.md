@@ -1898,4 +1898,28 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `fake-py-oneshot` is that worker; `test/fixtures/oneshot-worker` holds Node workers for the transport's own tests.
 - **A kit edit moves `optiland`'s and `optiland-wave`'s adapter revisions** (the worker hashes the kit's `.py` files),
   and an edit of `src/core/config.ts` moves `optiland-wave`'s too (`optiland/definition.ts` imports it): their
-  baseline records go STALE(engine) until the owner's next refresh.
+  baseline records go STALE(engine) until the owner's next refresh. So does an edit of `src/exchange/names.ts`, which
+  config.ts imports for the writer names; keep the writers themselves (`prescription.ts`) out of config.ts.
+- **`file-exchange` is an engine a person operates** (`src/transports/fileExchange.ts`, Stage 7.2): the definition's
+  `descriptor` answers `hello` and the adapter judges it as any engine's; its fingerprint is the operator's program.
+  The exchange directory is `<runsDir>/exchange/<engine id>/` (`TransportContext.runsDir`; a suite cannot be named
+  `exchange`), never anything under the repository, and nothing in it is committed: a case can reproduce an LV
+  prescription. A job's name is its store key (`jobName`: request id, engine id, fingerprint, adapter revision,
+  engine options); its `message.json` is the run message as canonical JSON under that name as `id`.
+- **The run path never moves or removes a file of the exchange**: it replies with `inbox/<job>.json` when there,
+  else hands the job over to `outbox/<job>/` whole (written beside it, renamed in; a second writer leaves the
+  first's) unless it is in outbox or pending, and replies `pending` (never stored; no failure of `lvrtc run`).
+- **One validation path**: `lvrtc collect` (`src/exchange/collect.ts`) admits every inbox answer through `askEngine`
+  with its job's request and case, never a check of its own; it is the one mover. Stored or cached goes to
+  `collected/<job>/`, anything else to `rejected/<job>/` with `reason.txt`. Every move is a rename: the answer into
+  its job directory first (a reason before it), then the directory whole; the next collect finishes a job directory
+  that holds `answer.json` before it reads the inbox, and an accepted job loses any stale `reason.txt` first. A job
+  left with no answer whose key the store holds (handed over again by a run during a collect) goes to `collected/`.
+  Collects of one exchange never run at once (as store maintenance runs without concurrent writers).
+- **A prescription writer never drops a member** (`src/exchange/prescription.ts`): every member of the case and the
+  request is written or is an error naming its path, numbers by `exactNumber` (`String`, `-0` kept). A writer is a
+  pure function; its tests hold synthetic cases to exact texts. A new writer adds its name to `names.ts` and its
+  file to `PRESCRIPTION_WRITERS` (the type check ties them).
+- Commands: `node bin/lvrtc.mjs collect [<engine>...] [--root <dir>] [--json]` (exit 1 on a refusal, 2 on usage);
+  `node test/fixtures/fake-operator/operator.mjs <runsDir>/exchange/<engine>` plays the operator of the fixture
+  root's `fake-human` with the TypeScript fake engine.

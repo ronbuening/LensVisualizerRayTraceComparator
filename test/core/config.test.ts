@@ -425,7 +425,7 @@ test("an engine definition of the wrong shape is an error naming the key and the
   const inProcess = { transport: "in-process", module: "fake.ts" };
   const stdio = { transport: "stdio", command: ["python3"] };
   const idRule = 'is not an engine id: a lowercase letter, then lowercase letters, digits or "-"';
-  const transports = '"in-process", "stdio" or "oneshot"';
+  const transports = '"in-process", "stdio", "oneshot" or "file-exchange"';
   const cases: [unknown, string][] = [
     [{ Fake: inProcess }, `"engines.Fake" ${idRule}`],
     [{ fake_engine: inProcess }, `"engines.fake_engine" ${idRule}`],
@@ -596,4 +596,60 @@ test("a definition of any transport may state its waits, each a number of millis
       );
     }
   }
+});
+
+// ── Stage 7.2: file-exchange engines ────────────────────────────────────────────────────────────────────────────
+
+test("a file-exchange engine is a descriptor, the prescription writers it is handed and options", (t) => {
+  const descriptor = { identity: { id: "human", fingerprint: "their program 2.1" }, anything: [1, "two"] };
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        human: { transport: "file-exchange", descriptor, prescriptions: ["table"], options: { desk: 3 } },
+        bare: { transport: "file-exchange", descriptor: {}, timeouts: { runMs: 5 } },
+      },
+    },
+  });
+  // The descriptor is taken as it is written: the adapter judges it when the engine is described.
+  assert.deepEqual(loadConfig({ rootDir, env: {} }).config.engineDefinitions, {
+    bare: { transport: "file-exchange", descriptor: {}, prescriptions: [], options: {}, timeouts: { runMs: 5 } },
+    human: { transport: "file-exchange", descriptor, prescriptions: ["table"], options: { desk: 3 } },
+  });
+});
+
+test("a file-exchange definition of the wrong shape is an error naming the member and the file", (t) => {
+  const head = { transport: "file-exchange", descriptor: {} };
+  const writers = 'a list of prescription writers: there are "table"';
+  const hello = "an object: the engine's answer to hello";
+  const has = 'a definition with transport "file-exchange" has transport, descriptor, prescriptions, options, timeouts';
+  const cases: [unknown, string][] = [
+    [{ transport: "file-exchange" }, `"engines.fake.descriptor" must be ${hello}`],
+    [{ ...head, descriptor: null }, `"engines.fake.descriptor" must be ${hello}`],
+    [{ ...head, descriptor: [] }, `"engines.fake.descriptor" must be ${hello}`],
+    [{ ...head, prescriptions: "table" }, `"engines.fake.prescriptions" must be ${writers}`],
+    [{ ...head, prescriptions: ["table", "zemax-zmx"] }, `"engines.fake.prescriptions" must be ${writers}`],
+    [{ ...head, prescriptions: [null] }, `"engines.fake.prescriptions" must be ${writers}`],
+    [
+      { ...head, prescriptions: ["table", "table"] },
+      '"engines.fake.prescriptions" must be a list of distinct writers, not "table" twice',
+    ],
+    [{ ...head, options: [] }, '"engines.fake.options" must be an object'],
+    [{ ...head, command: ["w"] }, `unknown key "engines.fake.command" (${has})`],
+    [{ ...head, module: "m.ts" }, `unknown key "engines.fake.module" (${has})`],
+    [{ ...head, env: {} }, `unknown key "engines.fake.env" (${has})`],
+    [{ ...head, timeouts: { runMs: 0 } }, '"engines.fake.timeouts.runMs" must be a number of milliseconds above 0'],
+  ];
+  for (const [fake, problem] of cases) {
+    const rootDir = rootWith(t, { [CONFIG_FILE]: { engines: { fake } } });
+    assert.throws(
+      () => loadConfig({ rootDir, env: {} }),
+      { message: `${join(rootDir, CONFIG_FILE)}: ${problem}` },
+      problem,
+    );
+  }
+  // A member of a file-exchange definition is unknown to the other transports.
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: { engines: { fake: { transport: "stdio", command: ["w"], descriptor: {} } } },
+  });
+  assert.throws(() => loadConfig({ rootDir, env: {} }), /unknown key "engines\.fake\.descriptor"/);
 });

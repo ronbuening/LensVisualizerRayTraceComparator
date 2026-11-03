@@ -28,6 +28,7 @@ import { canonicalJson } from "./numeric/canonicalJson.ts";
 import { resultDataProblems } from "./resultData.ts";
 import { STORE_DIRECTORY, createResultStore, storeKey } from "./resultStore.ts";
 import type { ResultStore } from "./resultStore.ts";
+import { EXCHANGE_DIRECTORY } from "../transports/fileExchange.ts";
 import { fineSampling, raySetId } from "../rays/raySets.ts";
 import type { RaySetResolution } from "../rays/raySets.ts";
 import type { SpotSetResolution } from "../rays/spotSets.ts";
@@ -376,6 +377,10 @@ export async function planJobs(input: RunSuiteInput): Promise<Plan> {
   const { suite, registry, rungDefinitions = RUNGS } = input;
   if (suite.name.toLowerCase() === STORE_DIRECTORY) {
     throw new UsageError(`a suite cannot be named "${suite.name}": the runs directory keeps the result store there`);
+  }
+  if (suite.name.toLowerCase() === EXCHANGE_DIRECTORY) {
+    const keeps = "the runs directory keeps the jobs of file-exchange engines there";
+    throw new UsageError(`a suite cannot be named "${suite.name}": ${keeps}`);
   }
   const known: KnownEngines = { configured: registry.ids(), builtin: registry.builtinIds() };
   if (known.configured.length + known.builtin.length === 0) {
@@ -768,7 +773,8 @@ function auditSources(
  * Runs a suite and writes its output.
  *
  * Before anything runs, what was asked for is checked, and a `UsageError` thrown for a rung that does not exist, an
- * engine that is neither configured nor built in, no engine at all, and a suite named after the store's directory.
+ * engine that is neither configured nor built in, no engine at all, and a suite named after the store's directory
+ * or the file exchange's.
  * A run that names no engine is run on every configured one; a built-in engine is run only where it is named, so
  * a run that names none under a configuration that defines none is a `UsageError` too. A run of the suite that has
  * no case (`LoadedRun.problems`) is recorded in the manifest and has no jobs.

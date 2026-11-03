@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 
 import type { ProtocolHandler } from "../contract/protocol.ts";
 import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
+import { createFileExchangeTransport, exchangeDirectory } from "../transports/fileExchange.ts";
 import { createInProcessTransport } from "../transports/inProcess.ts";
 import { createOneshotTransport } from "../transports/oneshot.ts";
 import { createStdioTransport, workerEnvironment } from "../transports/stdio.ts";
@@ -23,6 +24,8 @@ export interface TransportContext {
   readonly engineId: string;
   /** The directory the configuration was read from. Messages name files relative to it. */
   readonly rootDir: string;
+  /** The configuration's runs directory (`runsDir`): a file-exchange engine hands its jobs over below it. */
+  readonly runsDir: string;
 }
 
 /**
@@ -103,6 +106,22 @@ export const oneshotTransportFactory: TransportFactory<"oneshot"> = async (defin
   });
 
 /**
+ * The factory of file-exchange engines: an engine a person operates, whose jobs are handed over in its exchange
+ * directory, `<runsDir>/exchange/<engine id>/` (`exchangeDirectory`). Nothing is made here: the directory is made
+ * when the first job is handed over.
+ */
+export const fileExchangeTransportFactory: TransportFactory<"file-exchange"> = async (
+  definition,
+  { engineId, runsDir },
+) =>
+  createFileExchangeTransport({
+    directory: exchangeDirectory(runsDir, engineId),
+    descriptor: definition.descriptor,
+    prescriptions: definition.prescriptions,
+    options: definition.options,
+  });
+
+/**
  * The transports implemented so far. A stage that implements another adds its factory here, and nothing that uses
  * the registry changes.
  */
@@ -110,6 +129,7 @@ export const TRANSPORT_FACTORIES: TransportFactories = {
   "in-process": inProcessTransportFactory,
   stdio: stdioTransportFactory,
   oneshot: oneshotTransportFactory,
+  "file-exchange": fileExchangeTransportFactory,
 };
 
 /**
@@ -158,7 +178,7 @@ export async function createEngineTransport(
     const detail = `no transport "${definition.transport}" is implemented`;
     throw new EngineUnavailableError(id, "unsupported-transport", detail);
   }
-  return factory(definition, { engineId: id, rootDir: loaded.rootDir });
+  return factory(definition, { engineId: id, rootDir: loaded.rootDir, runsDir: loaded.config.runsDir });
 }
 
 /**

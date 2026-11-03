@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { isEngineId } from "../contract/engine.ts";
 import type { JsonObject } from "../contract/json.ts";
+import { PRESCRIPTION_WRITER_NAMES, isPrescriptionWriterName } from "../exchange/names.ts";
+import type { PrescriptionWriterName } from "../exchange/names.ts";
 
 /** The repository root: the directory that holds `lvrtc.config.json`. */
 export const REPO_ROOT: string = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -47,6 +49,10 @@ export interface DefinitionTimeouts {
  *   and `env` the variables set for it on top of the environment the transport gives every worker.
  * - `oneshot`: as `stdio`, but the command is started once per message and answers it by files
  *   (`src/transports/oneshot.ts`).
+ * - `file-exchange`: an engine a person operates, which answers by files when they do
+ *   (`src/transports/fileExchange.ts`): `descriptor` is its answer to `hello`, judged by the adapter as any engine's,
+ *   and `prescriptions` the writers whose files each job it is handed carries, distinct, in the order given (none
+ *   when the definition names none).
  *
  * In `stdio` and `oneshot` every placeholder of `ENGINE_PLACEHOLDERS` has been replaced; the words are otherwise as
  * written. `options` is the engine's own business; it is `{}` when the definition gives none. `timeouts` is there
@@ -60,7 +66,14 @@ export type EngineDefinition =
       readonly timeouts?: DefinitionTimeouts;
     }
   | WorkerDefinition<"stdio">
-  | WorkerDefinition<"oneshot">;
+  | WorkerDefinition<"oneshot">
+  | {
+      readonly transport: "file-exchange";
+      readonly descriptor: JsonObject;
+      readonly prescriptions: readonly PrescriptionWriterName[];
+      readonly options: JsonObject;
+      readonly timeouts?: DefinitionTimeouts;
+    };
 
 /** A definition of an engine that is a program the comparator starts: `stdio` or `oneshot`. */
 export interface WorkerDefinition<T extends "stdio" | "oneshot"> {
@@ -177,6 +190,7 @@ const DEFINITION_MEMBERS = {
   "in-process": ["transport", "module", "options", "timeouts"],
   stdio: ["transport", "command", "options", "env", "timeouts"],
   oneshot: ["transport", "command", "options", "env", "timeouts"],
+  "file-exchange": ["transport", "descriptor", "prescriptions", "options", "timeouts"],
 } as const;
 /** The waits a definition may state under `timeouts`. */
 const TIMEOUT_MEMBERS = ["helloMs", "runMs", "shutdownMs"] as const;
@@ -188,8 +202,8 @@ const TRANSPORTS = Object.keys(DEFINITION_MEMBERS).map((name) => `"${name}"`);
  */
 function checkedDefinition(key: string, members: Readonly<Record<string, unknown>>, file: string): EngineDefinition {
   const wrong = (member: string, must: string): Error => new Error(`${file}: "${key}.${member}" must be ${must}`);
-  const { transport, module, command, options = {}, env = {}, timeouts } = members;
-  if (transport !== "in-process" && transport !== "stdio" && transport !== "oneshot") {
+  const { transport, module, command, options = {}, env = {}, timeouts, descriptor, prescriptions = [] } = members;
+  if (transport !== "in-process" && transport !== "stdio" && transport !== "oneshot" && transport !== "file-exchange") {
     throw wrong("transport", `${TRANSPORTS.slice(0, -1).join(", ")} or ${TRANSPORTS.at(-1)}`);
   }
   const allowed: readonly string[] = DEFINITION_MEMBERS[transport];
@@ -207,6 +221,16 @@ function checkedDefinition(key: string, members: Readonly<Record<string, unknown
   if (transport === "in-process") {
     if (typeof module !== "string" || module === "") throw wrong("module", "a non-empty string");
     return { transport, module, options, ...waits };
+  }
+  if (transport === "file-exchange") {
+    if (!isPlainObject(descriptor)) throw wrong("descriptor", "an object: the engine's answer to hello");
+    const writers = PRESCRIPTION_WRITER_NAMES.map((name) => `"${name}"`).join(", ");
+    if (!Array.isArray(prescriptions) || !prescriptions.every(isPrescriptionWriterName)) {
+      throw wrong("prescriptions", `a list of prescription writers: there are ${writers}`);
+    }
+    const repeated = prescriptions.find((name, at) => prescriptions.indexOf(name) !== at);
+    if (repeated !== undefined) throw wrong("prescriptions", `a list of distinct writers, not "${repeated}" twice`);
+    return { transport, descriptor: descriptor as JsonObject, prescriptions: [...prescriptions], options, ...waits };
   }
   const isWord = (word: unknown): word is string => typeof word === "string" && word !== "";
   if (!Array.isArray(command) || command.length === 0 || !command.every(isWord)) {
@@ -346,6 +370,7 @@ function resolved(key: ConfigKey, value: string | null, rootDir: string): string
  */
 function resolvedDefinition(definition: EngineDefinition, rootDir: string, python: string): EngineDefinition {
   if (definition.transport === "in-process") return { ...definition, module: resolve(rootDir, definition.module) };
+  if (definition.transport === "file-exchange") return definition;
   const replacements: Readonly<Record<string, string>> = { root: rootDir, python };
   // The names were checked when the file was read, so each one has a replacement.
   const filled = (text: string): string => text.replace(PLACEHOLDER, (_written, name: string) => replacements[name]);

@@ -24,3 +24,13 @@ test("a one-shot engine of a pool worker is measured by the process table; a Pyt
   // A process per message, started as it is configured: the process table sees each while it runs.
   assert.equal(existsSync(join(oneshot, "needs-ps")), true);
 });
+
+test("a file-exchange engine of a pool worker starts no process, so there is nothing of it to measure", async (t) => {
+  const runsDir = join(tempDir(t), "runs");
+  const loaded = loadConfig({ rootDir: FAKE_ROOT, env: { LVRTC_RUNS_DIR: runsDir } });
+  const directory = tempDir(t);
+  const human = await memoryRegistry(loaded, directory).create("fake-human");
+  assert.equal((await human.describe()).identity.id, "fake-human");
+  await human.close();
+  assert.equal(existsSync(join(directory, "needs-ps")), false);
+});

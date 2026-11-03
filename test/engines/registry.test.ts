@@ -344,7 +344,7 @@ test("a createEngine that throws, as the fake does for options it does not know,
 
 test("a definition whose transport has no factory is unsupported-transport", async (t) => {
   // Every transport a definition can name is implemented; a caller's own map may leave one out.
-  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process", "stdio", "oneshot"]);
+  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process", "stdio", "oneshot", "file-exchange"]);
   const rootDir = rootWith(t, {
     worker: { transport: "stdio", command: ["python3", "-m", "worker"] },
     fake: inProcess("fake.ts", { id: "fake" }),
@@ -486,6 +486,25 @@ test("a oneshot definition is a program started per message, in the root, with i
   );
 });
 
+test("a file-exchange definition is an engine answered by files under the configuration's runs directory", async (t) => {
+  const hello = await createEngine({ id: "human" })({ contract: "1.0", id: "1", method: "hello", params: {} });
+  assert.ok(hello.ok);
+  const rootDir = rootWith(t, {
+    human: { transport: "file-exchange", descriptor: hello.result, prescriptions: ["table"], options: { id: "human" } },
+  });
+  const adapter = await registryOf(rootDir).create("human");
+  t.after(() => adapter.close());
+  assert.deepEqual(await adapter.describe(), hello.result);
+  const result = await adapter.run(echoRequest(Float64Array.of(2, 3)), CASE);
+  assert.equal(result.status, "pending");
+  // The job is handed over in <runsDir>/exchange/<engine id>/outbox, runsDir being the configuration's.
+  const [warning] = result.diagnostics.warnings;
+  const job = /^job ([0-9a-f]{64}) is in exchange\/human\/outbox:/.exec(warning)?.[1];
+  assert.ok(job !== undefined, warning);
+  const message = readFileSync(join(rootDir, "runs", "exchange", "human", "outbox", job, "message.json"), "utf8");
+  assert.equal(JSON.parse(message).params.request.id, result.requestId);
+});
+
 test("engineTimeouts: a definition's own waits, else those of the built-in engine of the id, else none", (t) => {
   const builtins: BuiltinEngines = {
     slow: { worker: () => ({ transport: "stdio", command: ["w"], options: {}, env: {} }), timeouts: { runMs: 5 } },
@@ -541,7 +560,7 @@ test("a factory in the map builds the transport of its kind, from the definition
         options: { id: "worker" },
         env: { MODE: "test" },
       },
-      { engineId: "worker", rootDir },
+      { engineId: "worker", rootDir, runsDir: join(rootDir, "runs") },
     ],
   ]);
   assert.equal((await adapter.describe()).identity.id, "worker");
