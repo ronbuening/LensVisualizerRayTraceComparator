@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="360" height="140" viewBox="0 0 360 140" role="img">
+<title>fake-pair: ladder heat map</title>
+<desc>One row for each run of the baseline and one column for each rung: a cell holds the gravest verdict of its records, and its records by verdict on hover.</desc>
+<style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
+.lvc .bg{fill:#fcfcfb}
+.lvc text{fill:#1c1c21}
+.lvc text.muted{fill:#5c5c66}
+.lvc text.head{font-weight:600;font-size:12px}
+.lvc .grid{stroke:#e6e6ea;stroke-width:1}
+.lvc .axis{stroke:#8a8a94;stroke-width:1}
+.lvc .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lvc .dash{stroke-dasharray:6 4}
+.lvc .dot{stroke:#fcfcfb;stroke-width:1.5}
+.lvc .band{fill:#eda100;fill-opacity:.16;stroke:#c98500;stroke-width:1;stroke-dasharray:2 3}
+.lvc .zeroline{stroke:#5c5c66;stroke-width:1}
+.lvc .gate{stroke:#d03b3b;stroke-width:1.5;stroke-dasharray:5 3;fill:none}
+.lvc .bar{fill:#2a78d6}
+.lvc .ring{fill:#fcfcfb;stroke:#2a78d6;stroke-width:2}
+.lvc .none{stroke:#8a8a94;stroke-width:2}
+.lvc .cell{stroke:#fcfcfb;stroke-width:2}
+.lvc .cell.empty{fill:#f4f4f6}
+.lvc text.vt{font-weight:600;text-anchor:middle}
+.lvc .s0{stroke:#2a78d6}
+.lvc .dot.s0{fill:#2a78d6}
+.lvc .s1{stroke:#e2622d}
+.lvc .dot.s1{fill:#e2622d}
+.lvc .s2{stroke:#16996a}
+.lvc .dot.s2{fill:#16996a}
+.lvc .s3{stroke:#b47b00}
+.lvc .dot.s3{fill:#b47b00}
+.lvc .s4{stroke:#cf5f8e}
+.lvc .dot.s4{fill:#cf5f8e}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#6250d6}
+.lvc .dot.s6{fill:#6250d6}
+.lvc .s7{stroke:#e34948}
+.lvc .dot.s7{fill:#e34948}
+.lvc .sx{stroke:#8a8a94}
+.lvc .dot.sx{fill:#8a8a94}
+.lvc .v-PASS{fill:#cdebcd}
+.lvc text.t-PASS{fill:#0b3d0b}
+.lvc .v-FLOOR{fill:#e3f2dc}
+.lvc text.t-FLOOR{fill:#24451a}
+.lvc .v-FAIL{fill:#f6cfcc}
+.lvc text.t-FAIL{fill:#5c0f0b}
+.lvc .v-ERROR{fill:#e9b7b3}
+.lvc text.t-ERROR{fill:#4a0906}
+.lvc .v-ATTENTION{fill:#fbe5ad}
+.lvc text.t-ATTENTION{fill:#4a3600}
+.lvc .v-RECORDED{fill:#e3e3ea}
+.lvc text.t-RECORDED{fill:#2c2c33}
+.lvc .v-UNSUPPORTED{fill:#ededf1}
+.lvc text.t-UNSUPPORTED{fill:#45454e}
+.lvc .v-BLOCKED{fill:#d9d9e1}
+.lvc text.t-BLOCKED{fill:#2c2c33}
+@media (prefers-color-scheme:dark){
+.lvc .bg{fill:#1a1a19}
+.lvc text{fill:#e7e7ec}
+.lvc text.muted{fill:#a3a3ad}
+.lvc .grid{stroke:#2e2e34}
+.lvc .axis{stroke:#6b6b75}
+.lvc .dot{stroke:#1a1a19}
+.lvc .band{fill:#c98500;fill-opacity:.22;stroke:#eda100}
+.lvc .zeroline{stroke:#a3a3ad}
+.lvc .gate{stroke:#e66767}
+.lvc .bar{fill:#3987e5}
+.lvc .ring{fill:#1a1a19;stroke:#3987e5}
+.lvc .none{stroke:#6b6b75}
+.lvc .cell{stroke:#1a1a19}
+.lvc .cell.empty{fill:#222226}
+.lvc .s0{stroke:#3987e5}
+.lvc .dot.s0{fill:#3987e5}
+.lvc .s1{stroke:#d95926}
+.lvc .dot.s1{fill:#d95926}
+.lvc .s2{stroke:#199e70}
+.lvc .dot.s2{fill:#199e70}
+.lvc .s3{stroke:#c98500}
+.lvc .dot.s3{fill:#c98500}
+.lvc .s4{stroke:#d55181}
+.lvc .dot.s4{fill:#d55181}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#9085e9}
+.lvc .dot.s6{fill:#9085e9}
+.lvc .s7{stroke:#e66767}
+.lvc .dot.s7{fill:#e66767}
+.lvc .sx{stroke:#6b6b75}
+.lvc .dot.sx{fill:#6b6b75}
+.lvc .v-PASS{fill:#1d4a22}
+.lvc text.t-PASS{fill:#d9f2d9}
+.lvc .v-FLOOR{fill:#2b4223}
+.lvc text.t-FLOOR{fill:#e1efdb}
+.lvc .v-FAIL{fill:#5a1d1a}
+.lvc text.t-FAIL{fill:#ffdcd8}
+.lvc .v-ERROR{fill:#6b2420}
+.lvc text.t-ERROR{fill:#ffe3e0}
+.lvc .v-ATTENTION{fill:#56420a}
+.lvc text.t-ATTENTION{fill:#fbeac0}
+.lvc .v-RECORDED{fill:#34343c}
+.lvc text.t-RECORDED{fill:#e4e4ea}
+.lvc .v-UNSUPPORTED{fill:#2a2a31}
+.lvc text.t-UNSUPPORTED{fill:#c8c8d0}
+.lvc .v-BLOCKED{fill:#3d3d46}
+.lvc text.t-BLOCKED{fill:#e4e4ea}
+}</style>
+<rect class="bg" x="0" y="0" width="360" height="140"/>
+<text x="12" y="20" class="head">fake-pair: ladder heat map</text>
+<text x="143.2" y="44" class="muted" text-anchor="middle">selftest</text>
+<g><title>singlet</title><text x="87.2" y="68" text-anchor="end">singlet</text></g>
+<g><title>singlet, selftest: FAIL; 1 FAIL</title><rect class="cell v-FAIL" x="95.2" y="52" width="96" height="24"/><text x="143.2" y="68" class="vt t-FAIL">FAIL</text></g>
+<g><title>double-gauss</title><text x="87.2" y="92" text-anchor="end">double-gauss</text></g>
+<g><title>double-gauss, selftest: FAIL; 1 FAIL</title><rect class="cell v-FAIL" x="95.2" y="76" width="96" height="24"/><text x="143.2" y="92" class="vt t-FAIL">FAIL</text></g>
+<g><rect class="cell v-FAIL" x="12" y="116" width="24" height="14"/><text x="42" y="127">FAIL</text></g>
+</svg>

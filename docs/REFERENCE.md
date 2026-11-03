@@ -6126,7 +6126,8 @@ Stage 8.1 is a read-only server over the run directories and baselines: `lvrtc s
 [--no-ask]` listens on `127.0.0.1` only (default port 8077; `--port 0` picks a free one; a busy port fails at once),
 prints `http://127.0.0.1:<port>/` and runs until SIGINT or SIGTERM, then closes and exits 0. The runs directory is the
 configuration's `runsDir` (so `LVRTC_RUNS_DIR` applies), the baselines are `<root>/baselines/*.json`, the policy is the
-policy at hand. Nothing is written; no directory is made; no store entry is read in 8.1.
+policy at hand. Nothing is written; no directory is made; no store entry is read in 8.1 (Stage 8.2's section pages
+read the entries of their own request, below).
 
 **What it shows.** The index lists every run directory with a manifest (not `store`, `exchange`, `mtf`): its jobs by
 status, whether it is compared, its pairs by verdict, how many are FAIL or ERROR, and the problems of its files
@@ -6169,3 +6170,55 @@ see code changed since it ran (the benchmark baselines record LensVisualizer's c
 the suite's last run (a run there without a case is stale, a run not there is not known), else not known. The badge
 is `STALE(<reasons>)`, `CURRENT` (every reason known, none holding) or `NOT KNOWN(<reasons>)`.
 `lvrtc engine describe <id>... [--root <dir>] [--json]` prints what a run's manifest would record of each engine now.
+
+**Charts (Stage 8.2).** Hand-written SVG, inline in the pages and styled by the page's one `<style>` (light and dark
+by `prefers-color-scheme`); no script, library or external resource. The builders in `src/dashboard/charts/` are pure:
+fixed sizes and margins, one coordinate formatter (`px`, two decimals), no ids, a fixed palette of classes (eight
+categorical slots in a fixed order, each at least 3:1 against the light and the dark surface, a neutral ninth for any
+series past the eighth; a marker shape of its own for each series, so curves that coincide stay told apart;
+status-like fills for verdicts). Every chart has a `<title>` and a `<desc>`, axis labels with units and a legend, and
+every mark a `<title>` with its value and its source (file and pointer) or, for a derived number, its derivation and
+sources. The view models are in `src/dashboard/chartViews.ts`; every sentence, tooltips and derivations included, is
+a template of `DASHBOARD_TEXT.charts`, and the wording test lints the text of every `<title>` as well as the visible
+text.
+
+- **MTF overlays** (a section of `mtf.native`, any rung): for each field and cut (sagittal, tangential), every job of
+  the request in engine order, each engine's first answer and then each later step (`ManifestJob.step`) as a series of
+  its own, read from the store entry the manifest names (`storeKey`): the frequencies are the entry's
+  `/request/spec/frequenciesPerMm`, the curve its `/result/data/fields/<k>/<cut>` decoded by the contract's codec (a
+  Curve; a value that is not a finite number is null, drawn as a gap and never as 0). A field its engine calls
+  unconverged is dashed; one it has no curves of (unavailable) is named in the legend with its status and not drawn,
+  and a job without an answer says one word there (missing, unreadable, pending, error, unsupported), the full
+  sentence in the legend entry's tooltip and among the page's problems.
+- **Difference curves**: for each pair of the section's sets (each pair of engines once), the first engine's value
+  minus the second's at each frequency where both are finite, each engine by the answer the comparison judges (the
+  comparator's rule, `lastA?.data ?? a`: its last step where that step has data, else its first answer); each point a
+  Derived with both curves as sources. A pair the comparison found UNSUPPORTED or ERROR has no curve, and the caption
+  says so. The band drawn about 0 is the policy's attention band of the field (`mtfOnAxis.maxAbs` for a field whose
+  value is 0, as the comparator decides it, else `mtfOffAxis.maxAbs`) or, for a rung without those, the tolerance of
+  `mtf.maxAbs` (R4f). Where the sorting of the MTF table (or of a peer table) sets a field aside (a class other than
+  `method`), the caption names that pair and no other.
+- **Ladder heat map** (run page, baseline page): a row per run of the manifest or the baseline (a run with no
+  comparison included), a column per rung, a cell the gravest verdict (`gravestVerdict`) of the pairs of its
+  comparisons (both modes) or of its records, labelled with the verdict (colour is never the only channel), its pairs
+  by verdict on hover; an empty cell for a run without that rung. A map of more than 150 rows (`HEAT_MAP_ROWS`) is
+  left out with a sentence that says how many it would have had (the catalog).
+- **Per-surface ray deviation** (a section of `rays.trace` of R2): for each pair of the section, the largest distance
+  between the two engines' hits on each surface (each visit, for `rays.trace` v2 and later, whose axis then says
+  "Visit") over the rays ok in both (`okInBoth`), leaving out a visit either records no point for (`unrecordedHits`),
+  decoded with `decodeTrace`: R2's own `hits.maxDistance`, surface by surface (`charts.test.ts` holds the skip against
+  the real comparator on two synthetic answers). A bar per surface on a log axis, a ring on the axis for 0, a dash
+  where no ray is ok in both, and R2's tolerance of `hits.maxDistance` as a line. The largest bar must be the pair's
+  `hits.maxDistance` in `comparisons.json`; a view says when it is not (a problem on the page), and says nothing where
+  every visit is left out and the comparison records 0.
+
+A section page reads exactly the store entries the manifest names for its request's jobs
+(`sources.storeEntry(key)`, kept by the (size, mtime, inode) of the file as the other files are, and part of the
+page's cache key: an entry rewritten or removed under a running server is another page); the store directory is never
+listed. An entry that is not there or cannot be read is a problem on the page. The golden SVGs are
+`test/fixtures/golden/dashboard/*.svg`, written only by `node test/report/writeGolden.ts` from the dashboard's fixture
+(`test/dashboard/chartGoldens.ts`: R5 and R5g stand-ins, the fake pair's run and baseline, `ref` against a copy with a
+radius one part in 1e6 too long and a faithful copy on the Double-Gauss case); `test/dashboard/charts.test.ts` holds
+each byte for byte and lists no stale golden. No golden depends on a hash of engine code: the fixture's copies of
+`ref` state a fingerprint and an adapter revision of the fixture's own, so a comment added to `ref` or to the contract
+moves no chart.

@@ -3,10 +3,11 @@
 // escape what they show, show a file that cannot be read as a problem, are the same bytes for the same files, name
 // no absolute path, say nothing the wording lint rejects, and write nothing anywhere.
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { after, before, test } from "node:test";
 
 import { baselineText } from "../../src/baseline/build.ts";
@@ -21,13 +22,21 @@ import type { Dashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
 import { tempDir } from "../core/support.ts";
-import { buildFixture, fetchFrom, treeOf, visibleText, walkView } from "./support.ts";
+import { buildFixture, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
 
 let fixture: DashboardFixture;
 let dashboard: Dashboard;
 let mtfDashboard: Dashboard;
-let before_: { root: string[]; runs: string[]; mtfRoot: string[]; mtfRuns: string[] };
+let raysDashboard: Dashboard;
+let before_: {
+  root: string[];
+  runs: string[];
+  mtfRoot: string[];
+  mtfRuns: string[];
+  raysRoot: string[];
+  raysRuns: string[];
+};
 
 before(async () => {
   fixture = await buildFixture();
@@ -36,6 +45,8 @@ before(async () => {
     runs: treeOf(fixture.runsDir),
     mtfRoot: treeOf(fixture.mtfRootDir),
     mtfRuns: treeOf(fixture.mtfRunsDir),
+    raysRoot: treeOf(fixture.raysRootDir),
+    raysRuns: treeOf(fixture.raysRunsDir),
   };
   dashboard = await startDashboard({ rootDir: fixture.rootDir, runsDir: fixture.runsDir, port: 0 });
   mtfDashboard = await startDashboard({
@@ -44,10 +55,17 @@ before(async () => {
     port: 0,
     policyFile: fixture.mtfPolicyFile,
   });
+  raysDashboard = await startDashboard({
+    rootDir: fixture.raysRootDir,
+    runsDir: fixture.raysRunsDir,
+    port: 0,
+    policyFile: fixture.raysPolicyFile,
+  });
 });
 after(async () => {
   await dashboard.close();
   await mtfDashboard.close();
+  await raysDashboard.close();
   fixture.remove();
 });
 
@@ -162,6 +180,15 @@ test("the HTML page and its JSON twin agree: the twin is the view, and the page 
       () =>
         createSources({ rootDir: fixture.mtfRootDir, runsDir: fixture.mtfRunsDir, policyFile: fixture.mtfPolicyFile }),
     ],
+    [
+      raysDashboard,
+      () =>
+        createSources({
+          rootDir: fixture.raysRootDir,
+          runsDir: fixture.raysRunsDir,
+          policyFile: fixture.raysPolicyFile,
+        }),
+    ],
   ] as const) {
     const views = createViews(sourcesOf(), () => ({ state: "not-asked" }));
     for (const path of await everyPage(server.port)) {
@@ -232,28 +259,36 @@ test("a comparison file that is not JSON is a problem on the page and in its twi
 });
 
 test("the same files give the same bytes, and no page or view names an absolute path", async () => {
-  const again = await startDashboard({ rootDir: fixture.rootDir, runsDir: fixture.runsDir, port: 0 });
-  try {
-    for (const path of await everyPage(dashboard.port)) {
-      for (const asked of [path, path === "/" ? "/api/index" : `/api${path}`]) {
-        const [one, two] = [await fetchFrom(dashboard.port, asked), await fetchFrom(again.port, asked)];
-        assert.equal(one.body, two.body, asked);
-        for (const absolute of [fixture.directory, REPO_ROOT, tmpdir(), "/Users/", "/private/", "/home/"]) {
-          assert.ok(!one.body.includes(absolute), `${asked} names ${absolute}`);
+  for (const [server, rootDir, runsDir, policyFile] of [
+    [dashboard, fixture.rootDir, fixture.runsDir, undefined],
+    [mtfDashboard, fixture.mtfRootDir, fixture.mtfRunsDir, fixture.mtfPolicyFile],
+    [raysDashboard, fixture.raysRootDir, fixture.raysRunsDir, fixture.raysPolicyFile],
+  ] as const) {
+    const again = await startDashboard({ rootDir, runsDir, policyFile, port: 0 });
+    try {
+      for (const path of await everyPage(server.port)) {
+        for (const asked of [path, path === "/" ? "/api/index" : `/api${path}`]) {
+          const [one, two] = [await fetchFrom(server.port, asked), await fetchFrom(again.port, asked)];
+          assert.equal(one.body, two.body, asked);
+          for (const absolute of [fixture.directory, REPO_ROOT, tmpdir(), "/Users/", "/private/", "/home/"]) {
+            assert.ok(!one.body.includes(absolute), `${asked} names ${absolute}`);
+          }
+          assert.doesNotMatch(one.body, /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/, `${asked}: no timestamp`);
         }
-        assert.doesNotMatch(one.body, /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/, `${asked}: no timestamp`);
       }
+    } finally {
+      await again.close();
     }
-  } finally {
-    await again.close();
   }
 });
 
 test("every sentence of every page passes the wording lint", async () => {
-  for (const server of [dashboard, mtfDashboard]) {
+  // The charts included: their axis labels, legends and captions are visible text too.
+  for (const server of [dashboard, mtfDashboard, raysDashboard]) {
     for (const path of await everyPage(server.port)) {
-      const text = visibleText((await fetchFrom(server.port, path)).body);
-      assert.deepEqual(wordingProblems(text), [], path);
+      const body = (await fetchFrom(server.port, path)).body;
+      assert.deepEqual(wordingProblems(visibleText(body)), [], path);
+      assert.deepEqual(wordingProblems(titleTexts(body).join("\n\n")), [], `${path}: its tooltips`);
     }
   }
   // While asking, once asking failed, and with every run page split: those pages say other sentences.
@@ -283,10 +318,45 @@ test("every sentence of every page passes the wording lint", async () => {
 test("nothing was written: the root and the runs directories, their stores included, are as they were", async () => {
   await everyPage(dashboard.port);
   await everyPage(mtfDashboard.port);
+  await everyPage(raysDashboard.port);
   assert.deepEqual(treeOf(fixture.rootDir), before_.root);
   assert.deepEqual(treeOf(fixture.runsDir), before_.runs);
   assert.deepEqual(treeOf(fixture.mtfRootDir), before_.mtfRoot);
   assert.deepEqual(treeOf(fixture.mtfRunsDir), before_.mtfRuns);
+  assert.deepEqual(treeOf(fixture.raysRootDir), before_.raysRoot);
+  assert.deepEqual(treeOf(fixture.raysRunsDir), before_.raysRuns);
+});
+
+test("a section page is of its store entries: one rewritten, then removed, under a running server is another page", async (t) => {
+  const runsDir = join(tempDir(t), "runs");
+  cpSync(fixture.mtfRunsDir, runsDir, { recursive: true });
+  const served = await startDashboard({
+    rootDir: fixture.mtfRootDir,
+    runsDir,
+    policyFile: fixture.mtfPolicyFile,
+    port: 0,
+  });
+  try {
+    const run = JSON.parse((await fetchFrom(served.port, "/api/run/r5-stand-ins")).body);
+    const section = run.sections.find((each: { run: string }) => each.run === "edge").section;
+    const path = `/run/r5-stand-ins/section/${section}`;
+    const manifest = JSON.parse(readFileSync(join(runsDir, "r5-stand-ins", "manifest.json"), "utf8"));
+    const wave = manifest.jobs.find(
+      (job: { run: string; engine: string }) => job.run === "edge" && job.engine === "wave",
+    );
+    const entry = join(runsDir, "store", `${wave.storeKey}.json.gz`);
+    const first = (await fetchFrom(served.port, path)).body;
+    assert.equal((await fetchFrom(served.port, path)).body, first, "kept while the entry is unchanged");
+    writeFileSync(entry, gzipSync("{ not an entry"));
+    const rewritten = (await fetchFrom(served.port, path)).body;
+    assert.notEqual(rewritten, first);
+    assert.match(visibleText(rewritten), /The store entry for wave cannot be read, so that answer is not drawn/);
+    rmSync(entry);
+    const removed = (await fetchFrom(served.port, path)).body;
+    assert.ok(visibleText(removed).includes(DASHBOARD_TEXT.charts.storeMissing("wave", wave.storeKey)));
+  } finally {
+    await served.close();
+  }
 });
 
 test("lvrtc serve: prints its URL, asks the engines once it listens, serves LVRTC_RUNS_DIR, and stops when told", async () => {
@@ -414,6 +484,8 @@ test("a baseline page is a summary: a catalog of 1,341 runs stays within a few h
   }));
   const view = views.baseline("large");
   assert.equal(view.summary.records, 1341 * 5);
+  // Its heat map would have a row per run: it is left out, and the page says so.
+  assert.deepEqual(view.heatMap?.omitted, { count: 1341 });
   const size = (text: string): number => Buffer.byteLength(text) / 1024;
   assert.ok(size(renderBaseline(view)) < 600, `${size(renderBaseline(view))} KB of HTML`);
   assert.ok(size(canonicalJson(view)) < 400, `${size(canonicalJson(view))} KB of JSON`);

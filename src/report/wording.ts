@@ -728,4 +728,97 @@ export const DASHBOARD_TEXT = {
     asked: "The engines were asked once, when the dashboard started.",
     askFailed: (problem: string): string => `The engines could not be asked (${problem}).`,
   },
+  /** What the charts of the dashboard say (Stage 8.2): their titles, axes, legends and captions. */
+  charts: {
+    intro:
+      "Each chart is drawn from the numbers of this page's files: hover over a mark to see its value and where it was read from, or how it was derived.",
+    storeIntro:
+      "The curves and the rays are read from the store entries the manifest names for this request's jobs, and from no other entry.",
+    overlayTitle: (subject: string, field: string, cut: string): string => `${subject}: MTF at field ${field}, ${cut}`,
+    overlayIntro:
+      "One chart for each field and cut: each engine's own curve as its store entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.",
+    differenceTitle: (subject: string, field: string, cut: string): string =>
+      `${subject}: differences at field ${field}, ${cut}`,
+    differenceIntro:
+      "For each pair of the request, the first engine's curve minus the second's at each frequency where both are finite numbers, each engine by the answer the comparison judges (its last step where that step has data, else its first answer); the shaded band is the attention band or the tolerance the policy gives the rung at that field.",
+    heatMapTitle: (subject: string): string => `${subject}: ladder heat map`,
+    heatMapRun:
+      "One row for each run and one column for each rung: a cell holds the gravest verdict of the pairs of its comparisons, and its pairs by verdict on hover.",
+    heatMapBaseline:
+      "One row for each run of the baseline and one column for each rung: a cell holds the gravest verdict of its records, and its records by verdict on hover.",
+    heatMapOmitted: (rows: string, most: string): string =>
+      `The heat map is left out: it would have ${rows} rows, and a page draws one of at most ${most}.`,
+    deviationTitle: (subject: string, place: string, a: string, b: string): string =>
+      `${subject}: hit distance by ${place}, ${a} and ${b}`,
+    deviationIntro:
+      "For each pair of the request, the largest distance between the two engines' hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as R2 measures hits.maxDistance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the tolerance of the policy.",
+    deviationLargest: (largest: string, recorded: string): string =>
+      `The largest bar is ${largest} mm, and the comparison records hits.maxDistance ${recorded} mm.`,
+    deviationDiffers: (largest: string, recorded: string): string =>
+      `The largest bar, ${largest} mm, is not the hits.maxDistance the comparison records, ${recorded} mm.`,
+    deviationUnmeasured: "The comparison records no hits.maxDistance for this pair.",
+    deviationNoBars: (recorded: string): string =>
+      `No surface has a ray ok in both answers whose visit both record, and the comparison records hits.maxDistance ${recorded} mm.`,
+    deviationNotFinite: (largest: string): string =>
+      `The comparison records a hits.maxDistance that is not a finite number, and the largest bar is ${largest} mm.`,
+    deviationNoBarsDiffers: (recorded: string): string =>
+      `No surface has a bar, yet the comparison records hits.maxDistance ${recorded} mm.`,
+    setAside: (a: string, b: string, kind: string, reason: string): string =>
+      `The comparison sets this field aside for ${a} and ${b} as ${kind} (${reason}), so their differences enter no band.`,
+    differenceLeftOut: (a: string, b: string, verdict: string): string =>
+      `The pair of ${a} and ${b} is ${verdict} in the comparison, so no difference of it is drawn.`,
+    storeMissing: (engine: string, key: string): string =>
+      `The store has no entry ${key} for ${engine}, so that answer is not drawn.`,
+    storeInvalid: (engine: string, problem: string): string =>
+      `The store entry for ${engine} cannot be read, so that answer is not drawn: ${problem}`,
+    noAnswer: (engine: string, status: string): string => `${engine} has no answer to draw: its job is ${status}.`,
+    notTraces: (problem: string): string => `The two answers cannot be set side by side: ${problem}.`,
+    noCharts: "No chart applies to this request.",
+    axisFrequency: "Frequency (cycles/mm)",
+    axisMtf: "MTF",
+    axisDifference: "Difference of MTF",
+    axisSurface: "Surface",
+    axisVisit: "Visit",
+    axisDistance: "Largest hit distance (mm, log scale)",
+    legendStep: (engine: string, step: string): string => `${engine} #${step}`,
+    legendState: (series: string, state: string, reason: string): string => `${series} (${state}: ${reason})`,
+    legendNoCurves: (series: string, status: string): string => `${series} (no curves: ${status})`,
+    legendPair: (a: string, b: string): string => `${a} minus ${b}`,
+    legendBand: (kind: string, value: string): string => `${kind} ±${value}`,
+    legendBar: "largest hit distance",
+    legendZero: "0 mm",
+    legendNone: "no ray ok in both",
+    legendGate: (value: string): string => `tolerance ${value} mm`,
+    legendNoPair: "no cell of this run and rung",
+    derivedDifference: (a: string, b: string, element: string): string =>
+      `${a} minus ${b} at element ${element} of both curves`,
+    derivedDeviation: (a: string, b: string, place: string, index: string): string =>
+      `the largest distance between the hits of ${a} and ${b} on ${place} ${index}, over the rays ok in both answers whose visit both record`,
+    tipField: (field: string, source: string): string => `field ${field}: ${source}`,
+    tipPoint: (series: string, cut: string, frequency: string, value: string, source: string): string =>
+      `${series}, ${cut} at ${frequency} cycles/mm: ${value} (${source})`,
+    tipDifference: (
+      pair: string,
+      frequency: string,
+      frequencySource: string,
+      value: string,
+      derivation: string,
+      of: string,
+    ): string => `${pair} at ${frequency} cycles/mm (${frequencySource}): ${value}, derived: ${derivation} of ${of}`,
+    tipLimit: (kind: string, value: string, where: string, source: string): string =>
+      `${kind} ±${value} ${where}: ${source}`,
+    onAxis: "on the axis",
+    offAxis: "off the axis",
+    anyField: "at every field",
+    tipBar: (place: string, index: string, value: string, derivation: string, of: string): string =>
+      `${place} ${index}: ${value}, derived: ${derivation} of ${of}`,
+    tipGate: (value: string, source: string): string => `tolerance ${value} mm: ${source}`,
+    tipRecorded: (source: string): string => `hits.maxDistance: ${source}`,
+    recordedLabel: (value: string): string => `hits.maxDistance ${value} mm`,
+    millimetres: (value: string): string => `${value} mm`,
+    tipCell: (run: string, rung: string, verdict: string, counts: string): string =>
+      `${run}, ${rung}: ${verdict}; ${counts}`,
+    tipEmptyCell: (run: string, rung: string): string => `${run}, ${rung}: no cell of this run and rung`,
+    tipSeries: (series: string, reason: string): string => `${series}: ${reason}`,
+  },
 } as const;

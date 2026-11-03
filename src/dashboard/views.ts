@@ -27,6 +27,8 @@ import type { ReportModel, ReportSection, SupportRow } from "../report/model.ts"
 import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
+import { NO_CHARTS, baselineHeatMap, buildSectionCharts, runHeatMap } from "./chartViews.ts";
+import type { HeatMapView, PairSorting, SectionCharts, StoreReader } from "./chartViews.ts";
 import { documentLabel, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Derived, DocumentName, Figure, Source } from "./figure.ts";
 import type { AskedEngines } from "./identity.ts";
@@ -346,6 +348,8 @@ export interface RunView {
   readonly summary: readonly { readonly mode: ComparisonMode; readonly counts: readonly VerdictCount[] }[];
   readonly failing: number;
   readonly sections: readonly SectionEntry[];
+  /** The ladder heat map of its comparisons: a row per run, a column per rung; null when it was not compared. */
+  readonly heatMap: HeatMapView | null;
   /** The jobs that wait for an answer. */
   readonly pending: readonly {
     readonly run: string;
@@ -411,6 +415,7 @@ export function buildRunView(
       summary: [],
       failing: 0,
       sections: [],
+      heatMap: null,
       pending: [],
     };
   }
@@ -463,6 +468,10 @@ export function buildRunView(
       : [],
     failing: compared ? report.failing : 0,
     sections: split ? [] : sections,
+    heatMap:
+      comparisons.state === "ok" && comparisons.value.comparisons.length > 0
+        ? runHeatMap(value, comparisons.value)
+        : null,
     pending: value.jobs
       .filter((job) => job.status === "pending")
       .map(({ run, rung, engine, requestId, step }) => ({ run, rung, engine, requestId, step: step ?? null })),
@@ -614,6 +623,8 @@ export interface SectionView {
     }[];
   } | null;
   readonly mtf: MtfView | null;
+  /** The charts of the request: MTF overlays and differences, or the per-surface deviation of an R2 request. */
+  readonly charts: SectionCharts;
 }
 
 /** The pieces of the comparison file a section's figures are read from. */
@@ -785,10 +796,21 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
   };
 }
 
+/** How an MTF table and each of its peers sort the fields of their pairs: what a chart's set-aside caption is of. */
+function sortingsOf(table: MtfView): PairSorting[] {
+  const own = {
+    a: table.pair.a,
+    b: table.pair.b,
+    fields: table.fields.map(({ class: c, reason }) => ({ class: c, reason })),
+  };
+  return [own, ...table.peers.flatMap(sortingsOf)];
+}
+
 /**
  * The section page of the section `index` of a compared run, from its comparison file, its report model
  * (`runReport` of the same documents) and its input problems (`runInputProblems`). Null for a section the run does
- * not have.
+ * not have. With the run's manifest and a reader of the store, its charts are drawn from the store entries the
+ * manifest names for the request's jobs; without them it has none.
  */
 export function buildSectionView(
   name: string,
@@ -797,6 +819,8 @@ export function buildSectionView(
   policy: Loaded<PolicyAtHand>,
   report: ReportModel,
   inputProblems: readonly string[],
+  manifest: RunManifest | null = null,
+  stored: StoreReader | null = null,
 ): SectionView | null {
   const section: ReportSection | undefined = report.sections[index];
   const indices = sectionSetGroups(comparisons.comparisons)[index];
@@ -901,6 +925,23 @@ export function buildSectionView(
     consensus: section.consensus,
     recorded,
     mtf,
+    charts:
+      manifest === null || stored === null
+        ? NO_CHARTS
+        : buildSectionCharts({
+            name,
+            run: section.run,
+            rung: section.rung,
+            quantity: section.quantity,
+            requestId: section.requestId,
+            manifest,
+            comparisons,
+            sets: indices,
+            policyDocument: context.policyDocument,
+            policy: context.policy,
+            sorting: mtf === null ? [] : sortingsOf(mtf),
+            stored,
+          }),
   };
 }
 
@@ -974,6 +1015,8 @@ export interface BaselineView extends BaselineHead {
   /** Every rung of the baseline, in the order its runs first have them: the columns of `runs`. */
   readonly rungs: readonly string[];
   readonly runs: readonly BaselineRunEntry[];
+  /** The ladder heat map of its records: a row per run, a column per rung; null for a baseline that cannot be read. */
+  readonly heatMap: HeatMapView | null;
 }
 
 /** The view of the page of one run of a baseline: its records with their figures and badges. */
@@ -1069,7 +1112,7 @@ export function buildBaselineView(
   const judged = judge(stem, loaded, policy, asked, lastRun);
   if (!("baseline" in judged)) {
     const none = { records: 0, badges: [], stale: [], notKnown: [] };
-    return { kind: "dashboard-baseline", ...judged, engines: [], summary: none, rungs: [], runs: [] };
+    return { kind: "dashboard-baseline", ...judged, engines: [], summary: none, rungs: [], runs: [], heatMap: null };
   }
   const { baseline, basis, head } = judged;
   const rungs = [...new Set(baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung)))];
@@ -1125,6 +1168,7 @@ export function buildBaselineView(
     },
     rungs,
     runs,
+    heatMap: baselineHeatMap(baseline, rungs),
   };
 }
 

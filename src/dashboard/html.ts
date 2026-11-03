@@ -16,6 +16,12 @@ import {
   consensusSentence,
 } from "../report/wording.ts";
 import type { MtfRowStatus } from "../report/wording.ts";
+import { HEAT_MAP_ROWS } from "./chartViews.ts";
+import type { HeatMapView, SectionCharts } from "./chartViews.ts";
+import { renderDeviation } from "./charts/deviation.ts";
+import { renderHeatMap } from "./charts/heatMap.ts";
+import { differenceCaption, overlayCaption, renderMtfDifference, renderMtfOverlay } from "./charts/mtf.ts";
+import { CHART_STYLE } from "./charts/svg.ts";
 import { documentLabel } from "./figure.ts";
 import type { Derived, Figure } from "./figure.ts";
 import type {
@@ -72,6 +78,8 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .v-RECORDED,.v-UNSUPPORTED,.v-BLOCKED{color:var(--quiet);font-weight:600}
 details{margin:4px 0}summary{cursor:pointer}
 ul{margin:4px 0;padding-left:20px}
+figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-top:4px}
+${CHART_STYLE}
 `;
 
 /** A whole page: the head with its one stylesheet, the bar of links, and the body. */
@@ -238,6 +246,61 @@ function problemsCell(lines: readonly string[]): string {
   );
 }
 
+// ── Charts ───────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** A chart in a figure, with a caption where it has more to say than the intro above it (never an empty one). */
+function chartFigure(svg: string, caption: string): string {
+  const said = caption === "" ? "" : `<figcaption>${escapeHtml(caption)}</figcaption>`;
+  return `<figure><div class="scroll">${svg}</div>${said}</figure>`;
+}
+
+/** The heat map of a run directory or a baseline, or the sentence that says why it is left out. */
+function heatMapBlock(view: HeatMapView | null, subject: string, kind: "run" | "baseline"): string[] {
+  if (view === null) return [];
+  const text = DASHBOARD_TEXT.charts;
+  if (view.omitted !== null) {
+    return [h(2, "Ladder heat map"), p(text.heatMapOmitted(count(view.omitted.count), count(HEAT_MAP_ROWS)))];
+  }
+  return [
+    h(2, "Ladder heat map"),
+    chartFigure(renderHeatMap(view, subject, kind), kind === "run" ? text.heatMapRun : text.heatMapBaseline),
+  ];
+}
+
+/** The charts of a section: its store problems, its MTF overlays and differences, its per-surface deviations. */
+function chartsBlock(charts: SectionCharts, subject: string): string[] {
+  const text = DASHBOARD_TEXT.charts;
+  const any = charts.overlays.length + charts.differences.length + charts.deviations.length > 0;
+  if (!any && charts.problems.length === 0) return [];
+  const out = [
+    h(2, "Charts"),
+    p(text.intro),
+    p(text.storeIntro),
+    ...charts.problems.map((problem) => p(problem, "problem")),
+  ];
+  if (charts.overlays.length > 0) {
+    out.push(h(3, "MTF of each answer"), p(text.overlayIntro));
+    for (const view of charts.overlays) out.push(chartFigure(renderMtfOverlay(view, subject), overlayCaption(view)));
+  }
+  if (charts.differences.length > 0) {
+    out.push(h(3, "Differences of each pair"), p(text.differenceIntro));
+    for (const view of charts.differences) {
+      out.push(chartFigure(renderMtfDifference(view, subject), differenceCaption(view)));
+    }
+  }
+  if (charts.deviations.length > 0) {
+    out.push(h(3, "Hit distance by surface or visit"), p(text.deviationIntro));
+    for (const view of charts.deviations) {
+      out.push(
+        ...view.problems.map((problem) => p(problem, "problem")),
+        chartFigure(renderDeviation(view, subject), view.caption),
+      );
+    }
+  }
+  if (!any) out.push(p(text.noCharts));
+  return out;
+}
+
 // ── The index ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** The index page. */
@@ -374,6 +437,7 @@ export function renderRun(view: RunView): string {
       ),
       p(DASHBOARD_TEXT.failing(view.failing)),
       ...DASHBOARD_TEXT.verdicts.map((sentence) => p(sentence)),
+      ...heatMapBlock(view.heatMap, view.name, "run"),
     );
   }
   const engineIds = view.supportByRung[0]?.engines.map(({ engine }) => engine) ?? [];
@@ -597,6 +661,7 @@ export function renderSection(view: SectionView): string {
     );
   }
   if (view.mtf !== null) body.push(h(2, "MTF"), p(DASHBOARD_TEXT.mtf), ...mtfTable(view.mtf, "Table"));
+  body.push(...chartsBlock(view.charts, `${view.run}, ${view.rung}`));
   return page(title, `/api${sectionHref(view.name, view.section)}`, body);
 }
 
@@ -652,6 +717,7 @@ export function renderBaseline(view: BaselineView): string {
         engineText(engine.now),
       ]),
     ),
+    ...heatMapBlock(view.heatMap, view.stem, "baseline"),
     h(2, "Runs"),
     p(DASHBOARD_TEXT.baselineRuns),
     table(

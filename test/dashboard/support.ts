@@ -34,8 +34,28 @@ import type { RunManifest } from "../../src/core/manifest.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { COUNT_KEYS, isCurve, isDerived, isFigure } from "../../src/dashboard/figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "../../src/dashboard/figure.ts";
-import { FAKE_ROOT } from "../core/support.ts";
-import { R5_POLICY, r5Cycle } from "../report/r5Fixture.ts";
+import { compareManifest } from "../../src/compare/manifest.ts";
+import { runSuite } from "../../src/core/orchestrator.ts";
+import { STORE_DIRECTORY, createResultStore } from "../../src/core/resultStore.ts";
+import { createFixtureCaseSource } from "../../src/core/suite.ts";
+import { createRefEngine } from "../../src/engines/ref/engine.ts";
+import { RemoteEngineAdapter } from "../../src/engines/remote.ts";
+import { createInProcessTransport } from "../../src/transports/inProcess.ts";
+import { DOUBLE_GAUSS, FAKE_ROOT, SINGLET, suiteOf, watchedRegistry } from "../core/support.ts";
+import type { EngineMaker } from "../core/support.ts";
+import { createEngine as createBentEngine } from "../engines/ref/bentEngine.ts";
+import type { BentOptions } from "../engines/ref/bentEngine.ts";
+import { ON_AXIS_BAND, R5_POLICY, mtfEngine, r5Cycle } from "../report/r5Fixture.ts";
+import { FLAT, SPEC, raised } from "../compare/mtfNativeSupport.ts";
+import { followUpsOf } from "../../src/compare/followUp.ts";
+import { MTF_NATIVE } from "../../src/contract/quantities/mtfNative.ts";
+import type { MtfNativeData, MtfNativeSpec } from "../../src/contract/quantities/mtfNative.ts";
+import { makeRequest } from "../../src/contract/request.ts";
+import { encodeF8 } from "../../src/core/numeric/ndarray.ts";
+import type { RungDefinition } from "../../src/core/rungs.ts";
+import { R5G_POLICY, r5gCycle } from "../report/r5gFixture.ts";
+import type { ProtocolHandler, ProtocolResponse } from "../../src/contract/protocol.ts";
+import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { FAULT_ROOT, suiteFile } from "../report/support.ts";
 
 /** The fixture: a root with baselines, its runs directory, and the R5 stand-ins under a root and runs of their own. */
@@ -47,6 +67,13 @@ export interface DashboardFixture {
   readonly mtfRootDir: string;
   readonly mtfRunsDir: string;
   readonly mtfPolicyFile: string;
+  /**
+   * The rays of `ref` against two copies of it (`RAYS_SUITE`), one with a radius one part in 1e6 too long, judged by
+   * the comparator's policy with an R0 that blocks nothing: its own root, runs directory and policy file.
+   */
+  readonly raysRootDir: string;
+  readonly raysRunsDir: string;
+  readonly raysPolicyFile: string;
   /** The suites run into `runsDir`. */
   readonly suites: readonly string[];
   /** A run directory whose name needs escaping, and one whose comparison file is not JSON. */
@@ -65,6 +92,129 @@ const SUITES: readonly { readonly name: string; readonly root: string; readonly 
 
 /** The run directory with a name that a page must escape. */
 export const ODD_NAME = "a<b&c";
+
+/** The policy of the MTF part of the fixture: the R5 stand-ins' rung and the R5g stand-ins', with their bands. */
+export const MTF_FIXTURE_POLICY: Policy = { ...R5_POLICY, rungs: { ...R5_POLICY.rungs, ...R5G_POLICY.rungs } };
+
+/** The suite of the rays part of the fixture: `ref`, a copy with a bent radius and a faithful copy, on R0 and R2. */
+export const RAYS_SUITE = "rays";
+
+/** The comparator's own policy with an R0 that blocks nothing, so that R2 speaks for itself. */
+export function unblockingPolicy(): Policy {
+  const own = loadPolicy();
+  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
+  return { ...own, rungs: { ...own.rungs, r0 } };
+}
+
+/** Runs `ref` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
+/** The copy of `ref` whose radius on surface 8 is one part in 1e6 too long; it sorts after the faithful copy. */
+export const WARPED = "ref-warped";
+
+/**
+ * A protocol handler that says it is `id` with a fingerprint and an adapter revision of the fixture's own, whatever
+ * the code behind it: no golden chart or store key of the fixture depends on a hash of any engine's source, so a
+ * chart changes only when its numbers or its drawing do.
+ */
+function fixedIdentity(id: string, handler: ProtocolHandler): ProtocolHandler {
+  const fingerprint = hashCanonical({ fixture: "dashboard", engine: id });
+  const adapterRevision = hashCanonical({ fixture: "dashboard", adapter: id });
+  return async (message) => {
+    const reply: ProtocolResponse = structuredClone(await handler(message));
+    if (!reply.ok) return reply;
+    const result = reply.result as { identity?: Record<string, unknown>; engine?: Record<string, unknown> };
+    for (const who of [result.identity, result.engine]) {
+      if (who === undefined) continue;
+      who.id = id;
+      who.fingerprint = fingerprint;
+      if (who.adapterRevision !== undefined) who.adapterRevision = adapterRevision;
+      if (who.details !== undefined) who.details = { fixture: "dashboard" };
+    }
+    return reply;
+  };
+}
+
+async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFile> {
+  const engine =
+    (handler: () => ProtocolHandler): EngineMaker =>
+    (id) =>
+      new RemoteEngineAdapter({ id, transport: createInProcessTransport(fixedIdentity(id, handler())) });
+  const bend: BentOptions = { id: WARPED, edits: [{ pointer: "/system/surfaces/8/shape/radius", scale: 1 + 1e-6 }] };
+  const { registry } = watchedRegistry({
+    ref: engine(() => createRefEngine()),
+    [WARPED]: engine(() => createBentEngine(bend)),
+    "ref-twin": engine(() => createBentEngine({ id: "ref-twin" })),
+  });
+  const suite = suiteOf(RAYS_SUITE, [
+    {
+      name: "double-gauss",
+      opticalCase: DOUBLE_GAUSS,
+      rungs: ["r0", "r2"],
+      fields: { kind: "angles-deg", values: [0, 10] },
+      sampling: { bundleGrid: 12 },
+    },
+    // A run that could not start: a row of the heat map that no comparison has.
+    { name: "no-case", opticalCase: null, problems: ["the fixture gives this run no case"] },
+  ]);
+  const sources = { fixture: createFixtureCaseSource(runsDir) };
+  const { manifest } = await runSuite({ suite, registry, runsDir, sources });
+  const store = createResultStore(join(runsDir, STORE_DIRECTORY));
+  return compareManifest({ manifest, store, policy, reference: "ref", cases: () => DOUBLE_GAUSS });
+}
+
+/** The suite whose first field is off the axis and whose stand-in for optiland fails when asked again at 512 rays. */
+export const REORDERED_SUITE = "r5-reordered";
+
+/**
+ * Runs `REORDERED_SUITE` into `runsDir` and compares it by `policy`: one request of two fields, 0.5 then 0, of two
+ * stand-ins. On the axis (the second field) optiland's sagittal curve is twice the band above lv's at 10 cycles/mm,
+ * so it is asked again at 512 rays, and that answer is an error: the comparison judges its first answer.
+ */
+async function reorderedCycle(runsDir: string, policy: Policy): Promise<ComparisonFile> {
+  const spec: MtfNativeSpec = { ...SPEC, fields: { kind: "image-height-fractions", values: [0.5, 0] } };
+  const rung: RungDefinition = {
+    id: "r5",
+    quantity: MTF_NATIVE,
+    engines: ["lv", "optiland"],
+    buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec })],
+  };
+  const field = (value: number, sagittal: readonly number[]) => ({
+    field: value,
+    fieldAngleDeg: 8 * value,
+    imageHeightMm: 16 * value,
+    sagittal: encodeF8([...sagittal]),
+    tangential: encodeF8([...FLAT]),
+    status: "ok" as const,
+    sampling: {},
+  });
+  const data = (name: string, onAxis: readonly number[]): MtfNativeData => ({
+    fields: [field(0.5, FLAT), field(0, onAxis)],
+    method: { name, params: {} },
+    focus: { mode: "design", appliedShiftMm: 0 },
+    aperture: {},
+    lines: [{ wavelengthNm: 587.5618, weight: 1 }],
+    notes: [],
+  });
+  const { registry } = watchedRegistry({
+    lv: mtfEngine(() => ({ status: "ok", data: data("lv-product", FLAT) })),
+    optiland: mtfEngine((request) =>
+      request.engineOptions?.fftRays === 512
+        ? { status: "error", error: { code: "engine-failure", message: "the stand-in fails at 512 rays" } }
+        : { status: "ok", data: data("scalar-fft-mtf", raised(2 * ON_AXIS_BAND, 0)) },
+    ),
+  });
+  const suite = suiteOf(REORDERED_SUITE, [{ name: "singlet", opticalCase: SINGLET }]);
+  const rungDefinitions = [rung];
+  const { manifest } = await runSuite({
+    suite,
+    registry,
+    runsDir,
+    rungDefinitions,
+    rungs: [rung.id],
+    followUps: followUpsOf(policy),
+  });
+  const store = createResultStore(join(runsDir, STORE_DIRECTORY));
+  return compareManifest({ manifest, store, policy, rungDefinitions });
+}
 
 async function cli(runsDir: string, args: readonly string[]): Promise<void> {
   const inputs = { rootDir: REPO_ROOT, cwd: REPO_ROOT, env: { LVRTC_RUNS_DIR: runsDir } };
@@ -160,14 +310,30 @@ export async function buildFixture(): Promise<DashboardFixture> {
   const mtfRootDir = join(directory, "mtf-root");
   const mtfRunsDir = join(directory, "mtf-runs");
   const mtfPolicyFile = join(directory, "r5-policy.json");
-  writeFileSync(mtfPolicyFile, `${canonicalJson(R5_POLICY)}\n`);
-  const cycle = await r5Cycle(mtfRunsDir);
+  writeFileSync(mtfPolicyFile, `${canonicalJson(MTF_FIXTURE_POLICY)}\n`);
+  const cycle = await r5Cycle(mtfRunsDir, MTF_FIXTURE_POLICY);
   writeFileSync(join(mtfRunsDir, "r5-stand-ins", COMPARISONS_FILE), comparisonFileText(cycle.comparisons));
   writeBaseline(
     mtfRootDir,
     "r5-stand-ins.mtf",
-    buildBaseline(cycle.manifest, cycle.comparisons, R5_POLICY, MTF_BASELINE),
+    buildBaseline(cycle.manifest, cycle.comparisons, MTF_FIXTURE_POLICY, MTF_BASELINE),
   );
+  // The R5g stand-ins beside them: a field of optiland's without curves (NaN at every frequency).
+  const geometric = await r5gCycle(mtfRunsDir, MTF_FIXTURE_POLICY);
+  writeFileSync(join(mtfRunsDir, "r5g-stand-ins", COMPARISONS_FILE), comparisonFileText(geometric.comparisons));
+  // A first field off the axis, and a later step that is an error: the comparison judges optiland's first answer.
+  const reordered = await reorderedCycle(mtfRunsDir, MTF_FIXTURE_POLICY);
+  writeFileSync(join(mtfRunsDir, REORDERED_SUITE, COMPARISONS_FILE), comparisonFileText(reordered));
+
+  // The rays of ref and its two copies, judged by a policy whose R0 blocks nothing.
+  const raysRootDir = join(directory, "rays-root");
+  const raysRunsDir = join(directory, "rays-runs");
+  const raysPolicyFile = join(directory, "rays-policy.json");
+  mkdirSync(raysRootDir, { recursive: true });
+  const raysPolicy = unblockingPolicy();
+  writeFileSync(raysPolicyFile, `${canonicalJson(raysPolicy)}\n`);
+  const rays = await raysCycle(raysRunsDir, raysPolicy);
+  writeFileSync(join(raysRunsDir, RAYS_SUITE, COMPARISONS_FILE), comparisonFileText(rays));
 
   return {
     directory,
@@ -176,6 +342,9 @@ export async function buildFixture(): Promise<DashboardFixture> {
     mtfRootDir,
     mtfRunsDir,
     mtfPolicyFile,
+    raysRootDir,
+    raysRunsDir,
+    raysPolicyFile,
     suites: SUITES.map((suite) => suite.name),
     oddName: ODD_NAME,
     corrupt: "corrupt",
@@ -325,6 +494,18 @@ export function fetchFrom(
     asked.on("error", reject);
     asked.end();
   });
+}
+
+/** The text of every <title> of a page or chart (its tooltips), entities decoded: what the wording lint reads too. */
+export function titleTexts(html: string): string[] {
+  return [...html.matchAll(/<title>([\s\S]*?)<\/title>/g)].map(([, text]) =>
+    text
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&"),
+  );
 }
 
 /** The visible text of a page, one block per text node, entities decoded: what the wording lint reads. */

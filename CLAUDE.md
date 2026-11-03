@@ -1952,8 +1952,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **`lvrtc serve` is read-only in Stage 8.1** (`src/dashboard`, `src/cli/commands/serve.ts`): it reads the run
   directories of the configuration's `runsDir` (skipping `store`, `exchange`, `mtf`), `<root>/baselines/*.json` and
   the policy at hand (`loadPolicy()`), and writes nothing: no file, no directory, no store entry
-  (`test/dashboard/server.test.ts` snapshots the trees). A view needs no store entry in 8.1; `sources.storeEntry` is
-  there for 8.2 and reads one entry by a key of `/^[0-9a-f]{64}$/` (gzip first, else a legacy plain entry, as the
+  (`test/dashboard/server.test.ts` snapshots the trees). Only a section page reads store entries (Stage 8.2, below):
+  `sources.storeEntry` reads one entry by a key of `/^[0-9a-f]{64}$/` (gzip first, else a legacy plain entry, as the
   store). A file is parsed and checked once per (size, mtime, inode); summaries, report models, input problems and
   pages are kept per the files they are of (`sources.derived`). The index never builds a run's report model:
   summaries only.
@@ -1976,18 +1976,17 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `comparisons:<suite>`, `baseline:<stem>`, `store:<key>` and `policy:<stem>` (the policy at hand: a column's
   limit, a band). A `Curve` is a list in the JSON or a store entry's encoded ndarray. A number the dashboard computes
   is a `Derived` with its derivation and sources, never a Figure. Every other number is a count under a key of
-  `COUNT_KEYS` (`count`, `failing`, `records`, `section`, `element`, `place`, `requests`, `sectionCount`); add a key
-  only with its recount in `test/dashboard/figures.test.ts`. That test is the stage's verification: every view of
-  every fixture page walked, each Figure and Curve resolved by the test from the file on disk and `Object.is`-equal;
-  each pointer held to the place of the view that holds it (the section's set with its run, rung and request; the
-  pair and metric of the cell; the column's engine and the row's field element; the baseline's run, rung, pair and
-  verdict; a band's metric by the row's field) and each cell to the independent path (`buildReport`,
-  `buildBaselineReport`, `buildMtfBaselineReport`), which also catches a left-out row, column or metric; the
-  pointer's member the one the view key names (`holdMeaning`); each Derived recomputed; each count recounted. Five
-  one-line mutations of `views.ts` (an MTF column read from column 0, the bands swapped, recorded cells read from the
-  first engine, a verdict count from `verdicts[0]`, a rung's requests from `runs/0/rungs/0`) each turn it red: keep
-  it so. Views are pure and deterministic (canonical JSON twins under `/api/...`), with no timestamp, host or
-  absolute path.
+  `COUNT_KEYS` (`count`, `failing`, `records`, `section`, `element`, `place`, `requests`, `sectionCount`,
+  `surface`); add a key only with its recount in `test/dashboard/figures.test.ts`. That test is the stage's
+  verification: every view of every fixture page walked, each Figure and Curve resolved by the test from the file on
+  disk and `Object.is`-equal; each pointer held to the place of the view that holds it (the section's set with its run,
+  rung and request; the pair and metric of the cell; the column's engine and the row's field element; the baseline's
+  run, rung, pair and verdict; a band's metric by the row's field) and each cell to the independent path (`buildReport`,
+  `buildBaselineReport`, `buildMtfBaselineReport`), which also catches a left-out row, column or metric; the pointer's
+  member the one the view key names (`holdMeaning`); each Derived recomputed; each count recounted. Five one-line
+  mutations of `views.ts` (an MTF column read from column 0, the bands swapped, recorded cells read from the first
+  engine, a verdict count from `verdicts[0]`, a rung's requests from `runs/0/rungs/0`) each turn it red: keep it so.
+  Views are pure and deterministic (canonical JSON twins under `/api/...`), with no timestamp, host or absolute path.
 - **STALE basis decision** (`src/dashboard/staleness.ts`): a baseline record is stale by case, engine or policy as
   `checkBaseline` decides it (`STALE_REASONS`), but the dashboard runs nothing again: never REFRESHABLE, DRIFT or MOVED
   (that is `lvrtc baseline check`'s). Policy: the baseline's `policy.hash` against the policy at hand; the catalog's
@@ -2014,5 +2013,33 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   of `DASHBOARD_TEXT` in `src/report/wording.ts` (or an existing report template); headings stay short labels. A test
   renders every fixture page (asking, asked, failed, not asked, split) and holds the text to `wordingProblems`, and
   lints every template.
-- 8.2 adds `src/dashboard/charts/` (pure SVG, golden files from `node test/report/writeGolden.ts`) and 8.3
-  `src/dashboard/control.ts` (the one writer, through child `lvrtc` commands, one at a time).
+- **Charts (Stage 8.2)**: view models in `src/dashboard/chartViews.ts`, pure SVG builders in `src/dashboard/charts/`
+  (one coordinate formatter `px`, no ids, fixed classes in `CHART_STYLE`, which a page puts in its one `<style>` and a
+  standalone SVG carries itself; series colours at least 3:1 against the light and the dark surface, and a marker shape
+  of its own for each series; a `<title>`, `<desc>`, axis labels with units and a legend on every chart; a `<title>`
+  with value and source, or derivation and sources, on every mark). MTF overlays and differences on a section of
+  `mtf.native`, the per-surface (per-visit for `rays.trace` v2 and later) deviation on a section of R2's `rays.trace`,
+  the ladder heat map on the run and baseline pages (rows from `manifest.runs`, a run without comparisons included; left
+  out above `HEAT_MAP_ROWS`, 150). **Store entries only by the manifest's keys**: a section page reads the `storeKey`s
+  of its request's jobs through `sources.storeEntry(key)` (cached by file identity, and in the page's cache key), never
+  by listing or scanning `runs/store`; an entry not there or not readable is a problem on the page, and a series without
+  curves says only a word in its legend (missing, unreadable, pending, error, unsupported), the sentence in the entry's
+  tooltip. An MTF curve is a Curve of the entry's encoded array, a value that is not a finite number null (a gap, never
+  0). **A difference is of the answer the comparison judges**, by the comparator's rule (`mtfNative.ts`, `lastA?.data ??
+  a`): an engine's last step where it has data, else its first answer; a pair the comparison found UNSUPPORTED or ERROR
+  has none drawn, and its caption says so. On the axis is by the field's value (0), as the comparator decides it. A
+  set-aside caption names the pair whose sorting it is (the MTF table's pair or a peer's), never another drawn beside
+  it. **A Derived is never shown as a source figure**: a difference and a per-surface maximum (R2's `hits.maxDistance`
+  by surface: `decodeTrace` and `okInBoth` reused, a visit either answer records no point for (`unrecordedHits`) left
+  out, as `charts.test.ts` holds against the real comparator; nothing else restated) are Derived with their sources, and
+  `figures.test.ts` recomputes each by its own loop from the arrays the test decodes; each chart's pointers are held to
+  its job, field, cut, pair and policy limit; each heat-map cell's verdict to the gravest of a recount by
+  `VERDICT_GRAVITY`; `surface` is a count key, recounted. The largest bar must equal the pair's `hits.maxDistance`, or
+  the view says it does not (nothing is said where every visit is left out and R2 records 0). **Golden SVGs only from
+  `node test/report/writeGolden.ts`** (`test/fixtures/golden/dashboard/`, drawn by `test/dashboard/chartGoldens.ts`),
+  held byte for byte by `test/dashboard/charts.test.ts`; read the diff after a rewrite. No golden depends on a hash of
+  engine code: the rays fixture's engines say a fingerprint and an adapter revision of the fixture's own
+  (`fixedIdentity` in `test/dashboard/support.ts`), and the stand-ins' are of their options. Every chart sentence,
+  tooltips and derivations included, is a template of `DASHBOARD_TEXT.charts`; the visible text and the `<title>` text
+  of every fixture page are linted.
+- 8.3 adds `src/dashboard/control.ts` (the one writer, through child `lvrtc` commands, one at a time).

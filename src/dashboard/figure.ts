@@ -57,6 +57,8 @@ export const COUNT_KEYS: readonly string[] = Object.freeze([
   "requests",
   // How many of a run's requests were compared (its sections).
   "sectionCount",
+  // The place of a surface in a trace's list of surfaces, from 0: the bar of a deviation chart it is.
+  "surface",
 ]);
 
 /** The pointer of a path of members and indices (RFC 6901): `~` is written `~0` and `/` is written `~1`. */

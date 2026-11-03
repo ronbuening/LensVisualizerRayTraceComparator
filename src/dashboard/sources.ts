@@ -49,7 +49,10 @@ export interface DashboardSources {
   comparisons(name: string): Loaded<ComparisonFile>;
   baseline(stem: string): Loaded<Baseline>;
   policy(): Loaded<PolicyAtHand>;
-  /** The store entry of `key`; missing for a key that is no store key. No view of Stage 8.1 asks for one. */
+  /**
+   * The store entry of `key`; missing for a key that is no store key. A section page asks only for the keys the
+   * manifest names for its request's jobs; the store directory is never listed.
+   */
   storeEntry(key: string): Loaded<StoreEntry>;
   /**
    * A value computed from the documents named, computed again only when one of their files changed. `label` tells
@@ -197,10 +200,13 @@ export function createSources(options: DashboardSourcesOptions): DashboardSource
       }),
     storeEntry: (key) => {
       if (!STORE_KEY_PATTERN.test(key)) return { state: "missing" };
-      const lookup = createResultStore(join(runsDir, STORE_DIRECTORY)).get(key);
-      if (lookup.kind === "hit") return { state: "ok", value: lookup.entry };
-      if (lookup.kind === "miss") return { state: "missing" };
-      return { state: "invalid", problem: lookup.problem };
+      // Kept as the other files are, by the (size, mtime, inode) of the file the store reads it from.
+      return cached<StoreEntry>(pathOf(`store:${key}`), () => {
+        const lookup = createResultStore(join(runsDir, STORE_DIRECTORY)).get(key);
+        if (lookup.kind === "hit") return { state: "ok", value: lookup.entry };
+        if (lookup.kind === "miss") return { state: "missing" };
+        return { state: "invalid", problem: lookup.problem };
+      });
     },
     derived: <T>(label: string, documents: readonly DocumentName[], compute: () => T): T => {
       const key = JSON.stringify([label, ...documents.map((document) => [document, statKey(pathOf(document))])]);

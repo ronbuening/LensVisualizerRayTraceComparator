@@ -6,6 +6,11 @@
 // view that holds it (the set, pair, metric, participant, element, run and rung that place is of), and every cell is
 // set against the independent path (`buildReport`, `buildBaselineReport`, `buildMtfBaselineReport`) that puts a
 // value in the same cell, so that a view that leaves out a row, a column or a metric fails too.
+//
+// The charts of Stage 8.2 are held the same way: an MTF curve is a Curve the test decodes from the store entry itself
+// (a value that is not a finite number is null there: a gap), each held to the job, field and cut of its chart; a
+// difference and a per-surface maximum are Derived numbers the test recomputes by its own loop from the arrays they
+// name; a heat map's cells are recounted from the comparisons or the baseline.
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -20,12 +25,13 @@ import type { Baseline, BaselinePair } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
 import type { Verdict } from "../../src/contract/comparison.ts";
 import type { Policy } from "../../src/contract/policy.ts";
-import type { ManifestEngine, RunManifest } from "../../src/core/manifest.ts";
+import type { ManifestEngine, ManifestJob, RunManifest } from "../../src/core/manifest.ts";
+import type { StoreEntry } from "../../src/core/resultStore.ts";
 import { encodeF8 } from "../../src/core/numeric/ndarray.ts";
 import { decodeNdArray, isNdArray } from "../../src/core/numeric/ndarray.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { COUNT_KEYS, figureAt, pointerOf, pointerTokens, resolvePointer } from "../../src/dashboard/figure.ts";
-import type { DocumentName, Figure } from "../../src/dashboard/figure.ts";
+import type { DocumentName, Figure, Source } from "../../src/dashboard/figure.ts";
 import type { AskedEngines } from "../../src/dashboard/identity.ts";
 import { createViews } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
@@ -244,9 +250,43 @@ function runCounts(places: DocumentPlaces, name: string, split: boolean): Map<st
       failing += verdicts.filter((verdict) => verdict === "FAIL" || verdict === "ERROR").length;
     });
     if (!split) groups.forEach((_group, s) => expected.set(`/sections/${s}/section`, s));
+    if (comparisons.comparisons.length > 0) {
+      const rungs = [...new Set(comparisons.comparisons.map((set) => set.rung))];
+      heatMapCounts(
+        expected,
+        manifest.runs.map((run) => run.name),
+        rungs,
+        (run, rung) =>
+          comparisons.comparisons
+            .filter((set) => set.run === run && set.rung === rung)
+            .flatMap((set) => set.pairs.map((pair) => pair.verdict)),
+      );
+    }
   }
   expected.set("/failing", failing);
   return expected;
+}
+
+/** The most rows a heat map draws, as the design sets it. */
+const HEAT_MAP_ROWS = 150;
+
+/** A heat map's counts, recounted: each cell's pairs by verdict, each verdict it has; or how many rows were left out. */
+function heatMapCounts(
+  expected: Map<string, number>,
+  runs: readonly string[],
+  rungs: readonly string[],
+  verdictsOf: (run: string, rung: string) => Verdict[],
+): void {
+  if (runs.length > HEAT_MAP_ROWS) return void expected.set("/heatMap/omitted/count", runs.length);
+  runs.forEach((run, r) =>
+    rungs.forEach((rung, g) => {
+      const verdicts = verdictsOf(run, rung);
+      const present = VERDICTS.filter((verdict) => verdicts.includes(verdict));
+      tally(verdicts, present).forEach(([, n], k) =>
+        expected.set(`/heatMap/rows/${r}/cells/${g}/counts/${k}/count`, n),
+      );
+    }),
+  );
 }
 
 function runPartCounts(places: DocumentPlaces, name: string, place: number): Map<string, number> {
@@ -280,6 +320,75 @@ function sectionCounts(places: DocumentPlaces, name: string, index: number, view
     mtf.peers.forEach((peer, p) => mtfElements(peer, `${at}/peers/${p}`));
   };
   if (view.mtf !== null) mtfElements(view.mtf, "/mtf");
+  for (const [path, value] of chartCounts(places, name, index)) expected.set(path, value);
+  return expected;
+}
+
+/** The store entry of a key, read by the test from disk; null where the store has none. */
+function storeEntryOf(places: DocumentPlaces, key: string | null): StoreEntry | null {
+  if (key === null) return null;
+  const there = ["json.gz", "json"].some((extension) =>
+    existsSync(join(places.runsDir, "store", `${key}.${extension}`)),
+  );
+  return there ? (documentFromDisk(places, `store:${key}`) as StoreEntry) : null;
+}
+
+/** The jobs of a section's request, read by the test: by engine, each engine's first answer before its steps. */
+function jobsOfSection(places: DocumentPlaces, name: string, index: number) {
+  const { manifest, comparisons } = runDocuments(places, name);
+  assert.ok(manifest !== null && comparisons !== null);
+  const group = groupsOf(comparisons)[index];
+  const head = comparisons.comparisons[group[0]];
+  const jobs = manifest.jobs.filter(
+    (job) => job.run === head.run && job.rung === head.rung && job.requestId === head.requestId,
+  );
+  const engines = [...new Set(jobs.map((job) => job.engine))].sort();
+  const pairs: { a: string; b: string; set: number; pair: number; verdict: Verdict }[] = [];
+  for (const set of group) {
+    comparisons.comparisons[set].pairs.forEach(({ a, b, verdict }, pair) => {
+      if (!pairs.some((each) => [each.a, each.b].sort().join() === [a, b].sort().join()))
+        pairs.push({ a, b, set, pair, verdict });
+    });
+  }
+  return {
+    head,
+    comparisons,
+    pairs,
+    jobs: engines.flatMap((engine) => jobs.filter((job) => job.engine === engine)),
+  };
+}
+
+/** The counts of a section's charts, recounted: each chart's field element and each bar's surface. */
+function chartCounts(places: DocumentPlaces, name: string, index: number): Map<string, number> {
+  const expected = new Map<string, number>();
+  const { head, jobs, pairs } = jobsOfSection(places, name, index);
+  if (head.quantity === "mtf.native") {
+    const fields = Math.max(
+      0,
+      ...jobs.map((job) => {
+        const entry = storeEntryOf(places, job.storeKey);
+        return entry?.result.status === "ok" ? (entry.result.data as { fields: unknown[] }).fields.length : 0;
+      }),
+    );
+    for (let field = 0; field < fields; field++) {
+      ["sagittal", "tangential"].forEach((_cut, c) => {
+        expected.set(`/charts/overlays/${field * 2 + c}/element`, field);
+        expected.set(`/charts/differences/${field * 2 + c}/element`, field);
+      });
+    }
+  }
+  if (head.quantity === "rays.trace" && head.rung === "r2") {
+    pairs.forEach(({ a, b }, d) => {
+      const [one, two] = [a, b].map((engine) =>
+        storeEntryOf(places, jobs.find((job) => job.engine === engine && job.step === undefined)?.storeKey ?? null),
+      );
+      if (one?.result.status !== "ok" || two?.result.status !== "ok") return;
+      const surfaces = decoded((one.result.data as { hits: unknown }).hits).shape[0];
+      for (let surface = 0; surface < surfaces; surface++) {
+        expected.set(`/charts/deviations/${d}/bars/${surface}/surface`, surface);
+      }
+    });
+  }
   return expected;
 }
 
@@ -309,13 +418,79 @@ function baselineCounts(
       expected.set(`/runs/${r}/badges/${k}/count`, n),
     );
   });
+  heatMapCounts(
+    expected,
+    baseline.runs.map((run) => run.name),
+    [...new Set(baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung)))],
+    (run, rung) =>
+      baseline.runs
+        .filter((each) => each.name === run)
+        .flatMap((each) =>
+          each.rungs.filter((one) => one.rung === rung).flatMap((one) => one.pairs.map((pair) => pair.verdict)),
+        ),
+  );
   return expected;
 }
 
 // ── Figures, curves and derived numbers against the files ────────────────────────────────────────────────────────
 
-/** Recomputes a derived number from the sources it names. */
-function recompute(derivation: string, values: readonly (number | null)[]): number | null {
+/** An encoded array of a store entry, decoded by the test with the contract's codec: its values and its shape. */
+function decoded(value: unknown): { values: number[]; shape: readonly number[] } {
+  assert.ok(isNdArray(value), "an encoded array");
+  const array = decodeNdArray(value);
+  return { values: Array.from(array.values as ArrayLike<number>), shape: array.shape };
+}
+
+/**
+ * The largest distance between two answers' hits on one surface, by the test's own loop: over the rays whose status
+ * is 0 (ok) in both, leaving out a visit either marks unrecorded; null where no ray is left.
+ */
+function largestHitDistance(surface: number, of: readonly Source[], values: readonly unknown[]): number | null {
+  const documents = [...new Set(of.map((source) => source.document))];
+  assert.equal(documents.length, 2, "the arrays of two answers");
+  const arrays = documents.map((document) => {
+    const member = (name: string) => {
+      const at = of.findIndex((source) => source.document === document && source.pointer === `/result/data/${name}`);
+      return at < 0 ? null : decoded(values[at]);
+    };
+    const hits = member("hits");
+    const status = member("status");
+    assert.ok(hits !== null && status !== null, "hits and status of each answer");
+    return { hits, status, unrecorded: member("unrecordedHits") };
+  });
+  const [a, b] = arrays;
+  const rays = a.status.values.length;
+  let largest: number | null = null;
+  for (let ray = 0; ray < rays; ray++) {
+    if (a.status.values[ray] !== 0 || b.status.values[ray] !== 0) continue;
+    const visit = surface * rays + ray;
+    if (a.unrecorded?.values[visit] === 1 || b.unrecorded?.values[visit] === 1) continue;
+    let squares = 0;
+    for (let axis = 0; axis < 3; axis++) {
+      const d = a.hits.values[visit * 3 + axis] - b.hits.values[visit * 3 + axis];
+      squares += d * d;
+    }
+    const distance = Math.sqrt(squares);
+    if (largest === null || distance > largest) largest = distance;
+  }
+  return largest;
+}
+
+/** Recomputes a derived number from the sources it names and the values the test read at them. */
+function recompute(derivation: string, of: readonly Source[], read: readonly unknown[]): number | null {
+  const difference = /^(.+) minus (.+) at element (\d+) of both curves$/.exec(derivation);
+  if (difference !== null) {
+    const element = Number(difference[3]);
+    const [a, b] = read.map((value) => decoded(value).values[element]);
+    assert.ok(Number.isFinite(a) && Number.isFinite(b), "a difference only of two finite values");
+    return a - b;
+  }
+  const surface =
+    /^the largest distance between the hits of .+ on (?:surface|visit) (\d+), over the rays ok in both answers/.exec(
+      derivation,
+    );
+  if (surface !== null) return largestHitDistance(Number(surface[1]), of, read);
+  const values = read as readonly (number | null)[];
   const numbers = values.filter((value): value is number => value !== null);
   if (derivation === "the first judged column minus the second") return values[0]! - values[1]!;
   if (derivation.startsWith("the distance between")) return Math.abs(values[0]! - values[1]!);
@@ -360,6 +535,9 @@ function holdMeaning(view: unknown, path: string, pointer: string, what: string)
     across: ["gridSize", "numRays"],
     lastChange: ["maxDelta"],
     policyVersion: ["version"],
+    frequency: ["frequenciesPerMm"],
+    gate: ["tolerance"],
+    maxDistance: ["value"],
   };
   let expected: readonly string[];
   if (/^\d+$/.test(key)) {
@@ -405,16 +583,24 @@ function holdView(places: DocumentPlaces, view: unknown, expectedCounts: Map<str
       ? Array.from(decodeNdArray(found.value).values as ArrayLike<number>)
       : (found.value as unknown[]);
     assert.equal(values.length, curve.values.length, `${what} ${path}: every value of the curve`);
-    values.forEach((value, index) => assert.ok(Object.is(value, curve.values[index]), `${what} ${path}/${index}`));
+    // A value that is not a finite number is null in the curve: the contract writes it so, and a chart draws a gap.
+    values.forEach((value, index) =>
+      assert.ok(
+        typeof value === "number" && !Number.isFinite(value)
+          ? curve.values[index] === null
+          : Object.is(value, curve.values[index]),
+        `${what} ${path}/${index}`,
+      ),
+    );
   }
   for (const { path, derived } of walked.derived) {
     const values = derived.of.map((source) => {
       const found = valueAtPointer(read(source.document), source.pointer);
       assert.ok(found.found, `${what} ${path}: ${source.document} has ${source.pointer}`);
-      return found.value as number | null;
+      return found.value;
     });
     assert.ok(
-      Object.is(recompute(derived.derivation, values), derived.value),
+      Object.is(recompute(derived.derivation, derived.of, values), derived.value),
       `${what} ${path}: ${derived.derivation}`,
     );
   }
@@ -536,6 +722,169 @@ function holdSection(places: DocumentPlaces, name: string, view: SectionView, po
 
   assert.equal(view.mtf === null, section.mtf === undefined, `${what}: an MTF table`);
   if (view.mtf !== null && section.mtf !== undefined) holdMtf(comparisons, group, view.mtf, section.mtf, what);
+  holdCharts(places, name, view, policy, section.mtf, what);
+}
+
+/**
+ * The job of an engine whose answer a comparison of `mtf.native` judges, by the comparator's rule
+ * (`src/compare/mtfNative.ts`: `(lastA?.data ?? a)`): the engine's last later step where that answer has data, and its
+ * first answer where it has none (an error, a pending job, an unsupported answer) or there is no later step.
+ */
+function judgedJob(places: DocumentPlaces, jobs: readonly ManifestJob[], engine: string): ManifestJob | undefined {
+  const own = jobs.filter((job) => job.engine === engine);
+  const steps = own.filter((job) => job.step !== undefined);
+  const lastA = steps.at(-1);
+  const data = lastA === undefined ? undefined : storeEntryOf(places, lastA.storeKey)?.result.data;
+  return data !== undefined ? lastA : own.find((job) => job.step === undefined);
+}
+
+/**
+ * Holds a section's charts to their places: each overlay's series are the request's jobs, in order, each curve the
+ * one of its job's store entry at the chart's field and cut; each difference is of the last answers of its pair's two
+ * engines at that field and cut, at a frequency where both are finite, its limit the policy's for that field; each
+ * deviation is of a pair of the section, of its two engines' entries, beside that pair's hits.maxDistance.
+ */
+function holdCharts(
+  places: DocumentPlaces,
+  name: string,
+  view: SectionView,
+  policy: Policy,
+  table: MtfComparison | undefined,
+  what: string,
+): void {
+  const { head, jobs, pairs, comparisons } = jobsOfSection(places, name, view.section);
+  const storeOf = (engine: string, step: string | null | undefined): string => {
+    const job = jobs.find((each) => each.engine === engine && (each.step ?? null) === (step ?? null));
+    return `store:${job?.storeKey ?? "none"}`;
+  };
+  // The sorting of each pair the report model's MTF table (and its peers) is of: what a set-aside caption may claim.
+  const tables: MtfComparison[] = [];
+  const gather = (each: MtfComparison): void => {
+    tables.push(each);
+    (each.peers ?? []).forEach(gather);
+  };
+  if (table !== undefined) gather(table);
+  const sameEngines = (x: { a: string; b: string }, y: { a: string; b: string }): boolean =>
+    [x.a, x.b].sort().join() === [y.a, y.b].sort().join();
+  const asideOf = (pair: { a: string; b: string }, element: number) => {
+    const sorted = tables.find((each) => sameEngines(each.pair, pair));
+    const field = sorted?.fields[element];
+    if (sorted === undefined || field === undefined || field.class === null || field.class === "method") return null;
+    return { a: sorted.pair.a, b: sorted.pair.b, class: field.class, reason: field.reason ?? "" };
+  };
+  const { overlays, differences, deviations } = view.charts;
+  if (head.quantity !== "mtf.native") assert.equal(overlays.length + differences.length, 0, `${what}: no MTF chart`);
+  if (head.quantity !== "rays.trace" || head.rung !== "r2") assert.equal(deviations.length, 0, `${what}: no deviation`);
+  for (const overlay of overlays) {
+    const at = `${what} overlay ${overlay.element} ${overlay.cut}`;
+    assert.deepEqual(
+      overlay.series.map((series) => [series.engine, series.step]),
+      jobs.map((job) => [job.engine, job.step ?? null]),
+      `${at}: a series for each job, in order`,
+    );
+    overlay.series.forEach((series) => {
+      if (series.values !== null) {
+        assert.equal(series.values.source.document, storeOf(series.engine, series.step), `${at}: the job's entry`);
+        assert.equal(series.values.source.pointer, `/result/data/fields/${overlay.element}/${overlay.cut}`, at);
+      }
+      if (series.frequencies !== null) {
+        assert.equal(series.frequencies.source.document, storeOf(series.engine, series.step), at);
+        assert.equal(series.frequencies.source.pointer, "/request/spec/frequenciesPerMm", at);
+      }
+    });
+    if (overlay.field !== null)
+      assert.equal(overlay.field.source.pointer, `/result/data/fields/${overlay.element}/field`);
+    assert.deepEqual(
+      overlay.setAside,
+      tables.flatMap((each) => asideOf(each.pair, overlay.element) ?? []),
+      `${at}: each set-aside names the pair whose sorting it is`,
+    );
+  }
+  for (const chart of differences) {
+    const at = `${what} differences ${chart.element} ${chart.cut}`;
+    assert.deepEqual(
+      chart.pairs.map(({ a, b }) => [a, b]),
+      pairs.map(({ a, b }) => [a, b]),
+      `${at}: each pair of the section once`,
+    );
+    for (const pair of chart.pairs) {
+      const [one, two] = [judgedJob(places, jobs, pair.a), judgedJob(places, jobs, pair.b)];
+      assert.deepEqual([pair.aStep, pair.bStep], [one?.step ?? null, two?.step ?? null], `${at}: the judged answers`);
+      assert.deepEqual(pair.setAside, asideOf(pair, chart.element), `${at}: the set-aside of this pair alone`);
+      const verdict = pairs.find((each) => each.a === pair.a && each.b === pair.b)?.verdict;
+      assert.equal(pair.verdict, verdict, `${at}: the pair's verdict`);
+      const comparable = verdict !== "UNSUPPORTED" && verdict !== "ERROR";
+      const curves = [one, two].map((job) => {
+        const entry = storeEntryOf(places, job?.storeKey ?? null);
+        const field = (entry?.result.data as { fields?: Record<string, unknown>[] } | undefined)?.fields?.[
+          chart.element
+        ];
+        return field === undefined ? null : decoded(field[chart.cut]).values;
+      });
+      const finite = !comparable
+        ? []
+        : (curves[0] ?? []).flatMap((x, i) =>
+            Number.isFinite(x) && Number.isFinite(curves[1]?.[i] ?? Number.NaN) ? [i] : [],
+          );
+      assert.deepEqual(
+        pair.points.map((point) => Number(/element (\d+) of/.exec(point.difference.derivation)?.[1])),
+        finite,
+        `${at}: a point at each frequency where both are finite`,
+      );
+      for (const point of pair.points) {
+        const element = Number(/element (\d+) of/.exec(point.difference.derivation)?.[1]);
+        assert.deepEqual(
+          point.difference.of.map((source) => [source.document, source.pointer]),
+          [one, two].map((job) => [`store:${job?.storeKey}`, `/result/data/fields/${chart.element}/${chart.cut}`]),
+          `${at}: the two curves`,
+        );
+        assert.deepEqual(
+          [point.frequency.source.document, point.frequency.source.pointer],
+          [`store:${one?.storeKey}`, `/request/spec/frequenciesPerMm/${element}`],
+        );
+      }
+    }
+    if (chart.limit !== null) {
+      const metrics = policy.rungs[head.rung]?.metrics ?? {};
+      const banded = Object.hasOwn(metrics, "mtfOnAxis.maxAbs");
+      const metric = banded ? (chart.field?.value === 0 ? "mtfOnAxis.maxAbs" : "mtfOffAxis.maxAbs") : "mtf.maxAbs";
+      assert.deepEqual(
+        tokensOf(chart.limit),
+        ["rungs", head.rung, "metrics", metric, banded ? "attention" : "tolerance"],
+        `${at}: the limit of the field`,
+      );
+    }
+  }
+  assert.deepEqual(
+    deviations.map(({ a, b }) => [a, b]),
+    head.quantity === "rays.trace" && head.rung === "r2" ? pairs.map(({ a, b }) => [a, b]) : [],
+    `${what}: a deviation for each pair`,
+  );
+  deviations.forEach((chart, d) => {
+    const at = `${what} deviation ${chart.a} ${chart.b}`;
+    const { set, pair } = pairs[d];
+    const metric = comparisons.comparisons[set].pairs[pair].metrics.findIndex(
+      (each) => each.name === "hits.maxDistance",
+    );
+    if (metric < 0) assert.equal(chart.maxDistance, null, at);
+    else {
+      assert.deepEqual(
+        tokensOf(chart.maxDistance!),
+        ["comparisons", set, "pairs", pair, "metrics", metric, "value"],
+        at,
+      );
+    }
+    if (chart.gate !== null) {
+      assert.deepEqual(tokensOf(chart.gate), ["rungs", head.rung, "metrics", "hits.maxDistance", "tolerance"], at);
+    }
+    for (const bar of chart.bars) {
+      assert.deepEqual(
+        [...new Set(bar.distance.of.map((source) => source.document))],
+        [storeOf(chart.a, null), storeOf(chart.b, null)],
+        `${at}: the two answers`,
+      );
+    }
+  });
 }
 
 /** Holds an MTF table's figures to their columns, fields and bands, and to the report model's table. */
@@ -613,6 +962,49 @@ function holdRun(places: DocumentPlaces, name: string, view: RunView, parts: rea
   const rows = view.split ? parts.flatMap((part) => part.rows) : view.supportByRun.flatMap((each) => each.rows);
   assert.deepEqual(rows, report.support, `${name}: every row of the support matrix`);
   parts.forEach((part) => assert.equal(part.run, manifest.runs[part.place].name));
+  if (comparisons !== null && comparisons.comparisons.length > 0) {
+    holdHeatMap(
+      view.heatMap,
+      manifest.runs.map((run) => run.name),
+      [...new Set(comparisons.comparisons.map((set) => set.rung))],
+      (run, rung) =>
+        comparisons.comparisons
+          .filter((set) => set.run === run && set.rung === rung)
+          .flatMap((set) => set.pairs.map((pair) => pair.verdict)),
+      name,
+    );
+  } else assert.equal(view.heatMap, null, `${name}: no heat map without comparisons`);
+}
+
+/**
+ * Holds a heat map to the documents: a row for each run the manifest or baseline has (one with no comparison
+ * included), a column for each rung, and each cell's verdict the gravest of its pairs by `VERDICT_GRAVITY`, recounted.
+ */
+function holdHeatMap(
+  view: RunView["heatMap"],
+  runs: readonly string[],
+  rungs: readonly string[],
+  verdictsOf: (run: string, rung: string) => Verdict[],
+  what: string,
+): void {
+  assert.ok(view !== null, `${what}: a heat map`);
+  assert.deepEqual(view.rungs, rungs, `${what}: a column for each rung`);
+  if (runs.length > HEAT_MAP_ROWS) return void assert.deepEqual(view.rows, []);
+  assert.deepEqual(
+    view.rows.map((row) => row.run),
+    runs,
+    `${what}: a row for each run`,
+  );
+  view.rows.forEach((row) =>
+    row.cells.forEach((cell, g) => {
+      const verdicts = verdictsOf(row.run, rungs[g]);
+      assert.equal(cell?.verdict ?? null, gravest(verdicts), `${what}: ${row.run} ${rungs[g]}, the gravest verdict`);
+      assert.deepEqual(
+        cell?.counts.map(({ verdict }) => verdict) ?? [],
+        VERDICTS.filter((verdict) => verdicts.includes(verdict)),
+      );
+    }),
+  );
 }
 
 /** Holds a baseline run page's figures to their run, rung, pair, verdict and metric, and to the baseline report. */
@@ -693,6 +1085,18 @@ function holdBaseline(places: DocumentPlaces, view: BaselineView): void {
     }),
   );
   if (view.policy !== null) assert.deepEqual(tokensOf(view.policy.version), ["policy", "version"]);
+  holdHeatMap(
+    view.heatMap,
+    baseline.runs.map((run) => run.name),
+    view.rungs,
+    (run, rung) =>
+      baseline.runs
+        .filter((each) => each.name === run)
+        .flatMap((each) =>
+          each.rungs.filter((one) => one.rung === rung).flatMap((one) => one.pairs.map((pair) => pair.verdict)),
+        ),
+    view.stem,
+  );
 }
 
 // ── Every page ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -777,11 +1181,17 @@ test("every view-model number equals the result JSON: with the engines as asked"
   holdEveryPage(places, { state: "asked", engines });
 });
 
-test("every view-model number equals the result JSON: the R5 stand-ins, their MTF tables and MTF baseline", () => {
+test("every view-model number equals the result JSON: the R5 and R5g stand-ins, their tables, charts and baseline", () => {
   const places = { rootDir: fixture.mtfRootDir, runsDir: fixture.mtfRunsDir, policyFile: fixture.mtfPolicyFile };
   const held = holdEveryPage(places, { state: "not-asked" });
-  assert.ok(held.derived > 0, "the MTF tables have derived differences, each recomputed");
+  assert.ok(held.derived > 0, "the MTF tables and charts have derived differences, each recomputed");
   assert.ok(held.figures > 300, `${held.figures} figures`);
+});
+
+test("every view-model number equals the result JSON: ref against its copies, R2's hit distance by surface", () => {
+  const places = { rootDir: fixture.raysRootDir, runsDir: fixture.raysRunsDir, policyFile: fixture.raysPolicyFile };
+  const held = holdEveryPage(places, { state: "not-asked" });
+  assert.ok(held.derived >= 2 * 3 * 11, `${held.derived} derived numbers: a bar for each surface of each pair`);
 });
 
 test("a curve is held to its list in the JSON, or to the store's encoded ndarray decoded by the codec", (t) => {
@@ -821,5 +1231,6 @@ test("a JSON pointer escapes ~ and /, and resolves members, indices and nothing 
     "requests",
     "section",
     "sectionCount",
+    "surface",
   ]);
 });

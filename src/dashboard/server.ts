@@ -9,6 +9,7 @@ import type { AddressInfo, Socket } from "node:net";
 import type { ComparisonFile } from "../compare/comparisonFile.ts";
 import type { Baseline } from "../contract/baseline.ts";
 import type { RunManifest } from "../core/manifest.ts";
+import { sectionSetGroups } from "../report/model.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import type { DocumentName } from "./figure.ts";
 import {
@@ -20,6 +21,7 @@ import {
   renderRunPart,
   renderSection,
 } from "./html.ts";
+import { chartsReadStore, requestStoreKeys } from "./chartViews.ts";
 import { askEngines } from "./identity.ts";
 import type { AskedEngines, EngineDescribeRunner } from "./identity.ts";
 import { createSources } from "./sources.ts";
@@ -137,6 +139,11 @@ export interface DashboardViews {
   runPart(name: string, place: number): RunPartView | null;
   /** Null for a run that was not compared or a section it does not have. */
   section(name: string, index: number): SectionView | null;
+  /**
+   * The store keys the manifest names for the jobs of a section's request: the only store entries its page reads,
+   * and which its page is kept by. Empty for a section the run does not have.
+   */
+  sectionStoreKeys(name: string, index: number): string[];
   baseline(stem: string): BaselineView;
   /** Null for a place the baseline does not have, or a baseline that cannot be read. */
   baselineRun(stem: string, place: number): BaselineRunView | null;
@@ -220,7 +227,28 @@ export function createViews(
       const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
       if (manifest.state !== "ok" || comparisons.state !== "ok") return null;
       const report = reportOf(name, manifest.value);
-      return buildSectionView(name, index, comparisons.value, sources.policy(), report, inputProblemsOf(name));
+      return buildSectionView(
+        name,
+        index,
+        comparisons.value,
+        sources.policy(),
+        report,
+        inputProblemsOf(name),
+        manifest.value,
+        (key) => sources.storeEntry(key),
+      );
+    },
+    sectionStoreKeys: (name, index) => {
+      const manifest = sources.manifest(name);
+      const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
+      if (manifest.state !== "ok" || comparisons.state !== "ok") return [];
+      const sets = sources.derived("section-groups", [`comparisons:${name}`], () =>
+        sectionSetGroups(comparisons.value.comparisons),
+      );
+      const first = sets[index]?.[0];
+      if (first === undefined) return [];
+      const { run, rung, quantity, requestId } = comparisons.value.comparisons[first];
+      return chartsReadStore(quantity, rung) ? requestStoreKeys(manifest.value, run, rung, requestId) : [];
     },
     baseline: (stem) => {
       const { loaded, lastRun } = baselineInputs(stem);
@@ -285,7 +313,11 @@ export function createRouter(
       if (route.length === 4 && number !== undefined && PLACE.test(number)) {
         const place = Number(number);
         if (sub === "section") {
-          return answer(api, `section:${name}:${place}`, documents, () => views.section(name, place), renderSection);
+          // A section page is of the store entries of its request too: an entry that comes, goes or changes is
+          // another page.
+          const keys = views.sectionStoreKeys(name, place);
+          const withStore: DocumentName[] = [...documents, ...keys.map((key): DocumentName => `store:${key}`)];
+          return answer(api, `section:${name}:${place}`, withStore, () => views.section(name, place), renderSection);
         }
         if (sub === "run") {
           return answer(api, `run-part:${name}:${place}`, documents, () => views.runPart(name, place), renderRunPart);
