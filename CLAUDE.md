@@ -703,9 +703,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **`test/fixtures/` is data, not source**: excluded from `tsc`, eslint and prettier. Tests load fixture modules
   from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only** (`workers/python/lvrtc_worker_kit`, Python `>=3.10`, type hints, 120
-  columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
-  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
-  standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
+  columns) and writes nothing to disk but the result file a one-shot worker is told to write; numpy is used only
+  inside the optiland worker. Nothing is installed into the optiland environment. Its tests are `unittest` in
+  `workers/python/tests/kit`. `lvrtc_optiland` imports the standard library, the kit, numpy and optiland, and
+  importing the package itself imports none of the last two.
 - **Investigations are result-only and outside every engine** (`src/diagnostics`, `workers/python/diagnostics`,
   `bin/z50f12-investigation.mjs`; Stage 4.2): no engine imports them, they write only into the temporary
   directory they are given, LV is reached through the binding and optiland through `lvrtc_optiland` under
@@ -1815,3 +1816,43 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   above; optiland's axial aim deferred until after Phase 6). Under them (REFERENCE, "Measured under policy 24"): R7b
   240, R11b 48, R12b 48/64/134 and R14b 384 RECORDED, no ATTENTION, every banded figure within its band; R14b on the
   features suite 64 RECORDED and 8 ERROR (`odd-asphere`: both engines' `time-budget`).
+
+## Phase 7 engines and transports
+
+- **Owner decision (2026-11-03): Stage 7.3 (a second external engine) and 7.5 (HTTP) are deferred.** Phase 7 is
+  7.1, 7.2 and 7.4, and its benchmark rests on fake engines (the plan's "Phase 7 amendment"). Never add a real
+  engine, a program-specific exchange format or an HTTP transport without the owner.
+- **`oneshot` is a transport of a process per message** (`src/transports/oneshot.ts`, Stage 7.1): request file in,
+  result file out, the same stateless protocol behind `RemoteEngineAdapter`, which validates every reply; the
+  transport judges nothing (it parses the result file and returns whatever JSON is there). The message is written
+  atomically (`writeFileAtomic`) as the text a stdio worker gets as its line; the command is started without a
+  shell, cwd the configuration root, stdin ignored, in `workerEnvironment`'s environment plus `LVRTC_REQUEST_FILE`
+  and `LVRTC_RESULT_FILE` (`REQUEST_FILE_VARIABLE`, `RESULT_FILE_VARIABLE`), absolute paths. Exit 0 and a result
+  file is the reply; stdout and stderr are both log (one bounded tail), never a reply. Failures are
+  `OneshotTransportError` codes (`spawn-failed`, `exited`: the result file is then not read, `no-result`,
+  `not-json`, `oversized-result`), a timeout kills the process and rejects with `TransportTimeoutError` once it has
+  ended. No failure ends the transport; calls may run at once. `open()` starts nothing but refuses, as
+  `spawn-failed`, a command no executable file answers to (`unstartable`: a path from the root, or a bare name on
+  the worker's `PATH`), so a missing worker is `spawn-failed` as over stdio, never `hello-failed`. Only the direct
+  process is killed, as over stdio: a launcher that leaves a child behind owns it. No `exitStatus`: the conformance
+  kit's shutdown check passes "no process to end".
+- **A one-shot exchange lives in a private temporary directory and nowhere else**: `open()` makes it (`mkdtemp`
+  under `os.tmpdir()`, mode 0700), each call a uniquely prefixed pair of files there, every file of that prefix (the
+  worker's temporaries too) removed when the call settles, the directory removed by `close()` after killing what
+  still runs. Never write a request or result under the repository or `runs/`: a case can carry an LV
+  prescription.
+- **A definition may state its waits** (`timeouts: { helloMs?, runMs?, shutdownMs? }`, finite numbers above 0, on
+  every transport; anything else is an error naming the file). `engineTimeouts` returns a configured definition's
+  own (a definition replaces a built-in engine's waits, as it replaces the engine), else a built-in engine's. Never
+  widen `DEFAULT_ENGINE_TIMEOUTS` for an engine: state its waits on its definition.
+- **In a pool a oneshot engine is not persistent** (`processRegistry.ts`: only stdio and the two optiland ids are),
+  and `memoryRegistry` measures its processes by the process table (`needs-ps`).
+- **The kit's one-shot entry is `serve_oneshot`** (`protocol.py`): the same answering of one message as the NDJSON
+  loop (`reply_to`, one function for both; never a second copy), written by `write_file_atomic`; exit 0 whenever a
+  reply was written (`ok: false` included), 2 only when none could be. A request file that is unset or unreadable is
+  `parse-error` under `"?"`. `fake_engine --oneshot` runs it; `--oneshot` is no engine option (not in the
+  descriptor or fingerprint), so the fake's results are byte-identical over both transports. The fixture root's
+  `fake-py-oneshot` is that worker; `test/fixtures/oneshot-worker` holds Node workers for the transport's own tests.
+- **A kit edit moves `optiland`'s and `optiland-wave`'s adapter revisions** (the worker hashes the kit's `.py` files),
+  and an edit of `src/core/config.ts` moves `optiland-wave`'s too (`optiland/definition.ts` imports it): their
+  baseline records go STALE(engine) until the owner's next refresh.

@@ -1757,6 +1757,13 @@ An engine is defined under `engines.<id>` by the transport that reaches it:
   that answers protocol messages. `src/engines/fake/engine.ts` is one: an engine without optics, for tests.
 - `stdio`: `command` is a worker's command line and `env` variables to set for it. The worker is a process that
   speaks the protocol as NDJSON on its standard streams; see below.
+- `oneshot` (Stage 7.1): `command`, `options` and `env` as for `stdio`, with the same placeholders; the command is
+  started once per message, which it reads from a request file and answers in a result file. See "One-shot
+  workers (Stage 7.1)".
+- `timeouts` (Stage 7.1), on a definition of any transport: `{ "helloMs", "runMs", "shutdownMs" }`, each optional
+  and a number of milliseconds above 0, the waits of that engine's adapter; any other member or value is an error
+  naming the file. A wait left out keeps its default (`DEFAULT_ENGINE_TIMEOUTS`). A definition replaces a built-in
+  engine's waits with its own, as it replaces the engine.
 
 `options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
 gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `lv`, `optiland`, `ref`) need no
@@ -2501,17 +2508,72 @@ and `shutdown` is answered with an empty object, after which a worker process en
 Each check is printed `PASS`, `FAIL` or `SKIPPED` with a reason. The exit code is 0 when nothing failed, 1 when a
 check did, and 2 for an id that is neither a configured nor a built-in engine.
 
+## One-shot workers (Stage 7.1)
+
+A `oneshot` engine is a program started once per message: request file in, result file out
+(`src/transports/oneshot.ts`). It speaks the same stateless protocol as a stdio worker (`hello`, `run` carrying the
+case, `shutdown`), behind the same adapter, which validates every reply; the transport judges nothing.
+
+```json
+{
+  "engines": {
+    "fake-py-oneshot": {
+      "transport": "oneshot",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine", "--oneshot"],
+      "options": { "id": "fake-py-oneshot" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
+    }
+  }
+}
+```
+
+- **One process per message.** The message is written, atomically, as one JSON document and a newline (the text a
+  stdio worker gets as its line) to a request file. The command is started without a shell, in the configuration
+  root, in the environment of a stdio worker (the few inherited variables, `LVRTC_ENGINE_OPTIONS`, the definition's
+  `env`) and two more: `LVRTC_REQUEST_FILE` and `LVRTC_RESULT_FILE`, absolute paths. Its standard input is not
+  used. The worker writes exactly one protocol response to the result file, whole (a temporary file beside it, then
+  a rename), and exits with code 0; the comparator then reads and parses it. Standard output and standard error are
+  both the worker's log, kept as a tail and quoted when a call fails; nothing written there is ever a reply.
+- **Files.** `open()` makes a private directory (`mkdtemp` under the system's temporary directory, readable by its
+  owner only); each call has its own pair of files there, and every file of the call, temporary files the worker
+  left beside its result included, is removed when the call settles, however it ends. `close()` kills any process
+  still running and removes the directory. Nothing is written under the repository or `runs/`: a case can carry a
+  prescription, and none is left behind.
+- **Failures** are coded (`ONESHOT_ERROR_CODES`): `spawn-failed` (the command did not start), `exited` (an exit
+  code other than 0, or a signal; the result file is then not read), `no-result` (exit 0 and no result file),
+  `not-json`, `oversized-result` (more than 256 MiB). A call not finished in time kills its process and is a
+  timeout. No failure ends the transport: the engine is stateless, so the next call starts a new process. Calls
+  may run at once, each with its own process and files. `open()` starts nothing, but looks for the command as a
+  spawn would (a path from the root, or a bare name on the worker's `PATH`) and refuses it when no executable file
+  answers: the engine is then unavailable as `spawn-failed`, as a stdio worker that does not start is, the message
+  naming the command. A command found that still does not start is a call's `spawn-failed`.
+- **`shutdown`** is delivered like any other message, in a process of its own. There is no process left to end
+  afterwards, which the conformance kit's shutdown check reports as passing.
+- **In a pool** a one-shot engine is not a persistent replica: one failed call ends nothing, so a slot keeps
+  taking its jobs. Its processes are short and started as configured, so the pool measures their memory by the
+  process table (`needs-ps`), as for an unknown launcher.
+
+`lvrtc engine conformance fake-py-oneshot --root test/fixtures/fake-root` passes every check, and the Python
+fake's results are byte-identical over oneshot and over stdio (`test/engines/pythonFake.test.ts`). The transport's
+own tests run a Node worker (`test/fixtures/oneshot-worker`) and need no Python.
+
 ## The Python worker kit
 
 `workers/python/lvrtc_worker_kit` is what a Python worker needs to speak the protocol. It imports nothing outside
-the standard library, writes nothing to disk and runs on Python 3.10 and later.
+the standard library, writes nothing to disk but the result file a one-shot worker is told to write, and runs on
+Python 3.10 and later.
 
 | Module | Is |
 |---|---|
 | `ndarray` | the NdArray wire form: bit-exact, independent of the host's byte order |
 | `validate` | the contract's schema validator, a port of `src/contract/validate.ts` that reads `contract/schema/v1` |
-| `protocol` | the NDJSON loop around an engine object with `describe()` and `run(request, case)` |
-| `fake_engine` | the fake engine as a worker: `python -m lvrtc_worker_kit.fake_engine [--id ID] [--bias X] [--no-quantities] [--fingerprint F]` |
+| `protocol` | the NDJSON loop around an engine object with `describe()` and `run(request, case)`; `serve_oneshot`, the one-shot answer of one message by files; both answer a message by `reply_to` |
+| `fake_engine` | the fake engine as a worker: `python -m lvrtc_worker_kit.fake_engine [--id ID] [--bias X] [--no-quantities] [--fingerprint F] [--oneshot]` |
+
+`serve_oneshot` reads the message from the file `LVRTC_REQUEST_FILE` names and writes the reply the loop would
+write for it as a line to the file `LVRTC_RESULT_FILE` names, atomically. It exits with code 0 whenever a reply was
+written, a refusal (`ok: false`) included, and with 2 only when none could be (no result file named, or it cannot
+be written). A request file that is not named or cannot be read is answered `parse-error` under the id `"?"`.
 
 The loop answers every line with exactly one line and never crashes on one: a line that is not JSON, an unknown
 method and a request that is not valid by the contract are answered

@@ -26,6 +26,7 @@ import { createEngine } from "../../src/engines/fake/engine.ts";
 import { createEngineRegistry, createEngineTransport } from "../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../src/engines/remote.ts";
 import { createInProcessTransport } from "../../src/transports/inProcess.ts";
+import { createOneshotTransport } from "../../src/transports/oneshot.ts";
 import { createStdioTransport, workerEnvironment } from "../../src/transports/stdio.ts";
 import type { StdioTransport } from "../../src/transports/stdio.ts";
 import { REQUEST_MINIMAL, SELFTEST_ECHO_EXAMPLES, edited, f8FromBits, REMOVE } from "../contract/corpus.ts";
@@ -224,6 +225,74 @@ test("the fixture root's fake-py passes the conformance kit", { skip }, async ()
   assert.equal(report.checks.at(-1)?.detail, "the worker ended by itself with exit code 0");
 });
 
+// ── The Python fake as a one-shot worker (Stage 7.1) ─────────────────────────────────────────────────────────────
+
+test("the fixture root's fake-py-oneshot passes the conformance kit, by the command line too", { skip }, async (t) => {
+  const loaded = fixtureRoot();
+  assert.deepEqual(loaded.config.engineDefinitions["fake-py-oneshot"], {
+    transport: "oneshot",
+    command: [PYTHON, "-m", "lvrtc_worker_kit.fake_engine", "--oneshot"],
+    options: { id: "fake-py-oneshot" },
+    env: { PYTHONPATH: `${FAKE_ROOT}/../../../workers/python` },
+  });
+  const report = await runConformance({
+    id: "fake-py-oneshot",
+    createTransport: () => createEngineTransport(loaded, "fake-py-oneshot"),
+  });
+  assert.deepEqual(
+    report.checks.filter((check) => check.status !== "pass" && check.status !== "skipped"),
+    [],
+  );
+  assert.equal(report.passed, true);
+  assert.equal(report.checks.length, 15);
+  // A process per message: there is no process left to end after shutdown.
+  assert.equal(report.checks.at(-1)?.detail, "the engine was released; its transport has no process to end");
+
+  const child = spawnSync(process.execPath, [BIN, "engine", "conformance", "fake-py-oneshot", "--root", FAKE_ROOT], {
+    encoding: "utf8",
+    cwd: REPO_ROOT,
+    env: { ...process.env, LVRTC_RUNS_DIR: join(tempDir(t), "runs"), LVRTC_PYTHON: PYTHON },
+  });
+  assert.equal(child.status, EXIT_OK, child.stdout + child.stderr);
+  const lines = child.stdout.split("\n").filter((line) => /^(PASS|FAIL|SKIPPED) /.test(line));
+  assert.equal(lines.length, 15, child.stdout);
+  assert.deepEqual(
+    lines.filter((line) => !/^(PASS|SKIPPED) /.test(line)),
+    [],
+  );
+});
+
+test(
+  "for one request the Python fake gives byte-identical results over oneshot and over stdio",
+  { skip },
+  async (t) => {
+    const options = { id: "fake", bias: 0.001 };
+    const environment = workerEnvironment(process.env, options, { PYTHONPATH: WORKER_KIT_PATH });
+    const command = [PYTHON, "-m", "lvrtc_worker_kit.fake_engine"];
+    const overStdio = new RemoteEngineAdapter({
+      id: "fake",
+      transport: createStdioTransport({ command, env: environment, cwd: tempDir(t) }),
+    });
+    const overFiles = new RemoteEngineAdapter({
+      id: "fake",
+      transport: createOneshotTransport({ command: [...command, "--oneshot"], env: environment, cwd: tempDir(t) }),
+    });
+    t.after(() => Promise.all([overStdio.close(), overFiles.close()]));
+    // One engine, however it is reached: the same descriptor, fingerprint included.
+    assert.equal(canonicalJson(await overFiles.describe()), canonicalJson(await overStdio.describe()));
+    const statuses = new Set<string>();
+    for (const request of requests()) {
+      const [fromFiles, fromStdio]: ResultEnvelope[] = [
+        await overFiles.run(request, CASE),
+        await overStdio.run(request, CASE),
+      ];
+      assert.equal(canonicalJson(fromFiles), canonicalJson(fromStdio), `${request.quantity} ${request.id.slice(0, 8)}`);
+      statuses.add(fromFiles.status);
+    }
+    assert.deepEqual([...statuses].sort(), ["error", "ok", "unsupported"]);
+  },
+);
+
 test(
   "fake-py is configured with placeholders, and its worker is the kit beside this repository",
   { skip },
@@ -248,7 +317,7 @@ test(
 );
 
 test(
-  "lvrtc run on the whole fixture root: fake-py computes what fake-a computes, and is cached like it",
+  "lvrtc run on the whole fixture root: fake-py and fake-py-oneshot compute what fake-a computes, and are cached like it",
   { skip },
   (t) => {
     const runsDir = join(tempDir(t), "runs");
@@ -262,11 +331,13 @@ test(
     };
     const first = run();
     assert.equal(first.code, EXIT_OK, first.out + first.err);
-    assert.match(first.out, /^singlet {7}selftest {2}fake-py {8}ok {11}computed$/m);
-    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {8}ok {11}computed$/m);
+    assert.match(first.out, /^singlet {7}selftest {2}fake-py {10}ok {11}computed$/m);
+    assert.match(first.out, /^singlet {7}selftest {2}fake-py-oneshot {2}ok {11}computed$/m);
+    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py {10}ok {11}computed$/m);
+    assert.match(first.out, /^double-gauss {2}selftest {2}fake-py-oneshot {2}ok {11}computed$/m);
     assert.match(
       first.out,
-      /^fake-pair: 12 jobs: 10 ok, 2 unsupported, 0 error, 0 pending \(10 computed, 0 cached\)$/m,
+      /^fake-pair: 14 jobs: 12 ok, 2 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m,
     );
 
     const manifestPath = join(runsDir, "fake-pair", MANIFEST_FILE);
@@ -274,20 +345,21 @@ test(
     const manifest: RunManifest = JSON.parse(manifestText);
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["fake-a", "fake-b", "fake-near", "fake-none", "fake-py", "fake-pyn"],
+      ["fake-a", "fake-b", "fake-near", "fake-none", "fake-py", "fake-py-oneshot", "fake-pyn"],
     );
     // The stored answers of the two unbiased fakes hold the same data, byte for byte.
     const stored = readdirSync(join(runsDir, STORE_DIRECTORY)).map(
       (file): ResultEnvelope =>
         JSON.parse(gunzipSync(readFileSync(join(runsDir, STORE_DIRECTORY, file))).toString("utf8")).result,
     );
-    assert.equal(stored.length, 10);
+    assert.equal(stored.length, 12);
     const dataOf = (engine: string): string[] =>
       stored
         .filter((result) => result.engine.id === engine)
         .map((result) => canonicalJson([result.requestId, result.data]))
         .sort();
     assert.equal(dataOf("fake-py").length, 2);
+    assert.deepEqual(dataOf("fake-py-oneshot"), dataOf("fake-py"));
     assert.deepEqual(dataOf("fake-py"), dataOf("fake-a"));
     assert.notDeepEqual(dataOf("fake-py"), dataOf("fake-b"));
     // The two fakes with the same small bias agree with each other bit for bit, and with neither of the unbiased.
@@ -296,7 +368,7 @@ test(
 
     const second = run();
     assert.equal(second.code, EXIT_OK, second.err);
-    assert.match(second.out, /\(0 computed, 10 cached\)$/m);
+    assert.match(second.out, /\(0 computed, 12 cached\)$/m);
     assert.equal(readFileSync(manifestPath, "utf8"), manifestText);
     assert.equal(existsSync(join(runsDir, "fake-pair")), true);
   },

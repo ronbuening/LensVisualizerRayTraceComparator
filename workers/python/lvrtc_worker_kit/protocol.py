@@ -1,4 +1,5 @@
-"""The engine protocol over NDJSON: one JSON object per line in, exactly one compact JSON line out for each.
+"""The engine protocol over NDJSON: one JSON object per line in, exactly one compact JSON line out for each; and
+over files, one message per process (``serve_oneshot``).
 
 The protocol is stateless (contract/CONTRACT.md, "protocol-request and protocol-response"): ``hello`` is answered
 with the engine's descriptor, ``run`` carries a request together with its optical case and is answered with a
@@ -16,14 +17,19 @@ What the loop guarantees, whatever arrives and whatever the engine does:
     answered ``ok: true`` with a result of status "error" and the code ``engine-failure``, stamped with the engine's
     own descriptor, as every engine of the comparator answers it;
   - ids are echoed, never recomputed: Python does not write numbers the way the hashes need them written.
+
+A one-shot worker (``serve_oneshot``) answers one message, read from the file ``LVRTC_REQUEST_FILE`` names, into the
+file ``LVRTC_RESULT_FILE`` names, written whole or not at all, by the same answering as the loop's (``reply_to``).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import secrets
 import sys
 import traceback
+from collections.abc import Mapping
 from typing import Any, BinaryIO, Protocol, TextIO
 
 from . import CONTRACT_VERSION, CONTRACT_VERSION_1_5, phase_definition
@@ -36,6 +42,15 @@ NO_ID = "?"
 METHODS: tuple[str, ...] = ("hello", "run", "shutdown")
 """Every method of the protocol."""
 
+REQUEST_FILE_VARIABLE = "LVRTC_REQUEST_FILE"
+"""The environment variable that names the file a one-shot worker reads its message from: an absolute path."""
+
+RESULT_FILE_VARIABLE = "LVRTC_RESULT_FILE"
+"""The environment variable that names the file a one-shot worker writes its reply to: an absolute path."""
+
+TEMP_SUFFIX = ".tmp"
+"""How the name of a result file that is still being written ends; it is renamed to the result file once whole."""
+
 ERROR_CODES: tuple[str, ...] = (
     "parse-error",
     "bad-request",
@@ -45,7 +60,8 @@ ERROR_CODES: tuple[str, ...] = (
 )
 """The ``error.code`` of every refusal the loop writes:
 
-- ``parse-error``: the line is not UTF-8, not JSON, or holds a ``NaN`` or ``Infinity`` token;
+- ``parse-error``: the line is not UTF-8, not JSON, or holds a ``NaN`` or ``Infinity`` token; for a one-shot
+  worker, also a request file that cannot be read;
 - ``bad-request``: the message is not a protocol request, or a run's request or case is not valid by its own kind,
   holds an array that does not decode, or the request is about another case;
 - ``unknown-method``: the method is none of ``METHODS``;
@@ -307,6 +323,15 @@ def handle_line(engine: Engine, line: bytes, schemas: SchemaSet, log: TextIO) ->
     return handle_message(engine, message, schemas, log)
 
 
+def reply_to(engine: Engine, line: bytes, schemas: SchemaSet, log: TextIO) -> tuple[bytes, bool]:
+    """The encoded reply to one message as it was read, and whether the loop ends after it. Never raises.
+
+    The one answering of a message: the NDJSON loop writes the bytes as its line, a one-shot worker as its file.
+    """
+    reply, stop = handle_line(engine, line, schemas, log)
+    return encode_reply(reply), stop
+
+
 def encode_reply(reply: dict[str, Any]) -> bytes:
     """A reply as its line: compact ASCII JSON and a newline. An answer JSON cannot carry becomes a refusal."""
     try:
@@ -338,8 +363,8 @@ def serve(
         line = requests.readline()
         if not line:
             return 0
-        reply, stop = handle_line(engine, line, schemas, log)
-        replies.write(encode_reply(reply))
+        reply, stop = reply_to(engine, line, schemas, log)
+        replies.write(reply)
         replies.flush()
         if stop:
             return 0
@@ -376,3 +401,68 @@ def serve_stdio(engine: Engine, *, schemas: SchemaSet | None = None, replies: Bi
     if replies is None:
         replies = protect_stdout()
     return serve(engine, sys.stdin.buffer, replies, schemas=schemas, log=sys.stderr)
+
+
+def write_file_atomic(path: str, data: bytes) -> None:
+    """Writes ``data`` as the file ``path`` so that it is at every moment absent or whole.
+
+    The bytes go to a temporary file in the same directory, whose name ends in ``TEMP_SUFFIX``, which is then renamed
+    over ``path``. When writing fails the temporary file is removed and the error raised.
+    """
+    directory, name = os.path.split(path)
+    temporary = os.path.join(directory, f"{name}.{os.getpid()}.{secrets.token_hex(6)}{TEMP_SUFFIX}")
+    try:
+        with open(temporary, "xb") as stream:
+            stream.write(data)
+        os.replace(temporary, path)
+    except BaseException:
+        try:
+            os.remove(temporary)
+        except OSError:
+            pass
+        raise
+
+
+def serve_oneshot(
+    engine: Engine,
+    *,
+    schemas: SchemaSet | None = None,
+    environ: Mapping[str, str] | None = None,
+    log: TextIO | None = None,
+) -> int:
+    """Answers the one message of a one-shot worker and returns the exit code.
+
+    The message is read from the file ``REQUEST_FILE_VARIABLE`` names and answered as the NDJSON loop answers a line
+    (``reply_to``); the reply is written, atomically (``write_file_atomic``), to the file ``RESULT_FILE_VARIABLE``
+    names. A request file that is not set or cannot be read is answered ``parse-error``, under the placeholder id.
+    The exit code is 0 whenever a reply was written, a refusal (``ok: false``) included, and 2 when none could be:
+    no result file is named, or it cannot be written; the log says why. The standard output is not the reply here:
+    whatever is written there is log. ``environ`` defaults to the process's environment, ``log`` to the standard
+    error stream.
+    """
+    environ = environ if environ is not None else os.environ
+    log = log if log is not None else sys.stderr
+    result_path = environ.get(RESULT_FILE_VARIABLE, "")
+    if result_path == "":
+        print(f"one-shot worker: {RESULT_FILE_VARIABLE} is not set: there is nowhere to write a reply", file=log)
+        return 2
+    request_path = environ.get(REQUEST_FILE_VARIABLE, "")
+    reply: bytes
+    if request_path == "":
+        refusal = _refused(NO_ID, "parse-error", f"{REQUEST_FILE_VARIABLE} is not set: there is no message to read")
+        reply = encode_reply(refusal)
+    else:
+        try:
+            with open(request_path, "rb") as stream:
+                message = stream.read()
+        except OSError as error:
+            refusal = _refused(NO_ID, "parse-error", f"the request file cannot be read: {error}")
+            reply = encode_reply(refusal)
+        else:
+            reply, _ = reply_to(engine, message, schemas if schemas is not None else contract_schemas(), log)
+    try:
+        write_file_atomic(result_path, reply)
+    except OSError as error:
+        print(f"one-shot worker: the result file cannot be written: {error}", file=log)
+        return 2
+    return 0

@@ -27,6 +27,12 @@
       "options": { "id": "fake-py" },
       "env": { "PYTHONPATH": "${root}/../../../workers/python" }
     },
+    "fake-py-oneshot": {
+      "transport": "oneshot",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine", "--oneshot"],
+      "options": { "id": "fake-py-oneshot" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
+    },
     "fake-pyn": {
       "transport": "stdio",
       "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine"],

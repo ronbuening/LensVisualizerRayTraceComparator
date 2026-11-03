@@ -425,7 +425,7 @@ test("an engine definition of the wrong shape is an error naming the key and the
   const inProcess = { transport: "in-process", module: "fake.ts" };
   const stdio = { transport: "stdio", command: ["python3"] };
   const idRule = 'is not an engine id: a lowercase letter, then lowercase letters, digits or "-"';
-  const transports = '"in-process" or "stdio"';
+  const transports = '"in-process", "stdio" or "oneshot"';
   const cases: [unknown, string][] = [
     [{ Fake: inProcess }, `"engines.Fake" ${idRule}`],
     [{ fake_engine: inProcess }, `"engines.fake_engine" ${idRule}`],
@@ -478,15 +478,15 @@ test("a member of the other transport is an unknown key, and the error says what
   const cases: [unknown, string][] = [
     [
       { transport: "in-process", module: "fake.ts", command: ["python3"] },
-      'unknown key "engines.fake.command" (a definition with transport "in-process" has transport, module, options)',
+      'unknown key "engines.fake.command" (a definition with transport "in-process" has transport, module, options, timeouts)',
     ],
     [
       { transport: "in-process", module: "fake.ts", env: {} },
-      'unknown key "engines.fake.env" (a definition with transport "in-process" has transport, module, options)',
+      'unknown key "engines.fake.env" (a definition with transport "in-process" has transport, module, options, timeouts)',
     ],
     [
       { transport: "stdio", command: ["python3"], module: "fake.ts" },
-      'unknown key "engines.fake.module" (a definition with transport "stdio" has transport, command, options, env)',
+      'unknown key "engines.fake.module" (a definition with transport "stdio" has transport, command, options, env, timeouts)',
     ],
   ];
   for (const [fake, problem] of cases) {
@@ -496,5 +496,104 @@ test("a member of the other transport is an unknown key, and the error says what
       { message: `${join(rootDir, CONFIG_FILE)}: ${problem}` },
       problem,
     );
+  }
+});
+
+// ── Phase 7: one-shot engines and the waits a definition states ─────────────────────────────────────────────────
+
+test("a oneshot engine is defined as a stdio one is: command, options, env and the same placeholders", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      python: "tools/venv/bin/python",
+      engines: {
+        once: {
+          transport: "oneshot",
+          command: ["${python}", "-m", "lvrtc_worker_kit.fake_engine", "--oneshot", "${root}/data"],
+          options: { id: "once" },
+          env: { PYTHONPATH: "${root}/workers/python" },
+        },
+        "by-path": { transport: "oneshot", command: ["./tools/worker"] },
+      },
+    },
+  });
+  const python = join(rootDir, "tools", "venv", "bin", "python");
+  assert.deepEqual(loadConfig({ rootDir, env: {} }).config.engineDefinitions, {
+    "by-path": { transport: "oneshot", command: [join(rootDir, "tools", "worker")], options: {}, env: {} },
+    once: {
+      transport: "oneshot",
+      command: [python, "-m", "lvrtc_worker_kit.fake_engine", "--oneshot", `${rootDir}/data`],
+      options: { id: "once" },
+      env: { PYTHONPATH: `${rootDir}/workers/python` },
+    },
+  });
+
+  const cases: [unknown, string][] = [
+    [
+      { transport: "oneshot", command: ["w", "${x}"] },
+      '"engines.once.command[1]" uses ${x}, which is not a placeholder: there are ${root} and ${python}',
+    ],
+    [{ transport: "oneshot" }, '"engines.once.command" must be a non-empty list of non-empty strings'],
+    [
+      { transport: "oneshot", command: ["w"], module: "m.ts" },
+      'unknown key "engines.once.module" (a definition with transport "oneshot" has transport, command, options, env, timeouts)',
+    ],
+  ];
+  for (const [once, problem] of cases) {
+    const wrong = rootWith(t, { [CONFIG_FILE]: { engines: { once } } });
+    assert.throws(
+      () => loadConfig({ rootDir: wrong, env: {} }),
+      { message: `${join(wrong, CONFIG_FILE)}: ${problem}` },
+      problem,
+    );
+  }
+});
+
+test("a definition of any transport may state its waits, each a number of milliseconds above 0", (t) => {
+  const rootDir = rootWith(t, {
+    [CONFIG_FILE]: {
+      engines: {
+        quick: { transport: "stdio", command: ["w"], timeouts: { helloMs: 500, runMs: 1500.5, shutdownMs: 1 } },
+        slow: { transport: "oneshot", command: ["w"], timeouts: { runMs: 3_600_000 } },
+        local: { transport: "in-process", module: "m.ts", timeouts: { helloMs: 10 } },
+        none: { transport: "oneshot", command: ["w"], timeouts: {} },
+        plain: { transport: "oneshot", command: ["w"] },
+      },
+    },
+  });
+  const { engineDefinitions } = loadConfig({ rootDir, env: {} }).config;
+  assert.deepEqual(engineDefinitions.quick.timeouts, { helloMs: 500, runMs: 1500.5, shutdownMs: 1 });
+  assert.deepEqual(engineDefinitions.slow.timeouts, { runMs: 3_600_000 });
+  assert.deepEqual(engineDefinitions.local.timeouts, { helloMs: 10 });
+  assert.deepEqual(engineDefinitions.none.timeouts, {});
+  // A definition that states none has no such member: the adapter's defaults are kept.
+  assert.equal("timeouts" in engineDefinitions.plain, false);
+
+  const above0 = "must be a number of milliseconds above 0";
+  const cases: [string, string][] = [
+    ["1000", '"engines.fake.timeouts" must be an object'],
+    ["[1000]", '"engines.fake.timeouts" must be an object'],
+    ["null", '"engines.fake.timeouts" must be an object'],
+    [
+      '{ "runMs": 1, "closeMs": 5 }',
+      'unknown key "engines.fake.timeouts.closeMs" (the waits are helloMs, runMs, shutdownMs)',
+    ],
+    ['{ "runMs": 0 }', `"engines.fake.timeouts.runMs" ${above0}`],
+    ['{ "runMs": -5 }', `"engines.fake.timeouts.runMs" ${above0}`],
+    ['{ "helloMs": "5000" }', `"engines.fake.timeouts.helloMs" ${above0}`],
+    ['{ "shutdownMs": null }', `"engines.fake.timeouts.shutdownMs" ${above0}`],
+    // JSON reads a number too large for a double as an infinity, which is no wait.
+    ['{ "runMs": 1e400 }', `"engines.fake.timeouts.runMs" ${above0}`],
+  ];
+  for (const [timeouts, problem] of cases) {
+    for (const head of ['"transport": "stdio", "command": ["w"]', '"transport": "in-process", "module": "m.ts"']) {
+      // Written as text, so that a value JSON.stringify would not write (1e400) reaches the reader as it is.
+      const text = `{ "engines": { "fake": { ${head}, "timeouts": ${timeouts} } } }`;
+      const root = rootWith(t, { [LOCAL_CONFIG_FILE]: text });
+      assert.throws(
+        () => loadConfig({ rootDir: root, env: {} }),
+        { message: `${join(root, LOCAL_CONFIG_FILE)}: ${problem}` },
+        `${head} ${problem}`,
+      );
+    }
   }
 });

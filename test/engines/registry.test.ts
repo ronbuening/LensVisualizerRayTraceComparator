@@ -13,7 +13,12 @@ import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
 import type { BuiltinEngines } from "../../src/engines/builtin.ts";
 import { createEngine } from "../../src/engines/fake/engine.ts";
 import { parseFakeOptions } from "../../src/engines/fake/options.ts";
-import { TRANSPORT_FACTORIES, createEngineRegistry, createEngineTransport } from "../../src/engines/registry.ts";
+import {
+  TRANSPORT_FACTORIES,
+  createEngineRegistry,
+  createEngineTransport,
+  engineTimeouts,
+} from "../../src/engines/registry.ts";
 import type { EngineRegistry, TransportContext, TransportFactories } from "../../src/engines/registry.ts";
 import { RemoteEngineAdapter } from "../../src/engines/remote.ts";
 import { createInProcessTransport } from "../../src/transports/inProcess.ts";
@@ -25,6 +30,9 @@ const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", im
 const STDIO_WORKER = fileURLToPath(new URL("../fixtures/stdio-worker/worker.mjs", import.meta.url));
 /** The TypeScript fake engine as a stdio worker. */
 const STDIO_FAKE_ENGINE = fileURLToPath(new URL("../fixtures/stdio-worker/fakeEngine.mjs", import.meta.url));
+/** The fixture worker of the one-shot transport's tests, and the TypeScript fake engine as a one-shot worker. */
+const ONESHOT_WORKER = fileURLToPath(new URL("../fixtures/oneshot-worker/worker.mjs", import.meta.url));
+const ONESHOT_FAKE_ENGINE = fileURLToPath(new URL("../fixtures/oneshot-worker/fakeEngine.mjs", import.meta.url));
 /** A module that is the fake engine, wherever the file that holds this text is. */
 const FAKE_MODULE = `export { createEngine } from ${JSON.stringify(pathToFileURL(FAKE_ENGINE).href)};\n`;
 /** A module whose engine answers hello as the engine its options name, and refuses everything else. */
@@ -336,7 +344,7 @@ test("a createEngine that throws, as the fake does for options it does not know,
 
 test("a definition whose transport has no factory is unsupported-transport", async (t) => {
   // Every transport a definition can name is implemented; a caller's own map may leave one out.
-  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process", "stdio"]);
+  assert.deepEqual(Object.keys(TRANSPORT_FACTORIES), ["in-process", "stdio", "oneshot"]);
   const rootDir = rootWith(t, {
     worker: { transport: "stdio", command: ["python3", "-m", "worker"] },
     fake: inProcess("fake.ts", { id: "fake" }),
@@ -418,6 +426,90 @@ test("a stdio engine whose command does not start, or is no engine, is unavailab
   assert.match(gone.message, /its log ends: cannot start: the licence file is missing$/);
   // A worker that answers, but not with a descriptor.
   await unavailable(stranger.describe(), "bad-descriptor");
+});
+
+test("a oneshot definition is a program started per message, in the root, with its options, env and waits", async (t) => {
+  const rootDir = rootWith(
+    t,
+    {
+      "fake-once": {
+        transport: "oneshot",
+        command: [process.execPath, "${root}/worker.mjs"],
+        options: { id: "fake-once", bias: 0.5 },
+        env: { WORKER_NOTE: "from ${root}" },
+        timeouts: { runMs: 20_000 },
+      },
+      inspector: { transport: "oneshot", command: [process.execPath, ONESHOT_WORKER, "well"], env: { NOTE: "x" } },
+      nowhere: { transport: "oneshot", command: ["lvrtc-no-such-command"] },
+    },
+    { "worker.mjs": `import ${JSON.stringify(pathToFileURL(ONESHOT_FAKE_ENGINE).href)};\n` },
+  );
+  const loaded = loadConfig({ rootDir, env: {} });
+  assert.deepEqual(engineTimeouts(loaded, "fake-once"), { runMs: 20_000 });
+  assert.deepEqual(engineTimeouts(loaded, "inspector"), {});
+
+  const adapter = await registryOf(rootDir).create("fake-once");
+  t.after(() => adapter.close());
+  const descriptor = await adapter.describe();
+  // The configured options reached the worker, through LVRTC_ENGINE_OPTIONS, as they reach a stdio worker.
+  assert.deepEqual(descriptor.identity.details, { bias: 0.5, offersQuantities: true, failMode: "none" });
+  assert.equal(descriptor.identity.fingerprint, parseFakeOptions({ id: "fake-once", bias: 0.5 }).fingerprint);
+  const result = await adapter.run(echoRequest(Float64Array.of(2, 3)), CASE);
+  assert.equal(result.status, "ok");
+  assert.equal(result.data?.sum, 6);
+
+  const transport = await createEngineTransport(loaded, "inspector");
+  t.after(() => transport.close());
+  assert.equal(transport.kind, "oneshot");
+  await transport.open();
+  const reply = await transport.call({ contract: "1.0", id: "1", method: "hello", params: {} }, { timeoutMs: 30_000 });
+  const seen = (reply as unknown as { result: { cwd: string; env: Record<string, string> } }).result;
+  assert.equal(seen.cwd, rootDir);
+  const set = { PYTHONDONTWRITEBYTECODE: "1", PYTHONUNBUFFERED: "1", LVRTC_ENGINE_OPTIONS: "{}", NOTE: "x" };
+  assert.partialDeepStrictEqual(seen.env, set);
+  const files = ["LVRTC_REQUEST_FILE", "LVRTC_RESULT_FILE"];
+  const others = Object.keys(seen.env).filter(
+    (name) => !Object.hasOwn(set, name) && !files.includes(name) && !name.startsWith("__CF"),
+  );
+  assert.deepEqual(
+    others.filter((name) => !(INHERITED_VARIABLES as readonly string[]).includes(name)),
+    [],
+  );
+
+  // A command that cannot be started is found when the transport opens, as a stdio worker's is: spawn-failed.
+  const nowhere = await registryOf(rootDir).create("nowhere");
+  t.after(() => nowhere.close());
+  const missing = await unavailable(nowhere.describe(), "spawn-failed");
+  assert.match(
+    missing.message,
+    /its oneshot transport did not open: one-shot worker: the command lvrtc-no-such-command cannot be started: no executable file of that name is on its PATH/,
+  );
+});
+
+test("engineTimeouts: a definition's own waits, else those of the built-in engine of the id, else none", (t) => {
+  const builtins: BuiltinEngines = {
+    slow: { worker: () => ({ transport: "stdio", command: ["w"], options: {}, env: {} }), timeouts: { runMs: 5 } },
+    plain: () => createEngine({ id: "plain" }),
+  };
+  const rootDir = rootWith(t, {
+    slow: { transport: "oneshot", command: ["w"], timeouts: { helloMs: 7 } },
+    worker: { transport: "stdio", command: ["w"], timeouts: { runMs: 9, shutdownMs: 11 } },
+    local: { ...inProcess("fake.ts"), timeouts: { helloMs: 13 } },
+    bare: { transport: "stdio", command: ["w"] },
+  });
+  const loaded = loadConfig({ rootDir, env: {} });
+  // A definition replaces a built-in engine's waits with its own, as it replaces the engine.
+  assert.deepEqual(engineTimeouts(loaded, "slow", builtins), { helloMs: 7 });
+  assert.deepEqual(engineTimeouts(loadConfig({ rootDir: rootWith(t, {}), env: {} }), "slow", builtins), { runMs: 5 });
+  assert.deepEqual(engineTimeouts(loaded, "worker", builtins), { runMs: 9, shutdownMs: 11 });
+  assert.deepEqual(engineTimeouts(loaded, "local", builtins), { helloMs: 13 });
+  assert.deepEqual(engineTimeouts(loaded, "bare", builtins), {});
+  assert.deepEqual(engineTimeouts(loaded, "plain", builtins), {});
+  assert.deepEqual(engineTimeouts(loaded, "nobody", builtins), {});
+  // A copy: the configuration's own object is not handed out.
+  const waits = engineTimeouts(loaded, "worker", builtins) as Record<string, number>;
+  waits.runMs = 1;
+  assert.deepEqual(engineTimeouts(loaded, "worker", builtins), { runMs: 9, shutdownMs: 11 });
 });
 
 test("a factory in the map builds the transport of its kind, from the definition and the context", async (t) => {

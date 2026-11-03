@@ -28,7 +28,15 @@ from typing import Any
 
 from . import CONTRACT_VERSION, CONTRACT_VERSION_1_2
 from .ndarray import NdArrayError, decode_ndarray, encode_ndarray_bytes
-from .protocol import engine_stamp, make_result, parse_json, serve_stdio
+from .protocol import (
+    REQUEST_FILE_VARIABLE,
+    RESULT_FILE_VARIABLE,
+    engine_stamp,
+    make_result,
+    parse_json,
+    serve_oneshot,
+    serve_stdio,
+)
 from .validate import SchemaSet, contract_schemas, format_issues, quantity_schema_id, validate
 
 SELFTEST_ECHO = "selftest.echo"
@@ -247,6 +255,15 @@ def options_from(argv: Sequence[str], environ: Mapping[str, str]) -> FakeOptions
     Raises a ``FakeOptionsError`` when ``LVRTC_ENGINE_OPTIONS`` is not a JSON object and when the options are not
     the fake engine's. A command line that cannot be read ends the process as ``argparse`` ends it, with code 2.
     """
+    return command_line(argv, environ)[0]
+
+
+def command_line(argv: Sequence[str], environ: Mapping[str, str]) -> tuple[FakeOptions, bool]:
+    """The options, as ``options_from`` reads them, and whether the worker is to answer one message by files.
+
+    ``--oneshot`` is how the worker is run, not an option of the engine: it is in neither the descriptor nor the
+    fingerprint, so the fake answers alike over stdio and over files.
+    """
     parser = argparse.ArgumentParser(
         prog="python -m lvrtc_worker_kit.fake_engine",
         description="The comparator's fake engine as a stdio worker: it answers selftest.echo and nothing else.",
@@ -255,6 +272,12 @@ def options_from(argv: Sequence[str], environ: Mapping[str, str]) -> FakeOptions
     parser.add_argument("--bias", type=float, help="added to every echoed value that is not a NaN (default 0)")
     parser.add_argument("--no-quantities", action="store_true", help="offer no quantity: every run is unsupported")
     parser.add_argument("--fingerprint", help="the fingerprint to report in place of the derived one")
+    parser.add_argument(
+        "--oneshot",
+        action="store_true",
+        help=f"answer one message from the file {REQUEST_FILE_VARIABLE} names into the file {RESULT_FILE_VARIABLE} "
+        "names, then exit, in place of the NDJSON loop on the standard streams",
+    )
     stated = parser.parse_args(list(argv))
 
     members: dict[str, Any] = {}
@@ -275,16 +298,19 @@ def options_from(argv: Sequence[str], environ: Mapping[str, str]) -> FakeOptions
         members["offersQuantities"] = False
     if stated.fingerprint is not None:
         members["fingerprint"] = stated.fingerprint
-    return parse_fake_options(members)
+    return parse_fake_options(members), bool(stated.oneshot)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Runs the fake engine on the standard streams until shutdown or end of input. Returns the exit code."""
+    """Runs the fake engine on the standard streams until shutdown or end of input, or with ``--oneshot`` on one
+    message by files. Returns the exit code."""
     try:
-        options = options_from(sys.argv[1:] if argv is None else argv, os.environ)
+        options, oneshot = command_line(sys.argv[1:] if argv is None else argv, os.environ)
     except FakeOptionsError as error:
         print(str(error), file=sys.stderr)
         return 2
+    if oneshot:
+        return serve_oneshot(FakeEngine(options))
     return serve_stdio(FakeEngine(options))
 
 

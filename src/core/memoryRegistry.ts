@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { BUILTIN_ENGINES } from "../engines/builtin.ts";
 import { optilandDefinition } from "../engines/optiland/definition.ts";
 import { wavefrontTransport } from "../engines/optiland/wavefrontEngine.ts";
-import { createEngineRegistry, TRANSPORT_FACTORIES } from "../engines/registry.ts";
+import { createEngineRegistry, oneshotTransportFactory, TRANSPORT_FACTORIES } from "../engines/registry.ts";
 import type { TransportFactory } from "../engines/registry.ts";
 import { createStdioTransport, workerEnvironment } from "../transports/stdio.ts";
 import type { LoadedConfig } from "./config.ts";
@@ -33,9 +33,14 @@ export function memoryRegistry(loaded: Pick<LoadedConfig, "rootDir" | "config">,
       env: { ...workerEnvironment(process.env, definition.options, definition.env), LVRTC_POOL_MEMORY_DIR: directory },
     });
   };
+  // A one-shot worker is a short process per message, started unwrapped: the process table counts it as it runs.
+  const oneshot: TransportFactory<"oneshot"> = async (definition, context) => {
+    writeFileSync(join(directory, "needs-ps"), "");
+    return oneshotTransportFactory(definition, context);
+  };
   return createEngineRegistry(
     loaded,
-    { ...TRANSPORT_FACTORIES, stdio },
+    { ...TRANSPORT_FACTORIES, stdio, oneshot },
     {
       ...BUILTIN_ENGINES,
       "optiland-wave": {

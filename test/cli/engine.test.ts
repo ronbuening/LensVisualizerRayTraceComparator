@@ -252,5 +252,5 @@ test("a configuration file that cannot be used is an error, exit 1, as for docto
   const rootDir = rootWith(t, { good: { transport: "carrier-pigeon" } });
   const ended = await engine(["conformance", "good"], { rootDir });
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.err, /^lvrtc engine: .*"engines\.good\.transport" must be "in-process" or "stdio"\n$/);
+  assert.match(ended.err, /^lvrtc engine: .*"engines\.good\.transport" must be "in-process", "stdio" or "oneshot"\n$/);
 });
