@@ -681,7 +681,14 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   exporter writes that radius as the surface's `aperture.semiDiameter` and the land is no surface of any engine.
   LV's validator keeps every forward ray inside the cap from meeting the land (`rimCutReentryRadius`), so the two
   models are one; a canary holds the lines. R0's sag samples run to that radius. Exports of 607ff23ae: 85 cuts on
-  44 states of 29 lenses.
+  44 states of 29 lenses. A cut's `sd` may lie beyond the end of its conic (since 55ddfb1e1), where the contract has no
+  sag and LV's profile a continuation its intersection never takes: the case ends at the cut radius, inside the conic,
+  and `test/integration/lv/export.test.ts` samples the sag to the case's rim, never to the state's `sd`.
+- **A vertical rim extension is no part of the case** (LV #942, `rimExtensionSd`; the prepared surface's `rimLand`
+  with `rimCut` null): a flat land from the cap's edge at `sd` out to a taller drawn rim. LV still clips at `sd` and
+  no trace meets the land (its own test traces a lens with and without one to the same bits), so the exporter writes
+  the surface as without it and reads `rimLand` for nothing; `surfaceAperture` refuses a LensVisualizer that clips such
+  a surface at its drawn rim. The canary of rim cuts holds both lands to the drawing alone.
 - **In `ref` a surface that does not clip is its sag wherever it has one**: a plane and a conic are met in closed
   form at any height; on an asphere whose conic does not end, a line on which Newton's method settles on no hit is
   failed, never blocked, since no stretch of it is the last to scan (a line along the axis is still met in closed
@@ -1833,3 +1840,21 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `lvrtc verify` holds both files byte for byte when both benchmark baselines exist or either matrix file does;
   `verify --write` regenerates them. Its synthetic golden is written only by `node test/report/writeGolden.ts`. It
   claims no agreement on a recorded rung and leaves the statement and its signed sentence unchanged.
+
+## LensVisualizer 55ddfb1e1 adopted
+
+- **LV `55ddfb1e1` adopted** (engine closure `ff0d938d`, 184 files, the same files as `fc5ae923`; 70 commits since
+  `6287f4393`). #942 (`6aacf5635`, vertical rim extensions) is the one engine change the comparator reads; the rest are
+  lens data and reviews (#941, #943 to #948), glass catalogue entries and tokens, the validator, the diagram, UI text
+  (#769) and the build (#951, #952). No binding name added or lost; the fake tree did not move. The rules "A rim cut is
+  a clear radius" and "A vertical rim extension is no part of the case" above say what changed; the evidence is
+  `docs/REFERENCE.md`, "LensVisualizer 55ddfb1e1 adopted".
+- **`L.maxSD` includes a drawn rim** (`outlineSemiDiameter`), and `isHeavyLensForRayWork` reads it; the chief sets ask it
+  of LV, so nothing is restated. At 55ddfb1e1 no lens's `maxSD` is a land's (all 1,056 surveyed).
+- **Measured and pinned anew** at `ff0d938d`: the MTF and R4f pins unchanged but the Sigma 35 mm's (its case moved with
+  its authored rims, #943; its figures at 70 % and its reference run's grid at 25 % with it); the summary's 123 cases
+  (119 before), margins 15, 0, 19 and 3 again. The census rewritten: 1,056 lenses, 1,419 states, 1,411 exported, the
+  same 8 refused, none thrown. The two cuts beyond their sphere and the Canon 135 mm's extensions: 165 R0–R4 pairs PASS.
+- The fingerprint of `lv`, `replay`, `wave` and `flux` moved, and their adapter revisions (`exportAperture.ts`'s
+  comment); `ref`'s, `ref-seidel`'s and the optiland engines' did not. Every record of the four is STALE(engine), the
+  Sigma 35 mm's STALE(case), until the Phase 7 end refresh (owner decision): no baseline written or checked here.

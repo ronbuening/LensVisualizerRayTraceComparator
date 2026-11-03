@@ -106,6 +106,13 @@ export interface LvSurface {
    * and no surface of the trace. Null on an uncut surface; absent in a LensVisualizer from before #928.
    */
   readonly rimCut?: { readonly depthMm: number; readonly sag: number; readonly radius: number } | null;
+  /**
+   * The drawn land of a rim cut or of a vertical rim extension (LV #942): flat at `sag` from the vertex, from `radius`,
+   * where the cap ends, out to the drawn rim `outerRadius`. A cut's land is its `rimCut`; an extension's starts at the
+   * cap's own `sd` and leaves `rimCut` null, so LV traces and clips the surface as it would without it. No radius of a
+   * case is read from it. Null on an ordinary surface; absent in a LensVisualizer from before #942.
+   */
+  readonly rimLand?: { readonly sag: number; readonly radius: number; readonly outerRadius: number } | null;
   readonly elemId: number;
   readonly asphere: LvAsphere | null;
   /** A diffractive phase on the surface, or null: LV's sequential MTF path has none. */

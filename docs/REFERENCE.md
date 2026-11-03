@@ -5773,3 +5773,75 @@ At the Phase 6 end refresh's baselines (LensVisualizer `6287f4393`, policy 24): 
 (R0–R3 288 configuration pairs each; R7a 8,640, R8a 1,872, R9a 1,152, R10a 1,728, R11a 864 request pairs; R4 864; R4f
 96; R6a 864); R5 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED; R5g 842 and 22 (request pairs); R6b 95 and 1; R6c 381, 51
 and 144. A review recounted every cell from the baseline JSON independently.
+
+## LensVisualizer 55ddfb1e1 adopted
+
+LensVisualizer main `55ddfb1e1` (clean), engine closure `ff0d938d`, 184 files: the same files as `fc5ae923`
+(`6287f4393`), of which `geometry/rimCut.ts`, `prescription/surfaces.ts`, `prescription/canonical.ts`, the two
+ingesters, `prescription/validate/*`, `first-order/lensConstants.ts`, `trace/runtimeRayResult.ts`, `types.ts`, the
+glass catalogue and the diagram modules changed. Of the 70 commits since `6287f4393`, #942 (`6aacf5635`) is the one
+engine change the comparator reads; the others are lens data and reviews (#941, #943 to #948 and the Canon
+reviews), the glass catalogue (new entries, and a catalogue grade named without digits now matched in a glass
+string), the validator, the diagram, translated text (#769) and the build (#951, #952). No name of the binding was
+added or lost, and nothing of the fake tree moved.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #942 (`6aacf5635`) | Vertical rim extensions: `rimExtensionSd` keeps the cap to its `sd` and adds a flat, opaque land at the cap's edge sag out to a taller drawn rim (`resolveRimExtension`). A cut and an extension share one record, `CompiledSurface.rimLand`; only a cut is `rimCut`. `evaluateAperture` still clips at `clearSemiDiameter(sd, rimCut)`; `rimCutLandPoint` is `rimLandPoint` and draws a clipped hit on either land; `L.maxSD` and the render diagnostics take the drawn rim (`outlineSemiDiameter`). Its own test traces a lens with and without an extension to the same result. | The canary of rim cuts restated: the land of an extension starts at `sd` with `rimCut` null, `runtimeRayResult.ts` is the one module of the trace that reads a land, and `clearSemiDiameter` and `activeSemiDiameter` are as they were. `LvSurface.rimLand` typed and read for nothing; the exporter is unchanged but for its comment. Hermetic tests: an extension exports as the surface without it, and a LensVisualizer that clips such a surface at its drawn rim is refused. |
+| #943 and the reviews (lens data) | `rimExtensionSd` in 249 lens files; rims and glass audited again; two rim cuts authored on an `sd` beyond the end of their sphere | The export test compared the contract's sag with LensVisualizer's profile out to the prepared `sd`, beyond the case's rim: NaN on those two surfaces. It samples to the case's rim (`nominalSemiDiameter`, the cut radius) since, and states the surfaces whose `sd` lies beyond their conic; a hermetic test of such a cut. |
+| #941, #945 to #948 | New lenses | The census rewritten |
+| The rest | The validator's lands and its beam checks' chief seed (`computeChiefRaySolve`), the glass tokens, the diagram, the UI, the build | Nothing the comparator restates |
+
+### Design choices
+
+1. **An extension is no part of the case.** LensVisualizer clips the surface at `sd` and no trace meets the land,
+   so the case is that of the surface without it, as a rear plate's generated rim is an envelope and no aperture.
+   `surfaceAperture` already holds `evaluateAperture` to `lvClearRadius` (the cut's radius, or `sd`), so a
+   LensVisualizer that clipped at the drawn rim is refused rather than exported.
+2. **The NaN is the contract's, at a height the case does not reach.** On `nikkor-s-auto-50mm-f14` (surface `5`,
+   R 16.1963 mm, `sd` 16.5, cut 6.15 mm deep at 12.704 mm) and `nikon-nikkor-s-auto-58mm-f1-4` (surface `8`,
+   R 16.82 mm, `sd` 19, cut 6.52 mm deep at 13.297 mm) the `sd` lies beyond the sphere, where the contract's sag is
+   NaN and LensVisualizer's profile is its continuation (21.46 mm at 19 mm on the 58 mm). The clear radius is the cut's,
+   inside the sphere, and the case ends there; LensVisualizer's intersection takes no point beyond the sphere
+   (`finiteRadiusLimit`). Nothing is approximated, and no coded problem is needed. Both rims bend rearward, where a
+   forward ray that meets the cap inside the cut radius does so before the land's plane, so LensVisualizer's trace,
+   the case and the cut lens stop the same rays ([gotchas](gotchas.md#a-rim-land-a-cuts-or-an-extensions-is-drawn-and-is-no-surface-of-the-trace)).
+3. **The heaviness of a lens follows LensVisualizer.** `isHeavyLensForRayWork` now reads a `maxSD` that includes a
+   drawn rim; the chief sets ask it of LensVisualizer (`chiefRaySets.ts`), so nothing is restated. At `55ddfb1e1` the
+   largest drawn rim of a lens is the largest `sd` of its own on every one of the 1,056 lenses: no lens is heavy, or
+   light, for a land.
+
+### Measured at 55ddfb1e1, 2026-11-03
+
+- **Tiers.** `npm run test:lv` 139 of 139 (16 min), `npm run test:optiland` 51 of 51, none skipped (44 min), and
+  `npm run check`, all at `55ddfb1e1`.
+- **The MTF tab** (`mtf.test.ts`): 11 of the 12 configurations the same case, shift and figures as at `6287f4393`.
+  The Sigma 35 mm's case moved with its authored rims (#943: the front `sd` 21 to 27.4 mm, a rim cut on surface 15,
+  extensions on four): axis and shift the same, at 70 % S 10, T 10, S 30, T 30 0.7230, 0.8358, 0.4802, 0.5524
+  (0.7152, 0.9057, 0.4754, 0.6234 before). Pinned anew at `ff0d938d`.
+- **R4f** (`fidelity.test.ts`): 96 runs, worst `mtf.maxAbs` 1.2989609388114332e-14 again; 22 of the 24 opening runs the
+  same case and grids; the Sigma 35 mm's two cases moved, its reference run's grid at 25 % 64 to 128. Pinned anew.
+- **The summary tab** (`summary.test.ts`): 123 states (71 finite; 119 before): 16 of the 119 cases moved and four
+  are new, the 20 new ids being the Sigma 35 mm's four states and 16 focus stations of eight lenses (the Sigma 24 mm
+  Art, 56 mm, 70 mm Macro and APO 50-500 mm, the Tamron 35-150 mm, A065 and F072, the Samyang AF 14 mm); the margins
+  15, 0, 19 and 3 units again (the Olympus 7-14 mm's station of zoom 32). `MEASURED_CASES` holds the 123.
+- **The benchmark's cases** (an `r0` run of `lv` alone): 88 of the 96 runs keep their case; the Sigma 35 mm's eight
+  moved (STALE(case) in every baseline until the Phase 7 end refresh, as STALE(engine) is every record of `lv`,
+  `replay`, `wave` and `flux`).
+- **The census** (`reports/census`, last written at `879c06102`): 1,056 lenses (1,007), 363 zooms (334), 1,419
+  states (1,341): 1,411 exported, the same 8 refused for the same reasons, none thrown; `aperture.unclipped` 282
+  (263), `surface.asphere.even` 691 (648), `surface.asphere.odd` 85 (83), `surface.conic` 319 (305), fisheye
+  equisolid 17 (15); the limits did not move. The export test counts 549 exported surfaces with an extension, each
+  clipped at its `sd`.
+- **The two cuts beyond their sphere, and an extension** (a temporary suite of `nikkor-s-auto-50mm-f14`,
+  `nikon-nikkor-s-auto-58mm-f1-4` and `canon-ef-135-f2l-usm`, three extensions; `lv`, `ref`, `optiland`, R0–R4,
+  `--jobs 4`, a temporary `LVRTC_RUNS_DIR`): 165 pairs PASS. On the two Nikkors no mask mismatch and no rim-band ray
+  of 4,898 and 4,278 rays; worst lv–ref hit 6.3e-14 mm, R0 sag 2.7e-15 mm, R4 1.4e-12. The Canon 135 mm's MTF case and
+  figures are those of `6287f4393`: its three extensions change nothing.
+- **Identities.** The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `fc5ae923` to
+  `ff0d938d`; their adapter revisions moved with the comment of `exportAperture.ts` (`lv` `d950739f` to `5ed05541`,
+  `replay` `7b9996fd` to `55ff9ba8`, `wave` `56bd2816` to `6dc6228e`, `flux` `a0cd59c5` to `2be7227c`). `ref`
+  (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` (`e12b6f28`) did not move. No baseline was
+  written or checked: the refresh is the Phase 7 end's (owner decision).
