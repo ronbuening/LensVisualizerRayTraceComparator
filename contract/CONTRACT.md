@@ -2299,8 +2299,9 @@ Version 1, added at Stage 6.3, changes no existing quantity, contract version or
 figures of the beam along the axis of a system whose object is at infinity, from rays launched parallel to the axis
 at fractions of the engine's own pupil radius (`pupilRadiusMm` states it): what LensVisualizer's spherical-aberration
 and axial-colour sections present (since LensVisualizer #927 each zone aimed at its fraction of the real stop's radius,
-each channel's at its own indices), and what optiland traces with its own pupil (its paraxial entrance pupil, the same
-heights at every line) and paraxial focus at each line. Nothing of an answer is gated: rung R8b records it.
+each channel's at its own indices), and what optiland traces with its own aimer (since Stage 6.9 each zone aimed at its
+fraction of the same stop radius, on each line's own optic at its own indices) and paraxial focus at each line. Nothing
+of an answer is gated: rung R8b records it.
 
 The spec is one of two kinds:
 
@@ -2331,12 +2332,14 @@ reference line and axial colour at every line, at the sections' own zones, of `l
 where it is named. `lv` answers from `computeSphericalAberration` and `computeSAProfile` at the authored indices, and
 from `computeLongitudinalChromaticFocus` at each line whose wavelength is one of its channels' (C, d, F, g, or C′, e,
 F′, g for a lens of native e-line indices), stating under `sampling.indexMaxDelta` how far the channel's indices are
-from the case's; both on the design plane only. optiland answers with the rays its own ray generator launches at
-`(0, f)` of the axial field with its default aiming (paraxial), at the first line's optic, traced at every line, each
-setting read back, and `F2()` plus the image plane. optiland refuses, before anything is built, the cases whose
-first-order data its paraxial model does not see, as for `paraxial.first-order`: a phase profile
-(`optiland-phase-paraxial-unseen`) and a term of power 1 or 2 (`surface.asphere.linear-term`,
-`surface.asphere.quadratic-term`); its pupil and its focus would be those of another lens.
+from the case's; both on the design plane only. optiland answers with the rays its own ray generator launches on the
+axial field under its `robust` aiming, each aimed at `(0, f R)` of the stop surface, `R` the case's stop radius
+(`conditions.stopSemiDiameter`, its `pupilRadiusMm`), on each line's own optic and traced there (a ray its aimer
+cannot aim is not traced and did not arrive, `sampling.raysUnaimed`; a line whose rays it aims none of is
+`unavailable`, `aim-failed`), each setting and where each ray crosses the stop read back, and `F2()` plus the image
+plane. optiland refuses, before anything is built, the cases whose first-order data its paraxial model does not see,
+as for `paraxial.first-order`: a phase profile (`optiland-phase-paraxial-unseen`) and a term of power 1 or 2
+(`surface.asphere.linear-term`, `surface.asphere.quadratic-term`); its focus would be that of another lens.
 
 The comparator forms the figures of rays with its estimator, at the marginal fraction the other answer took where it
 states one. A line is sorted before any difference (`classifyAxialLine`): R5's `classifyNativeField` first,
