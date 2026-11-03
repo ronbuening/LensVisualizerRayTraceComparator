@@ -10,6 +10,7 @@ import {
 } from "../../../src/engines/lv/exportAperture.ts";
 import type { LvStopApi } from "../../../src/engines/lv/exportAperture.ts";
 import type { LvRuntimeLens } from "../../../src/engines/lv/types.ts";
+import { profileOf, sag } from "../../../src/engines/ref/surface.ts";
 import { FLAT, lvEvaluateAperture, stateOf } from "./exportSupport.ts";
 
 const RUNTIME: LvRuntimeLens = {
@@ -321,6 +322,37 @@ test("a surface with a flat rim cut is its cap clipped at the cut radius, which 
   assert.throws(
     () => surfaceAperture(uncut, STATE, cut, undefined),
     /traces surface 1 with the semi-diameter 9, expected 6\.5/,
+  );
+});
+
+test("a rim cut whose sd lies beyond the end of its sphere is exported to the cut radius, where the sphere has a sag", () => {
+  // A sphere of radius 5 ends at 5 mm; the sd of 6 lies beyond it. A cut 1 mm deep meets the cap at 3 mm (3² + 4² =
+  // 5²), and the case ends there: R0 samples fractions of that rim, at each of which the contract's sag is a number.
+  const sphere = stateOf([{ label: "1", R: 5, d: 3, nd: 1.6, sd: 6 }], { stopIndex: 0 }).surfaces[0];
+  const cut = { ...sphere, physicalIndex: 1, rimCut: { depthMm: 1, sag: 1, radius: 3 } };
+  const aperture = surfaceAperture(API, STATE, cut, undefined);
+  assert.deepEqual(aperture, { semiDiameter: 3.000000001, nominalSemiDiameter: 3, innerSemiDiameter: 0 });
+  const profile = profileOf({ kind: "conic", radius: 5, conic: 0 });
+  assert.ok(Math.abs(sag(profile, aperture.nominalSemiDiameter) - 1) <= 2 ** -50, "the cap meets the land at the rim");
+  for (let step = 0; step <= 8; step++) assert.ok(Number.isFinite(sag(profile, (3 * step) / 8)), `step ${step}`);
+  // At the sd the contract has no sag, which a case that ran out to the sd would hand every engine.
+  assert.ok(Number.isNaN(sag(profile, cut.sd)));
+});
+
+test("a vertical rim extension is no radius of the case: the surface is its cap clipped at its sd, as without the land", () => {
+  // LV #942: the land runs from the cap's edge at sd (9 mm) out to a drawn rim of 12 mm, and rimCut stays null.
+  const plain = STATE.surfaces[0];
+  const extended = { ...plain, rimCut: null, rimLand: { sag: 1, radius: 9, outerRadius: 12 } };
+  assert.equal(lvClearRadius(extended), 9);
+  assert.deepEqual(surfaceAperture(API, STATE, extended, undefined), surfaceAperture(API, STATE, plain, undefined));
+  // A LensVisualizer that clipped such a surface at its drawn rim would be tracing the land as glass: refused.
+  const opened = {
+    evaluateAperture: (...args: Parameters<typeof lvEvaluateAperture>) =>
+      lvEvaluateAperture(args[0], { ...args[1], sd: 12 }, args[2], args[3]),
+  };
+  assert.throws(
+    () => surfaceAperture(opened, STATE, extended, undefined),
+    /traces surface 1 with the semi-diameter 12, expected 9/,
   );
 });
 

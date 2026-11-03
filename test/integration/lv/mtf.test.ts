@@ -74,9 +74,11 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * resized every stop by the paraxial EPD = F/N; #936 samples the pupil on the real stop at a cap of 256): measured and
  * pinned anew; no configuration's axial marginal ray is vignetted. At LV 6287f4393 (closure fc5ae923, 184 files: LV
  * #940, a finite object's aim seeded at its solved chief and `aim-failed`), every case and figure was measured again
- * and found unchanged: the 12 answers are the same bytes as at 607ff23ae.
+ * and found unchanged: the 12 answers are the same bytes as at 607ff23ae. At LV 55ddfb1e1 (closure ff0d938d, 184 files:
+ * LV #942's rim extensions, a drawing only) every configuration was measured again: 11 unchanged, case and figures;
+ * the Sigma 35 mm's case moved with its authored rims (LV #943), and its figures at 70 % with it.
  */
-const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
+const PINNED_CLOSURE = "ff0d938d09961e20552ae4624a94a4494b3885e1356302b209048147cf197c26";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures
@@ -114,12 +116,12 @@ const PINNED: Readonly<
     field70: ["0.8312", "0.8813", "0.5938", "0.6326"],
   },
   "sigma-35mm-f14-dg-hsm-a": {
-    caseId: "c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae",
+    caseId: "7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9",
     spectrum: "photopic",
     shift: "-0.0257",
     vignetted: "-",
     axis: ["0.9564", "0.9564", "0.7684", "0.7684"],
-    field70: ["0.7152", "0.9057", "0.4754", "0.6234"],
+    field70: ["0.7230", "0.8358", "0.4802", "0.5524"],
   },
   "nikkor-z50f12": {
     caseId: "25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2",

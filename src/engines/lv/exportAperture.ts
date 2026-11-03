@@ -159,7 +159,14 @@ function unclippedProbeRadii(sd: number): number[] {
  * (`semiDiameter`, LV's inclusive limit of it, and `nominalSemiDiameter` the cut radius, so R0 samples the cap out to
  * there and no further). It is no approximation of the cut lens either: LV's validator holds the cap beyond the land
  * from the cut radius out to `sd`, so a forward ray that would meet the land first meets the uncut cap beyond the cut
- * radius first, and the two models stop the same rays.
+ * radius first, and the two models stop the same rays. A cut's `sd` may lie beyond the end of its conic (two lenses at
+ * 55ddfb1e1): LV's profile continues there by a rule of its own that its intersection never takes, and the case, which
+ * ends at the cut radius, inside the conic, has no sag there to state. LV's trace and the case still stop the same
+ * rays; whether the cut lens does is LV's question (docs/gotchas.md).
+ *
+ * **A surface with a vertical rim extension** (LV #942, `rimLand` with `rimCut` null) is the surface without it: the
+ * land runs from the cap's edge at `sd` out to a taller drawn rim, LV still clips at `sd`, and no trace meets the land.
+ * Nothing of it is exported.
  *
  * Throws when LV's answer is not the one its own state implies: a semi-diameter that is not the surface's clear
  * radius (or the stop radius), or not a positive number; no semi-diameter for a surface the state does not mark `clips:

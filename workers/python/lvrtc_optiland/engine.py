@@ -13,7 +13,8 @@ It answers ``mtf.native`` with optiland's own FFT MTF (``mtf``), the method "dif
 MTF (``geometric``), the method "geometric": a line and a field at a time, each on an optic of its own that is built,
 read back and given its field there. A field optiland cannot compute is a row of the answer. It answers
 ``spot.native`` with optiland's own SpotDiagram and RayFan (``spot``), in the same way, ``axial.native`` with
-its own launch along the axis and real trace at each line and its paraxial focus there (``axial``), and
+its own rays along the axis, aimed at the real stop and traced on each line's own optic, and its paraxial focus
+there (``axial``), and
 ``chief.native`` with its own distortion model, its own chief rays across the field and its paraxial pupils
 (``chief``), ``curvature.native`` with its own ``FieldCurvature`` (``curvature``), ``summary.native`` with its
 paraxial accessors and its working f-number (``summary``), ``seidel.native`` with its ``aberrations.seidels()`` and
@@ -160,9 +161,9 @@ def refusals(request: dict[str, Any], case: dict[str, Any]) -> list[dict[str, st
     that is not supported. The engine states no limit, so none is exceeded.
 
     Then what the quantity asked for has no answer about in this case, which no flag of a descriptor says: for
-    ``paraxial.first-order``, for ``axial.native``, whose pupil (``EPD()``) and paraxial focus (``F2()``) are
-    optiland's first-order data, and for ``summary.native``, which states them, a phase profile, a term of power 1 and
-    a term of power 2
+    ``paraxial.first-order``, for ``axial.native``, whose paraxial focus (``F2()``) is optiland's first-order data,
+    and for ``summary.native``, which states the pupil and the focus, a phase profile, a term of power 1 and a term of
+    power 2
     (``first_order.term_refusals``): optiland's paraxial model sees none of them, and would state the pupil and the
     focus of another lens; for ``seidel.native`` those and a term of power 3 or 4, which optiland's Seidel sums do not
     read (``seidel.term_refusals``). The same for ``chief.native`` of distortion, whose chief rays optiland's default aiming

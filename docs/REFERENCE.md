@@ -5426,16 +5426,7 @@ earlier stages (ten times the largest measured, rounded up to one digit):
 
 ### The validation matrix
 
-The plan's Phase 6 line asks for `reports/benchmark/validation-matrix.md`, a row for every LensVisualizer analysis tab. It
-does not exist. It would be a report rendered from committed baselines alone (deterministic, held by `lvrtc verify`,
-its sentences wording templates), with a row per tab: MTF (R4, R4f, R6a gated; R5, R5g, R6b, R6c recorded), coma and bokeh
-(R7a; R7b), spherical aberration and axial colour (R8a; R8b), distortion, lateral colour, pupils and breathing (R9a and
-R1; R9b), field curves and astigmatism (R10a; R10b), vignetting and relative illumination (R11a; R11b), the summary (R1;
-R12b), and a row of what LensVisualizer has no tab of (Seidel, wavefront, Zernike: R13b, R14b, engines against the
-comparator), each with its gated verdicts on the benchmark and its not-covered items. It needs: R7a to R11a in the
-benchmark's rays baseline, which only the Phase 6 end refresh writes; and a committed record of the recorded rungs
-R7b to R14b, which are in no baseline (a baseline of recorded rungs, as the MTF baseline holds R5, would be the owner's
-to decide), or a matrix that names them without figures. It is due with the end refresh, not before.
+Delivered at Stage 6.10 (below, "Stage 6.10: the validation matrix").
 
 ## Stage 6.8b: LensVisualizer's PRs since `098c91ef6` adopted (part A)
 
@@ -5714,3 +5705,205 @@ baseline.
 `ref-seidel`'s, `optiland`'s and `optiland-wave`'s did not (no file of their closures changed; no file under
 `workers/python`). Policy 24 changes no gated rung; the rays and MTF baselines stay STALE(case, engine, policy) until the
 Phase 6 end refresh.
+
+## Stage 6.9: optiland's axial rays aimed at the real stop
+
+The open item of Stage 6.8b (part B) that the owner deferred until after Phase 6 (2026-10-29, decision 2): optiland's
+`axial.native` (`workers/python/lvrtc_optiland/axial.py`) aims each zone at its point of the real stop, as
+LensVisualizer's spherical-aberration and axial-colour sections have since #927 and #930. Only the worker changed: no
+contract, schema, quantity version, comparator, policy, limit or band moved, and no LensVisualizer file is read anew.
+The adapter revisions of `optiland` and `optiland-wave` moved (`axial.py`, and a docstring of `engine.py`); `lv`'s,
+`ref`'s, `ref-seidel`'s, `replay`'s, `wave`'s and `flux`'s did not. R8b is in no baseline; the committed baselines'
+optiland records are STALE(engine) until they are next written.
+
+### What optiland's robust aimer launches on the axis
+
+Read in optiland `4e893f53` and measured. Under the worker's aiming, `set_aiming("robust", max_iter=50, tol=1e-10)`,
+an object at infinity is aimed by moving the launch point in the transverse plane at the field's fixed direction
+(`LaunchParameterization`, infinite conjugate; a chief solve and four rim probes seed a Newton/Broyden polish of each
+ray, `RobustRayAimer`). On the axis every ray it aims starts at x `0.0` with direction `(0.0, 0.0, 1.0)` to the bit,
+from one launch plane in front of the first surface, at the height whose crossing of the stop surface lies within
+1e-10 mm of its target (up to 8e-11 mm on the Double-Gauss fixture). Its pupil coordinate 1 is the radius it takes
+for the stop (`FloatByStopStrategy`): the stop surface's clip radius, which for a case from LensVisualizer is the stop
+radius `R` (`conditions.stopSemiDiameter`) plus 1e-9 mm, the exporter's clip tolerance. A ray it cannot bring to its
+target it returns NaN in all six values; where it brings none of a call there it raises a `ValueError`. It keeps a map
+of the pupil for each field and wavelength it has aimed, on its optic.
+
+### Design choices
+
+1. **One optic a line, each aiming its own rays.** Each line asked has an optic of its own (`mtf.field_optic`: built,
+   verified, one angle field on the axis, the worker's aiming), whose generator is asked once for every ray of the
+   request at the line's own indices; the rays are traced on that optic (`trace.record`, `trace.settle`, as `rays.trace`
+   traces a batch) and on no other. LensVisualizer's colour section aims each channel at its own indices (#930); the
+   rays of one line's optic, traced at another, cross its stop elsewhere. A new optic a line also keeps an answer from
+   depending on what an aimer solved before.
+2. **The zones are fractions of the stop radius `R`, the radius LensVisualizer aims at.** The ray of a fraction `f` is
+   asked at the pupil coordinate `(0, f R / r)`, `r` the aimer's radius, so that it is aimed at `(0, f R)` of the stop;
+   `pupilRadiusMm` is `R`, the radius `lv` states, and `method.params` states both (`pupilRadiusMm`,
+   `aimerStopRadiusMm`). The brief of the stage had the zones at `f r`, optiland's own coordinate `(0, f)`; measured
+   so (below), every zone lies `f` times 1e-9 mm outside LensVisualizer's, and that is no longer one pupil to R8b on 11
+   of the 12 runs at f/8 (a stop under 5 mm) and moves the Sigma 45 mm's marginal intercept wide open beyond its band.
+   The aimer's radius is still held to the case's clip radius. One line of `launch` makes the other choice, should the
+   owner prefer it.
+3. **What the aimer launched is read back, every check with a deliberate fault in `test_axial.py`**: before and after
+   the rays are generated, the aiming (mode, `max_iter`, `tol`), the one `AngleField` on the axis without a vignetting
+   factor and of weight 1, the aimer's stop radius held to the case's clip radius, no apodization or polarization
+   (`mtf.verify_field`); the aimer that launched them (`RobustRayAimer`: a generator holding a stale paraxial aimer is
+   a fault); the length of every column; x and direction of each aimed ray to the bit; and where optiland's own trace
+   of each crosses the stop surface (its row of the stop, which goes on behind an aperture that clipped the ray),
+   `(0, f R)` within the aimer's 1e-10 mm. The last catches a launch from another line's optic and a launch at
+   `(0, f)` on a case whose clip radius is not its stop radius (the Double-Gauss fixture, 6.35 against 6.3412 mm).
+   Each check was also removed in memory, one at a time, and turned a test red.
+4. **An unaimed ray is not traced and did not arrive** (`sampling.raysUnaimed`, noted), as LensVisualizer leaves an
+   unaimed zone untraced; a ray clipped ahead of the stop is aimed all the same and is blocked where optiland's trace
+   says. A line whose rays the aimer aims none of is `unavailable`, `aim-failed`, with optiland's words in the notes,
+   the other lines as they are. The benchmark has neither.
+5. **The expected values are derived in the test**: each ray's entrance height by bisection in 60 digits on the hit at
+   the stop of `exact.py`'s trace of the case without clipping (80 halvings), and its exit by that trace; a point within
+   twice the aimer's tolerance, a direction within a tenth of it (an exit moves no more than the height at the stop on
+   these lenses, 0.994 of it on the Double Gauss, and a direction under 1/50 per mm). The focus is still `F2()` plus
+   the image plane, so the refusals of what optiland's paraxial model does not see stay (`first_order.term_refusals`).
+
+### Measured, 2026-11-03
+
+Benchmark (96 runs), LensVisualizer `6287f4393` (engine closure `fc5ae923`), optiland `4e893f53`, a temporary store,
+`LVRTC_RUNS_DIR=<tmp> node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r8a,r8b --jobs 4`
+then `compare benchmark`: 2,256 jobs (2,112 ok, 144 unsupported, no error) in 16 s from an empty store; 3,504 pairs,
+3,120 PASS, 96 RECORDED, 288 UNSUPPORTED, no ATTENTION, FAIL or ERROR. Pairs in both modes.
+
+| R8b | Stage 6.8b (`607ff23ae`) | Stage 6.9 (`6287f4393`) |
+|---|---|---|
+| Pairs | 96 ATTENTION, 288 UNSUPPORTED | 96 RECORDED, 288 UNSUPPORTED (`lv`'s photopic and off-design refusals, as before) |
+| Lines | 84 data (`pupils-apart`), 12 unsupported | 96 of two methods (48 spherical, 48 colour), none data |
+| `pupilRadius.relative` | up to 0.75 | 0: both radii are `conditions.stopSemiDiameter` (limit 2e-10) |
+| Marginal fraction | (optiland's own) | 0.97 in both answers on every line |
+
+| Figure of two methods | Largest | Where | Band |
+|---|---:|---|---|
+| `longitudinalSa.maxAbs` | 1.75e-12 mm | Nikon Z 24-70 mm wide, f/8 | 1e-10 mm |
+| `marginalIntercept.maxAbs` | 1.49e-12 mm | Nikon Z 24-70 mm wide, f/8 | 1e-10 mm |
+| `nearAxisIntercept.maxAbs` | 5.7e-13 mm | Sony FE 400 mm | 1e-10 mm |
+| `bestFocus.maxAbs` | 3.4e-13 mm | Sony FE 400 mm | 1e-10 mm |
+| `profile.maxAbs` | 2.1e-13 mm | Nikon Z 50 mm f/1.2 | 1e-10 mm |
+| `bestFocusRms.maxAbs` | 2.9e-14 mm | Nikon Z 50 mm f/1.2 | 1e-10 mm |
+| spherical `landing.maxAbs` | 0 | (the near-axis pair's mean, by symmetry) | limit 1e-5 mm |
+| colour `lineFocus.maxAbs` | 1.49e-12 mm | Nikon Z 24-70 mm wide, f/8 | none |
+| colour `landing.maxAbs` | 1.6e-13 mm | Nikon Z 50 mm f/1.2 | limit 1e-5 mm |
+
+`relativeFocus.maxAbs` and `paraxialFocalShift.maxAbs` are unmeasured: the runs LensVisualizer's colour section answers
+are of one line, the d line. Before #927, of LensVisualizer's paraxial pupil, the foci agreed within 8.4e-12 mm; they now
+agree within 1.75e-12 mm, of the same aimed rays.
+
+R8a is unchanged: 3,120 pairs PASS, no mask mismatch, no ray dropped; lv–ref `intercept.maxScaled` 3.0e-13 mm,
+`focus.maxScaled` 7.5e-14 mm, `focusRms.maxAbs` 4.4e-14 mm; ref–optiland 3.5e-13, 1.2e-13 and 1.0e-13 mm.
+
+**The brief's choice, measured the same way** (zones at `f r`, the aimer's own coordinate `(0, f)`; `pupilRadiusMm`
+`r`): 50 RECORDED and 46 ATTENTION. 44 of the ATTENTION pairs are the two asks of 11 of the 12 runs at f/8, `pupils-apart`
+(`pupilRadius.relative` 1e-9 mm over `R`, 2.1e-10 to 4.3e-10, the Sigma 45 mm the largest; the Sony FE 400 mm's
+stop is the one above 5 mm); 2 are the Sigma 45 mm wide open, whose spherical figures are of two methods but beyond the
+1e-10 mm band (`marginalIntercept.maxAbs` 1.70e-10 mm, `longitudinalSa.maxAbs` 1.68e-10 mm) for zones 1e-9 mm apart
+on its stop. Aimed at `f R`, the same lens agrees within 1.2e-12 mm (`longitudinalSa.maxAbs`).
+
+`test/integration/optiland/r8.test.ts` now holds that both lines of the Z 50 mm f/1.2's design run are of one pupil
+(within the rung's limit; the same double), of two methods with every figure measured, and RECORDED.
+
+## Stage 6.10: the validation matrix
+
+`reports/benchmark/validation-matrix.{md,json}` (`src/report/matrix.ts`, `lvrtc matrix [--root <dir>]`) is rendered from
+the benchmark's two baselines alone, `baselines/benchmark.json` and `benchmark.mtf.json`: no engine, clock, machine or
+path, and every sentence a template of `src/report/wording.ts` (`MATRIX_TEXT`, `MATRIX_ROWS`, `MATRIX_RUNGS`), linted at
+render time. Its header holds the suite and policy hashes, LensVisualizer's commit, dirty flag, engine closure and file
+count, and every engine's fingerprint and adapter revision, as the baselines record them. Its nine rows: the foundation
+(R0–R3); MTF (R4, R4f, R6a gated; R5, R5g, R6b, R6c recorded); coma and bokeh (R7a; R7b); spherical aberration and axial
+colour (R8a; R8b); distortion, lateral colour, pupils and breathing (R9a and R1; R9b); field curves and astigmatism
+(R10a; R10b); vignetting and relative illumination (R11a; R11b); summary and cardinal elements (R1; R12b); and what
+LensVisualizer has no tab of (R13b, R14b).
+
+For a rung in either baseline it states its engines, configurations, configuration pairs and request pairs, its
+verdicts in both units, the engines not ok and which baseline holds it; R4 is in both baselines and counts once
+(differing duplicates are refused; MTF's optional `measured` counts are set aside before the comparison). The recorded
+rungs R7b–R14b are in no baseline (owner decisions), so the matrix names their quantity and engines
+(`UNBASELINED_RUNGS`, held to `RUNGS` by a test) and gives no figure of them; a baseline that held one is refused. Each
+row ends with fixed not-covered items, held where they say a figure has no attention band to the policy at hand by a
+test, and the matrix ends with `NOT_COVERED`. The rows of the chief rays and the summary name the LensVisualizer-only
+tests (`breathing.test.ts`, `summary.test.ts`) that hold those readouts to R1's values: the baseline counts R1, not the
+tab. `lvrtc verify` holds both files byte for byte whenever both benchmark baselines exist, or either matrix file does;
+`verify --write` regenerates them. The hermetic golden comes from `node test/report/writeGolden.ts`, of synthetic
+baselines (`test/report/matrixFixture.ts`).
+
+At the Phase 6 end refresh's baselines (LensVisualizer `6287f4393`, policy 24): every gated rung PASS on every pair
+(R0–R3 288 configuration pairs each; R7a 8,640, R8a 1,872, R9a 1,152, R10a 1,728, R11a 864 request pairs; R4 864; R4f
+96; R6a 864); R5 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED; R5g 842 and 22 (request pairs); R6b 95 and 1; R6c 381, 51
+and 144. A review recounted every cell from the baseline JSON independently.
+
+## LensVisualizer 55ddfb1e1 adopted
+
+LensVisualizer main `55ddfb1e1` (clean), engine closure `ff0d938d`, 184 files: the same files as `fc5ae923`
+(`6287f4393`), of which `geometry/rimCut.ts`, `prescription/surfaces.ts`, `prescription/canonical.ts`, the two
+ingesters, `prescription/validate/*`, `first-order/lensConstants.ts`, `trace/runtimeRayResult.ts`, `types.ts`, the
+glass catalogue and the diagram modules changed. Of the 70 commits since `6287f4393`, #942 (`6aacf5635`) is the one
+engine change the comparator reads; the others are lens data and reviews (#941, #943 to #948 and the Canon
+reviews), the glass catalogue (new entries, and a catalogue grade named without digits now matched in a glass
+string), the validator, the diagram, translated text (#769) and the build (#951, #952). No name of the binding was
+added or lost, and nothing of the fake tree moved.
+
+### What changed, and what the comparator did
+
+| Change | LensVisualizer | The comparator |
+|---|---|---|
+| #942 (`6aacf5635`) | Vertical rim extensions: `rimExtensionSd` keeps the cap to its `sd` and adds a flat, opaque land at the cap's edge sag out to a taller drawn rim (`resolveRimExtension`). A cut and an extension share one record, `CompiledSurface.rimLand`; only a cut is `rimCut`. `evaluateAperture` still clips at `clearSemiDiameter(sd, rimCut)`; `rimCutLandPoint` is `rimLandPoint` and draws a clipped hit on either land; `L.maxSD` and the render diagnostics take the drawn rim (`outlineSemiDiameter`). Its own test traces a lens with and without an extension to the same result. | The canary of rim cuts restated: the land of an extension starts at `sd` with `rimCut` null, `runtimeRayResult.ts` is the one module of the trace that reads a land, and `clearSemiDiameter` and `activeSemiDiameter` are as they were. `LvSurface.rimLand` typed and read for nothing; the exporter is unchanged but for its comment. Hermetic tests: an extension exports as the surface without it, and a LensVisualizer that clips such a surface at its drawn rim is refused. |
+| #943 and the reviews (lens data) | `rimExtensionSd` in 249 lens files; rims and glass audited again; two rim cuts authored on an `sd` beyond the end of their sphere | The export test compared the contract's sag with LensVisualizer's profile out to the prepared `sd`, beyond the case's rim: NaN on those two surfaces. It samples to the case's rim (`nominalSemiDiameter`, the cut radius) since, and states the surfaces whose `sd` lies beyond their conic; a hermetic test of such a cut. |
+| #941, #945 to #948 | New lenses | The census rewritten |
+| The rest | The validator's lands and its beam checks' chief seed (`computeChiefRaySolve`), the glass tokens, the diagram, the UI, the build | Nothing the comparator restates |
+
+### Design choices
+
+1. **An extension is no part of the case.** LensVisualizer clips the surface at `sd` and no trace meets the land,
+   so the case is that of the surface without it, as a rear plate's generated rim is an envelope and no aperture.
+   `surfaceAperture` already holds `evaluateAperture` to `lvClearRadius` (the cut's radius, or `sd`), so a
+   LensVisualizer that clipped at the drawn rim is refused rather than exported.
+2. **The NaN is the contract's, at a height the case does not reach.** On `nikkor-s-auto-50mm-f14` (surface `5`,
+   R 16.1963 mm, `sd` 16.5, cut 6.15 mm deep at 12.704 mm) and `nikon-nikkor-s-auto-58mm-f1-4` (surface `8`,
+   R 16.82 mm, `sd` 19, cut 6.52 mm deep at 13.297 mm) the `sd` lies beyond the sphere, where the contract's sag is
+   NaN and LensVisualizer's profile is its continuation (21.46 mm at 19 mm on the 58 mm). The clear radius is the cut's,
+   inside the sphere, and the case ends there; LensVisualizer's intersection takes no point beyond the sphere
+   (`finiteRadiusLimit`). Nothing is approximated, and no coded problem is needed. Both rims bend rearward, where a
+   forward ray that meets the cap inside the cut radius does so before the land's plane, so LensVisualizer's trace,
+   the case and the cut lens stop the same rays ([gotchas](gotchas.md#a-rim-land-a-cuts-or-an-extensions-is-drawn-and-is-no-surface-of-the-trace)).
+3. **The heaviness of a lens follows LensVisualizer.** `isHeavyLensForRayWork` now reads a `maxSD` that includes a
+   drawn rim; the chief sets ask it of LensVisualizer (`chiefRaySets.ts`), so nothing is restated. At `55ddfb1e1` the
+   largest drawn rim of a lens is the largest `sd` of its own on every one of the 1,056 lenses: no lens is heavy, or
+   light, for a land.
+
+### Measured at 55ddfb1e1, 2026-11-03
+
+- **Tiers.** `npm run test:lv` 139 of 139 (16 min), `npm run test:optiland` 51 of 51, none skipped (44 min), and
+  `npm run check`, all at `55ddfb1e1`.
+- **The MTF tab** (`mtf.test.ts`): 11 of the 12 configurations the same case, shift and figures as at `6287f4393`.
+  The Sigma 35 mm's case moved with its authored rims (#943: the front `sd` 21 to 27.4 mm, a rim cut on surface 15,
+  extensions on four): axis and shift the same, at 70 % S 10, T 10, S 30, T 30 0.7230, 0.8358, 0.4802, 0.5524
+  (0.7152, 0.9057, 0.4754, 0.6234 before). Pinned anew at `ff0d938d`.
+- **R4f** (`fidelity.test.ts`): 96 runs, worst `mtf.maxAbs` 1.2989609388114332e-14 again; 22 of the 24 opening runs the
+  same case and grids; the Sigma 35 mm's two cases moved, its reference run's grid at 25 % 64 to 128. Pinned anew.
+- **The summary tab** (`summary.test.ts`): 123 states (71 finite; 119 before): 16 of the 119 cases moved and four
+  are new, the 20 new ids being the Sigma 35 mm's four states and 16 focus stations of eight lenses (the Sigma 24 mm
+  Art, 56 mm, 70 mm Macro and APO 50-500 mm, the Tamron 35-150 mm, A065 and F072, the Samyang AF 14 mm); the margins
+  15, 0, 19 and 3 units again (the Olympus 7-14 mm's station of zoom 32). `MEASURED_CASES` holds the 123.
+- **The benchmark's cases** (an `r0` run of `lv` alone): 88 of the 96 runs keep their case; the Sigma 35 mm's eight
+  moved (STALE(case) in every baseline until the Phase 7 end refresh, as STALE(engine) is every record of `lv`,
+  `replay`, `wave` and `flux`).
+- **The census** (`reports/census`, last written at `879c06102`): 1,056 lenses (1,007), 363 zooms (334), 1,419
+  states (1,341): 1,411 exported, the same 8 refused for the same reasons, none thrown; `aperture.unclipped` 282
+  (263), `surface.asphere.even` 691 (648), `surface.asphere.odd` 85 (83), `surface.conic` 319 (305), fisheye
+  equisolid 17 (15); the limits did not move. The export test counts 549 exported surfaces with an extension, each
+  clipped at its `sd`.
+- **The two cuts beyond their sphere, and an extension** (a temporary suite of `nikkor-s-auto-50mm-f14`,
+  `nikon-nikkor-s-auto-58mm-f1-4` and `canon-ef-135-f2l-usm`, three extensions; `lv`, `ref`, `optiland`, R0–R4,
+  `--jobs 4`, a temporary `LVRTC_RUNS_DIR`): 165 pairs PASS. On the two Nikkors no mask mismatch and no rim-band ray
+  of 4,898 and 4,278 rays; worst lv–ref hit 6.3e-14 mm, R0 sag 2.7e-15 mm, R4 1.4e-12. The Canon 135 mm's MTF case and
+  figures are those of `6287f4393`: its three extensions change nothing.
+- **Identities.** The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `fc5ae923` to
+  `ff0d938d`; their adapter revisions moved with the comment of `exportAperture.ts` (`lv` `d950739f` to `5ed05541`,
+  `replay` `7b9996fd` to `55ff9ba8`, `wave` `56bd2816` to `6dc6228e`, `flux` `a0cd59c5` to `2be7227c`). `ref`
+  (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` (`e12b6f28`) did not move. No baseline was
+  written or checked: the refresh is the Phase 7 end's (owner decision).

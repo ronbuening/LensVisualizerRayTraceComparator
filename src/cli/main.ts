@@ -7,6 +7,7 @@ import { doctorCommand } from "./commands/doctor.ts";
 import { engineCommand } from "./commands/engine.ts";
 import { exportCommand } from "./commands/export.ts";
 import { lensesCommand } from "./commands/lenses.ts";
+import { matrixCommand } from "./commands/matrix.ts";
 import { mtfCommand } from "./commands/mtf.ts";
 import { reportCommand } from "./commands/report.ts";
 import { runCommand } from "./commands/run.ts";
@@ -26,6 +27,7 @@ export const COMMANDS: readonly CliCommand[] = [
   baselineCommand,
   verifyCommand,
   statementCommand,
+  matrixCommand,
   engineCommand,
   lensesCommand,
   exportCommand,

@@ -86,6 +86,13 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   which is LensVisualizer's own rule and not the comparator's. Of the 18 678 surfaces of the lenses that export,
   none has a clear aperture beyond that height today; the nearest, the second surface of `russar-22-70f8`, is
   authored 1e-9 mm short of its radius.
+- **Since 55ddfb1e1** two surfaces are authored with an `sd` beyond the end of their sphere, each with a rim cut
+  ([below](#a-rim-land-a-cuts-or-an-extensions-is-drawn-and-is-no-surface-of-the-trace)): the surface `5` of
+  `nikkor-s-auto-50mm-f14` (R 16.1963 mm, `sd` 16.5, the cut at 12.70 mm) and the surface `8` of
+  `nikon-nikkor-s-auto-58mm-f1-4` (R 16.82 mm, `sd` 19, the cut at 13.30 mm). Their clear aperture is the cut radius,
+  inside the sphere, and the case ends there; LensVisualizer's profile at the `sd` is its continuation (21.46 mm on
+  the 58 mm, past the sphere's 16.82), the contract's sag NaN. The export test that compared the two sags out to the
+  state's `sd` read past the case's rim and failed there; it samples the case's rim since.
 - **Class.** convention.
 
 ### The stored pupil constants are not paraxial
@@ -200,6 +207,30 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   in the way. What changes is the case, which states another aperture, and with it the case's id and the id of
   every request about it.
 - **Class.** data.
+
+### A rim land, a cut's or an extension's, is drawn and is no surface of the trace
+
+- **Where.** `src/optics/geometry/rimCut.ts`, resolved once in `compileSurfaces` (`prescription/surfaces.ts`). A rim
+  cut (#928, #932; `rimCutDepthMm`) ends the cap where its sag reaches a flat land `depth` mm from the vertex; a
+  vertical rim extension (#942, `6aacf5635`; `rimExtensionSd`) keeps the cap to its `sd` and adds a flat land at the
+  cap's edge sag out to a taller drawn rim. Both are `CompiledSurface.rimLand`; only a cut is `rimCut`.
+  `activeSemiDiameter` (`trace/aperture.ts`) clips at `clearSemiDiameter(sd, rimCut)`, so a cut clips at its radius
+  and an extension at `sd`; of the trace's modules only `runtimeRayResult.ts` reads a land, to draw a clipped hit
+  on it (`rimLandPoint`). The validator keeps the cap off a cut's land (`rimCutReentryRadius`) and holds either land
+  clear of its neighbours (`validateRimLandClearances`). `L.maxSD`, the diagram's scale, includes an extension's
+  drawn rim (`outlineSemiDiameter`), and `isHeavyLensForRayWork` reads it.
+- **Effect.** None on a trace: LensVisualizer's own test traces a lens with and without an extension to the same
+  result. The land is what a lens element looks like in the drawing. At a cut the case is LensVisualizer's trace,
+  and the cut lens's too where the rim bends rearward: the land then lies at the cap's deepest point, and a forward
+  ray that meets the cap inside the cut radius does so before the land's plane, so a ray the land would stop is
+  stopped in both models. A cut whose rim bends toward the object, on an `sd` beyond the end of its conic, could pass
+  in LensVisualizer's trace (and in the case) a ray the cut glass would stop, which is LensVisualizer's to model;
+  none does at 55ddfb1e1 (the two such cuts bend rearward). That no lens became heavy for its drawn rim alone at
+  55ddfb1e1 is measured in [REFERENCE.md](REFERENCE.md#lensvisualizer-55ddfb1e1-adopted).
+- **Handled.** The exporter writes the clear radius LensVisualizer clips at (`lvClearRadius`: the cut's, or `sd`) and
+  no land, and reads `rimLand` for nothing; `surfaceAperture` refuses a LensVisualizer whose `evaluateAperture` clips
+  elsewhere, an extension at its drawn rim included. A canary holds the lines of each module named above.
+- **Class.** convention.
 
 ### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
 
@@ -2611,7 +2642,8 @@ Measured at LensVisualizer `a94c0ecd7` (the tree of `879c06102`) and optiland `4
 ## Axial rays (Stage 6.3)
 
 Measured at LensVisualizer `45e6f852d` (engine closure `afef1f81`) and optiland `4e893f53`, on the benchmark; the first
-entry is resolved by LensVisualizer #925 (Stage 6.6b, LV `098c91ef6`).
+entry is resolved by LensVisualizer #925 (Stage 6.6b, LV `098c91ef6`), the one on the sections' real stop by optiland's
+worker aiming at it (Stage 6.9, LV `6287f4393`).
 
 ### LensVisualizer's chromatic tab traces a d-line catalog glass at the catalog's own index, at every channel
 
@@ -2715,23 +2747,58 @@ is the history as it was measured.
   off the design plane is unsupported once the section says where its plane is").
 - **Class.** data: unsupported.
 
-### optiland's own axial launch is exactly parallel, at its paraxial entrance pupil
+### optiland's own axial launch is exactly parallel, aimed at the stop on each line's optic
 
-- **Where.** With its default `paraxial` aiming and an angle field on the axis, optiland's ray generator launches the
-  pupil point `(0, f)` at `y0 = f · EPD / 2 · vy + y` toward `y1 = f · EPD · vy / 2` (`AngleField.get_ray_origins`,
-  `ParaxialRayAimer`). With no vignetting factor (`vy` 1) the two are the same double, so `M` is 0 and `N` 1 exactly.
-- **Effect.** R8b's optiland pupil is the paraxial entrance pupil, as LensVisualizer's tabs': the two radii agree to
-  1.37e-11 of themselves on the benchmark (Sony FE 20 mm), and the spherical figures to 8.5e-12 mm. R7b's worker aims
-  at the real stop instead (`robust`), whose pupil is LensVisualizer's to 0.946 to 1.0048. The pupil is of the first
-  line asked, whose optic launches the rays for every line.
-- **Handled.** The worker reads back the aiming, the one field on the axis without vignetting and of the type
-  `AngleField`, no apodization, a finite `EPD()` other than 0, the length of every launched column, and each
-  launched ray's x, height and direction, and refuses anything else as `build-mismatch`. Pinned by
-  `test_each_setting_of_the_launch_is_read_back_with_the_mistake_made_on_purpose` and
-  `test_the_rays_of_every_line_are_launched_in_the_pupil_of_the_first_line_asked` (`test_axial.py`).
+**Changed at Stage 6.9** (2026-11-03): the launch was optiland's default `paraxial` aiming at its paraxial entrance
+pupil before; the last paragraph of the entry is that history.
+
+- **Where.** Under the worker's `robust` aiming (`max_iter` 50, `tol` 1e-10 mm), on an angle field on the axis of an
+  object at infinity, optiland's `RobustRayAimer` moves a launch point in the transverse plane at the field's fixed
+  direction (`LaunchParameterization`, infinite conjugate): every ray it aims starts at x 0 with direction (0, 0, 1)
+  to the bit, from one launch plane in front of the first surface, at the height whose crossing of the stop surface
+  is within 1e-10 mm of its target (8e-11 mm at most on the double Gauss). Its pupil coordinate 1 is the radius it
+  takes for the stop (`FloatByStopStrategy`), the stop surface's clip radius, which for a case from LensVisualizer is
+  the stop radius plus 1e-9 mm (the exporter's clip tolerance, LensVisualizer's own). A ray it cannot bring to its
+  target it returns NaN in all six values, and it raises a `ValueError` where it brings none of a call there. It
+  keeps a map of the pupil for each field and wavelength it has aimed.
+- **Effect.** Asked at `(0, f)`, every zone would lie `f` times 1e-9 mm outside LensVisualizer's, which are at `f R`
+  of the stop radius `R` itself. Measured so on the benchmark (LV `6287f4393`): the two pupil radii are then more
+  than the sorting's 2e-10 of the larger apart wherever `R` is under 5 mm (11 of the 12 runs at f/8, up to 4.3e-10
+  on the Sigma 45 mm), every line of them `pupils-apart`, and the Sigma 45 mm wide open differs by 1.70e-10 mm in its
+  marginal intercept, above the 1e-10 band, for zones 1e-9 mm apart on its stop: 23 pairs ATTENTION in each mode.
+- **Handled.** Each line has an optic of its own (`mtf.field_optic`), whose generator is asked once for the rays at
+  the pupil coordinates `(0, f R / r)`, `R` the case's stop radius and `r` the aimer's, so that each ray is aimed at
+  `(0, f R)` of the stop, at the line's own indices; they are traced on that same optic, and no ray of one line's
+  optic is traced at another. The answer's `pupilRadiusMm` is `R`, the radius `lv` states. Read back, a
+  `build-mismatch` otherwise: before and after the rays are generated the aiming, the one field (an `AngleField` on
+  the axis, no vignetting, weight 1), the aimer's stop radius held to the case's clip radius, no apodization or
+  polarization (`verify_field`); the aimer that launched the rays, the length of every column, x and direction of
+  each aimed ray; and where optiland's own trace of each crosses the stop surface, `(0, f R)` within 1e-10 mm. An
+  unaimed ray is not traced and did not arrive (`sampling.raysUnaimed`), as LensVisualizer leaves an unaimed zone
+  untraced; a line of no aimed ray is `unavailable`, `aim-failed`. Pinned by
+  `test_each_setting_of_the_launch_is_read_back_with_the_mistake_made_on_purpose` (a fault for each read-back),
+  `test_a_launch_from_another_lines_optic_crosses_this_lines_stop_elsewhere_and_is_caught`, and
+  `test_behind_a_lens_each_ray_is_the_exact_ray_aimed_at_its_point_of_the_stop` (the double Gauss's stop of 6.3412 mm
+  inside its clip of 6.35 mm: a launch at `(0, f)` is caught), with every exit held to the ray aimed by bisection in
+  60 digits (`test_axial.py`).
 - **Class.** convention: handled.
 
+Before Stage 6.9, with its default `paraxial` aiming, optiland's ray generator launched the pupil point `(0, f)` at
+`y0 = f · EPD / 2 · vy + y` toward `y1 = f · EPD · vy / 2` (`AngleField.get_ray_origins`, `ParaxialRayAimer`), the
+two the same double without a vignetting factor, so `M` was 0 and `N` 1 exactly; the pupil was the first line's, whose
+optic launched the rays for every line. Its radius agreed with LensVisualizer's paraxial pupil to 1.37e-11 of itself
+(Sony FE 20 mm) and the spherical figures to 8.5e-12 mm, until LensVisualizer #927 moved the sections' zones to the
+real stop (the next heading).
+
 ### Since LensVisualizer #927 the sections' zones are of the real stop, and optiland's of its paraxial pupil
+
+**Resolved at Stage 6.9 (2026-11-03), on the comparator's side.** optiland's worker aims each zone at `(0, f R)` of the
+stop, `R` the case's stop radius, on each line's own optic (the previous heading). On the benchmark (LV `6287f4393`,
+optiland `4e893f53`) every R8b line both engines answer is of two methods (24 spherical, 24 colour in each mode), the
+pupils' radii the same double: 96 pairs RECORDED and none ATTENTION (288 UNSUPPORTED, `lv`'s photopic and off-design
+refusals, as before). The spherical figures agree within 1.75e-12 mm (`longitudinalSa.maxAbs`; band 1e-10 mm), the
+colour's within 1.49e-12 mm (`lineFocus.maxAbs`), the landings within 1.6e-13 mm; R8a is unchanged. The measurement is
+`docs/REFERENCE.md`, "Stage 6.9". The entry below is the history as it was measured.
 
 - **Where.** LensVisualizer's spherical-aberration and axial-colour sections aim each zone `f` at `f · R` of the real
   stop (`prepareAxialZoneLaunch`, each channel at its own indices; LV #927, adopted at Stage 6.8b, LV `607ff23ae`), and
@@ -2754,18 +2821,19 @@ is the history as it was measured.
 - **Effect.** Two answers of other pupil radii trace other rays at the same fractions, and their landing figure is 0:
   the landing alone never set a spherical line aside.
 - **Handled.** R8b sorts a line as data, `pupils-apart`, where the two answers' pupil radii differ by more than
-  `pupilRadius.relative`'s limit of 2e-10 of the larger, ten times the measured 1.37e-11 rounded up. Pinned by
+  `pupilRadius.relative`'s limit of 2e-10 of the larger, ten times the measured 1.37e-11 rounded up. Since Stage 6.9
+  both answers state the case's stop radius, and the figure is 0 on the benchmark. Pinned by
   `test/compare/axialNative.test.ts` ("pupils whose radii differ beyond the limit set every line aside as data").
 - **Class.** data: handled.
 
 ### optiland's axial pupil and focus are its first-order data, which do not see a phase or a vertex term
 
-- **Where.** The pupil the worker launches in (`EPD()`) and the paraxial focus (`F2()`) are optiland's paraxial
-  model, which reads radii and indices: it bypasses a radial phase profile and a term of power 1 or 2 of a polynomial
-  sag.
-- **Effect.** Asked directly, the worker would state of such a case the pupil and the focus of another lens: of a
-  lens whose first surface has a term of power 2, the focus of the lens without it, 2.4 mm from the contract's; of a
-  phase on a plane, no focus, where its rays cross at 100 mm.
+- **Where.** The paraxial focus (`F2()`) is optiland's paraxial model, which reads radii and indices: it bypasses a
+  radial phase profile and a term of power 1 or 2 of a polynomial sag. Before Stage 6.9 the pupil the worker launched
+  in (`EPD()`) was too; since then the rays are aimed at the real stop, and only the focus is first-order.
+- **Effect.** Asked directly, the worker would state of such a case the focus of another lens: of a lens whose first
+  surface has a term of power 2, the focus of the lens without it, 2.4 mm from the contract's; of a phase on a plane,
+  no focus, where its rays cross at 100 mm.
 - **Handled.** The engine refuses `axial.native` of such a case before anything is built, as it refuses
   `paraxial.first-order` (`first_order.term_refusals`: `optiland-phase-paraxial-unseen`,
   `surface.asphere.linear-term`, `surface.asphere.quadratic-term`). Pinned by

@@ -5,14 +5,13 @@
 // directory.
 //
 // R8a is gated: every pair of the three engines passes, every figure is measured, and no ray is valid in one engine
-// and not in another. R8b is recorded: nothing here is held to a figure of an intercept. What is held is that
-// LensVisualizer answers exactly the asks its sections answer and says why not of the others, that optiland answers
-// every ask, and that the report claims nothing it may not. Since LensVisualizer #927 the sections' zones are fractions
-// of the real stop's radius and optiland's worker's of its paraxial entrance pupil at the first line: both pairs of the
-// design run, the spherical aberration and the colour, are ATTENTION by their pupils' radii and no figure is measured,
-// until optiland's axial aim moves to the real stop (the owner deferred it until after Phase 6; docs/gotchas.md,
-// "Axial rays"). LensVisualizer #925's anchored G channel (the d line, 587.56 nm, for a lens of d-line
-// indices) still traces the case's index to the bit.
+// and not in another. R8b is recorded: nothing here restates a figure of an intercept or a band of one. What is held is
+// that LensVisualizer answers exactly the asks its sections answer and says why not of the others, that optiland
+// answers every ask, that the two answers of the design run are of one pupil and their lines of two methods with every
+// figure measured, and that the report claims nothing it may not. Since LensVisualizer #927 the sections aim each zone
+// at its fraction of the real stop's radius, and since Stage 6.9 optiland's worker aims each at the same point of the
+// stop on each line's own optic (docs/gotchas.md, "Axial rays"; docs/REFERENCE.md, "Stage 6.9"). LensVisualizer #925's
+// anchored G channel (the d line, 587.56 nm, for a lens of d-line indices) still traces the case's index to the bit.
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -121,27 +120,35 @@ test(
     const value = (pair: (typeof answered)[number], name: string): number | null | undefined =>
       pair.metrics[name]?.value;
     const [spherical, colour] = answered;
-    // Both lines of the design run are of two pupils (LensVisualizer's real stop, 19.70 mm, optiland's paraxial
-    // entrance pupil, 20.85 mm, 5.5e-2 apart at LensVisualizer 607ff23ae): each pair ATTENTION by
-    // `pupilRadius.relative` beyond its limit, and no figure measured. On this lens the line is not even set aside as
-    // data: the figures are formed at the marginal fraction LensVisualizer took, 0.97, and optiland's rays at 0.97 of
-    // its larger pupil do not arrive (its own first arriving marginal pair is at 0.95), so they give no figures and the
-    // line is unsupported.
+    // Both lines of the design run are of one pupil: each answer's zones are fractions of the case's stop radius, each
+    // ray aimed at its point of the stop, so the radii agree within the rung's limit (to the bit, at LensVisualizer
+    // 6287f4393), the line is of two methods, every figure is measured at the marginal fraction LensVisualizer took,
+    // and the pair is RECORDED: no figure is beyond its band in the policy.
     for (const [pair, figures] of [
-      [spherical, ["marginalIntercept.maxAbs", "longitudinalSa.maxAbs", "bestFocus.maxAbs", "profile.maxAbs"]],
+      [
+        spherical,
+        [
+          "marginalIntercept.maxAbs",
+          "nearAxisIntercept.maxAbs",
+          "longitudinalSa.maxAbs",
+          "bestFocus.maxAbs",
+          "bestFocusRms.maxAbs",
+          "profile.maxAbs",
+        ],
+      ],
       [colour, ["lineFocus.maxAbs"]],
     ] as const) {
-      assert.equal(pair.verdict, "ATTENTION", pair.reason ?? "");
+      assert.equal(pair.verdict, "RECORDED", pair.reason ?? "");
       assert.deepEqual(
         [value(pair, "fields.compared"), value(pair, "fields.data"), value(pair, "fields.unavailable")],
-        [0, 0, 1],
+        [1, 0, 0],
         pair.reason ?? "",
       );
       const pupil = value(pair, "pupilRadius.relative");
-      assert.ok(typeof pupil === "number" && pupil > SAME_PUPIL, `${pupil}`);
-      assert.match(pair.reason ?? "", /^pupilRadius\.relative \S+ is outside its attention band/);
-      assert.match(pair.reason ?? "", /line 0: unsupported, no-curve \(optiland-real-rays: no figures of its rays\)/);
-      for (const figure of [...figures, "landing.maxAbs"]) assert.equal(value(pair, figure), undefined, figure);
+      assert.ok(typeof pupil === "number" && pupil <= SAME_PUPIL, `${pupil}`);
+      for (const figure of [...figures, "landing.maxAbs"]) {
+        assert.equal(typeof value(pair, figure), "number", `${pair.requestId} ${figure}`);
+      }
     }
     // Axial colour at the reference line, LensVisualizer's G channel (the d line for these d-line indices): since
     // LensVisualizer #925 its indices are the authored ones, the case's to the bit (docs/gotchas.md, "Axial rays").
