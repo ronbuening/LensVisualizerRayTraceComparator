@@ -10,6 +10,11 @@ import { renderReport } from "../../src/report/index.ts";
 import {
   BANNED_CLAIMS,
   CATALOG_TEXT,
+  CONSENSUS_SECTION,
+  CONSENSUS_TABLES,
+  NO_CONSENSUS_TEXT,
+  consensusCounts,
+  consensusSentence,
   WAVEFRONT_SEVERAL_LINES,
   MTF_COMPARISON_INTROS,
   DIFFERENCE_CLASS_TEXT,
@@ -91,6 +96,19 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "The difference is within tolerance of the attention band.",
     "All RECORDED rows are within the tolerance.",
   ],
+  "consensus-correct": [
+    "The consensus is correct.",
+    "Consensus: `fake-a`, `fake-near`, the right answer.",
+    "The outlier `fake-far` is wrong.",
+    "`fake-far` is an outlier, in error by 3e-9.",
+    "The majority holds the true value.",
+    "| fake-far | outlier | faulty |",
+    "Outliers are erroneous engines.",
+    "The consensus is accurate to 1e-12.",
+    "The outlier's answer is an error.",
+    "The outlier is the engine at fault.",
+    "The consensus engines agree, so their answers are verified.",
+  ],
 };
 
 test("each banned claim is rejected, in every wording of it here, and named", () => {
@@ -124,6 +142,15 @@ test("what a report may say is accepted: every template, and sentences that only
     ...Object.values(FIELD_REASON_TEXT),
     ...Object.values(DIFFERENCE_CLASS_TEXT),
     ...MTF_ROW_STATUSES.map((status) => `| ${status} | ${MTF_ROW_STATUS_TEXT[status]} |`),
+    CONSENSUS_SECTION.join("\n"),
+    ...Object.values(NO_CONSENSUS_TEXT),
+    consensusSentence({ consensus: ["a", "b"], outliers: ["c"], apart: ["d"], notPlaced: ["e"] }),
+    consensusSentence({ consensus: ["a", "b"], outliers: ["c", "d"], apart: [], notPlaced: [] }),
+    consensusCounts(3, 2),
+    consensusCounts(1, 1),
+    `| ${CONSENSUS_TABLES.engines.join(" | ")} |`,
+    `| ${CONSENSUS_TABLES.withConsensus} | 2 |`,
+    `| ${CONSENSUS_TABLES.withoutConsensus("no-pair-within")} | 0 |`,
   ];
   for (const text of templates) assert.deepEqual(wordingProblems(text), [], text);
   for (const text of [
@@ -144,6 +171,13 @@ test("what a report may say is accepted: every template, and sentences that only
     "| certified-artificial-focus1 | finite-conjugate-unavailable: focus position 1 at zoom 0 is not a station whose " +
       "object distance LensVisualizer certifies; only infinity focus and its documented stations can be exported |",
     "# Validation statement",
+    // A consensus and its outliers, said with the words a pair's verdicts support, and a claim of error of no
+    // consensus or outlier.
+    "`fake-far` is an outlier: beyond the gates of every engine of the consensus.",
+    "An engine whose pairs with the consensus are UNSUPPORTED, BLOCKED or ERROR is apart, never an outlier.",
+    "Within the gates of each other, `fake-a` and `fake-near` are the consensus of the group.",
+    "The engine is wrong about nothing a gate measures.",
+    "An engine with an ERROR pair with the consensus is apart.",
   ]) {
     assert.deepEqual(wordingProblems(text), [], text);
   }

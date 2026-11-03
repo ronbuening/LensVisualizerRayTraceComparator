@@ -337,7 +337,7 @@ test(
     assert.match(first.out, /^double-gauss {2}selftest {2}fake-py-oneshot {2}ok {11}computed$/m);
     assert.match(
       first.out,
-      /^fake-pair: 16 jobs: 12 ok, 2 unsupported, 0 error, 2 pending \(14 computed, 0 cached\)$/m,
+      /^fake-pair: 18 jobs: 14 ok, 2 unsupported, 0 error, 2 pending \(16 computed, 0 cached\)$/m,
     );
     // fake-human answers by file exchange: its jobs are handed over and pending, and pending is no failure.
     assert.match(first.out, /^singlet {7}selftest {2}fake-human {7}pending {6}computed$/m);
@@ -347,14 +347,24 @@ test(
     const manifest: RunManifest = JSON.parse(manifestText);
     assert.deepEqual(
       manifest.engines.map((engine) => engine.id),
-      ["fake-a", "fake-b", "fake-human", "fake-near", "fake-none", "fake-py", "fake-py-oneshot", "fake-pyn"],
+      [
+        "fake-a",
+        "fake-b",
+        "fake-far",
+        "fake-human",
+        "fake-near",
+        "fake-none",
+        "fake-py",
+        "fake-py-oneshot",
+        "fake-pyn",
+      ],
     );
     // The stored answers of the two unbiased fakes hold the same data, byte for byte.
     const stored = readdirSync(join(runsDir, STORE_DIRECTORY)).map(
       (file): ResultEnvelope =>
         JSON.parse(gunzipSync(readFileSync(join(runsDir, STORE_DIRECTORY, file))).toString("utf8")).result,
     );
-    assert.equal(stored.length, 12);
+    assert.equal(stored.length, 14);
     const dataOf = (engine: string): string[] =>
       stored
         .filter((result) => result.engine.id === engine)
@@ -371,7 +381,7 @@ test(
     const second = run();
     assert.equal(second.code, EXIT_OK, second.err);
     // fake-human's jobs are still unanswered: asked again, and still pending.
-    assert.match(second.out, /\(2 computed, 12 cached\)$/m);
+    assert.match(second.out, /\(2 computed, 14 cached\)$/m);
     assert.equal(readFileSync(manifestPath, "utf8"), manifestText);
     assert.equal(existsSync(join(runsDir, "fake-pair")), true);
   },

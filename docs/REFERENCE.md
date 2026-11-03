@@ -2685,6 +2685,90 @@ stage's verification (`test/cli/collect.test.ts`) runs run, the operator, collec
 compares the pair, and holds the second run's manifest to that of an in-process `fake-human` byte for byte; the
 transport's own tests are `test/transports/fileExchange.test.ts`, the collection's `test/exchange/collect.test.ts`.
 
+## Group reports (Stage 7.4)
+
+A report of a run (`lvrtc report`) already sets every two engines of a request side by side in its pairwise
+matrix. Stage 7.4 adds what the matrix comes to for a group: its consensus and its outliers, per request and over
+the run. No command and no file is added: `report.json` and `report.md` carry it. It is a pure function of the
+pairwise comparison set and the rung's policy (`consensusOf`, `src/report/consensus.ts`), laid out by
+`buildReport` and `renderMarkdown`, which stay pure.
+
+**Where there is a consensus to look for**: a request of a **gated** rung, compared pairwise, among **three or
+more** engines. A recorded rung's RECORDED or ATTENTION is no agreement, so its sections have none; a group of two
+is a pair, whose verdict says everything; a rung the policy has no entry for has none. Such a section's
+`consensus` is null and its Markdown is as before.
+
+**The rule.** Each pair is *within* (PASS, or FLOOR, which counts as a pass), *beyond* (FAIL) or *unjudged*
+(UNSUPPORTED, BLOCKED, ERROR). An engine with at least one pair within or beyond is *placed*; the others are *not
+placed* and named. The consensus is the largest set of at least two placed engines every two of which are within,
+provided it is the only largest such set and holds more than half of the placed engines. Otherwise there is none,
+and the reason is the first that holds of:
+
+| Reason | When |
+|---|---|
+| `split` | two or more sets of the largest size, every two engines of each within |
+| `no-pair-within` | no two placed engines are within each other's gates |
+| `minority` | the largest set holds no more than half of the placed engines |
+
+**Outlier and apart.** Of the placed engines outside a consensus, an *outlier* is beyond every engine of it: every
+such pair judged, every one FAIL. Any other is *apart*: a pair with an engine of the consensus that is not judged
+(an ERROR, an UNSUPPORTED, a BLOCKED), or within some of it and beyond the rest. The distinction keeps an engine
+that was never held to the whole consensus from being named its outlier. Without a consensus there is nothing to
+be outside of, and the lists of outliers and engines apart are empty. Lists are sorted by engine id; the result
+does not depend on the order of the participants or of the pairs. `consensusOf` throws for a group of more than
+16 engines (every subset of the placed engines is looked at); the report model gives such a section
+`consensus: null`, as it does a group of fewer than three, so a report of a large group is still written.
+
+**In `report.json`**: every section has `consensus`, null or `{ consensus: [...] | null, reason?, outliers,
+apart, notPlaced }`; the model has `groups`, null when no section has a consensus to look for, else the number of
+such sections, how many have one, how many have none by reason, and for every engine of the run how many sections
+place it in the consensus, as an outlier, apart, placed without a consensus, or not placed (`GroupSummary`). A
+report of two engines, or only of recorded rungs, differs from before only by `"consensus": null` in each section
+and `"groups": null`.
+
+**In `report.md`**: one sentence under each such pairwise matrix, and a section "## Consensus" after the verdict
+summary, with what a consensus is, the counts of requests and the table of engines. Every sentence is a template
+of `src/report/wording.ts` (`consensusSentence`, `NO_CONSENSUS_TEXT`, `CONSENSUS_SECTION`, `consensusCounts`,
+`CONSENSUS_TABLES`). A consensus says which answers are within the gates of each other and nothing more: the banned
+claim `consensus-correct` rejects a sentence that names a consensus, an outlier or a majority beside a claim of
+correctness or error (correct, right, wrong, true value, in error, accurate, reliable and the like), with its
+rejected and accepted examples in `test/report/wording.test.ts`.
+
+The golden is `test/fixtures/golden/fake-group.report.md`, of `test/fixtures/suites/fake-group.json`: `fake-a`,
+`fake-near` (a bias of 2e-14) and the fixture root's `fake-far` (a bias of 1e-9, just beyond the `selftest` gate of
+1e-12), on the singlet and the Double-Gauss case, in both modes. From it:
+
+```text
+| Engine | fake-a | fake-far | fake-near |
+|---|---|---|---|
+| fake-a | — | FAIL (sum.abs 3.00e-9) | PASS (sum.abs 6.04e-14) |
+| fake-far | FAIL (sum.abs 3.00e-9) | — | FAIL (sum.abs 3.00e-9) |
+| fake-near | PASS (sum.abs 6.04e-14) | FAIL (sum.abs 3.00e-9) | — |
+
+Consensus: `fake-a`, `fake-near`, every two of them within the gates of each other; outlier: `fake-far`, beyond the gates of every engine of the consensus.
+```
+
+and, after the verdict summary:
+
+```text
+Of 2 requests with a consensus to look for, 2 have one.
+
+| Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
+|---|---|---|---|---|---|
+| fake-a | 2 | 0 | 0 | 0 | 0 |
+| fake-far | 0 | 2 | 0 | 0 | 0 |
+| fake-near | 2 | 0 | 0 | 0 | 0 |
+```
+
+The goldens written again by `node test/report/writeGolden.ts` with it: `fake-3-engines` and `fake-3-engines-ts`
+(a consensus of `fake-a` and `fake-pyn` or `fake-near`; `fake-none`, UNSUPPORTED, not placed), `fake-faults` (no
+consensus, `no-pair-within`: `fake-a` and `fake-far` are beyond each other, `fake-absent` and `fake-broken` gave no
+result and are not placed), and the identical-ray stand-ins of R7a to R11a (three or four gated engines: a
+consensus with an outlier in each request of R7a, R8a and R10a; `no-pair-within` in R9a's one request and R11a's,
+whose engines are all beyond one another). The
+hand-built report and every recorded stand-in are unchanged. The tests are `test/report/consensus.test.ts` (the
+rule on hand-built sets, and the run's counts), the golden's own test in `test/report/golden.test.ts`, and the lint.
+
 ## The Python worker kit
 
 `workers/python/lvrtc_worker_kit` is what a Python worker needs to speak the protocol. It imports nothing outside

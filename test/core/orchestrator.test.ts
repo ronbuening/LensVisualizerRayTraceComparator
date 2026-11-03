@@ -1134,6 +1134,7 @@ test("the fixture suite runs on the fixture root's engines, built by the real re
   assert.deepEqual(registry.ids(), [
     "fake-a",
     "fake-b",
+    "fake-far",
     "fake-human",
     "fake-near",
     "fake-none",
@@ -1143,8 +1144,8 @@ test("the fixture suite runs on the fixture root's engines, built by the real re
   ]);
   const suite = await loadSuite(FAKE_PAIR_SUITE, { rootDir: loaded.rootDir });
   // Three of the in-process engines: fake-py, fake-py-oneshot and fake-pyn are Python workers, which
-  // test/engines/pythonFake.test.ts and test/report/golden.test.ts run, fake-near is in the reports of the latter,
-  // and fake-human answers by file exchange (test/exchange/collect.test.ts).
+  // test/engines/pythonFake.test.ts and test/report/golden.test.ts run, fake-near and fake-far are in the reports of
+  // the latter, and fake-human answers by file exchange (test/exchange/collect.test.ts).
   const result = await runSuite({ suite, registry, runsDir, engines: ["fake-a", "fake-b", "fake-none"] });
   assert.deepEqual(rows(result), [
     "singlet selftest fake-a ok computed",

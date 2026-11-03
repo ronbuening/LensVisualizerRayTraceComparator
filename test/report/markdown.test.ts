@@ -219,7 +219,8 @@ test("a figure that is shown and not judged stands beside the judged figure of t
     /^\| Engine \| firstOrder\.maxAbs \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilRadius\.maxAbs \[mm\] \| pupilZ\.maxScaled \(≤ 1\.00e-9 mm\) \| pupilZ\.maxAbs \[mm\] \| lines\.compared \[lines\] \| Verdict \| Note \|$/m,
   );
   // The plain figures are above 1e-9 mm in a pair that passes: they are shown beside what is judged, with where.
-  assert.deepEqual(rowsStarting(markdown, "optiland")[1], [
+  // (A row of each engine is in the table of engines, then in the consensus's: the gated rung has three engines.)
+  assert.deepEqual(rowsStarting(markdown, "optiland")[2], [
     "optiland",
     "2.00e-13 at line 0, quantity efl",
     "9.60e-11 at line 4, quantity exitPupilSemiDiameter",
@@ -231,7 +232,7 @@ test("a figure that is shown and not judged stands beside the judged figure of t
     "",
   ]);
   // The pairwise matrix names the judged metric nearest its limit, never a figure that is only shown.
-  assert.deepEqual(rowsStarting(markdown, "lv")[1], [
+  assert.deepEqual(rowsStarting(markdown, "lv")[2], [
     "lv",
     "—",
     "PASS (pupilZ.maxScaled 2.10e-10 at line 4, quantity exitPupilZ)",
@@ -303,7 +304,9 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
     markdown,
     /^\| Engine \| direction\.maxAbs \(≤ 1\.00e-9\) \| hits\.maxDistance \(≤ 1\.00e-8 mm; floor ≤ 1\.00e-7\) \| opd\.maxAbs \(≤ 2\.00e-5 waves; floor ≤ 2\.00e-4\) \| mask\.rimBand \[rays\] \| Verdict \| Note \|$/m,
   );
-  assert.deepEqual(rowsStarting(markdown, "optiland")[1], [
+  // A FLOOR is within the gates: lv and optiland are the consensus of the three engines, zemax is not placed.
+  assert.deepEqual(rowsStarting(markdown, "optiland")[1], ["optiland", "1", "0", "0", "0", "0"]);
+  assert.deepEqual(rowsStarting(markdown, "optiland")[2], [
     "optiland",
     "3.00e-10 at ray 4",
     "2.50e-8 at ray 4, surface 6",
@@ -329,7 +332,7 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
     /^\| FLOOR \| A gated rung: a judged metric is above its tolerance by the known numerical floor /m,
   );
   // The pairwise matrix names the metric furthest past its tolerance.
-  assert.deepEqual(rowsStarting(markdown, "lv")[1], [
+  assert.deepEqual(rowsStarting(markdown, "lv")[2], [
     "lv",
     "—",
     "FLOOR (hits.maxDistance 2.50e-8 at ray 4, surface 6)",

@@ -74,7 +74,7 @@ test("the Python trio and the all-TypeScript trio report the same numbers", () =
   const numbers = (name: string): string[] =>
     readFileSync(goldenFile(name), "utf8")
       .split("\n")
-      .filter((line) => /^\| (fake-pyn|fake-near) \| [0-9]/.test(line))
+      .filter((line) => /^\| (fake-pyn|fake-near) \| [0-9.]+e-[0-9]+ \|/.test(line))
       .map((line) => line.replace(/fake-pyn|fake-near/, "near"));
   assert.deepEqual(numbers("fake-3-engines"), numbers("fake-3-engines-ts"));
   assert.equal(numbers("fake-3-engines").length, 2);
@@ -96,4 +96,26 @@ test("the faults report shows a FAIL beyond tolerance, an engine error, an unava
   );
   // The suite names no reference: the first engine with an ok result is it.
   assert.match(golden, /^Reference vs each, against `fake-a`:$/m);
+  // Two engines are placed and beyond the gates of each other: no consensus; the two without a result are not placed.
+  assert.match(
+    golden,
+    /^No consensus: no two engines are within the gates of each other; not placed: `fake-absent`, `fake-broken`, /m,
+  );
+});
+
+test("the group report shows two fakes in a consensus and the third, just beyond the gate, as its outlier", () => {
+  const golden = readFileSync(goldenFile("fake-group"), "utf8");
+  assert.match(golden, /^6 of 10 pairs are FAIL or ERROR\.$/m);
+  // fake-far is beyond the tolerance by little: a bias of 1e-9 against a gate of 1e-12.
+  assert.match(golden, /^\| fake-far \| 3\.00e-9 \| 1\.00e-9 at index 1 \| FAIL \| /m);
+  assert.match(golden, /^\| fake-near \| PASS \(sum\.abs 6\.04e-14\) \| FAIL \(sum\.abs 3\.00e-9\) \| — \|$/m);
+  const sentence =
+    "Consensus: `fake-a`, `fake-near`, every two of them within the gates of each other; outlier: `fake-far`, " +
+    "beyond the gates of every engine of the consensus.";
+  assert.equal(golden.split("\n").filter((line) => line === sentence).length, 2);
+  assert.match(golden, /\n## Verdict summary\n[^#]*\n## Consensus\n[^#]*\n## Support matrix\n/);
+  assert.match(golden, /^Of 2 requests with a consensus to look for, 2 have one\.$/m);
+  assert.match(golden, /^\| fake-a \| 2 \| 0 \| 0 \| 0 \| 0 \|$/m);
+  assert.match(golden, /^\| fake-far \| 0 \| 2 \| 0 \| 0 \| 0 \|$/m);
+  assert.match(golden, /^\| fake-near \| 2 \| 0 \| 0 \| 0 \| 0 \|$/m);
 });

@@ -234,7 +234,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-human, fake-near, fake-none, fake-py, fake-py-oneshot, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-far, fake-human, fake-near, fake-none, fake-py, fake-py-oneshot, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });

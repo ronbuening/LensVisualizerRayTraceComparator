@@ -16,6 +16,8 @@ import { jobDetail } from "../core/manifest.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 import { CHIEF_LANDING_METRIC, GEOMETRIC_MTF_RUNG, isNativeMtfRung } from "../compare/mtfNative.ts";
+import { MAX_GROUP_ENGINES, NO_CONSENSUS_REASONS, consensusOf } from "./consensus.ts";
+import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
 import { buildMtfComparison, buildWavefrontComparison } from "./mtfComparison.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
 import { NOT_COVERED } from "./wording.ts";
@@ -137,6 +139,13 @@ export interface ReportSection {
     readonly engines: readonly string[];
     readonly cells: readonly (readonly (PairwiseCell | null)[])[];
   } | null;
+  /**
+   * What the pairwise comparison says of the group (`consensusOf`): its consensus or why it has none, its outliers,
+   * the engines apart and those not placed. Null where there is no consensus to look for: no pairwise comparison, a
+   * rung that is not gated or that the policy has no entry for, fewer than three engines, or more than
+   * `MAX_GROUP_ENGINES` (`consensusOf` throws for those; a report of a large group is still written).
+   */
+  readonly consensus: GroupConsensus | null;
   /** The values the engines' answers only record; null when no answer has any. */
   readonly recorded: RecordedTable | null;
   /**
@@ -144,6 +153,33 @@ export interface ReportSection {
    * the request (`buildMtfComparison`). Left out by every other section.
    */
   readonly mtf?: MtfComparison;
+}
+
+/**
+ * Where one engine of the run stands in the sections with a consensus to look for, as counts. They add up to the
+ * number of those sections the engine is compared in.
+ */
+export interface GroupEngineCounts {
+  readonly engine: string;
+  /** In the consensus. */
+  readonly consensus: number;
+  readonly outlier: number;
+  readonly apart: number;
+  /** Placed, in a section without a consensus. */
+  readonly noConsensus: number;
+  readonly notPlaced: number;
+}
+
+/** What the sections with a consensus to look for come to over the run. */
+export interface GroupSummary {
+  /** How many sections have a consensus to look for. */
+  readonly requests: number;
+  /** How many of them have one. */
+  readonly withConsensus: number;
+  /** How many have none, by the reason, each of `NO_CONSENSUS_REASONS` stated. */
+  readonly withoutConsensus: Readonly<Record<NoConsensusReason, number>>;
+  /** Every engine of the run, in the order of `ReportModel.engines`. */
+  readonly engines: readonly GroupEngineCounts[];
 }
 
 /** A report of one run of a suite. */
@@ -163,6 +199,8 @@ export interface ReportModel {
   readonly support: readonly SupportRow[];
   /** One section per request, in the order of the comparisons. */
   readonly sections: readonly ReportSection[];
+  /** What the sections' consensus comes to over the run; null when no section has a consensus to look for. */
+  readonly groups: GroupSummary | null;
   /** What the comparison does not show, whatever its verdicts: the fixed sentences of `NOT_COVERED`. */
   readonly notCovered: readonly string[];
 }
@@ -361,9 +399,46 @@ function sectionOf(
     columns,
     referenceVsEach,
     pairwise,
+    consensus:
+      each === undefined || each.participants.length > MAX_GROUP_ENGINES ? null : consensusOf(each, rungPolicy),
     // Every set of a request states the same participants, so the first one says it for all.
     recorded: recordedOf(sets[0]),
     ...(mtf === null ? {} : { mtf }),
+  };
+}
+
+/**
+ * The consensus of the sections over the run: for every engine of the run, how many sections place it in the
+ * consensus, as an outlier, apart, placed without a consensus or not placed; and how many sections have a consensus
+ * to look for, have one, or have none for each reason. Null when no section has a consensus to look for.
+ */
+function groupsOf(engines: readonly string[], sections: readonly ReportSection[]): GroupSummary | null {
+  const groups = sections.flatMap(({ consensus, pairwise }) =>
+    consensus === null ? [] : [{ group: consensus, engines: pairwise?.engines ?? [] }],
+  );
+  if (groups.length === 0) return null;
+  const withoutConsensus = Object.fromEntries(NO_CONSENSUS_REASONS.map((reason) => [reason, 0])) as Record<
+    NoConsensusReason,
+    number
+  >;
+  for (const { group } of groups) if (group.reason !== undefined) withoutConsensus[group.reason]++;
+  const counted = (engine: string): GroupEngineCounts => {
+    const counts = { engine, consensus: 0, outlier: 0, apart: 0, noConsensus: 0, notPlaced: 0 };
+    for (const { group, engines: compared } of groups) {
+      if (!compared.includes(engine)) continue;
+      if (group.notPlaced.includes(engine)) counts.notPlaced++;
+      else if (group.consensus === null) counts.noConsensus++;
+      else if (group.consensus.includes(engine)) counts.consensus++;
+      else if (group.outliers.includes(engine)) counts.outlier++;
+      else counts.apart++;
+    }
+    return counts;
+  };
+  return {
+    requests: groups.length,
+    withConsensus: groups.filter(({ group }) => group.consensus !== null).length,
+    withoutConsensus,
+    engines: engines.map(counted),
   };
 }
 
@@ -379,6 +454,8 @@ function sectionOf(
  * - `sections` has one entry per request that was compared, in the order of the comparisons: the sets of one run,
  *   rung and request that follow each other are one section. A section also lists what the answers only record,
  *   and a section of the rung of the engines' own MTF has the table of it (`ReportSection.mtf`).
+ * - A section of a gated rung compared pairwise among three or more engines has its consensus
+ *   (`ReportSection.consensus`), and `groups` counts over those sections where each engine of the run stands.
  * - `notCovered` is the fixed list of what no comparison of this tool shows.
  *
  * It does not check that the three belong together; `reportInputProblems` does.
@@ -410,6 +487,7 @@ export function buildReport(manifest: RunManifest, comparisons: ComparisonFile, 
     else grouped.push([set]);
   }
 
+  const sections = grouped.map((sets) => sectionOf(sets, policy, labelOf));
   return {
     contract: CONTRACT_VERSION,
     kind: "report",
@@ -425,7 +503,11 @@ export function buildReport(manifest: RunManifest, comparisons: ComparisonFile, 
     summary,
     failing,
     support: supportOf(manifest, labelOf),
-    sections: grouped.map((sets) => sectionOf(sets, policy, labelOf)),
+    sections,
+    groups: groupsOf(
+      manifest.engines.map((engine) => engine.id),
+      sections,
+    ),
     notCovered: [...NOT_COVERED],
   };
 }

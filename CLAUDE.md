@@ -1923,3 +1923,23 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - Commands: `node bin/lvrtc.mjs collect [<engine>...] [--root <dir>] [--json]` (exit 1 on a refusal, 2 on usage);
   `node test/fixtures/fake-operator/operator.mjs <runsDir>/exchange/<engine>` plays the operator of the fixture
   root's `fake-human` with the TypeScript fake engine.
+- **A group's consensus is a pure function of its pairwise set and the rung's policy** (`consensusOf`,
+  `src/report/consensus.ts`, Stage 7.4), looked for only on a **gated** rung compared pairwise among **three or more**
+  engines (a recorded rung's RECORDED/ATTENTION is no agreement; two engines are a pair); elsewhere
+  `ReportSection.consensus` is null. A pair is within (PASS, FLOOR), beyond (FAIL) or unjudged (UNSUPPORTED, BLOCKED,
+  ERROR); an engine with a pair within or beyond is placed, the others are named not placed. The consensus is the
+  largest set of at least two placed engines every two of which are within, only where it is the one largest such
+  set and holds more than half of the placed engines; else none, with the first of `split`, `no-pair-within`,
+  `minority`. Outside a consensus an engine beyond every member (each pair judged, each FAIL) is an outlier, any other
+  placed one is apart: never name an engine an outlier that was not judged against the whole consensus. Order of
+  pairs or participants changes nothing; `consensusOf` throws for more than 16 engines, and the report model gives such
+  a section `consensus: null` (as for fewer than three), so `buildReport` never fails for size. `ReportModel.groups`
+  counts, per engine of the run, the sections that place it in the consensus, as an outlier, apart, placed without one
+  or not placed; null when no section has a consensus to look for. No command or file of its own: `lvrtc report` carries it.
+- **A consensus says which answers are within the gates of each other, never which is right**: every sentence of it
+  is a template of `src/report/wording.ts` (`consensusSentence` under a pairwise matrix; "## Consensus" after the
+  verdict summary), and the banned claim `consensus-correct` rejects a consensus, outlier or majority named beside
+  correct, right, wrong, true value, in error, accurate and the like. Its golden is `fake-group` (`fake-a`,
+  `fake-near` and the fixture root's `fake-far`, a bias of 1e-9 just beyond the `selftest` gate), written only by
+  `node test/report/writeGolden.ts`, which also rewrote every golden of a qualifying section (`fake-3-engines(-ts)`,
+  `fake-faults`, the R7a to R11a stand-ins). See `docs/REFERENCE.md`, "Group reports (Stage 7.4)".

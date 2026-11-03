@@ -40,6 +40,31 @@ No pair is FAIL or ERROR, of 10 compared.
 | BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
 
+## Consensus
+
+A consensus is looked for on each request of a gated rung that three or more engines were compared on pairwise.
+An engine is placed where a pair of it is within or beyond the gates; a pair that is UNSUPPORTED, BLOCKED or ERROR
+is not judged and places no engine. The consensus is the largest set of placed engines every two of which are
+within the gates of each other, where it is the only largest such set and holds more than half of the engines
+placed. An outlier is beyond the gates of every engine of the consensus; an engine apart is outside the
+consensus and not beyond the gates of all of it. A consensus says which answers are within the gates of each
+other, and no more.
+
+Of 2 requests with a consensus to look for, 2 have one.
+
+| Requests | Count |
+|---|---|
+| with a consensus | 2 |
+| no consensus: split | 0 |
+| no consensus: no-pair-within | 0 |
+| no consensus: minority | 0 |
+
+| Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
+|---|---|---|---|---|---|
+| fake-a | 2 | 0 | 0 | 0 | 0 |
+| fake-none | 0 | 0 | 0 | 0 | 2 |
+| fake-pyn | 2 | 0 | 0 | 0 | 0 |
+
 ## Support matrix
 
 | Run | Rung | fake-a | fake-none | fake-pyn |
@@ -70,6 +95,8 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | fake-none | UNSUPPORTED | — | UNSUPPORTED |
 | fake-pyn | PASS (sum.abs 6.04e-14) | UNSUPPORTED | — |
 
+Consensus: `fake-a`, `fake-pyn`, every two of them within the gates of each other; not placed: `fake-none`, with no pair within or beyond the gates.
+
 ### double-gauss
 
 #### selftest
@@ -90,6 +117,8 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | fake-a | — | UNSUPPORTED | PASS (sum.abs 1.71e-13) |
 | fake-none | UNSUPPORTED | — | UNSUPPORTED |
 | fake-pyn | PASS (sum.abs 1.71e-13) | UNSUPPORTED | — |
+
+Consensus: `fake-a`, `fake-pyn`, every two of them within the gates of each other; not placed: `fake-none`, with no pair within or beyond the gates.
 
 ## Not covered
 

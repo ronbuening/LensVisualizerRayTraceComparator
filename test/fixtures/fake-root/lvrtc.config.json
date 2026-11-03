@@ -11,6 +11,11 @@
       "module": "../../../src/engines/fake/engine.ts",
       "options": { "id": "fake-b", "bias": 0.001 }
     },
+    "fake-far": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-far", "bias": 1e-9 }
+    },
     "fake-human": {
       "transport": "file-exchange",
       "prescriptions": ["table"],
