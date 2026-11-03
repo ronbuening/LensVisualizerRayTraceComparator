@@ -12,11 +12,14 @@
 // difference and a per-surface maximum are Derived numbers the test recomputes by its own loop from the arrays they
 // name; a heat map's cells are recounted from the comparisons or the baseline.
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { after, before, test } from "node:test";
 
 import { buildMtfBaselineReport } from "../../src/baseline/mtfReport.ts";
+import { controlChoices } from "../../src/cli/commands/serve.ts";
 import { buildBaselineReport } from "../../src/baseline/report.ts";
 import type { ComparisonFile } from "../../src/compare/comparisonFile.ts";
 import { OFF_AXIS_METRIC, ON_AXIS_METRIC } from "../../src/compare/mtfNative.ts";
@@ -25,6 +28,7 @@ import type { Baseline, BaselinePair } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
 import type { Verdict } from "../../src/contract/comparison.ts";
 import type { Policy } from "../../src/contract/policy.ts";
+import { loadConfig } from "../../src/core/config.ts";
 import type { ManifestEngine, ManifestJob, RunManifest } from "../../src/core/manifest.ts";
 import type { StoreEntry } from "../../src/core/resultStore.ts";
 import { encodeF8 } from "../../src/core/numeric/ndarray.ts";
@@ -32,8 +36,9 @@ import { decodeNdArray, isNdArray } from "../../src/core/numeric/ndarray.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { COUNT_KEYS, figureAt, pointerOf, pointerTokens, resolvePointer } from "../../src/dashboard/figure.ts";
 import type { DocumentName, Figure, Source } from "../../src/dashboard/figure.ts";
+import type { ControlView, JobView } from "../../src/dashboard/control.ts";
 import type { AskedEngines } from "../../src/dashboard/identity.ts";
-import { createViews } from "../../src/dashboard/server.ts";
+import { createViews, startDashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import type {
   BaselineRunView,
@@ -46,8 +51,8 @@ import type {
 } from "../../src/dashboard/views.ts";
 import { buildReport } from "../../src/report/model.ts";
 import type { MtfComparison } from "../../src/report/mtfComparison.ts";
-import { tempDir } from "../core/support.ts";
-import { buildFixture, documentFromDisk, valueAtPointer, walkView } from "./support.ts";
+import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "../core/support.ts";
+import { buildFixture, documentFromDisk, fetchFrom, valueAtPointer, walkView } from "./support.ts";
 import type { DashboardFixture, DocumentPlaces } from "./support.ts";
 
 let fixture: DashboardFixture;
@@ -1225,7 +1230,9 @@ test("a JSON pointer escapes ~ and /, and resolves members, indices and nothing 
   assert.deepEqual([...COUNT_KEYS].sort(), [
     "count",
     "element",
+    "exitCode",
     "failing",
+    "job",
     "place",
     "records",
     "requests",
@@ -1233,4 +1240,89 @@ test("a JSON pointer escapes ~ and /, and resolves members, indices and nothing 
     "sectionCount",
     "surface",
   ]);
+});
+
+/** The entries of an exchange folder, as the test reads them: neither hidden nor temporary; none if not there. */
+function folderEntries(directory: string): string[] {
+  return existsSync(directory)
+    ? readdirSync(directory)
+        .filter((name) => !name.startsWith(".") && !name.endsWith(".tmp"))
+        .sort()
+    : [];
+}
+
+test("every number of the control and job views is a count, recounted: jobs, exit codes, folders, collects", async (t) => {
+  // Three jobs of run control on the fake root: a suite that is no suite (its run exits 2, and no step follows it),
+  // the fake pair with fake-human (run 0; compare 1, its pending pairs ERROR; report 0), and a collect after the fake
+  // operator answered (0). The exit codes are the commands' documented ones for those inputs.
+  const directory = tempDir(t);
+  const runsDir = join(directory, "runs");
+  const broken = join(directory, "broken.json");
+  writeFileSync(broken, "{ not a suite\n");
+  const suites = [
+    { name: "broken", file: broken },
+    { name: "fake-pair", file: FAKE_PAIR_SUITE },
+  ];
+  const control = controlChoices(loadConfig({ rootDir: FAKE_ROOT, env: process.env }), suites, process.env);
+  const dashboard = await startDashboard({ rootDir: FAKE_ROOT, runsDir, port: 0, control });
+  t.after(() => dashboard.close());
+  const { port } = dashboard;
+  const token = /name="token" value="([0-9a-f]{64})"/.exec((await fetchFrom(port, "/control")).body)?.[1] ?? "";
+  const act = async (action: string, fields: Record<string, string>, job: number): Promise<void> => {
+    const answer = await fetchFrom(port, `/control/${action}`, {
+      method: "POST",
+      body: new URLSearchParams({ token, ...fields }).toString(),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+    });
+    assert.equal(answer.headers.location, `/control/job/${job}`, answer.body);
+    for (let tries = 0; JSON.parse((await fetchFrom(port, `/api/control/job/${job}`)).body).running; tries++) {
+      assert.ok(tries < 900, `job ${job} ended`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  };
+  await act("start", { suite: "broken" }, 1);
+  await act("start", { suite: "fake-pair", engines: "fake-a,fake-human", rungs: "selftest" }, 2);
+  const exchange = join(runsDir, "exchange", "fake-human");
+  const operator = fileURLToPath(new URL("../fixtures/fake-operator/operator.mjs", import.meta.url));
+  assert.equal(spawnSync(process.execPath, [operator, exchange]).status, 0);
+  await act("collect", {}, 3);
+
+  const exitCodes: Record<number, (number | null)[]> = { 1: [2, null, null], 2: [0, 1, 0], 3: [0] };
+  const places = { rootDir: FAKE_ROOT, runsDir, policyFile: POLICY_FILE };
+  const view = JSON.parse((await fetchFrom(port, "/api/control")).body) as ControlView;
+  const expected = new Map<string, number>();
+  view.jobs.forEach((job, index) => {
+    expected.set(`/jobs/${index}/job`, index + 1);
+    exitCodes[index + 1].forEach((code, step) => {
+      if (code !== null) expected.set(`/jobs/${index}/steps/${step}/exitCode`, code);
+    });
+  });
+  assert.equal(view.jobs.length, 3);
+  assert.deepEqual(
+    view.exchange.map(({ engine }) => engine),
+    ["fake-human"],
+  );
+  view.exchange[0].folders.forEach(({ folder }, index) =>
+    expected.set(`/exchange/0/folders/${index}/count`, folderEntries(join(exchange, folder)).length),
+  );
+  holdView(places, view, expected, "control");
+  for (const job of [1, 2, 3]) {
+    const jobView = JSON.parse((await fetchFrom(port, `/api/control/job/${job}`)).body) as JobView;
+    const counts = new Map<string, number>([["/job", job]]);
+    exitCodes[job].forEach((code, step) => {
+      if (code !== null) counts.set(`/steps/${step}/exitCode`, code);
+    });
+    if (job === 3) {
+      // What the collect said, recounted from the exchange directory it moved the jobs into.
+      const collected = folderEntries(join(exchange, "collected"));
+      assert.deepEqual(jobView.collect?.engines[0].collected.jobs, collected);
+      counts.set("/collect/engines/0/collected/count", collected.length);
+      counts.set("/collect/engines/0/rejected/count", folderEntries(join(exchange, "rejected")).length);
+      counts.set(
+        "/collect/engines/0/pending/count",
+        folderEntries(join(exchange, "outbox")).length + folderEntries(join(exchange, "pending")).length,
+      );
+    }
+    holdView(places, jobView, counts, `job ${job}`);
+  }
 });

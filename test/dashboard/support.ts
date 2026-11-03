@@ -463,11 +463,20 @@ export interface Fetched {
   readonly body: string;
 }
 
-/** Asks a dashboard on 127.0.0.1 for `path` by `method`, with the Host header given (its own unless one is). */
+/**
+ * Asks a dashboard on 127.0.0.1 for `path` by `method`, with the Host header given (its own unless one is), any
+ * other headers and a body.
+ */
 export function fetchFrom(
   port: number,
   path: string,
-  options: { readonly method?: string; readonly host?: string; readonly address?: string } = {},
+  options: {
+    readonly method?: string;
+    readonly host?: string;
+    readonly address?: string;
+    readonly headers?: Readonly<Record<string, string>>;
+    readonly body?: string;
+  } = {},
 ): Promise<Fetched> {
   return new Promise((resolve, reject) => {
     const asked = request(
@@ -476,7 +485,7 @@ export function fetchFrom(
         port,
         path,
         method: options.method ?? "GET",
-        headers: { host: options.host ?? `127.0.0.1:${port}` },
+        headers: { host: options.host ?? `127.0.0.1:${port}`, ...options.headers },
         agent: false,
       },
       (response) => {
@@ -492,7 +501,7 @@ export function fetchFrom(
       },
     );
     asked.on("error", reject);
-    asked.end();
+    asked.end(options.body);
   });
 }
 

@@ -59,6 +59,10 @@ export const COUNT_KEYS: readonly string[] = Object.freeze([
   "sectionCount",
   // The place of a surface in a trace's list of surfaces, from 0: the bar of a deviation chart it is.
   "surface",
+  // The number of a job of run control, from 1, in the order they were started: what its route names (Stage 8.3).
+  "job",
+  // The exit code of a step of a job of run control, as its child process ended with it (Stage 8.3).
+  "exitCode",
 ]);
 
 /** The pointer of a path of members and indices (RFC 6901): `~` is written `~0` and `/` is written `~1`. */

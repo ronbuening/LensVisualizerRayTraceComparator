@@ -1,7 +1,9 @@
 // The dashboard's HTTP server (`lvrtc serve`): the pages and their JSON twins over runs and baselines, on
 // 127.0.0.1 only. A request whose Host is not this server's own is refused (403), which also defeats DNS
-// rebinding; only GET and HEAD are answered (405 otherwise); a path segment is looked up among the names the server
-// listed itself (404 otherwise), never joined into a path. Nothing is written, and no directory is made.
+// rebinding; pages answer GET and HEAD only, and the actions of run control (`/control/<action>`, Stage 8.3) POST
+// only (405 otherwise); a path segment is looked up among the names the server listed itself (404 otherwise), never
+// joined into a path. No page writes anything; an action writes only through the child `lvrtc` command it starts
+// (`control.ts`).
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo, Socket } from "node:net";
@@ -11,17 +13,23 @@ import type { Baseline } from "../contract/baseline.ts";
 import type { RunManifest } from "../core/manifest.ts";
 import { sectionSetGroups } from "../report/model.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
+import { DASHBOARD_TEXT } from "../report/wording.ts";
 import type { DocumentName } from "./figure.ts";
 import {
+  renderActionRefusal,
   renderBaseline,
   renderBaselineRun,
+  renderControl,
   renderIndex,
+  renderJob,
   renderRefusal,
   renderRun,
   renderRunPart,
   renderSection,
 } from "./html.ts";
 import { chartsReadStore, requestStoreKeys } from "./chartViews.ts";
+import { CONTROL_ACTIONS, FORM_BODY_BYTES, createController, headerRefusal } from "./control.ts";
+import type { ControlAction, ControlOptions, Controller, Refusal } from "./control.ts";
 import { askEngines } from "./identity.ts";
 import type { AskedEngines, EngineDescribeRunner } from "./identity.ts";
 import { createSources } from "./sources.ts";
@@ -65,6 +73,12 @@ export interface DashboardOptions {
   readonly runPageRequests?: number;
   /** What is read; made from the root, the runs directory and the policy file unless a test gives its own. */
   readonly sources?: DashboardSources;
+  /**
+   * What run control may start: the suites, the engines and the file-exchange engines it is held to (the CLI lists
+   * `<root>/suites/*.json` and the configuration's engines). When left out, run control starts and collects nothing,
+   * and its page says so.
+   */
+  readonly control?: ControlOptions;
 }
 
 /** A dashboard that is listening. */
@@ -76,7 +90,10 @@ export interface Dashboard {
   asked(): AskedEngines;
   /** Resolves once the engines answered, could not be asked, or were not to be asked. */
   readonly answered: Promise<AskedEngines>;
-  /** Stops listening, ends every open connection and an asking child, and resolves once the server is closed. */
+  /**
+   * Stops listening, ends every open connection, an asking child and a running job's child (SIGTERM, then SIGKILL
+   * after a grace period), and resolves once the server is closed and the child has exited.
+   */
   close(): Promise<void>;
 }
 
@@ -342,6 +359,96 @@ export function createRouter(
   };
 }
 
+/** The headers of a page with forms: they post to this origin only, and send it as their Origin. */
+const FORM_PAGE_HEADERS: Readonly<Record<string, string>> = {
+  "content-security-policy":
+    "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+  "referrer-policy": "same-origin",
+};
+
+/** The action a path names, `/control/<action>`; null for any other path. */
+function controlAction(segments: readonly string[] | null): ControlAction | null {
+  if (segments === null || segments.length !== 2 || segments[0] !== "control") return null;
+  return (CONTROL_ACTIONS as readonly string[]).includes(segments[1]) ? (segments[1] as ControlAction) : null;
+}
+
+/** The body of a request, or null once it is longer than `limit` bytes (the rest is not kept). */
+function readBody(request: IncomingMessage, limit: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let done = false;
+    request.on("data", (chunk: Buffer) => {
+      if (done) return;
+      size += chunk.length;
+      if (size > limit) {
+        done = true;
+        resolve(null);
+      } else chunks.push(chunk);
+    });
+    request.on("end", () => {
+      if (!done) resolve(Buffer.concat(chunks).toString("utf8"));
+      done = true;
+    });
+    request.on("error", reject);
+  });
+}
+
+function refusalAnswer(refusal: Refusal): Answer {
+  return {
+    status: refusal.status,
+    type: "html",
+    body: renderActionRefusal(refusal.status, refusal.reason),
+    ...(refusal.status === 413 ? { headers: { connection: "close" } } : {}),
+  };
+}
+
+/** An action: its headers, its size and its token checked, then taken by run control. */
+async function takeAction(
+  controller: Controller,
+  action: ControlAction,
+  request: IncomingMessage,
+  port: number,
+): Promise<Answer> {
+  const refused = headerRefusal(request.headers, port);
+  if (refused !== null) return refusalAnswer(refused);
+  const tooLarge: Refusal = { status: 413, reason: DASHBOARD_TEXT.control.refusedSize(String(FORM_BODY_BYTES / 1024)) };
+  const declared = request.headers["content-length"];
+  if (declared !== undefined && !(Number(declared) <= FORM_BODY_BYTES)) return refusalAnswer(tooLarge);
+  const body = await readBody(request, FORM_BODY_BYTES);
+  if (body === null) return refusalAnswer(tooLarge);
+  const outcome = controller.act(action, body);
+  if ("location" in outcome) {
+    return { status: 303, type: "text", body: "see other\n", headers: { location: outcome.location } };
+  }
+  return refusalAnswer(outcome);
+}
+
+/** The pages of run control and their twins: `/control`, `/control/job/<n>`; null for any other path. */
+function controlPage(controller: Controller, segments: readonly string[] | null): Answer | null {
+  if (segments === null) return null;
+  const api = segments[0] === "api";
+  const route = api ? segments.slice(1) : segments;
+  if (route[0] !== "control") return null;
+  if (route.length === 1) {
+    const view = controller.controlView();
+    return api
+      ? { status: 200, type: "json", body: json(view) }
+      : { status: 200, type: "html", body: renderControl(view, controller.token), headers: FORM_PAGE_HEADERS };
+  }
+  if (route.length === 3 && route[1] === "job" && PLACE.test(route[2]) && route[2] !== "0") {
+    const view = controller.jobView(Number(route[2]));
+    if (view !== null) {
+      return api
+        ? { status: 200, type: "json", body: json(view) }
+        : { status: 200, type: "html", body: renderJob(view) };
+    }
+  }
+  return api
+    ? { status: 404, type: "json", body: json({ error: "not found" }) }
+    : { status: 404, type: "html", body: renderRefusal(404, "Not found") };
+}
+
 function send(request: IncomingMessage, response: ServerResponse, answer: Answer): void {
   const body = Buffer.from(answer.body, "utf8");
   response.writeHead(answer.status, {
@@ -370,22 +477,60 @@ export async function startDashboard(options: DashboardOptions): Promise<Dashboa
   const route = createRouter(sources, () => asked, { runPageRequests: options.runPageRequests });
   // The Host the server answers to: set in the listen callback, before any request can be served.
   let port = -1;
+  const abort = new AbortController();
+  const { runner } = options;
+  /** Asks the engines of the baselines who they are, through the runner, and keeps what they said. */
+  const ask = (asker: EngineDescribeRunner): Promise<AskedEngines> => {
+    asked = { state: "asking" };
+    return askEngines(asker, baselineEngineIds(sources), abort.signal).then((outcome) => {
+      asked = abort.signal.aborted ? { state: "failed", problem: "the dashboard closed first" } : outcome;
+      return asked;
+    });
+  };
+  const controller = createController(
+    {
+      rootDir: options.rootDir,
+      runsDir: options.runsDir,
+      sources,
+      asked: () => asked,
+      askAgain: runner === undefined ? null : () => void ask(runner),
+    },
+    options.control,
+  );
+
+  const answerOf = async (request: IncomingMessage): Promise<Answer> => {
+    const host = request.headers.host;
+    if (host !== `${DASHBOARD_HOST}:${port}` && host !== `localhost:${port}`) {
+      return { status: 403, type: "text", body: "forbidden: this dashboard answers its own host only\n" };
+    }
+    const url = request.url ?? "/";
+    const segments = pathSegments(url);
+    const action = controlAction(segments);
+    if (action !== null) {
+      if (request.method === "POST") return takeAction(controller, action, request, port);
+      return {
+        status: 405,
+        type: "html",
+        body: renderActionRefusal(405, DASHBOARD_TEXT.control.refusedMethod),
+        headers: { allow: "POST" },
+      };
+    }
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return { status: 405, type: "text", body: "method not allowed\n", headers: { allow: "GET, HEAD" } };
+    }
+    return controlPage(controller, segments) ?? route(url);
+  };
 
   const server: Server = createServer((request, response) => {
-    let answer: Answer;
-    try {
-      const host = request.headers.host;
-      if (host !== `${DASHBOARD_HOST}:${port}` && host !== `localhost:${port}`) {
-        answer = { status: 403, type: "text", body: "forbidden: this dashboard answers its own host only\n" };
-      } else if (request.method !== "GET" && request.method !== "HEAD") {
-        answer = { status: 405, type: "text", body: "method not allowed\n", headers: { allow: "GET, HEAD" } };
-      } else answer = route(request.url ?? "/");
-    } catch (error) {
-      // Never a stack trace to the client: what went wrong is for the console of whoever runs the server.
-      process.stderr.write(`lvrtc serve: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
-      answer = { status: 500, type: "text", body: "internal error\n" };
-    }
-    send(request, response, answer);
+    void answerOf(request)
+      .catch((error: unknown): Answer => {
+        // Never a stack trace to the client: what went wrong is for the console of whoever runs the server.
+        process.stderr.write(
+          `lvrtc serve: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+        );
+        return { status: 500, type: "text", body: "internal error\n" };
+      })
+      .then((answer) => send(request, response, answer));
   });
   const sockets = new Set<Socket>();
   server.on("connection", (socket) => {
@@ -401,14 +546,7 @@ export async function startDashboard(options: DashboardOptions): Promise<Dashboa
     });
   });
 
-  const abort = new AbortController();
-  const answered: Promise<AskedEngines> =
-    options.runner === undefined
-      ? Promise.resolve(asked)
-      : askEngines(options.runner, baselineEngineIds(sources), abort.signal).then((outcome) => {
-          asked = abort.signal.aborted ? { state: "failed", problem: "the dashboard closed first" } : outcome;
-          return asked;
-        });
+  const answered: Promise<AskedEngines> = runner === undefined ? Promise.resolve(asked) : ask(runner);
   return {
     port,
     url: `http://${DASHBOARD_HOST}:${port}/`,
@@ -416,6 +554,7 @@ export async function startDashboard(options: DashboardOptions): Promise<Dashboa
     answered,
     close: async () => {
       abort.abort();
+      await controller.close();
       await new Promise<void>((resolve) => {
         server.close(() => resolve());
         for (const socket of sockets) socket.destroy();

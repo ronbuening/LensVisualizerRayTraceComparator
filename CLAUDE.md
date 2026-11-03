@@ -2042,4 +2042,41 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   (`fixedIdentity` in `test/dashboard/support.ts`), and the stand-ins' are of their options. Every chart sentence,
   tooltips and derivations included, is a template of `DASHBOARD_TEXT.charts`; the visible text and the `<title>` text
   of every fixture page are linted.
-- 8.3 adds `src/dashboard/control.ts` (the one writer, through child `lvrtc` commands, one at a time).
+- **Run control (Stage 8.3) is the dashboard's one writer** (`src/dashboard/control.ts`, `/control`): it writes
+  only by starting `lvrtc` children (`process.execPath bin/lvrtc.mjs ...`, no shell, the server's environment with
+  `LVRTC_RUNS_DIR` set to its runs directory, the server's `--root`), which write what those commands write; no page
+  and no other file of the dashboard writes. A start is `run` of a suite the server listed (`<root>/suites/*.json` by
+  stem, links followed, regular files only; `startDashboard({ control })` takes the list, so tests name fixture
+  suites; without `control` it starts and collects nothing, and its page says so), then `compare`, then `report`;
+  `run` or `compare` exiting 2 ends the job (the rest "not run"), `compare` exiting 1 still goes on to `report`.
+  Engines (the configuration's definitions and the built-in engines, `controlChoices`), rungs (`RUNGS`) and jobs
+  (**1 to 4**, `CONTROL_MAX_JOBS`, never more) are held to the server's own lists; the client sends a listed name,
+  never a path. A suite of `OWNER_ONLY_SUITES` (the catalog) is listed with the note that it is a full catalog sweep,
+  the owner's alone. Collect is `collect --root <root> --json`, its stdout kept whole (that step only) and read once
+  at exit: per engine collected, rejected (lvrtc's reason in `<code>`, redacted) and pending. "Ask the engines
+  again" re-runs 8.1's ask through the same runner (none with `--no-ask`: 409).
+  **One job at a time** across the dashboard, asking included: a start, collect or ask while a job runs or the
+  engines are asked is 409 with a page that says so. **Actions are POST only** (GET or HEAD of `/control/<action>`
+  is 405 with `Allow: POST`; a POST elsewhere stays 405), a form body (`application/x-www-form-urlencoded`, else 415)
+  of at most 16 KB, declared or chunked (413), the per-server random token of every form required and compared in
+  constant time (403), an `Origin`, when sent, `http://127.0.0.1:<port>` or `http://localhost:<port>` and
+  `Sec-Fetch-Site`, when sent, `same-origin` or `none` (403), every field validated (400, an unknown or repeated field
+  too), then a 303 to the job page. The control page alone sends `referrer-policy: same-origin` and `form-action
+  'self'` (under `no-referrer` a browser posts `Origin: null`). No action for store maintenance, baselines, `verify
+  --write` or anything that writes the repository. Jobs are numbered from 1 and kept in memory only
+  (`/control/job/<n>` and its twin): each step's command line with `<root>` and `<runsDir>` (a listed suite outside
+  the root is `<suite:<name>>`, in its output too), its state (queued, running, exited with a code, killed, not
+  started, not run, not run because the dashboard closed) and a 256 KB tail of stdout and stderr interleaved, from a
+  line start, with the root, the runs directory and the home directory written `<root>`, `<runsDir>`, `~`
+  (`redactor`: whole paths only, at a path boundary, trailing slashes dropped, the longest spelling first, the
+  realpath of the nearest existing ancestor too); no absolute path appears whatever HOME is. A running job's page
+  reloads every 2 s. **Each child leads a process group of its own** (`detached`): a serial `lvrtc run` has no
+  SIGTERM handler and would leave its engine workers (optiland's Python) behind, so `close()` signals the group,
+  SIGTERM, then SIGKILL after `KILL_GRACE_MS` (5 s), waits for the child, and SIGKILLs what of the group outlives it.
+  `lvrtc serve` goes through `close()` on SIGINT or SIGTERM and ignores a second one until the group has ended. `job`
+  and `exitCode` are count keys, recounted in `figures.test.ts`; every control sentence is a `DASHBOARD_TEXT.control`
+  template, and the wording test lints the control and job pages without lvrtc's own words (`<pre>` output, `<code>`
+  reasons). The stage's verification is `test/dashboard/control.test.ts`: the fake suite end to end from the UI
+  (`fake-pair` with `fake-a,fake-human`, on a temporary root with the suite under its `suites/`: pending, the fake
+  operator, collect, run again, every job ok and four PASS, the manifest the bytes of a run where fake-human answered
+  at once); its tests start no Python or LensVisualizer.

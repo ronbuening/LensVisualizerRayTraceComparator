@@ -652,7 +652,8 @@ export const MATRIX_TEXT = {
  * takes HTML is filled with placeholders, escaped, and only then given the HTML (`html.ts`, `fill`).
  */
 export const DASHBOARD_TEXT = {
-  readOnly: "The dashboard reads the run directories, the baselines and the policy at hand, and writes nothing.",
+  readOnly:
+    "The pages read the run directories, the baselines and the policy at hand, and write nothing; only the actions of the control page write, each by starting an lvrtc command.",
   sources: "Hover over a number to see the file it was read from and its JSON pointer there.",
   derived: "A number marked as derived is computed by the dashboard from the figures it names, never read from a file.",
   policyAtHand: (name: string, version: string, hash: string): string =>
@@ -725,8 +726,90 @@ export const DASHBOARD_TEXT = {
       "The engines were not asked (lvrtc serve --no-ask): each baseline is judged against the last run of its suite where it has one.",
     asking:
       "The engines are being asked who they are; until they answer, each baseline is judged against the last run of its suite where it has one.",
-    asked: "The engines were asked once, when the dashboard started.",
+    asked: "The engines were asked who they are when the dashboard started, or since then from the control page.",
     askFailed: (problem: string): string => `The engines could not be asked (${problem}).`,
+  },
+  /**
+   * What the control page and the job pages say (Stage 8.3): of starting a suite, collecting, asking the engines again,
+   * the jobs, their steps and output, the pending jobs and the exchange directories, and why an action is refused.
+   */
+  control: {
+    intro:
+      "The actions of this page start lvrtc commands as children of the dashboard, one job at a time; what they write is what those commands write, and nothing else of the dashboard writes.",
+    heavy:
+      "A run of real engines (lv, ref, optiland and the others built in) is a heavy command: start one only when no other session runs one.",
+    noMaintenance:
+      "Store maintenance, baselines and anything that writes the repository have no action here: they are run by hand.",
+    busyJob: (job: string): string => `Job ${job} is running: a start or a collect is refused until it ends.`,
+    busyAsking:
+      "The engines are being asked who they are: a start or a collect is refused until they answer, since asking them is a heavy command too.",
+    idle: "No job is running.",
+    closing: "The dashboard is closing, so it starts nothing.",
+    startHow:
+      "A job runs lvrtc run of the suite, then lvrtc compare, then lvrtc report, each when the one before it has ended. A run that exits with code 2 started nothing and ends the job, and so does a compare that exits with code 2; a compare that finds a FAIL or an ERROR (code 1) still goes on to the report. Jobs left pending for a file-exchange engine are no failure.",
+    startFields: (most: string): string =>
+      `Engines and rungs are optional, each a list of ids separated by commas (the suite's own when left empty); jobs is 1 to ${most}, the number of concurrent jobs of lvrtc run.`,
+    noSuites: "No suite file is listed: the dashboard lists the files suites/*.json of its root.",
+    notConfigured:
+      "This dashboard was started without the lists a start and a collect are held to, so it starts and collects nothing.",
+    suitePlaceholder: (name: string): string => `<suite:${name}>`,
+    ownerOnlySuite: (name: string): string =>
+      `The suite ${name} is a full catalog sweep: running it is the owner's alone, never an implementer's.`,
+    ownerOnlyOption: (name: string): string => `${name} (owner only)`,
+    enginesKnown: (ids: string): string => `Engines that can be named: ${ids}.`,
+    rungsKnown: (ids: string): string => `Rungs that can be named: ${ids}.`,
+    collectHow:
+      "Collect runs lvrtc collect for every file-exchange engine of the configuration: each answer an operator left in an inbox is admitted into the store, or refused with its reason, and the next run of the suite finds the admitted answers there.",
+    askHow:
+      "Asking the engines again runs lvrtc engine describe as when the dashboard started, so that the STALE badges follow an engine that changed since then.",
+    cannotAsk:
+      "This dashboard was started without asking the engines (lvrtc serve --no-ask), so it has no way to ask them.",
+    noJobs: "No job has been started since the dashboard started.",
+    jobsKept: "Jobs are kept in memory while the dashboard runs, and nothing about them is written.",
+    pending:
+      "Every job of every run directory that waits for an answer from a file-exchange engine, as the manifests list it.",
+    noPending: "No job of any run directory waits for an answer.",
+    exchange:
+      "Each file-exchange engine's jobs by folder of its exchange directory: handed over (outbox), taken by its operator (pending), answered and not yet collected (inbox), collected, and refused.",
+    noExchange: "The configuration defines no file-exchange engine.",
+    operator: (engine: string): string =>
+      `The operator of ${engine} takes each job of its outbox, answers the job's message.json and leaves the answer in its inbox as a file named after the job; Collect then admits the answers.`,
+    jobRunning: "This job is running: the page reloads every two seconds.",
+    jobEnded: "This job has ended.",
+    output:
+      "Each step's standard output and error as they were received, the last 256 KB of them, with the root, the runs directory and the home directory written as <root>, <runsDir> and ~.",
+    truncated: "Earlier output of this step was left out.",
+    noOutput: "This step printed nothing.",
+    stateQueued: "queued",
+    stateRunning: "running",
+    stateExited: (code: string): string => `exited with code ${code}`,
+    stateKilled: (signal: string): string => `killed by ${signal}`,
+    stateNotStarted: "could not be started",
+    stateNotRun: "not run: an earlier step ended the job",
+    stateClosed: "not run: the dashboard closed before it was started",
+    collected: "What the collect admitted, refused and left pending, per file-exchange engine.",
+    collectUnavailable: (engine: string, reason: string): string => `${engine} could not be collected for: ${reason}`,
+    collectNotJson: "The output of lvrtc collect is not JSON.",
+    collectNoEngines: "The output of lvrtc collect does not list the engines it collected for.",
+    collectTooLong: "The output of lvrtc collect is too long to read.",
+    collectNothing: "The configuration defines no file-exchange engine, so nothing was collected.",
+    refusedTitle: "Refused",
+    refusedToken: "The form does not carry this dashboard's token: reload the control page and try again.",
+    refusedOrigin: "The request comes from a page of another origin than this dashboard.",
+    refusedSite: "The request comes from another site than this dashboard.",
+    refusedType: "An action takes a form, sent as application/x-www-form-urlencoded.",
+    refusedSize: (most: string): string => `An action takes a form of at most ${most} KB.`,
+    refusedMethod: "An action is taken by the form of the control page, sent by POST.",
+    unknownField: (name: string): string => `The form has a field that it does not take: ${name}.`,
+    repeatedField: (name: string): string => `The form has the field ${name} more than once.`,
+    noSuite: "The form names no suite.",
+    unknownSuite: (name: string): string => `The suite ${name} is not one of the suites the dashboard lists.`,
+    unknownEngine: (id: string): string => `The engine ${id} is neither defined by the configuration nor built in.`,
+    unknownRung: (id: string): string => `The rung ${id} is not a rung of the comparator.`,
+    emptyId: "A list of ids has an empty entry: name the ids separated by single commas.",
+    repeatedId: "A list of ids names an id more than once.",
+    badJobs: (given: string, most: string): string =>
+      `Jobs must be a whole number from 1 to ${most}, and the form gives "${given}".`,
   },
   /** What the charts of the dashboard say (Stage 8.2): their titles, axes, legends and captions. */
   charts: {

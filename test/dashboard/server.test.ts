@@ -11,17 +11,17 @@ import { gzipSync } from "node:zlib";
 import { after, before, test } from "node:test";
 
 import { baselineText } from "../../src/baseline/build.ts";
-import { createServeCommand } from "../../src/cli/commands/serve.ts";
+import { controlChoices, createServeCommand } from "../../src/cli/commands/serve.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts";
 import type { Baseline } from "../../src/contract/baseline.ts";
-import { REPO_ROOT } from "../../src/core/config.ts";
+import { REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
 import { escapeHtml, renderBaseline, renderBaselineRun } from "../../src/dashboard/html.ts";
 import { createViews, pathSegments, startDashboard } from "../../src/dashboard/server.ts";
 import type { Dashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
-import { tempDir } from "../core/support.ts";
+import { FAKE_PAIR_SUITE, tempDir } from "../core/support.ts";
 import { buildFixture, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
 
@@ -276,6 +276,18 @@ test("the same files give the same bytes, and no page or view names an absolute 
           assert.doesNotMatch(one.body, /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/, `${asked}: no timestamp`);
         }
       }
+      // The control page too: its twin the same bytes, its page the same but for the token of a form, each server's
+      // own (these dashboards have no control lists and no runner, so no form: control.test.ts holds the tokens).
+      const token = (body: string): string => body.replace(/name="token" value="[0-9a-f]{64}"/g, 'name="token"');
+      const [one, two] = [await fetchFrom(server.port, "/control"), await fetchFrom(again.port, "/control")];
+      assert.equal(token(one.body), token(two.body));
+      assert.equal(
+        (await fetchFrom(server.port, "/api/control")).body,
+        (await fetchFrom(again.port, "/api/control")).body,
+      );
+      for (const absolute of [fixture.directory, REPO_ROOT, tmpdir(), "/Users/", "/private/", "/home/"]) {
+        assert.ok(!one.body.includes(absolute), `/control names ${absolute}`);
+      }
     } finally {
       await again.close();
     }
@@ -285,7 +297,7 @@ test("the same files give the same bytes, and no page or view names an absolute 
 test("every sentence of every page passes the wording lint", async () => {
   // The charts included: their axis labels, legends and captions are visible text too.
   for (const server of [dashboard, mtfDashboard, raysDashboard]) {
-    for (const path of await everyPage(server.port)) {
+    for (const path of [...(await everyPage(server.port)), "/control"]) {
       const body = (await fetchFrom(server.port, path)).body;
       assert.deepEqual(wordingProblems(visibleText(body)), [], path);
       assert.deepEqual(wordingProblems(titleTexts(body).join("\n\n")), [], `${path}: its tooltips`);
@@ -303,7 +315,7 @@ test("every sentence of every page passes the wording lint", async () => {
   try {
     for (const state of ["asking", "failed"]) {
       assert.equal(asking.asked().state, state);
-      for (const path of await everyPage(asking.port)) {
+      for (const path of [...(await everyPage(asking.port)), "/control"]) {
         const text = visibleText((await fetchFrom(asking.port, path)).body);
         assert.deepEqual(wordingProblems(text), [], `${state} ${path}`);
       }
@@ -319,12 +331,77 @@ test("nothing was written: the root and the runs directories, their stores inclu
   await everyPage(dashboard.port);
   await everyPage(mtfDashboard.port);
   await everyPage(raysDashboard.port);
+  for (const server of [dashboard, mtfDashboard, raysDashboard]) {
+    for (const path of ["/control", "/api/control", "/control/job/1"]) await fetchFrom(server.port, path);
+  }
   assert.deepEqual(treeOf(fixture.rootDir), before_.root);
   assert.deepEqual(treeOf(fixture.runsDir), before_.runs);
   assert.deepEqual(treeOf(fixture.mtfRootDir), before_.mtfRoot);
   assert.deepEqual(treeOf(fixture.mtfRunsDir), before_.mtfRuns);
   assert.deepEqual(treeOf(fixture.raysRootDir), before_.raysRoot);
   assert.deepEqual(treeOf(fixture.raysRunsDir), before_.raysRuns);
+});
+
+test("asking the engines again from the control page re-runs the same runner, and the badges follow its answer", async () => {
+  // A scripted runner: first every engine unavailable, then the engines as the fake pair's last run recorded them.
+  const manifest = JSON.parse(readFileSync(join(fixture.runsDir, "fake-pair", "manifest.json"), "utf8"));
+  const recorded = new Map(manifest.engines.map((engine: { id: string }) => [engine.id, engine]));
+  const asked: string[][] = [];
+  let release: () => void = () => undefined;
+  const runner = async (ids: readonly string[]) => {
+    asked.push([...ids]);
+    if (asked.length === 2) await new Promise<void>((resolve) => (release = resolve));
+    const engines = ids.map((id) =>
+      asked.length === 1 || !recorded.has(id)
+        ? { id, status: "unavailable", code: "not-configured" }
+        : recorded.get(id),
+    );
+    return { code: 0, stdout: JSON.stringify({ engines }) };
+  };
+  const control = controlChoices(
+    loadConfig({ rootDir: fixture.rootDir, env: {} }),
+    [{ name: "fake-pair", file: FAKE_PAIR_SUITE }],
+    process.env,
+  );
+  const served = await startDashboard({ rootDir: fixture.rootDir, runsDir: fixture.runsDir, port: 0, runner, control });
+  try {
+    await served.answered;
+    const badges = async () =>
+      JSON.parse((await fetchFrom(served.port, "/api/baseline/fake-pair")).body).summary.badges.map(
+        ({ badge }: { badge: string }) => badge,
+      );
+    assert.deepEqual(await badges(), ["STALE(engine)"]);
+    const page = (await fetchFrom(served.port, "/control")).body;
+    const token = /name="token" value="([0-9a-f]{64})"/.exec(page)?.[1] ?? "";
+    const post = (action: string, fields = "") =>
+      fetchFrom(served.port, `/control/${action}`, {
+        method: "POST",
+        body: `token=${token}${fields}`,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+      });
+    const again = await post("ask");
+    assert.equal(again.status, 303);
+    assert.equal(again.headers.location, "/control");
+    // While the engines are asked again, a start, a collect or a second ask is refused, and the pages say so.
+    assert.equal(served.asked().state, "asking");
+    for (const [action, fields] of [
+      ["ask", ""],
+      ["collect", ""],
+      ["start", "&suite=fake-pair&rungs=selftest"],
+    ]) {
+      const busy = await post(action, fields);
+      assert.equal(busy.status, 409, action);
+      assert.ok(visibleText(busy.body).includes(DASHBOARD_TEXT.control.busyAsking), action);
+    }
+    assert.deepEqual(JSON.parse((await fetchFrom(served.port, "/api/control")).body).busy, { reason: "asking" });
+    release();
+    while (served.asked().state === "asking") await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(asked.length, 2);
+    assert.deepEqual(asked[1], asked[0], "the same engines, through the same runner");
+    assert.deepEqual(await badges(), ["CURRENT"]);
+  } finally {
+    await served.close();
+  }
 });
 
 test("a section page is of its store entries: one rewritten, then removed, under a running server is another page", async (t) => {
