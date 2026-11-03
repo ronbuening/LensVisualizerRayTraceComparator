@@ -6,11 +6,12 @@
 // (the stop rule, the MTF's stop lattice, the aimed pupil samples of the spot, axial and curvature sets, the colour
 // zone of four channels, the vignetting tab's stop lattice) were reread at Stage 6.8b, at LV 607ff23ae (closure
 // f016b35b, 184 files). Those LensVisualizer #940 moved (a finite object's chief seed, the end of a lattice that aims
-// nothing) were reread at LV 6287f4393 (closure fc5ae923, 184 files).
+// nothing) were reread at LV 6287f4393 (closure fc5ae923, 184 files). Those LensVisualizer #942 moved (the rim
+// lands of cuts and vertical extensions) were reread at LV 55ddfb1e1 (closure ff0d938d, 184 files).
 // LensVisualizer exports none of these rules as a function, so the comparator restates them; when LV rewrites
 // one, the canary fails and names what to read again. Whitespace is not compared.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -2766,10 +2767,12 @@ test(
 // ── Stage 6.8b: LensVisualizer #928, #932 and #936 ───────────────────────────────────────────────────────────────
 
 test(
-  "a flat rim cut is still only a clear radius of the trace, the land a drawing and no surface of it",
+  "a flat rim cut is still only a clear radius of the trace, a rim extension none, and each land a drawing and no surface of it",
   { skip },
   () => {
-    // Read at 607ff23ae (LV #928, #932): LV traces the uncut cap and clips a ray beyond the cut radius.
+    // Read at 607ff23ae (LV #928, #932): LV traces the uncut cap and clips a ray beyond the cut radius. Read again at
+    // 55ddfb1e1 (LV #942): a vertical rim extension is a land of the same kind, from the cap's edge at `sd` out to a
+    // taller drawn rim; it leaves `rimCut` null, so the trace still clips at `sd`.
     const mirror =
       "lvClearRadius in src/engines/lv/exportAperture.ts restates clearSemiDiameter; surfaceAperture exports the cap " +
       "clipped at that radius";
@@ -2786,10 +2789,10 @@ test(
      return clearSemiDiameter(surface.sd, surface.rimCut);`,
       mirror,
     );
-    // The land is met by no trace: only the drawing of a clipped hit is moved onto it.
+    // The land, a cut's or an extension's, is met by no trace: only the drawing of a clipped hit is moved onto it.
     assertSource(
       "src/optics/trace/runtimeRayResult.ts",
-      `const land = rimCutLandPoint(L.surfaces[hit.surfaceIndex], hit);
+      `const land = rimLandPoint(L.surfaces[hit.surfaceIndex], hit);
      if (ghost) ghostPts.push(land ? [land[2], land[1]] : point);`,
       "exportAperture.ts says no ray of a trace meets the land; a change here would make the land a surface",
     );
@@ -2797,6 +2800,28 @@ test(
       occurrences("src/optics/trace/sequentialTrace.ts", "rimCut"),
       0,
       "the sequential tracer now reads a rim cut: the land may be a surface of the trace, which the contract cannot express",
+    );
+    const tracers = readdirSync(join(LV_PATH ?? "", "src", "optics", "trace")).filter((name) => name.endsWith(".ts"));
+    assert.deepEqual(
+      tracers.filter((name) => occurrences(`src/optics/trace/${name}`, "rimLand") > 0),
+      ["runtimeRayResult.ts"],
+      "a module of the trace now reads a rim land: a land may be a surface of the trace, which the contract cannot express",
+    );
+    // An extension's land starts at the cap's own edge, `sd`, and is no rim cut: the clear radius stays `sd`.
+    assertSource(
+      "src/optics/prescription/surfaces.ts",
+      `const rimCut = compileRimCut(surface, profile);
+     const rimLand =
+       rimCut ??
+       (surface.rimExtensionSd === undefined
+         ? null
+         : resolveRimExtension(profile.sag, surface.sd, surface.rimExtensionSd));`,
+      "lvClearRadius reads rimCut alone, so a surface with an extension is exported clipped at its sd",
+    );
+    assertSource(
+      "src/optics/geometry/rimCut.ts",
+      "return Number.isFinite(edgeSag) ? { sag: edgeSag, radius: sd, outerRadius: outerSd } : null;",
+      "exportAperture.ts says an extension adds a land outside the clear aperture and changes no radius of the case",
     );
     // The validator holds the cap beyond the land from the cut radius out to sd, which makes the two models one.
     assertSource(
@@ -2806,7 +2831,8 @@ test(
     );
     assertSource(
       "src/optics/prescription/surfaces.ts",
-      "rimCut: compileRimCut(surface, profile),",
+      `rimCut,
+     rimLand: rimLand && Object.freeze(rimLand),`,
       "the binding reads the prepared surface's rimCut, which LvSurface types",
     );
   },

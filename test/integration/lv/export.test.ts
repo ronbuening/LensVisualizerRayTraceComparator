@@ -365,17 +365,34 @@ test(
 test(
   "every surface of every exported lens has the sag of LensVisualizer's own profile, from the vertex to the rim",
   { skip },
-  async () => {
+  async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
     const wrong: string[] = [];
+    const beyondConic: string[] = [];
+    let extensions = 0;
     const seen = { plane: 0, conic: 0, evenAsphere: 0, oddAsphere: 0, flatBaseAsphere: 0, power20: 0 };
     for (const { key } of (await binding.catalog()).entries) {
       const result = await exporter.exportLens(key, {});
       if (!result.ok) continue;
       const { state } = await prepared(binding, key);
-      result.opticalCase.system.surfaces.forEach(({ shape }, index) => {
-        const { profile, sd } = state.surfaces[index];
+      const { surfaces, stopIndex } = result.opticalCase.system;
+      surfaces.forEach(({ shape, aperture }, index) => {
+        const { profile, sd, rimCut, rimLand } = state.surfaces[index];
+        // The rim is the case's: a flat rim cut ends the cap at its radius (#928), inside LensVisualizer's sd, and the
+        // case states no surface beyond it. Since 55ddfb1e1 that sd may lie where the conic has ended and the
+        // contract has no sag (NaN), while LensVisualizer's profile goes on by a rule its intersection never takes.
+        const rim = aperture.nominalSemiDiameter;
+        if (index !== stopIndex && Number.isNaN(contractSag(shape, sd))) {
+          const cut = rimCut ? `rim cut at ${rimCut.radius}, its land at ${rimCut.sag} mm` : "no rim cut";
+          beyondConic.push(`${key} ${surfaces[index].label} (sd ${sd}, ${cut})`);
+          assert.ok(rimCut && rim === rimCut.radius, `${key}, surface ${index}: sd ${sd} lies beyond its conic`);
+        }
+        // A vertical rim extension (#942) is a land outside the clear aperture: the case is clipped at the sd.
+        if (rimLand && !rimCut) {
+          extensions++;
+          if (index !== stopIndex) assert.equal(rim, sd, `${key}, surface ${index}: a rim extension moved the rim`);
+        }
         if (shape.kind === "plane") seen.plane++;
         else if (shape.kind === "conic") seen.conic++;
         else {
@@ -390,7 +407,7 @@ test(
         // LV d36f44b3 the largest difference is 6.1e-12 of the sag (1.3e-10 mm), where a term left out, a wrong
         // power or a sign shows at 1e-6 or more.
         for (let step = 0; step <= 8; step++) {
-          const r = (sd * step) / 8;
+          const r = (rim * step) / 8;
           const expected = profile.sag(r);
           const difference = Math.abs(contractSag(shape, r) - expected);
           if (!(difference <= 1e-10 * Math.max(1, Math.abs(expected)))) {
@@ -402,6 +419,9 @@ test(
     assert.deepEqual(wrong.slice(0, 20), []);
     // The catalog has every kind of shape the exporter writes, so each was compared.
     for (const [kind, count] of Object.entries(seen)) assert.ok(count > 0, `no ${kind} surface was compared`);
+    // At 55ddfb1e1: nikkor-s-auto-50mm-f14 5 and nikon-nikkor-s-auto-58mm-f1-4 8, each rim bending rearward.
+    t.diagnostic(`rim cuts whose sd lies beyond the conic: ${beyondConic.join(", ") || "none"}`);
+    t.diagnostic(`surfaces with a vertical rim extension, exported clipped at their sd: ${extensions}`);
   },
 );
 

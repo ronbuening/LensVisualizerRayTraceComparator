@@ -47,9 +47,12 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
  * mtf.maxAbs 1.69e-14); at Stage 6.8b, at LV 607ff23ae (closure f016b35b, 184 files: every stop resized by LV #933, and
  * #936's stop lattice refined to a cap of 256 cells across the stop), every case and grid moved and was pinned anew
  * (worst R4f mtf.maxAbs 1.30e-14); at LV 6287f4393 (closure fc5ae923, 184 files: LV #940), every case and grid was
- * measured again and found unchanged, the 192 answers the same bytes as at 607ff23ae (worst 1.2989609388114332e-14).
+ * measured again and found unchanged, the 192 answers the same bytes as at 607ff23ae (worst 1.2989609388114332e-14); at
+ * LV 55ddfb1e1 (closure ff0d938d, 184 files: LV #942), every case and grid was measured again: unchanged but the Sigma
+ * 35 mm's two cases, which moved with its authored rims (LV #943), its reference run's grid at 25 % with them (worst
+ * again 1.2989609388114332e-14).
  */
-const PINNED_CLOSURE = "fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59";
+const PINNED_CLOSURE = "ff0d938d09961e20552ae4624a94a4494b3885e1356302b209048147cf197c26";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended
@@ -73,11 +76,11 @@ const PINNED: Readonly<Record<string, readonly [caseId: string, grids: readonly 
     [64, 64, 64, 64, 128],
   ],
   "sigma-35mm-f14-dg-hsm-a-ref": [
-    "998482d4e947545c167134a7dabe3f522863dc7d7a70aac77c25a969b4b4cb5e",
-    [32, 64, 64, 128, 256],
+    "18ef72984fad20ad086ba18f8b839edb2d9d142a51397b4b7c1a3cdf1565d456",
+    [32, 128, 64, 128, 256],
   ],
   "sigma-35mm-f14-dg-hsm-a-photopic": [
-    "c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae",
+    "7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9",
     [64, 64, 64, 128, 256],
   ],
   "nikkor-z50f12-ref": ["861a915ddd7dd32d774e7b798745bc1395913d8f13482022482c7d083e7acd22", [64, 128, 64, 128, 256]],

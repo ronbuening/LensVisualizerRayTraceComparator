@@ -86,6 +86,13 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   which is LensVisualizer's own rule and not the comparator's. Of the 18 678 surfaces of the lenses that export,
   none has a clear aperture beyond that height today; the nearest, the second surface of `russar-22-70f8`, is
   authored 1e-9 mm short of its radius.
+- **Since 55ddfb1e1** two surfaces are authored with an `sd` beyond the end of their sphere, each with a rim cut
+  ([below](#a-rim-land-a-cuts-or-an-extensions-is-drawn-and-is-no-surface-of-the-trace)): the surface `5` of
+  `nikkor-s-auto-50mm-f14` (R 16.1963 mm, `sd` 16.5, the cut at 12.70 mm) and the surface `8` of
+  `nikon-nikkor-s-auto-58mm-f1-4` (R 16.82 mm, `sd` 19, the cut at 13.30 mm). Their clear aperture is the cut radius,
+  inside the sphere, and the case ends there; LensVisualizer's profile at the `sd` is its continuation (21.46 mm on
+  the 58 mm, past the sphere's 16.82), the contract's sag NaN. The export test that compared the two sags out to the
+  state's `sd` read past the case's rim and failed there; it samples the case's rim since.
 - **Class.** convention.
 
 ### The stored pupil constants are not paraxial
@@ -200,6 +207,30 @@ by a tracer written afresh, on every ray both engines land of each set and not o
   in the way. What changes is the case, which states another aperture, and with it the case's id and the id of
   every request about it.
 - **Class.** data.
+
+### A rim land, a cut's or an extension's, is drawn and is no surface of the trace
+
+- **Where.** `src/optics/geometry/rimCut.ts`, resolved once in `compileSurfaces` (`prescription/surfaces.ts`). A rim
+  cut (#928, #932; `rimCutDepthMm`) ends the cap where its sag reaches a flat land `depth` mm from the vertex; a
+  vertical rim extension (#942, `6aacf5635`; `rimExtensionSd`) keeps the cap to its `sd` and adds a flat land at the
+  cap's edge sag out to a taller drawn rim. Both are `CompiledSurface.rimLand`; only a cut is `rimCut`.
+  `activeSemiDiameter` (`trace/aperture.ts`) clips at `clearSemiDiameter(sd, rimCut)`, so a cut clips at its radius
+  and an extension at `sd`; of the trace's modules only `runtimeRayResult.ts` reads a land, to draw a clipped hit
+  on it (`rimLandPoint`). The validator keeps the cap off a cut's land (`rimCutReentryRadius`) and holds either land
+  clear of its neighbours (`validateRimLandClearances`). `L.maxSD`, the diagram's scale, includes an extension's
+  drawn rim (`outlineSemiDiameter`), and `isHeavyLensForRayWork` reads it.
+- **Effect.** None on a trace: LensVisualizer's own test traces a lens with and without an extension to the same
+  result. The land is what a lens element looks like in the drawing. At a cut the case is LensVisualizer's trace,
+  and the cut lens's too where the rim bends rearward: the land then lies at the cap's deepest point, and a forward
+  ray that meets the cap inside the cut radius does so before the land's plane, so a ray the land would stop is
+  stopped in both models. A cut whose rim bends toward the object, on an `sd` beyond the end of its conic, could pass
+  in LensVisualizer's trace (and in the case) a ray the cut glass would stop, which is LensVisualizer's to model;
+  none does at 55ddfb1e1 (the two such cuts bend rearward). That no lens became heavy for its drawn rim alone at
+  55ddfb1e1 is measured in [REFERENCE.md](REFERENCE.md#lensvisualizer-55ddfb1e1-adopted).
+- **Handled.** The exporter writes the clear radius LensVisualizer clips at (`lvClearRadius`: the cut's, or `sd`) and
+  no land, and reads `rimLand` for nothing; `surfaceAperture` refuses a LensVisualizer whose `evaluateAperture` clips
+  elsewhere, an extension at its drawn rim included. A canary holds the lines of each module named above.
+- **Class.** convention.
 
 ### The wide-open stop radius is the height of a traced ray, and moves with the intersection tolerance
 
