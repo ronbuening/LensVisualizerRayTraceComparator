@@ -384,3 +384,190 @@ export const CATALOG_TEXT = {
   failures:
     "Listed failures remain FAIL; each failing metric retains its class, evidence hash, gotcha and one-run reproducer.",
 } as const;
+
+/** The rungs the validation matrix names: the statement's, and those of Phase 6, each with what it compares. */
+export const MATRIX_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
+  ...STATEMENT_RUNGS,
+  r7a: { mode: "gated", compares: "Spot and fan figures of the coma and bokeh tabs' rays, on identical rays" },
+  r7b: { mode: "recorded", compares: "LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan" },
+  r8a: {
+    mode: "gated",
+    compares: "Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays",
+  },
+  r8b: {
+    mode: "recorded",
+    compares: "LV's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
+  },
+  r9a: { mode: "gated", compares: "Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays" },
+  r9b: {
+    mode: "recorded",
+    compares: "LV's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils",
+  },
+  r10a: {
+    mode: "gated",
+    compares: "Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays",
+  },
+  r10b: { mode: "recorded", compares: "LV's field-curve sections beside optiland's FieldCurvature" },
+  r11a: {
+    mode: "gated",
+    compares:
+      "Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays",
+  },
+  r11b: { mode: "recorded", compares: "LV's vignetting tab beside flux, the comparator's estimate on LV's lattices" },
+  r12b: {
+    mode: "recorded",
+    compares: "LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number",
+  },
+  r13b: { mode: "recorded", compares: "The comparator's Seidel sums (ref-seidel) beside optiland's" },
+  r14b: {
+    mode: "recorded",
+    compares: "optiland's Zernike fit beside the comparator's fit of the same raw wavefront samples (optiland-wave)",
+  },
+};
+
+/** One row of the validation matrix: a LensVisualizer tab, or the analyses it has no tab of. */
+export interface MatrixRowText {
+  readonly tab: string;
+  readonly title: string;
+  /** What the row's rungs are of. */
+  readonly about: string;
+  readonly gated: readonly string[];
+  readonly recorded: readonly string[];
+  /** What the row does not cover, whatever its counts: fixed sentences, each ending its sentence. */
+  readonly notCovered: readonly string[];
+}
+
+/** The rows of the validation matrix, in their order. */
+export const MATRIX_ROWS: readonly MatrixRowText[] = [
+  {
+    tab: "foundation",
+    title: "Built system, first-order data, rays and optical path",
+    about:
+      "The foundation of every tab: the system each engine builds from the case, its first-order data, and the hits, landings and optical paths of LensVisualizer's own MTF launch rays.",
+    gated: ["r0", "r1", "r2", "r3"],
+    recorded: [],
+    notCovered: [
+      "Folded paths and diffractive surfaces: the suites folded and diffractive have rays baselines of their own, outside the benchmark.",
+      "The catalog beyond the benchmark: its baselines are a dated snapshot with a report of their own.",
+    ],
+  },
+  {
+    tab: "mtf",
+    title: "MTF",
+    about:
+      "LensVisualizer's MTF tab: the comparator's geometric and wave MTF of LensVisualizer's launch rays traced by each engine, LensVisualizer's own geometric MTF beside the replay of its sampling, and the engines' own MTF side by side.",
+    gated: ["r4", "r4f", "r6a"],
+    recorded: ["r5", "r5g", "r6b", "r6c"],
+    notCovered: ["Each item of the fixed block at the end of this matrix, which every MTF report ends with."],
+  },
+  {
+    tab: "coma-bokeh",
+    title: "Coma and bokeh",
+    about:
+      "LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and the bokeh tile's rings, each sample LensVisualizer's aimed launch ray.",
+    gated: ["r7a"],
+    recorded: ["r7b"],
+    notCovered: [
+      "The bokeh tile at the tab's own plane (infSensorZ): deferred.",
+      "A finite object and a folded path: coded problems of the run, never approximated; a coma fan on the axis is one of its field.",
+      "The spot figures of R7b have no attention band, since the two engines sample the pupil on different rings; only its fan figure has one.",
+    ],
+  },
+  {
+    tab: "axial",
+    title: "Spherical aberration and axial colour",
+    about:
+      "LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour section (chromatic tab): the zones of the axial object, at the authored indices and at each colour channel's own.",
+    gated: ["r8a"],
+    recorded: ["r8b"],
+    notCovered: [
+      "The colour figures of R8b have no attention band.",
+      "Bit identity of LensVisualizer's channel indices at the C, F and g lines: no committed suite asks those lines, and it is not pursued.",
+      "A finite object and a folded path: coded problems of the run.",
+    ],
+  },
+  {
+    tab: "chief",
+    title: "Distortion, lateral colour, pupils and breathing",
+    about:
+      "LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own; breathing is the focal length of each prepared state, which R1 compares; the LensVisualizer-only test breathing.test.ts holds the chart to R1's focal length.",
+    gated: ["r9a", "r1"],
+    recorded: ["r9b"],
+    notCovered: [
+      "Breathing between the focus stations LensVisualizer declares: chart positions between stations are no case.",
+      "A fisheye's distortion (lv-fisheye-projection): a coded problem of the set.",
+      "optiland's pupil aberration: another quantity, never asked.",
+      "The figures of R9b have no attention band.",
+    ],
+  },
+  {
+    tab: "curvature",
+    title: "Field curves and astigmatism",
+    about:
+      "LensVisualizer's field-curve and astigmatism sections (aberrations tab): the parabasal pencil and the real-ray fans of each field.",
+    gated: ["r10a"],
+    recorded: ["r10b"],
+    notCovered: [
+      "LensVisualizer's parabasal pencil is 0.01 mm wide, a convention of its own: its foci are of a finite pencil, beside optiland's infinitesimal pair.",
+      "Fields other than the sections' own field fractions.",
+    ],
+  },
+  {
+    tab: "vignetting",
+    title: "Vignetting and relative illumination",
+    about:
+      "LensVisualizer's vignetting tab: an aimed lattice on the real stop at each of its fields, the share of it that reaches the image and its flux there.",
+    gated: ["r11a"],
+    recorded: ["r11b"],
+    notCovered: [
+      "optiland has no vignetting analysis: the counterpart in R11b is flux, the comparator's estimate on LensVisualizer's lattices, not an external engine.",
+      "The relative illumination and the falloff of R11b have no attention band.",
+      "States outside the tab's beam model, and fields launched from a bounding sphere: coded problems, with no vignetting set.",
+    ],
+  },
+  {
+    tab: "summary",
+    title: "Summary and cardinal elements",
+    about:
+      "LensVisualizer's summary tab and aperture control: its readouts are of the prepared state and LensVisualizer's paraxial kernel, which R1 compares; the LensVisualizer-only test summary.test.ts holds its readouts to R1's values; the tab traces no ray of its own.",
+    gated: ["r1"],
+    recorded: ["r12b"],
+    notCovered: [
+      "The half field, the focus distance, the controls and the Current Perspective Pose section of the tab.",
+      "The aperture control's paraxial working f-number beside the mark, shown only above a difference of 0.05.",
+      "The stop and the track of R12b are read back from the case: they hold the tab to the case, not two engines to each other.",
+    ],
+  },
+  {
+    tab: "no-tab",
+    title: "Seidel sums, wavefront and Zernike fits (no LensVisualizer tab)",
+    about:
+      "LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these rungs set optiland beside the comparator's own estimates, by OpticStudio's conventions, and no LensVisualizer answer is asked.",
+    gated: [],
+    recorded: ["r13b", "r14b"],
+    notCovered: [
+      "optiland's chromatic Seidel sums: optiland states none of an optic of one line.",
+      "ref as a third Zernike answer: wavefront.native version 1 carries no launch rays.",
+      "OpticStudio's figures to the centroid.",
+      "LensVisualizer, which has no tab of these analyses.",
+    ],
+  },
+];
+
+/** The validation matrix's prose; its counts and names are supplied by the reducer. */
+export const MATRIX_TEXT = {
+  intro:
+    "This matrix is rendered from the benchmark's two baselines alone, with no engine, clock or machine input. It has a row for each LensVisualizer analysis tab, a row of the foundation they stand on, and a row of the analyses LensVisualizer has no tab of.",
+  counts:
+    "A configuration is one named run of the benchmark with a case. A configuration pair is two engines on one configuration and rung; a request pair is two engines on one request. Request-pair counts count every request pair, including unsupported answers; configuration-pair counts count the gravest verdict of each configuration pair. R4 is in both baselines and counts once.",
+  gated:
+    "A gated rung holds two engines to the tolerances of the policy on the same input, and its verdicts are the ones the baseline holds.",
+  recorded:
+    "A recorded rung sets two methods side by side with no tolerance and fails nothing: its counts say how many pairs were written down inside an attention band, outside one, or without an answer to set beside the other.",
+  unbaselined:
+    "A rung marked in no baseline is run only where a run names it and is kept out of every baseline, so this matrix names its quantity and engines and gives no figure of it.",
+  absent: "not in the benchmark's baselines",
+  inNoBaseline: "in no baseline; run only where named",
+  notCovered:
+    "Beyond each row's own items, the fixed block that every MTF report ends with says what no comparison of this tool shows:",
+} as const;

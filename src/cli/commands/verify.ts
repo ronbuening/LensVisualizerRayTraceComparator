@@ -41,6 +41,7 @@ import {
   STATEMENT_JSON,
   STATEMENT_MARKDOWN,
 } from "../../report/statement.ts";
+import { MATRIX_FILES, MATRIX_JSON, MATRIX_MARKDOWN, readMatrixInputs, renderMatrix } from "../../report/matrix.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -71,7 +72,9 @@ const HELP = [
   "report. An MTF baseline, <root>/baselines/<suite>.mtf.json, is held the same",
   "way with its reports, <root>/reports/<suite>/mtf.md and mtf.json.",
   "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
-  "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too.",
+  "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too. A root with",
+  "both benchmark baselines also requires reports/benchmark/validation-matrix.{json,md}, byte for byte from",
+  "those two, as lvrtc matrix writes it; --write regenerates it too.",
   "",
   "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
   "engines, and is what lvrtc baseline check says.",
@@ -112,7 +115,9 @@ function snapshotSaid(suite: string, baseline: Baseline): string {
  * written instead. A `reports/<name>/rays.md` or `rays.json` whose suite has no baseline is a problem too. A file
  * `baselines/<suite>.mtf.json` is the MTF baseline of the suite (unless a suite is itself named `<suite>.mtf`): it
  * is held the same way, to `reports/<suite>/mtf.md` and `mtf.json` as `renderMtfBaselineReport` gives them. Each
- * problem is a line on the error stream; each baseline that holds is a line on the output.
+ * problem is a line on the error stream; each baseline that holds is a line on the output. A root with the eight
+ * suite baselines of the statement, or either statement file, is held to `renderStatement`; a root with the
+ * benchmark's two baselines, or either matrix file, to `renderMatrix` (`reports/benchmark/validation-matrix.*`).
  *
  * Exit codes: 0 when nothing is wrong, also when there is no baseline at all; 1 when something is; 2 for a command
  * line that is not the synopsis and a `--root` that is not a directory.
@@ -333,6 +338,28 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
           }
         } catch (error) {
           problems.push(`validation-statement: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      // The benchmark's two baselines, or either matrix file, require the matrix, so deleting it cannot bypass verify.
+      if (
+        MATRIX_FILES.every((file) => files.includes(file)) ||
+        readText(join(rootDir, MATRIX_JSON)) !== undefined ||
+        readText(join(rootDir, MATRIX_MARKDOWN)) !== undefined
+      ) {
+        try {
+          const rendered = renderMatrix(readMatrixInputs(rootDir));
+          for (const [file, text] of [
+            [MATRIX_JSON, rendered.json],
+            [MATRIX_MARKDOWN, rendered.markdown],
+          ]) {
+            if (rewrite) writeFileAtomic(join(rootDir, file), text);
+            else if (readText(join(rootDir, file)) !== text)
+              problems.push(
+                `${file}: it is missing or is not what the benchmark's two baselines render; lvrtc matrix writes it anew`,
+              );
+          }
+        } catch (error) {
+          problems.push(`validation-matrix: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       for (const problem of problems) io.stderr(`lvrtc verify: ${problem}\n`);

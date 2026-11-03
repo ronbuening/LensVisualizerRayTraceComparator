@@ -60,6 +60,7 @@ node bin/lvrtc.mjs engine conformance ref      # the conformance kit on a built-
 node bin/lvrtc.mjs baseline write benchmark    # after run and compare: writes baselines/benchmark.json and reports/benchmark/rays.*
 node bin/lvrtc.mjs baseline check benchmark    # needs the engines: OK, STALE, REFRESHABLE or DRIFT per record
 node bin/lvrtc.mjs statement                   # write reports/validation-statement.{json,md} from the eight baselines alone
+node bin/lvrtc.mjs matrix                      # write reports/benchmark/validation-matrix.{json,md} from the benchmark's two baselines alone; verify holds both
 node bin/lvrtc.mjs verify                      # hermetic: baselines valid, committed reports byte-identical; the catalog held to its frozen policy; part of check
 node bin/lvrtc.mjs engine conformance optiland # the same on optiland: starts the Python worker (about 3 s; 17 s on an empty cache)
 node bin/lvrtc.mjs run suites/benchmark.json --engines lv,ref,optiland --rungs r0,r1,r2,r3,r4   # three ways: built system, first-order data, LV's launch rays, optical path, geometric MTF; what the baselines are of
@@ -1157,15 +1158,19 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   each element alone for a mix; never read an element's `source` for it (canaries hold the tab's line and
   `runtimeView`'s). What the case and spec decide is refused before LV is asked anything but that reading (a test
   makes every other LV call throw). No paraxial focus.
-- **optiland answers `axial.native` with its own rays** (`lvrtc_optiland/axial.py`): one verified optic per line; its
-  ray generator at `(0, f)` of the builder's axial field, with optiland's default `paraxial` aiming, on the first line's
-  optic; the launch read back (aiming, one `AngleField` on the axis, no vignetting or apodization, `EPD()` finite, x 0,
-  height `f x EPD / 2`, direction `(0, 0, 1)`), each check with a deliberate fault in `test_axial.py`; those rays traced
-  at every line (`trace.trace_rays`); `F2()` plus the image plane. The worker computes no intercept: the comparator's
-  estimator forms the figures of rays. The read-backs include the field's type, every launched column's length and an
-  `EPD()` of 0, each with a fault; a test with another pupil at each line catches a launch from another line's optic.
-  The pupil and the focus are optiland's first-order data: the engine refuses `axial.native` of a case
-  `first_order.term_refusals` refuses (a phase profile, a term of power 1 or 2) before anything is built.
+- **optiland answers `axial.native` with its own rays aimed at the real stop** (`lvrtc_optiland/axial.py`, Stage 6.9):
+  one verified optic a line (`mtf.field_optic`, one `AngleField` on the axis, the worker's `robust` aiming, `max_iter`
+  50, `tol` 1e-10), each line aiming its own rays at its own indices and tracing them on that optic alone; zone `f` is
+  asked at `(0, f R / r)` so that it crosses the stop at `(0, f R)`, `R` = `conditions.stopSemiDiameter` (the radius
+  LensVisualizer aims its zones at, `pupilRadiusMm`), `r` the aimer's stop radius, held to the stop's clip radius (for
+  an LV case `R` plus 1e-9 mm). Read back, each with a deliberate fault in `test_axial.py`: aiming, field, the aimer's
+  stop radius, the aimer class, every column's length, each ray's x and direction `(0, 0, 1)` to the bit, and its
+  crossing of the stop within the aimer's tol (which catches another line's optic and a launch at `(0, f)`). An
+  unaimed ray (NaN from the aimer) is not traced and did not arrive (`sampling.raysUnaimed`); a line aimed at nothing
+  is `unavailable`, `aim-failed`. Expected values by 60-digit bisection to the stop (`exact.py`). The worker computes
+  no intercept: the comparator's estimator forms the figures of rays. The focus is `F2()` plus the image plane, so the
+  engine still refuses `axial.native` of a case `first_order.term_refusals` refuses (a phase profile, a term of power 1
+  or 2) before anything is built.
 - **R8b is recorded, of `lv` and `optiland`, only where named** (`axialNativeComparator`): the figures of rays are
   formed at the marginal fraction the other answer took. Each line is sorted before any difference
   (`classifyAxialLine`): R5's `classifyNativeField` first (no figures, other wavelengths), then this rung's data,
@@ -1180,11 +1185,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   (`--rungs r8b`). The pupil limit, 2e-10 relative (ten times the measured 1.37e-11, rounded up), was signed off by the
   owner on 2026-10-26. On the benchmark every spherical line is of two methods, and since LV #925 (Stage 6.6b) every
   colour line too (every one was `indices-differ` before). Since LV #927 (Stage 6.8b) `lv`'s zones are fractions of
-  the real stop's radius (`pupilRadiusMm` the case's stop radius) and optiland's of its paraxial entrance pupil: every
-  line of the benchmark is `pupils-apart` (84 lines data, 12 unsupported; 96 pairs ATTENTION). **Owner decision
-  (2026-10-29): optiland's axial aim at the real stop is deferred until after Phase 6**; the worker is unchanged. The
-  fix pending (an open item of the plan; `docs/REFERENCE.md`, "Stage 6.8b (part B)"; `docs/gotchas.md`, "Axial rays"):
-  optiland's robust aimer at each zone's point of the stop, one optic a line, with its read-backs and faults.
+  the real stop's radius (`pupilRadiusMm` the case's stop radius); until Stage 6.9 optiland's were of its paraxial
+  entrance pupil and every line was `pupils-apart` (96 pairs ATTENTION). **Stage 6.9** (the owner's deferred item, done
+  2026-11-03) aims optiland's zones at the same points of the stop: on the benchmark 96 pairs RECORDED, no ATTENTION,
+  both pupils the same double, spherical figures within 1.75e-12 mm, colour within 1.49e-12 mm (`docs/REFERENCE.md`,
+  "Stage 6.9"). Zones at `f r` (optiland's own coordinate) instead set 46 pairs ATTENTION: one line of `launch`, should
+  the owner prefer it.
 - **LV assumption found, resolved by LV #925** (`5ba17c20c`; `docs/gotchas.md`, "Axial rays"; owner's brief
   `docs/upstream/lensvisualizer-loca-unanchored-index.md`, not filed): LV's chromatic tab traced a d-line glass it
   matched to a catalog at the catalog's own Sellmeier index at every channel, its G channel included (LV's reference
@@ -1740,8 +1746,7 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   workers a slot peaked at 2.31 GiB, within the 2.5 GiB estimate (`jobEstimateGiB` unchanged).
 - **Not covered**: `ref` as a third Zernike answer (`wavefront.native` v1 carries no launch rays; a v2 with them, or
   `ref`'s own aiming, would make one: the owner's), optiland's chromatic Seidel sums, OpticStudio's "to centroid"
-  figures, LensVisualizer (no tab). `reports/benchmark/validation-matrix.md` does not exist; what it needs is in the
-  REFERENCE (due with the end refresh).
+  figures, LensVisualizer (no tab). The validation matrix names R13b and R14b without figures (Stage 6.10, below).
 - The adapter revisions of `optiland` and `optiland-wave` moved (worker files, the kit's `validate.py`, the estimator);
   `lv`, `ref`, `replay`, `wave` and `flux` did not (no file of their closures changed); `ref-seidel` is new. No gated
   rung joins the Phase 6 end refresh.
@@ -1815,3 +1820,16 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   above; optiland's axial aim deferred until after Phase 6). Under them (REFERENCE, "Measured under policy 24"): R7b
   240, R11b 48, R12b 48/64/134 and R14b 384 RECORDED, no ATTENTION, every banded figure within its band; R14b on the
   features suite 64 RECORDED and 8 ERROR (`odd-asphere`: both engines' `time-budget`).
+
+## Stage 6.10 validation matrix
+
+- **The validation matrix is baseline-only** (`src/report/matrix.ts`, `lvrtc matrix [--root <dir>]`): rendered from
+  `baselines/benchmark.json` and `benchmark.mtf.json` alone into `reports/benchmark/validation-matrix.{json,md}`, a row
+  per LensVisualizer tab, a foundation row (R0–R3) and a row of what LV has no tab of (`MATRIX_ROWS` in `wording.ts`,
+  every sentence a linted template). A baselined rung gets counts in the statement's units (configurations,
+  configuration pairs, request pairs), R4 counted once (its duplicates must agree but for MTF's `measured`). A recorded
+  rung in no baseline (R7b–R14b, `UNBASELINED_RUNGS`, held to `RUNGS` by a test) gets its quantity and engines and no
+  figure; a baseline that holds one is refused. A row's "no attention band" sentence is held to the policy by a test.
+  `lvrtc verify` holds both files byte for byte when both benchmark baselines exist or either matrix file does;
+  `verify --write` regenerates them. Its synthetic golden is written only by `node test/report/writeGolden.ts`. It
+  claims no agreement on a recorded rung and leaves the statement and its signed sentence unchanged.

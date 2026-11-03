@@ -15,6 +15,8 @@ import { MTF_BASELINE, buildBaseline } from "../../src/baseline/build.ts";
 import { renderMtfBaselineReport } from "../../src/baseline/mtfReport.ts";
 import { renderStatement } from "../../src/report/statement.ts";
 import { statementInputs } from "./statementFixture.ts";
+import { renderMatrix } from "../../src/report/matrix.ts";
+import { matrixInputs } from "./matrixFixture.ts";
 import { REPORT_MARKDOWN_FILE, renderReport } from "../../src/report/index.ts";
 import { PYTHON_MISSING } from "../engines/support.ts";
 import { COMPARISONS, MANIFEST, POLICY } from "./handBuilt.ts";
@@ -37,6 +39,9 @@ writeFileSync(join(GOLDEN_DIR, "catalog.json"), catalog.json);
 const statement = renderStatement(statementInputs());
 writeFileSync(join(GOLDEN_DIR, "validation-statement.md"), statement.markdown);
 writeFileSync(join(GOLDEN_DIR, "validation-statement.json"), statement.json);
+const matrix = renderMatrix(matrixInputs());
+writeFileSync(join(GOLDEN_DIR, "validation-matrix.md"), matrix.markdown);
+writeFileSync(join(GOLDEN_DIR, "validation-matrix.json"), matrix.json);
 writeFileSync(goldenFile("hand-built"), renderReport(MANIFEST, COMPARISONS, POLICY).markdown);
 // Rungs R5 and R5g on stand-ins that know no optics: a run, a comparison and a report in this process.
 for (const [golden, standIns, policy] of [
