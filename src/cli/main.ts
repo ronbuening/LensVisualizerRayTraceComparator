@@ -2,6 +2,7 @@ import packageJson from "../../package.json" with { type: "json" };
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./command.ts";
 import type { CliCommand, CliIo } from "./command.ts";
 import { baselineCommand } from "./commands/baseline.ts";
+import { collectCommand } from "./commands/collect.ts";
 import { compareCommand } from "./commands/compare.ts";
 import { doctorCommand } from "./commands/doctor.ts";
 import { engineCommand } from "./commands/engine.ts";
@@ -22,6 +23,7 @@ export type { CliCommand, CliIo };
 export const COMMANDS: readonly CliCommand[] = [
   doctorCommand,
   runCommand,
+  collectCommand,
   compareCommand,
   reportCommand,
   baselineCommand,

@@ -1757,6 +1757,17 @@ An engine is defined under `engines.<id>` by the transport that reaches it:
   that answers protocol messages. `src/engines/fake/engine.ts` is one: an engine without optics, for tests.
 - `stdio`: `command` is a worker's command line and `env` variables to set for it. The worker is a process that
   speaks the protocol as NDJSON on its standard streams; see below.
+- `oneshot` (Stage 7.1): `command`, `options` and `env` as for `stdio`, with the same placeholders; the command is
+  started once per message, which it reads from a request file and answers in a result file. See "One-shot
+  workers (Stage 7.1)".
+- `file-exchange` (Stage 7.2): `descriptor` (an object, the engine's answer to `hello`), `prescriptions` (a list of
+  distinct prescription writers; `"table"` is the one there is; none by default) and `options`; an engine a person
+  operates, whose jobs are handed over as files under `<runsDir>/exchange/<id>/` and collected by `lvrtc collect`.
+  See "File exchange (Stage 7.2)".
+- `timeouts` (Stage 7.1), on a definition of any transport: `{ "helloMs", "runMs", "shutdownMs" }`, each optional
+  and a number of milliseconds above 0, the waits of that engine's adapter; any other member or value is an error
+  naming the file. A wait left out keeps its default (`DEFAULT_ENGINE_TIMEOUTS`). A definition replaces a built-in
+  engine's waits with its own, as it replaces the engine.
 
 `options` is handed to the engine as it is. A definition in `lvrtc.local.json` replaces the one `lvrtc.config.json`
 gives the same id, whole. The built-in engines (`src/engines/builtin.ts`: `lv`, `optiland`, `ref`) need no
@@ -2501,17 +2512,280 @@ and `shutdown` is answered with an empty object, after which a worker process en
 Each check is printed `PASS`, `FAIL` or `SKIPPED` with a reason. The exit code is 0 when nothing failed, 1 when a
 check did, and 2 for an id that is neither a configured nor a built-in engine.
 
+## One-shot workers (Stage 7.1)
+
+A `oneshot` engine is a program started once per message: request file in, result file out
+(`src/transports/oneshot.ts`). It speaks the same stateless protocol as a stdio worker (`hello`, `run` carrying the
+case, `shutdown`), behind the same adapter, which validates every reply; the transport judges nothing.
+
+```json
+{
+  "engines": {
+    "fake-py-oneshot": {
+      "transport": "oneshot",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine", "--oneshot"],
+      "options": { "id": "fake-py-oneshot" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
+    }
+  }
+}
+```
+
+- **One process per message.** The message is written, atomically, as one JSON document and a newline (the text a
+  stdio worker gets as its line) to a request file. The command is started without a shell, in the configuration
+  root, in the environment of a stdio worker (the few inherited variables, `LVRTC_ENGINE_OPTIONS`, the definition's
+  `env`) and two more: `LVRTC_REQUEST_FILE` and `LVRTC_RESULT_FILE`, absolute paths. Its standard input is not
+  used. The worker writes exactly one protocol response to the result file, whole (a temporary file beside it, then
+  a rename), and exits with code 0; the comparator then reads and parses it. Standard output and standard error are
+  both the worker's log, kept as a tail and quoted when a call fails; nothing written there is ever a reply.
+- **Files.** `open()` makes a private directory (`mkdtemp` under the system's temporary directory, readable by its
+  owner only); each call has its own pair of files there, and every file of the call, temporary files the worker
+  left beside its result included, is removed when the call settles, however it ends. `close()` kills any process
+  still running and removes the directory. Nothing is written under the repository or `runs/`: a case can carry a
+  prescription, and none is left behind.
+- **Failures** are coded (`ONESHOT_ERROR_CODES`): `spawn-failed` (the command did not start), `exited` (an exit
+  code other than 0, or a signal; the result file is then not read), `no-result` (exit 0 and no result file),
+  `not-json`, `oversized-result` (more than 256 MiB). A call not finished in time kills its process and is a
+  timeout. No failure ends the transport: the engine is stateless, so the next call starts a new process. Calls
+  may run at once, each with its own process and files. `open()` starts nothing, but looks for the command as a
+  spawn would (a path from the root, or a bare name on the worker's `PATH`) and refuses it when no executable file
+  answers: the engine is then unavailable as `spawn-failed`, as a stdio worker that does not start is, the message
+  naming the command. A command found that still does not start is a call's `spawn-failed`.
+- **`shutdown`** is delivered like any other message, in a process of its own. There is no process left to end
+  afterwards, which the conformance kit's shutdown check reports as passing.
+- **In a pool** a one-shot engine is not a persistent replica: one failed call ends nothing, so a slot keeps
+  taking its jobs. Its processes are short and started as configured, so the pool measures their memory by the
+  process table (`needs-ps`), as for an unknown launcher.
+
+`lvrtc engine conformance fake-py-oneshot --root test/fixtures/fake-root` passes every check, and the Python
+fake's results are byte-identical over oneshot and over stdio (`test/engines/pythonFake.test.ts`). The transport's
+own tests run a Node worker (`test/fixtures/oneshot-worker`) and need no Python.
+
+## File exchange (Stage 7.2)
+
+A `file-exchange` engine is one a person operates: a program they run by hand, whenever they do
+(`src/transports/fileExchange.ts`). It cannot answer `hello` live, so the definition's `descriptor` is its answer,
+which the adapter judges as any engine's (a valid descriptor, a contract range that includes the comparator's, the
+configured id). Its fingerprint is what the operator's engine is, their program and its version: an answer that
+carries another is refused (`fingerprint-mismatch`), as for any engine. Owner decision (2026-11-03): the exchange is
+generic; no format of a particular program is written.
+
+```json
+{
+  "engines": {
+    "desk": {
+      "transport": "file-exchange",
+      "prescriptions": ["table"],
+      "options": { "operator": "anything the operator's program needs" },
+      "descriptor": {
+        "contract": { "min": "1.0", "max": "1.0" },
+        "identity": { "id": "desk", "version": "2.1", "fingerprint": "their program 2.1 build 7", "details": {} },
+        "capabilities": {
+          "features": { "supported": ["surface.conic"], "limits": {} },
+          "quantities": { "paraxial.first-order": { "version": 1 } },
+          "deterministic": true,
+          "maxConcurrency": 1
+        }
+      }
+    }
+  }
+}
+```
+
+**The exchange directory** of an engine is `<runsDir>/exchange/<engine id>/` (the configuration's `runsDir`, so
+`LVRTC_RUNS_DIR` moves it). Nothing in it is committed: a case can reproduce a LensVisualizer prescription. A suite
+cannot be named `exchange`.
+
+| Path | Holds | Written by |
+|---|---|---|
+| `outbox/<job>/` | a job handed over: `message.json`, `job.json`, one file per prescription writer, `answer-template.json` | `lvrtc run` (the transport), whole: written beside the outbox and renamed in |
+| `pending/<job>/` | a job the operator has taken: they move it here from the outbox | the operator; the comparator treats outbox and pending alike |
+| `inbox/<job>.json` | the operator's answer: one `result` envelope | the operator, whole (a temporary name, then a rename) |
+| `collected/<job>/` | a job whose answer is in the store, its answer beside it as `answer.json` | `lvrtc collect` |
+| `rejected/<job>/` | an answer refused, as `answer.json`, with `reason.txt` (and its job, when it had one) | `lvrtc collect` |
+
+- **The job's name is its store key**: `storeKey` of the request id, the engine id, the descriptor's fingerprint and
+  adapter revision and the request's engine options, 64 hex digits (`jobName`). It is unique within an engine's
+  directory, it is the key the answer is kept under, and a job of the same request with other options, or for
+  another version of the engine, is another job. A second job of a name that was collected or rejected before
+  takes `<job>.2` there, and so on.
+- **`message.json`** is the `run` message (request and case) as canonical JSON under the job's name as its `id`, so
+  it is the same bytes whoever handed it over and whenever; it is the full record. **`job.json`** names the engine,
+  the job, where to answer (`inbox/<job>.json`), the definition's `options` and the files. **`answer-template.json`**
+  is a `result` with `requestId`, `caseId`, the engine stamp and `status` "ok" filled in and an empty `data`: the
+  operator fills `data` (and may add `method`), or changes the status to `unsupported` or `error` with its members.
+- **A run** (`run` of the transport): when `inbox/<job>.json` is there, its JSON is the reply, and the adapter and
+  `askEngine` validate and store it exactly as any engine's answer; a file that cannot be read, is larger than
+  256 MiB or is not JSON is no reply (a transport error of that job). Otherwise the job is handed over, unless it
+  is already in the outbox or pending, and the job is `pending` (never stored), with a warning naming it. The run
+  path never moves or removes anything. `lvrtc run` exits 0 on pending jobs: pending is no failure, and a comparison
+  of a pending pair is ERROR.
+- **`lvrtc collect [<engine>...] [--root <dir>] [--json]`** is the one command that moves anything. For each
+  file-exchange engine named (every one configured when none is) it describes the engine, then admits each inbox
+  answer through `askEngine` with its job's request and case: negotiation, the store lookup, the adapter's
+  validation, the data check (`invalid-data`) and the store write are a run's own. An answer stored, or whose job
+  the store answers already (`cached`), moves with its job to `collected/`. Anything else is refused and moves to
+  `rejected/` with its reason: a result of status `error` (what the adapter wrote: `invalid-result`,
+  `request-id-mismatch`, `fingerprint-mismatch`, a transport error of a file that is not JSON, or the operator's
+  own error), `pending`, an answer without a job in the outbox or pending, a job whose message is not a request and
+  a case whose contents hash to their ids (an edited `message.json`), a job written for another version of the
+  engine, and a request the engine as configured no longer answers. A job with no answer stays, unless the store
+  holds its key already: a run that missed the store while a collection moved the job away hands it over again,
+  and the next `collect` moves that job to `collected/` (as `<job>.2`, ...) and counts it collected. It prints per
+  engine the jobs collected, rejected (each with its reason) and still pending; exit 1 when anything was refused or
+  an engine could not be described, 2 for a command line, a root or an engine named that cannot be used, 0
+  otherwise. A refused job is handed over again by the next run.
+- **Collections of one exchange directory must not run at once**, as store maintenance runs without concurrent
+  writers: a second `collect` that renames a file the first has moved fails. A `run` beside a `collect` is safe.
+- **A collection that is ended part way loses nothing.** Every move is a rename, and the answer moves into its job
+  directory before the directory moves whole (for a refusal, after `reason.txt` is written there). A job directory
+  in the outbox or pending that holds `answer.json` is therefore half moved, and the next `collect` finishes it
+  first: with a reason to `rejected/`; without one to `collected/` when the store holds its key, else its answer
+  goes back to the inbox to be judged again.
+- **After `collect`** the next `lvrtc run` finds the answers in the store (`cached`), and its manifest is the same
+  bytes as that of a run in which an engine of the same id and fingerprint answered at once.
+- **In a pool** a file-exchange engine is not persistent and starts no process, so there is no memory of it to
+  measure. A job is handed over from whichever child asks it, under the same name and with the same bytes, and two
+  that hand one job over at once leave the first's directory: serial and pooled runs write the same outbox and
+  the same manifest.
+
+**Prescription writers** (`src/exchange/prescription.ts`, names in `src/exchange/names.ts`) write the case as a
+person types it into a lens data editor, one file per writer a definition names. `table` writes
+`prescription-table.txt`: the case's identity, label, features and source; object, stop, image plane; the lines
+and their weights and index sources; one row per surface (index, label, vertex z, thickness to the next vertex,
+shape, radius or flat base, conic, clip semi-diameter or "does not clip", nominal and inner semi-diameters, element,
+stop and rear plate); every asphere term as power and coefficient; the medium after every surface at every line;
+any diffractive phase term by term; the fixed optical path of a folded case visit by visit; then the request
+(quantity, version, every member of the spec and of the engine options, an encoded array named by its type and
+shape, its values being in `message.json`). Every number is the shortest decimal that reads back as the same double
+(`String`), `-0` as `-0`. A writer never leaves a member out: one it does not know is an error naming it by its
+path, and the job is then not handed over (a transport error of that job). A writer is a pure function of the case
+and the request; `test/exchange/prescription.test.ts` holds synthetic cases of every surface kind to exact texts.
+
+**What an operator does**, with the fixture root's `fake-human` (whose descriptor is the TypeScript fake engine's):
+
+```bash
+export LVRTC_RUNS_DIR=/tmp/lvrtc-desk
+node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root --engines fake-a,fake-human
+# fake-human's two jobs are pending; they are in $LVRTC_RUNS_DIR/exchange/fake-human/outbox/<job>/
+cd $LVRTC_RUNS_DIR/exchange/fake-human
+mkdir -p pending inbox
+mv outbox/<job> pending/                      # take the job
+less pending/<job>/prescription-table.txt     # type the case into the program; compute what the request asks
+cp pending/<job>/answer-template.json inbox/.<job>.json.tmp   # fill in data (and method), then:
+mv inbox/.<job>.json.tmp inbox/<job>.json     # hand the answer in whole; then the same for the other job
+cd -
+node bin/lvrtc.mjs collect fake-human --root test/fixtures/fake-root    # 2 collected, 0 rejected, 0 still pending
+node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root --engines fake-a,fake-human   # all cached
+```
+
+`node test/fixtures/fake-operator/operator.mjs <exchange directory of one engine>` plays the operator: it takes
+every outbox job to pending and answers each with the TypeScript fake engine made from the job's `options`. The
+stage's verification (`test/cli/collect.test.ts`) runs run, the operator, collect and run as separate processes,
+compares the pair, and holds the second run's manifest to that of an in-process `fake-human` byte for byte; the
+transport's own tests are `test/transports/fileExchange.test.ts`, the collection's `test/exchange/collect.test.ts`.
+
+## Group reports (Stage 7.4)
+
+A report of a run (`lvrtc report`) already sets every two engines of a request side by side in its pairwise
+matrix. Stage 7.4 adds what the matrix comes to for a group: its consensus and its outliers, per request and over
+the run. No command and no file is added: `report.json` and `report.md` carry it. It is a pure function of the
+pairwise comparison set and the rung's policy (`consensusOf`, `src/report/consensus.ts`), laid out by
+`buildReport` and `renderMarkdown`, which stay pure.
+
+**Where there is a consensus to look for**: a request of a **gated** rung, compared pairwise, among **three or
+more** engines. A recorded rung's RECORDED or ATTENTION is no agreement, so its sections have none; a group of two
+is a pair, whose verdict says everything; a rung the policy has no entry for has none. Such a section's
+`consensus` is null and its Markdown is as before.
+
+**The rule.** Each pair is *within* (PASS, or FLOOR, which counts as a pass), *beyond* (FAIL) or *unjudged*
+(UNSUPPORTED, BLOCKED, ERROR). An engine with at least one pair within or beyond is *placed*; the others are *not
+placed* and named. The consensus is the largest set of at least two placed engines every two of which are within,
+provided it is the only largest such set and holds more than half of the placed engines. Otherwise there is none,
+and the reason is the first that holds of:
+
+| Reason | When |
+|---|---|
+| `split` | two or more sets of the largest size, every two engines of each within |
+| `no-pair-within` | no two placed engines are within each other's gates |
+| `minority` | the largest set holds no more than half of the placed engines |
+
+**Outlier and apart.** Of the placed engines outside a consensus, an *outlier* is beyond every engine of it: every
+such pair judged, every one FAIL. Any other is *apart*: a pair with an engine of the consensus that is not judged
+(an ERROR, an UNSUPPORTED, a BLOCKED), or within some of it and beyond the rest. The distinction keeps an engine
+that was never held to the whole consensus from being named its outlier. Without a consensus there is nothing to
+be outside of, and the lists of outliers and engines apart are empty. Lists are sorted by engine id; the result
+does not depend on the order of the participants or of the pairs. `consensusOf` throws for a group of more than
+16 engines (every subset of the placed engines is looked at); the report model gives such a section
+`consensus: null`, as it does a group of fewer than three, so a report of a large group is still written.
+
+**In `report.json`**: every section has `consensus`, null or `{ consensus: [...] | null, reason?, outliers,
+apart, notPlaced }`; the model has `groups`, null when no section has a consensus to look for, else the number of
+such sections, how many have one, how many have none by reason, and for every engine of the run how many sections
+place it in the consensus, as an outlier, apart, placed without a consensus, or not placed (`GroupSummary`). A
+report of two engines, or only of recorded rungs, differs from before only by `"consensus": null` in each section
+and `"groups": null`.
+
+**In `report.md`**: one sentence under each such pairwise matrix, and a section "## Consensus" after the verdict
+summary, with what a consensus is, the counts of requests and the table of engines. Every sentence is a template
+of `src/report/wording.ts` (`consensusSentence`, `NO_CONSENSUS_TEXT`, `CONSENSUS_SECTION`, `consensusCounts`,
+`CONSENSUS_TABLES`). A consensus says which answers are within the gates of each other and nothing more: the banned
+claim `consensus-correct` rejects a sentence that names a consensus, an outlier or a majority beside a claim of
+correctness or error (correct, right, wrong, true value, in error, accurate, reliable and the like), with its
+rejected and accepted examples in `test/report/wording.test.ts`.
+
+The golden is `test/fixtures/golden/fake-group.report.md`, of `test/fixtures/suites/fake-group.json`: `fake-a`,
+`fake-near` (a bias of 2e-14) and the fixture root's `fake-far` (a bias of 1e-9, just beyond the `selftest` gate of
+1e-12), on the singlet and the Double-Gauss case, in both modes. From it:
+
+```text
+| Engine | fake-a | fake-far | fake-near |
+|---|---|---|---|
+| fake-a | — | FAIL (sum.abs 3.00e-9) | PASS (sum.abs 6.04e-14) |
+| fake-far | FAIL (sum.abs 3.00e-9) | — | FAIL (sum.abs 3.00e-9) |
+| fake-near | PASS (sum.abs 6.04e-14) | FAIL (sum.abs 3.00e-9) | — |
+
+Consensus: `fake-a`, `fake-near`, every two of them within the gates of each other; outlier: `fake-far`, beyond the gates of every engine of the consensus.
+```
+
+and, after the verdict summary:
+
+```text
+Of 2 requests with a consensus to look for, 2 have one.
+
+| Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
+|---|---|---|---|---|---|
+| fake-a | 2 | 0 | 0 | 0 | 0 |
+| fake-far | 0 | 2 | 0 | 0 | 0 |
+| fake-near | 2 | 0 | 0 | 0 | 0 |
+```
+
+The goldens written again by `node test/report/writeGolden.ts` with it: `fake-3-engines` and `fake-3-engines-ts`
+(a consensus of `fake-a` and `fake-pyn` or `fake-near`; `fake-none`, UNSUPPORTED, not placed), `fake-faults` (no
+consensus, `no-pair-within`: `fake-a` and `fake-far` are beyond each other, `fake-absent` and `fake-broken` gave no
+result and are not placed), and the identical-ray stand-ins of R7a to R11a (three or four gated engines: a
+consensus with an outlier in each request of R7a, R8a and R10a; `no-pair-within` in R9a's one request and R11a's,
+whose engines are all beyond one another). The
+hand-built report and every recorded stand-in are unchanged. The tests are `test/report/consensus.test.ts` (the
+rule on hand-built sets, and the run's counts), the golden's own test in `test/report/golden.test.ts`, and the lint.
+
 ## The Python worker kit
 
 `workers/python/lvrtc_worker_kit` is what a Python worker needs to speak the protocol. It imports nothing outside
-the standard library, writes nothing to disk and runs on Python 3.10 and later.
+the standard library, writes nothing to disk but the result file a one-shot worker is told to write, and runs on
+Python 3.10 and later.
 
 | Module | Is |
 |---|---|
 | `ndarray` | the NdArray wire form: bit-exact, independent of the host's byte order |
 | `validate` | the contract's schema validator, a port of `src/contract/validate.ts` that reads `contract/schema/v1` |
-| `protocol` | the NDJSON loop around an engine object with `describe()` and `run(request, case)` |
-| `fake_engine` | the fake engine as a worker: `python -m lvrtc_worker_kit.fake_engine [--id ID] [--bias X] [--no-quantities] [--fingerprint F]` |
+| `protocol` | the NDJSON loop around an engine object with `describe()` and `run(request, case)`; `serve_oneshot`, the one-shot answer of one message by files; both answer a message by `reply_to` |
+| `fake_engine` | the fake engine as a worker: `python -m lvrtc_worker_kit.fake_engine [--id ID] [--bias X] [--no-quantities] [--fingerprint F] [--oneshot]` |
+
+`serve_oneshot` reads the message from the file `LVRTC_REQUEST_FILE` names and writes the reply the loop would
+write for it as a line to the file `LVRTC_RESULT_FILE` names, atomically. It exits with code 0 whenever a reply was
+written, a refusal (`ok: false`) included, and with 2 only when none could be (no result file named, or it cannot
+be written). A request file that is not named or cannot be read is answered `parse-error` under the id `"?"`.
 
 The loop answers every line with exactly one line and never crashes on one: a line that is not JSON, an unknown
 method and a request that is not valid by the contract are answered

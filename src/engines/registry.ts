@@ -6,7 +6,9 @@ import { pathToFileURL } from "node:url";
 
 import type { ProtocolHandler } from "../contract/protocol.ts";
 import type { EngineDefinition, LoadedConfig } from "../core/config.ts";
+import { createFileExchangeTransport, exchangeDirectory } from "../transports/fileExchange.ts";
 import { createInProcessTransport } from "../transports/inProcess.ts";
+import { createOneshotTransport } from "../transports/oneshot.ts";
 import { createStdioTransport, workerEnvironment } from "../transports/stdio.ts";
 import type { Transport } from "../transports/transport.ts";
 import { EngineUnavailableError, enginesText } from "./adapter.ts";
@@ -22,6 +24,8 @@ export interface TransportContext {
   readonly engineId: string;
   /** The directory the configuration was read from. Messages name files relative to it. */
   readonly rootDir: string;
+  /** The configuration's runs directory (`runsDir`): a file-exchange engine hands its jobs over below it. */
+  readonly runsDir: string;
 }
 
 /**
@@ -89,12 +93,43 @@ export const stdioTransportFactory: TransportFactory<"stdio"> = async (definitio
   });
 
 /**
+ * The factory of one-shot engines: a program started from the definition's `command` once per message, in the
+ * configuration root as its working directory, with the environment of a stdio worker (`workerEnvironment`) and the
+ * paths of its request and result files. Nothing is started here, and no file is made: `open()` makes the
+ * transport's private directory, and each call starts the command.
+ */
+export const oneshotTransportFactory: TransportFactory<"oneshot"> = async (definition, { rootDir }) =>
+  createOneshotTransport({
+    command: definition.command,
+    env: workerEnvironment(process.env, definition.options, definition.env),
+    cwd: rootDir,
+  });
+
+/**
+ * The factory of file-exchange engines: an engine a person operates, whose jobs are handed over in its exchange
+ * directory, `<runsDir>/exchange/<engine id>/` (`exchangeDirectory`). Nothing is made here: the directory is made
+ * when the first job is handed over.
+ */
+export const fileExchangeTransportFactory: TransportFactory<"file-exchange"> = async (
+  definition,
+  { engineId, runsDir },
+) =>
+  createFileExchangeTransport({
+    directory: exchangeDirectory(runsDir, engineId),
+    descriptor: definition.descriptor,
+    prescriptions: definition.prescriptions,
+    options: definition.options,
+  });
+
+/**
  * The transports implemented so far. A stage that implements another adds its factory here, and nothing that uses
  * the registry changes.
  */
 export const TRANSPORT_FACTORIES: TransportFactories = {
   "in-process": inProcessTransportFactory,
   stdio: stdioTransportFactory,
+  oneshot: oneshotTransportFactory,
+  "file-exchange": fileExchangeTransportFactory,
 };
 
 /**
@@ -143,19 +178,21 @@ export async function createEngineTransport(
     const detail = `no transport "${definition.transport}" is implemented`;
     throw new EngineUnavailableError(id, "unsupported-transport", detail);
   }
-  return factory(definition, { engineId: id, rootDir: loaded.rootDir });
+  return factory(definition, { engineId: id, rootDir: loaded.rootDir, runsDir: loaded.config.runsDir });
 }
 
 /**
- * The waits of an engine that differ from the adapter's defaults: those of a built-in engine that runs in a worker
- * and states some, unless the configuration defines the id itself. Nothing for any other engine.
+ * The waits of an engine that differ from the adapter's defaults: those the configuration's definition of the id
+ * states under `timeouts`, and otherwise those of a built-in engine that states some. Nothing for any other engine.
+ * A definition replaces a built-in engine's waits with its own, as it replaces the engine.
  */
 export function engineTimeouts(
   loaded: Pick<LoadedConfig, "config">,
   id: string,
   builtins: BuiltinEngines = BUILTIN_ENGINES,
 ): Partial<EngineTimeouts> {
-  if (Object.hasOwn(loaded.config.engineDefinitions, id) || !Object.hasOwn(builtins, id)) return {};
+  if (Object.hasOwn(loaded.config.engineDefinitions, id)) return { ...loaded.config.engineDefinitions[id].timeouts };
+  if (!Object.hasOwn(builtins, id)) return {};
   const builtin = builtins[id];
   return typeof builtin === "function" ? {} : { ...builtin.timeouts };
 }

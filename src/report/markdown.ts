@@ -3,9 +3,14 @@ import { METRIC_DIGITS, numberText, whereText } from "../compare/metricText.ts";
 import { COMPARISON_MODES, VERDICTS } from "../contract/comparison.ts";
 import type { ComparisonMetric } from "../contract/comparison.ts";
 import { formatFixed, formatSci } from "../core/numeric/format.ts";
+import { NO_CONSENSUS_REASONS } from "./consensus.ts";
 import type { MtfComparison } from "./mtfComparison.ts";
-import type { MetricColumn, ReportModel, ReportSection, SupportCell } from "./model.ts";
+import type { GroupSummary, MetricColumn, ReportModel, ReportSection, SupportCell } from "./model.ts";
 import {
+  CONSENSUS_SECTION,
+  CONSENSUS_TABLES,
+  consensusCounts,
+  consensusSentence,
   DIFFERENCE_CLASS_TEXT,
   FIELD_REASON_TEXT,
   GEOMETRIC_SAMPLING,
@@ -249,6 +254,7 @@ function sectionLines(section: ReportSection): string[] {
       }),
     ]);
     lines.push(...table(["Engine", ...engines], body));
+    if (section.consensus !== null) lines.push("", consensusSentence(section.consensus));
   }
   if (section.mtf !== undefined) lines.push(...mtfComparisonLines(section.mtf));
   if (section.recorded !== null) {
@@ -269,6 +275,37 @@ function sectionLines(section: ReportSection): string[] {
     lines.push(...table(["Value", ...engines], body));
   }
   return lines;
+}
+
+/**
+ * The "Consensus" section of a run whose sections have a consensus to look for: what one is, how many requests have
+ * one or none by the reason, and where each engine of the run stands. Every sentence is a template of
+ * `src/report/wording.ts`.
+ */
+function consensusLines(groups: GroupSummary): string[] {
+  return [
+    "## Consensus",
+    "",
+    ...CONSENSUS_SECTION,
+    "",
+    consensusCounts(groups.requests, groups.withConsensus),
+    "",
+    ...table(CONSENSUS_TABLES.requests, [
+      [CONSENSUS_TABLES.withConsensus, count(groups.withConsensus)],
+      ...NO_CONSENSUS_REASONS.map((reason) => [
+        CONSENSUS_TABLES.withoutConsensus(reason),
+        count(groups.withoutConsensus[reason]),
+      ]),
+    ]),
+    "",
+    ...table(
+      CONSENSUS_TABLES.engines,
+      groups.engines.map((engine) => [
+        engine.engine,
+        ...[engine.consensus, engine.outlier, engine.apart, engine.noConsensus, engine.notPlaced].map(count),
+      ]),
+    ),
+  ];
 }
 
 const HOW_TO_READ: readonly string[] = [
@@ -345,9 +382,10 @@ export const HOW_TO_READ_MTF: readonly string[] = [
  *
  * The sections, in order: the title and the inputs (suite, contract version, policy version, engines with their
  * fingerprints and, for the comparator's own engines, their adapter revisions, runs); the verdict summary; the
- * support matrix; for each run and rung the reference-vs-each table, the pairwise matrix, for the rung of the
- * engines' own MTF the table of it at the shown frequencies, and the values the answers only record; what the
- * comparison does not cover, always; and how to read the verdicts.
+ * consensus over the run, where a section has one to look for; the support matrix; for each run and rung the
+ * reference-vs-each table, the pairwise matrix with the group's consensus under it where it has one to look for, for
+ * the rung of the engines' own MTF the table of it at the shown frequencies, and the values the answers only record;
+ * what the comparison does not cover, always; and how to read the verdicts.
  */
 export function renderMarkdown(model: ReportModel): string {
   const lines: string[] = [`# Comparison report: ${model.suite.name}`, "", "## Inputs", ""];
@@ -413,6 +451,8 @@ export function renderMarkdown(model: ReportModel): string {
       VERDICTS.map((verdict) => [verdict, ...COMPARISON_MODES.map((mode) => countsOf(mode, verdict))]),
     ),
   );
+
+  if (model.groups !== null) lines.push("", ...consensusLines(model.groups));
 
   lines.push("", "## Support matrix", "");
   const engineIds = model.engines.map((engine) => engine.id);

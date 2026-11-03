@@ -11,6 +11,44 @@
       "module": "../../../src/engines/fake/engine.ts",
       "options": { "id": "fake-b", "bias": 0.001 }
     },
+    "fake-far": {
+      "transport": "in-process",
+      "module": "../../../src/engines/fake/engine.ts",
+      "options": { "id": "fake-far", "bias": 1e-9 }
+    },
+    "fake-human": {
+      "transport": "file-exchange",
+      "prescriptions": ["table"],
+      "options": { "id": "fake-human" },
+      "descriptor": {
+        "contract": { "min": "1.0", "max": "1.2" },
+        "identity": {
+          "id": "fake-human",
+          "version": "1",
+          "fingerprint": "8f627e2231b63deb80b1026c7cdca9f4116ee8309f8723f32e5877383b36b6e9",
+          "details": { "bias": 0, "offersQuantities": true, "failMode": "none" }
+        },
+        "capabilities": {
+          "features": {
+            "supported": [
+              "aperture.annular",
+              "aperture.unclipped",
+              "lines.multiple",
+              "object.finite",
+              "path.folded",
+              "surface.asphere.even",
+              "surface.asphere.flat-base",
+              "surface.asphere.odd",
+              "surface.conic"
+            ],
+            "limits": {}
+          },
+          "quantities": { "selftest.echo": { "version": 1 } },
+          "deterministic": true,
+          "maxConcurrency": 1
+        }
+      }
+    },
     "fake-near": {
       "transport": "in-process",
       "module": "../../../src/engines/fake/engine.ts",
@@ -25,6 +63,12 @@
       "transport": "stdio",
       "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine"],
       "options": { "id": "fake-py" },
+      "env": { "PYTHONPATH": "${root}/../../../workers/python" }
+    },
+    "fake-py-oneshot": {
+      "transport": "oneshot",
+      "command": ["${python}", "-m", "lvrtc_worker_kit.fake_engine", "--oneshot"],
+      "options": { "id": "fake-py-oneshot" },
       "env": { "PYTHONPATH": "${root}/../../../workers/python" }
     },
     "fake-pyn": {

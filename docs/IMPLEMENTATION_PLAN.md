@@ -329,11 +329,11 @@ conformance kit passes on it; a group report shows the pairwise matrix and conse
 
 | Stage | Deliver | Verify |
 |---|---|---|
-| 7.1 One-shot transport | Request file in, result file out | Conformance kit passes over it with the Python fake engine |
-| 7.2 File exchange | Outbox, pending, inbox, `lvrtc collect`; prescription writers with full coefficient sets for human-operated engines | A pending job survives a restart and is collected, using a fake human-operated engine |
-| 7.3 Second external engine | Chosen then (e.g. rayoptics through the worker kit, or OpticStudio by file exchange) | Conformance kit; R0–R3 on the benchmark suite; `docs/adding-an-engine.md` followed as written |
-| 7.4 Group reports | Pairwise matrix, consensus, outlier engine | Golden group report from three fakes including an outlier |
-| 7.5 HTTP transport | Built when a consumer exists | Conformance kit over HTTP |
+| 7.1 (delivered) | The `oneshot` transport (a process per message, request and result files in a private temporary directory), its configuration with per-definition `timeouts`, and the kit's `serve_oneshot` with `fake_engine --oneshot` | Conformance kit passes over it with the Python fake engine |
+| 7.2 (delivered) | The `file-exchange` transport (a configured descriptor, jobs named by their store key handed over whole to `<runsDir>/exchange/<id>/outbox`, pending until `inbox/<job>.json` answers), `lvrtc collect` admitting each answer through `askEngine` and moving its job to `collected/` or `rejected/` with a reason, and the `table` prescription writer of every member and coefficient, proven with the fake operator and `fake-human` | A pending job survives a restart and is collected, using a fake human-operated engine |
+| 7.3 Second external engine (deferred) | Deferred by the owner (2026-11-03); chosen later (e.g. rayoptics through the worker kit, or OpticStudio by file exchange) | Conformance kit; R0–R3 on the benchmark suite; `docs/adding-an-engine.md` followed as written |
+| 7.4 (delivered) | Beside each pairwise matrix of a gated rung among three or more engines, the group's consensus (the one largest set, more than half of the engines placed, every two within the gates) with its outliers, engines apart and engines not placed, or why it has none, and a run-level "Consensus" section, all pure functions of the comparisons and the policy (`src/report/consensus.ts`) worded by linted templates | Golden group report from three fakes including an outlier |
+| 7.5 HTTP transport (deferred) | Deferred by the owner (2026-11-03): built when a consumer exists | Conformance kit over HTTP |
 
 ### Phase 8 — Dashboard
 
@@ -538,7 +538,7 @@ None is required. Optional, each a user decision on evidence the comparator prod
   prescription is committed, only synthetic fixtures. (This repo has a GitHub remote.)
 - **optiland JIT**: on, cache under `.cache/`. Stage 2.1 timed it (`docs/REFERENCE.md`, "The engine `optiland`"):
   a trace of 4096 rays takes 0.8 ms with it and 20 ms without, after 0.9 s of compiling once per cache.
-- **Second engine** (Stage 7.3): chosen when Phase 7 starts.
+- **Second engine** (Stage 7.3): deferred by the owner when Phase 7 started (2026-11-03); chosen later.
 - **optiland's axial aim at the real stop** (R8b): resolved at Stage 6.9 (zones at `f R` of the real stop, `R` the
   stop radius LensVisualizer aims at; one line of `launch` makes `f r`, the aimer's own coordinate, should the owner
   prefer it: measured, it sets 46 pairs ATTENTION).
@@ -619,3 +619,13 @@ with the identical-ray signed phase delay as its basis and the existing absolute
 scale. No existing gate or floor changes. Native limitations are coded rather than synthesized. LV's MTF gate
 continues to refuse these lenses, so R4/R4f/R6a are outside this stage's verification. The suite uses temporary
 storage; the census is the raw export snapshot and records the owner's LV lens branch commit.
+
+
+### Phase 7 amendment (owner, 2026-11-03)
+
+Stage 7.3 (a second external engine) and Stage 7.5 (the HTTP transport) are deferred; Phase 7 delivers 7.1, 7.2
+and 7.4. File exchange serves a generic human-operated engine, proven with a fake one; no format of a particular
+program is written. The phase benchmark therefore rests on fake engines: a further engine added by configuration
+and a worker, with no core module edited, is the Python fake over the one-shot transport (`fake-py-oneshot`) and
+the fake operator over file exchange; the conformance kit passes on them; the group report's golden comes from
+three fakes including an outlier. Choosing the second engine remains an open decision.

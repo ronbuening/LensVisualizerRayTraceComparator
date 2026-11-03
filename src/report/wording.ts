@@ -2,7 +2,8 @@
 // may be said of it is narrow: every sentence a report writes about one is a template of this file, and a lint
 // (`wordingProblems`) rejects the claims no recorded row supports, whoever writes them.
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
-import { formatSci, formatSignificant } from "../core/numeric/format.ts";
+import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
+import { formatFixed, formatSci, formatSignificant } from "../core/numeric/format.ts";
 
 /** What a row of an MTF comparison came to. */
 export const MTF_ROW_STATUSES = ["RECORDED", "ATTENTION", "SET ASIDE", "UNSUPPORTED", "ERROR"] as const;
@@ -139,6 +140,68 @@ export const NOT_COVERED: readonly string[] = [
   "Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no band.",
 ];
 
+/** Engines as a report names them in a sentence: each in backticks, by commas. */
+function engineList(engines: readonly string[]): string {
+  return engines.map((engine) => `\`${engine}\``).join(", ");
+}
+
+/** Why a group has no consensus (`src/report/consensus.ts`), as the first clause of the sentence under its matrix. */
+export const NO_CONSENSUS_TEXT: { readonly [reason in NoConsensusReason]: string } = {
+  split: "No consensus: the engines within the gates of each other split into two or more largest sets",
+  "no-pair-within": "No consensus: no two engines are within the gates of each other",
+  minority:
+    "No consensus: the largest set of engines within the gates of each other holds no more than half of the engines placed",
+};
+
+/**
+ * The sentence under the pairwise matrix of a group with a consensus to look for: the consensus or why there is
+ * none, then its outliers, the engines apart and those not placed, each clause only where it names an engine. It
+ * says which answers are within the gates of each other, never which is right.
+ */
+export function consensusSentence(group: GroupConsensus): string {
+  const clauses =
+    group.consensus === null
+      ? [NO_CONSENSUS_TEXT[group.reason ?? "no-pair-within"]]
+      : [`Consensus: ${engineList(group.consensus)}, every two of them within the gates of each other`];
+  if (group.outliers.length > 0) {
+    const noun = group.outliers.length === 1 ? "outlier" : "outliers";
+    clauses.push(`${noun}: ${engineList(group.outliers)}, beyond the gates of every engine of the consensus`);
+  }
+  if (group.apart.length > 0) {
+    clauses.push(`apart: ${engineList(group.apart)}, outside the consensus and not beyond the gates of all of it`);
+  }
+  if (group.notPlaced.length > 0) {
+    clauses.push(`not placed: ${engineList(group.notPlaced)}, with no pair within or beyond the gates`);
+  }
+  return `${clauses.join("; ")}.`;
+}
+
+/** The prose of a report's "Consensus" section, above its tables. */
+export const CONSENSUS_SECTION: readonly string[] = [
+  "A consensus is looked for on each request of a gated rung that three or more engines were compared on pairwise.",
+  "An engine is placed where a pair of it is within or beyond the gates; a pair that is UNSUPPORTED, BLOCKED or ERROR",
+  "is not judged and places no engine. The consensus is the largest set of placed engines every two of which are",
+  "within the gates of each other, where it is the only largest such set and holds more than half of the engines",
+  "placed. An outlier is beyond the gates of every engine of the consensus; an engine apart is outside the",
+  "consensus and not beyond the gates of all of it. A consensus says which answers are within the gates of each",
+  "other, and no more.",
+];
+
+/** How many requests had a consensus to look for, and how many had one. */
+export function consensusCounts(requests: number, withConsensus: number): string {
+  const noun = requests === 1 ? "request" : "requests";
+  const verb = withConsensus === 1 ? "has" : "have";
+  return `Of ${formatFixed(requests, 0)} ${noun} with a consensus to look for, ${formatFixed(withConsensus, 0)} ${verb} one.`;
+}
+
+/** The headings of the tables of a report's "Consensus" section, and the label of each row of requests. */
+export const CONSENSUS_TABLES = {
+  requests: ["Requests", "Count"],
+  withConsensus: "with a consensus",
+  withoutConsensus: (reason: NoConsensusReason): string => `no consensus: ${reason}`,
+  engines: ["Engine", "In the consensus", "Outlier", "Apart", "Placed, no consensus", "Not placed"],
+} as const;
+
 /** One claim a report must not make, and how to tell it. */
 export interface BannedClaim {
   /** A short name for the claim. */
@@ -228,6 +291,16 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
       /\bwithin (its |the |a )?(tolerance|spec|specification|limit)s?\b/i,
       /\b(band|RECORDED|recorded)\b/,
     ),
+  },
+  {
+    name: "consensus-correct",
+    why: "a consensus says which answers are within the gates of each other, not which is right or in error",
+    // "an error" is read in lower case only: a pair that is ERROR is a verdict, which a sentence may name.
+    matches: (sentence) =>
+      mentions(
+        /\b(consensus|outliers?|majority)\b/i,
+        /\b(correct(ly|ness)?|incorrect|right|wrong(ly)?|true values?|truth|errs?|erroneous|in error|mistaken|faulty|at fault|accurate|accuracy|valid|verified|trustworthy|reliable)\b/i,
+      )(sentence) || mentions(/\b(consensus|outliers?|majority)\b/i, /\ban error\b/)(sentence),
   },
 ];
 

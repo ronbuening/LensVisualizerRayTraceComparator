@@ -53,7 +53,10 @@ function lvrtcRun(
   return { code: child.status, signal: child.signal, out: child.stdout, err: child.stderr };
 }
 
-/** Three engines of the fixture root that run in this process. `fake-py` and `fake-pyn` are Python workers. */
+/**
+ * Three engines of the fixture root that run in this process. `fake-py`, `fake-py-oneshot` and `fake-pyn` are Python
+ * workers.
+ */
 const IN_PROCESS_ENGINES = "fake-a,fake-b,fake-none";
 
 /** The fixture suite on the fixture root, on its in-process engines unless `args` name engines: no Python is needed. */
@@ -131,12 +134,12 @@ test("lvrtc run: a line per job and a summary, exit 0; the second run finds ever
   assert.equal(
     first.out,
     [
-      "singlet       selftest  fake-a         ok           computed",
-      "singlet       selftest  fake-b         ok           computed",
-      "singlet       selftest  fake-none      unsupported  negotiated   the engine does not offer selftest.echo",
-      "double-gauss  selftest  fake-a         ok           computed",
-      "double-gauss  selftest  fake-b         ok           computed",
-      "double-gauss  selftest  fake-none      unsupported  negotiated   the engine does not offer selftest.echo",
+      "singlet       selftest  fake-a           ok           computed",
+      "singlet       selftest  fake-b           ok           computed",
+      "singlet       selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
+      "double-gauss  selftest  fake-a           ok           computed",
+      "double-gauss  selftest  fake-b           ok           computed",
+      "double-gauss  selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
       "fake-pair: 6 jobs: 4 ok, 2 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
       `manifest: ${manifestPath}`,
       "",
@@ -174,8 +177,8 @@ test("--engines runs only the engines named, in id order", (t) => {
   const one = fakePair(runsDir, "--engines", "fake-b");
   assert.equal(one.code, EXIT_OK, one.err);
   assert.deepEqual(one.out.split("\n").slice(0, 3), [
-    "singlet       selftest  fake-b         ok           computed",
-    "double-gauss  selftest  fake-b         ok           computed",
+    "singlet       selftest  fake-b           ok           computed",
+    "double-gauss  selftest  fake-b           ok           computed",
     "fake-pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
   ]);
   assert.deepEqual(
@@ -231,7 +234,7 @@ test("an unknown engine is a usage error that lists the engines there are, and n
   assert.equal(ended.out, "");
   assert.match(
     ended.err,
-    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-near, fake-none, fake-py, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave$/m,
+    /^lvrtc run: unknown engine "zemax": the configuration defines fake-a, fake-b, fake-far, fake-human, fake-near, fake-none, fake-py, fake-py-oneshot, fake-pyn; built in: flux, lv, optiland, optiland-wave, ref, ref-seidel, replay, wave$/m,
   );
   assert.equal(existsSync(runsDir), false);
 });
@@ -261,7 +264,7 @@ test("a run that cannot be started exits 1, is reported and recorded, and the ot
   const args = [FAKE_MIXED_SUITE, "--root", FAKE_ROOT, "--engines", "fake-a"];
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {11}ok {11}computed$/m);
   assert.match(ended.out, /^fake-mixed: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 0 cached\)$/m);
   const lv = "lv-not-configured: LensVisualizer is not configured: set lvPath in lvrtc.local.json or LVRTC_LV_PATH";
   const missing = "lens fixture cases/missing.json: it cannot be read (ENOENT)";

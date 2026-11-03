@@ -33,12 +33,14 @@ export interface GoldenSuite {
 /**
  * The suites with a golden report: the Phase 0 benchmark trio (a TypeScript fake as reference, the Python fake
  * with a bias inside the tolerance, a fake that offers no quantity), the same trio all in TypeScript, and the
- * faults (a bias beyond the tolerance, an engine that errors, one that cannot be loaded, a run that cannot start).
+ * faults (a bias beyond the tolerance, an engine that errors, one that cannot be loaded, a run that cannot start),
+ * and the group (two fakes within the tolerance of each other and one just beyond it: a consensus and an outlier).
  */
 export const GOLDEN_SUITES: readonly GoldenSuite[] = [
   { name: "fake-3-engines", root: FAKE_ROOT, needsPython: true, codes: [0, 0, 0] },
   { name: "fake-3-engines-ts", root: FAKE_ROOT, needsPython: false, codes: [0, 0, 0] },
   { name: "fake-faults", root: FAULT_ROOT, needsPython: false, codes: [1, 1, 0] },
+  { name: "fake-group", root: FAKE_ROOT, needsPython: false, codes: [0, 1, 0] },
 ];
 
 /** The path of a fixture suite's file. */

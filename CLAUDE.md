@@ -711,9 +711,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **`test/fixtures/` is data, not source**: excluded from `tsc`, eslint and prettier. Tests load fixture modules
   from a temporary copy, because Node caches modules by URL.
 - **The Python worker kit is stdlib-only** (`workers/python/lvrtc_worker_kit`, Python `>=3.10`, type hints, 120
-  columns) and writes nothing to disk; numpy is used only inside the optiland worker. Nothing is installed into the
-  optiland environment. Its tests are `unittest` in `workers/python/tests/kit`. `lvrtc_optiland` imports the
-  standard library, the kit, numpy and optiland, and importing the package itself imports none of the last two.
+  columns) and writes nothing to disk but the result file a one-shot worker is told to write; numpy is used only
+  inside the optiland worker. Nothing is installed into the optiland environment. Its tests are `unittest` in
+  `workers/python/tests/kit`. `lvrtc_optiland` imports the standard library, the kit, numpy and optiland, and
+  importing the package itself imports none of the last two.
 - **Investigations are result-only and outside every engine** (`src/diagnostics`, `workers/python/diagnostics`,
   `bin/z50f12-investigation.mjs`; Stage 4.2): no engine imports them, they write only into the temporary
   directory they are given, LV is reached through the binding and optiland through `lvrtc_optiland` under
@@ -1858,3 +1859,87 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - The fingerprint of `lv`, `replay`, `wave` and `flux` moved, and their adapter revisions (`exportAperture.ts`'s
   comment); `ref`'s, `ref-seidel`'s and the optiland engines' did not. Every record of the four is STALE(engine), the
   Sigma 35 mm's STALE(case), until the Phase 7 end refresh (owner decision): no baseline written or checked here.
+
+## Phase 7 engines and transports
+
+- **Owner decision (2026-11-03): Stage 7.3 (a second external engine) and 7.5 (HTTP) are deferred.** Phase 7 is
+  7.1, 7.2 and 7.4, and its benchmark rests on fake engines (the plan's "Phase 7 amendment"). Never add a real
+  engine, a program-specific exchange format or an HTTP transport without the owner.
+- **`oneshot` is a transport of a process per message** (`src/transports/oneshot.ts`, Stage 7.1): request file in,
+  result file out, the same stateless protocol behind `RemoteEngineAdapter`, which validates every reply; the
+  transport judges nothing (it parses the result file and returns whatever JSON is there). The message is written
+  atomically (`writeFileAtomic`) as the text a stdio worker gets as its line; the command is started without a
+  shell, cwd the configuration root, stdin ignored, in `workerEnvironment`'s environment plus `LVRTC_REQUEST_FILE`
+  and `LVRTC_RESULT_FILE` (`REQUEST_FILE_VARIABLE`, `RESULT_FILE_VARIABLE`), absolute paths. Exit 0 and a result
+  file is the reply; stdout and stderr are both log (one bounded tail), never a reply. Failures are
+  `OneshotTransportError` codes (`spawn-failed`, `exited`: the result file is then not read, `no-result`,
+  `not-json`, `oversized-result`), a timeout kills the process and rejects with `TransportTimeoutError` once it has
+  ended. No failure ends the transport; calls may run at once. `open()` starts nothing but refuses, as
+  `spawn-failed`, a command no executable file answers to (`unstartable`: a path from the root, or a bare name on
+  the worker's `PATH`), so a missing worker is `spawn-failed` as over stdio, never `hello-failed`. Only the direct
+  process is killed, as over stdio: a launcher that leaves a child behind owns it. No `exitStatus`: the conformance
+  kit's shutdown check passes "no process to end".
+- **A one-shot exchange lives in a private temporary directory and nowhere else**: `open()` makes it (`mkdtemp`
+  under `os.tmpdir()`, mode 0700), each call a uniquely prefixed pair of files there, every file of that prefix (the
+  worker's temporaries too) removed when the call settles, the directory removed by `close()` after killing what
+  still runs. Never write a request or result under the repository or `runs/`: a case can carry an LV
+  prescription.
+- **A definition may state its waits** (`timeouts: { helloMs?, runMs?, shutdownMs? }`, finite numbers above 0, on
+  every transport; anything else is an error naming the file). `engineTimeouts` returns a configured definition's
+  own (a definition replaces a built-in engine's waits, as it replaces the engine), else a built-in engine's. Never
+  widen `DEFAULT_ENGINE_TIMEOUTS` for an engine: state its waits on its definition.
+- **In a pool a oneshot engine is not persistent** (`processRegistry.ts`: only stdio and the two optiland ids are),
+  and `memoryRegistry` measures its processes by the process table (`needs-ps`).
+- **The kit's one-shot entry is `serve_oneshot`** (`protocol.py`): the same answering of one message as the NDJSON
+  loop (`reply_to`, one function for both; never a second copy), written by `write_file_atomic`; exit 0 whenever a
+  reply was written (`ok: false` included), 2 only when none could be. A request file that is unset or unreadable is
+  `parse-error` under `"?"`. `fake_engine --oneshot` runs it; `--oneshot` is no engine option (not in the
+  descriptor or fingerprint), so the fake's results are byte-identical over both transports. The fixture root's
+  `fake-py-oneshot` is that worker; `test/fixtures/oneshot-worker` holds Node workers for the transport's own tests.
+- **A kit edit moves `optiland`'s and `optiland-wave`'s adapter revisions** (the worker hashes the kit's `.py` files),
+  and an edit of `src/core/config.ts` moves `optiland-wave`'s too (`optiland/definition.ts` imports it): their
+  baseline records go STALE(engine) until the owner's next refresh. So does an edit of `src/exchange/names.ts`, which
+  config.ts imports for the writer names; keep the writers themselves (`prescription.ts`) out of config.ts.
+- **`file-exchange` is an engine a person operates** (`src/transports/fileExchange.ts`, Stage 7.2): the definition's
+  `descriptor` answers `hello` and the adapter judges it as any engine's; its fingerprint is the operator's program.
+  The exchange directory is `<runsDir>/exchange/<engine id>/` (`TransportContext.runsDir`; a suite cannot be named
+  `exchange`), never anything under the repository, and nothing in it is committed: a case can reproduce an LV
+  prescription. A job's name is its store key (`jobName`: request id, engine id, fingerprint, adapter revision,
+  engine options); its `message.json` is the run message as canonical JSON under that name as `id`.
+- **The run path never moves or removes a file of the exchange**: it replies with `inbox/<job>.json` when there,
+  else hands the job over to `outbox/<job>/` whole (written beside it, renamed in; a second writer leaves the
+  first's) unless it is in outbox or pending, and replies `pending` (never stored; no failure of `lvrtc run`).
+- **One validation path**: `lvrtc collect` (`src/exchange/collect.ts`) admits every inbox answer through `askEngine`
+  with its job's request and case, never a check of its own; it is the one mover. Stored or cached goes to
+  `collected/<job>/`, anything else to `rejected/<job>/` with `reason.txt`. Every move is a rename: the answer into
+  its job directory first (a reason before it), then the directory whole; the next collect finishes a job directory
+  that holds `answer.json` before it reads the inbox, and an accepted job loses any stale `reason.txt` first. A job
+  left with no answer whose key the store holds (handed over again by a run during a collect) goes to `collected/`.
+  Collects of one exchange never run at once (as store maintenance runs without concurrent writers).
+- **A prescription writer never drops a member** (`src/exchange/prescription.ts`): every member of the case and the
+  request is written or is an error naming its path, numbers by `exactNumber` (`String`, `-0` kept). A writer is a
+  pure function; its tests hold synthetic cases to exact texts. A new writer adds its name to `names.ts` and its
+  file to `PRESCRIPTION_WRITERS` (the type check ties them).
+- Commands: `node bin/lvrtc.mjs collect [<engine>...] [--root <dir>] [--json]` (exit 1 on a refusal, 2 on usage);
+  `node test/fixtures/fake-operator/operator.mjs <runsDir>/exchange/<engine>` plays the operator of the fixture
+  root's `fake-human` with the TypeScript fake engine.
+- **A group's consensus is a pure function of its pairwise set and the rung's policy** (`consensusOf`,
+  `src/report/consensus.ts`, Stage 7.4), looked for only on a **gated** rung compared pairwise among **three or more**
+  engines (a recorded rung's RECORDED/ATTENTION is no agreement; two engines are a pair); elsewhere
+  `ReportSection.consensus` is null. A pair is within (PASS, FLOOR), beyond (FAIL) or unjudged (UNSUPPORTED, BLOCKED,
+  ERROR); an engine with a pair within or beyond is placed, the others are named not placed. The consensus is the
+  largest set of at least two placed engines every two of which are within, only where it is the one largest such
+  set and holds more than half of the placed engines; else none, with the first of `split`, `no-pair-within`,
+  `minority`. Outside a consensus an engine beyond every member (each pair judged, each FAIL) is an outlier, any other
+  placed one is apart: never name an engine an outlier that was not judged against the whole consensus. Order of
+  pairs or participants changes nothing; `consensusOf` throws for more than 16 engines, and the report model gives such
+  a section `consensus: null` (as for fewer than three), so `buildReport` never fails for size. `ReportModel.groups`
+  counts, per engine of the run, the sections that place it in the consensus, as an outlier, apart, placed without one
+  or not placed; null when no section has a consensus to look for. No command or file of its own: `lvrtc report` carries it.
+- **A consensus says which answers are within the gates of each other, never which is right**: every sentence of it
+  is a template of `src/report/wording.ts` (`consensusSentence` under a pairwise matrix; "## Consensus" after the
+  verdict summary), and the banned claim `consensus-correct` rejects a consensus, outlier or majority named beside
+  correct, right, wrong, true value, in error, accurate and the like. Its golden is `fake-group` (`fake-a`,
+  `fake-near` and the fixture root's `fake-far`, a bias of 1e-9 just beyond the `selftest` gate), written only by
+  `node test/report/writeGolden.ts`, which also rewrote every golden of a qualifying section (`fake-3-engines(-ts)`,
+  `fake-faults`, the R7a to R11a stand-ins). See `docs/REFERENCE.md`, "Group reports (Stage 7.4)".

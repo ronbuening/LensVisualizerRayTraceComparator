@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { isEngineId } from "../contract/engine.ts";
 import type { JsonObject } from "../contract/json.ts";
+import { PRESCRIPTION_WRITER_NAMES, isPrescriptionWriterName } from "../exchange/names.ts";
+import type { PrescriptionWriterName } from "../exchange/names.ts";
 
 /** The repository root: the directory that holds `lvrtc.config.json`. */
 export const REPO_ROOT: string = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -30,23 +32,57 @@ const ENV_VARIABLES: Readonly<Partial<Record<ConfigKey, string>>> = {
 };
 
 /**
- * How one engine is reached, as `engines.<id>` defines it; the member `transport` says which of the two it is.
+ * The waits a definition states for its engine, in milliseconds, each a number above 0; a wait left out keeps the
+ * adapter's default. The members are those of `EngineTimeouts` (`src/engines/remote.ts`).
+ */
+export interface DefinitionTimeouts {
+  readonly helloMs?: number;
+  readonly runMs?: number;
+  readonly shutdownMs?: number;
+}
+
+/**
+ * How one engine is reached, as `engines.<id>` defines it; the member `transport` says which it is.
  *
  * - `in-process`: `module` is the absolute path of a module that exports `createEngine(options)`.
  * - `stdio`: `command` is the worker's command line, whose first word is an absolute path or a bare command name,
- *   and `env` the variables set for it on top of the environment the transport gives every worker. In both, every
- *   placeholder of `ENGINE_PLACEHOLDERS` has been replaced; the words are otherwise as written.
+ *   and `env` the variables set for it on top of the environment the transport gives every worker.
+ * - `oneshot`: as `stdio`, but the command is started once per message and answers it by files
+ *   (`src/transports/oneshot.ts`).
+ * - `file-exchange`: an engine a person operates, which answers by files when they do
+ *   (`src/transports/fileExchange.ts`): `descriptor` is its answer to `hello`, judged by the adapter as any engine's,
+ *   and `prescriptions` the writers whose files each job it is handed carries, distinct, in the order given (none
+ *   when the definition names none).
  *
- * `options` is the engine's own business; it is `{}` when the definition gives none.
+ * In `stdio` and `oneshot` every placeholder of `ENGINE_PLACEHOLDERS` has been replaced; the words are otherwise as
+ * written. `options` is the engine's own business; it is `{}` when the definition gives none. `timeouts` is there
+ * only when the definition states it.
  */
 export type EngineDefinition =
-  | { readonly transport: "in-process"; readonly module: string; readonly options: JsonObject }
   | {
-      readonly transport: "stdio";
-      readonly command: readonly string[];
+      readonly transport: "in-process";
+      readonly module: string;
       readonly options: JsonObject;
-      readonly env: Readonly<Record<string, string>>;
+      readonly timeouts?: DefinitionTimeouts;
+    }
+  | WorkerDefinition<"stdio">
+  | WorkerDefinition<"oneshot">
+  | {
+      readonly transport: "file-exchange";
+      readonly descriptor: JsonObject;
+      readonly prescriptions: readonly PrescriptionWriterName[];
+      readonly options: JsonObject;
+      readonly timeouts?: DefinitionTimeouts;
     };
+
+/** A definition of an engine that is a program the comparator starts: `stdio` or `oneshot`. */
+export interface WorkerDefinition<T extends "stdio" | "oneshot"> {
+  readonly transport: T;
+  readonly command: readonly string[];
+  readonly options: JsonObject;
+  readonly env: Readonly<Record<string, string>>;
+  readonly timeouts?: DefinitionTimeouts;
+}
 
 /** Resolved configuration. Directories are absolute; an interpreter is an absolute path or a bare command name. */
 export interface Config {
@@ -121,7 +157,7 @@ function checkedValue(key: ConfigKey, value: unknown, file: string): string | nu
 }
 
 /**
- * What a stdio definition may write in a word of `command` and in a value of `env`, as `${name}`:
+ * What a stdio or oneshot definition may write in a word of `command` and in a value of `env`, as `${name}`:
  *
  * - `${root}`: the configuration root, an absolute directory; `${root}/workers` is a path below it;
  * - `${python}`: the configuration value `python`, as resolved: an absolute path or a bare command name.
@@ -151,9 +187,13 @@ const NEST_HINT = "nest objects instead of writing dots";
 
 /** The members of an engine definition, by transport. A definition has those of its transport and no other. */
 const DEFINITION_MEMBERS = {
-  "in-process": ["transport", "module", "options"],
-  stdio: ["transport", "command", "options", "env"],
+  "in-process": ["transport", "module", "options", "timeouts"],
+  stdio: ["transport", "command", "options", "env", "timeouts"],
+  oneshot: ["transport", "command", "options", "env", "timeouts"],
+  "file-exchange": ["transport", "descriptor", "prescriptions", "options", "timeouts"],
 } as const;
+/** The waits a definition may state under `timeouts`. */
+const TIMEOUT_MEMBERS = ["helloMs", "runMs", "shutdownMs"] as const;
 const TRANSPORTS = Object.keys(DEFINITION_MEMBERS).map((name) => `"${name}"`);
 
 /**
@@ -162,8 +202,10 @@ const TRANSPORTS = Object.keys(DEFINITION_MEMBERS).map((name) => `"${name}"`);
  */
 function checkedDefinition(key: string, members: Readonly<Record<string, unknown>>, file: string): EngineDefinition {
   const wrong = (member: string, must: string): Error => new Error(`${file}: "${key}.${member}" must be ${must}`);
-  const { transport, module, command, options = {}, env = {} } = members;
-  if (transport !== "in-process" && transport !== "stdio") throw wrong("transport", TRANSPORTS.join(" or "));
+  const { transport, module, command, options = {}, env = {}, timeouts, descriptor, prescriptions = [] } = members;
+  if (transport !== "in-process" && transport !== "stdio" && transport !== "oneshot" && transport !== "file-exchange") {
+    throw wrong("transport", `${TRANSPORTS.slice(0, -1).join(", ")} or ${TRANSPORTS.at(-1)}`);
+  }
   const allowed: readonly string[] = DEFINITION_MEMBERS[transport];
   const misplaced = Object.keys(members).find((name) => !allowed.includes(name));
   if (misplaced !== undefined) {
@@ -174,10 +216,21 @@ function checkedDefinition(key: string, members: Readonly<Record<string, unknown
     );
   }
   if (!isPlainObject(options)) throw wrong("options", "an object");
+  const waits = timeouts === undefined ? {} : { timeouts: checkedTimeouts(key, timeouts, file) };
 
   if (transport === "in-process") {
     if (typeof module !== "string" || module === "") throw wrong("module", "a non-empty string");
-    return { transport, module, options };
+    return { transport, module, options, ...waits };
+  }
+  if (transport === "file-exchange") {
+    if (!isPlainObject(descriptor)) throw wrong("descriptor", "an object: the engine's answer to hello");
+    const writers = PRESCRIPTION_WRITER_NAMES.map((name) => `"${name}"`).join(", ");
+    if (!Array.isArray(prescriptions) || !prescriptions.every(isPrescriptionWriterName)) {
+      throw wrong("prescriptions", `a list of prescription writers: there are ${writers}`);
+    }
+    const repeated = prescriptions.find((name, at) => prescriptions.indexOf(name) !== at);
+    if (repeated !== undefined) throw wrong("prescriptions", `a list of distinct writers, not "${repeated}" twice`);
+    return { transport, descriptor: descriptor as JsonObject, prescriptions: [...prescriptions], options, ...waits };
   }
   const isWord = (word: unknown): word is string => typeof word === "string" && word !== "";
   if (!Array.isArray(command) || command.length === 0 || !command.every(isWord)) {
@@ -199,7 +252,27 @@ function checkedDefinition(key: string, members: Readonly<Record<string, unknown
     checkPlaceholders(`env.${name}`, value);
     return [name, value];
   });
-  return { transport, command: [...command], options, env: Object.fromEntries(variables) };
+  return { transport, command: [...command], options, env: Object.fromEntries(variables), ...waits };
+}
+
+/**
+ * The `timeouts` of the definition `key`: an object of `TIMEOUT_MEMBERS`, each a finite number of milliseconds above
+ * 0. Any other member or value is an error naming the file and the member.
+ */
+function checkedTimeouts(key: string, timeouts: unknown, file: string): DefinitionTimeouts {
+  if (!isPlainObject(timeouts)) throw new Error(`${file}: "${key}.timeouts" must be an object`);
+  const known: readonly string[] = TIMEOUT_MEMBERS;
+  const waits: Record<string, number> = {};
+  for (const [name, value] of Object.entries(timeouts)) {
+    if (!known.includes(name)) {
+      throw unknownKey(`${key}.timeouts.${name}`, file, `the waits are ${TIMEOUT_MEMBERS.join(", ")}`);
+    }
+    if (typeof value !== "number" || !Number.isFinite(value) || !(value > 0)) {
+      throw new Error(`${file}: "${key}.timeouts.${name}" must be a number of milliseconds above 0`);
+    }
+    waits[name] = value;
+  }
+  return waits;
 }
 
 /**
@@ -292,11 +365,12 @@ function resolved(key: ConfigKey, value: string | null, rootDir: string): string
 }
 
 /**
- * A definition as it is used: paths resolved against the root and, in a stdio definition, every placeholder
- * replaced. `python` is the resolved configuration value `python`.
+ * A definition as it is used: paths resolved against the root and, in a stdio or oneshot definition, every
+ * placeholder replaced. `python` is the resolved configuration value `python`.
  */
 function resolvedDefinition(definition: EngineDefinition, rootDir: string, python: string): EngineDefinition {
   if (definition.transport === "in-process") return { ...definition, module: resolve(rootDir, definition.module) };
+  if (definition.transport === "file-exchange") return definition;
   const replacements: Readonly<Record<string, string>> = { root: rootDir, python };
   // The names were checked when the file was read, so each one has a replacement.
   const filled = (text: string): string => text.replace(PLACEHOLDER, (_written, name: string) => replacements[name]);
@@ -315,8 +389,9 @@ function resolvedDefinition(definition: EngineDefinition, rootDir: string, pytho
  *
  * `engines.<id>` with a `transport` defines an engine. A definition is taken whole from the highest layer that
  * states one for that id, never merged across layers; its `module`, and a `command` whose first word is a path,
- * resolve against `rootDir` like every other path. In a stdio definition's `command` and `env`, `${root}` and
- * `${python}` (`ENGINE_PLACEHOLDERS`) are replaced, and any other `${...}` is an error naming the file.
+ * resolve against `rootDir` like every other path. In a stdio or oneshot definition's `command` and `env`, `${root}`
+ * and `${python}` (`ENGINE_PLACEHOLDERS`) are replaced, and any other `${...}` is an error naming the file. Any
+ * definition may state `timeouts`, the waits of its engine (`DefinitionTimeouts`).
  * `engines.optiland.python` is a value of its own and may stand with or without a definition beside it.
  */
 export function loadConfig(input: LoadConfigInput): LoadedConfig {

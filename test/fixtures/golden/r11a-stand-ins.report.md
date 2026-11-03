@@ -40,6 +40,32 @@
 | BLOCKED | 0 | 0 |
 | ERROR | 0 | 0 |
 
+## Consensus
+
+A consensus is looked for on each request of a gated rung that three or more engines were compared on pairwise.
+An engine is placed where a pair of it is within or beyond the gates; a pair that is UNSUPPORTED, BLOCKED or ERROR
+is not judged and places no engine. The consensus is the largest set of placed engines every two of which are
+within the gates of each other, where it is the only largest such set and holds more than half of the engines
+placed. An outlier is beyond the gates of every engine of the consensus; an engine apart is outside the
+consensus and not beyond the gates of all of it. A consensus says which answers are within the gates of each
+other, and no more.
+
+Of 1 request with a consensus to look for, 0 have one.
+
+| Requests | Count |
+|---|---|
+| with a consensus | 0 |
+| no consensus: split | 0 |
+| no consensus: no-pair-within | 1 |
+| no consensus: minority | 0 |
+
+| Engine | In the consensus | Outlier | Apart | Placed, no consensus | Not placed |
+|---|---|---|---|---|---|
+| moved | 0 | 0 | 0 | 1 | 0 |
+| ref | 0 | 0 | 0 | 1 | 0 |
+| stopped | 0 | 0 | 0 | 1 | 0 |
+| turned | 0 | 0 | 0 | 1 | 0 |
+
 ## Support matrix
 
 | Run | Rung | moved | ref | stopped | turned |
@@ -72,6 +98,8 @@ Pairwise, the verdict of each two engines and the metric nearest to or furthest 
 | ref | FAIL (landing.maxAbs 1.49e-8 at field 4, line 0, ray 102) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) |
 | stopped | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) |
 | turned | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (illumination.maxAbs 1.54e-6 at field 4, line 0) | FAIL (mask.mismatches 1 at field 3, line 0, ray 44, surface 2) | — |
+
+No consensus: no two engines are within the gates of each other.
 
 Recorded values, as each engine reports them. They are listed and never judged:
 
