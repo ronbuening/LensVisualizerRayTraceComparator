@@ -6119,3 +6119,53 @@ added or lost, and nothing of the fake tree moved.
   `replay` `7b9996fd` to `55ff9ba8`, `wave` `56bd2816` to `6dc6228e`, `flux` `a0cd59c5` to `2be7227c`). `ref`
   (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` (`e12b6f28`) did not move. No baseline was
   written or checked: the refresh is the Phase 7 end's (owner decision).
+
+## The dashboard (Phase 8)
+
+Stage 8.1 is a read-only server over the run directories and baselines: `lvrtc serve [--root <dir>] [--port <n>]
+[--no-ask]` listens on `127.0.0.1` only (default port 8077; `--port 0` picks a free one; a busy port fails at once),
+prints `http://127.0.0.1:<port>/` and runs until SIGINT or SIGTERM, then closes and exits 0. The runs directory is the
+configuration's `runsDir` (so `LVRTC_RUNS_DIR` applies), the baselines are `<root>/baselines/*.json`, the policy is the
+policy at hand. Nothing is written; no directory is made; no store entry is read in 8.1.
+
+**What it shows.** The index lists every run directory with a manifest (not `store`, `exchange`, `mtf`): its jobs by
+status, whether it is compared, its pairs by verdict, how many are FAIL or ERROR, and the problems of its files
+(comparisons that cannot be read, comparisons made from another manifest or judged by another policy); and every
+baseline: kind (rays or MTF, by `.mtf` in its stem), suite, policy version, records, records by verdict and by badge.
+A run page has the engines as the run recorded them, the runs (requests, sections, gravest verdict, problems), the
+support matrix added up per rung (requests by status per engine, `not-run` where an engine was not asked) and request
+by request per run, the verdicts of each mode, the sections (one per compared request, with the gravest verdict) and
+the pending jobs; a suite of more than 2,000 requests has its support matrix by request and its sections on a page per
+run instead. A section page has the metric columns with the policy's limits, reference-against-each and pairwise
+tables, the consensus where the report model has one, the recorded values, and for R5, R5g and R6c the MTF table of
+the report model. A baseline page has its inputs, its engines beside what the basis says they are now, the staleness
+summary by badge and reason, and a row per run (each rung's gravest verdict, records by badge); the page of a run of a
+baseline has every record of it (verdicts by request, metrics with tolerance and measured count) with its badge. On
+the committed catalog the baseline page is about 490 KB of HTML and the largest run page 36 KB.
+
+**Routes.** `/`, `/run/<suite>`, `/run/<suite>/run/<n>`, `/run/<suite>/section/<n>`, `/baseline/<stem>`,
+`/baseline/<stem>/run/<n>`; each has a JSON twin under `/api` (`/api/index` for `/`): the view model as canonical
+JSON and a newline. A segment is looked up among the names and places the server listed (404 otherwise, traversal
+included); a `Host` other than `127.0.0.1:<port>` or `localhost:<port>` is 403; any method but GET and HEAD is 405;
+an exception is a bare 500, its stack on the server's error stream.
+
+**Figures.** Every number a view takes from a file is a Figure: its value and the file and RFC 6901 pointer it is at
+(`comparisons.json /comparisons/12/pairs/0/metrics/2/value`), shown on hover. A number the dashboard computes (an MTF
+row's difference, the larger of two rim-ray counts) is marked derived and names its sources. Every other number is a
+count. `test/dashboard/figures.test.ts` holds every figure of every fixture page to the file on disk and to the place
+of the view that holds it, sets every cell against `buildReport`, `buildBaselineReport` or `buildMtfBaselineReport`,
+recomputes every derived number and recounts every count.
+
+**STALE, and its bases.** A record's reasons are those of `lvrtc baseline check` (case, engine, policy), judged
+without running anything, so the dashboard never says REFRESHABLE, DRIFT or MOVED. The policy reason is judged against
+the policy at hand (the catalog's baselines, a dated snapshot of policy v15, show STALE(policy) like any other, with
+a note). The engine reason is judged against the engines as asked: by default, once the server listens, one child
+`lvrtc engine describe` asks every engine of every baseline (about 25 s for the eight built-in engines; LensVisualizer
+and optiland load only in that child, whose error stream is the server's; the answer is kept in memory only). Until
+it answers, with `--no-ask`, or when asking fails, the engine reason is judged against the engines the suite's last
+run recorded (`<runsDir>/<suite>/manifest.json`), and else it is not known; each page says which. The last run cannot
+see code changed since it ran (the benchmark baselines record LensVisualizer's closure `fc5ae923`, the checkout's is
+`ff0d938d`, and a last run made before the change says nothing of it), which is why asking is the default. The case reason is judged against the cases of
+the suite's last run (a run there without a case is stale, a run not there is not known), else not known. The badge
+is `STALE(<reasons>)`, `CURRENT` (every reason known, none holding) or `NOT KNOWN(<reasons>)`.
+`lvrtc engine describe <id>... [--root <dir>] [--json]` prints what a run's manifest would record of each engine now.

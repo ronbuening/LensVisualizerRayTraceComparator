@@ -19,7 +19,9 @@ import { STDIO_FAKE_ENGINE } from "../engines/support.ts";
 const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
 const STDIO_WORKER = fileURLToPath(new URL("../fixtures/stdio-worker/worker.mjs", import.meta.url));
-const SYNOPSIS = "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n";
+const SYNOPSIS =
+  "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n" +
+  "       lvrtc engine describe <id>... [--root <dir>] [--json]\n";
 
 function inProcess(options: Record<string, unknown>): Record<string, unknown> {
   return { transport: "in-process", module: FAKE_ENGINE, options };
@@ -69,7 +71,7 @@ test("engine is a registered command, and --help says what conformance checks", 
   assert.ok(help.stdout.startsWith(SYNOPSIS));
   assert.match(help.stdout, /PASS, FAIL or SKIPPED with a reason/);
   const list = spawnSync(process.execPath, [BIN, "--help"], { encoding: "utf8", cwd: REPO_ROOT });
-  assert.match(list.stdout, /^ {2}engine +Check that an engine conforms to the contract$/m);
+  assert.match(list.stdout, /^ {2}engine +Check that an engine conforms to the contract, or say who engines are$/m);
 });
 
 test("an engine that conforms: a line per check, a count, exit 0", async (t) => {
@@ -225,9 +227,10 @@ test("an engine that is neither configured nor built in is a usage error that li
 test("a command line that is not the synopsis is a usage error that shows it", async (t) => {
   const rootDir = rootWith(t, ENGINES);
   const cases: [string[], string][] = [
-    [[], "no action was named: there is conformance"],
-    [["describe", "good"], 'unknown action "describe": there is conformance'],
-    [["good"], 'unknown action "good": there is conformance'],
+    [[], "no action was named: there are conformance and describe"],
+    [["describe"], "no engine was named"],
+    [["describe", "good", "--verbose"], 'unknown option "--verbose"'],
+    [["good"], 'unknown action "good": there are conformance and describe'],
     [["conformance"], "no engine was named"],
     [["conformance", "good", "biased"], "more than one engine was named: good, biased"],
     [["conformance", "good", "--verbose"], 'unknown option "--verbose"'],

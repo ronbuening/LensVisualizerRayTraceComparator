@@ -443,6 +443,28 @@ function groupsOf(engines: readonly string[], sections: readonly ReportSection[]
 }
 
 /**
+ * The sections of a run's comparisons, as the places of their sets in the list: the sets of one run, rung and request
+ * that follow each other, at most one of each mode, are one section. The report model and the dashboard group alike.
+ */
+export function sectionSetGroups(sets: readonly ComparisonSet[]): number[][] {
+  const groups: number[][] = [];
+  sets.forEach((set, index) => {
+    const last = groups.at(-1);
+    const first = last === undefined ? undefined : sets[last[0]];
+    const same =
+      last !== undefined &&
+      first !== undefined &&
+      first.run === set.run &&
+      first.rung === set.rung &&
+      first.requestId === set.requestId &&
+      !last.some((other) => sets[other].mode === set.mode);
+    if (same) last.push(index);
+    else groups.push([index]);
+  });
+  return groups;
+}
+
+/**
  * Builds the report of one run of a suite from its manifest, its comparisons and the policy they were judged by.
  * A pure function: equal arguments give an equal model, and nothing in it depends on when or where it is built.
  *
@@ -474,18 +496,9 @@ export function buildReport(manifest: RunManifest, comparisons: ComparisonFile, 
     0,
   );
 
-  const grouped: ComparisonSet[][] = [];
-  for (const set of comparisons.comparisons) {
-    const last = grouped.at(-1);
-    const same =
-      last !== undefined &&
-      last[0].run === set.run &&
-      last[0].rung === set.rung &&
-      last[0].requestId === set.requestId &&
-      !last.some((other) => other.mode === set.mode);
-    if (same) last.push(set);
-    else grouped.push([set]);
-  }
+  const grouped = sectionSetGroups(comparisons.comparisons).map((group) =>
+    group.map((index) => comparisons.comparisons[index]),
+  );
 
   const sections = grouped.map((sets) => sectionOf(sets, policy, labelOf));
   return {

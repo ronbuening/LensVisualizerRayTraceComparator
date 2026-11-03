@@ -644,3 +644,88 @@ export const MATRIX_TEXT = {
   notCovered:
     "Beyond each row's own items, the fixed block that every MTF report ends with says what no comparison of this tool shows:",
 } as const;
+
+/**
+ * The sentences of the dashboard (`lvrtc serve`, `src/dashboard/html.ts`): what its pages say of runs, comparisons,
+ * verdicts, consensus, staleness and the bases staleness is judged against. Headings stay short labels; every
+ * sentence is here, and a test lints the visible text of every page rendered from the fixtures. A template that
+ * takes HTML is filled with placeholders, escaped, and only then given the HTML (`html.ts`, `fill`).
+ */
+export const DASHBOARD_TEXT = {
+  readOnly: "The dashboard reads the run directories, the baselines and the policy at hand, and writes nothing.",
+  sources: "Hover over a number to see the file it was read from and its JSON pointer there.",
+  derived: "A number marked as derived is computed by the dashboard from the figures it names, never read from a file.",
+  policyAtHand: (name: string, version: string, hash: string): string =>
+    `The policy at hand is ${name}, version ${version} (${hash}).`,
+  noRuns: "No run directory with a manifest is in the runs directory.",
+  noBaselines: "No baseline file is in the baselines directory.",
+  documentProblem: (document: string, problem: string): string => `${document} cannot be shown: ${problem}`,
+  notReadable: "The manifest of this run cannot be read, so nothing of the run is shown.",
+  notCompared: "This run has not been compared: lvrtc compare writes the comparisons that judge it.",
+  comparisonsUnreadable: "The comparisons of this run cannot be read, so no verdict of it is shown.",
+  inputProblems:
+    "The comparisons do not belong with this manifest or with the policy at hand, so their verdicts may be of other inputs:",
+  failing: (count: number): string => `Pairs that are FAIL or ERROR: ${formatFixed(count, 0)}.`,
+  verdicts: [
+    "PASS and FAIL are the verdicts of a gated rung, whose metrics are held to the tolerances of the policy.",
+    "FLOOR is a pass that is counted apart.",
+    "RECORDED and ATTENTION are the verdicts of a recorded rung, which has no tolerance and fails nothing.",
+    "UNSUPPORTED is an answer and not a failure; BLOCKED is a pair that an earlier rung kept from being judged; ERROR is a pair that could not be compared.",
+  ],
+  supportByRung:
+    "Each cell counts the requests of the rung by how the engine's job ended; not-run is a request the engine was not asked.",
+  supportByRun: "The same, request by request, for each run.",
+  split:
+    "This suite has too many requests for one page: each run of it has a page of its own, with its requests and its sections.",
+  sections: "One section for each compared request, with the gravest verdict of its pairs.",
+  noSections: "No request of this run was compared.",
+  pending: "These jobs wait for an answer: lvrtc collect admits what the operators of file-exchange engines left.",
+  noPending: "No job waits for an answer.",
+  columns: "A limit is the tolerance of the policy for a gated rung and its attention band for a recorded one.",
+  referenceVsEach: (reference: string): string => `Every engine against the reference ${reference}.`,
+  pairwise:
+    "Every engine against every other: each cell has the verdict of the pair and the metric closest to its limit, or furthest past it.",
+  recorded: "Values the answers record beside what is compared: listed side by side and never judged.",
+  mtf: "The engines' own MTF, field by field, cut by cut and frequency by frequency, as the report lays it out.",
+  mtfPair: (a: string, b: string, verdict: string): string =>
+    `The differences are of ${a} minus ${b}, a pair whose verdict is ${verdict}.`,
+  mtfBands: (onAxis: string, offAxis: string, chiefLanding: string): string =>
+    `The attention bands are ${onAxis} on the axis and ${offAxis} off it; chief rays that land further apart than ${chiefLanding} mm are of two image points.`,
+  baselineHead: (kind: string, suite: string, hash: string, version: string, policyHash: string): string =>
+    `A ${kind} baseline of the suite ${suite} (${hash}), judged by policy v${version} (${policyHash}).`,
+  baselineRuns: "One row for each run of the baseline: the gravest verdict of each rung and its records by badge.",
+  staleness: {
+    intro: "A badge says which reasons of staleness hold for a record against the bases below.",
+    check:
+      "Whether the suite run again would still come to its baseline is for lvrtc baseline check to say, so no record here is called REFRESHABLE, DRIFT or MOVED.",
+    badges:
+      "STALE names the reasons that hold; CURRENT says that every reason is known and none holds; NOT KNOWN names the reasons that could not be judged.",
+    policy: "The policy reason is judged against the policy at hand.",
+    policyNone: "The policy reason is not known: the policy at hand cannot be read.",
+    engineAsked: "The engine reason is judged against the engines as they answered when asked.",
+    engineAskingLastRun:
+      "The engines are being asked; until they answer, the engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineAskingNone:
+      "The engines are being asked; until they answer, the engine reason is not known, since the suite has no last run to read.",
+    engineLastRun: "The engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineNone: "The engine reason is not known: the engines were not asked, and the suite has no last run to read.",
+    engineFailedLastRun:
+      "The engines could not be asked, so the engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineFailedNone:
+      "The engines could not be asked and the suite has no last run to read, so the engine reason is not known.",
+    caseLastRun: "The case reason is judged against the cases of the last run of the suite.",
+    caseNone: "The case reason is not known: the suite has no last run whose cases can be read.",
+    caseSame: "the same case in the last run",
+    caseMoved: (caseId: string): string => `another case in the last run: ${caseId}`,
+    caseRefused: "a run without a case in the last run",
+    caseUnknown: "no run of this name in the last run",
+    snapshot: (version: string): string =>
+      `This baseline is a dated snapshot of policy v${version}: it shows STALE(policy) against the policy at hand like any other, and lvrtc verify holds it to the policy it records.`,
+    notAsked:
+      "The engines were not asked (lvrtc serve --no-ask): each baseline is judged against the last run of its suite where it has one.",
+    asking:
+      "The engines are being asked who they are; until they answer, each baseline is judged against the last run of its suite where it has one.",
+    asked: "The engines were asked once, when the dashboard started.",
+    askFailed: (problem: string): string => `The engines could not be asked (${problem}).`,
+  },
+} as const;
