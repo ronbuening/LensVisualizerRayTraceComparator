@@ -892,6 +892,20 @@ stays for a future engine with synthetic tests; Phase 5's catalog sweep will tes
   first on a fisheye that was in LensVisualizer's working tree, not yet committed, at `b7deb221`.
 - **Class.** data.
 
+### A certified station's run name is LensVisualizer's row, which a lens edit can renumber
+
+- **Where.** `certified-focus` names a station's run `-<key>-zoom<station>-focus<keyframe>` by the conjugate's own
+  address in the lens file (`focus.conjugates`, `src/engines/lv/stations.ts`), and LV #954 (`ff57c4469`) thinned the
+  derived zoom stations and focus keyframes of 22 lenses, remapping each conjugate to its row's new index.
+- **Effect.** Six runs of `focus-stations` were renamed with the same case to the bit: the Olympus 40-150 mm's
+  `zoom0-focus17`, `zoom32-focus17` and `zoom64-focus17` are `zoom0-focus12`, `zoom16-focus12` and `zoom32-focus12`,
+  the Sigma 70-300 mm's `zoom0-focus9`, `zoom40-focus4` and `zoom80-focus2` are `zoom0-focus8`, `zoom20-focus4` and
+  `zoom40-focus2`. `baseline check` calls the old names GONE and the new ones NEW.
+- **Handled.** The runs are named as LensVisualizer addresses the station, and nothing maps an old name to a new one:
+  the refresh writes their records under the new names. No committed suite or test names a catalog lens's station
+  by its index.
+- **Class.** data.
+
 ### A field can lie outside the model
 
 - **Where.** `resolveMtfFieldTargets` in `src/optics/analysis/mtf/mtfFields.ts` resolves a fraction of the reference
@@ -3412,9 +3426,15 @@ f-number (the first two entries). **It landed in LV #933** (`445fa1711`) and was
   21.23 mm short of its 21.65 mm corner), five at an authored field the corner lowered (focus stations of the Samyang
   AF 14 mm, the Hasselblad XCD 25 mm, the Lumix S 26 mm and the Sigma 24 mm f/2). No engine has the quantity; R9a traces
   the solved chief ray at that angle (the distortion curve's edge) in every engine at every infinity state and judges
-  its landing at 1e-8 mm. The focus readout, also LensVisualizer's own, is the authored close-focus distance over the
+  its landing at 1e-8 mm. The focus readout, also LensVisualizer's own, was the authored close-focus distance over the
   focus position (`focusDistanceAt`): the certified conjugate's object-to-image-plane distance to the bit on 60 of 61
-  focus stations, and 1.09 mm (0.26%) longer on the GF 110 mm T/S macro at its 1:2 station.
+  focus stations, and 1.09 mm (0.26%) longer on the GF 110 mm T/S macro at its 1:2 station (37 of 71 to the bit, 70
+  within 1 mm, at `55ddfb1e1`). Since LV #954 (`ff57c4469`) it is where the state's authored rows are paraxially in
+  focus, interpolated in inverse distance between them (`focusLabelDistanceM`): at the 71 finite focus stations none
+  is the certified distance to the bit, 43 are within 1 mm and 59 within 1%, the furthest the M.Zuiko 17 mm f/1.2
+  (48.9 mm, 5.3%) and, relatively, the Zuiko 7-14 mm at its wide station (7.8%): a printed prescription is not in
+  paraxial focus at the distance its source states. LensVisualizer's station buttons show the certified distance
+  (`certifiedDistanceM`), so the tab's readout and the button of one station differ by that much.
 - **Handled.** Recorded (`halfFieldDeg`, `sampling.focusDistanceM`); listed as not covered by R1
   (`NOT_COVERED_BY_R1` in `test/integration/lv/summary.test.ts`, which writes the landings down).
 - **Class.** method (half field), data (focus distance): recorded.

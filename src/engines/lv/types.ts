@@ -882,6 +882,10 @@ export interface LvOpticalSummary {
   readonly physicalStopDiameterMm: number | null;
   readonly halfFieldDeg: number | null;
   readonly fullFieldDeg: number | null;
+  /**
+   * The focus readout (LV #954, `focusLabelDistanceM`): the object-to-image distance at which the state's authored rows
+   * are paraxially in focus, interpolated in inverse distance between them; null at infinity.
+   */
   readonly focusDistanceM: number | null;
   readonly zoomT: number;
   readonly focusT: number;

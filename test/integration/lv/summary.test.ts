@@ -24,7 +24,8 @@
 //
 // What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer is
 // held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae (engine
-// closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins.
+// closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins; at 55ddfb1e1,
+// ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -52,14 +53,15 @@ const skip = LV_UNAVAILABLE;
 const SUITES = ["benchmark", "states", "focus-stations"] as const;
 
 /**
- * The engine closure the margins were measured with (LensVisualizer 55ddfb1e1; the same margins at 6287f4393, fc5ae923,
- * and 607ff23ae, f016b35b).
+ * The engine closure the margins were measured with (LensVisualizer 290c6dd85; the same margins at ff57c4469, 0b6c085a,
+ * 55ddfb1e1, ff0d938d, 6287f4393, fc5ae923, and 607ff23ae, f016b35b).
  */
-const PINNED_CLOSURE = "ff0d938d09961e20552ae4624a94a4494b3885e1356302b209048147cf197c26";
+const PINNED_CLOSURE = "0516a7c791b5b658360f439c9eb4ce2fe7886748a8fac202e467eba2868a2112";
 
 /**
  * The first 16 hex digits of the id of each case the margins were measured on: 123 at 55ddfb1e1 (119 at 607ff23ae and at
- * 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new).
+ * 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new); at
+ * ff57c4469 the Thypoch Ksana 21's station moved with its re-solved focus gap (LV #954), the same at 290c6dd85.
  */
 const MEASURED_CASES: ReadonlySet<string> = new Set([
   "02b1e001699f7823",
@@ -81,7 +83,6 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "1ffeed7214f4c219",
   "20423bc3d2cf0c94",
   "22198c5be871fa98",
-  "22234d65f21f2d91",
   "22f573c4dcca9f77",
   "25da8f06a8d3bdf2",
   "26022f540fbb0f39",
@@ -183,6 +184,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "f2ba46d7a8b2499a",
   "f3fcc3b63cd7c8c3",
   "f738c7fd1c6b1e01",
+  "f8e388d76b003371",
   "fb6313aafaef4cc6",
   "fc71d244aec38864",
 ]);
@@ -193,7 +195,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
  * station 32; 7 at 098c91ef6 on the older cases), the pupil 0 (to the bit), the image-space and paraxial working
  * f-numbers 20 (measured 19 on the same station, and 3 for the paraxial working f-number at infinity). Measured again
  * at 6287f4393 (closure fc5ae923): 15, 0, 19 and 3 on the same 119 cases; at 55ddfb1e1 (closure ff0d938d): 15, 0, 19
- * and 3 again, on the 123 cases.
+ * and 3 again, on the 123 cases; the same at ff57c4469 (closure 0b6c085a) and 290c6dd85 (closure 0516a7c7).
  */
 const MARGINS = { focalUnits: 16, pupilUnits: 0, fNumberUnits: 20 } as const;
 
@@ -211,7 +213,10 @@ export const NOT_COVERED_BY_R1: Readonly<Record<string, string>> = Object.freeze
     "distortion curve's edge) at every infinity state, and the angle is LensVisualizer's solve",
   fullFieldDeg: "twice halfFieldDeg",
   focusDistanceM:
-    "the authored close-focus distance over the focus position, a nominal readout: not the conjugate the case states",
+    "the object-to-image distance at which the state's authored rows are paraxially in focus, interpolated in inverse " +
+    "distance between rows (LV #954, focusLabelDistanceM; the authored close focus over the focus position where it " +
+    "models none: a folded path, or a focus that moves no gap): LensVisualizer's model of the focus, not the " +
+    "conjugate the case states",
   zoomT: "the state's zoom control, which the case states as it is",
   focusT: "the state's focus control, which the case states as it is",
   aberrationT: "the aberration control, neutral in every case",

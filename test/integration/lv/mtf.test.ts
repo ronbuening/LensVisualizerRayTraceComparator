@@ -76,9 +76,11 @@ const CONFIGURATIONS: readonly { readonly key: string; readonly zoomT: number; r
  * #940, a finite object's aim seeded at its solved chief and `aim-failed`), every case and figure was measured again
  * and found unchanged: the 12 answers are the same bytes as at 607ff23ae. At LV 55ddfb1e1 (closure ff0d938d, 184 files:
  * LV #942's rim extensions, a drawing only) every configuration was measured again: 11 unchanged, case and figures;
- * the Sigma 35 mm's case moved with its authored rims (LV #943), and its figures at 70 % with it.
+ * the Sigma 35 mm's case moved with its authored rims (LV #943), and its figures at 70 % with it. At LV ff57c4469
+ * (closure 0b6c085a, 184 files: LV #954's focus readout) and 290c6dd85 (closure 0516a7c7: LV #949's glass entry) every
+ * configuration was measured again and found unchanged, case and figures.
  */
-const PINNED_CLOSURE = "ff0d938d09961e20552ae4624a94a4494b3885e1356302b209048147cf197c26";
+const PINNED_CLOSURE = "0516a7c791b5b658360f439c9eb4ce2fe7886748a8fac202e467eba2868a2112";
 
 /**
  * What LensVisualizer's MTF tab presents for each configuration, as `lvrtc mtf` prints it: the case the figures

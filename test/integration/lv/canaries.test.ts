@@ -2681,7 +2681,19 @@ test(
       ": computeCardinalElementsFromState(request.preparedGeometry);",
       "rearFocalZ is computeCardinalElementsFromState's rear focal point, the construction of the tab's BFD",
     );
-    assertSource(summary, "focusDistanceM: focusDistanceAt(state.focusT, L, state.zoomT),", answer);
+    // The focus readout (read at ff57c4469, LV #954): the object-to-image distance at which the state's authored rows
+    // are paraxially in focus, interpolated in inverse distance between them (the slider's closeFocus / focusT only on
+    // a folded path, or where the focus control moves no gap); null at infinity. Recorded under sampling, never judged.
+    const focus =
+      "answerLvSummary records the focus readout as sampling.focusDistanceM; NOT_COVERED_BY_R1 says what it is";
+    assertSource(summary, "focusDistanceM: finiteOrNull(focusLabelDistanceM(state.focusT, L, state.zoomT)),", focus);
+    const format = "src/optics/first-order/format.ts";
+    assertSource(format, "if (t < FOCUS_INFINITY_CUTOFF) return Infinity;", focus);
+    assertSource(format, "return modeledFocusDistanceAt(t, L, zoomT) ?? focusDistanceAt(t, L, zoomT);", focus);
+    const rows = "src/optics/state/fieldAdapters.ts";
+    assertSource(rows, "const vergence = paraxialInFocusVergence(state);", focus);
+    assertSource(rows, "return vergence > 0 ? 1000 / (1 / vergence + state.totalTrack) : 0;", focus);
+    assertSource(rows, "return inverse > 0 ? 1 / inverse : Infinity;", focus);
     // The hook's pupil since #933: the stop radius over the paraxial marginal ray's height ratio at the stop.
     const pupil = "the tab's entrance pupil, held to lv's R1 radius in test/integration/lv/summary.test.ts";
     assertSource(
