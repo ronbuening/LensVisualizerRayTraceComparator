@@ -168,6 +168,40 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * What a manifest records of an engine the run turned to: who its descriptor says it is (version, fingerprint,
+ * adapter revision and details), or the code of why it could not be used. `lvrtc engine describe` prints the same.
+ */
+export function manifestEngineOf(
+  id: string,
+  session:
+    | { readonly kind: "ready"; readonly descriptor: EngineDescriptor }
+    | { readonly kind: "unavailable"; readonly code: EngineUnavailableCode },
+): ManifestEngine {
+  if (session.kind === "unavailable") return { id, status: "unavailable", code: session.code };
+  const { version, fingerprint, adapterRevision, details } = session.descriptor.identity;
+  const adapter = adapterRevision === undefined ? {} : { adapterRevision };
+  return { id, status: "available", version, fingerprint, ...adapter, details };
+}
+
+/**
+ * Opens the engine `id` through `registry`, takes its `describe()` and closes it whatever happens, as a run opens
+ * an engine: what the manifest of a run would record of it now (`manifestEngineOf`). An engine that cannot be made
+ * or described is unavailable with its code; a failure to close it is not one of the engine's identity.
+ */
+export async function describeEngineForManifest(registry: EngineRegistry, id: string): Promise<ManifestEngine> {
+  let adapter: EngineAdapter | undefined;
+  try {
+    adapter = await registry.create(id);
+    return manifestEngineOf(id, { kind: "ready", descriptor: await adapter.describe() });
+  } catch (error) {
+    if (!(error instanceof EngineUnavailableError)) throw error;
+    return manifestEngineOf(id, { kind: "unavailable", code: error.code });
+  } finally {
+    await adapter?.close().catch(() => undefined);
+  }
+}
+
 /** Runs `select`, and says which run asked when what it selected does not exist. */
 function forRun<T>(run: string, select: () => T): T {
   try {
@@ -990,12 +1024,7 @@ async function runSuiteWork(input: RunSuiteInput): Promise<SuiteRunResult> {
 
   const engines = [...sessions]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([id, session]): ManifestEngine => {
-      if (session.kind === "unavailable") return { id, status: "unavailable", code: session.code };
-      const { version, fingerprint, adapterRevision, details } = session.descriptor.identity;
-      const adapter = adapterRevision === undefined ? {} : { adapterRevision };
-      return { id, status: "available", version, fingerprint, ...adapter, details };
-    });
+    .map(([id, session]): ManifestEngine => manifestEngineOf(id, session));
   const sources = auditSources(input, warnings);
   const manifest: RunManifest = {
     contract: CONTRACT_VERSION,

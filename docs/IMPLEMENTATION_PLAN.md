@@ -342,9 +342,9 @@ the existing result store and baselines.
 
 | Stage | Deliver | Verify |
 |---|---|---|
-| 8.1 Read-only server | View models over runs and baselines | Every view-model number equals the result JSON |
-| 8.2 Charts | MTF overlays, difference curves, ladder heat map, per-surface ray deviation | Snapshot tests on fixture runs |
-| 8.3 Run control | Start a suite and collect pending jobs from the UI | Starts the fake suite end to end |
+| 8.1 Read-only server (delivered) | `lvrtc serve`: pure view models over the run directories, the baselines and the policy at hand, served on 127.0.0.1 only (Host checked) as HTML with canonical JSON twins, writing nothing. Every number from a file is a Figure with its JSON pointer; STALE badges as `checkBaseline` decides them, the engines asked by default through a child `lvrtc engine describe` (LV and optiland load only there), else the suite's last run manifest | `test/dashboard/figures.test.ts`: every view of every fixture page walked, each Figure resolved from disk, held to its place in the view and to `buildReport`/the baseline reports, every count recounted; five one-line mutations of the views each turn it red |
+| 8.2 Charts (delivered) | Hand-written SVG: MTF overlays per engine and step from the result store (the manifest's keys only), difference curves of the judged answers with the policy's bands, the ladder heat map of a run and of a baseline, per-surface ray deviation of R2 held to its `hits.maxDistance` | Ten golden SVGs of fixture runs, written only by `node test/report/writeGolden.ts`, fixture engines of fixed identity; every chart number held by the walker |
+| 8.3 Run control (delivered) | `/control`: start a listed suite (engines, rungs, at most 4 jobs) as child `lvrtc run`, `compare`, `report`; collect pending file-exchange jobs; ask the engines again; one job at a time, POST with a per-server token and an Origin check, output redacted | `test/dashboard/control.test.ts`: the fake suite end to end from the UI (fake-human pending, the fake operator answers, collected, run again: every job cached, four PASS, the manifest byte-identical to a run answered at once) |
 
 ## How stages are run, and economy mode
 

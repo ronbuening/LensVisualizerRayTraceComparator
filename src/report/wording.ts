@@ -644,3 +644,264 @@ export const MATRIX_TEXT = {
   notCovered:
     "Beyond each row's own items, the fixed block that every MTF report ends with says what no comparison of this tool shows:",
 } as const;
+
+/**
+ * The sentences of the dashboard (`lvrtc serve`, `src/dashboard/html.ts`): what its pages say of runs, comparisons,
+ * verdicts, consensus, staleness and the bases staleness is judged against. Headings stay short labels; every
+ * sentence is here, and a test lints the visible text of every page rendered from the fixtures. A template that
+ * takes HTML is filled with placeholders, escaped, and only then given the HTML (`html.ts`, `fill`).
+ */
+export const DASHBOARD_TEXT = {
+  readOnly:
+    "The pages read the run directories, the baselines and the policy at hand, and write nothing; only the actions of the control page write, each by starting an lvrtc command.",
+  sources: "Hover over a number to see the file it was read from and its JSON pointer there.",
+  derived: "A number marked as derived is computed by the dashboard from the figures it names, never read from a file.",
+  policyAtHand: (name: string, version: string, hash: string): string =>
+    `The policy at hand is ${name}, version ${version} (${hash}).`,
+  noRuns: "No run directory with a manifest is in the runs directory.",
+  noBaselines: "No baseline file is in the baselines directory.",
+  documentProblem: (document: string, problem: string): string => `${document} cannot be shown: ${problem}`,
+  notReadable: "The manifest of this run cannot be read, so nothing of the run is shown.",
+  notCompared: "This run has not been compared: lvrtc compare writes the comparisons that judge it.",
+  comparisonsUnreadable: "The comparisons of this run cannot be read, so no verdict of it is shown.",
+  inputProblems:
+    "The comparisons do not belong with this manifest or with the policy at hand, so their verdicts may be of other inputs:",
+  failing: (count: number): string => `Pairs that are FAIL or ERROR: ${formatFixed(count, 0)}.`,
+  verdicts: [
+    "PASS and FAIL are the verdicts of a gated rung, whose metrics are held to the tolerances of the policy.",
+    "FLOOR is a pass that is counted apart.",
+    "RECORDED and ATTENTION are the verdicts of a recorded rung, which has no tolerance and fails nothing.",
+    "UNSUPPORTED is an answer and not a failure; BLOCKED is a pair that an earlier rung kept from being judged; ERROR is a pair that could not be compared.",
+  ],
+  supportByRung:
+    "Each cell counts the requests of the rung by how the engine's job ended; not-run is a request the engine was not asked.",
+  supportByRun: "The same, request by request, for each run.",
+  split:
+    "This suite has too many requests for one page: each run of it has a page of its own, with its requests and its sections.",
+  sections: "One section for each compared request, with the gravest verdict of its pairs.",
+  noSections: "No request of this run was compared.",
+  pending: "These jobs wait for an answer: lvrtc collect admits what the operators of file-exchange engines left.",
+  noPending: "No job waits for an answer.",
+  columns: "A limit is the tolerance of the policy for a gated rung and its attention band for a recorded one.",
+  referenceVsEach: (reference: string): string => `Every engine against the reference ${reference}.`,
+  pairwise:
+    "Every engine against every other: each cell has the verdict of the pair and the metric closest to its limit, or furthest past it.",
+  recorded: "Values the answers record beside what is compared: listed side by side and never judged.",
+  mtf: "The engines' own MTF, field by field, cut by cut and frequency by frequency, as the report lays it out.",
+  mtfPair: (a: string, b: string, verdict: string): string =>
+    `The differences are of ${a} minus ${b}, a pair whose verdict is ${verdict}.`,
+  mtfBands: (onAxis: string, offAxis: string, chiefLanding: string): string =>
+    `The attention bands are ${onAxis} on the axis and ${offAxis} off it; chief rays that land further apart than ${chiefLanding} mm are of two image points.`,
+  baselineHead: (kind: string, suite: string, hash: string, version: string, policyHash: string): string =>
+    `A ${kind} baseline of the suite ${suite} (${hash}), judged by policy v${version} (${policyHash}).`,
+  baselineRuns: "One row for each run of the baseline: the gravest verdict of each rung and its records by badge.",
+  staleness: {
+    intro: "A badge says which reasons of staleness hold for a record against the bases below.",
+    check:
+      "Whether the suite run again would still come to its baseline is for lvrtc baseline check to say, so no record here is called REFRESHABLE, DRIFT or MOVED.",
+    badges:
+      "STALE names the reasons that hold; CURRENT says that every reason is known and none holds; NOT KNOWN names the reasons that could not be judged.",
+    policy: "The policy reason is judged against the policy at hand.",
+    policyNone: "The policy reason is not known: the policy at hand cannot be read.",
+    engineAsked: "The engine reason is judged against the engines as they answered when asked.",
+    engineAskingLastRun:
+      "The engines are being asked; until they answer, the engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineAskingNone:
+      "The engines are being asked; until they answer, the engine reason is not known, since the suite has no last run to read.",
+    engineLastRun: "The engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineNone: "The engine reason is not known: the engines were not asked, and the suite has no last run to read.",
+    engineFailedLastRun:
+      "The engines could not be asked, so the engine reason is judged against the engines as the last run of the suite recorded them.",
+    engineFailedNone:
+      "The engines could not be asked and the suite has no last run to read, so the engine reason is not known.",
+    caseLastRun: "The case reason is judged against the cases of the last run of the suite.",
+    caseNone: "The case reason is not known: the suite has no last run whose cases can be read.",
+    caseSame: "the same case in the last run",
+    caseMoved: (caseId: string): string => `another case in the last run: ${caseId}`,
+    caseRefused: "a run without a case in the last run",
+    caseUnknown: "no run of this name in the last run",
+    snapshot: (version: string): string =>
+      `This baseline is a dated snapshot of policy v${version}: it shows STALE(policy) against the policy at hand like any other, and lvrtc verify holds it to the policy it records.`,
+    notAsked:
+      "The engines were not asked (lvrtc serve --no-ask): each baseline is judged against the last run of its suite where it has one.",
+    asking:
+      "The engines are being asked who they are; until they answer, each baseline is judged against the last run of its suite where it has one.",
+    asked: "The engines were asked who they are when the dashboard started, or since then from the control page.",
+    askFailed: (problem: string): string => `The engines could not be asked (${problem}).`,
+  },
+  /**
+   * What the control page and the job pages say (Stage 8.3): of starting a suite, collecting, asking the engines again,
+   * the jobs, their steps and output, the pending jobs and the exchange directories, and why an action is refused.
+   */
+  control: {
+    intro:
+      "The actions of this page start lvrtc commands as children of the dashboard, one job at a time; what they write is what those commands write, and nothing else of the dashboard writes.",
+    heavy:
+      "A run of real engines (lv, ref, optiland and the others built in) is a heavy command: start one only when no other session runs one.",
+    noMaintenance:
+      "Store maintenance, baselines and anything that writes the repository have no action here: they are run by hand.",
+    busyJob: (job: string): string => `Job ${job} is running: a start or a collect is refused until it ends.`,
+    busyAsking:
+      "The engines are being asked who they are: a start or a collect is refused until they answer, since asking them is a heavy command too.",
+    idle: "No job is running.",
+    closing: "The dashboard is closing, so it starts nothing.",
+    startHow:
+      "A job runs lvrtc run of the suite, then lvrtc compare, then lvrtc report, each when the one before it has ended. A run that exits with code 2 started nothing and ends the job, and so does a compare that exits with code 2; a compare that finds a FAIL or an ERROR (code 1) still goes on to the report. Jobs left pending for a file-exchange engine are no failure.",
+    startFields: (most: string): string =>
+      `Engines and rungs are optional, each a list of ids separated by commas (the suite's own when left empty); jobs is 1 to ${most}, the number of concurrent jobs of lvrtc run.`,
+    noSuites: "No suite file is listed: the dashboard lists the files suites/*.json of its root.",
+    notConfigured:
+      "This dashboard was started without the lists a start and a collect are held to, so it starts and collects nothing.",
+    suitePlaceholder: (name: string): string => `<suite:${name}>`,
+    ownerOnlySuite: (name: string): string =>
+      `The suite ${name} is a full catalog sweep: running it is the owner's alone, never an implementer's.`,
+    ownerOnlyOption: (name: string): string => `${name} (owner only)`,
+    enginesKnown: (ids: string): string => `Engines that can be named: ${ids}.`,
+    rungsKnown: (ids: string): string => `Rungs that can be named: ${ids}.`,
+    collectHow:
+      "Collect runs lvrtc collect for every file-exchange engine of the configuration: each answer an operator left in an inbox is admitted into the store, or refused with its reason, and the next run of the suite finds the admitted answers there.",
+    askHow:
+      "Asking the engines again runs lvrtc engine describe as when the dashboard started, so that the STALE badges follow an engine that changed since then.",
+    cannotAsk:
+      "This dashboard was started without asking the engines (lvrtc serve --no-ask), so it has no way to ask them.",
+    noJobs: "No job has been started since the dashboard started.",
+    jobsKept: "Jobs are kept in memory while the dashboard runs, and nothing about them is written.",
+    pending:
+      "Every job of every run directory that waits for an answer from a file-exchange engine, as the manifests list it.",
+    noPending: "No job of any run directory waits for an answer.",
+    exchange:
+      "Each file-exchange engine's jobs by folder of its exchange directory: handed over (outbox), taken by its operator (pending), answered and not yet collected (inbox), collected, and refused.",
+    noExchange: "The configuration defines no file-exchange engine.",
+    operator: (engine: string): string =>
+      `The operator of ${engine} takes each job of its outbox, answers the job's message.json and leaves the answer in its inbox as a file named after the job; Collect then admits the answers.`,
+    jobRunning: "This job is running: the page reloads every two seconds.",
+    jobEnded: "This job has ended.",
+    output:
+      "Each step's standard output and error as they were received, the last 256 KB of them, with the root, the runs directory and the home directory written as <root>, <runsDir> and ~.",
+    truncated: "Earlier output of this step was left out.",
+    noOutput: "This step printed nothing.",
+    stateQueued: "queued",
+    stateRunning: "running",
+    stateExited: (code: string): string => `exited with code ${code}`,
+    stateKilled: (signal: string): string => `killed by ${signal}`,
+    stateNotStarted: "could not be started",
+    stateNotRun: "not run: an earlier step ended the job",
+    stateClosed: "not run: the dashboard closed before it was started",
+    collected: "What the collect admitted, refused and left pending, per file-exchange engine.",
+    collectUnavailable: (engine: string, reason: string): string => `${engine} could not be collected for: ${reason}`,
+    collectNotJson: "The output of lvrtc collect is not JSON.",
+    collectNoEngines: "The output of lvrtc collect does not list the engines it collected for.",
+    collectTooLong: "The output of lvrtc collect is too long to read.",
+    collectNothing: "The configuration defines no file-exchange engine, so nothing was collected.",
+    refusedTitle: "Refused",
+    refusedToken: "The form does not carry this dashboard's token: reload the control page and try again.",
+    refusedOrigin: "The request comes from a page of another origin than this dashboard.",
+    refusedSite: "The request comes from another site than this dashboard.",
+    refusedType: "An action takes a form, sent as application/x-www-form-urlencoded.",
+    refusedSize: (most: string): string => `An action takes a form of at most ${most} KB.`,
+    refusedMethod: "An action is taken by the form of the control page, sent by POST.",
+    unknownField: (name: string): string => `The form has a field that it does not take: ${name}.`,
+    repeatedField: (name: string): string => `The form has the field ${name} more than once.`,
+    noSuite: "The form names no suite.",
+    unknownSuite: (name: string): string => `The suite ${name} is not one of the suites the dashboard lists.`,
+    unknownEngine: (id: string): string => `The engine ${id} is neither defined by the configuration nor built in.`,
+    unknownRung: (id: string): string => `The rung ${id} is not a rung of the comparator.`,
+    emptyId: "A list of ids has an empty entry: name the ids separated by single commas.",
+    repeatedId: "A list of ids names an id more than once.",
+    badJobs: (given: string, most: string): string =>
+      `Jobs must be a whole number from 1 to ${most}, and the form gives "${given}".`,
+  },
+  /** What the charts of the dashboard say (Stage 8.2): their titles, axes, legends and captions. */
+  charts: {
+    intro:
+      "Each chart is drawn from the numbers of this page's files: hover over a mark to see its value and where it was read from, or how it was derived.",
+    storeIntro:
+      "The curves and the rays are read from the store entries the manifest names for this request's jobs, and from no other entry.",
+    overlayTitle: (subject: string, field: string, cut: string): string => `${subject}: MTF at field ${field}, ${cut}`,
+    overlayIntro:
+      "One chart for each field and cut: each engine's own curve as its store entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.",
+    differenceTitle: (subject: string, field: string, cut: string): string =>
+      `${subject}: differences at field ${field}, ${cut}`,
+    differenceIntro:
+      "For each pair of the request, the first engine's curve minus the second's at each frequency where both are finite numbers, each engine by the answer the comparison judges (its last step where that step has data, else its first answer); the shaded band is the attention band or the tolerance the policy gives the rung at that field.",
+    heatMapTitle: (subject: string): string => `${subject}: ladder heat map`,
+    heatMapRun:
+      "One row for each run and one column for each rung: a cell holds the gravest verdict of the pairs of its comparisons, and its pairs by verdict on hover.",
+    heatMapBaseline:
+      "One row for each run of the baseline and one column for each rung: a cell holds the gravest verdict of its records, and its records by verdict on hover.",
+    heatMapOmitted: (rows: string, most: string): string =>
+      `The heat map is left out: it would have ${rows} rows, and a page draws one of at most ${most}.`,
+    deviationTitle: (subject: string, place: string, a: string, b: string): string =>
+      `${subject}: hit distance by ${place}, ${a} and ${b}`,
+    deviationIntro:
+      "For each pair of the request, the largest distance between the two engines' hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as R2 measures hits.maxDistance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the tolerance of the policy.",
+    deviationLargest: (largest: string, recorded: string): string =>
+      `The largest bar is ${largest} mm, and the comparison records hits.maxDistance ${recorded} mm.`,
+    deviationDiffers: (largest: string, recorded: string): string =>
+      `The largest bar, ${largest} mm, is not the hits.maxDistance the comparison records, ${recorded} mm.`,
+    deviationUnmeasured: "The comparison records no hits.maxDistance for this pair.",
+    deviationNoBars: (recorded: string): string =>
+      `No surface has a ray ok in both answers whose visit both record, and the comparison records hits.maxDistance ${recorded} mm.`,
+    deviationNotFinite: (largest: string): string =>
+      `The comparison records a hits.maxDistance that is not a finite number, and the largest bar is ${largest} mm.`,
+    deviationNoBarsDiffers: (recorded: string): string =>
+      `No surface has a bar, yet the comparison records hits.maxDistance ${recorded} mm.`,
+    setAside: (a: string, b: string, kind: string, reason: string): string =>
+      `The comparison sets this field aside for ${a} and ${b} as ${kind} (${reason}), so their differences enter no band.`,
+    differenceLeftOut: (a: string, b: string, verdict: string): string =>
+      `The pair of ${a} and ${b} is ${verdict} in the comparison, so no difference of it is drawn.`,
+    storeMissing: (engine: string, key: string): string =>
+      `The store has no entry ${key} for ${engine}, so that answer is not drawn.`,
+    storeInvalid: (engine: string, problem: string): string =>
+      `The store entry for ${engine} cannot be read, so that answer is not drawn: ${problem}`,
+    noAnswer: (engine: string, status: string): string => `${engine} has no answer to draw: its job is ${status}.`,
+    notTraces: (problem: string): string => `The two answers cannot be set side by side: ${problem}.`,
+    noCharts: "No chart applies to this request.",
+    axisFrequency: "Frequency (cycles/mm)",
+    axisMtf: "MTF",
+    axisDifference: "Difference of MTF",
+    axisSurface: "Surface",
+    axisVisit: "Visit",
+    axisDistance: "Largest hit distance (mm, log scale)",
+    legendStep: (engine: string, step: string): string => `${engine} #${step}`,
+    legendState: (series: string, state: string, reason: string): string => `${series} (${state}: ${reason})`,
+    legendNoCurves: (series: string, status: string): string => `${series} (no curves: ${status})`,
+    legendPair: (a: string, b: string): string => `${a} minus ${b}`,
+    legendBand: (kind: string, value: string): string => `${kind} ±${value}`,
+    legendBar: "largest hit distance",
+    legendZero: "0 mm",
+    legendNone: "no ray ok in both",
+    legendGate: (value: string): string => `tolerance ${value} mm`,
+    legendNoPair: "no cell of this run and rung",
+    derivedDifference: (a: string, b: string, element: string): string =>
+      `${a} minus ${b} at element ${element} of both curves`,
+    derivedDeviation: (a: string, b: string, place: string, index: string): string =>
+      `the largest distance between the hits of ${a} and ${b} on ${place} ${index}, over the rays ok in both answers whose visit both record`,
+    tipField: (field: string, source: string): string => `field ${field}: ${source}`,
+    tipPoint: (series: string, cut: string, frequency: string, value: string, source: string): string =>
+      `${series}, ${cut} at ${frequency} cycles/mm: ${value} (${source})`,
+    tipDifference: (
+      pair: string,
+      frequency: string,
+      frequencySource: string,
+      value: string,
+      derivation: string,
+      of: string,
+    ): string => `${pair} at ${frequency} cycles/mm (${frequencySource}): ${value}, derived: ${derivation} of ${of}`,
+    tipLimit: (kind: string, value: string, where: string, source: string): string =>
+      `${kind} ±${value} ${where}: ${source}`,
+    onAxis: "on the axis",
+    offAxis: "off the axis",
+    anyField: "at every field",
+    tipBar: (place: string, index: string, value: string, derivation: string, of: string): string =>
+      `${place} ${index}: ${value}, derived: ${derivation} of ${of}`,
+    tipGate: (value: string, source: string): string => `tolerance ${value} mm: ${source}`,
+    tipRecorded: (source: string): string => `hits.maxDistance: ${source}`,
+    recordedLabel: (value: string): string => `hits.maxDistance ${value} mm`,
+    millimetres: (value: string): string => `${value} mm`,
+    tipCell: (run: string, rung: string, verdict: string, counts: string): string =>
+      `${run}, ${rung}: ${verdict}; ${counts}`,
+    tipEmptyCell: (run: string, rung: string): string => `${run}, ${rung}: no cell of this run and rung`,
+    tipSeries: (series: string, reason: string): string => `${series}: ${reason}`,
+  },
+} as const;

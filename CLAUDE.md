@@ -32,6 +32,9 @@ node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a
 node test/contract/writeCorpus.ts   # rewrite contract/fixtures after editing test/contract/corpus.ts
 node test/report/writeGolden.ts     # rewrite test/fixtures/golden after a change meant to change a report
 node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   # the conformance kit on one engine
+node bin/lvrtc.mjs engine describe fake-a fake-b --root test/fixtures/fake-root --json   # who engines are now, as a manifest records them
+node bin/lvrtc.mjs serve               # Phase 8: read-only dashboard on http://127.0.0.1:8077/ (--port 0 picks one; LVRTC_RUNS_DIR applies); asks the baselines' engines once, in a child, after it listens
+node bin/lvrtc.mjs serve --no-ask      # the same without asking: every record's engines held to its suite's last run
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
@@ -1943,3 +1946,137 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `fake-near` and the fixture root's `fake-far`, a bias of 1e-9 just beyond the `selftest` gate), written only by
   `node test/report/writeGolden.ts`, which also rewrote every golden of a qualifying section (`fake-3-engines(-ts)`,
   `fake-faults`, the R7a to R11a stand-ins). See `docs/REFERENCE.md`, "Group reports (Stage 7.4)".
+
+## Phase 8 dashboard
+
+- **`lvrtc serve` is read-only in Stage 8.1** (`src/dashboard`, `src/cli/commands/serve.ts`): it reads the run
+  directories of the configuration's `runsDir` (skipping `store`, `exchange`, `mtf`), `<root>/baselines/*.json` and
+  the policy at hand (`loadPolicy()`), and writes nothing: no file, no directory, no store entry
+  (`test/dashboard/server.test.ts` snapshots the trees). Only a section page reads store entries (Stage 8.2, below):
+  `sources.storeEntry` reads one entry by a key of `/^[0-9a-f]{64}$/` (gzip first, else a legacy plain entry, as the
+  store). A file is parsed and checked once per (size, mtime, inode); summaries, report models, input problems and
+  pages are kept per the files they are of (`sources.derived`). The index never builds a run's report model:
+  summaries only.
+- **Pages stay small on the real data**: `/baseline/<stem>` is a summary (inputs, engines beside the basis, staleness
+  by badge and reason, a row per run with each rung's gravest verdict and its records by badge) and each run's records
+  are on `/baseline/<stem>/run/<n>` (the catalog's summary is about 490 KB of HTML, 230 KB of JSON). A run page of more
+  than `RUN_PAGE_REQUESTS` (2,000) requests is split: its support matrix by request and its sections move to
+  `/run/<suite>/run/<n>`, one page per run of the suite. Never put every record or request of a large file on one page.
+- **Localhost only**: it listens on `127.0.0.1`, never `0.0.0.0` or `::`, and has no `--host`. A request whose
+  `Host` is not `127.0.0.1:<port>` or `localhost:<port>` is 403 (DNS rebinding; the port is set in the listen
+  callback, before a request can be served); only GET and HEAD (405 otherwise, with `Allow`); a path segment is
+  decoded and looked up among the names the server listed itself (run directories, baseline stems, places), 404
+  otherwise, never joined into a path. Every interpolated string is escaped (`escapeHtml`; a template that takes HTML
+  goes through `fill`); no script, no external resource, one inline `<style>`. A file that cannot be read or is not
+  valid is a problem on the page and in its twin, without a path (comparisons are `none`, `ok` or `invalid`, never
+  "not compared" when unreadable); an exception is a bare 500 to the client and its stack on the server's stderr.
+- **The Figure rule** (`src/dashboard/figure.ts`): every number a view model takes from a document is a `Figure`,
+  `{ value, source: { document, pointer } }`, its value exactly the JSON value at the RFC 6901 pointer of the file as
+  it holds it (`figureAt` reads it from the parsed document; null stays null). Documents are `manifest:<suite>`,
+  `comparisons:<suite>`, `baseline:<stem>`, `store:<key>` and `policy:<stem>` (the policy at hand: a column's
+  limit, a band). A `Curve` is a list in the JSON or a store entry's encoded ndarray. A number the dashboard computes
+  is a `Derived` with its derivation and sources, never a Figure. Every other number is a count under a key of
+  `COUNT_KEYS` (`count`, `failing`, `records`, `section`, `element`, `place`, `requests`, `sectionCount`,
+  `surface`); add a key only with its recount in `test/dashboard/figures.test.ts`. That test is the stage's
+  verification: every view of every fixture page walked, each Figure and Curve resolved by the test from the file on
+  disk and `Object.is`-equal; each pointer held to the place of the view that holds it (the section's set with its run,
+  rung and request; the pair and metric of the cell; the column's engine and the row's field element; the baseline's
+  run, rung, pair and verdict; a band's metric by the row's field) and each cell to the independent path (`buildReport`,
+  `buildBaselineReport`, `buildMtfBaselineReport`), which also catches a left-out row, column or metric; the pointer's
+  member the one the view key names (`holdMeaning`); each Derived recomputed; each count recounted. Five one-line
+  mutations of `views.ts` (an MTF column read from column 0, the bands swapped, recorded cells read from the first
+  engine, a verdict count from `verdicts[0]`, a rung's requests from `runs/0/rungs/0`) each turn it red: keep it so.
+  Views are pure and deterministic (canonical JSON twins under `/api/...`), with no timestamp, host or absolute path.
+- **STALE basis decision** (`src/dashboard/staleness.ts`): a baseline record is stale by case, engine or policy as
+  `checkBaseline` decides it (`STALE_REASONS`), but the dashboard runs nothing again: never REFRESHABLE, DRIFT or MOVED
+  (that is `lvrtc baseline check`'s). Policy: the baseline's `policy.hash` against the policy at hand; the catalog's
+  baselines show STALE(policy) like any other and carry the dated-snapshot note. Engine, in this order: as asked
+  (**the default**: once the server listens, one child `node bin/lvrtc.mjs engine describe <ids>... --root <root>
+  --json` in the background for the union of every baseline's engines, its stderr the server's; kept in memory, never
+  written; LV and optiland load only in that child; about 25 s for the eight built-in engines), else as the suite's
+  last run recorded them (`<runsDir>/<suite>/manifest.json`; while the engines are being asked, with `--no-ask`, and
+  when asking failed), else not known. The last-run basis cannot see code changed since that run, which is why asking
+  is the default. Case: the last run's `caseId` of the run of that name (a run there without a case is stale; a run not
+  there is not known), else not known. Badge: `STALE(<reasons>)`, else `CURRENT` when every reason is known, else
+  `NOT KNOWN(<reasons>)`; an engine the basis does not name is not known, one it has unavailable is stale, one the
+  baseline does not list is stale (as `checkBaseline`; `parseBaseline` refuses such a baseline). Each page says which
+  basis it used, and what became of asking, through its own template.
+- **`lvrtc engine describe`** prints one `ManifestEngine` per id, in order, from `describeEngineForManifest` and
+  `manifestEngineOf` in `src/core/orchestrator.ts`, the function a run records its engines with: never a second
+  mapping. An engine that cannot be used is `{ id, status: "unavailable", code }`; exit 0 when it printed, 2 on usage.
+  Hermetic tests ask through an injected runner, `--no-ask` or the fake root's in-process engines; a test of
+  `lvrtc serve` never starts LV or Python.
+- **No dashboard import from engine code**: no file of `src/**` outside `src/dashboard` and `src/cli` reaches
+  `src/dashboard`, directly or transitively (`test/dashboard/imports.test.ts`), so no fingerprint or adapter
+  revision moves for it. The report model and the dashboard share `sectionSetGroups` (`src/report/model.ts`).
+- **Wording**: every sentence a page writes about comparisons, verdicts, consensus, staleness and bases is a template
+  of `DASHBOARD_TEXT` in `src/report/wording.ts` (or an existing report template); headings stay short labels. A test
+  renders every fixture page (asking, asked, failed, not asked, split) and holds the text to `wordingProblems`, and
+  lints every template.
+- **Charts (Stage 8.2)**: view models in `src/dashboard/chartViews.ts`, pure SVG builders in `src/dashboard/charts/`
+  (one coordinate formatter `px`, no ids, fixed classes in `CHART_STYLE`, which a page puts in its one `<style>` and a
+  standalone SVG carries itself; series colours at least 3:1 against the light and the dark surface, and a marker shape
+  of its own for each series; a `<title>`, `<desc>`, axis labels with units and a legend on every chart; a `<title>`
+  with value and source, or derivation and sources, on every mark). MTF overlays and differences on a section of
+  `mtf.native`, the per-surface (per-visit for `rays.trace` v2 and later) deviation on a section of R2's `rays.trace`,
+  the ladder heat map on the run and baseline pages (rows from `manifest.runs`, a run without comparisons included; left
+  out above `HEAT_MAP_ROWS`, 150). **Store entries only by the manifest's keys**: a section page reads the `storeKey`s
+  of its request's jobs through `sources.storeEntry(key)` (cached by file identity, and in the page's cache key), never
+  by listing or scanning `runs/store`; an entry not there or not readable is a problem on the page, and a series without
+  curves says only a word in its legend (missing, unreadable, pending, error, unsupported), the sentence in the entry's
+  tooltip. An MTF curve is a Curve of the entry's encoded array, a value that is not a finite number null (a gap, never
+  0). **A difference is of the answer the comparison judges**, by the comparator's rule (`mtfNative.ts`, `lastA?.data ??
+  a`): an engine's last step where it has data, else its first answer; a pair the comparison found UNSUPPORTED or ERROR
+  has none drawn, and its caption says so. On the axis is by the field's value (0), as the comparator decides it. A
+  set-aside caption names the pair whose sorting it is (the MTF table's pair or a peer's), never another drawn beside
+  it. **A Derived is never shown as a source figure**: a difference and a per-surface maximum (R2's `hits.maxDistance`
+  by surface: `decodeTrace` and `okInBoth` reused, a visit either answer records no point for (`unrecordedHits`) left
+  out, as `charts.test.ts` holds against the real comparator; nothing else restated) are Derived with their sources, and
+  `figures.test.ts` recomputes each by its own loop from the arrays the test decodes; each chart's pointers are held to
+  its job, field, cut, pair and policy limit; each heat-map cell's verdict to the gravest of a recount by
+  `VERDICT_GRAVITY`; `surface` is a count key, recounted. The largest bar must equal the pair's `hits.maxDistance`, or
+  the view says it does not (nothing is said where every visit is left out and R2 records 0). **Golden SVGs only from
+  `node test/report/writeGolden.ts`** (`test/fixtures/golden/dashboard/`, drawn by `test/dashboard/chartGoldens.ts`),
+  held byte for byte by `test/dashboard/charts.test.ts`; read the diff after a rewrite. No golden depends on a hash of
+  engine code: the rays fixture's engines say a fingerprint and an adapter revision of the fixture's own
+  (`fixedIdentity` in `test/dashboard/support.ts`), and the stand-ins' are of their options. Every chart sentence,
+  tooltips and derivations included, is a template of `DASHBOARD_TEXT.charts`; the visible text and the `<title>` text
+  of every fixture page are linted.
+- **Run control (Stage 8.3) is the dashboard's one writer** (`src/dashboard/control.ts`, `/control`): it writes
+  only by starting `lvrtc` children (`process.execPath bin/lvrtc.mjs ...`, no shell, the server's environment with
+  `LVRTC_RUNS_DIR` set to its runs directory, the server's `--root`), which write what those commands write; no page
+  and no other file of the dashboard writes. A start is `run` of a suite the server listed (`<root>/suites/*.json` by
+  stem, links followed, regular files only; `startDashboard({ control })` takes the list, so tests name fixture
+  suites; without `control` it starts and collects nothing, and its page says so), then `compare`, then `report`;
+  `run` or `compare` exiting 2 ends the job (the rest "not run"), `compare` exiting 1 still goes on to `report`.
+  Engines (the configuration's definitions and the built-in engines, `controlChoices`), rungs (`RUNGS`) and jobs
+  (**1 to 4**, `CONTROL_MAX_JOBS`, never more) are held to the server's own lists; the client sends a listed name,
+  never a path. A suite of `OWNER_ONLY_SUITES` (the catalog) is listed with the note that it is a full catalog sweep,
+  the owner's alone. Collect is `collect --root <root> --json`, its stdout kept whole (that step only) and read once
+  at exit: per engine collected, rejected (lvrtc's reason in `<code>`, redacted) and pending. "Ask the engines
+  again" re-runs 8.1's ask through the same runner (none with `--no-ask`: 409).
+  **One job at a time** across the dashboard, asking included: a start, collect or ask while a job runs or the
+  engines are asked is 409 with a page that says so. **Actions are POST only** (GET or HEAD of `/control/<action>`
+  is 405 with `Allow: POST`; a POST elsewhere stays 405), a form body (`application/x-www-form-urlencoded`, else 415)
+  of at most 16 KB, declared or chunked (413), the per-server random token of every form required and compared in
+  constant time (403), an `Origin`, when sent, `http://127.0.0.1:<port>` or `http://localhost:<port>` and
+  `Sec-Fetch-Site`, when sent, `same-origin` or `none` (403), every field validated (400, an unknown or repeated field
+  too), then a 303 to the job page. The control page alone sends `referrer-policy: same-origin` and `form-action
+  'self'` (under `no-referrer` a browser posts `Origin: null`). No action for store maintenance, baselines, `verify
+  --write` or anything that writes the repository. Jobs are numbered from 1 and kept in memory only
+  (`/control/job/<n>` and its twin): each step's command line with `<root>` and `<runsDir>` (a listed suite outside
+  the root is `<suite:<name>>`, in its output too), its state (queued, running, exited with a code, killed, not
+  started, not run, not run because the dashboard closed) and a 256 KB tail of stdout and stderr interleaved, from a
+  line start, with the root, the runs directory and the home directory written `<root>`, `<runsDir>`, `~`
+  (`redactor`: whole paths only, at a path boundary, trailing slashes dropped, the longest spelling first, the
+  realpath of the nearest existing ancestor too); no absolute path appears whatever HOME is. A running job's page
+  reloads every 2 s. **Each child leads a process group of its own** (`detached`): a serial `lvrtc run` has no
+  SIGTERM handler and would leave its engine workers (optiland's Python) behind, so `close()` signals the group,
+  SIGTERM, then SIGKILL after `KILL_GRACE_MS` (5 s), waits for the child, and SIGKILLs what of the group outlives it.
+  `lvrtc serve` goes through `close()` on SIGINT or SIGTERM and ignores a second one until the group has ended. `job`
+  and `exitCode` are count keys, recounted in `figures.test.ts`; every control sentence is a `DASHBOARD_TEXT.control`
+  template, and the wording test lints the control and job pages without lvrtc's own words (`<pre>` output, `<code>`
+  reasons). The stage's verification is `test/dashboard/control.test.ts`: the fake suite end to end from the UI
+  (`fake-pair` with `fake-a,fake-human`, on a temporary root with the suite under its `suites/`: pending, the fake
+  operator, collect, run again, every job ok and four PASS, the manifest the bytes of a run where fake-human answered
+  at once); its tests start no Python or LensVisualizer.

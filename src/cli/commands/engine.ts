@@ -2,7 +2,9 @@ import { statSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { REPO_ROOT, loadConfig } from "../../core/config.ts";
+import type { ManifestEngine } from "../../core/manifest.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
+import { describeEngineForManifest } from "../../core/orchestrator.ts";
 import { UsageError } from "../../core/usageError.ts";
 import { runConformance } from "../../engines/conformance.ts";
 import type { ConformanceReport, ConformanceStatus } from "../../engines/conformance.ts";
@@ -27,28 +29,36 @@ export interface EngineCommandInputs {
   readonly builtins?: BuiltinEngines;
 }
 
-const SYNOPSIS = "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n";
+const SYNOPSIS =
+  "Usage: lvrtc engine conformance <id> [--root <dir>] [--json]\n" +
+  "       lvrtc engine describe <id>... [--root <dir>] [--json]\n";
 const HELP = [
   SYNOPSIS,
-  "Runs the conformance kit on one engine, configured or built in: it must answer hello with a descriptor of this",
-  'contract and its own id, answer an unknown quantity "unsupported", refuse a malformed run, echo ids, answer the',
-  "contract's selftest.echo examples byte for byte if it offers the quantity, repeat itself if it says it is",
-  "deterministic, and answer shutdown, then end cleanly. Every check is reported",
+  "conformance: runs the conformance kit on one engine, configured or built in: it must answer hello with a",
+  'descriptor of this contract and its own id, answer an unknown quantity "unsupported", refuse a malformed run,',
+  "echo ids, answer the contract's selftest.echo examples byte for byte if it offers the quantity, repeat itself if",
+  "it says it is deterministic, and answer shutdown, then end cleanly. Every check is reported",
   "PASS, FAIL or SKIPPED with a reason.",
+  "",
+  "describe: opens each engine named through the registry, takes its describe() and closes it, and prints what the",
+  "manifest of a run would record of it: its version, fingerprint, adapter revision and details, or that it is",
+  "unavailable and the code of why. With --json, one object { engines: [...] } in the order the ids were given.",
   "",
   "  --root <dir>  the directory that holds lvrtc.config.json (default: this repository)",
   "  --json        print one JSON object in place of the lines",
   "",
-  "Exit code: 0 when no check failed; 1 when one did; 2 when nothing was checked because the command line or the",
-  "engine id cannot be used as given.",
+  "Exit code of conformance: 0 when no check failed; 1 when one did; 2 when nothing was checked because the command",
+  "line or the engine id cannot be used as given. Of describe: 0 when it printed, unavailable engines included; 2",
+  "for a command line that cannot be used as given.",
   "",
 ].join("\n");
 
 const LABELS: Readonly<Record<ConformanceStatus, string>> = { pass: "PASS", fail: "FAIL", skipped: "SKIPPED" };
 
-/** The command line of `lvrtc engine conformance`, read. */
+/** The command line of `lvrtc engine conformance` or `lvrtc engine describe`, read. */
 interface EngineArguments {
-  readonly id: string;
+  readonly action: "conformance" | "describe";
+  readonly ids: readonly string[];
   readonly root: string | undefined;
   readonly json: boolean;
 }
@@ -56,12 +66,23 @@ interface EngineArguments {
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
 function readArguments(args: readonly string[]): EngineArguments {
   const [action, ...rest] = args;
-  if (action === undefined) throw new UsageError("no action was named: there is conformance");
-  if (action !== "conformance") throw new UsageError(`unknown action "${action}": there is conformance`);
+  if (action === undefined) throw new UsageError("no action was named: there are conformance and describe");
+  if (action !== "conformance" && action !== "describe") {
+    throw new UsageError(`unknown action "${action}": there are conformance and describe`);
+  }
   const { positionals: ids, values, flags } = parseArguments(rest, ["--root"], ["--json"]);
   if (ids.length === 0) throw new UsageError("no engine was named");
-  if (ids.length > 1) throw new UsageError(`more than one engine was named: ${ids.join(", ")}`);
-  return { id: ids[0], root: values.get("--root"), json: flags.has("--json") };
+  if (action === "conformance" && ids.length > 1) {
+    throw new UsageError(`more than one engine was named: ${ids.join(", ")}`);
+  }
+  return { action, ids, root: values.get("--root"), json: flags.has("--json") };
+}
+
+/** One line of `lvrtc engine describe` for one engine. */
+function describedText(engine: ManifestEngine): string {
+  if (engine.status === "unavailable") return `${engine.id}: unavailable (${engine.code})`;
+  const adapter = engine.adapterRevision === undefined ? "" : `, adapter revision ${engine.adapterRevision}`;
+  return `${engine.id}: available, version ${engine.version}, fingerprint ${engine.fingerprint}${adapter}`;
 }
 
 /** One line per check, in columns, and a closing line that counts them. */
@@ -93,7 +114,7 @@ function reportText(report: ConformanceReport): string {
 export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
   return {
     name: "engine",
-    summary: "Check that an engine conforms to the contract",
+    summary: "Check that an engine conforms to the contract, or say who engines are",
     run: async (args, io) => {
       if (args.includes("-h") || args.includes("--help")) {
         io.stdout(HELP);
@@ -115,17 +136,25 @@ export function createEngineCommand(inputs: EngineCommandInputs): CliCommand {
       const loaded = loadConfig({ rootDir, env: inputs.env });
       const { builtins } = inputs;
       const registry = createEngineRegistry(loaded, undefined, builtins);
+      if (asked.action === "describe") {
+        // An engine that cannot be used, an id that names none included, is said to be unavailable with its code.
+        const engines: ManifestEngine[] = [];
+        for (const id of asked.ids) engines.push(await describeEngineForManifest(registry, id));
+        io.stdout(asked.json ? `${canonicalJson({ engines })}\n` : `${engines.map(describedText).join("\n")}\n`);
+        return EXIT_OK;
+      }
+      const [id] = asked.ids;
       const [configured, builtin] = [registry.ids(), registry.builtinIds()];
-      if (!configured.includes(asked.id) && !builtin.includes(asked.id)) {
-        io.stderr(`lvrtc engine: unknown engine "${asked.id}": ${enginesText(configured, builtin)}\n`);
+      if (!configured.includes(id) && !builtin.includes(id)) {
+        io.stderr(`lvrtc engine: unknown engine "${id}": ${enginesText(configured, builtin)}\n`);
         return EXIT_USAGE;
       }
 
       const report = await runConformance({
-        id: asked.id,
-        createTransport: () => createEngineTransport(loaded, asked.id, undefined, builtins),
+        id,
+        createTransport: () => createEngineTransport(loaded, id, undefined, builtins),
         // The engine's own waits, as a run would use them, unless this command was given others.
-        timeouts: { ...engineTimeouts(loaded, asked.id, builtins), ...inputs.timeouts },
+        timeouts: { ...engineTimeouts(loaded, id, builtins), ...inputs.timeouts },
       });
       // Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text.
       io.stdout(asked.json ? `${JSON.stringify(JSON.parse(canonicalJson(report)), null, 2)}\n` : reportText(report));

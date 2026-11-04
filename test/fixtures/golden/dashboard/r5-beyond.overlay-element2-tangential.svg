@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="328" viewBox="0 0 640 328" role="img">
+<title>beyond, r5: MTF at field 1, tangential</title>
+<desc>One chart for each field and cut: each engine&#39;s own curve as its store entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.</desc>
+<style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
+.lvc .bg{fill:#fcfcfb}
+.lvc text{fill:#1c1c21}
+.lvc text.muted{fill:#5c5c66}
+.lvc text.head{font-weight:600;font-size:12px}
+.lvc .grid{stroke:#e6e6ea;stroke-width:1}
+.lvc .axis{stroke:#8a8a94;stroke-width:1}
+.lvc .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lvc .dash{stroke-dasharray:6 4}
+.lvc .dot{stroke:#fcfcfb;stroke-width:1.5}
+.lvc .band{fill:#eda100;fill-opacity:.16;stroke:#c98500;stroke-width:1;stroke-dasharray:2 3}
+.lvc .zeroline{stroke:#5c5c66;stroke-width:1}
+.lvc .gate{stroke:#d03b3b;stroke-width:1.5;stroke-dasharray:5 3;fill:none}
+.lvc .bar{fill:#2a78d6}
+.lvc .ring{fill:#fcfcfb;stroke:#2a78d6;stroke-width:2}
+.lvc .none{stroke:#8a8a94;stroke-width:2}
+.lvc .cell{stroke:#fcfcfb;stroke-width:2}
+.lvc .cell.empty{fill:#f4f4f6}
+.lvc text.vt{font-weight:600;text-anchor:middle}
+.lvc .s0{stroke:#2a78d6}
+.lvc .dot.s0{fill:#2a78d6}
+.lvc .s1{stroke:#e2622d}
+.lvc .dot.s1{fill:#e2622d}
+.lvc .s2{stroke:#16996a}
+.lvc .dot.s2{fill:#16996a}
+.lvc .s3{stroke:#b47b00}
+.lvc .dot.s3{fill:#b47b00}
+.lvc .s4{stroke:#cf5f8e}
+.lvc .dot.s4{fill:#cf5f8e}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#6250d6}
+.lvc .dot.s6{fill:#6250d6}
+.lvc .s7{stroke:#e34948}
+.lvc .dot.s7{fill:#e34948}
+.lvc .sx{stroke:#8a8a94}
+.lvc .dot.sx{fill:#8a8a94}
+.lvc .v-PASS{fill:#cdebcd}
+.lvc text.t-PASS{fill:#0b3d0b}
+.lvc .v-FLOOR{fill:#e3f2dc}
+.lvc text.t-FLOOR{fill:#24451a}
+.lvc .v-FAIL{fill:#f6cfcc}
+.lvc text.t-FAIL{fill:#5c0f0b}
+.lvc .v-ERROR{fill:#e9b7b3}
+.lvc text.t-ERROR{fill:#4a0906}
+.lvc .v-ATTENTION{fill:#fbe5ad}
+.lvc text.t-ATTENTION{fill:#4a3600}
+.lvc .v-RECORDED{fill:#e3e3ea}
+.lvc text.t-RECORDED{fill:#2c2c33}
+.lvc .v-UNSUPPORTED{fill:#ededf1}
+.lvc text.t-UNSUPPORTED{fill:#45454e}
+.lvc .v-BLOCKED{fill:#d9d9e1}
+.lvc text.t-BLOCKED{fill:#2c2c33}
+@media (prefers-color-scheme:dark){
+.lvc .bg{fill:#1a1a19}
+.lvc text{fill:#e7e7ec}
+.lvc text.muted{fill:#a3a3ad}
+.lvc .grid{stroke:#2e2e34}
+.lvc .axis{stroke:#6b6b75}
+.lvc .dot{stroke:#1a1a19}
+.lvc .band{fill:#c98500;fill-opacity:.22;stroke:#eda100}
+.lvc .zeroline{stroke:#a3a3ad}
+.lvc .gate{stroke:#e66767}
+.lvc .bar{fill:#3987e5}
+.lvc .ring{fill:#1a1a19;stroke:#3987e5}
+.lvc .none{stroke:#6b6b75}
+.lvc .cell{stroke:#1a1a19}
+.lvc .cell.empty{fill:#222226}
+.lvc .s0{stroke:#3987e5}
+.lvc .dot.s0{fill:#3987e5}
+.lvc .s1{stroke:#d95926}
+.lvc .dot.s1{fill:#d95926}
+.lvc .s2{stroke:#199e70}
+.lvc .dot.s2{fill:#199e70}
+.lvc .s3{stroke:#c98500}
+.lvc .dot.s3{fill:#c98500}
+.lvc .s4{stroke:#d55181}
+.lvc .dot.s4{fill:#d55181}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#9085e9}
+.lvc .dot.s6{fill:#9085e9}
+.lvc .s7{stroke:#e66767}
+.lvc .dot.s7{fill:#e66767}
+.lvc .sx{stroke:#6b6b75}
+.lvc .dot.sx{fill:#6b6b75}
+.lvc .v-PASS{fill:#1d4a22}
+.lvc text.t-PASS{fill:#d9f2d9}
+.lvc .v-FLOOR{fill:#2b4223}
+.lvc text.t-FLOOR{fill:#e1efdb}
+.lvc .v-FAIL{fill:#5a1d1a}
+.lvc text.t-FAIL{fill:#ffdcd8}
+.lvc .v-ERROR{fill:#6b2420}
+.lvc text.t-ERROR{fill:#ffe3e0}
+.lvc .v-ATTENTION{fill:#56420a}
+.lvc text.t-ATTENTION{fill:#fbeac0}
+.lvc .v-RECORDED{fill:#34343c}
+.lvc text.t-RECORDED{fill:#e4e4ea}
+.lvc .v-UNSUPPORTED{fill:#2a2a31}
+.lvc text.t-UNSUPPORTED{fill:#c8c8d0}
+.lvc .v-BLOCKED{fill:#3d3d46}
+.lvc text.t-BLOCKED{fill:#e4e4ea}
+}</style>
+<rect class="bg" x="0" y="0" width="640" height="328"/>
+<g><title>field 1: store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/field</title><text x="12" y="20" class="head">beyond, r5: MTF at field 1, tangential</text></g>
+<line class="grid" x1="68" y1="256" x2="624" y2="256"/>
+<text x="62" y="260" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="68" y1="212" x2="624" y2="212"/>
+<text x="62" y="216" class="muted" text-anchor="end">0.2</text>
+<line class="grid" x1="68" y1="168" x2="624" y2="168"/>
+<text x="62" y="172" class="muted" text-anchor="end">0.4</text>
+<line class="grid" x1="68" y1="124" x2="624" y2="124"/>
+<text x="62" y="128" class="muted" text-anchor="end">0.6</text>
+<line class="grid" x1="68" y1="80" x2="624" y2="80"/>
+<text x="62" y="84" class="muted" text-anchor="end">0.8</text>
+<line class="grid" x1="68" y1="36" x2="624" y2="36"/>
+<text x="62" y="40" class="muted" text-anchor="end">1.0</text>
+<line class="axis" x1="68" y1="256" x2="68" y2="260"/>
+<text x="68" y="272" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="207" y1="256" x2="207" y2="260"/>
+<text x="207" y="272" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="346" y1="256" x2="346" y2="260"/>
+<text x="346" y="272" class="muted" text-anchor="middle">40</text>
+<line class="axis" x1="485" y1="256" x2="485" y2="260"/>
+<text x="485" y="272" class="muted" text-anchor="middle">60</text>
+<line class="axis" x1="624" y1="256" x2="624" y2="260"/>
+<text x="624" y="272" class="muted" text-anchor="middle">80</text>
+<line class="axis" x1="68" y1="256" x2="624" y2="256"/>
+<line class="axis" x1="68" y1="36" x2="68" y2="256"/>
+<text x="346" y="290" text-anchor="middle">Frequency (cycles/mm)</text>
+<text x="16" y="146" text-anchor="middle" transform="rotate(-90 16 146)">MTF</text>
+<polyline class="line s0" points="137.5,63.5 276.5,91 415.5,146 554.5,201"/>
+<circle class="dot s0" cx="137.5" cy="63.5" r="4"><title>lv, tangential at 10 cycles/mm: 8.75e-1 (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/tangential [0])</title></circle>
+<circle class="dot s0" cx="276.5" cy="91" r="4"><title>lv, tangential at 30 cycles/mm: 7.50e-1 (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/tangential [1])</title></circle>
+<circle class="dot s0" cx="415.5" cy="146" r="4"><title>lv, tangential at 50 cycles/mm: 5.00e-1 (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/tangential [2])</title></circle>
+<circle class="dot s0" cx="554.5" cy="201" r="4"><title>lv, tangential at 70 cycles/mm: 2.50e-1 (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/tangential [3])</title></circle>
+<polyline class="line s1" points="137.5,63.5 276.5,91 415.5,146 554.5,201"/>
+<rect class="dot s1" x="133.5" y="59.5" width="8" height="8"><title>optiland, tangential at 10 cycles/mm: 8.75e-1 (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/2/tangential [0])</title></rect>
+<rect class="dot s1" x="272.5" y="87" width="8" height="8"><title>optiland, tangential at 30 cycles/mm: 7.50e-1 (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/2/tangential [1])</title></rect>
+<rect class="dot s1" x="411.5" y="142" width="8" height="8"><title>optiland, tangential at 50 cycles/mm: 5.00e-1 (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/2/tangential [2])</title></rect>
+<rect class="dot s1" x="550.5" y="197" width="8" height="8"><title>optiland, tangential at 70 cycles/mm: 2.50e-1 (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/2/tangential [3])</title></rect>
+<polyline class="line s2" points="137.5,63.5 276.5,91 415.5,146 554.5,200.57"/>
+<polygon class="dot s2" points="137.5,58.5 142.5,67.5 132.5,67.5"><title>optiland #fft512, tangential at 10 cycles/mm: 8.75e-1 (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/2/tangential [0])</title></polygon>
+<polygon class="dot s2" points="276.5,86 281.5,95 271.5,95"><title>optiland #fft512, tangential at 30 cycles/mm: 7.50e-1 (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/2/tangential [1])</title></polygon>
+<polygon class="dot s2" points="415.5,141 420.5,150 410.5,150"><title>optiland #fft512, tangential at 50 cycles/mm: 5.00e-1 (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/2/tangential [2])</title></polygon>
+<polygon class="dot s2" points="554.5,195.57 559.5,204.57 549.5,204.57"><title>optiland #fft512, tangential at 70 cycles/mm: 2.52e-1 (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/2/tangential [3])</title></polygon>
+<polyline class="line s3 dash" points="137.5,63.5 276.5,91 415.5,146 554.5,201"/>
+<polygon class="dot s3" points="137.5,58.5 142.5,63.5 137.5,68.5 132.5,63.5"><title>wave, tangential at 10 cycles/mm: 8.75e-1 (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/2/tangential [0])</title></polygon>
+<polygon class="dot s3" points="276.5,86 281.5,91 276.5,96 271.5,91"><title>wave, tangential at 30 cycles/mm: 7.50e-1 (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/2/tangential [1])</title></polygon>
+<polygon class="dot s3" points="415.5,141 420.5,146 415.5,151 410.5,146"><title>wave, tangential at 50 cycles/mm: 5.00e-1 (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/2/tangential [2])</title></polygon>
+<polygon class="dot s3" points="554.5,196 559.5,201 554.5,206 549.5,201"><title>wave, tangential at 70 cycles/mm: 2.50e-1 (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/2/tangential [3])</title></polygon>
+<g><line class="line s0" x1="68" y1="311" x2="92" y2="311"/><circle class="dot s0" cx="80" cy="311" r="4"></circle><text x="98" y="315">lv</text></g>
+<g><line class="line s1" x1="124.4" y1="311" x2="148.4" y2="311"/><rect class="dot s1" x="132.4" y="307" width="8" height="8"></rect><text x="154.4" y="315">optiland</text></g>
+<g><line class="line s2" x1="218" y1="311" x2="242" y2="311"/><polygon class="dot s2" points="230,306 235,315 225,315"></polygon><text x="248" y="315">optiland #fft512</text></g>
+<g><line class="line s3 dash" x1="361.2" y1="311" x2="385.2" y2="311"/><polygon class="dot s3" points="373.2,306 378.2,311 373.2,316 368.2,311"></polygon><text x="391.2" y="315">wave (unconverged: undersampled)</text></g>
+</svg>
