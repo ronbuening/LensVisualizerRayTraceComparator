@@ -50,10 +50,10 @@ const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
  * measured again and found unchanged, the 192 answers the same bytes as at 607ff23ae (worst 1.2989609388114332e-14); at
  * LV 55ddfb1e1 (closure ff0d938d, 184 files: LV #942), every case and grid was measured again: unchanged but the Sigma
  * 35 mm's two cases, which moved with its authored rims (LV #943), its reference run's grid at 25 % with them (worst
- * again 1.2989609388114332e-14); at LV ff57c4469 (closure 0b6c085a, 184 files: LV #954) and 290c6dd85 (closure
- * 0516a7c7: LV #949), every case and grid was measured again and found unchanged.
+ * again 1.2989609388114332e-14); at LV ff57c4469 (closure 0b6c085a, 184 files: LV #954), 290c6dd85 (closure 0516a7c7:
+ * LV #949) and 25f65d4b4 (closure 4669921b: LV #950), every case and grid was measured again and found unchanged.
  */
-const PINNED_CLOSURE = "0516a7c791b5b658360f439c9eb4ce2fe7886748a8fac202e467eba2868a2112";
+const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
 
 /**
  * For each run of a lens as it opens: the case the figures are of, and the grid LensVisualizer's refinement ended

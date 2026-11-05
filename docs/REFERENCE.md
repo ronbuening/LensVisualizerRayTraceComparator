@@ -6300,18 +6300,20 @@ this repository's twelve baselines, LensVisualizer `55ddfb1e1` (closure `ff0d938
   section at most 630 KB; every page served in at most 0.12 s once its files are parsed (the index's first build
   about 3 s).
 
-## LensVisualizer 290c6dd85 adopted
+## LensVisualizer 25f65d4b4 adopted
 
-LensVisualizer main `290c6dd85` (clean), engine closure `0516a7c7`, 184 files: the same files as `ff0d938d`
-(`55ddfb1e1`). Three PRs since: #953 (Dependabot alerts, math rendering) changes no engine file; #954 (`ff57c4469`,
+LensVisualizer main `25f65d4b4` (clean), engine closure `4669921b`, 184 files: the same files as `ff0d938d`
+(`55ddfb1e1`). Four PRs since: #953 (Dependabot alerts, math rendering) changes no engine file; #954 (`ff57c4469`,
 closure `0b6c085a`) changes 13: `analysis/summary/summary.ts`, `field/geometry.ts`, `first-order/format.ts`, the
 `optics.ts` barrel, `prescription/canonical.ts`, `constructionData.ts`, `identity.ts`, `ingestV2.ts`,
 `validate/paths.ts` and `validate/schema.ts`, `state/fieldAdapters.ts`, `state/publishedStations.ts` and
 `state/stationTables.ts`; #949 (`290c6dd85`) changes `chromatic/glassCatalogData.ts`,
 `chromatic/glassCatalogEntries/sumita.ts` (Sumita LLF8) and `utils/catalog/lensTaxonomy.ts` (a Werra mount), and adds
-six lenses. The adoption began at `ff57c4469`; LensVisualizer's checkout was moved to `290c6dd85` while it was
-measured, and the session that set the task chose to adopt the checkout as it is. No name of the binding was added or
-lost, and nothing of the fake tree moved.
+six lenses (closure `0516a7c7`); #950 (`25f65d4b4`) changes `chromatic/glassCatalogData.ts` and
+`chromatic/glassCatalogEntries/ohara.ts` (Ohara PBM25 and TPH55, code `756251`), and adds six lenses. The adoption
+began at `ff57c4469`; LensVisualizer's checkout was moved to `290c6dd85` while it was measured, and the session that
+set the task chose to adopt the checkout as it is, then `25f65d4b4` with the owner's approval. No name of the binding
+was added or lost, and nothing of the fake tree moved.
 
 ### What changed, and what the comparator did
 
@@ -6322,7 +6324,7 @@ lost, and nothing of the fake tree moved.
 | #954, `PublishedFocusStation.certifiedDistanceM` | The station buttons show the certified conjugate's own object-to-image distance | Nothing: the stations are selected by LensVisualizer's conjugates, and `publishedFocusStations` is not bound |
 | #954, thinned rows (22 lenses) | Derived zoom stations and focus keyframes thinned (15,937 states to 4,837); published stations and conjugates kept and remapped, their states bit for bit | Six focus-station runs renamed, each the same case to the bit (below); no committed suite has another of the 22 lenses |
 | #954, two lenses re-solved | The Thypoch Ksana 21's D15 re-solved to paraxial focus at both published states (16.71 / 17.67 mm printed, 16.937263 / 17.889432 mm now); the Pentax 67 100 mm's standalone close focus reconstructed on six keyframes, its infinity row unchanged | The Thypoch's focus-station case moved (STALE(case) until the refresh); the Pentax has no certified station and its infinity case is that of `55ddfb1e1` |
-| #949 | Six lenses (the November 4 package), the Sumita LLF8 glass and a Werra mount | No case of a committed suite moves; the census rewritten |
+| #949, #950 | Six lenses each (the November 4 and 5 packages), the Sumita LLF8 and Ohara PBM25 and TPH55 glasses, a Werra mount | No case of a committed suite moves, and no existing lens's photopic or C, d, F case at either zoom end; #950's Voigtländer Macro APO-Ultron 35 mm f/2 adds a certified station; the census rewritten |
 
 ### Design choices
 
@@ -6335,44 +6337,52 @@ lost, and nothing of the fake tree moved.
    (`-zoom<station>-focus<keyframe>`) are LensVisualizer's indices, and thinning renumbers them. The runs are the same
    cases; their records are the refresh's to rewrite under the new names, and nothing maps an old name to a new one.
 
-### Measured at ff57c4469 and 290c6dd85, 2026-11-03
+### Measured at ff57c4469, 290c6dd85 and 25f65d4b4, 2026-11-03 to 2026-11-05
 
 - **Tiers.** At `ff57c4469` (closure `0b6c085a`): `npm run test:lv` 139 of 139 with every pin set to that closure and
   compared (the checkout moved to `290c6dd85` twelve minutes into the run, after the MTF, R4f and summary tests had
-  loaded `ff57c4469`). At
-  `290c6dd85` (closure `0516a7c7`): `npm run test:lv` 139 of 139 (15 min), `npm run test:optiland` 51 of 51, none
-  skipped (43 min), and `npm run check`.
-- **The MTF tab** (`mtf.test.ts`): the 12 configurations the same case, shift and figures as at `55ddfb1e1`, at both
-  commits; the printed lines are the same bytes. Pinned at `0516a7c7`.
+  loaded `ff57c4469`). At `290c6dd85` (closure `0516a7c7`): `npm run test:lv` 139 of 139 (15 min), `npm run
+  test:optiland` 51 of 51, none skipped (43 min), and `npm run check`. At `25f65d4b4` (closure `4669921b`), after main
+  (Phases 7 and 8) was merged: `npm run check` (2,167 hermetic tests), `npm run test:lv` 139 of 139 (15 min) and
+  `npm run test:optiland` 51 of 51, none skipped (43 min).
+- **The MTF tab** (`mtf.test.ts`): the 12 configurations the same case, shift and figures as at `55ddfb1e1`, at the
+  three commits; the printed lines are the same bytes. Pinned at `4669921b`.
 - **R4f** (`fidelity.test.ts`): 96 runs, worst `mtf.maxAbs` 1.2989609388114332e-14 again; the 24 opening runs the same
-  cases and grids. Pinned at `0516a7c7`.
-- **The summary tab** (`summary.test.ts`): 123 states (71 finite), the margins 15, 0, 19 and 3 units again (the
-  Olympus 7-14 mm's station of zoom 32), held on all 123; the one case that moved, the Thypoch Ksana 21's station
-  (`22234d65` to `f8e388d7`), replaces its old id in `MEASURED_CASES`.
+  cases and grids, at the three commits. Pinned at `4669921b`.
+- **The summary tab** (`summary.test.ts`): 123 states (71 finite) at `ff57c4469` and `290c6dd85`, 124 (72 finite) at
+  `25f65d4b4`, the margins 15, 0, 19 and 3 units again (the Olympus 7-14 mm's station of zoom 32), held on every one;
+  the one case that moved, the Thypoch Ksana 21's station (`22234d65` to `f8e388d7`), replaces its old id in
+  `MEASURED_CASES`, and #950's Voigtländer station (`f3b6869f`) joins it.
 - **The focus readout** (the summary test's diagnostic and a measurement of the 71 finite focus stations with
   `answerLvSummary`, against the case's object distance to its image plane): at `55ddfb1e1` 37 to the bit, 62 within
   1 µm, 70 within 1 mm, the furthest the GF 110 mm T/S macro's 1:2 station at 1.090 mm (0.26 %); at `ff57c4469` none to
   the bit, 4 within 1 µm, 43 within 1 mm, 59 within 1 %, the furthest the M.Zuiko 17 mm f/1.2 at 48.874 mm (5.32 %),
   the Sigma APO 50-500 mm's tele station at 27.2 mm (0.14 %), the Leica Summilux-C 18 mm at 21.9 mm (4.1 %) and the
-  Zuiko 7-14 mm's wide station at 19.5 mm (7.8 %); the same at `290c6dd85`.
-- **The suites' cases** (each suite expanded at `55ddfb1e1`, `ff57c4469` and `290c6dd85` through the case source):
-  benchmark 96, states 128, features 18, folded 16 and diffractive 9 runs, every name and case the same at the three
-  commits. Focus-stations 73 runs: the Thypoch Ksana 21's station a new case (#954's re-solved D15), and six runs
+  Zuiko 7-14 mm's wide station at 19.5 mm (7.8 %); the same at `290c6dd85`. At
+  `25f65d4b4` the Voigtländer's new station is within 1 mm (72 stations: 44 within 1 mm, 60 within 1 %).
+- **The suites' cases** (each suite expanded at `55ddfb1e1`, `ff57c4469`, `290c6dd85` and `25f65d4b4` through the
+  case source): benchmark 96, states 128, features 18, folded 16 and diffractive 9 runs, every name and case the same
+  at the four commits. Focus-stations 73 runs, 74 at `25f65d4b4`: the Thypoch Ksana 21's station a new case (#954's re-solved D15), and six runs
   renamed with the same case to the bit (`certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom0-focus17`,
   `-zoom32-focus17`, `-zoom64-focus17` to `-zoom0-focus12`, `-zoom16-focus12`, `-zoom32-focus12`;
   `certified-sigma-70-300mm-f4-56-dg-os-zoom0-focus9`, `-zoom40-focus4`, `-zoom80-focus2` to `-zoom0-focus8`,
-  `-zoom20-focus4`, `-zoom40-focus2`); #949 moved none. Until the refresh `baseline check focus-stations` sees six
-  GONE and six NEW, and the Thypoch STALE(case), beside STALE(engine) of every record of `lv`, `replay`, `wave` and
-  `flux`.
+  `-zoom20-focus4`, `-zoom40-focus2`); #949 and #950 moved none, and #950 adds
+  `certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1`. Until the refresh `baseline check focus-stations` sees
+  six GONE and seven NEW, and the Thypoch STALE(case), beside STALE(engine) of every record of `lv`, `replay`, `wave`
+  and `flux`.
+- **#950's glasses** (every catalog lens exported at both zoom ends on the photopic lines and on C, d, F, at
+  `290c6dd85` and at `25f65d4b4`): of 2,854 states (2,592 exported), no case moved; the 12 new states are #950's six
+  lenses. LensVisualizer's own glass reports agree: 48 more surfaces resolve to a catalogue entry, of 50 new, and
+  neither the ambiguous elements (2,697) nor the unresolved tokens (116) changed.
 - **The moved and renamed cases on the engines** (a temporary suite of the Thypoch station and the Olympus 40-150 mm's
   three, `lv`, `ref`, `optiland`, R0–R4, R4f and R6a, `--jobs 4`, a temporary `LVRTC_RUNS_DIR`): 288 pairs PASS. On
   the Thypoch, lv–ref R0 sag 8.9e-16 mm, no mask mismatch, R2 direction 1.7e-14, R3 8.7e-10 waves, R4 1.4e-11, R4f
   5.4e-15.
-- **The census** (`reports/census`): 1,062 lenses (1,056), 365 zooms (363), 1,427 states (1,419): 1,419 exported, the
-  same 8 refused for the same reasons, none thrown; `aperture.unclipped` 284 (282), `surface.asphere.even` 693 (691),
-  `surface.asphere.odd` 87 (85), `surface.conic` 321 (319); the limits did not move.
+- **The census** (`reports/census`, at `25f65d4b4`): 1,068 lenses (1,056 at `55ddfb1e1`), 365 zooms (363), 1,433
+  states (1,419): 1,425 exported, the same 8 refused for the same reasons, none thrown; `aperture.unclipped` 284 (282),
+  `surface.asphere.even` 694 (691), `surface.asphere.odd` 87 (85), `surface.conic` 321 (319); the limits did not move.
 - **Identities.** The fingerprint of `lv`, `replay`, `wave` and `flux` (LensVisualizer's closure) moved, `ff0d938d` to
-  `0516a7c7`; their adapter revisions moved with the comment of `summary.ts` on the focus readout (`lv` `5ed05541` to
+  `4669921b`; their adapter revisions moved with the comment of `summary.ts` on the focus readout (`lv` `5ed05541` to
   `afad9cb8`, `replay` `55ff9ba8` to `99024448`, `wave` `6dc6228e` to `956fcaf5`, `flux` `2be7227c` to `973a4173`).
   `ref` (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` did not move. No baseline was written
   or checked: the refresh is the owner's.

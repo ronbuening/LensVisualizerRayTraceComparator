@@ -25,7 +25,7 @@
 // What R1 does not cover is listed in `NOT_COVERED_BY_R1`; its numbers are written as diagnostics. Then `lv`'s answer is
 // held to the tab asked with a request spelled out a second time. Nothing is written. Measured at LV 607ff23ae (engine
 // closure f016b35b), and again at 6287f4393 (closure fc5ae923, LV #940): the same cases and margins; at 55ddfb1e1,
-// ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`.
+// ff57c4469 and 290c6dd85 the same margins on the 123 cases of `MEASURED_CASES`, and at 25f65d4b4 on 124.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -53,15 +53,16 @@ const skip = LV_UNAVAILABLE;
 const SUITES = ["benchmark", "states", "focus-stations"] as const;
 
 /**
- * The engine closure the margins were measured with (LensVisualizer 290c6dd85; the same margins at ff57c4469, 0b6c085a,
- * 55ddfb1e1, ff0d938d, 6287f4393, fc5ae923, and 607ff23ae, f016b35b).
+ * The engine closure the margins were measured with (LensVisualizer 25f65d4b4; the same margins at 290c6dd85, 0516a7c7,
+ * ff57c4469, 0b6c085a, 55ddfb1e1, ff0d938d, 6287f4393, fc5ae923, and 607ff23ae, f016b35b).
  */
-const PINNED_CLOSURE = "0516a7c791b5b658360f439c9eb4ce2fe7886748a8fac202e467eba2868a2112";
+const PINNED_CLOSURE = "4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b";
 
 /**
  * The first 16 hex digits of the id of each case the margins were measured on: 123 at 55ddfb1e1 (119 at 607ff23ae and at
  * 6287f4393; the Sigma 35 mm's rims and six lenses' focus stations moved 16 of them, and four stations are new); at
- * ff57c4469 the Thypoch Ksana 21's station moved with its re-solved focus gap (LV #954), the same at 290c6dd85.
+ * ff57c4469 the Thypoch Ksana 21's station moved with its re-solved focus gap (LV #954), the same at 290c6dd85; 124 at
+ * 25f65d4b4, whose new Voigtlander Macro APO-Ultron 35 mm f/2 (LV #950) has a certified station.
  */
 const MEASURED_CASES: ReadonlySet<string> = new Set([
   "02b1e001699f7823",
@@ -182,6 +183,7 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
   "ee0b49410666fe2b",
   "eeb1536ebab03437",
   "f2ba46d7a8b2499a",
+  "f3b6869f0d15a83f",
   "f3fcc3b63cd7c8c3",
   "f738c7fd1c6b1e01",
   "f8e388d76b003371",
@@ -195,7 +197,8 @@ const MEASURED_CASES: ReadonlySet<string> = new Set([
  * station 32; 7 at 098c91ef6 on the older cases), the pupil 0 (to the bit), the image-space and paraxial working
  * f-numbers 20 (measured 19 on the same station, and 3 for the paraxial working f-number at infinity). Measured again
  * at 6287f4393 (closure fc5ae923): 15, 0, 19 and 3 on the same 119 cases; at 55ddfb1e1 (closure ff0d938d): 15, 0, 19
- * and 3 again, on the 123 cases; the same at ff57c4469 (closure 0b6c085a) and 290c6dd85 (closure 0516a7c7).
+ * and 3 again, on the 123 cases; the same at ff57c4469 (closure 0b6c085a) and 290c6dd85 (closure 0516a7c7), and at
+ * 25f65d4b4 (closure 4669921b) on the 124 cases.
  */
 const MARGINS = { focalUnits: 16, pupilUnits: 0, fNumberUnits: 20 } as const;
 
