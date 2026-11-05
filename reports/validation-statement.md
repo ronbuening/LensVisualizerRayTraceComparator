@@ -4,7 +4,7 @@ This statement is rendered from the eight baselines alone, with no engine, clock
 
 ## Supportable sentence
 
-On 274 configurations across four suites, LensVisualizer, optiland and the reference tracer, given identical indices and apertures, trace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs: worst landing 1.2e-12 mm (gate 1e-8 mm), optical path 3.5e-9 waves (2e-5), geometric MTF 1.5e-11 (1e-7), wave MTF 1.1e-9 (2e-8); the benchmark covers six wavelengths. LensVisualizer's diffraction MTF is recorded beside two external counterparts, with no preference between them: optiland's FFT MTF, of one wavelength, differs by up to 0.49, a difference classed as one of method; the comparator's OTF of optiland's own wavefront, per wavelength and photopic, differs by up to 0.0081. Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and the catalog beyond these suites are not covered.
+On 276 configurations across four suites, LensVisualizer, optiland and the reference tracer, given identical indices and apertures, trace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs: worst landing 1.2e-12 mm (gate 1e-8 mm), optical path 3.5e-9 waves (2e-5), geometric MTF 1.5e-11 (1e-7), wave MTF 1.1e-9 (2e-8); the benchmark covers six wavelengths. LensVisualizer's diffraction MTF is recorded beside two external counterparts, with no preference between them: optiland's FFT MTF, of one wavelength, differs by up to 0.49, a difference classed as one of method; the comparator's OTF of optiland's own wavefront, per wavelength and photopic, differs by up to 0.0074. Dispersion, white-light weighting beyond the stated lines, focus choice, stop sizing, states not named and the catalog beyond these suites are not covered.
 
 ## Rungs
 
@@ -16,15 +16,15 @@ The supportable sentence's figures are over the configurations it counts, while 
 
 | Rung | Compares | Mode | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |
 |---|---|---|---:|---:|---:|---|---|
-| r0 | Built layout, shape, aperture, index and sampled sag | gated | 309 | 927 | 927 | 927 PASS | sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
-| r1 | First-order quantities and pupils | gated | 309 | 927 | 927 | 927 PASS | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
-| r2 | Hits, directions, image landings and masks of identical rays | gated | 309 | 927 | 7107 | 7107 PASS | hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745, surface 32 |
-| r3 | Optical path, path to image and chief-relative OPD of identical rays | gated | 309 | 927 | 7107 | 7107 PASS | opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1, line 0, ray 513 |
-| r4 | Comparator geometric MTF on identical rays | gated | 309 | 927 | 2751 | 2751 PASS | mtf.maxAbs 1.48e-11 1; states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1, frequencyPerMm 92 |
-| r4f | LV geometric MTF beside replay with LV's own sampling | gated | 309 | 309 | 309 | 309 PASS | mtf.maxAbs 1.58e-14 1; focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1, frequencyPerMm 2 |
+| r0 | Built layout, shape, aperture, index and sampled sag | gated | 314 | 942 | 942 | 942 PASS | sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
+| r1 | First-order quantities and pupils | gated | 314 | 942 | 942 | 942 PASS | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
+| r2 | Hits, directions, image landings and masks of identical rays | gated | 314 | 942 | 7152 | 7152 PASS | hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745, surface 32 |
+| r3 | Optical path, path to image and chief-relative OPD of identical rays | gated | 314 | 942 | 7152 | 7152 PASS | opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1, line 0, ray 513 |
+| r4 | Comparator geometric MTF on identical rays | gated | 314 | 942 | 2796 | 2796 PASS | mtf.maxAbs 1.48e-11 1; states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1, frequencyPerMm 92 |
+| r4f | LV geometric MTF beside replay with LV's own sampling | gated | 314 | 314 | 314 | 314 PASS | mtf.maxAbs 1.58e-14 1; focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1, frequencyPerMm 2 |
 | r5 | LV diffraction MTF beside optiland FFT and the LV-ray wave estimate | recorded | 96 | 288 | 288 | 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED | mtfOffAxis.maxAbs 4.91e-1 1; benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1, frequencyPerMm 10 |
-| r5g | Geometric MTF on each method's own pupil sampling | recorded | 96 | 288 | 864 | 842 RECORDED, 22 ATTENTION | mtfOffAxis.maxAbs 1.22e-2 1; benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1, frequencyPerMm 100 |
-| r6a | Comparator wave MTF on identical rays, in fields whose sampling settled | gated | 309 | 927 | 2751 | 2751 PASS | waveMtf.maxAbs 1.08e-9 1; states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50 |
+| r5g | Geometric MTF on each method's own pupil sampling | recorded | 96 | 288 | 864 | 844 RECORDED, 20 ATTENTION | mtfOffAxis.maxAbs 1.22e-2 1; benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1, frequencyPerMm 100 |
+| r6a | Comparator wave MTF on identical rays, in fields whose sampling settled | gated | 314 | 942 | 2796 | 2796 PASS | waveMtf.maxAbs 1.08e-9 1; states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50 |
 | r6b | LV sheared diffraction MTF beside comparator wave OTF on LV rays | recorded | 96 | 96 | 96 | 95 RECORDED, 1 ATTENTION | mtfOffAxis.maxAbs 5.75e-3 1; benchmark / nikon-z-24-70f4s-tele-ref; lv / wave at cut sagittal, field 5.00e-1, frequencyPerMm 30 |
 | r6c | LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts | recorded | 96 | 576 | 576 | 381 RECORDED, 51 ATTENTION, 144 UNSUPPORTED | mtfOffAxis.maxAbs 2.75e-1 1; benchmark / nikon-z-24-70f4s-tele-ref; lv / optiland at cut tangential, field 1, frequencyPerMm 50 |
 
@@ -37,20 +37,20 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: layout.mismatches 0 elements
 - tolerance: sag.maxScaled 1.00e-12 1
 - tolerance: shape.mismatches 0 elements
-- aperture.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 927
-- index.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 927
-- layout.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 927
-- sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28; measured request pairs 927
-- shape.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 927
+- aperture.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 942
+- index.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 942
+- layout.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 942
+- sag.maxScaled 6.04e-16 1; focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28; measured request pairs 942
+- shape.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 942
 
 #### r1
 
 - tolerance: firstOrder.maxAbs 1.00e-9 mm
 - tolerance: pupilRadius.maxScaled 1.00e-9 mm
 - tolerance: pupilZ.maxScaled 1.00e-9 mm
-- firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ; measured request pairs 927
-- pupilRadius.maxScaled 9.81e-13 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilSemiDiameter; measured request pairs 927
-- pupilZ.maxScaled 2.61e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilZ; measured request pairs 927
+- firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ; measured request pairs 942
+- pupilRadius.maxScaled 9.81e-13 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilSemiDiameter; measured request pairs 942
+- pupilZ.maxScaled 2.61e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilZ; measured request pairs 942
 
 #### r2
 
@@ -58,27 +58,27 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: hits.maxDistance 1.00e-8 mm
 - tolerance: landing.maxDistance 1.00e-8 mm
 - tolerance: mask.mismatches 0 rays
-- direction.maxAbs 4.46e-14 1; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745; measured request pairs 7107
-- hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745, surface 32; measured request pairs 7107
-- landing.maxDistance 1.20e-12 mm; focus-stations / certified-hasselblad-xcd-25mm-f25-v-zoom0-focus1; optiland / ref at field 4.99e1, line 0, ray 812; measured request pairs 7107
-- mask.mismatches 0 rays; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 7107
+- direction.maxAbs 4.46e-14 1; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745; measured request pairs 7152
+- hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1, line 0, ray 745, surface 32; measured request pairs 7152
+- landing.maxDistance 1.20e-12 mm; focus-stations / certified-hasselblad-xcd-25mm-f25-v-zoom0-focus1; optiland / ref at field 4.99e1, line 0, ray 812; measured request pairs 7152
+- mask.mismatches 0 rays; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 7152
 - mask.rimBand: 0
-- rays.compared: 6781578
+- rays.compared: 6867825
 
 #### r3
 
 - tolerance: opd.maxAbs 2.00e-5 waves
 - tolerance: opticalPath.maxAbs 2.00e-5 waves
 - tolerance: opticalPathToImage.maxAbs 2.00e-5 waves
-- opd.maxAbs 3.14e-9 waves; focus-stations / certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1; optiland / ref at field 2.54e1, line 0, ray 546; measured request pairs 7107
-- opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1, line 0, ray 513; measured request pairs 7107
-- opticalPathToImage.maxAbs 3.11e-9 waves; features / asphere-a20-photopic; optiland / ref at field 2.42e1, line 1, ray 815; measured request pairs 7107
+- opd.maxAbs 3.14e-9 waves; focus-stations / certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1; optiland / ref at field 2.54e1, line 0, ray 546; measured request pairs 7152
+- opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1, line 0, ray 513; measured request pairs 7152
+- opticalPathToImage.maxAbs 3.11e-9 waves; features / asphere-a20-photopic; optiland / ref at field 2.42e1, line 1, ray 815; measured request pairs 7152
 
 #### r4
 
 - tolerance: mtf.maxAbs 1.00e-7 1
-- mtf.maxAbs 1.48e-11 1; states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1, frequencyPerMm 92; measured request pairs 2751
-- rays.compared: 6781578
+- mtf.maxAbs 1.48e-11 1; states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1, frequencyPerMm 92; measured request pairs 2796
+- rays.compared: 6867825
 - rays.dropped: 0
 
 #### r4f
@@ -86,9 +86,9 @@ The supportable sentence's figures are over the configurations it counts, while 
 - tolerance: fields.mismatches 0 elements
 - tolerance: mtf.maxAbs 1.00e-9 1
 - tolerance: sampling.mismatches 0 elements
-- fields.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 309
-- mtf.maxAbs 1.58e-14 1; focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1, frequencyPerMm 2; measured request pairs 309
-- sampling.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 309
+- fields.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 314
+- mtf.maxAbs 1.58e-14 1; focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1, frequencyPerMm 2; measured request pairs 314
+- sampling.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 314
 
 #### r5
 
@@ -108,22 +108,22 @@ The supportable sentence's figures are over the configurations it counts, while 
 - attention: chiefLanding.maxAbs 1.00e-3 mm
 - attention: mtfOffAxis.maxAbs 1.00e-2 1
 - attention: mtfOnAxis.maxAbs 5.00e-3 1
-- mtfOffAxis.maxAbs 1.22e-2 1; benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1, frequencyPerMm 100; measured request pairs 566
+- mtfOffAxis.maxAbs 1.22e-2 1; benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1, frequencyPerMm 100; measured request pairs 576
 - mtfOnAxis.maxAbs 8.84e-3 1; benchmark / nikon-z-24-70f4s-tele-best-ref; lv / optiland at cut tangential, field 0, frequencyPerMm 100; measured request pairs 288
-- fields.compared: 854
+- fields.compared: 864
 - fields.data: 0
-- fields.flagged: 10
+- fields.flagged: 0
 - fields.rimLost: 0
 - fields.unavailable: 0
 
 #### r6a
 
 - tolerance: waveMtf.maxAbs 2.00e-8 1
-- convergence.maxAbs 1.58e-1 1; focus-stations / certified-thypoch-simera-50mm-f14-zoom0-focus1; lv / ref at cut tangential, field 2.01e1, frequencyPerMm 70; measured request pairs 2748
-- phaseStep.waves 2.48e1 waves; benchmark / sigma-35mm-f14-dg-hsm-a-photopic; lv / optiland at field 3.19e1, line 2, ray 987; measured request pairs 2748
-- waveMtf.flagged 1.17e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 690
-- waveMtf.maxAbs 1.08e-9 1; states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 2058
-- rays.compared: 27128112
+- convergence.maxAbs 1.58e-1 1; focus-stations / certified-thypoch-simera-50mm-f14-zoom0-focus1; lv / ref at cut tangential, field 2.01e1, frequencyPerMm 70; measured request pairs 2793
+- phaseStep.waves 2.52e1 waves; benchmark / sigma-35mm-f14-dg-hsm-a-photopic; lv / optiland at field 3.19e1, line 2, ray 987; measured request pairs 2793
+- waveMtf.flagged 1.17e-9 1; benchmark / nikon-z-24-70f4s-wide-best-ref; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 705
+- waveMtf.maxAbs 1.08e-9 1; states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1, frequencyPerMm 50; measured request pairs 2088
+- rays.compared: 27473151
 - rays.dropped: 0
 
 #### r6b
@@ -158,7 +158,7 @@ The Z 50/1.2 FFT attribution is class method on the settled best-focus half fiel
 | Rung | Counterpart | Configurations | Rows | Classes | Worst in band | Worst set aside |
 |---|---|---:|---:|---|---|---|
 | r5 | optiland | 96 | 6336 | {"method":2882,"numerical":66,"unsupported":3388} | mtf.maxAbs 4.91e-1 1; benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1, frequencyPerMm 10 | mtf.maxAbs 4.59e-1 1; benchmark / sony-fe-20mm-f18-g-ref; lv / optiland at cut tangential, field 1, frequencyPerMm 10 |
-| r6c | optiland-wave | 96 | 6336 | {"method":5874,"numerical":462} | mtf.maxAbs 8.14e-3 1; benchmark / sigma-35mm-f14-dg-hsm-a-ref; lv / optiland-wave at cut sagittal, field 5.00e-1, frequencyPerMm 100 | mtf.maxAbs 7.96e-3 1; benchmark / nikkor-z50f12-photopic; lv / optiland-wave at cut tangential, field 1, frequencyPerMm 20 |
+| r6c | optiland-wave | 96 | 6336 | {"method":5874,"numerical":462} | mtf.maxAbs 7.41e-3 1; benchmark / nikon-z-24-70f4s-tele-photopic; lv / optiland-wave at cut sagittal, field 5.00e-1, frequencyPerMm 30 | mtf.maxAbs 7.96e-3 1; benchmark / nikkor-z50f12-photopic; lv / optiland-wave at cut tangential, field 1, frequencyPerMm 20 |
 
 ### r5: optiland
 
@@ -392,8 +392,8 @@ These are the states as the baselines name them, with their case hashes or coded
 | canon-ef-135-f2l-usm-photopic | 5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513 | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 650612fe98b240e91dec4edb5e47d115fdfce934fa09cbe9e89f8d388bd3440f | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f | yes |
-| sigma-35mm-f14-dg-hsm-a-ref | 998482d4e947545c167134a7dabe3f522863dc7d7a70aac77c25a969b4b4cb5e | yes |
-| sigma-35mm-f14-dg-hsm-a-photopic | c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae | no |
+| sigma-35mm-f14-dg-hsm-a-ref | 18ef72984fad20ad086ba18f8b839edb2d9d142a51397b4b7c1a3cdf1565d456 | yes |
+| sigma-35mm-f14-dg-hsm-a-photopic | 7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9 | no |
 | nikkor-z50f12-ref | 861a915ddd7dd32d774e7b798745bc1395913d8f13482022482c7d083e7acd22 | no |
 | nikkor-z50f12-photopic | 25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2 | no |
 | sony-fe-20mm-f18-g-ref | b67aae200c54706fe97387ca9c5db8e03eb6da1fc64ec823bc694939ccbe78c5 | no |
@@ -424,12 +424,12 @@ These are the states as the baselines name them, with their case hashes or coded
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic | 0a789bcb488ae70bd153a4390f164cf24647a72b9508108f7a6635b81735cd3a | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref | eb45ad15291d7f5e4556a8ab1655f8b325aa8433e5806470be1db9dbc663d1ae | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 8ed243d16650b84e33194bedae63bbe3b1baf12d708588a18f2ba2b3427735f7 | yes |
-| sigma-35mm-f14-dg-hsm-a-best-ref | b4a6f51c4fa23fafe13e4831599380720723bdf259d0a718ab99a9448fe12aaa | yes |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 0b3e9ccf74b09ec83e23522124fa0542fb27466441b4bddd5179ac95a29d268d | no |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 739496a530c13d6dc687e54df4e26ed81c7ad18ebfbfbd15cecdb6588bc9a26a | yes |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 431366dc2d1dbc2767592aecce4cce8c6e3ebe9ae457d488afd0ab39e901c0eb | yes |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | c043b8a737c3aa1ea98906f50cb49cfa2859223b634c2641a55a8410507da665 | yes |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 6cdcf10137f8cd397d51d00afe1f5cb89a6f997a542cea149d48c8f4a47e243c | yes |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 130981bdd7a4989b64f69069a4346f2004bccb5f4e41fddc1b856bcd792c7d4d | yes |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 2876a9d3614dc1293aa063abda65053216c2d0dbe8fda26b4e7335de9a935417 | no |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | ce80398ec92f83206f4b4190f455665210292985b2b13c0bdc728983ac8ef72a | yes |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 2576f1abc7847ff787cf741fc8afe2a29ae1d6639c6dad9f3497291f972ac074 | yes |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 53d98c230d539a2f9f241accb3d0f4ceaab1006e5601e8c391d9ccf38239f723 | yes |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 42379a5556180d78b6be5ba5e140298c72a186b55b8221749f0c91a6fdb8760a | yes |
 | nikkor-z50f12-best-ref | 13cd75d2e0891cf4ab4f2e8c006a7719cdd7721caa4dce11e1faa6ab1f70e8f5 | yes |
 | nikkor-z50f12-best-photopic | 6e335d456db27535278548bcc6d44f974db63b0f65ae8f9252f5ab3b2aaddc07 | yes |
 | nikkor-z50f12-f8-ref | b2e66abb6142cc758397469e55448599762d9712ba3d6cd768f8cea13b336b92 | yes |
@@ -532,14 +532,14 @@ These are the states as the baselines name them, with their case hashes or coded
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | f0f53b7a7c65c33fe10be69f5a2299f0490464845e77d681fb48f2bfcc10d3c6 | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 8cec235dbb1353ecce18595c4106e7ca14174f1935bfc6ac081648abec9e23c8 | yes |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | df390f5440cda651600b10cad6ef60995d73c6561661120e2d5b08cd319ad60c | yes |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | d697f32194b1ab48938fa6c330f96591bd77db9ac21e96e0c1ea8132c4c2ef3c | yes |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 5b202930c7dda4b6795a60ebd2fad6f263e1c5e83b405c450763a7eb502201be | yes |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | cf9ba22bb4b5f5bf556a3e643dbb2c6181e3e30f0c9926fc6500a9b95e649948 | yes |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 6520f64ae1c8802b4576f4ed4a716e119a6b2b0d14f972d490a2a35f44201181 | yes |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 40785d2e0c725183d5e2e44edc8b24972bc72b99c5c3d6e2c202d61530a13cb8 | yes |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | b27674ee8be7e06d18f990d3d541b8b636a5e100bf7d8db396bada22c5c0cb87 | yes |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 61ff3c8c2377dfd9a8075c75037b091e2d0a4da435126f81f12852a3f577b38c | yes |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | ab907beab4a0590cad0157f85742779e5a7a3b3747964c85eaba7e49b694d70d | yes |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 63c31b9a55e5f68d962ae0d5a47e737b4d5df1301a900eb50af363001d160a75 | yes |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | c9b987d8cd81567b544cd64729e4f6c2b7f93f2c06393c51cc5701af4a7de658 | yes |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 049584b5191a4fd43509da6d422906e44e14697e68119403dd03ccb064f8b1cb | yes |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3928f6f17f07300923ac73beef345737c68861bac0dd626b2bdc9a2e792aaf76 | yes |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 02b1e001699f7823e93b41eef21cfbf7c3a7090a93803ba41f9b46d97b1b68b2 | yes |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3c2e09fba7575f45c009c963bbcc55903b738a3f4c8471749c346993dfc9baa6 | yes |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 1409655514e43351da977a690ec1a2a38ed6ea92bb6e65758dbabe5775a6f5d7 | yes |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3bca4f688cc50138a13532313ab1d9904df3aee898807b4781ad77be191dbd07 | yes |
 | nikkor-z50f12-f5.6-ref | 93370aead6b9eb8def155ccf5f3a8780f977a3fda62560f1c44406cf3a1d7ceb | yes |
 | nikkor-z50f12-f5.6-photopic | 385c7c1d4e996fe30b06b3b3da60c5369b24e303e5504e9bf3a35a18c75b6116 | yes |
 | nikkor-z50f12-f5.6-best-ref | 40adc9d9360db7791e21a3b20e8c0c833654c32f19427a958dd20aced28d9ebf | yes |
@@ -647,7 +647,7 @@ These are the states as the baselines name them, with their case hashes or coded
 
 ### focus-stations
 
-- Declared: 69; configurations: 67; refused: 2
+- Declared: 74; configurations: 72; refused: 2
 
 | Named state | Case SHA-256 / refusal | Measured on R2/R3/R4/R6a for both LV/external pairs |
 |---|---|---|
@@ -663,9 +663,9 @@ These are the states as the baselines name them, with their case hashes or coded
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus1 | 8270906e01b3faca8ae4a642653a0f2f6bbf6c56f6ed124c25e85fe787091421 | no |
 | certified-olympus-mzuiko-digital-ed-45mm-f12-pro-zoom0-focus2 | e2778a011e81560e6271e675f6844482a66b7f3ad247d8746d3215ec4c08e3fe | no |
 | certified-olympus-zuiko-digital-ed-300mm-f28-zoom0-focus1 | 673095cfc1f5665f4aa891be77f7cdb2eeef2dd706ea2d7769ea0e15425e4eec | yes |
-| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom0-focus17 | b3794c6c5924cee466179682391e442c92d6fd70b1e0ab0b6ac97082d0b72852 | yes |
-| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom32-focus17 | 0659c248d82dbf06c5521831ad34250a06d1f1b22c927cf1597770b0b227815d | yes |
-| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom64-focus17 | f2ba46d7a8b2499a6bc7da15228827704f359e024db844b8fabb06c81d014ef9 | yes |
+| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom0-focus12 | b3794c6c5924cee466179682391e442c92d6fd70b1e0ab0b6ac97082d0b72852 | yes |
+| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom16-focus12 | 0659c248d82dbf06c5521831ad34250a06d1f1b22c927cf1597770b0b227815d | yes |
+| certified-olympus-zuiko-digital-ed-40-150mm-f4-56-zoom32-focus12 | f2ba46d7a8b2499a6bc7da15228827704f359e024db844b8fabb06c81d014ef9 | yes |
 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom0-focus1 | 874854625cf1dd589f47f331895c0b49532f902a20bbe796f268e2024ce7d9e3 | yes |
 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom16-focus1 | 99b6b35e6ae7faa9b94ac06d2c115bb160911667f256de438f8697ea9233b9cc | yes |
 | certified-olympus-zuiko-digital-ed-7-14mm-f4-zoom32-focus1 | 568f93341d119dcc2a9f1949c2dcfcc3d63f99dc26c391280a71e591244fa8d6 | no |
@@ -677,8 +677,8 @@ These are the states as the baselines name them, with their case hashes or coded
 | certified-panasonic-lumix-g-vario-12-60mm-f35-56-zoom2-focus1 | 53c5ca7e688cbf9f0983edcc98da88609e0868a5b88deef5ce559d2fa68766d5 | no |
 | certified-panasonic-lumix-s-26mm-f8-zoom0-focus1 | 26022f540fbb0f394a84fe1bf7ba0b7e2c0483ac80c4d239346b603aae238b22 | yes |
 | certified-pentax-fa-star-300mm-f45-ed-if-zoom0-focus10 | bb47082c2e9124e55765678231442de72d55ad3b834333c85b8837cf7f9ca5aa | yes |
-| certified-samyang-af-14mm-f28-ef-zoom0-focus1 | 1cf221df7808f788a07cd99f50581d1a29e85ab0147605229fcdb98755391574 | yes |
-| certified-samyang-af-14mm-f28-ef-zoom0-focus2 | 73f942b93db286a48d6488b9326160e626b44540779630c68107f2ccdecdcdbe | yes |
+| certified-samyang-af-14mm-f28-ef-zoom0-focus1 | f738c7fd1c6b1e0119057b5dce8dd097ac9e1e924d461103f9b9821fd323025c | yes |
+| certified-samyang-af-14mm-f28-ef-zoom0-focus2 | 26cb89d09f607ed33c3dd367d9c8c05290608b97283f3a53140ceda948b6726e | yes |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus1 | 77240b3249fc2f96cae82d1c5932f50dcef934088dc2120589ed64b46daa3b0f | yes |
 | certified-sigma-105mm-f28-dg-dn-macro-art-zoom0-focus2 | 02dd902ccabd7e9efddefd7cf52710bb38253debd4b731f861f8cc74e4fef217 | yes |
 | certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1 | 22f573c4dcca9f77d238821d35ca62ce41661714c27dafce162fe79e5c759f23 | no |
@@ -689,37 +689,42 @@ These are the states as the baselines name them, with their case hashes or coded
 | certified-sigma-18-35-f18-dc-hsm-art-zoom1-focus1 | e3c1b9c0842d88e4bb1ea57ece875089e1a6de335469b227438334a9f4a6016f | no |
 | certified-sigma-18-35-f18-dc-hsm-art-zoom2-focus1 | acd7822027052cc1952f100f7114f829f03335fe258f4f7cec4b41880210e964 | no |
 | certified-sigma-200mm-f2-dg-os-sports-zoom0-focus1 | 11e8a91c1e7e9666e6214e8dfa9a071aa95c30b044aa47782b4e7f85afc12bae | no |
+| certified-sigma-24mm-f14-dg-hsm-art-zoom0-focus64 | acd45c4d3d13b956da700f7ef03591b83ccd3e342545ada1ebe2d9d82af37a2a | no |
 | certified-sigma-24mm-f2-dg-dn-contemporary-zoom0-focus1 | b0be2f20e5b95353f9377fd656f14c691282d42c2e611dd69986cfcecb4b85e2 | yes |
 | certified-sigma-24mm-f35-dg-dn-zoom0-focus1 | 9aee102182725025ed61069c4cf367e7cebed4d547743098cb34574dfd66eaff | no |
 | certified-sigma-28mm-f14-dg-hsm-art-zoom0-focus1 | cf90a40810f02e10d4a3f936a8edef233b88ecbd3a6ee545eaf703df4560b90b | no |
 | certified-sigma-35mm-f12-dg-ii-art-zoom0-focus1 | 17d8f3a57a99e1785f48b4b99a93338c1fe926853d879f06d38255370f1d221a | yes |
 | certified-sigma-50mm-f12-dg-dn-art-zoom0-focus1 | 851b25697188fac9d7e726bebd0f012893d277d9551e858f7d1dca682ecd9736 | no |
+| certified-sigma-56mm-f14-dc-dn-contemporary-zoom0-focus64 | 0e48e496478c8c822adf0593b386dded544594b0ad9e8a52ee2df544dfd07851 | no |
 | certified-sigma-65mm-f2-dg-dn-zoom0-focus1 | 62d4f5600679b10f237e8aa57b30967f59bb7bfb16b5a7a4d351fb64dc84f4eb | yes |
 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom0-focus1 | 3a6c0b2f69addb626038c0990440dde5ddee0abfcb44a8e595df75e5589fe065 | yes |
 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom1-focus1 | 18b137c95a0dea4adf0bc6590a8f3de81c6d67565837d10fce7c60af1a18a2f3 | yes |
 | certified-sigma-70-200mm-f28-dg-dn-os-sports-zoom2-focus1 | b4a9bef13532c7161f7793a1ecf28c9cafd8b539699dd9d40995b0a468bb9631 | no |
-| certified-sigma-70-300mm-f4-56-dg-os-zoom0-focus9 | 4c007de74973def2a32965907541cdd909b081ff8036fef4dde69926c5498cfa | yes |
-| certified-sigma-70-300mm-f4-56-dg-os-zoom40-focus4 | 827ce23a9b1f784a4b5c4dd72bd345210bc4f7ae826b576e158c4b22bfb38ac4 | yes |
-| certified-sigma-70-300mm-f4-56-dg-os-zoom80-focus2 | 88fee4e84777e7181151c3b0a912d70efc6652ccbc666ad44e1fff00ce7865de | yes |
+| certified-sigma-70-300mm-f4-56-dg-os-zoom0-focus8 | 4c007de74973def2a32965907541cdd909b081ff8036fef4dde69926c5498cfa | yes |
+| certified-sigma-70-300mm-f4-56-dg-os-zoom20-focus4 | 827ce23a9b1f784a4b5c4dd72bd345210bc4f7ae826b576e158c4b22bfb38ac4 | yes |
+| certified-sigma-70-300mm-f4-56-dg-os-zoom40-focus2 | 88fee4e84777e7181151c3b0a912d70efc6652ccbc666ad44e1fff00ce7865de | yes |
+| certified-sigma-70mm-f28-dg-macro-art-zoom0-focus32 | bf2ae8d971feac5f443b981f14fa33957883b73d39ebc168f1c7cd0fcf0e46a5 | yes |
+| certified-sigma-70mm-f28-dg-macro-art-zoom0-focus64 | 803b931ecef50d7dda14551d145463bb9d9f1b1973a4337dfd22bbc794d6bc72 | yes |
 | certified-sigma-85mm-f12-dg-art-zoom0-focus1 | 10bff0b1d82d13878aac8613719bc9056478c7706a675c17b4e2cd8e7f9de763 | no |
 | certified-sigma-90mm-f28-dg-dn-contemporary-zoom0-focus1 | 22198c5be871fa98cbbb32e8975a4030730a7894a5e8eb7bfe84328a92f0e7bb | yes |
-| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | 412e617abaf928fcecb490c55b259bf98ca4e1182f4e19387b828932e214cf6e | yes |
-| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | 2e6f278dd2f1ec94b8db751221aa4ac992b55806dbb29b96094acb085c3b4e11 | yes |
-| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 61751a849d977beb5339e3ab0862718565f1ddf41ccb909140895b7cfe0037fd | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom0-focus4 | d3c8e53174c6be102245c0f585610a5113b69023d529bc4a8ef903ed7dab1b81 | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom20-focus4 | e3494e8829f8776277b876a310757be1c87ad3383f203625023abbde92f0401e | yes |
+| certified-sigma-apo-50-500mm-f45-63-dg-os-hsm-zoom64-focus4 | 84e21a2ef03892e1c5b23daa5313ab4e43886ee541e31976e7cc56e6e12a3a67 | yes |
 | certified-sigma-apo-macro-180mm-f56-uc-zoom0-focus1 | e66d7ce98eb7ba9e080cb5247736616f8a44ddb243f3336b537bdb9343b9346f | yes |
 | certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1 | 094c8ed68417c334bf55145670ea50e80da7c4d891f3c9928ad34c528dba5f5b | yes |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom0-focus8 | c4cafe389ff19f2b3ac144e21ca3a2ece14048ff1d29f1bb6524fe0babf56aab | yes |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom20-focus8 | 7cdedfe0afa1f9483af937f9046fbb2ab00c5bc46d01efdccf884970dcd7f325 | yes |
 | certified-sony-sal-70-300mm-f45-56-g-ssm-zoom40-focus8 | e29835a068866e0eb6f0b139d64a7097729dbf772bb0e5a01721d000d453e978 | yes |
-| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | a6a31446c8e77964319cfd9e664e1bc596c7dcf7d071707a5f2e609934b6492c | yes |
-| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom1-focus1 | 2d27265e6b0031b00246d0f1424a01e4261bcadbe57dbe32dd1a87eecbb79c04 | yes |
-| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom2-focus1 | 5eb9db0466b9fe7137222fdbd30b1101ea26c50826f0dada18c5fc30bda6983d | no |
-| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom0-focus1 | ca2990fbd67f5671e0311331ed51997faa7843d6507d351fe6e33adeb6e19ea7 | yes |
-| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom1-focus1 | 6fcf69c5570573dca2d419e83ee9a1671bd2ff98fac1e81bc881aa436a6a1995 | no |
-| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom2-focus1 | 9ff925fa82ee6749b885459fb3e46177f1b31d4f7db5abce230e8c6460a16a33 | no |
-| certified-tamron-f072-90mm-f28-di-iii-macro-vxd-zoom0-focus1 | 32256a3f62cfc695eeda0d0a9a8d2fedd4bfc7a90553caf2fe35d12c853e02d8 | no |
-| certified-thypoch-ksana-21mm-f35-zoom0-focus1 | 22234d65f21f2d91cbc3daa3c10f0584e73c9750c4ac1485b555741ea544d96f | no |
+| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1 | e9ad1a503946236f045733f560103e3933bd81639f95378052623200c2cfcc6b | yes |
+| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom1-focus1 | 994c354dbc1f23b34155f96356c86d66c874b96fc93a767ae4b11094eb343fc3 | yes |
+| certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom2-focus1 | 20423bc3d2cf0c94f92962d1a19b5c88df68a1182f58d8c4698435db7afac44a | no |
+| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom0-focus1 | cf5bfc19bb19d9416ec8d7cb6d06d35602e9e22a6555ab611425d7cab311ca16 | yes |
+| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom1-focus1 | 25da8f06a8d3bdf2628ebb6d3ca7332233ad2a86a1f534cd812ccffcca269b8c | no |
+| certified-tamron-a065-70-180mm-f28-di-iii-vc-vxd-g2-zoom2-focus1 | ccbca3c4799d7e3c75230c6a96457fd805507f1aeb1485390433f3b99e2be175 | no |
+| certified-tamron-f072-90mm-f28-di-iii-macro-vxd-zoom0-focus1 | 4556b24f2345c91fef9e2df87e3544a6fc6a852e9a89c849d0fb11af035c1b97 | no |
+| certified-thypoch-ksana-21mm-f35-zoom0-focus1 | f8e388d76b003371215471c21196c27490b0cbf74082366abf7113a8667555cb | no |
 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | ae188d3eb305c52019797e5d4b2b534ffaa03c876c648707567624a3b8f9a0fe | no |
+| certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1 | f3b6869f0d15a83f79189993426a2d5fa8dfaeb48872cb8b441be70b99fb23a4 | no |
 
 ## Not covered
 
@@ -745,11 +750,11 @@ These are the states as the baselines name them, with their case hashes or coded
 
 ## Sources
 
-- baselines/benchmark.json: 1959dbedb724189ce0470a8bcef61b2c494acd11a77df1ce9869d38fe788481f
-- baselines/benchmark.mtf.json: 1fc8cc6959bbd0dfe6da5ffb9d023822ed61426426fa00a69d995a7cf69ef739
-- baselines/features.json: 88137cefd70ceeb9744bb25182038ef40e860fa1fe57969dc0cf6b164b00cd54
-- baselines/features.mtf.json: 3e9f22e63d5227d837837e6feab8135fd239da477864f3c9f355239e30bbdd04
-- baselines/states.json: 6272a953ebfbc81093b8fd57da25658c7f311d68e66a96d41365d5b00e8f10ec
-- baselines/states.mtf.json: 4b79f1d6d2409e512d7ded22cdd57173e1890b732108ed2083722dd2ea87b5eb
-- baselines/focus-stations.json: 5be19925fc6e4ee594e85a708155060a6d6a274217783dc65be7d61e75be4106
-- baselines/focus-stations.mtf.json: 4d67c4c3607c3d179015fcd867942ce818bf525f6627a7bec4d91c730f00a37d
+- baselines/benchmark.json: bc182fb3c2ab3c443fa0366454be22a7a71f26c4947db9fea03403ab531f953c
+- baselines/benchmark.mtf.json: ba1d7bce897c1aee77138ee29b41b86acccd490d254e539b25544fdfaf524793
+- baselines/features.json: 6987e577bb2070d3e60c5c470b2d77897f5f32f2330cf5aa055394761d77049b
+- baselines/features.mtf.json: 4f3865164b85849e141ca33c7b46dc3a21eff2f2c4280fc7fd575ae27fd9b3d2
+- baselines/states.json: 6d853f0406b97ce2b048226299f31260d77617cf27d2b84acf1456d139135ac4
+- baselines/states.mtf.json: c8dc92051eba7902f3ab6aa9d5fe49bfae81739a054f236baba7c5633c757f63
+- baselines/focus-stations.json: a28dc965cfc1b3a776f38376c110c351eaf3ef2c1bb8143862c0ac70a08be138
+- baselines/focus-stations.mtf.json: d9842b43ece7463b52c0b80e454c762f4f8131c79d5f640cf3ab13f617063257

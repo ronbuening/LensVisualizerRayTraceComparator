@@ -6386,3 +6386,90 @@ was added or lost, and nothing of the fake tree moved.
   `afad9cb8`, `replay` `55ff9ba8` to `99024448`, `wave` `6dc6228e` to `956fcaf5`, `flux` `2be7227c` to `973a4173`).
   `ref` (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` did not move. No baseline was written
   or checked: the refresh is the owner's.
+
+## The Phase 7 end refresh
+
+The owner decided that the baselines are refreshed once, at the end of Phase 7. Three things made all ten
+baselines other than the catalog's STALE before it:
+- the LensVisualizer adoptions `55ddfb1e1`, `290c6dd85` and `25f65d4b4`, which moved the fingerprint (`fc5ae923` to
+  `4669921b`) and the adapter revisions of `lv` (`d950739f` to `afad9cb8`), `replay` (`7b9996fd` to `99024448`),
+  `wave` (`56bd2816` to `956fcaf5`) and `flux`, and moved some cases;
+- Phase 7, whose kit and `src/core/config.ts` moved the adapter revisions of `optiland` (`846c50e3` to `98f36151`)
+  and `optiland-wave` (`7d3a5ee7` to `f6e596a0`); optiland's fingerprint (`bcfbf391`) did not move;
+- Phase 8, which moved no engine.
+
+`ref`'s fingerprint and adapter revision did not move, and the policy is still version 24. No gate, band or floor
+moved. The recipe is the one in "The Phase 6 end refresh". Each suite was run, compared and checked (`baseline check
+<suite> [--mtf]`), and its baseline was written straight after its own check:
+- the rays baselines with `--jobs 4`: benchmark, features and states with `r0,r1,r2,r3,r4,r7a,r8a,r9a,r10a,r11a`;
+  diffractive with `r0,r1,r2,r3,r7a,r8a,r9a,r10a,r11a`; folded with `r0,r1,r2,r3`; focus-stations with
+  `r0,r1,r2,r3,r4`;
+- the MTF baselines: features, states and focus-stations with `r4,r4f,r6a` and `--jobs 4`; benchmark with
+  `r4,r4f,r5,r5g,r6a,r6b,r6c`, its run and check with `--jobs 2` (R6c's memory estimate);
+- then `statement`, `matrix` and `verify`.
+
+`lvrtc run` exits 1 for a run the source refused that is not `finite-conjugate-unavailable`. Diffractive's
+`reference-folded-diffractive-plate` and folded's eight refused states are such runs. Each was already recorded as a
+coded run problem, and no job of either suite was an error.
+
+**Done, 2026-11-05**, at LensVisualizer `25f65d4b4` (engine closure `4669921b`, 184 files), optiland `4e893f53`,
+policy 24. It ran on the real store, through a private clone of LensVisualizer (`LVRTC_LV_PATH`), as at the Phase 6 end.
+
+- **The checks, against the Phase 6 end baselines:**
+  - No record was DRIFT. Every record of `lv`, `replay`, `wave`, `optiland` and `optiland-wave` was stale by engine,
+    and every one of them was REFRESHABLE, apart from two MOVED records and the NEW and GONE runs below.
+  - These records were also stale by case, and REFRESHABLE:
+    - the Sigma 35 mm's runs in benchmark and states (#943's authored rims);
+    - five diffractive runs, the Canon EF 400 mm DO, both ends of the Canon EF 70-300 mm DO and the Nikon 300 mm and
+      500 mm PF. Their lens files were reviewed in `55ddfb1e1` (#945, #943). Exported from a `git archive` of
+      `6287f4393`, each case is the same but for the clear radii of two to four surfaces;
+    - 13 focus stations: the Thypoch Ksana 21 mm's (#954's re-solved focus gap), and the 12 cases that, with the
+      Sigma 35 mm's four reference runs, are the "16 of the 119 cases" that moved at `55ddfb1e1` (the Samyang AF
+      14 mm's two stations, the Sigma APO 50-500 mm's three, the Tamron 35-150 mm's three, the Tamron 70-180 mm's
+      three and the Tamron 90 mm's one).
+  - Focus-stations has 74 runs (69 before).
+    - GONE: the six stations #954 renamed, of the Olympus 40-150 mm and the Sigma 70-300 mm. Their renamed runs are
+      NEW, with the same case ids.
+    - Also NEW: the Voigtländer Macro APO-Ultron 35 mm's station (#950) and four stations added at `55ddfb1e1`: the
+      Sigma 24 mm f/1.4's and Sigma 56 mm's `focus64`, and the Sigma 70 mm Macro's `focus32` and `focus64`.
+  - The two MOVED records are R5g's `lv`–optiland and optiland–`replay` pairs on
+    `sigma-35mm-f14-dg-hsm-a-best-photopic`. On the new case they went from ATTENTION to RECORDED.
+  - On the runs whose case did not move, four records changed a figure, each by units in the last place:
+    - features' `rear-plate-rim-photopic`, R9a `lv`–optiland: lateral colour 8.2e-14 to 9.6e-14 mm;
+    - the Nikon Z 800 mm's R9a, in all three pairs: landings and exit pupils, by at most 5.4e-14 mm in the landing.
+      `optiland`–`ref` moved too, so the chief rays LensVisualizer solves for the set moved, not one engine's trace.
+
+    Every other record of an unchanged case holds the same figures, in every rays and MTF baseline.
+- **The writes:**
+
+  | Baseline | Runs | Records | Comparison |
+  |---|---:|---:|---|
+  | benchmark rays | 96 | 2,880 | 34,800 PASS |
+  | features rays | 18 | 540 | 6,525 PASS |
+  | states rays | 128 | 3,840 | 46,400 PASS |
+  | diffractive | 9 | 192 | 976 PASS, 24 UNSUPPORTED |
+  | folded | 16 | 96 | 153 PASS, 87 UNSUPPORTED |
+  | focus-stations rays | 74 | 1,080 | 3,810 PASS |
+  | features MTF | 18 | 126 | 576 PASS |
+  | states MTF | 128 | 896 | 4,096 PASS |
+  | focus-stations MTF | 74 | 504 | 2,204 PASS |
+  | benchmark MTF | 96 | 1,920 | 3,072 PASS, 2,484 RECORDED, 156 ATTENTION, 336 UNSUPPORTED |
+
+  No FAIL, FLOOR or ERROR anywhere. Then `statement`, `matrix` and `verify` ran: 12 baselines, 0 problems.
+- **The validation statement:**
+  - The signed sentence's words are unchanged. It covers 276 configurations, up from 274. The gated rungs R0 to R4,
+    R4f and R6a cover 314 configurations, up from 309: the five focus stations above. The six renamed stations have
+    their old cases.
+  - The worst figures are unchanged: landing 1.2e-12 mm, optical path 3.5e-9 waves, geometric MTF 1.5e-11, wave MTF
+    1.1e-9.
+  - LensVisualizer's diffraction MTF against optiland's FFT: up to 0.49, unchanged.
+  - LensVisualizer's diffraction MTF against the comparator's OTF of optiland's own wavefront: up to 0.0074, down from
+    0.0081. The 0.0081 was the Sigma 35 mm's old case. The worst is now the Z 24-70 mm's tele end, photopic, half
+    field, 30 cycles/mm.
+  - R5g: 844 RECORDED and 20 ATTENTION, from 842 and 22. R5, R6b and R6c are unchanged in their counts.
+- **The validation matrix** moved only its identities and R5g's counts.
+- **Wall time:**
+  - From the first run (11:20) to `verify` (13:05): about 1 hour 45 minutes.
+  - The benchmark MTF run at `--jobs 2`: 63 minutes, recomputing `lv`, `replay`, `wave`, optiland and
+    `optiland-wave`. Its check, on the warm store: 4 minutes.
+  - Each rays suite: at most 10 minutes for its run, compare, check and write.

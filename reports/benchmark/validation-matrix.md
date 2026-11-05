@@ -10,21 +10,21 @@ This matrix is rendered from the benchmark's two baselines alone, with no engine
 | Suite hash | ca12c885c2454c3cb1a8d0c54d51128a20c4919c2ceb84c3d03a7404cceb75fa |
 | Policy | rungs v24 |
 | Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
-| LensVisualizer commit | 6287f4393ffbc2fd951c7d61f9bc6a024e30591f |
+| LensVisualizer commit | 25f65d4b4213a21392cbae92680134906049b2ad |
 | LensVisualizer dirty | false |
-| LensVisualizer engine closure | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 |
+| LensVisualizer engine closure | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b |
 | LensVisualizer engine files | 184 |
 | Declared runs | 96 |
 | Configurations | 96 |
 
 | Engine | Version | Fingerprint | Adapter revision |
 |---|---|---|---|
-| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 |
-| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 7d3a5ee7f261a8ae691a0ebf8262e4d58dad54ac8287c3b33dbe94e9a6233d62 |
+| lv | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb |
+| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | f6e596a0a856e4c27449919d31e73b446c909add6809cbfdfbdf8ae6718b818f |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 |
-| replay | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 7b9996fda36eb76f315491268b845e0dae54d65660bbb0d03e4289f80e497f05 |
-| wave | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 56bd2816660c9ae5a9432632f10739f3503302bf65a5215c2d9d1381260b3ad3 |
+| replay | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 |
+| wave | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 956fcaf5a64e0a0873c6514edd117b9d5002f92623e4f05f6c06faa409926182 |
 
 ## Rows
 
@@ -84,7 +84,7 @@ LensVisualizer's MTF tab: the comparator's geometric and wave MTF of LensVisuali
 | Rung | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not ok | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
 | r5 | LV diffraction MTF beside optiland FFT and the LV-ray wave estimate | mtf.native | lv, optiland, wave | 96 | 288 | 288 | 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED | 161 RECORDED, 31 ATTENTION, 96 UNSUPPORTED | optiland: 48 ok, 48 unsupported | baselines/benchmark.mtf.json |
-| r5g | Geometric MTF on each method's own pupil sampling | mtf.native | lv, optiland, replay | 96 | 288 | 864 | 842 RECORDED, 22 ATTENTION | 266 RECORDED, 22 ATTENTION | every engine ok | baselines/benchmark.mtf.json |
+| r5g | Geometric MTF on each method's own pupil sampling | mtf.native | lv, optiland, replay | 96 | 288 | 864 | 844 RECORDED, 20 ATTENTION | 268 RECORDED, 20 ATTENTION | every engine ok | baselines/benchmark.mtf.json |
 | r6b | LV sheared diffraction MTF beside comparator wave OTF on LV rays | mtf.native | lv, wave | 96 | 96 | 96 | 95 RECORDED, 1 ATTENTION | 95 RECORDED, 1 ATTENTION | every engine ok | baselines/benchmark.mtf.json |
 | r6c | LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts | mtf.native | lv, optiland, optiland-wave, wave | 96 | 576 | 576 | 381 RECORDED, 51 ATTENTION, 144 UNSUPPORTED | 381 RECORDED, 51 ATTENTION, 144 UNSUPPORTED | optiland: 48 ok, 48 unsupported | baselines/benchmark.mtf.json |
 
@@ -284,5 +284,5 @@ Beyond each row's own items, the fixed block that every MTF report ends with say
 
 ## Sources
 
-- baselines/benchmark.json: 1959dbedb724189ce0470a8bcef61b2c494acd11a77df1ce9869d38fe788481f
-- baselines/benchmark.mtf.json: 1fc8cc6959bbd0dfe6da5ffb9d023822ed61426426fa00a69d995a7cf69ef739
+- baselines/benchmark.json: bc182fb3c2ab3c443fa0366454be22a7a71f26c4947db9fea03403ab531f953c
+- baselines/benchmark.mtf.json: ba1d7bce897c1aee77138ee29b41b86acccd490d254e539b25544fdfaf524793

@@ -17,17 +17,17 @@ still those, and what moved.
 |---|---|
 | Suite | states |
 | Suite hash | b45f25ba129d4c0d95ab44ec5084eca68742a36a55828fcdc3a08ae932ed45f2 |
-| Baseline hash | 4b79f1d6d2409e512d7ded22cdd57173e1890b732108ed2083722dd2ea87b5eb |
+| Baseline hash | c8dc92051eba7902f3ab6aa9d5fe49bfae81739a054f236baba7c5633c757f63 |
 | Contract version | 1.1 |
 | Policy | rungs v24 |
 | Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| lv | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
-| replay | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 7b9996fda36eb76f315491268b845e0dae54d65660bbb0d03e4289f80e497f05 | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
+| replay | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
 
 | Run | Case |
 |---|---|
@@ -47,14 +47,14 @@ still those, and what moved.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | f0f53b7a7c65c33fe10be69f5a2299f0490464845e77d681fb48f2bfcc10d3c6 |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 8cec235dbb1353ecce18595c4106e7ca14174f1935bfc6ac081648abec9e23c8 |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | df390f5440cda651600b10cad6ef60995d73c6561661120e2d5b08cd319ad60c |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | d697f32194b1ab48938fa6c330f96591bd77db9ac21e96e0c1ea8132c4c2ef3c |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 5b202930c7dda4b6795a60ebd2fad6f263e1c5e83b405c450763a7eb502201be |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | cf9ba22bb4b5f5bf556a3e643dbb2c6181e3e30f0c9926fc6500a9b95e649948 |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 6520f64ae1c8802b4576f4ed4a716e119a6b2b0d14f972d490a2a35f44201181 |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 40785d2e0c725183d5e2e44edc8b24972bc72b99c5c3d6e2c202d61530a13cb8 |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | b27674ee8be7e06d18f990d3d541b8b636a5e100bf7d8db396bada22c5c0cb87 |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 61ff3c8c2377dfd9a8075c75037b091e2d0a4da435126f81f12852a3f577b38c |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | ab907beab4a0590cad0157f85742779e5a7a3b3747964c85eaba7e49b694d70d |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 63c31b9a55e5f68d962ae0d5a47e737b4d5df1301a900eb50af363001d160a75 |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | c9b987d8cd81567b544cd64729e4f6c2b7f93f2c06393c51cc5701af4a7de658 |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 049584b5191a4fd43509da6d422906e44e14697e68119403dd03ccb064f8b1cb |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3928f6f17f07300923ac73beef345737c68861bac0dd626b2bdc9a2e792aaf76 |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 02b1e001699f7823e93b41eef21cfbf7c3a7090a93803ba41f9b46d97b1b68b2 |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3c2e09fba7575f45c009c963bbcc55903b738a3f4c8471749c346993dfc9baa6 |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 1409655514e43351da977a690ec1a2a38ed6ea92bb6e65758dbabe5775a6f5d7 |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3bca4f688cc50138a13532313ab1d9904df3aee898807b4781ad77be191dbd07 |
 | nikkor-z50f12-f5.6-ref | 93370aead6b9eb8def155ccf5f3a8780f977a3fda62560f1c44406cf3a1d7ceb |
 | nikkor-z50f12-f5.6-photopic | 385c7c1d4e996fe30b06b3b3da60c5369b24e303e5504e9bf3a35a18c75b6116 |
 | nikkor-z50f12-f5.6-best-ref | 40adc9d9360db7791e21a3b20e8c0c833654c32f19427a958dd20aced28d9ebf |
@@ -195,15 +195,15 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
 | lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 1.10e-11 | 384 of 384 | sigma-45mm-f28-dg-dn-contemporary-f5.6-best-ref | cut tangential, field 2.56e1, frequencyPerMm 100 |
-| lv – optiland | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
+| lv – optiland | rays.compared [rays] | 1153868 | 384 of 384 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
 | lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.48e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 92 |
-| lv – ref | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
+| lv – ref | rays.compared [rays] | 1153868 | 384 of 384 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
 | optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 1.43e-11 | 384 of 384 | nikon-z-24-70f4s-f5.6-best-ref-tele | cut tangential, field 1.66e1, frequencyPerMm 94 |
-| optiland – ref | rays.compared [rays] | 1144936 | 384 of 384 | — | — |
+| optiland – ref | rays.compared [rays] | 1153868 | 384 of 384 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
 
@@ -227,14 +227,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: mtf.maxAbs 4.14e-13 (3 of 3) | PASS: mtf.maxAbs 2.90e-13 (3 of 3) | PASS: mtf.maxAbs 4.97e-13 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: mtf.maxAbs 2.62e-13 (3 of 3) | PASS: mtf.maxAbs 3.09e-13 (3 of 3) | PASS: mtf.maxAbs 5.57e-13 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: mtf.maxAbs 3.40e-13 (3 of 3) | PASS: mtf.maxAbs 3.08e-13 (3 of 3) | PASS: mtf.maxAbs 5.17e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: mtf.maxAbs 6.39e-13 (3 of 3) | PASS: mtf.maxAbs 6.52e-12 (3 of 3) | PASS: mtf.maxAbs 7.16e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: mtf.maxAbs 2.56e-13 (3 of 3) | PASS: mtf.maxAbs 1.18e-12 (3 of 3) | PASS: mtf.maxAbs 1.03e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: mtf.maxAbs 6.46e-13 (3 of 3) | PASS: mtf.maxAbs 6.32e-12 (3 of 3) | PASS: mtf.maxAbs 6.96e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.95e-13 (3 of 3) | PASS: mtf.maxAbs 2.90e-12 (3 of 3) | PASS: mtf.maxAbs 2.80e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: mtf.maxAbs 4.80e-13 (3 of 3) | PASS: mtf.maxAbs 1.20e-12 (3 of 3) | PASS: mtf.maxAbs 7.23e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: mtf.maxAbs 2.59e-13 (3 of 3) | PASS: mtf.maxAbs 4.15e-13 (3 of 3) | PASS: mtf.maxAbs 5.27e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: mtf.maxAbs 4.43e-13 (3 of 3) | PASS: mtf.maxAbs 1.15e-12 (3 of 3) | PASS: mtf.maxAbs 7.11e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: mtf.maxAbs 2.56e-13 (3 of 3) | PASS: mtf.maxAbs 5.26e-13 (3 of 3) | PASS: mtf.maxAbs 7.59e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: mtf.maxAbs 4.36e-13 (3 of 3) | PASS: mtf.maxAbs 4.28e-12 (3 of 3) | PASS: mtf.maxAbs 4.29e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: mtf.maxAbs 2.07e-13 (3 of 3) | PASS: mtf.maxAbs 5.57e-13 (3 of 3) | PASS: mtf.maxAbs 6.73e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: mtf.maxAbs 4.23e-13 (3 of 3) | PASS: mtf.maxAbs 4.01e-12 (3 of 3) | PASS: mtf.maxAbs 4.14e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: mtf.maxAbs 2.97e-13 (3 of 3) | PASS: mtf.maxAbs 9.37e-13 (3 of 3) | PASS: mtf.maxAbs 1.23e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: mtf.maxAbs 1.55e-13 (3 of 3) | PASS: mtf.maxAbs 1.64e-12 (3 of 3) | PASS: mtf.maxAbs 1.72e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: mtf.maxAbs 1.58e-13 (3 of 3) | PASS: mtf.maxAbs 3.60e-13 (3 of 3) | PASS: mtf.maxAbs 2.21e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: mtf.maxAbs 1.57e-13 (3 of 3) | PASS: mtf.maxAbs 1.64e-12 (3 of 3) | PASS: mtf.maxAbs 1.63e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: mtf.maxAbs 1.85e-13 (3 of 3) | PASS: mtf.maxAbs 7.18e-13 (3 of 3) | PASS: mtf.maxAbs 5.33e-13 (3 of 3) |
 | nikkor-z50f12-f5.6-ref | 3 | PASS: mtf.maxAbs 3.12e-12 (3 of 3) | PASS: mtf.maxAbs 7.45e-12 (3 of 3) | PASS: mtf.maxAbs 7.39e-12 (3 of 3) |
 | nikkor-z50f12-f5.6-photopic | 3 | PASS: mtf.maxAbs 1.89e-12 (3 of 3) | PASS: mtf.maxAbs 5.89e-12 (3 of 3) | PASS: mtf.maxAbs 7.10e-12 (3 of 3) |
 | nikkor-z50f12-f5.6-best-ref | 3 | PASS: mtf.maxAbs 3.08e-12 (3 of 3) | PASS: mtf.maxAbs 7.34e-12 (3 of 3) | PASS: mtf.maxAbs 7.31e-12 (3 of 3) |
@@ -370,14 +370,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 1 | PASS: mtf.maxAbs 5.66e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.78e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 1 | PASS: mtf.maxAbs 5.77e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.55e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 1 | PASS: mtf.maxAbs 5.44e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 1 | PASS: mtf.maxAbs 3.22e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 1 | PASS: mtf.maxAbs 4.33e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 1 | PASS: mtf.maxAbs 2.89e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 1 | PASS: mtf.maxAbs 1.78e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 1 | PASS: mtf.maxAbs 4.44e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
 | nikkor-z50f12-f5.6-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
 | nikkor-z50f12-f5.6-photopic | 1 | PASS: mtf.maxAbs 2.22e-15 (1 of 1) |
 | nikkor-z50f12-f5.6-best-ref | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
@@ -489,30 +489,30 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
-| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 2.46e-10 | 362 of 384 | nikkor-z50f12-f5.6-photopic | cut sagittal, field 1.19e1, frequencyPerMm 100 |
+| lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 2.46e-10 | 368 of 384 | nikkor-z50f12-f5.6-photopic | cut sagittal, field 1.19e1, frequencyPerMm 100 |
 | lv – optiland | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
 | lv – optiland | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
 | lv – optiland | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
-| lv – optiland | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
+| lv – optiland | rays.compared [rays] | 4612748 | 384 of 384 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – optiland | waveMtf.flagged | 1.18e-10 | 22 of 384 | nikon-z-24-70f4s-open-photopic-wide | cut tangential, field 4.33e1, frequencyPerMm 10 |
-| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.08e-9 | 362 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| lv – optiland | waveMtf.flagged | 1.18e-10 | 16 of 384 | nikon-z-24-70f4s-open-photopic-wide | cut tangential, field 4.33e1, frequencyPerMm 10 |
+| lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.08e-9 | 368 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
 | lv – ref | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
 | lv – ref | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
 | lv – ref | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
-| lv – ref | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
+| lv – ref | rays.compared [rays] | 4612748 | 384 of 384 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| lv – ref | waveMtf.flagged | 1.17e-9 | 22 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
-| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.05e-9 | 362 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| lv – ref | waveMtf.flagged | 1.17e-9 | 16 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.05e-9 | 368 of 384 | nikon-z-24-70f4s-f5.6-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
 | optiland – ref | phaseStep.waves [waves] | 4.07e-1 | 384 of 384 | nikon-z-24-70f4s-open-photopic-tele | field 1.66e1, line 1, ray 2368 |
 | optiland – ref | convergence.maxAbs | 1.68e-2 | 384 of 384 | nikon-z-24-70f4s-open-ref-tele | cut sagittal, field 1.66e1, frequencyPerMm 70 |
 | optiland – ref | lattice.columns [cells] | 64 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-ref | — |
-| optiland – ref | rays.compared [rays] | 4577224 | 384 of 384 | — | — |
+| optiland – ref | rays.compared [rays] | 4612748 | 384 of 384 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 384 of 384 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 384 of 384 | canon-ef-135-f2l-usm-f5.6-photopic | — |
-| optiland – ref | waveMtf.flagged | 1.16e-9 | 22 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
+| optiland – ref | waveMtf.flagged | 1.16e-9 | 16 of 384 | nikon-z-24-70f4s-open-best-ref-wide | cut tangential, field 4.33e1, frequencyPerMm 50 |
 
 By run, each pair with its verdict and the judged metric that is largest against its tolerance, with the number of the run's requests it was measured in:
 
@@ -534,14 +534,14 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.32e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.57e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-12 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-ref | 3 | PASS: waveMtf.maxAbs 5.92e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.89e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.79e-12 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 3.38e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.70e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.85e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: waveMtf.maxAbs 9.93e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.51e-11 (2 of 3) | PASS: waveMtf.maxAbs 7.35e-11 (2 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 7.37e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.19e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 9.57e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.99e-11 (2 of 3) | PASS: waveMtf.maxAbs 7.96e-11 (2 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 5.03e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.02e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.71e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: waveMtf.maxAbs 4.68e-12 (2 of 3) | PASS: waveMtf.maxAbs 2.15e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.10e-12 (2 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: waveMtf.maxAbs 4.49e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.65e-12 (2 of 3) | PASS: waveMtf.maxAbs 4.32e-12 (2 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: waveMtf.maxAbs 5.28e-12 (2 of 3) | PASS: waveMtf.maxAbs 1.79e-12 (2 of 3) | PASS: waveMtf.maxAbs 6.92e-12 (2 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.13e-12 (2 of 3) | PASS: waveMtf.maxAbs 5.13e-12 (2 of 3) | PASS: waveMtf.maxAbs 3.57e-12 (2 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-ref | 3 | PASS: waveMtf.maxAbs 8.40e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.30e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.38e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 6.56e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.19e-10 (3 of 3) | PASS: waveMtf.maxAbs 1.21e-10 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 9.30e-12 (3 of 3) | PASS: waveMtf.maxAbs 9.09e-11 (3 of 3) | PASS: waveMtf.maxAbs 8.86e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f5.6-best-photopic | 3 | PASS: waveMtf.maxAbs 4.73e-12 (3 of 3) | PASS: waveMtf.maxAbs 8.26e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.95e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-ref | 3 | PASS: waveMtf.maxAbs 3.83e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.53e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.44e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-photopic | 3 | PASS: waveMtf.maxAbs 2.42e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.04e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.16e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-ref | 3 | PASS: waveMtf.maxAbs 4.16e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.76e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.56e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f11-best-photopic | 3 | PASS: waveMtf.maxAbs 2.06e-12 (3 of 3) | PASS: waveMtf.maxAbs 1.60e-11 (3 of 3) | PASS: waveMtf.maxAbs 1.68e-11 (3 of 3) |
 | nikkor-z50f12-f5.6-ref | 3 | PASS: waveMtf.maxAbs 2.11e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.55e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.27e-10 (3 of 3) |
 | nikkor-z50f12-f5.6-photopic | 3 | PASS: waveMtf.maxAbs 2.46e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.45e-10 (3 of 3) | PASS: waveMtf.maxAbs 3.03e-10 (3 of 3) |
 | nikkor-z50f12-f5.6-best-ref | 3 | PASS: waveMtf.maxAbs 2.02e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.46e-10 (3 of 3) | PASS: waveMtf.maxAbs 2.17e-10 (3 of 3) |

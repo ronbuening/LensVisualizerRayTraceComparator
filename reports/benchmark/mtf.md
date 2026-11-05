@@ -17,19 +17,19 @@ still those, and what moved.
 |---|---|
 | Suite | benchmark |
 | Suite hash | ca12c885c2454c3cb1a8d0c54d51128a20c4919c2ceb84c3d03a7404cceb75fa |
-| Baseline hash | 1fc8cc6959bbd0dfe6da5ffb9d023822ed61426426fa00a69d995a7cf69ef739 |
+| Baseline hash | ba1d7bce897c1aee77138ee29b41b86acccd490d254e539b25544fdfaf524793 |
 | Contract version | 1.1 |
 | Policy | rungs v24 |
 | Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
-| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 7d3a5ee7f261a8ae691a0ebf8262e4d58dad54ac8287c3b33dbe94e9a6233d62 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| lv | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| optiland-wave | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | f6e596a0a856e4c27449919d31e73b446c909add6809cbfdfbdf8ae6718b818f | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
-| replay | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 7b9996fda36eb76f315491268b845e0dae54d65660bbb0d03e4289f80e497f05 | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
-| wave | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | 56bd2816660c9ae5a9432632f10739f3503302bf65a5215c2d9d1381260b3ad3 | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
+| replay | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 99024448fdb11f7eb293d0e54cf8281dc5272c57c468beeb30d66bb53ecf3409 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
+| wave | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | 956fcaf5a64e0a0873c6514edd117b9d5002f92623e4f05f6c06faa409926182 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
 
 | Run | Case |
 |---|---|
@@ -37,8 +37,8 @@ still those, and what moved.
 | canon-ef-135-f2l-usm-photopic | 5a1e4774772748058756cfcb4d918aedab000c3e4857e484254fe6688c651513 |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 650612fe98b240e91dec4edb5e47d115fdfce934fa09cbe9e89f8d388bd3440f |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | b241011c9681597d858ca830bb42493ed5d2719b1aa8782269e0f54cde52c35f |
-| sigma-35mm-f14-dg-hsm-a-ref | 998482d4e947545c167134a7dabe3f522863dc7d7a70aac77c25a969b4b4cb5e |
-| sigma-35mm-f14-dg-hsm-a-photopic | c14175c93aaf26b52e4fc4beda725340d2a3ad3e16d0f5c089800fdb3fb965ae |
+| sigma-35mm-f14-dg-hsm-a-ref | 18ef72984fad20ad086ba18f8b839edb2d9d142a51397b4b7c1a3cdf1565d456 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 7ff423e8023923c0d2ce5797fab6e1acce05b4d12bfb3528765c4020ba4fd7c9 |
 | nikkor-z50f12-ref | 861a915ddd7dd32d774e7b798745bc1395913d8f13482022482c7d083e7acd22 |
 | nikkor-z50f12-photopic | 25e839a37b367ed1c9f7298f4e44f9fdb017645f73647e4f965832cb1d28ede2 |
 | sony-fe-20mm-f18-g-ref | b67aae200c54706fe97387ca9c5db8e03eb6da1fc64ec823bc694939ccbe78c5 |
@@ -69,12 +69,12 @@ still those, and what moved.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic | 0a789bcb488ae70bd153a4390f164cf24647a72b9508108f7a6635b81735cd3a |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref | eb45ad15291d7f5e4556a8ab1655f8b325aa8433e5806470be1db9dbc663d1ae |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 8ed243d16650b84e33194bedae63bbe3b1baf12d708588a18f2ba2b3427735f7 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | b4a6f51c4fa23fafe13e4831599380720723bdf259d0a718ab99a9448fe12aaa |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 0b3e9ccf74b09ec83e23522124fa0542fb27466441b4bddd5179ac95a29d268d |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 739496a530c13d6dc687e54df4e26ed81c7ad18ebfbfbd15cecdb6588bc9a26a |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 431366dc2d1dbc2767592aecce4cce8c6e3ebe9ae457d488afd0ab39e901c0eb |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | c043b8a737c3aa1ea98906f50cb49cfa2859223b634c2641a55a8410507da665 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 6cdcf10137f8cd397d51d00afe1f5cb89a6f997a542cea149d48c8f4a47e243c |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 130981bdd7a4989b64f69069a4346f2004bccb5f4e41fddc1b856bcd792c7d4d |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 2876a9d3614dc1293aa063abda65053216c2d0dbe8fda26b4e7335de9a935417 |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | ce80398ec92f83206f4b4190f455665210292985b2b13c0bdc728983ac8ef72a |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 2576f1abc7847ff787cf741fc8afe2a29ae1d6639c6dad9f3497291f972ac074 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 53d98c230d539a2f9f241accb3d0f4ceaab1006e5601e8c391d9ccf38239f723 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 42379a5556180d78b6be5ba5e140298c72a186b55b8221749f0c91a6fdb8760a |
 | nikkor-z50f12-best-ref | 13cd75d2e0891cf4ab4f2e8c006a7719cdd7721caa4dce11e1faa6ab1f70e8f5 |
 | nikkor-z50f12-best-photopic | 6e335d456db27535278548bcc6d44f974db63b0f65ae8f9252f5ab3b2aaddc07 |
 | nikkor-z50f12-f8-ref | b2e66abb6142cc758397469e55448599762d9712ba3d6cd768f8cea13b336b92 |
@@ -141,9 +141,9 @@ still those, and what moved.
 | r5 | mtf.native | 96 | 96 | lv – optiland | 30 RECORDED, 18 ATTENTION, 48 UNSUPPORTED | 30 RECORDED, 18 ATTENTION, 48 UNSUPPORTED |
 | r5 | mtf.native | 96 | 96 | lv – wave | 95 RECORDED, 1 ATTENTION | 95 RECORDED, 1 ATTENTION |
 | r5 | mtf.native | 96 | 96 | optiland – wave | 36 RECORDED, 12 ATTENTION, 48 UNSUPPORTED | 36 RECORDED, 12 ATTENTION, 48 UNSUPPORTED |
-| r5g | mtf.native | 96 | 288 | lv – optiland | 85 RECORDED, 11 ATTENTION | 277 RECORDED, 11 ATTENTION |
+| r5g | mtf.native | 96 | 288 | lv – optiland | 86 RECORDED, 10 ATTENTION | 278 RECORDED, 10 ATTENTION |
 | r5g | mtf.native | 96 | 288 | lv – replay | 96 RECORDED | 288 RECORDED |
-| r5g | mtf.native | 96 | 288 | optiland – replay | 85 RECORDED, 11 ATTENTION | 277 RECORDED, 11 ATTENTION |
+| r5g | mtf.native | 96 | 288 | optiland – replay | 86 RECORDED, 10 ATTENTION | 278 RECORDED, 10 ATTENTION |
 | r6a | rays.trace | 96 | 288 | lv – optiland | 96 PASS | 288 PASS |
 | r6a | rays.trace | 96 | 288 | lv – ref | 96 PASS | 288 PASS |
 | r6a | rays.trace | 96 | 288 | optiland – ref | 96 PASS | 288 PASS |
@@ -190,15 +190,15 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
 | lv – optiland | mtf.maxAbs (≤ 1.00e-7) | 1.07e-11 | 288 of 288 | sigma-45mm-f28-dg-dn-contemporary-ref | cut tangential, field 2.56e1, frequencyPerMm 86 |
-| lv – optiland | rays.compared [rays] | 803472 | 288 of 288 | — | — |
+| lv – optiland | rays.compared [rays] | 809500 | 288 of 288 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | lv – ref | mtf.maxAbs (≤ 1.00e-7) | 1.23e-11 | 288 of 288 | nikon-z-24-70f4s-tele-ref | cut tangential, field 1.66e1, frequencyPerMm 100 |
-| lv – ref | rays.compared [rays] | 803472 | 288 of 288 | — | — |
+| lv – ref | rays.compared [rays] | 809500 | 288 of 288 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | optiland – ref | mtf.maxAbs (≤ 1.00e-7) | 1.18e-11 | 288 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 1.66e1, frequencyPerMm 100 |
-| optiland – ref | rays.compared [rays] | 803472 | 288 of 288 | — | — |
+| optiland – ref | rays.compared [rays] | 809500 | 288 of 288 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 
@@ -210,8 +210,8 @@ By run, each pair with its verdict and the judged metric that is largest against
 | canon-ef-135-f2l-usm-photopic | 3 | PASS: mtf.maxAbs 1.40e-12 (3 of 3) | PASS: mtf.maxAbs 1.29e-12 (3 of 3) | PASS: mtf.maxAbs 8.69e-13 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 3 | PASS: mtf.maxAbs 2.22e-12 (3 of 3) | PASS: mtf.maxAbs 7.44e-13 (3 of 3) | PASS: mtf.maxAbs 1.62e-12 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 3 | PASS: mtf.maxAbs 5.96e-13 (3 of 3) | PASS: mtf.maxAbs 5.59e-13 (3 of 3) | PASS: mtf.maxAbs 1.04e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-ref | 3 | PASS: mtf.maxAbs 2.55e-12 (3 of 3) | PASS: mtf.maxAbs 5.51e-12 (3 of 3) | PASS: mtf.maxAbs 8.06e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-photopic | 3 | PASS: mtf.maxAbs 3.04e-12 (3 of 3) | PASS: mtf.maxAbs 2.37e-12 (3 of 3) | PASS: mtf.maxAbs 2.44e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-ref | 3 | PASS: mtf.maxAbs 3.54e-12 (3 of 3) | PASS: mtf.maxAbs 2.13e-12 (3 of 3) | PASS: mtf.maxAbs 4.24e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-photopic | 3 | PASS: mtf.maxAbs 1.76e-12 (3 of 3) | PASS: mtf.maxAbs 2.32e-12 (3 of 3) | PASS: mtf.maxAbs 2.34e-12 (3 of 3) |
 | nikkor-z50f12-ref | 3 | PASS: mtf.maxAbs 3.92e-12 (3 of 3) | PASS: mtf.maxAbs 2.54e-12 (3 of 3) | PASS: mtf.maxAbs 4.42e-12 (3 of 3) |
 | nikkor-z50f12-photopic | 3 | PASS: mtf.maxAbs 2.87e-12 (3 of 3) | PASS: mtf.maxAbs 5.24e-12 (3 of 3) | PASS: mtf.maxAbs 4.31e-12 (3 of 3) |
 | sony-fe-20mm-f18-g-ref | 3 | PASS: mtf.maxAbs 1.78e-12 (3 of 3) | PASS: mtf.maxAbs 4.39e-12 (3 of 3) | PASS: mtf.maxAbs 3.47e-12 (3 of 3) |
@@ -242,12 +242,12 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic | 3 | PASS: mtf.maxAbs 3.40e-13 (3 of 3) | PASS: mtf.maxAbs 2.87e-13 (3 of 3) | PASS: mtf.maxAbs 5.21e-13 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref | 3 | PASS: mtf.maxAbs 6.28e-13 (3 of 3) | PASS: mtf.maxAbs 3.77e-13 (3 of 3) | PASS: mtf.maxAbs 7.35e-13 (3 of 3) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 3 | PASS: mtf.maxAbs 3.31e-13 (3 of 3) | PASS: mtf.maxAbs 2.88e-13 (3 of 3) | PASS: mtf.maxAbs 6.15e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 3 | PASS: mtf.maxAbs 3.21e-12 (3 of 3) | PASS: mtf.maxAbs 5.55e-12 (3 of 3) | PASS: mtf.maxAbs 8.76e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 3 | PASS: mtf.maxAbs 2.80e-12 (3 of 3) | PASS: mtf.maxAbs 2.54e-12 (3 of 3) | PASS: mtf.maxAbs 2.87e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 3 | PASS: mtf.maxAbs 1.87e-12 (3 of 3) | PASS: mtf.maxAbs 3.90e-12 (3 of 3) | PASS: mtf.maxAbs 5.77e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 3 | PASS: mtf.maxAbs 3.69e-13 (3 of 3) | PASS: mtf.maxAbs 1.16e-12 (3 of 3) | PASS: mtf.maxAbs 9.69e-13 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 3 | PASS: mtf.maxAbs 1.80e-12 (3 of 3) | PASS: mtf.maxAbs 3.80e-12 (3 of 3) | PASS: mtf.maxAbs 5.60e-12 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 3 | PASS: mtf.maxAbs 4.22e-13 (3 of 3) | PASS: mtf.maxAbs 1.85e-12 (3 of 3) | PASS: mtf.maxAbs 1.62e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 3 | PASS: mtf.maxAbs 3.77e-12 (3 of 3) | PASS: mtf.maxAbs 2.38e-12 (3 of 3) | PASS: mtf.maxAbs 4.66e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 3 | PASS: mtf.maxAbs 2.31e-12 (3 of 3) | PASS: mtf.maxAbs 2.68e-12 (3 of 3) | PASS: mtf.maxAbs 3.05e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 3 | PASS: mtf.maxAbs 2.53e-13 (3 of 3) | PASS: mtf.maxAbs 3.09e-12 (3 of 3) | PASS: mtf.maxAbs 3.34e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 3 | PASS: mtf.maxAbs 2.04e-13 (3 of 3) | PASS: mtf.maxAbs 3.98e-13 (3 of 3) | PASS: mtf.maxAbs 3.52e-13 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 3 | PASS: mtf.maxAbs 2.30e-13 (3 of 3) | PASS: mtf.maxAbs 3.03e-12 (3 of 3) | PASS: mtf.maxAbs 3.26e-12 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 3 | PASS: mtf.maxAbs 2.17e-13 (3 of 3) | PASS: mtf.maxAbs 9.49e-13 (3 of 3) | PASS: mtf.maxAbs 1.06e-12 (3 of 3) |
 | nikkor-z50f12-best-ref | 3 | PASS: mtf.maxAbs 6.22e-12 (3 of 3) | PASS: mtf.maxAbs 5.64e-12 (3 of 3) | PASS: mtf.maxAbs 6.97e-12 (3 of 3) |
 | nikkor-z50f12-best-photopic | 3 | PASS: mtf.maxAbs 2.40e-12 (3 of 3) | PASS: mtf.maxAbs 3.56e-12 (3 of 3) | PASS: mtf.maxAbs 3.95e-12 (3 of 3) |
 | nikkor-z50f12-f8-ref | 3 | PASS: mtf.maxAbs 1.62e-12 (3 of 3) | PASS: mtf.maxAbs 7.07e-13 (3 of 3) | PASS: mtf.maxAbs 1.56e-12 (3 of 3) |
@@ -321,8 +321,8 @@ By run, each pair with its verdict and the judged metric that is largest against
 | canon-ef-135-f2l-usm-photopic | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 1 | PASS: mtf.maxAbs 1.30e-14 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 1 | PASS: mtf.maxAbs 3.77e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | PASS: mtf.maxAbs 6.44e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-photopic | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | PASS: mtf.maxAbs 1.30e-14 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-photopic | 1 | PASS: mtf.maxAbs 4.77e-15 (1 of 1) |
 | nikkor-z50f12-ref | 1 | PASS: mtf.maxAbs 8.33e-15 (1 of 1) |
 | nikkor-z50f12-photopic | 1 | PASS: mtf.maxAbs 2.78e-15 (1 of 1) |
 | sony-fe-20mm-f18-g-ref | 1 | PASS: mtf.maxAbs 1.07e-14 (1 of 1) |
@@ -353,11 +353,11 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-photopic | 1 | PASS: mtf.maxAbs 2.55e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | PASS: mtf.maxAbs 5.33e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | PASS: mtf.maxAbs 3.55e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | PASS: mtf.maxAbs 3.33e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | PASS: mtf.maxAbs 1.89e-15 (1 of 1) |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | PASS: mtf.maxAbs 3.11e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | PASS: mtf.maxAbs 9.55e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | PASS: mtf.maxAbs 3.66e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | PASS: mtf.maxAbs 1.67e-15 (1 of 1) |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | PASS: mtf.maxAbs 3.00e-15 (1 of 1) |
 | sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 1 | PASS: mtf.maxAbs 2.00e-15 (1 of 1) |
 | nikkor-z50f12-best-ref | 1 | PASS: mtf.maxAbs 8.10e-15 (1 of 1) |
 | nikkor-z50f12-best-photopic | 1 | PASS: mtf.maxAbs 3.44e-15 (1 of 1) |
@@ -434,7 +434,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 | lv – wave | chiefLanding.maxAbs [mm] | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 |
 | lv – wave | mtfOnAxis.maxAbs | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 80 |
 | lv – wave | mtfOffAxis.maxAbs | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1, frequencyPerMm 30 |
-| lv – wave | mtfFlagged.maxAbs | 2.47e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
+| lv – wave | mtfFlagged.maxAbs | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
 | lv – wave | fields.compared [elements] | 211 | 96 of 96 | — | — |
 | lv – wave | fields.flagged [elements] | 77 | 96 of 96 | — | — |
 | lv – wave | fields.rimLost [elements] | 0 | 96 of 96 | — | — |
@@ -488,10 +488,10 @@ Rows by status: 224 RECORDED, 38 ATTENTION, 6 SET ASIDE, 20 UNSUPPORTED.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | 1 | tangential | ok | ok (fft512) | unconverged | method: two-methods | ATTENTION | ATTENTION | 0.8970 | 0.9016 | 0.8997 | -4.56e-3 | 0.6206 | 0.6349 | 0.6233 | -1.43e-2 | 0.3799 | 0.4035 | 0.3793 | -2.36e-2 |
 | sigma-35mm-f14-dg-hsm-a-ref | 0 | sagittal | ok | ok (fft512) | ok | method: two-methods | RECORDED | ATTENTION | 0.9868 | 0.9871 | 0.9865 | -3.13e-4 | 0.9502 | 0.9515 | 0.9491 | -1.39e-3 | 0.9020 | 0.9049 | 0.9002 | -2.85e-3 |
 | sigma-35mm-f14-dg-hsm-a-ref | 0 | tangential | ok | ok (fft512) | ok | method: two-methods | RECORDED | ATTENTION | 0.9868 | 0.9871 | 0.9865 | -3.13e-4 | 0.9502 | 0.9515 | 0.9491 | -1.39e-3 | 0.9020 | 0.9049 | 0.9002 | -2.85e-3 |
-| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | sagittal | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.9242 | — | 0.9265 | — | 0.6266 | — | 0.6281 | — | 0.3205 | — | 0.3229 | — |
-| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | tangential | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.9579 | — | 0.9589 | — | 0.7855 | — | 0.7908 | — | 0.6140 | — | 0.6170 | — |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | sagittal | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.5121 | — | 0.5014 | — | 0.3724 | — | 0.3648 | — | 0.3211 | — | 0.3205 | — |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | tangential | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.6748 | — | 0.6703 | — | 0.4795 | — | 0.4559 | — | 0.3591 | — | 0.3426 | — |
+| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | sagittal | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.9212 | — | 0.9229 | — | 0.6160 | — | 0.6160 | — | 0.3124 | — | 0.3112 | — |
+| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | tangential | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.9543 | — | 0.9555 | — | 0.7739 | — | 0.7747 | — | 0.5973 | — | 0.5972 | — |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | sagittal | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.4800 | — | 0.4730 | — | 0.3634 | — | 0.3625 | — | 0.3082 | — | 0.3109 | — |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | tangential | ok | no curve (fft512) | unconverged | unsupported: no-curve | UNSUPPORTED | ATTENTION | 0.6808 | — | 0.6759 | — | 0.3573 | — | 0.3436 | — | 0.2760 | — | 0.2631 | — |
 | nikkor-z50f12-ref | 0 | sagittal | ok | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.8192 | 0.8301 | 0.8195 | -1.09e-2 | 0.1877 | 0.2058 | 0.1881 | -1.81e-2 | 0.1753 | 0.1488 | 0.1753 | 2.65e-2 |
 | nikkor-z50f12-ref | 0 | tangential | ok | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.8192 | 0.8301 | 0.8195 | -1.09e-2 | 0.1877 | 0.2058 | 0.1881 | -1.81e-2 | 0.1753 | 0.1488 | 0.1753 | 2.65e-2 |
 | nikkor-z50f12-ref | 0.5 | sagittal | ok | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.8718 | 0.8732 | 0.8728 | -1.39e-3 | 0.2335 | 0.2428 | 0.2334 | -9.30e-3 | 0.1923 | 0.1928 | 0.1925 | -5.79e-4 |
@@ -584,22 +584,22 @@ Rows by status: 224 RECORDED, 38 ATTENTION, 6 SET ASIDE, 20 UNSUPPORTED.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9192 | 0.9188 | 0.9187 | 3.96e-4 | 0.7253 | 0.7251 | 0.7241 | 1.85e-4 | 0.5385 | 0.5388 | 0.5380 | -3.77e-4 |
 | sigma-35mm-f14-dg-hsm-a-best-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9884 | 0.9887 | 0.9881 | -2.51e-4 | 0.9644 | 0.9651 | 0.9635 | -7.47e-4 | 0.9392 | 0.9404 | 0.9378 | -1.15e-3 |
 | sigma-35mm-f14-dg-hsm-a-best-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9884 | 0.9887 | 0.9881 | -2.51e-4 | 0.9644 | 0.9651 | 0.9635 | -7.47e-4 | 0.9392 | 0.9404 | 0.9378 | -1.15e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | sagittal | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.9220 | — | 0.9243 | — | 0.6518 | — | 0.6532 | — | 0.4058 | — | 0.4099 | — |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | tangential | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.9510 | — | 0.9520 | — | 0.7464 | — | 0.7517 | — | 0.5450 | — | 0.5484 | — |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | sagittal | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.5033 | — | 0.4928 | — | 0.3601 | — | 0.3525 | — | 0.3072 | — | 0.3076 | — |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | tangential | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.6747 | — | 0.6706 | — | 0.4831 | — | 0.4584 | — | 0.3675 | — | 0.3499 | — |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | sagittal | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.9199 | — | 0.9215 | — | 0.6423 | — | 0.6423 | — | 0.3974 | — | 0.3974 | — |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | tangential | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.9479 | — | 0.9492 | — | 0.7371 | — | 0.7382 | — | 0.5313 | — | 0.5316 | — |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | sagittal | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.4723 | — | 0.4654 | — | 0.3536 | — | 0.3527 | — | 0.3005 | — | 0.3034 | — |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | tangential | ok | no curve | unconverged | unsupported: no-curve | UNSUPPORTED | RECORDED | 0.6838 | — | 0.6792 | — | 0.3685 | — | 0.3536 | — | 0.2851 | — | 0.2710 | — |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9406 | 0.9403 | 0.9402 | 3.04e-4 | 0.8218 | 0.8210 | 0.8206 | 8.29e-4 | 0.7031 | 0.7034 | 0.7031 | -2.44e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9406 | 0.9403 | 0.9402 | 3.04e-4 | 0.8218 | 0.8210 | 0.8206 | 8.29e-4 | 0.7031 | 0.7034 | 0.7031 | -2.44e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9318 | 0.9316 | 0.9314 | 2.04e-4 | 0.7691 | 0.7691 | 0.7683 | -2.26e-6 | 0.6070 | 0.6090 | 0.6080 | -1.99e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9378 | 0.9374 | 0.9373 | 3.19e-4 | 0.8123 | 0.8115 | 0.8111 | 7.85e-4 | 0.6870 | 0.6876 | 0.6873 | -5.20e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9368 | 0.9366 | 0.9368 | 2.15e-4 | 0.8085 | 0.8080 | 0.8085 | 4.96e-4 | 0.6822 | 0.6808 | 0.6821 | 1.37e-3 |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8686 | 0.8688 | 0.8685 | -1.45e-4 | 0.6092 | 0.6098 | 0.6089 | -5.83e-4 | 0.3726 | 0.3720 | 0.3723 | 6.07e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9364 | 0.9361 | 0.9360 | 3.19e-4 | 0.8059 | 0.8051 | 0.8047 | 7.61e-4 | 0.6753 | 0.6760 | 0.6758 | -6.54e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9284 | 0.9280 | 0.9279 | 3.96e-4 | 0.7810 | 0.7804 | 0.7799 | 6.09e-4 | 0.6396 | 0.6392 | 0.6391 | 3.43e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9406 | 0.9403 | 0.9402 | 3.04e-4 | 0.8218 | 0.8210 | 0.8207 | 8.29e-4 | 0.7031 | 0.7034 | 0.7031 | -2.44e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9406 | 0.9403 | 0.9402 | 3.04e-4 | 0.8218 | 0.8210 | 0.8207 | 8.29e-4 | 0.7031 | 0.7034 | 0.7031 | -2.44e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9316 | 0.9314 | 0.9312 | 2.01e-4 | 0.7679 | 0.7679 | 0.7672 | -2.28e-5 | 0.6049 | 0.6070 | 0.6060 | -2.02e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9378 | 0.9375 | 0.9374 | 3.19e-4 | 0.8125 | 0.8117 | 0.8113 | 7.88e-4 | 0.6874 | 0.6879 | 0.6877 | -5.14e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9368 | 0.9366 | 0.9368 | 2.14e-4 | 0.8082 | 0.8077 | 0.8082 | 4.94e-4 | 0.6816 | 0.6803 | 0.6816 | 1.37e-3 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8686 | 0.8688 | 0.8685 | -1.45e-4 | 0.6093 | 0.6099 | 0.6090 | -5.84e-4 | 0.3727 | 0.3721 | 0.3724 | 6.07e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9363 | 0.9360 | 0.9359 | 3.18e-4 | 0.8055 | 0.8047 | 0.8043 | 7.56e-4 | 0.6746 | 0.6753 | 0.6751 | -6.65e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9284 | 0.9280 | 0.9279 | 3.94e-4 | 0.7812 | 0.7806 | 0.7800 | 5.98e-4 | 0.6399 | 0.6396 | 0.6395 | 3.31e-4 |
 | nikkor-z50f12-best-ref | 0 | sagittal | ok | ok (fft512) | ok | method: two-methods | RECORDED | ATTENTION | 0.9823 | 0.9824 | 0.9820 | -1.10e-4 | 0.9036 | 0.9032 | 0.9024 | 4.42e-4 | 0.7822 | 0.7800 | 0.7796 | 2.13e-3 |
 | nikkor-z50f12-best-ref | 0 | tangential | ok | ok (fft512) | ok | method: two-methods | RECORDED | ATTENTION | 0.9823 | 0.9824 | 0.9820 | -1.10e-4 | 0.9036 | 0.9032 | 0.9024 | 4.42e-4 | 0.7822 | 0.7800 | 0.7796 | 2.13e-3 |
 | nikkor-z50f12-best-ref | 0.5 | sagittal | ok | ok (fft512) | unconverged | method: two-methods | RECORDED | ATTENTION | 0.9368 | 0.9408 | 0.9371 | -4.04e-3 | 0.7247 | 0.7295 | 0.7253 | -4.79e-3 | 0.6263 | 0.6236 | 0.6268 | 2.62e-3 |
@@ -780,33 +780,30 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 |---|---|---|---|---|---|
 | lv – optiland | chiefLanding.maxAbs [mm] | 1.52e-10 | 288 of 288 | nikon-z-mc-105f28-best-ref | field 1 |
 | lv – optiland | mtfOnAxis.maxAbs | 8.84e-3 | 96 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 100 |
-| lv – optiland | fields.compared [elements] | 284 | 288 of 288 | — | — |
-| lv – optiland | fields.flagged [elements] | 4 | 288 of 288 | — | — |
+| lv – optiland | fields.compared [elements] | 288 | 288 of 288 | — | — |
+| lv – optiland | fields.flagged [elements] | 0 | 288 of 288 | — | — |
 | lv – optiland | fields.rimLost [elements] | 0 | 288 of 288 | — | — |
 | lv – optiland | fields.data [elements] | 0 | 288 of 288 | — | — |
 | lv – optiland | fields.unavailable [elements] | 0 | 288 of 288 | — | — |
-| lv – optiland | mtfOffAxis.maxAbs | 1.22e-2 | 188 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
-| lv – optiland | mtfFlagged.maxAbs | 8.99e-3 | 4 of 288 | sigma-35mm-f14-dg-hsm-a-best-photopic | cut tangential, field 1, frequencyPerMm 100 |
+| lv – optiland | mtfOffAxis.maxAbs | 1.22e-2 | 192 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
 | lv – optiland | mtfOnAxis.firstStepMaxAbs | 9.00e-3 | 5 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 100 |
 | lv – optiland | mtfOffAxis.firstStepMaxAbs | 1.19e-2 | 1 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
 | lv – replay | chiefLanding.maxAbs [mm] | 0 | 288 of 288 | canon-ef-135-f2l-usm-ref | field 0 |
 | lv – replay | mtfOnAxis.maxAbs | 4.88e-15 | 96 of 288 | sony-fe-20mm-f18-g-ref | cut tangential, field 0, frequencyPerMm 10 |
-| lv – replay | fields.compared [elements] | 286 | 288 of 288 | — | — |
-| lv – replay | fields.flagged [elements] | 2 | 288 of 288 | — | — |
+| lv – replay | fields.compared [elements] | 288 | 288 of 288 | — | — |
+| lv – replay | fields.flagged [elements] | 0 | 288 of 288 | — | — |
 | lv – replay | fields.rimLost [elements] | 0 | 288 of 288 | — | — |
 | lv – replay | fields.data [elements] | 0 | 288 of 288 | — | — |
 | lv – replay | fields.unavailable [elements] | 0 | 288 of 288 | — | — |
-| lv – replay | mtfOffAxis.maxAbs | 6.99e-15 | 190 of 288 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | cut sagittal, field 1, frequencyPerMm 30 |
-| lv – replay | mtfFlagged.maxAbs | 5.33e-15 | 2 of 288 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 10 |
+| lv – replay | mtfOffAxis.maxAbs | 6.99e-15 | 192 of 288 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | cut sagittal, field 1, frequencyPerMm 30 |
 | optiland – replay | chiefLanding.maxAbs [mm] | 1.52e-10 | 288 of 288 | nikon-z-mc-105f28-best-ref | field 1 |
 | optiland – replay | mtfOnAxis.maxAbs | 8.84e-3 | 96 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 100 |
-| optiland – replay | fields.compared [elements] | 284 | 288 of 288 | — | — |
-| optiland – replay | fields.flagged [elements] | 4 | 288 of 288 | — | — |
+| optiland – replay | fields.compared [elements] | 288 | 288 of 288 | — | — |
+| optiland – replay | fields.flagged [elements] | 0 | 288 of 288 | — | — |
 | optiland – replay | fields.rimLost [elements] | 0 | 288 of 288 | — | — |
 | optiland – replay | fields.data [elements] | 0 | 288 of 288 | — | — |
 | optiland – replay | fields.unavailable [elements] | 0 | 288 of 288 | — | — |
-| optiland – replay | mtfOffAxis.maxAbs | 1.22e-2 | 188 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
-| optiland – replay | mtfFlagged.maxAbs | 8.99e-3 | 4 of 288 | sigma-35mm-f14-dg-hsm-a-best-photopic | cut tangential, field 1, frequencyPerMm 100 |
+| optiland – replay | mtfOffAxis.maxAbs | 1.22e-2 | 192 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
 | optiland – replay | mtfOnAxis.firstStepMaxAbs | 9.00e-3 | 5 of 288 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 100 |
 | optiland – replay | mtfOffAxis.firstStepMaxAbs | 1.19e-2 | 1 of 288 | sony-fe-400mm-f28-gm-oss-best-ref | cut sagittal, field 1, frequencyPerMm 100 |
 
@@ -833,7 +830,7 @@ A row is one field and cut of one run, at 10, 30, 50 cycles/mm. Under each engin
 (`replay`). The status is the gravest of the row's frequencies; "all" is what the two engines came to over
 every frequency of the request.
 
-Rows by status: 568 RECORDED, 8 SET ASIDE.
+Rows by status: 576 RECORDED.
 
 | Run | Field | Cut | lv | optiland | replay | Class | Status | All | lv 10 | optiland 10 | replay 10 | Δ 10 | lv 30 | optiland 30 | replay 30 | Δ 30 | lv 50 | optiland 50 | replay 50 | Δ 50 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -863,16 +860,16 @@ Rows by status: 568 RECORDED, 8 SET ASIDE.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8652 | 0.8655 | 0.8652 | -3.18e-4 | 0.4498 | 0.4497 | 0.4498 | 9.59e-5 | 0.1587 | 0.1594 | 0.1587 | -6.79e-4 |
 | sigma-35mm-f14-dg-hsm-a-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9981 | 0.9981 | 0.9981 | 3.54e-6 | 0.9834 | 0.9834 | 0.9834 | 3.11e-5 | 0.9544 | 0.9543 | 0.9544 | 8.28e-5 |
 | sigma-35mm-f14-dg-hsm-a-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9981 | 0.9981 | 0.9981 | 3.54e-6 | 0.9834 | 0.9834 | 0.9834 | 3.11e-5 | 0.9544 | 0.9543 | 0.9544 | 8.28e-5 |
-| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9317 | 0.9325 | 0.9317 | -7.96e-4 | 0.6303 | 0.6317 | 0.6303 | -1.45e-3 | 0.3136 | 0.3151 | 0.3136 | -1.49e-3 |
-| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9688 | 0.9684 | 0.9688 | 4.19e-4 | 0.7868 | 0.7860 | 0.7868 | 7.65e-4 | 0.6113 | 0.6127 | 0.6113 | -1.42e-3 |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | sagittal | unconverged | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.5156 | 0.5155 | 0.5156 | 5.72e-5 | 0.3755 | 0.3764 | 0.3755 | -9.03e-4 | 0.3284 | 0.3285 | 0.3284 | -1.35e-4 |
-| sigma-35mm-f14-dg-hsm-a-ref | 1 | tangential | unconverged | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.6933 | 0.6957 | 0.6933 | -2.34e-3 | 0.5305 | 0.5286 | 0.5305 | 1.93e-3 | 0.4313 | 0.4304 | 0.4313 | 8.57e-4 |
+| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9261 | 0.9266 | 0.9261 | -5.36e-4 | 0.6143 | 0.6163 | 0.6143 | -1.98e-3 | 0.3093 | 0.3115 | 0.3093 | -2.17e-3 |
+| sigma-35mm-f14-dg-hsm-a-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9643 | 0.9638 | 0.9643 | 4.53e-4 | 0.7654 | 0.7651 | 0.7654 | 2.31e-4 | 0.5916 | 0.5955 | 0.5916 | -3.97e-3 |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.4845 | 0.4846 | 0.4845 | -1.02e-5 | 0.3647 | 0.3653 | 0.3647 | -5.82e-4 | 0.3123 | 0.3130 | 0.3123 | -6.49e-4 |
+| sigma-35mm-f14-dg-hsm-a-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.6894 | 0.6912 | 0.6894 | -1.78e-3 | 0.3307 | 0.3294 | 0.3307 | 1.28e-3 | 0.3257 | 0.3269 | 0.3257 | -1.21e-3 |
 | sigma-35mm-f14-dg-hsm-a-photopic | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9488 | 0.9491 | 0.9488 | -2.75e-4 | 0.6341 | 0.6355 | 0.6341 | -1.35e-3 | 0.3267 | 0.3277 | 0.3267 | -9.56e-4 |
 | sigma-35mm-f14-dg-hsm-a-photopic | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9488 | 0.9491 | 0.9488 | -2.75e-4 | 0.6341 | 0.6355 | 0.6341 | -1.35e-3 | 0.3267 | 0.3277 | 0.3267 | -9.56e-4 |
-| sigma-35mm-f14-dg-hsm-a-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8925 | 0.8929 | 0.8925 | -3.55e-4 | 0.4597 | 0.4610 | 0.4597 | -1.33e-3 | 0.1029 | 0.1024 | 0.1029 | 4.54e-4 |
-| sigma-35mm-f14-dg-hsm-a-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9370 | 0.9366 | 0.9370 | 4.13e-4 | 0.6597 | 0.6609 | 0.6597 | -1.24e-3 | 0.4488 | 0.4502 | 0.4488 | -1.34e-3 |
-| sigma-35mm-f14-dg-hsm-a-photopic | 1 | sagittal | ok | unconverged | ok | numerical: unconverged | SET ASIDE | RECORDED | 0.5111 | 0.5112 | 0.5111 | -1.69e-4 | 0.3679 | 0.3675 | 0.3679 | 3.82e-4 | 0.3198 | 0.3196 | 0.3198 | 1.52e-4 |
-| sigma-35mm-f14-dg-hsm-a-photopic | 1 | tangential | ok | unconverged | ok | numerical: unconverged | SET ASIDE | RECORDED | 0.6648 | 0.6639 | 0.6648 | 8.85e-4 | 0.3989 | 0.3986 | 0.3989 | 2.50e-4 | 0.2345 | 0.2347 | 0.2345 | -1.31e-4 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8779 | 0.8790 | 0.8779 | -1.10e-3 | 0.4526 | 0.4544 | 0.4526 | -1.80e-3 | 0.0995 | 0.0995 | 0.0995 | -6.50e-5 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9265 | 0.9267 | 0.9265 | -2.28e-4 | 0.6439 | 0.6467 | 0.6439 | -2.79e-3 | 0.4408 | 0.4419 | 0.4408 | -1.14e-3 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.4798 | 0.4801 | 0.4798 | -3.16e-4 | 0.3581 | 0.3588 | 0.3581 | -7.52e-4 | 0.3026 | 0.3030 | 0.3026 | -4.14e-4 |
+| sigma-35mm-f14-dg-hsm-a-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.6279 | 0.6272 | 0.6279 | 6.89e-4 | 0.2581 | 0.2558 | 0.2581 | 2.31e-3 | 0.1728 | 0.1748 | 0.1728 | -2.03e-3 |
 | nikkor-z50f12-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8233 | 0.8244 | 0.8233 | -1.06e-3 | 0.1693 | 0.1704 | 0.1693 | -1.12e-3 | 0.1996 | 0.1980 | 0.1996 | 1.60e-3 |
 | nikkor-z50f12-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8233 | 0.8244 | 0.8233 | -1.06e-3 | 0.1693 | 0.1704 | 0.1693 | -1.12e-3 | 0.1996 | 0.1980 | 0.1996 | 1.60e-3 |
 | nikkor-z50f12-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8790 | 0.8779 | 0.8790 | 1.12e-3 | 0.2347 | 0.2328 | 0.2347 | 1.91e-3 | 0.1874 | 0.1879 | 0.1874 | -4.98e-4 |
@@ -1055,40 +1052,40 @@ Rows by status: 568 RECORDED, 8 SET ASIDE.
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9705 | 0.9707 | 0.9705 | -1.21e-4 | 0.7798 | 0.7805 | 0.7798 | -7.35e-4 | 0.5709 | 0.5720 | 0.5709 | -1.02e-3 |
 | sigma-35mm-f14-dg-hsm-a-best-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9998 | 0.9998 | 0.9998 | -1.68e-6 | 0.9984 | 0.9984 | 0.9984 | -1.51e-5 | 0.9955 | 0.9955 | 0.9955 | -4.20e-5 |
 | sigma-35mm-f14-dg-hsm-a-best-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9998 | 0.9998 | 0.9998 | -1.68e-6 | 0.9984 | 0.9984 | 0.9984 | -1.51e-5 | 0.9955 | 0.9955 | 0.9955 | -4.20e-5 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9291 | 0.9301 | 0.9291 | -9.26e-4 | 0.6583 | 0.6593 | 0.6583 | -1.00e-3 | 0.3998 | 0.4015 | 0.3998 | -1.71e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9613 | 0.9609 | 0.9613 | 4.41e-4 | 0.7454 | 0.7453 | 0.7454 | 1.27e-4 | 0.5480 | 0.5500 | 0.5480 | -1.99e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | sagittal | unconverged | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.5069 | 0.5069 | 0.5069 | 7.88e-6 | 0.3628 | 0.3638 | 0.3628 | -1.01e-3 | 0.3142 | 0.3150 | 0.3142 | -8.81e-4 |
-| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | tangential | unconverged | unconverged | unconverged | numerical: unconverged | SET ASIDE | RECORDED | 0.6932 | 0.6955 | 0.6932 | -2.28e-3 | 0.5342 | 0.5326 | 0.5342 | 1.63e-3 | 0.4411 | 0.4404 | 0.4411 | 7.63e-4 |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9245 | 0.9252 | 0.9245 | -6.85e-4 | 0.6422 | 0.6437 | 0.6422 | -1.53e-3 | 0.3925 | 0.3953 | 0.3925 | -2.86e-3 |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9574 | 0.9569 | 0.9574 | 4.87e-4 | 0.7264 | 0.7265 | 0.7264 | -1.09e-4 | 0.5292 | 0.5331 | 0.5292 | -3.88e-3 |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.4769 | 0.4769 | 0.4769 | 5.19e-6 | 0.3547 | 0.3554 | 0.3547 | -7.14e-4 | 0.3047 | 0.3059 | 0.3047 | -1.24e-3 |
+| sigma-35mm-f14-dg-hsm-a-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.6929 | 0.6946 | 0.6929 | -1.73e-3 | 0.3403 | 0.3387 | 0.3403 | 1.60e-3 | 0.3316 | 0.3327 | 0.3316 | -1.11e-3 |
 | sigma-35mm-f14-dg-hsm-a-best-photopic | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9661 | 0.9665 | 0.9661 | -4.82e-4 | 0.7835 | 0.7854 | 0.7835 | -1.87e-3 | 0.6263 | 0.6280 | 0.6263 | -1.70e-3 |
 | sigma-35mm-f14-dg-hsm-a-best-photopic | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9661 | 0.9665 | 0.9661 | -4.82e-4 | 0.7835 | 0.7854 | 0.7835 | -1.87e-3 | 0.6263 | 0.6280 | 0.6263 | -1.70e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | ATTENTION | 0.8851 | 0.8883 | 0.8851 | -3.14e-3 | 0.5919 | 0.5988 | 0.5919 | -6.87e-3 | 0.3930 | 0.3970 | 0.3930 | -4.01e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | ATTENTION | 0.9163 | 0.9160 | 0.9163 | 2.85e-4 | 0.5771 | 0.5785 | 0.5771 | -1.41e-3 | 0.3467 | 0.3505 | 0.3467 | -3.78e-3 |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | sagittal | ok | unconverged | ok | numerical: unconverged | SET ASIDE | RECORDED | 0.4670 | 0.4671 | 0.4670 | -1.20e-4 | 0.3022 | 0.3018 | 0.3022 | 3.85e-4 | 0.2444 | 0.2453 | 0.2444 | -9.47e-4 |
-| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | tangential | ok | unconverged | ok | numerical: unconverged | SET ASIDE | RECORDED | 0.6664 | 0.6653 | 0.6664 | 1.09e-3 | 0.4157 | 0.4131 | 0.4157 | 2.53e-3 | 0.2561 | 0.2560 | 0.2561 | 5.11e-5 |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.8768 | 0.8784 | 0.8768 | -1.65e-3 | 0.5879 | 0.5893 | 0.5879 | -1.40e-3 | 0.3908 | 0.3918 | 0.3908 | -9.11e-4 |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9088 | 0.9091 | 0.9088 | -2.94e-4 | 0.5637 | 0.5658 | 0.5637 | -2.04e-3 | 0.3426 | 0.3437 | 0.3426 | -1.09e-3 |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.4393 | 0.4396 | 0.4393 | -3.00e-4 | 0.3053 | 0.3050 | 0.3053 | 3.14e-4 | 0.2540 | 0.2544 | 0.2540 | -4.15e-4 |
+| sigma-35mm-f14-dg-hsm-a-best-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.6477 | 0.6472 | 0.6477 | 4.61e-4 | 0.2857 | 0.2851 | 0.2857 | 5.97e-4 | 0.1949 | 0.1948 | 0.1949 | 5.49e-5 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 1.0000 | 1.0000 | 1.0000 | -9.05e-9 | 1.0000 | 1.0000 | 1.0000 | -8.15e-8 | 1.0000 | 1.0000 | 1.0000 | -2.26e-7 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 1.0000 | 1.0000 | 1.0000 | -9.05e-9 | 1.0000 | 1.0000 | 1.0000 | -8.15e-8 | 1.0000 | 1.0000 | 1.0000 | -2.26e-7 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9906 | 0.9907 | 0.9906 | -8.21e-5 | 0.9174 | 0.9181 | 0.9174 | -7.03e-4 | 0.7814 | 0.7832 | 0.7814 | -1.76e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9996 | 0.9996 | 0.9996 | -4.71e-6 | 0.9964 | 0.9964 | 0.9964 | -4.23e-5 | 0.9899 | 0.9900 | 0.9899 | -1.17e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9995 | 0.9995 | 0.9995 | -4.99e-6 | 0.9951 | 0.9951 | 0.9951 | -4.48e-5 | 0.9864 | 0.9865 | 0.9864 | -1.24e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9988 | 0.9988 | 0.9988 | 4.51e-6 | 0.9894 | 0.9894 | 0.9894 | 3.99e-5 | 0.9707 | 0.9706 | 0.9707 | 1.08e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9989 | 0.9989 | 0.9989 | -6.00e-6 | 0.9902 | 0.9902 | 0.9902 | -5.36e-5 | 0.9729 | 0.9730 | 0.9729 | -1.46e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9969 | 0.9970 | 0.9969 | -7.29e-5 | 0.9727 | 0.9734 | 0.9727 | -6.19e-4 | 0.9274 | 0.9289 | 0.9274 | -1.52e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-photopic | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9989 | 0.9989 | 0.9989 | -1.11e-5 | 0.9899 | 0.9900 | 0.9899 | -9.86e-5 | 0.9721 | 0.9724 | 0.9721 | -2.68e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-photopic | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9989 | 0.9989 | 0.9989 | -1.11e-5 | 0.9899 | 0.9900 | 0.9899 | -9.86e-5 | 0.9721 | 0.9724 | 0.9721 | -2.68e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9881 | 0.9882 | 0.9881 | -1.06e-4 | 0.8962 | 0.8970 | 0.8962 | -8.87e-4 | 0.7306 | 0.7328 | 0.7306 | -2.12e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9923 | 0.9923 | 0.9923 | -6.80e-6 | 0.9334 | 0.9334 | 0.9334 | -5.09e-5 | 0.8288 | 0.8289 | 0.8288 | -9.23e-5 |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9995 | 0.9995 | 0.9995 | -4.58e-6 | 0.9953 | 0.9953 | 0.9953 | -4.07e-5 | 0.9871 | 0.9872 | 0.9871 | -1.10e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9864 | 0.9864 | 0.9864 | 2.52e-5 | 0.8864 | 0.8862 | 0.8864 | 1.84e-4 | 0.7291 | 0.7288 | 0.7291 | 3.13e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9990 | 0.9990 | 0.9990 | -7.56e-6 | 0.9914 | 0.9915 | 0.9914 | -6.72e-5 | 0.9763 | 0.9765 | 0.9763 | -1.82e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9868 | 0.9869 | 0.9868 | -1.14e-4 | 0.8881 | 0.8891 | 0.8881 | -9.39e-4 | 0.7238 | 0.7259 | 0.7238 | -2.14e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 1.0000 | 1.0000 | 1.0000 | -9.84e-11 | 1.0000 | 1.0000 | 1.0000 | -8.86e-10 | 1.0000 | 1.0000 | 1.0000 | -2.46e-9 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 1.0000 | 1.0000 | 1.0000 | -9.84e-11 | 1.0000 | 1.0000 | 1.0000 | -8.86e-10 | 1.0000 | 1.0000 | 1.0000 | -2.46e-9 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9904 | 0.9905 | 0.9904 | -8.44e-5 | 0.9155 | 0.9162 | 0.9155 | -7.22e-4 | 0.7767 | 0.7785 | 0.7767 | -1.80e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-ref | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9996 | 0.9996 | 0.9996 | -4.31e-6 | 0.9967 | 0.9968 | 0.9967 | -3.87e-5 | 0.9909 | 0.9910 | 0.9909 | -1.07e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9994 | 0.9994 | 0.9994 | -5.62e-6 | 0.9946 | 0.9947 | 0.9946 | -5.05e-5 | 0.9851 | 0.9853 | 0.9851 | -1.40e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9989 | 0.9989 | 0.9989 | 4.63e-6 | 0.9898 | 0.9897 | 0.9898 | 4.11e-5 | 0.9717 | 0.9716 | 0.9717 | 1.11e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9988 | 0.9988 | 0.9988 | -6.39e-6 | 0.9896 | 0.9896 | 0.9896 | -5.71e-5 | 0.9712 | 0.9713 | 0.9712 | -1.56e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9969 | 0.9970 | 0.9969 | -7.43e-5 | 0.9728 | 0.9734 | 0.9728 | -6.30e-4 | 0.9276 | 0.9291 | 0.9276 | -1.55e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9992 | 0.9992 | 0.9992 | -8.26e-6 | 0.9924 | 0.9925 | 0.9924 | -7.34e-5 | 0.9792 | 0.9794 | 0.9792 | -1.99e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9992 | 0.9992 | 0.9992 | -8.26e-6 | 0.9924 | 0.9925 | 0.9924 | -7.34e-5 | 0.9792 | 0.9794 | 0.9792 | -1.99e-4 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9914 | 0.9915 | 0.9914 | -7.49e-5 | 0.9247 | 0.9253 | 0.9247 | -6.39e-4 | 0.8011 | 0.8027 | 0.8011 | -1.59e-3 |
 | sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 0.5 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9916 | 0.9917 | 0.9916 | -1.33e-5 | 0.9281 | 0.9282 | 0.9281 | -1.01e-4 | 0.8179 | 0.8181 | 0.8179 | -1.90e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9996 | 0.9996 | 0.9996 | -4.51e-6 | 0.9964 | 0.9965 | 0.9964 | -3.95e-5 | 0.9904 | 0.9905 | 0.9904 | -1.04e-4 |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9858 | 0.9858 | 0.9858 | 4.63e-5 | 0.8818 | 0.8814 | 0.8818 | 3.61e-4 | 0.7193 | 0.7186 | 0.7193 | 7.46e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 1 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9995 | 0.9995 | 0.9995 | -7.63e-6 | 0.9951 | 0.9952 | 0.9951 | -6.75e-5 | 0.9866 | 0.9868 | 0.9866 | -1.81e-4 |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 1 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9871 | 0.9871 | 0.9871 | -8.83e-5 | 0.8906 | 0.8913 | 0.8906 | -7.45e-4 | 0.7316 | 0.7334 | 0.7316 | -1.78e-3 |
 | nikkor-z50f12-best-ref | 0 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9919 | 0.9919 | 0.9919 | 4.89e-6 | 0.9298 | 0.9297 | 0.9298 | 2.99e-5 | 0.8174 | 0.8174 | 0.8174 | 1.27e-5 |
 | nikkor-z50f12-best-ref | 0 | tangential | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9919 | 0.9919 | 0.9919 | 4.89e-6 | 0.9298 | 0.9297 | 0.9298 | 2.99e-5 | 0.8174 | 0.8174 | 0.8174 | 1.27e-5 |
 | nikkor-z50f12-best-ref | 0.5 | sagittal | ok | ok | ok | method: two-methods | RECORDED | RECORDED | 0.9433 | 0.9436 | 0.9433 | -2.97e-4 | 0.7226 | 0.7227 | 0.7226 | -8.82e-5 | 0.6329 | 0.6340 | 0.6329 | -1.14e-3 |
@@ -1420,7 +1417,6 @@ down and says nothing more; a difference outside it is worth a look and fails no
 | Reason | Meaning |
 |---|---|
 | two-methods | both engines stand by their curves; the difference is held to the attention band |
-| unconverged | a sampling did not settle; the difference is shown apart, in no band |
 
 ## r6a
 
@@ -1429,26 +1425,26 @@ Quantity `rays.trace`. The worst of every metric over the suite:
 | Pair | Metric | Worst, or total | Requests measured | Run | Where |
 |---|---|---|---|---|---|
 | lv – optiland | waveMtf.maxAbs (≤ 2.00e-8) | 1.47e-10 | 211 of 288 | nikkor-z50f12-best-ref | cut tangential, field 0, frequencyPerMm 100 |
-| lv – optiland | phaseStep.waves [waves] | 2.48e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
-| lv – optiland | convergence.maxAbs | 8.18e-2 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-ref | cut sagittal, field 3.19e1, frequencyPerMm 100 |
+| lv – optiland | phaseStep.waves [waves] | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
+| lv – optiland | convergence.maxAbs | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1, frequencyPerMm 70 |
 | lv – optiland | lattice.columns [cells] | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
-| lv – optiland | rays.compared [rays] | 3215828 | 288 of 288 | — | — |
+| lv – optiland | rays.compared [rays] | 3240172 | 288 of 288 | — | — |
 | lv – optiland | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | lv – optiland | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | lv – optiland | waveMtf.flagged | 4.02e-10 | 77 of 288 | nikkor-z50f12-best-ref | cut sagittal, field 2.29e1, frequencyPerMm 60 |
 | lv – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.02e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1, frequencyPerMm 50 |
-| lv – ref | phaseStep.waves [waves] | 2.48e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
-| lv – ref | convergence.maxAbs | 8.18e-2 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-ref | cut sagittal, field 3.19e1, frequencyPerMm 100 |
+| lv – ref | phaseStep.waves [waves] | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
+| lv – ref | convergence.maxAbs | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1, frequencyPerMm 70 |
 | lv – ref | lattice.columns [cells] | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
-| lv – ref | rays.compared [rays] | 3215828 | 288 of 288 | — | — |
+| lv – ref | rays.compared [rays] | 3240172 | 288 of 288 | — | — |
 | lv – ref | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | lv – ref | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | lv – ref | waveMtf.flagged | 1.17e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1, frequencyPerMm 50 |
 | optiland – ref | waveMtf.maxAbs (≤ 2.00e-8) | 1.03e-9 | 211 of 288 | nikon-z-24-70f4s-wide-f8-ref | cut tangential, field 4.33e1, frequencyPerMm 50 |
-| optiland – ref | phaseStep.waves [waves] | 2.48e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
-| optiland – ref | convergence.maxAbs | 8.18e-2 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-ref | cut sagittal, field 3.19e1, frequencyPerMm 100 |
+| optiland – ref | phaseStep.waves [waves] | 2.52e1 | 288 of 288 | sigma-35mm-f14-dg-hsm-a-photopic | field 3.19e1, line 2, ray 987 |
+| optiland – ref | convergence.maxAbs | 6.32e-2 | 288 of 288 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | cut sagittal, field 2.44e1, frequencyPerMm 70 |
 | optiland – ref | lattice.columns [cells] | 64 | 288 of 288 | canon-ef-135-f2l-usm-ref | — |
-| optiland – ref | rays.compared [rays] | 3215828 | 288 of 288 | — | — |
+| optiland – ref | rays.compared [rays] | 3240172 | 288 of 288 | — | — |
 | optiland – ref | rays.dropped [rays] | 0 | 288 of 288 | — | — |
 | optiland – ref | lines.compared [lines] | 5 | 288 of 288 | canon-ef-135-f2l-usm-photopic | — |
 | optiland – ref | waveMtf.flagged | 1.16e-9 | 77 of 288 | nikon-z-24-70f4s-wide-best-ref | cut tangential, field 4.33e1, frequencyPerMm 50 |
@@ -1495,10 +1491,10 @@ By run, each pair with its verdict and the judged metric that is largest against
 | fujifilm-fujinon-gf-63mm-f28-r-wr-f8-best-photopic | 3 | PASS: waveMtf.maxAbs 8.88e-12 (3 of 3) | PASS: waveMtf.maxAbs 2.64e-12 (3 of 3) | PASS: waveMtf.maxAbs 7.90e-12 (3 of 3) |
 | sigma-35mm-f14-dg-hsm-a-best-ref | 3 | PASS: waveMtf.maxAbs 5.44e-12 (1 of 3) | PASS: waveMtf.maxAbs 2.13e-11 (1 of 3) | PASS: waveMtf.maxAbs 2.63e-11 (1 of 3) |
 | sigma-35mm-f14-dg-hsm-a-best-photopic | 3 | PASS: no judged figure | PASS: no judged figure | PASS: no judged figure |
-| sigma-35mm-f14-dg-hsm-a-f8-ref | 3 | PASS: waveMtf.maxAbs 9.66e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.22e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.40e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-photopic | 3 | PASS: waveMtf.maxAbs 6.70e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.01e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.07e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 3 | PASS: waveMtf.maxAbs 7.93e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.15e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.41e-11 (3 of 3) |
-| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 3 | PASS: waveMtf.maxAbs 5.99e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.33e-11 (3 of 3) | PASS: waveMtf.maxAbs 2.90e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-ref | 3 | PASS: waveMtf.maxAbs 5.56e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.63e-11 (3 of 3) | PASS: waveMtf.maxAbs 7.11e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-photopic | 3 | PASS: waveMtf.maxAbs 3.09e-12 (3 of 3) | PASS: waveMtf.maxAbs 3.01e-11 (3 of 3) | PASS: waveMtf.maxAbs 3.07e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-best-ref | 3 | PASS: waveMtf.maxAbs 4.30e-12 (3 of 3) | PASS: waveMtf.maxAbs 6.52e-11 (3 of 3) | PASS: waveMtf.maxAbs 6.88e-11 (3 of 3) |
+| sigma-35mm-f14-dg-hsm-a-f8-best-photopic | 3 | PASS: waveMtf.maxAbs 5.67e-12 (3 of 3) | PASS: waveMtf.maxAbs 4.59e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.83e-11 (3 of 3) |
 | nikkor-z50f12-best-ref | 3 | PASS: waveMtf.maxAbs 1.47e-10 (1 of 3) | PASS: waveMtf.maxAbs 2.77e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.90e-10 (1 of 3) |
 | nikkor-z50f12-best-photopic | 3 | PASS: waveMtf.maxAbs 9.03e-11 (1 of 3) | PASS: waveMtf.maxAbs 1.18e-10 (1 of 3) | PASS: waveMtf.maxAbs 1.51e-10 (1 of 3) |
 | nikkor-z50f12-f8-ref | 3 | PASS: waveMtf.maxAbs 5.75e-11 (3 of 3) | PASS: waveMtf.maxAbs 4.69e-11 (3 of 3) | PASS: waveMtf.maxAbs 5.82e-11 (3 of 3) |
@@ -1562,7 +1558,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 |---|---|---|---|---|---|
 | lv – wave | mtfOnAxis.maxAbs | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 80 |
 | lv – wave | mtfOffAxis.maxAbs | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1, frequencyPerMm 30 |
-| lv – wave | mtfFlagged.maxAbs | 2.47e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
+| lv – wave | mtfFlagged.maxAbs | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
 | lv – wave | fields.compared [elements] | 211 | 96 of 96 | — | — |
 | lv – wave | fields.flagged [elements] | 77 | 96 of 96 | — | — |
 | lv – wave | fields.unavailable [elements] | 0 | 96 of 96 | — | — |
@@ -1685,7 +1681,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 | lv – optiland | mtfFlagged.maxAbs | 4.91e-1 | 3 of 96 | sony-fe-20mm-f18-g-best-ref | cut tangential, field 1, frequencyPerMm 10 |
 | lv – optiland-wave | chiefLanding.maxAbs [mm] | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 |
 | lv – optiland-wave | mtfOnAxis.maxAbs | 6.94e-3 | 96 of 96 | nikon-z-135f18-plena-ref | cut tangential, field 0, frequencyPerMm 100 |
-| lv – optiland-wave | mtfOffAxis.maxAbs | 8.14e-3 | 91 of 96 | sigma-35mm-f14-dg-hsm-a-ref | cut sagittal, field 5.00e-1, frequencyPerMm 100 |
+| lv – optiland-wave | mtfOffAxis.maxAbs | 7.41e-3 | 91 of 96 | nikon-z-24-70f4s-tele-photopic | cut sagittal, field 5.00e-1, frequencyPerMm 30 |
 | lv – optiland-wave | fields.compared [elements] | 267 | 96 of 96 | — | — |
 | lv – optiland-wave | fields.flagged [elements] | 21 | 96 of 96 | — | — |
 | lv – optiland-wave | fields.rimLost [elements] | 0 | 96 of 96 | — | — |
@@ -1695,7 +1691,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 | lv – wave | chiefLanding.maxAbs [mm] | 0 | 96 of 96 | canon-ef-135-f2l-usm-ref | field 0 |
 | lv – wave | mtfOnAxis.maxAbs | 5.42e-3 | 82 of 96 | nikon-z-24-70f4s-tele-best-ref | cut tangential, field 0, frequencyPerMm 80 |
 | lv – wave | mtfOffAxis.maxAbs | 5.75e-3 | 75 of 96 | nikon-z-24-70f4s-tele-ref | cut sagittal, field 5.00e-1, frequencyPerMm 30 |
-| lv – wave | mtfFlagged.maxAbs | 2.47e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
+| lv – wave | mtfFlagged.maxAbs | 1.49e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
 | lv – wave | fields.compared [elements] | 211 | 96 of 96 | — | — |
 | lv – wave | fields.flagged [elements] | 77 | 96 of 96 | — | — |
 | lv – wave | fields.rimLost [elements] | 0 | 96 of 96 | — | — |
@@ -1722,7 +1718,7 @@ Quantity `mtf.native`. The worst of every metric over the suite:
 | optiland-wave – wave | chiefLanding.maxAbs [mm] | 1.52e-10 | 96 of 96 | nikon-z-mc-105f28-best-ref | field 1 |
 | optiland-wave – wave | mtfOnAxis.maxAbs | 3.24e-3 | 82 of 96 | sigma-105mm-f28-dg-dn-macro-art-photopic | cut sagittal, field 0, frequencyPerMm 100 |
 | optiland-wave – wave | mtfOffAxis.maxAbs | 4.32e-3 | 75 of 96 | sony-fe-20mm-f18-g-f8-ref | cut tangential, field 1, frequencyPerMm 90 |
-| optiland-wave – wave | mtfFlagged.maxAbs | 2.20e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-ref | cut sagittal, field 1, frequencyPerMm 100 |
+| optiland-wave – wave | mtfFlagged.maxAbs | 1.36e-2 | 42 of 96 | sigma-35mm-f14-dg-hsm-a-best-ref | cut tangential, field 1, frequencyPerMm 30 |
 | optiland-wave – wave | fields.compared [elements] | 211 | 96 of 96 | — | — |
 | optiland-wave – wave | fields.flagged [elements] | 77 | 96 of 96 | — | — |
 | optiland-wave – wave | fields.rimLost [elements] | 0 | 96 of 96 | — | — |
@@ -2051,8 +2047,8 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 0.5 | 17.190 | ok | unconverged | no curve | ok | 1.42e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | no-curve |
-| 1 | 31.948 | ok | unconverged | no curve | unconverged | 6.50e-13 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | no-curve |
+| 0.5 | 17.190 | ok | unconverged | no curve | ok | 2.13e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | no-curve |
+| 1 | 31.948 | ok | unconverged | no curve | unconverged | 5.83e-13 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | no-curve |
 
 | Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -2062,18 +2058,18 @@ status of its own frequency.
 | 0 | tangential | 10 | 0.9868 | 0.9865 | 0.9871 | 0.9864 | 3.43e-4 | RECORDED | method | 4.44e-5 | RECORDED | method | 6.35e-4 | RECORDED | method |
 | 0 | tangential | 30 | 0.9502 | 0.9491 | 0.9516 | 0.9490 | 1.16e-3 | RECORDED | method | 1.28e-4 | RECORDED | method | 2.57e-3 | RECORDED | method |
 | 0 | tangential | 50 | 0.9020 | 0.9002 | 0.9049 | 0.9000 | 1.98e-3 | RECORDED | method | 1.44e-4 | RECORDED | method | 4.92e-3 | RECORDED | method |
-| 0.5 | sagittal | 10 | 0.9242 | 0.9265 | — | 0.9264 | -2.24e-3 | RECORDED | method | 7.34e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 30 | 0.6266 | 0.6281 | — | 0.6296 | -2.98e-3 | RECORDED | method | -1.48e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 50 | 0.3205 | 0.3229 | — | 0.3226 | -2.07e-3 | RECORDED | method | 3.23e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 10 | 0.9579 | 0.9589 | — | 0.9576 | 2.42e-4 | RECORDED | method | 1.27e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 30 | 0.7855 | 0.7908 | — | 0.7887 | -3.19e-3 | RECORDED | method | 2.13e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 50 | 0.6140 | 0.6170 | — | 0.6175 | -3.46e-3 | RECORDED | method | -5.24e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.5121 | 0.5014 | — | 0.5071 | 4.96e-3 | SET ASIDE | numerical | -5.66e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.3724 | 0.3648 | — | 0.3704 | 2.08e-3 | SET ASIDE | numerical | -5.53e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.3211 | 0.3205 | — | 0.3204 | 7.37e-4 | SET ASIDE | numerical | 8.51e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.6748 | 0.6703 | — | 0.6753 | -4.46e-4 | SET ASIDE | numerical | -4.92e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.4795 | 0.4559 | — | 0.4766 | 2.87e-3 | SET ASIDE | numerical | -2.08e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.3591 | 0.3426 | — | 0.3572 | 1.94e-3 | SET ASIDE | numerical | -1.46e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 10 | 0.9212 | 0.9229 | — | 0.9222 | -9.90e-4 | RECORDED | method | 6.86e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 30 | 0.6160 | 0.6160 | — | 0.6172 | -1.12e-3 | RECORDED | method | -1.17e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 50 | 0.3124 | 0.3112 | — | 0.3118 | 5.91e-4 | RECORDED | method | -6.18e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 10 | 0.9543 | 0.9555 | — | 0.9540 | 3.62e-4 | RECORDED | method | 1.53e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 30 | 0.7739 | 0.7747 | — | 0.7727 | 1.22e-3 | RECORDED | method | 2.08e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 50 | 0.5973 | 0.5972 | — | 0.5978 | -4.47e-4 | RECORDED | method | -5.80e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.4800 | 0.4730 | — | 0.4771 | 2.89e-3 | SET ASIDE | numerical | -4.13e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.3634 | 0.3625 | — | 0.3621 | 1.33e-3 | SET ASIDE | numerical | 4.15e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.3082 | 0.3109 | — | 0.3077 | 5.07e-4 | SET ASIDE | numerical | 3.16e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.6808 | 0.6759 | — | 0.6808 | 1.33e-5 | SET ASIDE | numerical | -4.92e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.3573 | 0.3436 | — | 0.3561 | 1.14e-3 | SET ASIDE | numerical | -1.25e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.2760 | 0.2631 | — | 0.2747 | 1.35e-3 | SET ASIDE | numerical | -1.15e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -2097,7 +2093,7 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
-| 0.5 | 17.190 | ok | unconverged | — | unconverged | 1.78e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 0.5 | 17.190 | ok | unconverged | — | unconverged | 2.49e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | unconverged | — | unconverged | 2.84e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
 
 On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,
@@ -2117,18 +2113,18 @@ a common reference point does not change the modulus.
 | 0 | tangential | 10 | 0.9395 | 0.9395 | — | 0.9396 | -7.44e-5 | RECORDED | method | -1.06e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 | 0 | tangential | 30 | 0.6311 | 0.6311 | — | 0.6322 | -1.10e-3 | RECORDED | method | -1.10e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 | 0 | tangential | 50 | 0.3403 | 0.3407 | — | 0.3417 | -1.37e-3 | RECORDED | method | -1.06e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 10 | 0.8879 | 0.8894 | — | 0.8887 | -8.38e-4 | SET ASIDE | numerical | 6.91e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 30 | 0.4590 | 0.4587 | — | 0.4600 | -9.81e-4 | SET ASIDE | numerical | -1.32e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 50 | 0.1004 | 0.0991 | — | 0.0995 | 9.63e-4 | SET ASIDE | numerical | -3.55e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 10 | 0.9284 | 0.9297 | — | 0.9284 | -3.87e-5 | SET ASIDE | numerical | 1.27e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 30 | 0.6597 | 0.6603 | — | 0.6608 | -1.06e-3 | SET ASIDE | numerical | -4.97e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 50 | 0.4476 | 0.4476 | — | 0.4492 | -1.52e-3 | SET ASIDE | numerical | -1.57e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.5078 | 0.4947 | — | 0.5031 | 4.75e-3 | SET ASIDE | numerical | -8.41e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.3649 | 0.3569 | — | 0.3641 | 7.54e-4 | SET ASIDE | numerical | -7.22e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.3130 | 0.3047 | — | 0.3131 | -8.49e-5 | SET ASIDE | numerical | -8.40e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.6476 | 0.6441 | — | 0.6475 | 6.98e-5 | SET ASIDE | numerical | -3.36e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.3631 | 0.3689 | — | 0.3631 | -5.86e-5 | SET ASIDE | numerical | 5.75e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.1953 | 0.1984 | — | 0.1960 | -7.17e-4 | SET ASIDE | numerical | 2.37e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 10 | 0.8747 | 0.8765 | — | 0.8765 | -1.73e-3 | SET ASIDE | numerical | 4.16e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 30 | 0.4511 | 0.4507 | — | 0.4527 | -1.59e-3 | SET ASIDE | numerical | -1.98e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 50 | 0.1008 | 0.1004 | — | 0.1004 | 3.71e-4 | SET ASIDE | numerical | -2.88e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 10 | 0.9190 | 0.9207 | — | 0.9198 | -7.25e-4 | SET ASIDE | numerical | 8.92e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 30 | 0.6433 | 0.6437 | — | 0.6453 | -2.02e-3 | SET ASIDE | numerical | -1.55e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 50 | 0.4361 | 0.4359 | — | 0.4385 | -2.33e-3 | SET ASIDE | numerical | -2.53e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.4763 | 0.4679 | — | 0.4733 | 3.06e-3 | SET ASIDE | numerical | -5.36e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.3566 | 0.3547 | — | 0.3560 | 6.09e-4 | SET ASIDE | numerical | -1.25e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.2995 | 0.2982 | — | 0.2993 | 1.79e-4 | SET ASIDE | numerical | -1.13e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.6245 | 0.6219 | — | 0.6239 | 5.86e-4 | SET ASIDE | numerical | -2.07e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.2591 | 0.2630 | — | 0.2630 | -3.91e-3 | SET ASIDE | numerical | 7.79e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.1599 | 0.1580 | — | 0.1585 | 1.41e-3 | SET ASIDE | numerical | -4.62e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3667,8 +3663,8 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 0.5 | 17.190 | ok | unconverged | no curve | ok | 2.49e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | no-curve |
-| 1 | 31.948 | ok | unconverged | no curve | unconverged | 7.11e-13 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | no-curve |
+| 0.5 | 17.190 | ok | unconverged | no curve | ok | 3.20e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | no-curve |
+| 1 | 31.948 | ok | unconverged | no curve | unconverged | 6.47e-13 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | no-curve |
 
 | Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -3678,18 +3674,18 @@ status of its own frequency.
 | 0 | tangential | 10 | 0.9884 | 0.9881 | 0.9887 | 0.9881 | 3.28e-4 | RECORDED | method | 4.62e-5 | RECORDED | method | 5.79e-4 | RECORDED | method |
 | 0 | tangential | 30 | 0.9644 | 0.9635 | 0.9651 | 0.9634 | 9.60e-4 | RECORDED | method | 1.13e-4 | RECORDED | method | 1.71e-3 | RECORDED | method |
 | 0 | tangential | 50 | 0.9392 | 0.9378 | 0.9404 | 0.9376 | 1.61e-3 | RECORDED | method | 1.74e-4 | RECORDED | method | 2.76e-3 | RECORDED | method |
-| 0.5 | sagittal | 10 | 0.9220 | 0.9243 | — | 0.9243 | -2.34e-3 | RECORDED | method | -4.67e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 30 | 0.6518 | 0.6532 | — | 0.6544 | -2.63e-3 | RECORDED | method | -1.21e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 50 | 0.4058 | 0.4099 | — | 0.4090 | -3.21e-3 | RECORDED | method | 9.82e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 10 | 0.9510 | 0.9520 | — | 0.9506 | 3.48e-4 | RECORDED | method | 1.38e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 30 | 0.7464 | 0.7517 | — | 0.7501 | -3.65e-3 | RECORDED | method | 1.64e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 50 | 0.5450 | 0.5484 | — | 0.5500 | -4.96e-3 | RECORDED | method | -1.61e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.5033 | 0.4928 | — | 0.4984 | 4.97e-3 | SET ASIDE | numerical | -5.56e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.3601 | 0.3525 | — | 0.3579 | 2.24e-3 | SET ASIDE | numerical | -5.33e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.3072 | 0.3076 | — | 0.3064 | 8.88e-4 | SET ASIDE | numerical | 1.24e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.6747 | 0.6706 | — | 0.6752 | -5.00e-4 | SET ASIDE | numerical | -4.66e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.4831 | 0.4584 | — | 0.4801 | 2.98e-3 | SET ASIDE | numerical | -2.17e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.3675 | 0.3499 | — | 0.3654 | 2.07e-3 | SET ASIDE | numerical | -1.55e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 10 | 0.9199 | 0.9215 | — | 0.9210 | -1.08e-3 | RECORDED | method | 5.45e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 30 | 0.6423 | 0.6423 | — | 0.6433 | -9.86e-4 | RECORDED | method | -1.06e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 50 | 0.3974 | 0.3974 | — | 0.3978 | -4.04e-4 | RECORDED | method | -3.39e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 10 | 0.9479 | 0.9492 | — | 0.9475 | 3.65e-4 | RECORDED | method | 1.63e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 30 | 0.7371 | 0.7382 | — | 0.7365 | 5.57e-4 | RECORDED | method | 1.68e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 50 | 0.5313 | 0.5316 | — | 0.5330 | -1.72e-3 | RECORDED | method | -1.47e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.4723 | 0.4654 | — | 0.4694 | 2.89e-3 | SET ASIDE | numerical | -4.03e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.3536 | 0.3527 | — | 0.3522 | 1.43e-3 | SET ASIDE | numerical | 5.35e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.3005 | 0.3034 | — | 0.2999 | 5.68e-4 | SET ASIDE | numerical | 3.48e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.6838 | 0.6792 | — | 0.6839 | -2.62e-5 | SET ASIDE | numerical | -4.68e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.3685 | 0.3536 | — | 0.3672 | 1.28e-3 | SET ASIDE | numerical | -1.36e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.2851 | 0.2710 | — | 0.2837 | 1.41e-3 | SET ASIDE | numerical | -1.26e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3713,7 +3709,7 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | unconverged | — | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
-| 0.5 | 17.190 | ok | unconverged | — | unconverged | 1.07e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 0.5 | 17.190 | ok | unconverged | — | unconverged | 5.68e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | unconverged | — | unconverged | 3.20e-14 | numerical | unconverged: a sampling did not settle; the difference is shown apart, in no band | numerical | unconverged | unsupported | optiland is unsupported (feature lines.polychromatic) |
 
 On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,
@@ -3733,18 +3729,18 @@ a common reference point does not change the modulus.
 | 0 | tangential | 10 | 0.9564 | 0.9566 | — | 0.9567 | -2.42e-4 | RECORDED | method | -5.97e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 | 0 | tangential | 30 | 0.7684 | 0.7695 | — | 0.7700 | -1.65e-3 | RECORDED | method | -5.02e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 | 0 | tangential | 50 | 0.6092 | 0.6100 | — | 0.6104 | -1.20e-3 | RECORDED | method | -3.97e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 10 | 0.8839 | 0.8853 | — | 0.8853 | -1.45e-3 | SET ASIDE | numerical | -3.31e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 30 | 0.5954 | 0.5952 | — | 0.5962 | -7.91e-4 | SET ASIDE | numerical | -9.76e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | sagittal | 50 | 0.3991 | 0.3994 | — | 0.3994 | -3.33e-4 | SET ASIDE | numerical | 4.08e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 10 | 0.9088 | 0.9105 | — | 0.9092 | -4.03e-4 | SET ASIDE | numerical | 1.34e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 30 | 0.5835 | 0.5849 | — | 0.5852 | -1.69e-3 | SET ASIDE | numerical | -3.35e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 0.5 | tangential | 50 | 0.3589 | 0.3594 | — | 0.3590 | -5.20e-5 | SET ASIDE | numerical | 4.39e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.4639 | 0.4514 | — | 0.4590 | 4.86e-3 | SET ASIDE | numerical | -7.57e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.3002 | 0.2887 | — | 0.2989 | 1.29e-3 | SET ASIDE | numerical | -1.02e-2 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.2388 | 0.2355 | — | 0.2387 | 6.22e-5 | SET ASIDE | numerical | -3.20e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.6491 | 0.6457 | — | 0.6491 | 4.34e-5 | SET ASIDE | numerical | -3.41e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.3778 | 0.3864 | — | 0.3765 | 1.25e-3 | SET ASIDE | numerical | 9.86e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.2124 | 0.2187 | — | 0.2140 | -1.61e-3 | SET ASIDE | numerical | 4.69e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 10 | 0.8757 | 0.8766 | — | 0.8769 | -1.12e-3 | SET ASIDE | numerical | -2.53e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 30 | 0.5830 | 0.5834 | — | 0.5851 | -2.06e-3 | SET ASIDE | numerical | -1.69e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | sagittal | 50 | 0.3906 | 0.3905 | — | 0.3910 | -3.53e-4 | SET ASIDE | numerical | -4.20e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 10 | 0.9042 | 0.9044 | — | 0.9033 | 9.92e-4 | SET ASIDE | numerical | 1.13e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 30 | 0.5684 | 0.5711 | — | 0.5723 | -3.89e-3 | SET ASIDE | numerical | -1.14e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 0.5 | tangential | 50 | 0.3467 | 0.3481 | — | 0.3490 | -2.24e-3 | SET ASIDE | numerical | -8.30e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.4357 | 0.4291 | — | 0.4329 | 2.73e-3 | SET ASIDE | numerical | -3.86e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.3034 | 0.2984 | — | 0.3023 | 1.13e-3 | SET ASIDE | numerical | -3.89e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.2489 | 0.2493 | — | 0.2489 | -3.83e-6 | SET ASIDE | numerical | 3.52e-4 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.6429 | 0.6402 | — | 0.6424 | 4.69e-4 | SET ASIDE | numerical | -2.18e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.2978 | 0.3047 | — | 0.3009 | -3.05e-3 | SET ASIDE | numerical | 3.84e-3 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.1799 | 0.1811 | — | 0.1810 | -1.11e-3 | SET ASIDE | numerical | 3.42e-5 | SET ASIDE | numerical | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3768,8 +3764,8 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 0.5 | 17.190 | ok | ok | ok | ok | 2.13e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 1 | 31.948 | ok | ok | ok | ok | 5.72e-13 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
+| 0.5 | 17.190 | ok | ok | ok | ok | 1.78e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
+| 1 | 31.948 | ok | ok | ok | ok | 5.93e-13 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
 
 | Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -3785,12 +3781,12 @@ status of its own frequency.
 | 0.5 | tangential | 10 | 0.9378 | 0.9373 | 0.9374 | 0.9371 | 6.27e-4 | RECORDED | method | 1.99e-4 | RECORDED | method | 3.08e-4 | RECORDED | method |
 | 0.5 | tangential | 30 | 0.8123 | 0.8111 | 0.8115 | 0.8111 | 1.22e-3 | RECORDED | method | -7.53e-6 | RECORDED | method | 4.31e-4 | RECORDED | method |
 | 0.5 | tangential | 50 | 0.6870 | 0.6873 | 0.6876 | 0.6871 | -9.24e-5 | RECORDED | method | 2.00e-4 | RECORDED | method | 4.28e-4 | RECORDED | method |
-| 1 | sagittal | 10 | 0.9368 | 0.9368 | 0.9366 | 0.9363 | 5.46e-4 | RECORDED | method | 5.26e-4 | RECORDED | method | 3.31e-4 | RECORDED | method |
-| 1 | sagittal | 30 | 0.8085 | 0.8085 | 0.8080 | 0.8075 | 1.04e-3 | RECORDED | method | 1.00e-3 | RECORDED | method | 5.46e-4 | RECORDED | method |
-| 1 | sagittal | 50 | 0.6822 | 0.6821 | 0.6808 | 0.6802 | 1.98e-3 | RECORDED | method | 1.92e-3 | RECORDED | method | 6.08e-4 | RECORDED | method |
-| 1 | tangential | 10 | 0.8686 | 0.8685 | 0.8688 | 0.8684 | 2.16e-4 | RECORDED | method | 1.06e-4 | RECORDED | method | 3.61e-4 | RECORDED | method |
-| 1 | tangential | 30 | 0.6092 | 0.6089 | 0.6098 | 0.6098 | -5.96e-4 | RECORDED | method | -9.05e-4 | RECORDED | method | -1.26e-5 | RECORDED | method |
-| 1 | tangential | 50 | 0.3726 | 0.3723 | 0.3720 | 0.3726 | 1.61e-5 | RECORDED | method | -2.19e-4 | RECORDED | method | -5.91e-4 | RECORDED | method |
+| 1 | sagittal | 10 | 0.9364 | 0.9360 | 0.9361 | 0.9358 | 6.29e-4 | RECORDED | method | 2.27e-4 | RECORDED | method | 3.10e-4 | RECORDED | method |
+| 1 | sagittal | 30 | 0.8059 | 0.8047 | 0.8051 | 0.8046 | 1.21e-3 | RECORDED | method | 5.20e-5 | RECORDED | method | 4.53e-4 | RECORDED | method |
+| 1 | sagittal | 50 | 0.6753 | 0.6758 | 0.6760 | 0.6755 | -2.06e-4 | RECORDED | method | 3.21e-4 | RECORDED | method | 4.47e-4 | RECORDED | method |
+| 1 | tangential | 10 | 0.9284 | 0.9279 | 0.9280 | 0.9276 | 7.57e-4 | RECORDED | method | 3.19e-4 | RECORDED | method | 3.61e-4 | RECORDED | method |
+| 1 | tangential | 30 | 0.7810 | 0.7799 | 0.7804 | 0.7799 | 1.11e-3 | RECORDED | method | -1.97e-5 | RECORDED | method | 4.98e-4 | RECORDED | method |
+| 1 | tangential | 50 | 0.6396 | 0.6391 | 0.6392 | 0.6386 | 9.04e-4 | RECORDED | method | 4.37e-4 | RECORDED | method | 5.60e-4 | RECORDED | method |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3814,7 +3810,7 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
-| 0.5 | 17.190 | ok | ok | — | ok | 3.55e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 0.5 | 17.190 | ok | ok | — | ok | 7.11e-15 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
 | 1 | 31.948 | ok | ok | — | ok | 3.91e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
 
 On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,
@@ -3840,12 +3836,12 @@ a common reference point does not change the modulus.
 | 0.5 | tangential | 10 | 0.9341 | 0.9337 | — | 0.9335 | 5.94e-4 | RECORDED | method | 1.88e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
 | 0.5 | tangential | 30 | 0.7707 | 0.7696 | — | 0.7696 | 1.11e-3 | RECORDED | method | 3.99e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
 | 0.5 | tangential | 50 | 0.5912 | 0.5909 | — | 0.5908 | 3.19e-4 | RECORDED | method | 8.20e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.9394 | 0.9394 | — | 0.9395 | -1.25e-4 | RECORDED | method | -1.44e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.8173 | 0.8172 | — | 0.8175 | -2.39e-4 | RECORDED | method | -2.77e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.6974 | 0.6973 | — | 0.6970 | 4.20e-4 | RECORDED | method | 3.61e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.8656 | 0.8655 | — | 0.8653 | 2.99e-4 | RECORDED | method | 1.97e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.5675 | 0.5672 | — | 0.5679 | -3.85e-4 | RECORDED | method | -6.35e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.3135 | 0.3133 | — | 0.3137 | -2.04e-4 | RECORDED | method | -4.03e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.9397 | 0.9393 | — | 0.9391 | 5.91e-4 | RECORDED | method | 2.09e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.8161 | 0.8150 | — | 0.8149 | 1.18e-3 | RECORDED | method | 7.63e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.6927 | 0.6925 | — | 0.6924 | 3.05e-4 | RECORDED | method | 1.92e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.9228 | 0.9224 | — | 0.9221 | 6.84e-4 | RECORDED | method | 3.04e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.7294 | 0.7287 | — | 0.7286 | 8.33e-4 | RECORDED | method | 6.01e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.5327 | 0.5331 | — | 0.5327 | -1.12e-5 | RECORDED | method | 3.19e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3869,8 +3865,8 @@ status of its own frequency.
 | Field | Angle [deg] | lv | wave | optiland | optiland-wave | Chief rays apart [mm] | Class | Reason | wave − optiland-wave: class | Reason | optiland − optiland-wave: class | Reason |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | ok | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 0.5 | 17.190 | ok | ok | ok | ok | 1.95e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
-| 1 | 31.948 | ok | ok | ok | ok | 5.61e-13 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
+| 0.5 | 17.190 | ok | ok | ok | ok | 1.42e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
+| 1 | 31.948 | ok | ok | ok | ok | 5.90e-13 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | method | two-methods |
 
 | Field | Cut | Cycles/mm | lv | wave | optiland | optiland-wave | lv − optiland-wave | Status | Class | wave − optiland-wave | Status | Class | optiland − optiland-wave | Status | Class |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -3886,12 +3882,12 @@ status of its own frequency.
 | 0.5 | tangential | 10 | 0.9378 | 0.9374 | 0.9375 | 0.9372 | 6.28e-4 | RECORDED | method | 2.00e-4 | RECORDED | method | 3.09e-4 | RECORDED | method |
 | 0.5 | tangential | 30 | 0.8125 | 0.8113 | 0.8117 | 0.8113 | 1.22e-3 | RECORDED | method | -4.44e-6 | RECORDED | method | 4.33e-4 | RECORDED | method |
 | 0.5 | tangential | 50 | 0.6874 | 0.6877 | 0.6879 | 0.6875 | -8.28e-5 | RECORDED | method | 2.06e-4 | RECORDED | method | 4.31e-4 | RECORDED | method |
-| 1 | sagittal | 10 | 0.9368 | 0.9368 | 0.9366 | 0.9362 | 5.46e-4 | RECORDED | method | 5.27e-4 | RECORDED | method | 3.32e-4 | RECORDED | method |
-| 1 | sagittal | 30 | 0.8082 | 0.8082 | 0.8077 | 0.8072 | 1.04e-3 | RECORDED | method | 1.00e-3 | RECORDED | method | 5.49e-4 | RECORDED | method |
-| 1 | sagittal | 50 | 0.6816 | 0.6816 | 0.6803 | 0.6797 | 1.98e-3 | RECORDED | method | 1.92e-3 | RECORDED | method | 6.13e-4 | RECORDED | method |
-| 1 | tangential | 10 | 0.8686 | 0.8685 | 0.8688 | 0.8684 | 2.17e-4 | RECORDED | method | 1.07e-4 | RECORDED | method | 3.63e-4 | RECORDED | method |
-| 1 | tangential | 30 | 0.6093 | 0.6090 | 0.6099 | 0.6099 | -5.92e-4 | RECORDED | method | -9.01e-4 | RECORDED | method | -7.84e-6 | RECORDED | method |
-| 1 | tangential | 50 | 0.3727 | 0.3724 | 0.3721 | 0.3726 | 2.19e-5 | RECORDED | method | -2.14e-4 | RECORDED | method | -5.85e-4 | RECORDED | method |
+| 1 | sagittal | 10 | 0.9363 | 0.9359 | 0.9360 | 0.9357 | 6.29e-4 | RECORDED | method | 2.28e-4 | RECORDED | method | 3.11e-4 | RECORDED | method |
+| 1 | sagittal | 30 | 0.8055 | 0.8043 | 0.8047 | 0.8043 | 1.21e-3 | RECORDED | method | 5.27e-5 | RECORDED | method | 4.55e-4 | RECORDED | method |
+| 1 | sagittal | 50 | 0.6746 | 0.6751 | 0.6753 | 0.6748 | -2.13e-4 | RECORDED | method | 3.20e-4 | RECORDED | method | 4.52e-4 | RECORDED | method |
+| 1 | tangential | 10 | 0.9284 | 0.9279 | 0.9280 | 0.9276 | 7.57e-4 | RECORDED | method | 3.19e-4 | RECORDED | method | 3.62e-4 | RECORDED | method |
+| 1 | tangential | 30 | 0.7812 | 0.7800 | 0.7806 | 0.7801 | 1.10e-3 | RECORDED | method | -2.03e-5 | RECORDED | method | 5.02e-4 | RECORDED | method |
+| 1 | tangential | 50 | 0.6399 | 0.6395 | 0.6396 | 0.6390 | 8.97e-4 | RECORDED | method | 4.38e-4 | RECORDED | method | 5.66e-4 | RECORDED | method |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -3916,7 +3912,7 @@ status of its own frequency.
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 0 | 0.000 | ok | ok | — | ok | 0 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
 | 0.5 | 17.190 | ok | ok | — | ok | 2.31e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
-| 1 | 31.948 | ok | ok | — | ok | 4.26e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
+| 1 | 31.948 | ok | ok | — | ok | 3.91e-14 | method | two-methods: both engines stand by their curves; the difference is held to the attention band | method | two-methods | unsupported | optiland is unsupported (feature lines.polychromatic) |
 
 On several lines optiland-wave is the comparator's sum of complex OTFs of optiland's raw wavefronts,
 one wavefront.native call per line, evaluated at the requested frequencies. Each line is phase-shifted by
@@ -3941,12 +3937,12 @@ a common reference point does not change the modulus.
 | 0.5 | tangential | 10 | 0.9335 | 0.9331 | — | 0.9329 | 5.78e-4 | RECORDED | method | 1.76e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
 | 0.5 | tangential | 30 | 0.7676 | 0.7665 | — | 0.7665 | 1.04e-3 | RECORDED | method | -1.13e-6 | RECORDED | method | — | UNSUPPORTED | unsupported |
 | 0.5 | tangential | 50 | 0.5867 | 0.5866 | — | 0.5865 | 2.04e-4 | RECORDED | method | 1.85e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 10 | 0.9395 | 0.9395 | — | 0.9397 | -1.37e-4 | RECORDED | method | -1.56e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 30 | 0.8184 | 0.8184 | — | 0.8187 | -2.76e-4 | RECORDED | method | -3.13e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | sagittal | 50 | 0.6999 | 0.6998 | — | 0.6995 | 3.67e-4 | RECORDED | method | 3.09e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 10 | 0.8651 | 0.8650 | — | 0.8648 | 2.79e-4 | RECORDED | method | 1.78e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 30 | 0.5658 | 0.5655 | — | 0.5662 | -4.36e-4 | RECORDED | method | -6.85e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
-| 1 | tangential | 50 | 0.3121 | 0.3119 | — | 0.3123 | -2.77e-4 | RECORDED | method | -4.72e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 10 | 0.9401 | 0.9397 | — | 0.9395 | 5.80e-4 | RECORDED | method | 2.00e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 30 | 0.8187 | 0.8176 | — | 0.8176 | 1.16e-3 | RECORDED | method | 5.20e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | sagittal | 50 | 0.6977 | 0.6976 | — | 0.6974 | 3.11e-4 | RECORDED | method | 1.64e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 10 | 0.9228 | 0.9224 | — | 0.9221 | 7.02e-4 | RECORDED | method | 3.02e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 30 | 0.7287 | 0.7278 | — | 0.7277 | 9.71e-4 | RECORDED | method | 7.85e-5 | RECORDED | method | — | UNSUPPORTED | unsupported |
+| 1 | tangential | 50 | 0.5317 | 0.5319 | — | 0.5315 | 1.56e-4 | RECORDED | method | 3.68e-4 | RECORDED | method | — | UNSUPPORTED | unsupported |
 
 A band is a width for attention, taken from a tolerance the plan withdrew. A difference inside it was written
 down and says nothing more; a difference outside it is worth a look and fails nothing.
@@ -6753,8 +6749,6 @@ with each figure above its band. A band is a width for attention; nothing here i
 | r6c | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.31e-3 (band 5.00e-3) at cut tangential, field 0, frequencyPerMm 100 |
 | r5 | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.06e-2 (band 1.00e-2) at cut tangential, field 1, frequencyPerMm 60 |
 | r6c | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.07e-2 (band 1.00e-2) at cut tangential, field 1, frequencyPerMm 60 |
-| r5g | sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | lv – optiland | mtfOffAxis.maxAbs 1.21e-2 (band 1.00e-2) at cut sagittal, field 5.00e-1, frequencyPerMm 90 |
-| r5g | sigma-35mm-f14-dg-hsm-a-best-photopic | 0.5 | optiland – replay | mtfOffAxis.maxAbs 1.21e-2 (band 1.00e-2) at cut sagittal, field 5.00e-1, frequencyPerMm 90 |
 | r5 | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (band 1.00e-2) at cut tangential, field 5.00e-1, frequencyPerMm 100 |
 | r6c | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (band 1.00e-2) at cut tangential, field 5.00e-1, frequencyPerMm 100 |
 | r6c | nikkor-z50f12-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.80e-3 (band 5.00e-3) at cut sagittal, field 0, frequencyPerMm 80 |

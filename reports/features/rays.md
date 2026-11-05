@@ -16,15 +16,15 @@ which is within the policy's floor limit of the arbiter while no other engine si
 |---|---|
 | Suite | features |
 | Suite hash | dffbfdd11f2bc3e6c9203e4afe99e207eb441a73417d2fd4ba3d1f95e2183b1e |
-| Baseline hash | 88137cefd70ceeb9744bb25182038ef40e860fa1fe57969dc0cf6b164b00cd54 |
+| Baseline hash | 6987e577bb2070d3e60c5c470b2d77897f5f32f2330cf5aa055394761d77049b |
 | Contract version | 1.0 |
 | Policy | rungs v24 |
 | Policy hash | be3e032669e5859702174ce5c6ea63cd00f44850c893b09e005c0d8a407c4889 |
 
 | Engine | Version | Fingerprint | Adapter revision | Taken at |
 |---|---|---|---|---|
-| lv | 1 | fc5ae9236ce310db6f3fae2e6e21db1e7baaa701bfc98b3a4cf85c479baf6e59 | d950739f06bc44c8bff898a823224e9f267dc69aaa6c2029c315298487048a1e | commit 6287f4393ffbc2fd951c7d61f9bc6a024e30591f, dirty false, engineFileCount 184 |
-| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 846c50e378e2ebe9f678d9f52ef8594f20cbb96ed773f1e042437710ae947773 | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
+| lv | 1 | 4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b | afad9cb89bd9a25fbfa5ee0ec335b1e315481414b7ba41da2f906c28856010c5 | commit 25f65d4b4213a21392cbae92680134906049b2ad, dirty false, engineFileCount 184 |
+| optiland | 0.6.2.post117+g4e893f53 | bcfbf3916c1103b3b3b49a93117d3346a0bd6921ec35f01feb99bc1a2a6e39eb | 98f36151b0cdd2d3d3f82013841899de85309b22012967de64bbba662217fbcb | backend numpy, commit 4e893f53aee1312f2d091680b93dd2279711e197, dirty true, distVersion 0.6.2.post117+g4e893f53, jit true, numba 0.65.1, numpy 2.3.5, precision float64, python 3.14.8, scipy 1.16.3, sourceFiles 534, sourceHash 279af5c55d8ebe1610686b9dad3e6eeb22b1822037d59a0e5f148c2fb8937f38 |
 | ref | 1 | b7d0684b593261d14a1dfebb903774775bbe481a07ae2955689644dc0ffd919e | 2225e342b4fd8539480e933e59a3ca95a8ae2beeb24f45972b55fd4e4a59d357 | sourceFiles 13 |
 
 | Run | Case |
@@ -501,7 +501,7 @@ By run, each pair with its verdict and the judged metric that is largest against
 | flat-base-asphere-ref | 4 | PASS: exitPupil.maxScaled 1.12e-13 mm | PASS: exitPupil.maxScaled 1.88e-13 mm | PASS: exitPupil.maxScaled 1.81e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | flat-base-asphere-photopic | 4 | PASS: exitPupil.maxScaled 1.20e-13 mm | PASS: exitPupil.maxScaled 2.06e-13 mm | PASS: exitPupil.maxScaled 2.17e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | rear-plate-rim-ref | 4 | PASS: landing.maxAbs 7.46e-14 mm | PASS: exitPupil.maxScaled 1.71e-13 mm | PASS: distortion.maxScaled 1.83e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
-| rear-plate-rim-photopic | 4 | PASS: landing.maxAbs 8.88e-14 mm | PASS: distortion.maxScaled 1.88e-13 mm | PASS: distortion.maxScaled 2.27e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
+| rear-plate-rim-photopic | 4 | PASS: lateralColour.maxAbs 9.59e-14 mm | PASS: distortion.maxScaled 1.88e-13 mm | PASS: distortion.maxScaled 2.27e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | fixed-iris-zoom-ref-wide | 4 | PASS: exitPupil.maxScaled 2.08e-14 mm | PASS: exitPupil.maxScaled 2.09e-13 mm | PASS: exitPupil.maxScaled 2.05e-13 mm | 148 / 1 / 0 | 148 / 1 / 0 | 148 / 1 / 0 |
 | fixed-iris-zoom-ref-tele | 4 | PASS: exitPupil.maxScaled 3.56e-14 mm | PASS: exitPupil.maxScaled 5.32e-13 mm | PASS: exitPupil.maxScaled 5.37e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | fixed-iris-zoom-photopic-wide | 4 | PASS: lateralColour.maxAbs 2.75e-14 mm | PASS: exitPupil.maxScaled 2.04e-13 mm | PASS: exitPupil.maxScaled 2.06e-13 mm | 136 / 13 / 0 | 136 / 13 / 0 | 136 / 13 / 0 |
