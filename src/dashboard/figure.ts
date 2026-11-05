@@ -5,11 +5,28 @@
 
 /**
  * A document the dashboard read, by name: the run's manifest or comparisons (`<runsDir>/<suite>/manifest.json`,
- * `comparisons.json`), a baseline file (`baselines/<stem>.json`), a store entry (`{ request, result }`), or the
- * policy at hand (`policy/<stem>.json`).
+ * `comparisons.json`), a case of a run directory (`case:<suite>/<caseId>`, `<runsDir>/<suite>/cases/<caseId>.json`,
+ * Stage 8.4), a baseline file (`baselines/<stem>.json`), a store entry (`{ request, result }`), or the policy at hand
+ * (`policy/<stem>.json`).
  */
 export type DocumentName =
-  `manifest:${string}` | `comparisons:${string}` | `baseline:${string}` | `store:${string}` | `policy:${string}`;
+  | `manifest:${string}`
+  | `comparisons:${string}`
+  | `case:${string}`
+  | `baseline:${string}`
+  | `store:${string}`
+  | `policy:${string}`;
+
+/** The document of a case of a run directory. */
+export function caseDocument(suite: string, caseId: string): DocumentName {
+  return `case:${suite}/${caseId}`;
+}
+
+/** The run directory and the case id a case document names: the id is what follows the last `/`. */
+export function caseDocumentParts(name: string): { readonly suite: string; readonly caseId: string } {
+  const slash = name.lastIndexOf("/");
+  return { suite: name.slice(0, slash), caseId: name.slice(slash + 1) };
+}
 
 /** Where a number is: a document, and an RFC 6901 pointer into it as the file holds it. */
 export interface Source {
@@ -63,6 +80,13 @@ export const COUNT_KEYS: readonly string[] = Object.freeze([
   "job",
   // The exit code of a step of a job of run control, as its child process ended with it (Stage 8.3).
   "exitCode",
+  // How many runs of the run directories a lens page gathers (Stage 8.4).
+  "runCount",
+  // The number of a curve of a lens page's selection, from 1, in the order the curves are drawn (Stage 8.4).
+  "curve",
+  // How many entry files of the store a store job's report counts, and how many bytes they hold (Stage 8.4).
+  "files",
+  "bytes",
 ]);
 
 /** The pointer of a path of members and indices (RFC 6901): `~` is written `~0` and `/` is written `~1`. */
@@ -157,5 +181,9 @@ export function documentLabel(document: DocumentName): string {
   if (kind === "comparisons") return `${name}/comparisons.json`;
   if (kind === "baseline") return `baselines/${name}.json`;
   if (kind === "policy") return `policy/${name}.json`;
+  if (kind === "case") {
+    const { suite, caseId } = caseDocumentParts(name);
+    return `${suite}/cases/${caseId}.json`;
+  }
   return `store/${name}`;
 }

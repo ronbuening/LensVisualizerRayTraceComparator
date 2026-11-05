@@ -11,6 +11,12 @@
 // (a value that is not a finite number is null there: a gap), each held to the job, field and cut of its chart; a
 // difference and a per-surface maximum are Derived numbers the test recomputes by its own loop from the arrays they
 // name; a heat map's cells are recounted from the comparisons or the baseline.
+//
+// The lens pages of Stage 8.4 are held the same way: each run of a lens is the test's own reading of the case files,
+// its condition's figures are of its own case file (and its manifest's recipe), each curve is a Curve of the store
+// entry of its job at its field and cut, the curves are the test's own enumeration of the choice, and each
+// difference is sorted (within the reference's request, apart, or left out) by the test's own restatement of the rule
+// before it is recomputed.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -30,6 +36,7 @@ import type { Verdict } from "../../src/contract/comparison.ts";
 import type { Policy } from "../../src/contract/policy.ts";
 import { loadConfig } from "../../src/core/config.ts";
 import type { ManifestEngine, ManifestJob, RunManifest } from "../../src/core/manifest.ts";
+import { DASHBOARD_TEXT } from "../../src/report/wording.ts";
 import type { StoreEntry } from "../../src/core/resultStore.ts";
 import { encodeF8 } from "../../src/core/numeric/ndarray.ts";
 import { decodeNdArray, isNdArray } from "../../src/core/numeric/ndarray.ts";
@@ -50,6 +57,9 @@ import type {
   SectionView,
 } from "../../src/dashboard/views.ts";
 import { buildReport } from "../../src/report/model.ts";
+import { MAX_LENS_CURVES } from "../../src/dashboard/lens.ts";
+import type { LensView } from "../../src/dashboard/lens.ts";
+import { LENS_KEY, lensGoldenQuery } from "./lensFixture.ts";
 import type { MtfComparison } from "../../src/report/mtfComparison.ts";
 import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "../core/support.ts";
 import { buildFixture, documentFromDisk, fetchFrom, valueAtPointer, walkView } from "./support.ts";
@@ -208,7 +218,35 @@ function indexCounts(
       ([, n], k) => expected.set(`/baselines/${j}/badges/${k}/count`, n),
     );
   });
+  [...lensRunsOf(places, runNames)].forEach(([, runs], l) => expected.set(`/lenses/${l}/runCount`, runs.length));
   return expected;
+}
+
+/** A run of a lens, as the test reads it: its run directory, its place there, its name and case. */
+interface TestLensRun {
+  readonly suite: string;
+  readonly place: number;
+  readonly run: string;
+  readonly caseId: string;
+  readonly manifest: RunManifest;
+}
+
+/** The lenses of the run directories, read by the test: every run whose case file's label names a lens, keys sorted. */
+function lensRunsOf(places: DocumentPlaces, runNames: readonly string[]): Map<string, TestLensRun[]> {
+  const lenses = new Map<string, TestLensRun[]>();
+  for (const suite of runNames) {
+    const { manifest } = runDocuments(places, suite);
+    manifest?.runs.forEach((run, place) => {
+      if (run.caseId === null) return;
+      const file = readJson<{ label?: { lensKey?: string } }>(
+        join(places.runsDir, suite, "cases", `${run.caseId}.json`),
+      );
+      const key = file?.label?.lensKey;
+      if (key === undefined) return;
+      lenses.set(key, [...(lenses.get(key) ?? []), { suite, place, run: run.name, caseId: run.caseId, manifest }]);
+    });
+  }
+  return new Map([...lenses].sort(([a], [b]) => (a < b ? -1 : 1)));
 }
 
 function runCounts(places: DocumentPlaces, name: string, split: boolean): Map<string, number> {
@@ -543,6 +581,14 @@ function holdMeaning(view: unknown, path: string, pointer: string, what: string)
     frequency: ["frequenciesPerMm"],
     gate: ["tolerance"],
     maxDistance: ["value"],
+    zoomT: ["zoomT"],
+    focusT: ["focusT"],
+    stopSemiDiameterMm: ["stopSemiDiameter"],
+    imageZ: ["imageZ"],
+    z: ["z"],
+    shiftMm: ["shiftMm"],
+    wavelengthNm: ["wavelengthNm"],
+    weight: ["weight"],
   };
   let expected: readonly string[];
   if (/^\d+$/.test(key)) {
@@ -1104,6 +1150,324 @@ function holdBaseline(places: DocumentPlaces, view: BaselineView): void {
   );
 }
 
+// ── Lens pages (Stage 8.4) ───────────────────────────────────────────────────────────────────────────────────────
+
+/** A curve as the test enumerates a choice: its job and where in its answer it is. */
+interface TestCurve {
+  readonly lensRun: TestLensRun;
+  readonly job: ManifestJob;
+  readonly entry: StoreEntry;
+  readonly element: number;
+  readonly cut: string;
+}
+
+const engineLabelOf = (job: ManifestJob): string => (job.step === undefined ? job.engine : `${job.engine}#${job.step}`);
+
+/**
+ * The curves of a choice, enumerated by the test from the manifests and the store: the lens's runs chosen, in order;
+ * each run's mtf.native requests in the order the manifest first has them; each request's engines sorted, an engine's
+ * jobs in the manifest's order; each answer's fields chosen, in their order; the cuts chosen, sagittal first.
+ */
+function expectedCurves(places: DocumentPlaces, runs: readonly TestLensRun[], view: LensView): TestCurve[] {
+  const chosen = (options: readonly { id: string; chosen: boolean }[]): string[] =>
+    options.filter((option) => option.chosen).map((option) => option.id);
+  const [runIds, rungs, engines, fields, cuts] = [
+    chosen(view.picker.runs),
+    chosen(view.picker.rungs),
+    chosen(view.picker.engines),
+    chosen(view.picker.fields),
+    chosen(view.picker.cuts),
+  ];
+  const out: TestCurve[] = [];
+  for (const lensRun of runs) {
+    if (!runIds.includes(`${lensRun.suite}/${lensRun.place}`)) continue;
+    const own = lensRun.manifest.jobs.filter((job) => job.run === lensRun.run && job.quantity === "mtf.native");
+    const requests = [...new Set(own.map((job) => `${job.rung} ${job.requestId}`))];
+    for (const request of requests) {
+      const jobs = own.filter((job) => `${job.rung} ${job.requestId}` === request);
+      for (const engine of [...new Set(jobs.map((job) => job.engine))].sort()) {
+        for (const job of jobs.filter((each) => each.engine === engine)) {
+          if (!rungs.includes(job.rung) || !engines.includes(engineLabelOf(job))) continue;
+          const entry = storeEntryOf(places, job.storeKey);
+          const data = entry?.result.status === "ok" ? (entry.result.data as { fields?: { field: number }[] }) : null;
+          const kind = (entry?.request.spec as { fields?: { kind?: string } } | undefined)?.fields?.kind;
+          const short = kind === "image-height-fractions" ? "fraction" : kind === "angles-deg" ? "angle" : "field";
+          (data?.fields ?? []).forEach((field, element) => {
+            if (!fields.includes(`${short}:${String(field.field)}`)) return;
+            for (const cut of ["sagittal", "tangential"]) {
+              if (cuts.includes(cut)) out.push({ lensRun, job, entry: entry!, element, cut });
+            }
+          });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** The section groups' place of a request in a run directory's comparisons, and the pairs of its sets. */
+function sectionOfRequest(places: DocumentPlaces, suite: string, run: string, rung: string, requestId: string) {
+  const { comparisons } = runDocuments(places, suite);
+  if (comparisons === null) return null;
+  const groups = groupsOf(comparisons);
+  const section = groups.findIndex((group) => {
+    const head = comparisons.comparisons[group[0]];
+    return head.run === run && head.rung === rung && head.requestId === requestId;
+  });
+  if (section < 0) return null;
+  return { section, pairs: groups[section].flatMap((set) => comparisons.comparisons[set].pairs) };
+}
+
+/**
+ * Holds a lens page to its documents: its runs to the case files, its curves to the test's own enumeration and each
+ * to its job's store entry, field and cut, and each difference to the test's own sorting: within the reference's
+ * request (a pair of its section, with that pair's verdict and the policy's band of its rung), apart (with its
+ * reason), or left out (another set of frequencies, or no values).
+ */
+function holdLens(places: DocumentPlaces, runs: readonly TestLensRun[], view: LensView, policy: Policy, what: string) {
+  assert.deepEqual(
+    view.runs.map((run) => [run.suite, run.place, run.run, run.caseId]),
+    runs.map((run) => [run.suite, run.place, run.run, run.caseId]),
+    `${what}: every run of the lens, in order`,
+  );
+  view.runs.forEach((run) => {
+    const condition = run.condition;
+    if (condition === null) return;
+    const document = `case:${run.suite}/${run.caseId}`;
+    const figures = [
+      condition.zoomT,
+      condition.focusT,
+      condition.stopSemiDiameterMm,
+      condition.imageZ,
+      condition.object.kind === "finite" ? condition.object.z : null,
+      ...condition.lines.flatMap((line) => [line.wavelengthNm, line.weight]),
+    ];
+    for (const figure of figures) {
+      if (figure !== null) assert.equal(figure.source.document, document, `${what}: ${run.run}'s own case`);
+    }
+    condition.lines.forEach((line, l) =>
+      assert.deepEqual(tokensOf(line.wavelengthNm), ["conditions", "lines", l, "wavelengthNm"], what),
+    );
+    if (condition.plane?.shiftMm) {
+      assert.equal(condition.plane.shiftMm.source.document, `manifest:${run.suite}`);
+      assert.deepEqual(tokensOf(condition.plane.shiftMm), ["runs", run.place, "recipe", "recipe", "plane", "shiftMm"]);
+    }
+  });
+  assert.deepEqual(
+    view.picker.runs.map((option) => option.id),
+    runs
+      .filter((run) => run.manifest.jobs.some((job) => job.run === run.run && job.quantity === "mtf.native"))
+      .map((run) => `${run.suite}/${run.place}`),
+    `${what}: a run of the picker for each run with an mtf.native job`,
+  );
+  const expected = expectedCurves(places, runs, view);
+  if (expected.length > MAX_LENS_CURVES) {
+    assert.deepEqual(view.curves, [], `${what}: too many curves draw none`);
+    return;
+  }
+  assert.deepEqual(
+    view.curves.map((curve) => [
+      curve.suite,
+      curve.runName,
+      curve.rung,
+      curve.requestId,
+      curve.engine,
+      curve.step,
+      curve.element,
+      curve.cut,
+    ]),
+    expected.map(({ lensRun, job, element, cut }) => [
+      lensRun.suite,
+      lensRun.run,
+      job.rung,
+      job.requestId,
+      job.engine,
+      job.step ?? null,
+      element,
+      cut,
+    ]),
+    `${what}: the curves of the choice, in order`,
+  );
+  view.curves.forEach((curve, c) => {
+    const { job } = expected[c];
+    const document = `store:${job.storeKey}`;
+    for (const [figure, pointer] of [
+      [curve.values, `/result/data/fields/${curve.element}/${curve.cut}`],
+      [curve.frequencies, "/request/spec/frequenciesPerMm"],
+      [curve.field, `/result/data/fields/${curve.element}/field`],
+    ] as const) {
+      if (figure === null) continue;
+      assert.deepEqual([figure.source.document, figure.source.pointer], [document, pointer], `${what} curve ${c + 1}`);
+    }
+  });
+  const reference = view.curves.find((curve) => curve.reference);
+  if (reference === undefined || view.referenceNote !== null) {
+    assert.equal(view.within, null, what);
+    assert.equal(view.other, null, what);
+    return;
+  }
+  // The test's own sorting of every other curve.
+  const within: number[] = [];
+  const apart: [number, string][] = [];
+  let left = 0;
+  const T = DASHBOARD_TEXT.lens;
+  const refSection = sectionOfRequest(places, reference.suite, reference.runName, reference.rung, reference.requestId);
+  for (const curve of view.curves) {
+    if (curve.reference) continue;
+    const values = curve.values?.values ?? [];
+    const frequencies = curve.frequencies?.values ?? [];
+    const same =
+      frequencies.length === (reference.frequencies?.values.length ?? -1) &&
+      frequencies.every((value, i) => Object.is(value, reference.frequencies?.values[i]));
+    if (curve.state === "unavailable" || values.every((value) => value === null) || !same) {
+      left++;
+      continue;
+    }
+    const why =
+      curve.suite !== reference.suite
+        ? T.whyOtherDirectory
+        : curve.run !== reference.run
+          ? T.whyOtherRun
+          : curve.rung !== reference.rung || curve.requestId !== reference.requestId
+            ? T.whyOtherRequest
+            : curve.element !== reference.element
+              ? T.whyOtherField
+              : curve.cut !== reference.cut
+                ? T.whyOtherCut
+                : curve.engine === reference.engine
+                  ? T.whySameEngine
+                  : refSection === null
+                    ? T.whyNotCompared
+                    : refSection.pairs.some(
+                          (pair) => [pair.a, pair.b].sort().join() === [curve.engine, reference.engine].sort().join(),
+                        )
+                      ? null
+                      : T.whyNoPair;
+    if (why === null) within.push(curve.curve);
+    else apart.push([curve.curve, why]);
+  }
+  assert.equal(view.unresolved.length, left, `${what}: what is left out of every difference`);
+  assert.deepEqual(
+    view.other?.lines.map((line) => [line.curve, line.why]) ?? [],
+    apart,
+    `${what}: the differences no comparison judges, each with its reason`,
+  );
+  const curveNumbered = (n: number) => view.curves[n - 1];
+  /** A point is of the frequency of its own element, in the store entry of its curve. */
+  const holdPoint = (
+    point: { frequency: Figure; difference: { derivation: string } },
+    curve: LensView["curves"][number],
+  ): void => {
+    const element = /at element (\d+) of both curves$/.exec(point.difference.derivation)?.[1];
+    assert.deepEqual(
+      [point.frequency.source.document, point.frequency.source.pointer],
+      [curve.values?.source.document, `/request/spec/frequenciesPerMm/${element}`],
+      `${what}: the frequency of the point's own element`,
+    );
+  };
+  for (const line of view.other?.lines ?? []) {
+    for (const point of line.points) {
+      assert.deepEqual(point.difference.of, [curveNumbered(line.curve).values?.source, reference.values?.source], what);
+      holdPoint(point, curveNumbered(line.curve));
+    }
+  }
+  if (within.length === 0) return assert.equal(view.within, null, what);
+  assert.ok(view.within !== null && refSection !== null, what);
+  assert.equal(view.within.section?.section, refSection.section, `${what}: the reference's section`);
+  assert.equal(view.within.view.pairs.length, within.length, `${what}: a pair for each curve within`);
+  view.within.view.pairs.forEach((pair, p) => {
+    const curve = curveNumbered(within[p]);
+    assert.deepEqual(
+      [pair.a, pair.aStep, pair.b, pair.bStep],
+      [curve.engine, curve.step, reference.engine, reference.step],
+    );
+    const own = refSection.pairs.find((each) => [each.a, each.b].sort().join() === [pair.a, pair.b].sort().join());
+    assert.equal(pair.verdict, own?.verdict, `${what}: the pair's verdict in the comparison`);
+    for (const point of pair.points) {
+      assert.deepEqual(point.difference.of, [curve.values?.source, reference.values?.source], what);
+      holdPoint(point, curve);
+    }
+  });
+  const limit = view.within.view.limit;
+  if (limit !== null) {
+    const metrics = policy.rungs[reference.rung]?.metrics ?? {};
+    const banded = Object.hasOwn(metrics, "mtfOnAxis.maxAbs");
+    const metric = banded ? (reference.field?.value === 0 ? "mtfOnAxis.maxAbs" : "mtfOffAxis.maxAbs") : "mtf.maxAbs";
+    assert.deepEqual(tokensOf(limit), ["rungs", reference.rung, "metrics", metric, banded ? "attention" : "tolerance"]);
+  }
+}
+
+/** A lens page's counts, recounted: the runs' places, the curves' numbers and fields, the reference's section. */
+function lensCounts(places: DocumentPlaces, runs: readonly TestLensRun[], view: LensView): Map<string, number> {
+  const expected = new Map<string, number>();
+  runs.forEach((run, r) =>
+    expected.set(
+      `/runs/${r}/place`,
+      run.manifest.runs.findIndex((each) => each.name === run.run),
+    ),
+  );
+  const curves = expectedCurves(places, runs, view);
+  view.curves.forEach((curve, c) => {
+    expected.set(`/curves/${c}/curve`, c + 1);
+    // The field's place in the answer, found by the test: the field of the answer whose value is the curve's.
+    const fields = (curves[c]?.entry.result.data as { fields: { field: number }[] }).fields;
+    expected.set(
+      `/curves/${c}/element`,
+      fields.findIndex((field) => field.field === curve.field?.value),
+    );
+  });
+  const reference = view.curves.findIndex((curve) => curve.reference);
+  if (view.reference !== null) expected.set("/reference/curve", reference + 1);
+  if (view.within !== null) {
+    const ref = view.curves[reference];
+    const section = sectionOfRequest(places, ref.suite, ref.runName, ref.rung, ref.requestId);
+    if (view.within.section !== null && section !== null) expected.set("/within/section/section", section.section);
+    expected.set("/within/view/element", ref.element);
+  }
+  view.other?.lines.forEach((line, l) => {
+    // A line's curve is the one whose values its differences are of.
+    const of = line.points[0]?.difference.of[0];
+    const same = (each: LensView["curves"][number]): boolean =>
+      each.values !== null && each.values.source.document === of?.document && each.values.source.pointer === of.pointer;
+    const curve = of === undefined ? line.curve : view.curves.findIndex(same) + 1;
+    expected.set(`/other/lines/${l}/curve`, curve);
+  });
+  return expected;
+}
+
+/** The choices a lens page is held at: none, each run's links, all at the first field, and the golden one. */
+function lensChoices(views: ReturnType<typeof createViews>, key: string): string[] {
+  const empty = views.lens(key, "");
+  const quick = empty.runs.flatMap((run) =>
+    run.requests.flatMap((request) => (request.quick === null ? [] : [request.quick])),
+  );
+  const all = new URLSearchParams();
+  for (const [name, options] of [
+    ["run", empty.picker.runs],
+    ["rung", empty.picker.rungs],
+    ["engine", empty.picker.engines],
+  ] as const) {
+    for (const option of options) all.append(name, option.id);
+  }
+  if (empty.picker.fields[0] !== undefined) all.append("field", empty.picker.fields[0].id);
+  for (const cut of ["sagittal", "tangential"]) all.append("cut", cut);
+  const drawn = views.lens(key, all.toString());
+  if (drawn.curves[0] !== undefined) all.append("ref", drawn.curves[0].id);
+  // Every field and both cuts of the first run with an answer, against its last curve.
+  const fields = new URLSearchParams();
+  const first = empty.runs.find((run) => run.requests.length > 0);
+  if (first !== undefined) {
+    fields.append("run", first.id);
+    for (const request of first.requests) fields.append("rung", request.rung);
+    for (const engine of new Set(first.requests.flatMap((request) => request.engines))) fields.append("engine", engine);
+    for (const field of empty.picker.fields) fields.append("field", field.id);
+    for (const cut of ["sagittal", "tangential"]) fields.append("cut", cut);
+    const last = views.lens(key, fields.toString()).curves.at(-1);
+    if (last !== undefined) fields.append("ref", last.id);
+  }
+  return ["", ...quick, all.toString(), fields.toString(), ...(key === LENS_KEY ? [lensGoldenQuery(views)] : [])];
+}
+
 // ── Every page ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** Every page of a root and runs directory, held to its documents. */
@@ -1142,6 +1506,14 @@ function holdEveryPage(
       assert.ok(view !== null);
       hold(view, sectionCounts(places, name, section, view), `section ${section} of ${name}`);
       holdSection(places, name, view, policy);
+    }
+  }
+  for (const [key, runs] of lensRunsOf(places, sources.runNames())) {
+    for (const choice of lensChoices(views, key)) {
+      const view = views.lens(key, choice);
+      const what = `lens ${key}?${choice}`;
+      hold(view, lensCounts(places, runs, view), what);
+      holdLens(places, runs, view, policy, what);
     }
   }
   for (const stem of sources.baselineStems()) {
@@ -1228,14 +1600,18 @@ test("a JSON pointer escapes ~ and /, and resolves members, indices and nothing 
   assert.deepEqual(resolvePointer(document, "/constructor"), { found: false });
   assert.throws(() => figureAt("manifest:x", document, ["a/b"]), /has no number at \/a~1b/);
   assert.deepEqual([...COUNT_KEYS].sort(), [
+    "bytes",
     "count",
+    "curve",
     "element",
     "exitCode",
     "failing",
+    "files",
     "job",
     "place",
     "records",
     "requests",
+    "runCount",
     "section",
     "sectionCount",
     "surface",

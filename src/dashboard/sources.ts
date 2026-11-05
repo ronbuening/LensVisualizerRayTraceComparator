@@ -1,7 +1,8 @@
-// What the dashboard reads, and nothing else: the run directories of the runs directory (their manifests and
-// comparison files), the baselines of the root, the policy at hand and, by key, an entry of the store. Read-only: no
-// file is written and no directory is made. A file is parsed and checked once for each (size, mtime, inode) it has,
-// and kept while those stay; a value computed from files is kept the same way (`derived`).
+// What the dashboard reads, and nothing else: the run directories of the runs directory (their manifests, comparison
+// files and, for the lens pages of Stage 8.4, the label and conditions of their cases), the baselines of the root,
+// the policy at hand and, by key, an entry of the store. Read-only: no file is written and no directory is made. A
+// file is parsed and checked once for each (size, mtime, inode) it has, and kept while those stay; a value computed
+// from files is kept the same way (`derived`).
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
@@ -12,12 +13,13 @@ import type { ComparisonFile } from "../compare/comparisonFile.ts";
 import { POLICY_FILE, loadPolicy } from "../compare/policyFile.ts";
 import type { Baseline } from "../contract/baseline.ts";
 import type { Policy } from "../contract/policy.ts";
-import { MANIFEST_FILE, manifestProblems } from "../core/manifest.ts";
+import { CASES_DIRECTORY, MANIFEST_FILE, manifestProblems } from "../core/manifest.ts";
 import type { RunManifest } from "../core/manifest.ts";
 import { hashCanonical } from "../core/numeric/hash.ts";
 import { STORE_DIRECTORY, createResultStore } from "../core/resultStore.ts";
 import type { StoreEntry } from "../core/resultStore.ts";
 import { EXCHANGE_DIRECTORY } from "../transports/fileExchange.ts";
+import { caseDocumentParts } from "./figure.ts";
 import type { DocumentName } from "./figure.ts";
 
 /** A document as the dashboard found it: read and checked, not there, or there and not usable (and why). */
@@ -38,6 +40,74 @@ export const NOT_RUN_DIRECTORIES: readonly string[] = Object.freeze([STORE_DIREC
 
 /** A store key, as the store names its entries. */
 export const STORE_KEY_PATTERN = /^[0-9a-f]{64}$/;
+/** A case id, as a run directory names the file of a case. */
+export const CASE_ID_PATTERN = /^[0-9a-f]{64}$/;
+
+/**
+ * What a lens page reads of a case file (`cases/<id>.json` of a run directory): its label and its conditions without
+ * the indices, as the file holds them, so that a pointer into this resolves as it does into the whole file. The rest
+ * of the case (its system, its indices) is let go once read.
+ */
+export interface CaseSummary {
+  readonly id: string;
+  readonly label: {
+    readonly name: string;
+    readonly lensKey?: string;
+    readonly zoomT?: number;
+    readonly focusT?: number;
+  };
+  readonly conditions: {
+    readonly object: { readonly kind: "infinity" } | { readonly kind: "finite"; readonly z: number };
+    readonly stopSemiDiameter: number;
+    readonly imageZ: number;
+    readonly lines: readonly { readonly wavelengthNm: number; readonly weight: number }[];
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** The summary of a parsed case file whose id is `caseId`, or why it is not one. */
+function caseSummaryOf(parsed: unknown, caseId: string): CaseSummary | string {
+  if (!isRecord(parsed) || parsed.kind !== "optical-case") return "not an optical case";
+  if (parsed.id !== caseId) return "a case of another id than its file's name";
+  const { label, conditions } = parsed;
+  if (!isRecord(label) || typeof label.name !== "string") return "a case without a label";
+  for (const member of ["zoomT", "focusT"]) {
+    if (label[member] !== undefined && typeof label[member] !== "number") return `a label whose ${member} is no number`;
+  }
+  if (label.lensKey !== undefined && typeof label.lensKey !== "string") return "a label whose lensKey is no text";
+  if (!isRecord(conditions)) return "a case without conditions";
+  const { object, stopSemiDiameter, imageZ, lines } = conditions;
+  const finite = isRecord(object) && object.kind === "finite" && typeof object.z === "number";
+  if (!(isRecord(object) && (object.kind === "infinity" || finite))) return "a case whose object is neither";
+  if (typeof stopSemiDiameter !== "number" || typeof imageZ !== "number") return "a case without its stop or plane";
+  if (
+    !Array.isArray(lines) ||
+    !lines.every((line) => isRecord(line) && typeof line.wavelengthNm === "number" && typeof line.weight === "number")
+  ) {
+    return "a case without its lines";
+  }
+  return {
+    id: caseId,
+    label: {
+      name: label.name,
+      ...(label.lensKey === undefined ? {} : { lensKey: label.lensKey as string }),
+      ...(label.zoomT === undefined ? {} : { zoomT: label.zoomT as number }),
+      ...(label.focusT === undefined ? {} : { focusT: label.focusT as number }),
+    },
+    conditions: {
+      object: finite ? { kind: "finite", z: (object as { z: number }).z } : { kind: "infinity" },
+      stopSemiDiameter,
+      imageZ,
+      lines: (lines as { wavelengthNm: number; weight: number }[]).map(({ wavelengthNm, weight }) => ({
+        wavelengthNm,
+        weight,
+      })),
+    },
+  };
+}
 
 /** What the dashboard reads. */
 export interface DashboardSources {
@@ -47,6 +117,11 @@ export interface DashboardSources {
   baselineStems(): string[];
   manifest(name: string): Loaded<RunManifest>;
   comparisons(name: string): Loaded<ComparisonFile>;
+  /**
+   * The label and conditions of the case `caseId` of the run directory `name` (`CaseSummary`); missing for a name that
+   * is no run directory's or an id that is no case id, which are never joined into a path.
+   */
+  caseSummary(name: string, caseId: string): Loaded<CaseSummary>;
   baseline(stem: string): Loaded<Baseline>;
   policy(): Loaded<PolicyAtHand>;
   /**
@@ -156,6 +231,10 @@ export function createSources(options: DashboardSourcesOptions): DashboardSource
     if (kind === "comparisons") return runPath(name, COMPARISONS_FILE);
     if (kind === "baseline") return join(baselinesDir, `${name}.json`);
     if (kind === "policy") return policyFile;
+    if (kind === "case") {
+      const { suite, caseId } = caseDocumentParts(name);
+      return runPath(suite, join(CASES_DIRECTORY, `${caseId}.json`));
+    }
     // As the store reads an entry: the gzip one where there is one, else a legacy plain one.
     const gzip = join(runsDir, STORE_DIRECTORY, `${name}.json.gz`);
     return statKey(gzip) === "missing" ? join(runsDir, STORE_DIRECTORY, `${name}.json`) : gzip;
@@ -174,6 +253,18 @@ export function createSources(options: DashboardSourcesOptions): DashboardSource
         const problem = comparisonFileProblem(parsed);
         return problem === null ? null : `not a comparison file: ${problem}`;
       }),
+    caseSummary: (name, caseId) => {
+      // A name of one directory, never a path: callers name the run directories `runNames` listed.
+      const plain = name !== "" && name !== "." && name !== ".." && !/[/\\]/.test(name);
+      if (!CASE_ID_PATTERN.test(caseId) || !plain || NOT_RUN_DIRECTORIES.includes(name)) return { state: "missing" };
+      return cached<CaseSummary>(runPath(name, join(CASES_DIRECTORY, `${caseId}.json`)), () => {
+        const read = readJson(runPath(name, join(CASES_DIRECTORY, `${caseId}.json`)));
+        if ("missing" in read) return { state: "missing" };
+        if ("problem" in read) return { state: "invalid", problem: read.problem };
+        const summary = caseSummaryOf(read.parsed, caseId);
+        return typeof summary === "string" ? { state: "invalid", problem: summary } : { state: "ok", value: summary };
+      });
+    },
     baseline: (stem) =>
       cached<Baseline>(join(baselinesDir, `${stem}.json`), () => {
         let text: string;

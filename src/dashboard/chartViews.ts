@@ -60,7 +60,7 @@ export function requestStoreKeys(manifest: RunManifest, run: string, rung: strin
 }
 
 /** One job of a request with its store entry: read, or why there is nothing to draw. */
-interface Answer {
+export interface Answer {
   readonly job: ManifestJob;
   readonly document: DocumentName | null;
   readonly entry: StoreEntry | null;
@@ -70,11 +70,13 @@ interface Answer {
   readonly status: string | null;
 }
 
-function nameOf(job: ManifestJob): string {
+/** A job's name in a legend: its engine, and its step where it is one. */
+export function nameOf(job: ManifestJob): string {
   return job.step === undefined ? job.engine : TEXT.legendStep(job.engine, job.step);
 }
 
-function answerOf(job: ManifestJob, stored: StoreReader): Answer {
+/** A job's answer: its store entry read by the key the manifest gives it, or why there is nothing to draw. */
+export function answerOf(job: ManifestJob, stored: StoreReader): Answer {
   const none = (document: DocumentName | null, missing: string, status: string): Answer => ({
     job,
     document,
@@ -96,7 +98,7 @@ function answerOf(job: ManifestJob, stored: StoreReader): Answer {
 }
 
 /** What became of the store entries of a request: a problem for each that is not there or cannot be read. */
-function storeProblems(answers: readonly Answer[]): string[] {
+export function storeProblems(answers: readonly Answer[]): string[] {
   const problems = answers.flatMap((answer) =>
     answer.document !== null && answer.entry === null && answer.missing !== null ? [answer.missing] : [],
   );
@@ -233,7 +235,8 @@ export interface SectionChartInputs {
   readonly stored: StoreReader;
 }
 
-function curveAt(document: DocumentName, entry: StoreEntry, tokens: readonly (string | number)[]): Curve | null {
+/** The curve at a path of a store entry: a list, or an encoded ndarray decoded (a value not finite is null). */
+export function curveAt(document: DocumentName, entry: StoreEntry, tokens: readonly (string | number)[]): Curve | null {
   const pointer = pointerOf(tokens);
   const found = resolvePointer(entry, pointer);
   if (!found.found) return null;
@@ -248,7 +251,8 @@ function curveAt(document: DocumentName, entry: StoreEntry, tokens: readonly (st
   return null;
 }
 
-function fieldsOf(answer: Answer): readonly Record<string, unknown>[] {
+/** The fields of an answer with data; none for an answer without. */
+export function fieldsOf(answer: Answer): readonly Record<string, unknown>[] {
   const fields = (answer.entry?.result.data as { fields?: unknown } | undefined)?.fields;
   return answer.missing === null && Array.isArray(fields) ? (fields as Record<string, unknown>[]) : [];
 }
@@ -290,7 +294,8 @@ function setAsideOf(sorting: PairSorting, element: number): SetAside | null {
   return { a: sorting.a, b: sorting.b, class: sorted.class, reason: sorted.reason ?? "" };
 }
 
-const samePair = (one: { a: string; b: string }, two: { a: string; b: string }): boolean =>
+/** Whether two pairs are of the same two engines, in either order. */
+export const samePair = (one: { a: string; b: string }, two: { a: string; b: string }): boolean =>
   (one.a === two.a && one.b === two.b) || (one.a === two.b && one.b === two.a);
 
 /** The pairs of the section's sets, each pair of engines once, in the order the sets first have it. */

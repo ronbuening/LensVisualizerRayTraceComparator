@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="346" viewBox="0 0 640 346" role="img">
+<title>stand-in-zoom: differences that no comparison judges</title>
+<desc>Each other curve minus the reference at each frequency where both are finite numbers. A curve of another run, another request, another field or the other cut is of another condition or another question, and a pair of one request that no comparison judges has no verdict either: each line here is a subtraction of two curves and no verdict of any engine, and no band applies to it. Curve 4 is of another run. Curve 5 is of another run. Curve 6 is of another run. Curve 7 is of another run. Curve 10 is of another run directory. Curve 11 is of another run directory. Curve 12 is of another run directory.</desc>
+<style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
+.lvc .bg{fill:#fcfcfb}
+.lvc text{fill:#1c1c21}
+.lvc text.muted{fill:#5c5c66}
+.lvc text.head{font-weight:600;font-size:12px}
+.lvc .grid{stroke:#e6e6ea;stroke-width:1}
+.lvc .axis{stroke:#8a8a94;stroke-width:1}
+.lvc .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lvc .dash{stroke-dasharray:6 4}
+.lvc .dot{stroke:#fcfcfb;stroke-width:1.5}
+.lvc .band{fill:#eda100;fill-opacity:.16;stroke:#c98500;stroke-width:1;stroke-dasharray:2 3}
+.lvc .zeroline{stroke:#5c5c66;stroke-width:1}
+.lvc .gate{stroke:#d03b3b;stroke-width:1.5;stroke-dasharray:5 3;fill:none}
+.lvc .bar{fill:#2a78d6}
+.lvc .ring{fill:#fcfcfb;stroke:#2a78d6;stroke-width:2}
+.lvc .none{stroke:#8a8a94;stroke-width:2}
+.lvc .cell{stroke:#fcfcfb;stroke-width:2}
+.lvc .cell.empty{fill:#f4f4f6}
+.lvc text.vt{font-weight:600;text-anchor:middle}
+.lvc .s0{stroke:#2a78d6}
+.lvc .dot.s0{fill:#2a78d6}
+.lvc .s1{stroke:#e2622d}
+.lvc .dot.s1{fill:#e2622d}
+.lvc .s2{stroke:#16996a}
+.lvc .dot.s2{fill:#16996a}
+.lvc .s3{stroke:#b47b00}
+.lvc .dot.s3{fill:#b47b00}
+.lvc .s4{stroke:#cf5f8e}
+.lvc .dot.s4{fill:#cf5f8e}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#6250d6}
+.lvc .dot.s6{fill:#6250d6}
+.lvc .s7{stroke:#e34948}
+.lvc .dot.s7{fill:#e34948}
+.lvc .sx{stroke:#8a8a94}
+.lvc .dot.sx{fill:#8a8a94}
+.lvc .v-PASS{fill:#cdebcd}
+.lvc text.t-PASS{fill:#0b3d0b}
+.lvc .v-FLOOR{fill:#e3f2dc}
+.lvc text.t-FLOOR{fill:#24451a}
+.lvc .v-FAIL{fill:#f6cfcc}
+.lvc text.t-FAIL{fill:#5c0f0b}
+.lvc .v-ERROR{fill:#e9b7b3}
+.lvc text.t-ERROR{fill:#4a0906}
+.lvc .v-ATTENTION{fill:#fbe5ad}
+.lvc text.t-ATTENTION{fill:#4a3600}
+.lvc .v-RECORDED{fill:#e3e3ea}
+.lvc text.t-RECORDED{fill:#2c2c33}
+.lvc .v-UNSUPPORTED{fill:#ededf1}
+.lvc text.t-UNSUPPORTED{fill:#45454e}
+.lvc .v-BLOCKED{fill:#d9d9e1}
+.lvc text.t-BLOCKED{fill:#2c2c33}
+@media (prefers-color-scheme:dark){
+.lvc .bg{fill:#1a1a19}
+.lvc text{fill:#e7e7ec}
+.lvc text.muted{fill:#a3a3ad}
+.lvc .grid{stroke:#2e2e34}
+.lvc .axis{stroke:#6b6b75}
+.lvc .dot{stroke:#1a1a19}
+.lvc .band{fill:#c98500;fill-opacity:.22;stroke:#eda100}
+.lvc .zeroline{stroke:#a3a3ad}
+.lvc .gate{stroke:#e66767}
+.lvc .bar{fill:#3987e5}
+.lvc .ring{fill:#1a1a19;stroke:#3987e5}
+.lvc .none{stroke:#6b6b75}
+.lvc .cell{stroke:#1a1a19}
+.lvc .cell.empty{fill:#222226}
+.lvc .s0{stroke:#3987e5}
+.lvc .dot.s0{fill:#3987e5}
+.lvc .s1{stroke:#d95926}
+.lvc .dot.s1{fill:#d95926}
+.lvc .s2{stroke:#199e70}
+.lvc .dot.s2{fill:#199e70}
+.lvc .s3{stroke:#c98500}
+.lvc .dot.s3{fill:#c98500}
+.lvc .s4{stroke:#d55181}
+.lvc .dot.s4{fill:#d55181}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#9085e9}
+.lvc .dot.s6{fill:#9085e9}
+.lvc .s7{stroke:#e66767}
+.lvc .dot.s7{fill:#e66767}
+.lvc .sx{stroke:#6b6b75}
+.lvc .dot.sx{fill:#6b6b75}
+.lvc .v-PASS{fill:#1d4a22}
+.lvc text.t-PASS{fill:#d9f2d9}
+.lvc .v-FLOOR{fill:#2b4223}
+.lvc text.t-FLOOR{fill:#e1efdb}
+.lvc .v-FAIL{fill:#5a1d1a}
+.lvc text.t-FAIL{fill:#ffdcd8}
+.lvc .v-ERROR{fill:#6b2420}
+.lvc text.t-ERROR{fill:#ffe3e0}
+.lvc .v-ATTENTION{fill:#56420a}
+.lvc text.t-ATTENTION{fill:#fbeac0}
+.lvc .v-RECORDED{fill:#34343c}
+.lvc text.t-RECORDED{fill:#e4e4ea}
+.lvc .v-UNSUPPORTED{fill:#2a2a31}
+.lvc text.t-UNSUPPORTED{fill:#c8c8d0}
+.lvc .v-BLOCKED{fill:#3d3d46}
+.lvc text.t-BLOCKED{fill:#e4e4ea}
+}</style>
+<rect class="bg" x="0" y="0" width="640" height="346"/>
+<text x="12" y="20" class="head">stand-in-zoom: differences that no comparison judges</text>
+<line class="grid" x1="68" y1="256" x2="624" y2="256"/>
+<text x="62" y="260" class="muted" text-anchor="end">-0.006</text>
+<line class="grid" x1="68" y1="219.33" x2="624" y2="219.33"/>
+<text x="62" y="223.33" class="muted" text-anchor="end">-0.004</text>
+<line class="grid" x1="68" y1="182.67" x2="624" y2="182.67"/>
+<text x="62" y="186.67" class="muted" text-anchor="end">-0.002</text>
+<line class="grid" x1="68" y1="146" x2="624" y2="146"/>
+<text x="62" y="150" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="68" y1="109.33" x2="624" y2="109.33"/>
+<text x="62" y="113.33" class="muted" text-anchor="end">0.002</text>
+<line class="grid" x1="68" y1="72.67" x2="624" y2="72.67"/>
+<text x="62" y="76.67" class="muted" text-anchor="end">0.004</text>
+<line class="grid" x1="68" y1="36" x2="624" y2="36"/>
+<text x="62" y="40" class="muted" text-anchor="end">0.006</text>
+<line class="axis" x1="68" y1="256" x2="68" y2="260"/>
+<text x="68" y="272" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="207" y1="256" x2="207" y2="260"/>
+<text x="207" y="272" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="346" y1="256" x2="346" y2="260"/>
+<text x="346" y="272" class="muted" text-anchor="middle">40</text>
+<line class="axis" x1="485" y1="256" x2="485" y2="260"/>
+<text x="485" y="272" class="muted" text-anchor="middle">60</text>
+<line class="axis" x1="624" y1="256" x2="624" y2="260"/>
+<text x="624" y="272" class="muted" text-anchor="middle">80</text>
+<line class="axis" x1="68" y1="256" x2="624" y2="256"/>
+<line class="axis" x1="68" y1="36" x2="68" y2="256"/>
+<text x="346" y="290" text-anchor="middle">Frequency (cycles/mm)</text>
+<text x="16" y="146" text-anchor="middle" transform="rotate(-90 16 146)">Difference of MTF</text>
+<line class="zeroline" x1="68" y1="146" x2="624" y2="146"/>
+<polyline class="line s3" points="137.5,146 276.5,146 415.5,146 554.5,146"/>
+<polygon class="dot s3" points="137.5,141 142.5,146 137.5,151 132.5,146"><title>4 minus 1 at 10 cycles/mm (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /request/spec/frequenciesPerMm/0): 0, derived: curve 4 minus curve 1 at element 0 of both curves of store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s3" points="276.5,141 281.5,146 276.5,151 271.5,146"><title>4 minus 1 at 30 cycles/mm (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /request/spec/frequenciesPerMm/1): 0, derived: curve 4 minus curve 1 at element 1 of both curves of store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s3" points="415.5,141 420.5,146 415.5,151 410.5,146"><title>4 minus 1 at 50 cycles/mm (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /request/spec/frequenciesPerMm/2): 0, derived: curve 4 minus curve 1 at element 2 of both curves of store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s3" points="554.5,141 559.5,146 554.5,151 549.5,146"><title>4 minus 1 at 70 cycles/mm (store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /request/spec/frequenciesPerMm/3): 0, derived: curve 4 minus curve 1 at element 3 of both curves of store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polyline class="line s4" points="137.5,146 276.5,146 415.5,217.61 554.5,146"/>
+<polygon class="dot s4" points="137.5,151 142.5,142 132.5,142"><title>5 minus 1 at 10 cycles/mm (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /request/spec/frequenciesPerMm/0): 0, derived: curve 5 minus curve 1 at element 0 of both curves of store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s4" points="276.5,151 281.5,142 271.5,142"><title>5 minus 1 at 30 cycles/mm (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /request/spec/frequenciesPerMm/1): 0, derived: curve 5 minus curve 1 at element 1 of both curves of store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s4" points="415.5,222.61 420.5,213.61 410.5,213.61"><title>5 minus 1 at 50 cycles/mm (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /request/spec/frequenciesPerMm/2): -3.91e-3, derived: curve 5 minus curve 1 at element 2 of both curves of store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s4" points="554.5,151 559.5,142 549.5,142"><title>5 minus 1 at 70 cycles/mm (store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /request/spec/frequenciesPerMm/3): 0, derived: curve 5 minus curve 1 at element 3 of both curves of store/a68caad6a3278d80685c114fad6d4b721350e6cda5e2701deca79342feb4662d /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polyline class="line s5" points="137.5,146 276.5,146 415.5,217.61 554.5,146"/>
+<polygon class="dot s5" points="135.5,141 139.5,141 139.5,144 142.5,144 142.5,148 139.5,148 139.5,151 135.5,151 135.5,148 132.5,148 132.5,144 135.5,144"><title>6 minus 1 at 10 cycles/mm (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /request/spec/frequenciesPerMm/0): 0, derived: curve 6 minus curve 1 at element 0 of both curves of store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s5" points="274.5,141 278.5,141 278.5,144 281.5,144 281.5,148 278.5,148 278.5,151 274.5,151 274.5,148 271.5,148 271.5,144 274.5,144"><title>6 minus 1 at 30 cycles/mm (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /request/spec/frequenciesPerMm/1): 0, derived: curve 6 minus curve 1 at element 1 of both curves of store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s5" points="413.5,212.61 417.5,212.61 417.5,215.61 420.5,215.61 420.5,219.61 417.5,219.61 417.5,222.61 413.5,222.61 413.5,219.61 410.5,219.61 410.5,215.61 413.5,215.61"><title>6 minus 1 at 50 cycles/mm (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /request/spec/frequenciesPerMm/2): -3.91e-3, derived: curve 6 minus curve 1 at element 2 of both curves of store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot s5" points="552.5,141 556.5,141 556.5,144 559.5,144 559.5,148 556.5,148 556.5,151 552.5,151 552.5,148 549.5,148 549.5,144 552.5,144"><title>6 minus 1 at 70 cycles/mm (store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /request/spec/frequenciesPerMm/3): 0, derived: curve 6 minus curve 1 at element 3 of both curves of store/00148b50276f2e5b7508e76b2cd21d12f562a241e96f1c02b37ff5773859b8ef /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polyline class="line s6" points="137.5,146 276.5,146 415.5,146 554.5,146"/>
+<circle class="dot s6" cx="137.5" cy="146" r="4"><title>7 minus 1 at 10 cycles/mm (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /request/spec/frequenciesPerMm/0): 0, derived: curve 7 minus curve 1 at element 0 of both curves of store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s6" cx="276.5" cy="146" r="4"><title>7 minus 1 at 30 cycles/mm (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /request/spec/frequenciesPerMm/1): 0, derived: curve 7 minus curve 1 at element 1 of both curves of store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s6" cx="415.5" cy="146" r="4"><title>7 minus 1 at 50 cycles/mm (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /request/spec/frequenciesPerMm/2): 0, derived: curve 7 minus curve 1 at element 2 of both curves of store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s6" cx="554.5" cy="146" r="4"><title>7 minus 1 at 70 cycles/mm (store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /request/spec/frequenciesPerMm/3): 0, derived: curve 7 minus curve 1 at element 3 of both curves of store/06da8f24d1972e0d89edefef1d215205f4617b1ae6cc2a7d9578290dc54133f3 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<polyline class="line sx" points="137.5,146 276.5,146 415.5,146 554.5,146"/>
+<polygon class="dot sx" points="137.5,141 142.5,146 137.5,151 132.5,146"><title>10 minus 1 at 10 cycles/mm (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /request/spec/frequenciesPerMm/0): 0, derived: curve 10 minus curve 1 at element 0 of both curves of store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="276.5,141 281.5,146 276.5,151 271.5,146"><title>10 minus 1 at 30 cycles/mm (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /request/spec/frequenciesPerMm/1): 0, derived: curve 10 minus curve 1 at element 1 of both curves of store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="415.5,141 420.5,146 415.5,151 410.5,146"><title>10 minus 1 at 50 cycles/mm (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /request/spec/frequenciesPerMm/2): 0, derived: curve 10 minus curve 1 at element 2 of both curves of store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="554.5,141 559.5,146 554.5,151 549.5,146"><title>10 minus 1 at 70 cycles/mm (store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /request/spec/frequenciesPerMm/3): 0, derived: curve 10 minus curve 1 at element 3 of both curves of store/b19c9ab48902f4a9120abba34742884c5aca796cb44da0d92765e17961fe1c9a /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polyline class="line sx" points="137.5,217.61 276.5,146 415.5,146 554.5,146"/>
+<polygon class="dot sx" points="137.5,222.61 142.5,213.61 132.5,213.61"><title>11 minus 1 at 10 cycles/mm (store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /request/spec/frequenciesPerMm/0): -3.91e-3, derived: curve 11 minus curve 1 at element 0 of both curves of store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="276.5,151 281.5,142 271.5,142"><title>11 minus 1 at 30 cycles/mm (store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /request/spec/frequenciesPerMm/1): 0, derived: curve 11 minus curve 1 at element 1 of both curves of store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="415.5,151 420.5,142 410.5,142"><title>11 minus 1 at 50 cycles/mm (store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /request/spec/frequenciesPerMm/2): 0, derived: curve 11 minus curve 1 at element 2 of both curves of store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="554.5,151 559.5,142 549.5,142"><title>11 minus 1 at 70 cycles/mm (store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /request/spec/frequenciesPerMm/3): 0, derived: curve 11 minus curve 1 at element 3 of both curves of store/c1934c6709dd76f561fce185ae1c2359ae27d2dc04e429e81687437f15089592 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polyline class="line sx" points="137.5,146 276.5,146 415.5,146 554.5,146"/>
+<polygon class="dot sx" points="135.5,141 139.5,141 139.5,144 142.5,144 142.5,148 139.5,148 139.5,151 135.5,151 135.5,148 132.5,148 132.5,144 135.5,144"><title>12 minus 1 at 10 cycles/mm (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /request/spec/frequenciesPerMm/0): 0, derived: curve 12 minus curve 1 at element 0 of both curves of store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="274.5,141 278.5,141 278.5,144 281.5,144 281.5,148 278.5,148 278.5,151 274.5,151 274.5,148 271.5,148 271.5,144 274.5,144"><title>12 minus 1 at 30 cycles/mm (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /request/spec/frequenciesPerMm/1): 0, derived: curve 12 minus curve 1 at element 1 of both curves of store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="413.5,141 417.5,141 417.5,144 420.5,144 420.5,148 417.5,148 417.5,151 413.5,151 413.5,148 410.5,148 410.5,144 413.5,144"><title>12 minus 1 at 50 cycles/mm (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /request/spec/frequenciesPerMm/2): 0, derived: curve 12 minus curve 1 at element 2 of both curves of store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<polygon class="dot sx" points="552.5,141 556.5,141 556.5,144 559.5,144 559.5,148 556.5,148 556.5,151 552.5,151 552.5,148 549.5,148 549.5,144 552.5,144"><title>12 minus 1 at 70 cycles/mm (store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /request/spec/frequenciesPerMm/3): 0, derived: curve 12 minus curve 1 at element 3 of both curves of store/e05638c7d89b1222bf276ee681957ea2e4d90cf18445f873b984d1c929a7232f /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></polygon>
+<g><title>Curve 4 is of another run.</title><line class="line s3" x1="68" y1="311" x2="92" y2="311"/><polygon class="dot s3" points="80,306 85,311 80,316 75,311"></polygon><text x="98" y="315">4 minus 1</text></g>
+<g><title>Curve 5 is of another run.</title><line class="line s4" x1="167.8" y1="311" x2="191.8" y2="311"/><polygon class="dot s4" points="179.8,316 184.8,307 174.8,307"></polygon><text x="197.8" y="315">5 minus 1</text></g>
+<g><title>Curve 6 is of another run.</title><line class="line s5" x1="267.6" y1="311" x2="291.6" y2="311"/><polygon class="dot s5" points="277.6,306 281.6,306 281.6,309 284.6,309 284.6,313 281.6,313 281.6,316 277.6,316 277.6,313 274.6,313 274.6,309 277.6,309"></polygon><text x="297.6" y="315">6 minus 1</text></g>
+<g><title>Curve 7 is of another run.</title><line class="line s6" x1="367.4" y1="311" x2="391.4" y2="311"/><circle class="dot s6" cx="379.4" cy="311" r="4"></circle><text x="397.4" y="315">7 minus 1</text></g>
+<g><title>Curve 10 is of another run directory.</title><line class="line sx" x1="467.2" y1="311" x2="491.2" y2="311"/><polygon class="dot sx" points="479.2,306 484.2,311 479.2,316 474.2,311"></polygon><text x="497.2" y="315">10 minus 1</text></g>
+<g><title>Curve 11 is of another run directory.</title><line class="line sx" x1="68" y1="329" x2="92" y2="329"/><polygon class="dot sx" points="80,334 85,325 75,325"></polygon><text x="98" y="333">11 minus 1</text></g>
+<g><title>Curve 12 is of another run directory.</title><line class="line sx" x1="174" y1="329" x2="198" y2="329"/><polygon class="dot sx" points="184,324 188,324 188,327 191,327 191,331 188,331 188,334 184,334 184,331 181,331 181,327 184,327"></polygon><text x="204" y="333">12 minus 1</text></g>
+</svg>

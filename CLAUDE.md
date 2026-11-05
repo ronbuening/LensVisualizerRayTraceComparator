@@ -26,6 +26,7 @@ node bin/lvrtc.mjs store compress        # OWNER ONLY: dry run; counts and bytes
 node bin/lvrtc.mjs store compress --yes  # OWNER ONLY: atomically gzip legacy plain entries
 node bin/lvrtc.mjs store prune           # OWNER ONLY: dry run; unused engine versions, protected by HEAD baselines
 node bin/lvrtc.mjs store prune --yes     # OWNER ONLY: delete only entries no committed baseline engine can hit
+node bin/lvrtc.mjs store prune --yes --expect <state>   # OWNER ONLY: only if the store is still in the state a dry run printed (the dashboard's confirmation)
 node bin/lvrtc.mjs run test/fixtures/suites/fake-pair.json --root test/fixtures/fake-root   # a suite on fake engines
 node bin/lvrtc.mjs compare fake-pair --root test/fixtures/fake-root   # compare a run: writes comparisons.json
 node bin/lvrtc.mjs report fake-pair --root test/fixtures/fake-root    # report a compared run: report.json, report.md
@@ -35,6 +36,7 @@ node bin/lvrtc.mjs engine conformance fake-py --root test/fixtures/fake-root   #
 node bin/lvrtc.mjs engine describe fake-a fake-b --root test/fixtures/fake-root --json   # who engines are now, as a manifest records them
 node bin/lvrtc.mjs serve               # Phase 8: read-only dashboard on http://127.0.0.1:8077/ (--port 0 picks one; LVRTC_RUNS_DIR applies); asks the baselines' engines once, in a child, after it listens
 node bin/lvrtc.mjs serve --no-ask      # the same without asking: every record's engines held to its suite's last run
+# Stage 8.4: /lens/<lensKey> overlays a lens's MTF curves across its runs; /control's "Run this lens" runs lvrtc mtf <key> --profile benchmark
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
@@ -142,7 +144,12 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   after a refresh is committed, never before. Missing/invalid committed baselines abort pruning; unreadable/corrupt
   entries are retained.
   Run maintenance without concurrent suite/store writers. Tests and measurements use temporary `LVRTC_RUNS_DIR`
-  directories; the real store, LensVisualizer and optiland remain untouched.
+  directories; the real store, LensVisualizer and optiland remain untouched. Every run prints `state`, the digest of
+  the entry files (name, size, mtime in ns, inode) and, for prune, the protected engine tuples (`storeState`); `--yes
+  --expect <state>` first holds the store to that state and changes nothing (`StoreChangedError`, exit 1) where it is
+  another, then works through exactly the files it listed. The dashboard's maintenance page (Stage 8.4) is the
+  owner's and runs these commands; never run `--yes` of either against `runs/store` as an implementer, not even
+  through the page.
 - **Zero runtime npm dependencies.** Validators, hashing and codecs are written here. Dev dependencies are tooling
   only.
 - **Tests are `node:test`** in `test/**/*.test.ts`. Unit tests are hermetic: they need neither LV nor optiland.
@@ -2092,8 +2099,8 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   constant time (403), an `Origin`, when sent, `http://127.0.0.1:<port>` or `http://localhost:<port>` and
   `Sec-Fetch-Site`, when sent, `same-origin` or `none` (403), every field validated (400, an unknown or repeated field
   too), then a 303 to the job page. The control page alone sends `referrer-policy: same-origin` and `form-action
-  'self'` (under `no-referrer` a browser posts `Origin: null`). No action for store maintenance, baselines, `verify
-  --write` or anything that writes the repository. Jobs are numbered from 1 and kept in memory only
+  'self'` (under `no-referrer` a browser posts `Origin: null`). No action for baselines, `verify --write` or
+  anything that writes the repository; store maintenance only as Stage 8.4's plan and confirmation (below). Jobs are numbered from 1 and kept in memory only
   (`/control/job/<n>` and its twin): each step's command line with `<root>` and `<runsDir>` (a listed suite outside
   the root is `<suite:<name>>`, in its output too), its state (queued, running, exited with a code, killed, not
   started, not run, not run because the dashboard closed) and a 256 KB tail of stdout and stderr interleaved, from a
@@ -2110,3 +2117,52 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   (`fake-pair` with `fake-a,fake-human`, on a temporary root with the suite under its `suites/`: pending, the fake
   operator, collect, run again, every job ok and four PASS, the manifest the bytes of a run where fake-human answered
   at once); its tests start no Python or LensVisualizer.
+- **Lens pages (Stage 8.4) are read-only** (`src/dashboard/lens.ts`, `charts/lens.ts`, `/lens/<lensKey>` and its twin):
+  a run is of the lens its case file names (`label.lensKey`, read as the document `case:<suite>/<caseId>`, only its
+  label and conditions kept: `sources.caseSummary`); a key no run and no run-control job has is 404, looked up, never
+  joined into a path. A run's condition is Figures of its own case file (zoom, focus, stop, object, image plane,
+  lines) and its manifest's recipe (plane kind and shift); the aperture's kind is in no case. The picker is a GET
+  form (no script; the choice is the address): runs × rungs × engines and steps × fields (`fraction:<v>`,
+  `angle:<v>`, by the value the answers state) × cuts of `mtf.native` answers, read from the store by the manifests'
+  keys only; more than `MAX_LENS_CURVES` (24) draws none and says so; a value that is no option is named and left out.
+  **Differences against the reference are of two kinds, never mixed**: within its own request (same run directory,
+  run, rung, request, field and cut, of a pair the comparison judges) they are the section page's own (the pair's
+  verdict, R5's sorting of the field and the band or tolerance, read from `views.section`'s charts, drawn by
+  `renderMtfDifference`), a curve that is not the judged answer noted; every other (another run directory, run, rung
+  or request, field or cut, the same engine, not compared, no judged pair) is drawn apart, without a band, each with
+  its reason, and the page says it is a subtraction and no verdict. **Never interpolate**: a curve not at the
+  reference's frequencies (same count, each `Object.is`) has no difference, with the reason. Every sentence is a
+  template of `DASHBOARD_TEXT.lens`; the banned claim `difference-agreement` rejects calling a difference across
+  conditions, requests, runs, fields or cuts (or an overlay) agreement, disagreement, consistency or a discrepancy.
+  `figures.test.ts` walks every lens page at several choices (curves held to the test's own enumeration, each
+  difference to the test's own sorting; four one-line mutations of `lens.ts` turn it red); golden SVGs
+  (`lens-<key>.*.svg`) and a golden page (`test/fixtures/golden/dashboard-pages/`) come only from
+  `node test/report/writeGolden.ts`. The index lists every lens; a run page links each run to its lens.
+- **"Run this lens" is run control's fourth action** (`/control/lens`, POST, every 8.3 guard): `lens` of
+  `LENS_KEY_PATTERN` (400 otherwise), `engines` of `LENS_ENGINES` (`lv,ref,optiland`; empty is `lvrtc mtf`'s `lv`),
+  `aperture` of `BENCHMARK_APERTURES` (empty is both), `jobs` 1 to 4 and **no more than `maxJobs` of the memory budget
+  at `jobEstimateGiB(benchmarkRungs(engines))`, a 400 before any child starts** (a 16 GB machine allows one; a test
+  states `ControlOptions.memoryBudgetGiB`, which is then handed to `lvrtc mtf` too). The job reads LensVisualizer's
+  catalog in a child (`lvrtc lenses list --json`, read and not shown; no engine loads in the server) and runs `lvrtc
+  mtf <key> --profile benchmark --root <root> ... --jobs <n>` only when the key is one of its keys; otherwise the job
+  ends there with the reason. The profile's rungs and suite name are `src/cli/benchmarkProfile.ts`, shared with
+  `lvrtc mtf`. `test/dashboard/lensControl.test.ts` refuses every field with no child started and runs the fake
+  LensVisualizer tree end to end to its lens page. No engine's import closure moved (adapter revisions of all built-in
+  engines are those of `ddeaaa5`).
+- **Store maintenance on run control (Stage 8.4, owner's request of 2026-11-05)**: `/control/plan-prune` and
+  `/control/plan-compress` start `lvrtc store prune|compress --root <root> --json` as a dry run (a job of its own,
+  one at a time, process group, redacted); its page shows the command's report read (per engine kept and removable
+  files and bytes, each removable engine version with its newest entry; plain and gzip entries and bytes before and
+  after), the prune's `PRUNE_NOTICE` first and in bold, the rule against concurrent writers and "prune after a refresh
+  is committed, never before", and the state digest. Only that plan's page carries the confirmation
+  (`/control/prune|compress`, fields `plan` and `state`, every 8.3 guard): 409 unless the plan is one the dashboard
+  showed, of that action and state, read whole, and its last store job; 409 while a job runs or the engines are asked;
+  409 while the store holds a `*.tmp` file (a writer at work, or one killed: `TEMP_SUFFIX` is the one marker the store
+  has, and its absence proves nothing, which the page says is the owner's to check); 409 where the state computed
+  again now (`storeState`, `committedBaselineEngines` for prune) differs. The confirmation then runs `--yes --expect
+  <state>`, which holds the state again in the child: the server never deletes or rewrites more than the plan showed.
+  A conflict of compress or an abort of prune (no or invalid committed baselines) is the command's failure, shown as it
+  states it, with no form. Report numbers are counts under `files`, `bytes` and `count`. Every sentence is a template
+  of `DASHBOARD_TEXT.store`. `test/dashboard/storeControl.test.ts` (temporary stores whose root reads this
+  repository's HEAD through a `.git` file, never `runs/store`): the dry runs change nothing, a confirmation changes
+  exactly the planned entries, and each refusal above changes nothing.

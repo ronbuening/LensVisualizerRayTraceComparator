@@ -1,9 +1,9 @@
-// The dashboard's HTTP server (`lvrtc serve`): the pages and their JSON twins over runs and baselines, on
-// 127.0.0.1 only. A request whose Host is not this server's own is refused (403), which also defeats DNS
-// rebinding; pages answer GET and HEAD only, and the actions of run control (`/control/<action>`, Stage 8.3) POST
-// only (405 otherwise); a path segment is looked up among the names the server listed itself (404 otherwise), never
-// joined into a path. No page writes anything; an action writes only through the child `lvrtc` command it starts
-// (`control.ts`).
+// The dashboard's HTTP server (`lvrtc serve`): the pages and their JSON twins over runs, baselines and lenses (Stage
+// 8.4: `/lens/<lensKey>`, whose choice of curves is in the query of its address), on 127.0.0.1 only. A request whose
+// Host is not this server's own is refused (403), which also defeats DNS rebinding; pages answer GET and HEAD only,
+// and the actions of run control (`/control/<action>`, Stage 8.3) POST only (405 otherwise); a path segment is looked
+// up among the names the server listed itself (404 otherwise), never joined into a path. No page writes anything; an
+// action writes only through the child `lvrtc` command it starts (`control.ts`).
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo, Socket } from "node:net";
@@ -13,7 +13,9 @@ import type { Baseline } from "../contract/baseline.ts";
 import type { RunManifest } from "../core/manifest.ts";
 import { sectionSetGroups } from "../report/model.ts";
 import { canonicalJson } from "../core/numeric/canonicalJson.ts";
+import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import { DASHBOARD_TEXT } from "../report/wording.ts";
+import { caseDocument } from "./figure.ts";
 import type { DocumentName } from "./figure.ts";
 import {
   renderActionRefusal,
@@ -22,6 +24,7 @@ import {
   renderControl,
   renderIndex,
   renderJob,
+  renderLens,
   renderRefusal,
   renderRun,
   renderRunPart,
@@ -32,6 +35,8 @@ import { CONTROL_ACTIONS, FORM_BODY_BYTES, createController, headerRefusal } fro
 import type { ControlAction, ControlOptions, Controller, Refusal } from "./control.ts";
 import { askEngines } from "./identity.ts";
 import type { AskedEngines, EngineDescribeRunner } from "./identity.ts";
+import { LENS_KEY_PATTERN, buildLensView, indexLenses, lensSelection, lensSummaries, selectionLabel } from "./lens.ts";
+import type { LensIndex, LensView } from "./lens.ts";
 import { createSources } from "./sources.ts";
 import type { DashboardSources, Loaded } from "./sources.ts";
 import type { BaselineRunView, BaselineView, IndexView, RunPartView, RunView, SectionView } from "./views.ts";
@@ -164,6 +169,15 @@ export interface DashboardViews {
   baseline(stem: string): BaselineView;
   /** Null for a place the baseline does not have, or a baseline that cannot be read. */
   baselineRun(stem: string, place: number): BaselineRunView | null;
+  /** The lenses the cases of the run directories name, with their runs (Stage 8.4). */
+  lensIndex(): LensIndex;
+  /** The page of a lens, with the choice of curves its address's query makes (what follows `?`, without it). */
+  lens(key: string, query: string): LensView;
+  /**
+   * The documents a lens page is of: the policy, every run directory's manifest and comparisons, the cases of the
+   * lens's runs and the store entries the manifests name for their mtf.native jobs, and no other entry.
+   */
+  lensDocuments(key: string): DocumentName[];
 }
 
 /**
@@ -199,6 +213,23 @@ export function createViews(
     sources.derived("report", runDocuments(name), () =>
       runReport(manifest, sources.comparisons(name), sources.policy()),
     );
+  const lensIndex = (): LensIndex =>
+    sources.derived(
+      "lens-index",
+      sources.runNames().map((name): DocumentName => `manifest:${name}`),
+      () =>
+        indexLenses(
+          sources.runNames().map((suite) => ({ suite, manifest: sources.manifest(suite) })),
+          (suite, caseId) => sources.caseSummary(suite, caseId),
+        ),
+    );
+  /** The lens each run of a run directory is of, by its case: what its run page links to. */
+  const lensOf =
+    (suite: string) =>
+    (caseId: string): string | null => {
+      const loaded = sources.caseSummary(suite, caseId);
+      return loaded.state === "ok" ? (loaded.value.label.lensKey ?? null) : null;
+    };
   const baselineInputs = (stem: string) => {
     const loaded: Loaded<Baseline> = sources.baseline(stem);
     const suite = loaded.state === "ok" ? loaded.value.suite.name : null;
@@ -206,6 +237,22 @@ export function createViews(
     return { loaded, lastRun };
   };
 
+  const sectionView = (name: string, index: number): SectionView | null => {
+    const manifest = sources.manifest(name);
+    const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
+    if (manifest.state !== "ok" || comparisons.state !== "ok") return null;
+    const report = reportOf(name, manifest.value);
+    return buildSectionView(
+      name,
+      index,
+      comparisons.value,
+      sources.policy(),
+      report,
+      inputProblemsOf(name),
+      manifest.value,
+      (key) => sources.storeEntry(key),
+    );
+  };
   return {
     policyDocuments,
     askedLabel,
@@ -226,35 +273,27 @@ export function createViews(
           baselineSummary(stem, loaded, policy, asked(), lastRun),
         );
       });
-      return buildIndexView(policy, asked(), runs, baselines);
+      const index = lensIndex();
+      const lenses = {
+        lenses: lensSummaries(index, (suite, caseId) => sources.caseSummary(suite, caseId)),
+        problems: index.problems,
+      };
+      return buildIndexView(policy, asked(), runs, baselines, lenses);
     },
     run: (name) => {
       const manifest = sources.manifest(name);
       const report = manifest.state === "ok" ? reportOf(name, manifest.value) : null;
       const requests = options.runPageRequests ?? RUN_PAGE_REQUESTS;
-      return buildRunView(name, manifest, sources.comparisons(name), report, inputProblemsOf(name), requests);
+      const comparisons = sources.comparisons(name);
+      return buildRunView(name, manifest, comparisons, report, inputProblemsOf(name), requests, lensOf(name));
     },
     runPart: (name, place) => {
       const manifest = sources.manifest(name);
       if (manifest.state !== "ok") return null;
-      return buildRunPartView(name, place, manifest.value, sources.comparisons(name), reportOf(name, manifest.value));
-    },
-    section: (name, index) => {
-      const manifest = sources.manifest(name);
-      const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
-      if (manifest.state !== "ok" || comparisons.state !== "ok") return null;
       const report = reportOf(name, manifest.value);
-      return buildSectionView(
-        name,
-        index,
-        comparisons.value,
-        sources.policy(),
-        report,
-        inputProblemsOf(name),
-        manifest.value,
-        (key) => sources.storeEntry(key),
-      );
+      return buildRunPartView(name, place, manifest.value, sources.comparisons(name), report, lensOf(name));
     },
+    section: (name, index) => sectionView(name, index),
     sectionStoreKeys: (name, index) => {
       const manifest = sources.manifest(name);
       const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
@@ -275,14 +314,75 @@ export function createViews(
       const { loaded, lastRun } = baselineInputs(stem);
       return buildBaselineRunView(stem, place, loaded, sources.policy(), asked(), lastRun);
     },
+    lensIndex,
+    lens: (key, query) => {
+      const runs = (lensIndex().lenses.get(key) ?? []).flatMap((ref) => {
+        const manifest = sources.manifest(ref.suite);
+        if (manifest.state !== "ok") return [];
+        const comparisons = sources.comparisons(ref.suite);
+        const state = comparisons.state === "missing" ? ("none" as const) : comparisons.state;
+        return [
+          {
+            ref,
+            manifest: manifest.value,
+            caseSummary: sources.caseSummary(ref.suite, ref.caseId),
+            comparisons: state,
+          },
+        ];
+      });
+      return buildLensView({
+        key,
+        runs,
+        selection: lensSelection(query),
+        stored: (storeKey) => sources.storeEntry(storeKey),
+        // The section page of the reference's request, as `/run/<suite>/section/<n>` draws it (Stage 8.2).
+        sectionCharts: (suite, run, rung, requestId) => {
+          const comparisons = sources.comparisons(suite);
+          if (comparisons.state !== "ok") return null;
+          const sets = comparisons.value.comparisons;
+          const groups = sources.derived("section-groups", [`comparisons:${suite}`], () => sectionSetGroups(sets));
+          const section = groups.findIndex((group) => {
+            const first = sets[group[0]];
+            return first.run === run && first.rung === rung && first.requestId === requestId;
+          });
+          const view = section < 0 ? null : sectionView(suite, section);
+          return view === null ? null : { section, charts: view.charts };
+        },
+      });
+    },
+    lensDocuments: (key) => {
+      const refs = lensIndex().lenses.get(key) ?? [];
+      const stores = refs.flatMap((ref) => {
+        const manifest = sources.manifest(ref.suite);
+        if (manifest.state !== "ok") return [];
+        return manifest.value.jobs.flatMap((job): DocumentName[] =>
+          job.run === ref.run && job.quantity === MTF_NATIVE && job.storeKey !== null ? [`store:${job.storeKey}`] : [],
+        );
+      });
+      return [
+        ...policyDocuments(),
+        ...sources.runNames().flatMap((name): DocumentName[] => [`manifest:${name}`, `comparisons:${name}`]),
+        ...refs.map((ref) => caseDocument(ref.suite, ref.caseId)),
+        ...new Set(stores),
+      ];
+    },
   };
+}
+
+/** What a router is told beyond its sources (Stage 8.4): lens keys of its own, and the form that runs a lens. */
+export interface RouterOptions {
+  readonly runPageRequests?: number;
+  /** Lens keys with a page though no run of them is in the runs directory: those run control started. */
+  readonly lensKeys?: () => readonly string[];
+  /** What a lens page's form to run the lens carries; without it a lens page has no such form. */
+  readonly lensForm?: { readonly token: string; readonly configured: boolean };
 }
 
 /** What answers a request: every route of the dashboard, over `sources` and what the engines said. */
 export function createRouter(
   sources: DashboardSources,
   asked: () => AskedEngines,
-  options: { readonly runPageRequests?: number } = {},
+  options: RouterOptions = {},
 ): (url: string) => Answer {
   const views = createViews(sources, asked, options);
   const { policyDocuments } = views;
@@ -341,6 +441,23 @@ export function createRouter(
         }
       }
       return notFound(api);
+    }
+    if (kind === "lens" && name !== undefined && route.length === 2) {
+      // Looked up among the lenses of the run directories and of run control's jobs, never joined into a path.
+      const known =
+        LENS_KEY_PATTERN.test(name) &&
+        (views.lensIndex().lenses.has(name) || (options.lensKeys?.() ?? []).includes(name));
+      if (!known) return notFound(api);
+      const query = url.includes("?") ? url.slice(url.indexOf("?") + 1).split("#", 1)[0] : "";
+      const label = `lens:${name}:${selectionLabel(lensSelection(query))}`;
+      const page = answer(
+        api,
+        label,
+        views.lensDocuments(name),
+        () => views.lens(name, query),
+        (view) => renderLens(view, options.lensForm ?? null),
+      );
+      return api ? page : { ...page, headers: FORM_PAGE_HEADERS };
     }
     if (kind === "baseline" && name !== undefined && sources.baselineStems().includes(name)) {
       const loaded = sources.baseline(name);
@@ -439,9 +556,12 @@ function controlPage(controller: Controller, segments: readonly string[] | null)
   if (route.length === 3 && route[1] === "job" && PLACE.test(route[2]) && route[2] !== "0") {
     const view = controller.jobView(Number(route[2]));
     if (view !== null) {
+      // A plan of store maintenance carries the form that confirms it: the page of a form (Stage 8.4).
       return api
         ? { status: 200, type: "json", body: json(view) }
-        : { status: 200, type: "html", body: renderJob(view) };
+        : view.store === null
+          ? { status: 200, type: "html", body: renderJob(view) }
+          : { status: 200, type: "html", body: renderJob(view, controller.token), headers: FORM_PAGE_HEADERS };
     }
   }
   return api
@@ -474,7 +594,6 @@ export async function startDashboard(options: DashboardOptions): Promise<Dashboa
     options.sources ??
     createSources({ rootDir: options.rootDir, runsDir: options.runsDir, policyFile: options.policyFile });
   let asked: AskedEngines = options.runner === undefined ? { state: "not-asked" } : { state: "asking" };
-  const route = createRouter(sources, () => asked, { runPageRequests: options.runPageRequests });
   // The Host the server answers to: set in the listen callback, before any request can be served.
   let port = -1;
   const abort = new AbortController();
@@ -497,6 +616,11 @@ export async function startDashboard(options: DashboardOptions): Promise<Dashboa
     },
     options.control,
   );
+  const route = createRouter(sources, () => asked, {
+    runPageRequests: options.runPageRequests,
+    lensKeys: () => controller.lensKeys(),
+    lensForm: { token: controller.token, configured: controller.configured },
+  });
 
   const answerOf = async (request: IncomingMessage): Promise<Answer> => {
     const host = request.headers.host;

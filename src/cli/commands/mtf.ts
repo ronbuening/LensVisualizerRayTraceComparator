@@ -58,6 +58,13 @@ import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { apertureOption, sliderPosition } from "../lensOptions.ts";
+import {
+  BENCHMARK_PROFILE,
+  OWN_MTF_ENGINE,
+  OWN_MTF_RUNGS,
+  benchmarkRungs,
+  benchmarkSuiteName,
+} from "../benchmarkProfile.ts";
 
 /** What `lvrtc mtf` is wired to, injected so that tests choose all three. */
 export interface MtfCommandInputs {
@@ -70,13 +77,7 @@ export interface MtfCommandInputs {
   readonly policy?: Policy;
 }
 
-/** The profile that is no request of one MTF but the Phase 3 conditions of a lens, compared. */
-export const BENCHMARK_PROFILE = "benchmark";
-/** The engine the rungs of the engines' own MTF need: they are run only where it is named. */
-const OWN_MTF_ENGINE = "optiland";
-/** The rungs the profile `benchmark` runs with any engines, and those it adds where `OWN_MTF_ENGINE` is named. */
-const BENCHMARK_RUNGS: readonly string[] = ["r4", "r4f", "r6a", "r6b"];
-const OWN_MTF_RUNGS: readonly string[] = ["r5", "r5g", "r6c"];
+export { BENCHMARK_PROFILE };
 
 /** The engine a run of `lvrtc mtf` asks when none is named. */
 const DEFAULT_ENGINES: readonly string[] = ["lv"];
@@ -221,10 +222,7 @@ function readArguments(args: readonly string[]): MtfArguments {
     throw new UsageError(`unknown profile "${profile}": the profiles are ${known}`);
   }
   const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
-  const rungs =
-    profile === BENCHMARK_PROFILE
-      ? [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])]
-      : [];
+  const rungs = profile === BENCHMARK_PROFILE ? benchmarkRungs(engines) : [];
   const jobs = jobsOption(values.get("--jobs"), memoryBudgetGiB, jobEstimateGiB(rungs));
   if (values.has("--jobs") && profile !== BENCHMARK_PROFILE)
     throw new UsageError("--jobs requires --profile benchmark");
@@ -355,7 +353,7 @@ async function runBenchmark(
       }
     }
   }
-  const name = `mtf-${lensKey}`;
+  const name = benchmarkSuiteName(lensKey);
   const written = {
     contract: CONTRACT_VERSION,
     kind: "suite",
@@ -375,7 +373,7 @@ async function runBenchmark(
       sources,
       jobs: asked.jobs,
     });
-    const rungs = [...BENCHMARK_RUNGS, ...(engines.includes(OWN_MTF_ENGINE) ? OWN_MTF_RUNGS : [])];
+    const rungs = benchmarkRungs(engines);
     io.stderr(
       `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}` +
         `${engines.includes(OWN_MTF_ENGINE) ? "" : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`}; ` +

@@ -109,6 +109,13 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "The outlier is the engine at fault.",
     "The consensus engines agree, so their answers are verified.",
   ],
+  "difference-agreement": [
+    "Across conditions the curves agree.",
+    "The overlay shows that the two runs disagree.",
+    "Curves of different requests are consistent with each other.",
+    "| lens-a | another run | in agreement |",
+    "The overlaid curves of several fields show a discrepancy.",
+  ],
 };
 
 test("each banned claim is rejected, in every wording of it here, and named", () => {
@@ -178,6 +185,10 @@ test("what a report may say is accepted: every template, and sentences that only
     "Within the gates of each other, `fake-a` and `fake-near` are the consensus of the group.",
     "The engine is wrong about nothing a gate measures.",
     "An engine with an ERROR pair with the consensus is apart.",
+    // A difference of curves of two conditions said as a lens page says it, and runs set side by side.
+    "A curve of another run is a subtraction of two curves and no verdict of any engine.",
+    "Two runs of the lens are listed side by side, each with its condition.",
+    "The overlay draws each curve as its store entry holds it.",
   ]) {
     assert.deepEqual(wordingProblems(text), [], text);
   }
