@@ -1106,9 +1106,10 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   stage commit. Until then `lvrtc verify` and `test/cli/baseline.test.ts` ("the committed baselines and reports of
   this repository hold together") failed only on policy identity (v15 recorded, v16 to v24 at hand from Stage 6.2 to
   6.8b): never weaken either. **The refresh is done** (2026-10-29, LensVisualizer `6287f4393`, closure `fc5ae923`,
-  policy 24; `docs/REFERENCE.md`, "The Phase 6 end refresh"): all ten baselines and the validation statement are
-  current, and `verify` reports 0 problems. The rays baselines of benchmark, features and states hold R7a to R11a
-  beside R0 to R4, and diffractive's beside its R0 to R3 (it has no vignetting sets).
+  policy 24; `docs/REFERENCE.md`, "The Phase 6 end refresh"): all ten baselines and the validation statement were
+  current, and `verify` reported 0 problems; the Phase 7 end refresh (below) rewrote them at `25f65d4b4`. The rays
+  baselines of benchmark, features and states hold R7a to R11a beside R0 to R4, and diffractive's beside its R0 to R3
+  (it has no vignetting sets).
   Before its commit each Phase 6 stage checks the rays baselines for no DRIFT (`baseline check <suite>`). The new
   LV names and worker files moved the adapter revisions of `lv`, `replay`, `wave`, `optiland` and `optiland-wave`
   (which hashes the worker's revision, so R6c records go STALE(engine)); `ref`'s did not. The recipe is in
@@ -1860,8 +1861,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   (119 before), margins 15, 0, 19 and 3 again. The census rewritten: 1,056 lenses, 1,419 states, 1,411 exported, the
   same 8 refused, none thrown. The two cuts beyond their sphere and the Canon 135 mm's extensions: 165 R0–R4 pairs PASS.
 - The fingerprint of `lv`, `replay`, `wave` and `flux` moved, and their adapter revisions (`exportAperture.ts`'s
-  comment); `ref`'s, `ref-seidel`'s and the optiland engines' did not. Every record of the four is STALE(engine), the
-  Sigma 35 mm's STALE(case), until the Phase 7 end refresh (owner decision): no baseline written or checked here.
+  comment); `ref`'s, `ref-seidel`'s and the optiland engines' did not. Every record of the four was STALE(engine), the
+  Sigma 35 mm's STALE(case), until the Phase 7 end refresh (owner decision; done, below): no baseline was written or
+  checked at the adoption.
 
 ## LensVisualizer 25f65d4b4 adopted
 
@@ -1881,9 +1883,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   1 mm). The canary of the summary tab restates it; `NOT_COVERED_BY_R1` says so.
 - **A certified station's run name is LensVisualizer's row** (`-zoom<station>-focus<keyframe>`), which a lens edit can
   renumber: #954 renamed six focus-station runs of the Olympus 40-150 mm and the Sigma 70-300 mm, each the same case to
-  the bit (GONE and NEW to `baseline check` until the refresh); the Thypoch Ksana 21's station moved (STALE(case));
-  #950's Voigtländer Macro APO-Ultron 35 mm f/2 adds a station (74 runs; NEW). Benchmark, states, features, folded and
-  diffractive keep every case.
+  the bit (GONE and NEW to the Phase 7 end refresh's `baseline check`); the Thypoch Ksana 21's station moved
+  (STALE(case)); #950's Voigtländer Macro APO-Ultron 35 mm f/2 adds a station (74 runs; NEW). Benchmark, states,
+  features, folded and diffractive keep every case of `55ddfb1e1`.
 - **Measured and pinned anew** at `4669921b`: the MTF tab's 12 answers, R4f's grids and the summary's cases and margins
   (15, 0, 19 and 3) unchanged at `ff57c4469` (closure `0b6c085a`, `test:lv` 139/139), `290c6dd85` (`0516a7c7`,
   139/139) and `25f65d4b4`; `MEASURED_CASES` 124 (the Thypoch's new case, the Voigtländer's station). The census
@@ -1891,7 +1893,23 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   Olympus 40-150 mm's three renamed stations: 288 R0–R4, R4f and R6a pairs PASS.
 - The fingerprint of `lv`, `replay`, `wave` and `flux` moved, and their adapter revisions (the comment of `summary.ts`
   on the focus readout; `types.ts` is imported for types only); `ref`'s, `ref-seidel`'s and the optiland engines' did
-  not. No baseline written or checked here: the refresh is the owner's.
+  not. No baseline was written or checked at the adoption; the Phase 7 end refresh (below) wrote them.
+
+## The Phase 7 end refresh
+
+- **Done, 2026-11-05** (`docs/REFERENCE.md`, "The Phase 7 end refresh"), at LensVisualizer `25f65d4b4` (closure
+  `4669921b`), optiland `4e893f53`, policy 24, on the real store through a private clone of LensVisualizer, by the
+  recipe of the Phase 6 end refresh: all ten baselines other than the catalog's, then `statement`, `matrix` and
+  `verify` (12 baselines, 0 problems). No DRIFT, FAIL, FLOOR or ERROR; no gate, band or floor moved; no `--replace`.
+- Every record was stale by engine (`lv`, `replay`, `wave` from the adoptions; `optiland`, `optiland-wave` from
+  Phase 7) and REFRESHABLE but two MOVED (R5g on the Sigma 35 mm's new case, ATTENTION to RECORDED). Stale by case:
+  the Sigma 35 mm (benchmark, states), five diffractive runs and 12 focus stations whose lens files `55ddfb1e1`
+  reviewed, and the Thypoch Ksana 21's station. focus-stations is 74 runs: #954's six renamed stations GONE and NEW
+  (same cases), the Voigtländer's and four `55ddfb1e1` stations NEW. The statement covers 276 configurations (274);
+  its signed sentence's words are unchanged.
+- `lvrtc run` exits 1 on diffractive and folded for their recorded source refusals; a refresh script must not stop
+  there. The catalog stays the dated snapshot of policy 15. `store prune` is the owner's, and only after the refresh
+  commit is committed.
 
 ## Phase 7 engines and transports
 
