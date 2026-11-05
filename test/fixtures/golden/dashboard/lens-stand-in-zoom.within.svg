@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="328" viewBox="0 0 640 328" role="img">
+<title>stand-in-zoom, lens-a, zoom-wide, r5: differences at field 0, sagittal</title>
+<desc>Curves that answer the reference&#39;s own request at its field and cut, of a pair its comparison judges: each curve minus the reference at each frequency where both are finite numbers, with the verdict the comparison gives the pair and the attention band or the tolerance the policy gives its rung at that field, as the section page of that request draws them.</desc>
+<style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
+.lvc .bg{fill:#fcfcfb}
+.lvc text{fill:#1c1c21}
+.lvc text.muted{fill:#5c5c66}
+.lvc text.head{font-weight:600;font-size:12px}
+.lvc .grid{stroke:#e6e6ea;stroke-width:1}
+.lvc .axis{stroke:#8a8a94;stroke-width:1}
+.lvc .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lvc .dash{stroke-dasharray:6 4}
+.lvc .dot{stroke:#fcfcfb;stroke-width:1.5}
+.lvc .band{fill:#eda100;fill-opacity:.16;stroke:#c98500;stroke-width:1;stroke-dasharray:2 3}
+.lvc .zeroline{stroke:#5c5c66;stroke-width:1}
+.lvc .gate{stroke:#d03b3b;stroke-width:1.5;stroke-dasharray:5 3;fill:none}
+.lvc .bar{fill:#2a78d6}
+.lvc .ring{fill:#fcfcfb;stroke:#2a78d6;stroke-width:2}
+.lvc .none{stroke:#8a8a94;stroke-width:2}
+.lvc .cell{stroke:#fcfcfb;stroke-width:2}
+.lvc .cell.empty{fill:#f4f4f6}
+.lvc text.vt{font-weight:600;text-anchor:middle}
+.lvc .s0{stroke:#2a78d6}
+.lvc .dot.s0{fill:#2a78d6}
+.lvc .s1{stroke:#e2622d}
+.lvc .dot.s1{fill:#e2622d}
+.lvc .s2{stroke:#16996a}
+.lvc .dot.s2{fill:#16996a}
+.lvc .s3{stroke:#b47b00}
+.lvc .dot.s3{fill:#b47b00}
+.lvc .s4{stroke:#cf5f8e}
+.lvc .dot.s4{fill:#cf5f8e}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#6250d6}
+.lvc .dot.s6{fill:#6250d6}
+.lvc .s7{stroke:#e34948}
+.lvc .dot.s7{fill:#e34948}
+.lvc .sx{stroke:#8a8a94}
+.lvc .dot.sx{fill:#8a8a94}
+.lvc .v-PASS{fill:#cdebcd}
+.lvc text.t-PASS{fill:#0b3d0b}
+.lvc .v-FLOOR{fill:#e3f2dc}
+.lvc text.t-FLOOR{fill:#24451a}
+.lvc .v-FAIL{fill:#f6cfcc}
+.lvc text.t-FAIL{fill:#5c0f0b}
+.lvc .v-ERROR{fill:#e9b7b3}
+.lvc text.t-ERROR{fill:#4a0906}
+.lvc .v-ATTENTION{fill:#fbe5ad}
+.lvc text.t-ATTENTION{fill:#4a3600}
+.lvc .v-RECORDED{fill:#e3e3ea}
+.lvc text.t-RECORDED{fill:#2c2c33}
+.lvc .v-UNSUPPORTED{fill:#ededf1}
+.lvc text.t-UNSUPPORTED{fill:#45454e}
+.lvc .v-BLOCKED{fill:#d9d9e1}
+.lvc text.t-BLOCKED{fill:#2c2c33}
+@media (prefers-color-scheme:dark){
+.lvc .bg{fill:#1a1a19}
+.lvc text{fill:#e7e7ec}
+.lvc text.muted{fill:#a3a3ad}
+.lvc .grid{stroke:#2e2e34}
+.lvc .axis{stroke:#6b6b75}
+.lvc .dot{stroke:#1a1a19}
+.lvc .band{fill:#c98500;fill-opacity:.22;stroke:#eda100}
+.lvc .zeroline{stroke:#a3a3ad}
+.lvc .gate{stroke:#e66767}
+.lvc .bar{fill:#3987e5}
+.lvc .ring{fill:#1a1a19;stroke:#3987e5}
+.lvc .none{stroke:#6b6b75}
+.lvc .cell{stroke:#1a1a19}
+.lvc .cell.empty{fill:#222226}
+.lvc .s0{stroke:#3987e5}
+.lvc .dot.s0{fill:#3987e5}
+.lvc .s1{stroke:#d95926}
+.lvc .dot.s1{fill:#d95926}
+.lvc .s2{stroke:#199e70}
+.lvc .dot.s2{fill:#199e70}
+.lvc .s3{stroke:#c98500}
+.lvc .dot.s3{fill:#c98500}
+.lvc .s4{stroke:#d55181}
+.lvc .dot.s4{fill:#d55181}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#9085e9}
+.lvc .dot.s6{fill:#9085e9}
+.lvc .s7{stroke:#e66767}
+.lvc .dot.s7{fill:#e66767}
+.lvc .sx{stroke:#6b6b75}
+.lvc .dot.sx{fill:#6b6b75}
+.lvc .v-PASS{fill:#1d4a22}
+.lvc text.t-PASS{fill:#d9f2d9}
+.lvc .v-FLOOR{fill:#2b4223}
+.lvc text.t-FLOOR{fill:#e1efdb}
+.lvc .v-FAIL{fill:#5a1d1a}
+.lvc text.t-FAIL{fill:#ffdcd8}
+.lvc .v-ERROR{fill:#6b2420}
+.lvc text.t-ERROR{fill:#ffe3e0}
+.lvc .v-ATTENTION{fill:#56420a}
+.lvc text.t-ATTENTION{fill:#fbeac0}
+.lvc .v-RECORDED{fill:#34343c}
+.lvc text.t-RECORDED{fill:#e4e4ea}
+.lvc .v-UNSUPPORTED{fill:#2a2a31}
+.lvc text.t-UNSUPPORTED{fill:#c8c8d0}
+.lvc .v-BLOCKED{fill:#3d3d46}
+.lvc text.t-BLOCKED{fill:#e4e4ea}
+}</style>
+<rect class="bg" x="0" y="0" width="640" height="328"/>
+<g><title>field 0: store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/field</title><text x="12" y="20" class="head">stand-in-zoom, lens-a, zoom-wide, r5: differences at field 0, sagittal</text></g>
+<line class="grid" x1="68" y1="256" x2="624" y2="256"/>
+<text x="62" y="260" class="muted" text-anchor="end">-0.006</text>
+<line class="grid" x1="68" y1="219.33" x2="624" y2="219.33"/>
+<text x="62" y="223.33" class="muted" text-anchor="end">-0.004</text>
+<line class="grid" x1="68" y1="182.67" x2="624" y2="182.67"/>
+<text x="62" y="186.67" class="muted" text-anchor="end">-0.002</text>
+<line class="grid" x1="68" y1="146" x2="624" y2="146"/>
+<text x="62" y="150" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="68" y1="109.33" x2="624" y2="109.33"/>
+<text x="62" y="113.33" class="muted" text-anchor="end">0.002</text>
+<line class="grid" x1="68" y1="72.67" x2="624" y2="72.67"/>
+<text x="62" y="76.67" class="muted" text-anchor="end">0.004</text>
+<line class="grid" x1="68" y1="36" x2="624" y2="36"/>
+<text x="62" y="40" class="muted" text-anchor="end">0.006</text>
+<line class="axis" x1="68" y1="256" x2="68" y2="260"/>
+<text x="68" y="272" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="207" y1="256" x2="207" y2="260"/>
+<text x="207" y="272" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="346" y1="256" x2="346" y2="260"/>
+<text x="346" y="272" class="muted" text-anchor="middle">40</text>
+<line class="axis" x1="485" y1="256" x2="485" y2="260"/>
+<text x="485" y="272" class="muted" text-anchor="middle">60</text>
+<line class="axis" x1="624" y1="256" x2="624" y2="260"/>
+<text x="624" y="272" class="muted" text-anchor="middle">80</text>
+<line class="axis" x1="68" y1="256" x2="624" y2="256"/>
+<line class="axis" x1="68" y1="36" x2="68" y2="256"/>
+<text x="346" y="290" text-anchor="middle">Frequency (cycles/mm)</text>
+<text x="16" y="146" text-anchor="middle" transform="rotate(-90 16 146)">Difference of MTF</text>
+<rect class="band" x="68" y="74.39" width="556" height="143.23"><title>attention ±3.91e-3 on the axis: policy/r5-policy.json /rungs/r5/metrics/mtfOnAxis.maxAbs/attention</title></rect>
+<line class="zeroline" x1="68" y1="146" x2="624" y2="146"/>
+<polyline class="line s0" points="137.5,217.61 276.5,146 415.5,146 554.5,146"/>
+<circle class="dot s0" cx="137.5" cy="217.61" r="4"><title>optiland minus lv at 10 cycles/mm (store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /request/spec/frequenciesPerMm/0): -3.91e-3, derived: curve 2 minus curve 1 at element 0 of both curves of store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s0" cx="276.5" cy="146" r="4"><title>optiland minus lv at 30 cycles/mm (store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /request/spec/frequenciesPerMm/1): 0, derived: curve 2 minus curve 1 at element 1 of both curves of store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s0" cx="415.5" cy="146" r="4"><title>optiland minus lv at 50 cycles/mm (store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /request/spec/frequenciesPerMm/2): 0, derived: curve 2 minus curve 1 at element 2 of both curves of store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<circle class="dot s0" cx="554.5" cy="146" r="4"><title>optiland minus lv at 70 cycles/mm (store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /request/spec/frequenciesPerMm/3): 0, derived: curve 2 minus curve 1 at element 3 of both curves of store/aa13053cc291348cb9fc0a0b88db45584937a1d12dbe067d7beafba6b65210f5 /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></circle>
+<polyline class="line s1" points="137.5,146 276.5,146 415.5,146 554.5,146"/>
+<rect class="dot s1" x="133.5" y="142" width="8" height="8"><title>wave minus lv at 10 cycles/mm (store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /request/spec/frequenciesPerMm/0): 0, derived: curve 3 minus curve 1 at element 0 of both curves of store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></rect>
+<rect class="dot s1" x="272.5" y="142" width="8" height="8"><title>wave minus lv at 30 cycles/mm (store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /request/spec/frequenciesPerMm/1): 0, derived: curve 3 minus curve 1 at element 1 of both curves of store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></rect>
+<rect class="dot s1" x="411.5" y="142" width="8" height="8"><title>wave minus lv at 50 cycles/mm (store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /request/spec/frequenciesPerMm/2): 0, derived: curve 3 minus curve 1 at element 2 of both curves of store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></rect>
+<rect class="dot s1" x="550.5" y="142" width="8" height="8"><title>wave minus lv at 70 cycles/mm (store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /request/spec/frequenciesPerMm/3): 0, derived: curve 3 minus curve 1 at element 3 of both curves of store/b9cc1c74313f5423340cee048e08810cdd3ff806e53ce5c78c7f922a045770cd /result/data/fields/0/sagittal; store/2a6a46fcd3ddfca25dfd592bbc63028397a905bce67e612b1bf66407a85b345a /result/data/fields/0/sagittal</title></rect>
+<g><line class="line s0" x1="68" y1="311" x2="92" y2="311"/><circle class="dot s0" cx="80" cy="311" r="4"></circle><text x="98" y="315">optiland minus lv</text></g>
+<g><line class="line s1" x1="217.4" y1="311" x2="241.4" y2="311"/><rect class="dot s1" x="225.4" y="307" width="8" height="8"></rect><text x="247.4" y="315">wave minus lv</text></g>
+<g><rect class="band" x="342" y="306" width="24" height="10"/><text x="372" y="315">attention ±3.91e-3</text></g>
+</svg>

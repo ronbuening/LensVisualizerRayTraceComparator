@@ -471,6 +471,44 @@ test("an action is refused for its token, origin, site, host, method, size and f
   assert.ok(!alive(pid), "the child was ended");
 });
 
+test("a start is held to the memory budget: over it a 400 naming budget and estimate, a serial start always taken", async (t) => {
+  const { rootDir } = rootOf(t);
+  const runsDir = join(tempDir(t), "runs");
+  const suites = rootSuites(rootDir);
+  // Budgets stated by the test, so that it holds on a 16 GB machine and a 48 GiB one alike (CI, 5afa034).
+  const budgeted = async (memoryBudgetGiB: number) => {
+    const control = {
+      ...controlChoices(loadConfig({ rootDir, env: process.env }), suites, process.env),
+      memoryBudgetGiB,
+    };
+    const dashboard = await startDashboard({ rootDir, runsDir, port: 0, control: { ...control, killGraceMs: 300 } });
+    t.after(() => dashboard.close());
+    return { port: dashboard.port, token: await tokenOf(dashboard.port) };
+  };
+  const text = DASHBOARD_TEXT.control;
+  const fields = { suite: "fake-pair", engines: "fake-a", rungs: "selftest" };
+  // 2 GiB, a 16 GB machine's default: one job at 2.5 GiB a job.
+  const small = await budgeted(2);
+  const over = await post(small.port, "start", { token: small.token, ...fields, jobs: "2" });
+  assert.equal(over.status, 400, over.body);
+  assert.ok(visibleText(over.body).includes(text.tooManyJobs("2", "1", "2", "2.5")), visibleText(over.body));
+  // R6c counts 4 GiB a job: 6 GiB holds one job of it, the estimate taken from the rungs the start names.
+  const six = await budgeted(6);
+  const r6c = await post(six.port, "start", { token: six.token, ...fields, rungs: "r6c", jobs: "2" });
+  assert.equal(r6c.status, 400, r6c.body);
+  assert.ok(visibleText(r6c.body).includes(text.tooManyJobs("2", "1", "6", "4")), visibleText(r6c.body));
+  for (const port of [small.port, six.port]) assert.deepEqual((await controlView(port)).jobs, [], "nothing started");
+  assert.equal(existsSync(runsDir), false, "nothing was written");
+
+  // A serial start is always taken, whatever the budget, and the child is given the dashboard's budget.
+  const tiny = await budgeted(0.5);
+  const serial = await post(tiny.port, "start", { token: tiny.token, ...fields, jobs: "1" });
+  assert.equal(serial.status, 303, serial.body);
+  const job = await ended(tiny.port, 1);
+  assert.match(job.steps[0].command, / --jobs 1 --memory-budget 0\.5$/);
+  assert.equal(job.steps[0].exitCode, 0, job.steps[0].output);
+});
+
 test("a child that ignores SIGTERM is killed after the grace period when the dashboard closes", async (t) => {
   const { rootDir, marker } = rootOf(t);
   const runsDir = join(tempDir(t), "runs");

@@ -345,6 +345,7 @@ the existing result store and baselines.
 | 8.1 Read-only server (delivered) | `lvrtc serve`: pure view models over the run directories, the baselines and the policy at hand, served on 127.0.0.1 only (Host checked) as HTML with canonical JSON twins, writing nothing. Every number from a file is a Figure with its JSON pointer; STALE badges as `checkBaseline` decides them, the engines asked by default through a child `lvrtc engine describe` (LV and optiland load only there), else the suite's last run manifest | `test/dashboard/figures.test.ts`: every view of every fixture page walked, each Figure resolved from disk, held to its place in the view and to `buildReport`/the baseline reports, every count recounted; five one-line mutations of the views each turn it red |
 | 8.2 Charts (delivered) | Hand-written SVG: MTF overlays per engine and step from the result store (the manifest's keys only), difference curves of the judged answers with the policy's bands, the ladder heat map of a run and of a baseline, per-surface ray deviation of R2 held to its `hits.maxDistance` | Ten golden SVGs of fixture runs, written only by `node test/report/writeGolden.ts`, fixture engines of fixed identity; every chart number held by the walker |
 | 8.3 Run control (delivered) | `/control`: start a listed suite (engines, rungs, at most 4 jobs) as child `lvrtc run`, `compare`, `report`; collect pending file-exchange jobs; ask the engines again; one job at a time, POST with a per-server token and an Origin check, output redacted | `test/dashboard/control.test.ts`: the fake suite end to end from the UI (fake-human pending, the fake operator answers, collected, run again: every job cached, four PASS, the manifest byte-identical to a run answered at once) |
+| 8.4 Lens pages (delivered) | `/lens/<lensKey>`: every run of a lens across the run directories (a run is of the lens its case file names), with its condition (zoom and focus positions, stop, object, image plane, lines); a picker (a GET form, no script) of runs × rungs × engines and steps × fields × cuts of `mtf.native` answers, read from the store by the manifests' keys only, overlaid (at most 24 curves), with differences against one curve chosen as the reference: within its request as its section page draws them (the pair's verdict, R5's sorting and the band), every other apart as no verdict, a curve at other frequencies left out with its reason and never interpolated. "Run this lens" in run control: `lvrtc lenses list` reads the catalog, then `lvrtc mtf <lensKey> --profile benchmark` (engines of `lv,ref,optiland`, optional `--aperture`, at most 4 jobs, a 400 above `maxJobs` of the memory budget; the same check now holds 8.3's starts). Store maintenance in run control (the owner's addition): "Plan prune" and "Plan compress" run `lvrtc store prune|compress` as a dry run and show its report (`PRUNE_NOTICE` first) and the store's state digest; the confirmation, only from that plan's page, is 409 unless the state computed again is the plan's (and while a job runs or a `.tmp` writer file is in the store), and runs `--yes --expect <state>`, which the command holds again | `test/dashboard/lens.test.ts`, the lens pages walked by `figures.test.ts` (curves, conditions, each difference sorted by the test's own restatement), three golden SVGs and a golden page; `lensControl.test.ts`: refusals with no child started, and the fake LensVisualizer tree end to end from the UI to its lens page; one real lens run from the UI into a temporary runs directory; `storeControl.test.ts` on temporary stores: dry runs change nothing, a confirmation changes exactly the planned entries, a stale digest, a busy dashboard and a conflict are refused; `control.test.ts`: a start over a budget the test states is 400 and starts nothing, a serial start is always taken |
 
 ## How stages are run, and economy mode
 
@@ -621,6 +622,18 @@ scale. No existing gate or floor changes. Native limitations are coded rather th
 continues to refuse these lenses, so R4/R4f/R6a are outside this stage's verification. The suite uses temporary
 storage; the census is the raw export snapshot and records the owner's LV lens branch commit.
 
+
+### Stage 8.4 amendment (owner, 2026-11-05)
+
+The owner asked for a page per lens that overlays its MTF across conditions and engines, and for running one lens
+from the dashboard to cut the latency of a whole suite. Stage 8.4 adds both (`/lens/<lensKey>` and run control's
+"Run this lens"). Comparing across LensVisualizer commits is out of scope: each new run of a suite replaces its run
+directory. A difference across conditions is no comparison and the page says so through linted templates (a banned
+claim, `difference-agreement`, rejects calling one agreement); within one request the section page's sorting and
+bands are kept exactly. The owner added (same day) store pruning and compression to the control page: each a dry
+run whose report is shown, then a confirmation from that plan's page alone, refused (409) unless the store is still
+in the state the plan was made of, which the command holds again (`--yes --expect <state>`); no implementer runs
+either against the real store. No engine's import closure moves; no baseline is written.
 
 ### Phase 7 amendment (owner, 2026-11-03)
 

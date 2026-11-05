@@ -31,7 +31,7 @@ import { R11A_GOLDEN, R11B_GOLDEN, r11aCycle, r11bCycle } from "./r11Fixture.ts"
 import { R12B_GOLDEN, r12bCycle } from "./r12Fixture.ts";
 import { R13B_GOLDEN, R14B_GOLDEN, r13bCycle, r14bCycle } from "./r13Fixture.ts";
 import { GOLDEN_DIR, GOLDEN_SUITES, cycle, goldenFile, mtfGoldenFile } from "./support.ts";
-import { CHART_GOLDEN_DIR, chartGoldens } from "../dashboard/chartGoldens.ts";
+import { CHART_GOLDEN_DIR, PAGE_GOLDEN_DIR, chartGoldens, pageGoldens } from "../dashboard/chartGoldens.ts";
 import { buildFixture } from "../dashboard/support.ts";
 
 mkdirSync(GOLDEN_DIR, { recursive: true });
@@ -106,13 +106,17 @@ for (const suite of GOLDEN_SUITES) {
     rmSync(runsDir, { recursive: true, force: true });
   }
 }
-// The dashboard's charts (Stage 8.2), each drawn standalone from the dashboard's fixture in a temporary directory.
+// The dashboard's charts (Stage 8.2), each drawn standalone from the dashboard's fixture in a temporary directory,
+// and its golden pages (Stage 8.4: the stand-in zoom's lens page).
 {
   const fixture = await buildFixture();
   try {
     mkdirSync(CHART_GOLDEN_DIR, { recursive: true });
     for (const [file, svg] of chartGoldens(fixture)) writeFileSync(join(CHART_GOLDEN_DIR, file), svg);
     console.log("dashboard charts: written");
+    mkdirSync(PAGE_GOLDEN_DIR, { recursive: true });
+    for (const [file, html] of pageGoldens(fixture)) writeFileSync(join(PAGE_GOLDEN_DIR, file), html);
+    console.log("dashboard pages: written");
   } finally {
     fixture.remove();
   }

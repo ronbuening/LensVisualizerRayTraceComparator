@@ -57,6 +57,7 @@ import { R5G_POLICY, r5gCycle } from "../report/r5gFixture.ts";
 import type { ProtocolHandler, ProtocolResponse } from "../../src/contract/protocol.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { FAULT_ROOT, suiteFile } from "../report/support.ts";
+import { lensCycles } from "./lensFixture.ts";
 
 /** The fixture: a root with baselines, its runs directory, and the R5 stand-ins under a root and runs of their own. */
 export interface DashboardFixture {
@@ -324,6 +325,8 @@ export async function buildFixture(): Promise<DashboardFixture> {
   // A first field off the axis, and a later step that is an error: the comparison judges optiland's first answer.
   const reordered = await reorderedCycle(mtfRunsDir, MTF_FIXTURE_POLICY);
   writeFileSync(join(mtfRunsDir, REORDERED_SUITE, COMPARISONS_FILE), comparisonFileText(reordered));
+  // A stand-in zoom with runs in two run directories: the lens page of Stage 8.4.
+  await lensCycles(mtfRunsDir, MTF_FIXTURE_POLICY);
 
   // The rays of ref and its two copies, judged by a policy whose R0 blocks nothing.
   const raysRootDir = join(directory, "rays-root");
@@ -409,7 +412,14 @@ export function documentFromDisk(places: DocumentPlaces, document: DocumentName)
           ? join(places.rootDir, "baselines", `${name}.json`)
           : kind === "policy"
             ? places.policyFile
-            : null;
+            : kind === "case"
+              ? join(
+                  places.runsDir,
+                  name.slice(0, name.lastIndexOf("/")),
+                  "cases",
+                  `${name.slice(name.lastIndexOf("/") + 1)}.json`,
+                )
+              : null;
   if (kind === "store") {
     // A store entry: the gzip file where there is one, else the legacy plain one.
     const gzip = join(places.runsDir, "store", `${name}.json.gz`);

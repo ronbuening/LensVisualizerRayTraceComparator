@@ -293,6 +293,14 @@ export const BANNED_CLAIMS: readonly BannedClaim[] = [
     ),
   },
   {
+    name: "difference-agreement",
+    why: "a difference of curves of two conditions or two requests is a subtraction that no comparison judges: it shows neither agreement nor its absence",
+    matches: mentions(
+      /\b(across|other|another|different|two|several) (conditions?|requests?|runs?|run directories|fields?|cuts?)\b|\boverla(y|ys|id)\b/i,
+      /\b(agree\w*|disagree\w*|consistent|inconsistent|consistency|discrepan\w*|concord\w*|conflict\w*)\b/i,
+    ),
+  },
+  {
     name: "consensus-correct",
     why: "a consensus says which answers are within the gates of each other, not which is right or in error",
     // "an error" is read in lower case only: a pair that is ERROR is a verdict, which a sentence may name.
@@ -739,10 +747,11 @@ export const DASHBOARD_TEXT = {
     heavy:
       "A run of real engines (lv, ref, optiland and the others built in) is a heavy command: start one only when no other session runs one.",
     noMaintenance:
-      "Store maintenance, baselines and anything that writes the repository have no action here: they are run by hand.",
-    busyJob: (job: string): string => `Job ${job} is running: a start or a collect is refused until it ends.`,
+      "Baselines and anything that writes the repository have no action here: they are run by hand. Store maintenance is planned and confirmed below.",
+    busyJob: (job: string): string =>
+      `Job ${job} is running: a start, a collect, a run of a lens or store maintenance is refused until it ends.`,
     busyAsking:
-      "The engines are being asked who they are: a start or a collect is refused until they answer, since asking them is a heavy command too.",
+      "The engines are being asked who they are: a start, a collect, a run of a lens or store maintenance is refused until they answer, since asking them is a heavy command too.",
     idle: "No job is running.",
     closing: "The dashboard is closing, so it starts nothing.",
     startHow:
@@ -810,6 +819,76 @@ export const DASHBOARD_TEXT = {
     repeatedId: "A list of ids names an id more than once.",
     badJobs: (given: string, most: string): string =>
       `Jobs must be a whole number from 1 to ${most}, and the form gives "${given}".`,
+    lensHow:
+      "Run one lens first reads LensVisualizer's catalog (lvrtc lenses list) and, when the key is one of its keys, runs lvrtc mtf with the profile benchmark on the lens; the lens page then gathers the run directory it writes.",
+    lensFields: (engines: string, apertures: string, most: string): string =>
+      `Engines are optional, ids of ${engines} separated by commas (lv alone when left empty); the aperture is one of ${apertures}, or both when left empty; jobs is 1 to ${most}, and no more than the memory budget of this machine allows.`,
+    noLens: "The form names no lens.",
+    badLensKey: (key: string): string =>
+      `The lens key "${key}" is not of the form of a key of LensVisualizer's catalog.`,
+    unknownLensEngine: (id: string, known: string): string =>
+      `The engine ${id} is not one that Run this lens names: ${known}.`,
+    badAperture: (given: string, known: string): string =>
+      `The aperture "${given}" is none of ${known}; leave it empty for both.`,
+    tooManyJobs: (given: string, most: string, budget: string, estimate: string): string =>
+      `Jobs ${given} is more than this machine allows: at most ${most}, the memory budget of ${budget} GiB divided by ${estimate} GiB a job and held to the processors available.`,
+    lensInCatalog: (key: string): string => `${key} is a key of LensVisualizer's catalog, so lvrtc mtf is run on it.`,
+    lensNotInCatalog: (key: string): string =>
+      `${key} is not a key of LensVisualizer's catalog, so lvrtc mtf is not run.`,
+    catalogUnreadable: "The output of lvrtc lenses list cannot be read, so lvrtc mtf is not run.",
+    catalogFailed: (code: string): string =>
+      `lvrtc lenses list ended with exit code ${code}, so the catalog was not read and lvrtc mtf is not run.`,
+    catalogQuiet: "The list lvrtc lenses list printed is read for the lens key and not shown.",
+    lensRunsAt: (suite: string): string => `The run directory of this lens's runs is ${suite}.`,
+    storeFailed: (code: string): string =>
+      `lvrtc store ended with exit code ${code}: its output above says why as the command states it (an abort of prune where the committed baselines are missing or invalid, a conflict of compress, a store that changed since the plan), and nothing of the dashboard resolves it.`,
+  },
+  /**
+   * What the store maintenance of run control says (Stage 8.4, the owner's): planning a prune or a compress as a dry
+   * run, confirming it only from its plan's page, held to the store's state the plan was made of, and why a
+   * confirmation is refused.
+   */
+  store: {
+    intro:
+      "Plan prune and Plan compress run lvrtc store prune or lvrtc store compress as a dry run, which changes nothing, and show its report and the digest of the store's state it is of. The change itself is the confirmation on that plan's page alone, and both the dashboard and the command hold it to that state: where the store or the protected engines changed since, it is refused and nothing is changed.",
+    writers:
+      "The dashboard sees only its own jobs: an lvrtc command in a terminal or another session that writes the same store is invisible to it. Run maintenance without concurrent suite or store writers; checking that is the owner's.",
+    pruneRule:
+      "Prune after the refreshed baselines are committed, never before a refresh that would need them: an engine version is protected only by a baseline committed to HEAD that names it.",
+    compressRule:
+      "Compress keeps every key and rewrites each plain entry as its gzip atomically, so it is safe at any time; even so, run it only when no writer is active.",
+    temporary:
+      "A file of the store whose name ends in .tmp is left by a writer at work or by one that was killed: a confirmation is refused while there is one, and what wrote it is the owner's to check.",
+    pruneReport:
+      "The report as the command printed it, read: the files and bytes kept and removable of each engine, and each removable engine version with its newest entry.",
+    compressReport:
+      "The report as the command printed it, read: the plain and gzip entries, and the bytes before and after.",
+    state: (digest: string): string => `This report is of the store's state ${digest}.`,
+    dryRun: "This was a dry run: nothing was changed.",
+    protectedCount: (count: string): string =>
+      `Engine versions that the baselines committed to HEAD protect: ${count}.`,
+    problemsCount: (count: string): string => `Entries that cannot be read, and are kept: ${count}.`,
+    confirmPrune:
+      "Prune runs lvrtc store prune --yes --expect with this state: it deletes the removable entries of this report, and only if the store and the protected engines are still in that state.",
+    confirmCompress:
+      "Compress runs lvrtc store compress --yes --expect with this state: it compresses the plain entries of this report, and only if the store is still in that state.",
+    notConfirmable:
+      "No confirmation of this plan is taken: it is not the last store job of the dashboard, or its report was not read whole. Plan again.",
+    deleted: (count: string): string => `The prune deleted ${count} entries.`,
+    compressed: (count: string): string => `The compress wrote ${count} gzip entries and removed their plain sources.`,
+    notJson: "The output of lvrtc store is not JSON.",
+    notReport: "The output of lvrtc store is not the report of the action asked.",
+    badConfirmation: "A confirmation carries the number of its plan's job and the 64 hex digits of its state.",
+    notShown: (action: string): string =>
+      `This confirmation is of no plan of ${action} that the dashboard showed with that state: plan again.`,
+    superseded: (plan: string): string =>
+      `Plan ${plan} is not the last store job of the dashboard any more: plan again.`,
+    writerFiles: (count: string): string =>
+      `The store holds ${count} temporary files of a writer at work or of one that was killed, so nothing is changed: check what wrote them, and plan again once they are gone.`,
+    cannotHold: (problem: string): string =>
+      `The store's state cannot be computed again, so nothing is changed: ${problem}`,
+    changed: (plan: string): string =>
+      `The store or the protected engines changed since plan ${plan} was made, so nothing is changed: plan again.`,
   },
   /** What the charts of the dashboard say (Stage 8.2): their titles, axes, legends and captions. */
   charts: {
@@ -903,5 +982,80 @@ export const DASHBOARD_TEXT = {
       `${run}, ${rung}: ${verdict}; ${counts}`,
     tipEmptyCell: (run: string, rung: string): string => `${run}, ${rung}: no cell of this run and rung`,
     tipSeries: (series: string, reason: string): string => `${series}: ${reason}`,
+  },
+  /**
+   * What a lens page says (Stage 8.4): of the runs of a lens and their conditions, the picker, the curves chosen, the
+   * reference, the differences within the reference's request (as a section page draws them) and the others, which
+   * no comparison judges, and running the lens from run control.
+   */
+  lens: {
+    intro:
+      "This page gathers every run of the run directories whose case names this lens, with the condition of each: its zoom and focus positions, its stop, its object, its image plane and its lines.",
+    lensOfRun:
+      "A run is of the lens its case file names; two lenses whose cases are the same share one case file, and its runs are listed under the lens that file names.",
+    noRuns: "No run of the run directories has a case that names this lens.",
+    noMtf: "no mtf.native answer",
+    planeNotRecorded: "not recorded",
+    objectInfinity: "at infinity",
+    indexIntro: "Every lens that a case of a run directory names, with how many runs of it there are and where.",
+    noLenses: "No case of a run directory names a lens.",
+    pickerIntro:
+      "Choose runs, rungs, engines and their steps, fields and cuts: each curve of those choices is read from the store entry the manifest names for its job, and from no other entry.",
+    pickerHow:
+      "The form sends the choice in the address of this page, so that a choice can be kept as a link; a reference is one of the curves the choice draws.",
+    quickIntro:
+      "Each link beside a run draws one request of it at its first field, tangential, of every engine, against the first curve.",
+    nothingChosen: "No curve is chosen: choose at least one run, rung, engine, field and cut.",
+    noCurvesOfChoice: "The choice has no curve: no answer of those runs, rungs and engines states a field chosen.",
+    tooMany: (count: string, most: string): string =>
+      `The choice has ${count} curves, and a page draws at most ${most}: choose fewer.`,
+    unknownValues: (values: string): string => `Some of the choice is not of this lens and is left out: ${values}.`,
+    unknownParameters: (names: string): string =>
+      `The address has parameters that a lens page does not take, and they are left out: ${names}.`,
+    curves: "The curves chosen, in the order they are drawn, with the condition of each run as the table above has it.",
+    noAnswers: "Jobs of the choice that have no curves to draw:",
+    overlayTitle: (key: string, count: string): string => `${key}: MTF of ${count} curves`,
+    overlayIntro:
+      "Each curve as its store entry holds it, numbered as in the list of curves: a dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a curve without values is named in the legend with why.",
+    referenceNone:
+      "No reference is chosen: choose one of the curves in the form, or with the link beside it, to see the differences against it.",
+    referenceNotChosen: "The reference is not among the curves of this choice, so no difference is drawn.",
+    referenceNoValues: (why: string): string =>
+      `The reference has no values to subtract, so no difference is drawn: ${why}`,
+    reference: (curve: string): string => `The reference is curve ${curve}.`,
+    useAsReference: "use as reference",
+    isReference: "the reference",
+    withinSubject: (key: string, suite: string, run: string, rung: string): string =>
+      `${key}, ${suite}, ${run}, ${rung}`,
+    withinIntro:
+      "Curves that answer the reference's own request at its field and cut, of a pair its comparison judges: each curve minus the reference at each frequency where both are finite numbers, with the verdict the comparison gives the pair and the attention band or the tolerance the policy gives its rung at that field, as the section page of that request draws them.",
+    withinSection: "The section page of the reference's request:",
+    notJudged: (curve: string, judged: string): string =>
+      `Curve ${curve} is not the answer the comparison judges for its engine, which is ${judged}; the band is the comparison's all the same.`,
+    otherTitle: (key: string): string => `${key}: differences that no comparison judges`,
+    otherIntro:
+      "Each other curve minus the reference at each frequency where both are finite numbers. A curve of another run, another request, another field or the other cut is of another condition or another question, and a pair of one request that no comparison judges has no verdict either: each line here is a subtraction of two curves and no verdict of any engine, and no band applies to it.",
+    otherWhy: (curve: string, reason: string): string => `Curve ${curve} is ${reason}.`,
+    whyOtherDirectory: "of another run directory",
+    whyOtherRun: "of another run",
+    whyOtherRequest: "of another rung or request of the same run",
+    whyOtherField: "at another field of the same request",
+    whyOtherCut: "of the other cut",
+    whySameEngine: "of the reference's own engine",
+    whyNotCompared: "of a request whose run directory was not compared",
+    whyNoPair: "of a pair that the comparison of the request does not judge",
+    frequenciesDiffer: (curve: string): string =>
+      `Curve ${curve} is not taken at the reference's frequencies, so no difference of it is drawn: no curve is interpolated.`,
+    noValues: (curve: string, why: string): string => `Curve ${curve} has no values to subtract: ${why}`,
+    unavailable: (reason: string): string => `its engine calls the field unavailable (${reason}).`,
+    legendCurve: (curve: string, name: string): string => `${curve}: ${name}`,
+    legendMinus: (curve: string, reference: string): string => `${curve} minus ${reference}`,
+    curveName: (engine: string, run: string, rung: string, field: string, cut: string): string =>
+      `${engine}, ${run}, ${rung}, field ${field}, ${cut}`,
+    tipCurve: (curve: string, run: string): string => `curve ${curve}: ${run}`,
+    runIntro:
+      "Run this lens starts lvrtc mtf with the profile benchmark as a job of run control: the lens wide open and at the MTF tab's f/8 comparison, at the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directory of the lens, which this page then gathers.",
+    runHeavy: "With real engines it is a heavy command: start it only when no other session runs one.",
+    runNotConfigured: "This dashboard was started without run control's lists, so it cannot run a lens.",
   },
 } as const;

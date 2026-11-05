@@ -23,15 +23,15 @@ import type { ChartOptions, LegendEntry, MarkerShape, Scale } from "./svg.ts";
 const TEXT = DASHBOARD_TEXT.charts;
 
 /** The fixed geometry of a line chart: its width, the plot's margins and height. */
-const WIDTH = 640;
-const LEFT = 68;
-const RIGHT = 16;
-const TOP = 36;
-const PLOT = 220;
-const BELOW = 46;
+export const WIDTH = 640;
+export const LEFT = 68;
+export const RIGHT = 16;
+export const TOP = 36;
+export const PLOT = 220;
+export const BELOW = 46;
 
 /** A field as text: the number as the file holds it, shortest form. */
-function fieldText(value: number | null | undefined): string {
+export function fieldText(value: number | null | undefined): string {
   return value === null || value === undefined ? "?" : String(value);
 }
 
@@ -54,12 +54,12 @@ export function differenceCaption(view: MtfDifferenceView): string {
     .join(" ");
 }
 
-function joined(intro: string, more: string): string {
+export function joined(intro: string, more: string): string {
   return more === "" ? intro : `${intro} ${more}`;
 }
 
 /** Axes and grid of a plot: ticks of both scales, their labels and the two axis titles. */
-function axes(x: Scale, y: Scale, xLabel: string, yLabel: string): string[] {
+export function axes(x: Scale, y: Scale, xLabel: string, yLabel: string): string[] {
   const [left, right, top, bottom] = [LEFT, WIDTH - RIGHT, TOP, TOP + PLOT];
   const out: string[] = [];
   for (const tick of y.ticks) {
@@ -100,7 +100,7 @@ function segments(xs: readonly (number | null)[], ys: readonly (number | null)[]
 }
 
 /** A polyline per run of points, and a marker with its tooltip at each point. */
-function line(
+export function line(
   xs: readonly (number | null)[],
   ys: readonly (number | null)[],
   x: Scale,
@@ -138,7 +138,7 @@ function seriesLabel(series: MtfSeriesView): string {
 }
 
 /** The title's text, with the field's source on hover. */
-function heading(title: string, field: MtfOverlayView["field"]): string {
+export function heading(title: string, field: MtfOverlayView["field"]): string {
   const hover = field === null ? "" : tip(TEXT.tipField(fieldText(field.value), sourceText(field.source)));
   return `<g>${hover}${text(12, 20, title, { className: "head" })}</g>`;
 }
@@ -199,8 +199,16 @@ export function renderMtfOverlay(view: MtfOverlayView, subject: string, options:
   return svgChart(frame, body, options);
 }
 
-/** Each pair's differences at one field and cut, with the band of the policy drawn about zero. */
-export function renderMtfDifference(view: MtfDifferenceView, subject: string, options: ChartOptions = {}): string {
+/**
+ * Each pair's differences at one field and cut, with the band of the policy drawn about zero. `intro` is what the
+ * chart's description says first: the section page's own unless a lens page (Stage 8.4) says what its pairs are.
+ */
+export function renderMtfDifference(
+  view: MtfDifferenceView,
+  subject: string,
+  options: ChartOptions = {},
+  intro: string = TEXT.differenceIntro,
+): string {
   const shown = view.pairs.filter((pair) => pair.drawn);
   const differences = shown.flatMap((pair) =>
     pair.points.flatMap(({ difference }) => (difference.value === null ? [] : [Math.abs(difference.value)])),
@@ -267,7 +275,7 @@ export function renderMtfDifference(view: MtfDifferenceView, subject: string, op
     width: WIDTH,
     height: TOP + PLOT + BELOW + rows * 18 + 8,
     title,
-    desc: joined(TEXT.differenceIntro, differenceCaption(view)),
+    desc: joined(intro, differenceCaption(view)),
   };
   return svgChart(frame, body, options);
 }

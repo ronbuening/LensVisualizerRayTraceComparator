@@ -32,6 +32,7 @@ import type { HeatMapView, PairSorting, SectionCharts, StoreReader } from "./cha
 import { documentLabel, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Derived, DocumentName, Figure, Source } from "./figure.ts";
 import type { AskedEngines } from "./identity.ts";
+import type { LensSummary } from "./lens.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
@@ -263,6 +264,10 @@ export interface IndexView {
   readonly engines: { readonly state: AskedEngines["state"]; readonly problem: string | null };
   readonly runs: readonly RunSummary[];
   readonly baselines: readonly BaselineSummary[];
+  /** The lenses the cases of the run directories name, each with a page of its own (Stage 8.4). */
+  readonly lenses: readonly LensSummary[];
+  /** Case files of runs that cannot be read, so that their runs are of no lens. */
+  readonly lensProblems: readonly DocumentProblem[];
 }
 
 function policyHeader(policy: Loaded<PolicyAtHand>): IndexView["policy"] {
@@ -275,12 +280,19 @@ function policyHeader(policy: Loaded<PolicyAtHand>): IndexView["policy"] {
   };
 }
 
-/** The index: the policy at hand, whether the engines were asked, and a summary of each run and each baseline. */
+/**
+ * The index: the policy at hand, whether the engines were asked, a summary of each run and each baseline, and the
+ * lenses of the run directories' cases.
+ */
 export function buildIndexView(
   policy: Loaded<PolicyAtHand>,
   asked: AskedEngines,
   runs: readonly RunSummary[],
   baselines: readonly BaselineSummary[],
+  lenses: { readonly lenses: readonly LensSummary[]; readonly problems: readonly DocumentProblem[] } = {
+    lenses: [],
+    problems: [],
+  },
 ): IndexView {
   return {
     kind: "dashboard-index",
@@ -289,6 +301,8 @@ export function buildIndexView(
     engines: { state: asked.state, problem: asked.state === "failed" ? asked.problem : null },
     runs,
     baselines,
+    lenses: lenses.lenses,
+    lensProblems: lenses.problems,
   };
 }
 
@@ -312,6 +326,8 @@ export interface RunEntry {
   readonly place: number;
   readonly name: string;
   readonly caseId: string | null;
+  /** The lens its case names, which has a page of its own (Stage 8.4); null for a run of no lens. */
+  readonly lens: string | null;
   readonly problems: readonly string[];
   /** How many requests (rows of the support matrix) it has. */
   readonly requests: number;
@@ -367,6 +383,8 @@ export interface RunPartView {
   readonly place: number;
   readonly run: string;
   readonly caseId: string | null;
+  /** The lens its case names; null for a run of no lens. */
+  readonly lens: string | null;
   readonly problems: readonly string[];
   /** The engines of the support matrix's columns, in order. */
   readonly engines: readonly string[];
@@ -385,9 +403,13 @@ function sectionEntries(report: ReportModel, comparisons: Loaded<ComparisonFile>
   });
 }
 
+/** The lens of a run's case, by its id; null for a case that names none or cannot be read. */
+export type LensOf = (caseId: string) => string | null;
+
 /**
  * The run page of a run directory, from its documents, its report model (`runReport`) and its input problems
- * (`runInputProblems`), when it has a manifest. A suite of more than `splitAbove` requests is split by run.
+ * (`runInputProblems`), when it has a manifest. A suite of more than `splitAbove` requests is split by run. `lensOf`
+ * names the lens of each run's case.
  */
 export function buildRunView(
   name: string,
@@ -396,6 +418,7 @@ export function buildRunView(
   report: ReportModel | null,
   inputProblems: readonly string[],
   splitAbove: number = RUN_PAGE_REQUESTS,
+  lensOf: LensOf = () => null,
 ): RunView {
   const problems = [...problemOf(`manifest:${name}`, manifest), ...problemOf(`comparisons:${name}`, comparisons)];
   const state = comparisonsState(comparisons);
@@ -448,6 +471,7 @@ export function buildRunView(
         place,
         name: run,
         caseId,
+        lens: caseId === null ? null : lensOf(caseId),
         problems: [...runProblems],
         requests: rowsByRun.get(run)?.length ?? 0,
         sectionCount: ofRun.length,
@@ -485,6 +509,7 @@ export function buildRunPartView(
   manifest: RunManifest,
   comparisons: Loaded<ComparisonFile>,
   report: ReportModel,
+  lensOf: LensOf = () => null,
 ): RunPartView | null {
   const run = manifest.runs[place];
   if (run === undefined) return null;
@@ -494,6 +519,7 @@ export function buildRunPartView(
     place,
     run: run.name,
     caseId: run.caseId,
+    lens: run.caseId === null ? null : lensOf(run.caseId),
     problems: [...run.problems],
     engines: report.engines.map((engine) => engine.id),
     rows: report.support.filter((row) => row.run === run.name),

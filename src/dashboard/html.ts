@@ -20,12 +20,16 @@ import { HEAT_MAP_ROWS } from "./chartViews.ts";
 import type { HeatMapView, SectionCharts } from "./chartViews.ts";
 import { renderDeviation } from "./charts/deviation.ts";
 import { renderHeatMap } from "./charts/heatMap.ts";
+import { curveName, otherCaption, renderLensOther, renderLensOverlay } from "./charts/lens.ts";
 import { differenceCaption, overlayCaption, renderMtfDifference, renderMtfOverlay } from "./charts/mtf.ts";
 import { CHART_STYLE } from "./charts/svg.ts";
 import { documentLabel } from "./figure.ts";
 import type { Derived, Figure } from "./figure.ts";
-import { CONTROL_MAX_JOBS } from "./control.ts";
-import type { ControlView, JobView, StepView } from "./control.ts";
+import { BENCHMARK_APERTURES } from "../cli/benchmarkProfile.ts";
+import { CONTROL_MAX_JOBS, LENS_ENGINES } from "./control.ts";
+import type { ControlView, JobEntry, JobView, StepView, StoreJobView } from "./control.ts";
+import { curveEngine } from "./lens.ts";
+import type { LensCondition, LensCurveView, LensView } from "./lens.ts";
 import type {
   BaselinePairView,
   BaselineRunView,
@@ -131,6 +135,14 @@ function figure(value: Figure | null): string {
   return `<span class="fig" title="${escapeHtml(where)}">${escapeHtml(said)}</span>`;
 }
 
+/** A figure written as the file holds it, shortest form (a position, a stop, a wavelength), with its source on hover. */
+function plainFigure(value: Figure | null): string {
+  if (value === null) return '<span class="muted">—</span>';
+  const said = value.value === null ? "not finite" : String(value.value);
+  const where = `${documentLabel(value.source.document)} ${value.source.pointer}`;
+  return `<span class="fig" title="${escapeHtml(where)}">${escapeHtml(said)}</span>`;
+}
+
 /** A derived number: its value, with how it was computed on hover. */
 function derivedValue(value: Derived): string {
   const said = value.value === null ? "not finite" : numberText(value.value);
@@ -198,6 +210,7 @@ const baselineHref = (stem: string): string => `/baseline/${encodeURIComponent(s
 
 const baselineRunHref = (stem: string, place: number): string => `${baselineHref(stem)}/run/${place}`;
 const runPartHref = (name: string, place: number): string => `${runHref(name)}/run/${place}`;
+const lensHref = (key: string): string => `/lens/${encodeURIComponent(key)}`;
 
 /**
  * A template filled with HTML: the template is given placeholders, its text is escaped, and only then is each
@@ -355,6 +368,20 @@ export function renderIndex(view: IndexView): string {
             ),
           ]),
         ),
+    h(2, "Lenses"),
+    p(DASHBOARD_TEXT.lens.indexIntro),
+    ...problems(view.lensProblems),
+    view.lenses.length === 0
+      ? p(DASHBOARD_TEXT.lens.noLenses)
+      : table(
+          ["Lens", "Name", "Runs", "Run directories"],
+          view.lenses.map((lens) => [
+            link(lensHref(lens.key), lens.key),
+            lens.name === null ? "—" : escapeHtml(lens.name),
+            count(lens.runCount),
+            lens.suites.map((suite) => link(runHref(suite), suite)).join(", "),
+          ]),
+        ),
     p(text.intro),
     p(text.badges),
     p(text.check),
@@ -422,9 +449,10 @@ export function renderRun(view: RunView): string {
     h(2, "Runs"),
     ...(view.split ? [p(DASHBOARD_TEXT.split)] : []),
     table(
-      ["Run", "Case", "Requests", "Sections", "Gravest verdict", "Problems"],
+      ["Run", "Lens", "Case", "Requests", "Sections", "Gravest verdict", "Problems"],
       view.runs.map((run) => [
         view.split ? link(runPartHref(view.name, run.place), run.name) : escapeHtml(run.name),
+        run.lens === null ? "—" : link(lensHref(run.lens), run.lens),
         run.caseId === null ? "—" : code(run.caseId),
         count(run.requests),
         count(run.sectionCount),
@@ -499,7 +527,7 @@ export function renderRun(view: RunView): string {
 export function renderRunPart(view: RunPartView): string {
   const body = [
     h(1, `${view.run}, a run of ${view.name}`),
-    `<p>${link(runHref(view.name), `Run of ${view.name}`)} · case ${view.caseId === null ? "—" : code(view.caseId)}</p>`,
+    `<p>${link(runHref(view.name), `Run of ${view.name}`)} · case ${view.caseId === null ? "—" : code(view.caseId)}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), `Lens ${view.lens}`)}`}</p>`,
     ...view.problems.map((problem) => p(problem, "problem")),
     h(2, "Support"),
     p(DASHBOARD_TEXT.supportByRun),
@@ -868,10 +896,33 @@ export function renderControl(view: ControlView, token: string): string {
     p(text.rungsKnown(view.rungs.join(", "))),
   );
 
+  body.push(h(2, "Run one lens"), p(text.lensHow), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
+  body.push(
+    view.configured
+      ? [
+          lensForm(token, null, view.lensEngines, view.apertures),
+          p(text.lensFields(view.lensEngines.join(", "), view.apertures.join(", "), String(CONTROL_MAX_JOBS))),
+        ].join("\n")
+      : p(text.notConfigured),
+  );
+
   body.push(
     h(2, "Collect"),
     p(text.collectHow),
     view.configured ? form("collect", token, [], "Collect") : p(text.notConfigured),
+  );
+
+  const store = DASHBOARD_TEXT.store;
+  body.push(
+    h(2, "Store maintenance"),
+    p(store.intro),
+    p(store.writers, "problem"),
+    p(store.pruneRule, "problem"),
+    p(store.compressRule),
+    p(store.temporary),
+    view.configured
+      ? [form("plan-prune", token, [], "Plan prune"), form("plan-compress", token, [], "Plan compress")].join("\n")
+      : p(text.notConfigured),
   );
 
   body.push(
@@ -892,8 +943,8 @@ export function renderControl(view: ControlView, token: string): string {
             .reverse()
             .map((job) => [
               link(jobHref(job.job), count(job.job)),
-              escapeHtml(job.jobKind === "suite" ? "start" : "collect"),
-              job.suite === null ? "—" : escapeHtml(job.suite),
+              escapeHtml(jobKindText(job)),
+              `${job.suite === null ? "—" : escapeHtml(job.suite)}${job.lens === null ? "" : ` (${link(lensHref(job.lens), job.lens)})`}`,
               job.steps.map((step) => `${escapeHtml(step.name)}: ${escapeHtml(stepState(step))}`).join("<br>"),
             ]),
         ),
@@ -936,14 +987,123 @@ export function renderControl(view: ControlView, token: string): string {
   return page("Run control", "/api/control", body);
 }
 
-/** The page of one job: each step's command line, state and output, and a collect's outcome. */
-export function renderJob(view: JobView): string {
+/** A job's kind, as the jobs table names it. */
+function jobKindText(job: Pick<JobEntry, "jobKind" | "store">): string {
+  if (job.store !== null) return `${job.store.mode === "plan" ? "plan of" : "confirmed"} store ${job.store.action}`;
+  return job.jobKind === "suite" ? "start" : job.jobKind === "lens" ? "run of a lens" : "collect";
+}
+
+/** Bytes as a whole number of them and in GiB. */
+function bytesText(bytes: number): string {
+  return `${count(bytes)} B (${formatFixed(bytes / 2 ** 30, 3)} GiB)`;
+}
+
+/** A store job's report: the prune's notice, its tables, its state, and from a plan the form that confirms it. */
+function storeBlock(view: StoreJobView, job: number, token: string | null): string[] {
+  const store = DASHBOARD_TEXT.store;
+  const out: string[] = [h(2, view.mode === "plan" ? `Plan of store ${view.action}` : `Store ${view.action}`)];
+  if (view.action === "prune") out.push(p(store.pruneRule, "problem"));
+  else out.push(p(store.compressRule));
+  out.push(p(store.writers, "problem"), p(store.temporary));
+  if (view.problem !== null) {
+    out.push(p(view.problem, "problem"));
+    return out;
+  }
+  if (view.state === null) return out;
+  if (view.prune !== null) {
+    const report = view.prune;
+    // The notice as the command states it, with every prune: shown first and plainly.
+    out.push(`<p class="problem"><strong>${escapeHtml(report.notice)}</strong></p>`, p(store.pruneReport));
+    out.push(
+      table(
+        ["Engine", "Kept files", "Kept bytes", "Removable files", "Removable bytes"],
+        report.engines.map((each) => [
+          escapeHtml(each.engine),
+          count(each.kept.files),
+          bytesText(each.kept.bytes),
+          count(each.removable.files),
+          bytesText(each.removable.bytes),
+        ]),
+      ),
+      table(
+        ["Removable engine", "Fingerprint", "Adapter revision", "Files", "Bytes", "Newest entry"],
+        report.removable.map((each) => [
+          escapeHtml(each.engine),
+          code(each.fingerprint),
+          each.adapterRevision === null ? "—" : code(each.adapterRevision),
+          count(each.files),
+          bytesText(each.bytes),
+          escapeHtml(each.newestEntry),
+        ]),
+      ),
+      p(store.protectedCount(count(report.protectedEngines.count))),
+    );
+    if (report.problems.length > 0) {
+      out.push(
+        `<details><summary>${escapeHtml(store.problemsCount(count(report.problems.length)))}</summary><pre>${escapeHtml(report.problems.join("\n"))}</pre></details>`,
+      );
+    }
+    if (view.dryRun === false) out.push(p(store.deleted(count(report.deleted.count))));
+  }
+  if (view.compress !== null) {
+    const report = view.compress;
+    out.push(
+      p(store.compressReport),
+      table(
+        ["Plain entries", "Gzip entries", "Bytes before", "Bytes after"],
+        [
+          [
+            count(report.plain.files),
+            count(report.compressed.files),
+            bytesText(report.before.bytes),
+            bytesText(report.after.bytes),
+          ],
+        ],
+      ),
+    );
+    if (view.dryRun === false) out.push(p(store.compressed(count(report.changed.count))));
+  }
+  out.push(p(store.state(view.state)));
+  if (view.dryRun === true) out.push(p(store.dryRun));
+  if (view.mode === "plan") {
+    if (view.confirmable && token !== null) {
+      out.push(
+        p(view.action === "prune" ? store.confirmPrune : store.confirmCompress),
+        form(
+          view.action,
+          token,
+          [
+            `<input type="hidden" name="plan" value="${escapeHtml(String(job))}">`,
+            `<input type="hidden" name="state" value="${escapeHtml(view.state)}">`,
+          ],
+          view.action === "prune" ? "Prune" : "Compress",
+        ),
+      );
+    } else out.push(p(store.notConfirmable));
+  }
+  return out;
+}
+
+/**
+ * The page of one job: each step's command line, state and output, a collect's outcome, a lens's catalog and a store
+ * job's report. A plan of store maintenance carries the form that confirms it, with `token`.
+ */
+export function renderJob(view: JobView, token: string | null = null): string {
   const text = DASHBOARD_TEXT.control;
-  const what = view.jobKind === "suite" ? `start of ${view.suite ?? "a suite"}` : "collect";
+  const what =
+    view.jobKind === "suite"
+      ? `start of ${view.suite ?? "a suite"}`
+      : view.jobKind === "lens"
+        ? `run of the lens ${view.lens ?? ""}`
+        : view.jobKind === "store"
+          ? jobKindText(view)
+          : "collect";
   const body: string[] = [
     h(1, `Job ${count(view.job)}: ${what}`),
-    `<p>${link("/control", "Run control")}${view.suite === null ? "" : ` · ${link(runHref(view.suite), `Run of ${view.suite}`)}`}</p>`,
+    `<p>${link("/control", "Run control")}${view.suite === null ? "" : ` · ${link(runHref(view.suite), `Run of ${view.suite}`)}`}${view.lens === null ? "" : ` · ${link(lensHref(view.lens), `Lens ${view.lens}`)}`}</p>`,
     p(view.running ? text.jobRunning : text.jobEnded),
+    // A store job's report first: the prune's notice, and from a plan the form that confirms it.
+    ...(view.store === null ? [] : storeBlock(view.store, view.job, token)),
     p(text.output),
   ];
   for (const step of view.steps) {
@@ -951,6 +1111,10 @@ export function renderJob(view: JobView): string {
       h(2, step.name),
       `<p>${code(step.command)}</p>`,
       p(stepState(step)),
+      ...(step.name === "catalog" ? [p(text.catalogQuiet)] : []),
+      ...(step.name === "catalog" && view.catalog !== null
+        ? [p(view.catalog.said, view.catalog.found === true ? undefined : "problem")]
+        : []),
       ...(step.truncated ? [p(text.truncated)] : []),
       step.output === "" ? p(text.noOutput, "muted") : `<pre>${escapeHtml(step.output)}</pre>`,
     );
@@ -998,4 +1162,257 @@ export function renderActionRefusal(status: number, reason: string): string {
     p(reason),
     `<p>${link("/control", "Run control")}</p>`,
   ]);
+}
+
+// ── The lens page (Stage 8.4) ────────────────────────────────────────────────────────────────────────────────────
+
+/** The form that runs one lens: POST to run control with the server's token; the key fixed where a lens page has it. */
+function lensForm(
+  token: string,
+  lens: string | null,
+  engines: readonly string[],
+  apertures: readonly string[],
+): string {
+  const options = [
+    '<option value="">both</option>',
+    ...apertures.map((each) => `<option value="${escapeHtml(each)}">${escapeHtml(each)}</option>`),
+  ];
+  return form(
+    "lens",
+    token,
+    [
+      lens === null
+        ? '<label>Lens key <input type="text" name="lens" size="40"></label>'
+        : `<input type="hidden" name="lens" value="${escapeHtml(lens)}">`,
+      `<label>Engines <input type="text" name="engines" size="24" placeholder="${escapeHtml(engines.join(","))}"></label>`,
+      `<label>Aperture <select name="aperture">${options.join("")}</select></label>`,
+      `<label>Jobs <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
+    ],
+    "Run this lens",
+  );
+}
+
+/** A lens page's address with a choice: the options it has chosen, and a reference. */
+function lensQuery(view: LensView, reference: string | null): string {
+  const params = new URLSearchParams();
+  for (const [name, options] of [
+    ["run", view.picker.runs],
+    ["rung", view.picker.rungs],
+    ["engine", view.picker.engines],
+    ["field", view.picker.fields],
+    ["cut", view.picker.cuts],
+  ] as const) {
+    for (const option of options) if (option.chosen) params.append(name, option.id);
+  }
+  if (reference !== null) params.append("ref", reference);
+  return params.toString();
+}
+
+/** The condition of a run as table cells: zoom, focus, stop, object, image plane, lines. */
+function conditionCells(condition: LensCondition | null): string[] {
+  if (condition === null) return ["—", "—", "—", "—", "—", "—"];
+  const plane =
+    condition.plane === null
+      ? `${plainFigure(condition.imageZ)} <span class="muted">(${escapeHtml(DASHBOARD_TEXT.lens.planeNotRecorded)})</span>`
+      : `${plainFigure(condition.imageZ)} ${escapeHtml(condition.plane.kind)}${condition.plane.shiftMm === null ? "" : ` ${plainFigure(condition.plane.shiftMm)} mm`}`;
+  return [
+    plainFigure(condition.zoomT),
+    plainFigure(condition.focusT),
+    plainFigure(condition.stopSemiDiameterMm),
+    condition.object.kind === "infinity"
+      ? escapeHtml(DASHBOARD_TEXT.lens.objectInfinity)
+      : `z ${plainFigure(condition.object.z)}`,
+    plane,
+    condition.lines.map((line) => `${plainFigure(line.wavelengthNm)} nm × ${plainFigure(line.weight)}`).join("<br>"),
+  ];
+}
+
+/** A content hash shortened to its first 12 digits, the whole of it on hover. */
+function shortId(id: string): string {
+  return `<code title="${escapeHtml(id)}">${escapeHtml(id.slice(0, 12))}</code>`;
+}
+
+function checkbox(name: string, value: string, label: string, chosen: boolean): string {
+  return `<label><input type="checkbox" name="${escapeHtml(name)}" value="${escapeHtml(value)}"${chosen ? " checked" : ""}> ${label}</label>`;
+}
+
+/** A curve's row in the list of curves, with a link that makes it the reference. */
+function curveRow(view: LensView, curve: LensCurveView): string[] {
+  const text = DASHBOARD_TEXT.lens;
+  return [
+    count(curve.curve),
+    link(runHref(curve.suite), curve.suite),
+    escapeHtml(curve.runName),
+    escapeHtml(curve.rung),
+    escapeHtml(curveEngine(curve)),
+    plainFigure(curve.field),
+    escapeHtml(curve.cut),
+    escapeHtml(curve.state === "ok" ? "ok" : `${curve.state}${curve.reason === null ? "" : `: ${curve.reason}`}`),
+    curve.reference
+      ? escapeHtml(text.isReference)
+      : link(`${lensHref(view.key)}?${lensQuery(view, curve.id)}`, text.useAsReference),
+  ];
+}
+
+/** A lens page: its runs and their conditions, the picker, the curves chosen, the differences, and running the lens. */
+export function renderLens(
+  view: LensView,
+  run: { readonly token: string; readonly configured: boolean } | null,
+): string {
+  const text = DASHBOARD_TEXT.lens;
+  const query = lensQuery(view, view.curves.find((curve) => curve.reference)?.id ?? null);
+  const body: string[] = [
+    h(1, view.name === null ? `Lens ${view.key}` : `Lens ${view.key}: ${view.name}`),
+    p(text.intro),
+    p(text.lensOfRun),
+    p(DASHBOARD_TEXT.sources),
+    p(DASHBOARD_TEXT.derived),
+    ...view.problems.map((problem) => p(problem, "problem")),
+    h(2, "Runs"),
+  ];
+  if (view.runs.length === 0) body.push(p(text.noRuns));
+  else {
+    body.push(
+      p(text.quickIntro),
+      table(
+        [
+          "Run directory",
+          "Run",
+          "Case",
+          "Zoom",
+          "Focus",
+          "Stop semi-diameter (mm)",
+          "Object",
+          "Image plane",
+          "Lines",
+          "Compared",
+          "MTF requests",
+        ],
+        view.runs.map((each) => [
+          link(runHref(each.suite), each.suite),
+          escapeHtml(each.run),
+          `${shortId(each.caseId)}${each.problems.length === 0 ? "" : `<br>${problemsCell(each.problems)}`}`,
+          ...conditionCells(each.condition),
+          each.comparisons === "ok" ? "yes" : each.comparisons === "none" ? "no" : '<span class="muted">—</span>',
+          each.requests.length === 0
+            ? `<span class="muted">${escapeHtml(text.noMtf)}</span>`
+            : each.requests
+                .map((request) =>
+                  request.quick === null
+                    ? escapeHtml(request.rung)
+                    : link(`${lensHref(view.key)}?${request.quick}`, request.rung),
+                )
+                .join(", "),
+        ]),
+      ),
+    );
+  }
+
+  body.push(h(2, "Choose curves"), p(text.pickerIntro), p(text.pickerHow));
+  const { picker } = view;
+  const group = (legend: string, boxes: readonly string[]): string =>
+    `<fieldset><legend>${escapeHtml(legend)}</legend>${boxes.join(" ") || '<span class="muted">—</span>'}</fieldset>`;
+  const references = [
+    '<option value="">none</option>',
+    ...view.curves.map(
+      (curve) =>
+        `<option value="${escapeHtml(curve.id)}"${curve.reference ? " selected" : ""}>${escapeHtml(DASHBOARD_TEXT.lens.legendCurve(count(curve.curve), curveName(curve)))}</option>`,
+    ),
+  ];
+  body.push(
+    [
+      `<form method="get" action="${escapeHtml(lensHref(view.key))}">`,
+      group(
+        "Runs",
+        picker.runs.map((option) => checkbox("run", option.id, escapeHtml(option.label), option.chosen)),
+      ),
+      group(
+        "Rungs",
+        picker.rungs.map((option) => checkbox("rung", option.id, escapeHtml(option.label), option.chosen)),
+      ),
+      group(
+        "Engines",
+        picker.engines.map((option) => checkbox("engine", option.id, escapeHtml(option.label), option.chosen)),
+      ),
+      group(
+        "Fields",
+        picker.fields.map((option) =>
+          checkbox("field", option.id, `${escapeHtml(option.kind)} ${plainFigure(option.field)}`, option.chosen),
+        ),
+      ),
+      group(
+        "Cuts",
+        picker.cuts.map((option) => checkbox("cut", option.id, escapeHtml(option.label), option.chosen)),
+      ),
+      `<label>Reference <select name="ref">${references.join("")}</select></label>`,
+      '<button type="submit">Draw</button>',
+      "</form>",
+    ].join("\n"),
+    ...view.notes.map((note) => p(note, "problem")),
+  );
+
+  if (view.curves.length > 0) {
+    body.push(
+      h(2, "Curves"),
+      p(text.overlayIntro),
+      chartFigure(renderLensOverlay(view.key, view.curves), ""),
+      p(text.curves),
+      table(
+        ["Curve", "Run directory", "Run", "Rung", "Engine", "Field", "Cut", "State", "Reference"],
+        view.curves.map((curve) => curveRow(view, curve)),
+      ),
+    );
+  }
+  if (view.noAnswers.length > 0) {
+    body.push(
+      p(text.noAnswers),
+      `<ul>${view.noAnswers.map((each) => `<li>${escapeHtml(`${each.suite}: ${each.runName}, ${each.rung}: `)}${escapeHtml(each.reason)}</li>`).join("")}</ul>`,
+    );
+  }
+  if (view.curves.length > 0) {
+    body.push(h(2, "Differences"));
+    if (view.reference !== null) body.push(p(text.reference(count(view.reference.curve))));
+    if (view.referenceNote !== null) body.push(p(view.referenceNote));
+    if (view.within !== null) {
+      const { within } = view;
+      body.push(
+        h(3, "Within the reference's request"),
+        p(text.withinIntro),
+        ...(within.section === null
+          ? []
+          : [
+              `<p>${escapeHtml(text.withinSection)} ${link(sectionHref(within.section.suite, within.section.section), `${within.section.suite}, section ${count(within.section.section)}`)}</p>`,
+            ]),
+        ...within.notes.map((note) => p(note)),
+        chartFigure(
+          renderMtfDifference(within.view, within.subject, {}, text.withinIntro),
+          differenceCaption(within.view),
+        ),
+      );
+    }
+    if (view.other !== null && view.reference !== null) {
+      body.push(
+        h(3, "Differences that no comparison judges"),
+        p(text.otherIntro),
+        chartFigure(renderLensOther(view.key, view.other, view.reference.curve), otherCaption(view.other)),
+      );
+    }
+    body.push(...view.unresolved.map((sentence) => p(sentence, "muted")));
+  }
+
+  body.push(h(2, "Run this lens"), p(text.runIntro), p(text.runHeavy, "problem"));
+  if (run === null || !run.configured) body.push(p(text.runNotConfigured));
+  else {
+    body.push(
+      lensForm(run.token, view.key, LENS_ENGINES, BENCHMARK_APERTURES),
+      p(
+        DASHBOARD_TEXT.control.lensFields(
+          LENS_ENGINES.join(", "),
+          BENCHMARK_APERTURES.join(", "),
+          String(CONTROL_MAX_JOBS),
+        ),
+      ),
+    );
+  }
+  return page(`Lens ${view.key}`, `/api${lensHref(view.key)}${query === "" ? "" : `?${query}`}`, body);
 }

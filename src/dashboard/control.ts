@@ -2,22 +2,33 @@
 // (`process.execPath bin/lvrtc.mjs ...`, no shell, the server's environment with its runs directory, the server's
 // `--root`), one job at a time across the whole dashboard, and those commands write what they write. Each child is
 // the leader of a process group of its own, so that ending a job ends the engine workers it started too. A job is
-// `lvrtc run` of a listed suite, then `lvrtc compare`, then `lvrtc report`, or one `lvrtc collect --json`. Jobs and
-// their output are kept in memory for the server's life and never written. Every field an action is given is held to
-// the server's own lists; no path from a client ever reaches the file system. Store maintenance, baselines and
-// anything that writes the repository have no action here.
+// `lvrtc run` of a listed suite, then `lvrtc compare`, then `lvrtc report`; or one `lvrtc collect --json`; or, to run
+// one lens (Stage 8.4), `lvrtc lenses list --json` to read LensVisualizer's catalog and, only when the lens key is one
+// of its keys, `lvrtc mtf <lensKey> --profile benchmark`; or store maintenance (Stage 8.4, the owner's): `lvrtc store
+// prune|compress` as a dry run, the plan, and only from that plan's page its confirmation, `--yes --expect <state>`,
+// held by the server (409) and again by the child to the store's state the plan was made of. Jobs and their output
+// are kept in memory for the server's life and never written. Every field an action is given is held to the server's
+// own lists (a lens key to the form of one, then to the catalog; a confirmation to a plan the server showed); no path
+// from a client ever reaches the file system. Baselines and anything that writes the repository have no action here.
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
+import { TEMP_SUFFIX } from "../core/atomicFile.ts";
+import { STORE_DIRECTORY } from "../core/resultStore.ts";
+import { committedBaselineEngines, storeState } from "../core/storeMaintenance.ts";
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import { fileURLToPath } from "node:url";
 
+import { BENCHMARK_APERTURES, BENCHMARK_PROFILE, benchmarkRungs, benchmarkSuiteName } from "../cli/benchmarkProfile.ts";
+import { maxJobs, suiteJobEstimate } from "../cli/jobs.ts";
+import { defaultMemoryBudgetGiB, jobEstimateGiB } from "../core/memoryBudget.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT } from "../report/wording.ts";
 import { EXCHANGE_FOLDERS, exchangeDirectory } from "../transports/fileExchange.ts";
+import { LENS_KEY_PATTERN } from "./lens.ts";
 import type { DashboardSources } from "./sources.ts";
 
 /** The command line of this repository, which every child is started with. */
@@ -46,8 +57,25 @@ export const EXCHANGE_FOLDER_ORDER = [
 /** The suites a start lists with the note that they are the owner's alone: a full catalog sweep. */
 export const OWNER_ONLY_SUITES: readonly string[] = Object.freeze(["catalog"]);
 
+/** The engines "Run this lens" may name: LensVisualizer, the reference tracer and optiland (Stage 8.4). */
+export const LENS_ENGINES: readonly string[] = Object.freeze(["lv", "ref", "optiland"]);
+/** The engine `lvrtc mtf` asks when a form names none. */
+const LENS_DEFAULT_ENGINES: readonly string[] = Object.freeze(["lv"]);
+
 /** The actions, each a POST route of `/control/<action>`. */
-export const CONTROL_ACTIONS = ["start", "collect", "ask"] as const;
+export const CONTROL_ACTIONS = [
+  "start",
+  "collect",
+  "ask",
+  "lens",
+  "plan-prune",
+  "prune",
+  "plan-compress",
+  "compress",
+] as const;
+
+/** The store maintenance a job does: `lvrtc store prune` or `lvrtc store compress`. */
+export type StoreAction = "prune" | "compress";
 export type ControlAction = (typeof CONTROL_ACTIONS)[number];
 
 /** A suite the dashboard may start: its name (what a form sends) and its file (which only the server knows). */
@@ -68,6 +96,12 @@ export interface ControlOptions {
   readonly env?: Readonly<Record<string, string | undefined>>;
   /** How long a child has to end after SIGTERM; `KILL_GRACE_MS` unless a test shortens it. */
   readonly killGraceMs?: number;
+  /**
+   * The memory budget the jobs of a start and of a lens run are held to, GiB; this machine's default budget
+   * (`defaultMemoryBudgetGiB`) unless one is given, which is then handed to `lvrtc run` and `lvrtc mtf` as their
+   * `--memory-budget` too.
+   */
+  readonly memoryBudgetGiB?: number;
 }
 
 /**
@@ -77,7 +111,10 @@ export interface ControlOptions {
 export type StepState = "queued" | "running" | "exited" | "killed" | "not-started" | "not-run" | "closed";
 
 /** Which command a step runs. */
-export type StepName = "run" | "compare" | "report" | "collect";
+export type StepName = "run" | "compare" | "report" | "collect" | "catalog" | "mtf" | "store";
+
+/** What a job kind is: a start of a suite, a collect, a run of one lens, or store maintenance. */
+export type JobKind = "suite" | "collect" | "lens" | "store";
 
 /** The output of a step: stdout and stderr interleaved as received, its last `OUTPUT_TAIL_BYTES`. */
 interface OutputTail {
@@ -96,18 +133,81 @@ interface StepRecord {
   exitCode: number | null;
   signal: string | null;
   readonly output: OutputTail;
-  /** A collect's standard output, kept whole (to `STDOUT_LIMIT_BYTES`) to be read once it exits; null otherwise. */
+  /**
+   * The standard output of a collect or of a catalog's list, kept whole (to `STDOUT_LIMIT_BYTES`) to be read once it
+   * exits; null otherwise. A catalog's list is not shown in the step's output.
+   */
   stdout: { text: string; bytes: number } | null;
 }
 
 interface JobRecord {
   readonly job: number;
-  readonly kind: "suite" | "collect";
+  readonly kind: JobKind;
   readonly suite: string | null;
+  /** The lens of a run of one lens; null otherwise. */
+  readonly lens: string | null;
   readonly steps: StepRecord[];
   finished: boolean;
   /** A collect's outcome, read once when its step exited. */
   collect: JobView["collect"];
+  /** What the catalog said of a run of one lens's key, read once when its step exited. */
+  catalog: JobView["catalog"];
+  /** Store maintenance: which, a plan or its confirmation, the state a confirmation expects, and what it said. */
+  readonly store: {
+    readonly action: StoreAction;
+    readonly mode: "plan" | "confirm";
+    readonly expected: string | null;
+    report: StoreReport | null;
+  } | null;
+}
+
+/** What `lvrtc store prune` printed, read: the CLI's report, files and bytes counted as it counts them. */
+export interface StorePruneReport {
+  readonly notice: string;
+  readonly engines: readonly {
+    readonly engine: string;
+    readonly kept: { readonly files: number; readonly bytes: number };
+    readonly removable: { readonly files: number; readonly bytes: number };
+  }[];
+  readonly removable: readonly {
+    readonly engine: string;
+    readonly fingerprint: string;
+    readonly adapterRevision: string | null;
+    readonly files: number;
+    readonly bytes: number;
+    readonly newestEntry: string;
+  }[];
+  readonly protectedEngines: { readonly count: number };
+  readonly problems: readonly string[];
+  readonly deleted: { readonly count: number };
+}
+
+/** What `lvrtc store compress` printed, read. */
+export interface StoreCompressReport {
+  readonly plain: { readonly files: number };
+  readonly compressed: { readonly files: number };
+  readonly before: { readonly bytes: number };
+  readonly after: { readonly bytes: number };
+  readonly changed: { readonly count: number };
+}
+
+/** A store job's report: the state it is of and what it counted, or why its output cannot be read. */
+export interface StoreReport {
+  readonly state: string | null;
+  readonly dryRun: boolean | null;
+  readonly prune: StorePruneReport | null;
+  readonly compress: StoreCompressReport | null;
+  readonly problem: string | null;
+}
+
+/** A store job as its page shows it. */
+export interface StoreJobView extends StoreReport {
+  readonly action: StoreAction;
+  readonly mode: "plan" | "confirm";
+  /** The state a confirmation was taken for; null for a plan. */
+  readonly expected: string | null;
+  /** Whether a confirmation of this plan is taken now: a plan read whole, and the last store job of the dashboard. */
+  readonly confirmable: boolean;
 }
 
 // ── Views ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -139,19 +239,31 @@ export interface CollectEngineView {
 export interface JobView {
   readonly kind: "dashboard-control-job";
   readonly job: number;
-  readonly jobKind: "suite" | "collect";
+  readonly jobKind: JobKind;
   readonly suite: string | null;
+  /** The lens of a run of one lens, whose page gathers its run directory; null for another job. */
+  readonly lens: string | null;
   readonly running: boolean;
   readonly steps: readonly StepView[];
   /** A collect's outcome, once its step exited; null for a suite job or a collect not yet read. */
   readonly collect: { readonly engines: readonly CollectEngineView[]; readonly problem: string | null } | null;
+  /**
+   * What LensVisualizer's catalog said of a lens run's key, once its step exited: whether the key is one of its keys
+   * (null where the catalog could not be read), and the sentence that says so; null before, or for another job.
+   */
+  readonly catalog: { readonly found: boolean | null; readonly said: string } | null;
+  /** A store job's plan or confirmation, once its step exited (its report null before). Null for another job. */
+  readonly store: StoreJobView | null;
 }
 
 /** A job as the control page lists it. */
 export interface JobEntry {
   readonly job: number;
-  readonly jobKind: "suite" | "collect";
+  readonly jobKind: JobKind;
   readonly suite: string | null;
+  readonly lens: string | null;
+  /** A store job's action and whether it is a plan or a confirmation; null for another job. */
+  readonly store: { readonly action: StoreAction; readonly mode: "plan" | "confirm" } | null;
   readonly running: boolean;
   readonly steps: readonly { readonly name: StepName; readonly state: StepState; readonly exitCode: number | null }[];
 }
@@ -166,6 +278,9 @@ export interface ControlView {
   readonly ownerOnly: readonly string[];
   readonly engines: readonly string[];
   readonly rungs: readonly string[];
+  /** The engines and apertures a run of one lens may name (Stage 8.4). */
+  readonly lensEngines: readonly string[];
+  readonly apertures: readonly string[];
   /** What keeps a start or a collect from being taken now: a job, the engines being asked, or nothing. */
   readonly busy: { readonly reason: "job"; readonly job: number } | { readonly reason: "asking" } | null;
   /** Whether the engines can be asked again (the dashboard was started with a way to ask them). */
@@ -334,6 +449,118 @@ export function readCollectOutput(
   return { engines, problem: null };
 }
 
+/** The keys of LensVisualizer's catalog that `lvrtc lenses list --json` printed, or null where its output is not that. */
+export function readCatalogOutput(stdout: string): ReadonlySet<string> | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || !Array.isArray(parsed.lenses)) return null;
+  const keys = new Set<string>();
+  for (const lens of parsed.lenses as unknown[]) {
+    if (!isRecord(lens) || typeof lens.key !== "string") return null;
+    keys.add(lens.key);
+  }
+  return keys;
+}
+
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
+/** What `lvrtc store <action> --json` printed, read: its report, or why it is not one, in words that quote nothing. */
+export function readStoreOutput(stdout: string, action: StoreAction): StoreReport {
+  const none = (problem: string): StoreReport => ({ state: null, dryRun: null, prune: null, compress: null, problem });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return none(DASHBOARD_TEXT.store.notJson);
+  }
+  if (
+    !isRecord(parsed) ||
+    parsed.action !== action ||
+    typeof parsed.dryRun !== "boolean" ||
+    typeof parsed.state !== "string" ||
+    !/^[0-9a-f]{64}$/.test(parsed.state)
+  ) {
+    return none(DASHBOARD_TEXT.store.notReport);
+  }
+  const base = { state: parsed.state, dryRun: parsed.dryRun, problem: null };
+  if (action === "compress") {
+    const { plainEntries, compressedEntries, bytesBefore, bytesAfter, changed } = parsed;
+    if (![plainEntries, compressedEntries, bytesBefore, bytesAfter, changed].every(isCount)) {
+      return none(DASHBOARD_TEXT.store.notReport);
+    }
+    return {
+      ...base,
+      prune: null,
+      compress: {
+        plain: { files: plainEntries as number },
+        compressed: { files: compressedEntries as number },
+        before: { bytes: bytesBefore as number },
+        after: { bytes: bytesAfter as number },
+        changed: { count: changed as number },
+      },
+    };
+  }
+  const { notice, engines, removableIdentities, protectedEngines, problems, deleted } = parsed;
+  const countsOk =
+    Array.isArray(engines) &&
+    engines.every(
+      (each) =>
+        isRecord(each) &&
+        typeof each.engine === "string" &&
+        [each.keep, each.keepBytes, each.prune, each.pruneBytes].every(isCount),
+    );
+  const versionsOk =
+    Array.isArray(removableIdentities) &&
+    removableIdentities.every(
+      (each) =>
+        isRecord(each) &&
+        typeof each.engine === "string" &&
+        typeof each.fingerprint === "string" &&
+        (each.adapterRevision === null || typeof each.adapterRevision === "string") &&
+        isCount(each.files) &&
+        isCount(each.bytes) &&
+        typeof each.newestEntry === "string",
+    );
+  if (
+    typeof notice !== "string" ||
+    !countsOk ||
+    !versionsOk ||
+    !Array.isArray(protectedEngines) ||
+    !isStrings(problems) ||
+    !isCount(deleted)
+  ) {
+    return none(DASHBOARD_TEXT.store.notReport);
+  }
+  return {
+    ...base,
+    compress: null,
+    prune: {
+      notice,
+      engines: (engines as Record<string, unknown>[]).map((each) => ({
+        engine: each.engine as string,
+        kept: { files: each.keep as number, bytes: each.keepBytes as number },
+        removable: { files: each.prune as number, bytes: each.pruneBytes as number },
+      })),
+      removable: (removableIdentities as Record<string, unknown>[]).map((each) => ({
+        engine: each.engine as string,
+        fingerprint: each.fingerprint as string,
+        adapterRevision: each.adapterRevision as string | null,
+        files: each.files as number,
+        bytes: each.bytes as number,
+        newestEntry: each.newestEntry as string,
+      })),
+      protectedEngines: { count: protectedEngines.length },
+      problems: [...problems],
+      deleted: { count: deleted },
+    },
+  };
+}
+
 // ── The form ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** A refusal of an action: its status and the sentence that says why. */
@@ -408,13 +635,28 @@ interface StartRequest {
   readonly jobs: number;
 }
 
+/** What a run of one lens asks for, held to the lists; its key is checked by its job. */
+interface LensRequest {
+  readonly lens: string;
+  readonly engines: readonly string[] | null;
+  readonly aperture: string | null;
+  readonly jobs: number;
+}
+
 // ── The controller ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /** What the server asks of run control. */
 export interface Controller {
   /** The token every form carries: random for each server, never written. */
   readonly token: string;
-  /** Takes an action whose headers and token were checked: 303 to the page to see, or a refusal. */
+  /** Whether the dashboard was given the lists an action is held to: without them it starts nothing. */
+  readonly configured: boolean;
+  /** The lenses of the runs of one lens this dashboard started, each once: each has a lens page (Stage 8.4). */
+  lensKeys(): readonly string[];
+  /**
+   * Takes an action whose headers and token were checked: 303 to the page to see, or a refusal. A run of one lens is
+   * refused here for its fields and its jobs, and its key is held to the catalog by its job's first step.
+   */
   act(action: ControlAction, body: string): { readonly location: string } | Refusal;
   controlView(): ControlView;
   /** Null for a job the dashboard does not have. */
@@ -501,7 +743,7 @@ export function createController(context: ControlContext, configured: ControlOpt
     exitCode: null,
     signal: null,
     output: { text: "", bytes: 0, truncated: false },
-    stdout: name === "collect" ? { text: "", bytes: 0 } : null,
+    stdout: name === "collect" || name === "catalog" || name === "store" ? { text: "", bytes: 0 } : null,
   });
 
   /** Runs one step as a child and resolves once it has ended and its output is in. */
@@ -525,7 +767,8 @@ export function createController(context: ControlContext, configured: ControlOpt
       const decoders = { stdout: new StringDecoder("utf8"), stderr: new StringDecoder("utf8") };
       child.stdout?.on("data", (chunk: Buffer) => {
         const said = decoders.stdout.write(chunk);
-        append(record.output, said);
+        // A catalog's list is read for its keys and not shown.
+        if (record.name !== "catalog") append(record.output, said);
         const kept = record.stdout;
         if (kept !== null && kept.bytes <= STDOUT_LIMIT_BYTES) {
           kept.text += said;
@@ -548,7 +791,7 @@ export function createController(context: ControlContext, configured: ControlOpt
       });
       child.on("close", () => {
         const rest = decoders.stdout.end();
-        append(record.output, rest + decoders.stderr.end());
+        append(record.output, (record.name === "catalog" ? "" : rest) + decoders.stderr.end());
         if (record.stdout !== null) record.stdout.text += rest;
         if (current !== null) current.child = null;
         resolve();
@@ -569,6 +812,38 @@ export function createController(context: ControlContext, configured: ControlOpt
     return readCollectOutput(kept.text, redact);
   };
 
+  /** A store job's report, read once from the step's whole output, then let go; a failed step's is its output's. */
+  const storeOutcome = (record: StepRecord, action: StoreAction): StoreReport => {
+    const kept = record.stdout;
+    record.stdout = null;
+    const none = (problem: string): StoreReport => ({
+      state: null,
+      dryRun: null,
+      prune: null,
+      compress: null,
+      problem,
+    });
+    if (record.state !== "exited" || record.exitCode !== 0) {
+      return none(text.storeFailed(record.exitCode === null ? "none" : String(record.exitCode)));
+    }
+    if (kept === null || kept.bytes > STDOUT_LIMIT_BYTES) return none(DASHBOARD_TEXT.store.notReport);
+    return readStoreOutput(kept.text, action);
+  };
+
+  /** What the catalog's list says of a lens run's key, read once from the step's whole output, then let go. */
+  const catalogOutcome = (record: StepRecord, lens: string): JobView["catalog"] => {
+    const kept = record.stdout;
+    record.stdout = null;
+    if (record.state !== "exited" || (record.exitCode !== 0 && record.exitCode !== 1)) {
+      return { found: null, said: text.catalogFailed(record.exitCode === null ? "none" : String(record.exitCode)) };
+    }
+    const keys = kept === null || kept.bytes > STDOUT_LIMIT_BYTES ? null : readCatalogOutput(kept.text);
+    if (keys === null) return { found: null, said: text.catalogUnreadable };
+    return keys.has(lens)
+      ? { found: true, said: text.lensInCatalog(lens) }
+      : { found: false, said: text.lensNotInCatalog(lens) };
+  };
+
   const runJob = async (job: JobRecord): Promise<void> => {
     let stopped = false;
     for (const record of job.steps) {
@@ -577,7 +852,12 @@ export function createController(context: ControlContext, configured: ControlOpt
       else {
         await runStep(record);
         if (record.name === "collect") job.collect = collectOutcome(record);
-        if (!goesOn(record)) stopped = true;
+        if (record.name === "store" && job.store !== null) job.store.report = storeOutcome(record, job.store.action);
+        if (record.name === "catalog") {
+          // lvrtc mtf is run only on a key of the catalog: anything else ends the job here.
+          job.catalog = catalogOutcome(record, job.lens ?? "");
+          if (job.catalog?.found !== true) stopped = true;
+        } else if (!goesOn(record)) stopped = true;
       }
     }
     job.finished = true;
@@ -615,8 +895,103 @@ export function createController(context: ControlContext, configured: ControlOpt
     return { suite, engines: engines.ids, rungs: rungs.ids, jobs: Number(said) };
   };
 
+  const readLens = (fields: ReadonlyMap<string, string>): LensRequest | Refusal => {
+    const lens = fields.get("lens") ?? "";
+    if (lens === "") return { status: 400, reason: text.noLens };
+    if (!LENS_KEY_PATTERN.test(lens)) return { status: 400, reason: text.badLensKey(lens) };
+    const engines = idList(fields.get("engines"), LENS_ENGINES, (id) =>
+      text.unknownLensEngine(id, LENS_ENGINES.join(", ")),
+    );
+    if ("reason" in engines) return { status: 400, reason: engines.reason };
+    const aperture = (fields.get("aperture") ?? "").trim();
+    if (aperture !== "" && !BENCHMARK_APERTURES.includes(aperture)) {
+      return { status: 400, reason: text.badAperture(aperture, BENCHMARK_APERTURES.join(", ")) };
+    }
+    const jobsText = (fields.get("jobs") ?? "").trim();
+    const said = jobsText === "" ? "1" : jobsText;
+    if (!/^[1-9][0-9]?$/.test(said) || Number(said) > CONTROL_MAX_JOBS) {
+      return { status: 400, reason: text.badJobs(jobsText, String(CONTROL_MAX_JOBS)) };
+    }
+    return { lens, engines: engines.ids, aperture: aperture === "" ? null : aperture, jobs: Number(said) };
+  };
+
+  /** The budget the children are held to: the one given, else this machine's default. */
+  const budgetGiB = (): number => options.memoryBudgetGiB ?? defaultMemoryBudgetGiB();
+  /** `--memory-budget` for a child, only where the dashboard was given a budget. */
+  const budgetArgs = (): string[] =>
+    options.memoryBudgetGiB === undefined ? [] : ["--memory-budget", String(options.memoryBudgetGiB)];
+
+  /**
+   * As `lvrtc run` and `lvrtc mtf` would refuse it (`jobsOption`): more jobs than the memory budget allows at the
+   * estimate of a job (2.5 GiB, 4 GiB with R6c), 400 before any child starts. A serial run (1 job) is always allowed.
+   */
+  const budgetRefusal = (jobs: number, estimateGiB: number): Refusal | null => {
+    const budget = budgetGiB();
+    const most = maxJobs(budget, estimateGiB);
+    if (jobs <= most) return null;
+    return { status: 400, reason: text.tooManyJobs(String(jobs), String(most), String(budget), String(estimateGiB)) };
+  };
+
+  /** The last store job the dashboard started: the only plan a confirmation is taken of. */
+  const lastStoreJob = (): JobRecord | undefined => [...jobs].reverse().find((job) => job.kind === "store");
+
+  /**
+   * A confirmation held to the plan it is of: a plan of this action the dashboard showed, read whole, of the state
+   * posted, and its last store job; then nothing running, no temporary file of a writer in the store, and the store
+   * and the protected engines, computed again now, in the state the plan was made of. 409 otherwise.
+   */
+  const readConfirmation = (
+    fields: ReadonlyMap<string, string>,
+    action: StoreAction,
+  ): { readonly state: string } | Refusal => {
+    const store = DASHBOARD_TEXT.store;
+    const planText = fields.get("plan") ?? "";
+    const state = fields.get("state") ?? "";
+    if (!/^[1-9][0-9]{0,8}$/.test(planText) || !/^[0-9a-f]{64}$/.test(state)) {
+      return { status: 400, reason: store.badConfirmation };
+    }
+    const plan = jobs[Number(planText) - 1];
+    if (
+      plan === undefined ||
+      plan.store === null ||
+      plan.store.mode !== "plan" ||
+      plan.store.action !== action ||
+      !plan.finished ||
+      plan.store.report?.state !== state ||
+      plan.store.report.dryRun !== true
+    ) {
+      return { status: 409, reason: store.notShown(action) };
+    }
+    if (lastStoreJob() !== plan) return { status: 409, reason: store.superseded(planText) };
+    const busy = busyRefusal();
+    if (busy !== null) return busy;
+    const directory = join(runsDir, STORE_DIRECTORY);
+    let temporary = 0;
+    try {
+      temporary = readdirSync(directory).filter((name) => name.endsWith(TEMP_SUFFIX)).length;
+    } catch {
+      // No store directory: a state of no entry, which the state below holds the plan to.
+    }
+    if (temporary > 0) return { status: 409, reason: store.writerFiles(String(temporary)) };
+    let now: string;
+    try {
+      now = storeState(directory, action === "prune" ? committedBaselineEngines(rootDir) : null);
+    } catch (error) {
+      return { status: 409, reason: store.cannotHold(redact(error instanceof Error ? error.message : String(error))) };
+    }
+    if (now !== state) return { status: 409, reason: store.changed(planText) };
+    return { state };
+  };
+
   const act = (action: ControlAction, body: string): { readonly location: string } | Refusal => {
-    const allowed = action === "start" ? ["token", "suite", "engines", "rungs", "jobs"] : ["token"];
+    const allowed =
+      action === "start"
+        ? ["token", "suite", "engines", "rungs", "jobs"]
+        : action === "lens"
+          ? ["token", "lens", "engines", "aperture", "jobs"]
+          : action === "prune" || action === "compress"
+            ? ["token", "plan", "state"]
+            : ["token"];
     const read = fieldsOf(body, allowed);
     // The token first: a form without this server's token is refused whatever else it holds.
     const tokens = new URLSearchParams(body).getAll("token");
@@ -637,15 +1012,82 @@ export function createController(context: ControlContext, configured: ControlOpt
         job: jobs.length + 1,
         kind: "collect",
         suite: null,
+        lens: null,
         steps: [step("collect", ["collect", "--root", rootDir, "--json"])],
         finished: false,
         collect: null,
+        catalog: null,
+        store: null,
+      });
+    }
+    if (action === "plan-prune" || action === "plan-compress") {
+      const busy = busyRefusal();
+      if (busy !== null) return busy;
+      const which: StoreAction = action === "plan-prune" ? "prune" : "compress";
+      return begin({
+        job: jobs.length + 1,
+        kind: "store",
+        suite: null,
+        lens: null,
+        steps: [step("store", ["store", which, "--root", rootDir, "--json"])],
+        finished: false,
+        collect: null,
+        catalog: null,
+        store: { action: which, mode: "plan", expected: null, report: null },
+      });
+    }
+    if (action === "prune" || action === "compress") {
+      const confirmed = readConfirmation(read.fields, action);
+      if ("status" in confirmed) return confirmed;
+      return begin({
+        job: jobs.length + 1,
+        kind: "store",
+        suite: null,
+        lens: null,
+        steps: [step("store", ["store", action, "--root", rootDir, "--yes", "--expect", confirmed.state, "--json"])],
+        finished: false,
+        collect: null,
+        catalog: null,
+        store: { action, mode: "confirm", expected: confirmed.state, report: null },
+      });
+    }
+    if (action === "lens") {
+      const asked = readLens(read.fields);
+      if ("status" in asked) return asked;
+      const busy = busyRefusal();
+      if (busy !== null) return busy;
+      const estimate = jobEstimateGiB(benchmarkRungs(asked.engines ?? LENS_DEFAULT_ENGINES));
+      const overBudget = budgetRefusal(asked.jobs, estimate);
+      if (overBudget !== null) return overBudget;
+      const selection = [
+        ...(asked.engines === null ? [] : ["--engines", asked.engines.join(",")]),
+        ...(asked.aperture === null ? [] : ["--aperture", asked.aperture]),
+        "--jobs",
+        String(asked.jobs),
+        ...budgetArgs(),
+      ];
+      return begin({
+        job: jobs.length + 1,
+        kind: "lens",
+        suite: benchmarkSuiteName(asked.lens),
+        lens: asked.lens,
+        steps: [
+          step("catalog", ["lenses", "list", "--root", rootDir, "--json"]),
+          step("mtf", ["mtf", asked.lens, "--profile", BENCHMARK_PROFILE, "--root", rootDir, ...selection]),
+        ],
+        finished: false,
+        collect: null,
+        catalog: null,
+        store: null,
       });
     }
     const start = readStart(read.fields);
     if ("status" in start) return start;
     const busy = busyRefusal();
     if (busy !== null) return busy;
+    // The estimate of a job from the rungs the start names, else from the suite file's own (R6c counts 4 GiB).
+    const overBudget = budgetRefusal(start.jobs, suiteJobEstimate(start.suite.file, start.rungs ?? undefined));
+    if (overBudget !== null) return overBudget;
     const suiteName = suiteNameOf(start.suite.file);
     const selection = [
       ...(start.engines === null ? [] : ["--engines", start.engines.join(",")]),
@@ -655,13 +1097,25 @@ export function createController(context: ControlContext, configured: ControlOpt
       job: jobs.length + 1,
       kind: "suite",
       suite: suiteName,
+      lens: null,
       steps: [
-        step("run", ["run", start.suite.file, "--root", rootDir, ...selection, "--jobs", String(start.jobs)]),
+        step("run", [
+          "run",
+          start.suite.file,
+          "--root",
+          rootDir,
+          ...selection,
+          "--jobs",
+          String(start.jobs),
+          ...budgetArgs(),
+        ]),
         step("compare", ["compare", suiteName, "--root", rootDir]),
         step("report", ["report", suiteName, "--root", rootDir]),
       ],
       finished: false,
       collect: null,
+      catalog: null,
+      store: null,
     });
   };
 
@@ -673,6 +1127,7 @@ export function createController(context: ControlContext, configured: ControlOpt
       job: job.job,
       jobKind: job.kind,
       suite: job.suite,
+      lens: job.lens,
       running: !job.finished,
       steps: job.steps.map((record) => ({
         name: record.name,
@@ -684,6 +1139,23 @@ export function createController(context: ControlContext, configured: ControlOpt
         truncated: record.output.truncated,
       })),
       collect: job.collect,
+      catalog: job.catalog,
+      store:
+        job.store === null
+          ? null
+          : {
+              action: job.store.action,
+              mode: job.store.mode,
+              expected: job.store.expected,
+              ...(job.store.report ?? { state: null, dryRun: null, prune: null, compress: null, problem: null }),
+              confirmable:
+                !closing &&
+                job.store.mode === "plan" &&
+                job.finished &&
+                job.store.report?.dryRun === true &&
+                job.store.report.state !== null &&
+                lastStoreJob() === job,
+            },
     };
   };
 
@@ -712,6 +1184,8 @@ export function createController(context: ControlContext, configured: ControlOpt
       ownerOnly: suiteNames.filter((name) => OWNER_ONLY_SUITES.includes(name)),
       engines: [...options.engines],
       rungs: [...rungIds],
+      lensEngines: [...LENS_ENGINES],
+      apertures: [...BENCHMARK_APERTURES],
       busy:
         current !== null
           ? { reason: "job", job: current.job.job }
@@ -724,6 +1198,8 @@ export function createController(context: ControlContext, configured: ControlOpt
         job: job.job,
         jobKind: job.kind,
         suite: job.suite,
+        lens: job.lens,
+        store: job.store === null ? null : { action: job.store.action, mode: job.store.mode },
         running: !job.finished,
         steps: job.steps.map(({ name, state, exitCode }) => ({ name, state, exitCode })),
       })),
@@ -740,6 +1216,8 @@ export function createController(context: ControlContext, configured: ControlOpt
 
   return {
     token,
+    configured: configured !== undefined,
+    lensKeys: () => [...new Set(jobs.flatMap((job) => (job.lens === null ? [] : [job.lens])))],
     act,
     controlView,
     jobView,

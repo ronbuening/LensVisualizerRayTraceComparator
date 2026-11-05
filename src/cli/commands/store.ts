@@ -10,9 +10,11 @@ import { EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 
-const HELP = `Usage: lvrtc store compress|prune [--root <dir>] [--yes] [--json]
+const HELP = `Usage: lvrtc store compress|prune [--root <dir>] [--yes [--expect <state>]] [--json]
 
-Owner-only maintenance of <runsDir>/store. Dry run by default; --yes performs the changes.
+Owner-only maintenance of <runsDir>/store. Dry run by default; --yes performs the changes. Every run prints the
+digest of the store's state it is of (state: the entry files and, for prune, the protected engines); with
+--expect <state>, --yes first holds the store to that state and changes nothing (exit 1) where it is another.
 compress  Count plain/gzip files and bytes before/after; atomically gzip each plain entry's exact bytes.
 prune     List counts/bytes kept and removable per engine, and protected engine identities from HEAD's
           committed baselines/*.json, and each removable engine version with its newest entry. --yes deletes
@@ -31,7 +33,7 @@ export function createStoreCommand(inputs: RunTargetInputs): CliCommand {
         return EXIT_OK;
       }
       try {
-        const { positionals, values, flags } = parseArguments(args, ["--root"], ["--yes", "--json"]);
+        const { positionals, values, flags } = parseArguments(args, ["--root", "--expect"], ["--yes", "--json"]);
         const [action] = positionals;
         if (positionals.length !== 1 || !["compress", "prune"].includes(action))
           throw new UsageError("name compress or prune");
@@ -40,10 +42,14 @@ export function createStoreCommand(inputs: RunTargetInputs): CliCommand {
           throw new UsageError("--root is not a directory");
         const directory = join(loadConfig({ rootDir, env: inputs.env }).config.runsDir, STORE_DIRECTORY);
         const yes = flags.has("--yes");
+        const expected = values.get("--expect");
+        if (expected !== undefined && (!yes || !/^[0-9a-f]{64}$/.test(expected))) {
+          throw new UsageError("--expect takes the 64 hex digits of a plan's state, with --yes");
+        }
         const summary =
           action === "compress"
-            ? compressStore(directory, yes)
-            : pruneStore(directory, committedBaselineEngines(rootDir), yes);
+            ? compressStore(directory, yes, expected)
+            : pruneStore(directory, committedBaselineEngines(rootDir), yes, expected);
         io.stdout(`${JSON.stringify({ action, dryRun: !yes, ...summary }, null, 2)}\n`);
         return EXIT_OK;
       } catch (error) {

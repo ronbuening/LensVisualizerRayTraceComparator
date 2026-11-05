@@ -156,6 +156,10 @@ concurrent suites or other writers. Implementers use temporary stores only.
   checkout runs them are removable wherever `baseline check` says STALE(engine). At LensVisualizer `2e046d71` that
   is every `lv`, `replay` and `wave` answer of the current closure: prune after the Stage 5.3 refresh is
   committed, not before it.
+- Both print `state` (Stage 8.4): the SHA-256 of the entry files listed (name, size, modification time in ns,
+  inode) and, for prune, of the protected engine tuples. `--yes --expect <state>` changes the store only if it is
+  still in that state, and works through exactly the files it listed; otherwise it changes nothing and exits 1
+  (`StoreChangedError`). The dashboard's confirmation runs it so.
 
 Hermetic tests compare jobs 1/2/4 on fake in-process and stdio Node engines, including follow-ups, transport death,
 whole gzip bytes, manifests, comparisons, baselines and reports. Maintenance tests use temporary stores and read
@@ -6234,7 +6238,9 @@ Runs of real engines are heavy commands: start one only when no other session ru
   collects nothing; a client sends a listed name, never a path; the catalog is listed with the note that it is a
   full catalog sweep, the owner's alone), engines (optional;
   ids the configuration defines or built-in engines, comma-separated), rungs (optional; ids of `RUNGS`) and jobs (1 to
-  4, default 1). The job is `run <suite file> --root <root> [--engines ...] [--rungs ...] --jobs <n>`, then
+  4, default 1; since Stage 8.4 also no more than `maxJobs` of the memory budget at the estimate of a job of the
+  rungs named, or of the suite file's own, 4 GiB with R6c: a 400 naming the budget and the estimate, as `lvrtc run`
+  would refuse it, after the busy check and before any child; a serial start is always taken). The job is `run <suite file> --root <root> [--engines ...] [--rungs ...] --jobs <n>`, then
   `compare <suite name> --root <root>`, then `report <suite name> --root <root>`, each when the one before has ended:
   `run` or `compare` exiting 2 ends the job (the rest are "not run"); `compare` exiting 1 (a FAIL or ERROR, as for
   the pairs of jobs still pending for a file-exchange engine) still goes on to `report`. Pending jobs are no failure.
@@ -6259,7 +6265,8 @@ Runs of real engines are heavy commands: start one only when no other session ru
   one is ignored until the group has ended) sends SIGTERM to the group, SIGKILL after 5 s, waits for the child, and
   sends SIGKILL to what of the group outlives it.
 
-**The writer's guards.** An action is a POST to `/control/start`, `/control/collect` or `/control/ask` (GET or HEAD
+**The writer's guards.** An action is a POST to `/control/start`, `/control/collect`, `/control/ask`, or (Stage 8.4) `/control/lens`,
+`/control/plan-prune`, `/control/prune`, `/control/plan-compress` or `/control/compress` (GET or HEAD
 of one is 405 with `Allow: POST`); its body is a form (`application/x-www-form-urlencoded`, else 415) of at most 16
 KB (413); every form carries the server's random token, required and compared in constant time (403); an `Origin`,
 when sent, must be `http://127.0.0.1:<port>` or `http://localhost:<port>` and `Sec-Fetch-Site`, when sent,
@@ -6267,8 +6274,9 @@ when sent, must be `http://127.0.0.1:<port>` or `http://localhost:<port>` and `S
 400 with the reason; a start, collect or ask while a job runs or the engines are being asked is 409 with a page that
 says so; else 303 to the job's page (to `/control` after an ask). The control page alone is served with
 `referrer-policy: same-origin` and `form-action 'self'` (a browser posts `Origin: null` from a page of
-`no-referrer`). There is no action for `lvrtc store compress|prune`, baselines, `verify --write` or anything that
-writes the repository. Every sentence of the control pages is a template of `DASHBOARD_TEXT.control`.
+`no-referrer`). There is no action for baselines, `verify --write` or anything that writes the repository; store
+maintenance has only Stage 8.4's plan and confirmation (below). Every sentence of the control pages is a template of
+`DASHBOARD_TEXT.control`.
 
 **The end-to-end flow** (`test/dashboard/control.test.ts`, the stage's verification, as `test/cli/collect.test.ts`
 does it from the command line): a dashboard on a temporary root (fake-root's `fake-a` and `fake-human`, the suite
@@ -6299,6 +6307,98 @@ this repository's twelve baselines, LensVisualizer `55ddfb1e1` (closure `ff0d938
 - *Sizes and times*: the catalog's baseline summary about 500 KB of HTML, a catalog run page 385 KB, a benchmark
   section at most 630 KB; every page served in at most 0.12 s once its files are parsed (the index's first build
   about 3 s).
+
+**Lens pages (Stage 8.4).** `/lens/<lensKey>` (and its twin `/api/lens/<lensKey>`) gathers every run of a lens
+across the run directories the dashboard lists: a run is of the lens its case file names (`label.lensKey` of
+`<runsDir>/<suite>/cases/<caseId>.json`, read as the document `case:<suite>/<caseId>`; only its label and its
+conditions without the indices are kept), so a lens run with `lvrtc mtf <lensKey> --profile benchmark`
+(`mtf-<lensKey>/`) and the same lens in a suite are on one page. Two lenses whose cases are the same share one case
+file, and its runs are listed under the lens that file names; a run without a case is of no lens. The index lists
+every lens with its runs, and each run on a run page links to its lens. A key no run of the run directories and no
+job of run control has is 404; a key is looked up, never joined into a path.
+
+- *Conditions*: per run its zoom and focus positions (the case's label), its stop semi-diameter, object and image
+  plane (the case's conditions; the image plane's kind and shift from the manifest's MTF recipe where it records
+  one) and its lines, each a Figure of its own file. The aperture's kind is not recorded in a case: a run's name says
+  it (`-f8-`).
+- *The picker*: a GET form (no script; the choice is the page's address, so a choice is a link): runs (those with an
+  `mtf.native` job), rungs, engines and their steps (`optiland#fft512`), fields (by the value the answers state, as
+  `fraction:<v>` or `angle:<v>`), cuts, and a reference among the curves the choice draws. Each run's requests have a
+  link that draws that request at its first field, tangential, of every engine, against its first curve. A curve is
+  one answer of one job at one field and cut, read from the store entry the manifest names for the job and from no
+  other entry; a choice of more than 24 curves (`MAX_LENS_CURVES`) draws none and says so; a value of the address that
+  is no option of the lens is named and left out.
+- *Differences against the reference*, each curve minus the reference at each frequency where both are finite:
+  within the reference's own request (same run directory, run, rung, request, field and cut, of a pair its comparison
+  judges) as the section page of that request draws them, with the pair's verdict, R5's sorting of the field (the
+  set-aside of the pair) and the attention band or tolerance of the rung at that field, all read from that section's
+  own charts (Stage 8.2); a curve that is not the answer the comparison judges (a first answer where a step has data)
+  is drawn there with a note. Every other difference (another run directory, run, rung or request, field or cut, the
+  reference's own engine, a run directory not compared, a pair no comparison judges) is drawn apart, without a band,
+  each with its reason, and the page says that such a difference is a subtraction and no verdict. A curve not taken
+  at the reference's frequencies (the same count of doubles, each the same) has no difference at all, with the reason:
+  no curve is interpolated; nor has a curve without values.
+- *Wording*: every sentence is a template of `DASHBOARD_TEXT.lens`; the banned claim `difference-agreement` rejects a
+  sentence that calls a difference across conditions, requests, runs, fields or cuts, or an overlay, agreement,
+  disagreement, consistency or a discrepancy.
+- *Verification*: `test/dashboard/lens.test.ts` on the fixture's stand-in zoom (`lensFixture.ts`: R5 at both ends in
+  `lens-a`, the wide end again in `lens-b` with R5 at other frequencies and R5g); `figures.test.ts` walks every lens
+  page at several choices and holds every curve, condition and difference to its file, the curves to the test's own
+  enumeration of the choice and each difference to the test's own sorting; three golden SVGs and a golden page
+  (`test/fixtures/golden/dashboard-pages/`), written only by `node test/report/writeGolden.ts`.
+
+**Run this lens (Stage 8.4).** `/control` and each lens page have a form that POSTs to `/control/lens` with the 8.3
+guards (token, Origin, Sec-Fetch-Site, Host, size, method, fields, one job at a time). Its fields: `lens` (a key of
+the form of a catalog key, `LENS_KEY_PATTERN`, else 400), `engines` (optional, of `lv`, `ref` and `optiland`;
+`lvrtc mtf`'s `lv` alone when empty), `aperture` (optional: `wide-open` or `f/8`, both when empty) and `jobs` (1 to 4,
+and no more than `maxJobs` of the memory budget at the profile's estimate, 2.5 GiB a job or 4 GiB with optiland's
+R6c: a 400 naming the budget before any child starts; a 16 GB machine allows one). The job's first step is `lvrtc
+lenses list --root <root> --json`, LensVisualizer's catalog read in a child (no engine loads in the server); only when
+the key is one of its keys is the second step run, `lvrtc mtf <lensKey> --profile benchmark --root <root> [--engines
+...] [--aperture ...] --jobs <n>` (with `--memory-budget` only where the dashboard was given one); a key not in the
+catalog, or a catalog that cannot be read, ends the job there with the reason on the job page. The catalog's list is
+read, not shown. The job page links to the lens page and to the run page of `mtf-<lensKey>`. A lens run's job counts
+as a job for the one-job rule and is ended with its process group like any other.
+`test/dashboard/lensControl.test.ts` refuses every field above with no child started, and runs the fake LensVisualizer
+tree end to end from the UI: a key not in the catalog (the job ends at the catalog), then `acme-singlet-50` at f/8 on
+`lv,ref`, whose lens page gathers its four runs with their recipe planes and draws R4f's request.
+
+**Measured, 2026-11-05** (LensVisualizer `25f65d4b4`, optiland `4e893f53`). On the owner's runs directory, read
+only with `--no-ask`: the index lists 1,004 lenses (its first build, every run directory's cases read, 3.9 s); the
+page of `canon-ef-135-f2l-usm` (17 runs of benchmark, states and catalog) 0.02 s, a quick link of a states run (lv
+against replay, R4f, PASS, 51 points within) 0.04 s. Run from the UI into a temporary runs directory with an empty
+store: "Run this lens" of `nikkor-z50f12`, engines `lv,ref,optiland`, aperture f/8, 2 jobs (R6c's ceiling on this
+machine): the catalog step found the key, `lvrtc mtf` exited 0 in about 1.5 min (404 jobs, 400 ok and 4 unsupported;
+r4 60, r4f 8 and r6a 60 pairs PASS; r5 14, r5g 60, r6b 8 and r6c 28 RECORDED; r5 6 and r6c 8 UNSUPPORTED; 276 store
+entries, 208 MB), and its lens page (four runs, each with its stop and recipe plane) rendered in 0.03 s. R5's request
+at the axis drew optiland and wave each minus lv within the request, RECORDED, against the on-axis band 0.005; lv's
+curves of the four conditions against the reference line at the design plane drew apart, as no verdict: the photopic
+lines up to 0.006, LensVisualizer's best focus 4.6e-6, both together 0.015. `npm run check`, `test:lv` (139) and
+`test:optiland` (51) passed on the stage.
+
+**Store maintenance (Stage 8.4, the owner's request of 2026-11-05).** `/control` has "Plan prune" and "Plan
+compress" (POST `/control/plan-prune`, `/control/plan-compress`, every 8.3 guard, one job at a time): a job that runs
+`lvrtc store prune|compress --root <root> --json` as a dry run, which changes nothing. Its page shows first the
+command's report, read: for prune `PRUNE_NOTICE` in bold, the kept and removable files and bytes of each engine,
+each removable engine version (fingerprint, adapter revision, files, bytes, newest entry), how many engine versions
+the committed baselines protect, the entries that cannot be read (kept); for compress the plain and gzip entries and
+the bytes before and after; then the state digest the report is of, the rule against concurrent writers ("the
+dashboard sees only its own jobs") and "prune after a refresh is committed, never before". A plan whose command
+failed (prune's abort without valid committed baselines, compress's conflicting plain and gzip copies) shows the
+command's words in its output and has no form: the dashboard resolves nothing.
+
+Only the plan's page carries the confirmation, a POST to `/control/prune` or `/control/compress` with the plan's
+job number and state. It is refused (409, nothing changed) unless the plan is one the dashboard showed, of that
+action and that state, read whole and still its last store job; while a job runs or the engines are being asked;
+while the store holds a file ending in `.tmp` (the one marker of a writer the store has: a writer at work or one
+that was killed; its absence proves nothing, and checking for writers outside the dashboard is the owner's); and
+when the state computed again at that moment differs (`storeState` of the store, with `committedBaselineEngines` of
+HEAD for prune). Taken, it runs `--yes --expect <state>`, which the command holds again before it changes
+anything. `test/dashboard/storeControl.test.ts`, on temporary stores only (a temporary root reads this repository's
+HEAD through a `.git` file): a plan changes nothing, every report number is recounted from the store, a confirmation
+removes exactly the planned entries (prune) or gzips exactly the planned plain entries and removes their sources
+(compress), and a changed store, a later plan, an unshown digest, a wrong action, bad fields, a `.tmp` file, a
+running job and a conflict are each refused with nothing changed.
 
 ## LensVisualizer 25f65d4b4 adopted
 
