@@ -144,6 +144,7 @@ function samplingOf(api: LvSummaryApi, model: LvCaseModel, summary: LvOpticalSum
   const stated: { [name: string]: number | null } = {
     infinityFocalLengthMm: finite(summary.infinityEFLMm),
     breathingPercent: finite(summary.breathingPercent),
+    // The focus readout: since LV #954 where the state's authored rows are in paraxial focus, object to image.
     focusDistanceM: finite(summary.focusDistanceM),
     // LensVisualizer's stored entrance pupil of the zoom position: its focal length over twice its marked f-number
     // wide open, at infinity focus (`epAtZoomClamped`, which R1 records as lvNominalEntrancePupilSemiDiameter).

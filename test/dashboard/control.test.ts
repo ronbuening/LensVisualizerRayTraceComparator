@@ -445,8 +445,9 @@ test("an action is refused for its token, origin, site, host, method, size and f
   assert.deepEqual(treeOf(runsDir), tree, "nothing was written");
   assert.ok(!existsSync(marker));
 
-  // One job at a time: a second start, or a collect, while one runs is refused with a page that says so.
-  const slow = await post(port, "start", { ...valid, engines: "slow" });
+  // One job at a time: a second start, or a collect, while one runs is refused with a page that says so. The run is
+  // serial: two jobs exceed the memory budget of a 16 GB machine (2 GiB), and its child would end at once.
+  const slow = await post(port, "start", { ...valid, engines: "slow", jobs: "1" });
   assert.equal(slow.status, 303, slow.body);
   await untilExists(marker);
   for (const [action, fields] of [

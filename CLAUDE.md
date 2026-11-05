@@ -1863,6 +1863,36 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   comment); `ref`'s, `ref-seidel`'s and the optiland engines' did not. Every record of the four is STALE(engine), the
   Sigma 35 mm's STALE(case), until the Phase 7 end refresh (owner decision): no baseline written or checked here.
 
+## LensVisualizer 25f65d4b4 adopted
+
+- **LV `25f65d4b4` adopted** (engine closure `4669921b`, 184 files, the same files as `ff0d938d`): `55ddfb1e1` and
+  #953, #954 (`ff57c4469`, closure `0b6c085a`), #949 (`290c6dd85`, closure `0516a7c7`) and #950. #953 (dependencies,
+  math rendering) changes no engine file. #954 thins the derived zoom stations and focus keyframes of 22 lenses
+  (published stations and conjugates kept and remapped, their states bit for bit), makes `focus.closeFocusM` the
+  distance the close row focuses at (a maker's figure moves to `catalog.closeFocusM.marketing`, which no case reads),
+  re-solves the Thypoch Ksana 21's focus gap, reconstructs the Pentax 67 100 mm's close focus, and makes the focus
+  readout LensVisualizer's model of the focus. #949 and #950 add six lenses each and glasses (Sumita LLF8; Ohara PBM25
+  and TPH55) and a mount: no existing lens's photopic or C, d, F case moves at either zoom end. No binding name added or
+  lost; the fake tree did not move. The evidence is `docs/REFERENCE.md`, "LensVisualizer 25f65d4b4 adopted".
+- **The summary's focus readout is `focusLabelDistanceM`** (`sampling.focusDistanceM`, recorded, never judged): the
+  object-to-image distance at which the state's authored rows are paraxially in focus, interpolated in inverse distance
+  between rows; the slider's `closeFocus / focusT` only where LensVisualizer models none (a folded path, a focus that
+  moves no gap). At a certified station it is no longer the certified distance (up to 48.9 mm, 5.3 %; 43 of 71 within
+  1 mm). The canary of the summary tab restates it; `NOT_COVERED_BY_R1` says so.
+- **A certified station's run name is LensVisualizer's row** (`-zoom<station>-focus<keyframe>`), which a lens edit can
+  renumber: #954 renamed six focus-station runs of the Olympus 40-150 mm and the Sigma 70-300 mm, each the same case to
+  the bit (GONE and NEW to `baseline check` until the refresh); the Thypoch Ksana 21's station moved (STALE(case));
+  #950's Voigtländer Macro APO-Ultron 35 mm f/2 adds a station (74 runs; NEW). Benchmark, states, features, folded and
+  diffractive keep every case.
+- **Measured and pinned anew** at `4669921b`: the MTF tab's 12 answers, R4f's grids and the summary's cases and margins
+  (15, 0, 19 and 3) unchanged at `ff57c4469` (closure `0b6c085a`, `test:lv` 139/139), `290c6dd85` (`0516a7c7`,
+  139/139) and `25f65d4b4`; `MEASURED_CASES` 124 (the Thypoch's new case, the Voigtländer's station). The census
+  rewritten: 1,068 lenses, 1,433 states, 1,425 exported, the same 8 refused, none thrown. The Thypoch station and the
+  Olympus 40-150 mm's three renamed stations: 288 R0–R4, R4f and R6a pairs PASS.
+- The fingerprint of `lv`, `replay`, `wave` and `flux` moved, and their adapter revisions (the comment of `summary.ts`
+  on the focus readout; `types.ts` is imported for types only); `ref`'s, `ref-seidel`'s and the optiland engines' did
+  not. No baseline written or checked here: the refresh is the owner's.
+
 ## Phase 7 engines and transports
 
 - **Owner decision (2026-11-03): Stage 7.3 (a second external engine) and 7.5 (HTTP) are deferred.** Phase 7 is

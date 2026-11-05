@@ -12,20 +12,20 @@ Rewrite it with `node bin/lvrtc.mjs export --all --census reports/census`.
 
 | Input | Value |
 | --- | --- |
-| LensVisualizer commit | `55ddfb1e1ec953e816c6945f6137fa23b1e2e934` (clean) |
-| Engine closure | `ff0d938d09961e20552ae4624a94a4494b3885e1356302b209048147cf197c26` (184 files) |
+| LensVisualizer commit | `25f65d4b4213a21392cbae92680134906049b2ad` (clean) |
+| Engine closure | `4669921bae7179c7eddd220fa367e696eae7acec3a5a788d0ca90da632d3eb6b` (184 files) |
 | Contract | 1.0 |
 
 ## Outcome
 
-1056 lenses, 363 of them zooms, in 1419 states; 0 lens files not indexed.
+1068 lenses, 365 of them zooms, in 1433 states; 0 lens files not indexed.
 
 | States | Count | Exported | Not exportable | Threw |
 | --- | --- | --- | --- | --- |
-| Primes | 693 | 685 | 8 | 0 |
-| Zooms, wide end | 363 | 363 | 0 | 0 |
-| Zooms, tele end | 363 | 363 | 0 | 0 |
-| All | 1419 | 1411 | 8 | 0 |
+| Primes | 703 | 695 | 8 | 0 |
+| Zooms, wide end | 365 | 365 | 0 | 0 |
+| Zooms, tele end | 365 | 365 | 0 | 0 |
+| All | 1433 | 1425 | 8 | 0 |
 
 A state that is not exportable has a reason with a code, below. A state whose export threw is a defect of the
 exporter; a healthy census has none.
@@ -83,14 +83,14 @@ LensVisualizer data issue: d- and e-referenced glasses lack wavelength data for 
 | Flag | Cases |
 | --- | --- |
 | `aperture.annular` | 7 |
-| `aperture.unclipped` | 282 |
+| `aperture.unclipped` | 284 |
 | `lines.multiple` | 0 |
 | `object.finite` | 0 |
 | `path.folded` | 9 |
-| `surface.asphere.even` | 691 |
+| `surface.asphere.even` | 694 |
 | `surface.asphere.flat-base` | 2 |
-| `surface.asphere.odd` | 85 |
-| `surface.conic` | 319 |
+| `surface.asphere.odd` | 87 |
+| `surface.conic` | 321 |
 | `surface.diffractive` | 8 |
 
 ## Provenance notes of the exported cases
