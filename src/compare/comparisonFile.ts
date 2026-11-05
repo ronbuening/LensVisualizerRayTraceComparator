@@ -39,6 +39,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Why a parsed value is not a comparison file this code can read, in words that name no file (null when it is one):
+ * its own members, and every set against the schema of a `comparison` and the rules of one
+ * (`comparisonInvariantProblems`). The first problem found is said.
+ */
+export function comparisonFileProblem(parsed: unknown): string | null {
+  if (!isRecord(parsed) || parsed.kind !== "comparison-file") return 'its kind is not "comparison-file"';
+  if (typeof parsed.contract !== "string" || !isCompatibleContract(parsed.contract)) {
+    return "its contract version cannot be read by this code";
+  }
+  for (const member of ["suite", "manifest", "policy"]) {
+    if (typeof parsed[member] !== "string") return `its ${member} is not a string`;
+  }
+  if (!Array.isArray(parsed.comparisons)) return "its comparisons are not a list";
+  for (const [index, set] of (parsed.comparisons as unknown[]).entries()) {
+    const issues = validateKind("comparison", set);
+    if (issues.length > 0) return `comparison ${index} is not valid: ${formatIssues(issues)}`;
+    const broken = comparisonInvariantProblems(set as ComparisonSet);
+    if (broken.length > 0) return `comparison ${index}: ${broken.join("; ")}`;
+  }
+  return null;
+}
+
+/**
  * The comparison file of the run directory `directory`, checked: its own members, and every set against the
  * schema of a `comparison` and the rules of one (`comparisonInvariantProblems`). Throws a `UsageError` when the
  * directory has none, which is what a run that was never compared looks like, and when the file cannot be read, is
@@ -61,22 +84,7 @@ export function readComparisonFile(directory: string): ComparisonFile {
   } catch (error) {
     throw new UsageError(`${file}: malformed JSON`, { cause: error });
   }
-  const refuse = (problem: string): never => {
-    throw new UsageError(`${file}: not a comparison file: ${problem}`);
-  };
-  if (!isRecord(parsed) || parsed.kind !== "comparison-file") return refuse('its kind is not "comparison-file"');
-  if (typeof parsed.contract !== "string" || !isCompatibleContract(parsed.contract)) {
-    return refuse("its contract version cannot be read by this code");
-  }
-  for (const member of ["suite", "manifest", "policy"]) {
-    if (typeof parsed[member] !== "string") return refuse(`its ${member} is not a string`);
-  }
-  if (!Array.isArray(parsed.comparisons)) return refuse("its comparisons are not a list");
-  parsed.comparisons.forEach((set: unknown, index) => {
-    const issues = validateKind("comparison", set);
-    if (issues.length > 0) refuse(`comparison ${index} is not valid: ${formatIssues(issues)}`);
-    const broken = comparisonInvariantProblems(set as ComparisonSet);
-    if (broken.length > 0) refuse(`comparison ${index}: ${broken.join("; ")}`);
-  });
+  const problem = comparisonFileProblem(parsed);
+  if (problem !== null) throw new UsageError(`${file}: not a comparison file: ${problem}`);
   return parsed as unknown as ComparisonFile;
 }

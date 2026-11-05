@@ -6120,6 +6120,186 @@ added or lost, and nothing of the fake tree moved.
   (`2225e342`), `ref-seidel` (`03133c53`), `optiland` and `optiland-wave` (`e12b6f28`) did not move. No baseline was
   written or checked: the refresh is the Phase 7 end's (owner decision).
 
+## The dashboard (Phase 8)
+
+Stage 8.1 is a read-only server over the run directories and baselines: `lvrtc serve [--root <dir>] [--port <n>]
+[--no-ask]` listens on `127.0.0.1` only (default port 8077; `--port 0` picks a free one; a busy port fails at once),
+prints `http://127.0.0.1:<port>/` and runs until SIGINT or SIGTERM, then closes and exits 0. The runs directory is the
+configuration's `runsDir` (so `LVRTC_RUNS_DIR` applies), the baselines are `<root>/baselines/*.json`, the policy is the
+policy at hand. Nothing is written; no directory is made; no store entry is read in 8.1 (Stage 8.2's section pages
+read the entries of their own request, below).
+
+**What it shows.** The index lists every run directory with a manifest (not `store`, `exchange`, `mtf`): its jobs by
+status, whether it is compared, its pairs by verdict, how many are FAIL or ERROR, and the problems of its files
+(comparisons that cannot be read, comparisons made from another manifest or judged by another policy); and every
+baseline: kind (rays or MTF, by `.mtf` in its stem), suite, policy version, records, records by verdict and by badge.
+A run page has the engines as the run recorded them, the runs (requests, sections, gravest verdict, problems), the
+support matrix added up per rung (requests by status per engine, `not-run` where an engine was not asked) and request
+by request per run, the verdicts of each mode, the sections (one per compared request, with the gravest verdict) and
+the pending jobs; a suite of more than 2,000 requests has its support matrix by request and its sections on a page per
+run instead. A section page has the metric columns with the policy's limits, reference-against-each and pairwise
+tables, the consensus where the report model has one, the recorded values, and for R5, R5g and R6c the MTF table of
+the report model. A baseline page has its inputs, its engines beside what the basis says they are now, the staleness
+summary by badge and reason, and a row per run (each rung's gravest verdict, records by badge); the page of a run of a
+baseline has every record of it (verdicts by request, metrics with tolerance and measured count) with its badge. On
+the committed catalog the baseline page is about 490 KB of HTML and the largest run page 36 KB.
+
+**Routes.** `/`, `/run/<suite>`, `/run/<suite>/run/<n>`, `/run/<suite>/section/<n>`, `/baseline/<stem>`,
+`/baseline/<stem>/run/<n>`; each has a JSON twin under `/api` (`/api/index` for `/`): the view model as canonical
+JSON and a newline. A segment is looked up among the names and places the server listed (404 otherwise, traversal
+included); a `Host` other than `127.0.0.1:<port>` or `localhost:<port>` is 403; any method but GET and HEAD is 405
+(the actions of run control, below, are POST only); an exception is a bare 500, its stack on the server's error
+stream.
+
+**Figures.** Every number a view takes from a file is a Figure: its value and the file and RFC 6901 pointer it is at
+(`comparisons.json /comparisons/12/pairs/0/metrics/2/value`), shown on hover. A number the dashboard computes (an MTF
+row's difference, the larger of two rim-ray counts) is marked derived and names its sources. Every other number is a
+count. `test/dashboard/figures.test.ts` holds every figure of every fixture page to the file on disk and to the place
+of the view that holds it, sets every cell against `buildReport`, `buildBaselineReport` or `buildMtfBaselineReport`,
+recomputes every derived number and recounts every count.
+
+**STALE, and its bases.** A record's reasons are those of `lvrtc baseline check` (case, engine, policy), judged
+without running anything, so the dashboard never says REFRESHABLE, DRIFT or MOVED. The policy reason is judged against
+the policy at hand (the catalog's baselines, a dated snapshot of policy v15, show STALE(policy) like any other, with
+a note). The engine reason is judged against the engines as asked: by default, once the server listens, one child
+`lvrtc engine describe` asks every engine of every baseline (about 25 s for the eight built-in engines; LensVisualizer
+and optiland load only in that child, whose error stream is the server's; the answer is kept in memory only). Until
+it answers, with `--no-ask`, or when asking fails, the engine reason is judged against the engines the suite's last
+run recorded (`<runsDir>/<suite>/manifest.json`), and else it is not known; each page says which. The last run cannot
+see code changed since it ran (the benchmark baselines record LensVisualizer's closure `fc5ae923`, the checkout's is
+`ff0d938d`, and a last run made before the change says nothing of it), which is why asking is the default. The case reason is judged against the cases of
+the suite's last run (a run there without a case is stale, a run not there is not known), else not known. The badge
+is `STALE(<reasons>)`, `CURRENT` (every reason known, none holding) or `NOT KNOWN(<reasons>)`.
+`lvrtc engine describe <id>... [--root <dir>] [--json]` prints what a run's manifest would record of each engine now.
+
+**Charts (Stage 8.2).** Hand-written SVG, inline in the pages and styled by the page's one `<style>` (light and dark
+by `prefers-color-scheme`); no script, library or external resource. The builders in `src/dashboard/charts/` are pure:
+fixed sizes and margins, one coordinate formatter (`px`, two decimals), no ids, a fixed palette of classes (eight
+categorical slots in a fixed order, each at least 3:1 against the light and the dark surface, a neutral ninth for any
+series past the eighth; a marker shape of its own for each series, so curves that coincide stay told apart;
+status-like fills for verdicts). Every chart has a `<title>` and a `<desc>`, axis labels with units and a legend, and
+every mark a `<title>` with its value and its source (file and pointer) or, for a derived number, its derivation and
+sources. The view models are in `src/dashboard/chartViews.ts`; every sentence, tooltips and derivations included, is
+a template of `DASHBOARD_TEXT.charts`, and the wording test lints the text of every `<title>` as well as the visible
+text.
+
+- **MTF overlays** (a section of `mtf.native`, any rung): for each field and cut (sagittal, tangential), every job of
+  the request in engine order, each engine's first answer and then each later step (`ManifestJob.step`) as a series of
+  its own, read from the store entry the manifest names (`storeKey`): the frequencies are the entry's
+  `/request/spec/frequenciesPerMm`, the curve its `/result/data/fields/<k>/<cut>` decoded by the contract's codec (a
+  Curve; a value that is not a finite number is null, drawn as a gap and never as 0). A field its engine calls
+  unconverged is dashed; one it has no curves of (unavailable) is named in the legend with its status and not drawn,
+  and a job without an answer says one word there (missing, unreadable, pending, error, unsupported), the full
+  sentence in the legend entry's tooltip and among the page's problems.
+- **Difference curves**: for each pair of the section's sets (each pair of engines once), the first engine's value
+  minus the second's at each frequency where both are finite, each engine by the answer the comparison judges (the
+  comparator's rule, `lastA?.data ?? a`: its last step where that step has data, else its first answer); each point a
+  Derived with both curves as sources. A pair the comparison found UNSUPPORTED or ERROR has no curve, and the caption
+  says so. The band drawn about 0 is the policy's attention band of the field (`mtfOnAxis.maxAbs` for a field whose
+  value is 0, as the comparator decides it, else `mtfOffAxis.maxAbs`) or, for a rung without those, the tolerance of
+  `mtf.maxAbs` (R4f). Where the sorting of the MTF table (or of a peer table) sets a field aside (a class other than
+  `method`), the caption names that pair and no other.
+- **Ladder heat map** (run page, baseline page): a row per run of the manifest or the baseline (a run with no
+  comparison included), a column per rung, a cell the gravest verdict (`gravestVerdict`) of the pairs of its
+  comparisons (both modes) or of its records, labelled with the verdict (colour is never the only channel), its pairs
+  by verdict on hover; an empty cell for a run without that rung. A map of more than 150 rows (`HEAT_MAP_ROWS`) is
+  left out with a sentence that says how many it would have had (the catalog).
+- **Per-surface ray deviation** (a section of `rays.trace` of R2): for each pair of the section, the largest distance
+  between the two engines' hits on each surface (each visit, for `rays.trace` v2 and later, whose axis then says
+  "Visit") over the rays ok in both (`okInBoth`), leaving out a visit either records no point for (`unrecordedHits`),
+  decoded with `decodeTrace`: R2's own `hits.maxDistance`, surface by surface (`charts.test.ts` holds the skip against
+  the real comparator on two synthetic answers). A bar per surface on a log axis, a ring on the axis for 0, a dash
+  where no ray is ok in both, and R2's tolerance of `hits.maxDistance` as a line. The largest bar must be the pair's
+  `hits.maxDistance` in `comparisons.json`; a view says when it is not (a problem on the page), and says nothing where
+  every visit is left out and the comparison records 0.
+
+A section page reads exactly the store entries the manifest names for its request's jobs
+(`sources.storeEntry(key)`, kept by the (size, mtime, inode) of the file as the other files are, and part of the
+page's cache key: an entry rewritten or removed under a running server is another page); the store directory is never
+listed. An entry that is not there or cannot be read is a problem on the page. The golden SVGs are
+`test/fixtures/golden/dashboard/*.svg`, written only by `node test/report/writeGolden.ts` from the dashboard's fixture
+(`test/dashboard/chartGoldens.ts`: R5 and R5g stand-ins, the fake pair's run and baseline, `ref` against a copy with a
+radius one part in 1e6 too long and a faithful copy on the Double-Gauss case); `test/dashboard/charts.test.ts` holds
+each byte for byte and lists no stale golden. No golden depends on a hash of engine code: the fixture's copies of
+`ref` state a fingerprint and an adapter revision of the fixture's own, so a comment added to `ref` or to the contract
+moves no chart.
+
+**Run control (Stage 8.3).** `/control` is the one page that writes, and it writes only by starting `lvrtc` commands
+as children of the server (`process.execPath bin/lvrtc.mjs ...`, no shell, the server's environment with
+`LVRTC_RUNS_DIR` set to its runs directory, the server's `--root`), one job at a time (`src/dashboard/control.ts`).
+Runs of real engines are heavy commands: start one only when no other session runs one.
+
+- **Start a suite**: a suite of `<root>/suites/*.json`, named by its stem (links followed, regular files only;
+  `startDashboard` takes the list as `control.suites`, so a test names fixture suites, and without it starts and
+  collects nothing; a client sends a listed name, never a path; the catalog is listed with the note that it is a
+  full catalog sweep, the owner's alone), engines (optional;
+  ids the configuration defines or built-in engines, comma-separated), rungs (optional; ids of `RUNGS`) and jobs (1 to
+  4, default 1). The job is `run <suite file> --root <root> [--engines ...] [--rungs ...] --jobs <n>`, then
+  `compare <suite name> --root <root>`, then `report <suite name> --root <root>`, each when the one before has ended:
+  `run` or `compare` exiting 2 ends the job (the rest are "not run"); `compare` exiting 1 (a FAIL or ERROR, as for
+  the pairs of jobs still pending for a file-exchange engine) still goes on to `report`. Pending jobs are no failure.
+- **Collect**: `collect --root <root> --json`, its output kept whole and read once when it exits; its page has, per
+  file-exchange engine, how many jobs were collected, rejected (each with lvrtc's reason, redacted, as code) and are
+  still pending.
+- **Ask the engines again**: the identity ask of Stage 8.1 once more, through the same runner, so that the STALE
+  badges follow an engine that changed without a restart (with `--no-ask` there is no runner: refused).
+- **Pending jobs**: every pending job of every run directory, from the manifests, and per file-exchange engine of
+  the configuration the jobs in `outbox`, `pending`, `inbox`, `collected` and `rejected` of
+  `<runsDir>/exchange/<id>/` (a listing of the directory; a folder not there is 0), with what its operator does in
+  words.
+- **Jobs**: `/control/job/<n>` (numbered from 1, kept in memory for the server's life, nothing written) and its twin
+  `/api/control/job/<n>`: each step's command line (`LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs run <root>/...`),
+  its state (queued, running, exited with a code, killed by a signal, not started, not run, not run because the
+  dashboard closed) and its standard output and error interleaved as received, the last 256 KB from the start of a
+  line, escaped, with the root, the runs directory and the home directory written `<root>`, `<runsDir>` and `~`, and a
+  listed suite outside the root `<suite:<name>>` (whole paths only, the realpath of the nearest existing ancestor
+  too), so that no absolute path shows whatever HOME is. A running job's page reloads every 2 s.
+- **Ending a job**: each child leads a process group of its own. A serial `lvrtc run` has no SIGTERM handler of its
+  own, and would leave its engine workers (optiland's Python) waiting; closing the server (SIGINT, SIGTERM; a second
+  one is ignored until the group has ended) sends SIGTERM to the group, SIGKILL after 5 s, waits for the child, and
+  sends SIGKILL to what of the group outlives it.
+
+**The writer's guards.** An action is a POST to `/control/start`, `/control/collect` or `/control/ask` (GET or HEAD
+of one is 405 with `Allow: POST`); its body is a form (`application/x-www-form-urlencoded`, else 415) of at most 16
+KB (413); every form carries the server's random token, required and compared in constant time (403); an `Origin`,
+when sent, must be `http://127.0.0.1:<port>` or `http://localhost:<port>` and `Sec-Fetch-Site`, when sent,
+`same-origin` or `none` (403); a field the form does not take, a field twice, or a value not on the server's lists is
+400 with the reason; a start, collect or ask while a job runs or the engines are being asked is 409 with a page that
+says so; else 303 to the job's page (to `/control` after an ask). The control page alone is served with
+`referrer-policy: same-origin` and `form-action 'self'` (a browser posts `Origin: null` from a page of
+`no-referrer`). There is no action for `lvrtc store compress|prune`, baselines, `verify --write` or anything that
+writes the repository. Every sentence of the control pages is a template of `DASHBOARD_TEXT.control`.
+
+**The end-to-end flow** (`test/dashboard/control.test.ts`, the stage's verification, as `test/cli/collect.test.ts`
+does it from the command line): a dashboard on a temporary root (fake-root's `fake-a` and `fake-human`, the suite
+`fake-pair.json` under its `suites/`) over a temporary runs directory; start with engines `fake-a,fake-human` and rung
+`selftest` (run 0, compare 1 with the four pairs ERROR since fake-human is pending, report 0); the run page and
+`/control` show fake-human's two pending jobs and two in its outbox; the fake operator
+(`node test/fixtures/fake-operator/operator.mjs <runsDir>/exchange/fake-human`) answers them; collect from the page:
+two collected; start again: every job ok from the store, four pairs PASS, and the manifest the bytes of a run where
+fake-human answered at once. The other tests of the file reject a malformed answer, refuse every guard above with
+nothing started, end a job whose run exits 2 before compare, show no absolute path with HOME elsewhere, and end a
+running job's process group (a child that ignores SIGTERM, a grandchild that ignores it) when the dashboard closes.
+
+**The phase benchmark, on the real data (2026-11-03).** `lvrtc serve` on the owner's runs directory (read only) and
+this repository's twelve baselines, LensVisualizer `55ddfb1e1` (closure `ff0d938d`), policy 24:
+
+- *STALE badges*: with the engines asked (eight built-in engines in about 25 s), every record of the eleven baselines
+  of policy 24 is STALE(engine) and the catalog's two are STALE(engine,policy): the baselines record LensVisualizer's
+  closure `fc5ae923` and the adapter revisions before Phase 7, the state Phase 7 leaves them in until the owner's end
+  refresh. With `--no-ask` the same records are CURRENT as the suites' last runs recorded their engines, which is why
+  asking is the default.
+- *Support matrix*: the run page of each suite, by rung and by run (the benchmark's 9,720 jobs: 9,624 ok, 96
+  unsupported).
+- *MTF overlays per engine and residual views*: an R6c section of the benchmark draws `lv`, `optiland`,
+  `optiland-wave` and `wave` per field and cut from their store entries, and the six pairs' difference curves against
+  the attention bands; the R2 sections of the diffractive and folded runs (the only run directories whose last run
+  holds R2) draw the deviation per surface or visit, the largest bar equal to the pair's `hits.maxDistance` in every
+  pair (lv against optiland 1.24e-13 mm on a diffractive section, 6.16e-14 mm on a folded one).
+- *Sizes and times*: the catalog's baseline summary about 500 KB of HTML, a catalog run page 385 KB, a benchmark
+  section at most 630 KB; every page served in at most 0.12 s once its files are parsed (the index's first build
+  about 3 s).
+
 ## LensVisualizer 290c6dd85 adopted
 
 LensVisualizer main `290c6dd85` (clean), engine closure `0516a7c7`, 184 files: the same files as `ff0d938d`
