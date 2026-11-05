@@ -23,7 +23,7 @@ import { StringDecoder } from "node:string_decoder";
 import { fileURLToPath } from "node:url";
 
 import { BENCHMARK_APERTURES, BENCHMARK_PROFILE, benchmarkRungs, benchmarkSuiteName } from "../cli/benchmarkProfile.ts";
-import { maxJobs } from "../cli/jobs.ts";
+import { maxJobs, suiteJobEstimate } from "../cli/jobs.ts";
 import { defaultMemoryBudgetGiB, jobEstimateGiB } from "../core/memoryBudget.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT } from "../report/wording.ts";
@@ -97,8 +97,9 @@ export interface ControlOptions {
   /** How long a child has to end after SIGTERM; `KILL_GRACE_MS` unless a test shortens it. */
   readonly killGraceMs?: number;
   /**
-   * The memory budget a lens run's jobs are held to, GiB; this machine's default budget (`defaultMemoryBudgetGiB`)
-   * unless one is given, which is then handed to `lvrtc mtf` as its `--memory-budget` too.
+   * The memory budget the jobs of a start and of a lens run are held to, GiB; this machine's default budget
+   * (`defaultMemoryBudgetGiB`) unless one is given, which is then handed to `lvrtc run` and `lvrtc mtf` as their
+   * `--memory-budget` too.
    */
   readonly memoryBudgetGiB?: number;
 }
@@ -634,7 +635,7 @@ interface StartRequest {
   readonly jobs: number;
 }
 
-/** What a run of one lens asks for, held to the lists and to the memory budget; its key is checked by its job. */
+/** What a run of one lens asks for, held to the lists; its key is checked by its job. */
 interface LensRequest {
   readonly lens: string;
   readonly engines: readonly string[] | null;
@@ -911,14 +912,24 @@ export function createController(context: ControlContext, configured: ControlOpt
     if (!/^[1-9][0-9]?$/.test(said) || Number(said) > CONTROL_MAX_JOBS) {
       return { status: 400, reason: text.badJobs(jobsText, String(CONTROL_MAX_JOBS)) };
     }
-    // As lvrtc mtf would refuse it (`jobsOption`): more jobs than the memory budget allows at the profile's estimate.
-    const budget = options.memoryBudgetGiB ?? defaultMemoryBudgetGiB();
-    const estimate = jobEstimateGiB(benchmarkRungs(engines.ids ?? LENS_DEFAULT_ENGINES));
-    const most = maxJobs(budget, estimate);
-    if (Number(said) > most) {
-      return { status: 400, reason: text.tooManyJobs(said, String(most), String(budget), String(estimate)) };
-    }
     return { lens, engines: engines.ids, aperture: aperture === "" ? null : aperture, jobs: Number(said) };
+  };
+
+  /** The budget the children are held to: the one given, else this machine's default. */
+  const budgetGiB = (): number => options.memoryBudgetGiB ?? defaultMemoryBudgetGiB();
+  /** `--memory-budget` for a child, only where the dashboard was given a budget. */
+  const budgetArgs = (): string[] =>
+    options.memoryBudgetGiB === undefined ? [] : ["--memory-budget", String(options.memoryBudgetGiB)];
+
+  /**
+   * As `lvrtc run` and `lvrtc mtf` would refuse it (`jobsOption`): more jobs than the memory budget allows at the
+   * estimate of a job (2.5 GiB, 4 GiB with R6c), 400 before any child starts. A serial run (1 job) is always allowed.
+   */
+  const budgetRefusal = (jobs: number, estimateGiB: number): Refusal | null => {
+    const budget = budgetGiB();
+    const most = maxJobs(budget, estimateGiB);
+    if (jobs <= most) return null;
+    return { status: 400, reason: text.tooManyJobs(String(jobs), String(most), String(budget), String(estimateGiB)) };
   };
 
   /** The last store job the dashboard started: the only plan a confirmation is taken of. */
@@ -1045,12 +1056,15 @@ export function createController(context: ControlContext, configured: ControlOpt
       if ("status" in asked) return asked;
       const busy = busyRefusal();
       if (busy !== null) return busy;
+      const estimate = jobEstimateGiB(benchmarkRungs(asked.engines ?? LENS_DEFAULT_ENGINES));
+      const overBudget = budgetRefusal(asked.jobs, estimate);
+      if (overBudget !== null) return overBudget;
       const selection = [
         ...(asked.engines === null ? [] : ["--engines", asked.engines.join(",")]),
         ...(asked.aperture === null ? [] : ["--aperture", asked.aperture]),
         "--jobs",
         String(asked.jobs),
-        ...(options.memoryBudgetGiB === undefined ? [] : ["--memory-budget", String(options.memoryBudgetGiB)]),
+        ...budgetArgs(),
       ];
       return begin({
         job: jobs.length + 1,
@@ -1071,6 +1085,9 @@ export function createController(context: ControlContext, configured: ControlOpt
     if ("status" in start) return start;
     const busy = busyRefusal();
     if (busy !== null) return busy;
+    // The estimate of a job from the rungs the start names, else from the suite file's own (R6c counts 4 GiB).
+    const overBudget = budgetRefusal(start.jobs, suiteJobEstimate(start.suite.file, start.rungs ?? undefined));
+    if (overBudget !== null) return overBudget;
     const suiteName = suiteNameOf(start.suite.file);
     const selection = [
       ...(start.engines === null ? [] : ["--engines", start.engines.join(",")]),
@@ -1082,7 +1099,16 @@ export function createController(context: ControlContext, configured: ControlOpt
       suite: suiteName,
       lens: null,
       steps: [
-        step("run", ["run", start.suite.file, "--root", rootDir, ...selection, "--jobs", String(start.jobs)]),
+        step("run", [
+          "run",
+          start.suite.file,
+          "--root",
+          rootDir,
+          ...selection,
+          "--jobs",
+          String(start.jobs),
+          ...budgetArgs(),
+        ]),
         step("compare", ["compare", suiteName, "--root", rootDir]),
         step("report", ["report", suiteName, "--root", rootDir]),
       ],

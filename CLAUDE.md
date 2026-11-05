@@ -2087,7 +2087,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   suites; without `control` it starts and collects nothing, and its page says so), then `compare`, then `report`;
   `run` or `compare` exiting 2 ends the job (the rest "not run"), `compare` exiting 1 still goes on to `report`.
   Engines (the configuration's definitions and the built-in engines, `controlChoices`), rungs (`RUNGS`) and jobs
-  (**1 to 4**, `CONTROL_MAX_JOBS`, never more) are held to the server's own lists; the client sends a listed name,
+  (**1 to 4**, `CONTROL_MAX_JOBS`, never more; since Stage 8.4 also no more than `maxJobs` of the memory budget at the
+  start's estimate, `suiteJobEstimate` of its rungs or its suite file, R6c 4 GiB: a 400 naming budget and estimate,
+  after the busy check and before any child; a serial start is always taken) are held to the server's own lists; the client sends a listed name,
   never a path. A suite of `OWNER_ONLY_SUITES` (the catalog) is listed with the note that it is a full catalog sweep,
   the owner's alone. Collect is `collect --root <root> --json`, its stdout kept whole (that step only) and read once
   at exit: per engine collected, rejected (lvrtc's reason in `<code>`, redacted) and pending. "Ask the engines
@@ -2141,8 +2143,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
 - **"Run this lens" is run control's fourth action** (`/control/lens`, POST, every 8.3 guard): `lens` of
   `LENS_KEY_PATTERN` (400 otherwise), `engines` of `LENS_ENGINES` (`lv,ref,optiland`; empty is `lvrtc mtf`'s `lv`),
   `aperture` of `BENCHMARK_APERTURES` (empty is both), `jobs` 1 to 4 and **no more than `maxJobs` of the memory budget
-  at `jobEstimateGiB(benchmarkRungs(engines))`, a 400 before any child starts** (a 16 GB machine allows one; a test
-  states `ControlOptions.memoryBudgetGiB`, which is then handed to `lvrtc mtf` too). The job reads LensVisualizer's
+  at `jobEstimateGiB(benchmarkRungs(engines))`, a 400 before any child starts** (after the busy check; a 16 GB machine
+  allows one; a test states `ControlOptions.memoryBudgetGiB`, which is then handed to `lvrtc mtf` and to a start's
+  `lvrtc run` as `--memory-budget`). The job reads LensVisualizer's
   catalog in a child (`lvrtc lenses list --json`, read and not shown; no engine loads in the server) and runs `lvrtc
   mtf <key> --profile benchmark --root <root> ... --jobs <n>` only when the key is one of its keys; otherwise the job
   ends there with the reason. The profile's rungs and suite name are `src/cli/benchmarkProfile.ts`, shared with

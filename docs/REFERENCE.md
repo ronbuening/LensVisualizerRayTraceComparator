@@ -6238,7 +6238,9 @@ Runs of real engines are heavy commands: start one only when no other session ru
   collects nothing; a client sends a listed name, never a path; the catalog is listed with the note that it is a
   full catalog sweep, the owner's alone), engines (optional;
   ids the configuration defines or built-in engines, comma-separated), rungs (optional; ids of `RUNGS`) and jobs (1 to
-  4, default 1). The job is `run <suite file> --root <root> [--engines ...] [--rungs ...] --jobs <n>`, then
+  4, default 1; since Stage 8.4 also no more than `maxJobs` of the memory budget at the estimate of a job of the
+  rungs named, or of the suite file's own, 4 GiB with R6c: a 400 naming the budget and the estimate, as `lvrtc run`
+  would refuse it, after the busy check and before any child; a serial start is always taken). The job is `run <suite file> --root <root> [--engines ...] [--rungs ...] --jobs <n>`, then
   `compare <suite name> --root <root>`, then `report <suite name> --root <root>`, each when the one before has ended:
   `run` or `compare` exiting 2 ends the job (the rest are "not run"); `compare` exiting 1 (a FAIL or ERROR, as for
   the pairs of jobs still pending for a file-exchange engine) still goes on to `report`. Pending jobs are no failure.
