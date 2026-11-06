@@ -58,6 +58,8 @@ import type {
 } from "../../src/dashboard/views.ts";
 import { buildReport } from "../../src/report/model.ts";
 import { MAX_LENS_CURVES } from "../../src/dashboard/lens.ts";
+import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
+import type { CompareView, GatedLine } from "../../src/dashboard/compare.ts";
 import type { LensView } from "../../src/dashboard/lens.ts";
 import { LENS_KEY, lensGoldenQuery } from "./lensFixture.ts";
 import type { MtfComparison } from "../../src/report/mtfComparison.ts";
@@ -536,6 +538,7 @@ function recompute(derivation: string, of: readonly Source[], read: readonly unk
   const values = read as readonly (number | null)[];
   const numbers = values.filter((value): value is number => value !== null);
   if (derivation === "the first judged column minus the second") return values[0]! - values[1]!;
+  if (/^.+'s .+ minus .+'s$/.test(derivation)) return values[0]! - values[1]!;
   if (derivation.startsWith("the distance between")) return Math.abs(values[0]! - values[1]!);
   if (derivation.startsWith("the larger") || derivation.startsWith("the largest")) return Math.max(...numbers);
   throw new Error(`a derivation the test does not know: ${derivation}`);
@@ -1471,6 +1474,280 @@ function lensChoices(views: ReturnType<typeof createViews>, key: string): string
 // ── Every page ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /** Every page of a root and runs directory, held to its documents. */
+// ── The compare pages (Stage 8.5) ────────────────────────────────────────────────────────────────────────────────
+
+/** Every query a compare page's chips reach from the page opened without one, each once. */
+function compareQueries(views: ReturnType<typeof createViews>, key: string): string[] {
+  const queries = [""];
+  for (let at = 0; at < queries.length; at++) {
+    const view = views.compare(key, queries[at], null);
+    assert.ok(view !== null);
+    for (const facet of view.facets) {
+      for (const option of facet.options) if (!queries.includes(option.query)) queries.push(option.query);
+    }
+  }
+  return queries;
+}
+
+/** The case ids of a compare view's runs, read by the test from the manifests on disk. */
+function compareCases(places: DocumentPlaces, view: CompareView): Set<string> {
+  return new Set(
+    view.runs.map((run) => {
+      const manifest = readJson<RunManifest>(join(places.runsDir, run.suite, "manifest.json"));
+      assert.ok(manifest !== null);
+      assert.equal(manifest.runs[run.place]?.name, run.run, `${run.suite} has ${run.run} at ${run.place}`);
+      return manifest.runs[run.place].caseId!;
+    }),
+  );
+}
+
+/** The gated pairs of a line by the test's own enumeration (each request's pair once, of either mode), and its values. */
+function gatedRecount(
+  places: DocumentPlaces,
+  cases: ReadonlySet<string>,
+  line: GatedLine,
+): { pairs: { a: string; b: string; verdict: Verdict }[]; values: number[] } {
+  const pairs: { a: string; b: string; verdict: Verdict }[] = [];
+  const values: number[] = [];
+  const metric = line.headline?.metric ?? line.unmeasured;
+  const take = (found: { value: number | null } | undefined): void => {
+    if (found !== undefined && found.value !== null) values.push(found.value);
+  };
+  if (line.source.kind === "runs") {
+    // A request's pair once, whichever run directory, run or mode it is in: the same request is the same question.
+    const seen = new Set<string>();
+    for (const suite of line.source.suites) {
+      const file = readJson<ComparisonFile>(join(places.runsDir, suite, "comparisons.json"));
+      assert.ok(file !== null);
+      for (const set of file.comparisons) {
+        if (set.rung !== line.rung || !cases.has(set.caseId)) continue;
+        for (const pair of set.pairs) {
+          const [a, b] = [pair.a, pair.b].sort();
+          const key = JSON.stringify([set.requestId, a, b]);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pairs.push({ a, b, verdict: pair.verdict });
+          take(pair.metrics.find((each) => each.name === metric));
+        }
+      }
+    }
+  }
+  if (line.source.kind === "baselines") {
+    for (const stem of line.source.stems) {
+      const baseline = readJson<Baseline>(join(places.rootDir, "baselines", `${stem}.json`));
+      assert.ok(baseline !== null);
+      for (const run of baseline.runs) {
+        if (run.caseId === null || !cases.has(run.caseId)) continue;
+        for (const pair of run.rungs.find((each) => each.rung === line.rung)?.pairs ?? []) {
+          for (const { verdict, count } of pair.verdicts) {
+            for (let n = 0; n < count; n++) pairs.push({ a: pair.a, b: pair.b, verdict });
+          }
+          take(pair.metrics.find((each) => each.name === metric));
+        }
+      }
+    }
+  }
+  return { pairs, values };
+}
+
+/** The comparison set a figure of a comparison file points into, by the test's own reading of its pointer. */
+function setOf(
+  places: DocumentPlaces,
+  figure: { source: Source },
+): { set: ComparisonFile["comparisons"][number]; tokens: (string | number)[] } {
+  const tokens = tokensOf(figure as Figure);
+  assert.equal(tokens[0], "comparisons");
+  const file = documentFromDisk(places, figure.source.document) as ComparisonFile;
+  return { set: file.comparisons[tokens[1] as number], tokens };
+}
+
+/** Holds a compare view's figures to the places of the view that hold them, and its sorting to the comparator's counts. */
+function holdCompare(places: DocumentPlaces, view: CompareView, what: string): void {
+  const cases = compareCases(places, view);
+  for (const card of view.cards) {
+    const tab = COMPARE_TABS.find((each) => each.tab === card.tab);
+    assert.ok(tab !== undefined, `${what}: ${card.tab} is a tab`);
+    for (const line of card.gated) {
+      assert.ok(tab.gated.includes(line.rung), `${what}: ${line.rung} is a gated rung of ${card.tab}`);
+      const found = gatedRecount(places, cases, line);
+      // The pairs, recounted; each one's gravest verdict is the gravest of its requests'.
+      const pairs = [...new Set(found.pairs.map((each) => JSON.stringify([each.a, each.b])))].sort();
+      assert.deepEqual(
+        line.pairs.map((pair) => JSON.stringify([pair.a, pair.b])),
+        pairs,
+        `${what}: ${line.rung} pairs`,
+      );
+      for (const pair of line.pairs) {
+        const verdicts = found.pairs
+          .filter((each) => each.a === pair.a && each.b === pair.b)
+          .map((each) => each.verdict);
+        assert.equal(pair.verdict, gravest(verdicts), `${what}: ${line.rung} ${pair.a} and ${pair.b}`);
+      }
+      if (line.headline !== null) {
+        const tokens = tokensOf(line.headline.value);
+        const values = found.values;
+        assert.equal(line.headline.value.value, Math.max(...values), `${what}: the largest of ${line.rung}`);
+        if (line.source.kind === "runs") {
+          const { set } = setOf(places, line.headline.value);
+          assert.equal(set.rung, line.rung, `${what}: the headline is of its rung`);
+          assert.ok(cases.has(set.caseId), `${what}: the headline is of the condition's case`);
+          const pair = set.pairs[tokens[3] as number];
+          assert.deepEqual([pair.a, pair.b].sort(), [line.headline.a, line.headline.b], `${what}: its pair`);
+          assert.equal(pair.metrics[tokens[5] as number].name, line.headline.metric, `${what}: its metric`);
+        } else {
+          assert.equal(tokens[0], "runs");
+          assert.ok(line.headline.value.source.document.startsWith("baseline:"));
+        }
+        if (line.headline.gate !== null) {
+          assert.equal(
+            line.headline.gate.source.pointer,
+            pointerOf(["rungs", line.rung, "metrics", line.headline.metric, "tolerance"]),
+          );
+        }
+      }
+    }
+    for (const line of card.recorded) {
+      assert.ok(tab.recorded.includes(line.rung), `${what}: ${line.rung} is a recorded rung of ${card.tab}`);
+      assert.equal(line.a, "lv", `${what}: LensVisualizer first`);
+      for (const metric of line.metrics) {
+        if (line.source.kind === "run") {
+          const { set, tokens } = setOf(places, metric.value);
+          assert.equal(set.rung, line.rung);
+          assert.equal(set.requestId, line.requestId, `${what}: the metric is of its request`);
+          const pair = set.pairs[tokens[3] as number];
+          assert.deepEqual([pair.a, pair.b].sort(), [line.a, line.b].sort(), `${what}: the metric is of its pair`);
+          assert.equal(pair.metrics[tokens[5] as number].name, metric.name, `${what}: ${metric.name}`);
+          assert.equal(pair.verdict, line.verdict, `${what}: the verdict is the pair's`);
+        }
+        for (const limit of [metric.band, metric.limit]) {
+          if (limit !== null) {
+            assert.equal(limit.source.pointer, pointerOf(["rungs", line.rung, "metrics", metric.name, "attention"]));
+          }
+        }
+      }
+      if (line.detail === null) continue;
+      const compared = line.counts.find((each) => each.name === "fields.compared" || each.name === "lines.compared");
+      for (const chart of line.detail.charts) {
+        if (chart.kind === "points") {
+          for (const series of chart.series) {
+            for (const point of series.points) {
+              for (const keyed of [point.x, point.y]) {
+                if (!keyed.value.source.document.startsWith("comparisons:")) continue;
+                const { set, tokens } = setOf(places, keyed.value);
+                assert.equal(set.requestId, line.requestId, `${what}: a point of its request`);
+                assert.equal(set.participants[tokens[3] as number].engine, series.engine, `${what}: of its engine`);
+                assert.equal(tokens[5], keyed.key, `${what}: of its value`);
+                assert.equal(tokens[6], point.element, `${what}: of its element`);
+              }
+            }
+          }
+          if (chart.axis === "profile" || compared === undefined) continue;
+          // The elements of two methods are those the comparison counted as compared.
+          const elements = new Set(chart.series.flatMap((series) => series.points.map((point) => point.element)));
+          const all = Math.max(elements.size, ...chart.setAside.map((aside) => aside.element + 1));
+          if (chart.values.length === 1) {
+            assert.equal(
+              all - chart.setAside.length,
+              compared.value.value,
+              `${what}: ${line.rung} elements of two methods`,
+            );
+          }
+        }
+        if (chart.kind === "values" && compared !== undefined) {
+          const elements = new Set(chart.rows.map((row) => row.element));
+          const banded = [...elements].filter((element) => !chart.setAside.some((aside) => aside.element === element));
+          assert.equal(banded.length, compared.value.value, `${what}: ${line.rung} lines of two methods`);
+        }
+      }
+      const fans = line.detail.charts.filter((chart) => chart.kind === "fan");
+      if (fans.length > 0 && compared !== undefined) {
+        assert.equal(fans.filter((chart) => chart.sorting.banded).length, compared.value.value, `${what}: fans`);
+      }
+    }
+  }
+}
+
+/** The counts of a compare view, recounted: cases, places, verdicts, sections; elements read from the pointers. */
+function compareCounts(places: DocumentPlaces, view: CompareView): Map<string, number> {
+  const counts = new Map<string, number>();
+  const cases = compareCases(places, view);
+  counts.set("/count", cases.size);
+  view.runs.forEach((run, index) => counts.set(`/runs/${index}/place`, run.place));
+  const last = (pointer: string): number => Number(pointer.split("/").at(-1));
+  view.cards.forEach((card, c) => {
+    card.gated.forEach((line, l) => {
+      const found = gatedRecount(places, cases, line);
+      line.pairs.forEach((pair, p) => {
+        pair.verdicts.forEach((each, v) => {
+          const recount = found.pairs.filter(
+            (one) => one.a === pair.a && one.b === pair.b && one.verdict === each.verdict,
+          );
+          counts.set(`/cards/${c}/gated/${l}/pairs/${p}/verdicts/${v}/count`, recount.length);
+        });
+      });
+    });
+    card.recorded.forEach((line, r) => {
+      const base = `/cards/${c}/recorded/${r}`;
+      if (line.source.kind === "run" && line.source.section !== null) {
+        const file = readJson<ComparisonFile>(join(places.runsDir, line.source.suite, "comparisons.json"))!;
+        const section = groupsOf(file).findIndex((group) => {
+          const head = file.comparisons[group[0]];
+          return head.run === line.source.run && head.rung === line.rung && head.requestId === line.requestId;
+        });
+        counts.set(`${base}/source/section`, section);
+      }
+      if (line.detail === null) return;
+      line.detail.overlays.forEach((overlay, o) => counts.set(`${base}/detail/overlays/${o}/element`, overlay.element));
+      line.detail.differences.forEach((difference, d) =>
+        counts.set(`${base}/detail/differences/${d}/element`, difference.element),
+      );
+      line.detail.charts.forEach((chart, k) => {
+        const at = `${base}/detail/charts/${k}`;
+        if (chart.kind === "points") {
+          chart.series.forEach((series, s) =>
+            series.points.forEach((point, n) =>
+              counts.set(`${at}/series/${s}/points/${n}/element`, last(point.y.value.source.pointer)),
+            ),
+          );
+          chart.differences.forEach((group, g) =>
+            group.points.forEach((point, n) =>
+              counts.set(`${at}/differences/${g}/points/${n}/element`, last(point.difference.of[0].pointer)),
+            ),
+          );
+        }
+        if (chart.kind === "fan") {
+          const pupil = chart.series.find((series) => series.pupil !== null)?.pupil;
+          counts.set(
+            `${at}/element`,
+            pupil === undefined || pupil === null
+              ? chart.element
+              : Number(tokensOf({ value: 0, source: pupil.source })[3]),
+          );
+          chart.differences.forEach((point, n) => {
+            const element = /at element (\d+) of both curves$/.exec(point.difference.derivation);
+            counts.set(`${at}/differences/${n}/element`, Number(element?.[1]));
+          });
+        }
+        if (chart.kind === "values") {
+          chart.rows.forEach((row, n) =>
+            counts.set(`${at}/rows/${n}/element`, last((row.a ?? row.b)!.value.source.pointer)),
+          );
+        }
+        if (chart.kind !== "fan") {
+          // Where the chart's axis has it, the element of an element set aside is its figure's place; else its own.
+          chart.setAside.forEach((aside, n) =>
+            counts.set(
+              `${at}/setAside/${n}/element`,
+              aside.at === null ? aside.element : last(aside.at.value.source.pointer),
+            ),
+          );
+        }
+      });
+    });
+  });
+  return counts;
+}
+
 function holdEveryPage(
   places: DocumentPlaces,
   asked: AskedEngines,
@@ -1514,6 +1791,17 @@ function holdEveryPage(
       const what = `lens ${key}?${choice}`;
       hold(view, lensCounts(places, runs, view), what);
       holdLens(places, runs, view, policy, what);
+    }
+  }
+  for (const key of views.index().compared.map((lens) => lens.key)) {
+    for (const query of compareQueries(views, key)) {
+      for (const tab of [null, ...COMPARE_TABS.map((each) => each.tab)]) {
+        const view = views.compare(key, query, tab);
+        assert.ok(view !== null);
+        const what = `compare ${key}${tab === null ? "" : `/${tab}`}?${query}`;
+        hold(view, compareCounts(places, view), what);
+        holdCompare(places, view, what);
+      }
     }
   }
   for (const stem of sources.baselineStems()) {
@@ -1563,6 +1851,17 @@ test("every view-model number equals the result JSON: the R5 and R5g stand-ins, 
   const held = holdEveryPage(places, { state: "not-asked" });
   assert.ok(held.derived > 0, "the MTF tables and charts have derived differences, each recomputed");
   assert.ok(held.figures > 300, `${held.figures} figures`);
+});
+
+test("every view-model number equals the result JSON: the compare pages of R7a to R12b's stand-ins (Stage 8.5)", () => {
+  const places = {
+    rootDir: fixture.compareRootDir,
+    runsDir: fixture.compareRunsDir,
+    policyFile: fixture.comparePolicyFile,
+  };
+  const held = holdEveryPage(places, { state: "not-asked" });
+  assert.ok(held.derived > 50, `${held.derived} derived differences, each recomputed`);
+  assert.ok(held.figures > 500, `${held.figures} figures`);
 });
 
 test("every view-model number equals the result JSON: ref against its copies, R2's hit distance by surface", () => {

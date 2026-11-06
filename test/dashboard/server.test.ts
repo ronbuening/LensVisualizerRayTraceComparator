@@ -21,6 +21,7 @@ import { createViews, pathSegments, startDashboard } from "../../src/dashboard/s
 import type { Dashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
+import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
 import { FAKE_PAIR_SUITE, tempDir } from "../core/support.ts";
 import { buildFixture, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
@@ -29,6 +30,7 @@ let fixture: DashboardFixture;
 let dashboard: Dashboard;
 let mtfDashboard: Dashboard;
 let raysDashboard: Dashboard;
+let compareDashboard: Dashboard;
 let before_: {
   root: string[];
   runs: string[];
@@ -36,6 +38,8 @@ let before_: {
   mtfRuns: string[];
   raysRoot: string[];
   raysRuns: string[];
+  compareRoot: string[];
+  compareRuns: string[];
 };
 
 before(async () => {
@@ -47,6 +51,8 @@ before(async () => {
     mtfRuns: treeOf(fixture.mtfRunsDir),
     raysRoot: treeOf(fixture.raysRootDir),
     raysRuns: treeOf(fixture.raysRunsDir),
+    compareRoot: treeOf(fixture.compareRootDir),
+    compareRuns: treeOf(fixture.compareRunsDir),
   };
   dashboard = await startDashboard({ rootDir: fixture.rootDir, runsDir: fixture.runsDir, port: 0 });
   mtfDashboard = await startDashboard({
@@ -61,11 +67,18 @@ before(async () => {
     port: 0,
     policyFile: fixture.raysPolicyFile,
   });
+  compareDashboard = await startDashboard({
+    rootDir: fixture.compareRootDir,
+    runsDir: fixture.compareRunsDir,
+    port: 0,
+    policyFile: fixture.comparePolicyFile,
+  });
 });
 after(async () => {
   await dashboard.close();
   await mtfDashboard.close();
   await raysDashboard.close();
+  await compareDashboard.close();
   fixture.remove();
 });
 
@@ -89,6 +102,22 @@ async function everyPage(port: number): Promise<string[]> {
     const path = `/baseline/${encodeURIComponent(baseline.stem)}`;
     paths.push(path);
     for (const { place } of (await viewOf(path)).runs as { place: number }[]) paths.push(`${path}/run/${place}`);
+  }
+  // The compare pages of each lens compared (Stage 8.5): every condition its chips reach, and each tab's details.
+  for (const { key } of index.compared as { key: string }[]) {
+    const base = `/compare/${encodeURIComponent(key)}`;
+    const queries = [""];
+    for (let at = 0; at < queries.length; at++) {
+      const view = await viewOf(`${base}${queries[at] === "" ? "" : `?${queries[at]}`}`);
+      for (const facet of view.facets as { options: { query: string }[] }[]) {
+        for (const option of facet.options) if (!queries.includes(option.query)) queries.push(option.query);
+      }
+    }
+    for (const query of queries) {
+      const suffix = query === "" ? "" : `?${query}`;
+      paths.push(`${base}${suffix}`);
+      for (const tab of COMPARE_TABS) paths.push(`${base}/${tab.tab}${suffix}`);
+    }
   }
   return paths;
 }
@@ -199,19 +228,22 @@ test("the HTML page and its JSON twin agree: the twin is the view, and the page 
       assert.equal(twin.headers["content-type"], "application/json; charset=utf-8");
       const view = JSON.parse(twin.body);
       assert.equal(twin.body, `${canonicalJson(view)}\n`, `${path}: canonical JSON and a newline`);
-      const segments = path.split("/").slice(1).map(decodeURIComponent);
+      const [pathname, query = ""] = path.split("?");
+      const segments = pathname.split("/").slice(1).map(decodeURIComponent);
       const built =
         path === "/"
           ? views.index()
-          : segments[0] === "baseline"
-            ? segments.length === 4
-              ? views.baselineRun(segments[1], Number(segments[3]))
-              : views.baseline(segments[1])
-            : segments.length === 4
-              ? segments[2] === "section"
-                ? views.section(segments[1], Number(segments[3]))
-                : views.runPart(segments[1], Number(segments[3]))
-              : views.run(segments[1]);
+          : segments[0] === "compare"
+            ? views.compare(segments[1], query, segments[2] ?? null)
+            : segments[0] === "baseline"
+              ? segments.length === 4
+                ? views.baselineRun(segments[1], Number(segments[3]))
+                : views.baseline(segments[1])
+              : segments.length === 4
+                ? segments[2] === "section"
+                  ? views.section(segments[1], Number(segments[3]))
+                  : views.runPart(segments[1], Number(segments[3]))
+                : views.run(segments[1]);
       assert.equal(twin.body, `${canonicalJson(built)}\n`, `${path}: the twin is the view`);
       for (const { figure } of walkView(view).figures) {
         assert.ok(
@@ -296,7 +328,7 @@ test("the same files give the same bytes, and no page or view names an absolute 
 
 test("every sentence of every page passes the wording lint", async () => {
   // The charts included: their axis labels, legends and captions are visible text too.
-  for (const server of [dashboard, mtfDashboard, raysDashboard]) {
+  for (const server of [dashboard, mtfDashboard, raysDashboard, compareDashboard]) {
     for (const path of [...(await everyPage(server.port)), "/control"]) {
       const body = (await fetchFrom(server.port, path)).body;
       assert.deepEqual(wordingProblems(visibleText(body)), [], path);
@@ -331,7 +363,8 @@ test("nothing was written: the root and the runs directories, their stores inclu
   await everyPage(dashboard.port);
   await everyPage(mtfDashboard.port);
   await everyPage(raysDashboard.port);
-  for (const server of [dashboard, mtfDashboard, raysDashboard]) {
+  for (const path of await everyPage(compareDashboard.port)) await fetchFrom(compareDashboard.port, path);
+  for (const server of [dashboard, mtfDashboard, raysDashboard, compareDashboard]) {
     for (const path of ["/control", "/api/control", "/control/job/1"]) await fetchFrom(server.port, path);
   }
   assert.deepEqual(treeOf(fixture.rootDir), before_.root);
@@ -340,6 +373,33 @@ test("nothing was written: the root and the runs directories, their stores inclu
   assert.deepEqual(treeOf(fixture.mtfRunsDir), before_.mtfRuns);
   assert.deepEqual(treeOf(fixture.raysRootDir), before_.raysRoot);
   assert.deepEqual(treeOf(fixture.raysRunsDir), before_.raysRuns);
+  assert.deepEqual(treeOf(fixture.compareRootDir), before_.compareRoot);
+  assert.deepEqual(treeOf(fixture.compareRunsDir), before_.compareRuns);
+});
+
+test("the compare routes: a lens's page and each tab's, their twins, and 404 for an unknown lens or tab", async () => {
+  const key = "stand-in-tabs";
+  const page = await fetchFrom(compareDashboard.port, `/compare/${key}`);
+  assert.equal(page.status, 200);
+  assert.match(page.body, /<h1>LV vs optiland: stand-in-tabs/);
+  const twin = JSON.parse((await fetchFrom(compareDashboard.port, `/api/compare/${key}`)).body);
+  assert.equal(twin.kind, "dashboard-compare");
+  assert.equal(twin.tab, null);
+  assert.deepEqual(
+    twin.cards.map((card: { tab: string }) => card.tab),
+    COMPARE_TABS.map((tab) => tab.tab),
+  );
+  const tab = JSON.parse((await fetchFrom(compareDashboard.port, `/api/compare/${key}/chief?${twin.query}`)).body);
+  assert.equal(tab.tab, "chief");
+  assert.equal(tab.cards.length, 1);
+  for (const path of [`/compare/${key}/no-such-tab`, "/compare/no-such-lens", `/compare/${key}/chief/extra`]) {
+    assert.equal((await fetchFrom(compareDashboard.port, path)).status, 404, path);
+    assert.equal((await fetchFrom(compareDashboard.port, `/api${path}`)).status, 404, `/api${path}`);
+  }
+  // The index leads with the lenses compared, each linked to its page.
+  const index = await fetchFrom(compareDashboard.port, "/");
+  assert.ok(index.body.indexOf("LV vs optiland") < index.body.indexOf("<h2>Runs</h2>"));
+  assert.ok(index.body.includes(`href="/compare/${key}"`));
 });
 
 test("asking the engines again from the control page re-runs the same runner, and the badges follow its answer", async () => {

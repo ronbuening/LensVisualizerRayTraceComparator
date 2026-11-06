@@ -60,11 +60,14 @@ import type { CliCommand } from "../command.ts";
 import { apertureOption, sliderPosition } from "../lensOptions.ts";
 import {
   BENCHMARK_PROFILE,
+  LENS_PROFILES,
   OWN_MTF_ENGINE,
   OWN_MTF_RUNGS,
-  benchmarkRungs,
-  benchmarkSuiteName,
+  TABS_PROFILE,
+  lensProfileRungs,
+  lensProfileSuiteName,
 } from "../benchmarkProfile.ts";
+import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE, renderReport } from "../../report/index.ts";
 
 /** What `lvrtc mtf` is wired to, injected so that tests choose all three. */
 export interface MtfCommandInputs {
@@ -77,7 +80,7 @@ export interface MtfCommandInputs {
   readonly policy?: Policy;
 }
 
-export { BENCHMARK_PROFILE };
+export { BENCHMARK_PROFILE, TABS_PROFILE };
 
 /** The engine a run of `lvrtc mtf` asks when none is named. */
 const DEFAULT_ENGINES: readonly string[] = ["lv"];
@@ -110,19 +113,24 @@ const HELP = [
   `                    --profile ${BENCHMARK_PROFILE} --engines lv,ref,optiland) and writes the run to`,
   "                    <runsDir>/mtf-<lensKey>/, with mtf.md and mtf.json; lvrtc compare and lvrtc report read it",
   "                    as the run of a suite named mtf-<lensKey>. Progress is on the error stream: the engines'",
-  "                    own MTF of a fast lens wide open takes minutes a run",
+  "                    own MTF of a fast lens wide open takes minutes a run.",
+  `                    ${TABS_PROFILE} is the same conditions with the rungs of LensVisualizer's other tabs: r0 and r1,`,
+  "                    the gated rays of the coma and bokeh, axial, chief-ray, field-curve and vignetting tabs",
+  "                    (r7a to r11a), and those tabs and the summary beside an engine's own analysis (r7b to r12b,",
+  "                    recorded, each asked of its own engines). It prints the report of that run and writes the run",
+  "                    to <runsDir>/tabs-<lensKey>/, with report.md and report.json",
   "  --zoom <t>        one zoom position from 0 (wide) to 1 (tele), in place of both ends of a zoom; a prime has",
   "                    no zoom position",
   `  --aperture <a>    wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/8`,
   "  --root <dir>      the directory that holds lvrtc.config.json (default: this repository)",
-  "  --jobs <n>        benchmark: concurrent jobs in isolated processes (default: 1, serial)",
+  "  --jobs <n>        benchmark, tabs: concurrent jobs in isolated processes (default: 1, serial)",
   "  --memory-budget <GiB>  replica RSS budget (default: 25% of installed RAM minus 2 GiB);",
   "                         jobs are capped at 2.5 GiB each, 4 GiB when R6c is selected",
   "  --json            print one JSON object in place of the lines: the record of the run, or, for both ends of",
   "                    a zoom, an object with the record of each end under wide and tele",
   "",
-  `With --profile ${BENCHMARK_PROFILE} --json prints the MTF report as one JSON object, and the exit code is 1 also when a`,
-  "pair of engines is FAIL or ERROR.",
+  `With --profile ${BENCHMARK_PROFILE} or ${TABS_PROFILE} --json prints the report as one JSON object, and the exit code is`,
+  "1 also when a pair of engines is FAIL or ERROR.",
   "",
   "Exit code: 0 when every engine answered (unsupported is an answer, not a failure); 1 when an engine ended in an",
   "error, when the lens has no case in a state that was asked about (each reason is printed with its code) or when",
@@ -217,15 +225,16 @@ function readArguments(args: readonly string[]): MtfArguments {
     throw new UsageError(`--engines needs ids separated by commas, got "${values.get("--engines")}"`);
   }
   const profile = values.get("--profile") ?? LV_TAB_PROFILE;
-  if (!Object.hasOwn(PROFILES, profile) && profile !== BENCHMARK_PROFILE) {
-    const known = [...Object.keys(PROFILES), BENCHMARK_PROFILE].sort().join(", ");
+  const ofLens = LENS_PROFILES.includes(profile);
+  if (!Object.hasOwn(PROFILES, profile) && !ofLens) {
+    const known = [...Object.keys(PROFILES), ...LENS_PROFILES].sort().join(", ");
     throw new UsageError(`unknown profile "${profile}": the profiles are ${known}`);
   }
   const memoryBudgetGiB = memoryBudgetOption(values.get("--memory-budget"));
-  const rungs = profile === BENCHMARK_PROFILE ? benchmarkRungs(engines) : [];
+  const rungs = ofLens ? lensProfileRungs(profile, engines) : [];
   const jobs = jobsOption(values.get("--jobs"), memoryBudgetGiB, jobEstimateGiB(rungs));
-  if (values.has("--jobs") && profile !== BENCHMARK_PROFILE)
-    throw new UsageError("--jobs requires --profile benchmark");
+  if (values.has("--jobs") && !ofLens)
+    throw new UsageError(`--jobs requires --profile ${LENS_PROFILES.join(" or --profile ")}`);
   const zoom = values.get("--zoom");
   const aperture = values.get("--aperture");
   return {
@@ -315,11 +324,12 @@ function benchmarkHead(lensKey: string, suite: string): string[] {
 }
 
 /**
- * The profile `benchmark`: the Phase 3 conditions of one lens as a suite of its own, `mtf-<lensKey>`, run on the
- * named engines (`runSuite`, with the result store of the root answering what it holds), compared
- * (`compareRunDirectory`) and reported as an MTF baseline is (`buildBaseline` with `MTF_BASELINE`,
- * `renderMtfBaselineReport`); nothing is written outside the run directory. A zoom without a position is two runs
- * a condition, by the case source. Returns the exit code.
+ * A profile of a lens: the Phase 3 conditions of one lens as a suite of its own, run on the named engines
+ * (`runSuite`, with the result store of the root answering what it holds) and compared (`compareRunDirectory`). The
+ * profile `benchmark` is the suite `mtf-<lensKey>` of the MTF rungs, reported as an MTF baseline is (`buildBaseline`
+ * with `MTF_BASELINE`, `renderMtfBaselineReport`); the profile `tabs` is the suite `tabs-<lensKey>` of the other tabs'
+ * rungs, reported as `lvrtc report` reports a run (`renderReport`). Nothing is written outside the run directory. A
+ * zoom without a position is two runs a condition, by the case source. Returns the exit code.
  */
 async function runBenchmark(
   asked: MtfArguments,
@@ -328,11 +338,11 @@ async function runBenchmark(
   io: Parameters<CliCommand["run"]>[1],
 ): Promise<number> {
   const { loaded, registry, policy } = context;
-  const { lensKey, engines } = asked;
+  const { lensKey, engines, profile } = asked;
   const comparison = asked.aperture.kind === "f-number" && asked.aperture.value === LV_TAB_COMPARISON_F_NUMBER;
   if (asked.apertureGiven && asked.aperture.kind !== "wide-open" && !comparison) {
     throw new UsageError(
-      `the profile ${BENCHMARK_PROFILE} is of the lens wide open and at the tab's comparison: ` +
+      `the profile ${profile} is of the lens wide open and at the tab's comparison: ` +
         `--aperture takes wide-open or f/${LV_TAB_COMPARISON_F_NUMBER} with it`,
     );
   }
@@ -353,7 +363,7 @@ async function runBenchmark(
       }
     }
   }
-  const name = benchmarkSuiteName(lensKey);
+  const name = lensProfileSuiteName(profile, lensKey);
   const written = {
     contract: CONTRACT_VERSION,
     kind: "suite",
@@ -373,10 +383,13 @@ async function runBenchmark(
       sources,
       jobs: asked.jobs,
     });
-    const rungs = benchmarkRungs(engines);
+    const rungs = lensProfileRungs(profile, engines);
+    const own =
+      profile !== BENCHMARK_PROFILE || engines.includes(OWN_MTF_ENGINE)
+        ? ""
+        : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`;
     io.stderr(
-      `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}` +
-        `${engines.includes(OWN_MTF_ENGINE) ? "" : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`}; ` +
+      `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}${own}; ` +
         "what the result store holds is not computed again\n",
     );
     let stage = "";
@@ -401,10 +414,17 @@ async function runBenchmark(
     const comparisons = await compareRunDirectoryWithJobs(directory, policy, asked.jobs);
     writeFileAtomic(join(directory, COMPARISONS_FILE), comparisonFileText(comparisons));
     const { manifest } = result;
-    const baseline = buildBaseline(manifest, comparisons, policy, MTF_BASELINE);
-    const rendered = renderMtfBaselineReport(baseline, benchmarkHead(lensKey, name));
-    writeFileAtomic(join(directory, MTF_REPORT_MARKDOWN), rendered.markdown);
-    writeFileAtomic(join(directory, MTF_REPORT_JSON), rendered.json);
+    let rendered: { readonly json: string; readonly markdown: string };
+    if (profile === TABS_PROFILE) {
+      rendered = renderReport(manifest, comparisons, policy);
+      writeFileAtomic(join(directory, REPORT_MARKDOWN_FILE), rendered.markdown);
+      writeFileAtomic(join(directory, REPORT_JSON_FILE), rendered.json);
+    } else {
+      const baseline = buildBaseline(manifest, comparisons, policy, MTF_BASELINE);
+      rendered = renderMtfBaselineReport(baseline, benchmarkHead(lensKey, name));
+      writeFileAtomic(join(directory, MTF_REPORT_MARKDOWN), rendered.markdown);
+      writeFileAtomic(join(directory, MTF_REPORT_JSON), rendered.json);
+    }
 
     let failed = false;
     for (const run of suite.runs) {
@@ -520,7 +540,7 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
           io.stderr(`lvrtc mtf: ${primeZoomNote(asked.lensKey)}\n`);
         }
         const bothEnds = positions.length > 1;
-        if (asked.profile === BENCHMARK_PROFILE) {
+        if (LENS_PROFILES.includes(asked.profile)) {
           const state = zoom && asked.zoomT !== undefined ? asked.zoomT : undefined;
           return await runBenchmark(asked, state, { loaded, registry, policy: inputs.policy ?? loadPolicy() }, io);
         }

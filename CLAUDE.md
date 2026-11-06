@@ -37,6 +37,7 @@ node bin/lvrtc.mjs engine describe fake-a fake-b --root test/fixtures/fake-root 
 node bin/lvrtc.mjs serve               # Phase 8: read-only dashboard on http://127.0.0.1:8077/ (--port 0 picks one; LVRTC_RUNS_DIR applies); asks the baselines' engines once, in a child, after it listens
 node bin/lvrtc.mjs serve --no-ask      # the same without asking: every record's engines held to its suite's last run
 # Stage 8.4: /lens/<lensKey> overlays a lens's MTF curves across its runs; /control's "Run this lens" runs lvrtc mtf <key> --profile benchmark
+# Stage 8.5: /compare/<lensKey> sets LV beside optiland a tab at a time; "Run this lens" runs --profile benchmark, tabs or both
 node bin/lvrtc.mjs lenses list                 # every LensVisualizer lens: key, name, file
 node bin/lvrtc.mjs lenses show nikkor-z50f12   # one lens as LV prepares it for tracing: a row per surface, with whether its rim clips (console only)
 node bin/lvrtc.mjs export nikkor-z50f12        # one lens as an engine-neutral case (stdout; never committed)
@@ -80,6 +81,7 @@ node bin/lvrtc.mjs run suites/benchmark.json --rungs r13b,r14b --jobs 4   # R13b
 node bin/lvrtc.mjs mtf nikkor-z50f12           # the MTF LV's own tab presents; --aperture f/8 for its comparison
 node bin/lvrtc.mjs mtf nikon-z-24-70f4s        # a zoom: both ends, two tables; --zoom 1 for the tele end alone
 node bin/lvrtc.mjs mtf nikkor-z50f12 --profile benchmark --engines lv,ref,optiland   # the MTF benchmark of one lens: 8 runs (a zoom 16), r4 r4f r6a judged, r6b r5 r5g r6c recorded; prints the MTF report, writes runs/mtf-<lensKey>/
+node bin/lvrtc.mjs mtf nikkor-z50f12 --profile tabs --engines lv,ref,optiland --jobs 4   # the other tabs of one lens: the same 8 runs, r0 r1 r7a-r11a judged, r7b-r12b recorded; writes runs/tabs-<lensKey>/ (Stage 8.5)
 node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tmpdir>   # Stage 4.2's evidence: docs/z50f12-investigation.md
 ```
 
@@ -2170,6 +2172,27 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   `lvrtc mtf`. `test/dashboard/lensControl.test.ts` refuses every field with no child started and runs the fake
   LensVisualizer tree end to end to its lens page. No engine's import closure moved (adapter revisions of all built-in
   engines are those of `ddeaaa5`).
+- **LV vs optiland (Stage 8.5, the owner's request of 2026-11-05)** (`src/dashboard/compare.ts`, `compareCharts.ts`,
+  `charts/compare.ts`; `/compare/<lensKey>` and `/compare/<lensKey>/<tab>`, twins under `/api`): read-only, as the lens
+  pages. **Data**: `lvrtc mtf <key> --profile tabs` (`TABS_RUNGS`: r0, r1, r7a to r11a, r7b to r12b on the benchmark
+  profile's conditions) writes `tabs-<key>` beside `mtf-<key>`; "Run this lens" takes `profile` (`LENS_RUNS`:
+  benchmark, the default, tabs, or both as two steps of one job, held to the larger memory estimate). **A condition is
+  a case**: chips of its facts (position, stop, image plane from the MTF recipe's kind or `z:<imageZ>`, lines),
+  resolved facet by facet, the first value of a case with a counterpart comparison chosen where nothing is asked.
+  **Cards** are `MATRIX_ROWS` with a tab (`COMPARE_TABS`): identical rays (each gated rung's pairs once per request,
+  the largest `GATED_HEADLINES` figure against the gate at hand; from the run directories, else the baselines' records
+  of the case, named as such) and the tab beside its counterpart (`COUNTERPARTS`: optiland, optiland-wave, flux; R6b
+  has none): the comparison's verdict, its figures with the attention band at hand or "no attention band", the
+  sorting's limits (`SORTING_METRICS`) as limits, never bands, and its own field counts. **Details**: MTF lines are
+  their section's 8.2 charts of the pair; every other plots `participants[].recorded` Figures on shared axes (fans
+  from the store by the manifest's keys, summaries as a table) with a strip of `lv` minus its counterpart (Derived)
+  and the band, a difference only for an element of two methods by the comparator's own `*FactsOfRecorded` and
+  classifier, an element set aside named. Nothing judges anew: verdicts are the comparisons'. Every sentence is a
+  `DASHBOARD_TEXT.compare` template (axis names `COMPARE_AXES`). `figures.test.ts` walks every compare page of every
+  condition the chips reach and every tab (positions, recounts, elements of two methods held to `fields.compared` or
+  `lines.compared`; five one-line mutations of the compare views each turn it red: keep it so); fixture
+  `test/dashboard/compareFixture.ts` (R7a to R12b's stand-ins relabelled to one lens; R7a only as a baseline);
+  goldens (`compare-*.svg`, `compare-stand-in-tabs*.html`) only from `node test/report/writeGolden.ts`.
 - **Store maintenance on run control (Stage 8.4, owner's request of 2026-11-05)**: `/control/plan-prune` and
   `/control/plan-compress` start `lvrtc store prune|compress --root <root> --json` as a dry run (a job of its own,
   one at a time, process group, redacted); its page shows the command's report read (per engine kept and removable

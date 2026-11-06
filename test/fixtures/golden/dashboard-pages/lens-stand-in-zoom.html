@@ -28,6 +28,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .v-ATTENTION,.b-NOTKNOWN{color:var(--warn);font-weight:600}
 .v-RECORDED,.v-UNSUPPORTED,.v-BLOCKED{color:var(--quiet);font-weight:600}
 details{margin:4px 0}summary{cursor:pointer}
+.card{border:1px solid var(--line);border-radius:8px;padding:2px 14px 8px;margin:14px 0;max-width:1200px}
+.card h2{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.badges{font-size:14px}
+.chip{display:inline-block;margin:0 6px 4px 0;padding:1px 8px;border:1px solid var(--line);border-radius:10px;text-decoration:none}
+strong.chip{background:var(--head)}
 form{margin:6px 0 12px}label{display:inline-block;margin:0 12px 6px 0}input,select,button{font:inherit}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--head);border:1px solid var(--line);padding:6px;max-height:480px;overflow-y:auto}
 ul{margin:4px 0;padding-left:20px}
@@ -141,6 +145,7 @@ figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-to
 <header><a href="/">lvrtc dashboard</a><a href="/control">Control</a><span class="muted">Lens stand-in-zoom</span><a href="/api/lens/stand-in-zoom?run=lens-a%2F0&amp;run=lens-a%2F1&amp;run=lens-b%2F0&amp;rung=r5&amp;rung=r5g&amp;engine=lv&amp;engine=optiland&amp;engine=optiland%23fft512&amp;engine=replay&amp;engine=wave&amp;field=fraction%3A0&amp;cut=sagittal&amp;ref=lens-a%252F0%2Cr5%2C62b036f845249e3d2d8428a1a806c9aaa438913be7ae4c4dd572741629152c70%2Clv%2Cfraction%253A0%2Csagittal">JSON</a></header>
 <main>
 <h1>Lens stand-in-zoom: Stand-in zoom</h1>
+<p>LensVisualizer beside optiland, a tab at a time: <a href="/compare/stand-in-zoom">LV vs optiland: stand-in-zoom</a></p>
 <p>This page gathers every run of the run directories whose case names this lens, with the condition of each: its zoom and focus positions, its stop, its object, its image plane and its lines.</p>
 <p>A run is of the lens its case file names; two lenses whose cases are the same share one case file, and its runs are listed under the lens that file names.</p>
 <p>Hover over a number to see the file it was read from and its JSON pointer there.</p>
@@ -425,17 +430,18 @@ figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-to
 <p class="muted">Curve 8 is not taken at the reference&#39;s frequencies, so no difference of it is drawn: no curve is interpolated.</p>
 <p class="muted">Curve 9 is not taken at the reference&#39;s frequencies, so no difference of it is drawn: no curve is interpolated.</p>
 <h2>Run this lens</h2>
-<p>Run this lens starts lvrtc mtf with the profile benchmark as a job of run control: the lens wide open and at the MTF tab&#39;s f/8 comparison, at the design plane and at LensVisualizer&#39;s best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directory of the lens, which this page then gathers.</p>
+<p>Run this lens starts lvrtc mtf as a job of run control, with the profile benchmark (the MTF tab), the profile tabs (LensVisualizer&#39;s other tabs) or both: the lens wide open and at the MTF tab&#39;s f/8 comparison, at the design plane and at LensVisualizer&#39;s best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directories of the lens, mtf-&lt;lensKey&gt; and tabs-&lt;lensKey&gt;, which this page then gathers.</p>
 <p class="problem">With real engines it is a heavy command: start it only when no other session runs one.</p>
 <form method="post" action="/control/lens">
 <input type="hidden" name="token" value="0000000000000000000000000000000000000000000000000000000000000000">
 <input type="hidden" name="lens" value="stand-in-zoom">
 <label>Engines <input type="text" name="engines" size="24" placeholder="lv,ref,optiland"></label>
+<label>Profile <select name="profile"><option value="">benchmark</option><option value="tabs">tabs</option><option value="both">both</option></select></label>
 <label>Aperture <select name="aperture"><option value="">both</option><option value="wide-open">wide-open</option><option value="f/8">f/8</option></select></label>
 <label>Jobs <input type="number" name="jobs" min="1" max="4" value="1"></label>
 <button type="submit">Run this lens</button>
 </form>
-<p>Engines are optional, ids of lv, ref, optiland separated by commas (lv alone when left empty); the aperture is one of wide-open, f/8, or both when left empty; jobs is 1 to 4, and no more than the memory budget of this machine allows.</p>
+<p>Engines are optional, ids of lv, ref, optiland separated by commas (lv alone when left empty); the aperture is one of wide-open, f/8, or both when left empty; the profile is one of benchmark, tabs, both, or benchmark when left empty; jobs is 1 to 4, and no more than the memory budget of this machine allows.</p>
 </main>
 </body>
 </html>

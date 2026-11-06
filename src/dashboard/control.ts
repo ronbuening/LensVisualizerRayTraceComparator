@@ -4,7 +4,8 @@
 // the leader of a process group of its own, so that ending a job ends the engine workers it started too. A job is
 // `lvrtc run` of a listed suite, then `lvrtc compare`, then `lvrtc report`; or one `lvrtc collect --json`; or, to run
 // one lens (Stage 8.4), `lvrtc lenses list --json` to read LensVisualizer's catalog and, only when the lens key is one
-// of its keys, `lvrtc mtf <lensKey> --profile benchmark`; or store maintenance (Stage 8.4, the owner's): `lvrtc store
+// of its keys, `lvrtc mtf <lensKey> --profile benchmark`, `--profile tabs` (Stage 8.5) or both, one after the other; or
+// store maintenance (Stage 8.4, the owner's): `lvrtc store
 // prune|compress` as a dry run, the plan, and only from that plan's page its confirmation, `--yes --expect <state>`,
 // held by the server (409) and again by the child to the store's state the plan was made of. Jobs and their output
 // are kept in memory for the server's life and never written. Every field an action is given is held to the server's
@@ -22,7 +23,14 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { StringDecoder } from "node:string_decoder";
 import { fileURLToPath } from "node:url";
 
-import { BENCHMARK_APERTURES, BENCHMARK_PROFILE, benchmarkRungs, benchmarkSuiteName } from "../cli/benchmarkProfile.ts";
+import {
+  BENCHMARK_APERTURES,
+  BENCHMARK_PROFILE,
+  LENS_PROFILES,
+  TABS_PROFILE,
+  lensProfileRungs,
+  lensProfileSuiteName,
+} from "../cli/benchmarkProfile.ts";
 import { maxJobs, suiteJobEstimate } from "../cli/jobs.ts";
 import { defaultMemoryBudgetGiB, jobEstimateGiB } from "../core/memoryBudget.ts";
 import { RUNGS } from "../core/rungs.ts";
@@ -61,6 +69,11 @@ export const OWNER_ONLY_SUITES: readonly string[] = Object.freeze(["catalog"]);
 export const LENS_ENGINES: readonly string[] = Object.freeze(["lv", "ref", "optiland"]);
 /** The engine `lvrtc mtf` asks when a form names none. */
 const LENS_DEFAULT_ENGINES: readonly string[] = Object.freeze(["lv"]);
+/**
+ * What "Run this lens" may run (Stage 8.5): the profile `benchmark` (the MTF tab), the profile `tabs` (the other tabs),
+ * or both, one after the other as two steps of one job; `benchmark` where a form names none.
+ */
+export const LENS_RUNS: readonly string[] = Object.freeze([...LENS_PROFILES, "both"]);
 
 /** The actions, each a POST route of `/control/<action>`. */
 export const CONTROL_ACTIONS = [
@@ -111,7 +124,7 @@ export interface ControlOptions {
 export type StepState = "queued" | "running" | "exited" | "killed" | "not-started" | "not-run" | "closed";
 
 /** Which command a step runs. */
-export type StepName = "run" | "compare" | "report" | "collect" | "catalog" | "mtf" | "store";
+export type StepName = "run" | "compare" | "report" | "collect" | "catalog" | "mtf" | "tabs" | "store";
 
 /** What a job kind is: a start of a suite, a collect, a run of one lens, or store maintenance. */
 export type JobKind = "suite" | "collect" | "lens" | "store";
@@ -281,6 +294,8 @@ export interface ControlView {
   /** The engines and apertures a run of one lens may name (Stage 8.4). */
   readonly lensEngines: readonly string[];
   readonly apertures: readonly string[];
+  /** What a run of one lens may run (Stage 8.5): `LENS_RUNS`. */
+  readonly lensRuns: readonly string[];
   /** What keeps a start or a collect from being taken now: a job, the engines being asked, or nothing. */
   readonly busy: { readonly reason: "job"; readonly job: number } | { readonly reason: "asking" } | null;
   /** Whether the engines can be asked again (the dashboard was started with a way to ask them). */
@@ -638,6 +653,8 @@ interface StartRequest {
 /** What a run of one lens asks for, held to the lists; its key is checked by its job. */
 interface LensRequest {
   readonly lens: string;
+  /** The profiles to run, in order: one of `LENS_PROFILES`, or both. */
+  readonly profiles: readonly string[];
   readonly engines: readonly string[] | null;
   readonly aperture: string | null;
   readonly jobs: number;
@@ -907,12 +924,17 @@ export function createController(context: ControlContext, configured: ControlOpt
     if (aperture !== "" && !BENCHMARK_APERTURES.includes(aperture)) {
       return { status: 400, reason: text.badAperture(aperture, BENCHMARK_APERTURES.join(", ")) };
     }
+    const run = (fields.get("profile") ?? "").trim();
+    if (run !== "" && !LENS_RUNS.includes(run)) {
+      return { status: 400, reason: text.badLensRun(run, LENS_RUNS.join(", ")) };
+    }
+    const profiles = run === "" ? [BENCHMARK_PROFILE] : run === "both" ? [...LENS_PROFILES] : [run];
     const jobsText = (fields.get("jobs") ?? "").trim();
     const said = jobsText === "" ? "1" : jobsText;
     if (!/^[1-9][0-9]?$/.test(said) || Number(said) > CONTROL_MAX_JOBS) {
       return { status: 400, reason: text.badJobs(jobsText, String(CONTROL_MAX_JOBS)) };
     }
-    return { lens, engines: engines.ids, aperture: aperture === "" ? null : aperture, jobs: Number(said) };
+    return { lens, profiles, engines: engines.ids, aperture: aperture === "" ? null : aperture, jobs: Number(said) };
   };
 
   /** The budget the children are held to: the one given, else this machine's default. */
@@ -988,7 +1010,7 @@ export function createController(context: ControlContext, configured: ControlOpt
       action === "start"
         ? ["token", "suite", "engines", "rungs", "jobs"]
         : action === "lens"
-          ? ["token", "lens", "engines", "aperture", "jobs"]
+          ? ["token", "lens", "profile", "engines", "aperture", "jobs"]
           : action === "prune" || action === "compress"
             ? ["token", "plan", "state"]
             : ["token"];
@@ -1056,7 +1078,12 @@ export function createController(context: ControlContext, configured: ControlOpt
       if ("status" in asked) return asked;
       const busy = busyRefusal();
       if (busy !== null) return busy;
-      const estimate = jobEstimateGiB(benchmarkRungs(asked.engines ?? LENS_DEFAULT_ENGINES));
+      // A job of both profiles is held to the larger estimate of the two: they run one after the other.
+      const estimate = Math.max(
+        ...asked.profiles.map((profile) =>
+          jobEstimateGiB(lensProfileRungs(profile, asked.engines ?? LENS_DEFAULT_ENGINES)),
+        ),
+      );
       const overBudget = budgetRefusal(asked.jobs, estimate);
       if (overBudget !== null) return overBudget;
       const selection = [
@@ -1069,11 +1096,21 @@ export function createController(context: ControlContext, configured: ControlOpt
       return begin({
         job: jobs.length + 1,
         kind: "lens",
-        suite: benchmarkSuiteName(asked.lens),
+        suite: lensProfileSuiteName(asked.profiles[asked.profiles.length - 1], asked.lens),
         lens: asked.lens,
         steps: [
           step("catalog", ["lenses", "list", "--root", rootDir, "--json"]),
-          step("mtf", ["mtf", asked.lens, "--profile", BENCHMARK_PROFILE, "--root", rootDir, ...selection]),
+          ...asked.profiles.map((profile) =>
+            step(profile === TABS_PROFILE ? "tabs" : "mtf", [
+              "mtf",
+              asked.lens,
+              "--profile",
+              profile,
+              "--root",
+              rootDir,
+              ...selection,
+            ]),
+          ),
         ],
         finished: false,
         collect: null,
@@ -1186,6 +1223,7 @@ export function createController(context: ControlContext, configured: ControlOpt
       rungs: [...rungIds],
       lensEngines: [...LENS_ENGINES],
       apertures: [...BENCHMARK_APERTURES],
+      lensRuns: [...LENS_RUNS],
       busy:
         current !== null
           ? { reason: "job", job: current.job.job }

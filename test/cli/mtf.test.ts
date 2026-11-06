@@ -492,7 +492,7 @@ test("a command line that is not the synopsis is a usage error, and nothing is w
   await usage(["acme-singlet-50", "--engines", "lv,"], '--engines needs ids separated by commas, got "lv,"');
   await usage(
     ["acme-singlet-50", "--profile", "zemax-default"],
-    'unknown profile "zemax-default": the profiles are benchmark, lv-tab-default',
+    'unknown profile "zemax-default": the profiles are benchmark, lv-tab-default, tabs',
   );
   await usage(
     ["acme-singlet-50", "--engines", "lv,zemax"],

@@ -68,7 +68,12 @@ test("a golden chart stands alone: its own <style>, a <title> and <desc>, axis l
       assert.ok(!svg.includes(absolute), `${file} names ${absolute}`);
     }
     if (!file.includes("heat-map")) {
-      assert.match(svg, /Frequency \(cycles\/mm\)|Surface/, `${file}: an x axis with its unit`);
+      // A compare chart (Stage 8.5) is against a field angle, a zone, a wavelength or a pupil coordinate.
+      assert.match(
+        svg,
+        /Frequency \(cycles\/mm\)|Surface|Field angle \(degrees\)|Pupil coordinate|Wavelength \(nm\)|Zone \(fraction/,
+        `${file}: an x axis with its unit`,
+      );
     }
     assert.deepEqual(wordingProblems(visibleText(svg)), [], file);
     assert.deepEqual(wordingProblems(titleTexts(svg).join("\n\n")), [], `${file}: its tooltips`);

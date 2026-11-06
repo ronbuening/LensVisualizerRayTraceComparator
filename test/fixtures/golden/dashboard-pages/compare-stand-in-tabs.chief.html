@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LV vs optiland: stand-in-tabs, Distortion, lateral colour, pupils and breathing</title>
+<style>
+:root{color-scheme:light dark;--bg:#ffffff;--fg:#1c1c21;--muted:#5c5c66;--line:#d8d8de;--head:#f2f2f5;
+--pass:#1d7034;--fail:#b3261e;--warn:#865500;--info:#2c56a0;--quiet:#6b6b75}
+@media (prefers-color-scheme:dark){:root{--bg:#141418;--fg:#e7e7ec;--muted:#a3a3ad;--line:#36363e;--head:#1f1f25;
+--pass:#6fcf87;--fail:#ff8a80;--warn:#f0c060;--info:#8fb4ff;--quiet:#9a9aa5}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{border-bottom:1px solid var(--line);padding:8px 16px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+header a{color:var(--info);text-decoration:none}
+main{padding:8px 16px 32px;max-width:1600px}
+h1{font-size:20px;margin:12px 0}h2{font-size:16px;margin:20px 0 8px}h3{font-size:14px;margin:14px 0 6px}
+p{margin:6px 0;max-width:110ch}a{color:var(--info)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;margin:6px 0 12px;font-variant-numeric:tabular-nums}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+th{background:var(--head);font-weight:600}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.muted{color:var(--muted)}.problem{color:var(--fail)}
+.fig{border-bottom:1px dotted var(--muted);cursor:help}.derived{border-bottom:1px dashed var(--warn);cursor:help}
+.v-PASS,.v-FLOOR,.b-CURRENT{color:var(--pass);font-weight:600}
+.v-FAIL,.v-ERROR,.b-STALE{color:var(--fail);font-weight:600}
+.v-ATTENTION,.b-NOTKNOWN{color:var(--warn);font-weight:600}
+.v-RECORDED,.v-UNSUPPORTED,.v-BLOCKED{color:var(--quiet);font-weight:600}
+details{margin:4px 0}summary{cursor:pointer}
+.card{border:1px solid var(--line);border-radius:8px;padding:2px 14px 8px;margin:14px 0;max-width:1200px}
+.card h2{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.badges{font-size:14px}
+.chip{display:inline-block;margin:0 6px 4px 0;padding:1px 8px;border:1px solid var(--line);border-radius:10px;text-decoration:none}
+strong.chip{background:var(--head)}
+form{margin:6px 0 12px}label{display:inline-block;margin:0 12px 6px 0}input,select,button{font:inherit}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--head);border:1px solid var(--line);padding:6px;max-height:480px;overflow-y:auto}
+ul{margin:4px 0;padding-left:20px}
+figure{margin:8px 0 16px}figcaption{color:var(--muted);max-width:110ch;margin-top:4px}
+.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
+.lvc .bg{fill:#fcfcfb}
+.lvc text{fill:#1c1c21}
+.lvc text.muted{fill:#5c5c66}
+.lvc text.head{font-weight:600;font-size:12px}
+.lvc .grid{stroke:#e6e6ea;stroke-width:1}
+.lvc .axis{stroke:#8a8a94;stroke-width:1}
+.lvc .line{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.lvc .dash{stroke-dasharray:6 4}
+.lvc .dot{stroke:#fcfcfb;stroke-width:1.5}
+.lvc .band{fill:#eda100;fill-opacity:.16;stroke:#c98500;stroke-width:1;stroke-dasharray:2 3}
+.lvc .zeroline{stroke:#5c5c66;stroke-width:1}
+.lvc .gate{stroke:#d03b3b;stroke-width:1.5;stroke-dasharray:5 3;fill:none}
+.lvc .bar{fill:#2a78d6}
+.lvc .ring{fill:#fcfcfb;stroke:#2a78d6;stroke-width:2}
+.lvc .none{stroke:#8a8a94;stroke-width:2}
+.lvc .cell{stroke:#fcfcfb;stroke-width:2}
+.lvc .cell.empty{fill:#f4f4f6}
+.lvc text.vt{font-weight:600;text-anchor:middle}
+.lvc .s0{stroke:#2a78d6}
+.lvc .dot.s0{fill:#2a78d6}
+.lvc .s1{stroke:#e2622d}
+.lvc .dot.s1{fill:#e2622d}
+.lvc .s2{stroke:#16996a}
+.lvc .dot.s2{fill:#16996a}
+.lvc .s3{stroke:#b47b00}
+.lvc .dot.s3{fill:#b47b00}
+.lvc .s4{stroke:#cf5f8e}
+.lvc .dot.s4{fill:#cf5f8e}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#6250d6}
+.lvc .dot.s6{fill:#6250d6}
+.lvc .s7{stroke:#e34948}
+.lvc .dot.s7{fill:#e34948}
+.lvc .sx{stroke:#8a8a94}
+.lvc .dot.sx{fill:#8a8a94}
+.lvc .v-PASS{fill:#cdebcd}
+.lvc text.t-PASS{fill:#0b3d0b}
+.lvc .v-FLOOR{fill:#e3f2dc}
+.lvc text.t-FLOOR{fill:#24451a}
+.lvc .v-FAIL{fill:#f6cfcc}
+.lvc text.t-FAIL{fill:#5c0f0b}
+.lvc .v-ERROR{fill:#e9b7b3}
+.lvc text.t-ERROR{fill:#4a0906}
+.lvc .v-ATTENTION{fill:#fbe5ad}
+.lvc text.t-ATTENTION{fill:#4a3600}
+.lvc .v-RECORDED{fill:#e3e3ea}
+.lvc text.t-RECORDED{fill:#2c2c33}
+.lvc .v-UNSUPPORTED{fill:#ededf1}
+.lvc text.t-UNSUPPORTED{fill:#45454e}
+.lvc .v-BLOCKED{fill:#d9d9e1}
+.lvc text.t-BLOCKED{fill:#2c2c33}
+@media (prefers-color-scheme:dark){
+.lvc .bg{fill:#1a1a19}
+.lvc text{fill:#e7e7ec}
+.lvc text.muted{fill:#a3a3ad}
+.lvc .grid{stroke:#2e2e34}
+.lvc .axis{stroke:#6b6b75}
+.lvc .dot{stroke:#1a1a19}
+.lvc .band{fill:#c98500;fill-opacity:.22;stroke:#eda100}
+.lvc .zeroline{stroke:#a3a3ad}
+.lvc .gate{stroke:#e66767}
+.lvc .bar{fill:#3987e5}
+.lvc .ring{fill:#1a1a19;stroke:#3987e5}
+.lvc .none{stroke:#6b6b75}
+.lvc .cell{stroke:#1a1a19}
+.lvc .cell.empty{fill:#222226}
+.lvc .s0{stroke:#3987e5}
+.lvc .dot.s0{fill:#3987e5}
+.lvc .s1{stroke:#d95926}
+.lvc .dot.s1{fill:#d95926}
+.lvc .s2{stroke:#199e70}
+.lvc .dot.s2{fill:#199e70}
+.lvc .s3{stroke:#c98500}
+.lvc .dot.s3{fill:#c98500}
+.lvc .s4{stroke:#d55181}
+.lvc .dot.s4{fill:#d55181}
+.lvc .s5{stroke:#008300}
+.lvc .dot.s5{fill:#008300}
+.lvc .s6{stroke:#9085e9}
+.lvc .dot.s6{fill:#9085e9}
+.lvc .s7{stroke:#e66767}
+.lvc .dot.s7{fill:#e66767}
+.lvc .sx{stroke:#6b6b75}
+.lvc .dot.sx{fill:#6b6b75}
+.lvc .v-PASS{fill:#1d4a22}
+.lvc text.t-PASS{fill:#d9f2d9}
+.lvc .v-FLOOR{fill:#2b4223}
+.lvc text.t-FLOOR{fill:#e1efdb}
+.lvc .v-FAIL{fill:#5a1d1a}
+.lvc text.t-FAIL{fill:#ffdcd8}
+.lvc .v-ERROR{fill:#6b2420}
+.lvc text.t-ERROR{fill:#ffe3e0}
+.lvc .v-ATTENTION{fill:#56420a}
+.lvc text.t-ATTENTION{fill:#fbeac0}
+.lvc .v-RECORDED{fill:#34343c}
+.lvc text.t-RECORDED{fill:#e4e4ea}
+.lvc .v-UNSUPPORTED{fill:#2a2a31}
+.lvc text.t-UNSUPPORTED{fill:#c8c8d0}
+.lvc .v-BLOCKED{fill:#3d3d46}
+.lvc text.t-BLOCKED{fill:#e4e4ea}
+}
+</style>
+</head>
+<body>
+<header><a href="/">lvrtc dashboard</a><a href="/control">Control</a><span class="muted">LV vs optiland: stand-in-tabs, Distortion, lateral colour, pupils and breathing</span><a href="/api/compare/stand-in-tabs/chief?position=-%2F-&amp;stop=3&amp;plane=z%3A60&amp;lines=587.5618%2B537.5618">JSON</a></header>
+<main>
+<h1>LV vs optiland: stand-in-tabs, Distortion, lateral colour, pupils and breathing (Stand-in tabs)</h1>
+<p>Each card is a tab of LensVisualizer, its heading the verdict of its identical rays (gated) and of its own analysis beside optiland&#39;s (recorded). Choose the condition with the chips, and open a card&#39;s charts for the curves.</p>
+<details><summary>How to read this page</summary>
+<p>This page sets LensVisualizer&#39;s own analyses of this lens beside optiland&#39;s, a tab at a time, in one condition: a case of the lens, as the chips below choose it. Each card has two kinds of line. The identical rays: each engine traces the rays the tab launches, and the policy holds every pair of engines to a gate. The tab&#39;s own analysis beside its counterpart&#39;s (optiland&#39;s, or for vignetting the comparator&#39;s flux on LensVisualizer&#39;s lattices): two methods set side by side with no tolerance, whose figures stand beside the attention bands of the policy at hand.</p>
+<p>A recorded pair fails nothing: it is RECORDED where each figure with an attention band is inside it, and ATTENTION where one is beyond it or the comparison set a field aside as data. The comparison sorts every field or line before any difference is taken: only one of two methods enters a figure, and the counts say how many it placed in each class (fields.compared of two methods; fields.data, fields.flagged or fields.unconverged, and fields.unavailable set aside as data, numerical and unsupported).</p>
+<p>A condition is a case of the lens: its zoom and focus positions, its stop semi-diameter, its image plane (the MTF recipe&#39;s kind of plane where a run has one, else the plane&#39;s position) and its lines, as the case files state them. A chip keeps the facets before it, and a facet after it gives way to its first value where the case chosen so far has another.</p>
+<p>A chip in grey is of cases with no comparison of LensVisualizer beside a counterpart (a run directory of an older run, say): it is listed, and chosen only where it is asked.</p>
+<p>Hover over a number to see the file it was read from and its JSON pointer there.</p>
+<p>A number marked as derived is computed by the dashboard from the figures it names, never read from a file.</p>
+</details>
+<p><span class="muted">Position:</span> <strong class="chip">no zoom or focus position</strong></p>
+<p><span class="muted">Stop:</span> <a class="chip" href="/compare/stand-in-tabs/chief?position=-%2F-&amp;stop=6.341241012139779&amp;plane=z%3A60&amp;lines=587.5618%2B537.5618">stop semi-diameter <span class="fig" title="r7b-stand-ins/cases/fd9331265b562f1702ee981c3415e32c8d3e89e98546901db15418dec6cac99a.json /conditions/stopSemiDiameter">6.341241012139779</span> mm</a> <a class="chip" href="/compare/stand-in-tabs/chief?position=-%2F-&amp;stop=5&amp;plane=z%3A60&amp;lines=587.5618%2B537.5618">stop semi-diameter <span class="fig" title="r7b-stand-ins/cases/0318018e2bf0d3700b9594802bda35d77b49a9451eba43d7ea4f87bb49d7f1f8.json /conditions/stopSemiDiameter">5</span> mm</a> <strong class="chip">stop semi-diameter <span class="fig" title="r10a-stand-ins/cases/5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd.json /conditions/stopSemiDiameter">3</span> mm</strong></p>
+<p><span class="muted">Image plane:</span> <strong class="chip">image plane at z <span class="fig" title="r10a-stand-ins/cases/5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd.json /conditions/imageZ">60</span> mm</strong></p>
+<p><span class="muted">Lines:</span> <strong class="chip">2 lines, <span class="fig" title="r10a-stand-ins/cases/5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd.json /conditions/lines/0/wavelengthNm">587.5618</span> to <span class="fig" title="r10a-stand-ins/cases/5e86575ae0af7493b28942da1d0fa71b4683e02ce17743e04724058ddd28addd.json /conditions/lines/1/wavelengthNm">537.5618</span> nm</strong></p>
+<p>The runs of this condition, each of the case shown: <a href="/run/r10a-stand-ins/run/0">r10a-stand-ins: lens</a>, <a href="/run/r10b-stand-ins/run/0">r10b-stand-ins: lens</a>, <a href="/run/r9a-stand-ins/run/0">r9a-stand-ins: lens</a>, <a href="/run/r9b-stand-ins/run/0">r9b-stand-ins: lens</a>, <a href="/run/r11a-stand-ins/run/0">r11a-stand-ins: lens</a>, <a href="/run/r11b-stand-ins/run/0">r11b-stand-ins: lens</a>, <a href="/run/r12b-stand-ins/run/0">r12b-stand-ins: lens</a>, <a href="/run/r7a-stand-ins/run/0">r7a-stand-ins: lens</a>, <a href="/run/r8a-stand-ins/run/0">r8a-stand-ins: lens</a>, <a href="/run/r8b-stand-ins/run/0">r8b-stand-ins: lens</a></p>
+<p class="muted">The chips leave 2 cases of the lens: every card gathers the comparisons of all of them.</p>
+<p>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none.</p>
+<p><a href="/compare/stand-in-tabs?position=-%2F-&amp;stop=3&amp;plane=z%3A60&amp;lines=587.5618%2B537.5618">Every card of this condition</a></p>
+<section class="card">
+<h2>Distortion, lateral colour, pupils and breathing <span class="badges">identical rays <span class="v-FAIL">FAIL</span>, beside optiland <span class="v-RECORDED">RECORDED</span></span></h2>
+<h3>Identical rays</h3>
+<div class="scroll"><table>
+<tr><th>Rung</th><th>Pairs</th><th>Largest</th><th>Gate</th></tr>
+<tr><td>r9a</td><td>moved and ref <span class="v-FAIL">FAIL</span><br>moved and stopped <span class="v-FAIL">FAIL</span><br>ref and stopped <span class="v-FAIL">FAIL</span></td><td><code>landing.maxAbs</code> <span class="fig" title="r9a-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/0/value">1.49e-8</span> (moved and ref)</td><td><span class="fig" title="policy/compare-policy.json /rungs/r9a/metrics/landing.maxAbs/tolerance">1.00e-8</span></td></tr>
+<tr><td>r1</td><td><span class="muted">none</span></td><td><span class="muted">—</span></td><td><span class="muted">—</span></td></tr>
+</table></div>
+<p class="muted">Read from the comparisons of the run directories r9a-stand-ins.</p>
+<p class="muted">r1: no comparison of this case in the run directories or the baselines.</p>
+<h3>Beside its counterpart</h3>
+<div class="scroll"><table>
+<tr><th>Rung</th><th>Request</th><th>Pair</th><th>Verdict</th><th>Figures</th><th>Fields</th><th>Read from</th></tr>
+<tr><td>r9b</td><td>distortion</td><td>lv beside optiland</td><td><span class="v-RECORDED">RECORDED</span></td><td><code>chiefLanding.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/0/value">0</span> mm, the sorting&#39;s limit <span class="fig" title="policy/compare-policy.json /rungs/r9b/metrics/chiefLanding.maxAbs/attention">1.00e-5</span><br><code>distortionPercent.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/1/value">4.88e-3</span> percent, no attention band<br><code>realHeight.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/2/value">2.44e-4</span> mm, no attention band<br><code>idealHeight.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/3/value">0</span> mm, no attention band<br><code>focalScale.relative</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/4/value">2.14e-6</span>, no attention band</td><td><code>fields.compared</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/5/value">2</span><br><code>fields.data</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/6/value">0</span><br><code>fields.unavailable</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/pairs/0/metrics/7/value">1</span></td><td><a href="/run/r9b-stand-ins/section/0">r9b-stand-ins</a></td></tr>
+<tr><td>r9b</td><td>lateral-colour</td><td>lv beside optiland</td><td><span class="v-RECORDED">RECORDED</span></td><td><code>chiefLanding.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/pairs/0/metrics/0/value">9.54e-7</span> mm, the sorting&#39;s limit <span class="fig" title="policy/compare-policy.json /rungs/r9b/metrics/chiefLanding.maxAbs/attention">1.00e-5</span><br><code>lateralColour.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/pairs/0/metrics/1/value">9.54e-7</span> mm, no attention band</td><td><code>fields.compared</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/pairs/0/metrics/2/value">5</span><br><code>fields.data</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/pairs/0/metrics/3/value">1</span><br><code>fields.unavailable</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/pairs/0/metrics/4/value">0</span></td><td><a href="/run/r9b-stand-ins/section/1">r9b-stand-ins</a></td></tr>
+<tr><td>r9b</td><td>pupils</td><td>lv beside optiland</td><td><span class="v-RECORDED">RECORDED</span></td><td><code>chiefLanding.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/0/value">0</span> mm, the sorting&#39;s limit <span class="fig" title="policy/compare-policy.json /rungs/r9b/metrics/chiefLanding.maxAbs/attention">1.00e-5</span><br><code>entrancePupil.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/1/value">3.91e-3</span> mm, no attention band<br><code>exitPupil.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/2/value">0</span> mm, no attention band<br><code>paraxialEntrancePupil.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/3/value">9.54e-7</span> mm, no attention band<br><code>paraxialExitPupil.maxAbs</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/4/value">0</span> mm, no attention band</td><td><code>fields.compared</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/5/value">2</span><br><code>fields.data</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/6/value">0</span><br><code>fields.unavailable</code> <span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/4/pairs/0/metrics/7/value">0</span></td><td><a href="/run/r9b-stand-ins/section/2">r9b-stand-ins</a></td></tr>
+</table></div>
+<details><summary>What the comparisons say of the fields they set aside</summary><ul><li>r9b (distortion): line 0, field 20: unsupported, no-curve (optiland-distortion: unavailable (no-scale))</li><li>r9b (lateral-colour): line 1, field 20: data, indices-differ (lv-chromatic-tab traced indices up to 1.53e-5 from the case&#39;s)</li></ul></details>
+<h3>r9b (distortion): lv beside optiland</h3>
+<figure><div class="scroll"><svg class="lvc" width="640" height="462" viewBox="0 0 640 462" role="img">
+<title>stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</title>
+<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. The policy at hand gives distortionPercent.maxAbs no attention band. 20: set aside as unsupported (no-curve), so no difference is drawn.</desc>
+<rect class="bg" x="0" y="0" width="640" height="462"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</text>
+<line class="grid" x1="76" y1="236" x2="624" y2="236"/>
+<text x="70" y="240" class="muted" text-anchor="end">-2.5</text>
+<line class="grid" x1="76" y1="196" x2="624" y2="196"/>
+<text x="70" y="200" class="muted" text-anchor="end">-2.0</text>
+<line class="grid" x1="76" y1="156" x2="624" y2="156"/>
+<text x="70" y="160" class="muted" text-anchor="end">-1.5</text>
+<line class="grid" x1="76" y1="116" x2="624" y2="116"/>
+<text x="70" y="120" class="muted" text-anchor="end">-1.0</text>
+<line class="grid" x1="76" y1="76" x2="624" y2="76"/>
+<text x="70" y="80" class="muted" text-anchor="end">-0.5</text>
+<line class="grid" x1="76" y1="36" x2="624" y2="36"/>
+<text x="70" y="40" class="muted" text-anchor="end">0</text>
+<line class="axis" x1="76" y1="236" x2="76" y2="240"/>
+<text x="76" y="252" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="236" x2="213" y2="240"/>
+<text x="213" y="252" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="236" x2="350" y2="240"/>
+<text x="350" y="252" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="236" x2="487" y2="240"/>
+<text x="487" y="252" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="236" x2="624" y2="240"/>
+<text x="624" y="252" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="236" x2="624" y2="236"/>
+<line class="axis" x1="76" y1="36" x2="76" y2="236"/>
+<text x="14" y="136" text-anchor="middle" transform="rotate(-90 14 136)">Distortion (percent)</text>
+<line class="grid" x1="76" y1="390" x2="624" y2="390"/>
+<text x="70" y="394" class="muted" text-anchor="end">-0.010</text>
+<line class="grid" x1="76" y1="362.5" x2="624" y2="362.5"/>
+<text x="70" y="366.5" class="muted" text-anchor="end">-0.005</text>
+<line class="grid" x1="76" y1="335" x2="624" y2="335"/>
+<text x="70" y="339" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="76" y1="307.5" x2="624" y2="307.5"/>
+<text x="70" y="311.5" class="muted" text-anchor="end">0.005</text>
+<line class="grid" x1="76" y1="280" x2="624" y2="280"/>
+<text x="70" y="284" class="muted" text-anchor="end">0.010</text>
+<line class="axis" x1="76" y1="390" x2="76" y2="394"/>
+<text x="76" y="406" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="390" x2="213" y2="394"/>
+<text x="213" y="406" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="390" x2="350" y2="394"/>
+<text x="350" y="406" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="390" x2="487" y2="394"/>
+<text x="487" y="406" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="390" x2="624" y2="394"/>
+<text x="624" y="406" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="390" x2="624" y2="390"/>
+<line class="axis" x1="76" y1="280" x2="76" y2="390"/>
+<text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
+<text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
+<line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
+<polyline class="line s0" points="213,36 350,86 624,236"/>
+<circle class="dot s0" cx="213" cy="36" r="4"><title>lv at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/0)</title></circle>
+<circle class="dot s0" cx="350" cy="86" r="4"><title>lv at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -6.25e-1 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/1)</title></circle>
+<circle class="dot s0" cx="624" cy="236" r="4"><title>lv at 20 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): -2.50e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/2)</title></circle>
+<polyline class="line s1 dash" points="213,36 350,85.61"/>
+<rect class="dot s1" x="209" y="32" width="8" height="8"><title>optiland at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/0)</title></rect>
+<rect class="dot s1" x="346" y="81.61" width="8" height="8"><title>optiland at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/1): -6.20e-1 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/1)</title></rect>
+<polyline class="line s2" points="213,335 350,361.86"/>
+<polygon class="dot s2" points="213,330 218,339 208,339"><title>at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s percent minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/0; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/0</title></polygon>
+<polygon class="dot s2" points="350,356.86 355,365.86 345,365.86"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -4.88e-3, derived: lv&#39;s percent minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/1; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/1</title></polygon>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv</text></g>
+<g><line class="line s1 dash" x1="132.4" y1="445" x2="156.4" y2="445"/><rect class="dot s1" x="140.4" y="441" width="8" height="8"></rect><text x="162.4" y="449">optiland</text></g>
+<g><line class="line s2" x1="226" y1="445" x2="250" y2="445"/><polygon class="dot s2" points="238,440 243,449 233,449"></polygon><text x="256" y="449">lv minus optiland</text></g>
+<g><line class="none" x1="381.4" y1="445" x2="393.4" y2="445"/><text x="405.4" y="449">no attention band</text></g>
+</svg></div><figcaption>The policy at hand gives distortionPercent.maxAbs no attention band.</figcaption></figure>
+<p class="muted"><span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2">20</span>: set aside as unsupported (no-curve), so no difference is drawn.</p>
+<figure><div class="scroll"><svg class="lvc" width="640" height="462" viewBox="0 0 640 462" role="img">
+<title>stand-in-tabs, lens, r9b: Real height (mm) against Field angle (degrees)</title>
+<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. The policy at hand gives realHeight.maxAbs no attention band. 20: set aside as unsupported (no-curve), so no difference is drawn.</desc>
+<rect class="bg" x="0" y="0" width="640" height="462"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Real height (mm) against Field angle (degrees)</text>
+<line class="grid" x1="76" y1="236" x2="624" y2="236"/>
+<text x="70" y="240" class="muted" text-anchor="end">-10</text>
+<line class="grid" x1="76" y1="186" x2="624" y2="186"/>
+<text x="70" y="190" class="muted" text-anchor="end">-8</text>
+<line class="grid" x1="76" y1="136" x2="624" y2="136"/>
+<text x="70" y="140" class="muted" text-anchor="end">-6</text>
+<line class="grid" x1="76" y1="86" x2="624" y2="86"/>
+<text x="70" y="90" class="muted" text-anchor="end">-4</text>
+<line class="grid" x1="76" y1="36" x2="624" y2="36"/>
+<text x="70" y="40" class="muted" text-anchor="end">-2</text>
+<line class="axis" x1="76" y1="236" x2="76" y2="240"/>
+<text x="76" y="252" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="236" x2="213" y2="240"/>
+<text x="213" y="252" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="236" x2="350" y2="240"/>
+<text x="350" y="252" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="236" x2="487" y2="240"/>
+<text x="487" y="252" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="236" x2="624" y2="240"/>
+<text x="624" y="252" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="236" x2="624" y2="236"/>
+<line class="axis" x1="76" y1="36" x2="76" y2="236"/>
+<text x="14" y="136" text-anchor="middle" transform="rotate(-90 14 136)">Real height (mm)</text>
+<line class="grid" x1="76" y1="390" x2="624" y2="390"/>
+<text x="70" y="394" class="muted" text-anchor="end">-4.0e-4</text>
+<line class="grid" x1="76" y1="362.5" x2="624" y2="362.5"/>
+<text x="70" y="366.5" class="muted" text-anchor="end">-2.0e-4</text>
+<line class="grid" x1="76" y1="335" x2="624" y2="335"/>
+<text x="70" y="339" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="76" y1="307.5" x2="624" y2="307.5"/>
+<text x="70" y="311.5" class="muted" text-anchor="end">2.0e-4</text>
+<line class="grid" x1="76" y1="280" x2="624" y2="280"/>
+<text x="70" y="284" class="muted" text-anchor="end">4.0e-4</text>
+<line class="axis" x1="76" y1="390" x2="76" y2="394"/>
+<text x="76" y="406" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="390" x2="213" y2="394"/>
+<text x="213" y="406" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="390" x2="350" y2="394"/>
+<text x="350" y="406" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="390" x2="487" y2="394"/>
+<text x="487" y="406" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="390" x2="624" y2="394"/>
+<text x="624" y="406" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="390" x2="624" y2="390"/>
+<line class="axis" x1="76" y1="280" x2="76" y2="390"/>
+<text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
+<text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
+<line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
+<polyline class="line s0" points="213,48.5 350,110.22 624,229.75"/>
+<circle class="dot s0" cx="213" cy="48.5" r="4"><title>lv at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): -2.50e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/realHeightMm/0)</title></circle>
+<circle class="dot s0" cx="350" cy="110.22" r="4"><title>lv at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -4.97e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/realHeightMm/1)</title></circle>
+<circle class="dot s0" cx="624" cy="229.75" r="4"><title>lv at 20 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): -9.75e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/realHeightMm/2)</title></circle>
+<polyline class="line s1 dash" points="213,48.5 350,110.22"/>
+<rect class="dot s1" x="209" y="44.5" width="8" height="8"><title>optiland at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/0): -2.50e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/realHeightMm/0)</title></rect>
+<rect class="dot s1" x="346" y="106.22" width="8" height="8"><title>optiland at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/1): -4.97e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/realHeightMm/1)</title></rect>
+<polyline class="line s2" points="213,335 350,301.43"/>
+<polygon class="dot s2" points="213,330 218,339 208,339"><title>at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s realHeightMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/realHeightMm/0; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/realHeightMm/0</title></polygon>
+<polygon class="dot s2" points="350,296.43 355,305.43 345,305.43"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): 2.44e-4, derived: lv&#39;s realHeightMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/realHeightMm/1; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/realHeightMm/1</title></polygon>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv</text></g>
+<g><line class="line s1 dash" x1="132.4" y1="445" x2="156.4" y2="445"/><rect class="dot s1" x="140.4" y="441" width="8" height="8"></rect><text x="162.4" y="449">optiland</text></g>
+<g><line class="line s2" x1="226" y1="445" x2="250" y2="445"/><polygon class="dot s2" points="238,440 243,449 233,449"></polygon><text x="256" y="449">lv minus optiland</text></g>
+<g><line class="none" x1="381.4" y1="445" x2="393.4" y2="445"/><text x="405.4" y="449">no attention band</text></g>
+</svg></div><figcaption>The policy at hand gives realHeight.maxAbs no attention band.</figcaption></figure>
+<p class="muted"><span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2">20</span>: set aside as unsupported (no-curve), so no difference is drawn.</p>
+<h3>r9b (lateral-colour): lv beside optiland</h3>
+<figure><div class="scroll"><svg class="lvc" width="640" height="498" viewBox="0 0 640 498" role="img">
+<title>stand-in-tabs, lens, r9b: Chief-ray landing (mm) against Field angle (degrees)</title>
+<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. No metric of the policy is of these values: no attention band applies. 20: set aside as data (indices-differ), so no difference is drawn.</desc>
+<rect class="bg" x="0" y="0" width="640" height="498"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Chief-ray landing (mm) against Field angle (degrees)</text>
+<line class="grid" x1="76" y1="236" x2="624" y2="236"/>
+<text x="70" y="240" class="muted" text-anchor="end">-10</text>
+<line class="grid" x1="76" y1="196" x2="624" y2="196"/>
+<text x="70" y="200" class="muted" text-anchor="end">-8</text>
+<line class="grid" x1="76" y1="156" x2="624" y2="156"/>
+<text x="70" y="160" class="muted" text-anchor="end">-6</text>
+<line class="grid" x1="76" y1="116" x2="624" y2="116"/>
+<text x="70" y="120" class="muted" text-anchor="end">-4</text>
+<line class="grid" x1="76" y1="76" x2="624" y2="76"/>
+<text x="70" y="80" class="muted" text-anchor="end">-2</text>
+<line class="grid" x1="76" y1="36" x2="624" y2="36"/>
+<text x="70" y="40" class="muted" text-anchor="end">0</text>
+<line class="axis" x1="76" y1="236" x2="76" y2="240"/>
+<text x="76" y="252" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="236" x2="213" y2="240"/>
+<text x="213" y="252" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="236" x2="350" y2="240"/>
+<text x="350" y="252" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="236" x2="487" y2="240"/>
+<text x="487" y="252" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="236" x2="624" y2="240"/>
+<text x="624" y="252" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="236" x2="624" y2="236"/>
+<line class="axis" x1="76" y1="36" x2="76" y2="236"/>
+<text x="14" y="136" text-anchor="middle" transform="rotate(-90 14 136)">Chief-ray landing (mm)</text>
+<line class="grid" x1="76" y1="390" x2="624" y2="390"/>
+<text x="70" y="394" class="muted" text-anchor="end">-2.0e-6</text>
+<line class="grid" x1="76" y1="362.5" x2="624" y2="362.5"/>
+<text x="70" y="366.5" class="muted" text-anchor="end">-1.0e-6</text>
+<line class="grid" x1="76" y1="335" x2="624" y2="335"/>
+<text x="70" y="339" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="76" y1="307.5" x2="624" y2="307.5"/>
+<text x="70" y="311.5" class="muted" text-anchor="end">1.0e-6</text>
+<line class="grid" x1="76" y1="280" x2="624" y2="280"/>
+<text x="70" y="284" class="muted" text-anchor="end">2.0e-6</text>
+<line class="axis" x1="76" y1="390" x2="76" y2="394"/>
+<text x="76" y="406" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="390" x2="213" y2="394"/>
+<text x="213" y="406" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="390" x2="350" y2="394"/>
+<text x="350" y="406" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="390" x2="487" y2="394"/>
+<text x="487" y="406" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="390" x2="624" y2="394"/>
+<text x="624" y="406" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="390" x2="624" y2="390"/>
+<line class="axis" x1="76" y1="280" x2="76" y2="390"/>
+<text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
+<text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
+<line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
+<polyline class="line s0" points="76,36 350,116 624,196"/>
+<circle class="dot s0" cx="76" cy="36" r="4"><title>lv, 587.5618 nm at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/0)</title></circle>
+<circle class="dot s0" cx="350" cy="116" r="4"><title>lv, 587.5618 nm at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/1): -4 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/1)</title></circle>
+<circle class="dot s0" cx="624" cy="196" r="4"><title>lv, 587.5618 nm at 20 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/2): -8 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/2)</title></circle>
+<polyline class="line s1 dash" points="76,36 350,116 624,196"/>
+<rect class="dot s1" x="72" y="32" width="8" height="8"><title>optiland, 587.5618 nm at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/0)</title></rect>
+<rect class="dot s1" x="346" y="112" width="8" height="8"><title>optiland, 587.5618 nm at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/1): -4 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/1)</title></rect>
+<rect class="dot s1" x="620" y="192" width="8" height="8"><title>optiland, 587.5618 nm at 20 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/2): -8 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/2)</title></rect>
+<polyline class="line s2" points="76,36 350,116.02 624,196.04"/>
+<polygon class="dot s2" points="76,31 81,40 71,40"><title>lv, 537.5618 nm at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/3): 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/3)</title></polygon>
+<polygon class="dot s2" points="350,111.02 355,120.02 345,120.02"><title>lv, 537.5618 nm at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/4): -4.00e0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/4)</title></polygon>
+<polygon class="dot s2" points="624,191.04 629,200.04 619,200.04"><title>lv, 537.5618 nm at 20 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/5): -8.00e0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/5)</title></polygon>
+<polyline class="line s3 dash" points="76,36 350,116.02 624,196.04"/>
+<polygon class="dot s3" points="76,31 81,36 76,41 71,36"><title>optiland, 537.5618 nm at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/3): 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/3)</title></polygon>
+<polygon class="dot s3" points="350,111.02 355,116.02 350,121.02 345,116.02"><title>optiland, 537.5618 nm at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/4): -4.00e0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/4)</title></polygon>
+<polygon class="dot s3" points="624,191.04 629,196.04 624,201.04 619,196.04"><title>optiland, 537.5618 nm at 20 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/fieldAngleDeg/5): -8.00e0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/5)</title></polygon>
+<polyline class="line s4" points="76,335 350,335 624,335"/>
+<polygon class="dot s4" points="76,340 81,331 71,331"><title>at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s chiefLandingMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/0; r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/0</title></polygon>
+<polygon class="dot s4" points="350,340 355,331 345,331"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/1): 0, derived: lv&#39;s chiefLandingMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/1; r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/1</title></polygon>
+<polygon class="dot s4" points="624,340 629,331 619,331"><title>at 20 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/2): 0, derived: lv&#39;s chiefLandingMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/2; r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/2</title></polygon>
+<polyline class="line s5" points="76,335 350,308.77"/>
+<polygon class="dot s5" points="74,330 78,330 78,333 81,333 81,337 78,337 78,340 74,340 74,337 71,337 71,333 74,333"><title>at 0 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/3): 0, derived: lv&#39;s chiefLandingMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/3; r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/3</title></polygon>
+<polygon class="dot s5" points="348,303.77 352,303.77 352,306.77 355,306.77 355,310.77 352,310.77 352,313.77 348,313.77 348,310.77 345,310.77 345,306.77 348,306.77"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/4): 9.54e-7, derived: lv&#39;s chiefLandingMm minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/chiefLandingMm/4; r9b-stand-ins/comparisons.json /comparisons/2/participants/1/recorded/chiefLandingMm/4</title></polygon>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv, 587.5618 nm</text></g>
+<g><line class="line s1 dash" x1="213" y1="445" x2="237" y2="445"/><rect class="dot s1" x="221" y="441" width="8" height="8"></rect><text x="243" y="449">optiland, 587.5618 nm</text></g>
+<g><line class="line s2" x1="387.2" y1="445" x2="411.2" y2="445"/><polygon class="dot s2" points="399.2,440 404.2,449 394.2,449"></polygon><text x="417.2" y="449">lv, 537.5618 nm</text></g>
+<g><line class="line s3 dash" x1="76" y1="463" x2="100" y2="463"/><polygon class="dot s3" points="88,458 93,463 88,468 83,463"></polygon><text x="106" y="467">optiland, 537.5618 nm</text></g>
+<g><line class="line s4" x1="250.2" y1="463" x2="274.2" y2="463"/><polygon class="dot s4" points="262.2,468 267.2,459 257.2,459"></polygon><text x="280.2" y="467">lv minus optiland, 587.5618 nm</text></g>
+<g><line class="line s5" x1="76" y1="481" x2="100" y2="481"/><polygon class="dot s5" points="86,476 90,476 90,479 93,479 93,483 90,483 90,486 86,486 86,483 83,483 83,479 86,479"></polygon><text x="106" y="485">lv minus optiland, 537.5618 nm</text></g>
+<g><line class="none" x1="312" y1="481" x2="324" y2="481"/><text x="336" y="485">no attention band</text></g>
+</svg></div><figcaption>No metric of the policy is of these values: no attention band applies.</figcaption></figure>
+<p class="muted"><span class="fig" title="r9b-stand-ins/comparisons.json /comparisons/2/participants/0/recorded/fieldAngleDeg/5">20</span>: set aside as data (indices-differ), so no difference is drawn.</p>
+<h3>r9b (pupils): lv beside optiland</h3>
+<figure><div class="scroll"><svg class="lvc" width="640" height="462" viewBox="0 0 640 462" role="img">
+<title>stand-in-tabs, lens, r9b: Entrance pupil z (mm) against Field angle (degrees)</title>
+<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. The policy at hand gives entrancePupil.maxAbs no attention band.</desc>
+<rect class="bg" x="0" y="0" width="640" height="462"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Entrance pupil z (mm) against Field angle (degrees)</text>
+<line class="grid" x1="76" y1="236" x2="624" y2="236"/>
+<text x="70" y="240" class="muted" text-anchor="end">8.0</text>
+<line class="grid" x1="76" y1="196" x2="624" y2="196"/>
+<text x="70" y="200" class="muted" text-anchor="end">8.1</text>
+<line class="grid" x1="76" y1="156" x2="624" y2="156"/>
+<text x="70" y="160" class="muted" text-anchor="end">8.2</text>
+<line class="grid" x1="76" y1="116" x2="624" y2="116"/>
+<text x="70" y="120" class="muted" text-anchor="end">8.3</text>
+<line class="grid" x1="76" y1="76" x2="624" y2="76"/>
+<text x="70" y="80" class="muted" text-anchor="end">8.4</text>
+<line class="grid" x1="76" y1="36" x2="624" y2="36"/>
+<text x="70" y="40" class="muted" text-anchor="end">8.5</text>
+<line class="axis" x1="76" y1="236" x2="76" y2="240"/>
+<text x="76" y="252" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="236" x2="213" y2="240"/>
+<text x="213" y="252" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="236" x2="350" y2="240"/>
+<text x="350" y="252" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="236" x2="487" y2="240"/>
+<text x="487" y="252" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="236" x2="624" y2="240"/>
+<text x="624" y="252" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="236" x2="624" y2="236"/>
+<line class="axis" x1="76" y1="36" x2="76" y2="236"/>
+<text x="14" y="136" text-anchor="middle" transform="rotate(-90 14 136)">Entrance pupil z (mm)</text>
+<line class="grid" x1="76" y1="390" x2="624" y2="390"/>
+<text x="70" y="394" class="muted" text-anchor="end">-0.005</text>
+<line class="grid" x1="76" y1="335" x2="624" y2="335"/>
+<text x="70" y="339" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="76" y1="280" x2="624" y2="280"/>
+<text x="70" y="284" class="muted" text-anchor="end">0.005</text>
+<line class="axis" x1="76" y1="390" x2="76" y2="394"/>
+<text x="76" y="406" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="390" x2="213" y2="394"/>
+<text x="213" y="406" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="390" x2="350" y2="394"/>
+<text x="350" y="406" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="390" x2="487" y2="394"/>
+<text x="487" y="406" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="390" x2="624" y2="394"/>
+<text x="624" y="406" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="390" x2="624" y2="390"/>
+<line class="axis" x1="76" y1="280" x2="76" y2="390"/>
+<text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
+<text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
+<line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
+<polyline class="line s0" points="350,234.44 624,36"/>
+<circle class="dot s0" cx="350" cy="234.44" r="4"><title>lv at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/0): 8.00e0 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/entrancePupilZ/0)</title></circle>
+<circle class="dot s0" cx="624" cy="36" r="4"><title>lv at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/1): 8.50e0 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/entrancePupilZ/1)</title></circle>
+<polyline class="line s1 dash" points="350,236 624,36"/>
+<rect class="dot s1" x="346" y="232" width="8" height="8"><title>optiland at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/fieldAngleDeg/0): 8 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/entrancePupilZ/0)</title></rect>
+<rect class="dot s1" x="620" y="32" width="8" height="8"><title>optiland at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/fieldAngleDeg/1): 8.50e0 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/entrancePupilZ/1)</title></rect>
+<polyline class="line s2" points="350,292.03 624,335"/>
+<polygon class="dot s2" points="350,287.03 355,296.03 345,296.03"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/0): 3.91e-3, derived: lv&#39;s entrancePupilZ minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/entrancePupilZ/0; r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/entrancePupilZ/0</title></polygon>
+<polygon class="dot s2" points="624,330 629,339 619,339"><title>at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/1): 0, derived: lv&#39;s entrancePupilZ minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/entrancePupilZ/1; r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/entrancePupilZ/1</title></polygon>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv</text></g>
+<g><line class="line s1 dash" x1="132.4" y1="445" x2="156.4" y2="445"/><rect class="dot s1" x="140.4" y="441" width="8" height="8"></rect><text x="162.4" y="449">optiland</text></g>
+<g><line class="line s2" x1="226" y1="445" x2="250" y2="445"/><polygon class="dot s2" points="238,440 243,449 233,449"></polygon><text x="256" y="449">lv minus optiland</text></g>
+<g><line class="none" x1="381.4" y1="445" x2="393.4" y2="445"/><text x="405.4" y="449">no attention band</text></g>
+</svg></div><figcaption>The policy at hand gives entrancePupil.maxAbs no attention band.</figcaption></figure>
+<figure><div class="scroll"><svg class="lvc" width="640" height="462" viewBox="0 0 640 462" role="img">
+<title>stand-in-tabs, lens, r9b: Exit pupil z (mm) against Field angle (degrees)</title>
+<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. The policy at hand gives exitPupil.maxAbs no attention band.</desc>
+<rect class="bg" x="0" y="0" width="640" height="462"/>
+<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Exit pupil z (mm) against Field angle (degrees)</text>
+<line class="grid" x1="76" y1="236" x2="624" y2="236"/>
+<text x="70" y="240" class="muted" text-anchor="end">11.0</text>
+<line class="grid" x1="76" y1="186" x2="624" y2="186"/>
+<text x="70" y="190" class="muted" text-anchor="end">11.5</text>
+<line class="grid" x1="76" y1="136" x2="624" y2="136"/>
+<text x="70" y="140" class="muted" text-anchor="end">12.0</text>
+<line class="grid" x1="76" y1="86" x2="624" y2="86"/>
+<text x="70" y="90" class="muted" text-anchor="end">12.5</text>
+<line class="grid" x1="76" y1="36" x2="624" y2="36"/>
+<text x="70" y="40" class="muted" text-anchor="end">13.0</text>
+<line class="axis" x1="76" y1="236" x2="76" y2="240"/>
+<text x="76" y="252" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="236" x2="213" y2="240"/>
+<text x="213" y="252" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="236" x2="350" y2="240"/>
+<text x="350" y="252" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="236" x2="487" y2="240"/>
+<text x="487" y="252" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="236" x2="624" y2="240"/>
+<text x="624" y="252" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="236" x2="624" y2="236"/>
+<line class="axis" x1="76" y1="36" x2="76" y2="236"/>
+<text x="14" y="136" text-anchor="middle" transform="rotate(-90 14 136)">Exit pupil z (mm)</text>
+<line class="grid" x1="76" y1="390" x2="624" y2="390"/>
+<text x="70" y="394" class="muted" text-anchor="end">-1.0e-12</text>
+<line class="grid" x1="76" y1="362.5" x2="624" y2="362.5"/>
+<text x="70" y="366.5" class="muted" text-anchor="end">-5.0e-13</text>
+<line class="grid" x1="76" y1="335" x2="624" y2="335"/>
+<text x="70" y="339" class="muted" text-anchor="end">0</text>
+<line class="grid" x1="76" y1="307.5" x2="624" y2="307.5"/>
+<text x="70" y="311.5" class="muted" text-anchor="end">5.0e-13</text>
+<line class="grid" x1="76" y1="280" x2="624" y2="280"/>
+<text x="70" y="284" class="muted" text-anchor="end">1.0e-12</text>
+<line class="axis" x1="76" y1="390" x2="76" y2="394"/>
+<text x="76" y="406" class="muted" text-anchor="middle">0</text>
+<line class="axis" x1="213" y1="390" x2="213" y2="394"/>
+<text x="213" y="406" class="muted" text-anchor="middle">5</text>
+<line class="axis" x1="350" y1="390" x2="350" y2="394"/>
+<text x="350" y="406" class="muted" text-anchor="middle">10</text>
+<line class="axis" x1="487" y1="390" x2="487" y2="394"/>
+<text x="487" y="406" class="muted" text-anchor="middle">15</text>
+<line class="axis" x1="624" y1="390" x2="624" y2="394"/>
+<text x="624" y="406" class="muted" text-anchor="middle">20</text>
+<line class="axis" x1="76" y1="390" x2="624" y2="390"/>
+<line class="axis" x1="76" y1="280" x2="76" y2="390"/>
+<text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
+<text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
+<line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
+<polyline class="line s0" points="350,136 624,136"/>
+<circle class="dot s0" cx="350" cy="136" r="4"><title>lv at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/0): 12 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/exitPupilZ/0)</title></circle>
+<circle class="dot s0" cx="624" cy="136" r="4"><title>lv at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/1): 12 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/exitPupilZ/1)</title></circle>
+<polyline class="line s1 dash" points="350,136 624,136"/>
+<rect class="dot s1" x="346" y="132" width="8" height="8"><title>optiland at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/fieldAngleDeg/0): 12 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/exitPupilZ/0)</title></rect>
+<rect class="dot s1" x="620" y="132" width="8" height="8"><title>optiland at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/fieldAngleDeg/1): 12 (r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/exitPupilZ/1)</title></rect>
+<polyline class="line s2" points="350,335 624,335"/>
+<polygon class="dot s2" points="350,330 355,339 345,339"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s exitPupilZ minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/exitPupilZ/0; r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/exitPupilZ/0</title></polygon>
+<polygon class="dot s2" points="624,330 629,339 619,339"><title>at 20 (r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/fieldAngleDeg/1): 0, derived: lv&#39;s exitPupilZ minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/4/participants/0/recorded/exitPupilZ/1; r9b-stand-ins/comparisons.json /comparisons/4/participants/1/recorded/exitPupilZ/1</title></polygon>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv</text></g>
+<g><line class="line s1 dash" x1="132.4" y1="445" x2="156.4" y2="445"/><rect class="dot s1" x="140.4" y="441" width="8" height="8"></rect><text x="162.4" y="449">optiland</text></g>
+<g><line class="line s2" x1="226" y1="445" x2="250" y2="445"/><polygon class="dot s2" points="238,440 243,449 233,449"></polygon><text x="256" y="449">lv minus optiland</text></g>
+<g><line class="none" x1="381.4" y1="445" x2="393.4" y2="445"/><text x="405.4" y="449">no attention band</text></g>
+</svg></div><figcaption>The policy at hand gives exitPupil.maxAbs no attention band.</figcaption></figure>
+</section>
+<p class="muted">The tabs answer at the reference line and the design plane; Run this lens with the profile tabs, or both, writes their comparisons.</p>
+<p><a href="/lens/stand-in-tabs">Lens stand-in-tabs</a></p>
+<h2>Run this lens</h2>
+<p>Run this lens starts lvrtc mtf as a job of run control, with the profile benchmark (the MTF tab), the profile tabs (LensVisualizer&#39;s other tabs) or both: the lens wide open and at the MTF tab&#39;s f/8 comparison, at the design plane and at LensVisualizer&#39;s best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directories of the lens, mtf-&lt;lensKey&gt; and tabs-&lt;lensKey&gt;, which this page then gathers.</p>
+<p class="problem">With real engines it is a heavy command: start it only when no other session runs one.</p>
+<form method="post" action="/control/lens">
+<input type="hidden" name="token" value="0000000000000000000000000000000000000000000000000000000000000000">
+<input type="hidden" name="lens" value="stand-in-tabs">
+<label>Engines <input type="text" name="engines" size="24" placeholder="lv,ref,optiland"></label>
+<label>Profile <select name="profile"><option value="">benchmark</option><option value="tabs">tabs</option><option value="both" selected>both</option></select></label>
+<label>Aperture <select name="aperture"><option value="">both</option><option value="wide-open">wide-open</option><option value="f/8">f/8</option></select></label>
+<label>Jobs <input type="number" name="jobs" min="1" max="4" value="1"></label>
+<button type="submit">Run this lens</button>
+</form>
+<p>Engines are optional, ids of lv, ref, optiland separated by commas (lv alone when left empty); the aperture is one of wide-open, f/8, or both when left empty; the profile is one of benchmark, tabs, both, or benchmark when left empty; jobs is 1 to 4, and no more than the memory budget of this machine allows.</p>
+</main>
+</body>
+</html>

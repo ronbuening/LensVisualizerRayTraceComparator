@@ -2,7 +2,8 @@
 // fields, the form of its key, its engines and aperture, and more jobs than the memory budget allows, as 400), then the
 // fake LensVisualizer tree end to end: LensVisualizer's catalog read by a child `lvrtc lenses list`, a key not in it
 // ending its job there with lvrtc mtf never run, and a key of it run as `lvrtc mtf <key> --profile benchmark`, after
-// which its lens page gathers the run directory the command wrote. Every child loads only the fake tree.
+// which its lens page gathers the run directory the command wrote; then the profile tabs (Stage 8.5), whose run
+// directory the compare page gathers beside it. Every child loads only the fake tree.
 import assert from "node:assert/strict";
 import { cpSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,6 +15,7 @@ import { controlChoices } from "../../src/cli/commands/serve.ts";
 import { CONFIG_FILE, REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import type { ControlOptions, ControlView, JobView } from "../../src/dashboard/control.ts";
 import type { LensView } from "../../src/dashboard/lens.ts";
+import type { CompareView } from "../../src/dashboard/compare.ts";
 import { startDashboard } from "../../src/dashboard/server.ts";
 import type { Dashboard } from "../../src/dashboard/server.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
@@ -118,6 +120,8 @@ test("a run of one lens is refused for its fields, its key's form and its jobs, 
     [{ ...valid, engines: "lv,wave" }, 400, TEXT.unknownLensEngine("wave", "lv, ref, optiland")],
     [{ ...valid, engines: "lv,lv" }, 400, TEXT.repeatedId],
     [{ ...valid, aperture: "f/5.6" }, 400, TEXT.badAperture("f/5.6", "wide-open, f/8")],
+    [{ ...valid, profile: "everything" }, 400, TEXT.badLensRun("everything", "benchmark, tabs, both")],
+    [{ ...valid, profile: "both", jobs: "2" }, 400, TEXT.tooManyJobs("2", "1", "2", "2.5")],
     [{ ...valid, jobs: "0" }, 400, TEXT.badJobs("0", "4")],
     [{ ...valid, jobs: "5" }, 400, TEXT.badJobs("5", "4")],
     [{ ...valid, jobs: "two" }, 400, TEXT.badJobs("two", "4")],
@@ -243,4 +247,32 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     treeOf(rootDir).every((entry) => !entry.startsWith("/runs")),
     "the root holds no run",
   );
+
+  // The profile tabs (Stage 8.5): lvrtc mtf --profile tabs writes tabs-<key>, which the compare page gathers beside
+  // mtf-<key> by the cases the two share.
+  const tabs = await post(port, { token, lens: LENS, profile: "tabs", engines: "lv,ref", aperture: "f/8", jobs: "1" });
+  assert.equal(tabs.status, 303, tabs.body);
+  const tabsJob = await ended(port, 3);
+  assert.deepEqual(
+    tabsJob.steps.map((step) => [step.name, step.command]),
+    [
+      ["catalog", "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs lenses list --root <root> --json"],
+      [
+        "tabs",
+        `LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs mtf ${LENS} --profile tabs --root <root> --engines lv,ref --aperture f/8 --jobs 1`,
+      ],
+    ],
+  );
+  assert.ok(tabsJob.steps[1].exitCode === 0 || tabsJob.steps[1].exitCode === 1, tabsJob.steps[1].output);
+  assert.equal(tabsJob.suite, `tabs-${LENS}`);
+  await holdPage(port, `/compare/${LENS}`);
+  const compare = JSON.parse((await fetchFrom(port, `/api/compare/${LENS}`)).body) as CompareView;
+  assert.deepEqual(
+    [...new Set(compare.runs.map((run) => run.suite))].sort(),
+    [`mtf-${LENS}`, `tabs-${LENS}`],
+    "the condition's case is of both run directories",
+  );
+  const r7a = compare.cards.find((card) => card.tab === "coma-bokeh")?.gated.find((line) => line.rung === "r7a");
+  assert.deepEqual(r7a?.source, { kind: "runs", suites: [`tabs-${LENS}`] });
+  for (const tab of compare.cards) await holdPage(port, `/compare/${LENS}/${tab.tab}?${compare.query}`);
 });
