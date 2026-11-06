@@ -6400,6 +6400,76 @@ removes exactly the planned entries (prune) or gzips exactly the planned plain e
 (compress), and a changed store, a later plan, an unshown digest, a wrong action, bad fields, a `.tmp` file, a
 running job and a conflict are each refused with nothing changed.
 
+**LV vs optiland (Stage 8.5, the owner's request of 2026-11-05).** The pages above are an audit trail; this one is
+the view the owner asked for: LensVisualizer beside optiland, a lens at a time, in the same condition. The owner
+approved the design on 2026-11-05 (a profile `tabs`, a page `/compare/<lensKey>`, cards whose sentences are the
+recorded values and the comparator's own sorting).
+
+- **Data: `lvrtc mtf <lensKey> --profile tabs`** (`TABS_PROFILE`, `TABS_RUNGS` in `src/cli/benchmarkProfile.ts`) is
+  the profile `benchmark`'s conditions (wide open and the MTF tab's f/8, design plane and LensVisualizer's best
+  axial focus, reference and photopic lines, a zoom at both ends) with the rungs of LensVisualizer's other tabs:
+  r0, r1, the gated r7a to r11a and the recorded r7b to r12b (each asked of its own engines). It writes
+  `<runsDir>/tabs-<lensKey>/` with `report.md` and `report.json` (`renderReport`), beside `mtf-<lensKey>/`; the
+  same conditions give the same cases, so a page gathers both by case id. `--jobs` and the memory budget hold as for
+  `benchmark` (2.5 GiB a job: no R6c). "Run this lens" takes a `profile` field: `benchmark` (the default),
+  `tabs`, or `both` (two steps of one job, `mtf` then `tabs`, held to the larger estimate of the two).
+- **A condition is a case.** The chips are the facts of the lens's cases (`src/dashboard/compare.ts`): position
+  (zoom and focus of the label), stop semi-diameter, image plane (the MTF recipe's kind where a run has one, else
+  `z:<imageZ>`) and lines, resolved facet by facet: a facet after a chip gives way to its first value where the
+  case chosen so far has another, with a note. Where nothing is asked, the first value of a case with a
+  comparison beside a counterpart is chosen, so a case only an older run directory has (the catalog sweep at an
+  earlier LensVisualizer) is listed in grey and not chosen. Two cases that share every facet are both taken.
+- **Cards** are the validation matrix's rows with a tab (`COMPARE_TABS`, from `MATRIX_ROWS`), each with two
+  tables. Identical rays: each gated rung's pairs (each request's pair once, of any mode or run directory) with their gravest
+  verdict, and the largest value of one metric of the rung (`GATED_HEADLINES`) against the gate at hand; read from
+  the lens's run directories, or else from the baselines' records of the case (named: their engines may have moved).
+  Beside its counterpart: each recorded rung's pair of `lv` and `optiland`, `optiland-wave` or `flux`
+  (`COUNTERPARTS`; R6b, lv beside wave, has none), the comparison's verdict, each figure against the attention
+  band at hand or "no attention band", the limits of the sorting (`SORTING_METRICS`) as limits, never bands, and the
+  comparison's own field counts; a request compared in several run directories is shown once (the lens's own
+  `mtf-`/`tabs-` directory first) and the others named. A rung with no such pair says so; an MTF baseline record
+  stands in where no run directory has the rung (no charts).
+- **Details** (`/compare/<lensKey>/<tab>`, `src/dashboard/compareCharts.ts`, `charts/compare.ts`): MTF lines are
+  their section's 8.2 charts, the pair's series and difference only; every other line plots each value both answers
+  recorded (`participants[].recorded`, Figures of the comparison file) against a recorded axis (field angle, field
+  fraction, wavelength, the spec's zones), LensVisualizer solid and its counterpart dashed, grouped by line where an
+  answer has several, with a strip of `lv` minus the counterpart (Derived) and the band shaded; a fan is read from
+  the two answers' store entries (Curves); a summary is a table. A difference is drawn only for an element of two
+  methods, by the comparator's own `*FactsOfRecorded` and classifier (as the MTF report repeats R5's); an element set
+  aside is named with its class and reason.
+- **Index.** "LV vs optiland" leads the index: each lens whose run directories hold a recorded comparison beside a
+  counterpart, with each card's two verdicts in its first condition (no store entry read).
+
+Tests (`test/dashboard/compare.test.ts`, `compareFixture.ts`): the stand-ins of R7a to R12b (test/report) run into
+run directories whose case files are relabelled to one lens (a label is in no case id), R7a's kept only as a
+baseline. `figures.test.ts` walks every compare page of every condition the chips reach and every tab: each Figure
+and Curve resolved from disk, each Derived recomputed, each count recounted (cases, places, verdicts, sections;
+elements from their pointers), each headline held to its rung, case, pair and metric and to the largest of the
+test's own enumeration, each recorded figure to its request, pair and metric, each band to its metric, each point
+to its engine's participant, value and element, and the elements not set aside to the comparison's
+`fields.compared` (or `lines.compared`). Five one-line mutations each turn it red: the headline the first figure,
+a band of another metric, both series read from `lv`, the difference reversed, a pair's verdict from its first
+request. `server.test.ts` crawls, lints and holds every compare page and twin; three golden SVGs and two golden
+pages come from `node test/report/writeGolden.ts`; `lensControl.test.ts` runs the profile `tabs` on the fake tree
+from the UI to its compare page.
+
+**Measured, 2026-11-05** (LensVisualizer `25f65d4b4`, optiland `4e893f53`, policy 24), into a temporary runs
+directory with an empty store, deleted afterwards: `lvrtc mtf nikkor-z50f12 --profile benchmark --engines
+lv,ref,optiland --jobs 2` exited 0 in 30.4 min (809 jobs, 801 ok and 8 unsupported; 256 PASS, 213 RECORDED, 7
+ATTENTION, 28 UNSUPPORTED), then `--profile tabs --jobs 4` exited 0 in 68 s (2,172 jobs, 2,114 ok and 58
+unsupported; 2,060 PASS, 52 RECORDED, 116 UNSUPPORTED); 1.3 GB of store. On `/compare/nikkor-z50f12` in its first
+condition (wide open, design plane, 587.5618 nm) every card is filled: identical rays PASS on every gated rung of
+every card (R2 and R3 from the benchmark's baseline, the rest from the two run directories; R7a's transverse error at
+most 3.3e-13 mm against 1e-8), and beside optiland (flux for vignetting) every pair RECORDED: R5g's MTF within
+2.3e-3 on the axis and 4.1e-3 off it (bands 0.005 and 0.01; R5's FFT fields are unconverged or unavailable at f/1.2,
+so set aside), R6c's optiland-wave within 2.5e-3 and 3.3e-3, R7b's fans 2.8e-11 mm (band 9e-10) and spots 2.4e-3 mm
+apart in RMS radius (no band: two ring samplings), R8b's spherical figures within 4.0e-13 mm (band 1e-10), R9b's
+distortion 5.1e-3 percent points and pupils 5.0e-7 mm (no bands), R10b's foci within 5.4e-7 mm (band 1e-5), R11b's
+transmission within 3.3e-3 (band 0.01), R12b's working f-number within 6.0e-11 (band 7e-8). At f/8 every card is
+filled as well; at LensVisualizer's best focus and on the photopic lines the tabs' own analyses are UNSUPPORTED (the
+tabs answer at the reference line and the design plane), which the cards show. The compare page builds in 1 to 2
+ms after the index (1.5 s, every run directory read); the detail pages 2 to 30 ms, 14 to 399 KB (MTF the largest).
+
 ## LensVisualizer 25f65d4b4 adopted
 
 LensVisualizer main `25f65d4b4` (clean), engine closure `4669921b`, 184 files: the same files as `ff0d938d`

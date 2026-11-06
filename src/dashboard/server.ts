@@ -24,6 +24,7 @@ import {
   renderControl,
   renderIndex,
   renderJob,
+  renderCompare,
   renderLens,
   renderRefusal,
   renderRun,
@@ -37,6 +38,15 @@ import { askEngines } from "./identity.ts";
 import type { AskedEngines, EngineDescribeRunner } from "./identity.ts";
 import { LENS_KEY_PATTERN, buildLensView, indexLenses, lensSelection, lensSummaries, selectionLabel } from "./lens.ts";
 import type { LensIndex, LensView } from "./lens.ts";
+import {
+  COMPARE_TABS,
+  buildCompareView,
+  compareSummary,
+  hasCounterpartComparison,
+  indexBaseline,
+  indexComparisons,
+} from "./compare.ts";
+import type { CompareBaseline, CompareDirectory, CompareInputs, CompareView } from "./compare.ts";
 import { createSources } from "./sources.ts";
 import type { DashboardSources, Loaded } from "./sources.ts";
 import type { BaselineRunView, BaselineView, IndexView, RunPartView, RunView, SectionView } from "./views.ts";
@@ -178,6 +188,16 @@ export interface DashboardViews {
    * lens's runs and the store entries the manifests name for their mtf.native jobs, and no other entry.
    */
   lensDocuments(key: string): DocumentName[];
+  /**
+   * The "LV vs optiland" page of a lens (Stage 8.5), with the condition its address's query chooses; with `tab`, that
+   * tab's card and details. Null for a tab that is none of `COMPARE_TABS`.
+   */
+  compare(key: string, query: string, tab: string | null): CompareView | null;
+  /**
+   * The documents a compare page is of: the lens page's, the baselines, and the store entries the manifests name for
+   * the jobs of the lens's runs in the recorded rungs of the cards.
+   */
+  compareDocuments(key: string): DocumentName[];
 }
 
 /**
@@ -237,6 +257,48 @@ export function createViews(
     return { loaded, lastRun };
   };
 
+  /** A run directory as the compare pages read it, indexed once per file (Stage 8.5). */
+  const compareDirectory = (suite: string): CompareDirectory | null => {
+    const manifest = sources.manifest(suite);
+    if (manifest.state !== "ok") return null;
+    const comparisons = sources.comparisons(suite);
+    const file = comparisons.state === "ok" ? comparisons.value : null;
+    const indexed = sources.derived("compare-index", [`comparisons:${suite}`], () =>
+      file === null ? null : indexComparisons(file, sectionSetGroups(file.comparisons)),
+    );
+    return {
+      suite,
+      manifest: manifest.value,
+      comparisons: file,
+      setsOfCase: indexed?.setsOfCase ?? new Map(),
+      sectionOfSet: indexed?.sectionOfSet ?? new Map(),
+    };
+  };
+  const compareBaselines = (): CompareBaseline[] =>
+    sources.baselineStems().flatMap((stem) => {
+      const loaded = sources.baseline(stem);
+      if (loaded.state !== "ok") return [];
+      const runsOfCase = sources.derived("compare-baseline", [`baseline:${stem}`], () => indexBaseline(loaded.value));
+      return [{ stem, baseline: loaded.value, runsOfCase }];
+    });
+  const compareInputs = (key: string, query: string): CompareInputs => {
+    const policy = sources.policy();
+    return {
+      key,
+      runs: (lensIndex().lenses.get(key) ?? []).map((ref) => ({
+        ref,
+        caseSummary: sources.caseSummary(ref.suite, ref.caseId),
+      })),
+      directory: compareDirectory,
+      baselines: compareBaselines(),
+      policy: policy.state === "ok" ? { document: `policy:${policy.value.name}`, policy: policy.value.policy } : null,
+      stored: (storeKey) => sources.storeEntry(storeKey),
+      query,
+      sectionCharts: (suite, section) => sectionView(suite, section)?.charts ?? null,
+    };
+  };
+  const recordedRungs = new Set(COMPARE_TABS.flatMap((tab) => tab.recorded));
+
   const sectionView = (name: string, index: number): SectionView | null => {
     const manifest = sources.manifest(name);
     const comparisons: Loaded<ComparisonFile> = sources.comparisons(name);
@@ -278,7 +340,11 @@ export function createViews(
         lenses: lensSummaries(index, (suite, caseId) => sources.caseSummary(suite, caseId)),
         problems: index.problems,
       };
-      return buildIndexView(policy, asked(), runs, baselines, lenses);
+      const compared = [...index.lenses.keys()].flatMap((key) => {
+        const inputs = compareInputs(key, "");
+        return hasCounterpartComparison(inputs) ? [compareSummary(inputs)] : [];
+      });
+      return buildIndexView(policy, asked(), runs, baselines, lenses, compared);
     },
     run: (name) => {
       const manifest = sources.manifest(name);
@@ -349,6 +415,27 @@ export function createViews(
           return view === null ? null : { section, charts: view.charts };
         },
       });
+    },
+    compare: (key, query, tab) => {
+      if (tab !== null && !COMPARE_TABS.some((each) => each.tab === tab)) return null;
+      return buildCompareView(compareInputs(key, query), tab);
+    },
+    compareDocuments: (key) => {
+      const refs = lensIndex().lenses.get(key) ?? [];
+      const stores = refs.flatMap((ref) => {
+        const manifest = sources.manifest(ref.suite);
+        if (manifest.state !== "ok") return [];
+        return manifest.value.jobs.flatMap((job): DocumentName[] =>
+          job.run === ref.run && recordedRungs.has(job.rung) && job.storeKey !== null ? [`store:${job.storeKey}`] : [],
+        );
+      });
+      return [
+        ...policyDocuments(),
+        ...sources.runNames().flatMap((name): DocumentName[] => [`manifest:${name}`, `comparisons:${name}`]),
+        ...sources.baselineStems().map((stem): DocumentName => `baseline:${stem}`),
+        ...refs.map((ref) => caseDocument(ref.suite, ref.caseId)),
+        ...new Set(stores),
+      ];
     },
     lensDocuments: (key) => {
       const refs = lensIndex().lenses.get(key) ?? [];
@@ -456,6 +543,26 @@ export function createRouter(
         views.lensDocuments(name),
         () => views.lens(name, query),
         (view) => renderLens(view, options.lensForm ?? null),
+      );
+      return api ? page : { ...page, headers: FORM_PAGE_HEADERS };
+    }
+    if (kind === "compare" && name !== undefined && (route.length === 2 || route.length === 3)) {
+      // As a lens page: the key looked up among the lenses of the run directories and of run control's jobs.
+      const known =
+        LENS_KEY_PATTERN.test(name) &&
+        (views.lensIndex().lenses.has(name) || (options.lensKeys?.() ?? []).includes(name));
+      const tab = route.length === 3 ? route[2] : null;
+      if (!known || (tab !== null && !COMPARE_TABS.some((each) => each.tab === tab))) return notFound(api);
+      const query = url.includes("?") ? url.slice(url.indexOf("?") + 1).split("#", 1)[0] : "";
+      const params = new URLSearchParams(query);
+      const normal = [...params].sort(([a, x], [b, y]) => (a !== b ? (a < b ? -1 : 1) : x < y ? -1 : x > y ? 1 : 0));
+      const label = `compare:${name}:${tab ?? ""}:${JSON.stringify(normal)}`;
+      const page = answer(
+        api,
+        label,
+        views.compareDocuments(name),
+        () => views.compare(name, query, tab),
+        (view) => renderCompare(view, options.lensForm ?? null),
       );
       return api ? page : { ...page, headers: FORM_PAGE_HEADERS };
     }

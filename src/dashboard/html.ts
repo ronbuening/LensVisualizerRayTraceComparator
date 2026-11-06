@@ -26,9 +26,13 @@ import { CHART_STYLE } from "./charts/svg.ts";
 import { documentLabel } from "./figure.ts";
 import type { Derived, Figure } from "./figure.ts";
 import { BENCHMARK_APERTURES } from "../cli/benchmarkProfile.ts";
-import { CONTROL_MAX_JOBS, LENS_ENGINES } from "./control.ts";
+import { CONTROL_MAX_JOBS, LENS_ENGINES, LENS_RUNS } from "./control.ts";
 import type { ControlView, JobEntry, JobView, StepView, StoreJobView } from "./control.ts";
 import { curveEngine } from "./lens.ts";
+import { COMPARE_TABS } from "./compare.ts";
+import type { CompareCard, CompareView, ConditionLabel, GatedLine, RecordedLine } from "./compare.ts";
+import type { SetAsideElement, ValuesTableView } from "./compareCharts.ts";
+import { fanChartCaption, pairBandCaption, renderFanChart, renderPairChart } from "./charts/compare.ts";
 import type { LensCondition, LensCurveView, LensView } from "./lens.ts";
 import type {
   BaselinePairView,
@@ -83,6 +87,10 @@ code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12p
 .v-ATTENTION,.b-NOTKNOWN{color:var(--warn);font-weight:600}
 .v-RECORDED,.v-UNSUPPORTED,.v-BLOCKED{color:var(--quiet);font-weight:600}
 details{margin:4px 0}summary{cursor:pointer}
+.card{border:1px solid var(--line);border-radius:8px;padding:2px 14px 8px;margin:14px 0;max-width:1200px}
+.card h2{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.badges{font-size:14px}
+.chip{display:inline-block;margin:0 6px 4px 0;padding:1px 8px;border:1px solid var(--line);border-radius:10px;text-decoration:none}
+strong.chip{background:var(--head)}
 form{margin:6px 0 12px}label{display:inline-block;margin:0 12px 6px 0}input,select,button{font:inherit}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--head);border:1px solid var(--line);padding:6px;max-height:480px;overflow-y:auto}
 ul{margin:4px 0;padding-left:20px}
@@ -333,6 +341,7 @@ export function renderIndex(view: IndexView): string {
       ? ""
       : `<p>${fill(DASHBOARD_TEXT.policyAtHand, [escapeHtml(view.policy.name), figure(view.policy.version), code(view.policy.hash)])}</p>`,
     p(askedText(view.engines)),
+    ...comparedBlock(view),
     h(2, "Runs"),
     view.runs.length === 0
       ? p(DASHBOARD_TEXT.noRuns)
@@ -900,8 +909,15 @@ export function renderControl(view: ControlView, token: string): string {
   body.push(
     view.configured
       ? [
-          lensForm(token, null, view.lensEngines, view.apertures),
-          p(text.lensFields(view.lensEngines.join(", "), view.apertures.join(", "), String(CONTROL_MAX_JOBS))),
+          lensForm(token, null, view.lensEngines, view.apertures, view.lensRuns),
+          p(
+            text.lensFields(
+              view.lensEngines.join(", "),
+              view.apertures.join(", "),
+              view.lensRuns.join(", "),
+              String(CONTROL_MAX_JOBS),
+            ),
+          ),
         ].join("\n")
       : p(text.notConfigured),
   );
@@ -1172,11 +1188,18 @@ function lensForm(
   lens: string | null,
   engines: readonly string[],
   apertures: readonly string[],
+  runs: readonly string[],
+  chosenRun: string | null = null,
 ): string {
   const options = [
     '<option value="">both</option>',
     ...apertures.map((each) => `<option value="${escapeHtml(each)}">${escapeHtml(each)}</option>`),
   ];
+  // The first profile is what an empty field runs (benchmark); the others are named.
+  const runOptions = runs.map((each, index) => {
+    const selected = each === chosenRun ? " selected" : "";
+    return `<option value="${index === 0 ? "" : escapeHtml(each)}"${selected}>${escapeHtml(each)}</option>`;
+  });
   return form(
     "lens",
     token,
@@ -1185,6 +1208,7 @@ function lensForm(
         ? '<label>Lens key <input type="text" name="lens" size="40"></label>'
         : `<input type="hidden" name="lens" value="${escapeHtml(lens)}">`,
       `<label>Engines <input type="text" name="engines" size="24" placeholder="${escapeHtml(engines.join(","))}"></label>`,
+      `<label>Profile <select name="profile">${runOptions.join("")}</select></label>`,
       `<label>Aperture <select name="aperture">${options.join("")}</select></label>`,
       `<label>Jobs <input type="number" name="jobs" min="1" max="${CONTROL_MAX_JOBS}" value="1"></label>`,
     ],
@@ -1263,6 +1287,7 @@ export function renderLens(
   const query = lensQuery(view, view.curves.find((curve) => curve.reference)?.id ?? null);
   const body: string[] = [
     h(1, view.name === null ? `Lens ${view.key}` : `Lens ${view.key}: ${view.name}`),
+    `<p>${escapeHtml(text.compareLink)} ${link(compareHref(view.key, null, ""), DASHBOARD_TEXT.compare.title(view.key))}</p>`,
     p(text.intro),
     p(text.lensOfRun),
     p(DASHBOARD_TEXT.sources),
@@ -1404,15 +1429,315 @@ export function renderLens(
   if (run === null || !run.configured) body.push(p(text.runNotConfigured));
   else {
     body.push(
-      lensForm(run.token, view.key, LENS_ENGINES, BENCHMARK_APERTURES),
+      lensForm(run.token, view.key, LENS_ENGINES, BENCHMARK_APERTURES, LENS_RUNS),
       p(
         DASHBOARD_TEXT.control.lensFields(
           LENS_ENGINES.join(", "),
           BENCHMARK_APERTURES.join(", "),
+          LENS_RUNS.join(", "),
           String(CONTROL_MAX_JOBS),
         ),
       ),
     );
   }
   return page(`Lens ${view.key}`, `/api${lensHref(view.key)}${query === "" ? "" : `?${query}`}`, body);
+}
+
+// ── The "LV vs optiland" pages (Stage 8.5) ───────────────────────────────────────────────────────────────────────
+
+const compareHref = (key: string, tab: string | null, query: string): string =>
+  `/compare/${encodeURIComponent(key)}${tab === null ? "" : `/${encodeURIComponent(tab)}`}${query === "" ? "" : `?${query}`}`;
+
+/** A chip's text: the figures of the case it is the value of, in the template of its facet. */
+function chipText(label: ConditionLabel): string {
+  const text = DASHBOARD_TEXT.compare;
+  switch (label.facet) {
+    case "position":
+      return label.zoomT === null && label.focusT === null
+        ? escapeHtml(text.chipNoPosition)
+        : fill(text.chipPosition, [plainFigure(label.zoomT), plainFigure(label.focusT)]);
+    case "stop":
+      return fill(text.chipStop, [plainFigure(label.stopSemiDiameterMm)]);
+    case "plane":
+      if (label.plane === "design") return escapeHtml(text.chipDesign);
+      if (label.plane === "lv-best-axial") return escapeHtml(text.chipBestAxial);
+      if (label.plane !== null) return escapeHtml(text.chipPlaneKind(label.plane));
+      return fill(text.chipPlaneAt, [plainFigure(label.imageZ)]);
+    case "lines": {
+      const lines = label.lines.map((line) => line.wavelengthNm);
+      if (lines.length === 1) return fill(text.chipOneLine, [plainFigure(lines[0])]);
+      return fill(text.chipLines, [
+        count(lines.length),
+        plainFigure(lines[0] ?? null),
+        plainFigure(lines.at(-1) ?? null),
+      ]);
+    }
+  }
+}
+
+const FACET_NAMES: Readonly<Record<string, string>> = {
+  position: DASHBOARD_TEXT.compare.facetPosition,
+  stop: DASHBOARD_TEXT.compare.facetStop,
+  plane: DASHBOARD_TEXT.compare.facetPlane,
+  lines: DASHBOARD_TEXT.compare.facetLines,
+};
+
+/** The chips of a compare page: each facet's values, the chosen one in bold, the others links that choose them. */
+function chipsBlock(view: CompareView): string[] {
+  return view.facets.map((facet) => {
+    const options = facet.options.map((option) =>
+      option.chosen
+        ? `<strong class="chip">${chipText(option.label)}</strong>`
+        : `<a class="chip${option.compared ? "" : " muted"}" href="${escapeHtml(compareHref(view.key, view.tab, option.query))}">${chipText(option.label)}</a>`,
+    );
+    return `<p><span class="muted">${escapeHtml(FACET_NAMES[facet.facet] ?? facet.facet)}:</span> ${options.join(" ")}</p>`;
+  });
+}
+
+/** A value with its unit, where it has one (a unit of "1" is a number without one). */
+function withUnit(value: Figure, unit: string): string {
+  return unit === "1" || unit === "" ? figure(value) : `${figure(value)} ${escapeHtml(unit)}`;
+}
+
+/** The gated lines of a card as a table: a row per rung, its pairs' verdicts, its largest headline figure and gate. */
+function gatedTable(lines: readonly GatedLine[]): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  const rows = lines.map((line) => {
+    const pairs =
+      line.pairs.length === 0
+        ? `<span class="muted">${escapeHtml(text.none)}</span>`
+        : line.pairs
+            .map((pair) => fill(text.gatedPair, [escapeHtml(pair.a), escapeHtml(pair.b), verdict(pair.verdict)]))
+            .join("<br>");
+    const largest =
+      line.headline !== null
+        ? fill(text.gatedLargest, [
+            code(line.headline.metric),
+            figure(line.headline.value),
+            escapeHtml(line.headline.a),
+            escapeHtml(line.headline.b),
+          ])
+        : line.unmeasured !== null
+          ? fill(text.gatedUnmeasured, [code(line.unmeasured)])
+          : '<span class="muted">—</span>';
+    const gate = line.headline?.gate ?? null;
+    return [escapeHtml(line.rung), pairs, largest, gate === null ? '<span class="muted">—</span>' : figure(gate)];
+  });
+  const out = [table([text.columnRung, text.columnPairs, text.columnLargest, text.columnGate], rows)];
+  const runs = [...new Set(lines.flatMap((line) => (line.source.kind === "runs" ? line.source.suites : [])))];
+  const stems = [...new Set(lines.flatMap((line) => (line.source.kind === "baselines" ? line.source.stems : [])))];
+  if (runs.length > 0) out.push(p(text.gatedFromRuns(runs.join(", ")), "muted"));
+  if (stems.length > 0) out.push(p(text.gatedFromBaselines(stems.join(", ")), "muted"));
+  for (const line of lines) if (line.pairs.length === 0) out.push(p(text.gatedNone(line.rung), "muted"));
+  return out;
+}
+
+/** A figure of a recorded line, against its band, its limit of the sorting, or no band. */
+function recordedMetric(metric: RecordedLine["metrics"][number]): string {
+  const text = DASHBOARD_TEXT.compare;
+  const value = withUnit(metric.value, metric.unit);
+  if (metric.limit !== null) return fill(text.metricLimit, [code(metric.name), value, figure(metric.limit)]);
+  if (metric.band !== null) return fill(text.metricBand, [code(metric.name), value, figure(metric.band)]);
+  return fill(text.metricNoBand, [code(metric.name), value]);
+}
+
+/** The recorded lines of a card as a table, and below it each line's notes, sources and (on a tab's page) details. */
+function recordedTable(view: CompareView, lines: readonly RecordedLine[]): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  if (lines.length === 0) return [];
+  const none = '<span class="muted">—</span>';
+  const rows = lines.map((line) => [
+    escapeHtml(line.rung),
+    escapeHtml(line.label ?? "—"),
+    fill(text.pairText, [escapeHtml(line.a), escapeHtml(line.b)]),
+    verdict(line.verdict),
+    line.metrics.map(recordedMetric).join("<br>") || none,
+    line.counts.map((each) => fill(text.countText, [code(each.name), figure(each.value)])).join("<br>") || none,
+    line.source.kind === "baseline"
+      ? escapeHtml(text.fromBaselineShort(line.source.stem))
+      : line.source.section === null
+        ? escapeHtml(line.source.suite)
+        : link(sectionHref(line.source.suite, line.source.section), line.source.suite),
+  ]);
+  const header = [
+    text.columnRung,
+    text.columnRequest,
+    text.columnPair,
+    text.columnVerdict,
+    text.columnFigures,
+    text.columnFields,
+    text.columnRead,
+  ];
+  const out = [table(header, rows)];
+  const notes = lines.flatMap((line) => [
+    ...(line.reason === null
+      ? []
+      : [`<li>${escapeHtml(text.lineNote(line.rung, line.label ?? "", line.reason))}</li>`]),
+    ...(line.source.kind === "baseline"
+      ? [`<li>${escapeHtml(text.fromBaseline(line.source.stem, line.source.run))}</li>`]
+      : []),
+    ...(line.alsoIn.length > 0 ? [`<li>${escapeHtml(text.alsoIn(line.alsoIn.join(", ")))}</li>`] : []),
+  ]);
+  if (notes.length > 0) {
+    out.push(`<details><summary>${escapeHtml(text.notesSummary)}</summary><ul>${notes.join("")}</ul></details>`);
+  }
+  if (view.tab !== null) {
+    for (const line of lines) {
+      if (line.detail === null) continue;
+      out.push(h(3, text.detailHeading(line.rung, line.label ?? "", line.a, line.b)), ...detailBlock(view, line));
+    }
+  }
+  return out;
+}
+
+/** The elements a comparison sets aside, each where its chart's axis has it, with the figure's source on hover. */
+function setAsideBlock(asides: readonly SetAsideElement[]): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  return asides.map((aside) => {
+    const at = aside.at === null ? escapeHtml(text.setAsideAt(String(aside.element))) : plainFigure(aside.at.value);
+    return `<p class="muted">${fill(text.setAside, [at, escapeHtml(aside.class), escapeHtml(aside.reason)])}</p>`;
+  });
+}
+
+/** A table of recorded values of both answers, with their differences and bands. */
+function valuesTableBlock(view: ValuesTableView): string {
+  const text = DASHBOARD_TEXT.compare;
+  return table(
+    [text.columnLine, text.columnValue, view.a, view.b, text.columnDifference, text.columnBand],
+    view.rows.map((row) => [
+      escapeHtml(row.group ?? ""),
+      code(row.name),
+      row.a === null ? '<span class="muted">—</span>' : figure(row.a.value),
+      row.b === null ? '<span class="muted">—</span>' : figure(row.b.value),
+      row.difference === null ? '<span class="muted">—</span>' : derivedValue(row.difference),
+      row.metric === null || row.band === null ? escapeHtml(text.legendNoBand) : figure(row.band),
+    ]),
+  );
+}
+
+/** The details of a recorded line: the MTF section's charts of the pair, or the charts and tables of its values. */
+function detailBlock(view: CompareView, line: RecordedLine): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  const detail = line.detail;
+  if (detail === null) return [];
+  const subject = `${view.key}, ${line.source.kind === "run" ? line.source.run : line.source.stem}, ${line.rung}`;
+  const out: string[] = [...detail.problems.map((problem) => p(problem, "problem"))];
+  if (detail.overlays.length + detail.differences.length > 0) {
+    out.push(p(text.mtfIntro));
+    detail.overlays.forEach((overlay, index) => {
+      out.push(chartFigure(renderMtfOverlay(overlay, subject), overlayCaption(overlay)));
+      const difference = detail.differences[index];
+      if (difference !== undefined) {
+        out.push(chartFigure(renderMtfDifference(difference, subject), differenceCaption(difference)));
+      }
+    });
+  }
+  for (const chart of detail.charts) {
+    if (chart.kind === "points") {
+      out.push(chartFigure(renderPairChart(chart, subject), pairBandCaption(chart)), ...setAsideBlock(chart.setAside));
+    } else if (chart.kind === "fan") out.push(chartFigure(renderFanChart(chart, subject), fanChartCaption(chart)));
+    else {
+      out.push(p(text.valuesIntro), valuesTableBlock(chart), ...setAsideBlock(chart.setAside));
+    }
+  }
+  if (detail.overlays.length + detail.differences.length + detail.charts.length === 0 && detail.problems.length === 0) {
+    out.push(p(text.noDetails, "muted"));
+  }
+  return out;
+}
+
+/** A card: its tab's identical rays and its comparisons beside the counterpart, under its verdicts. */
+function cardBlock(view: CompareView, card: CompareCard): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  const verdictText = (value: Verdict | null): string =>
+    value === null ? `<span class="muted">${escapeHtml(text.none)}</span>` : verdict(value);
+  const verdicts = fill(text.cardVerdicts, [verdictText(card.gatedVerdict), verdictText(card.recordedVerdict)]);
+  const out = [
+    '<section class="card">',
+    `<h2>${escapeHtml(card.title)} <span class="badges">${verdicts}</span></h2>`,
+    h(3, text.gatedHeading),
+    ...gatedTable(card.gated),
+  ];
+  if (card.recorded.length + card.notCompared.length > 0) {
+    out.push(h(3, text.recordedHeading));
+    if (card.tab === "vignetting") out.push(p(text.flux, "muted"));
+    out.push(...recordedTable(view, card.recorded));
+    out.push(...card.notCompared.map((rung) => p(text.notCompared(rung), "muted")));
+  }
+  if (view.tab === null && card.recorded.some((line) => line.source.kind === "run")) {
+    out.push(`<p>${link(compareHref(view.key, card.tab, view.query), text.detailsLink)}</p>`);
+  }
+  out.push("</section>");
+  return out;
+}
+
+/** A compare page: the chips, the runs of the condition, and a card for each tab (or one tab's card and details). */
+export function renderCompare(
+  view: CompareView,
+  run: { readonly token: string; readonly configured: boolean } | null,
+): string {
+  const text = DASHBOARD_TEXT.compare;
+  const title = view.tab === null ? text.title(view.key) : text.tabTitle(view.key, view.cards[0]?.title ?? view.tab);
+  const body: string[] = [
+    h(1, view.name === null ? title : `${title} (${view.name})`),
+    p(text.lead),
+    `<details><summary>${escapeHtml(text.howToRead)}</summary>`,
+    p(text.intro),
+    p(text.recordedMeaning),
+    p(text.chipsIntro),
+    p(text.chipsMuted),
+    p(DASHBOARD_TEXT.sources),
+    p(DASHBOARD_TEXT.derived),
+    "</details>",
+    ...chipsBlock(view),
+    ...view.notes.map((note) => p(note, "problem")),
+  ];
+  if (view.runs.length > 0) {
+    body.push(
+      `<p>${escapeHtml(text.runsIntro)} ${view.runs.map((each) => link(runPartHref(each.suite, each.place), `${each.suite}: ${each.run}`)).join(", ")}</p>`,
+    );
+  }
+  if (view.count > 1) body.push(p(text.severalCases(count(view.count)), "muted"));
+  if (view.tab !== null) {
+    body.push(p(text.detailsIntro), `<p>${link(compareHref(view.key, null, view.query), text.cardsLink)}</p>`);
+  }
+  for (const card of view.cards) body.push(...cardBlock(view, card));
+  body.push(p(text.runTabsHint, "muted"), `<p>${link(lensHref(view.key), `Lens ${view.key}`)}</p>`);
+  body.push(h(2, "Run this lens"), p(DASHBOARD_TEXT.lens.runIntro), p(DASHBOARD_TEXT.lens.runHeavy, "problem"));
+  if (run === null || !run.configured) body.push(p(DASHBOARD_TEXT.lens.runNotConfigured));
+  else {
+    body.push(
+      lensForm(run.token, view.key, LENS_ENGINES, BENCHMARK_APERTURES, LENS_RUNS, "both"),
+      p(
+        DASHBOARD_TEXT.control.lensFields(
+          LENS_ENGINES.join(", "),
+          BENCHMARK_APERTURES.join(", "),
+          LENS_RUNS.join(", "),
+          String(CONTROL_MAX_JOBS),
+        ),
+      ),
+    );
+  }
+  return page(title, `/api${compareHref(view.key, view.tab, view.query)}`, body);
+}
+
+/** The index's table of lenses compared beside optiland: a row per lens, a cell per tab of its verdicts. */
+function comparedBlock(view: IndexView): string[] {
+  const text = DASHBOARD_TEXT.compare;
+  const out = [h(2, text.indexHeading), p(text.indexIntro)];
+  if (view.compared.length === 0) return [...out, p(text.indexNone)];
+  const tabs = COMPARE_TABS.map((tab) => tab.title);
+  const cell = (verdictOf: Verdict | null): string =>
+    verdictOf === null ? `<span class="muted">${escapeHtml(text.none)}</span>` : verdict(verdictOf);
+  out.push(
+    table(
+      ["Lens", "Name", ...tabs],
+      view.compared.map((lens) => [
+        link(compareHref(lens.key, null, ""), lens.key),
+        lens.name === null ? "—" : escapeHtml(lens.name),
+        ...lens.cards.map((card) => fill(text.indexCell, [cell(card.gated), cell(card.recorded)])),
+      ]),
+    ),
+  );
+  return out;
 }

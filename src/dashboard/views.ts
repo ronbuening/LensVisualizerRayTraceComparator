@@ -33,6 +33,7 @@ import { documentLabel, figureAt, optionalFigureAt } from "./figure.ts";
 import type { Derived, DocumentName, Figure, Source } from "./figure.ts";
 import type { AskedEngines } from "./identity.ts";
 import type { LensSummary } from "./lens.ts";
+import type { CompareSummary } from "./compare.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
@@ -268,6 +269,8 @@ export interface IndexView {
   readonly lenses: readonly LensSummary[];
   /** Case files of runs that cannot be read, so that their runs are of no lens. */
   readonly lensProblems: readonly DocumentProblem[];
+  /** The lenses with a recorded comparison of LensVisualizer beside a counterpart, with their cards' verdicts (8.5). */
+  readonly compared: readonly CompareSummary[];
 }
 
 function policyHeader(policy: Loaded<PolicyAtHand>): IndexView["policy"] {
@@ -293,6 +296,7 @@ export function buildIndexView(
     lenses: [],
     problems: [],
   },
+  compared: readonly CompareSummary[] = [],
 ): IndexView {
   return {
     kind: "dashboard-index",
@@ -303,6 +307,7 @@ export function buildIndexView(
     baselines,
     lenses: lenses.lenses,
     lensProblems: lenses.problems,
+    compared,
   };
 }
 

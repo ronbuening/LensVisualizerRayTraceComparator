@@ -820,9 +820,9 @@ export const DASHBOARD_TEXT = {
     badJobs: (given: string, most: string): string =>
       `Jobs must be a whole number from 1 to ${most}, and the form gives "${given}".`,
     lensHow:
-      "Run one lens first reads LensVisualizer's catalog (lvrtc lenses list) and, when the key is one of its keys, runs lvrtc mtf with the profile benchmark on the lens; the lens page then gathers the run directory it writes.",
-    lensFields: (engines: string, apertures: string, most: string): string =>
-      `Engines are optional, ids of ${engines} separated by commas (lv alone when left empty); the aperture is one of ${apertures}, or both when left empty; jobs is 1 to ${most}, and no more than the memory budget of this machine allows.`,
+      "Run one lens first reads LensVisualizer's catalog (lvrtc lenses list) and, when the key is one of its keys, runs lvrtc mtf on the lens with the profile benchmark (the MTF tab, the run directory mtf-<lensKey>), the profile tabs (the other tabs, tabs-<lensKey>) or both, one after the other; the lens pages then gather the run directories it writes.",
+    lensFields: (engines: string, apertures: string, runs: string, most: string): string =>
+      `Engines are optional, ids of ${engines} separated by commas (lv alone when left empty); the aperture is one of ${apertures}, or both when left empty; the profile is one of ${runs}, or benchmark when left empty; jobs is 1 to ${most}, and no more than the memory budget of this machine allows.`,
     noLens: "The form names no lens.",
     badLensKey: (key: string): string =>
       `The lens key "${key}" is not of the form of a key of LensVisualizer's catalog.`,
@@ -830,6 +830,8 @@ export const DASHBOARD_TEXT = {
       `The engine ${id} is not one that Run this lens names: ${known}.`,
     badAperture: (given: string, known: string): string =>
       `The aperture "${given}" is none of ${known}; leave it empty for both.`,
+    badLensRun: (given: string, known: string): string =>
+      `The profile "${given}" is none of ${known}; leave it empty for benchmark.`,
     tooManyJobs: (given: string, most: string, budget: string, estimate: string): string =>
       `Jobs ${given} is more than this machine allows: at most ${most}, the memory budget of ${budget} GiB divided by ${estimate} GiB a job and held to the processors available.`,
     lensInCatalog: (key: string): string => `${key} is a key of LensVisualizer's catalog, so lvrtc mtf is run on it.`,
@@ -1054,8 +1056,174 @@ export const DASHBOARD_TEXT = {
       `${engine}, ${run}, ${rung}, field ${field}, ${cut}`,
     tipCurve: (curve: string, run: string): string => `curve ${curve}: ${run}`,
     runIntro:
-      "Run this lens starts lvrtc mtf with the profile benchmark as a job of run control: the lens wide open and at the MTF tab's f/8 comparison, at the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directory of the lens, which this page then gathers.",
+      "Run this lens starts lvrtc mtf as a job of run control, with the profile benchmark (the MTF tab), the profile tabs (LensVisualizer's other tabs) or both: the lens wide open and at the MTF tab's f/8 comparison, at the design plane and at LensVisualizer's best axial focus, on the reference line and on the photopic lines, a zoom at both ends. It writes the run directories of the lens, mtf-<lensKey> and tabs-<lensKey>, which this page then gathers.",
     runHeavy: "With real engines it is a heavy command: start it only when no other session runs one.",
     runNotConfigured: "This dashboard was started without run control's lists, so it cannot run a lens.",
+    compareLink: "LensVisualizer beside optiland, a tab at a time:",
+  },
+  /**
+   * What the "LV vs optiland" pages say (Stage 8.5): a lens at a time, in one condition chosen by chips, a card for
+   * each of LensVisualizer's tabs with its identical rays and its own analysis beside its counterpart's, and a page of
+   * each card's charts.
+   */
+  compare: {
+    title: (key: string): string => `LV vs optiland: ${key}`,
+    tabTitle: (key: string, tab: string): string => `LV vs optiland: ${key}, ${tab}`,
+    lead: "Each card is a tab of LensVisualizer, its heading the verdict of its identical rays (gated) and of its own analysis beside optiland's (recorded). Choose the condition with the chips, and open a card's charts for the curves.",
+    howToRead: "How to read this page",
+    cardVerdicts: (gated: string, recorded: string): string => `identical rays ${gated}, beside optiland ${recorded}`,
+    columnRung: "Rung",
+    columnPairs: "Pairs",
+    columnLargest: "Largest",
+    columnGate: "Gate",
+    columnRequest: "Request",
+    columnPair: "Pair",
+    columnVerdict: "Verdict",
+    columnFigures: "Figures",
+    columnFields: "Fields",
+    columnRead: "Read from",
+    pairText: (a: string, b: string): string => `${a} beside ${b}`,
+    gatedLargest: (metric: string, value: string, a: string, b: string): string => `${metric} ${value} (${a} and ${b})`,
+    fromBaselineShort: (stem: string): string => `baseline ${stem}`,
+    lineNote: (rung: string, label: string, reason: string): string =>
+      `${rung}${label === "" ? "" : ` (${label})`}: ${reason}`,
+    notesSummary: "What the comparisons say of the fields they set aside",
+    detailHeading: (rung: string, label: string, a: string, b: string): string =>
+      `${rung}${label === "" ? "" : ` (${label})`}: ${a} beside ${b}`,
+    intro:
+      "This page sets LensVisualizer's own analyses of this lens beside optiland's, a tab at a time, in one condition: a case of the lens, as the chips below choose it. Each card has two kinds of line. The identical rays: each engine traces the rays the tab launches, and the policy holds every pair of engines to a gate. The tab's own analysis beside its counterpart's (optiland's, or for vignetting the comparator's flux on LensVisualizer's lattices): two methods set side by side with no tolerance, whose figures stand beside the attention bands of the policy at hand.",
+    recordedMeaning:
+      "A recorded pair fails nothing: it is RECORDED where each figure with an attention band is inside it, and ATTENTION where one is beyond it or the comparison set a field aside as data. The comparison sorts every field or line before any difference is taken: only one of two methods enters a figure, and the counts say how many it placed in each class (fields.compared of two methods; fields.data, fields.flagged or fields.unconverged, and fields.unavailable set aside as data, numerical and unsupported).",
+    chipsIntro:
+      "A condition is a case of the lens: its zoom and focus positions, its stop semi-diameter, its image plane (the MTF recipe's kind of plane where a run has one, else the plane's position) and its lines, as the case files state them. A chip keeps the facets before it, and a facet after it gives way to its first value where the case chosen so far has another.",
+    chipsMuted:
+      "A chip in grey is of cases with no comparison of LensVisualizer beside a counterpart (a run directory of an older run, say): it is listed, and chosen only where it is asked.",
+    facetPosition: "Position",
+    facetStop: "Stop",
+    facetPlane: "Image plane",
+    facetLines: "Lines",
+    chipPosition: (zoom: string, focus: string): string => `zoom ${zoom}, focus ${focus}`,
+    chipNoPosition: "no zoom or focus position",
+    chipStop: (value: string): string => `stop semi-diameter ${value} mm`,
+    chipDesign: "design plane",
+    chipBestAxial: "LensVisualizer's best axial focus",
+    chipPlaneKind: (kind: string): string => `plane ${kind}`,
+    chipPlaneAt: (z: string): string => `image plane at z ${z} mm`,
+    chipOneLine: (wavelength: string): string => `${wavelength} nm`,
+    chipLines: (count: string, first: string, last: string): string => `${count} lines, ${first} to ${last} nm`,
+    runsIntro: "The runs of this condition, each of the case shown:",
+    severalCases: (count: string): string =>
+      `The chips leave ${count} cases of the lens: every card gathers the comparisons of all of them.`,
+    noCases: "No run of the run directories has a case of this lens that can be read.",
+    unknownParameters: (names: string): string =>
+      `The address has parameters that a compare page does not take, and they are left out: ${names}.`,
+    conditionGaveWay: (facet: string, asked: string): string =>
+      `The ${facet} asked, ${asked}, is of no case in the condition chosen so far, so the first one is shown.`,
+    gatedHeading: "Identical rays",
+    recordedHeading: "Beside its counterpart",
+    gatedLine: (rung: string, pairs: string): string => `${rung}: ${pairs}.`,
+    gatedHeadline: (metric: string, value: string, a: string, b: string, gate: string): string =>
+      `The largest ${metric} is ${value} (${a} and ${b}), against a gate of ${gate}.`,
+    gatedHeadlineNoGate: (metric: string, value: string, a: string, b: string): string =>
+      `The largest ${metric} is ${value} (${a} and ${b}); the policy at hand gives it no gate.`,
+    gatedPair: (a: string, b: string, verdict: string): string => `${a} and ${b} ${verdict}`,
+    gatedFromRuns: (suites: string): string => `Read from the comparisons of the run directories ${suites}.`,
+    gatedFromBaselines: (stems: string): string =>
+      `Read from the committed records of this case in the baselines ${stems}: their engines may have moved since, as the badges of the baseline pages say.`,
+    gatedNone: (rung: string): string => `${rung}: no comparison of this case in the run directories or the baselines.`,
+    recordedHead: (rung: string, label: string, a: string, b: string, verdict: string): string =>
+      `${rung}${label === "" ? "" : ` (${label})`}: ${a} beside ${b}, ${verdict}.`,
+    metricBand: (name: string, value: string, band: string): string => `${name} ${value}, attention band ±${band}`,
+    metricNoBand: (name: string, value: string): string => `${name} ${value}, no attention band`,
+    metricLimit: (name: string, value: string, limit: string): string =>
+      `${name} ${value}, the sorting's limit ${limit}`,
+    countText: (name: string, value: string): string => `${name} ${value}`,
+    recordedReason: (reason: string): string => `The comparison says: ${reason}`,
+    fromBaseline: (stem: string, run: string): string =>
+      `Read from the committed record of the run ${run} in the baseline ${stem}: a record keeps no values to draw, so run the lens to see its charts.`,
+    alsoIn: (suites: string): string =>
+      `The same request of this case is compared in ${suites} too; the lens's own run directory, else the first by name, is shown.`,
+    notCompared: (rung: string): string =>
+      `${rung}: no comparison of LensVisualizer beside its counterpart in this condition, in the run directories or the baselines.`,
+    runTabsHint:
+      "The tabs answer at the reference line and the design plane; Run this lens with the profile tabs, or both, writes their comparisons.",
+    flux: "The counterpart of the vignetting tab is flux, the comparator's estimate on LensVisualizer's lattices: optiland has no vignetting analysis.",
+    detailsLink: "Charts of this card",
+    cardsLink: "Every card of this condition",
+    sectionLink: "The section page of this request:",
+    detailsIntro:
+      "Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine's value minus the second's. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator's own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value's metric, and a chart says where it gives none.",
+    mtfIntro:
+      "An MTF comparison is drawn as its section page draws it (Stage 8.2), with the series and the pair of LensVisualizer and its counterpart only.",
+    noDetails: "This comparison has no values to draw.",
+    noSectionCharts:
+      "The charts of this request cannot be drawn: its run directory has no section of it that can be read.",
+    pairTitle: (subject: string, values: string, axis: string): string => `${subject}: ${values} against ${axis}`,
+    fanTitle: (subject: string, axis: string, field: string): string => `${subject}: ${axis} fan at field ${field}`,
+    fanIntro:
+      "One chart for each field: each engine's transverse error at each sample of its fan, as its store entry holds it, and below it the first engine's error minus the second's at each sample both landed.",
+    valuesIntro:
+      "One row for each line and value: each engine's value as the comparison recorded it, and the first minus the second for a line of two methods.",
+    strip: "Difference",
+    legendMinus: (a: string, b: string): string => `${a} minus ${b}`,
+    legendGroup: (engine: string, group: string): string => `${engine}, ${group}`,
+    legendNoBand: "no attention band",
+    noBandSaid: (metric: string): string => `The policy at hand gives ${metric} no attention band.`,
+    noMetricSaid: "No metric of the policy is of these values: no attention band applies.",
+    setAside: (at: string, kind: string, reason: string): string =>
+      `${at}: set aside as ${kind} (${reason}), so no difference is drawn.`,
+    setAsideAt: (element: string): string => `element ${element}`,
+    fanSorting: (kind: string, reason: string): string =>
+      `The comparison sets this field aside as ${kind} (${reason}), so no difference is drawn.`,
+    fanMissing: (said: string): string => `${said}`,
+    tipValue: (series: string, x: string, xSource: string, y: string, source: string): string =>
+      `${series} at ${x} (${xSource}): ${y} (${source})`,
+    tipDifference: (x: string, xSource: string, value: string, derivation: string, of: string): string =>
+      `at ${x} (${xSource}): ${value}, derived: ${derivation} of ${of}`,
+    tipBand: (value: string, source: string): string => `attention ±${value}: ${source}`,
+    derivedPair: (a: string, b: string, key: string): string => `${a}'s ${key} minus ${b}'s`,
+    groupLine: (wavelength: string): string => `${wavelength} nm`,
+    groupNoLine: "no line",
+    labelFan: (axis: string): string => `fan ${axis}`,
+    labelRings: "rings",
+    labelMtf: (method: string, fields: string): string => `${method}, fields ${fields}`,
+    gatedUnmeasured: (metric: string): string => `No pair of these requests measured ${metric}.`,
+    noJob: (engine: string): string => `${engine} has no job of this request in the manifest.`,
+    noFan: (engine: string): string => `The answer of ${engine} has no fan at this field.`,
+    columnLine: "Line",
+    columnValue: "Value",
+    columnDifference: "Difference",
+    columnBand: "Attention band",
+    indexHeading: "LV vs optiland",
+    indexIntro:
+      "Each lens with a recorded comparison of LensVisualizer beside optiland (or flux) in a run directory of its runs: for each tab, the gravest verdict of its identical rays and of its comparisons beside the counterpart, in the lens's first condition (the first position, the largest stop, the design plane, the fewest lines). Open a lens to choose another condition and see the charts.",
+    indexNone:
+      "No run directory compares LensVisualizer beside optiland for a lens: Run this lens on the control page writes such comparisons.",
+    indexCell: (gated: string, recorded: string): string => `${gated} / ${recorded}`,
+    none: "none",
   },
 } as const;
+
+/** What the charts of a compare page call a recorded value or an axis, with its unit; the name itself otherwise. */
+export const COMPARE_AXES: Readonly<Record<string, string>> = Object.freeze({
+  field: "Field (fraction of the half field)",
+  fieldAngleDeg: "Field angle (degrees)",
+  wavelengthNm: "Wavelength (nm)",
+  profile: "Zone (fraction of the pupil)",
+  rmsRadiusMm: "RMS radius (mm)",
+  centroidXMm: "Centroid x (mm)",
+  centroidYMm: "Centroid y (mm)",
+  profileMm: "Longitudinal aberration (mm)",
+  marginalInterceptZ: "Marginal intercept z (mm)",
+  percent: "Distortion (percent)",
+  realHeightMm: "Real height (mm)",
+  entrancePupilZ: "Entrance pupil z (mm)",
+  exitPupilZ: "Exit pupil z (mm)",
+  chiefLandingMm: "Chief-ray landing (mm)",
+  tangentialShiftMm: "Tangential focus shift (mm)",
+  sagittalShiftMm: "Sagittal focus shift (mm)",
+  geometricTransmission: "Geometric transmission",
+  relativeIllumination: "Relative illumination",
+  pupil: "Pupil coordinate",
+  errorMm: "Transverse error (mm)",
+});

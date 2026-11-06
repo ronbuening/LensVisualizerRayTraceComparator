@@ -8,7 +8,8 @@ import { renderDeviation } from "../../src/dashboard/charts/deviation.ts";
 import { renderHeatMap } from "../../src/dashboard/charts/heatMap.ts";
 import { renderLensOther, renderLensOverlay } from "../../src/dashboard/charts/lens.ts";
 import { renderMtfDifference, renderMtfOverlay } from "../../src/dashboard/charts/mtf.ts";
-import { renderLens } from "../../src/dashboard/html.ts";
+import { renderFanChart, renderPairChart } from "../../src/dashboard/charts/compare.ts";
+import { renderCompare, renderLens } from "../../src/dashboard/html.ts";
 import { DASHBOARD_TEXT } from "../../src/report/wording.ts";
 import { createViews } from "../../src/dashboard/server.ts";
 import type { DashboardViews } from "../../src/dashboard/server.ts";
@@ -16,6 +17,7 @@ import { createSources } from "../../src/dashboard/sources.ts";
 import type { SectionView } from "../../src/dashboard/views.ts";
 import { GOLDEN_DIR } from "../report/support.ts";
 import { LENS_KEY, lensGoldenQuery } from "./lensFixture.ts";
+import { COMPARE_KEY, compareGoldenQueries } from "./compareFixture.ts";
 import { RAYS_SUITE } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
 
@@ -112,12 +114,50 @@ export function chartGoldens(fixture: DashboardFixture): Map<string, string> {
       renderDeviation(deviation, subject(onAxis), standalone),
     );
   }
+
+  // The compare pages of R7a to R12b's stand-ins (Stage 8.5): a chart of each kind of value against a field angle, one
+  // grouped by line with an element set aside, and a ray fan of two methods, each with its strip of differences.
+  const compare = viewsOf(fixture.compareRootDir, fixture.compareRunsDir, fixture.comparePolicyFile);
+  const queries = compareGoldenQueries(compare);
+  const detail = (query: string, tab: string, rung: string, label: string | null, kind: string, nth = 0) => {
+    const line = compare
+      .compare(COMPARE_KEY, query, tab)
+      ?.cards[0]?.recorded.find((each) => each.rung === rung && each.label === label);
+    const chart = line?.detail?.charts.filter((each) => each.kind === kind)[nth];
+    if (line === undefined || chart === undefined) throw new Error(`the compare fixture has no ${rung} ${kind} chart`);
+    return { chart, subject: `${COMPARE_KEY}, ${line.source.kind === "run" ? line.source.run : ""}, ${rung}` };
+  };
+  const distortion = detail(queries.shared, "chief", "r9b", "distortion", "points");
+  if (distortion.chart.kind === "points") {
+    goldens.set("compare-r9b.distortion.svg", renderPairChart(distortion.chart, distortion.subject, standalone));
+  }
+  const tangential = detail(queries.shared, "curvature", "r10b", null, "points");
+  if (tangential.chart.kind === "points") {
+    goldens.set("compare-r10b.tangential.svg", renderPairChart(tangential.chart, tangential.subject, standalone));
+  }
+  const fan = detail(queries.fan, "coma-bokeh", "r7b", "fan tangential", "fan");
+  if (fan.chart.kind === "fan") goldens.set("compare-r7b.fan.svg", renderFanChart(fan.chart, fan.subject, standalone));
   return goldens;
 }
 
-/** Every golden page of the fixture, by file name (Stage 8.4): the stand-in zoom's lens page with the golden choice. */
+/**
+ * Every golden page of the fixture, by file name: the stand-in zoom's lens page with the golden choice (Stage 8.4), and
+ * the compare page of R7a to R12b's stand-ins in their shared condition, with the chief-ray tab's details (Stage 8.5).
+ */
 export function pageGoldens(fixture: DashboardFixture): Map<string, string> {
   const mtf = viewsOf(fixture.mtfRootDir, fixture.mtfRunsDir, fixture.mtfPolicyFile);
   const view = mtf.lens(LENS_KEY, lensGoldenQuery(mtf));
-  return new Map([[`lens-${LENS_KEY}.html`, renderLens(view, { token: GOLDEN_TOKEN, configured: true })]]);
+  const compare = viewsOf(fixture.compareRootDir, fixture.compareRunsDir, fixture.comparePolicyFile);
+  const { shared } = compareGoldenQueries(compare);
+  const form = { token: GOLDEN_TOKEN, configured: true };
+  const page = (tab: string | null): string => {
+    const built = compare.compare(COMPARE_KEY, shared, tab);
+    if (built === null) throw new Error(`the compare fixture has no page of ${tab ?? "its cards"}`);
+    return renderCompare(built, form);
+  };
+  return new Map([
+    [`lens-${LENS_KEY}.html`, renderLens(view, form)],
+    [`compare-${COMPARE_KEY}.html`, page(null)],
+    [`compare-${COMPARE_KEY}.chief.html`, page("chief")],
+  ]);
 }

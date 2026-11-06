@@ -58,6 +58,7 @@ import type { ProtocolHandler, ProtocolResponse } from "../../src/contract/proto
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import { FAULT_ROOT, suiteFile } from "../report/support.ts";
 import { lensCycles } from "./lensFixture.ts";
+import { compareCycles } from "./compareFixture.ts";
 
 /** The fixture: a root with baselines, its runs directory, and the R5 stand-ins under a root and runs of their own. */
 export interface DashboardFixture {
@@ -75,6 +76,13 @@ export interface DashboardFixture {
   readonly raysRootDir: string;
   readonly raysRunsDir: string;
   readonly raysPolicyFile: string;
+  /**
+   * The stand-ins of R7a to R12b as the run directories of one lens (Stage 8.5), judged by the comparator's own
+   * policy: their own root (R7a's baseline), runs directory and policy file.
+   */
+  readonly compareRootDir: string;
+  readonly compareRunsDir: string;
+  readonly comparePolicyFile: string;
   /** The suites run into `runsDir`. */
   readonly suites: readonly string[];
   /** A run directory whose name needs escaping, and one whose comparison file is not JSON. */
@@ -338,10 +346,21 @@ export async function buildFixture(): Promise<DashboardFixture> {
   const rays = await raysCycle(raysRunsDir, raysPolicy);
   writeFileSync(join(raysRunsDir, RAYS_SUITE, COMPARISONS_FILE), comparisonFileText(rays));
 
+  // The stand-ins of R7a to R12b, one lens of several conditions (Stage 8.5).
+  const compareRootDir = join(directory, "compare-root");
+  const compareRunsDir = join(directory, "compare-runs");
+  const comparePolicyFile = join(directory, "compare-policy.json");
+  mkdirSync(compareRootDir, { recursive: true });
+  writeFileSync(comparePolicyFile, `${canonicalJson(loadPolicy())}\n`);
+  await compareCycles(compareRunsDir, compareRootDir);
+
   return {
     directory,
     rootDir,
     runsDir,
+    compareRootDir,
+    compareRunsDir,
+    comparePolicyFile,
     mtfRootDir,
     mtfRunsDir,
     mtfPolicyFile,
