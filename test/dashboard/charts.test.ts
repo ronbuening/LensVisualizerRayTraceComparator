@@ -128,7 +128,7 @@ test("the largest bar of every R2 pair is the pair's hits.maxDistance in compari
   assert.doesNotMatch(twin, /<rect class="bar"/);
   assert.match(
     twin,
-    /<line class="gate" [^>]*><title>tolerance 1\.00e-8 mm: policy\/rays-policy\.json \/rungs\/r2\/metrics\/hits\.maxDistance\/tolerance<\/title>/,
+    /<line class="gate" [^>]*><title>limit 1\.00e-8 mm: policy\/rays-policy\.json \/rungs\/r2\/metrics\/hits\.maxDistance\/tolerance<\/title>/,
   );
 });
 
@@ -152,7 +152,9 @@ test("a view says when the largest bar is not the recorded hits.maxDistance", (t
   const problems = view?.charts.deviations.flatMap((deviation) => deviation.problems) ?? [];
   assert.equal(problems.length, 3);
   assert.ok(
-    problems.every((problem) => problem.endsWith("is not the hits.maxDistance the comparison records, 5.00e-1 mm.")),
+    problems.every((problem) =>
+      problem.endsWith("is not the largest hit distance the comparison records, 5.00e-1 mm."),
+    ),
   );
   assert.ok(visibleText(renderSection(view!)).includes(problems[0]));
 });
@@ -229,7 +231,7 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
   assert.equal(view.charts.problems.length, 2);
   assert.match(
     view.charts.problems[0],
-    /^The store entry for lv cannot be read, so that answer is not drawn: store entry [0-9a-f]{64}: it is malformed JSON/,
+    /^The result cache entry for lv cannot be read, so that answer is not drawn: store entry [0-9a-f]{64}: it is malformed JSON/,
   );
   assert.equal(view.charts.problems[1], text.storeMissing("wave", missing.storeKey));
   const page = visibleText(renderSection(view));
@@ -242,9 +244,13 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
     assert.deepEqual([lv?.state, lv?.noCurves], ["no-answer", "unreadable"]);
     // The legend says a word; the sentence (with the key and the store's words) is the entry's tooltip.
     const svg = renderMtfOverlay(overlay, "edge, r5");
-    assert.match(svg, />wave \(no curves: missing\)<\/text>/);
-    assert.match(svg, />lv \(no curves: unreadable\)<\/text>/);
-    assert.ok(svg.includes(`<title>wave: ${text.storeMissing("wave", missing.storeKey)}</title>`));
+    assert.match(svg, />Wave MTF of LensVisualizer&#39;s rays \(no curves: missing\)<\/text>/);
+    assert.match(svg, />LensVisualizer \(no curves: unreadable\)<\/text>/);
+    assert.ok(
+      svg.includes(
+        `<title>Wave MTF of LensVisualizer&#39;s rays: ${text.storeMissing("wave", missing.storeKey)}</title>`,
+      ),
+    );
     assert.doesNotMatch(svg, /<text[^>]*>[^<]*store entry/, "no store words in a legend label");
   }
   // The store directory is never listed: a stray entry there is never read.
@@ -351,7 +357,10 @@ test("a set-aside caption names the pair whose sorting it is, and an UNSUPPORTED
     assert.equal(pair.setAside === null, !judged, `${pair.a} ${pair.b}: only the pair the table sorts`);
   }
   const caption = differenceCaption(chart);
-  assert.match(caption, /sets this field aside for lv and optiland as data \(chief-landing-apart\)/);
+  assert.match(
+    caption,
+    /sets this field aside for LensVisualizer and optiland \(the inputs differ: the chief rays land further apart than the limit: two image points; no difference is shown\)/,
+  );
   assert.doesNotMatch(caption, /wave/);
   const polychromatic = views.section(
     "r5-stand-ins",
@@ -361,8 +370,14 @@ test("a set-aside caption names the pair whose sorting it is, and an UNSUPPORTED
   assert.ok(left.length > 0);
   for (const pair of left) assert.deepEqual([pair.drawn, pair.points], [false, []]);
   const said = differenceCaption(polychromatic!.charts.differences[0]);
-  assert.match(said, /The pair of lv and optiland is UNSUPPORTED in the comparison, so no difference of it is drawn\./);
-  assert.doesNotMatch(renderMtfDifference(polychromatic!.charts.differences[0], "p"), />lv minus optiland<\/text>/);
+  assert.match(
+    said,
+    /The comparison's verdict on LensVisualizer and optiland is "Not computed", so no difference of the pair is drawn\./,
+  );
+  assert.doesNotMatch(
+    renderMtfDifference(polychromatic!.charts.differences[0], "p"),
+    />LensVisualizer minus optiland<\/text>/,
+  );
 });
 
 /** Synthetic `rays.trace` data of two rays through two surfaces, every ray ok. */
@@ -481,10 +496,16 @@ test("every text of a chart is escaped: titles, legends, labels and the tooltips
     odd,
     "run",
   );
-  assert.ok(heat.includes(`<title>${escaped}: ladder heat map</title>`), "the chart's title");
+  assert.ok(heat.includes(`<title>${escaped}: verdicts by run and check</title>`), "the chart's title");
   assert.ok(heat.includes(`<g><title>${escaped}</title><text`), "the row's tooltip");
   assert.ok(heat.includes(`>${escaped}</text>`), "the row's label");
-  assert.ok(heat.includes(`<title>${escaped}, r2: PASS; 1 PASS</title>`), "the cell's tooltip");
+  assert.ok(
+    heat.includes(`<title>${escaped}, Ray trace (r2): Pass: within limit. By verdict: Pass: within limit: 1</title>`),
+    "the cell's tooltip",
+  );
+  assert.ok(heat.includes(">Pass</text>"), "the cell's short label");
+  assert.ok(heat.includes(">Pass: within limit (PASS)</text>"), "the legend's label with the stored value");
+  assert.ok(heat.includes("<title>Ray trace (r2)</title>"), "the column's check by title and id");
   const curve = (values: number[]) => ({ values, source: { document: "store:x" as const, pointer: "/v" } });
   const overlay = renderMtfOverlay(
     {

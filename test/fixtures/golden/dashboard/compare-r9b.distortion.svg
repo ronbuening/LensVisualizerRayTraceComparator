@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="462" viewBox="0 0 640 462" role="img">
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="480" viewBox="0 0 640 480" role="img">
 <title>stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</title>
-<desc>Each recorded comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or line the comparison sorts as of two methods (repeated by the comparator&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the attention band the policy at hand gives the value&#39;s metric, and a chart says where it gives none. The policy at hand gives distortionPercent.maxAbs no attention band. 20: set aside as unsupported (no-curve), so no difference is drawn.</desc>
+<desc>Each side-by-side comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or wavelength the comparison sorts as of two methods (repeated by this tool&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the review band the limits file at hand gives the value&#39;s figure, and a chart says where it gives none. The limits file at hand gives Largest difference of distortion no review band. 20: set aside (not computed by one engine: an engine has no curve of the field), so no difference is drawn.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -104,7 +104,7 @@
 .lvc .v-BLOCKED{fill:#3d3d46}
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
-<rect class="bg" x="0" y="0" width="640" height="462"/>
+<rect class="bg" x="0" y="0" width="640" height="480"/>
 <text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</text>
 <line class="grid" x1="76" y1="236" x2="624" y2="236"/>
 <text x="70" y="240" class="muted" text-anchor="end">-2.5</text>
@@ -157,17 +157,17 @@
 <text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
 <line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
 <polyline class="line s0" points="213,36 350,86 624,236"/>
-<circle class="dot s0" cx="213" cy="36" r="4"><title>lv at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/0)</title></circle>
-<circle class="dot s0" cx="350" cy="86" r="4"><title>lv at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -6.25e-1 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/1)</title></circle>
-<circle class="dot s0" cx="624" cy="236" r="4"><title>lv at 20 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): -2.50e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/2)</title></circle>
+<circle class="dot s0" cx="213" cy="36" r="4"><title>LensVisualizer at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/0)</title></circle>
+<circle class="dot s0" cx="350" cy="86" r="4"><title>LensVisualizer at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -6.25e-1 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/1)</title></circle>
+<circle class="dot s0" cx="624" cy="236" r="4"><title>LensVisualizer at 20 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/2): -2.50e0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/2)</title></circle>
 <polyline class="line s1 dash" points="213,36 350,85.61"/>
 <rect class="dot s1" x="209" y="32" width="8" height="8"><title>optiland at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/0): 0 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/0)</title></rect>
 <rect class="dot s1" x="346" y="81.61" width="8" height="8"><title>optiland at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/fieldAngleDeg/1): -6.20e-1 (r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/1)</title></rect>
 <polyline class="line s2" points="213,335 350,361.86"/>
 <polygon class="dot s2" points="213,330 218,339 208,339"><title>at 5 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0, derived: lv&#39;s percent minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/0; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/0</title></polygon>
 <polygon class="dot s2" points="350,356.86 355,365.86 345,365.86"><title>at 10 (r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/1): -4.88e-3, derived: lv&#39;s percent minus optiland&#39;s of r9b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/percent/1; r9b-stand-ins/comparisons.json /comparisons/0/participants/1/recorded/percent/1</title></polygon>
-<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">lv</text></g>
-<g><line class="line s1 dash" x1="132.4" y1="445" x2="156.4" y2="445"/><rect class="dot s1" x="140.4" y="441" width="8" height="8"></rect><text x="162.4" y="449">optiland</text></g>
-<g><line class="line s2" x1="226" y1="445" x2="250" y2="445"/><polygon class="dot s2" points="238,440 243,449 233,449"></polygon><text x="256" y="449">lv minus optiland</text></g>
-<g><line class="none" x1="381.4" y1="445" x2="393.4" y2="445"/><text x="405.4" y="449">no attention band</text></g>
+<g><line class="line s0" x1="76" y1="445" x2="100" y2="445"/><circle class="dot s0" cx="88" cy="445" r="4"></circle><text x="106" y="449">LensVisualizer</text></g>
+<g><line class="line s1 dash" x1="206.8" y1="445" x2="230.8" y2="445"/><rect class="dot s1" x="214.8" y="441" width="8" height="8"></rect><text x="236.8" y="449">optiland</text></g>
+<g><line class="line s2" x1="300.4" y1="445" x2="324.4" y2="445"/><polygon class="dot s2" points="312.4,440 317.4,449 307.4,449"></polygon><text x="330.4" y="449">LensVisualizer minus optiland</text></g>
+<g><line class="none" x1="82" y1="463" x2="94" y2="463"/><text x="106" y="467">no review band</text></g>
 </svg>

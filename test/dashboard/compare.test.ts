@@ -5,10 +5,12 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { COMPARE_TABS, GATED_HEADLINES } from "../../src/dashboard/compare.ts";
+import { escapeHtml, renderCompare } from "../../src/dashboard/html.ts";
 import { createViews } from "../../src/dashboard/server.ts";
 import type { DashboardViews } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { MATRIX_ROWS } from "../../src/report/wording.ts";
+import { engineName } from "../../src/vocabulary/index.ts";
 import { BASELINE_ONLY, COMPARE_KEY, compareGoldenQueries } from "./compareFixture.ts";
 import { buildFixture } from "./support.ts";
 import type { DashboardFixture } from "./support.ts";
@@ -72,7 +74,7 @@ test("a condition is a case: chips of each facet, the first value of a compared 
   const odd = views.compare(COMPARE_KEY, "stop=99&colour=red", null);
   assert.deepEqual(odd?.notes, [
     "The address has parameters that a compare page does not take, and they are left out: colour.",
-    "The stop asked, 99, is of no case in the condition chosen so far, so the first one is shown.",
+    "The stop asked, 99, is of no lens state in the condition chosen so far, so the first one is shown.",
   ]);
 });
 
@@ -140,4 +142,27 @@ test("a tab's page has its card alone, with the details of each recorded line; a
   const coma = views.compare(COMPARE_KEY, fan, "coma-bokeh")?.cards[0].recorded;
   assert.ok(coma?.some((line) => line.detail?.charts.some((chart) => chart.kind === "fan")));
   assert.equal(views.compare(COMPARE_KEY, shared, "no-such-tab"), null);
+});
+
+test("a card's badge names the counterparts of its own checks: the vignetting card's is flux, never optiland", () => {
+  const counterparts = (tab: string) => COMPARE_TABS.find((each) => each.tab === tab)?.counterparts;
+  assert.deepEqual(counterparts("vignetting"), ["flux"]);
+  assert.deepEqual(counterparts("mtf"), ["optiland", "optiland-wave"]);
+  assert.deepEqual(counterparts("chief"), ["optiland"]);
+  assert.deepEqual(counterparts("foundation"), []);
+  const { shared } = compareGoldenQueries(views);
+  const view = views.compare(COMPARE_KEY, shared, null);
+  assert.ok(view !== null);
+  const html = renderCompare(view, null);
+  const heading = (tab: string): string => {
+    const title = escapeHtml(COMPARE_TABS.find((each) => each.tab === tab)?.title ?? tab);
+    return html.split("\n").find((line) => line.startsWith(`<h2>${title} <span class="badges">`)) ?? "";
+  };
+  const flux = `beside <span title="flux">${escapeHtml(engineName("flux"))}</span>`;
+  assert.ok(heading("vignetting").includes(flux), heading("vignetting"));
+  assert.ok(!heading("vignetting").includes("optiland"), heading("vignetting"));
+  assert.ok(heading("chief").includes("beside <code>optiland</code>"), heading("chief"));
+  assert.ok(heading("mtf").includes(escapeHtml(engineName("optiland-wave"))), heading("mtf"));
+  // A card with no counterpart names none.
+  assert.ok(heading("foundation") !== "" && !heading("foundation").includes("beside"), heading("foundation"));
 });

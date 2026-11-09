@@ -25,6 +25,7 @@ import type { GroupConsensus } from "../report/consensus.ts";
 import { buildReport, reportInputProblems, sectionSetGroups } from "../report/model.ts";
 import type { ReportModel, ReportSection, SupportRow } from "../report/model.ts";
 import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
+import { DASHBOARD_TEXT } from "../report/wording.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import { NO_CHARTS, baselineHeatMap, buildSectionCharts, runHeatMap } from "./chartViews.ts";
@@ -37,6 +38,9 @@ import type { CompareSummary } from "./compare.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
+
+/** How the numbers a view computes are derived, in the words the pages show on hover. */
+const DERIVATIONS = DASHBOARD_TEXT.derivations;
 
 // ── Shared pieces ────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -151,7 +155,7 @@ export function runInputProblems(
   policy: Loaded<PolicyAtHand>,
 ): string[] {
   if (manifest.state !== "ok" || comparisons.state !== "ok" || policy.state !== "ok") return [];
-  return reportInputProblems(manifest.value, comparisons.value, policy.value.policy);
+  return reportInputProblems(manifest.value, comparisons.value, policy.value.policy).map(DASHBOARD_TEXT.inputProblem);
 }
 
 // ── The index ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -749,17 +753,14 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
       ? null
       : policyLanding !== null && Object.is(policyLanding.value, table.bands.chiefLandingMm)
         ? policyLanding
-        : derived(
-            table.bands.chiefLandingMm,
-            "the largest chief-landing limit the two judged columns record at the first field",
-            [at(a, "chiefLandingLimitMm", 0), at(b, "chiefLandingLimitMm", 0)],
-          );
+        : derived(table.bands.chiefLandingMm, DERIVATIONS.largestChiefLandingLimit, [
+            at(a, "chiefLandingLimitMm", 0),
+            at(b, "chiefLandingLimitMm", 0),
+          ]);
 
   const fields = table.fields.map((field, element): MtfFieldView => {
     const largest = (name: string, value: number | null): Derived | null =>
-      value === null
-        ? null
-        : derived(value, `the larger ${name} of the two judged columns`, [at(a, name, element), at(b, name, element)]);
+      value === null ? null : derived(value, DERIVATIONS.larger(name), [at(a, name, element), at(b, name, element)]);
     return {
       element,
       field: fieldAt(element),
@@ -772,7 +773,7 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
       chiefLandingMm:
         field.chiefLandingMm === null
           ? null
-          : derived(field.chiefLandingMm, "the distance between the chief-ray landings of the two judged columns", [
+          : derived(field.chiefLandingMm, DERIVATIONS.chiefLandingDistance, [
               at(a, "imageHeightMm", element),
               at(b, "imageHeightMm", element),
             ]),
@@ -804,10 +805,7 @@ function mtfOf(context: SectionContext, setIndex: number, rung: string, table: M
           difference:
             row.difference === null
               ? null
-              : derived(row.difference, "the first judged column minus the second", [
-                  at(a, name, element),
-                  at(b, name, element),
-                ]),
+              : derived(row.difference, DERIVATIONS.judgedDifference, [at(a, name, element), at(b, name, element)]),
           band: row.band === null ? null : row.field === 0 ? onAxis : offAxis,
           status: row.status,
           class: row.class,

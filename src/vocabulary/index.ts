@@ -9,6 +9,7 @@ export * from "./glossary.ts";
 export * from "./jargon.ts";
 export * from "./metrics.ts";
 export * from "./outcomes.ts";
+export * from "./quantities.ts";
 export * from "./suites.ts";
 export * from "./terms.ts";
 export * from "./verdicts.ts";

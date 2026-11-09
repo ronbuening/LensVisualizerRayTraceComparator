@@ -17,7 +17,7 @@ test("every sentence of DASHBOARD_TEXT passes the wording lint", () => {
   const all = sentences(DASHBOARD_TEXT);
   assert.ok(all.length > 30, `${all.length} sentences`);
   for (const sentence of all) assert.deepEqual(wordingProblems(sentence), [], sentence);
-  assert.equal(DASHBOARD_TEXT.failing(3), "Pairs that are FAIL or ERROR: 3.");
+  assert.equal(DASHBOARD_TEXT.failing(3), "Pairs that fail or end in an error: 3.");
   // The lint does reject a claim a dashboard must not make.
   assert.notDeepEqual(wordingProblems("The consensus is correct."), []);
 });

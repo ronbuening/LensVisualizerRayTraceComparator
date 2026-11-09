@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="360" height="140" viewBox="0 0 360 140" role="img">
-<title>rays: ladder heat map</title>
-<desc>One row for each run and one column for each rung: a cell holds the gravest verdict of the pairs of its comparisons, and its pairs by verdict on hover.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="360" height="172" viewBox="0 0 360 172" role="img">
+<title>rays: verdicts by run and check</title>
+<desc>One row for each run and one column for each check: a cell holds the worst verdict of the pairs of its comparisons, as the files store it, and its pairs by verdict on hover.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -104,16 +104,16 @@
 .lvc .v-BLOCKED{fill:#3d3d46}
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
-<rect class="bg" x="0" y="0" width="360" height="140"/>
-<text x="12" y="20" class="head">rays: ladder heat map</text>
-<text x="143.2" y="44" class="muted" text-anchor="middle">r0</text>
-<text x="239.2" y="44" class="muted" text-anchor="middle">r2</text>
-<g><title>double-gauss</title><text x="87.2" y="68" text-anchor="end">double-gauss</text></g>
-<g><title>double-gauss, r0: FAIL; 2 PASS, 3 FAIL</title><rect class="cell v-FAIL" x="95.2" y="52" width="96" height="24"/><text x="143.2" y="68" class="vt t-FAIL">FAIL</text></g>
-<g><title>double-gauss, r2: FAIL; 4 PASS, 6 FAIL</title><rect class="cell v-FAIL" x="191.2" y="52" width="96" height="24"/><text x="239.2" y="68" class="vt t-FAIL">FAIL</text></g>
-<g><title>no-case</title><text x="87.2" y="92" text-anchor="end">no-case</text></g>
-<g><title>no-case, r0: no cell of this run and rung</title><rect class="cell empty" x="95.2" y="76" width="96" height="24"/><text x="143.2" y="92" class="muted" text-anchor="middle">—</text></g>
-<g><title>no-case, r2: no cell of this run and rung</title><rect class="cell empty" x="191.2" y="76" width="96" height="24"/><text x="239.2" y="92" class="muted" text-anchor="middle">—</text></g>
-<g><rect class="cell v-FAIL" x="12" y="116" width="24" height="14"/><text x="42" y="127">FAIL</text></g>
-<g><rect class="cell empty" x="80.8" y="116" width="24" height="14"/><text x="110.8" y="127">no cell of this run and rung</text></g>
+<rect class="bg" x="0" y="0" width="360" height="172"/>
+<text x="12" y="20" class="head">rays: verdicts by run and check</text>
+<g><title>Built system (r0)</title><text x="143.2" y="44" text-anchor="middle">Built system</text><text x="143.2" y="58" class="muted" text-anchor="middle">r0</text></g>
+<g><title>Ray trace (r2)</title><text x="239.2" y="44" text-anchor="middle">Ray trace</text><text x="239.2" y="58" class="muted" text-anchor="middle">r2</text></g>
+<g><title>double-gauss</title><text x="87.2" y="82" text-anchor="end">double-gauss</text></g>
+<g><title>double-gauss, Built system (r0): Fail: beyond limit. By verdict: Pass: within limit: 2; Fail: beyond limit: 3</title><rect class="cell v-FAIL" x="95.2" y="66" width="96" height="24"/><text x="143.2" y="82" class="vt t-FAIL">Fail</text></g>
+<g><title>double-gauss, Ray trace (r2): Fail: beyond limit. By verdict: Pass: within limit: 4; Fail: beyond limit: 6</title><rect class="cell v-FAIL" x="191.2" y="66" width="96" height="24"/><text x="239.2" y="82" class="vt t-FAIL">Fail</text></g>
+<g><title>no-case</title><text x="87.2" y="106" text-anchor="end">no-case</text></g>
+<g><title>no-case, Built system (r0): no cell of this run and check</title><rect class="cell empty" x="95.2" y="90" width="96" height="24"/><text x="143.2" y="106" class="muted" text-anchor="middle">—</text></g>
+<g><title>no-case, Ray trace (r2): no cell of this run and check</title><rect class="cell empty" x="191.2" y="90" width="96" height="24"/><text x="239.2" y="106" class="muted" text-anchor="middle">—</text></g>
+<g><rect class="cell v-FAIL" x="12" y="130" width="24" height="14"/><text x="42" y="141">Fail: beyond limit (FAIL)</text></g>
+<g><rect class="cell empty" x="12" y="148" width="24" height="14"/><text x="42" y="159">no cell of this run and check</text></g>
 </svg>

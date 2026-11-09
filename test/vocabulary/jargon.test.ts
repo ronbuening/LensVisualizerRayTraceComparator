@@ -3,9 +3,9 @@
 // no longer uses: the lists only shrink, each to empty, as the plain-language stages land.
 //
 // The commands' own output joins the ratchet here (`CLI_OUTPUT`): what they print on a temporary root of fake
-// engines, the Markdown a report or the MTF profile prints aside (Stage 9.5's). Deferred: the dashboard's visible
-// text in Stage 9.4. MATRIX_ROWS' about and notCovered text moves into the vocabulary in Stage 9.5, when the report
-// wording changes.
+// engines, the Markdown a report or the MTF profile prints aside (Stage 9.5's). The dashboard joins it too
+// (`DASHBOARD`): the visible text and the <title> text of every page its wording test renders, by kind of page.
+// MATRIX_ROWS' about and notCovered text moves into the vocabulary in Stage 9.5, when the report wording changes.
 import assert from "node:assert/strict";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -26,9 +26,14 @@ import { createVerifyCommand } from "../../src/cli/commands/verify.ts";
 import { COMMANDS, runCli } from "../../src/cli/main.ts";
 import type { CliCommand } from "../../src/cli/main.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
-import { CONFIG_FILE } from "../../src/core/config.ts";
 import { wordingProblems } from "../../src/report/wording.ts";
-import { caseFixture, tempDir } from "../core/support.ts";
+import { FAKE_ROOT, caseFixture, tempDir } from "../core/support.ts";
+import { controlChoices } from "../../src/cli/commands/serve.ts";
+import { CONFIG_FILE, loadConfig } from "../../src/core/config.ts";
+import { createViews, startDashboard } from "../../src/dashboard/server.ts";
+import { createSources } from "../../src/dashboard/sources.ts";
+import { LENS_KEY, lensGoldenQuery } from "../dashboard/lensFixture.ts";
+import { buildFixture, everyPage, fetchFrom, titleTexts, visibleText } from "../dashboard/support.ts";
 import { JARGON, jargonProblems, jargonTerms, withoutExemptions } from "../../src/vocabulary/jargon.ts";
 import { OUTCOME_TEXT, VERDICT_TEXT } from "../../src/vocabulary/index.ts";
 
@@ -337,4 +342,94 @@ test("what the commands print uses no more of the tool's own words than its allo
     assert.deepEqual(wordingProblems(text), [], key);
   }
   ratchet("output", texts, CLI_OUTPUT);
+});
+
+// ── The dashboard ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The dashboard's pages, by kind of page: every page of a kind read together. What remains is not the dashboard's own
+ * words: a run page ends with the reports' Not covered block (`NOT_COVERED`), a section page shows the reports'
+ * Consensus prose (`CONSENSUS_SECTION`), both rewritten with the reports (Stage 9.5); and a chart's tooltip names the
+ * source of each limit it draws, a JSON pointer into the limits file, whose member is `rungs`. Beside the pages the
+ * wording test reads, a lens page (bare, and with its golden's curves) and a job page of run control are read.
+ */
+const DASHBOARD: Allowlist = {
+  run: ["rung"],
+  section: ["rung"],
+  "compare tab": ["rung"],
+  lens: ["rung"],
+};
+
+/** The kind of a dashboard page by its path: what the allowlist is keyed by. */
+function pageKind(path: string): string {
+  const segments = path.split("?")[0].split("/").slice(1);
+  if (segments[0] === "") return "index";
+  if (segments[0] === "run") return segments.length === 2 ? "run" : segments[2] === "section" ? "section" : "run part";
+  if (segments[0] === "baseline") return segments.length === 2 ? "baseline" : "baseline run";
+  if (segments[0] === "compare") return segments.length === 2 ? "compare" : "compare tab";
+  if (segments[0] === "control" && segments[1] === "job") return "job";
+  return segments[0];
+}
+
+/** Adds a page's visible and <title> text, Identifiers left out, to the text of its kind. */
+function addPage(texts: Map<string, string>, kind: string, html: string): void {
+  const shown = withoutExemptions(html);
+  texts.set(kind, [texts.get(kind) ?? "", visibleText(shown), ...titleTexts(shown)].join("\n\n"));
+}
+
+test("every page of the dashboard uses no more of the tool's own words than its allowlist; Identifiers are exempt", async (t) => {
+  const fixture = await buildFixture();
+  const roots = [
+    { rootDir: fixture.rootDir, runsDir: fixture.runsDir },
+    { rootDir: fixture.mtfRootDir, runsDir: fixture.mtfRunsDir, policyFile: fixture.mtfPolicyFile },
+    { rootDir: fixture.raysRootDir, runsDir: fixture.raysRunsDir, policyFile: fixture.raysPolicyFile },
+    { rootDir: fixture.compareRootDir, runsDir: fixture.compareRunsDir, policyFile: fixture.comparePolicyFile },
+  ];
+  const texts = new Map<string, string>();
+  try {
+    for (const root of roots) {
+      const dashboard = await startDashboard({ ...root, port: 0 });
+      try {
+        const paths = [...(await everyPage(dashboard.port)), "/control"];
+        // The lens page, bare and with the curves of its golden chosen.
+        const views = createViews(createSources(root), () => ({ state: "not-asked" }));
+        if (views.lensIndex().lenses.has(LENS_KEY)) {
+          paths.push(`/lens/${LENS_KEY}`, `/lens/${LENS_KEY}?${lensGoldenQuery(views)}`);
+        }
+        for (const path of paths) {
+          const answer = await fetchFrom(dashboard.port, path);
+          assert.equal(answer.status, 200, path);
+          addPage(texts, pageKind(path), answer.body);
+        }
+      } finally {
+        await dashboard.close();
+      }
+    }
+  } finally {
+    fixture.remove();
+  }
+  // A job page of run control: a collect on the fixture root, its step's output (the command's own words, which the
+  // CLI's surfaces hold) left out.
+  const control = controlChoices(loadConfig({ rootDir: FAKE_ROOT, env: process.env }), [], process.env);
+  const dashboard = await startDashboard({ rootDir: FAKE_ROOT, runsDir: join(tempDir(t), "runs"), port: 0, control });
+  try {
+    const token = /name="token" value="([0-9a-f]{64})"/.exec((await fetchFrom(dashboard.port, "/control")).body)?.[1];
+    const posted = await fetchFrom(dashboard.port, "/control/collect", {
+      method: "POST",
+      body: new URLSearchParams({ token: token ?? "" }).toString(),
+      headers: { "content-type": "application/x-www-form-urlencoded", origin: `http://127.0.0.1:${dashboard.port}` },
+    });
+    assert.equal(posted.status, 303, posted.body);
+    for (let tries = 0; JSON.parse((await fetchFrom(dashboard.port, "/api/control/job/1")).body).running; tries++) {
+      assert.ok(tries < 900, "the collect ended");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const job = await fetchFrom(dashboard.port, "/control/job/1");
+    assert.equal(job.status, 200);
+    addPage(texts, pageKind("/control/job/1"), job.body.replace(/<pre>[\s\S]*?<\/pre>/g, ""));
+  } finally {
+    await dashboard.close();
+  }
+  for (const kind of ["lens", "job"]) assert.ok(texts.has(kind), kind);
+  ratchet("dashboard", texts, DASHBOARD);
 });

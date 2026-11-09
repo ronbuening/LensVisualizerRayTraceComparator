@@ -22,6 +22,7 @@ import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT, MATRIX_ROWS } from "../report/wording.ts";
+import { SORTING_LIMITS } from "../vocabulary/metrics.ts";
 import { answerOf, samePair } from "./chartViews.ts";
 import type { Answer, MtfDifferenceView, MtfOverlayView, SectionCharts, StoreReader } from "./chartViews.ts";
 import { pairDetails } from "./compareCharts.ts";
@@ -60,12 +61,7 @@ export const GATED_HEADLINES: Readonly<Record<string, string>> = Object.freeze({
 });
 
 /** The metrics of a recorded rung that are limits of its sorting (an element beyond one is `data`), not bands. */
-export const SORTING_METRICS: readonly string[] = Object.freeze([
-  "chiefLanding.maxAbs",
-  "landing.maxAbs",
-  "pupilRadius.relative",
-  "rearFocus.maxAbs",
-]);
+export const SORTING_METRICS: readonly string[] = SORTING_LIMITS;
 
 /** Whether a recorded metric counts elements: how many fields or lines the comparison sorted into a class. */
 function isCount(name: string): boolean {
@@ -78,12 +74,20 @@ export interface CompareTab {
   readonly title: string;
   readonly gated: readonly string[];
   readonly recorded: readonly string[];
+  /** The counterparts its recorded rungs set beside LensVisualizer, in the order of `COUNTERPARTS`: what its badge names. */
+  readonly counterparts: readonly string[];
 }
 
 /** Whether a recorded rung sets LensVisualizer beside a counterpart: its own engines name one. */
 function hasCounterpart(rung: string): boolean {
   const engines = RUNGS.find((each) => each.id === rung)?.engines ?? [];
   return engines.includes(LV_ENGINE) && engines.some((engine) => COUNTERPARTS.includes(engine));
+}
+
+/** The counterparts of LensVisualizer that some of `rungs` are asked of, in the order of `COUNTERPARTS`. */
+function counterpartsOf(rungs: readonly string[]): string[] {
+  const engines = new Set(rungs.flatMap((rung) => RUNGS.find((each) => each.id === rung)?.engines ?? []));
+  return COUNTERPARTS.filter((engine) => engines.has(engine));
 }
 
 /** The cards, in the order of the validation matrix's rows, without the row of analyses LensVisualizer has no tab of. */
@@ -93,6 +97,7 @@ export const COMPARE_TABS: readonly CompareTab[] = Object.freeze(
     title: row.title,
     gated: [...row.gated],
     recorded: row.recorded.filter(hasCounterpart),
+    counterparts: counterpartsOf(row.recorded.filter(hasCounterpart)),
   })),
 );
 

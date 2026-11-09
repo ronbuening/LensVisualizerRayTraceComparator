@@ -474,7 +474,7 @@ function deviationOf(
     [a, one],
     [b, two],
   ] as const) {
-    if (answer === undefined) problems.push(TEXT.noAnswer(engine, "not in the manifest"));
+    if (answer === undefined) problems.push(TEXT.noAnswer(engine, TEXT.notInRunRecord));
     else if (answer.missing !== null) problems.push(answer.missing);
   }
   const none = (problem: readonly string[]): DeviationView => {

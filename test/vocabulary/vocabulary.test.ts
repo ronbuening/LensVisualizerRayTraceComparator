@@ -13,7 +13,9 @@ import { loadPolicy } from "../../src/compare/policyFile.ts";
 import type { Baseline } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
 import { RUNGS } from "../../src/core/rungs.ts";
+import { RUNG_CLASSES, RUNG_MODES } from "../../src/contract/policy.ts";
 import { badgeOf } from "../../src/dashboard/staleness.ts";
+import { SUPPORT_STATUSES } from "../../src/dashboard/views.ts";
 import { ENGINE_UNAVAILABLE_CODES } from "../../src/engines/adapter.ts";
 import { BUILTIN_ENGINES } from "../../src/engines/builtin.ts";
 import type { LvBindingErrorCode } from "../../src/engines/lv/errors.ts";
@@ -30,6 +32,13 @@ import * as vocabulary from "../../src/vocabulary/index.ts";
 import {
   BADGE_TEXT,
   CHECKS,
+  CLASS_KIND,
+  LIMIT_KIND_TEXT,
+  METHOD_TEXT,
+  QUANTITY_TEXT,
+  SUPPORT_STATUS_TEXT,
+  quantityLabel,
+  valueLabel,
   CLASS_TEXT,
   CODES,
   DIFFERENCE_CLASSES,
@@ -230,6 +239,26 @@ test("every verdict, outcome, stale reason, badge, class and row status has a la
   assert.equal(badgeLabel([], []), "Up to date");
   assert.equal(classLabel("method"), "the methods differ");
   assert.equal(rowStatusLabel("SET ASIDE"), "Set aside");
+});
+
+test("every quantity, check method, limit kind, class and support status the dashboard shows has a label", () => {
+  // The quantities of the contract, each a file of src/contract/quantities whose name constant is the stored name.
+  const directory = join(ROOT, "src", "contract", "quantities");
+  const names = readdirSync(directory)
+    .filter((file) => file.endsWith(".ts"))
+    .map((file) => /export const [A-Z_]+ = "([a-z]+\.[a-z-]+)";/.exec(readFileSync(join(directory, file), "utf8"))?.[1])
+    .filter((name): name is string => name !== undefined)
+    .sort();
+  assert.deepEqual(Object.keys(QUANTITY_TEXT).sort(), names);
+  assert.equal(quantityLabel("rays.trace"), "Ray trace");
+  assert.equal(quantityLabel("no.such"), "no.such");
+  assert.deepEqual(Object.keys(METHOD_TEXT), [...RUNG_MODES]);
+  assert.deepEqual(Object.keys(CLASS_KIND), [...RUNG_CLASSES]);
+  for (const kind of Object.values(CLASS_KIND)) assert.ok(kind in GLOSSARY_TEXT.kinds, kind);
+  assert.deepEqual(Object.keys(SUPPORT_STATUS_TEXT), [...SUPPORT_STATUSES]);
+  assert.deepEqual(Object.keys(LIMIT_KIND_TEXT), ["tolerance", "attention"]);
+  assert.equal(valueLabel(LIMIT_KIND_TEXT, "attention"), "review band");
+  assert.equal(valueLabel(LIMIT_KIND_TEXT, "other"), "other");
 });
 
 /** Every metric name a committed baseline states. */

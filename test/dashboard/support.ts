@@ -32,6 +32,7 @@ import { REPO_ROOT } from "../../src/core/config.ts";
 import { MANIFEST_FILE } from "../../src/core/manifest.ts";
 import type { RunManifest } from "../../src/core/manifest.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
+import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
 import { COUNT_KEYS, isCurve, isDerived, isFigure } from "../../src/dashboard/figure.ts";
 import type { Curve, Derived, DocumentName, Figure } from "../../src/dashboard/figure.ts";
 import { compareManifest } from "../../src/compare/manifest.ts";
@@ -562,4 +563,44 @@ export function visibleText(html: string): string {
     )
     .filter((text) => text !== "")
     .join("\n\n");
+}
+
+/** Every page path of a dashboard: the index, help and checks pages, and those read from its index, run and baseline pages. */
+export async function everyPage(port: number): Promise<string[]> {
+  const index = JSON.parse((await fetchFrom(port, "/api/index")).body);
+  const paths = ["/", "/help", "/checks"];
+  const viewOf = async (path: string) => JSON.parse((await fetchFrom(port, `/api${path}`)).body);
+  for (const run of index.runs as { name: string }[]) {
+    const path = `/run/${encodeURIComponent(run.name)}`;
+    paths.push(path);
+    const view = await viewOf(path);
+    const sections: { section: number }[] = [...view.sections];
+    for (const { place } of view.runs as { place: number }[]) {
+      paths.push(`${path}/run/${place}`);
+      if (view.split) sections.push(...(await viewOf(`${path}/run/${place}`)).sections);
+    }
+    for (const section of sections) paths.push(`${path}/section/${section.section}`);
+  }
+  for (const baseline of index.baselines as { stem: string }[]) {
+    const path = `/baseline/${encodeURIComponent(baseline.stem)}`;
+    paths.push(path);
+    for (const { place } of (await viewOf(path)).runs as { place: number }[]) paths.push(`${path}/run/${place}`);
+  }
+  // The compare pages of each lens compared (Stage 8.5): every condition its chips reach, and each tab's details.
+  for (const { key } of index.compared as { key: string }[]) {
+    const base = `/compare/${encodeURIComponent(key)}`;
+    const queries = [""];
+    for (let at = 0; at < queries.length; at++) {
+      const view = await viewOf(`${base}${queries[at] === "" ? "" : `?${queries[at]}`}`);
+      for (const facet of view.facets as { options: { query: string }[] }[]) {
+        for (const option of facet.options) if (!queries.includes(option.query)) queries.push(option.query);
+      }
+    }
+    for (const query of queries) {
+      const suffix = query === "" ? "" : `?${query}`;
+      paths.push(`${base}${suffix}`);
+      for (const tab of COMPARE_TABS) paths.push(`${base}/${tab.tab}${suffix}`);
+    }
+  }
+  return paths;
 }

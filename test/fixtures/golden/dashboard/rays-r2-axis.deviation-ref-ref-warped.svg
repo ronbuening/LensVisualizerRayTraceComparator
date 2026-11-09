@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="340" viewBox="0 0 640 340" role="img">
 <title>double-gauss, r2: hit distance by surface, ref and ref-warped</title>
-<desc>For each pair of the request, the largest distance between the two engines&#39; hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as R2 measures hits.maxDistance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the tolerance of the policy. The largest bar is 5.99e-7 mm, and the comparison records hits.maxDistance 5.99e-7 mm.</desc>
+<desc>For each pair of the request, the largest distance between the two engines&#39; hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as the ray-trace check measures its largest hit distance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the limit of the limits file. The largest bar is 5.99e-7 mm, and the comparison records a largest hit distance of 5.99e-7 mm.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -136,13 +136,13 @@
 <text x="548.18" y="284" class="muted" text-anchor="middle">9</text>
 <rect class="bar" x="584.73" y="64.33" width="28" height="203.67" rx="2"><title>surface 10: 5.99e-7 mm, derived: the largest distance between the hits of ref and ref-warped on surface 10, over the rays ok in both answers whose visit both record of store/2ff9e0812e26df5a02ddfcf4ebd0b26fd9c025e78e55419ef26957fff90e4681 /result/data/hits; store/2ff9e0812e26df5a02ddfcf4ebd0b26fd9c025e78e55419ef26957fff90e4681 /result/data/status; store/aacfd47c121871bd658f8c993265cfb03bc32ad6e42f298103830dc117b92af0 /result/data/hits; store/aacfd47c121871bd658f8c993265cfb03bc32ad6e42f298103830dc117b92af0 /result/data/status</title></rect>
 <text x="598.73" y="284" class="muted" text-anchor="middle">10</text>
-<line class="gate" x1="68" y1="194.67" x2="624" y2="194.67"><title>tolerance 1.00e-8 mm: policy/rays-policy.json /rungs/r2/metrics/hits.maxDistance/tolerance</title></line>
+<line class="gate" x1="68" y1="194.67" x2="624" y2="194.67"><title>limit 1.00e-8 mm: policy/rays-policy.json /rungs/r2/metrics/hits.maxDistance/tolerance</title></line>
 <line class="axis" x1="68" y1="268" x2="624" y2="268"/>
 <line class="axis" x1="68" y1="48" x2="68" y2="268"/>
 <text x="346" y="302" text-anchor="middle">Surface</text>
 <text x="16" y="158" text-anchor="middle" transform="rotate(-90 16 158)">Largest hit distance (mm, log scale)</text>
 <g><rect class="bar" x="74" y="317" width="12" height="12" rx="2"/><text x="98" y="327">largest hit distance</text></g>
 <g><circle class="ring" cx="248" cy="323" r="4"/><text x="266" y="327">0 mm</text></g>
-<g><line class="gate" x1="304.8" y1="323" x2="328.8" y2="323"/><text x="334.8" y="327">tolerance 1.00e-8 mm</text></g>
-<g><title>hits.maxDistance: rays/comparisons.json /comparisons/2/pairs/1/metrics/0/value</title><text x="12" y="36" class="muted">hits.maxDistance 5.99e-7 mm</text></g>
+<g><line class="gate" x1="304.8" y1="323" x2="328.8" y2="323"/><text x="334.8" y="327">limit 1.00e-8 mm</text></g>
+<g><title>largest hit distance recorded: rays/comparisons.json /comparisons/2/pairs/1/metrics/0/value</title><text x="12" y="36" class="muted">largest hit distance recorded 5.99e-7 mm</text></g>
 </svg>

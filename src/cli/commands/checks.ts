@@ -37,7 +37,7 @@ const HELP = helpText([
 ]);
 
 /** One figure of a check as the limits file states it. */
-interface LimitJson {
+export interface LimitJson {
   readonly metric: string;
   readonly label: string;
   readonly unit: string;
@@ -47,8 +47,8 @@ interface LimitJson {
   readonly sorting: boolean;
 }
 
-/** A check as `--json` prints it. */
-interface CheckJson {
+/** A check as `--json` prints it, and as the dashboard's checks page shows it (`src/dashboard/helpViews.ts`). */
+export interface CheckJson {
   readonly id: string;
   readonly newId: string;
   readonly title: string;
@@ -75,7 +75,8 @@ function limitsOf(check: CheckText, policy: Policy): LimitJson[] {
   }));
 }
 
-function jsonOf(check: CheckText, policy: Policy): CheckJson {
+/** A check in full: its words, the engines it is asked of, and each figure's limits from `policy`. */
+export function checkJson(check: CheckText, policy: Policy): CheckJson {
   const rung = RUNGS.find((each) => each.id === check.id);
   return {
     id: check.id,
@@ -127,7 +128,7 @@ function listText(): string {
 /** One check in full. */
 function checkText(check: CheckText, policy: Policy): string {
   const t = CHECKS_COMMAND_TEXT;
-  const json = jsonOf(check, policy);
+  const json = checkJson(check, policy);
   const engines =
     json.engines === null
       ? t.enginesOfSuite
@@ -177,7 +178,7 @@ export function createChecksCommand(inputs: { readonly policy?: Policy } = {}): 
       if (id === undefined) {
         io.stdout(
           json
-            ? `${JSON.stringify({ checks: CHECKS.map((check) => jsonOf(check, policy)), limitsFile: policy.version }, null, 2)}\n`
+            ? `${JSON.stringify({ checks: CHECKS.map((check) => checkJson(check, policy)), limitsFile: policy.version }, null, 2)}\n`
             : listText(),
         );
         return EXIT_OK;
@@ -189,7 +190,7 @@ export function createChecksCommand(inputs: { readonly policy?: Policy } = {}): 
       }
       io.stdout(
         json
-          ? `${JSON.stringify({ ...jsonOf(check, policy), limitsFile: policy.version }, null, 2)}\n`
+          ? `${JSON.stringify({ ...checkJson(check, policy), limitsFile: policy.version }, null, 2)}\n`
           : checkText(check, policy),
       );
       return EXIT_OK;

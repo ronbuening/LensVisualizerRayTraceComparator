@@ -300,7 +300,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
     [["fake-human", 2, 0, 0]],
   );
   const page2 = await holdPage(port, "/control/job/2");
-  assert.ok(page2.includes("<tr><td>fake-human</td><td>2</td><td>0</td><td>0</td></tr>"), "two collected");
+  assert.ok(page2.includes("<tr><td><code>fake-human</code></td><td>2</td><td>0</td><td>0</td></tr>"), "two collected");
   view = await controlView(port);
   assert.deepEqual(counts(), { outbox: 0, pending: 0, inbox: 0, collected: 2, rejected: 0 });
 

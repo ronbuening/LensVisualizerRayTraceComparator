@@ -59,6 +59,8 @@ import type {
 import { buildReport } from "../../src/report/model.ts";
 import { MAX_LENS_CURVES } from "../../src/dashboard/lens.ts";
 import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
+import type { ChecksView } from "../../src/dashboard/helpViews.ts";
+import { SORTING_LIMITS } from "../../src/vocabulary/index.ts";
 import type { CompareView, GatedLine } from "../../src/dashboard/compare.ts";
 import type { LensView } from "../../src/dashboard/lens.ts";
 import { LENS_KEY, lensGoldenQuery } from "./lensFixture.ts";
@@ -581,6 +583,8 @@ function holdMeaning(view: unknown, path: string, pointer: string, what: string)
     across: ["gridSize", "numRays"],
     lastChange: ["maxDelta"],
     policyVersion: ["version"],
+    limitsFile: ["version"],
+    bandSeveralLines: ["attentionSeveralLines"],
     frequency: ["frequenciesPerMm"],
     gate: ["tolerance"],
     maxDistance: ["value"],
@@ -1248,9 +1252,11 @@ function holdLens(places: DocumentPlaces, runs: readonly TestLensRun[], view: Le
     for (const figure of figures) {
       if (figure !== null) assert.equal(figure.source.document, document, `${what}: ${run.run}'s own case`);
     }
-    condition.lines.forEach((line, l) =>
-      assert.deepEqual(tokensOf(line.wavelengthNm), ["conditions", "lines", l, "wavelengthNm"], what),
-    );
+    // Each wavelength and its weight are of its own line of the case.
+    condition.lines.forEach((line, l) => {
+      assert.deepEqual(tokensOf(line.wavelengthNm), ["conditions", "lines", l, "wavelengthNm"], what);
+      assert.deepEqual(tokensOf(line.weight), ["conditions", "lines", l, "weight"], what);
+    });
     if (condition.plane?.shiftMm) {
       assert.equal(condition.plane.shiftMm.source.document, `manifest:${run.suite}`);
       assert.deepEqual(tokensOf(condition.plane.shiftMm), ["runs", run.place, "recipe", "recipe", "plane", "shiftMm"]);
@@ -1562,8 +1568,19 @@ function setOf(
 }
 
 /** Holds a compare view's figures to the places of the view that hold them, and its sorting to the comparator's counts. */
-function holdCompare(places: DocumentPlaces, view: CompareView, what: string): void {
+function holdCompare(places: DocumentPlaces, view: CompareView, what: string, policy: Policy): void {
   const cases = compareCases(places, view);
+  /** A limit of the limits file that a figure must be, by check, metric and member: the figure, or null where none. */
+  const holdLimit = (figure: Figure | null, rung: string, metric: string, member: string, said: string): void => {
+    const stated = (policy.rungs[rung]?.metrics[metric] as unknown as Record<string, unknown> | undefined)?.[member];
+    if (stated === undefined) {
+      assert.equal(figure, null, `${what}: ${said}: the limits file states no ${member} of ${rung} ${metric}`);
+      return;
+    }
+    assert.ok(figure !== null, `${what}: ${said}: the ${member} of ${rung} ${metric}`);
+    assert.equal(figure.source.pointer, pointerOf(["rungs", rung, "metrics", metric, member]), `${what}: ${said}`);
+    assert.ok(Object.is(figure.value, stated), `${what}: ${said}`);
+  };
   for (const card of view.cards) {
     const tab = COMPARE_TABS.find((each) => each.tab === card.tab);
     assert.ok(tab !== undefined, `${what}: ${card.tab} is a tab`);
@@ -1598,12 +1615,8 @@ function holdCompare(places: DocumentPlaces, view: CompareView, what: string): v
           assert.equal(tokens[0], "runs");
           assert.ok(line.headline.value.source.document.startsWith("baseline:"));
         }
-        if (line.headline.gate !== null) {
-          assert.equal(
-            line.headline.gate.source.pointer,
-            pointerOf(["rungs", line.rung, "metrics", line.headline.metric, "tolerance"]),
-          );
-        }
+        // The gate is the limits file's limit of the headline's own check and metric, wherever it states one.
+        holdLimit(line.headline.gate, line.rung, line.headline.metric, "tolerance", `${line.rung} gate`);
       }
     }
     for (const line of card.recorded) {
@@ -1619,15 +1632,22 @@ function holdCompare(places: DocumentPlaces, view: CompareView, what: string): v
           assert.equal(pair.metrics[tokens[5] as number].name, metric.name, `${what}: ${metric.name}`);
           assert.equal(pair.verdict, line.verdict, `${what}: the verdict is the pair's`);
         }
-        for (const limit of [metric.band, metric.limit]) {
-          if (limit !== null) {
-            assert.equal(limit.source.pointer, pointerOf(["rungs", line.rung, "metrics", metric.name, "attention"]));
-          }
-        }
+        // A limit of the sorting is a limit, never a band; every other metric's attention is its band.
+        const sorting = SORTING_LIMITS.includes(metric.name);
+        holdLimit(sorting ? metric.limit : metric.band, line.rung, metric.name, "attention", `${metric.name}`);
+        assert.equal(sorting ? metric.band : metric.limit, null, `${what}: ${metric.name}: a band or a limit`);
       }
       if (line.detail === null) continue;
       const compared = line.counts.find((each) => each.name === "fields.compared" || each.name === "lines.compared");
       for (const chart of line.detail.charts) {
+        // A chart's band is the attention of its own check's metric.
+        if (chart.kind === "values") {
+          for (const row of chart.rows) {
+            if (row.metric === null) assert.equal(row.band, null, `${what}: ${row.name}: no metric, no band`);
+            else holdLimit(row.band, line.rung, row.metric, "attention", `${row.name} band`);
+          }
+        } else if (chart.metric === null) assert.equal(chart.band, null, `${what}: no metric, no band`);
+        else holdLimit(chart.band, line.rung, chart.metric, "attention", `${chart.kind} band`);
         if (chart.kind === "points") {
           for (const series of chart.series) {
             for (const point of series.points) {
@@ -1748,6 +1768,43 @@ function compareCounts(places: DocumentPlaces, view: CompareView): Map<string, n
   return counts;
 }
 
+/**
+ * Holds the checks page to the limits file: each check lists exactly the metrics its entry has, in its order, and each
+ * limit is the member of that check's own metric that the view's key names, or null where the entry has none.
+ */
+function holdChecks(view: ChecksView, policy: Policy): void {
+  const members = { tolerance: "tolerance", band: "attention", bandSeveralLines: "attentionSeveralLines" } as const;
+  for (const check of view.checks) {
+    const entry = policy.rungs[check.id]?.metrics ?? {};
+    assert.deepEqual(
+      check.limits.map((limit) => limit.metric),
+      Object.keys(entry),
+      `checks ${check.id}: the metrics of its entry in the limits file`,
+    );
+    for (const limit of check.limits) {
+      for (const [key, member] of Object.entries(members)) {
+        const figure = limit[key as keyof typeof members];
+        const stated = (entry[limit.metric] as unknown as Record<string, unknown>)[member];
+        if (stated === undefined) {
+          assert.equal(figure, null, `checks ${check.id} ${limit.metric} ${key}: none in the limits file`);
+          continue;
+        }
+        assert.ok(figure !== null, `checks ${check.id} ${limit.metric} ${key}`);
+        assert.equal(
+          figure.source.pointer,
+          `/rungs/${check.id}/metrics/${limit.metric.replace(/~/g, "~0").replace(/\//g, "~1")}/${member}`,
+          `checks ${check.id} ${limit.metric} ${key}: its own check's metric`,
+        );
+        assert.ok(Object.is(figure.value, stated), `checks ${check.id} ${limit.metric} ${key}`);
+      }
+    }
+  }
+  assert.ok(
+    view.checks.some((check) => check.limits.length > 1),
+    "a check with several figures, so that a list cut short is told",
+  );
+}
+
 function holdEveryPage(
   places: DocumentPlaces,
   asked: AskedEngines,
@@ -1766,6 +1823,11 @@ function holdEveryPage(
     pages++;
   };
   hold(views.index(), indexCounts(places, sources.runNames(), sources.baselineStems(), askedEngines), "index");
+  // The help page holds no number; the checks page's limits are each a figure of the limits file at hand.
+  hold(views.help(), new Map(), "help");
+  const checks = views.checks();
+  hold(checks, new Map(), "checks");
+  holdChecks(checks, policy);
   for (const name of sources.runNames()) {
     const run = views.run(name);
     hold(run, runCounts(places, name, run.split), `run ${name}`);
@@ -1800,7 +1862,7 @@ function holdEveryPage(
         assert.ok(view !== null);
         const what = `compare ${key}${tab === null ? "" : `/${tab}`}?${query}`;
         hold(view, compareCounts(places, view), what);
-        holdCompare(places, view, what);
+        holdCompare(places, view, what, policy);
       }
     }
   }

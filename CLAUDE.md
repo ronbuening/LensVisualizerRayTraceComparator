@@ -2232,3 +2232,26 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   code is followed by its sentence and remedy (`codeLines`, also under `main.ts`'s catch-all). Hashes (engine code,
   this tool's code behind it, lens state, request, suite file, LensVisualizer's engine files) are shown only under
   `--details`. Every `--json` keeps its keys and values exactly: verify:real, check-lv and the dashboard parse them.
+- **What the dashboard shows** (Stage 9.4): every label is the vocabulary's, rendered by `html.ts`'s helpers (`check`:
+  title with the id in `<code>`; `engine`: name with the id on hover; `verdict`, `badge`, `differenceClass`,
+  `metricName`, `quantity`: label with the stored value or key on hover); CSS classes and every `/api` value stay the
+  stored ones. Value labels (methods, support statuses, limit kinds, baseline kinds, places, quantities) live in
+  `src/vocabulary` (`output.ts`, `quantities.ts`), never in `DASHBOARD_TEXT`; one class has one wording (`classLabel`).
+  Charts speak labels too: engine names in legends and captions, a heat map's checks by title and id, its cells the
+  short verdict where it fits (else the stored value, which its legend pairs with the label).
+  Headings, column headers, form labels, step names and derivations are `DASHBOARD_TEXT.labels` /
+  `DASHBOARD_TEXT.derivations` (a derivation's words are read back by `figures.test.ts`: move, never reword). Every
+  page but a refusal has a "How to read this page" `<details>` (`DASHBOARD_TEXT.howTo`); hashes (suite file, limits
+  file, lens states, requests, engine code, store state) go under `identifiers()`, a `<details>` whose summary is
+  exactly "Identifiers" with nothing nested. A compare card's badge names its own counterparts
+  (`CompareTab.counterparts`). `/help` and `/checks` (twins `/api/help`, `/api/checks`; `helpViews.ts`) show the
+  vocabulary and each check as `lvrtc checks <id>` does (`checkJson`), every limit a Figure of the limits file at
+  hand: `figures.test.ts` holds each limit to its own check's metric and member and each check's metrics to its entry
+  (`holdChecks`), and holds every compare gate, band and sorting limit to the limits file the same way (`holdLimit`).
+- The ratchet's `DASHBOARD` surface reads every page `server.test.ts` lints (`everyPage` in
+  `test/dashboard/support.ts`, plus `/control`), a lens page with its golden's curves and a run-control job page (its
+  `<pre>` output, the command's own words, left out), by kind of page, visible and `<title>` text with Identifiers
+  removed. What remains is shared report text (`NOT_COVERED`, `CONSENSUS_SECTION`, Stage 9.5's) and the limits
+  file's JSON pointers in chart tooltips. `SORTING_METRICS` (`src/dashboard/compare.ts`) is the vocabulary's
+  `SORTING_LIMITS` (R13b's `invariant.maxAbs` and R14b's `fitCondition.max` reach no card today, but are limits of a
+  sorting too).

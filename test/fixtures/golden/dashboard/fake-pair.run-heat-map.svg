@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="360" height="140" viewBox="0 0 360 140" role="img">
-<title>fake-pair: ladder heat map</title>
-<desc>One row for each run and one column for each rung: a cell holds the gravest verdict of the pairs of its comparisons, and its pairs by verdict on hover.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="360" height="154" viewBox="0 0 360 154" role="img">
+<title>fake-pair: verdicts by run and check</title>
+<desc>One row for each run and one column for each check: a cell holds the worst verdict of the pairs of its comparisons, as the files store it, and its pairs by verdict on hover.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
 .lvc text{fill:#1c1c21}
@@ -104,12 +104,12 @@
 .lvc .v-BLOCKED{fill:#3d3d46}
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
-<rect class="bg" x="0" y="0" width="360" height="140"/>
-<text x="12" y="20" class="head">fake-pair: ladder heat map</text>
-<text x="143.2" y="44" class="muted" text-anchor="middle">selftest</text>
-<g><title>singlet</title><text x="87.2" y="68" text-anchor="end">singlet</text></g>
-<g><title>singlet, selftest: FAIL; 2 FAIL</title><rect class="cell v-FAIL" x="95.2" y="52" width="96" height="24"/><text x="143.2" y="68" class="vt t-FAIL">FAIL</text></g>
-<g><title>double-gauss</title><text x="87.2" y="92" text-anchor="end">double-gauss</text></g>
-<g><title>double-gauss, selftest: FAIL; 2 FAIL</title><rect class="cell v-FAIL" x="95.2" y="76" width="96" height="24"/><text x="143.2" y="92" class="vt t-FAIL">FAIL</text></g>
-<g><rect class="cell v-FAIL" x="12" y="116" width="24" height="14"/><text x="42" y="127">FAIL</text></g>
+<rect class="bg" x="0" y="0" width="360" height="154"/>
+<text x="12" y="20" class="head">fake-pair: verdicts by run and check</text>
+<g><title>Pipeline echo (a test of this tool) (selftest)</title><text x="143.2" y="44" text-anchor="middle">Pipeline ech…</text><text x="143.2" y="58" class="muted" text-anchor="middle">selftest</text></g>
+<g><title>singlet</title><text x="87.2" y="82" text-anchor="end">singlet</text></g>
+<g><title>singlet, Pipeline echo (a test of this tool) (selftest): Fail: beyond limit. By verdict: Fail: beyond limit: 2</title><rect class="cell v-FAIL" x="95.2" y="66" width="96" height="24"/><text x="143.2" y="82" class="vt t-FAIL">Fail</text></g>
+<g><title>double-gauss</title><text x="87.2" y="106" text-anchor="end">double-gauss</text></g>
+<g><title>double-gauss, Pipeline echo (a test of this tool) (selftest): Fail: beyond limit. By verdict: Fail: beyond limit: 2</title><rect class="cell v-FAIL" x="95.2" y="90" width="96" height="24"/><text x="143.2" y="106" class="vt t-FAIL">Fail</text></g>
+<g><rect class="cell v-FAIL" x="12" y="130" width="24" height="14"/><text x="42" y="141">Fail: beyond limit (FAIL)</text></g>
 </svg>

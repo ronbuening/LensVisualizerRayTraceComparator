@@ -18,6 +18,7 @@ import { MTF_NATIVE } from "../contract/quantities/mtfNative.ts";
 import type { ManifestJob, RunManifest } from "../core/manifest.ts";
 import { RUNGS } from "../core/rungs.ts";
 import { DASHBOARD_TEXT } from "../report/wording.ts";
+import { engineName } from "../vocabulary/index.ts";
 import { answerOf, curveAt, fieldsOf, samePair, storeProblems } from "./chartViews.ts";
 import type {
   Answer,
@@ -475,12 +476,13 @@ function sameFrequencies(one: Curve | null, two: Curve | null): boolean {
 
 /** A curve's engine as a legend names it: its engine, and its step where its job is one. */
 export function curveEngine(curve: Pick<LensCurveView, "engine" | "step">): string {
-  return curve.step === null ? curve.engine : CHARTS.legendStep(curve.engine, curve.step);
+  const name = engineName(curve.engine);
+  return curve.step === null ? name : CHARTS.legendStep(name, curve.step);
 }
 
 /** Why a curve has no values to subtract, or null where it has some. */
 function noValuesWhy(curve: LensCurveView): string | null {
-  if (curve.state === "unavailable") return TEXT.unavailable(curve.reason ?? "no reason stated");
+  if (curve.state === "unavailable") return TEXT.unavailable(curve.reason ?? CHARTS.noReasonStated);
   if (curve.values === null || curve.values.values.every((value) => value === null)) {
     return CHARTS.noAnswer(curveEngine(curve), "missing");
   }
@@ -502,7 +504,11 @@ function pointsOf(
       frequency: figureAt(curve.answer.document!, curve.answer.entry!, ["request", "spec", "frequenciesPerMm", index]),
       difference: {
         value: value - other,
-        derivation: CHARTS.derivedDifference(`curve ${curve.view.curve}`, `curve ${reference.curve}`, String(index)),
+        derivation: CHARTS.derivedDifference(
+          DASHBOARD_TEXT.derivations.curve(String(curve.view.curve)),
+          DASHBOARD_TEXT.derivations.curve(String(reference.curve)),
+          String(index),
+        ),
         of: [x.source, y.source],
       },
     });

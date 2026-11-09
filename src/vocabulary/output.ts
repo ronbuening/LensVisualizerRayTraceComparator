@@ -275,3 +275,54 @@ export const DOCTOR_OUTPUT_TEXT = {
   toolCode: "tool code",
   noneStated: "none stated",
 } as const;
+
+/** How a cell of the support matrix ended: a job's status, or not asked for an engine a request was not put to. */
+export const SUPPORT_STATUS_TEXT: Readonly<Record<string, string>> = {
+  ...JOB_STATUS_TEXT,
+  "not-run": "not asked",
+};
+
+/** How the engines of a check are compared, by the limits file's `mode` of the check (`RungMode`). */
+export const METHOD_TEXT: Readonly<Record<string, string>> = {
+  direct: "numbers of each engine set against each other",
+  "identical-rays": "one estimator on each engine's trace of the same rays",
+  "independent-method": "each engine's own method",
+};
+
+/** What a figure's limit in the limits file is: a limit a pair must be within, or a review band. */
+export const LIMIT_KIND_TEXT: Readonly<Record<string, string>> = {
+  tolerance: "limit",
+  attention: "review band",
+};
+
+/** A side-by-side check's limit of a metric of `SORTING_LIMITS`: it sorts a field before any difference is taken. */
+export const SORTING_LIMIT_LABEL = "sorting limit";
+
+/** Which checks a baseline file records, by its kind: the rays checks or the MTF checks. */
+export const BASELINE_KIND_TEXT: Readonly<Record<string, string>> = {
+  rays: "ray",
+  mtf: "MTF",
+};
+
+/** The kind of check (`CheckKind`) of a class of the limits file: `gated` is held to a limit, `recorded` side by side. */
+export const CLASS_KIND: Readonly<Record<string, "limit" | "side-by-side">> = {
+  gated: "limit",
+  recorded: "side-by-side",
+};
+
+/** The label of a value of one of the sets above; a value with no label is returned unchanged. */
+export function valueLabel(labels: Readonly<Record<string, string>>, value: string): string {
+  return Object.hasOwn(labels, value) ? labels[value] : value;
+}
+
+/** Where a comparison found a figure (its `where`), by the key it states: what a place is called on a screen. */
+export const PLACE_TEXT: Readonly<Record<string, string>> = {
+  line: "wavelength",
+  field: "field",
+  ray: "ray",
+  surface: "surface",
+  visit: "visit",
+  index: "element",
+  cut: "cut",
+  frequencyPerMm: "frequency (cycles/mm)",
+};
