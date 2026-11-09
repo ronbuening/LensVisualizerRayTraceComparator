@@ -1,5 +1,6 @@
 // The checks, in plain words: what each compares, what it shows and what it does not. A check is what the code calls
-// a rung (`src/core/rungs.ts`); its id stays the stored id until the rename, and `newId` is the id it will take.
+// a rung (`src/core/rungs.ts`). Its id is the one suites, baselines and comparisons store since the rename of Stage 9.7,
+// and `oldId` the one it had before, which the catalog snapshot and files written before the rename still name.
 // Every string here is linted (`test/vocabulary/vocabulary.test.ts`), and `src/report/wording.ts` takes the words
 // of the validation statement and matrix from this file, so a report's bytes do not move.
 
@@ -10,8 +11,8 @@ export type CheckKind = "limit" | "side-by-side";
 export interface CheckText {
   /** The id stored in suites, baselines and comparisons today. */
   readonly id: string;
-  /** The id the check takes when the ids are renamed. */
-  readonly newId: string;
+  /** The id it had before the rename: the catalog snapshot and files written before the rename name it so. */
+  readonly oldId: string;
   readonly title: string;
   readonly kind: CheckKind;
   /** What it compares, one sentence without a full stop (the statement and the matrix print it as it is). */
@@ -31,8 +32,8 @@ export interface CheckText {
 /** Every check, in the order of `RUNGS`. */
 export const CHECKS: readonly CheckText[] = [
   {
-    id: "selftest",
-    newId: "pipeline-echo",
+    id: "pipeline-echo",
+    oldId: "selftest",
     title: "Pipeline echo (a test of this tool)",
     kind: "limit",
     compares: "An array this tool hands a test engine and the array the engine hands back",
@@ -43,8 +44,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: false,
   },
   {
-    id: "r0",
-    newId: "built-system",
+    id: "built-system",
+    oldId: "r0",
     title: "Built system",
     kind: "limit",
     compares: "Built layout, shape, aperture, index and sampled sag",
@@ -57,8 +58,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r1",
-    newId: "first-order",
+    id: "first-order",
+    oldId: "r1",
     title: "First-order data",
     kind: "limit",
     compares: "First-order quantities and pupils",
@@ -71,8 +72,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r2",
-    newId: "ray-trace",
+    id: "ray-trace",
+    oldId: "r2",
     title: "Ray trace",
     kind: "limit",
     compares: "Hits, directions, image landings and masks of identical rays",
@@ -85,8 +86,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r3",
-    newId: "optical-path",
+    id: "optical-path",
+    oldId: "r3",
     title: "Optical path",
     kind: "limit",
     compares: "Optical path, path to image and chief-relative OPD of identical rays",
@@ -99,8 +100,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r4",
-    newId: "geometric-mtf",
+    id: "geometric-mtf",
+    oldId: "r4",
     title: "Geometric MTF of the same rays",
     kind: "limit",
     compares: "This tool's geometric MTF of identical rays, as each engine traces them",
@@ -113,8 +114,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r4f",
-    newId: "lv-mtf-replay",
+    id: "lv-mtf-replay",
+    oldId: "r4f",
     title: "LensVisualizer's MTF sampling, replayed",
     kind: "limit",
     compares: "LensVisualizer's geometric MTF beside a replay of its own sampling",
@@ -127,8 +128,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r5",
-    newId: "mtf-vs-optiland-fft",
+    id: "mtf-vs-optiland-fft",
+    oldId: "r5",
     title: "MTF beside optiland's FFT MTF",
     kind: "side-by-side",
     compares:
@@ -142,8 +143,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r5g",
-    newId: "geometric-mtf-vs-optiland",
+    id: "geometric-mtf-vs-optiland",
+    oldId: "r5g",
     title: "Geometric MTF beside optiland's",
     kind: "side-by-side",
     compares: "Geometric MTF on each method's own pupil sampling",
@@ -156,8 +157,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r6a",
-    newId: "wave-mtf",
+    id: "wave-mtf",
+    oldId: "r6a",
     title: "Wave MTF of the same rays",
     kind: "limit",
     compares: "This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled",
@@ -170,8 +171,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r6b",
-    newId: "mtf-vs-wave-estimate",
+    id: "mtf-vs-wave-estimate",
+    oldId: "r6b",
     title: "MTF beside the wave estimate of LensVisualizer's rays",
     kind: "side-by-side",
     compares: "LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays",
@@ -184,8 +185,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r6c",
-    newId: "mtf-vs-optiland-wavefront",
+    id: "mtf-vs-optiland-wavefront",
+    oldId: "r6c",
     title: "MTF beside the OTF of optiland's wavefront",
     kind: "side-by-side",
     compares:
@@ -199,8 +200,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r7a",
-    newId: "spot-rays",
+    id: "spot-rays",
+    oldId: "r7a",
     title: "Spot and fan rays",
     kind: "limit",
     compares: "Spot and fan figures of the coma and bokeh tabs' rays, on identical rays",
@@ -213,8 +214,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r7b",
-    newId: "spot-vs-optiland",
+    id: "spot-vs-optiland",
+    oldId: "r7b",
     title: "Spots and fans beside optiland's",
     kind: "side-by-side",
     compares: "LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan",
@@ -226,8 +227,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r8a",
-    newId: "axial-rays",
+    id: "axial-rays",
+    oldId: "r8a",
     title: "Spherical aberration and axial colour rays",
     kind: "limit",
     compares: "Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays",
@@ -239,8 +240,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r8b",
-    newId: "axial-vs-optiland",
+    id: "axial-vs-optiland",
+    oldId: "r8b",
     title: "Spherical aberration and axial colour beside optiland's",
     kind: "side-by-side",
     compares: "LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
@@ -252,8 +253,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r9a",
-    newId: "chief-rays",
+    id: "chief-rays",
+    oldId: "r9a",
     title: "Chief rays (distortion, pupils, lateral colour)",
     kind: "limit",
     compares: "Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays",
@@ -265,8 +266,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r9b",
-    newId: "chief-vs-optiland",
+    id: "chief-vs-optiland",
+    oldId: "r9b",
     title: "Distortion, pupils and lateral colour beside optiland's",
     kind: "side-by-side",
     compares:
@@ -279,8 +280,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r10a",
-    newId: "field-curve-rays",
+    id: "field-curve-rays",
+    oldId: "r10a",
     title: "Field-curve rays",
     kind: "limit",
     compares: "Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays",
@@ -293,8 +294,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r10b",
-    newId: "field-curve-vs-optiland",
+    id: "field-curve-vs-optiland",
+    oldId: "r10b",
     title: "Field curves beside optiland's",
     kind: "side-by-side",
     compares: "LensVisualizer's field-curve sections beside optiland's FieldCurvature",
@@ -307,8 +308,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r11a",
-    newId: "vignetting-rays",
+    id: "vignetting-rays",
+    oldId: "r11a",
     title: "Vignetting rays",
     kind: "limit",
     compares:
@@ -322,8 +323,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r11b",
-    newId: "vignetting-vs-flux-estimate",
+    id: "vignetting-vs-flux-estimate",
+    oldId: "r11b",
     title: "Vignetting beside the flux estimate",
     kind: "side-by-side",
     compares: "LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices",
@@ -336,8 +337,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r12b",
-    newId: "summary-vs-optiland",
+    id: "summary-vs-optiland",
+    oldId: "r12b",
     title: "Summary beside optiland's",
     kind: "side-by-side",
     compares:
@@ -351,8 +352,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r13b",
-    newId: "seidel-vs-optiland",
+    id: "seidel-vs-optiland",
+    oldId: "r13b",
     title: "Seidel sums beside optiland's",
     kind: "side-by-side",
     compares: "This tool's Seidel sums of the reference model beside optiland's",
@@ -365,8 +366,8 @@ export const CHECKS: readonly CheckText[] = [
     inMatrix: true,
   },
   {
-    id: "r14b",
-    newId: "zernike-vs-optiland",
+    id: "zernike-vs-optiland",
+    oldId: "r14b",
     title: "Zernike fit beside optiland's",
     kind: "side-by-side",
     compares: "optiland's Zernike fit beside this tool's fit of the same raw wavefront samples",
@@ -380,9 +381,24 @@ export const CHECKS: readonly CheckText[] = [
   },
 ];
 
-/** The check of a stored id, or undefined. */
+/**
+ * Whether an id is the one a check had before the rename and no check's id of today: what a file written before the
+ * rename (the catalog snapshot) names its checks by.
+ */
+export function isOldCheckId(id: string): boolean {
+  return CHECKS.some((check) => check.oldId === id) && !CHECKS.some((check) => check.id === id);
+}
+
+/** Whether a baseline (or anything with its runs and checks) names a check by an id it had before the rename. */
+export function namesOldCheckIds(baseline: {
+  readonly runs: readonly { readonly rungs: readonly { readonly rung: string }[] }[];
+}): boolean {
+  return baseline.runs.some((run) => run.rungs.some((rung) => isOldCheckId(rung.rung)));
+}
+
+/** The check of a stored id, today's or the one it had before the rename (the catalog snapshot's), or undefined. */
 export function checkOf(id: string): CheckText | undefined {
-  return CHECKS.find((check) => check.id === id);
+  return CHECKS.find((check) => check.id === id) ?? CHECKS.find((check) => check.oldId === id);
 }
 
 /** The title of a check, or the id itself when no check has it. */

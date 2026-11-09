@@ -42,7 +42,7 @@ function lensCase(base: OpticalCase, zoomT: number): OpticalCase {
 export const OTHER_FREQUENCIES_SPEC: MtfNativeSpec = { ...SPEC, frequenciesPerMm: [10, 30, 50, 90] };
 
 const OTHER_FREQUENCIES_RUNG: RungDefinition = {
-  id: "r5",
+  id: "mtf-vs-optiland-fft",
   quantity: MTF_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) => [

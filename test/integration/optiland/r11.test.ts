@@ -29,8 +29,8 @@ import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, t
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R11A = loadPolicy().rungs.r11a;
-const R11B = loadPolicy().rungs.r11b;
+const R11A = loadPolicy().rungs["vignetting-rays"];
+const R11B = loadPolicy().rungs["vignetting-vs-flux-estimate"];
 
 const DESIGN = "nikkor-z50f12-ref";
 const PHOTOPIC = "nikkor-z50f12-photopic";
@@ -64,11 +64,11 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,ref,optiland",
-      rungs: "r11a,r11b",
+      rungs: "vignetting-rays,vignetting-vs-flux-estimate",
     });
 
     // R11a: the tab's beam of each field at each line, traced by the three engines.
-    const traced = manifest.jobs.filter((job) => job.rung === "r11a");
+    const traced = manifest.jobs.filter((job) => job.rung === "vignetting-rays");
     for (const run of manifest.runs) {
       const lines = run.name === PHOTOPIC ? 5 : 1;
       assert.deepEqual(run.vignettingRaySets?.problems, [], run.name);
@@ -78,7 +78,7 @@ test(
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
     // The pairs are of spans: the beams of a line, one span a line.
-    const gated = pairsOf(comparisons, "r11a", RAYS_TRACE);
+    const gated = pairsOf(comparisons, "vignetting-rays", RAYS_TRACE);
     assert.equal(gated.length, 3 * (1 + 5 + 1 + 1));
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
@@ -103,7 +103,7 @@ test(
 
     // R11b: LensVisualizer answers its tab's ask at the authored line; a photopic run has no line of the tab's and no
     // ask, and a case off the design plane is refused by lv and answered by flux.
-    const native = manifest.jobs.filter((job) => job.rung === "r11b");
+    const native = manifest.jobs.filter((job) => job.rung === "vignetting-vs-flux-estimate");
     assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["flux", "lv"]);
     assert.equal(native.length, 2 * 3);
     assert.ok(!native.some((job) => job.run === PHOTOPIC));
@@ -118,7 +118,7 @@ test(
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design"]);
     for (const run of [DESIGN, BEST, WIDE]) assert.deepEqual(statuses(run, "flux"), ["ok"], run);
 
-    const recorded = pairsOf(comparisons, "r11b", VIGNETTING_NATIVE);
+    const recorded = pairsOf(comparisons, "vignetting-vs-flux-estimate", VIGNETTING_NATIVE);
     assert.equal(recorded.length, 3);
     const of = (run: string): RungPair => recorded.find((pair) => pair.run === run)!;
     assert.equal(of(BEST).verdict, "UNSUPPORTED");

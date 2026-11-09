@@ -46,11 +46,11 @@ export const R9A_GOLDEN = "r9a-stand-ins";
 export const R9B_GOLDEN = "r9b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its limit and units. */
-function policyOf(rung: "r9a" | "r9b"): Policy {
+function policyOf(rung: "chief-rays" | "chief-vs-optiland"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R9A_POLICY: Policy = policyOf("r9a");
-export const R9B_POLICY: Policy = policyOf("r9b");
+export const R9A_POLICY: Policy = policyOf("chief-rays");
+export const R9B_POLICY: Policy = policyOf("chief-vs-optiland");
 
 /** What one cycle of a fixture gave. */
 export interface R9Cycle {
@@ -122,7 +122,7 @@ function chiefAt(line: number): RaysTraceSpec {
 
 /** The rung `r9a` as a case without LensVisualizer's tabs can be asked it: the set at both lines of the lens. */
 export const R9A_FIXTURE_RUNG: RungDefinition = {
-  id: "r9a",
+  id: "chief-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [chiefAt(0), chiefAt(1)].map((spec) => makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec })),
@@ -196,7 +196,7 @@ const PUPILS: ChiefNativeSpec = { kind: "pupils", lines: [0], maxFieldDeg: 20, f
 
 /** The rung `r9b` as stand-ins can be asked it: distortion and pupils at the first line, lateral colour at both. */
 export const R9B_FIXTURE_RUNG: RungDefinition = {
-  id: "r9b",
+  id: "chief-vs-optiland",
   quantity: CHIEF_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) =>

@@ -100,7 +100,7 @@ test("a run is compared against its reference and pairwise, ordered by run, rung
     assert.deepEqual(validateKind("comparison", set), []);
     assert.deepEqual(comparisonInvariantProblems(set), []);
     assert.equal(set.suite, "pair");
-    assert.equal(set.rung, "selftest");
+    assert.equal(set.rung, "pipeline-echo");
     assert.equal(set.quantity, SELFTEST_ECHO);
     assert.equal(set.caseId, set.run === "singlet" ? SINGLET.id : DOUBLE_GAUSS.id);
     assert.equal(set.participants.length, 4);
@@ -289,7 +289,7 @@ test("--mode chooses the sets; the sets of a mode are the same whichever modes a
 
 test("every request of a rung is a group of its own, in the order the rung builds them", async (t) => {
   const twice: RungDefinition = {
-    id: "selftest",
+    id: "pipeline-echo",
     quantity: SELFTEST_ECHO,
     buildRequests: (opticalCase) =>
       [2, 3].map((scale) =>
@@ -327,12 +327,15 @@ test("a rung the policy does not judge, or judges as another quantity, is a usag
   const empty: Policy = { ...POLICY, rungs: {} };
   assert.throws(() => compareManifest({ manifest, store, policy: empty }), {
     name: "UsageError",
-    message: "the policy has no entry for the rung selftest",
+    message: "the policy has no entry for the rung pipeline-echo",
   });
-  const other: Policy = { ...POLICY, rungs: { selftest: { ...POLICY.rungs.selftest, quantity: "rays.trace" } } };
+  const other: Policy = {
+    ...POLICY,
+    rungs: { "pipeline-echo": { ...POLICY.rungs["pipeline-echo"], quantity: "rays.trace" } },
+  };
   assert.throws(() => compareManifest({ manifest, store, policy: other }), {
     name: "UsageError",
-    message: "rung selftest: the run asked for selftest.echo; the policy judges rays.trace",
+    message: "rung pipeline-echo: the run asked for selftest.echo; the policy judges rays.trace",
   });
 });
 

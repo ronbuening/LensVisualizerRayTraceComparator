@@ -25,17 +25,17 @@ This matrix is rendered from the benchmark's two baselines alone, with no engine
 
 | Row | Checks held to a limit | Side-by-side checks |
 |---|---|---|
-| Built system, first-order data, rays and optical path | `r0`, `r1`, `r2`, `r3` | none |
-| MTF | `r4`, `r4f`, `r6a` | `r5`, `r5g`, `r6b`, `r6c` |
-| Coma and bokeh | `r7a` | `r7b` |
-| Spherical aberration and axial colour | `r8a` | `r8b` |
-| Distortion, lateral colour, pupils and breathing | `r9a`, `r1` | `r9b` |
-| Field curves and astigmatism | `r10a` | `r10b` |
-| Vignetting and relative illumination | `r11a` | `r11b` |
-| Summary and cardinal elements | `r1` | `r12b` |
-| Seidel sums, wavefront and Zernike fits (no LensVisualizer tab) | none | `r13b`, `r14b` |
+| Built system, first-order data, rays and optical path | `built-system`, `first-order`, `ray-trace`, `optical-path` | none |
+| MTF | `geometric-mtf`, `lv-mtf-replay`, `wave-mtf` | `mtf-vs-optiland-fft`, `geometric-mtf-vs-optiland`, `mtf-vs-wave-estimate`, `mtf-vs-optiland-wavefront` |
+| Coma and bokeh | `spot-rays` | `spot-vs-optiland` |
+| Spherical aberration and axial colour | `axial-rays` | `axial-vs-optiland` |
+| Distortion, lateral colour, pupils and breathing | `chief-rays`, `first-order` | `chief-vs-optiland` |
+| Field curves and astigmatism | `field-curve-rays` | `field-curve-vs-optiland` |
+| Vignetting and relative illumination | `vignetting-rays` | `vignetting-vs-flux-estimate` |
+| Summary and cardinal elements | `first-order` | `summary-vs-optiland` |
+| Seidel sums, wavefront and Zernike fits (no LensVisualizer tab) | none | `seidel-vs-optiland`, `zernike-vs-optiland` |
 
-A configuration is one named run of the benchmark, with its lens state. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. Request-pair counts count every request pair, answers that were not computed included; configuration-pair counts count the worst verdict of each configuration pair. Check r4 is in both baselines and counts once.
+A configuration is one named run of the benchmark, with its lens state. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. Request-pair counts count every request pair, answers that were not computed included; configuration-pair counts count the worst verdict of each configuration pair. Check geometric-mtf is in both baselines and counts once.
 
 A check held to a limit holds two engines to the limits of the limits file on the same input, and its verdicts are the ones the baseline holds.
 
@@ -51,10 +51,10 @@ The foundation of every tab: the system each engine builds from the lens state, 
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Built system — `r0` | Built layout, shape, aperture, index and sampled sag | system.describe | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| First-order data — `r1` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| Ray trace — `r2` | Hits, directions, image landings and masks of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| Optical path — `r3` | Optical path, path to image and chief-relative OPD of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Built system — `built-system` | Built layout, shape, aperture, index and sampled sag | system.describe | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Ray trace — `ray-trace` | Hits, directions, image landings and masks of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Optical path — `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 18 | 18 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Not covered
 
@@ -70,21 +70,21 @@ LensVisualizer's MTF tab: this tool's geometric and wave MTF of LensVisualizer's
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Geometric MTF of the same rays — `r4` | This tool's geometric MTF of identical rays, as each engine traces them | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json, baselines/benchmark.mtf.json |
-| LensVisualizer's MTF sampling, replayed — `r4f` | LensVisualizer's geometric MTF beside a replay of its own sampling | mtf.native | lv, replay | 2 | 2 | 2 | 2 Pass | 2 Pass | every engine answered | baselines/benchmark.mtf.json |
-| Wave MTF of the same rays — `r6a` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.mtf.json |
+| Geometric MTF of the same rays — `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json, baselines/benchmark.mtf.json |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | mtf.native | lv, replay | 2 | 2 | 2 | 2 Pass | 2 Pass | every engine answered | baselines/benchmark.mtf.json |
+| Wave MTF of the same rays — `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.mtf.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | mtf.native | lv, optiland, wave | 2 | 6 | 6 | 4 Side by side, worth a look; 2 Not computed | 4 Side by side, worth a look; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.mtf.json |
-| MTF beside the wave estimate of LensVisualizer's rays — `r6b` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | mtf.native | lv, wave | 2 | 2 | 2 | 1 Side by side; 1 Side by side, worth a look | 1 Side by side; 1 Side by side, worth a look | every engine answered | baselines/benchmark.mtf.json |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | mtf.native | lv, optiland, wave | 2 | 6 | 6 | 4 Side by side, worth a look; 2 Not computed | 4 Side by side, worth a look; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.mtf.json |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | mtf.native | lv, wave | 2 | 2 | 2 | 1 Side by side; 1 Side by side, worth a look | 1 Side by side; 1 Side by side, worth a look | every engine answered | baselines/benchmark.mtf.json |
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Geometric MTF beside optiland's — `r5g` | Geometric MTF on each method's own pupil sampling | none | none | not in the benchmark's baselines |
-| MTF beside the OTF of optiland's wavefront — `r6c` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | none | none | not in the benchmark's baselines |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | Geometric MTF on each method's own pupil sampling | none | none | not in the benchmark's baselines |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | none | none | not in the benchmark's baselines |
 
 ### Not covered
 
@@ -98,13 +98,13 @@ LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and t
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Spot and fan rays — `r7a` | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 24 | 16 Pass; 8 Not computed | 4 Pass; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.json |
+| Spot and fan rays — `spot-rays` | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 24 | 16 Pass; 8 Not computed | 4 Pass; 2 Not computed | optiland: 1 answered, 1 not computed | baselines/benchmark.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Spots and fans beside optiland's — `r7b` | LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan | spot.native | lv, optiland | in no baseline; run only where named |
+| Spots and fans beside optiland's — `spot-vs-optiland` | LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan | spot.native | lv, optiland | in no baseline; run only where named |
 
 ### Not covered
 
@@ -112,7 +112,7 @@ LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and t
 
 - A finite object and a folded path: each is a coded problem of the run, never approximated; a coma fan on the axis is a coded problem of its field.
 
-- The spot figures of check r7b have no review band, since the two engines sample the pupil on different rings; only its fan figure has one.
+- The spot figures of check spot-vs-optiland have no review band, since the two engines sample the pupil on different rings; only its fan figure has one.
 
 ## Spherical aberration and axial colour
 
@@ -122,17 +122,17 @@ LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Spherical aberration and axial colour rays — `r8a` | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Spherical aberration and axial colour rays — `axial-rays` | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Spherical aberration and axial colour beside optiland's — `r8b` | LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus | axial.native | lv, optiland | in no baseline; run only where named |
+| Spherical aberration and axial colour beside optiland's — `axial-vs-optiland` | LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus | axial.native | lv, optiland | in no baseline; run only where named |
 
 ### Not covered
 
-- The colour figures of check r8b have no review band.
+- The colour figures of check axial-vs-optiland have no review band.
 
 - Bit identity of LensVisualizer's channel indices at the C, F and g lines: no committed suite asks for those wavelengths, and it is not pursued.
 
@@ -140,20 +140,20 @@ LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour
 
 ## Distortion, lateral colour, pupils and breathing
 
-LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own. Breathing is the focal length of each prepared lens state, which check r1 compares; a test against LensVisualizer alone (breathing.test.ts) holds the breathing chart to that focal length.
+LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own. Breathing is the focal length of each prepared lens state, which check first-order compares; a test against LensVisualizer alone (breathing.test.ts) holds the breathing chart to that focal length.
 
 ### Held to a limit
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
-| First-order data — `r1` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Distortion, pupils and lateral colour beside optiland's — `r9b` | LensVisualizer's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils | chief.native | lv, optiland | in no baseline; run only where named |
+| Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland` | LensVisualizer's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils | chief.native | lv, optiland | in no baseline; run only where named |
 
 ### Not covered
 
@@ -163,7 +163,7 @@ LensVisualizer's distortion and pupils tabs and its lateral-colour section: thei
 
 - optiland's pupil aberration: another quantity, never asked for.
 
-- The figures of check r9b have no review band.
+- The figures of check chief-vs-optiland have no review band.
 
 ## Field curves and astigmatism
 
@@ -173,13 +173,13 @@ LensVisualizer's field-curve and astigmatism sections (aberrations tab): the par
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| Field-curve rays — `r10a` | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| Field-curve rays — `field-curve-rays` | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays | rays.trace | lv, optiland, ref | 2 | 6 | 12 | 12 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Field curves beside optiland's — `r10b` | LensVisualizer's field-curve sections beside optiland's FieldCurvature | curvature.native | lv, optiland | in no baseline; run only where named |
+| Field curves beside optiland's — `field-curve-vs-optiland` | LensVisualizer's field-curve sections beside optiland's FieldCurvature | curvature.native | lv, optiland | in no baseline; run only where named |
 
 ### Not covered
 
@@ -195,37 +195,37 @@ LensVisualizer's vignetting tab: an aimed lattice of rays on the real stop at ea
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Vignetting rays — `r11a` | Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays | none | none | not in the benchmark's baselines |
+| Vignetting rays — `vignetting-rays` | Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays | none | none | not in the benchmark's baselines |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Vignetting beside the flux estimate — `r11b` | LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices | vignetting.native | flux, lv | in no baseline; run only where named |
+| Vignetting beside the flux estimate — `vignetting-vs-flux-estimate` | LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices | vignetting.native | flux, lv | in no baseline; run only where named |
 
 ### Not covered
 
-- optiland has no vignetting analysis: the counterpart in check r11b is this tool's own flux estimate on LensVisualizer's lattices, not an external engine.
+- optiland has no vignetting analysis: the counterpart in check vignetting-vs-flux-estimate is this tool's own flux estimate on LensVisualizer's lattices, not an external engine.
 
-- The relative illumination and the falloff of check r11b have no review band.
+- The relative illumination and the falloff of check vignetting-vs-flux-estimate have no review band.
 
 - Lens states outside the tab's beam model, and fields launched from a bounding sphere: coded problems, with no vignetting rays.
 
 ## Summary and cardinal elements
 
-LensVisualizer's summary tab and aperture control: their readouts are of the prepared lens state and LensVisualizer's paraxial model, which check r1 compares; a test against LensVisualizer alone (summary.test.ts) holds the readouts to the first-order values of check r1; the tab traces no ray of its own.
+LensVisualizer's summary tab and aperture control: their readouts are of the prepared lens state and LensVisualizer's paraxial model, which check first-order compares; a test against LensVisualizer alone (summary.test.ts) holds the readouts to the first-order values of check first-order; the tab traces no ray of its own.
 
 ### Held to a limit
 
 | Check | Compares | Quantity | Engines | Configurations | Configuration pairs | Request pairs | Request-pair counts | Configuration-pair counts | Engines not answering | Baselines |
 |---|---|---|---|---:|---:|---:|---|---|---|---|
-| First-order data — `r1` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
+| First-order data — `first-order` | First-order quantities and pupils | paraxial.first-order | lv, optiland, ref | 2 | 6 | 6 | 6 Pass | 6 Pass | every engine answered | baselines/benchmark.json |
 
 ### Side by side
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Summary beside optiland's — `r12b` | LensVisualizer's summary tab and aperture control beside optiland's paraxial accessors and working f-number | summary.native | lv, optiland | in no baseline; run only where named |
+| Summary beside optiland's — `summary-vs-optiland` | LensVisualizer's summary tab and aperture control beside optiland's paraxial accessors and working f-number | summary.native | lv, optiland | in no baseline; run only where named |
 
 ### Not covered
 
@@ -233,7 +233,7 @@ LensVisualizer's summary tab and aperture control: their readouts are of the pre
 
 - The aperture control's paraxial working f-number beside the mark, shown only above a difference of 0.05.
 
-- The stop and the track in check r12b are optiland's reading of the lens state: they hold the tab to the lens state, not two engines to each other.
+- The stop and the track in check summary-vs-optiland are optiland's reading of the lens state: they hold the tab to the lens state, not two engines to each other.
 
 ## Seidel sums, wavefront and Zernike fits (no LensVisualizer tab)
 
@@ -243,8 +243,8 @@ LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these
 
 | Check | Compares | Quantity | Engines | Baselines |
 |---|---|---|---|---|
-| Seidel sums beside optiland's — `r13b` | This tool's Seidel sums of the reference model beside optiland's | seidel.native | optiland, ref-seidel | in no baseline; run only where named |
-| Zernike fit beside optiland's — `r14b` | optiland's Zernike fit beside this tool's fit of the same raw wavefront samples | zernike.native | optiland, optiland-wave | in no baseline; run only where named |
+| Seidel sums beside optiland's — `seidel-vs-optiland` | This tool's Seidel sums of the reference model beside optiland's | seidel.native | optiland, ref-seidel | in no baseline; run only where named |
+| Zernike fit beside optiland's — `zernike-vs-optiland` | optiland's Zernike fit beside this tool's fit of the same raw wavefront samples | zernike.native | optiland, optiland-wave | in no baseline; run only where named |
 
 ### Not covered
 
@@ -260,11 +260,11 @@ LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these
 
 Beyond each row's own items, the fixed list that every MTF report ends with says what no comparison of this tool shows:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
 
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
 
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 
@@ -290,8 +290,8 @@ The hashes that tell one version from another: of the suite file, of the limits 
 | Limits file hash | b32032395aa189b6f09936b542be7154e4d611122d299340bb341ba713f7312a |
 | LensVisualizer commit | cccccccccccccccccccccccccccccccccccccccc |
 | LensVisualizer engine code | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |
-| baselines/benchmark.json | a4af89aee4d91105c9b086491fc0b4942f9e284907e439c3bbad50766002ba76 |
-| baselines/benchmark.mtf.json | 9668eda943f56095580972788388f20233b1503263f14b6111bff856cb02e39b |
+| baselines/benchmark.json | 14526bc9ba61bdcc6d85ae6c002d48c579392832dfb1cb0b84eb9a19bc32daa3 |
+| baselines/benchmark.mtf.json | 9cd7f2136634ed22d8913593a986957ed2a9c1bc3d889f83fd3eba5a05eeb685 |
 
 | Engine | Engine code | This tool's code behind it |
 |---|---|---|

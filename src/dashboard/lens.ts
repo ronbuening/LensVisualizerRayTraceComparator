@@ -619,13 +619,42 @@ function differencesOf(
 }
 
 /**
+ * A choice whose checks are read under the ids of today where no run names them as given: an address written before
+ * the rename (`?rung=r5`) chooses what it chose then, quietly. A check the runs name as given is kept as it is. The
+ * check of the reference curve (its second part) is read the same way.
+ */
+function aliasedSelection(selection: LensSelection, known: ReadonlySet<string>): LensSelection {
+  const now = (id: string): string => (known.has(id) ? id : currentCheckId(id));
+  // A part that is no encoded text (a malformed address) is left as it is, and names no curve.
+  const part = (text: string): string => {
+    try {
+      return encodeURIComponent(now(decodeURIComponent(text)));
+    } catch {
+      return text;
+    }
+  };
+  const reference =
+    selection.reference === null
+      ? null
+      : selection.reference
+          .split(",")
+          .map((each, at) => (at === 1 ? part(each) : each))
+          .join(",");
+  return { ...selection, rungs: [...new Set(selection.rungs.map(now))], reference };
+}
+
+/**
  * The view of a lens page: its runs with their conditions and requests, the picker over their `mtf.native` answers,
  * the curves the choice draws (at most `MAX_LENS_CURVES`) and, with a reference among them, the differences against
  * it, within its request as its section page draws them, and the others apart.
  */
 export function buildLensView(inputs: LensInputs): LensView {
-  const { key, runs, selection, stored } = inputs;
+  const { key, runs, stored } = inputs;
   const jobs = runs.map((input) => ({ input, jobs: jobsOf(input, stored) }));
+  const selection = aliasedSelection(
+    inputs.selection,
+    new Set(jobs.flatMap((each) => each.jobs.map((item) => item.job.rung))),
+  );
   const nothing = chosenNothing(selection);
   const cutsChosen = nothing ? ["tangential"] : selection.cuts;
 

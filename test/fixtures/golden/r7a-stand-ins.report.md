@@ -8,7 +8,7 @@
 | Suite hash | d93953c7f24b3a290ab471bae2e31db27fe54684fa75e31e41318e41ca313ba4 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | c043b260c7ceac29a3a0eb888d390b4ebdfb272a20c8ef69505bdeab601231d8 |
+| Limits file hash | fcf6955e2dff2e46f8e0a774991d0060b8b93cb35546c9bf1b81c0c2e2bdf3a5 |
 
 ### Engines
 
@@ -67,14 +67,14 @@ Of 2 requests with a consensus to look for, 2 have one.
 
 | Run | Check | moved | ref | stopped |
 |---|---|---|---|---|
-| lens | r7a, request 1 of 2 | ok | ok | ok |
-| lens | r7a, request 2 of 2 | ok | ok | ok |
+| lens | spot-rays, request 1 of 2 | ok | ok | ok |
+| lens | spot-rays, request 2 of 2 | ok | ok | ok |
 
 ## Results
 
 ### lens
 
-#### Spot and fan rays — `r7a`, request 1 of 2
+#### Spot and fan rays — `spot-rays`, request 1 of 2
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `e3d8c50ac74aa038a63e4e27a58f07253e26af15609da251ef9dcb8584c0effd`.
 
@@ -106,7 +106,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 | spot.centroidY[0] | -4.19594236e-2 | -4.19594236e-2 | -1.91661870e-1 |
 | spot.rmsRadius[0] | 2.75204373e-1 | 2.75204373e-1 | 1.06348130e-1 |
 
-#### Spot and fan rays — `r7a`, request 2 of 2
+#### Spot and fan rays — `spot-rays`, request 2 of 2
 
 Quantity `rays.trace`: one estimator on each engine's trace of the same rays; held to a limit. Request `b9f79561c0293b9ce65b45870e0a13bbcf8d7b187215aefa9aa6e88ee1b54a68`.
 
@@ -142,9 +142,9 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.

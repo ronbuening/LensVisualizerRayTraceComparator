@@ -9,9 +9,9 @@ import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { sha256Hex } from "../core/numeric/hash.ts";
 import { escapeCell } from "./markdown.ts";
 import { VERDICTS } from "../contract/comparison.ts";
-import { VERDICT_TEXT, checkOf, checkTitle, classLabel, verdictShort } from "../vocabulary/index.ts";
+import { VERDICT_TEXT, checkOf, checkTitle, classLabel, namesOldCheckIds, verdictShort } from "../vocabulary/index.ts";
 import { checkName } from "./names.ts";
-import { CATALOG_LABELS, CATALOG_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
+import { CATALOG_LABELS, CATALOG_NOT_COVERED, CATALOG_TEXT, NOT_COVERED, wordingProblems } from "./wording.ts";
 
 export const CATALOG_FILES = ["catalog.json", "catalog.mtf.json"] as const;
 export const CATALOG_JSON = "reports/catalog.json";
@@ -310,7 +310,11 @@ export function renderCatalog(inputs: readonly CatalogInput[]) {
     "",
     `## ${L.notCovered}`,
     "",
-    ...NOT_COVERED.flatMap((t) => [`- ${t}`, ""]),
+    // A catalog written before the rename keeps the words of its check ids; one written since has today's.
+    ...(inputs.some((input) => namesOldCheckIds(input.baseline)) ? CATALOG_NOT_COVERED : NOT_COVERED).flatMap((t) => [
+      `- ${t}`,
+      "",
+    ]),
   );
   const markdown = lines.join("\n");
   const problems = wordingProblems(markdown);

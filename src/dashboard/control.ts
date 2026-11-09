@@ -1128,7 +1128,7 @@ export function createController(context: ControlContext, configured: ControlOpt
     const suiteName = suiteNameOf(start.suite.file);
     const selection = [
       ...(start.engines === null ? [] : ["--engines", start.engines.join(",")]),
-      ...(start.rungs === null ? [] : ["--rungs", start.rungs.join(",")]),
+      ...(start.rungs === null ? [] : ["--checks", start.rungs.join(",")]),
     ];
     return begin({
       job: jobs.length + 1,

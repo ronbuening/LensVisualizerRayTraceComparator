@@ -29,14 +29,14 @@ export const MATRIX_MARKDOWN = `reports/${MATRIX_SUITE}/validation-matrix.md`;
  * asked of, as `RungDefinition` states them (a test holds the two together). The matrix gives no figure of them.
  */
 export const UNBASELINED_RUNGS: Readonly<Record<string, { quantity: string; engines: readonly string[] }>> = {
-  r7b: { quantity: "spot.native", engines: ["lv", "optiland"] },
-  r8b: { quantity: "axial.native", engines: ["lv", "optiland"] },
-  r9b: { quantity: "chief.native", engines: ["lv", "optiland"] },
-  r10b: { quantity: "curvature.native", engines: ["lv", "optiland"] },
-  r11b: { quantity: "vignetting.native", engines: ["flux", "lv"] },
-  r12b: { quantity: "summary.native", engines: ["lv", "optiland"] },
-  r13b: { quantity: "seidel.native", engines: ["optiland", "ref-seidel"] },
-  r14b: { quantity: "zernike.native", engines: ["optiland", "optiland-wave"] },
+  "spot-vs-optiland": { quantity: "spot.native", engines: ["lv", "optiland"] },
+  "axial-vs-optiland": { quantity: "axial.native", engines: ["lv", "optiland"] },
+  "chief-vs-optiland": { quantity: "chief.native", engines: ["lv", "optiland"] },
+  "field-curve-vs-optiland": { quantity: "curvature.native", engines: ["lv", "optiland"] },
+  "vignetting-vs-flux-estimate": { quantity: "vignetting.native", engines: ["flux", "lv"] },
+  "summary-vs-optiland": { quantity: "summary.native", engines: ["lv", "optiland"] },
+  "seidel-vs-optiland": { quantity: "seidel.native", engines: ["optiland", "ref-seidel"] },
+  "zernike-vs-optiland": { quantity: "zernike.native", engines: ["optiland", "optiland-wave"] },
 };
 
 /** Reads only the benchmark's two baselines, refusing a missing or invalid one before anything is written. */

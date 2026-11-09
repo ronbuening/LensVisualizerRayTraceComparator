@@ -32,7 +32,7 @@ test("synthetic statement golden, both files; fixed ordering, no engines or envi
   assert.ok(rendered.markdown.includes(STATEMENT_TEXT.population));
   assert.equal(s.z50Attribution, null, "no lens-specific attribution without the named comparison");
   assert.deepEqual(s.wavelengthsNm, [400, 500, 600]);
-  const r4 = s.rungs.find((r) => r.rung === "r4")!;
+  const r4 = s.rungs.find((r) => r.rung === "geometric-mtf")!;
   assert.equal(r4.configurations, 8);
   assert.equal(r4.configurationPairs, 16);
   assert.equal(r4.requestPairs, 32); // R4 exists twice in each input suite, counted once.
@@ -45,11 +45,13 @@ test("synthetic statement golden, both files; fixed ordering, no engines or envi
     assert.equal(c.worstSetAside?.value, 3 / 8);
     assert.deepEqual(
       c.classes,
-      c.rung === "r5" ? { method: 4, numerical: 4, unsupported: 16 } : { method: 8, numerical: 8, unsupported: 8 },
+      c.rung === "mtf-vs-optiland-fft"
+        ? { method: 4, numerical: 4, unsupported: 16 }
+        : { method: 8, numerical: 8, unsupported: 8 },
     );
     assert.deepEqual(
       c.statuses,
-      c.rung === "r5"
+      c.rung === "mtf-vs-optiland-fft"
         ? { ATTENTION: 2, RECORDED: 2, "SET ASIDE": 4, UNSUPPORTED: 16 }
         : { ATTENTION: 4, RECORDED: 4, "SET ASIDE": 8, UNSUPPORTED: 8 },
     );
@@ -61,7 +63,7 @@ test("support names landing when hits is larger, and formats the statement's own
   const r2 = inputs[0].baseline.runs[0].rungs[2];
   r2.pairs[0].metrics.push({ name: "hits.maxDistance", value: 1 / 32, tolerance: 1 / 8, unit: "mm" });
   const s = buildStatement(inputs);
-  assert.equal(s.rungs.find((r) => r.rung === "r2")?.worst?.name, "hits.maxDistance");
+  assert.equal(s.rungs.find((r) => r.rung === "ray-trace")?.worst?.name, "hits.maxDistance");
   assert.match(s.supportable, /worst landing 0\.016 mm \(gate 0\.125 mm\)/);
   const changed = mutable(s);
   changed.agreementConfigurations = 7;
@@ -87,10 +89,10 @@ test("support quotes only the counted configurations' worsts while rung maxima k
   // a measured R6a metric for both LV/external pairs, despite having the largest residuals.
   for (const input of inputs.filter((input) => input.baseline.suite.name === "benchmark")) {
     for (const rung of input.baseline.runs[0].rungs) {
-      if (!["r2", "r3", "r4", "r6a"].includes(rung.rung)) continue;
+      if (!["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"].includes(rung.rung)) continue;
       for (const pair of rung.pairs) {
         for (const metric of pair.metrics.filter((metric) => metric.name !== "synthetic.zero")) metric.value = 1 / 32;
-        if (rung.rung === "r6a" && pair.b === "ref")
+        if (rung.rung === "wave-mtf" && pair.b === "ref")
           pair.metrics = pair.metrics.filter((metric) => metric.name !== "waveMtf.maxAbs");
       }
     }
@@ -100,10 +102,10 @@ test("support quotes only the counted configurations' worsts while rung maxima k
   assert.equal(s.agreementConfigurations, 7);
   assert.equal(s.agreementStates.filter((state) => state.run === "artificial-line").length, 3);
   for (const [rung, name] of [
-    ["r2", "landing"],
-    ["r3", "opticalPath"],
-    ["r4", "geometricMtf"],
-    ["r6a", "waveMtf"],
+    ["ray-trace", "landing"],
+    ["optical-path", "opticalPath"],
+    ["geometric-mtf", "geometricMtf"],
+    ["wave-mtf", "waveMtf"],
   ] as const) {
     const worst = s.rungs.find((r) => r.rung === rung)!.worst!;
     assert.equal(worst.value, 1 / 32);
@@ -136,7 +138,7 @@ test("ranks unlike gated metrics against their own gates, retains zero limits an
     ],
   };
   const s = buildStatement(copy);
-  const r2 = s.rungs.find((r) => r.rung === "r2")!;
+  const r2 = s.rungs.find((r) => r.rung === "ray-trace")!;
   assert.equal(r2.worst?.name, "small.maxAbs");
   assert.deepEqual(r2.worst?.where, { ray: 7 });
   assert.equal(r2.worst?.suite, "benchmark");

@@ -44,11 +44,11 @@ export const R11A_GOLDEN = "r11a-stand-ins";
 export const R11B_GOLDEN = "r11b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its limit and units. */
-function policyOf(rung: "r11a" | "r11b"): Policy {
+function policyOf(rung: "vignetting-rays" | "vignetting-vs-flux-estimate"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R11A_POLICY: Policy = policyOf("r11a");
-export const R11B_POLICY: Policy = policyOf("r11b");
+export const R11A_POLICY: Policy = policyOf("vignetting-rays");
+export const R11B_POLICY: Policy = policyOf("vignetting-vs-flux-estimate");
 
 /** What one cycle of a fixture gave. */
 export interface R11Cycle {
@@ -128,7 +128,7 @@ function beamOf(angle: number): RaysTraceSpec {
 
 /** The rung `r11a` as a case without LensVisualizer's tab can be asked it: the beams of three fields of one line. */
 export const R11A_FIXTURE_RUNG: RungDefinition = {
-  id: "r11a",
+  id: "vignetting-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [beamOf(0), beamOf(3), beamOf(4)].map((spec) =>
@@ -210,7 +210,7 @@ const ASK: VignettingNativeSpec = { lines: [0], maxFieldDeg: 24, fieldAnglesDeg:
 
 /** The rung `r11b` as stand-ins can be asked it: the tab's curve at the first line. */
 export const R11B_FIXTURE_RUNG: RungDefinition = {
-  id: "r11b",
+  id: "vignetting-vs-flux-estimate",
   quantity: VIGNETTING_NATIVE,
   engines: ["lv", "flux"],
   buildRequests: (opticalCase) => [

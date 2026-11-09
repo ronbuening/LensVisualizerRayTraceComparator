@@ -47,14 +47,16 @@ const CLI_HELP: Allowlist = {
 };
 
 /**
- * What the commands print on a temporary root of fake engines, by command line. Bare check ids (`r2`) are not jargon
- * yet: they are what a user types until the rename. `run` and `baseline check` name the run record's file,
- * manifest.json, whose name is stored; `glossary` says which of the tool's own words each term replaces.
+ * What the commands print on a temporary root of fake engines, by command line. `run` and `baseline check` name the
+ * run record's file, manifest.json, whose name is stored; `glossary` says which of the tool's own words each term
+ * replaces; `checks` shows each check's old id beside its id (the id it had before the rename, which is still read).
  */
 const CLI_OUTPUT: Allowlist = {
   "run suites/pair.json --engines fake-a,fake-near,fake-none": ["manifest"],
   "baseline check pair": ["manifest"],
   "baseline check pair, out of date": ["manifest"],
+  checks: ["old check id"],
+  "checks ray-trace": ["old check id"],
   glossary: ["rung", "ladder", "recipe", "manifest", "adapter revision", "fingerprint", "owner"],
 };
 
@@ -64,19 +66,22 @@ const README: Allowlist = {};
 /**
  * Every committed `reports/**\/*.md`, by its path under reports/. The catalog's statistics list each classified
  * failure with the command that reproduces it, as `docs/known-failures.json` stores it: `--rungs`, the older spelling
- * of `--checks`, until the catalog is refreshed.
+ * of `--checks`, until the catalog is refreshed. The catalog snapshot's reports name its checks by the ids it was
+ * written with (`r2`), until the end-of-project catalog refresh.
  */
 const REPORTS: Allowlist = {
-  "catalog.md": ["rung"],
+  "catalog.md": ["rung", "old check id"],
+  "catalog/mtf.md": ["old check id"],
+  "catalog/rays.md": ["old check id"],
 };
 
 /**
  * Every golden `test/fixtures/golden/**\/*.md`, by its path under the golden directory. The catalog's stand-in keeps
- * its reproducer commands as the committed one does, and a blocked pair's reason is the comparison's own, as
- * `comparisons.json` stores it ("not judged: rung r0 failed ...").
+ * its reproducer commands and its check ids as the committed one does, and a blocked pair's reason is the
+ * comparison's own, as `comparisons.json` stores it ("not judged: rung built-system failed ...").
  */
 const GOLDENS: Allowlist = {
-  "catalog.md": ["rung"],
+  "catalog.md": ["rung", "old check id"],
   "hand-built.report.md": ["rung"],
 };
 
@@ -228,7 +233,7 @@ function fakeRoot(t: TestContext, near: Readonly<Record<string, unknown>> = { bi
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: ["singlet", "double-gauss"].map((name) => ({ name, lens: { kind: "fixture", path: `cases/${name}.json` } })),
   };
   writeFileSync(join(rootDir, "suites", "pair.json"), JSON.stringify(suite));
@@ -303,7 +308,7 @@ test("what the commands print uses no more of the tool's own words than its allo
   await say(["doctor"]);
   await say(["engine", "describe", "fake-a", "lv"]);
   await say(["checks"]);
-  await say(["checks", "r2"]);
+  await say(["checks", "ray-trace"]);
   await say(["glossary"]);
   for (const [key, text] of texts) {
     assert.notEqual(text, "", key);
@@ -321,6 +326,7 @@ test("what the commands print uses no more of the tool's own words than its allo
  * of run control are read.
  */
 const DASHBOARD: Allowlist = {
+  checks: ["old check id"],
   section: ["rung"],
   "compare tab": ["rung"],
   lens: ["rung"],

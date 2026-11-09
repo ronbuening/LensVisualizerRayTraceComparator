@@ -19,7 +19,7 @@ import { encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { resultDataProblems } from "../../src/core/resultData.ts";
 import { mtfNativeQuantity } from "../../src/quantities/mtfNative.ts";
 
-const R6B = loadPolicy().rungs.r6b;
+const R6B = loadPolicy().rungs["mtf-vs-wave-estimate"];
 const SPEC: MtfNativeSpec = {
   frequenciesPerMm: [10, 30, 50],
   fields: { kind: "image-height-fractions", values: [0, 0.5, 1] },
@@ -102,8 +102,8 @@ function close(metric: ComputedMetric, expected: number): void {
 
 test("the comparator is of mtf.native for rung r6b, and the policy records its two bands", () => {
   assert.equal(mtfWaveComparator.quantity, "mtf.native");
-  assert.equal(mtfWaveComparator.rung, "r6b");
-  assert.equal(COMPARATORS.get("mtf.native", "r6b"), mtfWaveComparator);
+  assert.equal(mtfWaveComparator.rung, "mtf-vs-wave-estimate");
+  assert.equal(COMPARATORS.get("mtf.native", "mtf-vs-wave-estimate"), mtfWaveComparator);
   assert.deepEqual(
     mtfWaveComparator.metrics.map((metric) => `${metric.name} ${metric.unit}`),
     [

@@ -24,7 +24,7 @@ import type { SeidelNativeData } from "../../src/contract/quantities/seidelNativ
 import { seidelNativeQuantity } from "../../src/quantities/seidelNative.ts";
 import { SEIDEL_DATA_TWO_SURFACES, SEIDEL_DATA_UNAVAILABLE } from "../contract/corpus.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r13b;
+const POLICY: RungPolicy = loadPolicy().rungs["seidel-vs-optiland"];
 
 /** The corpus's answer as another engine states it: no chromatic sum, and other sums by `delta`. */
 function other(delta: number, more: Partial<SeidelNativeData> = {}): SeidelNativeData {

@@ -95,7 +95,7 @@ function judged(a: SpanAnswer, b: SpanAnswer) {
   return comparePair(
     participant("ref", a),
     participant("lv", b),
-    loadPolicy().rungs.r11a,
+    loadPolicy().rungs["vignetting-rays"],
     raysVignettingComparator,
     undefined,
     CONTEXT,

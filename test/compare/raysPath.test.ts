@@ -11,7 +11,7 @@ import { raysPathComparator } from "../../src/compare/raysPath.ts";
 import type { RaysTraceData } from "../../src/contract/quantities/raysTrace.ts";
 import { BASE, CHIEF, LENS, SPEC, WAVE_MM, changed, specAt, stopAt, tracer } from "./raysSupport.ts";
 
-const R3 = loadPolicy().rungs.r3;
+const R3 = loadPolicy().rungs["optical-path"];
 const CONTEXT: ComparisonContext = { spec: SPEC, opticalCase: LENS };
 const PLACE = { line: 0, field: 0 };
 /** One wave of the first line, mm: 587.5618 nm. */
@@ -42,8 +42,8 @@ function waves(metric: ComputedMetric, expected: number): void {
 
 test("the comparator is of rays.trace for rung r3, and reports separate geometric and phase metrics in waves", () => {
   assert.equal(raysPathComparator.quantity, "rays.trace");
-  assert.equal(raysPathComparator.rung, "r3");
-  assert.equal(COMPARATORS.get("rays.trace", "r3"), raysPathComparator);
+  assert.equal(raysPathComparator.rung, "optical-path");
+  assert.equal(COMPARATORS.get("rays.trace", "optical-path"), raysPathComparator);
   assert.deepEqual(raysPathComparator.metrics, [
     { name: "opticalPath.maxAbs", unit: "waves" },
     { name: "opticalPathToImage.maxAbs", unit: "waves" },

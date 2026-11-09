@@ -299,7 +299,7 @@ export function runAndCompare(t: TestContext, run: RunCycleInput): RunCycle {
   const ran = lvrtc(
     runsDir,
     cwd,
-    ["run", run.suite, ...rooted, "--engines", run.engines, "--rungs", run.rungs],
+    ["run", run.suite, ...rooted, "--engines", run.engines, "--checks", run.rungs],
     python,
   );
   const runSeconds = (performance.now() - started) / 1000;

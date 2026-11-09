@@ -30,13 +30,13 @@ How to read this, near the end, says what each label and column means.
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
-| LensVisualizer's MTF sampling, replayed — `r4f` | `mtf.native` | 128 | 128 | lv – replay | 128 Pass | 128 Pass |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 128 | 128 | lv – replay | 128 Pass | 128 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
 
 ## Support
 
@@ -45,16 +45,16 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Geometric MTF of the same rays — `r4` | lv | 128 answered |
-| Geometric MTF of the same rays — `r4` | optiland | 128 answered |
-| Geometric MTF of the same rays — `r4` | ref | 128 answered |
-| LensVisualizer's MTF sampling, replayed — `r4f` | lv | 128 answered |
-| LensVisualizer's MTF sampling, replayed — `r4f` | replay | 128 answered |
-| Wave MTF of the same rays — `r6a` | lv | 128 answered |
-| Wave MTF of the same rays — `r6a` | optiland | 128 answered |
-| Wave MTF of the same rays — `r6a` | ref | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | lv | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | optiland | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | ref | 128 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | lv | 128 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay | 128 answered |
+| Wave MTF of the same rays — `wave-mtf` | lv | 128 answered |
+| Wave MTF of the same rays — `wave-mtf` | optiland | 128 answered |
+| Wave MTF of the same rays — `wave-mtf` | ref | 128 answered |
 
-## Geometric MTF of the same rays — `r4`
+## Geometric MTF of the same rays — `geometric-mtf`
 
 Compares: This tool's geometric MTF of identical rays, as each engine traces them. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -208,7 +208,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | Pass: mtf.maxAbs 4.05e-13 (3 of 3) | Pass: mtf.maxAbs 2.39e-12 (3 of 3) | Pass: mtf.maxAbs 2.65e-12 (3 of 3) |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 3 | Pass: mtf.maxAbs 5.08e-13 (3 of 3) | Pass: mtf.maxAbs 3.46e-12 (3 of 3) | Pass: mtf.maxAbs 2.95e-12 (3 of 3) |
 
-## LensVisualizer's MTF sampling, replayed — `r4f`
+## LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`
 
 Compares: LensVisualizer's geometric MTF beside a replay of its own sampling. Kind: held to a limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -353,7 +353,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 1 | Pass: mtf.maxAbs 2.55e-15 (1 of 1) |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 1 | Pass: mtf.maxAbs 1.78e-15 (1 of 1) |
 
-## Wave MTF of the same rays — `r6a`
+## Wave MTF of the same rays — `wave-mtf`
 
 Compares: This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -531,9 +531,9 @@ No request is worth a look by its review bands.
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
@@ -561,9 +561,9 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Geometric MTF of the same rays | `r4` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
-| LensVisualizer's MTF sampling, replayed | `r4f` | held to a limit | LensVisualizer's geometric MTF beside a replay of its own sampling. |
-| Wave MTF of the same rays | `r6a` | held to a limit | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
+| Geometric MTF of the same rays | `geometric-mtf` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
+| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | held to a limit | LensVisualizer's geometric MTF beside a replay of its own sampling. |
+| Wave MTF of the same rays | `wave-mtf` | held to a limit | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
 
 ### Engines
 

@@ -30,7 +30,7 @@ const suite = {
   name: "folded-confirmation",
   defaults: {
     engines: ["lv", "ref", "optiland"],
-    rungs: ["r0", "r1", "r2", "r3"],
+    rungs: ["built-system", "first-order", "ray-trace", "optical-path"],
     fields: { kind: "angles-deg", values: [0, 0.25] },
     sampling: { bundleGrid: 4 },
   },
@@ -80,7 +80,7 @@ test("confirmed runs name the exact coarse/fine sets, keep identity, and retain 
   );
   const watched = watchedRegistry({ lv: fakeEngine(), ref: fakeEngine(), optiland: fakeEngine() });
   const input = { suite: loaded, sources: { lv: source }, registry: watched.registry, runsDir: tempDir(t) };
-  const plan = await planJobs({ ...input, rungs: ["r0", "r2", "r6a"] });
+  const plan = await planJobs({ ...input, rungs: ["built-system", "ray-trace", "wave-mtf"] });
   for (const run of plan.runs) {
     assert.ok(run.opticalCase);
     assert.equal(run.opticalCase.id, loaded.runs[0].opticalCase?.id);
@@ -164,7 +164,7 @@ test("a sequential case passes run preparation untouched: the same case, no conf
     sources: { lv: source },
     registry: watched.registry,
     runsDir: tempDir(t),
-    rungs: ["r0", "r2", "r6a"],
+    rungs: ["built-system", "ray-trace", "wave-mtf"],
   });
   assert.equal(plan.runs[0].opticalCase, before);
   assert.ok(!(before.provenance.notes ?? []).some((note) => note.startsWith(FOLDED_CONFIRMATION)));

@@ -49,7 +49,7 @@ function lvrtc(rootDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
-test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product that is no sampling fails", (t) => {
+test("lvrtc run --checks lv-mtf-replay: the replay of a sampled MTF passes, and a product that is no sampling fails", (t) => {
   const rootDir = sampledRoot(t);
   const singlet = { kind: "lv", key: "acme-singlet-50" };
   const suite = join(rootDir, "suite.json");
@@ -66,7 +66,7 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
     { name: "closed-form", lens: { kind: "lv", key: "acme-zoom-24-48" }, state: { zoomT: 0 } },
   ];
   // The suite names an engine that is none of the rung's: the rung is asked of its own two all the same.
-  const defaults = { engines: ["ref"], rungs: ["r4f"] };
+  const defaults = { engines: ["ref"], rungs: ["lv-mtf-replay"] };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "fidelity", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -75,7 +75,7 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "fidelity", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
-    runs.flatMap(({ name }) => ["lv", "replay"].map((engine) => `${name} r4f mtf.native ${engine} ok`)),
+    runs.flatMap(({ name }) => ["lv", "replay"].map((engine) => `${name} lv-mtf-replay mtf.native ${engine} ok`)),
   );
   // The two engines are one LensVisualizer, with an adapter revision each.
   const [lv, replay] = manifest.engines;
@@ -138,7 +138,7 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
   const markdown = readFileSync(join(rootDir, "runs", "fidelity", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(
     markdown,
-    /^#### LensVisualizer's MTF sampling, replayed — `r4f`\n\nQuantity `mtf\.native`: numbers of each engine set against each other; held to a limit\./m,
+    /^#### LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`\n\nQuantity `mtf\.native`: numbers of each engine set against each other; held to a limit\./m,
   );
   assert.match(
     markdown,
@@ -155,7 +155,7 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
     { name: "sampled-best", lens, imagePlane: { kind: "lv-best-axial" } },
   ];
   const suite = join(rootDir, "suite.json");
-  const defaults = { engines: ["lv", "ref"], rungs: ["r0", "r1", "r4f"] };
+  const defaults = { engines: ["lv", "ref"], rungs: ["built-system", "first-order", "lv-mtf-replay"] };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "held", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -180,16 +180,16 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
         rung.pairs.map((pair) => `${pair.a} ${pair.b} ${pair.verdict}`),
       ]),
       [
-        ["r0", ["lv ref PASS"]],
-        ["r1", ["lv ref PASS"]],
-        ["r4f", ["lv replay PASS"]],
+        ["built-system", ["lv ref PASS"]],
+        ["first-order", ["lv ref PASS"]],
+        ["lv-mtf-replay", ["lv replay PASS"]],
       ],
       run.name,
     );
   }
   // The report rendered from it has the check's section, with its three judged figures.
   const report = readFileSync(join(rootDir, "reports", "held", "rays.md"), "utf8");
-  assert.match(report, /^## LensVisualizer's MTF sampling, replayed — `r4f`$/m);
+  assert.match(report, /^## LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`$/m);
   assert.match(report, /^Compares: .* Quantity asked of the engines: an engine.s own MTF \(`mtf\.native`\)\.$/m);
   assert.match(report, / — `mtf\.maxAbs` \| \(no unit\) \| ≤ 1\.00e-9 \|/);
 
@@ -203,7 +203,11 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
   assert.deepEqual(said.errors, []);
   assert.deepEqual(
     said.records.map((record) => `${record.rung} ${record.a} ${record.b} ${record.outcome}`),
-    ["sampled", "sampled-best"].flatMap(() => ["r0 lv ref OK", "r1 lv ref OK", "r4f lv replay OK"]),
+    ["sampled", "sampled-best"].flatMap(() => [
+      "built-system lv ref OK",
+      "first-order lv ref OK",
+      "lv-mtf-replay lv replay OK",
+    ]),
   );
   const verified = lvrtc(rootDir, "verify");
   assert.equal(verified.code, EXIT_OK, verified.err + verified.out);
@@ -217,7 +221,10 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
     { name: "sampled-f8-best", lens, aperture: { kind: "lv-f8-comparison" }, imagePlane: { kind: "lv-best-axial" } },
   ];
   const suite = join(rootDir, "suite.json");
-  const defaults = { engines: ["lv", "ref"], rungs: ["r1", "r4", "r4f", "r6a", "r6b"] };
+  const defaults = {
+    engines: ["lv", "ref"],
+    rungs: ["first-order", "geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
+  };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "held", defaults, runs }));
   const at = (...parts: string[]): string => join(rootDir, ...parts);
 
@@ -228,13 +235,13 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
     none.err,
     /held\.mtf\.json: the suite held has no MTF baseline; lvrtc baseline write held --mtf writes one/,
   );
-  assert.equal(lvrtc(rootDir, "run", suite, "--rungs", "r1").code, EXIT_OK);
+  assert.equal(lvrtc(rootDir, "run", suite, "--checks", "first-order").code, EXIT_OK);
   assert.equal(lvrtc(rootDir, "compare", "held").code, EXIT_OK);
   const without = lvrtc(rootDir, "baseline", "write", "held", "--mtf");
   assert.equal(without.code, 2);
   assert.match(
     without.err,
-    /no MTF baseline is written of this run: it has none of the MTF checks r4, r4f, r5, r5g, r6a, r6b/,
+    /no MTF baseline is written of this run: it has none of the MTF checks geometric-mtf, lv-mtf-replay, mtf-vs-optiland-fft, geometric-mtf-vs-optiland, wave-mtf, mtf-vs-wave-estimate/,
   );
   assert.equal(existsSync(at("baselines")), false);
 
@@ -250,7 +257,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
     // The MTF rungs of the run and no other; every figure with the number of requests it was measured in.
     assert.deepEqual(
       run.rungs.map((rung: { rung: string }) => rung.rung),
-      ["r4", "r4f", "r6a", "r6b"],
+      ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
       run.name,
     );
     for (const rung of run.rungs) {
@@ -285,7 +292,16 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   assert.deepEqual(said.changes, []);
   assert.deepEqual(
     said.records.map((record) => `${record.rung} ${record.outcome}`),
-    ["r4", "r4f", "r6a", "r6b", "r4", "r4f", "r6a", "r6b"].map((rung) => `${rung} OK`),
+    [
+      "geometric-mtf",
+      "lv-mtf-replay",
+      "wave-mtf",
+      "mtf-vs-wave-estimate",
+      "geometric-mtf",
+      "lv-mtf-replay",
+      "wave-mtf",
+      "mtf-vs-wave-estimate",
+    ].map((rung) => `${rung} OK`),
   );
 
   // A report edited by hand is not what the baseline renders; --write makes it anew.
@@ -316,14 +332,14 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   );
 
   // A run directory is of the last run: a baseline is not replaced by the run of fewer rungs unless that is asked.
-  assert.equal(lvrtc(rootDir, "run", suite, "--rungs", "r1").code, EXIT_OK);
+  assert.equal(lvrtc(rootDir, "run", suite, "--checks", "first-order").code, EXIT_OK);
   assert.equal(lvrtc(rootDir, "compare", "held").code, EXIT_OK);
   const rays = readFileSync(at("baselines", "held.json"), "utf8");
   const fewer = lvrtc(rootDir, "baseline", "write", "held");
   assert.equal(fewer.code, 2);
   assert.match(
     fewer.err,
-    /the run has no check r4, r4f, r6a, r6b, which .*held\.json has: it is the run of other checks/,
+    /the run has no check geometric-mtf, lv-mtf-replay, wave-mtf, mtf-vs-wave-estimate, which .*held\.json has: it is the run of other checks/,
   );
   assert.equal(readFileSync(at("baselines", "held.json"), "utf8"), rays);
   assert.equal(lvrtc(rootDir, "baseline", "write", "held", "--replace").code, EXIT_OK);
@@ -358,9 +374,9 @@ test("station-selected suites round trip separate rays and gated MTF baselines w
     );
     for (const mtf of [false, true]) {
       const flags = mtf ? ["--mtf"] : [];
-      const rungs = mtf ? "r4f" : "r0,r1";
+      const rungs = mtf ? "lv-mtf-replay" : "built-system,first-order";
       for (const args of [
-        ["run", suite, "--rungs", rungs],
+        ["run", suite, "--checks", rungs],
         ["compare", name],
         ["baseline", "write", name, ...flags],
         ["baseline", "check", name, ...flags, "--json"],
@@ -419,7 +435,7 @@ test("baseline write records a declared station refused by the fake gate without
   for (const mtf of [false, true]) {
     const flags = mtf ? ["--mtf"] : [];
     for (const args of [
-      ["run", suite, "--rungs", mtf ? "r4f" : "r0,r1"],
+      ["run", suite, "--checks", mtf ? "lv-mtf-replay" : "built-system,first-order"],
       ["compare", "refused"],
       ["baseline", "write", "refused", ...flags],
       ["baseline", "check", "refused", ...flags, "--json"],

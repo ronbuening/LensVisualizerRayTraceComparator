@@ -44,7 +44,7 @@ test(
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
-    const tolerance = POLICY.rungs.r0.metrics["sag.maxScaled"].tolerance;
+    const tolerance = POLICY.rungs["built-system"].metrics["sag.maxScaled"].tolerance;
     assert.equal(tolerance, 1e-12);
 
     const worst = { scaled: 0, scaledAt: "", abs: 0, absAt: "" };
@@ -106,7 +106,7 @@ test(
   { skip },
   async (t) => {
     const binding = await loadLvBinding(LV_PATH);
-    const tolerance = POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance;
+    const tolerance = POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance;
     assert.equal(tolerance, 1e-9);
 
     const worst = { value: 0, at: "" };
@@ -176,7 +176,7 @@ test(
     const binding = await loadLvBinding(LV_PATH);
     const exporter = createLvExporter(binding);
     const trace = binding.api.paraxialTrace;
-    const tolerance = POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance;
+    const tolerance = POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance;
     assert.equal(tolerance, 1e-9);
 
     const worst = { entrance: 0, entranceAt: "", exit: 0, exitAt: "" };

@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { REPO_ROOT, loadConfig } from "../src/core/config.ts";
 import { expandSuite } from "../src/contract/runSpec.ts";
+import { currentCheckId } from "../src/core/legacyIds.ts";
 import { createLvCaseSource } from "../src/engines/lv/caseSource.ts";
 
 const [name, output, ...extra] = process.argv.slice(2);
@@ -18,5 +19,12 @@ const file = resolve(output);
 mkdirSync(dirname(file), { recursive: true });
 // A suite of its own name: run under the name "catalog", a reproduction would replace runs/catalog, the run that
 // `lvrtc baseline write catalog` records, with a run of one state. Run names, cases and requests are unchanged.
-writeFileSync(file, `${JSON.stringify({ ...suite, name: "catalog-repro", runs: selected }, null, 2)}\n`);
-console.log(`node bin/lvrtc.mjs run ${output} --rungs r0,r1,r2,r3,r4,r4f,r6a --jobs 4`);
+// The catalog's suite names its checks by the ids of before the rename; a new reproducer names them by today's.
+const checks = (rungs) => (rungs === undefined ? {} : { rungs: rungs.map((id) => currentCheckId(id)) });
+const defaults =
+  suite.defaults === undefined ? {} : { defaults: { ...suite.defaults, ...checks(suite.defaults.rungs) } };
+const runs = selected.map((run) => ({ ...run, ...checks(run.rungs) }));
+writeFileSync(file, `${JSON.stringify({ ...suite, ...defaults, name: "catalog-repro", runs }, null, 2)}\n`);
+console.log(
+  `node bin/lvrtc.mjs run ${output} --checks built-system,first-order,ray-trace,optical-path,geometric-mtf,lv-mtf-replay,wave-mtf --jobs 4`,
+);

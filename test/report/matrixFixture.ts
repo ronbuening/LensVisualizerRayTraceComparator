@@ -19,11 +19,11 @@ const engines: BaselineEngine[] = ["lv", "optiland", "ref", "replay", "wave"].ma
 }));
 
 const QUANTITIES: Readonly<Record<string, string>> = {
-  r0: "system.describe",
-  r1: "paraxial.first-order",
-  r4f: "mtf.native",
-  r5: "mtf.native",
-  r6b: "mtf.native",
+  "built-system": "system.describe",
+  "first-order": "paraxial.first-order",
+  "lv-mtf-replay": "mtf.native",
+  "mtf-vs-optiland-fft": "mtf.native",
+  "mtf-vs-wave-estimate": "mtf.native",
 };
 
 /** One rung of one run: every pair of `engines` at the given request verdicts, the gravest the pair's verdict. */
@@ -49,7 +49,7 @@ function rung(
     quantity: QUANTITIES[id] ?? "rays.trace",
     requests: verdicts.length,
     support: members.map((engine) => ({ engine, status: engine === unsupported ? "unsupported" : "ok" })),
-    ...(id === "r5" || id === "r6b" ? { bands: { "mtfOnAxis.maxAbs": 1 / 16 } } : {}),
+    ...(id === "mtf-vs-optiland-fft" || id === "mtf-vs-wave-estimate" ? { bands: { "mtfOnAxis.maxAbs": 1 / 16 } } : {}),
     pairs,
   };
 }
@@ -65,22 +65,22 @@ export function matrixInputs(): StatementInput[] {
       caseId: (second ? "e" : "f").repeat(64),
       rungs: mtf
         ? [
-            rung("r4", TRACERS, ["PASS", "PASS"]),
-            rung("r4f", ["lv", "replay"], ["PASS"]),
-            rung("r5", ["lv", "optiland", "wave"], ["ATTENTION"], second ? "optiland" : undefined),
-            rung("r6a", TRACERS, ["PASS", "PASS"]),
-            rung("r6b", ["lv", "wave"], [second ? "ATTENTION" : "RECORDED"]),
+            rung("geometric-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("lv-mtf-replay", ["lv", "replay"], ["PASS"]),
+            rung("mtf-vs-optiland-fft", ["lv", "optiland", "wave"], ["ATTENTION"], second ? "optiland" : undefined),
+            rung("wave-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("mtf-vs-wave-estimate", ["lv", "wave"], [second ? "ATTENTION" : "RECORDED"]),
           ]
         : [
-            rung("r0", TRACERS, ["PASS"]),
-            rung("r1", TRACERS, ["PASS"]),
-            rung("r2", TRACERS, ["PASS", "PASS", "PASS"]),
-            rung("r3", TRACERS, ["PASS", "PASS", "PASS"]),
-            rung("r4", TRACERS, ["PASS", "PASS"]),
-            rung("r7a", TRACERS, ["PASS", "PASS", "PASS", "PASS"], second ? "optiland" : undefined),
-            rung("r8a", TRACERS, ["PASS", "PASS"]),
-            rung("r9a", TRACERS, ["PASS"]),
-            rung("r10a", TRACERS, ["PASS", "PASS"]),
+            rung("built-system", TRACERS, ["PASS"]),
+            rung("first-order", TRACERS, ["PASS"]),
+            rung("ray-trace", TRACERS, ["PASS", "PASS", "PASS"]),
+            rung("optical-path", TRACERS, ["PASS", "PASS", "PASS"]),
+            rung("geometric-mtf", TRACERS, ["PASS", "PASS"]),
+            rung("spot-rays", TRACERS, ["PASS", "PASS", "PASS", "PASS"], second ? "optiland" : undefined),
+            rung("axial-rays", TRACERS, ["PASS", "PASS"]),
+            rung("chief-rays", TRACERS, ["PASS"]),
+            rung("field-curve-rays", TRACERS, ["PASS", "PASS"]),
           ],
     }));
     const baseline: Baseline = {

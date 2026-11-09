@@ -17,7 +17,7 @@ import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { ChiefNativeData, ChiefNativeField } from "../../src/contract/quantities/chiefNative.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r9b;
+const POLICY: RungPolicy = loadPolicy().rungs["chief-vs-optiland"];
 const LIMIT = 1e-5;
 
 const NO_FIGURES = { realHeightMm: null, idealHeightMm: null, percent: null, entrancePupilZ: null, exitPupilZ: null };

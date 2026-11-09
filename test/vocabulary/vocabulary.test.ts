@@ -12,6 +12,7 @@ import { COMPARATORS } from "../../src/compare/index.ts";
 import { loadPolicy } from "../../src/compare/policyFile.ts";
 import type { Baseline } from "../../src/contract/baseline.ts";
 import { VERDICTS } from "../../src/contract/comparison.ts";
+import { LEGACY_CHECK_IDS } from "../../src/core/legacyIds.ts";
 import { RUNGS } from "../../src/core/rungs.ts";
 import { RUNG_CLASSES, RUNG_MODES } from "../../src/contract/policy.ts";
 import { badgeOf } from "../../src/dashboard/staleness.ts";
@@ -103,11 +104,19 @@ function calls(): string[] {
   ];
 }
 
-/** Every string of the vocabulary but the jargon it names on purpose: the words a term replaces and `JARGON`. */
+/**
+ * Every string of the vocabulary but the jargon it names on purpose: the words a term replaces, `JARGON`, each
+ * check's old id (`oldId`, the id it had before the rename, which the checks command shows beside its id) and the
+ * note that names `--rungs`.
+ */
 function plainStrings(): string[] {
-  const { TERMS: _terms, JARGON: _jargon, ...rest } = vocabulary;
+  const { TERMS: _terms, JARGON: _jargon, CHECKS: checks, OLD_ID_TEXT: oldIdText, ...rest } = vocabulary;
+  // The note on --rungs names the option, the older spelling of --checks.
+  const { olderOption: _option, ...oldIdWords } = oldIdText;
   return [
     ...strings(rest),
+    ...strings(oldIdWords),
+    ...strings(checks.map(({ oldId: _oldId, ...check }) => check)),
     ...TERMS.flatMap((term) => [term.term, term.definition]),
     ...JARGON.map((jargon) => jargon.replacement),
     ...calls(),
@@ -139,7 +148,7 @@ test("the statement and the matrix take their words from the checks, in RUNGS or
     );
   assert.deepEqual(Object.keys(STATEMENT_RUNGS), Object.keys(MATRIX_RUNGS).slice(0, 11));
   // A sample, word for word as the committed statement prints it.
-  assert.deepEqual(STATEMENT_RUNGS.r2, {
+  assert.deepEqual(STATEMENT_RUNGS["ray-trace"], {
     mode: "gated",
     compares: "Hits, directions, image landings and masks of identical rays",
   });
@@ -164,18 +173,23 @@ test("there is a check for every rung, of its class in the limits file, and each
 
 test("new ids are unique and kebab-case; a check held to a limit never says -vs-, a side-by-side check always does", () => {
   const kebab = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  for (const list of [CHECKS.map((check) => check.newId), ENGINES.map((engine) => engine.newId)]) {
+  for (const list of [CHECKS.map((check) => check.id), ENGINES.map((engine) => engine.newId)]) {
     assert.equal(new Set(list).size, list.length);
     for (const id of list) assert.match(id, kebab);
   }
-  for (const check of CHECKS) assert.equal(check.newId.includes("-vs-"), check.kind === "side-by-side", check.id);
+  for (const check of CHECKS) assert.equal(check.id.includes("-vs-"), check.kind === "side-by-side", check.id);
+  // No new id is an old one, and no old id a new one: each id has one name in each id space.
+  const old = new Set(CHECKS.map((check) => check.oldId));
+  for (const check of CHECKS) assert.ok(!old.has(check.id), check.id);
   // LensVisualizer and optiland keep their ids, so their stored answers stay valid.
   assert.equal(ENGINES.find((engine) => engine.id === "lv")?.newId, "lv");
   assert.equal(ENGINES.find((engine) => engine.id === "optiland")?.newId, "optiland");
 });
 
-test("the new ids are the plan's, check by check and engine by engine", () => {
-  assert.deepEqual(Object.fromEntries(CHECKS.map((check) => [check.id, check.newId])), {
+test("the new ids are the plan's, check by check and engine by engine, and the legacy map is the checks' own", () => {
+  // Every check's old id to its id: the plan's table, and exactly the map the code reads old ids by.
+  assert.deepEqual(Object.fromEntries(CHECKS.map((check) => [check.oldId, check.id])), LEGACY_CHECK_IDS);
+  assert.deepEqual(Object.fromEntries(CHECKS.map((check) => [check.oldId, check.id])), {
     selftest: "pipeline-echo",
     r0: "built-system",
     r1: "first-order",

@@ -21,7 +21,7 @@ import { validateKind } from "../../src/contract/schemas.ts";
 import { decodeNdArray, encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { FIRST_ORDER_DATA_SINGLET, FIRST_ORDER_DATA_TWO_LINES, SINGLET_CASE } from "../contract/corpus.ts";
 
-const R1 = loadPolicy().rungs.r1;
+const R1 = loadPolicy().rungs["first-order"];
 /** Two lines, with an exit pupil at infinity at the second, and two recorded values. */
 const BASE: ParaxialFirstOrderData = FIRST_ORDER_DATA_TWO_LINES;
 /** The case the answers are about, as far as the comparator reads it: its image plane, at z = 100 mm. */
@@ -490,7 +490,7 @@ test("a set states what each answer records, sorted by name, with null for what 
     suite: "ladder",
     run: "one",
     caseId: "c".repeat(64),
-    rung: "r1",
+    rung: "first-order",
     quantity: "paraxial.first-order",
     requestId: "1".repeat(64),
     participants,

@@ -45,11 +45,11 @@ export const R8A_GOLDEN = "r8a-stand-ins";
 export const R8B_GOLDEN = "r8b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its bands and limits. */
-function policyOf(rung: "r8a" | "r8b"): Policy {
+function policyOf(rung: "axial-rays" | "axial-vs-optiland"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R8A_POLICY: Policy = policyOf("r8a");
-export const R8B_POLICY: Policy = policyOf("r8b");
+export const R8A_POLICY: Policy = policyOf("axial-rays");
+export const R8B_POLICY: Policy = policyOf("axial-vs-optiland");
 
 /** What one cycle of a fixture gave. */
 export interface R8Cycle {
@@ -97,7 +97,7 @@ function pairsAt(line: number): RaysTraceSpec {
 
 /** The rung `r8a` as a case without a LensVisualizer tab can be asked it: the pairs at both lines of `LENS`. */
 export const R8A_FIXTURE_RUNG: RungDefinition = {
-  id: "r8a",
+  id: "axial-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [pairsAt(0), pairsAt(1)].map((spec) => makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec })),
@@ -170,7 +170,7 @@ const COLOUR: AxialNativeSpec = { kind: "colour", lines: [0, 1], marginal: [1, 0
 
 /** The rung `r8b` as stand-ins can be asked it: spherical aberration at the first line and colour at both. */
 export const R8B_FIXTURE_RUNG: RungDefinition = {
-  id: "r8b",
+  id: "axial-vs-optiland",
   quantity: AXIAL_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) =>

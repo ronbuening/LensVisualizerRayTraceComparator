@@ -31,7 +31,7 @@ import { decodeTrace, noWorst, placeOf, takeWorst, whereOf } from "./raysRead.ts
 import type { DecodedTrace } from "./raysRead.ts";
 
 /** The rung of the field curves of identical rays. */
-export const CURVATURE_RAYS_RUNG = "r10a";
+export const CURVATURE_RAYS_RUNG = "field-curve-rays";
 
 /** The figures of a focus, by its fan, in the order the comparator reports them. */
 const FOCUS_FIGURES: { readonly [axis in FocusAxis]: readonly [scaled: string, along: string] } = {

@@ -17,7 +17,7 @@ import { decodeTrace, placeOf } from "./raysRead.ts";
 import type { DecodedTrace } from "./raysRead.ts";
 
 /** The rung of the spot and the ray fan on identical rays. */
-export const SPOT_RAYS_RUNG = "r7a";
+export const SPOT_RAYS_RUNG = "spot-rays";
 
 /** The figures of a spot, in the order the comparator reports them. */
 const SPOT_FIGURES = ["transverseError.maxAbs", "centroid.maxAbs", "rmsRadius.maxAbs"] as const;

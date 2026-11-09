@@ -27,7 +27,7 @@ import { LV_UNAVAILABLE } from "../lv/support.ts";
 import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, tempDir } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R5G = loadPolicy().rungs.r5g;
+const R5G = loadPolicy().rungs["geometric-mtf-vs-optiland"];
 const band = (name: string): number => R5G.metrics[name].attention as number;
 
 const PHOTOPIC = "canon-ef-135-f2l-usm-photopic";
@@ -50,7 +50,7 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,ref",
-      rungs: "r5g",
+      rungs: "geometric-mtf-vs-optiland",
     });
 
     const first = manifest.jobs.filter((job) => job.step === undefined);
@@ -59,7 +59,7 @@ test(
     assert.equal(first.length, 3 * FIELDS.length * RUNS.length);
     for (const job of first) assert.equal(job.status, "ok", `${job.run} ${job.engine}`);
 
-    const pairs = pairsOf(comparisons, "r5g", MTF_NATIVE);
+    const pairs = pairsOf(comparisons, "geometric-mtf-vs-optiland", MTF_NATIVE);
     assert.equal(pairs.length, 3 * FIELDS.length * RUNS.length);
     for (const pair of pairs) {
       const allowed = ["RECORDED", "ATTENTION"];
@@ -69,7 +69,8 @@ test(
     // What each engine's answer to one request records.
     const recordedOf = (run: string, requestId: string, engine: string) => {
       const set = comparisons.comparisons.find(
-        (candidate) => candidate.run === run && candidate.rung === "r5g" && candidate.requestId === requestId,
+        (candidate) =>
+          candidate.run === run && candidate.rung === "geometric-mtf-vs-optiland" && candidate.requestId === requestId,
       );
       const recorded = set?.participants.find((participant) => participant.engine === engine)?.recorded;
       assert.ok(recorded !== undefined, `${run} ${engine}`);
@@ -123,7 +124,7 @@ test(
         at,
       );
     }
-    assert.ok(steps.every((job) => job.rung === "r5g" && job.engine === "optiland"));
+    assert.ok(steps.every((job) => job.rung === "geometric-mtf-vs-optiland" && job.engine === "optiland"));
 
     const reported = lvrtc(runsDir, REPO_ROOT, ["report", "benchmark"], OPTILAND_PYTHON);
     assert.equal(reported.code, 0, reported.out + reported.err);

@@ -203,7 +203,7 @@ export function rayEndings(data: JsonObject): { readonly [name: string]: readonl
  */
 export const raysGeometryComparator: QuantityComparator = Object.freeze({
   quantity: RAYS_TRACE,
-  rung: "r2",
+  rung: "ray-trace",
   metrics: Object.freeze([
     { name: "hits.maxDistance", unit: "mm" },
     { name: "direction.maxAbs", unit: "1" },

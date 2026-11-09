@@ -33,7 +33,7 @@ import { CONVERGENCE_BANDS } from "../../src/estimators/waveValidity.ts";
 import { QUARTER_WAVE } from "../../src/estimators/waveOtf.ts";
 import { caseOf, sphere } from "../engines/ref/support.ts";
 
-const R6A = loadPolicy().rungs.r6a;
+const R6A = loadPolicy().rungs["wave-mtf"];
 const GATE = R6A.metrics["waveMtf.maxAbs"].tolerance as number;
 
 /** The side of the pupil in cosine space, the cells across the two lattices, and the wavelengths, nm. */
@@ -197,8 +197,8 @@ function closeStep(metric: ComputedMetric, expected: number): void {
 
 test("the comparator is of rays.trace for rung r6a, a comparator of spans, and reports the wave MTF and its lattice", () => {
   assert.equal(raysWaveMtfComparator.quantity, "rays.trace");
-  assert.equal(raysWaveMtfComparator.rung, "r6a");
-  assert.equal(COMPARATORS.get("rays.trace", "r6a"), raysWaveMtfComparator);
+  assert.equal(raysWaveMtfComparator.rung, "wave-mtf");
+  assert.equal(COMPARATORS.get("rays.trace", "wave-mtf"), raysWaveMtfComparator);
   assert.deepEqual(
     raysWaveMtfComparator.metrics.map((metric) => `${metric.name} ${metric.unit}`),
     [

@@ -90,7 +90,7 @@ test("the largest bar of every R2 pair is the pair's hits.maxDistance in compari
   const comparisons = JSON.parse(readFileSync(join(fixture.raysRunsDir, RAYS_SUITE, "comparisons.json"), "utf8"));
   let charts = 0;
   let bent = 0;
-  for (const entry of views.run(RAYS_SUITE).sections.filter((section) => section.rung === "r2")) {
+  for (const entry of views.run(RAYS_SUITE).sections.filter((section) => section.rung === "ray-trace")) {
     const view = views.section(RAYS_SUITE, entry.section);
     assert.ok(view !== null);
     assert.equal(view.charts.deviations.length, 3, "three pairs of three engines");
@@ -99,7 +99,7 @@ test("the largest bar of every R2 pair is the pair's hits.maxDistance in compari
       assert.deepEqual(deviation.problems, []);
       const set = comparisons.comparisons.find(
         (each: { rung: string; requestId: string; pairs: { a: string; b: string }[] }) =>
-          each.rung === "r2" &&
+          each.rung === "ray-trace" &&
           each.requestId === view.requestId &&
           each.pairs.some((pair) => pair.a === deviation.a && pair.b === deviation.b),
       );
@@ -128,7 +128,7 @@ test("the largest bar of every R2 pair is the pair's hits.maxDistance in compari
   assert.doesNotMatch(twin, /<rect class="bar"/);
   assert.match(
     twin,
-    /<line class="gate" [^>]*><title>limit 1\.00e-8 mm: policy\/rays-policy\.json \/rungs\/r2\/metrics\/hits\.maxDistance\/tolerance<\/title>/,
+    /<line class="gate" [^>]*><title>limit 1\.00e-8 mm: policy\/rays-policy\.json \/rungs\/ray-trace\/metrics\/hits\.maxDistance\/tolerance<\/title>/,
   );
 });
 
@@ -147,7 +147,7 @@ test("a view says when the largest bar is not the recorded hits.maxDistance", (t
     createSources({ rootDir: fixture.raysRootDir, runsDir, policyFile: fixture.raysPolicyFile }),
     notAsked,
   );
-  const section = views.run(RAYS_SUITE).sections.find((each) => each.rung === "r2");
+  const section = views.run(RAYS_SUITE).sections.find((each) => each.rung === "ray-trace");
   const view = views.section(RAYS_SUITE, section?.section ?? -1);
   const problems = view?.charts.deviations.flatMap((deviation) => deviation.problems) ?? [];
   assert.equal(problems.length, 3);
@@ -171,7 +171,7 @@ test("a value that is not a finite number is a gap: never drawn, never 0", () =>
   const optiland = overlay?.series.find((series) => series.engine === "optiland");
   assert.equal(optiland?.state, "unavailable");
   assert.deepEqual(optiland?.values?.values, [null, null, null, null]);
-  const svg = renderMtfOverlay(overlay!, "edge, r5g");
+  const svg = renderMtfOverlay(overlay!, "edge, geometric-mtf-vs-optiland");
   assert.doesNotMatch(svg, /<title>optiland, sagittal at/, "no point of optiland's");
   assert.match(svg, /optiland \(unavailable: frequency-beyond-bins\)/, "named in the legend with its status");
   const pairs = view?.charts.differences.filter((chart) => chart.element === 2).flatMap((chart) => chart.pairs) ?? [];
@@ -243,7 +243,7 @@ test("a store entry that is not there, or cannot be read, is a problem on the pa
     assert.deepEqual([wave?.state, wave?.values, wave?.noCurves], ["no-answer", null, "missing"]);
     assert.deepEqual([lv?.state, lv?.noCurves], ["no-answer", "unreadable"]);
     // The legend says a word; the sentence (with the key and the store's words) is the entry's tooltip.
-    const svg = renderMtfOverlay(overlay, "edge, r5");
+    const svg = renderMtfOverlay(overlay, "edge, mtf-vs-optiland-fft");
     assert.match(svg, />Wave MTF of LensVisualizer&#39;s rays \(no curves: missing\)<\/text>/);
     assert.match(svg, />LensVisualizer \(no curves: unreadable\)<\/text>/);
     assert.ok(
@@ -262,9 +262,9 @@ test("a heat map of more runs than a page draws is left out, and says how many i
   const pair = JSON.parse(readFileSync(join(fixture.rootDir, "baselines", "fake-pair.json"), "utf8")) as Baseline;
   const [template] = pair.runs;
   const runs = Array.from({ length: HEAT_MAP_ROWS + 1 }, (_unused, index) => ({ ...template, name: `lens-${index}` }));
-  const large = baselineHeatMap({ ...pair, runs }, ["selftest"]);
-  assert.deepEqual(large, { rungs: ["selftest"], rows: [], omitted: { count: HEAT_MAP_ROWS + 1 } });
-  const fits = baselineHeatMap({ ...pair, runs: runs.slice(0, HEAT_MAP_ROWS) }, ["selftest", "r9"]);
+  const large = baselineHeatMap({ ...pair, runs }, ["pipeline-echo"]);
+  assert.deepEqual(large, { rungs: ["pipeline-echo"], rows: [], omitted: { count: HEAT_MAP_ROWS + 1 } });
+  const fits = baselineHeatMap({ ...pair, runs: runs.slice(0, HEAT_MAP_ROWS) }, ["pipeline-echo", "r9"]);
   assert.equal(fits.rows.length, HEAT_MAP_ROWS);
   assert.equal(fits.rows[0].cells[1], null, "a rung the run does not have is an empty cell");
   const svg = renderHeatMap(fits, "large", "baseline");
@@ -295,7 +295,7 @@ test("a section page reads only the store entries the manifest names for its req
         const keys = manifest.jobs
           .filter((job) => job.run === view.run && job.rung === view.rung && job.requestId === view.requestId)
           .flatMap((job) => (job.storeKey === null ? [] : [job.storeKey]));
-        const charted = view.quantity === "mtf.native" || (view.quantity === "rays.trace" && view.rung === "r2");
+        const charted = view.quantity === "mtf.native" || (view.quantity === "rays.trace" && view.rung === "ray-trace");
         assert.deepEqual(
           [...new Set(asked)].sort(),
           charted ? [...new Set(keys)].sort() : [],
@@ -331,8 +331,8 @@ test("a difference is of the answer the comparison judges: a later step that is 
     view.charts.differences.find((chart) => chart.element === element && chart.cut === "sagittal"),
   );
   assert.deepEqual([off?.onAxis, on?.onAxis], [false, true]);
-  assert.equal(on?.limit?.source.pointer, "/rungs/r5/metrics/mtfOnAxis.maxAbs/attention");
-  assert.equal(off?.limit?.source.pointer, "/rungs/r5/metrics/mtfOffAxis.maxAbs/attention");
+  assert.equal(on?.limit?.source.pointer, "/rungs/mtf-vs-optiland-fft/metrics/mtfOnAxis.maxAbs/attention");
+  assert.equal(off?.limit?.source.pointer, "/rungs/mtf-vs-optiland-fft/metrics/mtfOffAxis.maxAbs/attention");
   const pair = on?.pairs.find((each) => each.a === "lv" && each.b === "optiland");
   assert.deepEqual([pair?.aStep, pair?.bStep], [null, null], "optiland by its first answer");
   assert.equal(pair?.points[0]?.difference.value, -2 / 256);
@@ -340,7 +340,10 @@ test("a difference is of the answer the comparison judges: a later step that is 
   const overlay = view.charts.overlays.find((chart) => chart.element === 1 && chart.cut === "sagittal");
   const failed = overlay?.series.find((series) => series.step === "fft512");
   assert.deepEqual([failed?.state, failed?.noCurves], ["no-answer", "error"]);
-  assert.match(renderMtfOverlay(overlay!, "singlet, r5"), />optiland #fft512 \(no curves: error\)<\/text>/);
+  assert.match(
+    renderMtfOverlay(overlay!, "singlet, mtf-vs-optiland-fft"),
+    />optiland #fft512 \(no curves: error\)<\/text>/,
+  );
 });
 
 test("a set-aside caption names the pair whose sorting it is, and an UNSUPPORTED pair has no difference drawn", () => {
@@ -407,7 +410,7 @@ function syntheticDeviation(dataA: Record<string, unknown>, dataB: Record<string
   const job = (engine: string, storeKey: string) => ({
     run: "one",
     caseId: "c",
-    rung: "r2",
+    rung: "ray-trace",
     quantity: "rays.trace",
     requestId: "q",
     engine,
@@ -419,7 +422,7 @@ function syntheticDeviation(dataA: Record<string, unknown>, dataB: Record<string
     comparisons: [
       {
         run: "one",
-        rung: "r2",
+        rung: "ray-trace",
         quantity: "rays.trace",
         requestId: "q",
         mode: "pairwise",
@@ -443,7 +446,7 @@ function syntheticDeviation(dataA: Record<string, unknown>, dataB: Record<string
   const charts = buildSectionCharts({
     name: "synthetic",
     run: "one",
-    rung: "r2",
+    rung: "ray-trace",
     quantity: "rays.trace",
     requestId: "q",
     manifest,
@@ -481,7 +484,7 @@ test("a visit an answer records no point for is left out of its bar, as R2 leave
     [null, null],
   );
   assert.equal(none.deviation.caption, DASHBOARD_TEXT.charts.deviationNoBars("0"));
-  assert.doesNotMatch(renderDeviation(none.deviation, "one, r2"), /none mm/);
+  assert.doesNotMatch(renderDeviation(none.deviation, "one, ray-trace"), /none mm/);
 });
 
 test("every text of a chart is escaped: titles, legends, labels and the tooltips of marks", () => {
@@ -489,7 +492,7 @@ test("every text of a chart is escaped: titles, legends, labels and the tooltips
   const escaped = "a&lt;b&amp;&quot;c&#39;";
   const heat = renderHeatMap(
     {
-      rungs: ["r2"],
+      rungs: ["ray-trace"],
       rows: [{ run: odd, cells: [{ verdict: "PASS", counts: [{ verdict: "PASS", count: 1 }] }] }],
       omitted: null,
     },
@@ -500,12 +503,14 @@ test("every text of a chart is escaped: titles, legends, labels and the tooltips
   assert.ok(heat.includes(`<g><title>${escaped}</title><text`), "the row's tooltip");
   assert.ok(heat.includes(`>${escaped}</text>`), "the row's label");
   assert.ok(
-    heat.includes(`<title>${escaped}, Ray trace (r2): Pass: within limit. By verdict: Pass: within limit: 1</title>`),
+    heat.includes(
+      `<title>${escaped}, Ray trace (ray-trace): Pass: within limit. By verdict: Pass: within limit: 1</title>`,
+    ),
     "the cell's tooltip",
   );
   assert.ok(heat.includes(">Pass</text>"), "the cell's short label");
   assert.ok(heat.includes(">Pass: within limit (PASS)</text>"), "the legend's label with the stored value");
-  assert.ok(heat.includes("<title>Ray trace (r2)</title>"), "the column's check by title and id");
+  assert.ok(heat.includes("<title>Ray trace (ray-trace)</title>"), "the column's check by title and id");
   const curve = (values: number[]) => ({ values, source: { document: "store:x" as const, pointer: "/v" } });
   const overlay = renderMtfOverlay(
     {

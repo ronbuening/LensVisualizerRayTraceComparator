@@ -112,8 +112,8 @@ export const RAYS_SUITE = "rays";
 /** The comparator's own policy with an R0 that blocks nothing, so that R2 speaks for itself. */
 export function unblockingPolicy(): Policy {
   const own = loadPolicy();
-  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
-  return { ...own, rungs: { ...own.rungs, r0 } };
+  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs["built-system"];
+  return { ...own, rungs: { ...own.rungs, "built-system": r0 } };
 }
 
 /** Runs `ref` and its two copies on the Double-Gauss case into `runsDir`, and compares them by `policy`. */
@@ -158,7 +158,7 @@ async function raysCycle(runsDir: string, policy: Policy): Promise<ComparisonFil
     {
       name: "double-gauss",
       opticalCase: DOUBLE_GAUSS,
-      rungs: ["r0", "r2"],
+      rungs: ["built-system", "ray-trace"],
       fields: { kind: "angles-deg", values: [0, 10] },
       sampling: { bundleGrid: 12 },
     },
@@ -182,7 +182,7 @@ export const REORDERED_SUITE = "r5-reordered";
 async function reorderedCycle(runsDir: string, policy: Policy): Promise<ComparisonFile> {
   const spec: MtfNativeSpec = { ...SPEC, fields: { kind: "image-height-fractions", values: [0.5, 0] } };
   const rung: RungDefinition = {
-    id: "r5",
+    id: "mtf-vs-optiland-fft",
     quantity: MTF_NATIVE,
     engines: ["lv", "optiland"],
     buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec })],

@@ -93,7 +93,12 @@ test("the evidence table retains unconverged flags and absent curves at every fr
           },
         },
       );
-      jobs.push({ run: `synthetic-${name}`, rung: "r6c", engine, storeKey: store.put(request, result) });
+      jobs.push({
+        run: `synthetic-${name}`,
+        rung: "mtf-vs-optiland-wavefront",
+        engine,
+        storeKey: store.put(request, result),
+      });
     }
   mkdirSync(join(directory, "z50f12-investigation"));
   writeFileSync(

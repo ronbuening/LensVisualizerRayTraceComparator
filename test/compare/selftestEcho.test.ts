@@ -118,7 +118,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   const presented = registered.filter((quantity) => !compared.includes(quantity));
   assert.deepEqual(presented, []);
   assert.equal(COMPARATORS.get("mtf.native"), undefined);
-  assert.equal(COMPARATORS.get("mtf.native", "r5"), mtfNativeComparator);
+  assert.equal(COMPARATORS.get("mtf.native", "mtf-vs-optiland-fft"), mtfNativeComparator);
   assert.equal(COMPARATORS.get("mtf.native", "r6d"), undefined);
   for (const rung of RUNGS) assert.ok(COMPARATORS.get(rung.quantity, rung.id) !== undefined, rung.id);
   assert.equal(COMPARATORS.get("selftest.echo"), selftestEchoComparator);
@@ -129,7 +129,7 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
 
   // A comparator that names no rung serves every rung of its quantity; one that names a rung serves that rung,
   // and comes before the general one for it. The list is by quantity and then by rung.
-  assert.equal(COMPARATORS.get("selftest.echo", "selftest"), selftestEchoComparator);
+  assert.equal(COMPARATORS.get("selftest.echo", "pipeline-echo"), selftestEchoComparator);
   assert.equal(COMPARATORS.get("selftest.echo", "any-rung"), selftestEchoComparator);
   const forOne = { ...selftestEchoComparator, rung: "one" };
   const forTwo = { ...selftestEchoComparator, rung: "two" };
@@ -147,32 +147,32 @@ test("every comparator is of a quantity, and every quantity a rung asks for has 
   assert.deepEqual(
     COMPARATORS.list().map((comparator) => [comparator.quantity, comparator.rung]),
     [
-      ["axial.native", "r8b"],
-      ["chief.native", "r9b"],
-      ["curvature.native", "r10b"],
-      ["mtf.native", "r4f"],
-      ["mtf.native", "r5"],
-      ["mtf.native", "r5g"],
-      ["mtf.native", "r6b"],
-      ["mtf.native", "r6c"],
+      ["axial.native", "axial-vs-optiland"],
+      ["chief.native", "chief-vs-optiland"],
+      ["curvature.native", "field-curve-vs-optiland"],
+      ["mtf.native", "geometric-mtf-vs-optiland"],
+      ["mtf.native", "lv-mtf-replay"],
+      ["mtf.native", "mtf-vs-optiland-fft"],
+      ["mtf.native", "mtf-vs-optiland-wavefront"],
+      ["mtf.native", "mtf-vs-wave-estimate"],
       ["paraxial.first-order", undefined],
-      ["rays.trace", "r10a"],
-      ["rays.trace", "r11a"],
-      ["rays.trace", "r2"],
-      ["rays.trace", "r3"],
-      ["rays.trace", "r4"],
-      ["rays.trace", "r6a"],
-      ["rays.trace", "r7a"],
-      ["rays.trace", "r8a"],
-      ["rays.trace", "r9a"],
-      ["seidel.native", "r13b"],
+      ["rays.trace", "axial-rays"],
+      ["rays.trace", "chief-rays"],
+      ["rays.trace", "field-curve-rays"],
+      ["rays.trace", "geometric-mtf"],
+      ["rays.trace", "optical-path"],
+      ["rays.trace", "ray-trace"],
+      ["rays.trace", "spot-rays"],
+      ["rays.trace", "vignetting-rays"],
+      ["rays.trace", "wave-mtf"],
+      ["seidel.native", "seidel-vs-optiland"],
       ["selftest.echo", undefined],
-      ["spot.native", "r7b"],
-      ["summary.native", "r12b"],
+      ["spot.native", "spot-vs-optiland"],
+      ["summary.native", "summary-vs-optiland"],
       ["system.describe", undefined],
-      ["vignetting.native", "r11b"],
+      ["vignetting.native", "vignetting-vs-flux-estimate"],
       ["wavefront.native", undefined],
-      ["zernike.native", "r14b"],
+      ["zernike.native", "zernike-vs-optiland"],
     ],
   );
 });

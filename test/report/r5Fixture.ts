@@ -41,7 +41,7 @@ export const R5_POLICY: Policy = {
   kind: "policy",
   version: 1,
   rungs: {
-    r5: {
+    "mtf-vs-optiland-fft": {
       quantity: MTF_NATIVE,
       mode: "independent-method",
       class: "recorded",
@@ -56,7 +56,7 @@ export const R5_POLICY: Policy = {
 
 /** The rung `r5` as far as engines that know no optics can be asked it: one request of `SPEC`, of three engines. */
 export const R5_FIXTURE_RUNG: RungDefinition = {
-  id: "r5",
+  id: "mtf-vs-optiland-fft",
   quantity: MTF_NATIVE,
   engines: ["lv", "optiland", "wave"],
   buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec: SPEC })],

@@ -17,5 +17,5 @@ export function jobEstimateGiB(
   rungs: readonly string[] = [],
   legacy: Readonly<Record<string, string>> = LEGACY_CHECK_IDS,
 ): number {
-  return rungs.some((rung) => currentCheckId(rung, legacy) === "r6c") ? R6C_JOB_GIB : JOB_GIB;
+  return rungs.some((rung) => currentCheckId(rung, legacy) === "mtf-vs-optiland-wavefront") ? R6C_JOB_GIB : JOB_GIB;
 }

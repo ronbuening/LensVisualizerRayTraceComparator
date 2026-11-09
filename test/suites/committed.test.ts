@@ -61,7 +61,7 @@ for (const name of SUITE_NAMES) {
       "wave",
     ]);
     if (name === "folded" || name === "diffractive") {
-      assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3"]);
+      assert.deepEqual(suite.defaults?.rungs, ["built-system", "first-order", "ray-trace", "optical-path"]);
       assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
       assert.deepEqual(suite.defaults?.fields, { kind: "angles-deg", values: [0, 0.25] });
       assert.equal(suite.runs.length, name === "folded" ? 16 : 8);
@@ -72,6 +72,7 @@ for (const name of SUITE_NAMES) {
     if (name === "catalog") {
       assert.deepEqual(suite.defaults, {
         engines: ["lv", "ref", "optiland"],
+        // The catalog's suite keeps the check ids it was swept with, read as today's on input.
         rungs: ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"],
         aperture: { kind: "wide-open" },
         lines: { kind: "reference" },
@@ -82,7 +83,15 @@ for (const name of SUITE_NAMES) {
     }
     const builtin = ["lv", "ref"];
     if (stationSuite) {
-      assert.deepEqual(suite.defaults?.rungs, ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"]);
+      assert.deepEqual(suite.defaults?.rungs, [
+        "built-system",
+        "first-order",
+        "ray-trace",
+        "optical-path",
+        "geometric-mtf",
+        "lv-mtf-replay",
+        "wave-mtf",
+      ]);
       assert.deepEqual(suite.defaults?.engines, ["lv", "ref", "optiland"]);
       for (const run of expandSuite(suite)) {
         assert.deepEqual(validateKind("run-spec", run), []);

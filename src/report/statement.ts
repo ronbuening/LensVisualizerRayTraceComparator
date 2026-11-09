@@ -122,7 +122,11 @@ function nativePolicy(rung: BaselineRung): RungPolicy {
   };
 }
 
-function counterpart(records: readonly RecordRung[], id: "r5" | "r6c", engine: string) {
+function counterpart(
+  records: readonly RecordRung[],
+  id: "mtf-vs-optiland-fft" | "mtf-vs-optiland-wavefront",
+  engine: string,
+) {
   const allRows: (MtfComparisonRow & { suite: string; run: string })[] = [];
   const coverage = records
     .filter(({ rung }) => rung.rung === id)
@@ -247,7 +251,7 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
       description.mode === "gated" ? metric.tolerance !== undefined : /^mtf(OnAxis|OffAxis)\.maxAbs$/.test(metric.name),
     );
     const reported =
-      id === "r6a"
+      id === "wave-mtf"
         ? figures.filter(
             (m) =>
               m.tolerance !== undefined ||
@@ -314,9 +318,12 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
       },
     ];
   });
-  const counterparts = [counterpart(records, "r5", "optiland"), counterpart(records, "r6c", "optiland-wave")];
+  const counterparts = [
+    counterpart(records, "mtf-vs-optiland-fft", "optiland"),
+    counterpart(records, "mtf-vs-optiland-wavefront", "optiland-wave"),
+  ];
   const wavelengthsNm = sortedNumbers(counterparts.flatMap((c) => c.linesNm));
-  const required = ["r2", "r3", "r4", "r6a"];
+  const required = ["ray-trace", "optical-path", "geometric-mtf", "wave-mtf"];
   const eligible = suites.flatMap((suite) =>
     suite.states
       .filter(
@@ -338,7 +345,7 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
                         (m) =>
                           m.tolerance !== undefined &&
                           m.value !== null &&
-                          (id !== "r6a" || m.name === "waveMtf.maxAbs") &&
+                          (id !== "wave-mtf" || m.name === "waveMtf.maxAbs") &&
                           (m.measured ?? r.rung.requests) > 0,
                       ),
                   ),
@@ -360,10 +367,10 @@ export function buildStatement(inputs: readonly StatementInput[], maps: LegacyMa
     );
   const agreementFigures = {
     population: "agreementStates",
-    landing: agreementFigure("r2", "landing.maxDistance"),
-    opticalPath: agreementFigure("r3"),
-    geometricMtf: agreementFigure("r4"),
-    waveMtf: agreementFigure("r6a"),
+    landing: agreementFigure("ray-trace", "landing.maxDistance"),
+    opticalPath: agreementFigure("optical-path"),
+    geometricMtf: agreementFigure("geometric-mtf"),
+    waveMtf: agreementFigure("wave-mtf"),
   };
   const gateHolds = rungs
     .filter((r) => r.mode === "gated")

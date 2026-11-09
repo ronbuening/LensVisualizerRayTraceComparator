@@ -191,7 +191,7 @@ export interface RungDefinition {
  * so one case gives one request however its numbers are spelled. The RunSpec is not consulted.
  */
 export const selftestRung: RungDefinition = Object.freeze({
-  id: "selftest",
+  id: "pipeline-echo",
   quantity: SELFTEST_ECHO,
   buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
     const { system, conditions } = opticalCase;
@@ -209,7 +209,7 @@ export const selftestRung: RungDefinition = Object.freeze({
  * RunSpec is not consulted.
  */
 export const r0Rung: RungDefinition = Object.freeze({
-  id: "r0",
+  id: "built-system",
   quantity: SYSTEM_DESCRIBE,
   buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => {
     const spec: SystemDescribeSpec = { sagFractions: [...DEFAULT_SAG_FRACTIONS] };
@@ -222,7 +222,7 @@ export const r0Rung: RungDefinition = Object.freeze({
  * quantity has. The RunSpec is not consulted.
  */
 export const r1Rung: RungDefinition = Object.freeze({
-  id: "r1",
+  id: "first-order",
   quantity: PARAXIAL_FIRST_ORDER,
   buildRequests: (opticalCase: OpticalCase): QuantityRequest[] => [
     makeRequest({
@@ -269,7 +269,7 @@ function requestsOfSets(opticalCase: OpticalCase, sets: readonly RaysTraceSpec[]
  * the image plane and in which rays got through.
  */
 export const r2Rung: RungDefinition = Object.freeze({
-  id: "r2",
+  id: "ray-trace",
   quantity: RAYS_TRACE,
   needsRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -282,7 +282,7 @@ export const r2Rung: RungDefinition = Object.freeze({
  * the last surface and to the image plane.
  */
 export const r3Rung: RungDefinition = Object.freeze({
-  id: "r3",
+  id: "optical-path",
   quantity: RAYS_TRACE,
   needsRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -297,7 +297,7 @@ export const r3Rung: RungDefinition = Object.freeze({
  * run, and only of a run that has a recipe: without one nothing says at which frequencies an MTF is to be taken.
  */
 export const r4Rung: RungDefinition = Object.freeze({
-  id: "r4",
+  id: "geometric-mtf",
   quantity: RAYS_TRACE,
   needsRaySets: true,
   needsRecipe: true,
@@ -321,7 +321,7 @@ export function waveTraceRequests(opticalCase: OpticalCase, inputs: RungInputs =
  * (`src/compare/raysWaveMtf.ts`). It is asked of the engines of the run, and only of a run that has a recipe.
  */
 export const r6aRung: RungDefinition = Object.freeze({
-  id: "r6a",
+  id: "wave-mtf",
   quantity: RAYS_TRACE,
   needsRaySets: true,
   needsFineRaySets: true,
@@ -359,7 +359,7 @@ export function geometricMtfSpec(recipe: MtfRecipe): MtfNativeSpec | null {
  * option `lvGridCap`, where the run states one.
  */
 export const r4fRung: RungDefinition = Object.freeze({
-  id: "r4f",
+  id: "lv-mtf-replay",
   quantity: MTF_NATIVE,
   needsRecipe: true,
   engines: R4F_ENGINES,
@@ -417,7 +417,7 @@ export function waveMtfSpec(recipe: MtfRecipe, fields: RunFields = DEFAULT_RAY_F
  * `bundleGrid`, where the run states them; each reads its own.
  */
 export const r6bRung: RungDefinition = Object.freeze({
-  id: "r6b",
+  id: "mtf-vs-wave-estimate",
   quantity: MTF_NATIVE,
   needsRecipe: true,
   engines: R6B_ENGINES,
@@ -465,7 +465,7 @@ export function recipeAngles(recipe: MtfRecipe, spec: MtfNativeSpec): number[] |
  * only for a recipe LensVisualizer resolved, and only where the rung is named: optiland is not on every machine.
  */
 export const r5Rung: RungDefinition = Object.freeze({
-  id: "r5",
+  id: "mtf-vs-optiland-fft",
   quantity: MTF_NATIVE,
   needsRecipe: true,
   engines: R5_ENGINES,
@@ -484,7 +484,7 @@ export const r5Rung: RungDefinition = Object.freeze({
 /** R6c: four-column diffraction comparison; native request and R5 field angles, no automatic follow-up. */
 export const r6cRung: RungDefinition = Object.freeze({
   ...r5Rung,
-  id: "r6c",
+  id: "mtf-vs-optiland-wavefront",
   engines: Object.freeze(["lv", "wave", "optiland", "optiland-wave"]),
   engineOptions: (runSpec: RunSpec, inputs?: RungInputs, engineId?: string): JsonObject | undefined =>
     r5Rung.engineOptions?.(runSpec, inputs, engineId === "optiland-wave" ? "optiland" : engineId),
@@ -528,7 +528,7 @@ export function geometricFieldMtfSpecs(recipe: MtfRecipe, fields?: RunFields): M
  * (`R5G_ENGINES`), only for a recipe LensVisualizer resolved, and only where the rung is named.
  */
 export const r5gRung: RungDefinition = Object.freeze({
-  id: "r5g",
+  id: "geometric-mtf-vs-optiland",
   quantity: MTF_NATIVE,
   needsRecipe: true,
   engines: R5G_ENGINES,
@@ -564,7 +564,7 @@ export const r5gRung: RungDefinition = Object.freeze({
  * focus that is not folded.
  */
 export const r7aRung: RungDefinition = Object.freeze({
-  id: "r7a",
+  id: "spot-rays",
   quantity: RAYS_TRACE,
   needsSpotRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -583,7 +583,7 @@ export const R7B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
  * where it is named: optiland is not on every machine.
  */
 export const r7bRung: RungDefinition = Object.freeze({
-  id: "r7b",
+  id: "spot-vs-optiland",
   quantity: SPOT_NATIVE,
   needsSpotRaySets: true,
   engines: R7B_ENGINES,
@@ -615,7 +615,7 @@ export const r7bRung: RungDefinition = Object.freeze({
  * axial sets: a LensVisualizer lens at infinity focus that is not folded.
  */
 export const r8aRung: RungDefinition = Object.freeze({
-  id: "r8a",
+  id: "axial-rays",
   quantity: RAYS_TRACE,
   needsAxialRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -634,7 +634,7 @@ export const R8B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
  * optiland is not on every machine.
  */
 export const r8bRung: RungDefinition = Object.freeze({
-  id: "r8b",
+  id: "axial-vs-optiland",
   quantity: AXIAL_NATIVE,
   needsAxialRaySets: true,
   engines: R8B_ENGINES,
@@ -655,7 +655,7 @@ export const r8bRung: RungDefinition = Object.freeze({
  * infinity focus that is not folded.
  */
 export const r9aRung: RungDefinition = Object.freeze({
-  id: "r9a",
+  id: "chief-rays",
   quantity: RAYS_TRACE,
   needsChiefRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -673,7 +673,7 @@ export const R9B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"]);
  * those two engines and of no other, and run only where it is named: optiland is not on every machine.
  */
 export const r9bRung: RungDefinition = Object.freeze({
-  id: "r9b",
+  id: "chief-vs-optiland",
   quantity: CHIEF_NATIVE,
   needsChiefRaySets: true,
   engines: R9B_ENGINES,
@@ -693,7 +693,7 @@ export const r9bRung: RungDefinition = Object.freeze({
  * of a run whose source has curvature sets: a LensVisualizer lens at infinity focus that is not folded.
  */
 export const r10aRung: RungDefinition = Object.freeze({
-  id: "r10a",
+  id: "field-curve-rays",
   quantity: RAYS_TRACE,
   needsCurvatureRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -711,7 +711,7 @@ export const R10B_ENGINES: readonly string[] = Object.freeze(["lv", "optiland"])
  * every machine.
  */
 export const r10bRung: RungDefinition = Object.freeze({
-  id: "r10b",
+  id: "field-curve-vs-optiland",
   quantity: CURVATURE_NATIVE,
   needsCurvatureRaySets: true,
   engines: R10B_ENGINES,
@@ -731,7 +731,7 @@ export const r10bRung: RungDefinition = Object.freeze({
  * run, and only of a run whose source has vignetting sets: a LensVisualizer lens at infinity focus that is not folded.
  */
 export const r11aRung: RungDefinition = Object.freeze({
-  id: "r11a",
+  id: "vignetting-rays",
   quantity: RAYS_TRACE,
   needsVignettingRaySets: true,
   buildRequests: (opticalCase: OpticalCase, _runSpec: RunSpec, inputs?: RungInputs): QuantityRequest[] =>
@@ -754,7 +754,7 @@ export const R11B_ENGINES: readonly string[] = Object.freeze(["lv", "flux"]);
  * named.
  */
 export const r11bRung: RungDefinition = Object.freeze({
-  id: "r11b",
+  id: "vignetting-vs-flux-estimate",
   quantity: VIGNETTING_NATIVE,
   needsVignettingRaySets: true,
   engines: R11B_ENGINES,
@@ -793,7 +793,7 @@ export function summaryNativeSpec(opticalCase: OpticalCase): SummaryNativeSpec |
  * and run only where it is named: optiland is not on every machine.
  */
 export const r12bRung: RungDefinition = Object.freeze({
-  id: "r12b",
+  id: "summary-vs-optiland",
   quantity: SUMMARY_NATIVE,
   engines: R12B_ENGINES,
   onlyWhereNamed: true,
@@ -832,7 +832,7 @@ export function seidelNativeSpec(opticalCase: OpticalCase, recipe: MtfRecipe): S
  * every machine. LensVisualizer presents no Seidel sums.
  */
 export const r13bRung: RungDefinition = Object.freeze({
-  id: "r13b",
+  id: "seidel-vs-optiland",
   quantity: SEIDEL_NATIVE,
   needsRecipe: true,
   engines: R13B_ENGINES,
@@ -884,7 +884,7 @@ export function zernikeNativeSpecs(recipe: MtfRecipe): ZernikeNativeSpec[] {
  * only where it is named. LensVisualizer presents no wavefront.
  */
 export const r14bRung: RungDefinition = Object.freeze({
-  id: "r14b",
+  id: "zernike-vs-optiland",
   quantity: ZERNIKE_NATIVE,
   needsRecipe: true,
   engines: R14B_ENGINES,

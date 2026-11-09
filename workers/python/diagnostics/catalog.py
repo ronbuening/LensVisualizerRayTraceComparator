@@ -40,7 +40,8 @@ def main() -> None:
     values = lambda wire: decode_ndarray(wire).values()
     requests = {}
     for job in manifest["jobs"]:
-        assert job["rung"] == "r2"
+        # The ray-trace check, by its id since the rename of the check ids or by its id before it.
+        assert job["rung"] in ("r2", "ray-trace")
         with gzip.open(directory / "store" / (job["storeKey"] + ".json.gz"), "rt") as file:
             entry = json.load(file)
         request = requests.setdefault(job["requestId"], {"spec": entry["request"]["spec"], "answers": {}})

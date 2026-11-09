@@ -13,6 +13,7 @@ import { makeResult } from "../../src/contract/result.ts";
 import type { ResultBody } from "../../src/contract/result.ts";
 import type { RunOptions, RunSpec } from "../../src/contract/runSpec.ts";
 import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { currentCheckId } from "../../src/core/legacyIds.ts";
 import { hashCanonical } from "../../src/core/numeric/hash.ts";
 import type { LoadedSuite } from "../../src/core/suite.ts";
 import type { EngineAdapter } from "../../src/engines/adapter.ts";
@@ -149,4 +150,18 @@ export function watchedRegistry(engines: Readonly<Record<string, EngineMaker>>):
     },
   };
   return watched;
+}
+
+/**
+ * A policy of the contract's corpus (`test/contract/corpus.ts`, whose documents keep the check ids they were written
+ * with) with its entries under today's check ids, as a policy at hand is keyed: a copy, every other member the same.
+ */
+export function atCurrentIds<T extends { readonly rungs: object }>(
+  policy: T,
+): Omit<T, "rungs"> & { readonly rungs: Record<string, T["rungs"][keyof T["rungs"]]> } {
+  const copy = structuredClone(policy);
+  return {
+    ...copy,
+    rungs: Object.fromEntries(Object.entries(copy.rungs).map(([id, entry]) => [currentCheckId(id), entry])),
+  };
 }

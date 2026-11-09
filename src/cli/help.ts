@@ -94,7 +94,7 @@ export const JOBS_OPTIONS: readonly OptionRow[] = [
   ],
   [
     "--memory-budget <GiB>",
-    "the memory the jobs may use together (default: a quarter of the installed memory, less 2 GiB); a job is counted as 2.5 GiB, or 4 GiB when the check r6c (two optiland workers) is selected",
+    "the memory the jobs may use together (default: a quarter of the installed memory, less 2 GiB); a job is counted as 2.5 GiB, or 4 GiB when the check mtf-vs-optiland-wavefront (two optiland workers) is selected",
   ],
 ];
 

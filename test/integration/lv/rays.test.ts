@@ -533,7 +533,7 @@ function fieldsAtTheirHeights(
 }
 
 test(
-  "lvrtc run --rungs r2: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
+  "lvrtc run --checks ray-trace: on the 12 benchmark configurations, every ray lv traces is LensVisualizer's own",
   { skip, timeout: 600_000 },
   async (t) => {
     const directory = tempDir(t);
@@ -545,12 +545,12 @@ test(
     writeFileSync(suiteFile, JSON.stringify({ ...benchmark, name: "benchmark-reference", runs }));
 
     const runsDir = join(directory, "runs");
-    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
+    const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--checks", "ray-trace");
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "", "every field has rays");
     assert.match(ran.out, /^benchmark-reference: 36 jobs: 36 answered \(36 asked now\)$/m);
     // The same command again asks nothing: the rays are the same rays, so the requests have the same ids.
-    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
+    const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--checks", "ray-trace");
     assert.match(again.out, /36 answered \(36 from the result cache\)$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark-reference", MANIFEST_FILE), "utf8"));
@@ -579,7 +579,7 @@ test(
       assert.deepEqual(
         jobs.map((job) => [job.rung, job.quantity, job.engine, job.status, job.requestId]),
         sets.map((spec) => [
-          "r2",
+          "ray-trace",
           RAYS_TRACE,
           "lv",
           "ok",
@@ -908,7 +908,7 @@ test(
     const directory = tempDir(t);
     const outputs = ["first", "second"].map((name) => {
       const runsDir = join(directory, name);
-      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "r2");
+      const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--checks", "ray-trace");
       assert.equal(ran.code, 0, ran.err);
       assert.match(ran.out, /^smoke: 27 jobs: 27 answered \(27 asked now\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");

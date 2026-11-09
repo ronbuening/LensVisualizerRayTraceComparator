@@ -312,7 +312,7 @@ test(
     const command = createRunCommand({ rootDir, env: {}, cwd: rootDir });
     const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
     const every = RUNGS.map((rung) => rung.id);
-    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--rungs", every.join(",")], io, [
+    const code = await runCli(["run", "suite.json", "--engines", "optiland", "--checks", every.join(",")], io, [
       command,
     ]);
     // The standard error names the fields a case file gives no rays for; that fails nothing.
@@ -336,33 +336,33 @@ test(
     assert.deepEqual(
       every.filter((rung) => !rungs.includes(rung)),
       [
-        "r4",
-        "r4f",
-        "r5",
-        "r5g",
-        "r6a",
-        "r6b",
-        "r6c",
-        "r7a",
-        "r7b",
-        "r8a",
-        "r8b",
-        "r9a",
-        "r9b",
-        "r10a",
-        "r10b",
-        "r11a",
-        "r11b",
-        "r12b",
-        "r13b",
-        "r14b",
+        "geometric-mtf",
+        "lv-mtf-replay",
+        "mtf-vs-optiland-fft",
+        "geometric-mtf-vs-optiland",
+        "wave-mtf",
+        "mtf-vs-wave-estimate",
+        "mtf-vs-optiland-wavefront",
+        "spot-rays",
+        "spot-vs-optiland",
+        "axial-rays",
+        "axial-vs-optiland",
+        "chief-rays",
+        "chief-vs-optiland",
+        "field-curve-rays",
+        "field-curve-vs-optiland",
+        "vignetting-rays",
+        "vignetting-vs-flux-estimate",
+        "summary-vs-optiland",
+        "seidel-vs-optiland",
+        "zernike-vs-optiland",
       ],
     );
     assert.ok(manifest.jobs.length >= rungs.length);
     assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [...rungs].sort());
     // The two rungs of traced rays ask the same request, of the one field a case file has rays for, the axis: the
     // worker traces the set once, and the second rung finds the answer in the store.
-    const answered = ["r0", "r1", "r2", "r3"];
+    const answered = ["built-system", "first-order", "ray-trace", "optical-path"];
     for (const job of manifest.jobs) {
       const status = answered.includes(job.rung) ? "ok" : "unsupported";
       assert.deepEqual([job.engine, job.status], ["optiland", status], job.rung);
@@ -370,8 +370,8 @@ test(
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
     assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
-    assert.match(out.join(""), /^singlet {2}r2 +optiland {7}answered +asked now$/m);
-    assert.match(out.join(""), /^singlet {2}r3 +optiland {7}answered +from the cache$/m);
+    assert.match(out.join(""), /^singlet {2}ray-trace +optiland {7}answered +asked now$/m);
+    assert.match(out.join(""), /^singlet {2}optical-path +optiland {7}answered +from the cache$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);

@@ -91,7 +91,7 @@ function checkSaid(
   return JSON.stringify({
     records: records.map((record, index) => ({
       run: `run-${index}`,
-      rung: "r2",
+      rung: "ray-trace",
       a: "lv",
       b: "ref",
       stale: [],
@@ -112,7 +112,7 @@ const STEP: CheckStep = {
   suite: "benchmark",
   kind: "rays",
   baseline: "b.json",
-  rungs: ["r0"],
+  rungs: ["built-system"],
   jobs: 4,
   perJobGiB: 2.5,
 };
@@ -248,7 +248,7 @@ test("the plan of this repository: the benchmark, rays then MTF, MTF at two jobs
       ["benchmark", "mtf", 2],
     ],
   );
-  assert.ok(steps[1].rungs.includes("r6c"));
+  assert.ok(steps[1].rungs.includes("mtf-vs-optiland-wavefront"));
   assert.equal(steps[1].perJobGiB, 4);
   assert.deepEqual(checkArgs(steps[0], "/root"), [
     "baseline",
@@ -304,7 +304,10 @@ test("--all plans every routine committed baseline of this repository, in the fi
 });
 
 test("the plan follows the memory budget and the cores, never more than --jobs", (t) => {
-  const rootDir = plannedRoot(t, { a: ["r0", "r2"], "a.mtf": ["r4", "r6c"] });
+  const rootDir = plannedRoot(t, {
+    a: ["built-system", "ray-trace"],
+    "a.mtf": ["geometric-mtf", "mtf-vs-optiland-wavefront"],
+  });
   const plan = (jobs: string, machine: { budgetGiB: number; cpus: number }): number[] =>
     planChecks(parseVerifyRealArgs(["--suites", "a", "--jobs", jobs]), rootDir, machine).map((step) => step.jobs);
   assert.deepEqual(plan("4", OWNER_MACHINE), [4, 2]);
@@ -315,7 +318,12 @@ test("the plan follows the memory budget and the cores, never more than --jobs",
 });
 
 test("another suite is checked for the kinds of baseline it has; one with none, or no suite file, is refused", (t) => {
-  const rootDir = plannedRoot(t, { rays: ["r0"], both: ["r0"], "both.mtf": ["r4"], "solo.mtf": ["r4f"] });
+  const rootDir = plannedRoot(t, {
+    rays: ["built-system"],
+    both: ["built-system"],
+    "both.mtf": ["geometric-mtf"],
+    "solo.mtf": ["lv-mtf-replay"],
+  });
   const kinds = (names: string): string[] =>
     planChecks(parseVerifyRealArgs(["--suites", names]), rootDir, OWNER_MACHINE).map((s) => `${s.suite}:${s.kind}`);
   assert.deepEqual(kinds("solo,both,rays"), ["solo:mtf", "both:rays", "both:mtf", "rays:rays"]);
@@ -325,7 +333,7 @@ test("another suite is checked for the kinds of baseline it has; one with none, 
     () => planChecks(parseVerifyRealArgs([]), rootDir, OWNER_MACHINE),
     /suites\/benchmark\.json: no suite file is there/,
   );
-  const partial = plannedRoot(t, { benchmark: ["r0"] });
+  const partial = plannedRoot(t, { benchmark: ["built-system"] });
   assert.throws(
     () => planChecks(parseVerifyRealArgs([]), partial, OWNER_MACHINE),
     /benchmark\.mtf\.json: the suite benchmark has no MTF baseline to check; lvrtc baseline write benchmark --mtf writes one/,
@@ -526,9 +534,9 @@ test("verify:real asks the doctor first, then each check alone and in order, and
   assert.doesNotMatch(said.out, /a{64}|f{64}/, "no hash without --details");
   assert.match(
     said.out,
-    /^ {2}benchmark rays {2}checks r0, r1, r2, r3, r4, r7a, r8a, r9a, r10a, r11a {2}at most 4 jobs at once/m,
+    /^ {2}benchmark rays {2}checks built-system, first-order, ray-trace, optical-path, geometric-mtf, spot-rays, axial-rays, chief-rays, field-curve-rays, vignetting-rays {2}at most 4 jobs at once/m,
   );
-  assert.match(said.out, /^ {2}Checks: r0 Built system; r1 First-order data; /m);
+  assert.match(said.out, /^ {2}Checks: built-system Built system; first-order First-order data; /m);
   assert.match(said.out, /^benchmark rays {2}clean {2}1 record: 1 Unchanged; 4 jobs at once; 60 s$/m);
   assert.match(said.out, /^benchmark mtf {3}clean {2}.*; 2 jobs at once; 60 s$/m);
   assert.match(said.out, new RegExp(`^${CLEAN_LINE}$`, "m"));
@@ -726,7 +734,7 @@ test("on fake engines: a clean check exits 0, a drifted engine exits 1, and base
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: ["singlet", "double-gauss"].map((name) => ({ name, lens: { kind: "fixture", path: `cases/${name}.json` } })),
   };
   writeFileSync(join(rootDir, "suites", "pair.json"), JSON.stringify(suite));
@@ -782,7 +790,7 @@ test("bin/verify-real.mjs refuses, before any check, a machine where LensVisuali
   assert.equal(child.status, EXIT_USAGE, child.stderr + child.stdout);
   assert.match(
     child.stdout,
-    /^ {2}benchmark rays {2}checks r0, r1, r2, r3, r4, r7a, r8a, r9a, r10a, r11a {2}at most \d+ jobs? at once \(2\.5 GiB a job\)$/m,
+    /^ {2}benchmark rays {2}checks built-system, first-order, ray-trace, optical-path, geometric-mtf, spot-rays, axial-rays, chief-rays, field-curve-rays, vignetting-rays {2}at most \d+ jobs? at once \(2\.5 GiB a job\)$/m,
   );
   assert.match(child.stderr, /^verify:real: refused: LensVisualizer is not at \/nonexistent\/lv: /m);
   assert.match(child.stderr, /^verify:real: refused: optiland's interpreter \/nonexistent\/python does not run$/m);

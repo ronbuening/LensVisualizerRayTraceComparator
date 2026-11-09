@@ -8,99 +8,99 @@ On 8 configurations across four suites, LensVisualizer, optiland and the referen
 
 ## Checks
 
-A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check r4, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.
+A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check geometric-mtf, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.
 
-The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check r6a leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.
+The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check wave-mtf leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.
 
 The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each check.
 
 | Check | Id | Compares | Kind | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |
 |---|---|---|---|---:|---:|---:|---|---|
-| Built system | `r0` | Built layout, shape, aperture, index and sampled sag | held to a limit | 8 | 16 | 32 | 32 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| First-order data | `r1` | First-order quantities and pupils | held to a limit | 8 | 16 | 32 | 32 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| Ray trace | `r2` | Hits, directions, image landings and masks of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | landing.maxDistance 1.56e-2 mm; benchmark / artificial-line; lv / optiland at field 0 |
-| Optical path | `r3` | Optical path, path to image and chief-relative OPD of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | opticalPath.maxAbs 1.56e-2 waves; benchmark / artificial-line; lv / optiland at field 0 |
-| Geometric MTF of the same rays | `r4` | This tool's geometric MTF of identical rays, as each engine traces them | held to a limit | 8 | 16 | 32 | 32 Pass | mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| LensVisualizer's MTF sampling, replayed | `r4f` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 8 | 8 | 16 | 16 Pass | mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0 |
-| MTF beside optiland's FFT MTF | `r5` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 1 Side by side, worth a look; 1 Not computed | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| Geometric MTF beside optiland's | `r5g` | Geometric MTF on each method's own pupil sampling | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| Wave MTF of the same rays | `r6a` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | held to a limit | 8 | 16 | 32 | 32 Pass | waveMtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
-| MTF beside the wave estimate of LensVisualizer's rays | `r6b` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront | `r6c` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| Built system | `built-system` | Built layout, shape, aperture, index and sampled sag | held to a limit | 8 | 16 | 32 | 32 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
+| First-order data | `first-order` | First-order quantities and pupils | held to a limit | 8 | 16 | 32 | 32 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
+| Ray trace | `ray-trace` | Hits, directions, image landings and masks of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | landing.maxDistance 1.56e-2 mm; benchmark / artificial-line; lv / optiland at field 0 |
+| Optical path | `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | held to a limit | 8 | 16 | 32 | 32 Pass | opticalPath.maxAbs 1.56e-2 waves; benchmark / artificial-line; lv / optiland at field 0 |
+| Geometric MTF of the same rays | `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | held to a limit | 8 | 16 | 32 | 32 Pass | mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
+| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 8 | 8 | 16 | 16 Pass | synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0 |
+| MTF beside optiland's FFT MTF | `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 1 Side by side, worth a look; 1 Not computed | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| Geometric MTF beside optiland's | `geometric-mtf-vs-optiland` | Geometric MTF on each method's own pupil sampling | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| Wave MTF of the same rays | `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | held to a limit | 8 | 16 | 32 | 32 Pass | waveMtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0 |
+| MTF beside the wave estimate of LensVisualizer's rays | `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 2 | 2 | 2 | 2 Side by side, worth a look | mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 
 ### Limits and largest values
 
-#### Built system — `r0`
+#### Built system — `built-system`
 
 - limit: synthetic.maxAbs 1.25e-1 (no unit)
 - limit: synthetic.zero 0 elements
 - synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0; measured request pairs 32
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 
-#### First-order data — `r1`
+#### First-order data — `first-order`
 
 - limit: synthetic.maxAbs 1.25e-1 (no unit)
 - limit: synthetic.zero 0 elements
 - synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0; measured request pairs 32
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 
-#### Ray trace — `r2`
+#### Ray trace — `ray-trace`
 
 - limit: landing.maxDistance 1.25e-1 mm
 - limit: synthetic.zero 0 elements
 - landing.maxDistance 1.56e-2 mm; benchmark / artificial-line; lv / optiland at field 0; measured request pairs 32
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 
-#### Optical path — `r3`
+#### Optical path — `optical-path`
 
 - limit: opticalPath.maxAbs 1.25e-1 waves
 - limit: synthetic.zero 0 elements
 - opticalPath.maxAbs 1.56e-2 waves; benchmark / artificial-line; lv / optiland at field 0; measured request pairs 32
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 
-#### Geometric MTF of the same rays — `r4`
+#### Geometric MTF of the same rays — `geometric-mtf`
 
 - limit: mtf.maxAbs 1.25e-1 (no unit)
 - limit: synthetic.zero 0 elements
 - mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0; measured request pairs 32
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 
-#### LensVisualizer's MTF sampling, replayed — `r4f`
+#### LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`
 
-- limit: mtf.maxAbs 1.25e-1 (no unit)
+- limit: synthetic.maxAbs 1.25e-1 (no unit)
 - limit: synthetic.zero 0 elements
-- mtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0; measured request pairs 16
+- synthetic.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / replay at field 0; measured request pairs 16
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / replay; measured request pairs 16
 
-#### MTF beside optiland's FFT MTF — `r5`
+#### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`
 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
 - review band: mtfOnAxis.maxAbs 6.25e-2 (no unit)
 - mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 1
 
-#### Geometric MTF beside optiland's — `r5g`
+#### Geometric MTF beside optiland's — `geometric-mtf-vs-optiland`
 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
 - review band: mtfOnAxis.maxAbs 6.25e-2 (no unit)
 - mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
 
-#### Wave MTF of the same rays — `r6a`
+#### Wave MTF of the same rays — `wave-mtf`
 
 - limit: synthetic.zero 0 elements
 - limit: waveMtf.maxAbs 1.25e-1 (no unit)
 - synthetic.zero 0 elements; benchmark / artificial-line; lv / optiland; measured request pairs 32
 - waveMtf.maxAbs 1.56e-2 (no unit); benchmark / artificial-line; lv / optiland at field 0; measured request pairs 16
 
-#### MTF beside the wave estimate of LensVisualizer's rays — `r6b`
+#### MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate`
 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
 - review band: mtfOnAxis.maxAbs 6.25e-2 (no unit)
 - mtfOnAxis.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / wave at cut sagittal, field 0 of the image height, frequencyPerMm 10; measured request pairs 2
 
-#### MTF beside the OTF of optiland's wavefront — `r6c`
+#### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
 - sorting limit: chiefLanding.maxAbs 1.56e-2 mm
 - review band: mtfOffAxis.maxAbs 1.25e-1 (no unit)
@@ -113,10 +113,10 @@ Both external diffraction counterparts are set side by side with LensVisualizer,
 
 | Check | Counterpart | Configurations | Rows | Rows by class | Worst of the rows with a review band | Worst set aside |
 |---|---|---:|---:|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | optiland | 2 | 24 | 4 the methods differ (`method`); 4 not converged (`numerical`); 16 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland-wave | 2 | 24 | 8 the methods differ (`method`); 8 not converged (`numerical`); 8 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 2 | 24 | 4 the methods differ (`method`); 4 not converged (`numerical`); 16 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 2 | 24 | 8 the methods differ (`method`); 8 not converged (`numerical`); 8 not computed by one engine (`unsupported`) | mtf.maxAbs 1.25e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 0 of the image height, frequencyPerMm 10 | mtf.maxAbs 3.75e-1 (no unit); benchmark / artificial-line; lv / optiland-wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 10 |
 
-### MTF beside optiland's FFT MTF — `r5`: optiland
+### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`: optiland
 
 - Wavelengths asked of LensVisualizer (nm): 400, 500, 600
 - Wavelengths the counterpart answered (nm): 500
@@ -131,7 +131,7 @@ Both external diffraction counterparts are set side by side with LensVisualizer,
 | benchmark | artificial-line / 0 | 500 | 500 | 0: method / two-methods; 0.5: numerical / unconverged; 1: unsupported / no-curve | 1.56e-2 | Side by side, worth a look |
 | benchmark | artificial-several / 0 | 400, 600 |  | 0: unsupported / no-curve; 0.5: unsupported / no-curve; 1: unsupported / no-curve | 1.56e-2 | Not computed |
 
-### MTF beside the OTF of optiland's wavefront — `r6c`: optiland-wave
+### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`: optiland-wave
 
 - Wavelengths asked of LensVisualizer (nm): 400, 500, 600
 - Wavelengths the counterpart answered (nm): 400, 500, 600
@@ -154,7 +154,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 2 named states are declared, 2 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | artificial-line | — | yes |
 | artificial-several | — | yes |
@@ -163,7 +163,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 2 named states are declared, 2 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | artificial-line | — | yes |
 | artificial-several | — | yes |
@@ -172,7 +172,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 2 named states are declared, 2 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | artificial-line | — | yes |
 | artificial-several | — | yes |
@@ -181,7 +181,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 3 named states are declared, 2 are run with a lens state, and 1 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | artificial-line | — | yes |
 | artificial-several | — | yes |
@@ -189,11 +189,11 @@ These are the lens states as the baselines name them, each with the code of its 
 
 ## Not covered
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
 
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
 
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 
@@ -215,14 +215,14 @@ The SHA-256 hashes of the eight baseline files this statement is rendered from, 
 
 | Baseline file | SHA-256 |
 |---|---|
-| baselines/benchmark.json | 11298f1ae1775648217b51d7461c687d2c8e3c34a40ec385954ef4f7dfd47460 |
-| baselines/benchmark.mtf.json | 843d39766f6ba05e2cc922536108751f22a6dab181777d4254471e5cfafa9128 |
-| baselines/features.json | 0c1cf93a913a05e592c0bb7a61fb144a33e88e52b4c57c01b327b7c011b39b0e |
-| baselines/features.mtf.json | 0576b518837206459e11bf659da06e8ac7c50ae0ef3696e776ff635abee41bd8 |
-| baselines/states.json | a7bedfba219cf7528667347c186d8da3ea71faa6213233f04344c5491bac650a |
-| baselines/states.mtf.json | 16f5f7680a07f7683da87c38156d6cfdef65ad26264a772b7317e3e6a1111b04 |
-| baselines/focus-stations.json | 79fa96e8a3180d71101c2dbdbc83d35577ac6a1fe6b00a04a306aa120bd4f1c9 |
-| baselines/focus-stations.mtf.json | 606dbc2ef9d6945343e402947497d55b48f765f4774f648d5b7bd51216fb7f4b |
+| baselines/benchmark.json | a7bf02155932fb6d5605e669f59d18a5de447e7c1d7d3f2c159d709f6f9ec2c4 |
+| baselines/benchmark.mtf.json | deaeb0caf32da47c056ee461625851124fea279d266b33c29ef821798a10ee25 |
+| baselines/features.json | 4977e471c07fe18726b4eb577366ee77abfe55c5471668f1e62f3a18d0081185 |
+| baselines/features.mtf.json | 38f65274d84acc43bcddc09f20f40565551cebd80202de16bff0289355c5299a |
+| baselines/states.json | 2dc3ecf56edf724987f78fec7943756b55851f53e5c969f8f427d967d888a234 |
+| baselines/states.mtf.json | 1f417e60af80a87228d91db4ccdf6dcd7a88c3d5e19f1523a18e8cd8951956d3 |
+| baselines/focus-stations.json | 07b4df6f57e7c72aebe81d4127ae24ee2352e008d8e7bb05b9bf718d1b083d5f |
+| baselines/focus-stations.mtf.json | d033c8af02d8bdf4199454211d2a3d58a643e3cf49ca3628fbeb1cb79229abd2 |
 
 | Suite | Named state | Lens state (SHA-256) |
 |---|---|---|

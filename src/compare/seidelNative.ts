@@ -34,7 +34,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeFieldFacts, NativeFieldSorting } from "./mtfNative.ts";
 
 /** The rung of the engines' own Seidel sums. */
-export const SEIDEL_NATIVE_RUNG = "r13b";
+export const SEIDEL_NATIVE_RUNG = "seidel-vs-optiland";
 
 /** How far apart two answers' Lagrange invariants lie, mm: the limit of the sorting. */
 export const INVARIANT_METRIC = "invariant.maxAbs";

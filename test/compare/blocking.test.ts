@@ -52,15 +52,18 @@ test("a pair is two engines, whichever is named first", () => {
   assert.notEqual(pairKey("lv", "ref"), pairKey("lv", "optiland"));
   // Engine ids hold no character that could make two pairs one key.
   assert.notEqual(pairKey("a", "b-c"), pairKey("a-b", "c"));
-  assert.equal(blockedReason("ref", "lv", "r0"), "not judged: rung r0 failed for lv and ref on this case");
-  assert.equal(blockedReason("lv", "ref", "r0"), blockedReason("ref", "lv", "r0"));
+  assert.equal(
+    blockedReason("ref", "lv", "built-system"),
+    "not judged: rung built-system failed for lv and ref on this case",
+  );
+  assert.equal(blockedReason("lv", "ref", "built-system"), blockedReason("ref", "lv", "built-system"));
 });
 
 test("a rung that blocks later rungs blocks the pairs that failed it: FAIL and ERROR, and no other verdict", () => {
   const ledger = createBlockingLedger();
-  assert.equal(ledger.blockedIn("r0").size, 0);
+  assert.equal(ledger.blockedIn("built-system").size, 0);
   ledger.note(
-    setOf("r0", [
+    setOf("built-system", [
       ["a", "b", "FAIL"],
       ["a", "c", "PASS"],
       ["a", "d", "ERROR"],
@@ -71,53 +74,58 @@ test("a rung that blocks later rungs blocks the pairs that failed it: FAIL and E
     ]),
     BLOCKING,
   );
-  const blocked = ledger.blockedIn("r1");
+  const blocked = ledger.blockedIn("first-order");
   assert.deepEqual(
     [...blocked],
     [
-      [pairKey("a", "b"), "r0"],
-      [pairKey("a", "d"), "r0"],
+      [pairKey("a", "b"), "built-system"],
+      [pairKey("a", "d"), "built-system"],
     ],
   );
   // The key is the pair's, whichever engine a set names first.
-  assert.equal(blocked.get(pairKey("b", "a")), "r0");
+  assert.equal(blocked.get(pairKey("b", "a")), "built-system");
 });
 
 test("a rung does not block itself, an earlier blocker stays the blocker, and a rung without the flag blocks nothing", () => {
   const ledger = createBlockingLedger();
-  ledger.note(setOf("r0", [["a", "b", "FAIL"]]), BLOCKING);
+  ledger.note(setOf("built-system", [["a", "b", "FAIL"]]), BLOCKING);
   // Another request of the same rung is judged: it is not a later rung.
-  assert.equal(ledger.blockedIn("r0").size, 0);
-  assert.equal(ledger.blockedIn("r1").get(pairKey("a", "b")), "r0");
+  assert.equal(ledger.blockedIn("built-system").size, 0);
+  assert.equal(ledger.blockedIn("first-order").get(pairKey("a", "b")), "built-system");
 
   // A later rung that blocks too adds its own failures, and does not take over a pair already blocked.
   ledger.note(
-    setOf("r1", [
+    setOf("first-order", [
       ["a", "b", "FAIL"],
       ["a", "c", "FAIL"],
     ]),
     BLOCKING,
   );
-  const later = ledger.blockedIn("r2");
-  assert.equal(later.get(pairKey("a", "b")), "r0");
-  assert.equal(later.get(pairKey("a", "c")), "r1");
+  const later = ledger.blockedIn("ray-trace");
+  assert.equal(later.get(pairKey("a", "b")), "built-system");
+  assert.equal(later.get(pairKey("a", "c")), "first-order");
   // In r1 itself only the earlier rung's block holds.
-  assert.deepEqual([...ledger.blockedIn("r1").values()], ["r0"]);
+  assert.deepEqual([...ledger.blockedIn("first-order").values()], ["built-system"]);
 
   const plain = createBlockingLedger();
-  plain.note(setOf("r0", [["a", "b", "FAIL"]]), GATED);
-  plain.note(setOf("r0", [["a", "b", "ERROR"]]), { ...GATED, blocksLaterRungs: false });
-  assert.equal(plain.blockedIn("r1").size, 0);
+  plain.note(setOf("built-system", [["a", "b", "FAIL"]]), GATED);
+  plain.note(setOf("built-system", [["a", "b", "ERROR"]]), { ...GATED, blocksLaterRungs: false });
+  assert.equal(plain.blockedIn("first-order").size, 0);
   // What blockedIn returns is the caller's: changing it does not unblock anything.
-  (ledger.blockedIn("r2") as Map<string, string>).clear();
-  assert.equal(ledger.blockedIn("r2").size, 2);
+  (ledger.blockedIn("ray-trace") as Map<string, string>).clear();
+  assert.equal(ledger.blockedIn("ray-trace").size, 2);
 });
 
 test("only a gated rung can block: a recorded rung never fails", () => {
-  const policy = (rung: RungPolicy): Policy => ({ contract: "1.0", kind: "policy", version: 1, rungs: { r0: rung } });
+  const policy = (rung: RungPolicy): Policy => ({
+    contract: "1.0",
+    kind: "policy",
+    version: 1,
+    rungs: { "built-system": rung },
+  });
   assert.deepEqual(policyProblems(policy(BLOCKING)), []);
   assert.deepEqual(policyProblems(policy({ ...RECORDED, blocksLaterRungs: true })), [
-    "rung r0: a recorded rung cannot block later rungs",
+    "rung built-system: a recorded rung cannot block later rungs",
   ]);
   assert.deepEqual(policyProblems(policy({ ...RECORDED, blocksLaterRungs: false })), []);
   assert.deepEqual(validateKind("policy", policy(BLOCKING)), []);
@@ -127,20 +135,23 @@ test("only a gated rung can block: a recorded rung never fails", () => {
 
 test("a blocked pair of two answers is BLOCKED: no metric, the rung's class, and the rung that blocks it", () => {
   const [a, b] = [answered("ref", [1, 2, 3]), answered("lv", [1, 2, 3])];
-  const pair = comparePair(a, b, GATED, selftestEchoComparator, "r0");
+  const pair = comparePair(a, b, GATED, selftestEchoComparator, "built-system");
   assert.deepEqual(pair, {
     a: "ref",
     b: "lv",
     metrics: [],
     class: "gated",
     verdict: "BLOCKED",
-    reason: "not judged: rung r0 failed for lv and ref on this case",
+    reason: "not judged: rung built-system failed for lv and ref on this case",
   });
   // The answers are not looked at: two that would fail, and two that cannot be compared, are blocked alike.
-  assert.equal(comparePair(a, answered("lv", [9, 9, 9]), GATED, selftestEchoComparator, "r0").verdict, "BLOCKED");
-  assert.equal(comparePair(a, answered("lv", [1]), GATED, selftestEchoComparator, "r0").verdict, "BLOCKED");
-  assert.equal(comparePair(a, b, GATED, undefined, "r0").verdict, "BLOCKED");
-  assert.equal(comparePair(a, b, RECORDED, selftestEchoComparator, "r0").class, "recorded");
+  assert.equal(
+    comparePair(a, answered("lv", [9, 9, 9]), GATED, selftestEchoComparator, "built-system").verdict,
+    "BLOCKED",
+  );
+  assert.equal(comparePair(a, answered("lv", [1]), GATED, selftestEchoComparator, "built-system").verdict, "BLOCKED");
+  assert.equal(comparePair(a, b, GATED, undefined, "built-system").verdict, "BLOCKED");
+  assert.equal(comparePair(a, b, RECORDED, selftestEchoComparator, "built-system").class, "recorded");
   // Without a blocker the pair is judged as ever.
   assert.equal(comparePair(a, b, GATED, selftestEchoComparator, undefined).verdict, "PASS");
 });
@@ -152,12 +163,12 @@ test("an engine that did not answer says so, blocked or not: BLOCKED is of two a
     ended("lv", "unsupported", "feature system.afocal"),
     GATED,
     selftestEchoComparator,
-    "r0",
+    "built-system",
   );
   assert.equal(unsupported.verdict, "UNSUPPORTED");
   assert.equal(unsupported.reason, "lv is unsupported (feature system.afocal)");
   for (const status of ["error", "pending", "missing"] as const) {
-    const pair = comparePair(a, ended("lv", status, "engine-failure"), GATED, selftestEchoComparator, "r0");
+    const pair = comparePair(a, ended("lv", status, "engine-failure"), GATED, selftestEchoComparator, "built-system");
     assert.equal(pair.verdict, "ERROR", status);
     assert.match(pair.reason ?? "", /^lv /);
   }
@@ -168,13 +179,13 @@ test("a group blocks the pairs it is told are blocked, in both modes and whichev
     suite: "ladder",
     run: "one",
     caseId: "c".repeat(64),
-    rung: "r1",
+    rung: "first-order",
     quantity: SELFTEST_ECHO,
     requestId: "1".repeat(64),
     participants: [answered("ref", [1, 2]), answered("lv", [1, 2]), answered("optiland", [1, 2])],
     policy: GATED,
     comparator: selftestEchoComparator,
-    blocked: new Map([[pairKey("ref", "lv"), "r0"]]),
+    blocked: new Map([[pairKey("ref", "lv"), "built-system"]]),
   };
   const against = compareGroup(group, "reference-vs-each", "ref");
   assert.deepEqual(

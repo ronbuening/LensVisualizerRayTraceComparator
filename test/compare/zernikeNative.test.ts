@@ -21,7 +21,7 @@ import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { ZernikeNativeData } from "../../src/contract/quantities/zernikeNative.ts";
 import { ZERNIKE_DATA_FRINGE, ZERNIKE_DATA_STANDARD } from "../contract/corpus.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r14b;
+const POLICY: RungPolicy = loadPolicy().rungs["zernike-vs-optiland"];
 
 function compared(
   a: ZernikeNativeData,

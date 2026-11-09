@@ -20,7 +20,7 @@ import type { MtfRecipe } from "../../src/core/mtfRecipe.ts";
 import { decodeNdArray, encodeNdArray } from "../../src/core/numeric/ndarray.ts";
 import { BASE, LENS, SPEC, changed, specAt, stopAt, traceOf } from "./raysSupport.ts";
 
-const R4 = loadPolicy().rungs.r4;
+const R4 = loadPolicy().rungs["geometric-mtf"];
 const FREQUENCIES = [10, 30, 50];
 const TWO_PI = 2 * Math.PI;
 
@@ -117,8 +117,8 @@ function close(metric: ComputedMetric, expected: number): void {
 
 test("the comparator is of rays.trace for rung r4, a comparator of spans, and reports the MTF and three counts", () => {
   assert.equal(raysMtfComparator.quantity, "rays.trace");
-  assert.equal(raysMtfComparator.rung, "r4");
-  assert.equal(COMPARATORS.get("rays.trace", "r4"), raysMtfComparator);
+  assert.equal(raysMtfComparator.rung, "geometric-mtf");
+  assert.equal(COMPARATORS.get("rays.trace", "geometric-mtf"), raysMtfComparator);
   assert.deepEqual(raysMtfComparator.metrics, [
     { name: "mtf.maxAbs", unit: "1" },
     { name: "rays.compared", unit: "rays" },

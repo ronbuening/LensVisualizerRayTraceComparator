@@ -30,11 +30,14 @@ export const R5G_GOLDEN = "r5g-stand-ins";
 export const GEOMETRIC_SPEC: MtfNativeSpec = { ...SPEC, method: "geometric" };
 
 /** A policy of the one rung `r5g`, with the bands of the fixture of `r5`. */
-export const R5G_POLICY: Policy = { ...R5_POLICY, rungs: { r5g: R5_POLICY.rungs.r5 } };
+export const R5G_POLICY: Policy = {
+  ...R5_POLICY,
+  rungs: { "geometric-mtf-vs-optiland": R5_POLICY.rungs["mtf-vs-optiland-fft"] },
+};
 
 /** The rung `r5g` as far as engines that know no optics can be asked it: one request, of three engines. */
 export const R5G_FIXTURE_RUNG: RungDefinition = {
-  id: "r5g",
+  id: "geometric-mtf-vs-optiland",
   quantity: MTF_NATIVE,
   engines: ["lv", "optiland", "replay"],
   buildRequests: (opticalCase) => [makeRequest({ caseId: opticalCase.id, quantity: MTF_NATIVE, spec: GEOMETRIC_SPEC })],

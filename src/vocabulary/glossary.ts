@@ -22,7 +22,7 @@ export const GLOSSARY_TEXT = {
   termsIntro: "The words used on screens and in reports, and the older words of this tool that each replaces.",
   checks: "Checks",
   checksIntro:
-    "A check held to a limit hands two engines the same input and passes or fails. A side-by-side check sets two methods beside each other with no limit and fails nothing. The id is the one stored today; the second id is the one it takes when the ids are renamed.",
+    "A check held to a limit hands two engines the same input and passes or fails. A side-by-side check sets two methods beside each other with no limit and fails nothing. The id is the one stored today; the second id is the one it had before the ids were renamed, which the catalog snapshot and files written before the rename still name and which is still read.",
   kinds: { limit: "held to a limit", "side-by-side": "side by side, no limit" },
   engines: "Engines",
   enginesIntro:
@@ -72,7 +72,7 @@ export function renderGlossary(): string {
     lines.push(
       `### ${check.title}`,
       "",
-      `- Id: \`${check.id}\`, to be renamed \`${check.newId}\`.`,
+      `- Id: \`${check.id}\`, formerly \`${check.oldId}\`.`,
       `- Kind: ${t.kinds[check.kind]}.`,
       `- Compares: ${check.compares}.`,
       `- Shows: ${check.shows}`,

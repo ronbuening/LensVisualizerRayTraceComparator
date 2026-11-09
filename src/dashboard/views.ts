@@ -38,7 +38,7 @@ import type { CompareSummary } from "./compare.ts";
 import { caseNowOf, recordStaleness, stalenessBasis } from "./staleness.ts";
 import type { StalenessBasis } from "./staleness.ts";
 import type { Loaded, PolicyAtHand } from "./sources.ts";
-import { currentCheckId } from "../core/legacyIds.ts";
+import { currentCheckId, legacyIdsOfRun } from "../core/legacyIds.ts";
 
 /** How the numbers a view computes are derived, in the words the pages show on hover. */
 const DERIVATIONS = DASHBOARD_TEXT.derivations;
@@ -358,6 +358,12 @@ export interface RunView {
   readonly runs: readonly RunEntry[];
   readonly comparisons: ComparisonsState;
   readonly inputProblems: readonly string[];
+  /**
+   * The old ids its run record or comparisons name (`legacyIdsOfRun`: `check <old>`, `engine <old>`): a run directory
+   * written before a rename, which `compare`, `report` and `baseline write` refuse and whose checks the pages of today
+   * may not show. Empty for a run directory of today's ids.
+   */
+  readonly oldIds: readonly string[];
   /** The support matrix added up: a row per rung, a cell per engine, its requests by status (`SUPPORT_STATUSES`). */
   readonly supportByRung: readonly {
     readonly rung: string;
@@ -442,6 +448,7 @@ export function buildRunView(
       runs: [],
       comparisons: state,
       inputProblems: [],
+      oldIds: [],
       supportByRung: [],
       split: false,
       supportByRun: [],
@@ -491,6 +498,7 @@ export function buildRunView(
     }),
     comparisons: state,
     inputProblems: [...inputProblems],
+    oldIds: legacyIdsOfRun(value, comparisons.state === "ok" ? comparisons.value : null),
     supportByRung,
     split,
     supportByRun: split ? [] : [...rowsByRun].map(([run, rows]) => ({ run, rows })),

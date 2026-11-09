@@ -325,7 +325,7 @@ test("a suite of LensVisualizer lenses loads through the source, and its manifes
 
   const runsDir = join(rootDir, "runs");
   const { registry } = watchedRegistry({ "fake-a": fakeEngine() });
-  const result = await runSuite({ suite, registry, runsDir, sources, rungs: ["selftest"] });
+  const result = await runSuite({ suite, registry, runsDir, sources, rungs: ["pipeline-echo"] });
   assert.deepEqual(result.manifest.sources, {
     lv: {
       fingerprint: {
@@ -458,7 +458,7 @@ test("a suite runs a zoom without a position at both ends, as two ordinary runs 
       registry,
       runsDir: join(rootDir, directory),
       sources,
-      rungs: ["selftest"],
+      rungs: ["pipeline-echo"],
     });
     assert.deepEqual(
       result.manifest.runs.map((each) => [each.name, each.caseId]),
@@ -503,7 +503,7 @@ test("a lens file edited between loading the suite and the end of its run marks 
     runsDir: join(rootDir, "runs"),
     sources,
     // The rungs that compare the engines of a run: this registry has no LensVisualizer for a rung of its own.
-    rungs: ["selftest", "r0"],
+    rungs: ["pipeline-echo", "built-system"],
     onJob: () => appendFileSync(join(lv, SINGLET_FILE), "// edited while the suite ran\n"),
   });
   assert.equal(result.manifest.sources?.lv.status, SOURCE_CHANGED);

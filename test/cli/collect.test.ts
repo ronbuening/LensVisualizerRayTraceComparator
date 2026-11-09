@@ -37,7 +37,7 @@ test("a pending job survives a restart and is collected, using a fake human-oper
   // 1. The run hands fake-human's jobs over: pending, which fails nothing, and the outbox holds them.
   const first = run();
   assert.equal(first.code, 0, first.err);
-  assert.match(first.out, /^singlet {7}selftest {2}fake-human {7}waiting for an operator {2}asked now$/m);
+  assert.match(first.out, /^singlet {7}pipeline-echo {16}fake-human {7}waiting for an operator {2}asked now$/m);
   assert.match(first.out, /^fake-pair: 4 jobs: 2 answered, 2 waiting for an operator \(4 asked now\)$/m);
   const jobs = readdirSync(join(exchange, "outbox")).sort();
   assert.equal(jobs.length, 2);
@@ -69,7 +69,7 @@ test("a pending job survives a restart and is collected, using a fake human-oper
   // 4. The next run finds every answer in the store, and the pair compares.
   const second = run();
   assert.equal(second.code, 0, second.err);
-  assert.match(second.out, /^singlet {7}selftest {2}fake-human {7}answered {17}from the cache$/m);
+  assert.match(second.out, /^singlet {7}pipeline-echo {16}fake-human {7}answered {17}from the cache$/m);
   assert.match(second.out, /^fake-pair: 4 jobs: 4 answered \(4 from the result cache\)$/m);
   const compared = node(runsDir, [BIN, "compare", "fake-pair", "--root", FAKE_ROOT]);
   assert.equal(compared.code, 0, compared.out + compared.err);

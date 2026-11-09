@@ -239,7 +239,7 @@ test(
       suite: "suite.json",
       name: "made-for-r2",
       engines: "ref,optiland",
-      rungs: "r2",
+      rungs: "ray-trace",
       root: rootDir,
     });
     const manifest: RunManifest = cycle.manifest;
@@ -301,13 +301,13 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
     suite: suiteFile,
     name: suite,
     engines,
-    rungs: "r2",
+    rungs: "ray-trace",
     python: compiled.python,
   });
   // One worker process for the run: every ray set of it went to the process that answered hello.
   assert.equal(compiled.starts(), 1);
   const { manifest } = cycle;
-  assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r2"));
+  assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "ray-trace"));
   const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
   assert.equal(manifest.jobs.length, 3 * sets);
   const on = assertR2(t, suite, cycle);
@@ -326,7 +326,7 @@ function threeWays(t: TestContext, suite: "benchmark" | "features"): { on: R2Sum
     suite: suiteFile,
     name: suite,
     engines,
-    rungs: "r2",
+    rungs: "ray-trace",
     python: interpreted.python,
     runsDir: cycle.runsDir,
   });

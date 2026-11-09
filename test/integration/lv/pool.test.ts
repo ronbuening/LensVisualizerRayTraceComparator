@@ -10,6 +10,6 @@ test(
   "gated MTF subset: child preparation and parallel comparison match serial LV/ref bytes",
   { skip: LV_UNAVAILABLE },
   async (t) => {
-    await benchmarkPool(t, ["lv", "ref"], ["r4", "r4f", "r6a"]);
+    await benchmarkPool(t, ["lv", "ref"], ["geometric-mtf", "lv-mtf-replay", "wave-mtf"]);
   },
 );

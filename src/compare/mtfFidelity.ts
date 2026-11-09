@@ -112,7 +112,7 @@ function recorded(data: JsonObject): { readonly [name: string]: readonly number[
  */
 export const mtfFidelityComparator: QuantityComparator = Object.freeze({
   quantity: MTF_NATIVE,
-  rung: "r4f",
+  rung: "lv-mtf-replay",
   metrics: Object.freeze([
     { name: "mtf.maxAbs", unit: "1" },
     { name: "sampling.mismatches", unit: "elements" },

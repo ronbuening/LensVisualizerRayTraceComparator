@@ -67,7 +67,7 @@ function waveRoot(t: TestContext): string {
     defaults: {
       engines: ["ref", "ref-bent", "ref-twin", "fake-a"],
       referenceEngine: "ref",
-      rungs: ["r6a"],
+      rungs: ["wave-mtf"],
       fields: { kind: "angles-deg", values: [0] },
       sampling: { bundleGrid: GRID },
     },
@@ -113,7 +113,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
 
   const compared = await inProcess(rootDir, "compare", "wave");
   const file = read<ComparisonFile>(rootDir, "wave", COMPARISONS_FILE);
-  assert.ok(file.comparisons.every((set) => set.rung === "r6a" && set.quantity === "rays.trace"));
+  assert.ok(file.comparisons.every((set) => set.rung === "wave-mtf" && set.quantity === "rays.trace"));
   // The four requests of the field are one set in each mode, under the id of the first of them.
   const sets = (mode: string): ComparisonSet[] => file.comparisons.filter((set) => set.mode === mode);
   assert.equal(sets("pairwise").length, 1);
@@ -154,7 +154,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   } else {
     assert.equal(
       bent.verdict,
-      figure > (loadPolicy().rungs.r6a.metrics["waveMtf.maxAbs"].tolerance as number) ? "FAIL" : "PASS",
+      figure > (loadPolicy().rungs["wave-mtf"].metrics["waveMtf.maxAbs"].tolerance as number) ? "FAIL" : "PASS",
     );
   }
   assert.equal(compared.code, bent.verdict === "FAIL" ? EXIT_FAILURE : EXIT_OK, compared.out);
@@ -166,35 +166,51 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   const markdown = readFileSync(join(rootDir, "runs", "wave", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(
     markdown,
-    /^#### Wave MTF of the same rays — `r6a`, request 1 of 4\n\nQuantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\./m,
+    /^#### Wave MTF of the same rays — `wave-mtf`, request 1 of 4\n\nQuantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\./m,
   );
   // The figure that is judged, then the one that is only written down, then what the lattice says of itself.
   assert.match(
     markdown,
     /^\| Engine \| waveMtf\.maxAbs \(≤ 2\.00e-8\) \| waveMtf\.flagged \| phaseStep\.waves \[waves\] \| convergence\.maxAbs \| /m,
   );
-  assert.doesNotMatch(markdown, /^#### .*`r6a`, request 2 of 4$/m);
+  assert.doesNotMatch(markdown, /^#### .*`wave-mtf`, request 2 of 4$/m);
 });
 
 test("the finer lattice is asked of R6a alone: R2 to R4 trace the run's own sets, and R6a finds them in the store", async (t) => {
   const rootDir = waveRoot(t);
-  const first = await inProcess(rootDir, "run", "suite.json", "--rungs", "r2,r3,r4", "--engines", "ref,ref-twin");
+  const first = await inProcess(
+    rootDir,
+    "run",
+    "suite.json",
+    "--checks",
+    "ray-trace,optical-path,geometric-mtf",
+    "--engines",
+    "ref,ref-twin",
+  );
   assert.equal(first.code, EXIT_OK, first.err);
   const before = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   assert.equal(Object.hasOwn(before.runs[0], "fineRaySets"), false);
   const coarse = [...new Set(before.jobs.map((job) => job.requestId))];
   assert.equal(coarse.length, 2);
 
-  const all = await inProcess(rootDir, "run", "suite.json", "--rungs", "r2,r3,r4,r6a", "--engines", "ref,ref-twin");
+  const all = await inProcess(
+    rootDir,
+    "run",
+    "suite.json",
+    "--checks",
+    "ray-trace,optical-path,geometric-mtf,wave-mtf",
+    "--engines",
+    "ref,ref-twin",
+  );
   assert.equal(all.code, EXIT_OK, all.err);
   const after = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   const of = (rung: string): string[] => [
     ...new Set(after.jobs.filter((job) => job.rung === rung).map((job) => job.requestId)),
   ];
-  for (const rung of ["r2", "r3", "r4"]) assert.deepEqual(of(rung), coarse, rung);
+  for (const rung of ["ray-trace", "optical-path", "geometric-mtf"]) assert.deepEqual(of(rung), coarse, rung);
   // The run's own sets first, then those of the finer lattice.
-  assert.deepEqual(of("r6a").slice(0, 2), coarse);
-  assert.equal(of("r6a").length, 4);
+  assert.deepEqual(of("wave-mtf").slice(0, 2), coarse);
+  assert.equal(of("wave-mtf").length, 4);
   // Two sets, two engines: the four traces of the finer lattice are all that was computed.
   assert.match(all.out, /\(4 asked now, 16 from the result cache\)$/m);
 });
@@ -218,7 +234,7 @@ function lvrtc(rootDir: string, ...args: string[]): { code: number | null; out: 
   return { code: child.status, out: child.stdout, err: child.stderr };
 }
 
-test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave estimator on its rays, recorded", (t) => {
+test("lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF beside the wave estimator on its rays, recorded", (t) => {
   const rootDir = fakeLvRoot(t);
   const singlet = { kind: "lv", key: "acme-singlet-50" };
   const suite = join(rootDir, "suite.json");
@@ -227,7 +243,7 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
     { name: "f8", lens: singlet, aperture: { kind: "lv-f8-comparison" }, frequenciesPerMm: [40, 10, 20] },
   ];
   // The suite names an engine that is none of the rung's: the rung is asked of its own two all the same.
-  const defaults = { engines: ["ref"], rungs: ["r6b"], sampling: { bundleGrid: 8 } };
+  const defaults = { engines: ["ref"], rungs: ["mtf-vs-wave-estimate"], sampling: { bundleGrid: 8 } };
   writeFileSync(suite, JSON.stringify({ contract: CONTRACT_VERSION, kind: "suite", name: "wave", defaults, runs }));
 
   const ran = lvrtc(rootDir, "run", suite);
@@ -236,7 +252,7 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
   const manifest = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
-    runs.flatMap(({ name }) => ["lv", "wave"].map((engine) => `${name} r6b mtf.native ${engine} ok`)),
+    runs.flatMap(({ name }) => ["lv", "wave"].map((engine) => `${name} mtf-vs-wave-estimate mtf.native ${engine} ok`)),
   );
   // The two engines are one LensVisualizer, with an adapter revision each; the rung traces no rays of the run's.
   const [lv, wave] = manifest.engines;
@@ -259,8 +275,8 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
   assert.deepEqual(
     pairwise.map((set) => [set.run, set.rung, set.pairs.map((pair) => `${pair.a} ${pair.b} ${pair.class}`)]),
     [
-      ["open", "r6b", ["lv wave recorded"]],
-      ["f8", "r6b", ["lv wave recorded"]],
+      ["open", "mtf-vs-wave-estimate", ["lv wave recorded"]],
+      ["f8", "mtf-vs-wave-estimate", ["lv wave recorded"]],
     ],
   );
   for (const set of pairwise) {
@@ -289,7 +305,7 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
   const markdown = readFileSync(join(rootDir, "runs", "wave", REPORT_MARKDOWN_FILE), "utf8");
   assert.match(
     markdown,
-    /^#### MTF beside the wave estimate of LensVisualizer's rays — `r6b`\n\nQuantity `mtf\.native`: each engine's own method; side by side, no limit\./m,
+    /^#### MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate`\n\nQuantity `mtf\.native`: each engine's own method; side by side, no limit\./m,
   );
   assert.match(
     markdown,

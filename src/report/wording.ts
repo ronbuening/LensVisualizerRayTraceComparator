@@ -3,6 +3,7 @@
 // (`wordingProblems`) rejects the claims no recorded row supports, whoever writes them.
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
+import { LEGACY_CHECK_IDS } from "../core/legacyIds.ts";
 import { formatFixed, formatSci, formatSignificant } from "../core/numeric/format.ts";
 import { MATRIX_CHECKS, STATEMENT_CHECKS } from "../vocabulary/checks.ts";
 
@@ -120,10 +121,11 @@ export const MTF_COMPARISON_OUTRO: readonly string[] = [
 ];
 
 /**
- * What a comparison of this tool does not show, whatever its verdicts: the block every report ends its results
- * with. The sentences are fixed; a report adds none and leaves none out.
+ * What a comparison of this tool does not show, as the catalog snapshot's statistics state it: the sentences of
+ * `NOT_COVERED` with the check ids of before the rename, which the catalog keeps until the end-of-project catalog
+ * refresh, so that its report keeps its bytes. No other report renders these.
  */
-export const NOT_COVERED: readonly string[] = [
+export const CATALOG_NOT_COVERED: readonly string[] = [
   "optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, " +
     "reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.",
   "A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several " +
@@ -151,6 +153,15 @@ export const NOT_COVERED: readonly string[] = [
   "Fields that an engine's own convergence test did not pass. Their figures are shown apart and enter no review " +
     "band.",
 ];
+
+/**
+ * What a comparison of this tool does not show, whatever its verdicts: the block every report ends its results
+ * with. The sentences are fixed; a report adds none and leaves none out. They are `CATALOG_NOT_COVERED`'s, each check
+ * named by its id of today.
+ */
+export const NOT_COVERED: readonly string[] = CATALOG_NOT_COVERED.map((sentence) =>
+  sentence.replace(/\b(r(?:1[0-4]|[0-9])[a-g]?)\b/g, (id) => LEGACY_CHECK_IDS[id] ?? id),
+);
 
 /** Engines as a report names them in a sentence: each in backticks, by commas. */
 function engineList(engines: readonly string[]): string {
@@ -230,15 +241,32 @@ const mentions =
     patterns.every((pattern) => pattern.test(sentence));
 
 const AN_MTF = /\b(MTF|OTF|transfer function)s?\b/i;
-// The rungs of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
-const GATED_IDENTICAL = /\b(gated|R4f?|R6a)\b/i;
+/**
+ * The checks of `old` (their ids before the rename) under both spellings, as a group of alternatives of a pattern that
+ * follows a word boundary: the old id, ending at a word boundary as before the rename, and the id of today, which is
+ * never matched inside a longer one (`geometric-mtf` in `geometric-mtf-vs-optiland`): it is followed by neither a word
+ * character nor a hyphen.
+ */
+function checkIds(old: readonly string[]): string {
+  const now = old.map((id) => LEGACY_CHECK_IDS[id].replaceAll("-", "\\-"));
+  return `(?:(?:${old.join("|")})\\b|(?:${now.join("|")})(?![\\w-]))`;
+}
+// The checks of the engines' own MTF are recorded whatever they are called: a sentence that names it is one of a recorded row.
+const GATED_IDENTICAL = new RegExp(`\\b(?:gated\\b|${checkIds(["r4", "r4f", "r6a"])})`, "i");
 const IDENTICAL_RAYS = /\bidentical[- ]rays?\b/i;
 const GATED_SAME_RAYS =
   /\btrace the same rays within the gates, and the optical path, geometric MTF and wave MTF computed from those rays agree within theirs\b/i;
+const RECORDED_MTF = new RegExp(
+  `\\b(?:(?:recorded|FFT|optiland-wave)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
+  "i",
+);
 const recordedContext = (sentence: string): boolean =>
   !(GATED_SAME_RAYS.test(sentence) || (GATED_IDENTICAL.test(sentence) && IDENTICAL_RAYS.test(sentence))) ||
-  /\b(R5g?|R6[bc]|recorded|FFT|optiland-wave)\b/i.test(sentence);
-const RECORDED_ROW = /\b(RECORDED|ATTENTION|recorded (row|rung|pair|difference)s?|r5g?|r6[bc])\b/i;
+  RECORDED_MTF.test(sentence);
+const RECORDED_ROW = new RegExp(
+  `\\b(?:(?:RECORDED|ATTENTION|recorded (?:row|rung|pair|difference)s?)\\b|${checkIds(["r5", "r5g", "r6b", "r6c"])})`,
+  "i",
+);
 
 /** The claims that are rejected. */
 export const BANNED_CLAIMS: readonly BannedClaim[] = [
@@ -373,9 +401,9 @@ export const STATEMENT_TEXT = {
   intro:
     "This statement is rendered from the eight baselines of the benchmark, features, states and focus-stations suites alone, with no engine, clock or machine input. It says what those baselines support, check by check, and what they do not cover.",
   counts:
-    "A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check r4, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.",
+    "A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check geometric-mtf, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.",
   worst:
-    "The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check r6a leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.",
+    "The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check wave-mtf leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.",
   population:
     "The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each check.",
   counterparts:
@@ -432,7 +460,7 @@ export const STATEMENT_LABELS = {
   stateColumns: [
     "Named state",
     "Refusal",
-    "Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine",
+    "Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine",
   ],
   notCovered: "Not covered",
   identifiers: "Identifiers",
@@ -493,8 +521,8 @@ export function statementSupport(statement: StatementSupportData, holds: boolean
   const path = gated(statement.agreementFigures.opticalPath);
   const geometric = gated(statement.agreementFigures.geometricMtf);
   const wave = gated(statement.agreementFigures.waveMtf);
-  const fft = statement.counterparts.find((c) => c.rung === "r5");
-  const wavefront = statement.counterparts.find((c) => c.rung === "r6c");
+  const fft = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-fft");
+  const wavefront = statement.counterparts.find((c) => c.rung === "mtf-vs-optiland-wavefront");
   if (
     !landing ||
     !path ||
@@ -626,7 +654,7 @@ export const MATRIX_TEXT = {
   intro:
     "This matrix is rendered from the benchmark's two baselines alone, with no engine, clock or machine input. It has a row for each LensVisualizer analysis tab, a row of the foundation they stand on, and a row of the analyses LensVisualizer has no tab of.",
   counts:
-    "A configuration is one named run of the benchmark, with its lens state. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. Request-pair counts count every request pair, answers that were not computed included; configuration-pair counts count the worst verdict of each configuration pair. Check r4 is in both baselines and counts once.",
+    "A configuration is one named run of the benchmark, with its lens state. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. Request-pair counts count every request pair, answers that were not computed included; configuration-pair counts count the worst verdict of each configuration pair. Check geometric-mtf is in both baselines and counts once.",
   gated:
     "A check held to a limit holds two engines to the limits of the limits file on the same input, and its verdicts are the ones the baseline holds.",
   recorded:
@@ -906,6 +934,9 @@ export const DASHBOARD_TEXT = {
   documentProblem: (document: string, problem: string): string => `${document} cannot be shown: ${problem}`,
   notReadable: "The run record of this run cannot be read, so nothing of the run is shown.",
   notCompared: "This run has not been compared: lvrtc compare writes the comparisons that judge it.",
+  /** A run directory written before a rename of ids: the code's own sentence and remedy, then the old ids it names. */
+  writtenBeforeRename: (sentence: string, remedy: string): string =>
+    `${sentence} ${remedy} Until then this page may leave out what the old ids name. The old ids it names:`,
   comparisonsUnreadable: "The comparisons of this run cannot be read, so no verdict of it is shown.",
   inputProblems:
     "The comparisons do not belong with this run record or with the limits file at hand, so their verdicts may be of other inputs:",
@@ -1609,6 +1640,7 @@ export const DASHBOARD_TEXT = {
       term: "Term",
       id: "Id",
       newId: "Future id",
+      oldId: "Old id",
       whatItIs: "What it is",
       compares: "Compares",
       shows: "Shows",

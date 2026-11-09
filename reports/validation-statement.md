@@ -8,29 +8,29 @@ On 276 configurations across four suites, LensVisualizer, optiland and the refer
 
 ## Checks
 
-A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check r4, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.
+A configuration is one named run of one suite, with its lens state; the same lens state in two suites counts twice, and check geometric-mtf, which is in both the ray and the MTF baselines, counts once. A configuration pair is two engines on one configuration and one check; a request pair is two engines on one request. The verdict counts count request pairs, answers that were not computed included; a refused lens state has no pairs.
 
-The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check r6a leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.
+The worst residual of a check held to a limit is the figure largest as a fraction of its own limit; a limit of zero ranks a value of zero at zero and any value above it above every finite ratio. The largest value of each figure is also listed in its own units. The worst of a side-by-side check is the largest MTF difference among the rows that have a review band, over every pair of that check; the differences set aside are listed apart for each external diffraction counterpart. The measured request counts of check wave-mtf leave out fields set aside for their phase step or convergence, even where the verdict of the request is Pass.
 
 The supportable sentence's figures are over the configurations it counts, while the table's figures are over every configuration of each check.
 
 | Check | Id | Compares | Kind | Configurations | Configuration pairs | Request pairs | Verdicts | Worst residual |
 |---|---|---|---|---:|---:|---:|---|---|
-| Built system | `r0` | Built layout, shape, aperture, index and sampled sag | held to a limit | 314 | 942 | 942 | 942 Pass | sag.maxScaled 6.04e-16 (no unit); focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
-| First-order data | `r1` | First-order quantities and pupils | held to a limit | 314 | 942 | 942 | 942 Pass | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
-| Ray trace | `r2` | Hits, directions, image landings and masks of identical rays | held to a limit | 314 | 942 | 7152 | 7152 Pass | hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1 deg, line 0, ray 745, surface 32 |
-| Optical path | `r3` | Optical path, path to image and chief-relative OPD of identical rays | held to a limit | 314 | 942 | 7152 | 7152 Pass | opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1 deg, line 0, ray 513 |
-| Geometric MTF of the same rays | `r4` | This tool's geometric MTF of identical rays, as each engine traces them | held to a limit | 314 | 942 | 2796 | 2796 Pass | mtf.maxAbs 1.48e-11 (no unit); states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1 deg, frequencyPerMm 92 |
-| LensVisualizer's MTF sampling, replayed | `r4f` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 314 | 314 | 314 | 314 Pass | mtf.maxAbs 1.58e-14 (no unit); focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1 of the image height, frequencyPerMm 2 |
-| MTF beside optiland's FFT MTF | `r5` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | side by side, no limit | 96 | 288 | 288 | 161 Side by side; 31 Side by side, worth a look; 96 Not computed | mtfOffAxis.maxAbs 4.91e-1 (no unit); benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| Geometric MTF beside optiland's | `r5g` | Geometric MTF on each method's own pupil sampling | side by side, no limit | 96 | 288 | 864 | 844 Side by side; 20 Side by side, worth a look | mtfOffAxis.maxAbs 1.22e-2 (no unit); benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| Wave MTF of the same rays | `r6a` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | held to a limit | 314 | 942 | 2796 | 2796 Pass | waveMtf.maxAbs 1.08e-9 (no unit); states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
-| MTF beside the wave estimate of LensVisualizer's rays | `r6b` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 96 | 96 | 96 | 95 Side by side; 1 Side by side, worth a look | mtfOffAxis.maxAbs 5.75e-3 (no unit); benchmark / nikon-z-24-70f4s-tele-ref; lv / wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront | `r6c` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 96 | 576 | 576 | 381 Side by side; 51 Side by side, worth a look; 144 Not computed | mtfOffAxis.maxAbs 2.75e-1 (no unit); benchmark / nikon-z-24-70f4s-tele-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| Built system | `built-system` | Built layout, shape, aperture, index and sampled sag | held to a limit | 314 | 942 | 942 | 942 Pass | sag.maxScaled 6.04e-16 (no unit); focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28 |
+| First-order data | `first-order` | First-order quantities and pupils | held to a limit | 314 | 942 | 942 | 942 Pass | firstOrder.maxAbs 4.32e-12 mm; focus-stations / certified-sony-fe-600mm-f4-gm-oss-zoom0-focus1; optiland / ref at line 0, quantity frontFocalZ |
+| Ray trace | `ray-trace` | Hits, directions, image landings and masks of identical rays | held to a limit | 314 | 942 | 7152 | 7152 Pass | hits.maxDistance 2.70e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus1; lv / optiland at field 4.07e1 deg, line 0, ray 745, surface 32 |
+| Optical path | `optical-path` | Optical path, path to image and chief-relative OPD of identical rays | held to a limit | 314 | 942 | 7152 | 7152 Pass | opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1 deg, line 0, ray 513 |
+| Geometric MTF of the same rays | `geometric-mtf` | This tool's geometric MTF of identical rays, as each engine traces them | held to a limit | 314 | 942 | 2796 | 2796 Pass | mtf.maxAbs 1.48e-11 (no unit); states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1 deg, frequencyPerMm 92 |
+| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | LensVisualizer's geometric MTF beside a replay of its own sampling | held to a limit | 314 | 314 | 314 | 314 Pass | mtf.maxAbs 1.58e-14 (no unit); focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1 of the image height, frequencyPerMm 2 |
+| MTF beside optiland's FFT MTF | `mtf-vs-optiland-fft` | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays | side by side, no limit | 96 | 288 | 288 | 161 Side by side; 31 Side by side, worth a look; 96 Not computed | mtfOffAxis.maxAbs 4.91e-1 (no unit); benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| Geometric MTF beside optiland's | `geometric-mtf-vs-optiland` | Geometric MTF on each method's own pupil sampling | side by side, no limit | 96 | 288 | 864 | 844 Side by side; 20 Side by side, worth a look | mtfOffAxis.maxAbs 1.22e-2 (no unit); benchmark / sony-fe-400mm-f28-gm-oss-best-ref; optiland / replay at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| Wave MTF of the same rays | `wave-mtf` | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled | held to a limit | 314 | 942 | 2796 | 2796 Pass | waveMtf.maxAbs 1.08e-9 (no unit); states / nikon-z-24-70f4s-f5.6-best-ref-wide; lv / ref at cut tangential, field 4.33e1 deg, frequencyPerMm 50 |
+| MTF beside the wave estimate of LensVisualizer's rays | `mtf-vs-wave-estimate` | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays | side by side, no limit | 96 | 96 | 96 | 95 Side by side; 1 Side by side, worth a look | mtfOffAxis.maxAbs 5.75e-3 (no unit); benchmark / nikon-z-24-70f4s-tele-ref; lv / wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts | side by side, no limit | 96 | 576 | 576 | 381 Side by side; 51 Side by side, worth a look; 144 Not computed | mtfOffAxis.maxAbs 2.75e-1 (no unit); benchmark / nikon-z-24-70f4s-tele-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 50 |
 
 ### Limits and largest values
 
-#### Built system — `r0`
+#### Built system — `built-system`
 
 - limit: aperture.mismatches 0 elements
 - limit: index.mismatches 0 elements
@@ -43,7 +43,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - sag.maxScaled 6.04e-16 (no unit); focus-stations / certified-tamron-35-150mm-f2-28-di-iii-vxd-a058-zoom0-focus1; lv / optiland at sample 6, surface 28; measured request pairs 942
 - shape.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / optiland; measured request pairs 942
 
-#### First-order data — `r1`
+#### First-order data — `first-order`
 
 - limit: firstOrder.maxAbs 1.00e-9 mm
 - limit: pupilRadius.maxScaled 1.00e-9 mm
@@ -52,7 +52,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - pupilRadius.maxScaled 9.81e-13 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilSemiDiameter; measured request pairs 942
 - pupilZ.maxScaled 2.61e-12 mm; focus-stations / certified-leica-summilux-c-18mm-t14-zoom0-focus2; lv / ref at line 0, quantity exitPupilZ; measured request pairs 942
 
-#### Ray trace — `r2`
+#### Ray trace — `ray-trace`
 
 - limit: direction.maxAbs 1.00e-9 (no unit)
 - limit: hits.maxDistance 1.00e-8 mm
@@ -65,7 +65,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - mask.rimBand: 0
 - rays.compared: 6867825
 
-#### Optical path — `r3`
+#### Optical path — `optical-path`
 
 - limit: opd.maxAbs 2.00e-5 waves
 - limit: opticalPath.maxAbs 2.00e-5 waves
@@ -74,14 +74,14 @@ The supportable sentence's figures are over the configurations it counts, while 
 - opticalPath.maxAbs 3.63e-9 waves; focus-stations / certified-sigma-12mm-f14-dc-contemporary-zoom0-focus1; lv / ref at field 5.72e1 deg, line 0, ray 513; measured request pairs 7152
 - opticalPathToImage.maxAbs 3.11e-9 waves; features / asphere-a20-photopic; optiland / ref at field 2.42e1 deg, line 1, ray 815; measured request pairs 7152
 
-#### Geometric MTF of the same rays — `r4`
+#### Geometric MTF of the same rays — `geometric-mtf`
 
 - limit: mtf.maxAbs 1.00e-7 (no unit)
 - mtf.maxAbs 1.48e-11 (no unit); states / nikon-z-24-70f4s-f5.6-best-ref-tele; lv / ref at cut tangential, field 1.66e1 deg, frequencyPerMm 92; measured request pairs 2796
 - rays.compared: 6867825
 - rays.dropped: 0
 
-#### LensVisualizer's MTF sampling, replayed — `r4f`
+#### LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`
 
 - limit: fields.mismatches 0 elements
 - limit: mtf.maxAbs 1.00e-9 (no unit)
@@ -90,7 +90,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - mtf.maxAbs 1.58e-14 (no unit); focus-stations / certified-sigma-24mm-f35-dg-dn-zoom0-focus1; lv / replay at cut sagittal, field 7.50e-1 of the image height, frequencyPerMm 2; measured request pairs 314
 - sampling.mismatches 0 elements; benchmark / canon-ef-135-f2l-usm-ref; lv / replay; measured request pairs 314
 
-#### MTF beside optiland's FFT MTF — `r5`
+#### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`
 
 - sorting limit: chiefLanding.maxAbs 1.00e-7 mm
 - review band: mtfOffAxis.maxAbs 1.00e-2 (no unit)
@@ -103,7 +103,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - fields.rimLost: 0
 - fields.unavailable: 20
 
-#### Geometric MTF beside optiland's — `r5g`
+#### Geometric MTF beside optiland's — `geometric-mtf-vs-optiland`
 
 - sorting limit: chiefLanding.maxAbs 1.00e-3 mm
 - review band: mtfOffAxis.maxAbs 1.00e-2 (no unit)
@@ -116,7 +116,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - fields.rimLost: 0
 - fields.unavailable: 0
 
-#### Wave MTF of the same rays — `r6a`
+#### Wave MTF of the same rays — `wave-mtf`
 
 - limit: waveMtf.maxAbs 2.00e-8 (no unit)
 - convergence.maxAbs 1.58e-1 (no unit); focus-stations / certified-thypoch-simera-50mm-f14-zoom0-focus1; lv / ref at cut tangential, field 2.01e1 deg, frequencyPerMm 70; measured request pairs 2793
@@ -126,7 +126,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - rays.compared: 27473151
 - rays.dropped: 0
 
-#### MTF beside the wave estimate of LensVisualizer's rays — `r6b`
+#### MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate`
 
 - review band: mtfOffAxis.maxAbs 1.00e-2 (no unit)
 - review band: mtfOnAxis.maxAbs 5.00e-3 (no unit)
@@ -136,7 +136,7 @@ The supportable sentence's figures are over the configurations it counts, while 
 - fields.flagged: 77
 - fields.unavailable: 0
 
-#### MTF beside the OTF of optiland's wavefront — `r6c`
+#### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
 - sorting limit: chiefLanding.maxAbs 1.00e-7 mm
 - review band: mtfOffAxis.maxAbs 1.00e-2 (no unit)
@@ -157,10 +157,10 @@ For the Nikkor Z 50 mm f/1.2 wide open at best focus, the tangential difference 
 
 | Check | Counterpart | Configurations | Rows | Rows by class | Worst of the rows with a review band | Worst set aside |
 |---|---|---:|---:|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | optiland | 96 | 6336 | 2882 the methods differ (`method`); 66 not converged (`numerical`); 3388 not computed by one engine (`unsupported`) | mtf.maxAbs 4.91e-1 (no unit); benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 | mtf.maxAbs 4.59e-1 (no unit); benchmark / sony-fe-20mm-f18-g-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland-wave | 96 | 6336 | 5874 the methods differ (`method`); 462 not converged (`numerical`) | mtf.maxAbs 7.41e-3 (no unit); benchmark / nikon-z-24-70f4s-tele-photopic; lv / optiland-wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 | mtf.maxAbs 7.96e-3 (no unit); benchmark / nikkor-z50f12-photopic; lv / optiland-wave at cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 96 | 6336 | 2882 the methods differ (`method`); 66 not converged (`numerical`); 3388 not computed by one engine (`unsupported`) | mtf.maxAbs 4.91e-1 (no unit); benchmark / sony-fe-20mm-f18-g-best-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 | mtf.maxAbs 4.59e-1 (no unit); benchmark / sony-fe-20mm-f18-g-ref; lv / optiland at cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 96 | 6336 | 5874 the methods differ (`method`); 462 not converged (`numerical`) | mtf.maxAbs 7.41e-3 (no unit); benchmark / nikon-z-24-70f4s-tele-photopic; lv / optiland-wave at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 | mtf.maxAbs 7.96e-3 (no unit); benchmark / nikkor-z50f12-photopic; lv / optiland-wave at cut tangential, field 1 of the image height, frequencyPerMm 20 |
 
-### MTF beside optiland's FFT MTF — `r5`: optiland
+### MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`: optiland
 
 - Wavelengths asked of LensVisualizer (nm): 470, 510, 555, 587.5618, 610, 650
 - Wavelengths the counterpart answered (nm): 587.5618
@@ -269,7 +269,7 @@ For the Nikkor Z 50 mm f/1.2 wide open at best focus, the tangential difference 
 | benchmark | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref / 0 | 587.5618 | 587.5618 | 0: method / two-methods; 0.5: method / two-methods; 1: method / two-methods | 1.00e-7 | Side by side |
 | benchmark | sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic / 0 | 555, 470, 510, 610, 650 |  | 0: unsupported / no-curve; 0.5: unsupported / no-curve; 1: unsupported / no-curve | 1.00e-7 | Not computed |
 
-### MTF beside the OTF of optiland's wavefront — `r6c`: optiland-wave
+### MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`: optiland-wave
 
 - Wavelengths asked of LensVisualizer (nm): 470, 510, 555, 587.5618, 610, 650
 - Wavelengths the counterpart answered (nm): 470, 510, 555, 587.5618, 610, 650
@@ -386,7 +386,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 96 named states are declared, 96 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | canon-ef-135-f2l-usm-ref | — | yes |
 | canon-ef-135-f2l-usm-photopic | — | yes |
@@ -489,7 +489,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 18 named states are declared, 18 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | odd-asphere-ref | — | yes |
 | odd-asphere-photopic | — | yes |
@@ -514,7 +514,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 128 named states are declared, 128 are run with a lens state, and 0 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | canon-ef-135-f2l-usm-f5.6-ref | — | yes |
 | canon-ef-135-f2l-usm-f5.6-photopic | — | yes |
@@ -649,7 +649,7 @@ These are the lens states as the baselines name them, each with the code of its 
 
 74 named states are declared, 72 are run with a lens state, and 2 are refused.
 
-| Named state | Refusal | Measured on r2, r3, r4 and r6a for both pairs of LensVisualizer and an external engine |
+| Named state | Refusal | Measured on ray-trace, optical-path, geometric-mtf and wave-mtf for both pairs of LensVisualizer and an external engine |
 |---|---|---|
 | certified-fujifilm-gf-110mm-f56-ts-macro-zoom0-focus100 | — | yes |
 | certified-fujifilm-gf80-f17-zoom0-focus1 | — | no |
@@ -728,11 +728,11 @@ These are the lens states as the baselines name them, each with the code of its 
 
 ## Not covered
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
 
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
 
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 

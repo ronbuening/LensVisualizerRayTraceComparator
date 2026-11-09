@@ -64,7 +64,7 @@ import {
   SORTING_LIMIT_LABEL,
 } from "../../vocabulary/index.ts";
 import { codeLines, columns, countsText, engineIdentifierLines, legendLines, usageErrorMeans } from "../output.ts";
-import { LEGACY_IDS, currentIds, snapshotIds } from "../../core/legacyIds.ts";
+import { LEGACY_IDS, currentIds, snapshotIds, snapshotPolicyIds } from "../../core/legacyIds.ts";
 import type { LegacyMaps } from "../../core/legacyIds.ts";
 
 /** What `lvrtc baseline` is wired to, injected so that tests choose it. */
@@ -469,8 +469,10 @@ async function check(
  * id space they can be held in together. A dated snapshot (`SNAPSHOT_BASELINE_SUITES`, the catalog) stays as written,
  * and today's baseline is read back under the ids the snapshot and its known failures were written with
  * (`snapshotIds`) before it is classified (`classifyCatalog`) and checked: a listed FAIL is then the same FAIL, its
- * evidence hashed over the same pair. Any other baseline is read under the ids of today (`currentIds`). Returns the
- * two baselines as held and the records. A pure function.
+ * evidence hashed over the same pair, and judged by the limits of the policy at hand under those ids
+ * (`snapshotPolicyIds`). A snapshot already written under the ids of today (one written since the rename, as the
+ * end-of-project refresh writes it) names no old id and is held to today's run as it is. Any other baseline is read
+ * under the ids of today (`currentIds`). Returns the two baselines as held and the records. A pure function.
  */
 export function checkInIdSpace(
   file: Baseline,
@@ -480,9 +482,15 @@ export function checkInIdSpace(
   maps: LegacyMaps = LEGACY_IDS,
 ): { readonly committed: Baseline; readonly fresh: Baseline; readonly records: CheckRecord[] } {
   const snapshot = SNAPSHOT_BASELINE_SUITES.includes(file.suite.name);
+  // A snapshot written before the rename: it names an old id, so reading it under today's ids would change it.
+  const before = snapshot && currentIds(file, maps) !== file;
   const committed = snapshot ? file : currentIds(file, maps);
-  const fresh = classifyCatalog(snapshot ? snapshotIds(built, maps) : built, known);
-  return { committed, fresh, records: checkBaseline(committed, fresh, policy) };
+  const fresh = classifyCatalog(before ? snapshotIds(built, maps) : built, known);
+  return {
+    committed,
+    fresh,
+    records: checkBaseline(committed, fresh, before ? snapshotPolicyIds(policy, maps) : policy),
+  };
 }
 
 /**

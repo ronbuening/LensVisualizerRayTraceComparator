@@ -92,9 +92,10 @@ test("lvrtc checks lists every check with its kind and what it compares", async 
   assert.equal(list.code, EXIT_OK);
   for (const check of CHECKS) {
     const kind = check.kind === "limit" ? "held to a limit" : "side by side, no limit";
-    assert.ok(list.out.includes(`${check.id} (from the rename: ${check.newId})  ${check.title}: ${kind}\n`), check.id);
+    assert.ok(list.out.includes(`${check.id} (old id: ${check.oldId})  ${check.title}: ${kind}\n`), check.id);
   }
-  assert.deepEqual(jargonTerms(list.out), []);
+  // The list names each check's old id beside it, by design, and no other word of the tool's own.
+  assert.deepEqual(jargonTerms(list.out), ["old check id"]);
   assert.deepEqual(wordingProblems(list.out), []);
 
   const json = JSON.parse((await lvrtc(["checks", "--json"])).out);
@@ -111,10 +112,15 @@ test("lvrtc checks <id> shows a check in full: its engines from the checks, its 
     const shown = await lvrtc(["checks", id]);
     assert.equal(shown.code, EXIT_OK, id);
     assert.ok(shown.out.startsWith("Ray trace\n"), shown.out);
+    assert.match(shown.out, /^ {2}old id +r2$/m);
+    // The id it had before the rename is read as today's, and the command says so once.
+    if (id === "r2")
+      assert.match(shown.err, /^note: some ids were read under their new names: check r2 is now ray-trace; /);
+    else assert.equal(shown.err, "");
     assert.match(shown.out, /^ {2}engines +the suite's engines, or those --engines names$/m);
     assert.match(shown.out, /^ {2}runs +in every run, unless --checks names other checks$/m);
     assert.match(shown.out, new RegExp(`limits \\(from the limits file, version ${policy.version}\\):`));
-    for (const [metric, limits] of Object.entries(policy.rungs.r2.metrics)) {
+    for (const [metric, limits] of Object.entries(policy.rungs["ray-trace"].metrics)) {
       assert.ok(shown.out.includes(`${metricLabel(metric)} (${metric}): limit ${limits.tolerance}`), metric);
     }
   }
@@ -127,20 +133,23 @@ test("lvrtc checks <id> shows a check in full: its engines from the checks, its 
   assert.match(r5, /^ {2}runs +only where a suite or --checks names it$/m);
   assert.match(r5, /\(mtfOnAxis\.maxAbs\): review band 0\.005\./);
   assert.match(r5, /\(chiefLanding\.maxAbs\): sorting limit/);
-  assert.match((await lvrtc(["checks", "r6c"])).out, /1e-7 mm, 0\.001 mm when either answer has several\s+wavelengths/);
-  assert.match((await lvrtc(["checks", "r13b"])).out, /\(SPHA\.maxAbs\): no review band\./);
+  assert.match(
+    (await lvrtc(["checks", "mtf-vs-optiland-wavefront"])).out,
+    /1e-7 mm, 0\.001 mm when either answer has several\s+wavelengths/,
+  );
+  assert.match((await lvrtc(["checks", "seidel-vs-optiland"])).out, /\(SPHA\.maxAbs\): no review band\./);
 
-  const json = JSON.parse((await lvrtc(["checks", "r4f", "--json"])).out);
+  const json = JSON.parse((await lvrtc(["checks", "lv-mtf-replay", "--json"])).out);
   assert.deepEqual(json.engines, ["lv", "replay"]);
   assert.equal(json.onlyWhereNamed, false);
   assert.deepEqual(
     json.limits.map((limit: { metric: string }) => limit.metric),
-    Object.keys(policy.rungs.r4f.metrics),
+    Object.keys(policy.rungs["lv-mtf-replay"].metrics),
   );
 
   for (const args of [
     ["checks", "r99"],
-    ["checks", "r2", "r3"],
+    ["checks", "ray-trace", "optical-path"],
     ["checks", "--wat"],
   ]) {
     const refused = await lvrtc(args);
@@ -164,6 +173,14 @@ test("lvrtc glossary prints the terms; a term is found by its word, a word it re
     (await lvrtc(["glossary", "ATTENTION"])).out.startsWith("Side by side, worth a look (stored as ATTENTION)\n"),
   );
   assert.ok((await lvrtc(["glossary", "ref"])).out.includes("Reference tracer (stored as ref)\n"));
+  // A check by its id, or by the id it had before the rename, which the command says it read as today's.
+  const byId = await lvrtc(["glossary", "ray-trace"]);
+  assert.ok(byId.out.startsWith("Ray trace (replaces r2; stored as ray-trace)\n"), byId.out);
+  assert.equal(byId.err, "");
+  const byOldId = await lvrtc(["glossary", "r2"]);
+  assert.equal(byOldId.code, EXIT_OK);
+  assert.equal(byOldId.out, byId.out);
+  assert.match(byOldId.err, /^note: some ids were read under their new names: check r2 is now ray-trace; /);
 
   const json = JSON.parse((await lvrtc(["glossary", "manifest", "--json"])).out);
   assert.deepEqual(

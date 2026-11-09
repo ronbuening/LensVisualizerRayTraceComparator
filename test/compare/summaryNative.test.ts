@@ -20,7 +20,7 @@ import type { JsonObject } from "../../src/contract/json.ts";
 import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { SummaryNativeData, SummaryNativeLine } from "../../src/contract/quantities/summaryNative.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r12b;
+const POLICY: RungPolicy = loadPolicy().rungs["summary-vs-optiland"];
 
 /**
  * A line as LensVisualizer's tab states one at a finite focus: a marked f-number and a half field, no working f-number of

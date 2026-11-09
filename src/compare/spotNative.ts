@@ -25,7 +25,7 @@ import { CHIEF_LANDING_METRIC, classifyNativeField, sameWavelengths } from "./mt
 import type { NativeFieldFacts, NativeFieldSorting } from "./mtfNative.ts";
 
 /** The rung of the engines' own spots and ray fans. */
-export const SPOT_NATIVE_RUNG = "r7b";
+export const SPOT_NATIVE_RUNG = "spot-vs-optiland";
 
 /** The figures of the fields of two methods: of a spot, its centroid and its radius; of a fan, its errors. */
 export const SPOT_CENTROID_METRIC = "spotCentroid.maxAbs";

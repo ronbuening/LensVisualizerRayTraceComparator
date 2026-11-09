@@ -8,7 +8,7 @@
 | Suite hash | a41ac0822e1b6004ddd52e3842d0d4564923a079ec12e71bf3d45f8d4e9a93d7 |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 24346812ea75c2f97d4cc4e8420135284a5307a3799522193de1422b57954ee5 |
+| Limits file hash | a744ecacadb41a7af2c0a4de8b4e1d1cf97aaa0191e02ed98edbacc2afc81c63 |
 
 ### Engines
 
@@ -41,13 +41,13 @@ No pair is Fail or Error, of 2 compared.
 
 | Run | Check | lv | optiland |
 |---|---|---|---|
-| lens | r10b | ok | ok |
+| lens | field-curve-vs-optiland | ok | ok |
 
 ## Results
 
 ### lens
 
-#### Field curves beside optiland's — `r10b`
+#### Field curves beside optiland's — `field-curve-vs-optiland`
 
 Quantity `curvature.native`: each engine's own method; side by side, no limit. Request `e0dbf4d996d770616c035c12225b1933fb76eae2709149b872e434157e809135`.
 
@@ -127,9 +127,9 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.

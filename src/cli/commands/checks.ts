@@ -2,6 +2,7 @@
 // file. It reads the vocabulary, the checks (`RUNGS`) and the limits file, and nothing else.
 import { loadPolicy } from "../../compare/policyFile.ts";
 import type { MetricPolicy, Policy } from "../../contract/policy.ts";
+import { aliasCheckId } from "../../core/legacyIds.ts";
 import { RUNGS } from "../../core/rungs.ts";
 import { UsageError } from "../../core/usageError.ts";
 import {
@@ -27,7 +28,7 @@ const HELP = helpText([
   ...options([
     [
       "<id>",
-      "a check's id as suites and --checks name it (r2), or the id it takes when the ids are renamed (ray-trace)",
+      "a check's id as suites and --checks name it (ray-trace), or the id it had before the ids were renamed, which the command reads as today's and says so",
     ],
     ["--json", "print one JSON object in place of the lines"],
   ]),
@@ -50,7 +51,8 @@ export interface LimitJson {
 /** A check as `--json` prints it, and as the dashboard's checks page shows it (`src/dashboard/helpViews.ts`). */
 export interface CheckJson {
   readonly id: string;
-  readonly newId: string;
+  /** The id it had before the ids were renamed. */
+  readonly oldId: string;
   readonly title: string;
   readonly kind: CheckText["kind"];
   readonly compares: string;
@@ -80,7 +82,7 @@ export function checkJson(check: CheckText, policy: Policy): CheckJson {
   const rung = RUNGS.find((each) => each.id === check.id);
   return {
     id: check.id,
-    newId: check.newId,
+    oldId: check.oldId,
     title: check.title,
     kind: check.kind,
     compares: check.compares,
@@ -117,7 +119,7 @@ function listText(): string {
   const lines: string[] = [...paragraph(CHECKS_COMMAND_TEXT.intro)];
   for (const check of CHECKS) {
     lines.push(
-      `${check.id} (${CHECKS_COMMAND_TEXT.labels.newId}: ${check.newId})  ${check.title}: ${GLOSSARY_TEXT.kinds[check.kind]}`,
+      `${check.id} (${CHECKS_COMMAND_TEXT.labels.oldId}: ${check.oldId})  ${check.title}: ${GLOSSARY_TEXT.kinds[check.kind]}`,
     );
     lines.push(...wrap(`${check.compares}.`, 4));
   }
@@ -135,7 +137,7 @@ function checkText(check: CheckText, policy: Policy): string {
       : `${json.engines.map((id) => (engineName(id) === id ? id : `${id} (${engineName(id)})`)).join(", ")}; ${t.enginesOwn}`;
   const rows: [string, string][] = [
     [t.labels.id, check.id],
-    [t.labels.newId, check.newId],
+    [t.labels.oldId, check.oldId],
     [t.labels.kind, GLOSSARY_TEXT.kinds[check.kind]],
     [t.labels.compares, `${check.compares}.`],
     [t.labels.shows, check.shows],
@@ -183,7 +185,10 @@ export function createChecksCommand(inputs: { readonly policy?: Policy } = {}): 
         );
         return EXIT_OK;
       }
-      const check = CHECKS.find((each) => each.id === id || each.newId === id);
+      // An id the checks do not know is read as one it had before the rename, and the command says so once.
+      const known = CHECKS.some((each) => each.id === id);
+      const now = known ? id : aliasCheckId(id);
+      const check = CHECKS.find((each) => each.id === now);
       if (check === undefined) {
         io.stderr(`lvrtc checks: "${id}": ${CHECKS_COMMAND_TEXT.unknown}\n${SYNOPSIS}`);
         return EXIT_USAGE;

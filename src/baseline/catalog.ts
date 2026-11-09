@@ -56,7 +56,8 @@ export function readKnownFailures(root: string): KnownFailure[] {
       !entry.engines.every((e: unknown) => typeof e === "string") ||
       !(entry.engines[0] < entry.engines[1]) ||
       !/^docs\/gotchas\.md#[a-z0-9-]+$/.test(entry.gotcha) ||
-      !/^node bin\/lvrtc\.mjs run \S+\.json --rungs \S+ --jobs [1-4]$/.test(entry.reproducer) ||
+      // A reproducer of the snapshot names its checks by --rungs; one written since the rename by --checks.
+      !/^node bin\/lvrtc\.mjs run \S+\.json --(?:rungs|checks) \S+ --jobs [1-4]$/.test(entry.reproducer) ||
       !/^[0-9a-f]{64}$/.test(entry.evidenceHash)
     )
       throw new UsageError(`${file}: malformed known failure`);

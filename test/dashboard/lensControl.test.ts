@@ -222,7 +222,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     assert.equal(run.condition.plane.kind, run.run.includes("-best-") ? "lv-best-axial" : "design");
     assert.deepEqual(
       run.requests.map((request) => request.rung),
-      ["r4f", "r6b"],
+      ["lv-mtf-replay", "mtf-vs-wave-estimate"],
     );
   }
   const quick = view.runs[0].requests[0].quick;
@@ -272,7 +272,7 @@ test("Run this lens from the UI on the fake tree: the catalog read, lvrtc mtf ru
     [`mtf-${LENS}`, `tabs-${LENS}`],
     "the condition's case is of both run directories",
   );
-  const r7a = compare.cards.find((card) => card.tab === "coma-bokeh")?.gated.find((line) => line.rung === "r7a");
+  const r7a = compare.cards.find((card) => card.tab === "coma-bokeh")?.gated.find((line) => line.rung === "spot-rays");
   assert.deepEqual(r7a?.source, { kind: "runs", suites: [`tabs-${LENS}`] });
   for (const tab of compare.cards) await holdPage(port, `/compare/${LENS}/${tab.tab}?${compare.query}`);
 });

@@ -19,7 +19,7 @@ import { test, type TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { buildBaseline, parseBaseline } from "../../../src/baseline/build.ts";
-import { checkBaseline } from "../../../src/baseline/check.ts";
+import { checkInIdSpace } from "../../../src/cli/commands/baseline.ts";
 import { COMPARISONS_FILE } from "../../../src/compare/comparisonFile.ts";
 import type { ComparisonFile } from "../../../src/compare/comparisonFile.ts";
 import { compareGroup } from "../../../src/compare/group.ts";
@@ -87,7 +87,15 @@ interface Cycle {
 
 function cycle(t: TestContext, suite: "benchmark" | "features"): Cycle {
   const runsDir = tempDir(t);
-  const ran = lvrtc(runsDir, "run", suitePath(suite), "--engines", "lv,ref", "--rungs", "r0,r1,r2,r3");
+  const ran = lvrtc(
+    runsDir,
+    "run",
+    suitePath(suite),
+    "--engines",
+    "lv,ref",
+    "--checks",
+    "built-system,first-order,ray-trace,optical-path",
+  );
   assert.equal(ran.code, 0, ran.err);
   assert.equal(ran.err, "", "every field of every run has rays");
   const compared = lvrtc(runsDir, "compare", suite);
@@ -141,7 +149,7 @@ function tallyOf(file: ComparisonFile) {
     const [pair] = set.pairs;
     verdicts[`${set.rung} ${pair.verdict}`] = (verdicts[`${set.rung} ${pair.verdict}`] ?? 0) + 1;
     if (pair.verdict === "FLOOR") floors.set(`${set.run} ${set.rung}`, pair.reason ?? "");
-    if (set.rung !== "r2") continue;
+    if (set.rung !== "ray-trace") continue;
     const value = (name: string): number => pair.metrics.find((metric) => metric.name === name)?.value ?? 0;
     rays.compared += value("rays.compared");
     rays.rimBand += value("mask.rimBand");
@@ -184,7 +192,7 @@ test(
     // Every gated pair is PASS, and nothing else: no failure, no error, nothing blocked.
     assert.match(verdicts, /^benchmark: 3840 pairs: 3840 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
-    const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
+    const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
       `benchmark: ${verdicts}; ${JSON.stringify(counts)}; R2 ${said(r2, R2_METRICS)}; R3 ${said(r3, R3_METRICS)}; ` +
         `rays ${JSON.stringify(rays)}; floors ${JSON.stringify([...floors.keys()])}`,
@@ -211,14 +219,19 @@ test(
     // nothing but the landing and the path to it. At 31c34396 (closure a52a7b8e), whose intersection tolerance is
     // 1e-12 mm, the same pairs pass with a hit distance of 1.9e-12 mm, a direction of 8.0e-14 and a landing of
     // 2.4e-12 mm at the most. The bounds are upper bounds: a more accurate LensVisualizer is not a failure.
-    assert.deepEqual(counts, { "r0 PASS": 96, "r1 PASS": 96, "r2 PASS": 864, "r3 PASS": 864 });
+    assert.deepEqual(counts, {
+      "built-system PASS": 96,
+      "first-order PASS": 96,
+      "ray-trace PASS": 864,
+      "optical-path PASS": 864,
+    });
     assert.equal(floors.size, 0);
     assert.ok(r2["hits.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     assert.ok(r2["direction.maxAbs"].value < 1e-9 && r2["landing.maxDistance"].value < 1e-8, said(r2, R2_METRICS));
     for (const name of R3_METRICS) assert.ok(r3[name].value < 2e-5, said(r3, R3_METRICS));
 
     // No floor remains in the real policy, at either rung or metric level.
-    for (const rung of [POLICY.rungs.r2, POLICY.rungs.r3]) {
+    for (const rung of [POLICY.rungs["ray-trace"], POLICY.rungs["optical-path"]]) {
       assert.equal(rung.floor, undefined);
       assert.ok(Object.values(rung.metrics).every((metric) => metric.floor === undefined));
     }
@@ -231,13 +244,17 @@ test(
     const read = parseBaseline(readFileSync(COMMITTED_BASELINE, "utf8"));
     assert.ok("baseline" in read, JSON.stringify(read));
     const fresh = buildBaseline(manifest, comparisons, POLICY);
-    const records = checkBaseline(read.baseline, fresh, POLICY).filter(
+    // The committed baseline may name its checks by the ids of before the rename: held as the command holds it.
+    const records = checkInIdSpace(read.baseline, fresh, [], POLICY).records.filter(
       (record) => record.a === "lv" && record.b === "ref" && record.outcome !== "GONE",
     );
     assert.equal(records.length, 4 * 96);
-    const held = records.filter((record) => record.stale.length === 0);
+    // Until the maintainer's refresh of the check rename every record is out of date by its limits file alone (v24
+    // against v25, the same limits): a record otherwise current then holds as REFRESHABLE.
+    const held = records.filter((record) => record.stale.every((reason) => reason === "policy"));
     for (const record of held) {
-      assert.equal(record.outcome, "OK", `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
+      const holds = record.stale.length === 0 ? "OK" : "REFRESHABLE";
+      assert.equal(record.outcome, holds, `${record.run} ${record.rung}: ${record.moved.join("; ")}`);
     }
     t.diagnostic(
       `baselines/benchmark.json: ${held.length} of ${records.length} records of lv and ref are of the cases and ` +
@@ -262,7 +279,7 @@ test(
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
     assert.match(verdicts, /^features: 720 pairs: 720 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
-    const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
+    const [r2, r3] = [worstOf(comparisons, "ray-trace"), worstOf(comparisons, "optical-path")];
     t.diagnostic(
       `features: ${verdicts}; ${JSON.stringify(counts)}; R2 ${said(r2, R2_METRICS)}; R3 ${said(r3, R3_METRICS)}; ` +
         `rays ${JSON.stringify(rays)}; floors ${JSON.stringify([...floors])}`,
@@ -282,7 +299,12 @@ test(
     // is 6e-15 mm and 2e-11 waves from the truth on that ray, and LensVisualizer the rest. See docs/gotchas.md.
     // That is LensVisualizer's intersection tolerance of 1e-9 mm. At 31c34396, where it is 1e-12 mm, no pair is a
     // floor: every pair of the suite passes. Policy version 11 removes the floors entirely.
-    assert.deepEqual(counts, { "r0 PASS": 18, "r1 PASS": 18, "r2 PASS": 162, "r3 PASS": 162 });
+    assert.deepEqual(counts, {
+      "built-system PASS": 18,
+      "first-order PASS": 18,
+      "ray-trace PASS": 162,
+      "optical-path PASS": 162,
+    });
     assert.equal(floors.size, 0);
     // The hits themselves are inside their gate on every lens: it is the landing, behind a steep exit, that at a
     // tolerance of 1e-9 mm is not.
@@ -350,7 +372,7 @@ async function tracedSet(
       { engine: "lv", fingerprint: null, status: "ok" as const, data: mine.data as JsonObject },
       { engine: "ref", fingerprint: null, status: "ok" as const, data: theirs.data as JsonObject },
     ];
-    const pairOf = (rung: "r2" | "r3"): PairComparison =>
+    const pairOf = (rung: "ray-trace" | "optical-path"): PairComparison =>
       compareGroup(
         {
           suite: "catalog",
@@ -371,8 +393,8 @@ async function tracedSet(
       spec,
       lvData: mine.data as RaysTraceData,
       refData: theirs.data as RaysTraceData,
-      r2: pairOf("r2"),
-      r3: pairOf("r3"),
+      r2: pairOf("ray-trace"),
+      r3: pairOf("optical-path"),
     };
   }
 }

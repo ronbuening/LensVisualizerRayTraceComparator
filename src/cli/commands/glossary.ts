@@ -1,8 +1,11 @@
 // `lvrtc glossary [term]`: the words a reviewer meets, from the vocabulary. A term is found by its own word, by an
-// older word of this tool that it replaces, or, for a verdict, an outcome or an engine, by the value stored for it.
+// older word of this tool that it replaces, or, for a verdict, an outcome, an engine or a check, by the value stored for
+// it. A check is also found by the id it had before the rename.
+import { aliasCheckId } from "../../core/legacyIds.ts";
 import { UsageError } from "../../core/usageError.ts";
 import {
   BADGE_TEXT,
+  CHECKS,
   CLASS_TEXT,
   ENGINES,
   GLOSSARY_COMMAND_TEXT,
@@ -22,7 +25,7 @@ const SYNOPSIS = "Usage: lvrtc glossary [<term>] [--json]\n";
 const HELP = helpText([
   SYNOPSIS,
   ...paragraph(
-    "Prints the glossary: each word used on the screens and in the reports, what it means, and the older words of this tool that it replaces. With a term, prints that entry alone; a term is found by its word or by an older word it replaces (lvrtc glossary tolerance shows limit), and a verdict, an outcome or an engine also by the value stored for it (lvrtc glossary ATTENTION). docs/GLOSSARY.md holds the same words with the checks, engines and suites.",
+    "Prints the glossary: each word used on the screens and in the reports, what it means, and the older words of this tool that it replaces. With a term, prints that entry alone; a term is found by its word or by an older word it replaces (lvrtc glossary tolerance shows limit), and a verdict, an outcome, an engine or a check also by the value stored for it (lvrtc glossary ATTENTION, lvrtc glossary ray-trace); a check is found by the id it had before the ids were renamed too. docs/GLOSSARY.md holds the same words with the checks, engines and suites.",
   ),
   ...options([
     ["<term>", "the word to look up, in any case"],
@@ -42,7 +45,7 @@ interface Entry {
   readonly stored: string | null;
 }
 
-/** Every entry: the terms, then the labels of verdicts, outcomes, classes and engines with their stored values. */
+/** Every entry: the terms, then the labels of verdicts, outcomes, classes, engines and checks with their stored values. */
 function entries(): Entry[] {
   const labelled = (table: Readonly<Record<string, { label: string; meaning: string }>>): Entry[] =>
     Object.entries(table).map(([stored, text]) => ({ term: text.label, meaning: text.meaning, replaces: [], stored }));
@@ -55,6 +58,13 @@ function entries(): Entry[] {
     ...labelled(CLASS_TEXT),
     ...labelled(ROW_STATUS_TEXT),
     ...ENGINES.map((engine) => ({ term: engine.name, meaning: engine.description, replaces: [], stored: engine.id })),
+    // A check by its title, the id it had before the rename and its id of today.
+    ...CHECKS.map((check) => ({
+      term: check.title,
+      meaning: `${check.compares}. ${check.shows}`,
+      replaces: [check.oldId],
+      stored: check.id,
+    })),
   ];
 }
 
@@ -114,6 +124,9 @@ export function createGlossaryCommand(): CliCommand {
         io.stderr(`lvrtc glossary: "${words.join(" ")}": ${GLOSSARY_COMMAND_TEXT.unknown}\n${SYNOPSIS}`);
         return EXIT_USAGE;
       }
+      // A check found by the id it had before the rename: the command says once which id it is now.
+      const old = CHECKS.find((check) => check.oldId.toLowerCase() === word);
+      if (old !== undefined) aliasCheckId(old.oldId);
       io.stdout(
         json
           ? `${JSON.stringify({ terms: found }, null, 2)}\n`

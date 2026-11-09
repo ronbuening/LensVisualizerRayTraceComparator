@@ -29,7 +29,7 @@ import { OPTILAND_UNAVAILABLE, pairsOf, runAndCompare, tempDir } from "./support
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const GATE = loadPolicy().rungs.r6a.metrics["waveMtf.maxAbs"].tolerance as number;
+const GATE = loadPolicy().rungs["wave-mtf"].metrics["waveMtf.maxAbs"].tolerance as number;
 
 /** The lenses whose four conditions on the reference line are run, and the one run on the photopic lines. */
 const LENSES = ["sony-fe-20mm-f18-g", "nikon-z-24-70f4s", "nikkor-z50f12"];
@@ -63,7 +63,7 @@ test(
       suite: waveSuite(t),
       name: "benchmark",
       engines: "lv,ref,optiland",
-      rungs: "r6a",
+      rungs: "wave-mtf",
     });
     const { manifest } = cycle;
     assert.deepEqual(
@@ -80,7 +80,7 @@ test(
       assert.deepEqual([run.raySets?.problems, run.fineRaySets?.problems], [[], []], run.name);
     }
 
-    const pairs = pairsOf(cycle.comparisons, "r6a", RAYS_TRACE);
+    const pairs = pairsOf(cycle.comparisons, "wave-mtf", RAYS_TRACE);
     // A field of a run is one comparison, whatever its lines: 51 fields, three pairs of engines.
     assert.equal(pairs.length, 3 * 3 * manifest.runs.length);
     const worst = new Map<string, { value: number; at: string; judged: number; flagged: number }>();

@@ -103,7 +103,7 @@ function f8(wire: NdArrayWire): number[] {
 
 /** The verdict of rung `rung` on what `lv` and `ref` answer about a case, with the reason of one that fails. */
 async function verdictOf(
-  rung: "r0" | "r1",
+  rung: "built-system" | "first-order",
   lv: RemoteEngineAdapter,
   ref: RemoteEngineAdapter,
   opticalCase: OpticalCase,
@@ -286,7 +286,7 @@ test("the sag is NaN beyond the height at which LensVisualizer says a surface en
   assert.ok(Number.isFinite(state.surfaces[0].profile.sag(8)));
   assert.equal(state.surfaces[0].profile.finiteRadiusLimit(), 5.5);
   // The reference engine has no sag there either, so the two still agree.
-  assert.equal(await verdictOf("r0", engine, refEngine(t), opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, refEngine(t), opticalCase), "PASS");
 });
 
 test("a central obstruction of the state is the inner clip radius of the echo, and R0 holds ref to it", async (t) => {
@@ -306,7 +306,7 @@ test("a central obstruction of the state is the inner clip radius of the echo, a
   const data = dataOf<SystemDescribeData>(await ask(engine, opticalCase, SYSTEM_DESCRIBE), SYSTEM_DESCRIBE);
   // What LensVisualizer's evaluateAperture reports for each surface, and not what the case states.
   assert.deepEqual(f8(data.innerClipRadius), [0, 2.5, 0, 0, 0, 0, 0]);
-  assert.equal(await verdictOf("r0", engine, refEngine(t), opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, refEngine(t), opticalCase), "PASS");
   // An engine that built the lens without the obstruction, as the case without it stands for, fails R0 on it.
   const plain = {
     ...opticalCase,
@@ -319,7 +319,7 @@ test("a central obstruction of the state is the inner clip radius of the echo, a
     },
   };
   const theirs = await ask(refEngine(t), plain as OpticalCase, SYSTEM_DESCRIBE);
-  const outcome = COMPARATORS.get(SYSTEM_DESCRIBE, "r0")?.compare(data, theirs.data as SystemDescribeData);
+  const outcome = COMPARATORS.get(SYSTEM_DESCRIBE, "built-system")?.compare(data, theirs.data as SystemDescribeData);
   assert.ok(outcome?.comparable);
   assert.deepEqual(
     outcome.metrics.find((metric) => metric.name === "aperture.mismatches"),
@@ -350,7 +350,7 @@ test("a rear plate with a generated rim clips nothing: an infinite clip radius, 
   assert.deepEqual(f8(data.innerClipRadius), [0, 0, 0, 0, 0]);
   // The heights of the sag are still fractions of the envelope.
   assert.deepEqual(f8(data.sagRadii).slice(-9), [0, 1.75, 3.5, 5.25, 7, 8.75, 10.5, 12.25, 14]);
-  assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
 
   // Rays at 30 degrees through the middle of the stop reach the plate some 16 mm from the axis, beyond its 14.
   const tangent = Math.tan(Math.PI / 6);
@@ -371,7 +371,7 @@ test("a rear plate with a generated rim clips nothing: an infinite clip radius, 
     // Surface 3, the plate's first: its three rays follow the 9 of the surfaces before it.
     for (let ray = 0; ray < 3; ray++) assert.ok(Math.hypot(hits[27 + 3 * ray], hits[28 + 3 * ray]) > 14.5);
   }
-  const r2 = COMPARATORS.get(RAYS_TRACE, "r2")?.compare(mine, theirs, { opticalCase, spec });
+  const r2 = COMPARATORS.get(RAYS_TRACE, "ray-trace")?.compare(mine, theirs, { opticalCase, spec });
   assert.ok(r2?.comparable);
   assert.deepEqual(r2.metrics.find((metric) => metric.name === "mask.mismatches")?.value, 0);
   assert.equal(r2.metrics.find((metric) => metric.name === "rays.compared")?.value, 3);
@@ -490,8 +490,8 @@ test("lv and ref agree in R0 and R1 on every kind of case the fake tree gives", 
   ];
   for (const [name, key, options] of cases) {
     const opticalCase = await exported(binding, key, options);
-    assert.equal(await verdictOf("r0", lv, ref, opticalCase), "PASS", `${name}: r0`);
-    assert.equal(await verdictOf("r1", lv, ref, opticalCase), "PASS", `${name}: r1`);
+    assert.equal(await verdictOf("built-system", lv, ref, opticalCase), "PASS", `${name}: built-system`);
+    assert.equal(await verdictOf("first-order", lv, ref, opticalCase), "PASS", `${name}: first-order`);
   }
   // Both engines record the magnification of a finite object, each from its own kernel.
   const close = await exported(binding, "acme-singlet-50", { state: { focus: { kind: "focusT", value: 1 } } });
@@ -524,8 +524,8 @@ test("a stop inside an element has its pupils traced through the glass on both s
   const binding = await bind(t, lv);
   const [engine, ref] = [engineOn(t, binding), refEngine(t)];
   const opticalCase = await exported(binding, "inner-stop", { lines: { kind: "cdf" } });
-  assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
-  assert.equal(await verdictOf("r1", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, opticalCase), "PASS");
   // Neither pupil is the stop itself: each is its image through the glass and the surface on its side.
   const data = dataOf<ParaxialFirstOrderData>(
     await ask(engine, opticalCase, PARAXIAL_FIRST_ORDER),
@@ -552,7 +552,7 @@ test("a coefficient the exporter writes and LensVisualizer does not evaluate fai
   // lv echoes what LensVisualizer holds, not what the case says: one term, and the sag of one term.
   const data = dataOf<SystemDescribeData>(await ask(engine, opticalCase, SYSTEM_DESCRIBE), SYSTEM_DESCRIBE);
   assert.deepEqual(data.terms[1], [{ power: 4, coeff: 1e-6 }]);
-  const verdict = await verdictOf("r0", engine, ref, opticalCase);
+  const verdict = await verdictOf("built-system", engine, ref, opticalCase);
   assert.match(verdict, /^FAIL: /);
   assert.match(verdict, /shape\.mismatches 1 exceeds its tolerance 0 at field terms, power 10, surface 1/);
   assert.match(verdict, /sag\.maxScaled [0-9.e-]+ exceeds its tolerance 1\.00e-12 at sample 8, surface 1/);
@@ -593,8 +593,8 @@ test("an asphere without a term is the conic it equals, a plane on a flat base; 
     ],
     [{ power: 4, coeff: -2e-6 }],
   ]);
-  assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
-  assert.equal(await verdictOf("r1", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, opticalCase), "PASS");
 });
 
 test("a pupil that is an inverted image of the stop has a positive radius", async (t) => {
@@ -625,7 +625,7 @@ test("a pupil that is an inverted image of the stop has a positive radius", asyn
   // The entrance pupil is a real image of the stop, in front of the lens.
   assert.ok(f8(front.entrancePupilZ)[0] < 0, String(f8(front.entrancePupilZ)[0]));
   assert.ok(f8(front.entrancePupilSemiDiameter)[0] > 0, String(f8(front.entrancePupilSemiDiameter)[0]));
-  assert.equal(await verdictOf("r1", engine, ref, behind), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, behind), "PASS");
 
   const before = await exported(binding, "stop-before-focus");
   const rear = dataOf<ParaxialFirstOrderData>(await ask(engine, before, PARAXIAL_FIRST_ORDER), PARAXIAL_FIRST_ORDER);
@@ -634,7 +634,7 @@ test("a pupil that is an inverted image of the stop has a positive radius", asyn
   assert.ok(f8(rear.exitPupilSemiDiameter)[0] > 0, String(f8(rear.exitPupilSemiDiameter)[0]));
   // With the stop on the first surface the entrance pupil is the stop.
   assert.deepEqual([f8(rear.entrancePupilZ), f8(rear.entrancePupilSemiDiameter)], [[0], [3]]);
-  assert.equal(await verdictOf("r1", engine, ref, before), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, before), "PASS");
 });
 
 test("an image space that is not air has its index in the focal length and in the exit pupil", async (t) => {
@@ -664,8 +664,8 @@ test("an image space that is not air has its index in the focal length and in th
   const w = 1 - p1 * 2 - p2 * y;
   close(f8(data.exitPupilZ)[0], 7 - (1.33 * y) / w, "exitPupilZ");
   close(f8(data.exitPupilSemiDiameter)[0], 5 / w, "exitPupilSemiDiameter");
-  assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
-  assert.equal(await verdictOf("r1", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, opticalCase), "PASS");
 });
 
 test("a telecentric system has its exit pupil at infinity: an infinity in place and in radius, never a NaN", async (t) => {
@@ -690,7 +690,7 @@ test("a telecentric system has its exit pupil at infinity: an infinity in place 
   assert.ok(Math.abs(f8(data.efl)[0] - 150) < 1e-12, String(f8(data.efl)[0]));
   assert.ok(Math.abs(f8(data.rearFocalZ)[0] - 250) < 1e-12, String(f8(data.rearFocalZ)[0]));
   // The reference engine puts the pupil at the same infinity, and two equal infinities differ by nothing.
-  assert.equal(await verdictOf("r1", engine, ref, opticalCase), "PASS");
+  assert.equal(await verdictOf("first-order", engine, ref, opticalCase), "PASS");
 });
 
 test("a system LensVisualizer finds afocal is unsupported, with the item system.afocal and every line named", async (t) => {
@@ -711,9 +711,9 @@ test("a system LensVisualizer finds afocal is unsupported, with the item system.
     );
     assert.deepEqual(validateKind("result", result), []);
     // The system is described all the same, and the reference engine has no focal length for it either.
-    assert.equal(await verdictOf("r0", engine, ref, opticalCase), "PASS");
+    assert.equal(await verdictOf("built-system", engine, ref, opticalCase), "PASS");
     assert.match(
-      await verdictOf("r1", engine, ref, opticalCase),
+      await verdictOf("first-order", engine, ref, opticalCase),
       /^UNSUPPORTED: lv is unsupported; ref is unsupported$/,
     );
     return result.unsupported?.[0].message ?? "";
@@ -754,8 +754,8 @@ test("a term of power 1 or 2, which the paraxial kernel is not handed, is unsupp
     const items = result.status === "unsupported" ? result.unsupported : result.status;
     return {
       items,
-      r0: await verdictOf("r0", engine, ref, opticalCase),
-      r1: await verdictOf("r1", engine, ref, opticalCase),
+      r0: await verdictOf("built-system", engine, ref, opticalCase),
+      r1: await verdictOf("first-order", engine, ref, opticalCase),
     };
   };
 
@@ -1043,15 +1043,15 @@ test("a run with lv and no LensVisualizer fails lv's jobs with the code, and no 
     registry,
     runsDir: join(rootDir, "runs"),
     engines: ["lv", "ref"],
-    rungs: ["r0", "r1"],
+    rungs: ["built-system", "first-order"],
   });
   assert.deepEqual(
     result.manifest.jobs.map((job) => [job.rung, job.engine, job.status, job.error?.code ?? null]),
     [
-      ["r0", "lv", "error", "not-configured"],
-      ["r0", "ref", "ok", null],
-      ["r1", "lv", "error", "not-configured"],
-      ["r1", "ref", "ok", null],
+      ["built-system", "lv", "error", "not-configured"],
+      ["built-system", "ref", "ok", null],
+      ["first-order", "lv", "error", "not-configured"],
+      ["first-order", "ref", "ok", null],
     ],
   );
   assert.deepEqual(
@@ -1071,7 +1071,7 @@ test("a run on lv of a fixture case records the refusal, which is an answer and 
   writeFileSync(join(rootDir, "lvrtc.config.json"), JSON.stringify({ lvPath: lv }));
   const registry = createEngineRegistry(loadConfig({ rootDir, env: {} }));
   const suite = suiteOf("fixture-on-lv", [{ name: "singlet", opticalCase: SINGLET_CASE }]);
-  const input = { suite, registry, runsDir: join(rootDir, "runs"), engines: ["lv"], rungs: ["r0"] };
+  const input = { suite, registry, runsDir: join(rootDir, "runs"), engines: ["lv"], rungs: ["built-system"] };
   const result = await runSuite(input);
   assert.deepEqual(
     result.manifest.jobs.map(({ status, unsupported }) => [status, unsupported]),

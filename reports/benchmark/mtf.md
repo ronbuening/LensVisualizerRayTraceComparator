@@ -32,26 +32,26 @@ How to read this, near the end, says what each label and column means.
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
-| LensVisualizer's MTF sampling, replayed — `r4f` | `mtf.native` | 96 | 96 | lv – replay | 96 Pass | 96 Pass |
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 96 | 288 | lv – optiland | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 96 | 288 | lv – replay | 96 Side by side | 288 Side by side |
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 96 | 288 | optiland – replay | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
-| Wave MTF of the same rays — `r6a` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
-| MTF beside the wave estimate of LensVisualizer's rays — `r6b` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | lv – optiland-wave | 92 Side by side; 4 Side by side, worth a look | 92 Side by side; 4 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | optiland – optiland-wave | 32 Side by side; 16 Side by side, worth a look; 48 Not computed | 32 Side by side; 16 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 96 | 96 | optiland-wave – wave | 96 Side by side | 96 Side by side |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | `mtf.native` | 96 | 96 | lv – replay | 96 Pass | 96 Pass |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | lv – optiland | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | lv – replay | 96 Side by side | 288 Side by side |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 96 | 288 | optiland – replay | 86 Side by side; 10 Side by side, worth a look | 278 Side by side; 10 Side by side, worth a look |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | lv – optiland | 96 Pass | 288 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | lv – ref | 96 Pass | 288 Pass |
+| Wave MTF of the same rays — `wave-mtf` | `rays.trace` | 96 | 288 | optiland – ref | 96 Pass | 288 Pass |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – optiland | 30 Side by side; 18 Side by side, worth a look; 48 Not computed | 30 Side by side; 18 Side by side, worth a look; 48 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – optiland-wave | 92 Side by side; 4 Side by side, worth a look | 92 Side by side; 4 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | lv – wave | 95 Side by side; 1 Side by side, worth a look | 95 Side by side; 1 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – optiland-wave | 32 Side by side; 16 Side by side, worth a look; 48 Not computed | 32 Side by side; 16 Side by side, worth a look; 48 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland – wave | 36 Side by side; 12 Side by side, worth a look; 48 Not computed | 36 Side by side; 12 Side by side, worth a look; 48 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 96 | 96 | optiland-wave – wave | 96 Side by side | 96 Side by side |
 
 ## Support
 
@@ -60,28 +60,28 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Geometric MTF of the same rays — `r4` | lv | 96 answered |
-| Geometric MTF of the same rays — `r4` | optiland | 96 answered |
-| Geometric MTF of the same rays — `r4` | ref | 96 answered |
-| LensVisualizer's MTF sampling, replayed — `r4f` | lv | 96 answered |
-| LensVisualizer's MTF sampling, replayed — `r4f` | replay | 96 answered |
-| MTF beside optiland's FFT MTF — `r5` | lv | 96 answered |
-| MTF beside optiland's FFT MTF — `r5` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
-| MTF beside optiland's FFT MTF — `r5` | wave | 96 answered |
-| Geometric MTF beside optiland's — `r5g` | lv | 96 answered |
-| Geometric MTF beside optiland's — `r5g` | optiland | 96 answered |
-| Geometric MTF beside optiland's — `r5g` | replay | 96 answered |
-| Wave MTF of the same rays — `r6a` | lv | 96 answered |
-| Wave MTF of the same rays — `r6a` | optiland | 96 answered |
-| Wave MTF of the same rays — `r6a` | ref | 96 answered |
-| MTF beside the wave estimate of LensVisualizer's rays — `r6b` | lv | 96 answered |
-| MTF beside the wave estimate of LensVisualizer's rays — `r6b` | wave | 96 answered |
-| MTF beside the OTF of optiland's wavefront — `r6c` | lv | 96 answered |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland-wave | 96 answered |
-| MTF beside the OTF of optiland's wavefront — `r6c` | wave | 96 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | lv | 96 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | optiland | 96 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | ref | 96 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | lv | 96 answered |
+| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` | replay | 96 answered |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | lv | 96 answered |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | wave | 96 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | lv | 96 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | 96 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay | 96 answered |
+| Wave MTF of the same rays — `wave-mtf` | lv | 96 answered |
+| Wave MTF of the same rays — `wave-mtf` | optiland | 96 answered |
+| Wave MTF of the same rays — `wave-mtf` | ref | 96 answered |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | lv | 96 answered |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | wave | 96 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | lv | 96 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland | 48 answered, 48 not computed (feature lines.polychromatic) |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 96 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave | 96 answered |
 
-## Geometric MTF of the same rays — `r4`
+## Geometric MTF of the same rays — `geometric-mtf`
 
 Compares: This tool's geometric MTF of identical rays, as each engine traces them. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -203,7 +203,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | 3 | Pass: mtf.maxAbs 5.35e-13 (3 of 3) | Pass: mtf.maxAbs 4.27e-12 (3 of 3) | Pass: mtf.maxAbs 4.37e-12 (3 of 3) |
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic | 3 | Pass: mtf.maxAbs 6.23e-13 (3 of 3) | Pass: mtf.maxAbs 4.05e-12 (3 of 3) | Pass: mtf.maxAbs 3.61e-12 (3 of 3) |
 
-## LensVisualizer's MTF sampling, replayed — `r4f`
+## LensVisualizer's MTF sampling, replayed — `lv-mtf-replay`
 
 Compares: LensVisualizer's geometric MTF beside a replay of its own sampling. Kind: held to a limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -316,7 +316,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | 1 | Pass: mtf.maxAbs 1.03e-14 (1 of 1) |
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic | 1 | Pass: mtf.maxAbs 2.33e-15 (1 of 1) |
 
-## MTF beside optiland's FFT MTF — `r5`
+## MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`
 
 Compares: LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -676,7 +676,7 @@ more; a difference outside it is worth a look and fails nothing.
 | two-methods | both engines stand by their curves; the difference is set beside the review band |
 | unconverged | a sampling did not settle; the difference is shown apart, in no review band |
 
-## Geometric MTF beside optiland's — `r5g`
+## Geometric MTF beside optiland's — `geometric-mtf-vs-optiland`
 
 Compares: Geometric MTF on each method's own pupil sampling. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -1325,7 +1325,7 @@ more; a difference outside it is worth a look and fails nothing.
 |---|---|
 | two-methods | both engines stand by their curves; the difference is set beside the review band |
 
-## Wave MTF of the same rays — `r6a`
+## Wave MTF of the same rays — `wave-mtf`
 
 Compares: This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1459,7 +1459,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | 3 | Pass: waveMtf.maxAbs 5.98e-12 (3 of 3) | Pass: waveMtf.maxAbs 7.60e-10 (3 of 3) | Pass: waveMtf.maxAbs 7.59e-10 (3 of 3) |
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic | 3 | Pass: waveMtf.maxAbs 4.72e-12 (3 of 3) | Pass: waveMtf.maxAbs 7.02e-10 (3 of 3) | Pass: waveMtf.maxAbs 6.97e-10 (3 of 3) |
 
-## MTF beside the wave estimate of LensVisualizer's rays — `r6b`
+## MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate`
 
 Compares: LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -1575,7 +1575,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-ref | 1 | Side by side: no judged figure |
 | sigma-45mm-f28-dg-dn-contemporary-f8-best-photopic | 1 | Side by side: no judged figure |
 
-## MTF beside the OTF of optiland's wavefront — `r6c`
+## MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
 Compares: LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -6738,8 +6738,8 @@ Its first answer is what the support counts; the step is what its row of a table
 
 | Check | Engine | Step | Runs | Requests asked again | Not ok |
 |---|---|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | optiland | fft512 | 18 | 18 | — |
-| Geometric MTF beside optiland's — `r5g` | optiland | geo512 | 6 | 6 | — |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | fft512 | 18 | 18 | — |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | geo512 | 6 | 6 | — |
 
 ## Worth a look
 
@@ -6749,117 +6749,117 @@ sorting limit tells two image points apart; nothing here is a failure.
 
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.07e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.64e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.21e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.78e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 90 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.79e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.75e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.64e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.59e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 9.72e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.63e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.58e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.62e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.15e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 2.11e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.01e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside optiland's FFT MTF — `r5` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.92e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.10e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.04e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 8.93e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 1.02e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.11e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.58e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.00e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.03e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.73e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.95e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.91e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 90; mtfOffAxis.maxAbs 4.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.57e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.98e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.49e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.78e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-wide-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 7.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.87e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-tele-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-tele-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.44e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-mc-105f28-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.24e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.70e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.80e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.93e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 40 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.83e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.08e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 6.94e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 1.44e-2 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 2.65e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.94e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `r5` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
-| MTF beside optiland's FFT MTF — `r5` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.22e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.79e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.31e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.07e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
-| MTF beside optiland's FFT MTF — `r5` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikkor-z50f12-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.80e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikkor-z50f12-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 5.99e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 4.91e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 10 |
-| MTF beside optiland's FFT MTF — `r5` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.41e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.67e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.60e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
-| Geometric MTF beside optiland's — `r5g` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | lv – optiland | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | optiland – replay | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.73e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.47e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.76e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.05e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 3.69e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.19e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.83e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.54e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.71e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.44e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-wide-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-wide-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.16e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-wide-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 80 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-wide-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-wide-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.27e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-tele-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-24-70f4s-tele-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the wave estimate of LensVisualizer's rays — `r6b` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.74e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.66e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-mc-105f28-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.33e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.71e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside optiland's FFT MTF — `r5` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.50e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.29e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-135f18-plena-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-135f18-plena-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.52e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.72e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 7.51e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.16e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.68e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.31e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-135f18-plena-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
-| Geometric MTF beside optiland's — `r5g` | nikon-z-135f18-plena-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.07e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.64e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.21e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.78e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 90 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.79e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.75e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.64e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | fujifilm-fujinon-gf-63mm-f28-r-wr-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 50; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.59e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.40e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | lv – optiland | mtfOnAxis.maxAbs 6.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 9.72e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-35mm-f14-dg-hsm-a-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.63e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.58e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30; mtfOffAxis.maxAbs 2.63e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | lv – optiland | mtfOnAxis.maxAbs 2.62e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.15e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 2.11e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.01e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 9.92e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.10e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.04e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.01e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 8.93e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-400mm-f28-gm-oss-ref | — | optiland – wave | mtfOnAxis.maxAbs 1.02e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 1.11e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.58e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.00e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 4.03e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | lv – optiland | mtfOnAxis.maxAbs 8.73e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.95e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.91e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 90; mtfOffAxis.maxAbs 4.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.57e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.98e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.49e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.78e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 40; mtfOffAxis.maxAbs 7.49e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 7.12e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 20 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.83e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.75e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.87e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 1.05e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 8.65e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.44e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 5.66e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.68e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.24e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-mc-105f28-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.70e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.38e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.80e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.93e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 40 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | lv – optiland | mtfOnAxis.maxAbs 1.83e-2 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 3.08e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 6.94e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 1.44e-2 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 2.65e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-ref | — | optiland – wave | mtfOffAxis.maxAbs 1.94e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 50 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.03e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.22e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 1.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 70 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.79e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | canon-ef-135-f2l-usm-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.31e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.06e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | fujifilm-fujinon-gf-63mm-f28-r-wr-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.07e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 60 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.02e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.80e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikkor-z50f12-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 5.99e-2 (review band 1.00e-2) at cut tangential, field 5.00e-1 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 4.91e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 10 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.41e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 9.67e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 60 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.45e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sony-fe-20mm-f18-g-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 8.60e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | lv – optiland | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | sony-fe-400mm-f28-gm-oss-best-ref | 1 | optiland – replay | mtfOffAxis.maxAbs 1.22e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 3.73e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.47e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.76e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 5.05e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 60; mtfOffAxis.maxAbs 3.69e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 6.19e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.83e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | sigma-105mm-f28-dg-dn-macro-art-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 5.54e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100; mtfOffAxis.maxAbs 3.71e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 30 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.44e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 70 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | lv – optiland-wave | mtfOnAxis.maxAbs 5.16e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-wide-best-ref | — | optiland – optiland-wave | mtfOffAxis.maxAbs 6.45e-2 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 80 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-wide-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.17e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.27e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-24-70f4s-tele-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 8.84e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | lv – optiland | mtfOffAxis.maxAbs 2.67e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | lv – wave | mtfOnAxis.maxAbs 5.42e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 80 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 5.74e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.66e-1 (review band 1.00e-2) at cut tangential, field 1 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-24-70f4s-tele-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 6.43e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-mc-105f28-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 7.48e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.33e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.71e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.50e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.29e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-ref | 0 | lv – optiland | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-ref | 0 | optiland – replay | mtfOnAxis.maxAbs 6.96e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | lv – optiland | mtfOnAxis.maxAbs 7.52e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 80; mtfOffAxis.maxAbs 2.72e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – optiland-wave | mtfOnAxis.maxAbs 7.51e-3 (review band 5.00e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 2.16e-2 (review band 1.00e-2) at cut sagittal, field 1 of the image height, frequencyPerMm 40 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | nikon-z-135f18-plena-best-ref | — | optiland – wave | mtfOnAxis.maxAbs 7.68e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 70; mtfOffAxis.maxAbs 1.31e-2 (review band 1.00e-2) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 60 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-photopic | 0 | lv – optiland | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | nikon-z-135f18-plena-best-photopic | 0 | optiland – replay | mtfOnAxis.maxAbs 6.21e-3 (review band 5.00e-3) at cut tangential, field 0 of the image height, frequencyPerMm 100 |
 
 ## Not covered
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
@@ -6890,13 +6890,13 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Geometric MTF of the same rays | `r4` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
-| LensVisualizer's MTF sampling, replayed | `r4f` | held to a limit | LensVisualizer's geometric MTF beside a replay of its own sampling. |
-| MTF beside optiland's FFT MTF | `r5` | side by side, no limit | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. |
-| Geometric MTF beside optiland's | `r5g` | side by side, no limit | Geometric MTF on each method's own pupil sampling. |
-| Wave MTF of the same rays | `r6a` | held to a limit | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
-| MTF beside the wave estimate of LensVisualizer's rays | `r6b` | side by side, no limit | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays. |
-| MTF beside the OTF of optiland's wavefront | `r6c` | side by side, no limit | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. |
+| Geometric MTF of the same rays | `geometric-mtf` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
+| LensVisualizer's MTF sampling, replayed | `lv-mtf-replay` | held to a limit | LensVisualizer's geometric MTF beside a replay of its own sampling. |
+| MTF beside optiland's FFT MTF | `mtf-vs-optiland-fft` | side by side, no limit | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. |
+| Geometric MTF beside optiland's | `geometric-mtf-vs-optiland` | side by side, no limit | Geometric MTF on each method's own pupil sampling. |
+| Wave MTF of the same rays | `wave-mtf` | held to a limit | This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled. |
+| MTF beside the wave estimate of LensVisualizer's rays | `mtf-vs-wave-estimate` | side by side, no limit | LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays. |
+| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | side by side, no limit | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. |
 
 ### Engines
 

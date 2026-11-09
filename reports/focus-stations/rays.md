@@ -32,21 +32,21 @@ engines are still those of the baseline. How to read this, near the end, says wh
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Built system — `r0` | `system.describe` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
-| Built system — `r0` | `system.describe` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
-| Built system — `r0` | `system.describe` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
-| Ray trace — `r2` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Ray trace — `r2` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Ray trace — `r2` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
-| Optical path — `r3` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Optical path — `r3` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Optical path — `r3` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Built system — `built-system` | `system.describe` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
+| Built system — `built-system` | `system.describe` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
+| Built system — `built-system` | `system.describe` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | lv – optiland | 72 Pass | 72 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | lv – ref | 72 Pass | 72 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 72 | 72 | optiland – ref | 72 Pass | 72 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Optical path — `optical-path` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
+| Optical path — `optical-path` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
+| Optical path — `optical-path` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – optiland | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | lv – ref | 72 Pass | 206 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 72 | 206 | optiland – ref | 72 Pass | 206 Pass |
 
 ## Support
 
@@ -55,23 +55,23 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Built system — `r0` | lv | 72 answered |
-| Built system — `r0` | optiland | 72 answered |
-| Built system — `r0` | ref | 72 answered |
-| First-order data — `r1` | lv | 72 answered |
-| First-order data — `r1` | optiland | 72 answered |
-| First-order data — `r1` | ref | 72 answered |
-| Ray trace — `r2` | lv | 72 answered |
-| Ray trace — `r2` | optiland | 72 answered |
-| Ray trace — `r2` | ref | 72 answered |
-| Optical path — `r3` | lv | 72 answered |
-| Optical path — `r3` | optiland | 72 answered |
-| Optical path — `r3` | ref | 72 answered |
-| Geometric MTF of the same rays — `r4` | lv | 72 answered |
-| Geometric MTF of the same rays — `r4` | optiland | 72 answered |
-| Geometric MTF of the same rays — `r4` | ref | 72 answered |
+| Built system — `built-system` | lv | 72 answered |
+| Built system — `built-system` | optiland | 72 answered |
+| Built system — `built-system` | ref | 72 answered |
+| First-order data — `first-order` | lv | 72 answered |
+| First-order data — `first-order` | optiland | 72 answered |
+| First-order data — `first-order` | ref | 72 answered |
+| Ray trace — `ray-trace` | lv | 72 answered |
+| Ray trace — `ray-trace` | optiland | 72 answered |
+| Ray trace — `ray-trace` | ref | 72 answered |
+| Optical path — `optical-path` | lv | 72 answered |
+| Optical path — `optical-path` | optiland | 72 answered |
+| Optical path — `optical-path` | ref | 72 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | lv | 72 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | optiland | 72 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | ref | 72 answered |
 
-## Built system — `r0`
+## Built system — `built-system`
 
 Compares: Built layout, shape, aperture, index and sampled sag. Kind: held to a limit. Quantity asked of the engines: the system as built (`system.describe`).
 
@@ -175,7 +175,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | 1 | Pass: sag.maxScaled 2.22e-16 | Pass: sag.maxScaled 2.07e-16 | Pass: sag.maxScaled 2.22e-16 |
 | certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1 | 1 | Pass: sag.maxScaled 2.22e-16 | Pass: sag.maxScaled 3.11e-16 | Pass: sag.maxScaled 3.11e-16 |
 
-## First-order data — `r1`
+## First-order data — `first-order`
 
 Compares: First-order quantities and pupils. Kind: held to a limit. Quantity asked of the engines: first-order data (`paraxial.first-order`).
 
@@ -276,7 +276,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | 1 | Pass: firstOrder.maxAbs 3.20e-14 mm | Pass: firstOrder.maxAbs 1.42e-14 mm | Pass: firstOrder.maxAbs 3.20e-14 mm |
 | certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1 | 1 | Pass: pupilZ.maxScaled 1.07e-14 mm | Pass: firstOrder.maxAbs 7.99e-15 mm | Pass: firstOrder.maxAbs 1.42e-14 mm |
 
-## Ray trace — `r2`
+## Ray trace — `ray-trace`
 
 Compares: Hits, directions, image landings and masks of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -380,7 +380,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | 3 | Pass: landing.maxDistance 8.32e-14 mm | Pass: hits.maxDistance 1.00e-12 mm | Pass: hits.maxDistance 9.96e-13 mm | 2431 / 644 / 0 | 2431 / 644 / 0 | 2431 / 644 / 0 |
 | certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1 | 3 | Pass: landing.maxDistance 5.60e-14 mm | Pass: landing.maxDistance 4.83e-14 mm | Pass: landing.maxDistance 6.06e-14 mm | 2635 / 440 / 0 | 2635 / 440 / 0 | 2635 / 440 / 0 |
 
-## Optical path — `r3`
+## Optical path — `optical-path`
 
 Compares: Optical path, path to image and chief-relative OPD of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -475,7 +475,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | certified-thypoch-simera-50mm-f14-zoom0-focus1 | 3 | Pass: opd.maxAbs 2.18e-10 waves | Pass: opticalPathToImage.maxAbs 1.21e-9 waves | Pass: opticalPathToImage.maxAbs 1.21e-9 waves |
 | certified-voigtlander-macro-apo-ultron-x-35f2-zoom0-focus1 | 3 | Pass: opticalPathToImage.maxAbs 1.21e-10 waves | Pass: opd.maxAbs 1.21e-10 waves | Pass: opticalPathToImage.maxAbs 1.21e-10 waves |
 
-## Geometric MTF of the same rays — `r4`
+## Geometric MTF of the same rays — `geometric-mtf`
 
 Compares: This tool's geometric MTF of identical rays, as each engine traces them. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -592,11 +592,11 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Built system | `r0` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
-| First-order data | `r1` | held to a limit | First-order quantities and pupils. |
-| Ray trace | `r2` | held to a limit | Hits, directions, image landings and masks of identical rays. |
-| Optical path | `r3` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
-| Geometric MTF of the same rays | `r4` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
+| Built system | `built-system` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
+| First-order data | `first-order` | held to a limit | First-order quantities and pupils. |
+| Ray trace | `ray-trace` | held to a limit | Hits, directions, image landings and masks of identical rays. |
+| Optical path | `optical-path` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
+| Geometric MTF of the same rays | `geometric-mtf` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
 
 ### Engines
 

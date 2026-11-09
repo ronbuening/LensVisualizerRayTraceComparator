@@ -228,7 +228,7 @@ test("the sentence under a matrix names the consensus and its outliers, or why t
 // ── In a report ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 const CASE = "c".repeat(64);
-const POLICY: Policy = { contract: "1.0", kind: "policy", version: 1, rungs: { selftest: GATED } };
+const POLICY: Policy = { contract: "1.0", kind: "policy", version: 1, rungs: { "pipeline-echo": GATED } };
 
 /** A manifest of the engines, available, each asked every request of the rung `selftest` of one run. */
 function manifestOf(engines: readonly string[], requests: readonly string[]): RunManifest {
@@ -242,7 +242,7 @@ function manifestOf(engines: readonly string[], requests: readonly string[]): Ru
       engines.map((engine) => ({
         run: "only",
         caseId: CASE,
-        rung: "selftest",
+        rung: "pipeline-echo",
         quantity: "selftest.echo",
         requestId,
         engine,
@@ -262,7 +262,7 @@ function pairwiseSet(requestId: string, engines: string, pairs: readonly string[
     suite: "groups",
     run: "only",
     caseId: CASE,
-    rung: "selftest",
+    rung: "pipeline-echo",
     quantity: "selftest.echo",
     requestId,
     participants: participants.map(({ engine }) => ({ engine, fingerprint: engine, status: "ok" })),
@@ -340,7 +340,7 @@ test("a report of two engines, or of a recorded rung, has no consensus and its M
   assert.doesNotMatch(renderMarkdown(pair), /onsensus/);
 
   const three = manifestOf(["a", "b", "c"], [request]);
-  const recorded = { ...POLICY, rungs: { selftest: RECORDED } };
+  const recorded = { ...POLICY, rungs: { "pipeline-echo": RECORDED } };
   const set = pairwiseSet(request, "a b c", ["a b RECORDED", "a c ATTENTION", "b c RECORDED"]);
   const model = buildReport(three, fileOf(three, [set]), recorded);
   assert.equal(model.sections[0].consensus, null);

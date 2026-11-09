@@ -46,18 +46,18 @@ engines are still those of the baseline. How to read this, near the end, says wh
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Built system — `r0` | `system.describe` | 8 | 8 | lv – optiland | 8 Pass | 8 Pass |
-| Built system — `r0` | `system.describe` | 8 | 8 | lv – ref | 8 Pass | 8 Pass |
-| Built system — `r0` | `system.describe` | 8 | 8 | optiland – ref | 8 Pass | 8 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 8 | 8 | lv – optiland | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
-| First-order data — `r1` | `paraxial.first-order` | 8 | 8 | lv – ref | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
-| First-order data — `r1` | `paraxial.first-order` | 8 | 8 | optiland – ref | 7 Pass; 1 Not computed | 7 Pass; 1 Not computed |
-| Ray trace — `r2` | `rays.trace` | 8 | 16 | lv – optiland | 8 Pass | 16 Pass |
-| Ray trace — `r2` | `rays.trace` | 8 | 16 | lv – ref | 8 Pass | 16 Pass |
-| Ray trace — `r2` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
-| Optical path — `r3` | `rays.trace` | 8 | 16 | lv – optiland | 8 Not computed | 16 Not computed |
-| Optical path — `r3` | `rays.trace` | 8 | 16 | lv – ref | 8 Not computed | 16 Not computed |
-| Optical path — `r3` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
+| Built system — `built-system` | `system.describe` | 8 | 8 | lv – optiland | 8 Pass | 8 Pass |
+| Built system — `built-system` | `system.describe` | 8 | 8 | lv – ref | 8 Pass | 8 Pass |
+| Built system — `built-system` | `system.describe` | 8 | 8 | optiland – ref | 8 Pass | 8 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | lv – optiland | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
+| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | lv – ref | 1 Pass; 7 Not computed | 1 Pass; 7 Not computed |
+| First-order data — `first-order` | `paraxial.first-order` | 8 | 8 | optiland – ref | 7 Pass; 1 Not computed | 7 Pass; 1 Not computed |
+| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | lv – optiland | 8 Pass | 16 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | lv – ref | 8 Pass | 16 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
+| Optical path — `optical-path` | `rays.trace` | 8 | 16 | lv – optiland | 8 Not computed | 16 Not computed |
+| Optical path — `optical-path` | `rays.trace` | 8 | 16 | lv – ref | 8 Not computed | 16 Not computed |
+| Optical path — `optical-path` | `rays.trace` | 8 | 16 | optiland – ref | 8 Pass | 16 Pass |
 
 ## Support
 
@@ -66,20 +66,20 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Built system — `r0` | lv | 8 answered |
-| Built system — `r0` | optiland | 8 answered |
-| Built system — `r0` | ref | 8 answered |
-| First-order data — `r1` | lv | 1 answered, 7 not computed (feature folded-stop-not-visited; feature lv-folded-first-order-unavailable) |
-| First-order data — `r1` | optiland | 7 answered, 1 not computed (feature folded-stop-not-visited) |
-| First-order data — `r1` | ref | 7 answered, 1 not computed (feature folded-stop-not-visited) |
-| Ray trace — `r2` | lv | 8 answered |
-| Ray trace — `r2` | optiland | 8 answered |
-| Ray trace — `r2` | ref | 8 answered |
-| Optical path — `r3` | lv | 8 answered |
-| Optical path — `r3` | optiland | 8 answered |
-| Optical path — `r3` | ref | 8 answered |
+| Built system — `built-system` | lv | 8 answered |
+| Built system — `built-system` | optiland | 8 answered |
+| Built system — `built-system` | ref | 8 answered |
+| First-order data — `first-order` | lv | 1 answered, 7 not computed (feature folded-stop-not-visited; feature lv-folded-first-order-unavailable) |
+| First-order data — `first-order` | optiland | 7 answered, 1 not computed (feature folded-stop-not-visited) |
+| First-order data — `first-order` | ref | 7 answered, 1 not computed (feature folded-stop-not-visited) |
+| Ray trace — `ray-trace` | lv | 8 answered |
+| Ray trace — `ray-trace` | optiland | 8 answered |
+| Ray trace — `ray-trace` | ref | 8 answered |
+| Optical path — `optical-path` | lv | 8 answered |
+| Optical path — `optical-path` | optiland | 8 answered |
+| Optical path — `optical-path` | ref | 8 answered |
 
-## Built system — `r0`
+## Built system — `built-system`
 
 Compares: Built layout, shape, aperture, index and sampled sag. Kind: held to a limit. Quantity asked of the engines: the system as built (`system.describe`).
 
@@ -119,7 +119,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | reference-mangin-second-surface-mirror | 1 | Pass: sag.maxScaled 3.10e-16 | Pass: layout.mismatches 0 elements | Pass: sag.maxScaled 3.10e-16 |
 | reference-spherical-primary-mirror | 1 | Pass: sag.maxScaled 1.74e-16 | Pass: layout.mismatches 0 elements | Pass: sag.maxScaled 1.74e-16 |
 
-## First-order data — `r1`
+## First-order data — `first-order`
 
 Compares: First-order quantities and pupils. Kind: held to a limit. Quantity asked of the engines: first-order data (`paraxial.first-order`).
 
@@ -156,7 +156,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | reference-mangin-second-surface-mirror | 1 | Not computed | Not computed | Pass: pupilZ.maxScaled 5.68e-14 mm |
 | reference-spherical-primary-mirror | 1 | Pass: firstOrder.maxAbs 0 mm | Pass: firstOrder.maxAbs 2.08e-15 mm | Pass: firstOrder.maxAbs 2.08e-15 mm |
 
-## Ray trace — `r2`
+## Ray trace — `ray-trace`
 
 Compares: Hits, directions, image landings and masks of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -196,7 +196,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | reference-mangin-second-surface-mirror | 2 | Pass: landing.maxDistance 3.27e-14 mm | Pass: landing.maxDistance 1.51e-14 mm | Pass: landing.maxDistance 3.76e-14 mm | 325 / 188 / 0 | 325 / 188 / 0 | 325 / 188 / 0 |
 | reference-spherical-primary-mirror | 2 | Pass: hits.maxDistance 2.85e-14 mm | Pass: landing.maxDistance 1.79e-14 mm | Pass: hits.maxDistance 2.84e-14 mm | 325 / 188 / 0 | 325 / 188 / 0 | 325 / 188 / 0 |
 
-## Optical path — `r3`
+## Optical path — `optical-path`
 
 Compares: Optical path, path to image and chief-relative OPD of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -241,10 +241,10 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Built system | `r0` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
-| First-order data | `r1` | held to a limit | First-order quantities and pupils. |
-| Ray trace | `r2` | held to a limit | Hits, directions, image landings and masks of identical rays. |
-| Optical path | `r3` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
+| Built system | `built-system` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
+| First-order data | `first-order` | held to a limit | First-order quantities and pupils. |
+| Ray trace | `ray-trace` | held to a limit | Hits, directions, image landings and masks of identical rays. |
+| Optical path | `optical-path` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
 
 ### Engines
 

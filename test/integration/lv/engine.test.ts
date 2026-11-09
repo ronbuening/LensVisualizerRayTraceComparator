@@ -88,7 +88,7 @@ function worstMetrics(file: ComparisonFile): Record<string, { value: number; at:
  */
 function ranAndCompared(t: TestContext, suite: "benchmark" | "features") {
   const runsDir = tempDir(t);
-  const ran = lvrtc(runsDir, "run", suitePath(suite), "--engines", "lv,ref", "--rungs", "r0,r1");
+  const ran = lvrtc(runsDir, "run", suitePath(suite), "--engines", "lv,ref", "--checks", "built-system,first-order");
   const compared = lvrtc(runsDir, "compare", suite);
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, suite, MANIFEST_FILE), "utf8"));
   const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, suite, COMPARISONS_FILE), "utf8"));
@@ -185,10 +185,10 @@ test(
       for (const lines of ["ref", "photopic"]) {
         const sets = comparisons.comparisons.filter((set) => set.run === `${configuration}-${lines}`);
         assert.deepEqual(sets.map((set) => `${set.rung} ${set.mode}`).sort(), [
-          "r0 pairwise",
-          "r0 reference-vs-each",
-          "r1 pairwise",
-          "r1 reference-vs-each",
+          "built-system pairwise",
+          "built-system reference-vs-each",
+          "first-order pairwise",
+          "first-order reference-vs-each",
         ]);
         for (const set of sets) assert.deepEqual([set.pairs.length, set.pairs[0].verdict], [1, "PASS"], set.run);
       }
@@ -309,12 +309,12 @@ test("lvrtc run: a case with one index nudged is reported stale-case by lv, and 
     rootDir,
     "--engines",
     "lv,ref",
-    "--rungs",
-    "r0,r1",
+    "--checks",
+    "built-system,first-order",
   );
   assert.equal(ran.code, 1, "a stale case is an error");
   assert.match(ran.out, /^stale: 8 jobs: 6 answered, 2 error /m);
-  for (const rung of ["r0", "r1"]) {
+  for (const rung of ["built-system", "first-order"]) {
     assert.match(ran.out, new RegExp(`^exported +${rung} +lv +answered +asked now$`, "m"));
     assert.match(
       ran.out,
@@ -624,7 +624,12 @@ test(
 const NEAR_TELECENTRIC = "viltrox-af-75mm-f12-pro";
 
 /** A pair of answers about one case, judged by the policy of a rung as `lvrtc compare` judges it. */
-function judged(rung: "r1", opticalCase: OpticalCase, lvData: JsonObject, refData: JsonObject): PairComparison {
+function judged(
+  rung: "first-order",
+  opticalCase: OpticalCase,
+  lvData: JsonObject,
+  refData: JsonObject,
+): PairComparison {
   const { quantity } = POLICY.rungs[rung];
   const participant = (engine: string, data: JsonObject) => ({
     engine,
@@ -649,10 +654,10 @@ test(
     const { binding, lv, ref } = await engines(t);
     const exporter = createLvExporter(binding);
     const limits = {
-      sag: POLICY.rungs.r0.metrics["sag.maxScaled"].tolerance as number,
-      firstOrder: POLICY.rungs.r1.metrics["firstOrder.maxAbs"].tolerance as number,
-      pupilZ: POLICY.rungs.r1.metrics["pupilZ.maxScaled"].tolerance as number,
-      pupilRadius: POLICY.rungs.r1.metrics["pupilRadius.maxScaled"].tolerance as number,
+      sag: POLICY.rungs["built-system"].metrics["sag.maxScaled"].tolerance as number,
+      firstOrder: POLICY.rungs["first-order"].metrics["firstOrder.maxAbs"].tolerance as number,
+      pupilZ: POLICY.rungs["first-order"].metrics["pupilZ.maxScaled"].tolerance as number,
+      pupilRadius: POLICY.rungs["first-order"].metrics["pupilRadius.maxScaled"].tolerance as number,
     };
     assert.deepEqual(limits, { sag: 1e-12, firstOrder: 1e-9, pupilZ: 1e-9, pupilRadius: 1e-9 });
 
@@ -780,7 +785,7 @@ test(
     // At its reference line the lens failed the plain gate of 1e-9 mm by the position of its exit pupil, 7.6 m
     // behind the image plane. It passes R1 now: the report shows the plain figure and the one that is judged.
     const reference = await answers(NEAR_TELECENTRIC, { kind: "reference" });
-    const atReference = judged("r1", reference.opticalCase, reference.lvData, reference.refData);
+    const atReference = judged("first-order", reference.opticalCase, reference.lvData, reference.refData);
     assert.deepEqual([atReference.verdict, atReference.reason], ["PASS", undefined]);
     const figures = metricsOf(atReference);
     assert.ok(figures["pupilZ.maxAbs"] > 1e-9 && figures["pupilZ.maxAbs"] < 2e-9, String(figures["pupilZ.maxAbs"]));
@@ -794,8 +799,11 @@ test(
 
     // The gate is still a gate on this lens: 5e-13 of the distance passes, and 1e-11 of it does not.
     const { opticalCase, refData } = reference;
-    assert.equal(judged("r1", opticalCase, moved(refData, "exitPupilZ", 0, distance * 5e-13), refData).verdict, "PASS");
-    const beyond = judged("r1", opticalCase, moved(refData, "exitPupilZ", 0, distance * 1e-11), refData);
+    assert.equal(
+      judged("first-order", opticalCase, moved(refData, "exitPupilZ", 0, distance * 5e-13), refData).verdict,
+      "PASS",
+    );
+    const beyond = judged("first-order", opticalCase, moved(refData, "exitPupilZ", 0, distance * 1e-11), refData);
     assert.equal(beyond.verdict, "FAIL");
     assert.match(
       beyond.reason ?? "",
@@ -805,7 +813,7 @@ test(
     // At the photopic lines the pupil lies from 1.3 m to 20 m away, on either side, and is placed within the gate
     // at every one of them: 3.0e-9 mm apart at 650 nm, where the plain gate would fail it.
     const photopic = await answers(NEAR_TELECENTRIC, { kind: "photopic" });
-    const atPhotopic = judged("r1", photopic.opticalCase, photopic.lvData, photopic.refData);
+    const atPhotopic = judged("first-order", photopic.opticalCase, photopic.lvData, photopic.refData);
     const spread = metricsOf(atPhotopic);
     assert.ok(spread["pupilZ.maxAbs"] > 2e-9 && spread["pupilZ.maxAbs"] < 5e-9, String(spread["pupilZ.maxAbs"]));
     assert.ok(spread["pupilZ.maxScaled"] < 5e-10, String(spread["pupilZ.maxScaled"]));
@@ -842,15 +850,18 @@ test(
     assert.ok(Math.abs(spread["pupilRadius.maxScaled"] - onScale) < 1e-6 * onScale, `${onScale}`);
     // The gate is still a gate on the radius of this pupil: 5e-13 of its distance passes, and 1e-11 of it does not.
     const { opticalCase: atLines, refData: theirs } = photopic;
-    assert.equal(judged("r1", atLines, moved(theirs, "exitPupilSemiDiameter", 4, far * 5e-13), theirs).verdict, "PASS");
-    const wide = judged("r1", atLines, moved(theirs, "exitPupilSemiDiameter", 4, far * 1e-11), theirs);
+    assert.equal(
+      judged("first-order", atLines, moved(theirs, "exitPupilSemiDiameter", 4, far * 5e-13), theirs).verdict,
+      "PASS",
+    );
+    const wide = judged("first-order", atLines, moved(theirs, "exitPupilSemiDiameter", 4, far * 1e-11), theirs);
     assert.equal(wide.verdict, "FAIL");
     assert.match(
       wide.reason ?? "",
       /^pupilRadius\.maxScaled 1\.00e-8 exceeds its tolerance 1\.00e-9 at line 4, quantity exitPupilSemiDiameter$/,
     );
     // Its entrance pupil is an ordinary one, within a metre of the image plane: 1e-8 mm of its radius fails.
-    const entrance = judged("r1", atLines, moved(theirs, "entrancePupilSemiDiameter", 4, 1e-8), theirs);
+    const entrance = judged("first-order", atLines, moved(theirs, "entrancePupilSemiDiameter", 4, 1e-8), theirs);
     assert.equal(entrance.verdict, "FAIL");
     assert.match(
       entrance.reason ?? "",
@@ -861,11 +872,11 @@ test(
     // did, in position and in radius, and so does any other value 1e-8 mm off, on this lens and on the telecentric
     // one alike.
     const ordinary = await answers("nikkor-z50f12", { kind: "reference" });
-    assert.equal(judged("r1", ordinary.opticalCase, ordinary.lvData, ordinary.refData).verdict, "PASS");
+    assert.equal(judged("first-order", ordinary.opticalCase, ordinary.lvData, ordinary.refData).verdict, "PASS");
     const ordinaryDistance = Math.abs(f8(ordinary.refData.exitPupilZ)[0] - ordinary.opticalCase.conditions.imageZ);
     assert.ok(ordinaryDistance < 1000, `${ordinaryDistance} mm`);
     for (const value of ["exitPupilZ", "entrancePupilZ"] as const) {
-      const off = judged("r1", ordinary.opticalCase, moved(ordinary.lvData, value, 0, 1e-8), ordinary.refData);
+      const off = judged("first-order", ordinary.opticalCase, moved(ordinary.lvData, value, 0, 1e-8), ordinary.refData);
       assert.equal(off.verdict, "FAIL", value);
       assert.match(
         off.reason ?? "",
@@ -873,7 +884,7 @@ test(
       );
     }
     for (const value of ["exitPupilSemiDiameter", "entrancePupilSemiDiameter"] as const) {
-      const off = judged("r1", ordinary.opticalCase, moved(ordinary.lvData, value, 0, 1e-8), ordinary.refData);
+      const off = judged("first-order", ordinary.opticalCase, moved(ordinary.lvData, value, 0, 1e-8), ordinary.refData);
       assert.equal(off.verdict, "FAIL", value);
       assert.match(
         off.reason ?? "",
@@ -881,7 +892,7 @@ test(
       );
     }
     for (const { opticalCase: about, lvData, refData: theirs } of [ordinary, reference]) {
-      const pair = judged("r1", about, moved(lvData, "efl", 0, 1e-8), theirs);
+      const pair = judged("first-order", about, moved(lvData, "efl", 0, 1e-8), theirs);
       assert.equal(pair.verdict, "FAIL");
       assert.match(
         pair.reason ?? "",

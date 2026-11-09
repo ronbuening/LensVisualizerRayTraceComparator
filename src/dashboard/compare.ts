@@ -47,18 +47,18 @@ export type ConditionFacet = (typeof CONDITION_FACETS)[number];
 
 /** The metric of a gated rung a card's line names: the one of the rung's metrics that says most of the tab's rays. */
 export const GATED_HEADLINES: Readonly<Record<string, string>> = Object.freeze({
-  r0: "sag.maxScaled",
-  r1: "firstOrder.maxAbs",
-  r2: "hits.maxDistance",
-  r3: "opticalPath.maxAbs",
-  r4: "mtf.maxAbs",
-  r4f: "mtf.maxAbs",
-  r6a: "waveMtf.maxAbs",
-  r7a: "transverseError.maxAbs",
-  r8a: "intercept.maxScaled",
-  r9a: "landing.maxAbs",
-  r10a: "tangentialFocus.maxScaled",
-  r11a: "illumination.maxAbs",
+  "built-system": "sag.maxScaled",
+  "first-order": "firstOrder.maxAbs",
+  "ray-trace": "hits.maxDistance",
+  "optical-path": "opticalPath.maxAbs",
+  "geometric-mtf": "mtf.maxAbs",
+  "lv-mtf-replay": "mtf.maxAbs",
+  "wave-mtf": "waveMtf.maxAbs",
+  "spot-rays": "transverseError.maxAbs",
+  "axial-rays": "intercept.maxScaled",
+  "chief-rays": "landing.maxAbs",
+  "field-curve-rays": "tangentialFocus.maxScaled",
+  "vignetting-rays": "illumination.maxAbs",
 });
 
 /** The metrics of a recorded rung that are limits of its sorting (an element beyond one is `data`), not bands. */

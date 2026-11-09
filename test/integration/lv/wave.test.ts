@@ -27,7 +27,7 @@ import { LV_PATH, LV_UNAVAILABLE } from "./support.ts";
 
 const skip = LV_UNAVAILABLE;
 const BIN = fileURLToPath(new URL("../../../bin/lvrtc.mjs", import.meta.url));
-const R6B = loadPolicy().rungs.r6b;
+const R6B = loadPolicy().rungs["mtf-vs-wave-estimate"];
 
 /** The runs of the benchmark that are run here. */
 const RUNS = [
@@ -59,7 +59,7 @@ test("the engine wave conforms on the real LensVisualizer", { skip, timeout: 300
 });
 
 test(
-  "lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave estimator on its rays, on six runs",
+  "lvrtc run --checks mtf-vs-wave-estimate: LensVisualizer's diffraction MTF beside the wave estimator on its rays, on six runs",
   { skip, timeout: 900_000 },
   (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-wave-"));
@@ -72,7 +72,7 @@ test(
     );
 
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of wave whatever a run names.
-    const ran = lvrtc(runsDir, "run", suite, "--rungs", "r6b");
+    const ran = lvrtc(runsDir, "run", suite, "--checks", "mtf-vs-wave-estimate");
     assert.equal(ran.code, 0, ran.err);
     assert.match(ran.out, /^benchmark: 12 jobs: 12 answered \(12 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
@@ -99,7 +99,7 @@ test(
     const sets = comparisons.comparisons.filter((set) => set.mode === "pairwise");
     assert.equal(sets.length, RUNS.length);
     for (const set of sets) {
-      assert.deepEqual([set.rung, set.quantity], ["r6b", "mtf.native"], set.run);
+      assert.deepEqual([set.rung, set.quantity], ["mtf-vs-wave-estimate", "mtf.native"], set.run);
       const [pair] = set.pairs;
       assert.deepEqual([pair.a, pair.b, pair.class], ["lv", "wave", "recorded"], set.run);
       assert.ok(["RECORDED", "ATTENTION"].includes(pair.verdict), `${set.run}: ${pair.verdict} ${pair.reason ?? ""}`);

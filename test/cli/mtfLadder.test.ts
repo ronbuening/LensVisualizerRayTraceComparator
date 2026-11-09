@@ -59,7 +59,7 @@ function ladderRoot(t: TestContext): string {
     defaults: {
       engines: ["ref", "ref-bent", "ref-twin", "fake-a"],
       referenceEngine: "ref",
-      rungs: ["r4"],
+      rungs: ["geometric-mtf"],
       fields: { kind: "angles-deg", values: [0, 3] },
       sampling: { bundleGrid: 12 },
     },
@@ -116,7 +116,7 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   // A set for each field of each run, in each mode: three pairs against the reference and six pairwise.
   assert.match(compared.out, /^mtf: 36 pairs: 8 Pass, 12 Fail, 16 Not computed$/m);
   const file = read<ComparisonFile>(rootDir, COMPARISONS_FILE);
-  assert.ok(file.comparisons.every((set) => set.rung === "r4" && set.quantity === "rays.trace"));
+  assert.ok(file.comparisons.every((set) => set.rung === "geometric-mtf" && set.quantity === "rays.trace"));
   const sets = (run: string, mode: string): ComparisonSet[] =>
     file.comparisons.filter((set) => set.run === run && set.mode === mode);
 
@@ -174,9 +174,9 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   const reported = await lvrtc(rootDir, "report", "mtf");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "mtf", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### Geometric MTF of the same rays — `r4`, request 1 of 4$/m);
-  assert.match(markdown, /^#### Geometric MTF of the same rays — `r4`, request 3 of 4$/m);
-  assert.doesNotMatch(markdown, /^#### .*`r4`, request 2 of 4$/m);
+  assert.match(markdown, /^#### Geometric MTF of the same rays — `geometric-mtf`, request 1 of 4$/m);
+  assert.match(markdown, /^#### Geometric MTF of the same rays — `geometric-mtf`, request 3 of 4$/m);
+  assert.doesNotMatch(markdown, /^#### .*`geometric-mtf`, request 2 of 4$/m);
   assert.match(
     markdown,
     /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
@@ -191,7 +191,15 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   );
 
   // The rungs of traced rays ask the same requests: with R2 and R3 beside it, R4 finds every answer in the store.
-  const all = await lvrtc(rootDir, "run", "suite.json", "--rungs", "r2,r3,r4", "--engines", "ref,ref-twin");
+  const all = await lvrtc(
+    rootDir,
+    "run",
+    "suite.json",
+    "--checks",
+    "ray-trace,optical-path,geometric-mtf",
+    "--engines",
+    "ref,ref-twin",
+  );
   assert.equal(all.code, EXIT_OK, all.err);
   assert.match(all.out, /^mtf: 48 jobs: 48 answered \(48 from the result cache\)$/m);
   const again = await lvrtc(rootDir, "compare", "mtf");

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="346" viewBox="0 0 640 346" role="img">
-<title>beyond, r5: MTF at field 1, tangential</title>
+<title>beyond, mtf-vs-optiland-fft: MTF at field 1, tangential</title>
 <desc>One chart for each field and cut: each engine&#39;s own curve as its result cache entry holds it, its first answer and each later step a series of its own. A dashed line is a field its engine calls unconverged, a value that is not a finite number is a gap, and a field without curves is named in the legend with its status.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
@@ -105,7 +105,7 @@
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
 <rect class="bg" x="0" y="0" width="640" height="346"/>
-<g><title>field 1: store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/field</title><text x="12" y="20" class="head">beyond, r5: MTF at field 1, tangential</text></g>
+<g><title>field 1: store/5dd052be284dfd92ba7ac06a82f3797f0cd2bf88f47daa5a76bc4e89ce4c2b30 /result/data/fields/2/field</title><text x="12" y="20" class="head">beyond, mtf-vs-optiland-fft: MTF at field 1, tangential</text></g>
 <line class="grid" x1="68" y1="256" x2="624" y2="256"/>
 <text x="62" y="260" class="muted" text-anchor="end">0</text>
 <line class="grid" x1="68" y1="212" x2="624" y2="212"/>

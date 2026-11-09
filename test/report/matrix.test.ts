@@ -46,14 +46,14 @@ test("synthetic matrix golden, both files; fixed ordering, no engines or environ
   const rungs = m.rows.flatMap((row) => [...row.gated, ...row.recorded]);
   const of = (id: string) => rungs.find((r) => r.rung === id)!;
   // R4 is in both baselines and counts once.
-  const r4 = of("r4");
+  const r4 = of("geometric-mtf");
   assert.ok(r4.inBaseline);
   assert.equal(r4.configurations, 2);
   assert.equal(r4.configurationPairs, 6);
   assert.equal(r4.requestPairs, 12);
   assert.deepEqual(r4.baselines, ["baselines/benchmark.json", "baselines/benchmark.mtf.json"]);
   // Request pairs and configuration pairs are counted apart, an unsupported engine named.
-  const r7a = of("r7a");
+  const r7a = of("spot-rays");
   assert.ok(r7a.inBaseline);
   assert.deepEqual(r7a.requestPairVerdicts, [
     { verdict: "PASS", count: 16 },
@@ -67,28 +67,28 @@ test("synthetic matrix golden, both files; fixed ordering, no engines or environ
     { status: "ok", configurations: 1 },
     { status: "unsupported", configurations: 1 },
   ]);
-  const r6b = of("r6b");
+  const r6b = of("mtf-vs-wave-estimate");
   assert.ok(r6b.inBaseline);
   assert.deepEqual(r6b.requestPairVerdicts, [
     { verdict: "RECORDED", count: 1 },
     { verdict: "ATTENTION", count: 1 },
   ]);
   // A baselined rung the baselines lack is said to be absent; a rung in no baseline has no figure, only its names.
-  for (const id of ["r11a", "r5g", "r6c"])
+  for (const id of ["vignetting-rays", "geometric-mtf-vs-optiland", "mtf-vs-optiland-wavefront"])
     assert.deepEqual(Object.keys(of(id)).sort(), ["compares", "inBaseline", "mode", "rung"]);
   assert.ok(rendered.markdown.includes(MATRIX_TEXT.absent));
-  const r7b = of("r7b");
+  const r7b = of("spot-vs-optiland");
   assert.deepEqual(r7b, {
-    rung: "r7b",
+    rung: "spot-vs-optiland",
     mode: "recorded",
-    compares: MATRIX_RUNGS.r7b.compares,
+    compares: MATRIX_RUNGS["spot-vs-optiland"].compares,
     inBaseline: false,
-    ...UNBASELINED_RUNGS.r7b,
+    ...UNBASELINED_RUNGS["spot-vs-optiland"],
   });
   assert.equal(m.lensVisualizer?.details.commit, "c".repeat(40));
   assert.match(
     rendered.markdown,
-    /^\| Spots and fans beside optiland's — `r7b` \| .* \| spot\.native \| lv, optiland \| in no baseline; run only where named \|$/m,
+    /^\| Spots and fans beside optiland's — `spot-vs-optiland` \| .* \| spot\.native \| lv, optiland \| in no baseline; run only where named \|$/m,
   );
 });
 
@@ -114,8 +114,8 @@ test("refuses missing, repeated or inconsistent inputs, conflicting duplicates a
   engine[1].baseline.engines[0] = { ...engine[1].baseline.engines[0], fingerprint: "9".repeat(64) };
   assert.throws(() => buildMatrix(engine), /engine lv differs/);
   const kept = mutable(inputs);
-  kept[1].baseline.runs[0].rungs.push({ ...kept[1].baseline.runs[0].rungs[4], rung: "r12b" });
-  assert.throws(() => buildMatrix(kept), /r12b: a rung kept out of every baseline/);
+  kept[1].baseline.runs[0].rungs.push({ ...kept[1].baseline.runs[0].rungs[4], rung: "summary-vs-optiland" });
+  assert.throws(() => buildMatrix(kept), /summary-vs-optiland: a rung kept out of every baseline/);
 });
 
 test("the rows name every rung of the policy, each by the mode, quantity and engines its definition states", () => {
@@ -124,7 +124,7 @@ test("the rows name every rung of the policy, each by the mode, quantity and eng
   assert.deepEqual(
     [...new Set(named)].sort(),
     Object.keys(policy.rungs)
-      .filter((id) => id !== "selftest")
+      .filter((id) => id !== "pipeline-echo")
       .sort(),
   );
   for (const row of MATRIX_ROWS) {
@@ -154,19 +154,26 @@ test("a figure a row says has no review band has none in the policy at hand", ()
     for (const metric of metrics)
       assert.equal(rungs[rung].metrics?.[metric]?.attention, undefined, `${rung} ${metric}`);
   };
-  sentence("coma-bokeh", "The spot figures of check r7b have no review band");
-  unbanded("r7b", ["spotCentroid.maxAbs", "spotRmsRadius.maxAbs"]);
-  assert.notEqual(rungs.r7b.metrics?.["fanError.maxAbs"]?.attention, undefined, "only its fan figure has one");
-  sentence("axial", "The colour figures of check r8b have no review band");
-  unbanded("r8b", ["lineFocus.maxAbs", "relativeFocus.maxAbs"]);
-  // R9b's one limit is the landing it sorts fields by, which is no band on a figure.
-  sentence("chief", "The figures of check r9b have no review band");
-  unbanded(
-    "r9b",
-    Object.keys(rungs.r9b.metrics ?? {}).filter((metric) => metric !== "chiefLanding.maxAbs"),
+  sentence("coma-bokeh", "The spot figures of check spot-vs-optiland have no review band");
+  unbanded("spot-vs-optiland", ["spotCentroid.maxAbs", "spotRmsRadius.maxAbs"]);
+  assert.notEqual(
+    rungs["spot-vs-optiland"].metrics?.["fanError.maxAbs"]?.attention,
+    undefined,
+    "only its fan figure has one",
   );
-  sentence("vignetting", "The relative illumination and the falloff of check r11b have no review band");
-  unbanded("r11b", ["relativeIllumination.maxAbs", "falloff.maxAbs"]);
+  sentence("axial", "The colour figures of check axial-vs-optiland have no review band");
+  unbanded("axial-vs-optiland", ["lineFocus.maxAbs", "relativeFocus.maxAbs"]);
+  // R9b's one limit is the landing it sorts fields by, which is no band on a figure.
+  sentence("chief", "The figures of check chief-vs-optiland have no review band");
+  unbanded(
+    "chief-vs-optiland",
+    Object.keys(rungs["chief-vs-optiland"].metrics ?? {}).filter((metric) => metric !== "chiefLanding.maxAbs"),
+  );
+  sentence(
+    "vignetting",
+    "The relative illumination and the falloff of check vignetting-vs-flux-estimate have no review band",
+  );
+  unbanded("vignetting-vs-flux-estimate", ["relativeIllumination.maxAbs", "falloff.maxAbs"]);
 });
 
 test("the committed matrix is what the benchmark's committed baselines render", () => {

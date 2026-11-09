@@ -79,7 +79,7 @@ test("R6c selects the answer's several-line chief limit and reports the same sor
   const { buildWavefrontComparison } = await import("../../src/report/mtfComparison.ts");
   const { SPEC, answer } = await import("../compare/mtfNativeSupport.ts");
   const { SINGLET } = await import("../core/support.ts");
-  const policy = loadPolicy().rungs.r6c;
+  const policy = loadPolicy().rungs["mtf-vs-optiland-wavefront"];
   assert.deepEqual(policy.metrics["chiefLanding.maxAbs"], {
     attention: 1e-7,
     attentionSeveralLines: 1e-3,
@@ -110,7 +110,7 @@ test("R6c selects the answer's several-line chief limit and reports the same sor
         suite: "synthetic",
         run: "field",
         caseId: SINGLET.id,
-        rung: "r6c",
+        rung: "mtf-vs-optiland-wavefront",
         quantity: "mtf.native",
         requestId: "1".repeat(64),
         participants: [

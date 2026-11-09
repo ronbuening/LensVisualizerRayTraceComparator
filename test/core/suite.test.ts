@@ -75,7 +75,7 @@ test("the fixture suite loads: two runs, each with the case its lens names", asy
   for (const run of suite.runs) {
     assert.equal(run.spec.kind, "run-spec");
     assert.equal(run.spec.contract, CONTRACT_VERSION);
-    assert.deepEqual(run.spec.rungs, ["selftest"]);
+    assert.deepEqual(run.spec.rungs, ["pipeline-echo"]);
   }
   assert.ok(
     Object.isFrozen(suite) && Object.isFrozen(suite.runs[0].spec) && Object.isFrozen(suite.runs[0].opticalCase),
@@ -91,16 +91,16 @@ test("the hash is that of the suite's name and expanded runs, however the file w
   // The same runs with the default written into each run, and the keys in another order.
   const path = "cases/singlet.json";
   const withDefaults = suiteOf([fixtureRun("one", path), fixtureRun("two", path)], {
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
   });
   const spelledOut = {
     runs: [
-      { rungs: ["selftest"], lens: { path, kind: "fixture" }, name: "one" },
+      { rungs: ["pipeline-echo"], lens: { path, kind: "fixture" }, name: "one" },
       {
         name: "two",
         kind: "run-spec",
         lens: { kind: "fixture", path },
-        rungs: ["selftest"],
+        rungs: ["pipeline-echo"],
         contract: CONTRACT_VERSION,
       },
     ],
@@ -115,9 +115,12 @@ test("the hash is that of the suite's name and expanded runs, however the file w
 
   // Another name, another option or another lens is another suite.
   const others = [
-    suiteOf([fixtureRun("one", path), fixtureRun("two", path)], { defaults: { rungs: ["selftest"] }, name: "b-suite" }),
+    suiteOf([fixtureRun("one", path), fixtureRun("two", path)], {
+      defaults: { rungs: ["pipeline-echo"] },
+      name: "b-suite",
+    }),
     suiteOf([fixtureRun("one", path), fixtureRun("two", path)]),
-    suiteOf([fixtureRun("one", path), fixtureRun("three", path)], { defaults: { rungs: ["selftest"] } }),
+    suiteOf([fixtureRun("one", path), fixtureRun("three", path)], { defaults: { rungs: ["pipeline-echo"] } }),
   ];
   const hashes = [a.hash];
   for (const other of others) hashes.push((await load(t, other, files)).hash);

@@ -48,23 +48,30 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,ref",
-      rungs: "r13b,r14b",
+      rungs: "seidel-vs-optiland,zernike-vs-optiland",
     });
     const jobs = (rung: string) => manifest.jobs.filter((job) => job.rung === rung);
-    assert.deepEqual([...new Set(jobs("r13b").map((job) => job.engine))].sort(), ["optiland", "ref-seidel"]);
-    assert.deepEqual([...new Set(jobs("r14b").map((job) => job.engine))].sort(), ["optiland", "optiland-wave"]);
+    assert.deepEqual([...new Set(jobs("seidel-vs-optiland").map((job) => job.engine))].sort(), [
+      "optiland",
+      "ref-seidel",
+    ]);
+    assert.deepEqual([...new Set(jobs("zernike-vs-optiland").map((job) => job.engine))].sort(), [
+      "optiland",
+      "optiland-wave",
+    ]);
     const statuses = (rung: string, run: string, engine: string): string[] =>
       jobs(rung)
         .filter((job) => job.run === run && job.engine === engine)
         .map((job) =>
           job.status === "unsupported" ? (job.unsupported ?? []).map((u) => u.item).join("+") : job.status,
         );
-    assert.deepEqual(statuses("r13b", NIKKOR, "optiland"), ["surface.asphere.quartic-term"]);
-    for (const run of [CANON, PHOTOPIC, NIKKOR, SIGMA]) assert.deepEqual(statuses("r13b", run, "ref-seidel"), ["ok"]);
-    assert.deepEqual(statuses("r13b", SIGMA, "optiland"), ["surface.asphere.quartic-term"]);
+    assert.deepEqual(statuses("seidel-vs-optiland", NIKKOR, "optiland"), ["surface.asphere.quartic-term"]);
+    for (const run of [CANON, PHOTOPIC, NIKKOR, SIGMA])
+      assert.deepEqual(statuses("seidel-vs-optiland", run, "ref-seidel"), ["ok"]);
+    assert.deepEqual(statuses("seidel-vs-optiland", SIGMA, "optiland"), ["surface.asphere.quartic-term"]);
 
     // R13b: the sums of two methods agree to the rounding of what cancels in them.
-    const seidel = pairsOf(comparisons, "r13b", SEIDEL_NATIVE);
+    const seidel = pairsOf(comparisons, "seidel-vs-optiland", SEIDEL_NATIVE);
     for (const run of [CANON, PHOTOPIC]) {
       const pair = seidel.find((entry) => entry.run === run);
       assert.ok(pair !== undefined, run);
@@ -79,14 +86,16 @@ test(
       assert.ok((pair.reason ?? "").includes(`CLA.maxAbs was not measured: ${silent}`), `${run}: ${pair.reason ?? ""}`);
     }
     const photopic = comparisons.comparisons.find(
-      (set) => set.run === PHOTOPIC && set.rung === "r13b" && set.mode === "pairwise",
+      (set) => set.run === PHOTOPIC && set.rung === "seidel-vs-optiland" && set.mode === "pairwise",
     );
     const sums = photopic?.participants.find((participant) => participant.engine === "ref-seidel")?.recorded;
     assert.ok(sums !== undefined && Number.isFinite(sums.CLA[0]) && Number.isFinite(sums.W020[0]));
     assert.equal(seidel.find((entry) => entry.run === NIKKOR)?.verdict, "UNSUPPORTED");
 
     // R14b: one wavefront, two fits; conditions agree, coefficients agree where the samples determine them.
-    const zernike = comparisons.comparisons.filter((set) => set.rung === "r14b" && set.mode === "pairwise");
+    const zernike = comparisons.comparisons.filter(
+      (set) => set.rung === "zernike-vs-optiland" && set.mode === "pairwise",
+    );
     assert.equal(zernike.length, 2 * 4);
     let conditioned = 0;
     let illConditioned = 0;

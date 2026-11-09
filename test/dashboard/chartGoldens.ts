@@ -58,7 +58,7 @@ export function chartGoldens(fixture: DashboardFixture): Map<string, string> {
   const standalone = { standalone: true };
   const goldens = new Map<string, string>();
   const mtf = viewsOf(fixture.mtfRootDir, fixture.mtfRunsDir, fixture.mtfPolicyFile);
-  const beyond = sectionOf(mtf, "r5-stand-ins", "beyond", "r5");
+  const beyond = sectionOf(mtf, "r5-stand-ins", "beyond", "mtf-vs-optiland-fft");
   const subject = (section: SectionView): string => `${section.run}, ${section.rung}`;
   // The stand-in for optiland asked again at 512 rays (a step of its own), and wave unconverged at field 1.
   goldens.set(
@@ -76,7 +76,7 @@ export function chartGoldens(fixture: DashboardFixture): Map<string, string> {
     renderMtfDifference(chartAt(beyond.charts.differences, 1, "tangential"), subject(beyond), standalone),
   );
   // A field the stand-in for optiland has no curves of: NaN at every frequency, named in the legend, never drawn.
-  const edge = sectionOf(mtf, "r5g-stand-ins", "edge", "r5g");
+  const edge = sectionOf(mtf, "r5g-stand-ins", "edge", "geometric-mtf-vs-optiland");
   goldens.set(
     "r5g-edge.overlay-element2-sagittal.svg",
     renderMtfOverlay(chartAt(edge.charts.overlays, 2, "sagittal"), subject(edge), standalone),
@@ -107,7 +107,7 @@ export function chartGoldens(fixture: DashboardFixture): Map<string, string> {
   const raysMap = rays.run(RAYS_SUITE).heatMap;
   if (raysMap === null) throw new Error("the rays run has no heat map");
   goldens.set("rays.run-heat-map.svg", renderHeatMap(raysMap, RAYS_SUITE, "run", standalone));
-  const onAxis = sectionOf(rays, RAYS_SUITE, "double-gauss", "r2", 0);
+  const onAxis = sectionOf(rays, RAYS_SUITE, "double-gauss", "ray-trace", 0);
   for (const deviation of onAxis.charts.deviations) {
     goldens.set(
       `rays-r2-axis.deviation-${deviation.a}-${deviation.b}.svg`,
@@ -127,15 +127,15 @@ export function chartGoldens(fixture: DashboardFixture): Map<string, string> {
     if (line === undefined || chart === undefined) throw new Error(`the compare fixture has no ${rung} ${kind} chart`);
     return { chart, subject: `${COMPARE_KEY}, ${line.source.kind === "run" ? line.source.run : ""}, ${rung}` };
   };
-  const distortion = detail(queries.shared, "chief", "r9b", "distortion", "points");
+  const distortion = detail(queries.shared, "chief", "chief-vs-optiland", "distortion", "points");
   if (distortion.chart.kind === "points") {
     goldens.set("compare-r9b.distortion.svg", renderPairChart(distortion.chart, distortion.subject, standalone));
   }
-  const tangential = detail(queries.shared, "curvature", "r10b", null, "points");
+  const tangential = detail(queries.shared, "curvature", "field-curve-vs-optiland", null, "points");
   if (tangential.chart.kind === "points") {
     goldens.set("compare-r10b.tangential.svg", renderPairChart(tangential.chart, tangential.subject, standalone));
   }
-  const fan = detail(queries.fan, "coma-bokeh", "r7b", "fan tangential", "fan");
+  const fan = detail(queries.fan, "coma-bokeh", "spot-vs-optiland", "fan tangential", "fan");
   if (fan.chart.kind === "fan") goldens.set("compare-r7b.fan.svg", renderFanChart(fan.chart, fan.subject, standalone));
   return goldens;
 }

@@ -38,11 +38,11 @@ export const R7A_GOLDEN = "r7a-stand-ins";
 export const R7B_GOLDEN = "r7b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its bandless metrics. */
-function policyOf(rung: "r7a" | "r7b"): Policy {
+function policyOf(rung: "spot-rays" | "spot-vs-optiland"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R7A_POLICY: Policy = policyOf("r7a");
-export const R7B_POLICY: Policy = policyOf("r7b");
+export const R7A_POLICY: Policy = policyOf("spot-rays");
+export const R7B_POLICY: Policy = policyOf("spot-vs-optiland");
 
 /** What one cycle of a fixture gave. */
 export interface R7Cycle {
@@ -78,7 +78,7 @@ async function cycle(
 
 /** The rung `r7a` as a case without a LensVisualizer tab can be asked it: the seven rays of `SPEC` at both lines. */
 export const R7A_FIXTURE_RUNG: RungDefinition = {
-  id: "r7a",
+  id: "spot-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [specAt(0), specAt(1)].map((spec) => makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec })),
@@ -152,7 +152,7 @@ const FAN_SPEC: SpotNativeSpec = {
 
 /** The rung `r7b` as stand-ins can be asked it: a spot of three fields and a tangential fan, of `lv` and `optiland`. */
 export const R7B_FIXTURE_RUNG: RungDefinition = {
-  id: "r7b",
+  id: "spot-vs-optiland",
   quantity: SPOT_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) =>

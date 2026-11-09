@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="340" viewBox="0 0 640 340" role="img">
-<title>double-gauss, r2: hit distance by surface, ref-twin and ref-warped</title>
+<title>double-gauss, ray-trace: hit distance by surface, ref-twin and ref-warped</title>
 <desc>For each pair of the request, the largest distance between the two engines&#39; hits on each surface (on each visit, for a trace of a folded path) over the rays ok in both answers, leaving out a visit either answer records no point for, as the ray-trace check measures its largest hit distance. A distance of 0 is a ring on the axis, a surface where no ray is ok in both is a dash, and the line is the limit of the limits file. The largest bar is 5.99e-7 mm, and the comparison records a largest hit distance of 5.99e-7 mm.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
@@ -105,7 +105,7 @@
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
 <rect class="bg" x="0" y="0" width="640" height="340"/>
-<text x="12" y="20" class="head">double-gauss, r2: hit distance by surface, ref-twin and ref-warped</text>
+<text x="12" y="20" class="head">double-gauss, ray-trace: hit distance by surface, ref-twin and ref-warped</text>
 <line class="grid" x1="68" y1="268" x2="624" y2="268"/>
 <text x="62" y="272" class="muted" text-anchor="end">1e-9</text>
 <line class="grid" x1="68" y1="194.67" x2="624" y2="194.67"/>
@@ -136,7 +136,7 @@
 <text x="548.18" y="284" class="muted" text-anchor="middle">9</text>
 <rect class="bar" x="584.73" y="64.33" width="28" height="203.67" rx="2"><title>surface 10: 5.99e-7 mm, derived: the largest distance between the hits of ref-twin and ref-warped on surface 10, over the rays ok in both answers whose visit both record of store/992c87ce964455a4382f6ea53fa6a05112f7b3fb2acd7d3f28b25e022e3ec001 /result/data/hits; store/992c87ce964455a4382f6ea53fa6a05112f7b3fb2acd7d3f28b25e022e3ec001 /result/data/status; store/aacfd47c121871bd658f8c993265cfb03bc32ad6e42f298103830dc117b92af0 /result/data/hits; store/aacfd47c121871bd658f8c993265cfb03bc32ad6e42f298103830dc117b92af0 /result/data/status</title></rect>
 <text x="598.73" y="284" class="muted" text-anchor="middle">10</text>
-<line class="gate" x1="68" y1="194.67" x2="624" y2="194.67"><title>limit 1.00e-8 mm: policy/rays-policy.json /rungs/r2/metrics/hits.maxDistance/tolerance</title></line>
+<line class="gate" x1="68" y1="194.67" x2="624" y2="194.67"><title>limit 1.00e-8 mm: policy/rays-policy.json /rungs/ray-trace/metrics/hits.maxDistance/tolerance</title></line>
 <line class="axis" x1="68" y1="268" x2="624" y2="268"/>
 <line class="axis" x1="68" y1="48" x2="68" y2="268"/>
 <text x="346" y="302" text-anchor="middle">Surface</text>

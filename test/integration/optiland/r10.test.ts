@@ -29,8 +29,8 @@ import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, t
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R10A = loadPolicy().rungs.r10a;
-const R10B = loadPolicy().rungs.r10b;
+const R10A = loadPolicy().rungs["field-curve-rays"];
+const R10B = loadPolicy().rungs["field-curve-vs-optiland"];
 const tolerance = (name: string): number => R10A.metrics[name].tolerance as number;
 
 const DESIGN = "nikkor-z50f12-ref";
@@ -62,11 +62,11 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,ref,optiland",
-      rungs: "r10a,r10b",
+      rungs: "field-curve-rays,field-curve-vs-optiland",
     });
 
     // R10a: every set is traced by the three engines, and every pair passes with its foci measured.
-    const traced = manifest.jobs.filter((job) => job.rung === "r10a");
+    const traced = manifest.jobs.filter((job) => job.rung === "field-curve-rays");
     const sets = new Map(manifest.runs.map((run) => [run.name, run.curvatureRaySets?.sets.length ?? 0]));
     for (const run of [DESIGN, BEST, LONG]) assert.equal(sets.get(run), PATTERNS, run);
     const photopicSets = sets.get(PHOTOPIC) ?? 0;
@@ -74,7 +74,7 @@ test(
     const total = [...sets.values()].reduce((sum, count) => sum + count, 0);
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
-    const gated = pairsOf(comparisons, "r10a", RAYS_TRACE);
+    const gated = pairsOf(comparisons, "field-curve-rays", RAYS_TRACE);
     assert.equal(gated.length, 3 * total);
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
@@ -99,7 +99,7 @@ test(
 
     // R10b: LensVisualizer answers its sections' ask at the authored line; a photopic run has no line of theirs and no
     // ask, and a case off the design plane is refused.
-    const native = manifest.jobs.filter((job) => job.rung === "r10b");
+    const native = manifest.jobs.filter((job) => job.rung === "field-curve-vs-optiland");
     assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["lv", "optiland"]);
     assert.equal(native.length, 2 * 3);
     assert.ok(!native.some((job) => job.run === PHOTOPIC));
@@ -114,7 +114,7 @@ test(
     assert.deepEqual(statuses(BEST, "lv"), ["focus.off-design"]);
     for (const run of [DESIGN, BEST, LONG]) assert.deepEqual(statuses(run, "optiland"), ["ok"], run);
 
-    const recorded = pairsOf(comparisons, "r10b", CURVATURE_NATIVE);
+    const recorded = pairsOf(comparisons, "field-curve-vs-optiland", CURVATURE_NATIVE);
     assert.equal(recorded.length, 3);
     const of = (run: string): RungPair => recorded.find((pair) => pair.run === run)!;
     assert.equal(of(BEST).verdict, "UNSUPPORTED");

@@ -30,7 +30,7 @@ import { OPTILAND_PYTHON, OPTILAND_UNAVAILABLE, lvrtc, pairsOf, runAndCompare, t
 import type { RungPair } from "./support.ts";
 
 const skip = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R9A = loadPolicy().rungs.r9a;
+const R9A = loadPolicy().rungs["chief-rays"];
 const tolerance = (name: string): number => R9A.metrics[name].tolerance as number;
 
 const DESIGN = "nikkor-z50f12-ref";
@@ -45,7 +45,7 @@ const PATTERNS = 4;
 const ASKS = 3;
 
 /** The rung's limit of the sorting: two identifying chief rays land within it, or the field is data. */
-const SAME_FIELD_MM = loadPolicy().rungs.r9b.metrics["chiefLanding.maxAbs"].attention as number;
+const SAME_FIELD_MM = loadPolicy().rungs["chief-vs-optiland"].metrics["chiefLanding.maxAbs"].attention as number;
 
 test(
   "R9a and R9b: LensVisualizer's chief rays in three engines, and its distortion, pupils and lateral-colour tabs beside optiland's",
@@ -62,11 +62,11 @@ test(
       suite,
       name: "benchmark",
       engines: "lv,ref,optiland",
-      rungs: "r9a,r9b",
+      rungs: "chief-rays,chief-vs-optiland",
     });
 
     // R9a: every set is traced by the three engines at every line, and every pair of a span passes.
-    const traced = manifest.jobs.filter((job) => job.rung === "r9a");
+    const traced = manifest.jobs.filter((job) => job.rung === "chief-rays");
     const lines = new Map(manifest.runs.map((run) => [run.name, run.chiefRaySets?.sets.length ?? 0]));
     for (const run of [DESIGN, BEST, LONG]) assert.equal(lines.get(run), PATTERNS, run);
     const photopicSets = lines.get(PHOTOPIC) ?? 0;
@@ -75,7 +75,7 @@ test(
     assert.equal(traced.length, 3 * total);
     for (const job of traced) assert.equal(job.status, "ok", `${job.run} ${job.engine} ${job.requestId}`);
     // The lines of a set are one span: three pairs of each pattern of each run.
-    const gated = pairsOf(comparisons, "r9a", RAYS_TRACE);
+    const gated = pairsOf(comparisons, "chief-rays", RAYS_TRACE);
     assert.equal(gated.length, 3 * PATTERNS * RUNS.length);
     for (const pair of gated) {
       assert.equal(pair.verdict, "PASS", `${pair.run} ${pair.engines}: ${pair.reason ?? ""}`);
@@ -99,7 +99,7 @@ test(
 
     // R9b: LensVisualizer answers its tabs' own asks: none on lines that are not its authored indices or its
     // channels, and none of a case off the design plane.
-    const native = manifest.jobs.filter((job) => job.rung === "r9b");
+    const native = manifest.jobs.filter((job) => job.rung === "chief-vs-optiland");
     assert.deepEqual([...new Set(native.map((job) => job.engine))].sort(), ["lv", "optiland"]);
     assert.equal(native.length, 2 * ASKS * RUNS.length);
     const statuses = (run: string, engine: string): string[] =>
@@ -118,7 +118,7 @@ test(
     assert.deepEqual(statuses(BEST, "lv"), Array(ASKS).fill("focus.off-design"));
     for (const run of RUNS) assert.deepEqual(statuses(run, "optiland"), Array(ASKS).fill("ok"), run);
 
-    const recorded = pairsOf(comparisons, "r9b", CHIEF_NATIVE);
+    const recorded = pairsOf(comparisons, "chief-vs-optiland", CHIEF_NATIVE);
     assert.equal(recorded.length, ASKS * RUNS.length);
     const of = (run: string): RungPair[] => recorded.filter((pair) => pair.run === run);
     for (const run of [PHOTOPIC, BEST]) {

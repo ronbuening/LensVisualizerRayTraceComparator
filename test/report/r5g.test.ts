@@ -35,30 +35,36 @@ import { GEOMETRIC_SPEC, R5G_FIXTURE_RUNG, R5G_GOLDEN, R5G_POLICY, geometricStan
 import { goldenFile } from "./support.ts";
 
 test("r5g has the comparator of r5, made for it, the bands of r5 in the policy, and a follow-up of its own", () => {
-  assert.deepEqual([mtfGeometricComparator.quantity, mtfGeometricComparator.rung], ["mtf.native", "r5g"]);
-  assert.equal(COMPARATORS.get("mtf.native", "r5g"), mtfGeometricComparator);
+  assert.deepEqual(
+    [mtfGeometricComparator.quantity, mtfGeometricComparator.rung],
+    ["mtf.native", "geometric-mtf-vs-optiland"],
+  );
+  assert.equal(COMPARATORS.get("mtf.native", "geometric-mtf-vs-optiland"), mtfGeometricComparator);
   assert.equal(mtfGeometricComparator.compare, mtfNativeComparator.compare);
   assert.deepEqual(mtfGeometricComparator.metrics, mtfNativeComparator.metrics);
   const policy = loadPolicy();
   // The bands of r5; the limit on the chief rays' landing is the rung's own, a micrometre (the plan's Amendments).
-  const [r5, r5g]: RungPolicy[] = [policy.rungs.r5, policy.rungs.r5g];
+  const [r5, r5g]: RungPolicy[] = [policy.rungs["mtf-vs-optiland-fft"], policy.rungs["geometric-mtf-vs-optiland"]];
   assert.deepEqual(
     [r5g.metrics["mtfOnAxis.maxAbs"].attention, r5g.metrics["mtfOffAxis.maxAbs"].attention],
     [0.005, 0.01],
   );
   assert.deepEqual(r5g, { ...r5, metrics: { ...r5.metrics, "chiefLanding.maxAbs": { attention: 1e-3, unit: "mm" } } });
-  assert.deepEqual([policy.rungs.r5g.mode, policy.rungs.r5g.class], ["independent-method", "recorded"]);
+  assert.deepEqual(
+    [policy.rungs["geometric-mtf-vs-optiland"].mode, policy.rungs["geometric-mtf-vs-optiland"].class],
+    ["independent-method", "recorded"],
+  );
   assert.deepEqual(
     followUpsOf(policy).map(({ rung, engine, step, options }) => [rung, engine, step, options]),
     [
-      ["r5", "optiland", "fft512", { fftRays: 512 }],
-      ["r5g", "optiland", R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS],
+      ["mtf-vs-optiland-fft", "optiland", "fft512", { fftRays: 512 }],
+      ["geometric-mtf-vs-optiland", "optiland", R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS],
     ],
   );
   assert.deepEqual([R5G_FOLLOW_UP_STEP, R5G_FOLLOW_UP_OPTIONS], ["geo512", { geometricRays: 512 }]);
   assert.deepEqual(
     followUpsOf(R5G_POLICY).map((followUp) => followUp.rung),
-    ["r5g"],
+    ["geometric-mtf-vs-optiland"],
   );
 });
 
@@ -137,7 +143,7 @@ test("a rung is asked for the options of each of its requests, and an engine is 
     registry: watched.registry,
     runsDir: tempDir(t),
     rungDefinitions: [rung],
-    rungs: ["r5g"],
+    rungs: ["geometric-mtf-vs-optiland"],
   });
   assert.deepEqual(
     watched.requests.map((request, index) => [watched.ran[index], request.engineOptions]),
@@ -208,7 +214,7 @@ test("optiland is asked again once, with geometricRays 512, for the run of one l
     "beyond: lv-optiland ATTENTION, lv-replay RECORDED, optiland-replay ATTENTION",
     "polychromatic: lv-optiland ATTENTION, lv-replay RECORDED, optiland-replay ATTENTION",
   ]);
-  assert.ok(comparisons.comparisons.every((set) => set.rung === "r5g"));
+  assert.ok(comparisons.comparisons.every((set) => set.rung === "geometric-mtf-vs-optiland"));
   const beyond = comparisons.comparisons.find((set) => set.run === "beyond" && set.mode === "pairwise");
   const pair = beyond?.pairs.find(({ a, b }) => a === "lv" && b === "optiland");
   const value = (name: string) => pair?.metrics.find((metric) => metric.name === name)?.value;
@@ -354,18 +360,20 @@ test("the report of the stand-ins is its golden file, says whose rays and whose 
   );
   for (const sentence of NOT_COVERED) assert.ok(report.markdown.includes(`- ${sentence}\n`), sentence);
   assert.ok(
-    NOT_COVERED.some((sentence) => /Check r5g sets the two side by side and holds them to no limit/.test(sentence)),
+    NOT_COVERED.some((sentence) =>
+      /Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit/.test(sentence),
+    ),
   );
 });
 
 test("the lint takes a sentence about R5g as one of a recorded row", () => {
   for (const claim of [
     "R5g passes for every lens of the benchmark.",
-    "| nikkor-z50f12-ref | r5g | lv | optiland | PASS |",
+    "| nikkor-z50f12-ref | geometric-mtf-vs-optiland | lv | optiland | PASS |",
     "The geometric MTF of optiland agrees with LensVisualizer's.",
     "optiland's geometric MTF confirms the MTF of LensVisualizer.",
   ]) {
     assert.notDeepEqual(wordingProblems(claim), [], claim);
   }
-  assert.deepEqual(wordingProblems("| edge | r5g | ok | ok | ok |"), []);
+  assert.deepEqual(wordingProblems("| edge | geometric-mtf-vs-optiland | ok | ok | ok |"), []);
 });

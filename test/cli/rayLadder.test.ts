@@ -59,7 +59,7 @@ function ladderRoot(t: TestContext): string {
     defaults: {
       engines: ["ref", "ref-bent", "ref-twin"],
       referenceEngine: "ref",
-      rungs: ["r0", "r2", "r3"],
+      rungs: ["built-system", "ray-trace", "optical-path"],
       fields: { kind: "angles-deg", values: [0, 10] },
       sampling: { bundleGrid: 12 },
     },
@@ -96,12 +96,12 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "rays", COMPARISONS_FILE), "utf8"));
   const sets = (rung: string, mode: string): ComparisonSet[] =>
     file.comparisons.filter((set) => set.rung === rung && set.mode === mode);
-  for (const rung of ["r2", "r3"]) {
+  for (const rung of ["ray-trace", "optical-path"]) {
     assert.equal(sets(rung, "reference-vs-each").length, 2, "one set for each field");
     for (const set of sets(rung, "reference-vs-each")) {
       const [bent, twin] = set.pairs;
       assert.deepEqual([bent.b, bent.verdict, bent.metrics], ["ref-bent", "BLOCKED", []]);
-      assert.equal(bent.reason, "not judged: rung r0 failed for ref and ref-bent on this case");
+      assert.equal(bent.reason, "not judged: rung built-system failed for ref and ref-bent on this case");
       // The faithful copy is the same arithmetic on the same rays: every figure is 0, and no ray is in doubt.
       assert.deepEqual([twin.b, twin.verdict], ["ref-twin", "PASS"]);
       for (const metric of twin.metrics) {
@@ -110,7 +110,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
     }
   }
   // A probe lattice has no chief ray: the path relative to one is not measured, and the pair says so and passes.
-  const [path] = sets("r3", "pairwise").map((set) =>
+  const [path] = sets("optical-path", "pairwise").map((set) =>
     set.pairs.find((pair) => pair.a === "ref" && pair.b === "ref-twin"),
   );
   assert.equal(path?.reason, "opd.maxAbs was not measured: the set has no chief ray");
@@ -119,7 +119,7 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
     ["opticalPath.maxAbs", "opticalPathToImage.maxAbs"],
   );
   // Rays were compared: a twelve-by-twelve lattice over the front element, of which the stop passes the middle.
-  const [geometry] = sets("r2", "pairwise").map((set) => set.pairs.find((pair) => pair.b === "ref-twin"));
+  const [geometry] = sets("ray-trace", "pairwise").map((set) => set.pairs.find((pair) => pair.b === "ref-twin"));
   const count = geometry?.metrics.find((metric) => metric.name === "rays.compared")?.value ?? 0;
   assert.ok(count >= 8 && count < 144, String(count));
   // The field of the set is in every place a metric occurs at.
@@ -128,12 +128,15 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   const reported = await lvrtc(rootDir, "report", "rays");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const markdown = readFileSync(join(rootDir, "runs", "rays", REPORT_MARKDOWN_FILE), "utf8");
-  assert.match(markdown, /^#### Ray trace — `r2`, request 1 of 2$/m);
+  assert.match(markdown, /^#### Ray trace — `ray-trace`, request 1 of 2$/m);
   assert.match(
     markdown,
     /^Quantity `rays\.trace`: one estimator on each engine's trace of the same rays; held to a limit\. /m,
   );
-  assert.match(markdown, /^\| ref-bent \| — \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed /m);
+  assert.match(
+    markdown,
+    /^\| ref-bent \| — \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung built-system failed /m,
+  );
   assert.match(markdown, /^\| rays\.blocked\[0\] \| \d+ \| \d+ \| \d+ \|$/m);
   // The real policy has no floor: requesting a digest is refused explicitly.
   const digest = await lvrtc(rootDir, "report", "rays", "--floor", "digest");
@@ -162,14 +165,14 @@ test("compare reads each case from the run directory, and a case that is not the
   // Without its case a rung of traced rays cannot be judged: every pair of it is an error that says why.
   const compared = await lvrtc(rootDir, "compare", "rays");
   assert.equal(compared.code, EXIT_FAILURE);
-  assert.match(compared.out, /^double-gauss +r0 +every pair +ref +ref-twin +Pass$/m);
+  assert.match(compared.out, /^double-gauss +built-system +every pair +ref +ref-twin +Pass$/m);
   assert.match(
     compared.out,
-    /^double-gauss +r2 +every pair +ref +ref-twin +Error +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
+    /^double-gauss +ray-trace +every pair +ref +ref-twin +Error +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
   );
   assert.match(
     compared.out,
-    /^double-gauss +r3 +every pair +ref +ref-twin +Error +the request and its case are not at hand: /m,
+    /^double-gauss +optical-path +every pair +ref +ref-twin +Error +the request and its case are not at hand: /m,
   );
   writeFileSync(file, original);
   assert.equal((await lvrtc(rootDir, "compare", "rays")).code, EXIT_OK);
@@ -188,8 +191,8 @@ function bentEngine(bend: Omit<BentOptions, "id">): EngineMaker {
 /** The comparator's own policy with an R0 that blocks nothing, so that the rungs behind it speak for themselves. */
 function unblocking(): Policy {
   const own = loadPolicy();
-  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
-  return { ...own, rungs: { ...own.rungs, r0 } };
+  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs["built-system"];
+  return { ...own, rungs: { ...own.rungs, "built-system": r0 } };
 }
 
 /** The R2 and R3 pairs of `ref` against a bent copy, for each of two fields of the Double-Gauss, R0 not blocking. */
@@ -203,7 +206,7 @@ async function against(
   const run = {
     name: "one",
     opticalCase,
-    rungs: ["r0", "r2", "r3"],
+    rungs: ["built-system", "ray-trace", "optical-path"],
     fields: { kind: "angles-deg", values: [0, 10] } as const,
     sampling: { bundleGrid: 16 },
   };
@@ -226,7 +229,7 @@ async function against(
   });
   const pairsOf = (rung: string): PairComparison[] =>
     file.comparisons.filter((set) => set.rung === rung).map((set) => set.pairs[0]);
-  return { r2: pairsOf("r2"), r3: pairsOf("r3"), manifest, store };
+  return { r2: pairsOf("ray-trace"), r3: pairsOf("optical-path"), manifest, store };
 }
 
 function metricOf(pair: PairComparison, name: string): number {

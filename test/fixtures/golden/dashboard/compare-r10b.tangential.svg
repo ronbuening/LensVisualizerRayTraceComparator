@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="516" viewBox="0 0 640 516" role="img">
-<title>stand-in-tabs, lens, r10b: Tangential focus shift (mm) against Field angle (degrees)</title>
+<title>stand-in-tabs, lens, field-curve-vs-optiland: Tangential focus shift (mm) against Field angle (degrees)</title>
 <desc>Each side-by-side comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or wavelength the comparison sorts as of two methods (repeated by this tool&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the review band the limits file at hand gives the value&#39;s figure, and a chart says where it gives none. 0: set aside (the inputs differ: indices-differ), so no difference is drawn. 10: set aside (the inputs differ: indices-differ), so no difference is drawn. 20: set aside (not computed by one engine: an engine has no curve of the field), so no difference is drawn.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
@@ -105,7 +105,7 @@
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
 <rect class="bg" x="0" y="0" width="640" height="516"/>
-<text x="12" y="20" class="head">stand-in-tabs, lens, r10b: Tangential focus shift (mm) against Field angle (degrees)</text>
+<text x="12" y="20" class="head">stand-in-tabs, lens, field-curve-vs-optiland: Tangential focus shift (mm) against Field angle (degrees)</text>
 <line class="grid" x1="76" y1="236" x2="624" y2="236"/>
 <text x="70" y="240" class="muted" text-anchor="end">0</text>
 <line class="grid" x1="76" y1="186" x2="624" y2="186"/>
@@ -153,7 +153,7 @@
 <line class="axis" x1="76" y1="280" x2="76" y2="390"/>
 <text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
 <text x="350" y="424" text-anchor="middle">Field angle (degrees)</text>
-<rect class="band" x="76" y="307.5" width="548" height="55"><title>review band ±1.00e-5: policy/compare-policy.json /rungs/r10b/metrics/tangentialShift.maxAbs/attention</title></rect>
+<rect class="band" x="76" y="307.5" width="548" height="55"><title>review band ±1.00e-5: policy/compare-policy.json /rungs/field-curve-vs-optiland/metrics/tangentialShift.maxAbs/attention</title></rect>
 <line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
 <polyline class="line s0" points="76,236 350,138.34 624,40.69"/>
 <circle class="dot s0" cx="76" cy="236" r="4"><title>LensVisualizer, 587.5618 nm at 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/fieldAngleDeg/0): 0 (r10b-stand-ins/comparisons.json /comparisons/0/participants/0/recorded/tangentialShiftMm/0)</title></circle>

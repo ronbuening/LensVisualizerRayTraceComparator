@@ -32,7 +32,7 @@ const TEXT = DASHBOARD_TEXT.charts;
 export type StoreReader = (key: string) => Loaded<StoreEntry>;
 
 /** The rung whose `rays.trace` requests have a per-surface deviation chart. */
-export const DEVIATION_RUNG = "r2";
+export const DEVIATION_RUNG = "ray-trace";
 /** The metric of R2 the largest bar of a deviation chart is held to, and whose tolerance is its line. */
 export const DEVIATION_METRIC = "hits.maxDistance";
 /** The most runs a heat map draws a row for; a run directory or a baseline of more has none on its page. */

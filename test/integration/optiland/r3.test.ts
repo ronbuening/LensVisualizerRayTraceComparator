@@ -303,7 +303,7 @@ test(
       suite: "suite.json",
       name: "made-for-r3",
       engines: "ref,optiland",
-      rungs: "r2,r3",
+      rungs: "ray-trace,optical-path",
       root: rootDir,
     });
     const { manifest } = cycle;
@@ -333,8 +333,8 @@ test(
 function assertTracedOnce(jobs: readonly { rung: string; storeKey: string | null }[]): void {
   const answered = (rung: string): (string | null)[] =>
     jobs.filter((job) => job.rung === rung).map((job) => job.storeKey);
-  assert.ok(answered("r3").length > 0 && !answered("r3").includes(null));
-  assert.deepEqual(answered("r3"), answered("r2"), "the answer of a set to R3 is its answer to R2");
+  assert.ok(answered("optical-path").length > 0 && !answered("optical-path").includes(null));
+  assert.deepEqual(answered("optical-path"), answered("ray-trace"), "the answer of a set to R3 is its answer to R2");
 }
 
 /**
@@ -343,7 +343,7 @@ function assertTracedOnce(jobs: readonly { rung: string; storeKey: string | null
  * judged is `PASS`. Says the largest figure of each pair of engines, with its run and its place.
  */
 function assertR4(t: TestContext, suite: string, comparisons: ComparisonFile, runs: number): void {
-  const pairs = pairsOf(comparisons, "r4", RAYS_TRACE);
+  const pairs = pairsOf(comparisons, "geometric-mtf", RAYS_TRACE);
   // Three fields a run, each once whatever the number of its lines, and three pairs of engines.
   assert.equal(pairs.length, 3 * 3 * runs);
   const worst = new Map<string, { value: number; at: string }>();
@@ -363,7 +363,7 @@ function assertR4(t: TestContext, suite: string, comparisons: ComparisonFile, ru
 
 /**
  * A suite on rungs R0 to R4 by all three engines: what Phase 2 states as its benchmark,
- * `lvrtc run <suite> --engines lv,ref,optiland --rungs r0,r1,r2,r3`, with the rung of Phase 3 that asks the same
+ * `lvrtc run <suite> --engines lv,ref,optiland --checks built-system,first-order,ray-trace,optical-path`, with the rung of Phase 3 that asks the same
  * requests, R4, beside them; then `lvrtc compare`, which must find no failure on any rung. R3 and R4 are then held
  * pair by pair; R0, R1 and R2 have tests of their own.
  */
@@ -375,7 +375,7 @@ function everyRung(
     suite: rungSuite(t, suite),
     name: suite,
     engines: "lv,ref,optiland",
-    rungs: "r0,r1,r2,r3,r4",
+    rungs: "built-system,first-order,ray-trace,optical-path,geometric-mtf",
   });
   const { manifest } = cycle;
   assert.deepEqual(
@@ -387,7 +387,7 @@ function everyRung(
   assert.equal(manifest.jobs.length, 3 * (2 * manifest.runs.length + 3 * sets));
   assertTracedOnce(manifest.jobs);
   const answers = (rung: string) => manifest.jobs.filter((job) => job.rung === rung).map((job) => job.storeKey);
-  assert.deepEqual(answers("r4"), answers("r2"), "the answer of a set to R4 is its answer to R2");
+  assert.deepEqual(answers("geometric-mtf"), answers("ray-trace"), "the answer of a set to R4 is its answer to R2");
   assertR4(t, suite, cycle.comparisons, manifest.runs.length);
   const paths = assertR3(t, suite, cycle.comparisons);
   assert.equal(paths.pairs.length, 3 * sets);

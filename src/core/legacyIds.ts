@@ -1,14 +1,44 @@
 // The ids a check or an engine had before it was renamed, and what each is called now. A run, a suite, a command
 // line or a committed baseline written before a rename still names the old id; each is read through these maps, so
-// that nothing with an old id is persisted again or enters a key. Both maps are empty until the renames land.
+// that nothing with an old id is persisted again or enters a key. The check ids are renamed (Stage 9.7); the engine
+// map is empty until the engine ids are (Stage 9.8).
 //
 // This file imports nothing and is in no engine's import closure: no fingerprint or adapter revision moves for it.
 // It is never applied where the catalog snapshot is held to its frozen policy and known failures (`parseBaseline`,
 // `readCatalogInputs`, `readKnownFailures`, `classifyCatalog`, `unusedKnownFailures`, `baselineGateProblems`), nor to
 // the catalog's own reports: the catalog keeps its ids as written until the end-of-project catalog refresh.
 
-/** Old check id to new check id. Empty: no check has been renamed. */
-export const LEGACY_CHECK_IDS: Readonly<Record<string, string>> = Object.freeze({});
+/**
+ * Old check id to new check id (Stage 9.7): a check held to a limit is named after what it compares, a side-by-side
+ * comparison `<analysis>-vs-<counterpart>`. The catalog snapshot, its known failures and reproducers keep the old ids.
+ */
+export const LEGACY_CHECK_IDS: Readonly<Record<string, string>> = Object.freeze({
+  selftest: "pipeline-echo",
+  r0: "built-system",
+  r1: "first-order",
+  r2: "ray-trace",
+  r3: "optical-path",
+  r4: "geometric-mtf",
+  r4f: "lv-mtf-replay",
+  r5: "mtf-vs-optiland-fft",
+  r5g: "geometric-mtf-vs-optiland",
+  r6a: "wave-mtf",
+  r6b: "mtf-vs-wave-estimate",
+  r6c: "mtf-vs-optiland-wavefront",
+  r7a: "spot-rays",
+  r7b: "spot-vs-optiland",
+  r8a: "axial-rays",
+  r8b: "axial-vs-optiland",
+  r9a: "chief-rays",
+  r9b: "chief-vs-optiland",
+  r10a: "field-curve-rays",
+  r10b: "field-curve-vs-optiland",
+  r11a: "vignetting-rays",
+  r11b: "vignetting-vs-flux-estimate",
+  r12b: "summary-vs-optiland",
+  r13b: "seidel-vs-optiland",
+  r14b: "zernike-vs-optiland",
+});
 
 /** Old engine id to new engine id. Empty: no engine has been renamed. */
 export const LEGACY_ENGINE_IDS: Readonly<Record<string, string>> = Object.freeze({});
@@ -219,6 +249,34 @@ export function legacyEngineId(id: string, maps: LegacyMaps = LEGACY_IDS): strin
  */
 export function snapshotIds<T extends BaselineIds>(baseline: T, maps: LegacyMaps = LEGACY_IDS): T {
   return currentIds(baseline, inverseMaps(maps));
+}
+
+/**
+ * A policy, or anything whose entries are keyed by check under `rungs`, with each entry under the id `map` gives it
+ * (an id it does not name keeps its own): every other member is kept, and the order of the entries. The same object
+ * where no id is mapped. A pure function.
+ */
+export function policyAtIds<T extends { readonly rungs: Readonly<Record<string, unknown>> }>(
+  policy: T,
+  map: Readonly<Record<string, string>>,
+): T {
+  if (!Object.keys(policy.rungs).some((id) => Object.hasOwn(map, id))) return policy;
+  return {
+    ...policy,
+    rungs: Object.fromEntries(Object.entries(policy.rungs).map(([id, entry]) => [currentCheckId(id, map), entry])),
+  };
+}
+
+/**
+ * The policy at hand in the id space of a dated snapshot written before the renames (the catalog's): its entries
+ * under their old ids, as `snapshotIds` reads today's run back, so that the snapshot's records are judged by the
+ * limits of their own checks.
+ */
+export function snapshotPolicyIds<T extends { readonly rungs: Readonly<Record<string, unknown>> }>(
+  policy: T,
+  maps: LegacyMaps = LEGACY_IDS,
+): T {
+  return policyAtIds(policy, inverseMaps(maps).checks);
 }
 
 // ── Run directories ──────────────────────────────────────────────────────────────────────────────────────────────

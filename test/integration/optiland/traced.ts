@@ -44,7 +44,7 @@ export function f8(wire: RaysTraceData[keyof RaysTraceData]): number[] {
 /** How the rays of each engine ended, over every ray set of a rung of traced rays. */
 export function rayCounts(
   comparisons: ComparisonFile,
-  rung: "r2" | "r3" = "r2",
+  rung: "ray-trace" | "optical-path" = "ray-trace",
 ): Record<string, { ok: number; blocked: number; failed: number }> {
   const counts: Record<string, { ok: number; blocked: number; failed: number }> = {};
   for (const set of comparisons.comparisons) {
@@ -76,7 +76,7 @@ export interface R2Summary {
  */
 export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summary {
   const { comparisons } = cycle;
-  const pairs = pairsOf(comparisons, "r2", RAYS_TRACE);
+  const pairs = pairsOf(comparisons, "ray-trace", RAYS_TRACE);
   assert.ok(pairs.length > 0);
   const verdicts: Record<string, number> = {};
   for (const pair of pairs) {
@@ -119,7 +119,7 @@ export function assertR2(t: TestContext, label: string, cycle: RunCycle): R2Summ
 
 /** Check each failed ray against stored answers, never aggregate counts or the pair's surviving-ray mask alone. */
 function assertBlockedFailures(t: TestContext, label: string, cycle: RunCycle): number {
-  const jobs = cycle.manifest.jobs.filter((job) => job.rung === "r2");
+  const jobs = cycle.manifest.jobs.filter((job) => job.rung === "ray-trace");
   const answer = (run: string, requestId: string, engine: string): RaysTraceData => {
     const job = jobs.find((job) => job.run === run && job.requestId === requestId && job.engine === engine);
     assert.ok(
@@ -181,7 +181,7 @@ const NO_CHIEF = /opd\.maxAbs was not measured: (the set has no chief ray|the ch
  * Says, for each two engines, the largest of each figure and where it is: the run, the line, the field, the ray.
  */
 export function assertR3(t: TestContext, label: string, comparisons: ComparisonFile): R3Summary {
-  const pairs = pairsOf(comparisons, "r3", RAYS_TRACE);
+  const pairs = pairsOf(comparisons, "optical-path", RAYS_TRACE);
   assert.ok(pairs.length > 0);
   const verdicts: Record<string, number> = {};
   const withoutChief = new Set<string>();
@@ -391,7 +391,10 @@ export function figuresOf(pairs: readonly RungPair[]): Map<string, RungPair> {
 }
 
 /** The stored answer of each ray set that optiland gave on a rung of traced rays in a run, by request id. */
-export function optilandAnswers(cycle: RunCycle, rung: "r2" | "r3" = "r2"): Map<string, RaysTraceData> {
+export function optilandAnswers(
+  cycle: RunCycle,
+  rung: "ray-trace" | "optical-path" = "ray-trace",
+): Map<string, RaysTraceData> {
   const answers = new Map<string, RaysTraceData>();
   for (const job of cycle.manifest.jobs) {
     if (job.engine !== "optiland" || job.rung !== rung || job.storeKey === null) continue;

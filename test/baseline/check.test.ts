@@ -107,11 +107,11 @@ test("the report of a baseline: verdicts by run and by request, the worst figure
   assert.deepEqual(renderBaselineReport(JSON.parse(baselineText(BASELINE_RAYS))), { markdown, json });
   assert.match(
     markdown,
-    /^\| Ray trace — `r2` \| `rays\.trace` \| 1 \| 2 \| lv – ref \| 1 Within a numerical floor \| 1 Pass; 1 Within a numerical floor \|$/m,
+    /^\| Ray trace — `ray-trace` \| `rays\.trace` \| 1 \| 2 \| lv – ref \| 1 Within a numerical floor \| 1 Pass; 1 Within a numerical floor \|$/m,
   );
   assert.match(
     markdown,
-    /^\| First-order data — `r1` \| other \| 1 not computed \(quantity paraxial\.first-order\) \|$/m,
+    /^\| First-order data — `first-order` \| other \| 1 not computed \(quantity paraxial\.first-order\) \|$/m,
   );
   assert.match(
     markdown,

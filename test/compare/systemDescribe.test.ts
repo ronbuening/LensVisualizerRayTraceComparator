@@ -15,7 +15,7 @@ import type { NdArrayWire } from "../../src/core/numeric/ndarray.ts";
 import { systemDescribeQuantity } from "../../src/quantities/systemDescribe.ts";
 import { DESCRIBE_DATA_ASPHERE, DESCRIBE_DATA_SINGLET } from "../contract/corpus.ts";
 
-const R0 = loadPolicy().rungs.r0;
+const R0 = loadPolicy().rungs["built-system"];
 /** Two surfaces, two lines, two radii each: a paraboloid with two terms, and a ball whose second sag is a NaN. */
 const BASE: SystemDescribeData = DESCRIBE_DATA_ASPHERE;
 

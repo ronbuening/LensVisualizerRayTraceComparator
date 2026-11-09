@@ -40,7 +40,7 @@ const rung: RungDefinition = {
   },
 };
 const followUp: FollowUp = {
-  rung: "selftest",
+  rung: "pipeline-echo",
   engine: "fake-stdio",
   step: "fine",
   options: { fine: true },
@@ -74,7 +74,7 @@ for (const dies of [false, true]) {
       const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: runsDir } });
       const seen: unknown[] = [];
       const result = await runSuite({
-        suite: pairSuite({ engines: ["fake-a", "fake-b", "fake-stdio"], rungs: ["selftest"] }),
+        suite: pairSuite({ engines: ["fake-a", "fake-b", "fake-stdio"], rungs: ["pipeline-echo"] }),
         registry:
           jobs === 1
             ? createEngineRegistry(loaded)
@@ -316,7 +316,7 @@ test("a Node pool slot dying retires its engine without replacing the slot; othe
       },
     };
     const result = await runSuite({
-      suite: pairSuite({ engines: ["fake-a", "fake-b"], rungs: ["selftest"] }),
+      suite: pairSuite({ engines: ["fake-a", "fake-b"], rungs: ["pipeline-echo"] }),
       registry: jobs === 1 ? serial : createProcessRegistry(loaded, jobs),
       jobs,
       runsDir,
@@ -352,7 +352,7 @@ test("a store publication failure rejects serial and pooled suites rather than b
     mkdirSync(runsDir);
     writeFileSync(join(runsDir, "store"), "a file cannot be a store directory");
     const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: runsDir } });
-    const suite = pairSuite({ engines: ["fake-a"], rungs: ["selftest"] });
+    const suite = pairSuite({ engines: ["fake-a"], rungs: ["pipeline-echo"] });
     await assert.rejects(
       runSuite({
         suite,
@@ -384,12 +384,12 @@ test("cached duplicates remain answers after the last Node slot dies", async (t)
     const runsDir = join(root, pool ? "pooled" : "serial");
     const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: runsDir } });
     const base = createEngineRegistry(loaded);
-    const suite = pairSuite({ engines: ["fake-a"], rungs: ["selftest", "repeat"] });
+    const suite = pairSuite({ engines: ["fake-a"], rungs: ["pipeline-echo", "repeat"] });
     await runSuite({
       suite: { ...suite, runs: [suite.runs[1]] },
       registry: base,
       runsDir,
-      rungs: ["selftest"],
+      rungs: ["pipeline-echo"],
       rungDefinitions: [{ ...rung, buildRequests: (...args) => rung.buildRequests(...args).slice(0, 4) }],
     });
     let gone = false;
@@ -452,14 +452,16 @@ test("duplicate outcome reuse invalidates a store file corrupted between rungs",
     const loaded = loadConfig({ rootDir: root, env: { LVRTC_RUNS_DIR: runsDir } });
     let damaged = false;
     const result = await runSuite({
-      suite: pairSuite({ engines: ["fake-a"], rungs: ["selftest", "repeat"] }),
+      suite: pairSuite({ engines: ["fake-a"], rungs: ["pipeline-echo", "repeat"] }),
       runsDir,
       jobs,
       registry: jobs === 1 ? createEngineRegistry(loaded) : createProcessRegistry(loaded, jobs),
       rungDefinitions: [selftestRung, { ...selftestRung, id: "repeat" }],
-      followUps: [{ rung: "selftest", engine: "fake-a", step: "unused", options: { fine: true }, needed: () => false }],
+      followUps: [
+        { rung: "pipeline-echo", engine: "fake-a", step: "unused", options: { fine: true }, needed: () => false },
+      ],
       onJob: ({ job }) => {
-        if (!damaged && job.rung === "selftest") {
+        if (!damaged && job.rung === "pipeline-echo") {
           damaged = true;
           writeFileSync(join(runsDir, "store", `${job.storeKey}.json.gz`), "broken gzip");
         }
@@ -514,7 +516,7 @@ test("a deferred invalid-data retry is admitted before a later terminal failure"
         };
       },
     };
-    const suite = pairSuite({ engines: ["fake-a"], rungs: ["selftest", "repeat", "death"] });
+    const suite = pairSuite({ engines: ["fake-a"], rungs: ["pipeline-echo", "repeat", "death"] });
     const first = {
       ...rung,
       buildRequests: (...args: Parameters<typeof rung.buildRequests>) => rung.buildRequests(...args).slice(0, 3),
@@ -533,7 +535,7 @@ test("a deferred invalid-data retry is admitted before a later terminal failure"
     assert.deepEqual(
       result.manifest.jobs.filter((job) => job.status === "error").map((job) => [job.rung, job.error?.code]),
       [
-        ["selftest", "invalid-data"],
+        ["pipeline-echo", "invalid-data"],
         ["repeat", "invalid-data"],
         ["death", "transport-error"],
       ],

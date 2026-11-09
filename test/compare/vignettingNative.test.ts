@@ -19,7 +19,7 @@ import type { JsonObject } from "../../src/contract/json.ts";
 import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { VignettingNativeData, VignettingNativeField } from "../../src/contract/quantities/vignettingNative.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r11b;
+const POLICY: RungPolicy = loadPolicy().rungs["vignetting-vs-flux-estimate"];
 
 function field(fieldAngleDeg: number, more: Partial<VignettingNativeField> = {}): VignettingNativeField {
   return {

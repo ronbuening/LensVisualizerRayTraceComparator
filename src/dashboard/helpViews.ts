@@ -78,7 +78,8 @@ export interface CheckLimitView {
 /** One check as the checks page shows it. */
 export interface CheckView {
   readonly id: string;
-  readonly newId: string;
+  /** The id it had before the ids were renamed. */
+  readonly oldId: string;
   readonly title: string;
   readonly kind: CheckKind;
   readonly compares: string;
@@ -113,7 +114,7 @@ export function buildChecksView(policy: Loaded<PolicyAtHand>): ChecksView {
         : optionalFigureAt(document, atHand.policy, ["rungs", currentCheckId(check.id), "metrics", metric, member]);
     return {
       id: json.id,
-      newId: json.newId,
+      oldId: json.oldId,
       title: json.title,
       kind: json.kind,
       compares: json.compares,

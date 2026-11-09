@@ -54,7 +54,7 @@ function writeSuite(rootDir: string, runs: readonly string[] = ["singlet", "doub
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "pair",
-    defaults: { rungs: ["selftest"] },
+    defaults: { rungs: ["pipeline-echo"] },
     runs: runs.map((name) => ({ name, lens: { kind: "fixture", path: `cases/${name}.json` } })),
   };
   mkdirSync(join(rootDir, "suites"), { recursive: true });
@@ -177,7 +177,7 @@ test("write, then verify: the baseline is valid, canonical and keyed on run name
   const policy = loadPolicy();
   assert.equal(baseline.policy.version, policy.version);
   const [rung] = baseline.runs[0].rungs;
-  assert.deepEqual([rung.rung, rung.quantity, rung.requests], ["selftest", "selftest.echo", 1]);
+  assert.deepEqual([rung.rung, rung.quantity, rung.requests], ["pipeline-echo", "selftest.echo", 1]);
   assert.deepEqual(rung.support, [
     { engine: "fake-a", status: "ok" },
     { engine: "fake-near", status: "ok" },
@@ -199,7 +199,7 @@ test("write, then verify: the baseline is valid, canonical and keyed on run name
   assert.match(markdown, /^# Baseline of pair: the ray checks$/m);
   assert.match(
     markdown,
-    /^\| Pipeline echo \(a test of this tool\) — `selftest` \| `selftest\.echo` \| 2 \| 2 \| fake-a – fake-near \| 2 Pass \| 2 Pass \|$/m,
+    /^\| Pipeline echo \(a test of this tool\) — `pipeline-echo` \| `selftest\.echo` \| 2 \| 2 \| fake-a – fake-near \| 2 Pass \| 2 Pass \|$/m,
   );
   assert.match(markdown, /^\| singlet \| 1 \| Pass: (sum\.abs|values\.maxAbs) \d\.\d\de-1\d \|$/m);
   assert.equal(JSON.parse(json).kind, "baseline-report");
@@ -273,11 +273,11 @@ test("check: an engine with another fingerprint is STALE(engine); what still hol
   assert.deepEqual(said.stale, { case: 0, engine: 2, policy: 0 });
   assert.ok(said.records.every((record) => record.stale.join() === "engine"));
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
-  assert.match(lines.out, /^Checks: selftest Pipeline echo \(a test of this tool\)$/m);
+  assert.match(lines.out, /^Checks: pipeline-echo Pipeline echo \(a test of this tool\)$/m);
   assert.match(lines.out, /^Engines: fake-a, fake-near \(defined in this configuration\)$/m);
   assert.match(
     lines.out,
-    /^singlet +selftest +fake-a +fake-near +Out of date, still within limits \(engine code changed\) +Pass$/m,
+    /^singlet +pipeline-echo +fake-a +fake-near +Out of date, still within limits \(engine code changed\) +Pass$/m,
   );
   assert.match(lines.out, /^pair: 2 records: 2 Out of date, still within limits$/m);
   assert.match(lines.out, /^pair: out of date: engine code changed in 2 records$/m);
@@ -316,7 +316,7 @@ test("check: a run whose case is another is STALE(case), the others stay OK", as
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
   assert.match(
     lines.out,
-    /^singlet +selftest +fake-a +fake-near +Out of date, still within limits \(lens data changed\) +Pass$/m,
+    /^singlet +pipeline-echo +fake-a +fake-near +Out of date, still within limits \(lens data changed\) +Pass$/m,
   );
   assert.match(lines.out, /^pair: out of date: lens data changed in 1 record$/m);
   assert.doesNotMatch(lines.out, /^double-gauss /m);
@@ -339,7 +339,7 @@ test("check: an engine whose answers moved past the tolerance is DRIFT, stale or
   assert.equal(lines.code, EXIT_FAILURE);
   assert.match(
     lines.out,
-    /^singlet +selftest +fake-a +fake-near +Changed beyond limits \(engine code changed\) +Fail +verdicts were 1 Pass — now 1 Fail \| .*\(limit 1\.00e-12\)/m,
+    /^singlet +pipeline-echo +fake-a +fake-near +Changed beyond limits \(engine code changed\) +Fail +verdicts were 1 Pass — now 1 Fail \| .*\(limit 1\.00e-12\)/m,
   );
   assert.match(lines.out, /^ {2}Changed beyond limits: in a check held to a limit a verdict changed/m);
   assert.match(lines.out, /^ {2}A pair fails, or ends in an error, today\.$/m);
@@ -349,7 +349,7 @@ test("check: an engine whose answers moved past the tolerance is DRIFT, stale or
   const before = filesOf(rootDir);
   const refused = await lvrtc(rootDir, ["baseline", "write", "pair"]);
   assert.equal(refused.code, EXIT_FAILURE);
-  assert.match(refused.err, /^lvrtc baseline: singlet selftest fake-a fake-near FAIL$/m);
+  assert.match(refused.err, /^lvrtc baseline: singlet pipeline-echo fake-a fake-near FAIL$/m);
   assert.deepEqual(filesOf(rootDir), before);
 
   // An engine that states the fingerprint it had and answers otherwise: nothing is stale, and it drifted. The
@@ -376,8 +376,8 @@ test("check: a run the baseline lacks is NEW, one the suite lacks is GONE; neith
   writeSuite(rootDir, ["singlet", "third"]);
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
   assert.equal(lines.code, EXIT_OK, lines.err);
-  assert.match(lines.out, /^double-gauss +selftest +fake-a +fake-near +No longer run$/m);
-  assert.match(lines.out, /^third +selftest +fake-a +fake-near +New +Pass$/m);
+  assert.match(lines.out, /^double-gauss +pipeline-echo +fake-a +fake-near +No longer run$/m);
+  assert.match(lines.out, /^third +pipeline-echo +fake-a +fake-near +New +Pass$/m);
   assert.match(lines.out, /^pair: the suite file is not the one the committed results name/m);
   assert.match(lines.out, /^pair: 3 records: 1 Unchanged, 1 New, 1 No longer run$/m);
 });
@@ -553,7 +553,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
     runs,
   };
   writeFileSync(join(rootDir, "suites", "lenses.json"), JSON.stringify(suite));
-  const ran = child(rootDir, "run", join(rootDir, "suites", "lenses.json"), "--rungs", "r0,r1");
+  const ran = child(rootDir, "run", join(rootDir, "suites", "lenses.json"), "--checks", "built-system,first-order");
   assert.equal(ran.code, EXIT_OK, ran.err);
   assert.equal(child(rootDir, "compare", "lenses").code, EXIT_OK);
   const wrote = child(rootDir, "baseline", "write", "lenses");
@@ -583,8 +583,14 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   writeFileSync(lens, lensText.replace("R: 50, d: 4", "R: 51, d: 4"));
   const staleCase = child(rootDir, "baseline", "check", "lenses");
   assert.equal(staleCase.code, EXIT_OK, staleCase.err + staleCase.out);
-  assert.match(staleCase.out, /^singlet +r0 +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m);
-  assert.match(staleCase.out, /^singlet +r1 +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m);
+  assert.match(
+    staleCase.out,
+    /^singlet +built-system +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m,
+  );
+  assert.match(
+    staleCase.out,
+    /^singlet +first-order +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m,
+  );
   assert.match(staleCase.out, /^lenses: 6 records: 4 Unchanged, 2 Out of date, still within limits$/m);
   assert.match(staleCase.out, /^lenses: out of date: lens data changed in 2 records$/m);
   // verify reads no engine and cannot see it.
@@ -710,7 +716,7 @@ test("catalog CLI refuses unknown FAILs, writes listed FAILs, and checks unchang
             metric: m.name,
             class: "numerical",
             gotcha: "docs/gotchas.md#artificial-example",
-            reproducer: "node bin/lvrtc.mjs run suites/catalog-repro/artificial.json --rungs selftest --jobs 1",
+            reproducer: "node bin/lvrtc.mjs run suites/catalog-repro/artificial.json --checks pipeline-echo --jobs 1",
             evidenceHash: failureEvidence(rung.requests, pair),
           })),
       ),

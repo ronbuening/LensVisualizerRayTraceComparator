@@ -125,10 +125,16 @@ test("the summary counts the pairs of each mode by verdict, and says how many fa
 
 test("the support matrix has a row per request and a cell per engine, from the manifest alone", () => {
   assert.deepEqual(rowsStarting(MARKDOWN, "tele").slice(1), [
-    ["tele", "r5, request 1 of 2", "ok", "ok", "error: spawn-failed"],
-    ["tele", "r5, request 2 of 2", "ok", "unsupported: feature surface.asphere.odd, option a\\|b", "—"],
-    ["tele", "r0", "ok", "pending", "—"],
-    ["tele", "r1", "ok", "ok", "—"],
+    ["tele", "mtf-vs-optiland-fft, request 1 of 2", "ok", "ok", "error: spawn-failed"],
+    [
+      "tele",
+      "mtf-vs-optiland-fft, request 2 of 2",
+      "ok",
+      "unsupported: feature surface.asphere.odd, option a\\|b",
+      "—",
+    ],
+    ["tele", "built-system", "ok", "pending", "—"],
+    ["tele", "first-order", "ok", "ok", "—"],
   ]);
   const nothingCompared = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [] }, POLICY);
   assert.deepEqual(nothingCompared.support, MODEL.support);
@@ -158,12 +164,12 @@ test("a section has the policy's metrics by name, then any other, each with its 
 test("a gated metric shows its tolerance with its unit", () => {
   const gated: ComparisonFile = {
     ...COMPARISONS,
-    comparisons: [{ ...COMPARISONS.comparisons[2], rung: "r2", quantity: "rays.trace" }],
+    comparisons: [{ ...COMPARISONS.comparisons[2], rung: "ray-trace", quantity: "rays.trace" }],
   };
   const model = buildReport(MANIFEST, gated, POLICY);
   assert.deepEqual(model.sections[0].columns, [{ name: "hits.max", unit: "mm", limit: 0, limitKind: "tolerance" }]);
-  const policy = { ...POLICY, rungs: { r2: POLICY.rungs.r2 } };
-  const set = { ...COMPARISONS.comparisons[0], rung: "r2", quantity: "rays.trace" };
+  const policy = { ...POLICY, rungs: { "ray-trace": POLICY.rungs["ray-trace"] } };
+  const set = { ...COMPARISONS.comparisons[0], rung: "ray-trace", quantity: "rays.trace" };
   const markdown = renderMarkdown(buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, policy));
   assert.match(
     markdown,
@@ -197,11 +203,15 @@ test("a figure that is shown and not judged stands beside the judged figure of t
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "PASS" } as const;
   const sets = [0, 1].map((index) => ({
     ...COMPARISONS.comparisons[index],
-    rung: "r1",
+    rung: "first-order",
     quantity: "paraxial.first-order",
     pairs: [pair],
   }));
-  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { r1 } });
+  const model = buildReport(
+    MANIFEST,
+    { ...COMPARISONS, comparisons: sets },
+    { ...POLICY, rungs: { "first-order": r1 } },
+  );
   const markdown = renderMarkdown(model);
 
   // The metrics the policy names, by name, each followed by the figure of the same subject that is only shown.
@@ -252,8 +262,8 @@ test("a figure that is shown and not judged stands beside the judged figure of t
     { name: "mask.failed", value: 0, unit: "rays" },
     { name: "mask.mismatches", value: 0, unit: "rays" },
   ];
-  const set = { ...sets[0], rung: "r2", quantity: "rays.trace", pairs: [{ ...pair, metrics: counts }] };
-  const rays = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, { ...POLICY, rungs: { r2 } });
+  const set = { ...sets[0], rung: "ray-trace", quantity: "rays.trace", pairs: [{ ...pair, metrics: counts }] };
+  const rays = buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, { ...POLICY, rungs: { "ray-trace": r2 } });
   assert.deepEqual(
     rays.sections[0].columns.map((column) => column.name),
     ["hits.maxDistance", "mask.mismatches", "mask.rimBand", "mask.failed", "rays.compared"],
@@ -284,11 +294,11 @@ test("a floor is a verdict of its own: counted apart from PASS, no failure, with
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "FLOOR", reason } as const;
   const sets = [0, 1].map((index) => ({
     ...COMPARISONS.comparisons[index],
-    rung: "r2",
+    rung: "ray-trace",
     quantity: "rays.trace",
     pairs: [pair],
   }));
-  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { r2 } });
+  const model = buildReport(MANIFEST, { ...COMPARISONS, comparisons: sets }, { ...POLICY, rungs: { "ray-trace": r2 } });
   const markdown = renderMarkdown(model);
 
   // The floor limit is in the heading of each metric that has one, after its tolerance; a metric of the policy
@@ -369,8 +379,14 @@ test("an engine of the comparator's own is listed with its adapter revision; a r
 test("a column shows the limit its rung is judged by: the band of a recorded rung, the tolerance of a gated one", () => {
   const limits = { tolerance: 1e-9, attention: 0.005, unit: "1" };
   const columnsOf = (rungClass: "gated" | "recorded"): unknown => {
-    const r5 = { ...POLICY.rungs.r5, mode: "direct" as const, class: rungClass, metrics: { "mtf.maxAbs": limits } };
-    return buildReport(MANIFEST, COMPARISONS, { ...POLICY, rungs: { r5 } }).sections[0].columns[0];
+    const r5 = {
+      ...POLICY.rungs["mtf-vs-optiland-fft"],
+      mode: "direct" as const,
+      class: rungClass,
+      metrics: { "mtf.maxAbs": limits },
+    };
+    return buildReport(MANIFEST, COMPARISONS, { ...POLICY, rungs: { "mtf-vs-optiland-fft": r5 } }).sections[0]
+      .columns[0];
   };
   assert.deepEqual(columnsOf("recorded"), { name: "mtf.maxAbs", unit: "1", limit: 0.005, limitKind: "attention" });
   assert.deepEqual(columnsOf("gated"), { name: "mtf.maxAbs", unit: "1", limit: 1e-9, limitKind: "tolerance" });
@@ -404,7 +420,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
   const counting = { quantity: "system.describe", mode: "direct", class: "gated" } as const;
   const policy = {
     ...POLICY,
-    rungs: { r0: { ...counting, metrics: { "shape.mismatches": { tolerance: 0, unit: "elements" } } } },
+    rungs: { "built-system": { ...counting, metrics: { "shape.mismatches": { tolerance: 0, unit: "elements" } } } },
   };
   const metrics: ComparisonMetric[] = [
     { name: "shape.mismatches", value: 12, unit: "elements", where: { field: "curvature", surface: 4 } },
@@ -412,7 +428,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
   ];
   const reason = "shape.mismatches 12 exceeds its tolerance 0 at field curvature, surface 4";
   const pair = { a: "lv", b: "optiland", metrics, class: "gated", verdict: "FAIL", reason } as const;
-  const set = { ...COMPARISONS.comparisons[0], rung: "r0", quantity: "system.describe", pairs: [pair] };
+  const set = { ...COMPARISONS.comparisons[0], rung: "built-system", quantity: "system.describe", pairs: [pair] };
   const markdown = renderMarkdown(buildReport(MANIFEST, { ...COMPARISONS, comparisons: [set] }, policy));
   assert.match(
     markdown,
@@ -429,7 +445,7 @@ test("a whole number is written in full, so a count and a limit of 0 read as wha
 
 test("a blocked pair is a row with its reason, and no metric", () => {
   const section = MODEL.sections[3];
-  assert.deepEqual([section.rung, section.mode, section.class], ["r1", "direct", "gated"]);
+  assert.deepEqual([section.rung, section.mode, section.class], ["first-order", "direct", "gated"]);
   assert.deepEqual(section.referenceVsEach, {
     reference: "lv",
     rows: [
@@ -437,7 +453,7 @@ test("a blocked pair is a row with its reason, and no metric", () => {
         engine: "optiland",
         metrics: [null],
         verdict: "BLOCKED",
-        reason: "not judged: rung r0 failed for lv and optiland on this case",
+        reason: "not judged: rung built-system failed for lv and optiland on this case",
       },
     ],
   });
@@ -445,7 +461,7 @@ test("a blocked pair is a row with its reason, and no metric", () => {
     "optiland",
     "—",
     "BLOCKED",
-    "not judged: rung r0 failed for lv and optiland on this case",
+    "not judged: rung built-system failed for lv and optiland on this case",
   ]);
   assert.match(MARKDOWN, /^\| Not judged \(an earlier check failed\) \| `BLOCKED` \| The pair is not judged/m);
 });
@@ -503,8 +519,8 @@ test("the worst metric is the one furthest past its limit, in units of the limit
     const policy = {
       ...POLICY,
       rungs: {
-        r5: {
-          ...POLICY.rungs.r5,
+        "mtf-vs-optiland-fft": {
+          ...POLICY.rungs["mtf-vs-optiland-fft"],
           metrics: {
             a: { attention: 10, unit: "1" },
             b: { attention: 0.1, unit: "1" },

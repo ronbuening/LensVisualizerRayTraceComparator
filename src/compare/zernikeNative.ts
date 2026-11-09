@@ -28,7 +28,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeFieldFacts, NativeFieldSorting } from "./mtfNative.ts";
 
 /** The rung of the engines' own Zernike fits. */
-export const ZERNIKE_NATIVE_RUNG = "r14b";
+export const ZERNIKE_NATIVE_RUNG = "zernike-vs-optiland";
 
 /** How far apart two answers' chief rays land, mm: the limit of the sorting, R5's name. */
 export const CHIEF_LANDING_METRIC = "chiefLanding.maxAbs";

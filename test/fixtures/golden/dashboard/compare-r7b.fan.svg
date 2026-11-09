@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="480" viewBox="0 0 640 480" role="img">
-<title>stand-in-tabs, singlet, r7b: tangential fan at field 0.75</title>
+<title>stand-in-tabs, singlet, spot-vs-optiland: tangential fan at field 0.75</title>
 <desc>One chart for each field: each engine&#39;s transverse error at each sample of its fan, as its result cache entry holds it, and below it the first engine&#39;s error minus the second&#39;s at each sample both landed.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
@@ -105,7 +105,7 @@
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
 <rect class="bg" x="0" y="0" width="640" height="480"/>
-<g><title>field 0.75: store/aa9c41c3df7ffd2258ef81cdbc0a7208a67ec1caeeca248048c7ebb0791f344e /result/data/fields/0/field</title><text x="12" y="20" class="head">stand-in-tabs, singlet, r7b: tangential fan at field 0.75</text></g>
+<g><title>field 0.75: store/aa9c41c3df7ffd2258ef81cdbc0a7208a67ec1caeeca248048c7ebb0791f344e /result/data/fields/0/field</title><text x="12" y="20" class="head">stand-in-tabs, singlet, spot-vs-optiland: tangential fan at field 0.75</text></g>
 <line class="grid" x1="76" y1="236" x2="624" y2="236"/>
 <text x="70" y="240" class="muted" text-anchor="end">-0.4</text>
 <line class="grid" x1="76" y1="196" x2="624" y2="196"/>
@@ -151,7 +151,7 @@
 <line class="axis" x1="76" y1="280" x2="76" y2="390"/>
 <text x="14" y="335" text-anchor="middle" transform="rotate(-90 14 335)">Difference</text>
 <text x="350" y="424" text-anchor="middle">Pupil coordinate</text>
-<rect class="band" x="76" y="335" width="548" height="0"><title>review band ±9.00e-10: policy/compare-policy.json /rungs/r7b/metrics/fanError.maxAbs/attention</title></rect>
+<rect class="band" x="76" y="335" width="548" height="0"><title>review band ±9.00e-10: policy/compare-policy.json /rungs/spot-vs-optiland/metrics/fanError.maxAbs/attention</title></rect>
 <line class="zeroline" x1="76" y1="335" x2="624" y2="335"/>
 <polyline class="line s0" points="213,181 350,156 487,106 624,56"/>
 <circle class="dot s0" cx="213" cy="181" r="4"><title>lv at -0.5 (store/aa9c41c3df7ffd2258ef81cdbc0a7208a67ec1caeeca248048c7ebb0791f344e /result/data/fields/0/fan/pupil [1]): -1.25e-1 (store/aa9c41c3df7ffd2258ef81cdbc0a7208a67ec1caeeca248048c7ebb0791f344e /result/data/fields/0/fan/errorMm [1])</title></circle>

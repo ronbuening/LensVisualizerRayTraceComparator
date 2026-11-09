@@ -1,8 +1,8 @@
-// The legacy-id plumbing (`src/core/legacyIds.ts`) with synthetic maps: the real maps are empty, so every test here
-// hands the functions a rename of its own. An old id on input is read as its new one with one note per command; a
-// baseline committed before a rename is read under the new ids, its pairs in the writer's order; a run directory
-// written before one is refused; a configuration that defines an engine under an old id is refused; and the catalog
-// snapshot keeps the ids it was written with.
+// The legacy-id plumbing (`src/core/legacyIds.ts`): the check ids are renamed (Stage 9.7) and the engine map is empty
+// until the engine ids are, so a test of an engine rename hands the functions a rename of its own. An old id on input
+// is read as its new one with one note per command; a baseline committed before a rename is read under the new ids,
+// its pairs in the writer's order; a run directory written before one is refused; a configuration that defines an
+// engine under an old id is refused; and the catalog snapshot keeps the ids it was written with.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { MTF_BASELINE, buildBaseline, parseBaseline } from "../../src/baseline/build.ts";
 import { renderMtfBaselineReport } from "../../src/baseline/mtfReport.ts";
 import { baselineAtCurrentIds, renderBaselineReport } from "../../src/baseline/report.ts";
+import { readCatalogInputs, renderCatalog } from "../../src/report/catalog.ts";
+import { CATALOG_NOT_COVERED, NOT_COVERED } from "../../src/report/wording.ts";
 import { checkInIdSpace, createBaselineCommand } from "../../src/cli/commands/baseline.ts";
 import { classifyCatalog, failureEvidence } from "../../src/baseline/catalog.ts";
 import type { KnownFailure } from "../../src/baseline/catalog.ts";
@@ -54,8 +56,12 @@ import { FAKE_PAIR_SUITE, FAKE_ROOT, tempDir } from "./support.ts";
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const NONE: LegacyMaps = { checks: {}, engines: {} };
 
-test("the maps are empty and frozen until the renames, and each id is its own", () => {
-  assert.deepEqual(LEGACY_CHECK_IDS, {});
+test("the check map renames every check and the engine map is empty until the engine rename; both are frozen", () => {
+  // Every check of today is the new id of exactly one old id.
+  assert.deepEqual(new Set(Object.values(LEGACY_CHECK_IDS)), new Set(RUNGS.map((rung) => rung.id)));
+  assert.equal(Object.keys(LEGACY_CHECK_IDS).length, RUNGS.length);
+  assert.equal(currentCheckId("r2"), "ray-trace");
+  assert.equal(currentCheckId("selftest"), "pipeline-echo");
   assert.deepEqual(LEGACY_ENGINE_IDS, {});
   assert.ok(Object.isFrozen(LEGACY_CHECK_IDS) && Object.isFrozen(LEGACY_ENGINE_IDS) && Object.isFrozen(LEGACY_IDS));
   for (const rung of RUNGS) assert.equal(currentCheckId(rung.id), rung.id);
@@ -69,16 +75,15 @@ test("the maps are empty and frozen until the renames, and each id is its own", 
 
 // ── Input ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-const RENAMED: readonly RungDefinition[] = RUNGS.map((rung) =>
-  rung.id === "r2" ? { ...rung, id: "ray-trace" } : rung,
-);
+/** The ladder as it was before the rename of `ray-trace`: a test's stand-in that still has a rung "r2". */
+const BEFORE: readonly RungDefinition[] = RUNGS.map((rung) => (rung.id === "ray-trace" ? { ...rung, id: "r2" } : rung));
 
 test("an old check or engine id on input is read as its new id, and noted once", () => {
   takeAliases();
-  const rungs = selectRungs(["r1", "r2", "r2"], RENAMED, { r2: "ray-trace" });
+  const rungs = selectRungs(["first-order", "r2", "r2"], RUNGS, { r2: "ray-trace" });
   assert.deepEqual(
     rungs.map((rung) => rung.id),
-    ["r1", "ray-trace"],
+    ["first-order", "ray-trace"],
   );
   const known = { configured: [], builtin: ["lv", "reference-tracer"] };
   assert.deepEqual(selectEngines(["ref", "lv"], known, { ref: "reference-tracer" }), ["lv", "reference-tracer"]);
@@ -88,20 +93,23 @@ test("an old check or engine id on input is read as its new id, and noted once",
   ]);
   assert.deepEqual(takeAliases(), [], "taking the aliases forgets them");
   // An id that is neither old nor known is still unknown, by the name it was given.
-  assert.throws(() => selectRungs(["r99"], RENAMED, { r2: "ray-trace" }), /unknown rung "r99"/);
-  // With the real, empty maps nothing is read otherwise.
+  assert.throws(() => selectRungs(["r99"], RUNGS, { r2: "ray-trace" }), /unknown rung "r99"/);
+  // With the real maps an old check id is read as today's, and noted.
   assert.deepEqual(
-    selectRungs(["r2"]).map((rung) => rung.id),
-    ["r2"],
+    selectRungs(["r2", "r6c", "wave-mtf"]).map((rung) => rung.id),
+    ["ray-trace", "wave-mtf", "mtf-vs-optiland-wavefront"],
   );
-  assert.deepEqual(takeAliases(), []);
+  assert.deepEqual(takeAliases(), [
+    { kind: "check", old: "r2", now: "ray-trace" },
+    { kind: "check", old: "r6c", now: "mtf-vs-optiland-wavefront" },
+  ]);
 });
 
 test("an id the handed ladder or registry knows is never read as an old one (a test's stand-ins)", () => {
   takeAliases();
   // A ladder that still has a rung "r2" keeps it, though the map renames r2.
   assert.deepEqual(
-    selectRungs(["r2"], RUNGS, { r2: "ray-trace" }).map((rung) => rung.id),
+    selectRungs(["r2"], BEFORE, { r2: "ray-trace" }).map((rung) => rung.id),
     ["r2"],
   );
   // A registry that names an engine "ref" keeps it, though the map renames ref.
@@ -133,7 +141,7 @@ test("a suite's checks, engines, reference engine and engine options are read un
   takeAliases();
   t.after(() => takeAliases());
   const maps: LegacyMaps = { checks: { selftest: "pipeline-echo" }, engines: { "fake-a": "fake-alpha" } };
-  const ladder = RUNGS.map((rung) => (rung.id === "selftest" ? { ...rung, id: "pipeline-echo" } : rung));
+  const ladder = RUNGS;
   const written = JSON.parse(readFileSync(FAKE_PAIR_SUITE, "utf8"));
   const suiteOf = (rung: string, engine: string) => ({
     ...written,
@@ -201,8 +209,9 @@ test("a command says the old ids it read once, after it ends, however often it r
 });
 
 test("the memory estimate knows an old check id", () => {
+  assert.equal(jobEstimateGiB(["mtf-vs-optiland-wavefront"]), R6C_JOB_GIB);
   assert.equal(jobEstimateGiB(["r6c"]), R6C_JOB_GIB);
-  assert.equal(jobEstimateGiB(["wave-four"], { "wave-four": "r6c" }), R6C_JOB_GIB);
+  assert.equal(jobEstimateGiB(["wave-four"], { "wave-four": "mtf-vs-optiland-wavefront" }), R6C_JOB_GIB);
   assert.equal(jobEstimateGiB(["wave-four"]), JOB_GIB);
 });
 
@@ -258,8 +267,10 @@ function handBaseline(suite = "hand"): Baseline {
 
 test("a baseline committed before a rename is read under the new ids, every list in the writer's order", () => {
   const before = handBaseline();
-  assert.equal(currentIds(before), before, "with the real maps a baseline is the same object");
-  assert.equal(currentIds(before, NONE), before);
+  assert.equal(currentIds(before, NONE), before, "with no rename a baseline is the same object");
+  assert.equal(currentIds(before).runs[0].rungs[0].rung, "ray-trace", "with the real maps its check is renamed");
+  const once = currentIds(before);
+  assert.equal(currentIds(once), once, "a baseline of today's ids is read as it is");
   // "ref" renamed "aaa" sorts before "lv": every list the writer sorts by engine is sorted again.
   const after = currentIds(before, { checks: { r2: "ray-trace" }, engines: { ref: "aaa" } });
   assert.deepEqual(
@@ -301,11 +312,23 @@ test("a baseline committed before a rename is read under the new ids, every list
   assert.equal(before.runs[0].rungs[0].pairs[1].b, "ref");
 });
 
-test("every committed baseline is read unchanged with the real maps", () => {
+test("every committed baseline names checks by the old ids, and is read under today's with the real maps", () => {
+  const today = new Set(RUNGS.map((rung) => rung.id));
   for (const file of ["benchmark.json", "benchmark.mtf.json", "catalog.json"]) {
     const read = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
     assert.ok("baseline" in read, file);
-    assert.equal(currentIds(read.baseline), read.baseline, file);
+    const checks = read.baseline.runs.flatMap((run) => run.rungs.map((rung) => rung.rung));
+    // Written before the rename (until the maintainer's refresh): every check by its old id.
+    assert.ok(checks.length > 0 && checks.every((id) => Object.hasOwn(LEGACY_CHECK_IDS, id)), file);
+    const read2 = currentIds(read.baseline);
+    assert.ok(
+      read2.runs.every((run) => run.rungs.every((rung) => today.has(rung.rung))),
+      `${file}: every check is one of today's`,
+    );
+    // The engines are not renamed yet: the same engines in the same order.
+    assert.deepEqual(read2.engines, read.baseline.engines, file);
+    // And back again is the baseline as written.
+    assert.deepEqual(snapshotIds(read2), read.baseline, file);
   }
 });
 
@@ -370,7 +393,7 @@ test("compare, report and baseline write refuse a run directory written before a
   const words = codeTextOf(LEGACY_RUN_CODE);
   assert.ok(words !== undefined && words.remedy !== "");
   const renames: readonly (readonly [LegacyMaps, string])[] = [
-    [{ checks: { selftest: "pipeline-echo" }, engines: {} }, "check selftest"],
+    [{ checks: { "pipeline-echo": "echo-2" }, engines: {} }, "check pipeline-echo"],
     [{ checks: {}, engines: { "fake-near": "fake-close" } }, "engine fake-near"],
   ];
   for (const [maps, old] of renames) {
@@ -386,8 +409,14 @@ test("compare, report and baseline write refuse a run directory written before a
       assert.ok(ended.err.includes(words.sentence.slice(0, 40)), ended.err);
     }
   }
-  // Read with the real maps, the same directory is reported as before.
+  // Read with no rename, or with the real maps (it is written with today's ids), the same directory is reported.
   assert.equal((await cli(runsDir, NONE, ["report", "fake-pair"])).code, EXIT_OK);
+  assert.equal((await cli(runsDir, LEGACY_IDS, ["report", "fake-pair"])).code, EXIT_OK);
+  // A run record of before the rename (its checks by their old ids) is refused with the real maps.
+  assert.deepEqual(
+    legacyIdsOfRun({ ...manifest, jobs: manifest.jobs.map((job) => ({ ...job, rung: "selftest" })) }, null),
+    ["check selftest"],
+  );
 });
 
 test("a configuration that defines an engine under an old id is refused, with the code's words", () => {
@@ -434,7 +463,7 @@ test("an MTF baseline of today's run is rendered under the new ids", async (t) =
   const directory = join(runsDir, "fake-pair");
   const baseline = buildBaseline(readRunManifest(directory), readComparisonFile(directory), loadPolicy(), {
     ...MTF_BASELINE,
-    rungs: ["selftest"],
+    rungs: ["pipeline-echo"],
   });
   const maps: LegacyMaps = { checks: {}, engines: { "fake-near": "aaa" } };
   const rendered = renderMtfBaselineReport(baseline, undefined, maps);
@@ -445,6 +474,41 @@ test("an MTF baseline of today's run is rendered under the new ids", async (t) =
   assert.equal(JSON.parse(rendered.json).baseline, JSON.parse(renderMtfBaselineReport(baseline).json).baseline);
 });
 
+test("the catalog snapshot's reports are, under the real maps, the committed bytes: its raw ids and words", () => {
+  // The statistics (lvrtc report catalog --catalog) and each catalog baseline's reports (lvrtc verify --write).
+  const statistics = renderCatalog(readCatalogInputs(ROOT));
+  assert.equal(statistics.markdown, readFileSync(join(ROOT, "reports", "catalog.md"), "utf8"));
+  assert.equal(statistics.json, readFileSync(join(ROOT, "reports", "catalog.json"), "utf8"));
+  for (const [file, render, name] of [
+    ["catalog.json", renderBaselineReport, "rays"],
+    ["catalog.mtf.json", renderMtfBaselineReport, "mtf"],
+  ] as const) {
+    const read = parseBaseline(readFileSync(join(ROOT, "baselines", file), "utf8"));
+    assert.ok("baseline" in read, file);
+    const rendered = render(read.baseline);
+    assert.equal(rendered.markdown, readFileSync(join(ROOT, "reports", "catalog", `${name}.md`), "utf8"), file);
+    assert.equal(rendered.json, readFileSync(join(ROOT, "reports", "catalog", `${name}.json`), "utf8"), file);
+    // Its checks keep the ids it was written with, each shown with its title (found by the old id).
+    assert.match(rendered.markdown, /— `r4`/);
+    assert.doesNotMatch(rendered.markdown, /`geometric-mtf`/);
+  }
+  assert.match(statistics.markdown, /`r4`/);
+  assert.doesNotMatch(statistics.markdown, /`geometric-mtf`/);
+  for (const sentence of CATALOG_NOT_COVERED) assert.ok(statistics.markdown.includes(`- ${sentence}\n`), sentence);
+
+  // A catalog written since the rename (as the end-of-project refresh writes it) has today's words.
+  const refreshed = readCatalogInputs(ROOT).map((input) => ({ ...input, baseline: currentIds(input.baseline) }));
+  const changed = NOT_COVERED.filter((sentence) => !CATALOG_NOT_COVERED.includes(sentence));
+  assert.ok(changed.length > 0);
+  const statisticsToday = renderCatalog(refreshed).markdown;
+  const mtfToday = renderMtfBaselineReport(refreshed.find((input) => input.file === "catalog.mtf.json")!.baseline);
+  for (const text of [statisticsToday, mtfToday.markdown]) {
+    for (const sentence of NOT_COVERED) assert.ok(text.includes(`- ${sentence}\n`), sentence);
+    for (const sentence of CATALOG_NOT_COVERED.filter((each) => !NOT_COVERED.includes(each)))
+      assert.ok(!text.includes(sentence), sentence);
+  }
+});
+
 // ── The catalog snapshot's id space ──────────────────────────────────────────────────────────────────────────────
 
 test("the maps turn round only as bijections whose new ids are no old ids", () => {
@@ -453,7 +517,11 @@ test("the maps turn round only as bijections whose new ids are no old ids", () =
   assert.equal(legacyCheckId("ray-trace", maps), "r2");
   assert.equal(legacyEngineId("aaa", maps), "ref");
   assert.equal(legacyEngineId("lv", maps), "lv");
-  assert.deepEqual(inverseMaps(), { checks: {}, engines: {} });
+  // The real maps turn round: every check's id of today to its old id, and no engine yet.
+  const back = inverseMaps();
+  assert.equal(Object.keys(back.checks).length, Object.keys(LEGACY_CHECK_IDS).length);
+  for (const [old, now] of Object.entries(LEGACY_CHECK_IDS)) assert.equal(back.checks[now], old);
+  assert.deepEqual(back.engines, {});
   assert.throws(() => inverseMaps({ checks: {}, engines: { ref: "x", flux: "x" } }), /both renamed x/);
   assert.throws(() => inverseMaps({ checks: { r2: "r3", r3: "r4" }, engines: {} }), /itself an old id/);
   // There and back is the same baseline.

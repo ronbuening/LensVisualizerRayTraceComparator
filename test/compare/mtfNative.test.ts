@@ -23,7 +23,7 @@ import { SINGLET } from "../core/support.ts";
 import { FLAT, SPEC, answer, raised } from "./mtfNativeSupport.ts";
 
 const POLICY = loadPolicy();
-const R5 = POLICY.rungs.r5;
+const R5 = POLICY.rungs["mtf-vs-optiland-fft"];
 const ON_AXIS = R5.metrics["mtfOnAxis.maxAbs"].attention as number;
 const OFF_AXIS = R5.metrics["mtfOffAxis.maxAbs"].attention as number;
 const LANDING = R5.metrics["chiefLanding.maxAbs"].attention as number;
@@ -56,7 +56,7 @@ function verdictOf(a: MtfNativeData, b: MtfNativeData) {
 }
 
 test("the comparator is the one of mtf.native for r5, and its bands are the plan's", () => {
-  assert.deepEqual([mtfNativeComparator.quantity, mtfNativeComparator.rung], ["mtf.native", "r5"]);
+  assert.deepEqual([mtfNativeComparator.quantity, mtfNativeComparator.rung], ["mtf.native", "mtf-vs-optiland-fft"]);
   assert.deepEqual([ON_AXIS, OFF_AXIS], [0.005, 0.01]);
 });
 
@@ -296,7 +296,7 @@ test("what an answer records is every value a table of the comparison needs, and
       suite: "s",
       run: "r",
       caseId: SINGLET.id,
-      rung: "r5",
+      rung: "mtf-vs-optiland-fft",
       quantity: "mtf.native",
       requestId: "1".repeat(64),
       participants: [
@@ -322,9 +322,17 @@ test("optiland is asked again exactly where its pair with lv has a figure outsid
   const [followUp] = followUpsOf(POLICY);
   assert.deepEqual(
     [followUp.rung, followUp.engine, followUp.step, followUp.options],
-    ["r5", "optiland", "fft512", { fftRays: 512 }],
+    ["mtf-vs-optiland-fft", "optiland", "fft512", { fftRays: 512 }],
   );
-  assert.deepEqual(followUpsOf({ ...POLICY, rungs: { r0: POLICY.rungs.r0 } }), []);
+  assert.deepEqual(followUpsOf({ ...POLICY, rungs: { "built-system": POLICY.rungs["built-system"] } }), []);
+  // The policy at hand asks exactly two follow-ups; the rename of the check ids moved their checks, not their steps.
+  assert.deepEqual(
+    followUpsOf(POLICY).map((each) => [each.rung, each.engine, each.step, each.options]),
+    [
+      ["mtf-vs-optiland-fft", "optiland", "fft512", { fftRays: 512 }],
+      ["geometric-mtf-vs-optiland", "optiland", "geo512", { geometricRays: 512 }],
+    ],
+  );
   const context = { spec: SPEC, opticalCase: SINGLET, recipe: null };
   const asked = (lv: MtfNativeData | null, optiland: MtfNativeData | null, wave?: MtfNativeData): boolean => {
     const answers = new Map<string, MtfNativeData>();

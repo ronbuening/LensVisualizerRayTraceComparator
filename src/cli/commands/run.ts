@@ -39,6 +39,7 @@ import {
   JOB_SOURCE_TEXT,
   JOB_STATUS_TEXT,
   LEGEND_TEXT,
+  OLD_ID_TEXT,
   RUN_OUTPUT_TEXT,
 } from "../../vocabulary/index.ts";
 
@@ -99,6 +100,8 @@ interface RunArguments {
   readonly memoryBudgetGiB: number;
   readonly details: boolean;
   readonly json: boolean;
+  /** Whether the checks were named by `--rungs`, the older spelling of `--checks`: the command says so once. */
+  readonly olderSpelling: boolean;
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
@@ -125,6 +128,7 @@ function readArguments(args: readonly string[]): RunArguments {
     memoryBudgetGiB,
     details: flags.has("--details"),
     json: flags.has("--json"),
+    olderSpelling: values.has("--rungs"),
   };
 }
 
@@ -294,6 +298,7 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         io.stderr(`lvrtc run: ${error.message}\n${SYNOPSIS}`);
         return EXIT_USAGE;
       }
+      if (asked.olderSpelling) io.stderr(`${OLD_ID_TEXT.olderOption}\n`);
 
       let suite: LoadedSuite;
       let result: SuiteRunResult;

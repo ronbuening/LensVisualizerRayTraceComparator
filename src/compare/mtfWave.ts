@@ -174,7 +174,7 @@ function recorded(data: JsonObject): { readonly [name: string]: readonly number[
  */
 export const mtfWaveComparator: QuantityComparator = Object.freeze({
   quantity: MTF_NATIVE,
-  rung: "r6b",
+  rung: "mtf-vs-wave-estimate",
   metrics: Object.freeze([
     { name: "mtfOnAxis.maxAbs", unit: "1" },
     { name: "mtfOffAxis.maxAbs", unit: "1" },

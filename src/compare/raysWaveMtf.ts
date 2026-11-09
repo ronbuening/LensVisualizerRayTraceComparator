@@ -374,7 +374,7 @@ function measure(dataA: JsonObject, dataB: JsonObject, context?: ComparisonConte
  */
 export const raysWaveMtfComparator: QuantityComparator = Object.freeze({
   quantity: RAYS_TRACE,
-  rung: "r6a",
+  rung: "wave-mtf",
   metrics: Object.freeze([
     { name: "waveMtf.maxAbs", unit: "1" },
     { name: "waveMtf.flagged", unit: "1" },

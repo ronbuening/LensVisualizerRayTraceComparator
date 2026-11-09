@@ -41,7 +41,7 @@ import { classifyNativeField } from "./mtfNative.ts";
 import type { NativeDifferenceClass, NativeFieldFacts, NativeFieldReason } from "./mtfNative.ts";
 
 /** The rung of the engines' own axial figures. */
-export const AXIAL_NATIVE_RUNG = "r8b";
+export const AXIAL_NATIVE_RUNG = "axial-vs-optiland";
 
 /** How far apart two answers' identifying rays land on the image plane, mm: the limit of the sorting is its band. */
 export const LANDING_METRIC = "landing.maxAbs";

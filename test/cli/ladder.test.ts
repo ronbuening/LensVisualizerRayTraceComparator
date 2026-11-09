@@ -57,7 +57,11 @@ function ladderRoot(t: TestContext): string {
     contract: CONTRACT_VERSION,
     kind: "suite",
     name: "ladder",
-    defaults: { rungs: ["r0", "r1"], engines: ["ref", "ref-bent", "ref-twin"], referenceEngine: "ref" },
+    defaults: {
+      rungs: ["built-system", "first-order"],
+      engines: ["ref", "ref-bent", "ref-twin"],
+      referenceEngine: "ref",
+    },
     runs: [
       { name: "singlet", lens: { kind: "fixture", path: "cases/singlet.json" } },
       { name: "double-gauss", lens: { kind: "fixture", path: "cases/double-gauss.json" } },
@@ -109,7 +113,7 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   };
 
   // The singlet has no ninth surface, so there the copy is faithful: everything passes, with no difference at all.
-  for (const rung of ["r0", "r1"]) {
+  for (const rung of ["built-system", "first-order"]) {
     for (const engine of ["ref-bent", "ref-twin"]) {
       const pair = pairOf("singlet", rung, "reference-vs-each", "ref", engine);
       assert.equal(pair.verdict, "PASS", `${rung} ${engine}`);
@@ -121,7 +125,7 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   }
 
   // The Double-Gauss: R0 fails for the bent copy, on the curvature of surface 8 and on the sag that follows from it.
-  const failed = pairOf("double-gauss", "r0", "reference-vs-each", "ref", "ref-bent");
+  const failed = pairOf("double-gauss", "built-system", "reference-vs-each", "ref", "ref-bent");
   assert.equal(failed.verdict, "FAIL");
   const metrics = Object.fromEntries(failed.metrics.map((metric) => [metric.name, metric]));
   assert.deepEqual(metrics["shape.mismatches"], {
@@ -146,8 +150,8 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
     /^sag\.maxScaled \d\.\d\de-(9|10) exceeds its tolerance 1\.00e-12 at sample 8, surface 8; shape\.mismatches 1 exceeds its tolerance 0 at field curvature, surface 8$/,
   );
   // The faithful copy passes R0 on the same case, and so is judged in R1, where it agrees to the last bit.
-  assert.equal(pairOf("double-gauss", "r0", "reference-vs-each", "ref", "ref-twin").verdict, "PASS");
-  assert.deepEqual(pairOf("double-gauss", "r1", "reference-vs-each", "ref", "ref-twin"), {
+  assert.equal(pairOf("double-gauss", "built-system", "reference-vs-each", "ref", "ref-twin").verdict, "PASS");
+  assert.deepEqual(pairOf("double-gauss", "first-order", "reference-vs-each", "ref", "ref-twin"), {
     a: "ref",
     b: "ref-twin",
     metrics: [
@@ -167,24 +171,24 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   });
 
   // R1 of the bent copy is not judged, against the reference or against the twin, and says which rung blocks it.
-  assert.deepEqual(pairOf("double-gauss", "r1", "reference-vs-each", "ref", "ref-bent"), {
+  assert.deepEqual(pairOf("double-gauss", "first-order", "reference-vs-each", "ref", "ref-bent"), {
     a: "ref",
     b: "ref-bent",
     metrics: [],
     class: "gated",
     verdict: "BLOCKED",
-    reason: "not judged: rung r0 failed for ref and ref-bent on this case",
+    reason: "not judged: rung built-system failed for ref and ref-bent on this case",
   });
-  assert.equal(pairOf("double-gauss", "r0", "pairwise", "ref-bent", "ref-twin").verdict, "FAIL");
-  assert.deepEqual(pairOf("double-gauss", "r1", "pairwise", "ref-bent", "ref-twin"), {
+  assert.equal(pairOf("double-gauss", "built-system", "pairwise", "ref-bent", "ref-twin").verdict, "FAIL");
+  assert.deepEqual(pairOf("double-gauss", "first-order", "pairwise", "ref-bent", "ref-twin"), {
     a: "ref-bent",
     b: "ref-twin",
     metrics: [],
     class: "gated",
     verdict: "BLOCKED",
-    reason: "not judged: rung r0 failed for ref-bent and ref-twin on this case",
+    reason: "not judged: rung built-system failed for ref-bent and ref-twin on this case",
   });
-  assert.equal(pairOf("double-gauss", "r1", "pairwise", "ref", "ref-twin").verdict, "PASS");
+  assert.equal(pairOf("double-gauss", "first-order", "pairwise", "ref", "ref-twin").verdict, "PASS");
 });
 
 test("the report shows the mismatching surface in R0, and the blocked R1 as a row with its reason", async (t) => {
@@ -236,7 +240,7 @@ test("the report shows the mismatching surface in R0, and the blocked R1 as a ro
   );
   assert.match(
     markdown,
-    /^\| ref-bent \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung r0 failed for ref and ref-bent on this case \|$/m,
+    /^\| ref-bent \| — \| — \| — \| — \| — \| BLOCKED \| not judged: rung built-system failed for ref and ref-bent on this case \|$/m,
   );
   // And in the pairwise matrix of that rung.
   assert.match(markdown, /^\| ref-bent \| BLOCKED \| — \| BLOCKED \|$/m);
@@ -267,7 +271,7 @@ async function against(
 ): Promise<{ r0: PairComparison; r1: PairComparison }> {
   const runsDir = tempDir(t);
   const { registry } = watchedRegistry({ ref: REF, "ref-bent": engineOf({ id: "ref-bent", ...bend }) });
-  const suite = suiteOf("bends", [{ name: "one", opticalCase, rungs: ["r0", "r1"] }]);
+  const suite = suiteOf("bends", [{ name: "one", opticalCase, rungs: ["built-system", "first-order"] }]);
   const { manifest } = await runSuite({ suite, registry, runsDir });
   assert.ok(
     manifest.jobs.every((job) => job.status === "ok"),
@@ -284,7 +288,7 @@ async function against(
   const [r0, r1] = file.comparisons.map((set) => set.pairs[0]);
   assert.deepEqual(
     file.comparisons.map((set) => set.rung),
-    ["r0", "r1"],
+    ["built-system", "first-order"],
   );
   return { r0, r1 };
 }
@@ -389,7 +393,7 @@ test("each thing an engine can build wrong fails R0 with its field and its surfa
     assert.equal(r0.verdict, "FAIL", what);
     assert.equal(firstCount(r0), expected, what);
     assert.equal(r1.verdict, "BLOCKED", what);
-    assert.equal(r1.reason, "not judged: rung r0 failed for ref and ref-bent on this case", what);
+    assert.equal(r1.reason, "not judged: rung built-system failed for ref and ref-bent on this case", what);
     assert.deepEqual(r1.metrics, [], what);
   }
 });
@@ -399,11 +403,11 @@ test("what R0 lets through, R1 judges: without the blocking rule a wrong radius 
   const runsDir = tempDir(t);
   const bent = engineOf({ id: "ref-bent", edits: [{ pointer: "/system/surfaces/0/shape/radius", scale: 1 + 1e-6 }] });
   const { registry } = watchedRegistry({ ref: REF, "ref-bent": bent });
-  const suite = suiteOf("bends", [{ name: "one", opticalCase: ASPHERE, rungs: ["r0", "r1"] }]);
+  const suite = suiteOf("bends", [{ name: "one", opticalCase: ASPHERE, rungs: ["built-system", "first-order"] }]);
   const { manifest } = await runSuite({ suite, registry, runsDir });
   const own = loadPolicy();
-  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs.r0;
-  const policy = { ...own, rungs: { ...own.rungs, r0 } };
+  const { blocksLaterRungs: _blocks, ...r0 } = own.rungs["built-system"];
+  const policy = { ...own, rungs: { ...own.rungs, "built-system": r0 } };
   const store = createResultStore(join(runsDir, STORE_DIRECTORY));
   const asked = { manifest, store, reference: "ref", modes: ["reference-vs-each"], cases: () => ASPHERE } as const;
   const file = compareManifest({ ...asked, policy });

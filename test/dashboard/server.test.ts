@@ -16,11 +16,12 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, runCli } from "../../src/cli/main.ts
 import type { Baseline } from "../../src/contract/baseline.ts";
 import { REPO_ROOT, loadConfig } from "../../src/core/config.ts";
 import { canonicalJson } from "../../src/core/numeric/canonicalJson.ts";
-import { escapeHtml, renderBaseline, renderBaselineRun } from "../../src/dashboard/html.ts";
+import { escapeHtml, renderBaseline, renderBaselineRun, renderRun } from "../../src/dashboard/html.ts";
 import { createViews, pathSegments, startDashboard } from "../../src/dashboard/server.ts";
 import type { Dashboard } from "../../src/dashboard/server.ts";
 import { createSources } from "../../src/dashboard/sources.ts";
 import { DASHBOARD_TEXT, wordingProblems } from "../../src/report/wording.ts";
+import { codeTextOf } from "../../src/vocabulary/index.ts";
 import { COMPARE_TABS } from "../../src/dashboard/compare.ts";
 import { FAKE_PAIR_SUITE, tempDir } from "../core/support.ts";
 import { buildFixture, everyPage, fetchFrom, titleTexts, treeOf, visibleText, walkView } from "./support.ts";
@@ -80,6 +81,34 @@ after(async () => {
   await raysDashboard.close();
   await compareDashboard.close();
   fixture.remove();
+});
+
+test("a run directory written before the rename of the check ids is shown with a notice, its old ids named", (t) => {
+  // A copy of the fake pair's run directory whose run record and comparisons name its check by its old id.
+  const runsDir = join(tempDir(t), "runs");
+  cpSync(join(fixture.runsDir, "fake-pair"), join(runsDir, "fake-pair"), { recursive: true });
+  for (const file of ["manifest.json", "comparisons.json"]) {
+    const path = join(runsDir, "fake-pair", file);
+    const text = readFileSync(path, "utf8");
+    assert.ok(text.includes('"rung":"pipeline-echo"'), file);
+    writeFileSync(path, text.replaceAll('"rung":"pipeline-echo"', '"rung":"selftest"'));
+  }
+  const views = createViews(createSources({ rootDir: fixture.rootDir, runsDir }), () => ({ state: "not-asked" }));
+  const old = views.run("fake-pair");
+  assert.deepEqual(old.oldIds, ["check selftest"]);
+  const words = codeTextOf("written-before-id-rename");
+  assert.ok(words !== undefined);
+  const page = renderRun(old);
+  assert.ok(page.includes(escapeHtml(words.sentence)), "the code's sentence");
+  assert.ok(page.includes(escapeHtml(words.remedy)), "and its remedy");
+  assert.ok(page.includes("<li><code>check selftest</code></li>"));
+  assert.deepEqual(wordingProblems(visibleText(page)), []);
+  // A run directory of today's ids has no notice.
+  const today = createViews(createSources({ rootDir: fixture.rootDir, runsDir: fixture.runsDir }), () => ({
+    state: "not-asked",
+  })).run("fake-pair");
+  assert.deepEqual(today.oldIds, []);
+  assert.ok(!renderRun(today).includes(escapeHtml(words.sentence)));
 });
 
 test("it listens on 127.0.0.1 alone, and answers its own host by address or as localhost", async () => {
@@ -418,7 +447,7 @@ test("asking the engines again from the control page re-runs the same runner, an
     for (const [action, fields] of [
       ["ask", ""],
       ["collect", ""],
-      ["start", "&suite=fake-pair&rungs=selftest"],
+      ["start", "&suite=fake-pair&rungs=pipeline-echo"],
     ]) {
       const busy = await post(action, fields);
       assert.equal(busy.status, 409, action);
@@ -579,7 +608,10 @@ test("a baseline page is a summary: a catalog of 1,341 runs stays within a few h
   // The fixture's pair baseline, its runs repeated to the catalog's 1,341, five rungs a run.
   const pair = JSON.parse(readFileSync(join(fixture.rootDir, "baselines", "fake-pair.json"), "utf8")) as Baseline;
   const [template] = pair.runs;
-  const rungs = ["r0", "r1", "r2", "r3", "r4"].map((rung) => ({ ...template.rungs[0], rung }));
+  const rungs = ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf"].map((rung) => ({
+    ...template.rungs[0],
+    rung,
+  }));
   const large: Baseline = {
     ...pair,
     runs: Array.from({ length: 1341 }, (_unused, index) => ({ ...template, name: `lens-${index}-wide`, rungs })),

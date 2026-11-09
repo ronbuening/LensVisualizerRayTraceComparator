@@ -36,7 +36,7 @@ import type { RungPair } from "./support.ts";
 const skip = OPTILAND_UNAVAILABLE;
 /** The suites are of LensVisualizer lenses: they need both. */
 const skipSuites = OPTILAND_UNAVAILABLE || LV_UNAVAILABLE;
-const R0 = loadPolicy().rungs.r0;
+const R0 = loadPolicy().rungs["built-system"];
 const COUNTS = ["layout.mismatches", "shape.mismatches", "aperture.mismatches", "index.mismatches"] as const;
 
 /** What `lvrtc run` on rung R0 and `lvrtc compare` gave for a suite. */
@@ -49,9 +49,9 @@ interface R0Cycle {
 }
 
 function r0Cycle(t: TestContext, suite: string, name: string, engines: string, root?: string): R0Cycle {
-  const { manifest, comparisons, verdicts } = runAndCompare(t, { suite, name, engines, rungs: "r0", root });
-  assert.ok(comparisons.comparisons.every((set) => set.rung === "r0"));
-  return { manifest, pairs: pairsOf(comparisons, "r0", SYSTEM_DESCRIBE), verdicts };
+  const { manifest, comparisons, verdicts } = runAndCompare(t, { suite, name, engines, rungs: "built-system", root });
+  assert.ok(comparisons.comparisons.every((set) => set.rung === "built-system"));
+  return { manifest, pairs: pairsOf(comparisons, "built-system", SYSTEM_DESCRIBE), verdicts };
 }
 
 /** Holds every pair to R0's gates as PASS, and says the worst sag of the pairs of optiland. */
@@ -100,7 +100,7 @@ test(
     const { manifest, pairs, verdicts } = r0Cycle(t, "suite.json", "contract-cases", "ref,optiland", rootDir);
     assert.deepEqual(
       manifest.jobs.map((job) => [job.run, job.rung, job.engine, job.status]),
-      names.flatMap((name) => ["optiland", "ref"].map((engine) => [name, "r0", engine, "ok"])),
+      names.flatMap((name) => ["optiland", "ref"].map((engine) => [name, "built-system", engine, "ok"])),
     );
     const optiland = manifest.engines.find((engine) => engine.id === "optiland");
     assert.ok(optiland !== undefined && optiland.status === "available");
@@ -206,7 +206,7 @@ test(
     // 12 configurations, each at the reference line and at the five photopic lines; one request for each engine.
     assert.equal(manifest.runs.length, 24);
     assert.equal(manifest.jobs.length, 24 * 3);
-    assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r0"));
+    assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "built-system"));
     // Against a reference two pairs for each run, and pair by pair three.
     assert.equal(verdicts, "benchmark: 120 pairs: 120 Pass");
     // Three pairs of two engines for each run.

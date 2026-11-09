@@ -168,13 +168,13 @@ function conditionOf(name: string): { readonly f8: boolean; readonly best: boole
 }
 
 test(
-  "lvrtc run --rungs r4f on the benchmark: the replay of LensVisualizer's sampling is its own geometric MTF, on all 480 fields",
+  "lvrtc run --checks lv-mtf-replay on the benchmark: the replay of LensVisualizer's sampling is its own geometric MTF, on all 480 fields",
   { skip, timeout: 900_000 },
   async (t) => {
     const runsDir = mkdtempSync(join(tmpdir(), "lvrtc-fidelity-"));
     t.after(() => rmSync(runsDir, { recursive: true, force: true }));
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of the replay whatever a run names.
-    const ran = lvrtc(runsDir, "run", suitePath("benchmark"), "--rungs", "r4f");
+    const ran = lvrtc(runsDir, "run", suitePath("benchmark"), "--checks", "lv-mtf-replay");
     assert.equal(ran.code, 0, ran.err);
     assert.match(ran.out, /^benchmark: 192 jobs: 192 answered \(192 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
@@ -265,13 +265,13 @@ test(
     assert.equal(fields, 480);
 
     // ── The comparison ──
-    const gate = loadPolicy().rungs.r4f.metrics["mtf.maxAbs"].tolerance;
+    const gate = loadPolicy().rungs["lv-mtf-replay"].metrics["mtf.maxAbs"].tolerance;
     assert.equal(gate, 1e-9);
     const worst = { value: 0, at: "" };
     const table: string[] = [];
     for (const run of manifest.runs) {
       const set = comparisons.comparisons.find((each) => each.run === run.name && each.mode === "pairwise");
-      assert.ok(set !== undefined && set.rung === "r4f" && set.quantity === "mtf.native", run.name);
+      assert.ok(set !== undefined && set.rung === "lv-mtf-replay" && set.quantity === "mtf.native", run.name);
       const [pair] = set.pairs;
       assert.deepEqual([set.pairs.length, pair.a, pair.b, pair.verdict], [1, "lv", "replay", "PASS"], run.name);
       const metrics = Object.fromEntries(pair.metrics.map((metric) => [metric.name, metric]));

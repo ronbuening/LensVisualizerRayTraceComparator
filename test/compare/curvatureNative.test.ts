@@ -18,7 +18,7 @@ import type { JsonObject } from "../../src/contract/json.ts";
 import type { RungPolicy } from "../../src/contract/policy.ts";
 import type { CurvatureNativeData, CurvatureNativeField } from "../../src/contract/quantities/curvatureNative.ts";
 
-const POLICY: RungPolicy = loadPolicy().rungs.r10b;
+const POLICY: RungPolicy = loadPolicy().rungs["field-curve-vs-optiland"];
 const LIMIT = 1e-5;
 
 function field(line: number, fieldAngleDeg: number, more: Partial<CurvatureNativeField> = {}): CurvatureNativeField {

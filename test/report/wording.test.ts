@@ -53,6 +53,7 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "| lv | optiland | certified |",
   ],
   "mtf-agrees": [
+    "Within gated wave-mtf limits, the wave MTF of identical rays agrees with optiland's, as mtf-vs-optiland-fft records.",
     "LensVisualizer agrees with optiland's diffraction MTF.",
     "The FFT MTF of optiland matches LensVisualizer's within 0.004.",
     "The two MTF curves are consistent.",
@@ -76,11 +77,16 @@ const CLAIMS: { readonly [name: string]: readonly string[] } = {
     "R5 passes for every lens of the benchmark.",
     "R6c passes for every lens of the benchmark.",
     "| canon-ef-135-f2l-usm-ref | r5 | lv | optiland | PASS |",
+    // The same, under the ids of today: a side-by-side MTF check by its id, whichever of the two.
+    "| canon-ef-135-f2l-usm-ref | mtf-vs-optiland-fft | lv | optiland | PASS |",
+    "| canon-ef-135-f2l-usm-ref | geometric-mtf-vs-optiland | lv | optiland | PASS |",
+    "mtf-vs-optiland-wavefront passes for every lens of the benchmark.",
   ],
   "recorded-authority": [
     "R5 is accurate.",
     "R6c proves the result.",
     "R6b proves the result.",
+    "mtf-vs-wave-estimate proves the result.",
     "The recorded rung is trustworthy.",
   ],
   "counterpart-preference": [
@@ -171,6 +177,11 @@ test("what a report may say is accepted: every template, and sentences that only
     "sampling.mismatches 0, fields.mismatches 0",
     "| edge | r5 | ok | ok | ok |",
     "Rung R5 is recorded and never gated: it sets two methods side by side.",
+    // The same, under the ids of today; and a gated check whose id begins as a side-by-side one's does.
+    "| geometric-mtf | lv | ref | PASS |\n| mtf-vs-optiland-fft | lv | optiland | RECORDED |",
+    "| edge | mtf-vs-optiland-fft | ok | ok | ok |",
+    "| geometric-mtf | lv | ref | PASS |",
+    "Within gated geometric-mtf and wave-mtf limits, geometric MTF and wave MTF of identical rays agree.",
     "The R6c difference is recorded as method, with numerical rows set aside.",
     "The FFT and raw wavefront counterparts are recorded side by side, with no preference claimed.",
     "Within gated R4 and R6a limits, geometric MTF and wave MTF of identical rays agree.",

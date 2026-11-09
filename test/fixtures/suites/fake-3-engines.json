@@ -4,7 +4,7 @@
   "name": "fake-3-engines",
   "defaults": {
     "rungs": [
-      "selftest"
+      "pipeline-echo"
     ],
     "engines": [
       "fake-a",

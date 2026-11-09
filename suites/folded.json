@@ -4,7 +4,7 @@
   "name": "folded",
   "defaults": {
     "engines": ["lv", "ref", "optiland"],
-    "rungs": ["r0", "r1", "r2", "r3"],
+    "rungs": ["built-system", "first-order", "ray-trace", "optical-path"],
     "aperture": {
       "kind": "wide-open"
     },

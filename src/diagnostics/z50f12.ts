@@ -28,7 +28,7 @@ export function investigationSuite(benchmark: Suite): Suite {
     contract: "1.0",
     kind: "suite",
     name: "z50f12-investigation",
-    defaults: { ...benchmark.defaults, rungs: ["r6c"] },
+    defaults: { ...benchmark.defaults, rungs: ["mtf-vs-optiland-wavefront"] },
     runs: runs.flatMap((run) =>
       LEVELS.map((level) => ({
         ...run,
@@ -81,7 +81,9 @@ export function readInvestigation(directory: string) {
   ) as RunManifest;
   const store = createResultStore(join(directory, "store"));
   const answer = (run: string, engine: string) => {
-    const job = manifest.jobs.find((j) => j.run === run && j.engine === engine && j.rung === "r6c");
+    const job = manifest.jobs.find(
+      (j) => j.run === run && j.engine === engine && j.rung === "mtf-vs-optiland-wavefront",
+    );
     if (job?.storeKey == null) throw new Error(`no stored answer: ${run} ${engine}`);
     const entry = store.get(job.storeKey);
     if (entry.kind !== "hit" || entry.entry.result.status !== "ok")

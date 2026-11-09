@@ -46,11 +46,11 @@ The words used on screens and in reports, and the older words of this tool that 
 
 ## Checks
 
-A check held to a limit hands two engines the same input and passes or fails. A side-by-side check sets two methods beside each other with no limit and fails nothing. The id is the one stored today; the second id is the one it takes when the ids are renamed.
+A check held to a limit hands two engines the same input and passes or fails. A side-by-side check sets two methods beside each other with no limit and fails nothing. The id is the one stored today; the second id is the one it had before the ids were renamed, which the catalog snapshot and files written before the rename still name and which is still read.
 
 ### Pipeline echo (a test of this tool)
 
-- Id: `selftest`, to be renamed `pipeline-echo`.
+- Id: `pipeline-echo`, formerly `selftest`.
 - Kind: held to a limit.
 - Compares: An array this tool hands a test engine and the array the engine hands back.
 - Shows: That this tool's requests, transports and comparisons carry numbers through unchanged.
@@ -58,7 +58,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Built system
 
-- Id: `r0`, to be renamed `built-system`.
+- Id: `built-system`, formerly `r0`.
 - Kind: held to a limit.
 - Compares: Built layout, shape, aperture, index and sampled sag.
 - Shows: That each engine built the same system from the lens state it was handed: the same surfaces at the same places, the same shapes, apertures and refractive indices, and the same sag at sampled heights, within the limit.
@@ -66,7 +66,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### First-order data
 
-- Id: `r1`, to be renamed `first-order`.
+- Id: `first-order`, formerly `r1`.
 - Kind: held to a limit.
 - Compares: First-order quantities and pupils.
 - Shows: That the engines' paraxial models give the same focal length, focal and principal points, back focus and pupil positions and sizes, within the limit.
@@ -74,7 +74,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Ray trace
 
-- Id: `r2`, to be renamed `ray-trace`.
+- Id: `ray-trace`, formerly `r2`.
 - Kind: held to a limit.
 - Compares: Hits, directions, image landings and masks of identical rays.
 - Shows: That, handed the same rays, the engines find the same hit points on every surface, the same exit directions and image landings, and stop the same rays, within the limit.
@@ -82,7 +82,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Optical path
 
-- Id: `r3`, to be renamed `optical-path`.
+- Id: `optical-path`, formerly `r3`.
 - Kind: held to a limit.
 - Compares: Optical path, path to image and chief-relative OPD of identical rays.
 - Shows: That, handed the same rays, the engines compute the same optical path lengths, to each surface and to the image, and the same optical path difference from the chief ray, within the limit.
@@ -90,7 +90,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Geometric MTF of the same rays
 
-- Id: `r4`, to be renamed `geometric-mtf`.
+- Id: `geometric-mtf`, formerly `r4`.
 - Kind: held to a limit.
 - Compares: This tool's geometric MTF of identical rays, as each engine traces them.
 - Shows: That one geometric MTF calculation of this tool, applied to each engine's trace of the same rays, gives curves within the limit of each other.
@@ -98,7 +98,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### LensVisualizer's MTF sampling, replayed
 
-- Id: `r4f`, to be renamed `lv-mtf-replay`.
+- Id: `lv-mtf-replay`, formerly `r4f`.
 - Kind: held to a limit.
 - Compares: LensVisualizer's geometric MTF beside a replay of its own sampling.
 - Shows: That LensVisualizer's geometric MTF is, within the limit, the sum this tool forms of LensVisualizer's own sampled rays, with the same sampling grids, ray counts and field outcomes.
@@ -106,7 +106,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### MTF beside optiland's FFT MTF
 
-- Id: `r5`, to be renamed `mtf-vs-optiland-fft`.
+- Id: `mtf-vs-optiland-fft`, formerly `r5`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays.
 - Shows: LensVisualizer's diffraction MTF set beside optiland's FFT MTF and this tool's wave estimate on LensVisualizer's rays, field by field, each difference sorted by its cause before it is shown.
@@ -114,7 +114,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Geometric MTF beside optiland's
 
-- Id: `r5g`, to be renamed `geometric-mtf-vs-optiland`.
+- Id: `geometric-mtf-vs-optiland`, formerly `r5g`.
 - Kind: side by side, no limit.
 - Compares: Geometric MTF on each method's own pupil sampling.
 - Shows: LensVisualizer's geometric MTF set beside optiland's own geometric MTF and the replay of LensVisualizer's sampling, each engine with its own rays and pupil sampling.
@@ -122,7 +122,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Wave MTF of the same rays
 
-- Id: `r6a`, to be renamed `wave-mtf`.
+- Id: `wave-mtf`, formerly `r6a`.
 - Kind: held to a limit.
 - Compares: This tool's wave MTF of identical rays, as each engine traces them, in fields whose sampling settled.
 - Shows: That one wave-optics MTF calculation of this tool, applied to each engine's optical paths of the same rays, gives curves within the limit of each other, in fields whose sampling settled.
@@ -130,7 +130,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### MTF beside the wave estimate of LensVisualizer's rays
 
-- Id: `r6b`, to be renamed `mtf-vs-wave-estimate`.
+- Id: `mtf-vs-wave-estimate`, formerly `r6b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's sheared diffraction MTF beside this tool's wave OTF of LensVisualizer's rays.
 - Shows: LensVisualizer's diffraction MTF set beside this tool's wave estimate on the rays LensVisualizer launches, field by field.
@@ -138,7 +138,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### MTF beside the OTF of optiland's wavefront
 
-- Id: `r6c`, to be renamed `mtf-vs-optiland-wavefront`.
+- Id: `mtf-vs-optiland-wavefront`, formerly `r6c`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts.
 - Shows: LensVisualizer's diffraction MTF and the wave estimate set beside optiland's FFT MTF and this tool's OTF of optiland's raw wavefront samples, field by field.
@@ -146,7 +146,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Spot and fan rays
 
-- Id: `r7a`, to be renamed `spot-rays`.
+- Id: `spot-rays`, formerly `r7a`.
 - Kind: held to a limit.
 - Compares: Spot and fan figures of the coma and bokeh tabs' rays, on identical rays.
 - Shows: That, handed the rays LensVisualizer's coma and bokeh tabs launch, the engines give the same transverse errors, spot centroids and RMS radii, and stop the same rays, within the limit.
@@ -154,7 +154,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Spots and fans beside optiland's
 
-- Id: `r7b`, to be renamed `spot-vs-optiland`.
+- Id: `spot-vs-optiland`, formerly `r7b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's coma and bokeh tabs beside optiland's SpotDiagram and RayFan.
 - Shows: LensVisualizer's spot and ray-fan figures set beside optiland's own spot diagram and ray fan of the field.
@@ -162,7 +162,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Spherical aberration and axial colour rays
 
-- Id: `r8a`, to be renamed `axial-rays`.
+- Id: `axial-rays`, formerly `r8a`.
 - Kind: held to a limit.
 - Compares: Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays.
 - Shows: That, handed the rays LensVisualizer's spherical-aberration and axial-colour sections launch, the engines find the same axial crossings and best focus, judged on the transverse scale, within the limit.
@@ -170,7 +170,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Spherical aberration and axial colour beside optiland's
 
-- Id: `r8b`, to be renamed `axial-vs-optiland`.
+- Id: `axial-vs-optiland`, formerly `r8b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's spherical-aberration and axial-colour sections beside optiland's own rays and focus.
 - Shows: LensVisualizer's spherical-aberration and axial-colour figures set beside those of optiland's own rays, aimed at the same points of the stop.
@@ -178,7 +178,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Chief rays (distortion, pupils, lateral colour)
 
-- Id: `r9a`, to be renamed `chief-rays`.
+- Id: `chief-rays`, formerly `r9a`.
 - Kind: held to a limit.
 - Compares: Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays.
 - Shows: That, handed the chief rays LensVisualizer's distortion, pupils and lateral-colour tabs launch, the engines give the same landings, distortion, lateral colour and exit-pupil crossings, within the limit.
@@ -186,7 +186,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Distortion, pupils and lateral colour beside optiland's
 
-- Id: `r9b`, to be renamed `chief-vs-optiland`.
+- Id: `chief-vs-optiland`, formerly `r9b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils.
 - Shows: LensVisualizer's distortion curve, pupils and lateral colour set beside optiland's own distortion model, chief rays and pupils.
@@ -194,7 +194,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Field-curve rays
 
-- Id: `r10a`, to be renamed `field-curve-rays`.
+- Id: `field-curve-rays`, formerly `r10a`.
 - Kind: held to a limit.
 - Compares: Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays.
 - Shows: That, handed the rays LensVisualizer's field-curve sections launch, the engines find the same tangential and sagittal foci and chief landings, judged on the transverse scale, within the limit.
@@ -202,7 +202,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Field curves beside optiland's
 
-- Id: `r10b`, to be renamed `field-curve-vs-optiland`.
+- Id: `field-curve-vs-optiland`, formerly `r10b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's field-curve sections beside optiland's FieldCurvature.
 - Shows: LensVisualizer's tangential and sagittal focus shifts and astigmatism set beside optiland's own field-curvature analysis.
@@ -210,7 +210,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Vignetting rays
 
-- Id: `r11a`, to be renamed `vignetting-rays`.
+- Id: `vignetting-rays`, formerly `r11a`.
 - Kind: held to a limit.
 - Compares: Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays.
 - Shows: That, handed the beams LensVisualizer's vignetting tab launches, the engines let the same rays through and give the same flux into the image and the same chief landings, within the limit.
@@ -218,7 +218,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Vignetting beside the flux estimate
 
-- Id: `r11b`, to be renamed `vignetting-vs-flux-estimate`.
+- Id: `vignetting-vs-flux-estimate`, formerly `r11b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's vignetting tab beside this tool's flux estimate on LensVisualizer's lattices.
 - Shows: LensVisualizer's geometric transmission and relative illumination set beside this tool's flux estimate on LensVisualizer's own lattices.
@@ -226,7 +226,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Summary beside optiland's
 
-- Id: `r12b`, to be renamed `summary-vs-optiland`.
+- Id: `summary-vs-optiland`, formerly `r12b`.
 - Kind: side by side, no limit.
 - Compares: LensVisualizer's summary tab and aperture control beside optiland's paraxial accessors and working f-number.
 - Shows: LensVisualizer's focal length, entrance pupil, stop, f-numbers and track set beside optiland's own paraxial values and working f-number.
@@ -234,7 +234,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Seidel sums beside optiland's
 
-- Id: `r13b`, to be renamed `seidel-vs-optiland`.
+- Id: `seidel-vs-optiland`, formerly `r13b`.
 - Kind: side by side, no limit.
 - Compares: This tool's Seidel sums of the reference model beside optiland's.
 - Shows: The third-order Seidel sums of this tool's reference model set beside optiland's own, surface by surface and in total.
@@ -242,7 +242,7 @@ A check held to a limit hands two engines the same input and passes or fails. A 
 
 ### Zernike fit beside optiland's
 
-- Id: `r14b`, to be renamed `zernike-vs-optiland`.
+- Id: `zernike-vs-optiland`, formerly `r14b`.
 - Kind: side by side, no limit.
 - Compares: optiland's Zernike fit beside this tool's fit of the same raw wavefront samples.
 - Shows: optiland's Zernike fit set beside this tool's fit of the same raw wavefront samples, coefficient by coefficient.

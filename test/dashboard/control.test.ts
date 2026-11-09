@@ -223,7 +223,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
   assert.ok(control.includes('<option value="fake-pair">fake-pair</option>'));
   assert.ok(visibleText(control).includes(DASHBOARD_TEXT.control.heavy));
   const token = await tokenOf(port);
-  const start = { token, suite: "fake-pair", engines: "fake-a,fake-human", rungs: "selftest", jobs: "1" };
+  const start = { token, suite: "fake-pair", engines: "fake-a,fake-human", rungs: "pipeline-echo", jobs: "1" };
 
   // 1. Started from the form: run, compare and report, each a child; the job page says every step exited. The
   // compare finds the pairs of the pending jobs ERROR (code 1), and the job still goes on to the report.
@@ -241,7 +241,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
   );
   assert.equal(
     job1.steps[0].command,
-    "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs run <root>/suites/fake-pair.json --root <root> --engines fake-a,fake-human --rungs selftest --jobs 1",
+    "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs run <root>/suites/fake-pair.json --root <root> --engines fake-a,fake-human --checks pipeline-echo --jobs 1",
   );
   assert.equal(job1.steps[1].command, "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs compare fake-pair --root <root>");
   assert.match(job1.steps[1].output, /^fake-pair: 4 pairs: 4 Error$/m);
@@ -370,8 +370,8 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
     rootDir,
     "--engines",
     "fake-a,fake-human",
-    "--rungs",
-    "selftest",
+    "--checks",
+    "pipeline-echo",
     "--jobs",
     "1",
   ]);
@@ -389,7 +389,7 @@ test("an action is refused for its token, origin, site, host, method, size and f
   const token = await tokenOf(port);
   assert.notEqual(token, await tokenOf((await served(t, rootDir, runsDir, [])).port), "a token for each server");
   const tree = treeOf(runsDir);
-  const valid = { token, suite: "fake-pair", engines: "fake-a", rungs: "selftest", jobs: "2" };
+  const valid = { token, suite: "fake-pair", engines: "fake-a", rungs: "pipeline-echo", jobs: "2" };
   const cases: [string, Promise<{ status: number; body: string; headers: Record<string, unknown> }>, number][] = [
     ["no token", post(port, "start", { ...valid, token: "" }), 403],
     ["no token field", post(port, "start", { suite: "fake-pair" }), 403],
@@ -412,7 +412,7 @@ test("an action is refused for its token, origin, site, host, method, size and f
     ["no suite", post(port, "start", { ...valid, suite: "" }), 400],
     ["an unknown engine", post(port, "start", { ...valid, engines: "fake-a,nobody" }), 400],
     ["an empty engine", post(port, "start", { ...valid, engines: "fake-a,,fake-human" }), 400],
-    ["an unknown rung", post(port, "start", { ...valid, rungs: "selftest,r99" }), 400],
+    ["an unknown rung", post(port, "start", { ...valid, rungs: "pipeline-echo,r99" }), 400],
     ["jobs 0", post(port, "start", { ...valid, jobs: "0" }), 400],
     ["jobs 5", post(port, "start", { ...valid, jobs: "5" }), 400],
     ["jobs 1.5", post(port, "start", { ...valid, jobs: "1.5" }), 400],
@@ -483,7 +483,7 @@ test("a start is held to the memory budget: over it a 400 naming budget and esti
     return { port: dashboard.port, token: await tokenOf(dashboard.port) };
   };
   const text = DASHBOARD_TEXT.control;
-  const fields = { suite: "fake-pair", engines: "fake-a", rungs: "selftest" };
+  const fields = { suite: "fake-pair", engines: "fake-a", rungs: "pipeline-echo" };
   // 2 GiB, a 16 GB machine's default: one job at 2.5 GiB a job.
   const small = await budgeted(2);
   const over = await post(small.port, "start", { token: small.token, ...fields, jobs: "2" });
@@ -491,7 +491,12 @@ test("a start is held to the memory budget: over it a 400 naming budget and esti
   assert.ok(visibleText(over.body).includes(text.tooManyJobs("2", "1", "2", "2.5")), visibleText(over.body));
   // R6c counts 4 GiB a job: 6 GiB holds one job of it, the estimate taken from the rungs the start names.
   const six = await budgeted(6);
-  const r6c = await post(six.port, "start", { token: six.token, ...fields, rungs: "r6c", jobs: "2" });
+  const r6c = await post(six.port, "start", {
+    token: six.token,
+    ...fields,
+    rungs: "mtf-vs-optiland-wavefront",
+    jobs: "2",
+  });
   assert.equal(r6c.status, 400, r6c.body);
   assert.ok(visibleText(r6c.body).includes(text.tooManyJobs("2", "1", "6", "4")), visibleText(r6c.body));
   for (const port of [small.port, six.port]) assert.deepEqual((await controlView(port)).jobs, [], "nothing started");
@@ -580,7 +585,7 @@ test("a collect that refuses an answer shows the job rejected with lvrtc's reaso
   const dashboard = await served(t, rootDir, runsDir, rootSuites(rootDir));
   const { port } = dashboard;
   const token = await tokenOf(port);
-  const start = { token, suite: "fake-pair", engines: "fake-a,fake-human", rungs: "selftest" };
+  const start = { token, suite: "fake-pair", engines: "fake-a,fake-human", rungs: "pipeline-echo" };
   assert.equal((await post(port, "start", start)).status, 303);
   await ended(port, 1);
   assert.equal(node(runsDir, [OPERATOR, exchange]).code, 0);

@@ -346,7 +346,7 @@ function sectionOf(
   const rungPolicy = Object.hasOwn(policy.rungs, rung) ? policy.rungs[rung] : null;
   const mtf = !isNativeMtfRung(rung)
     ? null
-    : (rung === "r6c" ? buildWavefrontComparison : buildMtfComparison)({
+    : (rung === "mtf-vs-optiland-wavefront" ? buildWavefrontComparison : buildMtfComparison)({
         participants: sets[0].participants,
         pairs: sets.flatMap((set) => set.pairs),
         policy: rungPolicy,

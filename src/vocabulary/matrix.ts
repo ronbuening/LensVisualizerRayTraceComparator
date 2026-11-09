@@ -23,7 +23,7 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "Built system, first-order data, rays and optical path",
     about:
       "The foundation of every tab: the system each engine builds from the lens state, its first-order data, and the hits, landings and optical paths of the rays LensVisualizer launches for its MTF.",
-    gated: ["r0", "r1", "r2", "r3"],
+    gated: ["built-system", "first-order", "ray-trace", "optical-path"],
     recorded: [],
     notCovered: [
       "Folded paths and diffractive surfaces: the suites folded and diffractive have ray baselines of their own, outside the benchmark.",
@@ -35,8 +35,8 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "MTF",
     about:
       "LensVisualizer's MTF tab: this tool's geometric and wave MTF of LensVisualizer's launch rays as each engine traces them, LensVisualizer's own geometric MTF beside the replay of its sampling, and the engines' own MTF side by side.",
-    gated: ["r4", "r4f", "r6a"],
-    recorded: ["r5", "r5g", "r6b", "r6c"],
+    gated: ["geometric-mtf", "lv-mtf-replay", "wave-mtf"],
+    recorded: ["mtf-vs-optiland-fft", "geometric-mtf-vs-optiland", "mtf-vs-wave-estimate", "mtf-vs-optiland-wavefront"],
     notCovered: ["Each item of the fixed list at the end of this matrix, which every MTF report ends with."],
   },
   {
@@ -44,12 +44,12 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "Coma and bokeh",
     about:
       "LensVisualizer's coma and bokeh tabs: the rings and fans of the coma cloud and the bokeh tile's rings, each sample LensVisualizer's own aimed launch ray.",
-    gated: ["r7a"],
-    recorded: ["r7b"],
+    gated: ["spot-rays"],
+    recorded: ["spot-vs-optiland"],
     notCovered: [
       "The bokeh tile at the tab's own plane (infSensorZ): deferred.",
       "A finite object and a folded path: each is a coded problem of the run, never approximated; a coma fan on the axis is a coded problem of its field.",
-      "The spot figures of check r7b have no review band, since the two engines sample the pupil on different rings; only its fan figure has one.",
+      "The spot figures of check spot-vs-optiland have no review band, since the two engines sample the pupil on different rings; only its fan figure has one.",
     ],
   },
   {
@@ -57,10 +57,10 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "Spherical aberration and axial colour",
     about:
       "LensVisualizer's spherical-aberration section (aberrations tab) and axial-colour section (chromatic tab): the zones of the axial object, at the lens's own refractive indices and at each colour channel's own.",
-    gated: ["r8a"],
-    recorded: ["r8b"],
+    gated: ["axial-rays"],
+    recorded: ["axial-vs-optiland"],
     notCovered: [
-      "The colour figures of check r8b have no review band.",
+      "The colour figures of check axial-vs-optiland have no review band.",
       "Bit identity of LensVisualizer's channel indices at the C, F and g lines: no committed suite asks for those wavelengths, and it is not pursued.",
       "A finite object and a folded path: coded problems of the run.",
     ],
@@ -69,14 +69,14 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     tab: "chief",
     title: "Distortion, lateral colour, pupils and breathing",
     about:
-      "LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own. Breathing is the focal length of each prepared lens state, which check r1 compares; a test against LensVisualizer alone (breathing.test.ts) holds the breathing chart to that focal length.",
-    gated: ["r9a", "r1"],
-    recorded: ["r9b"],
+      "LensVisualizer's distortion and pupils tabs and its lateral-colour section: their chief rays, each colour channel's own. Breathing is the focal length of each prepared lens state, which check first-order compares; a test against LensVisualizer alone (breathing.test.ts) holds the breathing chart to that focal length.",
+    gated: ["chief-rays", "first-order"],
+    recorded: ["chief-vs-optiland"],
     notCovered: [
       "Breathing between the focus stations LensVisualizer declares: a chart position between two stations is no lens state.",
       "A fisheye's distortion (lv-fisheye-projection): a coded problem of the set of rays.",
       "optiland's pupil aberration: another quantity, never asked for.",
-      "The figures of check r9b have no review band.",
+      "The figures of check chief-vs-optiland have no review band.",
     ],
   },
   {
@@ -84,8 +84,8 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "Field curves and astigmatism",
     about:
       "LensVisualizer's field-curve and astigmatism sections (aberrations tab): the parabasal pencil and the real-ray fans of each field.",
-    gated: ["r10a"],
-    recorded: ["r10b"],
+    gated: ["field-curve-rays"],
+    recorded: ["field-curve-vs-optiland"],
     notCovered: [
       "LensVisualizer's parabasal pencil is 0.01 mm wide, a convention of its own: its foci are of a finite pencil, beside optiland's infinitesimal pair.",
       "Fields other than the sections' own field fractions.",
@@ -96,11 +96,11 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     title: "Vignetting and relative illumination",
     about:
       "LensVisualizer's vignetting tab: an aimed lattice of rays on the real stop at each of its fields, the share of it that reaches the image and its flux there.",
-    gated: ["r11a"],
-    recorded: ["r11b"],
+    gated: ["vignetting-rays"],
+    recorded: ["vignetting-vs-flux-estimate"],
     notCovered: [
-      "optiland has no vignetting analysis: the counterpart in check r11b is this tool's own flux estimate on LensVisualizer's lattices, not an external engine.",
-      "The relative illumination and the falloff of check r11b have no review band.",
+      "optiland has no vignetting analysis: the counterpart in check vignetting-vs-flux-estimate is this tool's own flux estimate on LensVisualizer's lattices, not an external engine.",
+      "The relative illumination and the falloff of check vignetting-vs-flux-estimate have no review band.",
       "Lens states outside the tab's beam model, and fields launched from a bounding sphere: coded problems, with no vignetting rays.",
     ],
   },
@@ -108,13 +108,13 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     tab: "summary",
     title: "Summary and cardinal elements",
     about:
-      "LensVisualizer's summary tab and aperture control: their readouts are of the prepared lens state and LensVisualizer's paraxial model, which check r1 compares; a test against LensVisualizer alone (summary.test.ts) holds the readouts to the first-order values of check r1; the tab traces no ray of its own.",
-    gated: ["r1"],
-    recorded: ["r12b"],
+      "LensVisualizer's summary tab and aperture control: their readouts are of the prepared lens state and LensVisualizer's paraxial model, which check first-order compares; a test against LensVisualizer alone (summary.test.ts) holds the readouts to the first-order values of check first-order; the tab traces no ray of its own.",
+    gated: ["first-order"],
+    recorded: ["summary-vs-optiland"],
     notCovered: [
       "The half field, the focus distance, the controls and the Current Perspective Pose section of the tab.",
       "The aperture control's paraxial working f-number beside the mark, shown only above a difference of 0.05.",
-      "The stop and the track in check r12b are optiland's reading of the lens state: they hold the tab to the lens state, not two engines to each other.",
+      "The stop and the track in check summary-vs-optiland are optiland's reading of the lens state: they hold the tab to the lens state, not two engines to each other.",
     ],
   },
   {
@@ -123,7 +123,7 @@ export const MATRIX_ROWS: readonly MatrixRowText[] = [
     about:
       "LensVisualizer presents no Seidel sums, wavefront or Zernike coefficients: these checks set optiland beside this tool's own estimates, by OpticStudio's conventions, and LensVisualizer is not asked.",
     gated: [],
-    recorded: ["r13b", "r14b"],
+    recorded: ["seidel-vs-optiland", "zernike-vs-optiland"],
     notCovered: [
       "optiland's chromatic Seidel sums: optiland states none for a lens of one wavelength.",
       "The reference tracer as a third Zernike answer: the raw wavefront quantity (wavefront.native, version 1) carries no launch rays.",

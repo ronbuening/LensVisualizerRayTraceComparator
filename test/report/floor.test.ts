@@ -18,8 +18,9 @@ import {
   renderFloorReport,
 } from "../../src/report/floor.ts";
 import { POLICY_LADDER } from "../contract/corpus.ts";
+import { atCurrentIds } from "../core/support.ts";
 
-const POLICY: Policy = structuredClone(POLICY_LADDER);
+const POLICY: Policy = atCurrentIds(POLICY_LADDER);
 const FLOOR = { engine: "lv", arbiter: "ref" } as const;
 const CASE = "c".repeat(64);
 const TELE_CASE = "d".repeat(64);
@@ -78,7 +79,7 @@ function set(
     "rays.blocked": [blocked],
     "rays.failed": [failed],
   });
-  const rays = rung === "r2";
+  const rays = rung === "ray-trace";
   return {
     contract: "1.0",
     kind: "comparison",
@@ -86,7 +87,7 @@ function set(
     run,
     caseId: CASE,
     rung,
-    quantity: rung === "r1" ? "paraxial.first-order" : "rays.trace",
+    quantity: rung === "first-order" ? "paraxial.first-order" : "rays.trace",
     requestId: request.repeat(64),
     participants: [
       { engine: "lv", fingerprint: "f".repeat(64), status: "ok", ...(rays ? { recorded: counts(40, 9, 1) } : {}) },
@@ -107,21 +108,21 @@ const COMPARISONS: ComparisonFile = {
   manifest: hashCanonical(MANIFEST),
   policy: hashCanonical(POLICY),
   comparisons: [
-    set("wide", "r1", "1", "pairwise", [
+    set("wide", "first-order", "1", "pairwise", [
       pair("lv", "other", "PASS", [metric("firstOrder.maxAbs", 9, "mm")]),
       pair("lv", "ref", "PASS", R1),
       pair("other", "ref", "FAIL", [metric("firstOrder.maxAbs", 9, "mm")]),
     ]),
     // Two requests of r2 for the first run, each in both modes: the pairwise one is the one that is read.
-    set("wide", "r2", "2", "reference-vs-each", [
+    set("wide", "ray-trace", "2", "reference-vs-each", [
       pair("lv", "other", "PASS", geometry(7, 0, 0, 1)),
       pair("lv", "ref", "PASS", geometry(4e-9, 3, 0, 30)),
     ]),
-    set("wide", "r2", "2", "pairwise", [pair("lv", "ref", "PASS", geometry(4e-9, 3, 0, 30))]),
-    set("wide", "r2", "3", "pairwise", [pair("lv", "ref", "FLOOR", geometry(2.5e-8, 17, 2, 28), "a floor")]),
+    set("wide", "ray-trace", "2", "pairwise", [pair("lv", "ref", "PASS", geometry(4e-9, 3, 0, 30))]),
+    set("wide", "ray-trace", "3", "pairwise", [pair("lv", "ref", "FLOOR", geometry(2.5e-8, 17, 2, 28), "a floor")]),
     // The second run was compared against a reference only, and named the other way round.
-    set("tele", "r2", "4", "reference-vs-each", [pair("ref", "lv", "PASS", geometry(9e-9, 5, 1, 12))]),
-    set("tele", "r2", "5", "reference-vs-each", [
+    set("tele", "ray-trace", "4", "reference-vs-each", [pair("ref", "lv", "PASS", geometry(9e-9, 5, 1, 12))]),
+    set("tele", "ray-trace", "5", "reference-vs-each", [
       pair("ref", "lv", "FAIL", geometry(null as unknown as number, 6, 0, 3)),
     ]),
   ],
@@ -129,11 +130,14 @@ const COMPARISONS: ComparisonFile = {
 
 test("the engine with a floor and its arbiter are the policy's; a policy without a floor has none", () => {
   assert.deepEqual(floorOf(POLICY), FLOOR);
-  const { r2: _r2, r3: _r3, ...rungs } = POLICY.rungs;
+  const { "ray-trace": _r2, "optical-path": _r3, ...rungs } = POLICY.rungs;
   assert.equal(floorOf({ ...POLICY, rungs }), undefined);
   const other: Policy = {
     ...POLICY,
-    rungs: { ...POLICY.rungs, r3: { ...POLICY.rungs.r3, floor: { engine: "x", arbiter: "ref" } } },
+    rungs: {
+      ...POLICY.rungs,
+      "optical-path": { ...POLICY.rungs["optical-path"], floor: { engine: "x", arbiter: "ref" } },
+    },
   };
   assert.throws(() => floorOf(other), /the policy names more than one floor/);
   assert.deepEqual(floorFileNames("lv"), { json: "lv-floor.json", markdown: "lv-floor.md" });
@@ -168,10 +172,10 @@ test("the digest holds the pairs of the two engines only: per run and rung the w
   assert.deepEqual(
     report.rows.map((row) => [row.run, row.rung, row.requests, row.verdicts]),
     [
-      ["wide", "r1", 1, [{ verdict: "PASS", count: 1 }]],
+      ["wide", "first-order", 1, [{ verdict: "PASS", count: 1 }]],
       [
         "wide",
-        "r2",
+        "ray-trace",
         2,
         [
           { verdict: "PASS", count: 1 },
@@ -180,7 +184,7 @@ test("the digest holds the pairs of the two engines only: per run and rung the w
       ],
       [
         "tele",
-        "r2",
+        "ray-trace",
         2,
         [
           { verdict: "PASS", count: 1 },
@@ -223,9 +227,9 @@ test("the digest holds the pairs of the two engines only: per run and rung the w
   assert.deepEqual(
     report.rungs.map((rung) => [rung.rung, rung.quantity, rung.requests, rung.verdicts]),
     [
-      ["r1", "paraxial.first-order", 1, [{ verdict: "PASS", count: 1 }]],
+      ["first-order", "paraxial.first-order", 1, [{ verdict: "PASS", count: 1 }]],
       [
-        "r2",
+        "ray-trace",
         "rays.trace",
         4,
         [
@@ -276,11 +280,11 @@ test("the Markdown names the two engines with their hashes, then each rung's wor
       "# Numerical floor of lv against ref: digest",
       "## Inputs",
       "## Worst figures",
-      "### r1",
-      "### r2",
+      "### first-order",
+      "### ray-trace",
       "## By run",
-      "### r1",
-      "### r2",
+      "### first-order",
+      "### ray-trace",
     ],
   );
   assert.ok(

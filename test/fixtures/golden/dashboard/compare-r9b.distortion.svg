@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" class="lvc" width="640" height="480" viewBox="0 0 640 480" role="img">
-<title>stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</title>
+<title>stand-in-tabs, lens, chief-vs-optiland: Distortion (percent) against Field angle (degrees)</title>
 <desc>Each side-by-side comparison of this card in this condition: each value both answers recorded, set on shared axes, and below it the first engine&#39;s value minus the second&#39;s. A difference is drawn only for a field or wavelength the comparison sorts as of two methods (repeated by this tool&#39;s own functions from the values it recorded); one it sets aside is named with its class and reason. The shaded band is the review band the limits file at hand gives the value&#39;s figure, and a chart says where it gives none. The limits file at hand gives Largest difference of distortion no review band. 20: set aside (not computed by one engine: an engine has no curve of the field), so no difference is drawn.</desc>
 <style>.lvc{font:11px system-ui,-apple-system,'Segoe UI',sans-serif}
 .lvc .bg{fill:#fcfcfb}
@@ -105,7 +105,7 @@
 .lvc text.t-BLOCKED{fill:#e4e4ea}
 }</style>
 <rect class="bg" x="0" y="0" width="640" height="480"/>
-<text x="12" y="20" class="head">stand-in-tabs, lens, r9b: Distortion (percent) against Field angle (degrees)</text>
+<text x="12" y="20" class="head">stand-in-tabs, lens, chief-vs-optiland: Distortion (percent) against Field angle (degrees)</text>
 <line class="grid" x1="76" y1="236" x2="624" y2="236"/>
 <text x="70" y="240" class="muted" text-anchor="end">-2.5</text>
 <line class="grid" x1="76" y1="196" x2="624" y2="196"/>

@@ -3,7 +3,7 @@
   "kind": "suite",
   "name": "fake-pair",
   "defaults": {
-    "rungs": ["selftest"]
+    "rungs": ["pipeline-echo"]
   },
   "runs": [
     {

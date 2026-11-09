@@ -10,7 +10,7 @@
       "kind": "design"
     },
     "engines": ["lv", "ref", "optiland"],
-    "rungs": ["r0", "r1", "r2", "r3", "r4", "r4f", "r6a"]
+    "rungs": ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "lv-mtf-replay", "wave-mtf"]
   },
   "runs": [
     {

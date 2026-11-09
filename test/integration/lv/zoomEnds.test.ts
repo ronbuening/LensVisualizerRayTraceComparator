@@ -80,7 +80,7 @@ function runOf(key: string, options: RunOptions): RunSpec {
 /** The pair of `lv` and `ref` on one request of a rung, judged by the rung's policy as `lvrtc compare` judges it. */
 async function judged(
   ask: Engines,
-  rung: "r0" | "r1" | "r2" | "r3",
+  rung: "built-system" | "first-order" | "ray-trace" | "optical-path",
   request: QuantityRequest,
   opticalCase: OpticalCase,
   at: string,
@@ -93,7 +93,7 @@ async function judged(
 }
 
 function judgedAnswers(
-  rung: "r0" | "r1" | "r2" | "r3",
+  rung: "built-system" | "first-order" | "ray-trace" | "optical-path",
   request: QuantityRequest,
   opticalCase: OpticalCase,
   lvData: JsonObject,
@@ -187,11 +187,11 @@ test(
           judgedCases++;
           const spec = runOf(key, { state: { zoomT }, lines });
           for (const rung of [r0Rung, r1Rung]) {
-            const id = rung.id as "r0" | "r1";
+            const id = rung.id as "built-system" | "first-order";
             const [request] = rung.buildRequests(opticalCase, spec);
             const pair = await judged(ask, id, request, opticalCase, at);
             if (pair.verdict !== "PASS") failed.push(`${at} ${id}: ${pair.verdict} ${pair.reason ?? ""}`);
-            if (id === "r0") {
+            if (id === "built-system") {
               const sag = metricOf(pair, "sag.maxScaled");
               if (sag > worst.sag) Object.assign(worst, { sag, sagAt: at });
             } else {
@@ -288,11 +288,11 @@ test(
         const [mine, theirs] = [await ask.lv.run(request, opticalCase), await ask.ref.run(request, opticalCase)];
         assert.deepEqual([mine.status, theirs.status], ["ok", "ok"], at);
         const [lvData, refData] = [mine.data as JsonObject, theirs.data as JsonObject];
-        const r2 = judgedAnswers("r2", request, opticalCase, lvData, refData, at);
-        const r3 = judgedAnswers("r3", request, opticalCase, lvData, refData, at);
+        const r2 = judgedAnswers("ray-trace", request, opticalCase, lvData, refData, at);
+        const r3 = judgedAnswers("optical-path", request, opticalCase, lvData, refData, at);
         for (const [rung, pair] of [
-          ["r2", r2],
-          ["r3", r3],
+          ["ray-trace", r2],
+          ["optical-path", r3],
         ] as const) {
           assert.equal(pair.verdict, "PASS", `${at} ${rung}: ${pair.verdict} ${pair.reason}`);
           verdicts[`${rung} ${pair.verdict}`] = (verdicts[`${rung} ${pair.verdict}`] ?? 0) + 1;
@@ -394,7 +394,7 @@ test(
     );
     assert.equal(Number(summary[1] ?? 0) + Number(summary[2] ?? 0), 36);
     for (const end of ["wide", "tele"]) {
-      for (const rung of ["r0", "r1", "r2", "r3", "r4", "r6a"]) {
+      for (const rung of ["built-system", "first-order", "ray-trace", "optical-path", "geometric-mtf", "wave-mtf"]) {
         assert.match(
           compared.out,
           new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +every pair +lv +ref +Pass`, "m"),

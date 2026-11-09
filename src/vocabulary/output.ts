@@ -253,6 +253,9 @@ export const OLD_ID_TEXT = {
   engine: "engine",
   isNow: "is now",
   advice: "write the new ids; the old ones will stop being read when the catalog is next refreshed",
+  /** What `lvrtc run` says when the checks were named by `--rungs`, the older spelling of `--checks`. */
+  olderOption:
+    "note: --rungs is the older spelling of --checks and was read as --checks; write --checks, since --rungs will stop being read when the catalog is next refreshed",
 } as const;
 
 /** The identifiers `--details` shows: hashes that tell one engine version, lens state or request from another. */

@@ -8,7 +8,7 @@
 | Suite hash | f468d61f309a985206b26b9271d180cd5d6b8e9e7a30935e9c254d75d5d6e5ff |
 | Contract version | 1.0 |
 | Limits file | v1 |
-| Limits file hash | 127f9838fd0e93ee279207fb5026303cc7e756b84e71f07a6180b0d8c9e5aab2 |
+| Limits file hash | e433eafea6dfbbbcbf37de7e04a8adc4511b4b77a2e4726b5583737a292ee163 |
 
 ### Engines
 
@@ -41,15 +41,15 @@ No pair is Fail or Error, of 6 compared.
 
 | Run | Check | lv | optiland |
 |---|---|---|---|
-| lens | r9b, request 1 of 3 | ok | ok |
-| lens | r9b, request 2 of 3 | ok | ok |
-| lens | r9b, request 3 of 3 | ok | ok |
+| lens | chief-vs-optiland, request 1 of 3 | ok | ok |
+| lens | chief-vs-optiland, request 2 of 3 | ok | ok |
+| lens | chief-vs-optiland, request 3 of 3 | ok | ok |
 
 ## Results
 
 ### lens
 
-#### Distortion, pupils and lateral colour beside optiland's — `r9b`, request 1 of 3
+#### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 1 of 3
 
 Quantity `chief.native`: each engine's own method; side by side, no limit. Request `90ebb95de8e540ba912359d165fae26954ba83d2016cb1430286919cd069c7ee`.
 
@@ -99,7 +99,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 | wavelengthNm[1] | 5.87561800e2 | 5.87561800e2 |
 | wavelengthNm[2] | 5.87561800e2 | 5.87561800e2 |
 
-#### Distortion, pupils and lateral colour beside optiland's — `r9b`, request 2 of 3
+#### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 2 of 3
 
 Quantity `chief.native`: each engine's own method; side by side, no limit. Request `0c61068d14858a01185fad60c86696b6adda44e31272b1e3f326d7ee9c0339c0`.
 
@@ -161,7 +161,7 @@ Recorded values, as each engine reports them. They are listed and never judged:
 | wavelengthNm[4] | 5.37561800e2 | 5.37561800e2 |
 | wavelengthNm[5] | 5.37561800e2 | 5.37561800e2 |
 
-#### Distortion, pupils and lateral colour beside optiland's — `r9b`, request 3 of 3
+#### Distortion, pupils and lateral colour beside optiland's — `chief-vs-optiland`, request 3 of 3
 
 Quantity `chief.native`: each engine's own method; side by side, no limit. Request `63564a4046cb3b10c7852becdc8646eb05c4839610a9726b805b38971c00c89b`.
 
@@ -205,9 +205,9 @@ Recorded values, as each engine reports them. They are listed and never judged:
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.

@@ -29,9 +29,9 @@ How to read this, near the end, says what each label and column means.
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 3 | 3 | lv – wave | 3 Side by side | 3 Side by side |
-| MTF beside optiland's FFT MTF — `r5` | `mtf.native` | 3 | 3 | optiland – wave | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 3 | 3 | lv – wave | 3 Side by side | 3 Side by side |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | `mtf.native` | 3 | 3 | optiland – wave | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
 
 ## Support
 
@@ -40,11 +40,11 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | lv | 3 answered |
-| MTF beside optiland's FFT MTF — `r5` | optiland | 2 answered, 1 not computed (feature lines.polychromatic) |
-| MTF beside optiland's FFT MTF — `r5` | wave | 3 answered |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | lv | 3 answered |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | 2 answered, 1 not computed (feature lines.polychromatic) |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | wave | 3 answered |
 
-## MTF beside optiland's FFT MTF — `r5`
+## MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft`
 
 Compares: LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -134,7 +134,7 @@ Its first answer is what the support counts; the step is what its row of a table
 
 | Check | Engine | Step | Runs | Requests asked again | Not ok |
 |---|---|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | optiland | fft512 | 1 | 1 | — |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | optiland | fft512 | 1 | 1 | — |
 
 ## Worth a look
 
@@ -144,16 +144,16 @@ sorting limit tells two image points apart; nothing here is a failure.
 
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
-| MTF beside optiland's FFT MTF — `r5` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside optiland's FFT MTF — `r5` | beyond | — | optiland – wave | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside optiland's FFT MTF — `mtf-vs-optiland-fft` | beyond | — | optiland – wave | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
 
 ## Not covered
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
@@ -183,7 +183,7 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| MTF beside optiland's FFT MTF | `r5` | side by side, no limit | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. |
+| MTF beside optiland's FFT MTF | `mtf-vs-optiland-fft` | side by side, no limit | LensVisualizer's diffraction MTF beside optiland's FFT MTF and the wave estimate of LensVisualizer's rays. |
 
 ### Engines
 
@@ -256,8 +256,8 @@ contract version is that of the file format the baseline is written in.
 | Identifier | Value |
 |---|---|
 | Suite file | 2683eeb778d1dbede78479314c82c226901206a79c0675f76566a26c181d231f |
-| Baseline file | 5172cbfbdd383358dc8673e466fcb274e2484d15dde57a1fe38852ea144b9bbe |
-| Limits file | 98d2351601a94f80f1cf6be9cf1c0272a3f98573b7446c70e66db4edcdd8fa85 |
+| Baseline file | fab9c80308add56e816bd1f55592101bdce767136505b46ad2053ec17113653f |
+| Limits file | d7fcac99ad2089a29efc4031c3134c3777e39cf1afd4d85ef9b90cf57d1c54d2 |
 | Contract version of the baseline file | 1.1 |
 
 | Engine | Engine code | This tool's code behind it | Commit and sources |

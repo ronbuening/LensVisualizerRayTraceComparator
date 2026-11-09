@@ -25,6 +25,13 @@ export const JARGON: readonly JargonTerm[] = [
   { term: "Phase", pattern: /\bphase \d/i, replacement: "nothing: say what changed, not when" },
   { term: "owner", pattern: /\bowners?\b/i, replacement: "maintainer" },
   { term: "implementer", pattern: /\bimplementers?\b/i, replacement: "maintainer" },
+  // A check's id from before the rename, as a whole token (r2, r6a, R14b, selftest; never selftest.echo, the
+  // quantity, or a name that only contains one, such as r5-stand-ins).
+  {
+    term: "old check id",
+    pattern: /(?<![\w./-])(?:r(?:1[0-4]|[0-9])[a-g]?|selftest)(?![\w-]|\.\w)/i,
+    replacement: "the check's id of today (lvrtc checks lists both)",
+  },
 ];
 
 /**

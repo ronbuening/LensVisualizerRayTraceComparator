@@ -55,7 +55,7 @@ test(
       suite: suitePath("focus-stations"),
       name: "focus-stations",
       engines: "lv,ref,optiland",
-      rungs: "r2,r3",
+      rungs: "ray-trace,optical-path",
       root: rootDir,
     });
     const { manifest } = cycle;
@@ -74,8 +74,8 @@ test(
     }
     const sets = manifest.runs.reduce((total, run) => total + (run.raySets?.sets.length ?? 0), 0);
     assert.equal(manifest.jobs.length, 2 * 3 * sets);
-    const computed = manifest.jobs.filter((job) => job.rung === "r2").map((job) => job.storeKey);
-    const again = manifest.jobs.filter((job) => job.rung === "r3").map((job) => job.storeKey);
+    const computed = manifest.jobs.filter((job) => job.rung === "ray-trace").map((job) => job.storeKey);
+    const again = manifest.jobs.filter((job) => job.rung === "optical-path").map((job) => job.storeKey);
     assert.deepEqual(again, computed, "the answer of a set to R3 is its answer to R2");
 
     const { pairs } = assertR2(t, "focus stations", cycle);

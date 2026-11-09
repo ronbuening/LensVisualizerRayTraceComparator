@@ -583,9 +583,12 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.equal(new Set(manifest.runs.map((each) => each.caseId)).size, 8, "each condition is a case of its own");
   assert.ok(manifest.runs.every((each) => each.caseId !== null));
   // The rungs that need optiland are run only where it is named.
-  assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))], ["r4", "r4f", "r6a", "r6b"]);
+  assert.deepEqual(
+    [...new Set(manifest.jobs.map((job) => job.rung))],
+    ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
+  );
   assert.ok(manifest.engines.every((engine) => !["optiland", "optiland-wave"].includes(engine.id)));
-  assert.doesNotMatch(markdown, /^## .*`r6c`$/m);
+  assert.doesNotMatch(markdown, /^## .*`mtf-vs-optiland-wavefront`$/m);
   assert.ok(manifest.jobs.every((job) => job.status === "ok"));
   assert.deepEqual([...new Set(comparisons.comparisons.map((set) => set.run))], names);
 
@@ -594,29 +597,29 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   assert.match(markdown, /^# MTF of acme-singlet-50$/m);
   assert.match(
     markdown,
-    /^\| Geometric MTF of the same rays — `r4` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
+    /^\| Geometric MTF of the same rays — `geometric-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| LensVisualizer's MTF sampling, replayed — `r4f` \| `mtf\.native` \| 8 \| 8 \| lv – replay \| 8 Pass \| 8 Pass \|$/m,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 8 \| 8 \| lv – replay \| 8 Pass \| 8 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| Wave MTF of the same rays — `r6a` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
+    /^\| Wave MTF of the same rays — `wave-mtf` \| `rays\.trace` \| 8 \| 24 \| lv – ref \| 8 Pass \| 24 Pass \|$/m,
   );
   assert.match(
     markdown,
-    /^\| MTF beside the wave estimate of LensVisualizer's rays — `r6b` \| `mtf\.native` \| 8 \| 8 \| lv – wave \| /m,
+    /^\| MTF beside the wave estimate of LensVisualizer's rays — `mtf-vs-wave-estimate` \| `mtf\.native` \| 8 \| 8 \| lv – wave \| /m,
   );
   assert.match(markdown, /^## Not covered$/m);
   assert.deepEqual(wordingProblems(markdown), []);
   assert.match(
     run.err,
-    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, with the checks r4, r4f, r6a, r6b \(r5 and r5g and r6c need optiland\); what the result cache holds is not computed again$/m,
+    /^lvrtc mtf: mtf-acme-singlet-50: 8 runs on lv, ref, with the checks geometric-mtf, lv-mtf-replay, wave-mtf, mtf-vs-wave-estimate \(mtf-vs-optiland-fft and geometric-mtf-vs-optiland and mtf-vs-optiland-wavefront need optiland\); what the result cache holds is not computed again$/m,
   );
-  assert.match(run.err, /^lvrtc mtf: {3}Checks: r4 Geometric MTF of the same rays; r4f /m);
+  assert.match(run.err, /^lvrtc mtf: {3}Checks: geometric-mtf Geometric MTF of the same rays; lv-mtf-replay /m);
   assert.match(run.err, /^lvrtc mtf: {3}Engines: lv LensVisualizer; ref Reference tracer$/m);
-  assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic r6b$/m);
+  assert.match(run.err, /^lvrtc mtf: acme-singlet-50-f8-best-photopic mtf-vs-wave-estimate$/m);
   assert.ok(run.err.endsWith(`lvrtc mtf: run directory: ${join(runsDir, "mtf-acme-singlet-50")}\n`));
   // Nothing is written outside the run directory and the store.
   assert.deepEqual(readdirSync(runsDir).sort(), ["mtf-acme-singlet-50", "store"]);
@@ -626,7 +629,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   const again = await mtf(["acme-singlet-50", "--profile", "benchmark", "--engines", "lv,ref"], rootDir);
   assert.equal(again.code, EXIT_OK, again.err);
   assert.equal(again.out, run.out);
-  assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref r4f \(from the cache\)$/m);
+  assert.match(again.err, /^lvrtc mtf: acme-singlet-50-ref lv-mtf-replay \(from the cache\)$/m);
 
   // One aperture is four runs; --json prints the report as one object.
   const f8 = await mtf(
@@ -642,7 +645,7 @@ test("--profile benchmark: the lens in its eight conditions, run, compared and r
   );
   assert.deepEqual(
     report.rungs.map((each) => each.rung),
-    ["r4", "r4f", "r6a", "r6b"],
+    ["geometric-mtf", "lv-mtf-replay", "wave-mtf", "mtf-vs-wave-estimate"],
   );
 
   const usage = await mtf(["acme-singlet-50", "--profile", "benchmark", "--aperture", "f/5.6"], rootDir);
@@ -665,15 +668,15 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
   assert.equal(run.code, EXIT_OK, run.err);
   const { manifest, markdown } = benchmarkOf(runsDir, "acme-singlet-50");
   assert.deepEqual([...new Set(manifest.jobs.map((job) => job.rung))].sort(), [
-    "r4",
-    "r4f",
-    "r5",
-    "r5g",
-    "r6a",
-    "r6b",
-    "r6c",
+    "geometric-mtf",
+    "geometric-mtf-vs-optiland",
+    "lv-mtf-replay",
+    "mtf-vs-optiland-fft",
+    "mtf-vs-optiland-wavefront",
+    "mtf-vs-wave-estimate",
+    "wave-mtf",
   ]);
-  const jobs = manifest.jobs.filter((job) => job.rung === "r6c");
+  const jobs = manifest.jobs.filter((job) => job.rung === "mtf-vs-optiland-wavefront");
   assert.deepEqual(
     [...new Set(jobs.map((job) => job.run))],
     [
@@ -693,7 +696,7 @@ test("--profile benchmark: naming optiland adds r5, r5g and r6c, with r6c on ref
     );
   }
   assert.equal(run.out, markdown);
-  assert.match(markdown, /^## MTF beside the OTF of optiland's wavefront — `r6c`$/m);
+  assert.match(markdown, /^## MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`$/m);
   assert.deepEqual(wordingProblems(markdown), []);
 });
 
@@ -725,10 +728,10 @@ test("--profile benchmark: a gated pair that fails is named on the error stream,
   assert.equal(run.code, EXIT_FAILURE);
   const failing = run.err.split("\n").filter((line) => /: Fail: /.test(line));
   assert.equal(failing.length, 4, "each failing pair is named once");
-  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref r4f lv replay: Fail: /);
+  assert.match(failing[0], /^lvrtc mtf: acme-singlet-50-f8-ref lv-mtf-replay lv replay: Fail: /);
   assert.match(
     run.out,
-    /^\| LensVisualizer's MTF sampling, replayed — `r4f` \| `mtf\.native` \| 4 \| 4 \| lv – replay \| 4 Fail \| 4 Fail \|$/m,
+    /^\| LensVisualizer's MTF sampling, replayed — `lv-mtf-replay` \| `mtf\.native` \| 4 \| 4 \| lv – replay \| 4 Fail \| 4 Fail \|$/m,
   );
 });
 

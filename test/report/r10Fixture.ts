@@ -45,11 +45,11 @@ export const R10A_GOLDEN = "r10a-stand-ins";
 export const R10B_GOLDEN = "r10b-stand-ins";
 
 /** A policy of one rung, the rung's entry of the comparator's own policy: its gates, or its limit and units. */
-function policyOf(rung: "r10a" | "r10b"): Policy {
+function policyOf(rung: "field-curve-rays" | "field-curve-vs-optiland"): Policy {
   return { contract: "1.0", kind: "policy", version: 1, rungs: { [rung]: loadPolicy().rungs[rung] } };
 }
-export const R10A_POLICY: Policy = policyOf("r10a");
-export const R10B_POLICY: Policy = policyOf("r10b");
+export const R10A_POLICY: Policy = policyOf("field-curve-rays");
+export const R10B_POLICY: Policy = policyOf("field-curve-vs-optiland");
 
 /** What one cycle of a fixture gave. */
 export interface R10Cycle {
@@ -126,7 +126,7 @@ function curvatureAt(line: number): RaysTraceSpec {
 
 /** The rung `r10a` as a case without LensVisualizer's sections can be asked it: the set at both lines of the lens. */
 export const R10A_FIXTURE_RUNG: RungDefinition = {
-  id: "r10a",
+  id: "field-curve-rays",
   quantity: RAYS_TRACE,
   buildRequests: (opticalCase) =>
     [curvatureAt(0), curvatureAt(1)].map((spec) => makeRequest({ caseId: opticalCase.id, quantity: RAYS_TRACE, spec })),
@@ -193,7 +193,7 @@ const ASK: CurvatureNativeSpec = { lines: [0, 1], maxFieldDeg: 20, fieldAnglesDe
 
 /** The rung `r10b` as stand-ins can be asked it: the field curves at both lines. */
 export const R10B_FIXTURE_RUNG: RungDefinition = {
-  id: "r10b",
+  id: "field-curve-vs-optiland",
   quantity: CURVATURE_NATIVE,
   engines: ["lv", "optiland"],
   buildRequests: (opticalCase) => [

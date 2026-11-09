@@ -424,7 +424,7 @@ function chartCounts(places: DocumentPlaces, name: string, index: number): Map<s
       });
     }
   }
-  if (head.quantity === "rays.trace" && head.rung === "r2") {
+  if (head.quantity === "rays.trace" && head.rung === "ray-trace") {
     pairs.forEach(({ a, b }, d) => {
       const [one, two] = [a, b].map((engine) =>
         storeEntryOf(places, jobs.find((job) => job.engine === engine && job.step === undefined)?.storeKey ?? null),
@@ -832,7 +832,8 @@ function holdCharts(
   };
   const { overlays, differences, deviations } = view.charts;
   if (head.quantity !== "mtf.native") assert.equal(overlays.length + differences.length, 0, `${what}: no MTF chart`);
-  if (head.quantity !== "rays.trace" || head.rung !== "r2") assert.equal(deviations.length, 0, `${what}: no deviation`);
+  if (head.quantity !== "rays.trace" || head.rung !== "ray-trace")
+    assert.equal(deviations.length, 0, `${what}: no deviation`);
   for (const overlay of overlays) {
     const at = `${what} overlay ${overlay.element} ${overlay.cut}`;
     assert.deepEqual(
@@ -915,7 +916,7 @@ function holdCharts(
   }
   assert.deepEqual(
     deviations.map(({ a, b }) => [a, b]),
-    head.quantity === "rays.trace" && head.rung === "r2" ? pairs.map(({ a, b }) => [a, b]) : [],
+    head.quantity === "rays.trace" && head.rung === "ray-trace" ? pairs.map(({ a, b }) => [a, b]) : [],
     `${what}: a deviation for each pair`,
   );
   deviations.forEach((chart, d) => {
@@ -2018,7 +2019,7 @@ test("every number of the control and job views is a count, recounted: jobs, exi
     }
   };
   await act("start", { suite: "broken" }, 1);
-  await act("start", { suite: "fake-pair", engines: "fake-a,fake-human", rungs: "selftest" }, 2);
+  await act("start", { suite: "fake-pair", engines: "fake-a,fake-human", rungs: "pipeline-echo" }, 2);
   const exchange = join(runsDir, "exchange", "fake-human");
   const operator = fileURLToPath(new URL("../fixtures/fake-operator/operator.mjs", import.meta.url));
   assert.equal(spawnSync(process.execPath, [operator, exchange]).status, 0);

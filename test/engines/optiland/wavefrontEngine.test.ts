@@ -205,15 +205,18 @@ test("R6c is named-only, uses R6b's native request and R5's angles, and has no f
   );
   assert.deepEqual(r6cRung.engineOptions?.(run, inputs, "optiland-wave"), { fieldAnglesDeg: [0, 5, 10] });
   const policy = loadPolicy();
-  assert.equal(policy.version, 24);
-  assert.deepEqual(policy.rungs.r6c, {
-    ...policy.rungs.r5,
+  assert.equal(policy.version, 25);
+  assert.deepEqual(policy.rungs["mtf-vs-optiland-wavefront"], {
+    ...policy.rungs["mtf-vs-optiland-fft"],
     metrics: {
-      ...policy.rungs.r5.metrics,
-      "chiefLanding.maxAbs": { ...policy.rungs.r5.metrics["chiefLanding.maxAbs"], attentionSeveralLines: 1e-3 },
+      ...policy.rungs["mtf-vs-optiland-fft"].metrics,
+      "chiefLanding.maxAbs": {
+        ...policy.rungs["mtf-vs-optiland-fft"].metrics["chiefLanding.maxAbs"],
+        attentionSeveralLines: 1e-3,
+      },
     },
   });
-  assert.ok(!followUpsOf(policy).some((f) => f.rung === "r6c"));
+  assert.ok(!followUpsOf(policy).some((f) => f.rung === "mtf-vs-optiland-wavefront"));
 });
 
 test("a raw unavailable field keeps its reason and has no derived number", () => {

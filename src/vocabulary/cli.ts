@@ -126,10 +126,10 @@ export const DOCTOR_TEXT = {
 export const CHECKS_COMMAND_TEXT = {
   intro:
     "A check held to a limit hands two engines the same input and passes or fails. A side-by-side check sets two methods beside each other with no limit and fails nothing.",
-  more: "lvrtc checks <id> shows one check in full: what it compares, what it shows and does not show, its engines and its limits. Each check is listed by the id to type today, then the id it takes from the rename.",
+  more: "lvrtc checks <id> shows one check in full: what it compares, what it shows and does not show, its engines and its limits. Each check is listed by the id to type today, then the id it had before the rename, which is still read.",
   labels: {
     id: "id",
-    newId: "from the rename",
+    oldId: "old id",
     kind: "kind",
     compares: "compares",
     shows: "shows",

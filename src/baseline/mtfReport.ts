@@ -13,7 +13,7 @@ import { canonicalJson } from "../core/numeric/canonicalJson.ts";
 import { formatFixed } from "../core/numeric/format.ts";
 import { HOW_TO_READ_MTF, OWN_MTF_HEADING, mtfComparisonLines } from "../report/markdown.ts";
 import { HOW_TO_READ_TEXT, MTF_TABLE_TEXT, REPORT_TEXT } from "../report/wording.ts";
-import { SORTING_LIMITS, classLabel, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
+import { SORTING_LIMITS, classLabel, namesOldCheckIds, rowStatusLabel, verdictShort } from "../vocabulary/index.ts";
 import { MTF_COMPARISON_PAIR, buildMtfComparison, buildWavefrontComparison } from "../report/mtfComparison.ts";
 import type { MtfComparison, MtfFieldFlag } from "../report/mtfComparison.ts";
 import {
@@ -23,12 +23,14 @@ import {
   MTF_COMPARISON_INTROS,
   MTF_COMPARISON_OUTRO,
   MTF_ROW_STATUSES,
+  CATALOG_NOT_COVERED,
   NOT_COVERED,
 } from "../report/wording.ts";
 import type { MtfComparisonKind, MtfRowStatus } from "../report/wording.ts";
 import { checkName, placeText } from "../report/names.ts";
 import { baselineAtCurrentIds, buildBaselineReport, count, renderBaselineMarkdown, table } from "./report.ts";
 import { LEGACY_IDS } from "../core/legacyIds.ts";
+import { SNAPSHOT_BASELINE_SUITES } from "../compare/policyFile.ts";
 import type { LegacyMaps } from "../core/legacyIds.ts";
 import type { BaselineReport, ReportRung } from "./report.ts";
 
@@ -190,7 +192,7 @@ export function buildMtfBaselineReport(baseline: Baseline, source: Baseline = ba
         class: "recorded",
         metrics: Object.fromEntries(Object.keys(bands).map((name) => [name, { attention: bands[name], unit: "1" }])),
       };
-      if (rung.rung === "r6c") {
+      if (rung.rung === "mtf-vs-optiland-wavefront") {
         for (const [request, set] of rung.sets.entries()) {
           const table = buildWavefrontComparison({ participants: set.participants, pairs: set.pairs, policy });
           if (table !== null) wavefrontTables.push({ run: run.name, table });
@@ -313,7 +315,13 @@ export function buildMtfBaselineReport(baseline: Baseline, source: Baseline = ba
       }),
     })),
     ...(wavefrontTables.length === 0 ? {} : { wavefrontTables }),
-    notCovered: [...NOT_COVERED],
+    // A dated snapshot (the catalog) written before the rename keeps the words of its check ids; one written since,
+    // as the end-of-project refresh writes it, has today's.
+    notCovered: [
+      ...(SNAPSHOT_BASELINE_SUITES.includes(baseline.suite.name) && namesOldCheckIds(baseline)
+        ? CATALOG_NOT_COVERED
+        : NOT_COVERED),
+    ],
   };
 }
 
@@ -525,7 +533,7 @@ export function renderMtfBaselineMarkdown(
       measured: true,
       byRun: (rung) => tabled(rung) === undefined,
       afterRung: (rung) => {
-        if (rung.rung === "r6c")
+        if (rung.rung === "mtf-vs-optiland-wavefront")
           return (report.wavefrontTables ?? []).flatMap(({ run, table }) => [
             "",
             `#### ${run}`,

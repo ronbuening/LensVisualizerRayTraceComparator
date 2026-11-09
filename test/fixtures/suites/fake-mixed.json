@@ -2,7 +2,7 @@
   "contract": "1.0",
   "kind": "suite",
   "name": "fake-mixed",
-  "defaults": { "rungs": ["selftest"] },
+  "defaults": { "rungs": ["pipeline-echo"] },
   "runs": [
     {
       "name": "lv-lens",

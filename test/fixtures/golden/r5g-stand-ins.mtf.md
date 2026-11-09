@@ -29,9 +29,9 @@ How to read this, near the end, says what each label and column means.
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 3 | 3 | lv – replay | 3 Side by side | 3 Side by side |
-| Geometric MTF beside optiland's — `r5g` | `mtf.native` | 3 | 3 | optiland – replay | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | lv – replay | 3 Side by side | 3 Side by side |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | `mtf.native` | 3 | 3 | optiland – replay | 1 Side by side; 2 Side by side, worth a look | 1 Side by side; 2 Side by side, worth a look |
 
 ## Support
 
@@ -40,11 +40,11 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Geometric MTF beside optiland's — `r5g` | lv | 3 answered |
-| Geometric MTF beside optiland's — `r5g` | optiland | 3 answered |
-| Geometric MTF beside optiland's — `r5g` | replay | 3 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | lv | 3 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | 3 answered |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | replay | 3 answered |
 
-## Geometric MTF beside optiland's — `r5g`
+## Geometric MTF beside optiland's — `geometric-mtf-vs-optiland`
 
 Compares: Geometric MTF on each method's own pupil sampling. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -145,7 +145,7 @@ Its first answer is what the support counts; the step is what its row of a table
 
 | Check | Engine | Step | Runs | Requests asked again | Not ok |
 |---|---|---|---|---|---|
-| Geometric MTF beside optiland's — `r5g` | optiland | geo512 | 1 | 1 | — |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | optiland | geo512 | 1 | 1 | — |
 
 ## Worth a look
 
@@ -155,18 +155,18 @@ sorting limit tells two image points apart; nothing here is a failure.
 
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
-| Geometric MTF beside optiland's — `r5g` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| Geometric MTF beside optiland's — `r5g` | beyond | — | optiland – replay | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| Geometric MTF beside optiland's — `r5g` | polychromatic | — | lv – optiland | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
-| Geometric MTF beside optiland's — `r5g` | polychromatic | — | optiland – replay | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | beyond | — | optiland – replay | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | polychromatic | — | lv – optiland | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
+| Geometric MTF beside optiland's — `geometric-mtf-vs-optiland` | polychromatic | — | optiland – replay | mtfOffAxis.maxAbs 1.56e-2 (review band 7.81e-3) at cut sagittal, field 5.00e-1 of the image height, frequencyPerMm 30 |
 
 ## Not covered
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
@@ -195,7 +195,7 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Geometric MTF beside optiland's | `r5g` | side by side, no limit | Geometric MTF on each method's own pupil sampling. |
+| Geometric MTF beside optiland's | `geometric-mtf-vs-optiland` | side by side, no limit | Geometric MTF on each method's own pupil sampling. |
 
 ### Engines
 
@@ -269,8 +269,8 @@ contract version is that of the file format the baseline is written in.
 | Identifier | Value |
 |---|---|
 | Suite file | 0b893087636f1fc875c66610f77a58553ae02d065d110fb089f1d7f81db029e9 |
-| Baseline file | dfa8bbd427269e4a8e4658ca5899f9a0e86f61248d0cb51c5a4b1181f241e2b3 |
-| Limits file | a3a1c92a5a4f633308de2ea2e5b0cd245786c9674e4b88be1bab832155a4fd68 |
+| Baseline file | 930e31d1f2215791b1a7d547d729ea152aa43ea048f2664b92ac071099e4a796 |
+| Limits file | 366eeb007dfd32760617cec0f4c81f8391f64ecc2fd7a977d44f0073791034d6 |
 | Contract version of the baseline file | 1.1 |
 
 | Engine | Engine code | This tool's code behind it | Commit and sources |

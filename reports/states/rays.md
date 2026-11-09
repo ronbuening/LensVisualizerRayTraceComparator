@@ -25,36 +25,36 @@ engines are still those of the baseline. How to read this, near the end, says wh
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| Built system — `r0` | `system.describe` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
-| Built system — `r0` | `system.describe` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
-| Built system — `r0` | `system.describe` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
-| First-order data — `r1` | `paraxial.first-order` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
-| Ray trace — `r2` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
-| Ray trace — `r2` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
-| Ray trace — `r2` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
-| Optical path — `r3` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
-| Optical path — `r3` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
-| Optical path — `r3` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Geometric MTF of the same rays — `r4` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
-| Spot and fan rays — `r7a` | `rays.trace` | 128 | 3840 | lv – optiland | 128 Pass | 3840 Pass |
-| Spot and fan rays — `r7a` | `rays.trace` | 128 | 3840 | lv – ref | 128 Pass | 3840 Pass |
-| Spot and fan rays — `r7a` | `rays.trace` | 128 | 3840 | optiland – ref | 128 Pass | 3840 Pass |
-| Spherical aberration and axial colour rays — `r8a` | `rays.trace` | 128 | 832 | lv – optiland | 128 Pass | 832 Pass |
-| Spherical aberration and axial colour rays — `r8a` | `rays.trace` | 128 | 832 | lv – ref | 128 Pass | 832 Pass |
-| Spherical aberration and axial colour rays — `r8a` | `rays.trace` | 128 | 832 | optiland – ref | 128 Pass | 832 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | `rays.trace` | 128 | 512 | lv – optiland | 128 Pass | 512 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | `rays.trace` | 128 | 512 | lv – ref | 128 Pass | 512 Pass |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | `rays.trace` | 128 | 512 | optiland – ref | 128 Pass | 512 Pass |
-| Field-curve rays — `r10a` | `rays.trace` | 128 | 768 | lv – optiland | 128 Pass | 768 Pass |
-| Field-curve rays — `r10a` | `rays.trace` | 128 | 768 | lv – ref | 128 Pass | 768 Pass |
-| Field-curve rays — `r10a` | `rays.trace` | 128 | 768 | optiland – ref | 128 Pass | 768 Pass |
-| Vignetting rays — `r11a` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
-| Vignetting rays — `r11a` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
-| Vignetting rays — `r11a` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| Built system — `built-system` | `system.describe` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
+| Built system — `built-system` | `system.describe` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
+| Built system — `built-system` | `system.describe` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | lv – optiland | 128 Pass | 128 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | lv – ref | 128 Pass | 128 Pass |
+| First-order data — `first-order` | `paraxial.first-order` | 128 | 128 | optiland – ref | 128 Pass | 128 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
+| Ray trace — `ray-trace` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
+| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | lv – optiland | 128 Pass | 1152 Pass |
+| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | lv – ref | 128 Pass | 1152 Pass |
+| Optical path — `optical-path` | `rays.trace` | 128 | 1152 | optiland – ref | 128 Pass | 1152 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
+| Geometric MTF of the same rays — `geometric-mtf` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | lv – optiland | 128 Pass | 3840 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | lv – ref | 128 Pass | 3840 Pass |
+| Spot and fan rays — `spot-rays` | `rays.trace` | 128 | 3840 | optiland – ref | 128 Pass | 3840 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | lv – optiland | 128 Pass | 832 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | lv – ref | 128 Pass | 832 Pass |
+| Spherical aberration and axial colour rays — `axial-rays` | `rays.trace` | 128 | 832 | optiland – ref | 128 Pass | 832 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | lv – optiland | 128 Pass | 512 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | lv – ref | 128 Pass | 512 Pass |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | `rays.trace` | 128 | 512 | optiland – ref | 128 Pass | 512 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | lv – optiland | 128 Pass | 768 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | lv – ref | 128 Pass | 768 Pass |
+| Field-curve rays — `field-curve-rays` | `rays.trace` | 128 | 768 | optiland – ref | 128 Pass | 768 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | lv – optiland | 128 Pass | 384 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | lv – ref | 128 Pass | 384 Pass |
+| Vignetting rays — `vignetting-rays` | `rays.trace` | 128 | 384 | optiland – ref | 128 Pass | 384 Pass |
 
 ## Support
 
@@ -63,38 +63,38 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| Built system — `r0` | lv | 128 answered |
-| Built system — `r0` | optiland | 128 answered |
-| Built system — `r0` | ref | 128 answered |
-| First-order data — `r1` | lv | 128 answered |
-| First-order data — `r1` | optiland | 128 answered |
-| First-order data — `r1` | ref | 128 answered |
-| Ray trace — `r2` | lv | 128 answered |
-| Ray trace — `r2` | optiland | 128 answered |
-| Ray trace — `r2` | ref | 128 answered |
-| Optical path — `r3` | lv | 128 answered |
-| Optical path — `r3` | optiland | 128 answered |
-| Optical path — `r3` | ref | 128 answered |
-| Geometric MTF of the same rays — `r4` | lv | 128 answered |
-| Geometric MTF of the same rays — `r4` | optiland | 128 answered |
-| Geometric MTF of the same rays — `r4` | ref | 128 answered |
-| Spot and fan rays — `r7a` | lv | 128 answered |
-| Spot and fan rays — `r7a` | optiland | 128 answered |
-| Spot and fan rays — `r7a` | ref | 128 answered |
-| Spherical aberration and axial colour rays — `r8a` | lv | 128 answered |
-| Spherical aberration and axial colour rays — `r8a` | optiland | 128 answered |
-| Spherical aberration and axial colour rays — `r8a` | ref | 128 answered |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | lv | 128 answered |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | optiland | 128 answered |
-| Chief rays (distortion, pupils, lateral colour) — `r9a` | ref | 128 answered |
-| Field-curve rays — `r10a` | lv | 128 answered |
-| Field-curve rays — `r10a` | optiland | 128 answered |
-| Field-curve rays — `r10a` | ref | 128 answered |
-| Vignetting rays — `r11a` | lv | 128 answered |
-| Vignetting rays — `r11a` | optiland | 128 answered |
-| Vignetting rays — `r11a` | ref | 128 answered |
+| Built system — `built-system` | lv | 128 answered |
+| Built system — `built-system` | optiland | 128 answered |
+| Built system — `built-system` | ref | 128 answered |
+| First-order data — `first-order` | lv | 128 answered |
+| First-order data — `first-order` | optiland | 128 answered |
+| First-order data — `first-order` | ref | 128 answered |
+| Ray trace — `ray-trace` | lv | 128 answered |
+| Ray trace — `ray-trace` | optiland | 128 answered |
+| Ray trace — `ray-trace` | ref | 128 answered |
+| Optical path — `optical-path` | lv | 128 answered |
+| Optical path — `optical-path` | optiland | 128 answered |
+| Optical path — `optical-path` | ref | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | lv | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | optiland | 128 answered |
+| Geometric MTF of the same rays — `geometric-mtf` | ref | 128 answered |
+| Spot and fan rays — `spot-rays` | lv | 128 answered |
+| Spot and fan rays — `spot-rays` | optiland | 128 answered |
+| Spot and fan rays — `spot-rays` | ref | 128 answered |
+| Spherical aberration and axial colour rays — `axial-rays` | lv | 128 answered |
+| Spherical aberration and axial colour rays — `axial-rays` | optiland | 128 answered |
+| Spherical aberration and axial colour rays — `axial-rays` | ref | 128 answered |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | lv | 128 answered |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | optiland | 128 answered |
+| Chief rays (distortion, pupils, lateral colour) — `chief-rays` | ref | 128 answered |
+| Field-curve rays — `field-curve-rays` | lv | 128 answered |
+| Field-curve rays — `field-curve-rays` | optiland | 128 answered |
+| Field-curve rays — `field-curve-rays` | ref | 128 answered |
+| Vignetting rays — `vignetting-rays` | lv | 128 answered |
+| Vignetting rays — `vignetting-rays` | optiland | 128 answered |
+| Vignetting rays — `vignetting-rays` | ref | 128 answered |
 
-## Built system — `r0`
+## Built system — `built-system`
 
 Compares: Built layout, shape, aperture, index and sampled sag. Kind: held to a limit. Quantity asked of the engines: the system as built (`system.describe`).
 
@@ -254,7 +254,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 1 | Pass: sag.maxScaled 3.94e-16 | Pass: sag.maxScaled 2.00e-16 | Pass: sag.maxScaled 3.94e-16 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 1 | Pass: sag.maxScaled 3.94e-16 | Pass: sag.maxScaled 2.00e-16 | Pass: sag.maxScaled 3.94e-16 |
 
-## First-order data — `r1`
+## First-order data — `first-order`
 
 Compares: First-order quantities and pupils. Kind: held to a limit. Quantity asked of the engines: first-order data (`paraxial.first-order`).
 
@@ -411,7 +411,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 1 | Pass: firstOrder.maxAbs 1.55e-13 mm | Pass: firstOrder.maxAbs 7.11e-14 mm | Pass: firstOrder.maxAbs 1.08e-13 mm |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 1 | Pass: firstOrder.maxAbs 2.38e-13 mm | Pass: firstOrder.maxAbs 1.42e-13 mm | Pass: firstOrder.maxAbs 1.90e-13 mm |
 
-## Ray trace — `r2`
+## Ray trace — `ray-trace`
 
 Compares: Hits, directions, image landings and masks of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -571,7 +571,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 15 | Pass: hits.maxDistance 1.05e-12 mm | Pass: hits.maxDistance 1.17e-12 mm | Pass: hits.maxDistance 1.20e-12 mm | 15375 / 0 / 0 | 15375 / 0 / 0 | 15375 / 0 / 0 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 15 | Pass: hits.maxDistance 9.95e-13 mm | Pass: hits.maxDistance 9.95e-13 mm | Pass: hits.maxDistance 9.95e-13 mm | 15375 / 0 / 0 | 15375 / 0 / 0 | 15375 / 0 / 0 |
 
-## Optical path — `r3`
+## Optical path — `optical-path`
 
 Compares: Optical path, path to image and chief-relative OPD of identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -722,7 +722,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 15 | Pass: opticalPath.maxAbs 1.72e-9 waves | Pass: opticalPath.maxAbs 2.06e-9 waves | Pass: opticalPath.maxAbs 2.06e-9 waves |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 15 | Pass: opd.maxAbs 1.23e-9 waves | Pass: opd.maxAbs 1.75e-9 waves | Pass: opd.maxAbs 1.75e-9 waves |
 
-## Geometric MTF of the same rays — `r4`
+## Geometric MTF of the same rays — `geometric-mtf`
 
 Compares: This tool's geometric MTF of identical rays, as each engine traces them. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -876,7 +876,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 3 | Pass: mtf.maxAbs 4.05e-13 | Pass: mtf.maxAbs 2.39e-12 | Pass: mtf.maxAbs 2.65e-12 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 3 | Pass: mtf.maxAbs 5.08e-13 | Pass: mtf.maxAbs 3.46e-12 | Pass: mtf.maxAbs 2.95e-12 |
 
-## Spot and fan rays — `r7a`
+## Spot and fan rays — `spot-rays`
 
 Compares: Spot and fan figures of the coma and bokeh tabs' rays, on identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1039,7 +1039,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 50 | Pass: transverseError.maxAbs 1.40e-13 mm | Pass: transverseError.maxAbs 3.34e-13 mm | Pass: transverseError.maxAbs 3.18e-13 mm | 9709 / 11 / 0 | 9709 / 11 / 0 | 9709 / 11 / 0 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 50 | Pass: transverseError.maxAbs 2.15e-13 mm | Pass: transverseError.maxAbs 4.09e-13 mm | Pass: transverseError.maxAbs 4.30e-13 mm | 9709 / 11 / 0 | 9709 / 11 / 0 | 9709 / 11 / 0 |
 
-## Spherical aberration and axial colour rays — `r8a`
+## Spherical aberration and axial colour rays — `axial-rays`
 
 Compares: Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1208,7 +1208,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 10 | Pass: intercept.maxScaled 2.88e-14 mm | Pass: intercept.maxScaled 1.09e-13 mm | Pass: intercept.maxScaled 1.05e-13 mm | 280 / 0 / 0 | 280 / 0 / 0 | 280 / 0 / 0 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 10 | Pass: intercept.maxScaled 2.66e-13 mm | Pass: intercept.maxScaled 2.61e-13 mm | Pass: intercept.maxScaled 2.43e-13 mm | 280 / 0 / 0 | 280 / 0 / 0 | 280 / 0 / 0 |
 
-## Chief rays (distortion, pupils, lateral colour) — `r9a`
+## Chief rays (distortion, pupils, lateral colour) — `chief-rays`
 
 Compares: Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1380,7 +1380,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 4 | Pass: lateralColour.maxAbs 7.82e-14 mm | Pass: landing.maxAbs 2.10e-13 mm | Pass: landing.maxAbs 2.24e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 4 | Pass: lateralColour.maxAbs 1.03e-13 mm | Pass: lateralColour.maxAbs 8.88e-14 mm | Pass: lateralColour.maxAbs 1.17e-13 mm | 149 / 0 / 0 | 149 / 0 / 0 | 149 / 0 / 0 |
 
-## Field-curve rays — `r10a`
+## Field-curve rays — `field-curve-rays`
 
 Compares: Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1555,7 +1555,7 @@ By run, each pair with its verdict and the judged figure that is largest against
 | nikon-z-24-70f4s-f8-best-photopic-zoom0.5 | 10 | Pass: landing.maxAbs 1.24e-13 mm | Pass: landing.maxAbs 6.47e-13 mm | Pass: landing.maxAbs 6.43e-13 mm | 8990 / 190 / 0 | 8990 / 190 / 0 | 8990 / 190 / 0 |
 | nikon-z-24-70f4s-f8-best-photopic-tele | 10 | Pass: landing.maxAbs 3.87e-13 mm | Pass: landing.maxAbs 5.51e-13 mm | Pass: landing.maxAbs 5.97e-13 mm | 8990 / 190 / 0 | 8990 / 190 / 0 | 8990 / 190 / 0 |
 
-## Vignetting rays — `r11a`
+## Vignetting rays — `vignetting-rays`
 
 Compares: Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays. Kind: held to a limit. Quantity asked of the engines: ray trace (`rays.trace`).
 
@@ -1743,16 +1743,16 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| Built system | `r0` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
-| First-order data | `r1` | held to a limit | First-order quantities and pupils. |
-| Ray trace | `r2` | held to a limit | Hits, directions, image landings and masks of identical rays. |
-| Optical path | `r3` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
-| Geometric MTF of the same rays | `r4` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
-| Spot and fan rays | `r7a` | held to a limit | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays. |
-| Spherical aberration and axial colour rays | `r8a` | held to a limit | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays. |
-| Chief rays (distortion, pupils, lateral colour) | `r9a` | held to a limit | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays. |
-| Field-curve rays | `r10a` | held to a limit | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays. |
-| Vignetting rays | `r11a` | held to a limit | Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays. |
+| Built system | `built-system` | held to a limit | Built layout, shape, aperture, index and sampled sag. |
+| First-order data | `first-order` | held to a limit | First-order quantities and pupils. |
+| Ray trace | `ray-trace` | held to a limit | Hits, directions, image landings and masks of identical rays. |
+| Optical path | `optical-path` | held to a limit | Optical path, path to image and chief-relative OPD of identical rays. |
+| Geometric MTF of the same rays | `geometric-mtf` | held to a limit | This tool's geometric MTF of identical rays, as each engine traces them. |
+| Spot and fan rays | `spot-rays` | held to a limit | Spot and fan figures of the coma and bokeh tabs' rays, on identical rays. |
+| Spherical aberration and axial colour rays | `axial-rays` | held to a limit | Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays. |
+| Chief rays (distortion, pupils, lateral colour) | `chief-rays` | held to a limit | Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays. |
+| Field-curve rays | `field-curve-rays` | held to a limit | Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays. |
+| Vignetting rays | `vignetting-rays` | held to a limit | Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays. |
 
 ### Engines
 

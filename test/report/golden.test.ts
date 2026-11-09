@@ -84,7 +84,7 @@ test("the faults report shows a FAIL beyond tolerance, an engine error, an unava
   const golden = readFileSync(goldenFile("fake-faults"), "utf8");
   assert.match(golden, /^18 of 18 pairs are Fail or Error\.$/m);
   assert.match(golden, /^\| fake-absent \| unavailable: load-failed \| — \| — \|$/m);
-  assert.match(golden, /^\| singlet \| selftest \| ok \| error: load-failed \| error: protocol-error \| ok \|$/m);
+  assert.match(golden, /^\| singlet \| pipeline-echo \| ok \| error: load-failed \| error: protocol-error \| ok \|$/m);
   assert.match(
     golden,
     /^\| fake-far \| 3\.00e-3 \| 1\.00e-3 at index 1 \| FAIL \| sum\.abs 3\.00e-3 exceeds its tolerance 1\.00e-12; /m,

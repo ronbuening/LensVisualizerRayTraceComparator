@@ -6,6 +6,7 @@
 // (suite file, lens states, requests, engine code, store keys) are under a <details> whose summary is "Identifiers".
 import { numberText } from "../compare/metricText.ts";
 import type { Verdict } from "../contract/comparison.ts";
+import { LEGACY_RUN_CODE } from "../core/legacyIds.ts";
 import { formatFixed } from "../core/numeric/format.ts";
 import {
   COMPARE_AXES,
@@ -35,6 +36,7 @@ import {
   badgeLabel,
   checkTitle,
   classLabel,
+  codeTextOf,
   engineName,
   metricLabel,
   modeLabel,
@@ -635,6 +637,16 @@ function pendingIdentifiers(
   );
 }
 
+/** The notice of a run directory written before a rename of ids: what its code says, and the old ids it names. */
+function oldIdsNotice(oldIds: readonly string[]): string[] {
+  const said = codeTextOf(LEGACY_RUN_CODE);
+  if (oldIds.length === 0 || said === undefined) return [];
+  return [
+    p(DASHBOARD_TEXT.writtenBeforeRename(said.sentence, said.remedy), "problem"),
+    `<ul>${oldIds.map((id) => `<li>${code(id)}</li>`).join("")}</ul>`,
+  ];
+}
+
 /** A run page. */
 export function renderRun(view: RunView): string {
   const body: string[] = [h(1, L.runOf(view.name)), ...problems(view.problems)];
@@ -647,6 +659,7 @@ export function renderRun(view: RunView): string {
     howToRead([DASHBOARD_TEXT.howTo.run, DASHBOARD_TEXT.sources], [verdictLegend()]),
     ...(view.comparisons === "none" ? [p(DASHBOARD_TEXT.notCompared)] : []),
     ...(view.comparisons === "invalid" ? [p(DASHBOARD_TEXT.comparisonsUnreadable)] : []),
+    ...oldIdsNotice(view.oldIds),
     ...(view.inputProblems.length === 0
       ? []
       : [
@@ -1201,7 +1214,7 @@ export function renderChecks(view: ChecksView): string {
             escapeHtml(C.runsWhen),
             escapeHtml(each.onlyWhereNamed ? CHECKS_COMMAND_TEXT.runsNamed : CHECKS_COMMAND_TEXT.runsAlways),
           ],
-          [escapeHtml(C.newId), code(each.newId)],
+          [escapeHtml(C.oldId), code(each.oldId)],
         ],
       ),
       each.limits.length === 0

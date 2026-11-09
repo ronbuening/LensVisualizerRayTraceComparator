@@ -37,8 +37,8 @@ test("the cards are the validation matrix's tab rows; a recorded rung is a card'
   );
   const mtf = COMPARE_TABS.find((tab) => tab.tab === "mtf");
   // R6b is lv beside wave, the comparator's estimator on LensVisualizer's rays: no counterpart of LensVisualizer's.
-  assert.deepEqual(mtf?.recorded, ["r5", "r5g", "r6c"]);
-  assert.deepEqual(COMPARE_TABS.find((tab) => tab.tab === "vignetting")?.recorded, ["r11b"]);
+  assert.deepEqual(mtf?.recorded, ["mtf-vs-optiland-fft", "geometric-mtf-vs-optiland", "mtf-vs-optiland-wavefront"]);
+  assert.deepEqual(COMPARE_TABS.find((tab) => tab.tab === "vignetting")?.recorded, ["vignetting-vs-flux-estimate"]);
   for (const tab of COMPARE_TABS) for (const rung of tab.gated) assert.ok(rung in GATED_HEADLINES, rung);
 });
 
@@ -86,14 +86,14 @@ test("a gated line is read from the run directories, else from a baseline's reco
   assert.ok(view.count >= 2, `${view.count} cases`);
   const line = (tab: string, rung: string) =>
     view.cards.find((card) => card.tab === tab)?.gated.find((each) => each.rung === rung);
-  assert.equal(line("axial", "r8a")?.source.kind, "runs");
+  assert.equal(line("axial", "axial-rays")?.source.kind, "runs");
   // R7a's run directory has no comparisons: its case's records are the baseline's.
-  const r7a = line("coma-bokeh", "r7a");
+  const r7a = line("coma-bokeh", "spot-rays");
   assert.deepEqual(r7a?.source, { kind: "baselines", stems: [BASELINE_ONLY] });
   assert.equal(r7a?.headline?.value.source.document, `baseline:${BASELINE_ONLY}`);
   // R1 was run in no directory and is in no baseline here.
-  assert.deepEqual(line("summary", "r1")?.source, { kind: "none" });
-  assert.deepEqual(line("summary", "r1")?.pairs, []);
+  assert.deepEqual(line("summary", "first-order")?.source, { kind: "none" });
+  assert.deepEqual(line("summary", "first-order")?.pairs, []);
 });
 
 test("a recorded line is LensVisualizer beside its counterpart, with the policy's bands and the sorting's limits", () => {
@@ -116,7 +116,7 @@ test("a recorded line is LensVisualizer beside its counterpart, with the policy'
   const vignetting = view.cards.find((card) => card.tab === "vignetting")?.recorded[0];
   assert.equal(vignetting?.b, "flux");
   assert.deepEqual(
-    lines.filter((line) => line.rung === "r9b").map((line) => line.label),
+    lines.filter((line) => line.rung === "chief-vs-optiland").map((line) => line.label),
     ["distortion", "lateral-colour", "pupils"].filter((label) => lines.some((line) => line.label === label)),
   );
 });

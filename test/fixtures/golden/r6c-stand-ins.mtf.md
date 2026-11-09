@@ -30,12 +30,12 @@ How to read this, near the end, says what each label and column means.
 
 | Check | Quantity | Runs | Requests | Pair | Runs by verdict | Requests by verdict |
 |---|---|---|---|---|---|---|
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | lv – optiland-wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | lv – wave | 3 Side by side | 3 Side by side |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | optiland – optiland-wave | 2 Side by side, worth a look; 1 Not computed | 2 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | optiland – wave | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
-| MTF beside the OTF of optiland's wavefront — `r6c` | `mtf.native` | 3 | 3 | optiland-wave – wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – optiland | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – optiland-wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | lv – wave | 3 Side by side | 3 Side by side |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – optiland-wave | 2 Side by side, worth a look; 1 Not computed | 2 Side by side, worth a look; 1 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland – wave | 1 Side by side; 1 Side by side, worth a look; 1 Not computed | 1 Side by side; 1 Side by side, worth a look; 1 Not computed |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | `mtf.native` | 3 | 3 | optiland-wave – wave | 3 Side by side, worth a look | 3 Side by side, worth a look |
 
 ## Support
 
@@ -44,12 +44,12 @@ In how many runs the jobs of an engine ended in each way. An engine that cannot 
 
 | Check | Engine | Runs by status |
 |---|---|---|
-| MTF beside the OTF of optiland's wavefront — `r6c` | lv | 3 answered |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland | 2 answered, 1 not computed (feature lines.polychromatic) |
-| MTF beside the OTF of optiland's wavefront — `r6c` | optiland-wave | 3 answered |
-| MTF beside the OTF of optiland's wavefront — `r6c` | wave | 3 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | lv | 3 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland | 2 answered, 1 not computed (feature lines.polychromatic) |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | optiland-wave | 3 answered |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | wave | 3 answered |
 
-## MTF beside the OTF of optiland's wavefront — `r6c`
+## MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront`
 
 Compares: LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. Kind: side by side, no limit. Quantity asked of the engines: an engine's own MTF (`mtf.native`).
 
@@ -278,24 +278,24 @@ sorting limit tells two image points apart; nothing here is a failure.
 
 | Check | Run | Field | Pair | Figures above their review band or sorting limit |
 |---|---|---|---|---|
-| MTF beside the OTF of optiland's wavefront — `r6c` | edge | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | edge | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height |
-| MTF beside the OTF of optiland's wavefront — `r6c` | edge | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | beyond | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | beyond | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | beyond | — | optiland – wave | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | beyond | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | polychromatic | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
-| MTF beside the OTF of optiland's wavefront — `r6c` | polychromatic | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | edge | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | lv – optiland | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland – wave | chiefLanding.maxAbs 1.95e-3 (sorting limit 9.77e-4) at field 5.00e-1 of the image height; mtfOnAxis.maxAbs 3.91e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 50 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | beyond | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 9.77e-4) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | lv – optiland-wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
+| MTF beside the OTF of optiland's wavefront — `mtf-vs-optiland-wavefront` | polychromatic | — | optiland-wave – wave | chiefLanding.maxAbs 4 (sorting limit 1.00e-3) at field 1 of the image height; mtfOnAxis.maxAbs 7.81e-3 (review band 3.91e-3) at cut sagittal, field 0 of the image height, frequencyPerMm 10 |
 
 ## Not covered
 
 What this comparison does not show, whatever its verdicts:
 
-- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check r5 sets two methods side by side and holds them to no limit.
-- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks r5 or r6c. The external counterpart in check r6c is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
-- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check r5g sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
+- optiland's FFT and Huygens MTF take no injected rays. An MTF of optiland's own is on optiland's own pupil grid, reference sphere and frequency axes, so check mtf-vs-optiland-fft sets two methods side by side and holds them to no limit.
+- A polychromatic curve of optiland's FFT class. It gives the modulus at one wavelength, so a run of several wavelengths has no FFT row in checks mtf-vs-optiland-fft or mtf-vs-optiland-wavefront. The external counterpart in check mtf-vs-optiland-wavefront is this tool's complex sum of optiland's raw wavefronts; its proof on synthetic sums checks the declared weighting and phase convention, not physical spectral fidelity.
+- optiland's geometric MTF takes no injected rays either. Its rays are an even grid on the stop surface, out to the clip radius; LensVisualizer's are a lattice across the entrance beam; neither is weighted by direction cosine. Check geometric-mtf-vs-optiland sets the two side by side and holds them to no limit: a difference of the two pupil samplings is written down, not explained.
 - The bins of optiland's geometric MTF. At one wavelength optiland's curve is of landings counted into bins, and a field whose bins move a value by more than its convergence band (0.005 on the axis, 0.01 off it) has no optiland curve. At several wavelengths the sum over optiland's landings is this tool's, without bins, about the axis point of the image plane; LensVisualizer's is about a chief ray's landing.
 - Dispersion and white-light weighting. Every engine is handed the refractive indices and the wavelength weights LensVisualizer states; no glass catalog and no spectrum is checked against another.
 - The choice of focus. A best-focus plane is LensVisualizer's own, handed to every engine as a plane; no engine searches for one of its own.
@@ -325,7 +325,7 @@ is headed by a check's title, with the id the baseline file stores it under.
 
 | Check | Id | Kind | Compares |
 |---|---|---|---|
-| MTF beside the OTF of optiland's wavefront | `r6c` | side by side, no limit | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. |
+| MTF beside the OTF of optiland's wavefront | `mtf-vs-optiland-wavefront` | side by side, no limit | LensVisualizer's MTF, the wave OTF of its rays and optiland's FFT MTF beside this tool's OTF of optiland's raw wavefronts. |
 
 ### Engines
 
@@ -400,8 +400,8 @@ contract version is that of the file format the baseline is written in.
 | Identifier | Value |
 |---|---|
 | Suite file | 42859dd104196db2704aaaf6d38ad4e21e94bab0a2b28e1147aa7888ff5fa5d4 |
-| Baseline file | e18c8ac170771294dba2cbb01cf1b044bc3a9a07c541252b25e033021fefe00d |
-| Limits file | 6712023ebdae26142c51ef2fec56a763f4f2a951c91fc6eea04a4ec5a1fcffa7 |
+| Baseline file | 73550bdac29c928cb71b1398bd57ee0977f4aaf101ce00dd625595906db6b3bc |
+| Limits file | 0f9d1439d5a64ffd54b79fa6e0b75031180841b145ead77f4e660650741e0530 |
 | Contract version of the baseline file | 1.1 |
 
 | Engine | Engine code | This tool's code behind it | Commit and sources |
