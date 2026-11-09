@@ -2210,3 +2210,16 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   of `DASHBOARD_TEXT.store`. `test/dashboard/storeControl.test.ts` (temporary stores whose root reads this
   repository's HEAD through a `.git` file, never `runs/store`): the dry runs change nothing, a confirmation changes
   exactly the planned entries, and each refusal above changes nothing.
+
+## Phase 9 plain language
+
+- **`src/vocabulary` is the single source of every displayed label, definition and remedy** (checks with their
+  future ids, engines, verdicts, outcomes, classes, metrics, codes, terms, suites). No surface hand-writes a label.
+  It is pure data and small helpers, imports only types from outside itself, and is in no engine's import closure
+  (`test/vocabulary/closure.test.ts`). `src/report/wording.ts` takes `STATEMENT_RUNGS` and `MATRIX_RUNGS` from
+  `checks.ts` (never the other way), so a report's bytes do not move.
+- Every vocabulary string passes `wordingProblems` and uses no word of `JARGON` (`test/vocabulary/vocabulary.test.ts`).
+- `docs/GLOSSARY.md` is generated (`renderGlossary`, `lvrtc verify --write`) and held byte for byte by `lvrtc verify`
+  on this repository (by real path) or any root that has one; never edit it or run prettier on it.
+- The jargon ratchet (`test/vocabulary/jargon.test.ts`) holds CLI help, `reports/**/*.md` and the golden reports to
+  per-text allowlists that only shrink: remove a word from a list once a surface stops using it, never add one.

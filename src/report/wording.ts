@@ -4,6 +4,7 @@
 import type { NativeDifferenceClass, NativeFieldReason } from "../compare/mtfNative.ts";
 import type { GroupConsensus, NoConsensusReason } from "./consensus.ts";
 import { formatFixed, formatSci, formatSignificant } from "../core/numeric/format.ts";
+import { MATRIX_CHECKS, STATEMENT_CHECKS } from "../vocabulary/checks.ts";
 
 /** What a row of an MTF comparison came to. */
 export const MTF_ROW_STATUSES = ["RECORDED", "ATTENTION", "SET ASIDE", "UNSUPPORTED", "ERROR"] as const;
@@ -346,20 +347,12 @@ export function wordingProblems(markdown: string): string[] {
   );
 }
 
-/** Stage 4.5's labels and prose; numeric and named-state data are supplied by the reducer. */
-export const STATEMENT_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
-  r0: { mode: "gated", compares: "Built layout, shape, aperture, index and sampled sag" },
-  r1: { mode: "gated", compares: "First-order quantities and pupils" },
-  r2: { mode: "gated", compares: "Hits, directions, image landings and masks of identical rays" },
-  r3: { mode: "gated", compares: "Optical path, path to image and chief-relative OPD of identical rays" },
-  r4: { mode: "gated", compares: "Comparator geometric MTF on identical rays" },
-  r4f: { mode: "gated", compares: "LV geometric MTF beside replay with LV's own sampling" },
-  r5: { mode: "recorded", compares: "LV diffraction MTF beside optiland FFT and the LV-ray wave estimate" },
-  r5g: { mode: "recorded", compares: "Geometric MTF on each method's own pupil sampling" },
-  r6a: { mode: "gated", compares: "Comparator wave MTF on identical rays, in fields whose sampling settled" },
-  r6b: { mode: "recorded", compares: "LV sheared diffraction MTF beside comparator wave OTF on LV rays" },
-  r6c: { mode: "recorded", compares: "LV, LV-ray wave OTF and FFT beside comparator OTF of optiland raw wavefronts" },
-};
+/**
+ * Stage 4.5's labels and prose; numeric and named-state data are supplied by the reducer. The words are the checks'
+ * (`src/vocabulary/checks.ts`).
+ */
+export const STATEMENT_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> =
+  STATEMENT_CHECKS;
 
 /** Included only when the baselines contain the named settled comparison. */
 export const STATEMENT_Z50_ATTRIBUTION =
@@ -466,45 +459,11 @@ export const CATALOG_TEXT = {
     "Listed failures remain FAIL; each failing metric retains its class, evidence hash, gotcha and one-run reproducer.",
 } as const;
 
-/** The rungs the validation matrix names: the statement's, and those of Phase 6, each with what it compares. */
-export const MATRIX_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = {
-  ...STATEMENT_RUNGS,
-  r7a: { mode: "gated", compares: "Spot and fan figures of the coma and bokeh tabs' rays, on identical rays" },
-  r7b: { mode: "recorded", compares: "LV's coma and bokeh tabs beside optiland's SpotDiagram and RayFan" },
-  r8a: {
-    mode: "gated",
-    compares: "Axial intercepts of the spherical-aberration and axial-colour sections' rays, on identical rays",
-  },
-  r8b: {
-    mode: "recorded",
-    compares: "LV's spherical-aberration and axial-colour sections beside optiland's own rays and focus",
-  },
-  r9a: { mode: "gated", compares: "Chief rays of the distortion, pupils and lateral-colour tabs, on identical rays" },
-  r9b: {
-    mode: "recorded",
-    compares: "LV's distortion, pupils and lateral-colour tabs beside optiland's distortion, chief rays and pupils",
-  },
-  r10a: {
-    mode: "gated",
-    compares: "Tangential and sagittal foci of the field-curve sections' parabasal rays and fans, on identical rays",
-  },
-  r10b: { mode: "recorded", compares: "LV's field-curve sections beside optiland's FieldCurvature" },
-  r11a: {
-    mode: "gated",
-    compares:
-      "Which rays of the vignetting tab's beams get through, their flux and the chief landings, on identical rays",
-  },
-  r11b: { mode: "recorded", compares: "LV's vignetting tab beside flux, the comparator's estimate on LV's lattices" },
-  r12b: {
-    mode: "recorded",
-    compares: "LV's summary tab and aperture control beside optiland's paraxial accessors and working f-number",
-  },
-  r13b: { mode: "recorded", compares: "The comparator's Seidel sums (ref-seidel) beside optiland's" },
-  r14b: {
-    mode: "recorded",
-    compares: "optiland's Zernike fit beside the comparator's fit of the same raw wavefront samples (optiland-wave)",
-  },
-};
+/**
+ * The rungs the validation matrix names: the statement's, and those of Phase 6, each with what it compares. The words
+ * are the checks' (`src/vocabulary/checks.ts`).
+ */
+export const MATRIX_RUNGS: Readonly<Record<string, { mode: "gated" | "recorded"; compares: string }>> = MATRIX_CHECKS;
 
 /** One row of the validation matrix: a LensVisualizer tab, or the analyses it has no tab of. */
 export interface MatrixRowText {

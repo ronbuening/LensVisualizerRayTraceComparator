@@ -7,7 +7,7 @@ import {
 } from "../../baseline/catalog.ts";
 import { CATALOG_JSON, CATALOG_MARKDOWN, readCatalogInputs, renderCatalog } from "../../report/catalog.ts";
 import { canonicalJson } from "../../core/numeric/canonicalJson.ts";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { parseBaseline } from "../../baseline/build.ts";
@@ -42,6 +42,7 @@ import {
   STATEMENT_MARKDOWN,
 } from "../../report/statement.ts";
 import { MATRIX_FILES, MATRIX_JSON, MATRIX_MARKDOWN, readMatrixInputs, renderMatrix } from "../../report/matrix.ts";
+import { GLOSSARY_FILE, renderGlossary } from "../../vocabulary/glossary.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -56,6 +57,8 @@ export interface VerifyCommandInputs {
   readonly policy?: Policy;
   /** Where the frozen policies of the snapshot baselines are; this repository's `policy/snapshots/` unless given. */
   readonly policySnapshots?: string;
+  /** The root that requires the glossary even where it is missing; this repository unless given. */
+  readonly repositoryRoot?: string;
 }
 
 const SYNOPSIS = "Usage: lvrtc verify [--root <dir>] [--write]\n";
@@ -74,7 +77,8 @@ const HELP = [
   "A root with all eight suite baselines also requires reports/validation-statement.{json,md}, byte for",
   "byte from all eight suite baselines, as lvrtc statement writes it; --write regenerates it too. A root with",
   "both benchmark baselines also requires reports/benchmark/validation-matrix.{json,md}, byte for byte from",
-  "those two, as lvrtc matrix writes it; --write regenerates it too.",
+  "those two, as lvrtc matrix writes it; --write regenerates it too. This repository, and any root with a",
+  "docs/GLOSSARY.md, also requires that file byte for byte as src/vocabulary renders it; --write regenerates it.",
   "",
   "It cannot see a case or an engine that has changed since a baseline was written (STALE): that needs the",
   "engines, and is what lvrtc baseline check says.",
@@ -92,6 +96,15 @@ function readText(file: string): string | undefined {
     return readFileSync(file, "utf8");
   } catch {
     return undefined;
+  }
+}
+
+/** The real path of a file, or the path resolved when it does not exist. */
+function realPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
   }
 }
 
@@ -117,7 +130,9 @@ function snapshotSaid(suite: string, baseline: Baseline): string {
  * is held the same way, to `reports/<suite>/mtf.md` and `mtf.json` as `renderMtfBaselineReport` gives them. Each
  * problem is a line on the error stream; each baseline that holds is a line on the output. A root with the eight
  * suite baselines of the statement, or either statement file, is held to `renderStatement`; a root with the
- * benchmark's two baselines, or either matrix file, to `renderMatrix` (`reports/benchmark/validation-matrix.*`).
+ * benchmark's two baselines, or either matrix file, to `renderMatrix` (`reports/benchmark/validation-matrix.*`). This
+ * repository (`repositoryRoot`, by real path), and any root with a glossary, is held to `renderGlossary`
+ * (`docs/GLOSSARY.md`), with a line on the output when it holds.
  *
  * Exit codes: 0 when nothing is wrong, also when there is no baseline at all; 1 when something is; 2 for a command
  * line that is not the synopsis and a `--root` that is not a directory.
@@ -361,6 +376,21 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
         } catch (error) {
           problems.push(`validation-matrix: ${error instanceof Error ? error.message : String(error)}`);
         }
+      }
+      // The glossary is generated from the vocabulary: this repository requires it, so deleting it cannot bypass verify.
+      if (
+        realPath(rootDir) === realPath(inputs.repositoryRoot ?? REPO_ROOT) ||
+        readText(join(rootDir, GLOSSARY_FILE)) !== undefined
+      ) {
+        const glossary = renderGlossary();
+        if (rewrite) {
+          writeFileAtomic(join(rootDir, GLOSSARY_FILE), glossary);
+          io.stdout(`${GLOSSARY_FILE} is written from src/vocabulary\n`);
+        } else if (readText(join(rootDir, GLOSSARY_FILE)) !== glossary) {
+          problems.push(
+            `${GLOSSARY_FILE}: it is missing or is not what src/vocabulary renders; lvrtc verify --write writes it anew`,
+          );
+        } else io.stdout(`${GLOSSARY_FILE} is what src/vocabulary renders\n`);
       }
       for (const problem of problems) io.stderr(`lvrtc verify: ${problem}\n`);
       const count = `${files.length} ${files.length === 1 ? "baseline" : "baselines"}`;
