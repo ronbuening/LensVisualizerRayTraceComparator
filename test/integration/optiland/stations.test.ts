@@ -94,10 +94,7 @@ test(
     // wherever every engine lands that ray: in all but one set at c05a2ab7, where an aperture stops it for all three.
     assert.ok(paths.withoutChief.length < sets / 4, JSON.stringify(paths.withoutChief));
     t.diagnostic(`focus stations: no chief ray landed in ${JSON.stringify(paths.withoutChief)}`);
-    assert.match(
-      cycle.verdicts,
-      /^focus-stations: \d+ pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(cycle.verdicts, /^focus-stations: (\d+) pairs: \1 Pass$/);
     t.diagnostic(
       `focus stations: ${stations.length} stations of ${new Set(stations.map(({ key }) => key)).size} lenses, ` +
         `${sets} ray sets, the object ${Math.min(...distances).toFixed(0)} mm to ` +

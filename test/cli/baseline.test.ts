@@ -205,9 +205,12 @@ test("write, then verify: the baseline is valid, canonical and keyed on run name
   assert.equal(verified.code, EXIT_OK, verified.err);
   assert.match(
     verified.out,
-    /^baselines\/pair\.json: a baseline of 2 runs and 2 records, policy v\d+; reports\/pair\/rays\.md and rays\.json are what it renders$/m,
+    /^baselines\/pair\.json: committed results of 2 runs, 2 records, limits file v\d+; reports\/pair\/rays\.md and rays\.json are what it renders$/m,
   );
-  assert.match(verified.out, /^verify: 1 baseline, 0 problems\. No engine was read: .*STALE.*lvrtc baseline check/m);
+  assert.match(
+    verified.out,
+    /^verify: 1 baseline, 0 problems\. No engine was run: .*out of date.*lvrtc baseline check/m,
+  );
 });
 
 test("the same suite gives the same three files in another directory and in another process", async (t) => {
@@ -242,11 +245,13 @@ test("check: nothing changed is OK for every record, and exits 0", async (t) => 
   await written(rootDir);
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
   assert.equal(lines.code, EXIT_OK, lines.err);
+  assert.match(lines.out, /^pair: 2 records: 2 Unchanged$/m);
+  assert.doesNotMatch(lines.out, /out of date/);
   assert.match(
     lines.out,
-    /^pair: 2 records: 2 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 0, by policy 0$/m,
+    /^What this means:\n {2}Unchanged: the committed results are of the lens states, engines and limits file at hand\. Nothing to do\.$/m,
   );
-  assert.match(lines.out, /^OK: the baseline is of the cases, engines and policy at hand\. Nothing to do\.$/m);
+  assert.doesNotMatch(lines.out, /^Maintainers:$/m);
   // The same with an empty store: every answer is computed again, and is what it was.
   const { ended, said } = await checked(rootDir, { runs: "other-runs" });
   assert.equal(ended.code, EXIT_OK);
@@ -265,8 +270,19 @@ test("check: an engine with another fingerprint is STALE(engine); what still hol
   assert.deepEqual(said.stale, { case: 0, engine: 2, policy: 0 });
   assert.ok(said.records.every((record) => record.stale.join() === "engine"));
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
-  assert.match(lines.out, /^singlet +selftest +fake-a +fake-near +STALE\(engine\) REFRESHABLE +PASS$/m);
-  assert.match(lines.out, /^REFRESHABLE: .* lvrtc baseline write pair, then commit baselines\/ and reports\/\.$/m);
+  assert.match(lines.out, /^Checks: selftest Pipeline echo \(a test of this tool\)$/m);
+  assert.match(lines.out, /^Engines: fake-a, fake-near \(defined in this configuration\)$/m);
+  assert.match(
+    lines.out,
+    /^singlet +selftest +fake-a +fake-near +Out of date, still within limits \(engine code changed\) +Pass$/m,
+  );
+  assert.match(lines.out, /^pair: 2 records: 2 Out of date, still within limits$/m);
+  assert.match(lines.out, /^pair: out of date: engine code changed in 2 records$/m);
+  assert.match(lines.out, /^ {2}Out of date, still within limits: .* still so today\.$/m);
+  assert.match(
+    lines.out,
+    /^Maintainers:\n {2}To write it as it is now: lvrtc baseline write pair, then commit baselines\/ and reports\/\.$/m,
+  );
   // Writing it anew records the engine as it is: the next check is OK.
   assert.equal((await lvrtc(rootDir, ["baseline", "write", "pair"])).code, EXIT_OK);
   assert.deepEqual((await checked(rootDir)).said.counts, {
@@ -295,7 +311,11 @@ test("check: a run whose case is another is STALE(case), the others stay OK", as
     ],
   );
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
-  assert.match(lines.out, /^singlet +selftest +fake-a +fake-near +STALE\(case\) REFRESHABLE +PASS$/m);
+  assert.match(
+    lines.out,
+    /^singlet +selftest +fake-a +fake-near +Out of date, still within limits \(lens data changed\) +Pass$/m,
+  );
+  assert.match(lines.out, /^pair: out of date: lens data changed in 1 record$/m);
   assert.doesNotMatch(lines.out, /^double-gauss /m);
 });
 
@@ -316,10 +336,12 @@ test("check: an engine whose answers moved past the tolerance is DRIFT, stale or
   assert.equal(lines.code, EXIT_FAILURE);
   assert.match(
     lines.out,
-    /^singlet +selftest +fake-a +fake-near +STALE\(engine\) DRIFT +FAIL +verdicts were 1 PASS, are 1 FAIL; /m,
+    /^singlet +selftest +fake-a +fake-near +Changed beyond limits \(engine code changed\) +Fail +verdicts were 1 PASS, are 1 FAIL; /m,
   );
-  assert.match(lines.out, /^DRIFT: .*Do not write the baseline anew before the cause is known/m);
-  assert.match(lines.out, /^FAIL or ERROR today: lvrtc compare pair names each pair and its reason\.$/m);
+  assert.match(lines.out, /^ {2}Changed beyond limits: in a check held to a limit a verdict changed/m);
+  assert.match(lines.out, /^ {2}A pair fails, or ends in an error, today\.$/m);
+  assert.match(lines.out, /^ {2}Do not write the baseline anew before the cause is known/m);
+  assert.match(lines.out, /^ {2}lvrtc compare pair names each pair and its reason\.$/m);
   // Such a run is no baseline: write refuses it, and the committed one stays.
   const before = filesOf(rootDir);
   const refused = await lvrtc(rootDir, ["baseline", "write", "pair"]);
@@ -351,10 +373,10 @@ test("check: a run the baseline lacks is NEW, one the suite lacks is GONE; neith
   writeSuite(rootDir, ["singlet", "third"]);
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
   assert.equal(lines.code, EXIT_OK, lines.err);
-  assert.match(lines.out, /^double-gauss +selftest +fake-a +fake-near +GONE$/m);
-  assert.match(lines.out, /^third +selftest +fake-a +fake-near +NEW +PASS$/m);
-  assert.match(lines.out, /^pair: the suite file is not the one the baseline names/m);
-  assert.match(lines.out, /^pair: 3 records: 1 OK, 0 REFRESHABLE, 0 MOVED, 0 DRIFT, 1 NEW, 1 GONE; /m);
+  assert.match(lines.out, /^double-gauss +selftest +fake-a +fake-near +No longer run$/m);
+  assert.match(lines.out, /^third +selftest +fake-a +fake-near +New +Pass$/m);
+  assert.match(lines.out, /^pair: the suite file is not the one the committed results name/m);
+  assert.match(lines.out, /^pair: 3 records: 1 Unchanged, 1 New, 1 No longer run$/m);
 });
 
 test("exit code 2: no baseline, no comparisons, an unknown action, a root that is not there", async (t) => {
@@ -393,7 +415,10 @@ test("an engine that cannot be used: write refuses the run (exit 2), and check f
   assert.equal(said.failed, true);
   const lines = await lvrtc(rootDir, ["baseline", "check", "pair"]);
   assert.equal(lines.code, EXIT_FAILURE);
-  assert.match(lines.err, /^lvrtc baseline: ERROR: engine fake-near could not be used \(/m);
+  assert.match(
+    lines.err,
+    /^lvrtc baseline: Error: engine fake-near could not be used \(load-failed\)\n {4}The engine's code/m,
+  );
   // The run the check left behind, compared, is no baseline, and the committed one is as it was.
   const refused = await lvrtc(rootDir, ["baseline", "write", "pair"]);
   assert.equal(refused.code, EXIT_USAGE);
@@ -547,7 +572,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   assert.equal(child(rootDir, "verify").code, EXIT_OK);
   const ok = child(rootDir, "baseline", "check", "lenses");
   assert.equal(ok.code, EXIT_OK, ok.err + ok.out);
-  assert.match(ok.out, /^lenses: 6 records: 6 OK, /m);
+  assert.match(ok.out, /^lenses: 6 records: 6 Unchanged$/m);
 
   // A lens file is edited: the case LensVisualizer exports for its run is another, and the engines are the same.
   const lens = join(rootDir, "lv", "src", "lens-data", "acme", "AcmeSinglet50.data.ts");
@@ -555,12 +580,10 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   writeFileSync(lens, lensText.replace("R: 50, d: 4", "R: 51, d: 4"));
   const staleCase = child(rootDir, "baseline", "check", "lenses");
   assert.equal(staleCase.code, EXIT_OK, staleCase.err + staleCase.out);
-  assert.match(staleCase.out, /^singlet +r0 +lv +ref +STALE\(case\) REFRESHABLE +PASS$/m);
-  assert.match(staleCase.out, /^singlet +r1 +lv +ref +STALE\(case\) REFRESHABLE +PASS$/m);
-  assert.match(
-    staleCase.out,
-    /^lenses: 6 records: 4 OK, 2 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 2, by engine 0, by policy 0$/m,
-  );
+  assert.match(staleCase.out, /^singlet +r0 +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m);
+  assert.match(staleCase.out, /^singlet +r1 +lv +ref +Out of date, still within limits \(lens data changed\) +Pass$/m);
+  assert.match(staleCase.out, /^lenses: 6 records: 4 Unchanged, 2 Out of date, still within limits$/m);
+  assert.match(staleCase.out, /^lenses: out of date: lens data changed in 2 records$/m);
   // verify reads no engine and cannot see it.
   assert.equal(child(rootDir, "verify").code, EXIT_OK);
   writeFileSync(lens, lensText);
@@ -572,7 +595,7 @@ test("a LensVisualizer lens: a zoom is two records, an edited lens file is STALE
   assert.equal(staleEngine.code, EXIT_OK, staleEngine.err + staleEngine.out);
   assert.match(
     staleEngine.out,
-    /^lenses: 6 records: 0 OK, 6 REFRESHABLE, 0 MOVED, 0 DRIFT, 0 NEW, 0 GONE; stale by case 0, by engine 6, by policy 0$/m,
+    /^lenses: 6 records: 6 Out of date, still within limits\nlenses: out of date: engine code changed in 6 records$/m,
   );
 });
 
@@ -745,7 +768,7 @@ test("a catalog refresh: written at the policy at hand, frozen, then verified un
   assert.equal(wrote.code, EXIT_OK, wrote.err);
   assert.ok(
     wrote.out.includes(
-      `snapshot: catalog is a dated snapshot of policy v${policy.version}; lvrtc verify holds it to ${frozenName}, ` +
+      `catalog is a dated snapshot of the limits file v${policy.version}; lvrtc verify holds it to ${frozenName}, ` +
         `which is not yet frozen: cp policy/rungs.v1.json ${frozenName}, and commit it with the baseline\n`,
     ),
     wrote.out,
@@ -769,7 +792,7 @@ test("a catalog refresh: written at the policy at hand, frozen, then verified un
   assert.equal(verified.code, EXIT_OK, verified.err);
   assert.match(
     verified.out,
-    /^verify: the catalog is a dated snapshot of policy v\d+: it is held to the policy it records/m,
+    /^verify: the catalog is a dated snapshot of the limits file v\d+: it is held to the limits file it was written with/m,
   );
   const checked = await at(["baseline", "check", "catalog", "--json"], later);
   assert.equal(checked.code, EXIT_OK, checked.err);

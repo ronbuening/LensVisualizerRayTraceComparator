@@ -49,9 +49,20 @@ test("describe prints, per id in the order given, the engine a run's manifest re
   assert.equal(lines.code, EXIT_OK);
   const fakeA = recorded.find((engine) => engine.id === "fake-a");
   assert.ok(fakeA?.status === "available");
-  assert.equal(
+  // The engine's version, and for one that cannot be used its code with what the code means and what to do; the
+  // hashes only with --details.
+  assert.ok(
+    lines.out.startsWith(
+      `fake-a: available, version ${fakeA.version}\nno-such-engine: cannot be used (not-configured)\n  `,
+    ),
     lines.out,
-    `fake-a: available, version ${fakeA.version}, fingerprint ${fakeA.fingerprint}\nno-such-engine: unavailable (not-configured)\n`,
+  );
+  assert.ok(!lines.out.includes(fakeA.fingerprint), lines.out);
+  const detailed = await describe(["fake-a", "--details"]);
+  assert.equal(detailed.code, EXIT_OK);
+  assert.equal(
+    detailed.out,
+    `fake-a: available, version ${fakeA.version}\n  fake-a  engine code ${fakeA.fingerprint}\n`,
   );
 });
 

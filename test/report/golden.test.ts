@@ -36,9 +36,9 @@ for (const suite of GOLDEN_SUITES) {
 
     // A third cycle, into the first directory: nothing an engine answered is computed again, and nothing changes.
     const cached = await cycle(suite, first);
-    assert.match(cached.steps[0].out, /\((\d+) computed, \d+ cached\)$/m);
-    const computedAgain = Number(/\((\d+) computed, /.exec(cached.steps[0].out)?.[1]);
-    const neverStored = (cached.steps[0].out.match(/ error {2,}computed /g) ?? []).length;
+    assert.match(cached.steps[0].out, /^\S+: \d+ jobs?: .*\((\d+ asked now, )?\d+ from the result cache(, .*)?\)$/m);
+    const computedAgain = Number(/\((\d+) asked now, /.exec(cached.steps[0].out)?.[1] ?? 0);
+    const neverStored = (cached.steps[0].out.match(/ error {2,}asked now /g) ?? []).length;
     assert.equal(computedAgain, neverStored, "only an error, which is never stored, is asked for again");
     for (const file of CYCLE_FILES) assert.equal(cached.files[file], one.files[file], file);
 

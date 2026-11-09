@@ -413,10 +413,7 @@ test(
     // floor. A pair is counted in both modes: 24 runs on R0 and on R1, 216 ray sets on R2 and on R3, and 72 fields
     // on R4, five pairs each. On R4 (LensVisualizer 33ebdb30, closure 78215d72) LensVisualizer is within 3.4e-8 of
     // both, and optiland within 1.2e-11 of ref, against a gate of 1e-7.
-    assert.match(
-      verdicts,
-      /^benchmark: 2760 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(verdicts, /^benchmark: 2760 pairs: 2760 Pass$/);
     // Every chief ray of the benchmark lands, in every engine: the path relative to it is measured in every pair.
     assert.deepEqual(paths.withoutChief, []);
   },
@@ -429,10 +426,7 @@ test(
     const { paths, verdicts, sets } = everyRung(t, "features");
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
     assert.equal(sets, 162);
-    assert.match(
-      verdicts,
-      /^features: 2070 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(verdicts, /^features: 2070 pairs: 2070 Pass$/);
     // Historical at 33ebdb30: optiland within 3.5e-9 waves of ref; two ray sets of the Hologon, at its full field
     // at 470 nm and 510 nm, are floors of LensVisualizer against ref and optiland (2.07e-5 waves to the image and
     // 2.28e-5 relative to the chief ray, where optiland is 4.2e-10 waves from ref). Version 11 grants no floor.

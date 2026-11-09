@@ -21,6 +21,9 @@ import { statementCommand } from "./commands/statement.ts";
 import { verifyCommand } from "./commands/verify.ts";
 import { CLI_TEXT } from "../vocabulary/cli.ts";
 import type { CliGroupEntry } from "../vocabulary/cli.ts";
+import { ERROR_OUTPUT_TEXT } from "../vocabulary/output.ts";
+import { codeLines } from "./output.ts";
+import { LvBindingError } from "../engines/lv/errors.ts";
 
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE };
 export type { CliCommand, CliIo };
@@ -129,6 +132,15 @@ export async function runCli(
     return await command.run(rest, io);
   } catch (error) {
     io.stderr(`lvrtc ${command.name}: ${error instanceof Error ? error.message : String(error)}\n`);
+    // An error that carries a code the vocabulary knows (LensVisualizer's binding, an engine) says how to fix it: the
+    // error classes keep their words, and the remedy is added where the error is shown.
+    const code = (error as { readonly code?: unknown } | null)?.code;
+    const means = codeLines(
+      typeof code === "string" ? code : null,
+      2,
+      error instanceof LvBindingError ? "lv" : undefined,
+    );
+    if (means.length > 0) io.stderr(`${ERROR_OUTPUT_TEXT.fix}:\n${means.join("\n")}\n`);
     return EXIT_FAILURE;
   }
 }

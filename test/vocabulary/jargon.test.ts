@@ -2,16 +2,33 @@
 // (`JARGON`, `src/vocabulary/jargon.ts`). A word not on a surface's list fails, and so does a listed word the surface
 // no longer uses: the lists only shrink, each to empty, as the plain-language stages land.
 //
-// Deferred: the commands' own output (stdout of run, compare, baseline check and the rest) joins the ratchet in
-// Stage 9.3, and the dashboard's visible text in Stage 9.4. MATRIX_ROWS' about and notCovered text moves into the
-// vocabulary in Stage 9.5, when the report wording changes.
+// The commands' own output joins the ratchet here (`CLI_OUTPUT`): what they print on a temporary root of fake
+// engines, the Markdown a report or the MTF profile prints aside (Stage 9.5's). Deferred: the dashboard's visible
+// text in Stage 9.4. MATRIX_ROWS' about and notCovered text moves into the vocabulary in Stage 9.5, when the report
+// wording changes.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { test } from "node:test";
+import type { TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { createBaselineCommand } from "../../src/cli/commands/baseline.ts";
+import { createChecksCommand } from "../../src/cli/commands/checks.ts";
+import { createCompareCommand } from "../../src/cli/commands/compare.ts";
+import { createDoctorCommand } from "../../src/cli/commands/doctor.ts";
+import type { DoctorProbe } from "../../src/cli/commands/doctor.ts";
+import { createEngineCommand } from "../../src/cli/commands/engine.ts";
+import { createGlossaryCommand } from "../../src/cli/commands/glossary.ts";
+import { createReportCommand } from "../../src/cli/commands/report.ts";
+import { createRunCommand } from "../../src/cli/commands/run.ts";
+import { createVerifyCommand } from "../../src/cli/commands/verify.ts";
 import { COMMANDS, runCli } from "../../src/cli/main.ts";
+import type { CliCommand } from "../../src/cli/main.ts";
+import { CONTRACT_VERSION } from "../../src/contract/version.ts";
+import { CONFIG_FILE } from "../../src/core/config.ts";
+import { wordingProblems } from "../../src/report/wording.ts";
+import { caseFixture, tempDir } from "../core/support.ts";
 import { JARGON, jargonProblems, jargonTerms, withoutExemptions } from "../../src/vocabulary/jargon.ts";
 import { OUTCOME_TEXT, VERDICT_TEXT } from "../../src/vocabulary/index.ts";
 
@@ -23,6 +40,18 @@ type Allowlist = Readonly<Record<string, readonly string[]>>;
 /** `lvrtc --help` and `lvrtc <command> --help`. `run` names --rungs, the older spelling of --checks. */
 const CLI_HELP: Allowlist = {
   run: ["rung"],
+};
+
+/**
+ * What the commands print on a temporary root of fake engines, by command line. Bare check ids (`r2`) are not jargon
+ * yet: they are what a user types until the rename. `run` and `baseline check` name the run record's file,
+ * manifest.json, whose name is stored; `glossary` says which of the tool's own words each term replaces.
+ */
+const CLI_OUTPUT: Allowlist = {
+  "run suites/pair.json --engines fake-a,fake-near,fake-none": ["manifest"],
+  "baseline check pair": ["manifest"],
+  "baseline check pair, out of date": ["manifest"],
+  glossary: ["rung", "ladder", "recipe", "manifest", "adapter revision", "fingerprint", "owner"],
 };
 
 /** The README, a reviewer's first page: it uses none of the tool's own words. */
@@ -209,4 +238,103 @@ test("every committed report uses no more of the tool's own words than its allow
 
 test("every golden report uses no more of the tool's own words than its allowlist", () => {
   ratchet("test/fixtures/golden/", filesUnder("test/fixtures/golden"), GOLDENS);
+});
+
+// ── What the commands print ──────────────────────────────────────────────────────────────────────────────────────
+
+const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
+
+/** A root with two fake engines, the suite `pair` of two case files, and nothing run. */
+function fakeRoot(t: TestContext, near: Readonly<Record<string, unknown>> = { bias: 2e-14 }): string {
+  const rootDir = join(tempDir(t), "root");
+  mkdirSync(join(rootDir, "cases"), { recursive: true });
+  mkdirSync(join(rootDir, "suites"), { recursive: true });
+  for (const each of ["singlet", "double-gauss"]) cpSync(caseFixture(each), join(rootDir, "cases", `${each}.json`));
+  writeConfig(rootDir, near);
+  const suite = {
+    contract: CONTRACT_VERSION,
+    kind: "suite",
+    name: "pair",
+    defaults: { rungs: ["selftest"] },
+    runs: ["singlet", "double-gauss"].map((name) => ({ name, lens: { kind: "fixture", path: `cases/${name}.json` } })),
+  };
+  writeFileSync(join(rootDir, "suites", "pair.json"), JSON.stringify(suite));
+  return rootDir;
+}
+
+function writeConfig(rootDir: string, near: Readonly<Record<string, unknown>>): void {
+  const engine = (id: string, more: Readonly<Record<string, unknown>> = {}) => ({
+    transport: "in-process",
+    module: FAKE_ENGINE,
+    options: { id, ...more },
+  });
+  const engines = {
+    "fake-a": engine("fake-a"),
+    "fake-near": engine("fake-near", near),
+    "fake-none": engine("fake-none", { offersQuantities: false }),
+  };
+  writeFileSync(join(rootDir, CONFIG_FILE), JSON.stringify({ engines }));
+}
+
+/** A machine with nothing on it: doctor's probes find no LensVisualizer, no Python and no optiland. */
+const BARE_MACHINE: DoctorProbe = {
+  nodeVersion: () => process.versions.node,
+  exists: () => false,
+  run: () => null,
+  lvBinding: async () => ({ status: "failed", code: "path-missing", message: "no checkout" }),
+  optilandEngine: async () => ({ status: "unavailable", code: "not-configured", message: "not configured" }),
+};
+
+/** The commands of a root, wired to it in this process. */
+function commandsOf(rootDir: string): CliCommand[] {
+  const inputs = { rootDir, cwd: rootDir, env: { LVRTC_RUNS_DIR: join(rootDir, "runs") } };
+  return [
+    createRunCommand(inputs),
+    createCompareCommand(inputs),
+    createReportCommand(inputs),
+    createBaselineCommand(inputs),
+    createVerifyCommand({ rootDir, cwd: rootDir }),
+    createDoctorCommand({ ...inputs, probe: BARE_MACHINE }),
+    createEngineCommand(inputs),
+    createChecksCommand(),
+    createGlossaryCommand(),
+  ];
+}
+
+/** Everything a command line printed, on both streams; the Markdown of a report is left aside (Stage 9.5's). */
+async function printed(rootDir: string, args: readonly string[]): Promise<string> {
+  let text = "";
+  const io = { stdout: (chunk: string) => void (text += chunk), stderr: (chunk: string) => void (text += chunk) };
+  await runCli(args, io, commandsOf(rootDir));
+  return text;
+}
+
+test("what the commands print uses no more of the tool's own words than its allowlist, and no banned claim", async (t) => {
+  const rootDir = fakeRoot(t);
+  const texts = new Map<string, string>();
+  const say = async (args: readonly string[], key = args.join(" ")): Promise<void> => {
+    texts.set(key, await printed(rootDir, args));
+  };
+  await say(["run", "suites/pair.json", "--engines", "fake-a,fake-near,fake-none"]);
+  await say(["compare", "pair"]);
+  await say(["report", "pair"]);
+  // A baseline of agreeing engines: written, checked, and verified.
+  await printed(rootDir, ["run", "suites/pair.json"]);
+  await printed(rootDir, ["compare", "pair"]);
+  await say(["baseline", "write", "pair"]);
+  await say(["baseline", "check", "pair"]);
+  await say(["verify"]);
+  // Another build of an engine: out of date, and what moved.
+  writeConfig(rootDir, { bias: 3e-14 });
+  await say(["baseline", "check", "pair", "--details"], "baseline check pair, out of date");
+  await say(["doctor"]);
+  await say(["engine", "describe", "fake-a", "lv"]);
+  await say(["checks"]);
+  await say(["checks", "r2"]);
+  await say(["glossary"]);
+  for (const [key, text] of texts) {
+    assert.notEqual(text, "", key);
+    assert.deepEqual(wordingProblems(text), [], key);
+  }
+  ratchet("output", texts, CLI_OUTPUT);
 });

@@ -540,10 +540,10 @@ test("lvrtc run: optiland without an interpreter is unavailable, and the other e
   const rootDir = suiteRoot(t, ["selftest"]);
   const ended = await run(rootDir, ["--engines", "fake-a,optiland"]);
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}answered {17}asked now$/m);
   assert.match(
     ended.out,
-    /^singlet {2}selftest {2}optiland {7}error {8}unavailable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it: set engines\.optiland\.python in lvrtc\.local\.json/m,
+    /^singlet {2}selftest {2}optiland {7}error {20}engine unusable {2}not-configured: engine optiland is unavailable \(not-configured\): no interpreter is configured for it: set engines\.optiland\.python in lvrtc\.local\.json/m,
   );
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
@@ -566,11 +566,11 @@ test(
     const ended = await run(rootDir, ["--engines", "fake-a,optiland", "--rungs", "selftest"]);
     assert.equal(ended.err, "");
     assert.equal(ended.code, EXIT_OK, ended.out);
-    const rows = ended.out.split("\n").filter((line) => line.includes("optiland"));
+    const rows = ended.out.split("\n").filter((line) => line.startsWith("singlet") && line.includes("optiland"));
     assert.deepEqual(rows, [
-      "singlet  selftest  optiland       unsupported  negotiated   the engine does not offer selftest.echo",
+      "singlet  selftest  optiland       not computed             not offered      the engine does not offer selftest.echo",
     ]);
-    assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}ok {11}computed$/m);
+    assert.match(ended.out, /^singlet {2}selftest {2}fake-a {9}answered {17}asked now$/m);
     const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "pair", MANIFEST_FILE), "utf8"));
     const engine = manifest.engines.find((entry) => entry.id === "optiland");
     assert.ok(engine !== undefined && engine.status === "available");

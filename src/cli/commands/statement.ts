@@ -47,7 +47,7 @@ export function createStatementCommand(inputs: { rootDir: string; cwd: string })
       const rendered = renderStatement(readStatementInputs(root));
       writeFileAtomic(resolve(root, STATEMENT_JSON), rendered.json);
       writeFileAtomic(resolve(root, STATEMENT_MARKDOWN), rendered.markdown);
-      io.stdout(`${STATEMENT_JSON} and ${STATEMENT_MARKDOWN}: written from eight baselines; no engine was read.\n`);
+      io.stdout(`${STATEMENT_JSON} and ${STATEMENT_MARKDOWN}: written from the eight baselines; no engine was run.\n`);
       return EXIT_OK;
     },
   };

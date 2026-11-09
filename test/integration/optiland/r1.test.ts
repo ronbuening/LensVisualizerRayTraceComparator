@@ -274,10 +274,7 @@ test(
     assert.equal(manifest.jobs.length, names.length * 2 * 2);
     // Each request is compared against a reference and pair by pair: with two engines, the same pair twice.
     const pairs = names.length * 2 * 2;
-    assert.equal(
-      verdicts,
-      `${name}: ${pairs} pairs: ${pairs} PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR`,
-    );
+    assert.equal(verdicts, `${name}: ${pairs} pairs: ${pairs} Pass`);
     const r1 = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
     assert.deepEqual(
       r1.map((pair) => [pair.run, pair.engines]),
@@ -335,10 +332,7 @@ test(
       ]),
     );
     const pairs = names.length * 2;
-    assert.equal(
-      verdicts,
-      `${name}: ${2 * pairs} pairs: ${pairs} PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, ${pairs} UNSUPPORTED, 0 BLOCKED, 0 ERROR`,
-    );
+    assert.equal(verdicts, `${name}: ${2 * pairs} pairs: ${pairs} Pass, ${pairs} Not computed`);
     // The system is built and echoed whatever its first-order data: a term of power 2 is in optiland's sag.
     for (const pair of pairsOf(comparisons, "r0", SYSTEM_DESCRIBE)) assert.equal(pair.verdict, "PASS", pair.run);
     const r1 = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
@@ -372,10 +366,7 @@ test(
     assert.deepEqual(notOk(manifest.jobs), []);
     assert.equal(manifest.jobs.length, 24 * 2 * 3);
     // For each request two pairs against a reference, and three pair by pair.
-    assert.equal(
-      verdicts,
-      "benchmark: 240 pairs: 240 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "benchmark: 240 pairs: 240 Pass");
     const pairs = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
@@ -406,10 +397,7 @@ test(
     // An odd asphere, an e line, a term of power 20, a flat base, a rear plate, a zoom, a stop inside an element:
     // none of them is a term of power 1 or 2, so optiland's first-order data is asked of each and answers each.
     assert.deepEqual(notOk(manifest.jobs), []);
-    assert.equal(
-      verdicts,
-      "features: 180 pairs: 180 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "features: 180 pairs: 180 Pass");
     const pairs = pairsOf(comparisons, "r1", PARAXIAL_FIRST_ORDER);
     assert.equal(pairs.length, 18 * 3);
     assertR1Passes(t, "features", pairs);

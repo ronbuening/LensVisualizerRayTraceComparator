@@ -17,7 +17,7 @@ import { createEngineRegistry } from "../../engines/registry.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
 import { ROOT_OPTION, helpText, options, paragraph, wrap } from "../help.ts";
-import { DOCTOR_TEXT, codeTextOf } from "../../vocabulary/index.ts";
+import { DOCTOR_OUTPUT_TEXT, DOCTOR_TEXT, IDENTIFIERS_TEXT, engineCodeTextOf } from "../../vocabulary/index.ts";
 import { doctorRefusals } from "../verifyReal.ts";
 
 export type { CommandResult };
@@ -102,7 +102,7 @@ export interface DoctorReport {
 const NODE_RANGE: string = packageJson.engines.node;
 /** optiland has no `__version__`; its distribution metadata is the only version it carries. */
 const OPTILAND_VERSION_SCRIPT = "import importlib.metadata as m; print(m.version('optiland'))";
-const USAGE = "Usage: lvrtc doctor [--root <dir>] [--json]\n";
+const USAGE = "Usage: lvrtc doctor [--root <dir>] [--details] [--json]\n";
 const HELP = helpText([
   USAGE,
   ...paragraph(
@@ -113,6 +113,7 @@ const HELP = helpText([
   ),
   ...options([
     ROOT_OPTION,
+    ["--details", IDENTIFIERS_TEXT.option],
     ["--json", "print one JSON object in place of the lines, with sorted keys; ready says what is ready"],
   ]),
   ...paragraph(
@@ -218,13 +219,13 @@ function fix(remedy: string): Row {
 }
 
 /** The remedy of a code, or `fallback` where the vocabulary has none for it. */
-function remedyOf(code: string, fallback: string): string {
-  const remedy = codeTextOf(code)?.remedy ?? "";
+function remedyOf(code: string, fallback: string, engine?: string): string {
+  const remedy = engineCodeTextOf(engine, code)?.remedy ?? "";
   return remedy === "" ? fallback : remedy;
 }
 
-/** The rows that say who the engine `optiland` is, or why it cannot be used. */
-function optilandEngineRows(engine: DoctorOptilandEngine | null): Row[] {
+/** The rows that say who the engine `optiland` is, or why it cannot be used; its hashes only under `details`. */
+function optilandEngineRows(engine: DoctorOptilandEngine | null, showHashes: boolean): Row[] {
   if (engine === null) return [];
   if (engine.status === "unavailable") {
     return [
@@ -239,13 +240,16 @@ function optilandEngineRows(engine: DoctorOptilandEngine | null): Row[] {
       ? "not a git checkout"
       : `${said("commit")} (${details.dirty === true ? "dirty" : details.dirty === false ? "clean" : "unknown"})`;
   const versions = `Python ${said("python")}, numpy ${said("numpy")}, scipy ${said("scipy")}, numba ${said("numba")}`;
+  const t = DOCTOR_OUTPUT_TEXT;
+  const sources = `${said("sourceFiles")} ${t.files}`;
   return [
-    ["engine", `fingerprint ${engine.fingerprint}`],
+    ["engine", t.answers],
+    ...(showHashes ? ([[t.codeHash, engine.fingerprint]] as Row[]) : []),
     ["git", commit],
-    ["sources", `${said("sourceFiles")} files, hash ${said("sourceHash")}`],
+    ["sources", showHashes ? `${sources}, ${t.hash} ${said("sourceHash")}` : sources],
     ["versions", versions],
     ["jit", details.jit === true ? "on" : details.jit === false ? "off" : "unknown"],
-    ["adapter", engine.adapterRevision ?? "none stated"],
+    ...(showHashes ? ([[t.toolCode, engine.adapterRevision ?? t.noneStated]] as Row[]) : []),
   ];
 }
 
@@ -314,8 +318,8 @@ function readySection(report: DoctorReport): string {
   ].join("\n");
 }
 
-/** The human-readable report: a pure function of the report, with no timestamps. */
-export function renderDoctorText(report: DoctorReport): string {
+/** The human-readable report: a pure function of the report, with no timestamps; the hashes only under `details`. */
+export function renderDoctorText(report: DoctorReport, details = false): string {
   const { node, config, lensVisualizer, python, optiland } = report;
 
   const lvRows: Row[] = [["status", lensVisualizer.status]];
@@ -329,10 +333,12 @@ export function renderDoctorText(report: DoctorReport): string {
     if (git === null) lvRows.push(fix(DOCTOR_TEXT.lvNotGit));
     else if (git.dirty) lvRows.push(fix(DOCTOR_TEXT.lvDirty));
     if (binding?.status === "loaded") {
-      lvRows.push(["engine", `${binding.engineFileCount} files, closure ${binding.engineClosureHash}`]);
+      const t = DOCTOR_OUTPUT_TEXT;
+      lvRows.push(["engine", `${t.loads} (${binding.engineFileCount} ${t.files})`]);
+      if (details) lvRows.push([t.filesHash, binding.engineClosureHash]);
     } else if (binding?.status === "failed") {
       lvRows.push(["engine", `not loadable (${binding.code}): ${binding.message}`]);
-      lvRows.push(fix(remedyOf(binding.code, DOCTOR_TEXT.lvPath)));
+      lvRows.push(fix(remedyOf(binding.code, DOCTOR_TEXT.lvPath, "lv")));
     }
   }
 
@@ -342,7 +348,7 @@ export function renderDoctorText(report: DoctorReport): string {
     optilandRows[optilandRows.length - 1] = ["interpreter", `present (${optiland.interpreterVersion})`];
     optilandRows.push(["version", optiland.version ?? "not importable"]);
     if (optiland.version === null) optilandRows.push(fix(DOCTOR_TEXT.optilandNotImportable));
-    optilandRows.push(...optilandEngineRows(optiland.engine));
+    optilandRows.push(...optilandEngineRows(optiland.engine, details));
   } else {
     optilandRows.push(fix(DOCTOR_TEXT.optilandPython));
   }
@@ -402,10 +408,12 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
         return EXIT_OK;
       }
       let json = false;
+      let details = false;
       let root: string | undefined;
       for (let index = 0; index < args.length; index += 1) {
         const arg = args[index];
         if (arg === "--json") json = true;
+        else if (arg === "--details") details = true;
         else if (arg === "--root" && root === undefined && args[index + 1] !== undefined) root = args[++index];
         else {
           io.stderr(`lvrtc doctor: unknown argument "${arg}"\n${USAGE}`);
@@ -419,7 +427,7 @@ export function createDoctorCommand(inputs: DoctorInputs): CliCommand {
       }
       const loaded = loadConfig({ rootDir, env: inputs.env });
       const report = await collectDoctorReport(loaded, inputs.probe);
-      io.stdout(json ? renderDoctorJson(report) : renderDoctorText(report));
+      io.stdout(json ? renderDoctorJson(report) : renderDoctorText(report, details));
       if (report.node.ok) return EXIT_OK;
       io.stderr(`lvrtc doctor: Node ${report.node.version} is outside the supported range ${report.node.required}\n`);
       return EXIT_FAILURE;

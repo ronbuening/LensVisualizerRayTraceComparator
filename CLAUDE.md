@@ -2226,3 +2226,9 @@ node bin/z50f12-investigation.mjs suite|table|sampling|lv-grid|optiland-grid <tm
   on this repository (by real path) or any root that has one; never edit it or run prettier on it.
 - The jargon ratchet (`test/vocabulary/jargon.test.ts`) holds CLI help, `reports/**/*.md` and the golden reports to
   per-text allowlists that only shrink: remove a word from a list once a surface stops using it, never add one.
+- **What a command prints** (Stage 9.3; the ratchet's `CLI_OUTPUT`, on a temporary fake root): per-item lines keep
+  check and engine ids (what a user types), and the command prints one legend of the ids it used (`legendLines`,
+  `src/cli/output.ts`); statuses, verdicts and outcomes are vocabulary labels (`src/vocabulary/output.ts`), and a
+  code is followed by its sentence and remedy (`codeLines`, also under `main.ts`'s catch-all). Hashes (engine code,
+  this tool's code behind it, lens state, request, suite file, LensVisualizer's engine files) are shown only under
+  `--details`. Every `--json` keeps its keys and values exactly: verify:real, check-lv and the dashboard parse them.

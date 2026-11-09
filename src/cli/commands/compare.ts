@@ -22,7 +22,8 @@ import type { CliCommand } from "../command.ts";
 import { parseTargetArguments, resolveRunDirectory } from "../runTarget.ts";
 import type { RunTargetInputs } from "../runTarget.ts";
 import { helpText, options, paragraph } from "../help.ts";
-import { verdictLabel } from "../../vocabulary/index.ts";
+import { COMPARE_OUTPUT_TEXT, verdictLabel, verdictShort, modeLabel } from "../../vocabulary/index.ts";
+import { columns, countsText, legendLines } from "../output.ts";
 
 /** What `lvrtc compare` is wired to, injected so that tests choose it. */
 export interface CompareCommandInputs extends RunTargetInputs {
@@ -69,26 +70,36 @@ const MODE_CHOICES: Readonly<Record<string, readonly ComparisonMode[]>> = {
   both: COMPARISON_MODES,
 };
 
-/** One line per pair, in columns: run, rung, mode, the two engines, the verdict and its reason; then the counts. */
+/**
+ * The legend of the check and engine ids and of the ways pairs are formed; then one line per pair, in columns: run,
+ * check, how the pair was formed, the two engines, the verdict and its reason (the comparison's own words); then the
+ * counts, by verdict.
+ */
 function linesText(file: ComparisonFile): string {
-  const rows = file.comparisons.flatMap((set) =>
-    set.pairs.map((pair) => [set.run, set.rung, set.mode, pair.a, pair.b, pair.verdict, pair.reason ?? ""]),
+  const pairs = file.comparisons.flatMap((set) => set.pairs.map((pair) => ({ set, pair })));
+  const rows = pairs.map(({ set, pair }) => [
+    set.run,
+    set.rung,
+    modeLabel(set.mode),
+    pair.a,
+    pair.b,
+    verdictShort(pair.verdict),
+    pair.reason ?? "",
+  ]);
+  const legend = legendLines({
+    checks: file.comparisons.map((set) => set.rung),
+    engines: pairs.flatMap(({ pair }) => [pair.a, pair.b]).sort(),
+    modes: file.comparisons.map((set) => set.mode),
+    references: file.comparisons.flatMap((set) => (set.reference === undefined ? [] : [set.reference])),
+  });
+  const counts = countsText(
+    VERDICTS.map((verdict) => [verdictShort(verdict), pairs.filter(({ pair }) => pair.verdict === verdict).length]),
   );
-  const widths = rows.reduce<number[]>(
-    (most, row) => row.map((cell, column) => Math.max(most[column] ?? 0, cell.length)),
-    [],
-  );
-  const lines = rows.map((row) =>
-    row
-      .map((cell, column) => cell.padEnd(widths[column]))
-      .join("  ")
-      .trimEnd(),
-  );
-  const verdicts = rows.map((row) => row[5]);
-  const counts = VERDICTS.map((verdict) => `${verdicts.filter((each) => each === verdict).length} ${verdict}`);
+  const t = COMPARE_OUTPUT_TEXT;
   return [
-    ...lines,
-    `${file.suite}: ${rows.length} ${rows.length === 1 ? "pair" : "pairs"}: ${counts.join(", ")}`,
+    ...legend,
+    ...columns(rows),
+    `${file.suite}: ${rows.length} ${rows.length === 1 ? t.pair : t.pairs}: ${counts}`,
     "",
   ].join("\n");
 }
@@ -189,7 +200,7 @@ export function createCompareCommand(inputs: CompareCommandInputs): CliCommand {
       writeFileAtomic(path, comparisonFileText(file));
       // Canonical JSON sorts the keys at every depth; parsing it keeps that order for the indented text.
       if (json) io.stdout(`${JSON.stringify(JSON.parse(canonicalJson(file)), null, 2)}\n`);
-      else io.stdout(`${linesText(file)}comparisons: ${path}\n`);
+      else io.stdout(`${linesText(file)}${COMPARE_OUTPUT_TEXT.comparisons}: ${path}\n`);
 
       const failed = file.comparisons.some((set) => set.pairs.some((pair) => FAILING_VERDICTS.includes(pair.verdict)));
       return failed ? EXIT_FAILURE : EXIT_OK;

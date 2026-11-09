@@ -134,14 +134,14 @@ function summaryText(census: ExportCensus): string {
   const width = Math.max(0, ...reasons.map(([code]) => code.length));
   const counted = Math.max(0, ...reasons.map(([, { states }]) => String(states).length));
   return [
-    `${census.lenses} lenses (${census.zooms} of them zooms, each at both ends), ${census.states} states: ` +
-      `${census.exported} exported, ${census.notExportable} not exportable, ${census.threw.length} threw`,
+    `${census.lenses} lenses (${census.zooms} of them zooms, each at both ends), ${census.states} lens states: ` +
+      `${census.exported} exported, ${census.notExportable} not exportable, ${census.threw.length} failed with an error`,
     ...(["prime", "wide", "tele"] as const).map((kind) => {
       const { states, exported, notExportable, threw } = census.byState[kind];
       const name = (kind === "prime" ? "primes" : `zooms, ${kind}`).padEnd(11);
-      return `  ${name}  ${states}: ${exported} exported, ${notExportable} not exportable, ${threw} threw`;
+      return `  ${name}  ${states}: ${exported} exported, ${notExportable} not exportable, ${threw} failed with an error`;
     }),
-    ...(reasons.length === 0 ? [] : ["not exportable, by reason (states, lenses):"]),
+    ...(reasons.length === 0 ? [] : ["not exportable, by reason (lens states, lenses):"]),
     ...reasons.map(
       ([code, { states, lenses }]) => `  ${code.padEnd(width)}  ${String(states).padStart(counted)}  ${lenses.length}`,
     ),
@@ -162,7 +162,7 @@ async function exportAll(binding: LvBinding, censusDir: string | undefined, json
         lenses.push({ ...state, outcome: await exporter.exportLens(key, { state: { zoomT } }) });
       } catch (error) {
         const threw = error instanceof Error ? error.message : String(error);
-        io.stderr(`lvrtc export: threw: ${threw}${end === undefined ? "" : ` (${end} end)`}\n`);
+        io.stderr(`lvrtc export: failed with an error: ${threw}${end === undefined ? "" : ` (${end} end)`}\n`);
         lenses.push({ ...state, outcome: { threw } });
       }
     }
@@ -181,7 +181,9 @@ async function exportAll(binding: LvBinding, censusDir: string | undefined, json
   }
   io.stdout(json ? censusJsonText(census) : summaryText(census));
   if (censusDir !== undefined && !json) {
-    io.stdout(`census: ${join(censusDir, CENSUS_FILES.json)}, ${join(censusDir, CENSUS_FILES.markdown)}\n`);
+    io.stdout(
+      `export summary of every lens: ${join(censusDir, CENSUS_FILES.json)}, ${join(censusDir, CENSUS_FILES.markdown)}\n`,
+    );
   }
   return census.threw.length === 0 && census.unindexedFiles === 0 ? EXIT_OK : EXIT_FAILURE;
 }

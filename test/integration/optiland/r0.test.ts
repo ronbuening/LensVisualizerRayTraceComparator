@@ -109,10 +109,7 @@ test(
     assert.match(optiland.version, /^\d+\.\d+/);
 
     // Each request is compared against a reference and pair by pair: with two engines, the same pair twice.
-    assert.equal(
-      verdicts,
-      "contract-cases: 6 pairs: 6 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "contract-cases: 6 pairs: 6 Pass");
     assert.deepEqual(
       pairs.map((pair) => [pair.run, pair.engines]),
       names.map((name) => [name, "optiland / ref"]),
@@ -211,10 +208,7 @@ test(
     assert.equal(manifest.jobs.length, 24 * 3);
     assert.ok(manifest.jobs.every((job) => job.status === "ok" && job.rung === "r0"));
     // Against a reference two pairs for each run, and pair by pair three.
-    assert.equal(
-      verdicts,
-      "benchmark: 120 pairs: 120 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "benchmark: 120 pairs: 120 Pass");
     // Three pairs of two engines for each run.
     assert.equal(pairs.length, 24 * 3);
     assert.deepEqual([...new Set(pairs.map((pair) => pair.engines))].sort(), [
@@ -242,10 +236,7 @@ test(
       refused.map((job) => [job.run, job.engine, job.status, job.unsupported ?? job.error]),
       [],
     );
-    assert.equal(
-      verdicts,
-      "features: 90 pairs: 90 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR",
-    );
+    assert.equal(verdicts, "features: 90 pairs: 90 Pass");
     assert.equal(pairs.length, 18 * 3);
     assertAllPass(t, "features", pairs);
   },

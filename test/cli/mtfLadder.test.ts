@@ -101,7 +101,7 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   const ran = await lvrtc(rootDir, "run", "suite.json");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // Two runs, two fields, two lines: eight ray sets, asked of four engines, of which one traces no rays.
-  assert.match(ran.out, /^mtf: 32 jobs: 24 ok, 8 unsupported, 0 error, 0 pending \(24 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^mtf: 32 jobs: 24 answered, 8 not computed \(24 asked now, 8 not offered\)$/m);
   const manifest = read<RunManifest>(rootDir, MANIFEST_FILE);
   // The recipe of each run is recorded: the plane of its case, and its frequencies in ascending order.
   const [design, shifted] = manifest.runs;
@@ -114,10 +114,7 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   const compared = await lvrtc(rootDir, "compare", "mtf");
   assert.equal(compared.code, EXIT_FAILURE, compared.out);
   // A set for each field of each run, in each mode: three pairs against the reference and six pairwise.
-  assert.match(
-    compared.out,
-    /^mtf: 36 pairs: 8 PASS, 0 FLOOR, 12 FAIL, 0 RECORDED, 0 ATTENTION, 16 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^mtf: 36 pairs: 8 Pass, 12 Fail, 16 Not computed$/m);
   const file = read<ComparisonFile>(rootDir, COMPARISONS_FILE);
   assert.ok(file.comparisons.every((set) => set.rung === "r4" && set.quantity === "rays.trace"));
   const sets = (run: string, mode: string): ComparisonSet[] =>
@@ -193,22 +190,22 @@ test("R4 compares a field at every line as one set: a faithful copy differs by n
   // The rungs of traced rays ask the same requests: with R2 and R3 beside it, R4 finds every answer in the store.
   const all = await lvrtc(rootDir, "run", "suite.json", "--rungs", "r2,r3,r4", "--engines", "ref,ref-twin");
   assert.equal(all.code, EXIT_OK, all.err);
-  assert.match(all.out, /^mtf: 48 jobs: 48 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 48 cached\)$/m);
+  assert.match(all.out, /^mtf: 48 jobs: 48 answered \(48 from the result cache\)$/m);
   const again = await lvrtc(rootDir, "compare", "mtf");
   assert.equal(again.code, EXIT_OK, again.out);
   // R2 and R3 judge each ray set, R4 each field: 8 + 8 + 4 sets, each of one pair in each mode.
-  assert.match(again.out, /^mtf: 40 pairs: 40 PASS, 0 FLOOR, 0 FAIL, /m);
+  assert.match(again.out, /^mtf: 40 pairs: 40 Pass$/m);
 });
 
 test("a field no engine traced has no span to be put in: each of its requests stands alone, unsupported", async (t) => {
   const rootDir = ladderRoot(t);
   const ran = await lvrtc(rootDir, "run", "suite.json", "--engines", "fake-a,fake-b");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^mtf: 16 jobs: 0 ok, 16 unsupported, 0 error, 0 pending/m);
+  assert.match(ran.out, /^mtf: 16 jobs: 16 not computed/m);
   const compared = await lvrtc(rootDir, "compare", "mtf", "--reference", "fake-a");
   assert.equal(compared.code, EXIT_OK, compared.out);
   // Eight requests, one pair in each mode: nothing says which of them are of one field.
-  assert.match(compared.out, /^mtf: 16 pairs: 0 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 16 UNSUPPORTED, /m);
+  assert.match(compared.out, /^mtf: 16 pairs: 16 Not computed$/m);
   const file = read<ComparisonFile>(rootDir, COMPARISONS_FILE);
   assert.equal(new Set(file.comparisons.map((set) => set.requestId)).size, 8);
 });

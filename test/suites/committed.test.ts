@@ -235,8 +235,14 @@ test("a committed suite runs at the root of the repository without naming an eng
   const io = { stdout: (text: string) => void out.push(text), stderr: (text: string) => void err.push(text) };
   const code = await runCli(["run", "suites/smoke.json"], io, [command]);
   assert.equal(code, EXIT_FAILURE, err.join(""));
-  assert.match(out.join(""), /^smoke: 0 jobs: 0 ok, 0 unsupported, 0 error, 0 pending/m);
-  const lines = err.join("").trimEnd().split("\n");
+  assert.match(out.join(""), /^smoke: 0 jobs: 0 answered/m);
+  // Under each problem, what its code means and what to do: indented, and left out here.
+  const lines = err
+    .join("")
+    .trimEnd()
+    .split("\n")
+    .filter((line) => !line.startsWith("    "));
+  assert.match(err.join(""), /lv-path-missing: .*\n {4}The LensVisualizer path that is set is not a directory\./);
   // One line per run as written: without LensVisualizer nothing says which lens is a zoom.
   assert.equal(lines.length, 4);
   for (const line of lines) {

@@ -77,7 +77,7 @@ export function outcomeLabel(outcome: string): string {
 }
 
 /** The words of a list of reasons, as `lens data, engine code`; a reason with no words is given as it is. */
-function reasonsText(reasons: readonly string[]): string {
+export function reasonsText(reasons: readonly string[]): string {
   return reasons.map((reason) => STALE_REASON_TEXT[reason]?.label ?? reason).join(", ");
 }
 

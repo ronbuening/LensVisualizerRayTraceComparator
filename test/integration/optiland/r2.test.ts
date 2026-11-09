@@ -395,10 +395,7 @@ test(
     assert.equal(on.pairs.length / 3, 216);
     // Measured: optiland and ref within 1.2e-12 mm in every hit, 2.1e-14 in direction and 8.9e-13 mm in landing,
     // over 137 596 rays; every pair of LensVisualizer inside its gates, so the benchmark has no floor.
-    assert.match(
-      cycle.verdicts,
-      /^benchmark: 1080 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(cycle.verdicts, /^benchmark: 1080 pairs: 1080 Pass$/);
   },
 );
 
@@ -410,10 +407,7 @@ test(
     // 16 runs as written, 18 as run: the fixed-iris zoom is run at both ends.
     assert.equal(cycle.manifest.runs.length, 18);
     assert.equal(on.pairs.length / 3, 162);
-    assert.match(
-      cycle.verdicts,
-      /^features: 810 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(cycle.verdicts, /^features: 810 pairs: 810 Pass$/);
     // At the historical 1e-9 mm tolerance the Hologon had four floors; version 11 grants none.
     assert.ok(on.pairs.every((pair) => pair.verdict === "PASS"));
   },

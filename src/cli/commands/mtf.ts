@@ -70,7 +70,15 @@ import {
 import { REPORT_JSON_FILE, REPORT_MARKDOWN_FILE, renderReport } from "../../report/index.ts";
 import { JOBS_OPTIONS, ROOT_OPTION, checkNames, checksByKind, helpText, options, paragraph, wrap } from "../help.ts";
 import type { OptionRow } from "../help.ts";
-import { verdictLabel } from "../../vocabulary/index.ts";
+import {
+  IDENTIFIERS_TEXT,
+  JOB_SOURCE_TEXT,
+  JOB_STATUS_TEXT,
+  MTF_OUTPUT_TEXT,
+  verdictLabel,
+  verdictShort,
+} from "../../vocabulary/index.ts";
+import { codeLines, columns, engineIdentifierLines, explainedProblem, legendLines } from "../output.ts";
 
 /** What `lvrtc mtf` is wired to, injected so that tests choose all three. */
 export interface MtfCommandInputs {
@@ -90,7 +98,8 @@ const DEFAULT_ENGINES: readonly string[] = ["lv"];
 
 const SYNOPSIS = [
   "Usage: lvrtc mtf <lensKey> [--engines <id,...>] [--profile <name>] [--zoom <t>]",
-  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>] [--json]`,
+  `                 [--aperture wide-open|f/${LV_TAB_COMPARISON_F_NUMBER}] [--root <dir>] [--jobs <n>] [--memory-budget <GiB>]`,
+  "                 [--details] [--json]",
   "",
 ].join("\n");
 const BENCHMARK_KINDS = checksByKind(lensProfileRungs(BENCHMARK_PROFILE, []));
@@ -130,6 +139,7 @@ const HELP = helpText([
       `wide-open (default), or f/${LV_TAB_COMPARISON_F_NUMBER}: the tab's own comparison at f/${LV_TAB_COMPARISON_F_NUMBER}`,
     ],
     ROOT_OPTION,
+    ["--details", IDENTIFIERS_TEXT.option],
     ...JOBS_OPTIONS.map(([name, description]): OptionRow => [
       name,
       `${BENCHMARK_PROFILE} and ${TABS_PROFILE}: ${description}`,
@@ -217,12 +227,13 @@ interface MtfArguments {
   readonly root: string | undefined;
   readonly jobs: number;
   readonly memoryBudgetGiB: number;
+  readonly details: boolean;
   readonly json: boolean;
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
 function readArguments(args: readonly string[]): MtfArguments {
-  const { positionals: keys, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json"]);
+  const { positionals: keys, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json", "--details"]);
   if (keys.length === 0) throw new UsageError("no lens key was given");
   if (keys.length > 1) throw new UsageError(`unexpected argument "${keys[1]}"`);
   const engines = values.get("--engines")?.split(",") ?? [...DEFAULT_ENGINES];
@@ -252,6 +263,7 @@ function readArguments(args: readonly string[]): MtfArguments {
     root: values.get("--root"),
     jobs,
     memoryBudgetGiB,
+    details: flags.has("--details"),
     json: flags.has("--json"),
   };
 }
@@ -279,7 +291,7 @@ function engineOf(id: string, descriptor: EngineDescriptor): ManifestEngine {
 /** The lines of one engine's part: how it ended, then its table, or why it has none. */
 function engineText(asked: Asked, request: Extract<ProfileRequest, { ok: true }>): string {
   const { answer, source, detail } = asked;
-  const head = `${answer.engine}  ${answer.status}  ${source}`;
+  const head = `${answer.engine}  ${JOB_STATUS_TEXT[answer.status] ?? answer.status}  ${JOB_SOURCE_TEXT[source] ?? source}`;
   if (answer.status === "ok" && answer.result?.data !== undefined) {
     const data = answer.result.data as MtfNativeData;
     const { spec, displayedFrequenciesPerMm, opticalCase } = request;
@@ -290,7 +302,7 @@ function engineText(asked: Asked, request: Extract<ProfileRequest, { ok: true }>
     return `${[head, ...items].join("\n")}\n`;
   }
   const code = answer.error === undefined ? "" : `${answer.error.code}: `;
-  return `${head}\n  ${code}${detail ?? ""}\n`;
+  return [head, `  ${code}${detail ?? ""}`, ...codeLines(answer.error?.code ?? null, 4, answer.engine), ""].join("\n");
 }
 
 /** The fields of each "ok" answer at the shown frequencies, as plain numbers: what `--json` adds to the record. */
@@ -393,10 +405,12 @@ async function runBenchmark(
       profile !== BENCHMARK_PROFILE || engines.includes(OWN_MTF_ENGINE)
         ? ""
         : ` (${OWN_MTF_RUNGS.join(" and ")} need ${OWN_MTF_ENGINE})`;
+    const m = MTF_OUTPUT_TEXT;
     io.stderr(
-      `lvrtc mtf: ${name}: ${suite.runs.length} runs on ${engines.join(", ")}, rungs ${rungs.join(", ")}${own}; ` +
-        "what the result store holds is not computed again\n",
+      `lvrtc mtf: ${name}: ${suite.runs.length} ${m.runsOn} ${engines.join(", ")}, ${m.withChecks} ${rungs.join(", ")}${own}; ` +
+        `${m.cacheNote}\n`,
     );
+    for (const line of legendLines({ checks: rungs, engines }, 2)) io.stderr(`lvrtc mtf: ${line}\n`);
     let stage = "";
     const result = await runSuite({
       suite,
@@ -411,7 +425,8 @@ async function runBenchmark(
       // the engines in the order lv, ref, optiland that is before optiland's own MTF, the slow part, is asked.
       onJob: ({ job, source }) => {
         const now = `${job.run} ${job.rung}`;
-        if (now !== stage) io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${source})`}\n`);
+        if (now !== stage)
+          io.stderr(`lvrtc mtf: ${now}${source === "computed" ? "" : ` (${JOB_SOURCE_TEXT[source] ?? source})`}\n`);
         stage = now;
       },
     });
@@ -434,17 +449,27 @@ async function runBenchmark(
     let failed = false;
     for (const run of suite.runs) {
       if (run.opticalCase !== null) continue;
-      for (const problem of run.problems) io.stderr(`lvrtc mtf: run ${run.spec.name} was not started: ${problem}\n`);
+      for (const problem of run.problems)
+        io.stderr(explainedProblem(`lvrtc mtf: run ${run.spec.name} ${m.notStarted}: `, problem));
       failed = true;
     }
     for (const engine of manifest.engines) {
       if (engine.status === "available") continue;
-      io.stderr(`lvrtc mtf: engine ${engine.id} could not be used (${engine.code})\n`);
+      const said = [
+        `lvrtc mtf: engine ${engine.id} ${m.engineUnusable} (${engine.code})`,
+        ...codeLines(engine.code, 4, engine.id),
+      ];
+      io.stderr(`${said.join("\n")}\n`);
       failed = true;
     }
     for (const { job, detail } of result.outcomes) {
       if (job.status !== "error") continue;
-      io.stderr(`lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: ${job.error?.code ?? "error"}: ${detail ?? ""}\n`);
+      io.stderr(
+        explainedProblem(
+          `lvrtc mtf: ${job.run} ${job.rung} ${job.engine}: `,
+          `${job.error?.code ?? "error"}: ${detail ?? ""}`,
+        ),
+      );
       failed = true;
     }
     for (const warning of result.warnings) io.stderr(`lvrtc mtf: warning: ${warning}\n`);
@@ -455,13 +480,13 @@ async function runBenchmark(
       for (const pair of set.pairs) {
         if (!FAILING_VERDICTS.includes(pair.verdict)) continue;
         const [a, b] = [pair.a, pair.b].sort();
-        failing.add(`${set.run} ${set.rung} ${a} ${b}: ${pair.verdict}: ${pair.reason ?? ""}`);
+        failing.add(`${set.run} ${set.rung} ${a} ${b}: ${verdictShort(pair.verdict)}: ${pair.reason ?? ""}`);
       }
     }
     for (const line of failing) io.stderr(`lvrtc mtf: ${line}\n`);
     if (failing.size > 0) failed = true;
     io.stdout(asked.json ? `${JSON.stringify(JSON.parse(rendered.json), null, 2)}\n` : rendered.markdown);
-    io.stderr(`lvrtc mtf: run: ${directory}\n`);
+    io.stderr(`lvrtc mtf: ${m.runDirectory}: ${directory}\n`);
     return failed ? EXIT_FAILURE : EXIT_OK;
   } finally {
     await pool?.close();
@@ -575,7 +600,8 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
           const resolved = await PROFILES[asked.profile].resolve(binding, asked.lensKey, zoomT, asked.aperture);
           if (!resolved.ok) {
             const which = bothEnds ? ` (${end} end)` : "";
-            for (const problem of resolved.problems) io.stderr(`lvrtc mtf: ${asked.lensKey}${which}: ${problem}\n`);
+            for (const problem of resolved.problems)
+              io.stderr(explainedProblem(`lvrtc mtf: ${asked.lensKey}${which}: `, problem));
             failed = true;
             continue;
           }
@@ -647,13 +673,23 @@ export function createMtfCommand(inputs: MtfCommandInputs): CliCommand {
             [
               ...(tables++ === 0 ? [] : [""]),
               `${asked.lensKey}  ${opticalCase.label.name}`,
-              `profile  ${asked.profile}: ${resolved.said}`,
-              `state    ${position}${end === undefined ? "" : ` (${end})`}, infinity focus`,
-              `case     ${opticalCase.id}`,
-              `request  ${request.id}`,
+              ...columns([
+                [MTF_OUTPUT_TEXT.profile, `${asked.profile}: ${resolved.said}`],
+                [MTF_OUTPUT_TEXT.state, `${position}${end === undefined ? "" : ` (${end})`}, infinity focus`],
+              ]),
+              ...(asked.details
+                ? [
+                    `${IDENTIFIERS_TEXT.title}:`,
+                    ...columns([
+                      [IDENTIFIERS_TEXT.lensState, opticalCase.id],
+                      [IDENTIFIERS_TEXT.request, request.id],
+                    ]).map((line) => `  ${line}`),
+                    ...engineIdentifierLines(askeds.map(({ engine }) => engine)),
+                  ]
+                : []),
               "",
               ...askeds.map((one) => engineText(one, resolved)),
-              `result: ${file}`,
+              `${MTF_OUTPUT_TEXT.result}: ${file}`,
               "",
             ].join("\n"),
           );

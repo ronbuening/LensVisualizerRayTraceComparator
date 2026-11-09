@@ -48,7 +48,7 @@ export function createMatrixCommand(inputs: { rootDir: string; cwd: string }): C
       writeFileAtomic(resolve(root, MATRIX_JSON), rendered.json);
       writeFileAtomic(resolve(root, MATRIX_MARKDOWN), rendered.markdown);
       io.stdout(
-        `${MATRIX_JSON} and ${MATRIX_MARKDOWN}: written from the benchmark's two baselines; no engine was read.\n`,
+        `${MATRIX_JSON} and ${MATRIX_MARKDOWN}: written from the benchmark's two baselines; no engine was run.\n`,
       );
       return EXIT_OK;
     },

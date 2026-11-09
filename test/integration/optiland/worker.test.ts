@@ -370,8 +370,8 @@ test(
     for (const rung of answered) assert.equal(manifest.jobs.filter((job) => job.rung === rung).length, 1, rung);
     const traced = manifest.jobs.filter((job) => job.quantity === "rays.trace");
     assert.deepEqual([...new Set(traced.map((job) => job.storeKey))].length, 1);
-    assert.match(out.join(""), /^singlet {2}r2 +optiland {7}ok +computed$/m);
-    assert.match(out.join(""), /^singlet {2}r3 +optiland {7}ok +cached$/m);
+    assert.match(out.join(""), /^singlet {2}r2 +optiland {7}answered +asked now$/m);
+    assert.match(out.join(""), /^singlet {2}r3 +optiland {7}answered +from the cache$/m);
     const [engine] = manifest.engines;
     assert.ok(engine.id === "optiland" && engine.status === "available");
     assert.match(engine.adapterRevision ?? "", SHA256);
@@ -386,14 +386,15 @@ test("lvrtc doctor reports the fingerprint of the optiland it finds", { skip }, 
   assert.equal(found.details.commit, optilandCommit());
 
   // And the command itself, as it is run: on this repository's own configuration, whose caches are gitignored.
-  const ended = spawnSync(process.execPath, [BIN, "doctor"], {
+  const ended = spawnSync(process.execPath, [BIN, "doctor", "--details"], {
     encoding: "utf8",
     env: { ...process.env, LVRTC_OPTILAND_PYTHON: OPTILAND_PYTHON ?? "" },
     timeout: 600_000,
   });
   assert.equal(ended.status, 0, ended.stderr);
   const section = ended.stdout.slice(ended.stdout.lastIndexOf("\noptiland\n"));
-  assert.match(section, new RegExp(`^  engine       fingerprint ${found.fingerprint}$`, "m"));
+  assert.match(section, /^ {2}engine {7}answers$/m);
+  assert.match(section, new RegExp(`^  code hash    ${found.fingerprint}$`, "m"));
   assert.match(section, new RegExp(`^  git          ${String(found.details.commit)} \\((dirty|clean)\\)$`, "m"));
   assert.match(
     section,
@@ -401,7 +402,7 @@ test("lvrtc doctor reports the fingerprint of the optiland it finds", { skip }, 
   );
   assert.match(section, /^ {2}versions {5}Python \d+\.\d+\.\d+, numpy \d+\.\S+, scipy \d+\.\S+, numba \d+\.\S+$/m);
   assert.match(section, /^ {2}jit {10}on$/m);
-  assert.match(section, new RegExp(`^  adapter      ${found.adapterRevision}$`, "m"));
+  assert.match(section, new RegExp(`^  tool code    ${found.adapterRevision}$`, "m"));
   // The environment the tests gave the interpreter is the worker's own: stated once, used by both.
   assert.equal(optilandEnvironment().MPLBACKEND, "Agg");
 });

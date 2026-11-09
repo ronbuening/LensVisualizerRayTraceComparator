@@ -65,7 +65,7 @@ export function resolveRunDirectory(target: string, root: string | undefined, in
   const found = candidates.find((directory) => existsSync(join(directory, MANIFEST_FILE)));
   if (found === undefined) {
     throw new UsageError(
-      `no run of "${target}" was found: there is no ${MANIFEST_FILE} in ${candidates.join(" or in ")}; run lvrtc run first`,
+      `no run of "${target}" was found: there is no run record (${MANIFEST_FILE}) in ${candidates.join(" or in ")}; run lvrtc run first`,
     );
   }
   return found;

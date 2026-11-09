@@ -176,14 +176,11 @@ test(
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of the replay whatever a run names.
     const ran = lvrtc(runsDir, "run", suitePath("benchmark"), "--rungs", "r4f");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(
-      ran.out,
-      /^benchmark: 192 jobs: 192 ok, 0 unsupported, 0 error, 0 pending \(192 computed, 0 cached\)$/m,
-    );
+    assert.match(ran.out, /^benchmark: 192 jobs: 192 answered \(192 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
-    const notPassing = compared.out.split("\n").filter((line) => / (FAIL|ERROR|UNSUPPORTED|BLOCKED)$/.test(line));
+    const notPassing = compared.out.split("\n").filter((line) => / (Fail|Error|Not computed|Not judged)$/.test(line));
     assert.equal(compared.code, 0, notPassing.join("\n"));
-    assert.match(compared.out, /^benchmark: 192 pairs: 192 PASS, 0 FLOOR, 0 FAIL, .* 0 ERROR$/m);
+    assert.match(compared.out, /^benchmark: 192 pairs: 192 Pass$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark", MANIFEST_FILE), "utf8"));
     const comparisons: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "benchmark", COMPARISONS_FILE), "utf8"));

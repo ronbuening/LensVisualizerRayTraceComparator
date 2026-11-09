@@ -548,13 +548,10 @@ test(
     const ran = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
     assert.equal(ran.code, 0, ran.err);
     assert.equal(ran.err, "", "every field has rays");
-    assert.match(
-      ran.out,
-      /^benchmark-reference: 36 jobs: 36 ok, 0 unsupported, 0 error, 0 pending \(36 computed, 0 cached\)$/m,
-    );
+    assert.match(ran.out, /^benchmark-reference: 36 jobs: 36 answered \(36 asked now\)$/m);
     // The same command again asks nothing: the rays are the same rays, so the requests have the same ids.
     const again = lvrtc(runsDir, "run", suiteFile, "--engines", "lv", "--rungs", "r2");
-    assert.match(again.out, /36 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 36 cached\)$/m);
+    assert.match(again.out, /36 answered \(36 from the result cache\)$/m);
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark-reference", MANIFEST_FILE), "utf8"));
     const store = createResultStore(join(runsDir, STORE_DIRECTORY));
@@ -913,7 +910,7 @@ test(
       const runsDir = join(directory, name);
       const ran = lvrtc(runsDir, "run", suitePath("smoke"), "--engines", "lv", "--rungs", "r2");
       assert.equal(ran.code, 0, ran.err);
-      assert.match(ran.out, /^smoke: 27 jobs: 27 ok, 0 unsupported, 0 error, 0 pending \(27 computed, 0 cached\)$/m);
+      assert.match(ran.out, /^smoke: 27 jobs: 27 answered \(27 asked now\)$/m);
       const manifestText = readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8");
       const manifest: RunManifest = JSON.parse(manifestText);
       const entries = manifest.jobs.map((job) =>

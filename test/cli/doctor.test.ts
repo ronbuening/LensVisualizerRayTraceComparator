@@ -160,7 +160,7 @@ test("everything present: the full report, exit 0", async (t) => {
       `  path    ${LV}`,
       "  status  present",
       `  git     ${COMMIT} (clean)`,
-      `  engine  141 files, closure ${CLOSURE}`,
+      "  engine  loads (141 files)",
       "",
       "Python",
       "  role     runs the Python engines a configuration defines, such as the demonstration engines under",
@@ -172,12 +172,11 @@ test("everything present: the full report, exit 0", async (t) => {
       `  python       ${OPTILAND_PYTHON}`,
       "  interpreter  present (Python 3.12.7)",
       "  version      0.6.2",
-      `  engine       fingerprint ${FINGERPRINT}`,
+      "  engine       answers",
       `  git          ${"e".repeat(40)} (dirty)`,
-      `  sources      7 files, hash ${"5".repeat(64)}`,
+      "  sources      7 files",
       "  versions     Python 3.12.7, numpy 9.1, scipy 9.2, numba 9.3",
       "  jit          on",
-      `  adapter      ${REVISION}`,
       "",
       "Ready",
       "  LensVisualizer  ready",
@@ -186,6 +185,40 @@ test("everything present: the full report, exit 0", async (t) => {
       "  Ready to check LensVisualizer: lvrtc check-lv can run.",
       "",
     ].join("\n"),
+  );
+  assert.doesNotMatch(run.out, new RegExp(`${CLOSURE}|${FINGERPRINT}|${REVISION}|${"5".repeat(64)}`), "no hash");
+
+  // --details adds the hashes: of LensVisualizer's engine files, and of optiland's code, sources and this tool's code.
+  const detailed = await runDoctor(t, healthyMachine(), { args: ["--details"] });
+  assert.equal(detailed.code, EXIT_OK);
+  assert.ok(
+    detailed.out.includes(
+      [
+        "LensVisualizer",
+        `  path        ${LV}`,
+        "  status      present",
+        `  git         ${COMMIT} (clean)`,
+        "  engine      loads (141 files)",
+        `  files hash  ${CLOSURE}`,
+        "",
+      ].join("\n"),
+    ),
+    detailed.out,
+  );
+  assert.ok(
+    detailed.out.includes(
+      [
+        "  engine       answers",
+        `  code hash    ${FINGERPRINT}`,
+        `  git          ${"e".repeat(40)} (dirty)`,
+        `  sources      7 files, hash ${"5".repeat(64)}`,
+        "  versions     Python 3.12.7, numpy 9.1, scipy 9.2, numba 9.3",
+        "  jit          on",
+        `  tool code    ${REVISION}`,
+        "",
+      ].join("\n"),
+    ),
+    detailed.out,
   );
 });
 
@@ -364,16 +397,17 @@ test("an optiland engine that cannot be used is reported with its code and reaso
 test("an optiland that is not a git checkout, and details that are missing, are said as such", async (t) => {
   const machine = healthyMachine();
   machine.engine = { status: "available", fingerprint: FINGERPRINT, adapterRevision: null, details: { commit: null } };
-  const run = await runDoctor(t, machine);
+  const run = await runDoctor(t, machine, { args: ["--details"] });
   assert.ok(
     run.out.includes(
       [
-        `  engine       fingerprint ${FINGERPRINT}`,
+        "  engine       answers",
+        `  code hash    ${FINGERPRINT}`,
         "  git          not a git checkout",
         "  sources      unknown files, hash unknown",
         "  versions     Python unknown, numpy unknown, scipy unknown, numba unknown",
         "  jit          unknown",
-        "  adapter      none stated",
+        "  tool code    none stated",
         "",
         "Ready",
       ].join("\n"),
@@ -453,7 +487,10 @@ test("an unknown argument is a usage error and probes nothing", async (t) => {
   const run = await runDoctor(t, healthyMachine(), { args: ["--jsno"] });
   assert.equal(run.code, EXIT_USAGE);
   assert.equal(run.out, "");
-  assert.equal(run.err, 'lvrtc doctor: unknown argument "--jsno"\nUsage: lvrtc doctor [--root <dir>] [--json]\n');
+  assert.equal(
+    run.err,
+    'lvrtc doctor: unknown argument "--jsno"\nUsage: lvrtc doctor [--root <dir>] [--details] [--json]\n',
+  );
   assert.deepEqual(run.ran, []);
 });
 
@@ -477,7 +514,7 @@ test("--root reads the configuration of that root, and one that is no directory 
 test("--help prints the usage", async (t) => {
   const run = await runDoctor(t, healthyMachine(), { args: ["--help"] });
   assert.equal(run.code, EXIT_OK);
-  assert.ok(run.out.startsWith("Usage: lvrtc doctor [--root <dir>] [--json]\n\n"), run.out);
+  assert.ok(run.out.startsWith("Usage: lvrtc doctor [--root <dir>] [--details] [--json]\n\n"), run.out);
   assert.match(run.out, /fix line says what to set, in lvrtc\.local\.json or in the environment/);
   assert.match(run.out, /^Exit code: 0 when the Node version is in range/m);
   assert.deepEqual(run.ran, []);

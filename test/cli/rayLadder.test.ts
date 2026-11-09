@@ -86,15 +86,12 @@ test("ref against a faithful copy passes R2 and R3 with no difference at all; a 
   const ran = await lvrtc(rootDir, "run", "suite.json");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // One request of r0 and two ray sets, each asked by r2 and by r3, of three engines: r3 finds what r2 asked.
-  assert.match(ran.out, /^rays: 15 jobs: 15 ok, 0 unsupported, 0 error, 0 pending \(9 computed, 6 cached\)$/m);
+  assert.match(ran.out, /^rays: 15 jobs: 15 answered \(9 asked now, 6 from the result cache\)$/m);
   const compared = await lvrtc(rootDir, "compare", "rays");
   assert.equal(compared.code, EXIT_FAILURE, compared.out);
   // Five requests, two pairs against the reference and three pairwise: R0 fails for the two pairs of the bent
   // copy, and both its rungs of traced rays are blocked for them.
-  assert.match(
-    compared.out,
-    /^rays: 25 pairs: 10 PASS, 0 FLOOR, 3 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 12 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^rays: 25 pairs: 10 Pass, 3 Fail, 12 Not judged$/m);
 
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "rays", COMPARISONS_FILE), "utf8"));
   const sets = (rung: string, mode: string): ComparisonSet[] =>
@@ -162,14 +159,14 @@ test("compare reads each case from the run directory, and a case that is not the
   // Without its case a rung of traced rays cannot be judged: every pair of it is an error that says why.
   const compared = await lvrtc(rootDir, "compare", "rays");
   assert.equal(compared.code, EXIT_FAILURE);
-  assert.match(compared.out, /^double-gauss +r0 +pairwise +ref +ref-twin +PASS$/m);
+  assert.match(compared.out, /^double-gauss +r0 +every pair +ref +ref-twin +Pass$/m);
   assert.match(
     compared.out,
-    /^double-gauss +r2 +pairwise +ref +ref-twin +ERROR +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
+    /^double-gauss +r2 +every pair +ref +ref-twin +Error +the case is not at hand: its clip radii say which rays lie in the rim band$/m,
   );
   assert.match(
     compared.out,
-    /^double-gauss +r3 +pairwise +ref +ref-twin +ERROR +the request and its case are not at hand: /m,
+    /^double-gauss +r3 +every pair +ref +ref-twin +Error +the request and its case are not at hand: /m,
   );
   writeFileSync(file, original);
   assert.equal((await lvrtc(rootDir, "compare", "rays")).code, EXIT_OK);

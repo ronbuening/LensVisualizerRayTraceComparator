@@ -97,7 +97,7 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
   ]);
   const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^lv-ladder: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^lv-ladder: 12 jobs: 12 answered \(12 asked now\)$/m);
 
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   const closure = closureOf(join(rootDir, "lv"), FAKE_ENGINE_FILES);
@@ -115,10 +115,7 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
 
   const compared = lvrtc(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_OK, compared.err);
-  assert.match(
-    compared.out,
-    /^lv-ladder: 12 pairs: 12 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^lv-ladder: 12 pairs: 12 Pass$/m);
   const reported = lvrtc(rootDir, "report", "lv-ladder");
   assert.equal(reported.code, EXIT_OK, reported.err);
   const report = readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8");
@@ -128,7 +125,7 @@ test("lv and ref run R0 and R1 on LensVisualizer lenses and every pair passes; t
 
   // A second run finds every answer in the store, and the same report comes of it, byte for byte.
   const again = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
-  assert.match(again.out, /\(0 computed, 12 cached\)$/m);
+  assert.match(again.out, /\(12 from the result cache\)$/m);
   assert.equal(lvrtc(rootDir, "compare", "lv-ladder").code, EXIT_OK);
   assert.equal(lvrtc(rootDir, "report", "lv-ladder").code, EXIT_OK);
   assert.equal(readFileSync(join(rootDir, "runs", "lv-ladder", REPORT_MARKDOWN_FILE), "utf8"), report);
@@ -164,15 +161,15 @@ test("lv refuses a fixture by its source and a corrupted case as stale-case; ref
   ]);
   const ran = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r0,r1");
   assert.equal(ran.code, EXIT_FAILURE, "a stale case is an error");
-  assert.match(ran.out, /^lv-ladder: 12 jobs: 8 ok, 2 unsupported, 2 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^lv-ladder: 12 jobs: 8 answered, 2 not computed, 2 error \(12 asked now\)$/m);
   // A stored case of a LensVisualizer lens is answered like one built in this run: its source is in its provenance.
-  assert.match(ran.out, /^exported +r0 +lv +ok +computed$/m);
-  assert.match(ran.out, /^fixture +r0 +lv +unsupported +computed +the engine lv answers from LensVisualizer's own/m);
+  assert.match(ran.out, /^exported +r0 +lv +answered +asked now$/m);
+  assert.match(ran.out, /^fixture +r0 +lv +not computed +asked now +the engine lv answers from LensVisualizer's own/m);
   assert.match(
     ran.out,
-    /^nudged +r1 +lv +error +computed +stale-case: the case of lens acme-singlet-50 is stale: its conditions are not/m,
+    /^nudged +r1 +lv +error +asked now +stale-case: the case of lens acme-singlet-50 is stale: its conditions are not/m,
   );
-  assert.match(ran.out, /^nudged +r1 +ref +ok +computed$/m);
+  assert.match(ran.out, /^nudged +r1 +ref +answered +asked now$/m);
 
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   const lvJobs = manifest.jobs.filter((job) => job.engine === "lv" && job.rung === "r0");
@@ -211,15 +208,15 @@ test("without a LensVisualizer, lv is unavailable with its code and ref runs as 
   assert.equal(ran.code, EXIT_FAILURE);
   assert.match(
     ran.out,
-    /^fixture +r0 +lv +error +unavailable +not-configured: engine lv is unavailable \(not-configured\): /m,
+    /^fixture +r0 +lv +error +engine unusable +not-configured: engine lv is unavailable \(not-configured\): /m,
   );
-  assert.match(ran.out, /^fixture +r0 +ref +ok +computed$/m);
+  assert.match(ran.out, /^fixture +r0 +ref +answered +asked now$/m);
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"));
   assert.deepEqual(manifest.engines[0], { id: "lv", status: "unavailable", code: "not-configured" });
 
   const conformance = lvrtc(rootDir, "engine", "conformance", "lv");
   assert.equal(conformance.code, EXIT_FAILURE);
-  assert.match(conformance.out, /^FAIL +hello +engine lv is unavailable \(not-configured\): /m);
+  assert.match(conformance.out, /^failed +hello +engine lv is unavailable \(not-configured\): /m);
 });
 
 /** The suite of the ray rungs: a singlet on its three default fields, and a zoom on five lines with a lost field. */
@@ -254,10 +251,10 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   assert.equal(ran.code, EXIT_OK, ran.err);
   // Three fields of the singlet on its one line; of the zoom, the axis at each of its five lines: the fake finds
   // no chief ray at 75 degrees. Each engine traces each set once, for r2, and r3 finds the answers in the store.
-  assert.match(ran.out, /^lv-ladder: 32 jobs: 32 ok, 0 unsupported, 0 error, 0 pending \(16 computed, 16 cached\)$/m);
-  assert.match(ran.out, /^singlet +r2 +lv +ok +computed$/m);
-  assert.match(ran.out, /^singlet +r2 +ref +ok +computed$/m);
-  assert.match(ran.out, /^zoom-photopic +r3 +ref +ok +cached$/m);
+  assert.match(ran.out, /^lv-ladder: 32 jobs: 32 answered \(16 asked now, 16 from the result cache\)$/m);
+  assert.match(ran.out, /^singlet +r2 +lv +answered +asked now$/m);
+  assert.match(ran.out, /^singlet +r2 +ref +answered +asked now$/m);
+  assert.match(ran.out, /^zoom-photopic +r3 +ref +answered +from the cache$/m);
   assert.equal(
     ran.err,
     "lvrtc run: run zoom-photopic: a field has no rays: chief-ray-failed: LensVisualizer finds no chief ray for " +
@@ -289,17 +286,14 @@ test("lvrtc run --rungs r2,r3: lv and ref trace LensVisualizer's own launch rays
   // A second process generates the same rays: every request has the id it had, and its answer is in the store.
   const text = readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8");
   const again = lvrtc(rootDir, "run", suite, "--engines", "lv,ref", "--rungs", "r2,r3");
-  assert.match(again.out, /\(0 computed, 32 cached\)$/m);
+  assert.match(again.out, /\(32 from the result cache\)$/m);
   assert.equal(readFileSync(join(rootDir, "runs", "lv-ladder", MANIFEST_FILE), "utf8"), text);
 
   // The fake's tracer stops within 1e-13 mm of a surface, and the reference engine on it: every pair passes, in
   // both rungs and both modes, and no ray is in the rim band or in doubt.
   const compared = lvrtc(rootDir, "compare", "lv-ladder");
   assert.equal(compared.code, EXIT_OK, compared.err + compared.out);
-  assert.match(
-    compared.out,
-    /^lv-ladder: 32 pairs: 32 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^lv-ladder: 32 pairs: 32 Pass$/m);
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "lv-ladder", COMPARISONS_FILE), "utf8"));
   const limits: Record<string, number> = {
     "hits.maxDistance": 1e-11,
@@ -372,7 +366,7 @@ test("a synthetic policy grants FLOOR for fake LV hits 3e-8 mm off, counted apar
   const compared = await floorCommand(rootDir, "compare", "lv-ladder");
   // A floor fails nothing: the command exits 0, and says how many pairs are FLOOR beside how many are PASS.
   assert.equal(compared.code, EXIT_OK, compared.out);
-  const counts = /^lv-ladder: (\d+) pairs: (\d+) PASS, (\d+) FLOOR, 0 FAIL, .* 0 BLOCKED, 0 ERROR$/m.exec(compared.out);
+  const counts = /^lv-ladder: (\d+) pairs: (\d+) Pass, (\d+) Within a numerical floor$/m.exec(compared.out);
   assert.ok(counts !== null, compared.out);
   const [pairs, pass, floor] = counts.slice(1).map(Number);
   assert.equal(pairs, 2 * (2 + 2 + 8 + 8));
@@ -433,7 +427,7 @@ test("a synthetic policy refuses fake LV hits beyond its floor: FAIL, and compar
   // The reason says that the floor was considered, and which figure against the arbiter is beyond its limit.
   assert.match(
     compared.out,
-    /^singlet +r2 +pairwise +lv +ref +FAIL +.*hits\.maxDistance \d\.\d\de-6 exceeds its tolerance 1\.00e-8 .*; not a floor of lv: hits\.maxDistance against ref \d\.\d\de-6 exceeds the floor limit 1\.00e-7$/m,
+    /^singlet +r2 +every pair +lv +ref +Fail +.*hits\.maxDistance \d\.\d\de-6 exceeds its tolerance 1\.00e-8 .*; not a floor of lv: hits\.maxDistance against ref \d\.\d\de-6 exceeds the floor limit 1\.00e-7$/m,
   );
 });
 

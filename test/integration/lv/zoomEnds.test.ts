@@ -337,7 +337,7 @@ test(
     // at every line (LensVisualizer 607ff23ae).
     assert.match(
       ran.out,
-      /^features: 5142 jobs: 5106 ok, 36 unsupported, 0 error, 0 pending \(4134 computed, 972 cached\)$/m,
+      /^features: 5142 jobs: 5106 answered, 36 not computed \(4134 asked now, 972 from the result cache, 36 not offered\)$/m,
     );
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "features", MANIFEST_FILE), "utf8"));
     assert.equal(manifest.runs.length, 18);
@@ -385,19 +385,19 @@ test(
     // one for each of the 108 curvature sets and R11a one for each of the 54 vignetting spans (the beams of a line):
     // each counted in both modes.
     const summary =
-      /^features: 2826 pairs: \d+ PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 36 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^features: 2826 pairs: \d+ Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 36 Not computed$/m.exec(
         compared.out,
       );
     assert.ok(
       summary !== null,
       compared.out.split("\n").find((line) => line.startsWith("features: ")),
     );
-    assert.equal(Number(summary[1]) + Number(summary[2]), 36);
+    assert.equal(Number(summary[1] ?? 0) + Number(summary[2] ?? 0), 36);
     for (const end of ["wide", "tele"]) {
       for (const rung of ["r0", "r1", "r2", "r3", "r4", "r6a"]) {
         assert.match(
           compared.out,
-          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +pairwise +lv +ref +PASS`, "m"),
+          new RegExp(`^fixed-iris-zoom-photopic-${end} +${rung} +every pair +lv +ref +Pass`, "m"),
         );
       }
     }
@@ -419,16 +419,18 @@ test(
     assert.equal(blocks.length, 2);
     assert.deepEqual(
       blocks.map((block) => block.split("\n")[2]),
-      ["state    zoom 0 (wide), infinity focus", "state    zoom 1 (tele), infinity focus"],
+      ["lens state  zoom 0 (wide), infinity focus", "lens state  zoom 1 (tele), infinity focus"],
     );
     for (const block of blocks) {
-      assert.match(block, /^lv {2}ok {2}computed$/m);
+      assert.match(block, /^lv {2}answered {2}asked now$/m);
       // Eleven fields at the tab's 10 % steps, each with a number at both shown frequencies in both cuts.
       assert.equal(block.match(/^[0-9.]+ +[0-9.]+ +[0-9.]+ +ok +0\.\d+ +0\.\d+ +0\.\d+ +0\.\d+$/gm)?.length, 11);
     }
     // The two ends are two cases and two tables.
-    assert.notEqual(blocks[0].split("\n")[3], blocks[1].split("\n")[3]);
-    assert.notEqual(blocks[0].split("\n").slice(6, -2).join("\n"), blocks[1].split("\n").slice(6, -2).join("\n"));
+    const caseIdOf = (name: string): string =>
+      JSON.parse(readFileSync(join(bothDir, "mtf", "lv-tab-default", name, MTF_RUN_FILE), "utf8")).caseId;
+    assert.notEqual(caseIdOf("nikon-z-24-70f4s"), caseIdOf("nikon-z-24-70f4s-zoom1"));
+    assert.notEqual(blocks[0].split("\n").slice(4, -2).join("\n"), blocks[1].split("\n").slice(4, -2).join("\n"));
 
     // The tele end, asked for by itself: the same text, and the same bytes on disk.
     assert.equal(blocks[1].replaceAll(bothDir, "<runs>"), tele.out.replaceAll(teleDir, "<runs>"));

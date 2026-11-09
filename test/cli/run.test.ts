@@ -21,7 +21,7 @@ const BIN = fileURLToPath(new URL("../../bin/lvrtc.mjs", import.meta.url));
 const FAKE_MIXED_SUITE = fileURLToPath(new URL("../fixtures/suites/fake-mixed.json", import.meta.url));
 const FAKE_ENGINE = fileURLToPath(new URL("../../src/engines/fake/engine.ts", import.meta.url));
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--details] [--json]\n";
 /** The environment variable that tells the engine of the SIGKILL test after how many runs to kill its process. */
 const KILL_AFTER_RUNS = "LVRTC_TEST_KILL_AFTER_RUNS";
 
@@ -134,14 +134,17 @@ test("lvrtc run: a line per job and a summary, exit 0; the second run finds ever
   assert.equal(
     first.out,
     [
-      "singlet       selftest  fake-a           ok           computed",
-      "singlet       selftest  fake-b           ok           computed",
-      "singlet       selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
-      "double-gauss  selftest  fake-a           ok           computed",
-      "double-gauss  selftest  fake-b           ok           computed",
-      "double-gauss  selftest  fake-none        unsupported  negotiated   the engine does not offer selftest.echo",
-      "fake-pair: 6 jobs: 4 ok, 2 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
-      `manifest: ${manifestPath}`,
+      "singlet       selftest  fake-a           answered                 asked now",
+      "singlet       selftest  fake-b           answered                 asked now",
+      "singlet       selftest  fake-none        not computed             not offered      the engine does not offer selftest.echo",
+      "double-gauss  selftest  fake-a           answered                 asked now",
+      "double-gauss  selftest  fake-b           answered                 asked now",
+      "double-gauss  selftest  fake-none        not computed             not offered      the engine does not offer selftest.echo",
+      "The ids in the lines above:",
+      "  Checks: selftest Pipeline echo (a test of this tool)",
+      "  Engines: fake-a, fake-b, fake-none (defined in this configuration)",
+      "fake-pair: 6 jobs: 4 answered, 2 not computed (4 asked now, 2 not offered)",
+      `run record: ${manifestPath}`,
       "",
     ].join("\n"),
   );
@@ -157,7 +160,9 @@ test("lvrtc run: a line per job and a summary, exit 0; the second run finds ever
   assert.equal(second.code, EXIT_OK, second.err);
   assert.equal(
     second.out,
-    first.out.replaceAll("computed\n", "cached\n").replace("(4 computed, 0 cached)", "(0 computed, 4 cached)"),
+    first.out
+      .replaceAll("asked now\n", "from the cache\n")
+      .replace("(4 asked now, 2 not offered)", "(4 from the result cache, 2 not offered)"),
   );
   assert.equal(readFileSync(manifestPath, "utf8"), manifest, "computed or cached, the manifest is the same bytes");
   assert.equal(readdirSync(join(runsDir, STORE_DIRECTORY)).length, 4);
@@ -176,10 +181,13 @@ test("--engines runs only the engines named, in id order", (t) => {
   const runsDir = join(tempDir(t), "runs");
   const one = fakePair(runsDir, "--engines", "fake-b");
   assert.equal(one.code, EXIT_OK, one.err);
-  assert.deepEqual(one.out.split("\n").slice(0, 3), [
-    "singlet       selftest  fake-b           ok           computed",
-    "double-gauss  selftest  fake-b           ok           computed",
-    "fake-pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
+  assert.deepEqual(one.out.split("\n").slice(0, 6), [
+    "singlet       selftest  fake-b           answered                 asked now",
+    "double-gauss  selftest  fake-b           answered                 asked now",
+    "The ids in the lines above:",
+    "  Checks: selftest Pipeline echo (a test of this tool)",
+    "  Engines: fake-b (defined in this configuration)",
+    "fake-pair: 2 jobs: 2 answered (2 asked now)",
   ]);
   assert.deepEqual(
     manifestOf(runsDir, "fake-pair").engines.map((engine) => engine.id),
@@ -197,14 +205,14 @@ test("--engines runs only the engines named, in id order", (t) => {
       "double-gauss fake-none unsupported",
     ],
   );
-  assert.match(two.out, /\(0 computed, 2 cached\)/);
+  assert.match(two.out, /\(2 from the result cache, 2 not offered\)$/m);
 });
 
 test("unsupported is an answer, not a failure: a run of nothing else exits 0", (t) => {
   const runsDir = join(tempDir(t), "runs");
   const ended = fakePair(runsDir, "--engines", "fake-none");
   assert.equal(ended.code, EXIT_OK, ended.err);
-  assert.match(ended.out, /^fake-pair: 2 jobs: 0 ok, 2 unsupported, 0 error, 0 pending \(0 computed, 0 cached\)$/m);
+  assert.match(ended.out, /^fake-pair: 2 jobs: 2 not computed \(2 not offered\)$/m);
   assert.equal(existsSync(join(runsDir, STORE_DIRECTORY)), false);
 });
 
@@ -281,11 +289,16 @@ test("a run that cannot be started exits 1, is reported and recorded, and the ot
   const args = [FAKE_MIXED_SUITE, "--root", FAKE_ROOT, "--engines", "fake-a"];
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_FAILURE);
-  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {11}ok {11}computed$/m);
-  assert.match(ended.out, /^fake-mixed: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 0 cached\)$/m);
+  assert.match(ended.out, /^singlet {2}selftest {2}fake-a {11}answered {17}asked now$/m);
+  assert.match(ended.out, /^fake-mixed: 1 job: 1 answered \(1 asked now\)$/m);
   const lv = "lv-not-configured: LensVisualizer is not configured: set lvPath in lvrtc.local.json or LVRTC_LV_PATH";
   const missing = "lens fixture cases/missing.json: it cannot be read (ENOENT)";
   assert.ok(ended.err.includes(`lvrtc run: run lv-lens was not started: ${lv}\n`), ended.err);
+  // Under a problem's line, what its code means and what to do.
+  assert.match(
+    ended.err,
+    /lv-not-configured: .*\n {4}No LensVisualizer checkout is set, so no lens can be exported\. Set lvPath /,
+  );
   assert.ok(ended.err.includes(`lvrtc run: run missing was not started: ${missing}\n`), ended.err);
   assert.deepEqual(manifestOf(runsDir, "fake-mixed").runs, [
     { name: "lv-lens", caseId: null, problems: [lv] },
@@ -303,15 +316,20 @@ test("a job that ends as an error exits 1, and the console says why where the ma
   const runsDir = join(tempDir(t), "runs");
   const ended = lvrtcRun(runsDir, [join(rootDir, "suite.json"), "--root", rootDir]);
   assert.equal(ended.code, EXIT_FAILURE, ended.err);
-  const lines = ended.out.split("\n");
+  // A job that ended in an error has, under its line, what the code means and what to do, where the vocabulary says.
+  const lines = ended.out.split("\n").filter((line) => !line.startsWith("    "));
+  assert.match(
+    ended.out,
+    /^singlet .* load-failed: engine absent is unavailable .*\n {4}The engine's code could not be loaded: its module is missing or failed to import\. Check the module path in the\s+engine's definition\.$/m,
+  );
   assert.deepEqual(lines.slice(0, 3), [
-    "singlet       selftest  absent         error        unavailable  load-failed: engine absent is unavailable " +
+    "singlet       selftest  absent         error                    engine unusable  load-failed: engine absent is unavailable " +
       "(load-failed): its module engines/none.ts does not exist",
-    "singlet       selftest  fake-a         ok           computed",
-    "singlet       selftest  refuses        error        computed     protocol-error: the engine refused the message " +
+    "singlet       selftest  fake-a         answered                 asked now",
+    "singlet       selftest  refuses        error                    asked now        protocol-error: the engine refused the message " +
       "(fake-failure): the fake engine is set to fail (failMode protocol-error)",
   ]);
-  assert.equal(lines[6], "pair: 6 jobs: 2 ok, 0 unsupported, 4 error, 0 pending (4 computed, 0 cached)");
+  assert.equal(lines[9], "pair: 6 jobs: 2 answered, 4 error (4 asked now, 2 engine unusable)");
 
   const manifest = manifestOf(runsDir, "pair");
   assert.deepEqual(
@@ -373,13 +391,13 @@ test("the suite file and --root are relative to the directory the command is run
   const args = [relative(cwd, FAKE_PAIR_SUITE), "--root", relative(cwd, FAKE_ROOT), "--engines", "fake-a"];
   const ended = lvrtcRun(runsDir, args, { cwd });
   assert.equal(ended.code, EXIT_OK, ended.err);
-  assert.match(ended.out, /^fake-pair: 2 jobs: 2 ok/m);
+  assert.match(ended.out, /^fake-pair: 2 jobs: 2 answered/m);
 
   // A value may follow its option after an equals sign, as for every command.
   const joined = [relative(cwd, FAKE_PAIR_SUITE), `--root=${relative(cwd, FAKE_ROOT)}`, "--engines=fake-a"];
   const again = lvrtcRun(join(tempDir(t), "runs"), joined, { cwd });
   assert.equal(again.code, EXIT_OK, again.err);
-  assert.match(again.out, /^fake-pair: 2 jobs: 2 ok/m);
+  assert.match(again.out, /^fake-pair: 2 jobs: 2 answered/m);
 });
 
 test("a run killed with SIGKILL resumes: only the missing jobs are computed, into a whole run's manifest", (t) => {
@@ -405,7 +423,7 @@ test("a run killed with SIGKILL resumes: only the missing jobs are computed, int
     "fake-b": fake({ id: "fake-b", bias: 0.001 }, "engines/killable.ts"),
   };
   const computedLines = (ended: Ended): number =>
-    ended.out.split("\n").filter((line) => line.endsWith("  computed")).length;
+    ended.out.split("\n").filter((line) => line.endsWith("  asked now")).length;
 
   // An uninterrupted run, from a root of its own into a runs directory of its own.
   const wholeRoot = rootWith(t, engines, { "engines/killable.ts": killable });
@@ -431,7 +449,7 @@ test("a run killed with SIGKILL resumes: only the missing jobs are computed, int
   const resumed = lvrtcRun(runsDir, args);
   assert.equal(resumed.code, EXIT_OK, resumed.err);
   assert.equal(computedLines(resumed), 1, resumed.out);
-  assert.match(resumed.out, /^pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending \(1 computed, 3 cached\)$/m);
+  assert.match(resumed.out, /^pair: 4 jobs: 4 answered \(1 asked now, 3 from the result cache\)$/m);
   assert.equal(
     readFileSync(join(runsDir, "pair", MANIFEST_FILE), "utf8"),
     readFileSync(join(wholeRuns, "pair", MANIFEST_FILE), "utf8"),
@@ -500,10 +518,13 @@ test("without --root the command's own root is the configuration root, and its r
   assert.equal(
     ended.out,
     [
-      "singlet       selftest  fake-a         ok           computed",
-      "double-gauss  selftest  fake-a         ok           computed",
-      "pair: 2 jobs: 2 ok, 0 unsupported, 0 error, 0 pending (2 computed, 0 cached)",
-      `manifest: ${manifestPath}`,
+      "singlet       selftest  fake-a         answered                 asked now",
+      "double-gauss  selftest  fake-a         answered                 asked now",
+      "The ids in the lines above:",
+      "  Checks: selftest Pipeline echo (a test of this tool)",
+      "  Engines: fake-a (defined in this configuration)",
+      "pair: 2 jobs: 2 answered (2 asked now)",
+      `run record: ${manifestPath}`,
       "",
     ].join("\n"),
   );
@@ -514,7 +535,7 @@ test("without --root the command's own root is the configuration root, and its r
   const other = rootWith(t, { "fake-z": fake({ id: "fake-z" }) });
   const elsewhere = await inProcess(["suite.json", "--root", other], { rootDir });
   assert.equal(elsewhere.code, EXIT_OK, elsewhere.err);
-  assert.match(elsewhere.out, /^singlet {7}selftest {2}fake-z {9}ok {11}computed$/m);
+  assert.match(elsewhere.out, /^singlet {7}selftest {2}fake-z {9}answered {17}asked now$/m);
   assert.ok(existsSync(join(other, "runs", "pair", MANIFEST_FILE)));
 });
 
@@ -546,12 +567,15 @@ test("the built-in engine ref runs under any root when it is named, and only the
   assert.equal(
     named.out,
     [
-      "singlet       r0        ref            ok           computed",
-      "singlet       r1        ref            ok           computed",
-      "double-gauss  r0        ref            ok           computed",
-      "double-gauss  r1        ref            ok           computed",
-      "pair: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending (4 computed, 0 cached)",
-      `manifest: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
+      "singlet       r0        ref            answered                 asked now",
+      "singlet       r1        ref            answered                 asked now",
+      "double-gauss  r0        ref            answered                 asked now",
+      "double-gauss  r1        ref            answered                 asked now",
+      "The ids in the lines above:",
+      "  Checks: r0 Built system; r1 First-order data",
+      "  Engines: ref Reference tracer",
+      "pair: 4 jobs: 4 answered (4 asked now)",
+      `run record: ${join(bare, "runs", "pair", MANIFEST_FILE)}`,
       "",
     ].join("\n"),
   );
@@ -573,9 +597,9 @@ test("the built-in engine ref runs under any root when it is named, and only the
   // ref does not answer the conformance quantity, and says so before it is asked.
   assert.match(
     both.out,
-    /^singlet {7}selftest {2}ref {12}unsupported {2}negotiated {3}the engine does not offer selftest\.echo$/m,
+    /^singlet {7}selftest {2}ref {12}not computed {13}not offered {6}the engine does not offer selftest\.echo$/m,
   );
-  assert.match(both.out, /^singlet {7}selftest {2}fake-a {9}ok {11}cached$/m);
+  assert.match(both.out, /^singlet {7}selftest {2}fake-a {9}answered {17}from the cache$/m);
 });
 
 test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a field without rays fails nothing", async (t) => {
@@ -603,9 +627,12 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   assert.equal(
     angles.out,
     [
-      ...new Array(3).fill("singlet  r2        ref            ok           computed"),
-      "probe: 3 jobs: 3 ok, 0 unsupported, 0 error, 0 pending (3 computed, 0 cached)",
-      `manifest: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
+      ...new Array(3).fill("singlet  r2        ref            answered                 asked now"),
+      "The ids in the lines above:",
+      "  Checks: r2 Ray trace",
+      "  Engines: ref Reference tracer",
+      "probe: 3 jobs: 3 answered (3 asked now)",
+      `run record: ${join(rootDir, "runs", "probe", MANIFEST_FILE)}`,
       "",
     ].join("\n"),
   );
@@ -616,13 +643,13 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   // The same suite again has the same rays, and so the same manifest, byte for byte: every answer is in the store.
   const bytes = readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8");
   const again = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
-  assert.match(again.out, /\(0 computed, 3 cached\)$/m);
+  assert.match(again.out, /\(3 from the result cache\)$/m);
   assert.equal(readFileSync(join(rootDir, "runs", "probe", MANIFEST_FILE), "utf8"), bytes);
 
   // r3 asks the very requests of r2: an engine is asked once for both, and the second rung finds the answers.
   const both = await inProcess(["angles.json", "--engines", "ref", "--rungs", "r3,r2"], { rootDir });
   assert.equal(both.code, EXIT_OK, both.err);
-  assert.match(both.out, /^probe: 6 jobs: 6 ok, 0 unsupported, 0 error, 0 pending \(0 computed, 6 cached\)$/m);
+  assert.match(both.out, /^probe: 6 jobs: 6 answered \(6 from the result cache\)$/m);
   const jobs = manifestOf(join(rootDir, "runs"), "probe").jobs;
   assert.deepEqual(
     jobs.map((job) => job.rung),
@@ -637,7 +664,7 @@ test("--rungs r2 traces the probe rays of a fixture: one job for each set, and a
   // others are reported, recorded, and no failure.
   const fractions = await inProcess(["fractions.json", "--engines", "ref", "--rungs", "r2"], { rootDir });
   assert.equal(fractions.code, EXIT_OK, fractions.err);
-  assert.match(fractions.out, /^probe: 1 job: 1 ok, 0 unsupported, 0 error, 0 pending/m);
+  assert.match(fractions.out, /^probe: 1 job: 1 answered /m);
   assert.deepEqual(fractions.err.split("\n"), [
     "lvrtc run: run singlet: a field has no rays: field-fraction-unresolved: a case read from a file states no " +
       "image height to take the fraction 0.5 of; state the field as an angle (fields of kind angles-deg)",
@@ -760,7 +787,7 @@ test("a store entry that cannot be trusted is a warning on the error stream, and
     ended.err,
     new RegExp(`^lvrtc run: warning: store entry ${key}: it is malformed JSON .*; the job is computed again\n$`),
   );
-  assert.match(ended.out, /\(1 computed, 1 cached\)/);
+  assert.match(ended.out, /\(1 asked now, 1 from the result cache\)/);
 });
 
 // ── LensVisualizer lenses ────────────────────────────────────────────────────────────────────────────────────────
@@ -807,8 +834,8 @@ test("a suite of LensVisualizer lenses has its cases built from the configured c
   // The root's own lvPath is used: nothing of this machine's configuration reaches the child.
   const ended = lvrtcRun(runsDir, args, { env: { LVRTC_LV_PATH: "" } });
   assert.equal(ended.code, EXIT_OK, "finite-conjugate refusals are reported and fail no job");
-  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {9}ok {11}computed$/m);
-  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {9}ok {11}computed$/m);
+  assert.match(ended.out, /^singlet {9}selftest {2}fake-a {9}answered {17}asked now$/m);
+  assert.match(ended.out, /^zoom-tele-f8 {4}selftest {2}fake-a {9}answered {17}asked now$/m);
   // The refocused run states no zoom position of a zoom: it is two runs, one for each end, and neither starts.
   for (const [end, zoom] of [
     ["wide", 0],

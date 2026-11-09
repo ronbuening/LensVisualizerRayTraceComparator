@@ -43,6 +43,7 @@ import {
 } from "../../report/statement.ts";
 import { MATRIX_FILES, MATRIX_JSON, MATRIX_MARKDOWN, readMatrixInputs, renderMatrix } from "../../report/matrix.ts";
 import { GLOSSARY_FILE, renderGlossary } from "../../vocabulary/glossary.ts";
+import { VERIFY_OUTPUT_TEXT } from "../../vocabulary/output.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
@@ -106,11 +107,11 @@ function realPath(path: string): string {
   }
 }
 
-/** "the catalog is a dated snapshot of policy v15 at LensVisualizer 879c06102", from the baseline alone. */
+/** "the catalog is a dated snapshot of the limits file v15 at LensVisualizer 879c06102", from the baseline alone. */
 function snapshotSaid(suite: string, baseline: Baseline): string {
   const commit = baseline.engines.find((engine) => engine.id === "lv")?.details.commit;
   const at = typeof commit === "string" ? ` at LensVisualizer ${commit.slice(0, 9)}` : "";
-  return `the ${suite} is a dated snapshot of policy v${baseline.policy.version}${at}`;
+  return `the ${suite} is ${VERIFY_OUTPUT_TEXT.snapshot} v${baseline.policy.version}${at}`;
 }
 
 /**
@@ -273,11 +274,12 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
             (sum, run) => sum + run.rungs.reduce((n, rung) => n + rung.pairs.length, 0),
             0,
           );
+          const t = VERIFY_OUTPUT_TEXT;
           io.stdout(
-            `${at}: a baseline of ${baseline.runs.length} runs and ${records} records, policy v${baseline.policy.version}; ` +
-              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} are ${rewrite ? "written from it" : "what it renders"}` +
+            `${at}: ${t.baseline} ${baseline.runs.length} ${baseline.runs.length === 1 ? "run" : "runs"}, ${records} ${records === 1 ? "record" : "records"}, ${t.limitsFile} v${baseline.policy.version}; ` +
+              `${REPORTS_DIRECTORY}/${suite}/${reportMarkdown} and ${reportJson} ${rewrite ? t.written : t.rendered}` +
               (snapshot
-                ? `; ${snapshotSaid(suite, baseline)}, held to ${policySnapshotName(baseline.policy.version)}`
+                ? `; ${snapshotSaid(suite, baseline)}, ${t.heldTo} ${policySnapshotName(baseline.policy.version)}`
                 : "") +
               "\n",
           );
@@ -393,13 +395,12 @@ export function createVerifyCommand(inputs: VerifyCommandInputs): CliCommand {
       for (const problem of problems) io.stderr(`lvrtc verify: ${problem}\n`);
       const count = `${files.length} ${files.length === 1 ? "baseline" : "baselines"}`;
       io.stdout(
-        `verify: ${count}, ${problems.length} ${problems.length === 1 ? "problem" : "problems"}. No engine was read: a case ` +
-          `or an engine that has changed since (STALE) is seen by lvrtc baseline check, not here.\n`,
+        `verify: ${count}, ${problems.length} ${problems.length === 1 ? "problem" : "problems"}. ${VERIFY_OUTPUT_TEXT.closing}\n`,
       );
       for (const { suite, baseline } of snapshotNotes) {
         io.stdout(
-          `verify: ${snapshotSaid(suite, baseline)}: it is held to the policy it records, not to the policy at hand ` +
-            `(v${policy.version}), and is not refreshed with it\n`,
+          `verify: ${snapshotSaid(suite, baseline)}: ${VERIFY_OUTPUT_TEXT.snapshotHeld} (v${policy.version}), ` +
+            `${VERIFY_OUTPUT_TEXT.snapshotNotRewritten}\n`,
         );
       }
       return problems.length > 0 ? EXIT_FAILURE : EXIT_OK;

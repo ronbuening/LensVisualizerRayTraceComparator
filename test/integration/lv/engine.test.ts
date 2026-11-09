@@ -161,12 +161,9 @@ test(
   (t) => {
     const { ran, compared, manifest, comparisons } = ranAndCompared(t, "benchmark");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(
-      ran.out,
-      /^benchmark: 384 jobs: 384 ok, 0 unsupported, 0 error, 0 pending \(384 computed, 0 cached\)$/m,
-    );
+    assert.match(ran.out, /^benchmark: 384 jobs: 384 answered \(384 asked now\)$/m);
     assert.equal(compared.code, 0, compared.err);
-    assert.match(compared.out, /^benchmark: 384 pairs: 384 PASS, 0 FLOOR, 0 FAIL, .* 0 ERROR$/m);
+    assert.match(compared.out, /^benchmark: 384 pairs: 384 Pass$/m);
 
     // 12 configurations in four conditions (wide open and the tab's f/8, each at the design plane and at
     // LensVisualizer's best axial focus), each on its reference line and on the five photopic lines, in two rungs
@@ -229,7 +226,7 @@ test("lvrtc run and compare: on the feature suite every lens has a case and pass
   // Every run of the suite has a case: the two translation paths that have no lens are not runs of it.
   assert.equal(ran.code, 0, ran.err);
   assert.equal(ran.err, "");
-  assert.match(ran.out, /^features: 72 jobs: 72 ok, 0 unsupported, 0 error, 0 pending \(72 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^features: 72 jobs: 72 answered \(72 asked now\)$/m);
   assert.deepEqual(
     manifest.runs.filter((run) => run.caseId === null),
     [],
@@ -316,19 +313,19 @@ test("lvrtc run: a case with one index nudged is reported stale-case by lv, and 
     "r0,r1",
   );
   assert.equal(ran.code, 1, "a stale case is an error");
-  assert.match(ran.out, /^stale: 8 jobs: 6 ok, 0 unsupported, 2 error, 0 pending /m);
+  assert.match(ran.out, /^stale: 8 jobs: 6 answered, 2 error /m);
   for (const rung of ["r0", "r1"]) {
-    assert.match(ran.out, new RegExp(`^exported +${rung} +lv +ok +computed$`, "m"));
+    assert.match(ran.out, new RegExp(`^exported +${rung} +lv +answered +asked now$`, "m"));
     assert.match(
       ran.out,
       new RegExp(
-        `^nudged +${rung} +lv +error +computed +stale-case: the case of lens nikkor-z50f12 is stale: its conditions ` +
+        `^nudged +${rung} +lv +error +asked now +stale-case: the case of lens nikkor-z50f12 is stale: its conditions ` +
           "are not the ones LensVisualizer gives for the same lines, stop and focus; neither the lens file nor " +
           "LensVisualizer's engine code has changed since it was exported: the case itself was altered$",
         "m",
       ),
     );
-    assert.match(ran.out, new RegExp(`^nudged +${rung} +ref +ok +computed$`, "m"));
+    assert.match(ran.out, new RegExp(`^nudged +${rung} +ref +answered +asked now$`, "m"));
   }
   const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "stale", MANIFEST_FILE), "utf8"));
   assert.deepEqual(

@@ -24,6 +24,23 @@ import { parseArguments } from "../arguments.ts";
 import { JOBS_OPTIONS, ROOT_OPTION, checkListLines, engineListLines, helpText, options, paragraph } from "../help.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand } from "../command.ts";
+import {
+  codeLines,
+  codeOf,
+  countsText,
+  distinct,
+  engineIdentifierLines,
+  explainedProblem,
+  legendLines,
+} from "../output.ts";
+import {
+  IDENTIFIERS_TEXT,
+  JOB_SOURCE_SUMMARY_TEXT,
+  JOB_SOURCE_TEXT,
+  JOB_STATUS_TEXT,
+  LEGEND_TEXT,
+  RUN_OUTPUT_TEXT,
+} from "../../vocabulary/index.ts";
 
 /** What `lvrtc run` is wired to, injected so that tests choose all three. */
 export interface RunCommandInputs {
@@ -37,7 +54,7 @@ export interface RunCommandInputs {
 }
 
 const SYNOPSIS =
-  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--json]\n";
+  "Usage: lvrtc run <suite.json> [--root <dir>] [--engines <id,...>] [--checks <id,...>] [--jobs <n>] [--memory-budget <GiB>] [--details] [--json]\n";
 const HELP = helpText([
   SYNOPSIS,
   ...paragraph(
@@ -59,6 +76,7 @@ const HELP = helpText([
       (column) => checkListLines(column + 2),
     ],
     ...JOBS_OPTIONS,
+    ["--details", IDENTIFIERS_TEXT.option],
     ["--json", "print one JSON object in place of the lines"],
   ]),
   ...paragraph(
@@ -79,12 +97,13 @@ interface RunArguments {
   readonly rungs: readonly string[] | undefined;
   readonly jobs: number;
   readonly memoryBudgetGiB: number;
+  readonly details: boolean;
   readonly json: boolean;
 }
 
 /** Reads the arguments. Throws a `UsageError` for anything that is not the command line the synopsis shows. */
 function readArguments(args: readonly string[]): RunArguments {
-  const { positionals: files, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json"]);
+  const { positionals: files, values, flags } = parseArguments(args, VALUE_OPTIONS, ["--json", "--details"]);
   if (files.length === 0) throw new UsageError("no suite file was named");
   if (files.length > 1) throw new UsageError(`more than one suite file was named: ${files.join(", ")}`);
 
@@ -104,6 +123,7 @@ function readArguments(args: readonly string[]): RunArguments {
     rungs: list("--checks") ?? list("--rungs"),
     jobs: jobsOption(values.get("--jobs"), memoryBudgetGiB),
     memoryBudgetGiB,
+    details: flags.has("--details"),
     json: flags.has("--json"),
   };
 }
@@ -151,13 +171,23 @@ export async function prepareSuiteRun(
   }
 }
 
-/** One line per job: run, rung, engine, status and how the status was come by, in columns; then what went wrong. */
+/** The words of a job's stored status and source; a value with no words is given as it is. */
+const statusText = (status: string): string => JOB_STATUS_TEXT[status] ?? status;
+const sourceText = (source: string): string => JOB_SOURCE_TEXT[source] ?? source;
+
+/**
+ * One line per job: run, check, engine, how it ended and how it came by that, in columns; then what went wrong, and
+ * under it what the code of an error means and what to do about it.
+ */
 function jobLine(outcome: JobOutcome, widths: readonly number[]): string {
   const { job, source, detail } = outcome;
   const engine = job.step === undefined ? job.engine : `${job.engine} +${job.step}`;
-  const cells = [job.run, job.rung, engine, job.status, source].map((cell, column) => cell.padEnd(widths[column]));
+  const cells = [job.run, job.rung, engine, statusText(job.status), sourceText(source)].map((cell, column) =>
+    cell.padEnd(widths[column]),
+  );
   const said = job.error === undefined ? detail : `${job.error.code}: ${detail ?? ""}`;
-  return `${[...cells, ...(said === null ? [] : [said])].join("  ").trimEnd()}\n`;
+  const means = codeLines(job.error?.code ?? null, 4, job.engine);
+  return [`${[...cells, ...(said === null ? [] : [said])].join("  ").trimEnd()}`, ...means, ""].join("\n");
 }
 
 /** How many of `values` are each of `keys`. */
@@ -177,17 +207,37 @@ function countsOf(outcomes: readonly JobOutcome[]): {
   return { status: countBy(STATUSES, statuses), source: countBy(SOURCES, sources) };
 }
 
-/** The closing lines of the text output. */
-function summaryText(suite: LoadedSuite, result: SuiteRunResult): string {
+/** The closing lines of the text output: the legend of the ids the job lines kept, the counts, the run record. */
+function summaryText(suite: LoadedSuite, result: SuiteRunResult, details: boolean): string {
   const { status, source } = countsOf(result.outcomes);
   const jobs = result.outcomes.length;
-  const byStatus = STATUSES.map((name) => `${status[name]} ${name}`).join(", ");
-  const bySource = `${source.computed} computed, ${source.cached} cached`;
+  const t = RUN_OUTPUT_TEXT;
+  const byStatus = countsText(STATUSES.map((name) => [statusText(name), status[name]] as const));
+  // Every source is counted, so that the counts add up to the jobs.
+  const bySource = countsText(SOURCES.map((name) => [JOB_SOURCE_SUMMARY_TEXT[name] ?? name, source[name]] as const));
+  const legend = legendLines({
+    checks: distinct(result.outcomes.map((outcome) => outcome.job.rung)),
+    engines: distinct(result.outcomes.map((outcome) => outcome.job.engine)),
+  });
   return [
-    `${suite.name}: ${jobs} ${jobs === 1 ? "job" : "jobs"}: ${byStatus} (${bySource})`,
-    `manifest: ${result.manifestPath}`,
+    ...(legend.length > 0 ? [LEGEND_TEXT.above, ...legend.map((line) => `  ${line}`)] : []),
+    `${suite.name}: ${jobs} ${jobs === 1 ? t.job : t.jobs}: ${byStatus} (${bySource})`,
+    `${t.runRecord}: ${result.manifestPath}`,
+    ...(details ? identifierLines(result) : []),
     "",
   ].join("\n");
+}
+
+/** What `--details` adds: the suite file's hash, each run's lens state and each engine's code, by their hashes. */
+function identifierLines(result: SuiteRunResult): string[] {
+  const { manifest } = result;
+  const t = IDENTIFIERS_TEXT;
+  return [
+    `${t.title}:`,
+    `  ${t.suite} ${manifest.suite.hash}`,
+    ...manifest.runs.map((run) => `  ${t.lensState} ${run.name} ${run.caseId ?? "-"}`),
+    ...engineIdentifierLines(manifest.engines),
+  ];
 }
 
 /** Everything the run did as one JSON object with sorted keys. It is console output: it may hold absolute paths. */
@@ -263,8 +313,8 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
           Math.max(0, ...suite.runs.map((run) => run.spec.name.length)),
           Math.max(0, ...RUNGS.map((rung) => rung.id.length)),
           Math.max(0, ...[...registry.ids(), ...registry.builtinIds()].map((id) => id.length)),
-          Math.max(...STATUSES.map((status) => status.length)),
-          Math.max(...SOURCES.map((source) => source.length)),
+          Math.max(...STATUSES.map((status) => statusText(status).length)),
+          Math.max(...SOURCES.map((source) => sourceText(source).length)),
         ];
         result = await runSuite({
           suite,
@@ -283,42 +333,34 @@ export function createRunCommand(inputs: RunCommandInputs): CliCommand {
         return EXIT_USAGE;
       }
 
+      const t = RUN_OUTPUT_TEXT;
       const notStarted = result.manifest.runs.filter((run) => run.caseId === null);
       for (const run of notStarted) {
-        for (const problem of run.problems) io.stderr(`lvrtc run: run ${run.name} was not started: ${problem}\n`);
+        for (const problem of run.problems)
+          io.stderr(explainedProblem(`lvrtc run: run ${run.name} ${t.notStarted}: `, problem));
       }
       for (const run of result.manifest.runs) {
-        for (const problem of run.raySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a field has no rays: ${problem}\n`);
-        }
-        for (const problem of run.fineRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a field has no rays on the finer lattice: ${problem}\n`);
-        }
-        for (const problem of run.spotRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a spot or fan has no rays: ${problem}\n`);
-        }
-        for (const problem of run.axialRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the axial tabs have no rays: ${problem}\n`);
-        }
-        for (const problem of run.chiefRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: a chief-ray tab has no rays: ${problem}\n`);
-        }
-        for (const problem of run.curvatureRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the field curves have no rays: ${problem}\n`);
-        }
-        for (const problem of run.vignettingRaySets?.problems ?? []) {
-          io.stderr(`lvrtc run: run ${run.name}: the vignetting sets: ${problem}\n`);
-        }
+        const said = (what: string, problems: readonly string[] | undefined): void => {
+          for (const problem of problems ?? [])
+            io.stderr(explainedProblem(`lvrtc run: run ${run.name}: ${what}: `, problem));
+        };
+        said(t.noRays, run.raySets?.problems);
+        said(t.noFineRays, run.fineRaySets?.problems);
+        said(t.noSpotRays, run.spotRaySets?.problems);
+        said(t.noAxialRays, run.axialRaySets?.problems);
+        said(t.noChiefRays, run.chiefRaySets?.problems);
+        said(t.noCurvatureRays, run.curvatureRaySets?.problems);
+        said(t.noVignettingRays, run.vignettingRaySets?.problems);
       }
-      for (const warning of result.warnings) io.stderr(`lvrtc run: warning: ${warning}\n`);
-      io.stdout(asked.json ? jsonText(result) : summaryText(suite, result));
+      for (const warning of result.warnings) io.stderr(explainedProblem(`lvrtc run: ${t.warning}: `, warning));
+      io.stdout(asked.json ? jsonText(result) : summaryText(suite, result, asked.details));
 
       const failed = result.outcomes.some((outcome) => outcome.job.status === "error");
       const changed = Object.values(result.manifest.sources ?? {}).some((source) => source.status === SOURCE_CHANGED);
       const refusedOnly = notStarted.every(
         (run) =>
           run.problems.length > 0 &&
-          run.problems.every((problem) => problem.startsWith("finite-conjugate-unavailable: ")),
+          run.problems.every((problem) => codeOf(problem) === "finite-conjugate-unavailable"),
       );
       return failed || changed || !refusedOnly ? EXIT_FAILURE : EXIT_OK;
     },

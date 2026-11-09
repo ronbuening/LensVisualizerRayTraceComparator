@@ -66,9 +66,8 @@ export const CODES: Readonly<Record<string, CodeText>> = {
     remedy: "Use one of the transports the configuration documents: in-process, stdio, oneshot or file-exchange.",
   },
   "load-failed": {
-    sentence:
-      "The engine's code could not be loaded: its module is missing or failed to import; for LensVisualizer, lvPath holds nothing this tool can load.",
-    remedy: `${LV_PATH} Or check the module path in the engine's definition.`,
+    sentence: "The engine's code could not be loaded: its module is missing or failed to import.",
+    remedy: "Check the module path in the engine's definition.",
   },
   "bad-module": {
     sentence: "The engine's module does not export a createEngine function.",
@@ -101,6 +100,10 @@ export const CODES: Readonly<Record<string, CodeText>> = {
   },
   ...LV_BINDING,
   ...Object.fromEntries(Object.entries(LV_BINDING).map(([code, text]) => [`lv-${code}`, text])),
+  "lv-load-failed": {
+    sentence: "LensVisualizer could not be loaded: lvPath holds nothing this tool can load.",
+    remedy: LV_PATH,
+  },
   "lv-not-configured": {
     sentence: "No LensVisualizer checkout is set, so no lens can be exported.",
     remedy: LV_PATH,
@@ -247,6 +250,14 @@ export const CODES: Readonly<Record<string, CodeText>> = {
 /** The words of a code, or undefined when it has none. */
 export function codeTextOf(code: string): CodeText | undefined {
   return Object.hasOwn(CODES, code) ? CODES[code] : undefined;
+}
+
+/**
+ * The words of a code of one engine: of LensVisualizer (`lv`), its `lv-` variant first, which names lvPath; else the
+ * code's own words.
+ */
+export function engineCodeTextOf(engine: string | undefined, code: string): CodeText | undefined {
+  return (engine === "lv" ? codeTextOf(`lv-${code}`) : undefined) ?? codeTextOf(code);
 }
 
 /** A code, its sentence and its remedy, as one line; a code with no words is returned unchanged. */

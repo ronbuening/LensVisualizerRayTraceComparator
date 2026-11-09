@@ -102,7 +102,7 @@ test("R6a compares a field on both lattices at every line as one set: a faithful
   const ran = await inProcess(rootDir, "run", "suite.json");
   assert.equal(ran.code, EXIT_OK, ran.err);
   // One field at two lines on two lattices: four ray sets, asked of four engines, of which one traces no rays.
-  assert.match(ran.out, /^wave: 16 jobs: 12 ok, 4 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^wave: 16 jobs: 12 answered, 4 not computed \(12 asked now, 4 not offered\)$/m);
   const manifest = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   const [run] = manifest.runs;
   // The sets of the finer lattice are recorded apart from the run's own, and are other sets.
@@ -193,7 +193,7 @@ test("the finer lattice is asked of R6a alone: R2 to R4 trace the run's own sets
   assert.deepEqual(of("r6a").slice(0, 2), coarse);
   assert.equal(of("r6a").length, 4);
   // Two sets, two engines: the four traces of the finer lattice are all that was computed.
-  assert.match(all.out, /\(4 computed, 16 cached\)$/m);
+  assert.match(all.out, /\(4 asked now, 16 from the result cache\)$/m);
 });
 
 /** A root whose `lvPath` is a copy of the fake LV tree. */
@@ -229,7 +229,7 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
 
   const ran = lvrtc(rootDir, "run", suite);
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^wave: 4 jobs: 4 ok, 0 unsupported, 0 error, 0 pending \(4 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^wave: 4 jobs: 4 answered \(4 asked now\)$/m);
   const manifest = read<RunManifest>(rootDir, "wave", MANIFEST_FILE);
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
@@ -249,7 +249,7 @@ test("lvrtc run --rungs r6b: LensVisualizer's diffraction MTF beside the wave es
   assert.equal(compared.code, EXIT_OK, compared.out);
   assert.match(
     compared.out,
-    /^wave: 4 pairs: 0 PASS, 0 FLOOR, 0 FAIL, \d RECORDED, \d ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+    /^wave: 4 pairs: (?:\d Side by side(?!, worth)(?:, \d Side by side, worth a look)?|\d Side by side, worth a look)$/m,
   );
   const file = read<ComparisonFile>(rootDir, "wave", COMPARISONS_FILE);
   const pairwise = file.comparisons.filter((set) => set.mode === "pairwise");

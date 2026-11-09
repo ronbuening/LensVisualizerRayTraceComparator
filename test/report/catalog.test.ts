@@ -126,12 +126,12 @@ test("a catalog snapshot under an older policy passes verify, held to its frozen
   assert.equal(said.code, 0, said.err);
   assert.match(
     said.out,
-    /^baselines\/catalog\.json: a baseline of 3 runs and 2 records, policy v3; .*; the catalog is a dated snapshot of policy v3, held to policy\/snapshots\/rungs\.v3\.json$/m,
+    /^baselines\/catalog\.json: committed results of 3 runs, 2 records, limits file v3; .*; the catalog is a dated snapshot of the limits file v3, held to policy\/snapshots\/rungs\.v3\.json$/m,
   );
   assert.match(
     said.out,
     new RegExp(
-      `^verify: the catalog is a dated snapshot of policy v3: it is held to the policy it records, not to the policy at hand \\(v${later.version}\\)`,
+      `^verify: the catalog is a dated snapshot of the limits file v3: it is held to the limits file it was written with, not to the one at hand \\(v${later.version}\\)`,
       "m",
     ),
   );

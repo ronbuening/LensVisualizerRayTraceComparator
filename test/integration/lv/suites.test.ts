@@ -265,17 +265,14 @@ test(
     const env = { ...process.env, LVRTC_RUNS_DIR: runsDir, LVRTC_LV_PATH: LV_PATH ?? "" };
     const child = spawnSync(process.execPath, args, { encoding: "utf8", cwd: REPO_ROOT, env });
     assert.equal(child.status, 0, child.stderr);
-    assert.match(
-      child.stdout,
-      /^smoke: 30 jobs: 15 ok, 15 unsupported, 0 error, 0 pending \(15 computed, 0 cached\)$/m,
-    );
+    assert.match(child.stdout, /^smoke: 30 jobs: 15 answered, 15 not computed \(15 asked now, 15 not offered\)$/m);
     // The suite's zoom states no position: it is two runs, one for each end.
     const zoomRuns = ["minolta-af-35-70-f4-ref-wide", "minolta-af-35-70-f4-ref-tele"];
     for (const run of ["carl-zeiss-tessar-50f35-ref", "carl-zeiss-tessar-50f35-photopic", ...zoomRuns]) {
       for (const rung of ["r0", "r1"]) {
-        assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +ok +computed$`, "m"), `${run} ${rung}`);
+        assert.match(child.stdout, new RegExp(`^${run} +${rung} +ref +answered +asked now$`, "m"), `${run} ${rung}`);
       }
-      assert.match(child.stdout, new RegExp(`^${run} +selftest +fake-a +ok +computed$`, "m"), run);
+      assert.match(child.stdout, new RegExp(`^${run} +selftest +fake-a +answered +asked now$`, "m"), run);
     }
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "smoke", MANIFEST_FILE), "utf8"));
@@ -324,13 +321,17 @@ test(
     // trace the vignetting tab's stop lattice of each of its fields at every line: 83 sets (LensVisualizer 607ff23ae).
     assert.match(
       ran.stdout,
-      /^smoke: 818 jobs: 808 ok, 10 unsupported, 0 error, 0 pending \(646 computed, 162 cached\)$/m,
+      /^smoke: 818 jobs: 808 answered, 10 not computed \(646 asked now, 162 from the result cache, 10 not offered\)$/m,
     );
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +ok +computed$/m);
-    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +ok +computed$/m);
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r6b +wave +answered +asked now$/m);
+    assert.match(ran.stdout, /^minolta-af-35-70-f4-ref-tele +r4f +replay +answered +asked now$/m);
     for (const end of ["wide", "tele"]) {
       for (const rung of ["r3", "r4"]) {
-        assert.match(ran.stdout, new RegExp(`^minolta-af-35-70-f4-ref-${end} +${rung} +lv +ok +cached$`, "m"), end);
+        assert.match(
+          ran.stdout,
+          new RegExp(`^minolta-af-35-70-f4-ref-${end} +${rung} +lv +answered +from the cache$`, "m"),
+          end,
+        );
       }
     }
     const compared = lvrtc("compare", "smoke");
@@ -344,14 +345,14 @@ test(
     // four spans a run, 20, and passes; R10a of the 18 curvature sets, and passes; R11a of the beam sets of a line,
     // one span a line, 9, and passes. A pair is counted in both modes.
     const summary =
-      /^smoke: 536 pairs: 516 PASS, 0 FLOOR, 0 FAIL, (\d+) RECORDED, (\d+) ATTENTION, 10 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m.exec(
+      /^smoke: 536 pairs: 516 Pass(?:, (\d+) Side by side(?!, worth))?(?:, (\d+) Side by side, worth a look)?, 10 Not computed$/m.exec(
         compared.stdout,
       );
     assert.ok(
       summary !== null,
       compared.stdout.split("\n").find((line) => line.startsWith("smoke: ")),
     );
-    assert.equal(Number(summary[1]) + Number(summary[2]), 10);
+    assert.equal(Number(summary[1] ?? 0) + Number(summary[2] ?? 0), 10);
     // R4 is of a field at every line of its run: fifteen fields, where R2 and R3 judge 27 ray sets each.
     const { comparisons }: ComparisonFile = JSON.parse(readFileSync(join(runsDir, "smoke", COMPARISONS_FILE), "utf8"));
     const sets = (rung: string) => comparisons.filter((set) => set.rung === rung && set.mode === "pairwise");

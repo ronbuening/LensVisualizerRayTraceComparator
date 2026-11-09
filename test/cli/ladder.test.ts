@@ -94,12 +94,9 @@ test("ref against a copy that built another surface: R0 fails and names it, and 
   const [ran, compared, reported] = await cycle(rootDir);
   // Every engine answered every request: a wrong system is an answer, not an error.
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^ladder: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^ladder: 12 jobs: 12 answered \(12 asked now\)$/m);
   assert.equal(compared.code, EXIT_FAILURE, compared.err);
-  assert.match(
-    compared.out,
-    /^ladder: 20 pairs: 14 PASS, 0 FLOOR, 3 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 3 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^ladder: 20 pairs: 14 Pass, 3 Fail, 3 Not judged$/m);
   assert.equal(reported.code, EXIT_OK, reported.err);
 
   const directory = join(rootDir, "runs", "ladder");

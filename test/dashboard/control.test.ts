@@ -244,11 +244,8 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
     "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs run <root>/suites/fake-pair.json --root <root> --engines fake-a,fake-human --rungs selftest --jobs 1",
   );
   assert.equal(job1.steps[1].command, "LVRTC_RUNS_DIR=<runsDir> node bin/lvrtc.mjs compare fake-pair --root <root>");
-  assert.match(job1.steps[1].output, /^fake-pair: 4 pairs: 0 PASS, .* 4 ERROR$/m);
-  assert.match(
-    job1.steps[0].output,
-    /^fake-pair: 4 jobs: 2 ok, 0 unsupported, 0 error, 2 pending \(4 computed, 0 cached\)$/m,
-  );
+  assert.match(job1.steps[1].output, /^fake-pair: 4 pairs: 4 Error$/m);
+  assert.match(job1.steps[0].output, /^fake-pair: 4 jobs: 2 answered, 2 waiting for an operator \(4 asked now\)$/m);
   const page1 = await holdPage(port, "/control/job/1");
   assert.ok(!page1.includes('http-equiv="refresh"'), "an ended job's page does not reload");
 
@@ -320,7 +317,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
       ["exited", 0],
     ],
   );
-  assert.match(job3.steps[0].output, /\(0 computed, 4 cached\)$/m);
+  assert.match(job3.steps[0].output, /\(4 from the result cache\)$/m);
   const rerun = JSON.parse((await fetchFrom(port, "/api/run/fake-pair")).body);
   assert.deepEqual(rerun.pending, []);
   for (const { engines } of rerun.supportByRung as { engines: { counts: { status: string; count: number }[] }[] }[]) {
@@ -342,7 +339,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
     "two pairs in each mode, four PASS",
   );
   assert.equal(rerun.failing, 0);
-  assert.match(job3.steps[1].output, /^fake-pair: 4 pairs: 4 PASS, /m);
+  assert.match(job3.steps[1].output, /^fake-pair: 4 pairs: 4 Pass$/m);
   const manifestText = readFileSync(join(runsDir, "fake-pair", MANIFEST_FILE), "utf8");
   const manifest = JSON.parse(manifestText) as RunManifest;
   assert.ok(manifest.jobs.every((job) => job.status === "ok"));
@@ -379,7 +376,7 @@ test("the fake suite end to end from the UI: started, pending, answered, collect
     "1",
   ]);
   assert.equal(atOnce.code, 0, atOnce.err);
-  assert.match(atOnce.out, /\(4 computed, 0 cached\)$/m);
+  assert.match(atOnce.out, /\(4 asked now\)$/m);
   assert.equal(readFileSync(join(elsewhere, "fake-pair", MANIFEST_FILE), "utf8"), manifestText);
 });
 

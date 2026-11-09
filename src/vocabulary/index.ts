@@ -12,3 +12,4 @@ export * from "./outcomes.ts";
 export * from "./suites.ts";
 export * from "./terms.ts";
 export * from "./verdicts.ts";
+export * from "./output.ts";

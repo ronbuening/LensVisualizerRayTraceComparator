@@ -6,7 +6,8 @@ import { helpText } from "../help.ts";
 import { verifyReal, verifyRealHelpBody, verifyRealHere } from "../verifyReal.ts";
 import type { PlanMachine, SignalSource, VerifyRealProgram, VerifyRealRunner } from "../verifyReal.ts";
 
-const SYNOPSIS = "Usage: lvrtc check-lv [--all | --suite <name> | --suites <a,b,...>] [--jobs <n>] [--root <dir>]\n";
+const SYNOPSIS =
+  "Usage: lvrtc check-lv [--all | --suite <name> | --suites <a,b,...>] [--jobs <n>] [--root <dir>] [--details]\n";
 
 /** How `lvrtc check-lv` names itself. */
 export const CHECK_LV_PROGRAM: VerifyRealProgram = {

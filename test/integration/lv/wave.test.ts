@@ -74,13 +74,13 @@ test(
     // No --engines: the suite names lv and ref, and the rung is asked of lv and of wave whatever a run names.
     const ran = lvrtc(runsDir, "run", suite, "--rungs", "r6b");
     assert.equal(ran.code, 0, ran.err);
-    assert.match(ran.out, /^benchmark: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+    assert.match(ran.out, /^benchmark: 12 jobs: 12 answered \(12 asked now\)$/m);
     const compared = lvrtc(runsDir, "compare", "benchmark");
     // A recorded rung fails nothing.
     assert.equal(compared.code, 0, compared.out);
     assert.match(
       compared.out,
-      /^benchmark: 12 pairs: 0 PASS, 0 FLOOR, 0 FAIL, \d+ RECORDED, \d+ ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
+      /^benchmark: 12 pairs: (?:\d+ Side by side(?!, worth)(?:, \d+ Side by side, worth a look)?|\d+ Side by side, worth a look)$/m,
     );
 
     const manifest: RunManifest = JSON.parse(readFileSync(join(runsDir, "benchmark", MANIFEST_FILE), "utf8"));

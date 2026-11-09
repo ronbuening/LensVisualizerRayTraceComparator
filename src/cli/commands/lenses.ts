@@ -14,7 +14,8 @@ import { primeZoomNote, teleHint } from "../../engines/lv/zoomEnds.ts";
 import { parseArguments } from "../arguments.ts";
 import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "../command.ts";
 import type { CliCommand, CliIo } from "../command.ts";
-import { ROOT_OPTION, helpText, options, paragraph } from "../help.ts";
+import { ROOT_OPTION, helpText, options, paragraph, wrap } from "../help.ts";
+import { LENSES_SHOW_LEGEND } from "../../vocabulary/index.ts";
 
 /** What `lvrtc lenses` is wired to, injected so that tests choose all three. */
 export interface LensesCommandInputs {
@@ -124,7 +125,7 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     ["stop index", String(summary.stopIndex)],
     ["stop radius", numberText(summary.stopRadius)],
     ["last lens surface", String(summary.lastLensSurfaceIndex)],
-    ["imgZ", numberText(summary.imgZ)],
+    ["image plane z", numberText(summary.imgZ)],
   ]);
   return [
     `${lens.key}  ${lens.name}`,
@@ -133,6 +134,8 @@ function showText(lens: { key: string; name: string; file: string }, summary: St
     `zoom   ${numberText(summary.zoomT)}`,
     "",
     ...table([header, ...rows], new Set([0, 2, 3, 4, 5, 7])),
+    "",
+    ...wrap(LENSES_SHOW_LEGEND),
     "",
     ...totals,
     "",

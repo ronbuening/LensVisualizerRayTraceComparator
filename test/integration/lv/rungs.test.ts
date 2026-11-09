@@ -182,10 +182,7 @@ test(
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
 
     // Every gated pair is PASS, and nothing else: no failure, no error, nothing blocked.
-    assert.match(
-      verdicts,
-      /^benchmark: 3840 pairs: 3840 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(verdicts, /^benchmark: 3840 pairs: 3840 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
     t.diagnostic(
@@ -263,10 +260,7 @@ test(
       ["ref-wide", "ref-tele", "photopic-wide", "photopic-tele"].map((rest) => `fixed-iris-zoom-${rest}`),
     );
     assert.ok(manifest.jobs.every((job) => job.status === "ok"));
-    assert.match(
-      verdicts,
-      /^features: 720 pairs: 720 PASS, 0 FLOOR, 0 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/,
-    );
+    assert.match(verdicts, /^features: 720 pairs: 720 Pass$/);
     const { verdicts: counts, floors, rays } = tallyOf(comparisons);
     const [r2, r3] = [worstOf(comparisons, "r2"), worstOf(comparisons, "r3")];
     t.diagnostic(

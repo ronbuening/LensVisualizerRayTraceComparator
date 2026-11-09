@@ -71,7 +71,7 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
 
   const ran = lvrtc(rootDir, "run", suite);
   assert.equal(ran.code, EXIT_OK, ran.err);
-  assert.match(ran.out, /^fidelity: 6 jobs: 6 ok, 0 unsupported, 0 error, 0 pending \(6 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^fidelity: 6 jobs: 6 answered \(6 asked now\)$/m);
   const manifest: RunManifest = JSON.parse(readFileSync(join(rootDir, "runs", "fidelity", MANIFEST_FILE), "utf8"));
   assert.deepEqual(
     manifest.jobs.map((job) => `${job.run} ${job.rung} ${job.quantity} ${job.engine} ${job.status}`),
@@ -102,10 +102,7 @@ test("lvrtc run --rungs r4f: the replay of a sampled MTF passes, and a product t
 
   const compared = lvrtc(rootDir, "compare", "fidelity");
   assert.equal(compared.code, EXIT_FAILURE, compared.out);
-  assert.match(
-    compared.out,
-    /^fidelity: 6 pairs: 4 PASS, 0 FLOOR, 2 FAIL, 0 RECORDED, 0 ATTENTION, 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m,
-  );
+  assert.match(compared.out, /^fidelity: 6 pairs: 4 Pass, 2 Fail$/m);
   const file: ComparisonFile = JSON.parse(readFileSync(join(rootDir, "runs", "fidelity", COMPARISONS_FILE), "utf8"));
   const pairwise = file.comparisons.filter((set) => set.mode === "pairwise");
   assert.deepEqual(
@@ -161,10 +158,10 @@ test("a baseline may hold R4f: written from a run with it, it checks clean, and 
   const ran = lvrtc(rootDir, "run", suite);
   assert.equal(ran.code, EXIT_OK, ran.err);
   // R0 and R1 on the two engines the suite names, R4f on its own two: twelve jobs, and none unsupported.
-  assert.match(ran.out, /^held: 12 jobs: 12 ok, 0 unsupported, 0 error, 0 pending \(12 computed, 0 cached\)$/m);
+  assert.match(ran.out, /^held: 12 jobs: 12 answered \(12 asked now\)$/m);
   const compared = lvrtc(rootDir, "compare", "held");
   assert.equal(compared.code, EXIT_OK, compared.out);
-  assert.match(compared.out, /^held: 12 pairs: 12 PASS, 0 FLOOR, 0 FAIL, .* 0 UNSUPPORTED, 0 BLOCKED, 0 ERROR$/m);
+  assert.match(compared.out, /^held: 12 pairs: 12 Pass$/m);
 
   const written = lvrtc(rootDir, "baseline", "write", "held");
   assert.equal(written.code, EXIT_OK, written.err);
@@ -234,7 +231,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   assert.equal(without.code, 2);
   assert.match(
     without.err,
-    /no MTF baseline is written of this run: it has none of the rungs r4, r4f, r5, r5g, r6a, r6b/,
+    /no MTF baseline is written of this run: it has none of the MTF checks r4, r4f, r5, r5g, r6a, r6b/,
   );
   assert.equal(existsSync(at("baselines")), false);
 
@@ -271,7 +268,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   assert.equal(verified.code, EXIT_OK, verified.err);
   assert.match(
     verified.out,
-    /^baselines\/held\.mtf\.json: a baseline of 2 runs and 8 records, policy v\d+; reports\/held\/mtf\.md and mtf\.json are what it renders$/m,
+    /^baselines\/held\.mtf\.json: committed results of 2 runs, 8 records, limits file v\d+; reports\/held\/mtf\.md and mtf\.json are what it renders$/m,
   );
   assert.match(verified.out, /^baselines\/held\.json: .* reports\/held\/rays\.md and rays\.json are what it renders$/m);
 
@@ -323,7 +320,7 @@ test("an MTF baseline: write --mtf, verify and check --mtf hold it and its repor
   assert.equal(fewer.code, 2);
   assert.match(
     fewer.err,
-    /the run has no rung r4, r4f, r6a, r6b, which .*held\.json has: it is the run of other rungs/,
+    /the run has no check r4, r4f, r6a, r6b, which .*held\.json has: it is the run of other checks/,
   );
   assert.equal(readFileSync(at("baselines", "held.json"), "utf8"), rays);
   assert.equal(lvrtc(rootDir, "baseline", "write", "held", "--replace").code, EXIT_OK);

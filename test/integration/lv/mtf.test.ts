@@ -704,8 +704,8 @@ test(
     assert.match(
       slow.out,
       offered || wideOpenCase
-        ? /^lv {2}ok {2}computed$/m
-        : /^lv {2}unsupported {2}computed\n {2}feature aperture\.f8-comparison: the lens /m,
+        ? /^lv {2}answered {2}asked now$/m
+        : /^lv {2}not computed {2}asked now\n {2}feature aperture\.f8-comparison: the lens /m,
     );
   },
 );
@@ -932,7 +932,7 @@ test(
     // Through the command, such a lens is presented as LensVisualizer presents it: no MTF, and why.
     const fisheye = await lvrtc(tempDir(), "mtf", refused[0].split(" ")[0]);
     assert.equal(fisheye.code, 0, fisheye.err);
-    assert.match(fisheye.out, /^lv {2}unsupported {2}computed\n {2}feature [a-z-]+: \S/m);
+    assert.match(fisheye.out, /^lv {2}not computed {2}asked now\n {2}feature [a-z-]+: \S/m);
   },
 );
 
